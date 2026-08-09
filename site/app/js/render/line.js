@@ -1,7 +1,8 @@
 /* Liniendiagramme: Serien, Zielbänder, vertikale Bänder, Ereignismarker,
    horizontale Referenzlinien, Betriebspunkt. */
 
-import { frame, heading, axes, marker, text } from './base.js';
+import { lineFrame, heading, axes, marker, text } from './base.js';
+import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 
 const PI = Math.PI;
@@ -9,16 +10,45 @@ const PI = Math.PI;
 export function drawLine(x, w, h, d) {
   heading(x, w, h, d);
   const C = theme.chart;
-  const f = frame(w, h, false);
+  const f = lineFrame(w, h, d);
   const x0 = d.x[0], x1 = d.x[d.x.length - 1];
+  const left = d.ys.filter(s => s.axis !== 'right');
+  const right = d.ys.filter(s => s.axis === 'right');
   let all = [];
-  for (let i = 0; i < d.ys.length; i++) all = all.concat(d.ys[i].y.filter(isFinite));
+  for (let i = 0; i < left.length; i++) all = all.concat(left[i].y.filter(isFinite));
   let y0 = d.y0 == null ? Math.min.apply(null, [0].concat(all)) : d.y0;
   let y1 = d.y1 == null ? Math.max.apply(null, all) * 1.08 : d.y1;
   if (d.hrefs) for (let i = 0; i < d.hrefs.length; i++) if (d.y1 == null) y1 = Math.max(y1, d.hrefs[i].y * 1.08);
   axes(x, w, h, f, x0, x1, y0, y1, d);
   const X = a => f.L + (a - x0) / (x1 - x0) * f.pw;
   const Y = a => f.T + (y1 - a) / (y1 - y0) * f.ph;
+
+  /* rechte Achse: eigene Skala für Serien mit axis:'right' */
+  let YR = Y;
+  if (right.length) {
+    let rall = [];
+    for (let i = 0; i < right.length; i++) rall = rall.concat(right[i].y.filter(isFinite));
+    if (!rall.length) rall = [1];
+    const r0 = d.r0 == null ? 0 : d.r0;
+    const r1 = d.r1 == null ? Math.max.apply(null, rall) * 1.08 : d.r1;
+    YR = a => f.T + (r1 - a) / (r1 - r0 || 1) * f.ph;
+    const rc = right[0].c;
+    x.strokeStyle = rc; x.globalAlpha = 0.6;
+    x.beginPath(); x.moveTo(f.L + f.pw, f.T); x.lineTo(f.L + f.pw, f.T + f.ph); x.stroke();
+    x.globalAlpha = 1;
+    for (let i = 0; i <= 5; i++) {
+      const yy = f.T + i * f.ph / 5;
+      x.fillStyle = rc; x.textAlign = 'left'; x.font = '11px Arial';
+      x.fillText(fmt(r1 - i * (r1 - r0) / 5), f.L + f.pw + 7, yy + 4);
+    }
+    if (d.rl) {
+      x.save();
+      x.translate(w - 10, f.T + f.ph / 2); x.rotate(PI / 2);
+      x.fillStyle = rc; x.textAlign = 'center'; x.font = '11px Arial';
+      x.fillText(d.rl, 0, 0);
+      x.restore();
+    }
+  }
 
   /* vertikale Bereichs-Bänder (z. B. „keine Zerstäubung" im PQ²) */
   if (d.vbands) for (let i = 0; i < d.vbands.length; i++) {
@@ -87,14 +117,18 @@ export function drawLine(x, w, h, d) {
   }
 
   for (let i = 0; i < d.ys.length; i++) {
-    x.strokeStyle = d.ys[i].c; x.lineWidth = 2; x.beginPath();
+    const Ys = d.ys[i].axis === 'right' ? YR : Y;
+    x.strokeStyle = d.ys[i].c; x.lineWidth = 2;
+    if (d.ys[i].axis === 'right') x.setLineDash([7, 4]);
+    x.beginPath();
     let started = false;
     for (let j = 0; j < d.x.length; j++) {
       if (!isFinite(d.ys[i].y[j])) { started = false; continue; }
-      started ? x.lineTo(X(d.x[j]), Y(d.ys[i].y[j])) : x.moveTo(X(d.x[j]), Y(d.ys[i].y[j]));
+      started ? x.lineTo(X(d.x[j]), Ys(d.ys[i].y[j])) : x.moveTo(X(d.x[j]), Ys(d.ys[i].y[j]));
       started = true;
     }
     x.stroke();
+    x.setLineDash([]);
   }
 
   /* Kurven-Stützpunkte (Schusskurve) */

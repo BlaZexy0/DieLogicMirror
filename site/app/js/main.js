@@ -9,7 +9,7 @@ import { initPresetSelect } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
 import { renderKpis } from './ui/kpis.js';
 import { buildCard, renderCard } from './ui/cards.js';
-import { initSimCard } from './ui/simcard.js';
+import { initSim } from './core/simstore.js';
 
 const cards = {};
 let activeHl = null;
@@ -44,7 +44,7 @@ async function init() {
 
   const chartsEl = document.getElementById('charts');
   charts.forEach(def => { cards[def.id] = buildCard(def, chartsEl, { link: true, onHighlight }); });
-  initSimCard(document.getElementById('simcharts'));
+  initSim();
 
   document.getElementById('resetBtn').onclick = () => {
     resetState();

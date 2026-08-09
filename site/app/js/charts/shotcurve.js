@@ -4,7 +4,24 @@
 import { series, line } from './helpers.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
+import { sim } from '../core/simstore.js';
 import { frac, sqrt } from './mathfmt.js';
+
+/* Anzeige der Simulations-Luftdruckkurve kappen: nahe der vollständigen
+   Füllung divergiert das Modell (Restluftvolumen → 0). */
+const P_CLIP_MBAR = 10000;
+
+/* Simulations-Samples (eigenes Zeit-/Wegraster) linear auf das Chart-Raster
+   interpolieren; außerhalb des Simulationsbereichs NaN (= Lücke). */
+function interpSim(xs, ys, xv) {
+  if (!xs.length || xv < xs[0] || xv > xs[xs.length - 1]) return NaN;
+  for (let i = 1; i < xs.length; i++) {
+    if (xv <= xs[i]) {
+      return ys[i - 1] + (ys[i] - ys[i - 1]) * (xv - xs[i - 1]) / (xs[i] - xs[i - 1]);
+    }
+  }
+  return NaN;
+}
 
 export default {
   id: 'shotcurve',
@@ -52,6 +69,28 @@ export default {
     q.pts = [];
     for (let i = 0; i < nodes.s.length; i++) {
       q.pts.push({ x: tb === 'sv' ? nodes.s[i] * 1000 : nodes.t[i], y: tb === 'ts' ? nodes.s[i] * 1000 : nodes.v[i] });
+    }
+
+    /* Luftdruck in der Kammer (Backend-Simulation, hpdcsim) — zweite Achse. */
+    const sd = sim.data;
+    if (sd && sd.samples) {
+      const sx = [], sp = [];
+      const src = tb === 'sv' ? sd.samples.s_mm : sd.samples.t;
+      for (let i = 0; i < src.length; i++) {
+        const xv = src[i], pv = sd.samples.p_air_mbar[i];
+        if (xv === null || pv === null || !isFinite(xv) || !isFinite(pv)) continue;
+        if (pv > P_CLIP_MBAR) break;
+        sx.push(xv); sp.push(pv);
+      }
+      if (sx.length > 1) {
+        q.ys.push({
+          n: 'Luftdruck Kammer (Simulation)', u: 'mbar', c: C.series4,
+          axis: 'right', y: x.map(xv => interpSim(sx, sp, xv))
+        });
+        q.rl = 'Luftdruck in mbar (Anzeige ≤ ' + fmt(P_CLIP_MBAR) + ')';
+      }
+    } else if (sim.status === 'error' && sim.error === 'offline') {
+      q.info += ' · Luftdruck-Simulation: Backend nicht erreichbar';
     }
     return q;
   },

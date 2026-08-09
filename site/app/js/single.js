@@ -10,6 +10,7 @@ import { buildInputs, validate } from './ui/inputs.js';
 import { initPresetSelect } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
 import { buildCard, renderCard } from './ui/cards.js';
+import { initSim } from './core/simstore.js';
 
 const id = new URLSearchParams(location.search).get('id');
 const def = chartsById[id] || charts[0];
@@ -71,6 +72,7 @@ async function init() {
   let rt;
   window.onresize = () => { clearTimeout(rt); rt = setTimeout(render, 120); };
 
+  if (def.id === 'shotcurve') initSim();
   subscribe(render);
   requestAnimationFrame(() => requestAnimationFrame(render));
 }

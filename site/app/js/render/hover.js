@@ -1,6 +1,6 @@
 /* Hover-Auswertung: zeigt unter jedem Diagramm den Wert an der Mausposition. */
 
-import { frame } from './base.js';
+import { frame, lineFrame } from './base.js';
 import { donutGeom } from './donut.js';
 import { MAP_LABELS } from './map.js';
 import { fmt } from '../core/format.js';
@@ -51,7 +51,7 @@ export function showHover(card, ev) {
     box.textContent = HOVER_IDLE; return;
   }
 
-  const f = d.z ? frame(w, h, true) : frame(w, h, false);
+  const f = d.z ? frame(w, h, true) : lineFrame(w, h, d);
   if (px < f.L || px > w - f.R || py < f.T || py > h - f.B) { box.textContent = HOVER_IDLE; return; }
 
   if (d.kind === 'map') {
@@ -84,7 +84,10 @@ export function showHover(card, ev) {
     box.innerHTML = '<b>' + d.xl + ':</b> ' + fmt(xv) + ' · <b>' + d.yl + ':</b> ' + fmt(yv) + ' · <b>' + d.cl + ':</b> ' + fmt(heatVal(d, xv, yv));
   } else {
     let msg = '<b>' + d.xl + ':</b> ' + fmt(xv);
-    for (let i = 0; i < d.ys.length; i++) msg += ' · <b>' + d.ys[i].n + ':</b> ' + fmt(interp(d.x, d.ys[i].y, xv));
+    for (let i = 0; i < d.ys.length; i++) {
+      const s = d.ys[i], val = interp(d.x, s.y, xv);
+      msg += ' · <b>' + s.n + ':</b> ' + (isFinite(val) ? fmt(val) + (s.u ? ' ' + s.u : '') : '—');
+    }
     box.innerHTML = msg + ' <span class="unit">' + d.yl + '</span>';
   }
 }

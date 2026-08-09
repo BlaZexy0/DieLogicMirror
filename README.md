@@ -25,10 +25,11 @@ dielogic/
 │   ├── assets/          logo.svg (Vektor-Logo), icon-*.png (Favicons,
 │   │                    aus logo.svg gerendert), site.webmanifest, team-mockup.svg
 │   └── app/             das Dashboard (Port von ../hpdc-dashboard)
-│       ├── index.html       Gesamt-Dashboard + Simulationskarte (Backend)
+│       ├── index.html       Gesamt-Dashboard (Schusskurve inkl. Luftdruck-Simulation)
 │       ├── chart.html       Diagramm-Einzelseite
 │       ├── css/site.css     Layout-Offsets für die 56px-Navigation
-│       └── js/…             u. a. core/simapi.js + ui/simcard.js (Backend-Anbindung)
+│       └── js/…             u. a. core/simapi.js + core/simstore.js (Backend-Anbindung;
+│                            Luftdruck-Serie mit 2. Achse in der Schusskurve)
 ├── backend/         FastAPI: /api/sim/shot (hpdcsim) + statische Auslieferung
 │   ├── app.py  sim.py  core.py  convert.py  requirements.txt  README.md
 ├── packages/
@@ -49,7 +50,7 @@ python3 -m venv .venv                       # einmalig
 .venv/bin/uvicorn backend.app:app --reload
 ```
 
-→ http://127.0.0.1:8000/ — die Simulationskarte im Dashboard rechnet über
+→ http://127.0.0.1:8000/ — die Luftdruck-Kurve in der Schusskurve rechnet über
 `/api/sim/shot` (Details: `backend/README.md`).
 
 **Nur statisch (ohne Simulation):**
@@ -60,8 +61,8 @@ cd dielogic/site && python3 -m http.server 8000
 
 Das Dashboard lädt seine ES-Module direkt aus `app/js/` — kein
 Build-Schritt, aber ein Webserver ist nötig (file://-Doppelklick wird
-nicht unterstützt). Ohne Backend zeigt die Simulationskarte einen
-Hinweis — alle 19 Diagramme rechnen unabhängig davon im Browser.
+nicht unterstützt). Ohne Backend entfällt nur die Luftdruck-Serie mit einem
+Hinweis in der Schusskurve — alle 19 Diagramme rechnen unabhängig davon im Browser.
 
 ## Vor dem Livegang (Rechtsseiten)
 
@@ -92,7 +93,8 @@ Simulations-Requests ergänzt werden.
 - **Neues Diagramm:** wie in `site/app/README.md`; danach in `site/nav.js`
   (`CHARTS`) und im Katalog auf `site/index.html` verlinken.
 - **Simulation:** Einheiten-Übersetzung und Defaults in
-  `backend/convert.py`; die Karte im Dashboard ist `site/app/js/ui/simcard.js`.
+  `backend/convert.py`; im Frontend holt `site/app/js/core/simstore.js` das
+  Ergebnis, die Schusskurve zeichnet den Luftdruck auf der zweiten Achse.
 
 ## Herkunft
 

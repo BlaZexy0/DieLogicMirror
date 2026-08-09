@@ -16,8 +16,8 @@ python3 -m venv .venv
 ```
 
 → http://127.0.0.1:8000/ ist die Website, das Dashboard unter
-`/app/index.html` zeigt zusätzlich die Simulationskarte. Ohne laufendes
-Backend (statisches Hosting, file://) zeigt die Karte einen Hinweis — alles
+`/app/index.html` zeigt den simulierten Luftdruck auf der zweiten Achse der Schusskurve. Ohne laufendes
+Backend (statisches Hosting) entfällt nur diese Serie mit einem Hinweis — alles
 andere rechnet weiter im Browser.
 
 ## API

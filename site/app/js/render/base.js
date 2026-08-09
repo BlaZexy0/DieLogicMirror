@@ -10,6 +10,18 @@ export function frame(w, h, heatmap) {
   return { L: 75, R: heatmap ? 92 : 50, T: 92, B: 58, pw: w - 75 - (heatmap ? 92 : 50), ph: h - 150 };
 }
 
+/* Rahmen für Liniendiagramme: mit rechter Achse (Serien mit axis:'right')
+   wird der rechte Rand breiter. Auch von hover.js benutzt, damit Zeichnung
+   und Mausauswertung dieselbe Geometrie verwenden. */
+export function lineFrame(w, h, d) {
+  const f = frame(w, h, false);
+  if (d && d.ys && d.ys.some(s => s.axis === 'right')) {
+    f.R = 86;
+    f.pw = w - f.L - f.R;
+  }
+  return f;
+}
+
 export function text(x, s, a, b, al, font) {
   x.fillStyle = theme.chart.text;
   x.textAlign = al || 'center';
