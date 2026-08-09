@@ -5,8 +5,15 @@ import { groups, PRESET_KEYS } from '../config/fields.js';
 import { state, notify } from '../core/state.js';
 
 function fieldHTML(f) {
-  return '<div class="field" data-field="' + f.key + '"><label>' + f.label +
-    ' <span class="unit">' + f.unit + '</span></label>' +
+  const label = '<label>' + f.label +
+    (f.unit ? ' <span class="unit">' + f.unit + '</span>' : '') + '</label>';
+  if (f.type === 'select') {
+    const opts = f.options.map(o =>
+      '<option value="' + o[0] + '"' + (o[0] === f.def ? ' selected' : '') + '>' + o[1] + '</option>').join('');
+    return '<div class="field" data-field="' + f.key + '">' + label +
+      '<select data-k="' + f.key + '">' + opts + '</select></div>';
+  }
+  return '<div class="field" data-field="' + f.key + '">' + label +
     '<input data-k="' + f.key + '" type="number" step="any" value="' + f.def + '"></div>';
 }
 
@@ -32,14 +39,15 @@ export function buildInputs(container, onlyKeys = null) {
     const el = document.createElement('div');
     el.className = 'group' + (g.wide ? ' wide' : '');
     el.dataset.group = g.id;
-    el.innerHTML = '<h3>' + g.title + '</h3>' + inner;
+    el.innerHTML = '<h3>' + g.title + '</h3>' + inner +
+      (g.note ? '<p class="group-note">' + g.note + '</p>' : '');
     container.appendChild(el);
   }
 
-  container.querySelectorAll('input[data-k]').forEach(e => {
+  container.querySelectorAll('input[data-k], select[data-k]').forEach(e => {
     e.value = state.values[e.dataset.k];
     e.oninput = () => {
-      state.values[e.dataset.k] = Number(e.value);
+      state.values[e.dataset.k] = e.tagName === 'SELECT' ? e.value : Number(e.value);
       if (PRESET_KEYS[e.dataset.k]) {
         state.machine = '';
         const ms = document.getElementById('machineSel');
@@ -55,7 +63,9 @@ export function buildInputs(container, onlyKeys = null) {
 export function applyValues(fields) {
   for (const k in fields) {
     if (fields[k] == null) continue;
-    state.values[k] = Number(fields[k]);
+    /* String-Felder (Selects, z. B. vacModel) unverändert übernehmen. */
+    state.values[k] = typeof state.values[k] === 'string'
+      ? String(fields[k]) : Number(fields[k]);
     const e = document.querySelector('[data-k="' + k + '"]');
     if (e) e.value = fields[k];
   }

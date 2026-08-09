@@ -84,6 +84,40 @@ def _clamped_curve(curve, limit):
     return out, clamped
 
 
+ALLOWED_VACUUM_MODELS = ("ideal", "conductance")
+
+
+def _vacuum_config(vac, fill_complete, travel):
+    """Vakuum-Block in Browser-Einheiten (model, pump_mbar, valve_mm2,
+    start_mm) → hpdcsim-VacuumSystem (SI). None wenn kein Vakuum gewählt."""
+    model = str(vac.get("model", "") or "").strip()
+    if model in ("", "aus", "none", "sealed"):
+        return None
+    if model not in ALLOWED_VACUUM_MODELS:
+        raise ConvertError(
+            f"Vakuum-Modell '{model}' unbekannt — erlaubt: "
+            + ", ".join(ALLOWED_VACUUM_MODELS) + " oder 'aus'.")
+    pump = _num(vac, "pump_mbar") * 100.0          # mbar → Pa
+    if pump <= 0:
+        raise ConvertError("Pumpen-Enddruck muss > 0 mbar sein.")
+    valve = _num(vac, "valve_mm2") / 1e6           # mm² → m²
+    if valve <= 0:
+        raise ConvertError("Ventilquerschnitt muss > 0 mm² sein.")
+    start = _num(vac, "start_mm") / 1000.0         # mm → m
+    if start < 0:
+        raise ConvertError("Vakuum-Start muss ≥ 0 mm sein.")
+    limit = min(fill_complete, travel)
+    if start >= limit:
+        raise ConvertError(
+            f"Vakuum-Start ({start * 1000:.0f} mm) muss vor dem Kurvenende/"
+            f"Füllende ({limit * 1000:.0f} mm) liegen.")
+    return {
+        "start_position": start,
+        "valve_area": valve,
+        "model": {"type": model, "pump_pressure": pump},
+    }
+
+
 def sim_config_from_browser(values, curve, process=None, vacuum=None):
     """(values, curve) aus dem Dashboard → (hpdcsim-Konfig-Dict, Meta-Dict)."""
     for key in REQUIRED_KEYS:
@@ -148,7 +182,10 @@ def sim_config_from_browser(values, curve, process=None, vacuum=None):
     if vent > 0:
         config["casting"]["vent_area"] = vent
     if vacuum:
-        config["vacuum"] = vacuum  # SI, hpdcsim-Schema — 1:1 durchgereicht
+        vac = _vacuum_config(vacuum, fill_complete,
+                             positions_velocities[-1][0])
+        if vac is not None:
+            config["vacuum"] = vac
 
     meta = {
         "phi": phi,

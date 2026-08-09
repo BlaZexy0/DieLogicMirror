@@ -3,7 +3,21 @@
    und die Simulationskarte zeigt einen Hinweis (graceful degradation). */
 
 export function toSimPayload(values, curve, count = 400) {
-  return { values, curve, count };
+  /* Nur numerische Werte — String-Felder (Selects) sind kein Teil des
+     values-Schemas der API. */
+  const nums = {};
+  for (const k in values) if (typeof values[k] === 'number') nums[k] = values[k];
+  const payload = { values: nums, curve, count };
+  /* Vakuum in Browser-Einheiten; die SI-Übersetzung macht das Backend. */
+  if (values.vacModel && values.vacModel !== 'aus') {
+    payload.vacuum = {
+      model: values.vacModel,
+      pump_mbar: values.vacPump,
+      valve_mm2: values.vacValve,
+      start_mm: values.vacStart
+    };
+  }
+  return payload;
 }
 
 export async function fetchSim(payload, signal) {

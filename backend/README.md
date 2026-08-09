@@ -33,14 +33,18 @@ andere rechnet weiter im Browser.
     "curve": [[60, 0.4], [318, 0.4], [470, 4], [675, 4]],
     "count": 400,
     "process": {"dosing_time": 4.0, "dwell_time": 1.0},
-    "vacuum": {"start_position": 0.15, "valve_area": 100e-6,
-                "model": {"type": "ideal", "pump_pressure": 8000}}
+    "vacuum": {"model": "ideal", "pump_mbar": 80,
+                "valve_mm2": 100, "start_mm": 150}
   }
   ```
 
   `values`/`curve` sind 1:1 der Dashboard-Zustand (Browser-Einheiten:
-  mm, kg, °C); `process` und `vacuum` sind optional (`vacuum` im
-  SI-Schema von hpdcsim, unverändert durchgereicht). Antwort: `meta`
+  mm, kg, °C); `process` und `vacuum` sind optional. `vacuum` kommt
+  ebenfalls in Browser-Einheiten (`model`: `ideal` | `conductance` |
+  `aus`, `pump_mbar`, `valve_mm2`, `start_mm`) und wird in `convert.py`
+  ins SI-Schema von hpdcsim übersetzt; beim `conductance`-Modell wirken
+  zusätzlich die Entlüftungsfläche (`values.vent` → `casting.vent_area`)
+  und der Einguss als Drosselquerschnitte. Antwort: `meta`
   (φ, Füllende-Hub, Pressrestlänge, ob die Kurve gekappt wurde), `samples`
   über die Schussphase (t, s_mm, v, gate_v, p_air_mbar, T_melt, part_fill),
   `events` (Einguss dicht, Kammer voll, …) und `critical_crossing`

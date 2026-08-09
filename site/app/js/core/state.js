@@ -31,8 +31,14 @@ function loadPersisted() {
     const data = JSON.parse(raw);
     if (data.values) {
       for (const k in state.values) {
-        const x = Number(data.values[k]);
-        if (data.values[k] != null && isFinite(x)) state.values[k] = x;
+        if (data.values[k] == null) continue;
+        if (typeof state.values[k] === 'string') {
+          /* Select-Felder (z. B. vacModel) sind Strings. */
+          state.values[k] = String(data.values[k]);
+        } else {
+          const x = Number(data.values[k]);
+          if (isFinite(x)) state.values[k] = x;
+        }
       }
     }
     if (Array.isArray(data.curve) && data.curve.length) {

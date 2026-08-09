@@ -62,6 +62,17 @@ export const groups = [
     ]
   },
   {
+    id: 'vacuum', title: 'Vakuum (Simulation)',
+    note: 'Wirkt auf die simulierte Luftdruck-Kurve in der Schusskurve (Backend). „Ventil + Entlüftung" rechnet zusätzlich mit der Entlüftungsfläche und dem Eingussquerschnitt.',
+    fields: [
+      { key: 'vacModel', label: 'Vakuum-Modell', unit: '', def: 'aus', type: 'select',
+        options: [['aus', 'ohne Vakuum'], ['ideal', 'Idealpumpe (Enddruck)'], ['conductance', 'Ventil + Entlüftung (Drossel)']] },
+      { key: 'vacPump',  label: 'Pumpen-Enddruck',    unit: 'mbar', def: 80 },
+      { key: 'vacValve', label: 'Ventilquerschnitt',  unit: 'mm²',  def: 100 },
+      { key: 'vacStart', label: 'Vakuum ab Kolbenweg', unit: 'mm',  def: 150 }
+    ]
+  },
+  {
     id: 'process', title: 'Prozessfenster', wide: true,
     fields: [
       { key: 'vmin',    label: 'Kolbengeschw. min.',        unit: 'm/s', def: 1 },
