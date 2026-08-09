@@ -1,0 +1,4 @@
+# Vorschau-Betrieb: komplette Site für Suchmaschinen gesperrt.
+# Zum Livegang diese Datei ersetzen (dann nur noch /recht/ ausnehmen o. ä.).
+User-agent: *
+Disallow: /
