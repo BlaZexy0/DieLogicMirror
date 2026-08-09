@@ -55,26 +55,6 @@
 
   <script src="config/theme.js"></script>
   <script src="config/machines.js"></script>
-  <script>
-    /* Über http(s): ES-Module direkt aus js/. Über file:// (Doppelklick):
-       gebündelte Fassung dist/app.js (mit "python3 build.py" erzeugt). */
-    (function () {
-      var s = document.createElement('script');
-      if (location.protocol === 'file:') {
-        s.src = 'dist/app.js';
-        s.setAttribute('data-entry', 'single');
-        s.onerror = function () {
-          var d = document.createElement('div');
-          d.className = 'file-warning';
-          d.textContent = 'dist/app.js fehlt — bitte einmal "python3 build.py" im Projektordner ausführen (oder die Seite über einen Webserver öffnen).';
-          document.body.appendChild(d);
-        };
-      } else {
-        s.type = 'module';
-        s.src = 'js/single.js';
-      }
-      document.head.appendChild(s);
-    })();
-  </script>
+  <script type="module" src="js/single.js"></script>
 </body>
 </html>

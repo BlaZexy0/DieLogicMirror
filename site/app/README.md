@@ -6,15 +6,13 @@ ES-Modulen — kein Build-Schritt, keine Abhängigkeiten.
 
 ## Starten
 
-Zwei gleichwertige Wege — die Seiten wählen automatisch den passenden:
-
-- **Doppelklick (file://):** `index.html` direkt öffnen. Dann läuft die
-  gebündelte Fassung `dist/app.js`. Nach Änderungen an Dateien unter `js/`
-  einmal `python3 build.py` ausführen, um das Bundle zu aktualisieren
-  (kein Node/npm nötig — reines Python ohne Abhängigkeiten).
-- **Webserver / Website:** Ordner in den Webspace legen oder lokal
-  `python3 -m http.server 8000` starten. Über http laden die Seiten die
-  ES-Module direkt aus `js/` — Quellcode-Änderungen wirken sofort, kein Build.
+Die Seiten laden die ES-Module direkt aus `js/` — kein Build-Schritt,
+Quellcode-Änderungen wirken sofort. Es braucht nur einen Webserver:
+das DieLogic-Backend (`uvicorn backend.app:app`, liefert zusätzlich die
+Simulationskarte) oder lokal `python3 -m http.server 8000` im
+`site/`-Ordner. Direktes Öffnen per Doppelklick (file://) wird nicht mehr
+unterstützt (Browser blockieren ES-Module über file://; der frühere
+Python-Bundler `build.py` → `dist/app.js` wurde dafür entfernt).
 
 Die Konfiguration (`config/theme.js`, `config/machines.js`) wird in beiden
 Modi als klassisches Skript geladen und ist ohne Build direkt editierbar.
@@ -40,9 +38,8 @@ Modi als klassisches Skript geladen und ist ohne Build direkt editierbar.
   Heatmap-Farbrampe. Bei eigenen Farben auf Kontrast und unterscheidbare
   Helligkeit der Serienfarben achten (Farbfehlsichtigkeit).
 
-Beide Dateien sind JSON-Daten in einer `window.__…`-Zuweisung — so sind sie
-per `<script>`-Tag auch über `file://` ladbar (fetch von JSON wäre dort
-blockiert).
+Beide Dateien sind JSON-Daten in einer `window.__…`-Zuweisung und werden als
+klassische `<script>`-Tags geladen — ohne Build direkt editierbar.
 
 ## Funktionen pro Diagrammkarte
 
@@ -68,8 +65,6 @@ blockiert).
 config/            Daten, die man ohne Code-Kenntnis ändert (kein Build nötig)
   machines.js        Maschinen-Presets  (window.__MACHINES__)
   theme.js           Farbschema         (window.__THEME__)
-build.py           Mini-Bundler (Python, ohne Abhängigkeiten) → dist/app.js
-dist/app.js        gebündelte file://-Fassung (generiert, nicht editieren)
 css/main.css       Layout/Komponenten (Farben via CSS-Variablen aus dem Theme)
 js/
   config/fields.js   Eingabegruppen: Keys, Labels, Einheiten, Defaults

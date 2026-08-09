@@ -58,9 +58,9 @@ python3 -m venv .venv                       # einmalig
 cd dielogic/site && python3 -m http.server 8000
 ```
 
-Auch `file://`-Doppelklick funktioniert (Dashboard nutzt dann
-`app/dist/app.js`; nach Änderungen unter `app/js/` einmal
-`python3 app/build.py`). Ohne Backend zeigt die Simulationskarte einen
+Das Dashboard lädt seine ES-Module direkt aus `app/js/` — kein
+Build-Schritt, aber ein Webserver ist nötig (file://-Doppelklick wird
+nicht unterstützt). Ohne Backend zeigt die Simulationskarte einen
 Hinweis — alle 19 Diagramme rechnen unabhängig davon im Browser.
 
 ## Vor dem Livegang (Rechtsseiten)
