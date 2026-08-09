@@ -1,0 +1,25 @@
+/* Einbettung in die DieLogic-Website: über dem Dashboard sitzt die 56px hohe
+   Site-Navigation (nav.js). Diese Datei verschiebt nur den fixierten Kopf und
+   die Layout-Höhen — main.css bleibt unverändert, das Dashboard funktioniert
+   ohne diese Datei weiterhin standalone. */
+
+header { top: 56px; }
+
+.layout {
+  margin-top: 138px;              /* 56px Nav + 82px Dashboard-Kopf */
+  height: calc(100vh - 138px);
+}
+
+.sidebar {
+  height: calc(100vh - 178px);
+  top: 158px;
+}
+
+.content { height: calc(100vh - 178px); }
+
+@media (max-width: 1080px) {
+  /* main.css schaltet hier auf normales Scrollen um — Offsets zurücknehmen */
+  header { position: static; }
+  .layout { margin: 0; height: auto; }
+  .sidebar, .content { height: auto; }
+}

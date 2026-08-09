@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Über uns · DieLogic</title>
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
+  <link rel="apple-touch-icon" href="assets/icon-180.png">
+  <link rel="manifest" href="assets/site.webmanifest">
+  <link rel="stylesheet" href="shared.css">
+  <script src="nav.js" data-base="."></script>
+  <style>
+    .about-wrap { max-width: 1000px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+    .about-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2.5rem;
+      align-items: center;
+      margin-bottom: 3rem;
+    }
+    .about-cols h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-bottom: 0.8rem;
+    }
+    .about-cols p { font-size: 0.92rem; line-height: 1.75; color: #2a3f4a; margin-bottom: 0.8rem; }
+    .team-photo {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,39,51,0.18);
+      margin-bottom: 3rem;
+    }
+    .team-section h2, .values-section h2 {
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-bottom: 0.4rem;
+    }
+    .team-section .section-sub, .values-section .section-sub {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 2rem;
+    }
+    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-bottom: 3rem; }
+    .member-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.6rem 1.4rem;
+      text-align: center;
+    }
+    .member-avatar {
+      width: 84px; height: 84px;
+      margin: 0 auto 1rem;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--dark2), #00463f);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .member-avatar svg { width: 44px; height: 44px; }
+    .member-card h3 { font-size: 0.98rem; font-weight: 700; margin-bottom: 0.15rem; }
+    .member-role {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.6rem;
+    }
+    .member-card p { font-size: 0.83rem; color: var(--muted); line-height: 1.6; }
+    .values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-bottom: 3rem; }
+    .value-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      border-top: 3px solid var(--primary);
+      background: var(--surface);
+      padding: 1.3rem 1.3rem;
+    }
+    .value-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .value-card p { font-size: 0.84rem; color: var(--muted); line-height: 1.65; }
+    .about-cta {
+      background: var(--dark);
+      border-radius: 12px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+    }
+    .about-cta h2 { color: white; font-size: 1.3rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .about-cta p { color: var(--ondark); font-size: 0.9rem; margin-bottom: 1.4rem; }
+    @media (max-width: 768px) {
+      .about-cols, .team-grid, .values-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Über uns</h1>
+    <p class="subtitle">Wir bauen Werkzeuge, mit denen Gießerei-Ingenieure ihre Auslegung
+      sehen, prüfen und begründen können — direkt im Browser.</p>
+  </div>
+</section>
+
+<main class="about-wrap">
+
+  <div class="draft-note">
+    ⚠️ <b>Mockup-Inhalte:</b> Das Teamfoto ist ein gezeichneter Platzhalter
+    (<code>assets/team-mockup.svg</code>) und die Teammitglieder sind
+    <span class="ph">[Platzhalter]</span> — echtes Foto einsetzen, Namen, Rollen und
+    Beschreibungen ersetzen. Diesen Kasten danach löschen.
+  </div>
+
+  <div class="about-cols">
+    <div>
+      <h2>Warum es DieLogic gibt</h2>
+      <p>Die gießtechnische Auslegung lebt in vielen Betrieben verstreut in Excel-Tabellen,
+        Faustformel-Sammlungen und Erfahrungswissen einzelner Kollegen. Ob Füllkammer,
+        Anschnitt und Schusskurve zusammenpassen, zeigt sich oft erst am Abmusterungstag.</p>
+      <p>DieLogic bringt diese Rechnungen an einen Ort: ein Dashboard, in dem jede Eingabe
+        sofort alle 19 Diagramme, die KPI-Zeile und die Prüfungen gegen die Maschinengrenzen
+        aktualisiert. Der rote Marker zeigt in jedem Bild denselben Betriebspunkt — eine
+        Auslegung, eine Wahrheit.</p>
+      <p>Dabei bleibt alles bei Ihnen: Die Physik rechnet vollständig im Browser, Ihre
+        Auslegungsdaten verlassen Ihr Gerät nicht.</p>
+    </div>
+    <div>
+      <h2>Woher wir kommen</h2>
+      <p><span class="ph">[Kurze, echte Gründungsgeschichte — z. B.: „DieLogic ist aus der
+        täglichen Arbeit in der Druckgießerei entstanden. Nach Jahren mit gewachsenen
+        Excel-Werkzeugen haben wir die Auslegungsrechnung neu aufgebaut — nachvollziehbar,
+        geprüft und für jeden im Team zugänglich."]</span></p>
+      <p><span class="ph">[Standort, Gründungsjahr, ggf. Bezug zu Hochschule/Industrie.]</span></p>
+    </div>
+  </div>
+
+  <img class="team-photo" src="assets/team-mockup.svg" alt="Teamfoto (Platzhalter)">
+
+  <section class="team-section">
+    <h2>Das Team</h2>
+    <p class="section-sub">Gießereitechnik, Software und Support aus einer Hand.</p>
+    <div class="team-grid">
+
+      <div class="member-card">
+        <div class="member-avatar">
+          <svg viewBox="0 0 44 44" fill="none"><circle cx="22" cy="15" r="8" fill="#8fb8c4"/><path d="M6 40 Q6 26 22 26 Q38 26 38 40 Z" fill="#8fb8c4"/></svg>
+        </div>
+        <h3><span class="ph">[Vorname Nachname]</span></h3>
+        <div class="member-role">Gründung · Gießereitechnik</div>
+        <p><span class="ph">[1–2 Sätze: Hintergrund im Druckguss, z. B. Prozess- oder
+          Werkzeugauslegung, Jahre Berufserfahrung.]</span></p>
+      </div>
+
+      <div class="member-card">
+        <div class="member-avatar">
+          <svg viewBox="0 0 44 44" fill="none"><circle cx="22" cy="15" r="8" fill="#3fc2b6"/><path d="M6 40 Q6 26 22 26 Q38 26 38 40 Z" fill="#3fc2b6"/></svg>
+        </div>
+        <h3><span class="ph">[Vorname Nachname]</span></h3>
+        <div class="member-role">Softwareentwicklung</div>
+        <p><span class="ph">[1–2 Sätze: Wer die Rechenmodelle und das Dashboard baut und
+          pflegt.]</span></p>
+      </div>
+
+      <div class="member-card">
+        <div class="member-avatar">
+          <svg viewBox="0 0 44 44" fill="none"><circle cx="22" cy="15" r="8" fill="#e5f3f2"/><path d="M6 40 Q6 26 22 26 Q38 26 38 40 Z" fill="#e5f3f2"/></svg>
+        </div>
+        <h3><span class="ph">[Vorname Nachname]</span></h3>
+        <div class="member-role">Kunden &amp; Support</div>
+        <p><span class="ph">[1–2 Sätze: Ansprechperson für Testphasen, Schulungen und
+          Enterprise-Anfragen.]</span></p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="values-section">
+    <h2>Woran wir glauben</h2>
+    <p class="section-sub">Drei Grundsätze, die in jedem Diagramm stecken.</p>
+    <div class="values-grid">
+      <div class="value-card">
+        <h3>Nachvollziehbare Physik</h3>
+        <p>Keine Blackbox: Die Modelle hinter den Diagrammen sind dokumentiert — bis hin zur
+          Karte „Mathematik &amp; Herleitung" direkt unter dem Auslegungsfenster.</p>
+      </div>
+      <div class="value-card">
+        <h3>Ihre Daten bleiben Ihre</h3>
+        <p>Die komplette Rechnung läuft clientseitig. Auslegungen liegen im Browser oder als
+          JSON-Datei bei Ihnen — nicht auf fremden Servern.</p>
+      </div>
+      <div class="value-card">
+        <h3>Werkzeuge aus der Praxis</h3>
+        <p>Konventionen wie in der Gießerei: Dosiergewicht inkl. Pressrest, Füllzeit ab
+          Anschnitt, Prüfungen gegen echte Maschinendaten aus editierbaren Presets.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="about-cta">
+    <h2>Lernen Sie uns kennen</h2>
+    <p>Fragen zur Auslegung, zum Professional-Plan oder einfach Feedback zum Dashboard —
+      wir freuen uns über jede Nachricht.</p>
+    <a href="kontakt.html" class="btn btn-lg btn-primary">Kontakt aufnehmen →</a>
+  </div>
+
+</main>
+
+</body>
+</html>

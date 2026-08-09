@@ -1,0 +1,13 @@
+# Render-Blueprint: ein Web Service liefert Website + API aus einem Prozess.
+# Repo auf GitHub verbinden → Render liest diese Datei ("New > Blueprint").
+services:
+  - type: web
+    name: dielogic
+    runtime: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt ./packages/hpdcsim
+    startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.4

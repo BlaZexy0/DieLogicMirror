@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DieLogic — Gießtechnische Auslegung für den Druckguss</title>
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
+  <link rel="apple-touch-icon" href="assets/icon-180.png">
+  <link rel="manifest" href="assets/site.webmanifest">
+  <link rel="stylesheet" href="shared.css">
+  <script src="nav.js" data-base="."></script>
+  <style>
+    /* ── Hero ───────────────────────────────────────────────── */
+    .hero {
+      min-height: 82vh;
+      background: linear-gradient(135deg, #002733 0%, #0a3945 55%, #00463f 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 6rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+    .hero-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+    .hero-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(0,140,130,0.15);
+      border: 1px solid rgba(0,140,130,0.5);
+      color: #3fc2b6;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 {
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      font-weight: 800;
+      color: white;
+      letter-spacing: -0.03em;
+      max-width: 760px;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+    .hero .subtitle {
+      color: var(--ondark);
+      font-size: 1.05rem;
+      max-width: 640px;
+      line-height: 1.65;
+      margin-bottom: 2rem;
+    }
+    .hero-ctas { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+    .hero-stats { display: flex; gap: 2rem; margin-top: 2.5rem; flex-wrap: wrap; justify-content: center; }
+    .hero-stat { font-size: 0.82rem; color: var(--ondark); }
+    .hero-stat strong {
+      color: white;
+      font-size: 1.1rem;
+      display: block;
+      font-weight: 700;
+      font-family: var(--mono);
+    }
+
+    /* ── So funktioniert's ─────────────────────────────────── */
+    .how-section { padding: 5rem 2rem; background: var(--bg); }
+    .how-inner { max-width: 1000px; margin: 0 auto; }
+    .how-section .section-title {
+      text-align: center;
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .how-section .section-sub { text-align: center; color: var(--muted); margin-bottom: 3rem; font-size: 1rem; }
+    .steps-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
+    .step { padding: 2rem 2rem; position: relative; text-align: center; }
+    .step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 0; top: 20%; bottom: 20%;
+      width: 1px;
+      background: var(--border);
+    }
+    .step-icon {
+      width: 48px; height: 48px;
+      margin: 0 auto 1.2rem;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,140,130,0.1);
+      border-radius: 12px;
+    }
+    .step-num {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+    .step h3 { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+    .step p { font-size: 0.88rem; color: var(--muted); line-height: 1.65; }
+
+    /* ── Werkzeuge ─────────────────────────────────────────── */
+    .tools-section { padding: 5rem 2rem; background: var(--dark); }
+    .tools-inner { max-width: 1100px; margin: 0 auto; }
+    .tools-section .section-title {
+      text-align: center;
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 0.5rem;
+    }
+    .tools-section .section-sub { text-align: center; color: var(--ondark); margin-bottom: 3rem; }
+    .tools-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .tool-card {
+      background: var(--dark2);
+      border: 1px solid var(--dark3);
+      border-radius: 12px;
+      padding: 1.5rem 1.8rem;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .tool-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,20,27,0.3); }
+    .tool-card.featured { border: 2px solid var(--primary); grid-column: span 3; }
+    .tool-card-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .tool-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 0.5rem;
+      display: flex; align-items: center; gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .badge-live {
+      font-size: 0.65rem;
+      font-weight: 700;
+      background: rgba(0,140,130,0.15);
+      color: #3fc2b6;
+      border: 1px solid rgba(0,140,130,0.5);
+      padding: 0.1rem 0.45rem;
+      border-radius: 10px;
+      letter-spacing: 0.05em;
+    }
+    .tool-card p { font-size: 0.84rem; color: var(--ondark); line-height: 1.6; margin-bottom: 0.5rem; }
+    .tool-card .physics-note {
+      font-size: 0.76rem;
+      color: #5f8391;
+      font-style: italic;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+    .tool-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+    .tool-tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.05);
+      color: var(--ondark);
+      border: 1px solid var(--dark3);
+    }
+    .tool-card-btns { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: auto; }
+
+    /* ── Diagramm-Katalog ──────────────────────────────────── */
+    .catalog-section { padding: 5rem 2rem; background: var(--bg); }
+    .catalog-inner { max-width: 1100px; margin: 0 auto; }
+    .catalog-section .section-title {
+      text-align: center;
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .catalog-section .section-sub { text-align: center; color: var(--muted); margin-bottom: 3rem; }
+    .catalog-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9rem; }
+    .catalog-card {
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      background: var(--surface);
+      border-top: 3px solid var(--primary);
+      text-decoration: none;
+      transition: box-shadow 0.15s ease, transform 0.15s ease;
+    }
+    .catalog-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+    .catalog-card h4 { font-size: 0.88rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+    .catalog-card span { font-size: 0.76rem; color: var(--muted); line-height: 1.5; display: block; }
+    .catalog-card .arrow { color: var(--primary); font-weight: 600; font-size: 0.8rem; margin-top: 0.4rem; }
+
+    /* ── Theorie ───────────────────────────────────────────── */
+    .theory-section { padding: 5rem 2rem; background: var(--bg); }
+    .theory-inner { max-width: 1000px; margin: 0 auto; }
+    .theory-section .section-title {
+      text-align: center;
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .theory-section .section-sub { text-align: center; color: var(--muted); margin-bottom: 3rem; }
+    .theory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+    .theory-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.4rem 1.4rem;
+      background: var(--surface);
+      border-top: 3px solid transparent;
+      transition: box-shadow 0.15s ease;
+    }
+    .theory-card:hover { box-shadow: var(--shadow); }
+    .theory-card h4 { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 0.4rem; }
+    .theory-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.8rem; }
+    .link-primary { color: var(--primary); text-decoration: none; font-weight: 600; font-size: 0.85rem; }
+
+    /* ── Preise ────────────────────────────────────────────── */
+    .pricing-section { padding: 5rem 2rem; background: var(--dark); }
+    .pricing-inner { max-width: 1000px; margin: 0 auto; }
+    .pricing-section .section-title {
+      text-align: center;
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 0.5rem;
+    }
+    .pricing-section .section-sub { text-align: center; color: var(--ondark); margin-bottom: 3rem; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; align-items: start; }
+    .pricing-card {
+      background: var(--dark2);
+      border: 1px solid var(--dark3);
+      border-radius: 12px;
+      padding: 2rem 1.8rem;
+      position: relative;
+    }
+    .pricing-card.featured { border: 2px solid var(--primary); transform: scale(1.02); }
+    .most-popular {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.9rem;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .plan-name { font-size: 1rem; font-weight: 700; color: white; margin-bottom: 0.3rem; }
+    .plan-price {
+      font-size: 2rem;
+      font-weight: 800;
+      color: white;
+      line-height: 1;
+      margin-bottom: 0.2rem;
+      font-family: var(--mono);
+    }
+    .plan-price span { font-size: 0.85rem; font-weight: 400; color: var(--ondark); }
+    .plan-alt { font-size: 0.78rem; color: #5f8391; margin-bottom: 1.2rem; }
+    .plan-features { list-style: none; margin-bottom: 1.5rem; }
+    .plan-features li {
+      font-size: 0.84rem;
+      color: var(--ondark);
+      padding: 0.3rem 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .plan-features li::before { content: '✓'; color: var(--primary); font-weight: 700; flex-shrink: 0; }
+    .pricing-legal {
+      grid-column: 1 / -1;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #5f8391;
+      margin-top: 0.5rem;
+    }
+    .pricing-legal a { color: var(--ondark); }
+
+    /* ── Responsiv ─────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .catalog-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .steps-grid { grid-template-columns: 1fr; }
+      .step:not(:last-child)::after { display: none; }
+      .tools-grid { grid-template-columns: 1fr; }
+      .tool-card.featured { grid-column: span 1; }
+      .theory-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .pricing-card.featured { transform: none; }
+    }
+    @media (max-width: 480px) {
+      .catalog-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HERO
+═══════════════════════════════════════════════════════════════ -->
+<section class="hero">
+  <svg class="hero-bg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <pattern id="hex-grid" x="0" y="0" width="60" height="52" patternUnits="userSpaceOnUse">
+        <polygon points="30,2 55,15 55,37 30,50 5,37 5,15" fill="none" stroke="#ffffff" stroke-width="0.5" opacity="0.08"/>
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#hex-grid)"/>
+    <line x1="5%" y1="28%" x2="22%" y2="28%" stroke="#ffffff" stroke-width="0.6" opacity="0.12"/>
+    <line x1="5%" y1="28%" x2="5%" y2="26%" stroke="#ffffff" stroke-width="0.6" opacity="0.12"/>
+    <line x1="22%" y1="28%" x2="22%" y2="26%" stroke="#ffffff" stroke-width="0.6" opacity="0.12"/>
+    <line x1="78%" y1="72%" x2="95%" y2="72%" stroke="#ffffff" stroke-width="0.6" opacity="0.12"/>
+    <line x1="78%" y1="72%" x2="78%" y2="74%" stroke="#ffffff" stroke-width="0.6" opacity="0.12"/>
+    <line x1="95%" y1="72%" x2="95%" y2="74%" stroke="#ffffff" stroke-width="0.6" opacity="0.12"/>
+    <line x1="88%" y1="15%" x2="88%" y2="40%" stroke="#ffffff" stroke-width="0.6" opacity="0.09"/>
+    <line x1="86%" y1="15%" x2="90%" y2="15%" stroke="#ffffff" stroke-width="0.6" opacity="0.09"/>
+    <line x1="86%" y1="40%" x2="90%" y2="40%" stroke="#ffffff" stroke-width="0.6" opacity="0.09"/>
+    <line x1="12%" y1="62%" x2="18%" y2="62%" stroke="#008c82" stroke-width="0.8" opacity="0.25"/>
+    <line x1="15%" y1="59%" x2="15%" y2="65%" stroke="#008c82" stroke-width="0.8" opacity="0.25"/>
+    <circle cx="15%" cy="62%" r="3" fill="none" stroke="#008c82" stroke-width="0.8" opacity="0.25"/>
+  </svg>
+
+  <div class="hero-content">
+    <span class="hero-pill">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4.5" fill="#008c82" opacity="0.5"/><circle cx="5" cy="5" r="2" fill="#008c82"/></svg>
+      Reines Vanilla-JS — läuft komplett im Browser
+    </span>
+    <h1>Gießtechnische Auslegung für den Druckguss — in einem Dashboard</h1>
+    <p class="subtitle">DieLogic rechnet die komplette HPDC-Auslegung live im Browser: Massenbilanz,
+      Füllkammer, Schusskurve, PQ²-Arbeitspunkt, Prozessfenster und Maschinengrenzen — mit
+      19 gekoppelten Diagrammen, KPI-Zeile und einem roten Betriebspunkt-Marker in jedem Bild.
+      Keine Installation, kein Server, keine Abhängigkeiten.</p>
+    <div class="hero-ctas">
+      <a href="app/index.html" class="btn btn-lg btn-primary">→ Dashboard öffnen</a>
+      <a href="#diagramme" class="btn btn-lg btn-ghost">Alle Diagramme ansehen</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><strong>19</strong>gekoppelte Diagramme</div>
+      <div class="hero-stat"><strong>0</strong>Abhängigkeiten</div>
+      <div class="hero-stat"><strong>100 %</strong>clientseitig, auch offline</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SO FUNKTIONIERT'S
+═══════════════════════════════════════════════════════════════ -->
+<section class="how-section" id="so-funktionierts">
+  <div class="how-inner">
+    <h2 class="section-title">So funktioniert&rsquo;s</h2>
+    <p class="section-sub">Eine Auslegung, alle Diagramme — jede Eingabe wirkt sofort überall.</p>
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="3" width="18" height="22" rx="2" stroke="#008c82" stroke-width="1.6"/>
+            <rect x="10" y="1" width="8" height="4" rx="1.5" stroke="#008c82" stroke-width="1.5" fill="none"/>
+            <line x1="9" y1="10" x2="19" y2="10" stroke="#008c82" stroke-width="1.4"/>
+            <line x1="9" y1="14" x2="19" y2="14" stroke="#008c82" stroke-width="1.4"/>
+            <line x1="9" y1="18" x2="15" y2="18" stroke="#008c82" stroke-width="1.4"/>
+            <circle cx="8" cy="10" r="1.2" fill="#008c82"/>
+            <circle cx="8" cy="14" r="1.2" fill="#008c82"/>
+            <circle cx="8" cy="18" r="1.2" fill="#008c82"/>
+          </svg>
+        </div>
+        <div class="step-num">Schritt 01</div>
+        <h3>Auslegung eingeben</h3>
+        <p>Massenbilanz, Maschine (Preset oder manuell), Füllkammer, Anschnitt, Prozessfenster
+          und die Schusskurve als Weg-/Geschwindigkeits-Punkte — alles in einer Seitenleiste,
+          mit Validierung gegen min/max-Grenzen.</p>
+      </div>
+      <div class="step">
+        <div class="step-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="2" width="24" height="24" rx="3" stroke="#008c82" stroke-width="1.5"/>
+            <path d="M8 19 L8 9 M8 9 L11 12 M8 9 L5 12" stroke="#008c82" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 9 L14 19 M14 19 L17 16 M14 19 L11 16" stroke="#008c82" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="20" y1="9" x2="20" y2="19" stroke="#008c82" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="step-num">Schritt 02</div>
+        <h3>Die Physik rechnet sofort</h3>
+        <p>Schussmodell mit konstanter Beschleunigung zwischen Wegpunkten, kritische
+          Kolbengeschwindigkeit, PQ²-Arbeitspunkt, Füllzeit, Entlüftung und die Prüfungen
+          gegen die Maschinengrenzen — direkt im Browser, bei jedem Tastendruck.</p>
+      </div>
+      <div class="step">
+        <div class="step-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="14" cy="14" r="11" stroke="#008c82" stroke-width="1.5"/>
+            <circle cx="14" cy="14" r="6" stroke="#008c82" stroke-width="1.2" stroke-dasharray="3 2"/>
+            <circle cx="14" cy="14" r="2" fill="#008c82"/>
+            <polyline points="9,14 12.5,17.5 19,10.5" stroke="#008c82" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="step-num">Schritt 03</div>
+        <h3>Lesen &amp; exportieren</h3>
+        <p>KPI-Kacheln mit Ampelfarben, 🎯 hebt die Eingaben eines Diagramms hervor,
+          PNG in die Zwischenablage, CSV der Schusskurve — und die Auslegung wird
+          automatisch im Browser gespeichert, ein Reload verliert nichts.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     WERKZEUGE
+═══════════════════════════════════════════════════════════════ -->
+<section class="tools-section" id="werkzeuge">
+  <div class="tools-inner">
+    <h2 class="section-title">Werkzeuge</h2>
+    <p class="section-sub">Ein Dashboard für die komplette Auslegung — und jedes Diagramm auch als fokussierte Einzelseite.</p>
+    <div class="tools-grid">
+
+      <!-- Dashboard (featured) -->
+      <div class="tool-card featured">
+        <div class="tool-card-icon" style="background:rgba(0,140,130,0.15);">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+            <rect x="1" y="1" width="24" height="24" rx="2" stroke="#008c82" stroke-width="1.3"/>
+            <rect x="4" y="4" width="8" height="6" rx="1" stroke="#008c82" stroke-width="1.2"/>
+            <rect x="14" y="4" width="8" height="6" rx="1" stroke="#008c82" stroke-width="1.2"/>
+            <rect x="4" y="12" width="8" height="6" rx="1" stroke="#008c82" stroke-width="1.2"/>
+            <rect x="14" y="12" width="8" height="6" rx="1" stroke="#008c82" stroke-width="1.2"/>
+            <line x1="4" y1="21.5" x2="22" y2="21.5" stroke="#008c82" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3>DieLogic Dashboard <span class="badge-live">LIVE</span></h3>
+        <p>Die komplette gießtechnische Auslegung auf einer Seite: alle Eingaben in der Seitenleiste,
+          KPI-Zeile mit Ampelbewertung und alle 19 Diagramme untereinander — Schusskurve mit
+          Ereignistabelle und Prüfliste, PQ² mit Achsenmodi, das (φ, L/D)-Auslegungsfenster und die
+          Diagramme der gießtechnischen Auslegung. Maschinen-Presets kommen aus einer editierbaren
+          Konfigurationsdatei, das Farbschema ebenso.</p>
+        <p class="physics-note">Physik: Schussmodell (konstante Beschleunigung zwischen Wegpunkten), kritische Kolbengeschwindigkeit 1. Phase, PQ²-Arbeitspunkt, Füllzeit- und Entlüftungsrechnung, Maschinen- und Zuhaltungsprüfungen.</p>
+        <div class="tool-tags">
+          <span class="tool-tag">KPI-Zeile</span>
+          <span class="tool-tag">19 Diagramme</span>
+          <span class="tool-tag">Maschinen-Presets</span>
+          <span class="tool-tag">🎯 Eingabe-Hervorhebung</span>
+          <span class="tool-tag">PNG- / CSV-Export</span>
+          <span class="tool-tag">Automatische Persistenz</span>
+        </div>
+        <div class="tool-card-btns">
+          <a href="app/index.html" class="btn btn-sm btn-primary">Dashboard öffnen →</a>
+          <a href="#diagramme" class="btn btn-sm btn-ghost">Diagramm-Katalog →</a>
+        </div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card-icon" style="background:rgba(140,190,230,0.12);">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+            <rect x="1" y="1" width="24" height="24" rx="2" stroke="#8cbee6" stroke-width="1.3"/>
+            <path d="M4 21 L8 19 L12 15 L16 15 L20 9 L23 6" stroke="#8cbee6" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8" cy="19" r="1.8" fill="#8cbee6"/>
+            <circle cx="16" cy="15" r="1.8" fill="#8cbee6"/>
+            <line x1="12" y1="4" x2="12" y2="21" stroke="#c2447e" stroke-width="1" opacity="0.7"/>
+          </svg>
+        </div>
+        <h3>Schusskurve <span class="badge-live">EINZELSEITE</span></h3>
+        <p>Wegpunkte als s/v-Paare eingeben; das Modell integriert die Bewegung, markiert jedes
+          Ereignis auf dem Kolbenweg (Kammer voll, Anguss, Bauteil, Überlauf) und prüft gegen
+          kritische Geschwindigkeit und Maschinengrenzen — mit Ereignistabelle und CSV-Export.</p>
+        <div class="tool-card-btns">
+          <a href="app/chart.html?id=shotcurve" class="btn btn-sm btn-primary">Öffnen →</a>
+        </div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card-icon" style="background:rgba(0,140,130,0.12);">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+            <rect x="1" y="1" width="24" height="24" rx="2" stroke="#008c82" stroke-width="1.3"/>
+            <path d="M4 21 Q13 4 22 21" stroke="#008c82" stroke-width="1.6" fill="none"/>
+            <path d="M4 21 Q13 30 22 21" stroke="#c2447e" stroke-width="1.6" fill="none"/>
+            <circle cx="13" cy="16.5" r="2.2" fill="#008c82"/>
+          </svg>
+        </div>
+        <h3>PQ²-Diagramm <span class="badge-live">EINZELSEITE</span></h3>
+        <p>Maschinenlinie gegen Formwiderstand mit dem Arbeitspunkt, Anschnittgeschwindigkeit
+          und Füllzeit — umschaltbare Achsenmodi, roter Betriebspunkt-Marker und die Eingaben,
+          die genau dieses Diagramm beeinflussen, direkt daneben.</p>
+        <div class="tool-card-btns">
+          <a href="app/chart.html?id=pq2" class="btn btn-sm btn-primary">Öffnen →</a>
+        </div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card-icon" style="background:rgba(154,119,232,0.12);">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+            <rect x="1" y="1" width="24" height="24" rx="2" stroke="#9a77e8" stroke-width="1.3"/>
+            <rect x="4" y="4" width="5" height="5" rx="0.5" fill="#9a77e8" opacity="0.7"/>
+            <rect x="10.5" y="4" width="5" height="5" rx="0.5" fill="#9a77e8" opacity="0.4"/>
+            <rect x="4" y="10.5" width="5" height="5" rx="0.5" fill="#9a77e8" opacity="0.4"/>
+            <rect x="10.5" y="10.5" width="5" height="5" rx="0.5" fill="#9a77e8" opacity="0.7"/>
+            <rect x="17" y="17" width="5" height="5" rx="0.5" fill="#9a77e8" opacity="0.7"/>
+          </svg>
+        </div>
+        <h3>Auslegungsfenster (φ, L/D) <span class="badge-live">EINZELSEITE</span></h3>
+        <p>Das machbare Band der Füllkammer-Auslegung als analytisch berechnetes Polygon:
+          Füllgrad φ gegen L/D, mit beschrifteten Grenzkurven für Bohrung, Kammerlänge, Pressrest
+          und kritische Geschwindigkeit — inklusive Karte „Mathematik &amp; Herleitung“ unter dem Diagramm.</p>
+        <div class="tool-card-btns">
+          <a href="app/chart.html?id=phild" class="btn btn-sm btn-primary">Öffnen →</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DIAGRAMM-KATALOG
+═══════════════════════════════════════════════════════════════ -->
+<section class="catalog-section" id="diagramme">
+  <div class="catalog-inner">
+    <h2 class="section-title">Alle 19 Diagramme</h2>
+    <p class="section-sub">Jedes Diagramm als fokussierte Einzelseite — nur mit den Eingaben, die es wirklich beeinflussen. Alle Seiten teilen dieselbe Auslegung.</p>
+    <div class="catalog-grid">
+      <a class="catalog-card" href="app/chart.html?id=shotcurve"><h4>Schusskurve</h4><span>1. + 2. Phase mit Ereignissen &amp; Prüfliste</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=pq2"><h4>PQ²-Diagramm</h4><span>Arbeitspunkt aus Maschinenlinie &amp; Formwiderstand</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=phild"><h4>Auslegungsfenster (φ, L/D)</h4><span>Machbares Band der Füllkammer-Auslegung</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=area"><h4>Zulässige Sprengfläche</h4><span>Maschinenkraft und Druck</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=machine"><h4>Erforderliche Maschinengröße</h4><span>Kraftbedarf über dem Gießdruck</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=clamp"><h4>Max. Nachdruck (Zuhaltung)</h4><span>Säulenlast bei außermittigem Schwerpunkt</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=filltime"><h4>Füllzeit ab Anschnitt</h4><span>Bauteil + Überlauf</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=fill"><h4>Füllgrad der Füllkammer</h4><span>Dosiergewicht inkl. Pressrest</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=vent"><h4>Entlüftungsgeschwindigkeit</h4><span>Querschnittsverhältnis</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=sleeve"><h4>Füllkammer-Auswahl</h4><span>Füllgrad (inkl. Pressrest) mit Zielbereich</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=gate"><h4>Anschnittfläche</h4><span>Auslegung Anschnittfenster</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=slowshot"><h4>Kritische Kolbengeschw. 1. Phase</h4><span>Nogowizin — konsistent zur Schusskurve</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=pspec"><h4>Spezifischer Gießdruck</h4><span>Über dem Kolben-Ø</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=window"><h4>Prozessfenster Anschnitt</h4><span>Anschnittgeschwindigkeit als Feld</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=ftwall"><h4>Empfohlene Füllzeit</h4><span>NADCA-Richtwert über der Wandstärke</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=gvwall"><h4>Anschnittgeschw. / Wandstärke</h4><span>Empfehlung mit Zielband</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=ventreq"><h4>Entlüftungsbedarf</h4><span>Über der Füllzeit</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=yield"><h4>Materialausbeute</h4><span>Ringdiagramm — Anteile am Dosiergewicht</span><div class="arrow">Öffnen →</div></a>
+      <a class="catalog-card" href="app/chart.html?id=gatesol"><h4>Anschnitt-Erstarrungszeit</h4><span>Über der Anschnittdicke</span><div class="arrow">Öffnen →</div></a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     THEORIE
+═══════════════════════════════════════════════════════════════ -->
+<section class="theory-section" id="theorie">
+  <div class="theory-inner">
+    <h2 class="section-title">Theorie</h2>
+    <p class="section-sub">Die Physik hinter den Diagrammen — hergeleitet, nicht behauptet.</p>
+    <div class="theory-grid">
+      <div class="theory-card" style="border-top-color:#008c82;">
+        <h4>Das PQ²-Diagramm</h4>
+        <p>Warum Druck über Q² aufgetragen wird, wie Maschinen- und Werkzeuglinie entstehen und
+          wie aus dem Schnittpunkt Anschnittgeschwindigkeit und Füllzeit folgen.</p>
+        <a href="theorie/pq2.html" class="link-primary">Lesen →</a>
+      </div>
+      <div class="theory-card" style="border-top-color:#8cbee6;">
+        <h4>Kritische Kolbengeschwindigkeit</h4>
+        <p>Die Schwallwelle in der Füllkammer, die Flachwasser-Wellengeschwindigkeit im
+          Kreissegment und die Nogowizin-Grenze der ersten Phase.</p>
+        <a href="theorie/kritische-geschwindigkeit.html" class="link-primary">Lesen →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PREISE
+═══════════════════════════════════════════════════════════════ -->
+<section class="pricing-section" id="preise">
+  <div class="pricing-inner">
+    <h2 class="section-title">Einfache, transparente Preise</h2>
+    <p class="section-sub">Kostenlos starten — erweitern, wenn das Team wächst.</p>
+    <div class="pricing-grid">
+
+      <div class="pricing-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">Kostenlos</div>
+        <div class="plan-alt">&nbsp;</div>
+        <ul class="plan-features">
+          <li>Dashboard mit allen 19 Diagrammen</li>
+          <li>Alle Diagramm-Einzelseiten</li>
+          <li>PNG- und CSV-Export</li>
+          <li>Automatische Speicherung im Browser</li>
+        </ul>
+        <a href="app/index.html" class="btn btn-ghost" style="width:100%;justify-content:center;">Kostenlos starten</a>
+      </div>
+
+      <div class="pricing-card featured">
+        <span class="most-popular">Beliebteste Wahl</span>
+        <div class="plan-name">Professional</div>
+        <div class="plan-price">49&nbsp;€<span>/Monat</span></div>
+        <div class="plan-alt">zzgl. USt. · monatlich kündbar</div>
+        <ul class="plan-features">
+          <li>Alles aus Starter</li>
+          <li>Eigene Maschinen-Presets &amp; Firmen-Farbschema</li>
+          <li>Betrieb im Firmen-Intranet (On-Premise-Paket)</li>
+          <li>E-Mail-Support mit Antwort am nächsten Werktag</li>
+          <li>Alle neuen Diagramme und Funktionen</li>
+        </ul>
+        <a href="kontakt.html" class="btn btn-primary" style="width:100%;justify-content:center;">14 Tage kostenlos testen</a>
+      </div>
+
+      <div class="pricing-card">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price">Individuell</div>
+        <div class="plan-alt">&nbsp;</div>
+        <ul class="plan-features">
+          <li>Alles aus Professional</li>
+          <li>Anbindung an eigene Systeme &amp; Datenformate</li>
+          <li>Eigene Diagramme und Rechenmodelle</li>
+          <li>Schulung für Ihr Team</li>
+        </ul>
+        <a href="kontakt.html" class="btn btn-ghost" style="width:100%;justify-content:center;">Anfrage stellen</a>
+      </div>
+
+      <p class="pricing-legal">Alle Preise zzgl. gesetzlicher Umsatzsteuer. Es gelten unsere
+        <a href="recht/agb.html">AGB</a>; Verbrauchern steht das <a href="recht/widerruf.html">Widerrufsrecht</a> zu.</p>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

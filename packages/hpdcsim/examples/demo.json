@@ -1,0 +1,52 @@
+{
+  "sleeve": {
+    "diameter": 0.09,
+    "length": 0.5,
+    "fill_fraction": 0.35,
+    "pour_hole_position": 0.12,
+    "pour_hole_area": 2500e-6
+  },
+  "melt": {
+    "density": 2400.0,
+    "specific_heat": 1050.0,
+    "pouring_temperature": 680.0,
+    "latent_heat": 440e3,
+    "liquidus": 595.0,
+    "solidus": 540.0
+  },
+  "casting": {
+    "runner": {"volume": 250e-6, "gate_area": 180e-6, "surface_area": 0.030},
+    "part": {"volume": 680e-6, "surface_area": 0.45},
+    "overflow": {"volume": 90e-6, "surface_area": 0.008},
+    "vent_area": 20e-6
+  },
+  "environment": {
+    "ambient_pressure": 101325.0,
+    "ambient_temperature": 293.15
+  },
+  "motion": {
+    "type": "two_stage",
+    "a1": 2.0,
+    "v1": 0.3,
+    "a2": 15.0,
+    "v2": 2.5
+  },
+  "vacuum": {
+    "start_position": 0.15,
+    "valve_area": 100e-6,
+    "model": {"type": "conductance", "pump_pressure": 8e3}
+  },
+  "thermal": {
+    "type": "multi_surface",
+    "surfaces": {
+      "shell": {"htc": 2000.0, "wall_temperature": 180.0},
+      "plunger_face": {"htc": 1000.0, "wall_temperature": 120.0},
+      "die_face": {"htc": 2000.0, "wall_temperature": 180.0},
+      "downstream": {"htc": 4000.0, "wall_temperature": 150.0}
+    }
+  },
+  "process": {
+    "dosing_time": 4.0,
+    "dwell_time": 1.5
+  }
+}

@@ -1,0 +1,108 @@
+/* Gemeinsame Canvas-Bausteine: Rahmen, Achsen, Überschrift, Betriebspunkt-
+   Marker, Turbo-Farbrampe und Konturlinien. Alle Farben kommen aus dem Theme. */
+
+import { fmt } from '../core/format.js';
+import { theme } from '../core/theme.js';
+
+const PI = Math.PI;
+
+export function frame(w, h, heatmap) {
+  return { L: 75, R: heatmap ? 92 : 50, T: 92, B: 58, pw: w - 75 - (heatmap ? 92 : 50), ph: h - 150 };
+}
+
+export function text(x, s, a, b, al, font) {
+  x.fillStyle = theme.chart.text;
+  x.textAlign = al || 'center';
+  x.font = font || '11px Arial';
+  x.fillText(s, a, b);
+}
+
+export function heading(x, w, h, d) {
+  x.fillStyle = theme.chart.surface;
+  x.fillRect(0, 0, w, h);
+  text(x, d.title, w / 2, 22, 'center', 'bold 15px Arial');
+  text(x, d.info || '', w / 2, 42);
+  x.strokeStyle = theme.chart.axis;
+  x.beginPath(); x.moveTo(40, 55); x.lineTo(w - 40, 55); x.stroke();
+}
+
+export function axes(x, w, h, f, x0, x1, y0, y1, d) {
+  for (let i = 0; i <= 5; i++) {
+    const X = f.L + i * f.pw / 5, Y = f.T + i * f.ph / 5;
+    x.strokeStyle = theme.chart.grid;
+    x.beginPath(); x.moveTo(X, f.T); x.lineTo(X, h - f.B); x.stroke();
+    x.beginPath(); x.moveTo(f.L, Y); x.lineTo(w - f.R, Y); x.stroke();
+    text(x, fmt(x0 + i * (x1 - x0) / 5), X, h - f.B + 18);
+    text(x, fmt(y1 - i * (y1 - y0) / 5), f.L - 7, Y + 4, 'right');
+  }
+  text(x, d.xl, f.L + f.pw / 2, h - 11);
+  x.save(); x.translate(14, f.T + f.ph / 2); x.rotate(-PI / 2); text(x, d.yl, 0, 0); x.restore();
+}
+
+/* Roter Betriebspunkt-Marker mit Führungslinien und Label. */
+export function marker(x, f, px, py, label) {
+  if (px < f.L - 2 || px > f.L + f.pw + 2 || py < f.T - 2 || py > f.T + f.ph + 2) return;
+  const MC = theme.chart.marker;
+  x.save();
+  x.strokeStyle = MC; x.lineWidth = 1; x.setLineDash([4, 3]);
+  x.beginPath(); x.moveTo(f.L, py); x.lineTo(px, py); x.moveTo(px, f.T + f.ph); x.lineTo(px, py); x.stroke();
+  x.setLineDash([]);
+  x.beginPath(); x.arc(px, py, 6, 0, 2 * PI); x.fillStyle = theme.chart.surface; x.fill();
+  x.lineWidth = 2.2; x.strokeStyle = MC; x.stroke();
+  x.beginPath(); x.arc(px, py, 2, 0, 2 * PI); x.fillStyle = MC; x.fill();
+  if (label) {
+    x.font = 'bold 11px Arial'; x.textAlign = 'left';
+    const tw = x.measureText(label).width;
+    let lx = px + 11, ly = py - 9;
+    if (lx + tw + 6 > f.L + f.pw) lx = px - tw - 19;
+    if (ly < f.T + 12) ly = py + 22;
+    x.fillStyle = 'rgba(255,255,255,.88)';
+    x.fillRect(lx - 4, ly - 11, tw + 8, 15);
+    x.fillStyle = MC; x.fillText(label, lx, ly);
+  }
+  x.restore();
+}
+
+/* Farbrampe für Heatmaps; Stützstellen aus theme.heatStops. */
+export function turbo(t) {
+  t = Math.max(0, Math.min(1, t));
+  const k = theme.heatStops;
+  const u = t * (k.length - 1), i = Math.min(k.length - 2, Math.floor(u)), q = u - i;
+  const a = k[i], b = k[i + 1];
+  return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * q) + ',' + Math.round(a[1] + (b[1] - a[1]) * q) + ',' + Math.round(a[2] + (b[2] - a[2]) * q) + ')';
+}
+
+/* Marching-Squares-Konturen mit Wertelabels. */
+export function contours(ctx, f, d) {
+  const nx = d.x.length, ny = d.y.length, cw = f.pw / (nx - 1), ch = f.ph / (ny - 1);
+  ctx.save();
+  ctx.lineWidth = 1.15; ctx.strokeStyle = 'rgba(255,255,255,.95)';
+  ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center';
+  for (let li = 0; li < d.levels.length; li++) {
+    const L = d.levels[li];
+    ctx.beginPath();
+    let label = null;
+    for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+      const v = [d.z[j][i], d.z[j][i + 1], d.z[j + 1][i + 1], d.z[j + 1][i]];
+      const p = [];
+      const X = a => f.L + a * cw, Y = a => f.T + f.ph - a * ch;
+      const cut = (a, b) => b === a ? 0.5 : (L - a) / (b - a);
+      if ((v[0] - L) * (v[1] - L) < 0) p.push([X(i + cut(v[0], v[1])), Y(j)]);
+      if ((v[1] - L) * (v[2] - L) < 0) p.push([X(i + 1), Y(j + cut(v[1], v[2]))]);
+      if ((v[2] - L) * (v[3] - L) < 0) p.push([X(i + 1 - cut(v[2], v[3])), Y(j + 1)]);
+      if ((v[3] - L) * (v[0] - L) < 0) p.push([X(i), Y(j + 1 - cut(v[3], v[0]))]);
+      if (p.length >= 2) {
+        ctx.moveTo(p[0][0], p[0][1]); ctx.lineTo(p[1][0], p[1][1]);
+        if (!label && i > nx * 0.35 && i < nx * 0.65 && j > ny * 0.2 && j < ny * 0.8) label = p[0];
+      }
+    }
+    ctx.stroke();
+    if (label) {
+      ctx.fillStyle = 'rgba(255,255,255,.92)';
+      ctx.fillRect(label[0] - 14, label[1] - 8, 28, 14);
+      ctx.fillStyle = theme.chart.text;
+      ctx.fillText(fmt(L), label[0], label[1] + 3);
+    }
+  }
+  ctx.restore();
+}

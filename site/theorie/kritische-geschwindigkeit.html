@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kritische Kolbengeschwindigkeit · Theorie · DieLogic</title>
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png">
+  <link rel="apple-touch-icon" href="../assets/icon-180.png">
+  <link rel="stylesheet" href="../shared.css">
+  <script src="../nav.js" data-base=".."></script>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="../index.html">DieLogic</a>
+  <span>›</span>
+  <a href="../index.html#theorie">Theorie</a>
+  <span>›</span>
+  Kritische Kolbengeschwindigkeit
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Die kritische Kolbengeschwindigkeit der ersten Phase</h1>
+    <p class="subtitle">Vor dem Kolben läuft eine Welle. Wer schneller fährt als sie, schlägt
+      Luft in die Schmelze — die Nogowizin-Grenze sagt, wie schnell die erste Phase sein darf.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">Vorlaufphase</span>
+      <span class="hero-tag">Wellengeschwindigkeit</span>
+      <span class="hero-tag">Füllgrad</span>
+      <span class="hero-tag">Nogowizin</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#s1">1. Die Welle vor dem Kolben</a></li>
+        <li><a href="#s2">2. Wie schnell läuft die Welle?</a></li>
+        <li><a href="#s3">3. Die Nogowizin-Grenze</a></li>
+        <li><a href="#s4">4. Konsequenz für die Schusskurve</a></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <div class="draft-note">
+        ⚠️ <b>Mockup-Artikel</b> — Kurzfassung als Platzhalter für die ausführliche Version.
+        Inhalte vor Veröffentlichung fachlich gegenlesen. Diesen Kasten danach löschen.
+      </div>
+
+      <span class="section-anchor" id="s1"></span>
+      <h2 class="section-title">1. Die Welle vor dem Kolben</h2>
+      <div class="prose">
+        <p>Nach dem Dosieren liegt die Schmelze im unteren Teil der Füllkammer; darüber steht Luft.
+          Setzt sich der Kolben in Bewegung, schiebt er keine starre Säule vor sich her, sondern
+          wirft eine <strong>Schwallwelle</strong> auf, die dem Kolben vorausläuft und die Kammer
+          nach und nach bis zur Decke füllt.</p>
+        <p>Fährt der Kolben zu schnell, bricht diese Welle wie eine Brandung über: Sie überschlägt
+          sich, faltet die Luft der Kammer in die Schmelze ein und transportiert sie als Porosität
+          bis ins Bauteil. Fährt er viel zu langsam, verliert die Schmelze Temperatur und die Welle
+          kann am Kammerende reflektieren. Die erste Phase hat also ein Fenster — und dessen obere
+          Kante ist die kritische Kolbengeschwindigkeit.</p>
+      </div>
+
+      <span class="section-anchor" id="s2"></span>
+      <h2 class="section-title">2. Wie schnell läuft die Welle?</h2>
+      <div class="prose">
+        <p>Die Füllkammer ist ein liegender Zylinder, der Schmelzespiegel schneidet den Querschnitt
+          als <strong>Kreissegment</strong>: benetzte Fläche A, freie Oberflächenbreite T (die
+          Sehne). Für lange Wellen in einem offenen Gerinne beliebigen Querschnitts gilt die
+          Flachwasser-Wellengeschwindigkeit:</p>
+      </div>
+      <div class="eq">
+        c = <span class="sqrt"><span class="rad">g ·
+        <span class="frac"><span class="num">A</span><span class="den">T</span></span>
+        </span></span>
+        &nbsp;&nbsp;mit&nbsp;&nbsp;
+        A = φ · <span class="frac"><span class="num">π D²</span><span class="den">4</span></span>
+      </div>
+      <div class="derivation-box">
+        <div class="step"><span class="step-num">①</span>
+          <span>Der Füllgrad φ bestimmt den Mittelpunktswinkel θ des Segments über
+            θ − sin θ = 2π·φ (numerisch invertiert, z.&nbsp;B. mit Newton-Verfahren).</span></div>
+        <div class="step"><span class="step-num">②</span>
+          <span>Aus θ folgen Fläche und Sehne: A = R²(θ − sin θ)/2, T = 2R·sin(θ/2).</span></div>
+        <div class="step"><span class="step-num">③</span>
+          <span>A/T ist die <em>hydraulische Tiefe</em> — die Wellengeschwindigkeit hängt damit nur
+            von Bohrung D und Füllgrad φ ab.</span></div>
+      </div>
+
+      <span class="section-anchor" id="s3"></span>
+      <h2 class="section-title">3. Die Nogowizin-Grenze</h2>
+      <div class="prose">
+        <p>Die kritische Kolbengeschwindigkeit ist erreicht, wenn die vom Kolben aufgeworfene Welle
+          gerade die Kammerdecke berührt, ohne zu überschlagen. Nogowizin fasst die Lösung dieses
+          Wellenproblems in eine handliche Näherung — dieselbe Formel, die DieLogic rechnet:</p>
+      </div>
+      <div class="eq">
+        v<sub>krit</sub> = <span class="sqrt"><span class="rad">g · D</span></span>
+        · ( 1,386 − 1,915·φ + 0,615·φ² )
+      </div>
+      <div class="prose">
+        <p>Der Vorfaktor √(g·D) skaliert wie die Wellengeschwindigkeit; das Polynom in φ erfasst
+          die Segmentgeometrie. Zwei Ablesebeispiele für eine Kammer mit D = 80&nbsp;mm:</p>
+      </div>
+      <table class="th-table">
+        <thead><tr><th>Füllgrad φ</th><th>Faktor (1,386 − 1,915φ + 0,615φ²)</th><th>v<sub>krit</sub></th></tr></thead>
+        <tbody>
+          <tr><td>0,3</td><td>0,867</td><td>≈ 0,77 m/s</td></tr>
+          <tr><td>0,5</td><td>0,582</td><td>≈ 0,52 m/s</td></tr>
+          <tr><td>0,7</td><td>0,347</td><td>≈ 0,31 m/s</td></tr>
+        </tbody>
+      </table>
+      <div class="insight-box">
+        <div class="label">Kernaussage</div>
+        <p>Je voller die Kammer, desto niedriger die zulässige Kolbengeschwindigkeit: Bei hohem
+          Füllgrad bleibt der Welle kaum Raum unter der Kammerdecke, sie überschlägt schon bei
+          geringem Nachschub. Ein hoher Füllgrad spart also Pressrest und Zykluszeit — erkauft mit
+          einer langsameren, empfindlicheren ersten Phase.</p>
+      </div>
+
+      <span class="section-anchor" id="s4"></span>
+      <h2 class="section-title">4. Konsequenz für die Schusskurve</h2>
+      <div class="prose">
+        <p>Die Regel für die Kurvenplanung ist damit einfach: <strong>Bis die Kammer voll ist,
+          bleibt die Kolbengeschwindigkeit unter v<sub>krit</sub></strong>; erst danach darf auf
+          die zweite Phase beschleunigt werden. Das Dashboard prüft genau das — es sucht das
+          Maximum der Schusskurve im Vorlaufweg (1 − φ)·L und vergleicht es mit der
+          Nogowizin-Grenze; das Ereignis „Kammer voll" markiert den Umschaltpunkt.</p>
+      </div>
+      <div class="warning-box">
+        <b>Grenzen des Modells:</b> Die Formel ist eine stationäre Näherung — Anfahrrampen,
+        Wellenreflexionen am Kammerende und das Eintauchverhalten am Eingusskanal bildet sie nicht
+        ab. Für die Feinabstimmung der ersten Phase (z.&nbsp;B. beschleunigte Vorlaufprofile)
+        lohnt der Blick in die weiterführende Literatur.
+      </div>
+      <p style="margin-top:1.5rem;">
+        <a href="../app/chart.html?id=slowshot" class="btn btn-primary">Im Dashboard: Kritische Kolbengeschw. →</a>
+        &nbsp;
+        <a href="../app/chart.html?id=shotcurve" class="btn btn-outline">Zur Schusskurve →</a>
+      </p>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>

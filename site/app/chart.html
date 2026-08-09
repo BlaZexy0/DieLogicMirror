@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Diagramm · DieLogic</title>
+  <link rel="stylesheet" href="css/main.css">
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png">
+  <link rel="apple-touch-icon" href="../assets/icon-180.png">
+  <link rel="stylesheet" href="css/site.css">
+  <script src="../nav.js" data-base=".." data-footer="none"></script>
+</head>
+<body>
+  <header>
+    <h1 id="chartTitle">Diagramm</h1>
+    <div class="header-actions">
+      <select id="chartNav" class="nav-select" title="Zu einem anderen Diagramm wechseln"></select>
+      <a class="back-link" href="index.html">← Übersicht</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <h2>Eingaben</h2>
+      <p class="sub" id="chartDesc"></p>
+      <section class="panel">
+        <div class="group" id="preset-group">
+          <h3>Maschinen-Preset</h3>
+          <select id="machineSel"><option value="">— manuell —</option></select>
+          <p class="group-note">Presets kommen aus <code>config/machines.js</code>.</p>
+        </div>
+        <div class="group" id="curve-group">
+          <h3>Schusskurve (1. + 2. Phase)</h3>
+          <p class="curve-note">Wegpunkte als Weg s [mm] / Kolbengeschwindigkeit v [m/s]. Zwischen den Punkten wird konstant beschleunigt; der Ursprung (0&nbsp;mm, 0&nbsp;m/s) wird automatisch ergänzt.</p>
+          <table class="ctab">
+            <thead><tr><th style="width:40%">s [mm]</th><th style="width:44%">v [m/s]</th><th></th></tr></thead>
+            <tbody id="curveBody"></tbody>
+          </table>
+          <button id="addPoint" class="row-add">+ Punkt hinzufügen</button>
+        </div>
+        <div id="groups" class="groups"></div>
+        <div class="hint">
+          Es werden nur die Eingaben gezeigt, die dieses Diagramm beeinflussen. Alle übrigen Werte behalten ihre Standardwerte.
+          <span id="error"></span>
+        </div>
+      </section>
+    </aside>
+
+    <section class="content">
+      <section id="charts" class="charts"></section>
+    </section>
+  </main>
+
+  <script src="config/theme.js"></script>
+  <script src="config/machines.js"></script>
+  <script>
+    /* Über http(s): ES-Module direkt aus js/. Über file:// (Doppelklick):
+       gebündelte Fassung dist/app.js (mit "python3 build.py" erzeugt). */
+    (function () {
+      var s = document.createElement('script');
+      if (location.protocol === 'file:') {
+        s.src = 'dist/app.js';
+        s.setAttribute('data-entry', 'single');
+        s.onerror = function () {
+          var d = document.createElement('div');
+          d.className = 'file-warning';
+          d.textContent = 'dist/app.js fehlt — bitte einmal "python3 build.py" im Projektordner ausführen (oder die Seite über einen Webserver öffnen).';
+          document.body.appendChild(d);
+        };
+      } else {
+        s.type = 'module';
+        s.src = 'js/single.js';
+      }
+      document.head.appendChild(s);
+    })();
+  </script>
+</body>
+</html>

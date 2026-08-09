@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dashboard · DieLogic</title>
+  <link rel="stylesheet" href="css/main.css">
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png">
+  <link rel="apple-touch-icon" href="../assets/icon-180.png">
+  <link rel="stylesheet" href="css/site.css">
+  <script src="../nav.js" data-base=".." data-footer="none"></script>
+</head>
+<body>
+  <header>
+    <h1>Dashboard — Gießtechnische Auslegung + Schusskurve</h1>
+    <div class="header-actions">
+      <button id="resetBtn" class="save-btn" title="Alle Eingaben, Schusskurve und Preset auf die Standardwerte zurücksetzen">↺ Zurücksetzen</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <h2>Eingaben</h2>
+      <p class="sub">Massenbilanz, Maschine, Füllkammer, Anschnitt, Prozessfenster und Schusskurve</p>
+      <section class="panel">
+        <div class="group" id="preset-group">
+          <h3>Maschinen-Preset</h3>
+          <select id="machineSel"><option value="">— manuell —</option></select>
+          <p class="group-note">Presets kommen aus <code>config/machines.js</code>. Setzt Maschinenkraft, Kolbengeschw./Beschleunigung max., Kolben-Ø-Bereich, Kammerlänge max. und Gießkraft. Wird eines dieser Felder von Hand geändert, springt die Auswahl auf „manuell".</p>
+        </div>
+        <div class="group" id="curve-group">
+          <h3>Schusskurve (1. + 2. Phase)</h3>
+          <p class="curve-note">Wegpunkte als Weg s [mm] / Kolbengeschwindigkeit v [m/s]. Zwischen den Punkten wird konstant beschleunigt; der Ursprung (0&nbsp;mm, 0&nbsp;m/s) wird automatisch ergänzt.</p>
+          <table class="ctab">
+            <thead><tr><th style="width:40%">s [mm]</th><th style="width:44%">v [m/s]</th><th></th></tr></thead>
+            <tbody id="curveBody"></tbody>
+          </table>
+          <button id="addPoint" class="row-add">+ Punkt hinzufügen</button>
+        </div>
+        <div id="groups" class="groups"></div>
+        <div class="hint">
+          Dosiergewicht = Bauteil + Anguss + Überlauf + Pressrest. Gewicht ab Anschnitt = Bauteil + Überlauf.<br>
+          <b>Konvention:</b> Der Pressrest zählt zur dosierten Schmelze — alle Füllgrad-Angaben (KPI, Diagramme, Schusskurve, Auslegungsfenster) rechnen mit dem Dosiergewicht. Füllzeit und Entlüftung rechnen ab Anschnitt (Bauteil + Überlauf, ohne Anguss und Pressrest).<br>
+          🔴 <b>Roter Marker</b> = aktueller Betriebspunkt in jedem Diagramm. Rot umrandete Felder liegen außerhalb ihrer min/max-Grenzen.
+          <span id="error"></span>
+        </div>
+      </section>
+    </aside>
+
+    <section class="content">
+      <div id="summary" class="summary"></div>
+      <h2>Auslegungsdiagramme</h2>
+      <p class="sub">Schusskurve · PQ² mit Achsenmodi · (φ, L/D)-Auslegungsfenster · Diagramme der gießtechnischen Auslegung · PNG-Export · 🎯 hebt die Eingaben eines Diagramms hervor · ↗ öffnet die Einzelseite</p>
+      <section id="charts" class="charts"></section>
+      <h2>Simulation</h2>
+      <p class="sub">Serverseitig gerechnet mit hpdcsim (Dosieren → Beruhigen → Schuss, Luft- und Temperaturmodelle) — braucht das DieLogic-Backend, alle übrigen Diagramme rechnen lokal weiter</p>
+      <section id="simcharts" class="charts"></section>
+    </section>
+  </main>
+
+  <script src="config/theme.js"></script>
+  <script src="config/machines.js"></script>
+  <script>
+    /* Über http(s): ES-Module direkt aus js/. Über file:// (Doppelklick):
+       gebündelte Fassung dist/app.js (mit "python3 build.py" erzeugt). */
+    (function () {
+      var s = document.createElement('script');
+      if (location.protocol === 'file:') {
+        s.src = 'dist/app.js';
+        s.setAttribute('data-entry', 'main');
+        s.onerror = function () {
+          var d = document.createElement('div');
+          d.className = 'file-warning';
+          d.textContent = 'dist/app.js fehlt — bitte einmal "python3 build.py" im Projektordner ausführen (oder die Seite über einen Webserver öffnen).';
+          document.body.appendChild(d);
+        };
+      } else {
+        s.type = 'module';
+        s.src = 'js/main.js';
+      }
+      document.head.appendChild(s);
+    })();
+  </script>
+</body>
+</html>

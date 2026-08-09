@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" role="img" aria-label="Platzhalter für ein Teamfoto">
+  <!-- Teamfoto-Mockup (Platzhalter) — durch ein echtes Foto ersetzen:
+       einfach eine team.jpg/team.webp einsetzen und den <img>-Verweis in
+       ueber-uns.html anpassen. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#002733"/>
+      <stop offset="0.6" stop-color="#0a3945"/>
+      <stop offset="1" stop-color="#00463f"/>
+    </linearGradient>
+    <pattern id="hex" x="0" y="0" width="60" height="52" patternUnits="userSpaceOnUse">
+      <polygon points="30,2 55,15 55,37 30,50 5,37 5,15" fill="none" stroke="#ffffff" stroke-width="0.6" opacity="0.06"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="480" fill="url(#bg)"/>
+  <rect width="1200" height="480" fill="url(#hex)"/>
+
+  <!-- Boden -->
+  <line x1="0" y1="430" x2="1200" y2="430" stroke="#ffffff" stroke-width="1.5" opacity="0.12"/>
+
+  <!-- Angedeutete Füllkammer mit Schmelze-Pfeil (Logo-Motiv), links -->
+  <g opacity="0.35">
+    <rect x="70" y="300" width="190" height="110" rx="14" fill="none" stroke="#8fb8c4" stroke-width="7"/>
+    <rect x="100" y="328" width="95" height="54" rx="9" fill="#8fb8c4"/>
+    <path d="M262 322 L262 306 L352 355 L262 404 L262 388 L230 372 L230 338 Z" fill="#008c82"/>
+  </g>
+  <!-- Schusskurve, rechts oben -->
+  <g opacity="0.4">
+    <path d="M910 300 C 990 292, 1050 250, 1110 180" fill="none" stroke="#008c82" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="1116" cy="174" r="13" fill="#008c82"/>
+  </g>
+
+  <!-- Team (stilisiert) -->
+  <g>
+    <!-- Person 1 -->
+    <circle cx="440" cy="212" r="44" fill="#8fb8c4"/>
+    <path d="M368 430 L368 340 Q368 282 440 282 Q512 282 512 340 L512 430 Z" fill="#8fb8c4"/>
+    <!-- Person 2 -->
+    <circle cx="580" cy="192" r="48" fill="#008c82"/>
+    <path d="M502 430 L502 328 Q502 266 580 266 Q658 266 658 328 L658 430 Z" fill="#008c82"/>
+    <!-- Person 3 -->
+    <circle cx="722" cy="208" r="45" fill="#e5f3f2"/>
+    <path d="M648 430 L648 338 Q648 278 722 278 Q796 278 796 338 L796 430 Z" fill="#e5f3f2"/>
+    <!-- Person 4 -->
+    <circle cx="860" cy="220" r="42" fill="#3fc2b6"/>
+    <path d="M792 430 L792 346 Q792 290 860 290 Q928 290 928 346 L928 430 Z" fill="#3fc2b6"/>
+  </g>
+
+  <!-- Platzhalter-Hinweis -->
+  <g>
+    <rect x="24" y="24" width="360" height="40" rx="8" fill="#00131a" opacity="0.72"/>
+    <text x="44" y="50" font-family="system-ui,-apple-system,'Segoe UI',sans-serif" font-size="19" fill="#ffd766">📷 Platzhalter — echtes Teamfoto einsetzen</text>
+  </g>
+</svg>

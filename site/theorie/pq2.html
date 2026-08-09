@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Das PQ²-Diagramm · Theorie · DieLogic</title>
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png">
+  <link rel="apple-touch-icon" href="../assets/icon-180.png">
+  <link rel="stylesheet" href="../shared.css">
+  <script src="../nav.js" data-base=".."></script>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="../index.html">DieLogic</a>
+  <span>›</span>
+  <a href="../index.html#theorie">Theorie</a>
+  <span>›</span>
+  Das PQ²-Diagramm
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Das PQ²-Diagramm: Maschine und Werkzeug in einem Bild</h1>
+    <p class="subtitle">Zwei Kennlinien, ein Schnittpunkt: Warum der Druck über dem Quadrat des
+      Volumenstroms aufgetragen wird — und wie daraus Arbeitspunkt, Anschnittgeschwindigkeit und
+      Füllzeit folgen.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">Maschinenlinie</span>
+      <span class="hero-tag">Werkzeuglinie</span>
+      <span class="hero-tag">Arbeitspunkt</span>
+      <span class="hero-tag">Anschnittgeschwindigkeit</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#s1">1. Warum ein gemeinsames Bild?</a></li>
+        <li><a href="#s2">2. Die Maschinenlinie</a></li>
+        <li><a href="#s3">3. Die Werkzeuglinie</a></li>
+        <li><a href="#s4">4. Der Arbeitspunkt</a></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <div class="draft-note">
+        ⚠️ <b>Mockup-Artikel</b> — Kurzfassung als Platzhalter für die ausführliche Version.
+        Inhalte vor Veröffentlichung fachlich gegenlesen. Diesen Kasten danach löschen.
+      </div>
+
+      <span class="section-anchor" id="s1"></span>
+      <h2 class="section-title">1. Warum ein gemeinsames Bild?</h2>
+      <div class="prose">
+        <p>Während der Formfüllung verhandeln zwei Parteien miteinander: Die <strong>Maschine</strong>
+          kann einen Volumenstrom Q nur bis zu einer bestimmten Druckhöhe liefern — je schneller der
+          Kolben, desto weniger hydraulische Reserve bleibt. Das <strong>Werkzeug</strong> verlangt
+          für einen Volumenstrom Q einen Druck, der am Anschnitt in kinetische Energie der Schmelze
+          umgesetzt wird. Der Prozess stellt sich dort ein, wo Angebot und Nachfrage sich treffen:
+          im Arbeitspunkt.</p>
+        <p>Beide Zusammenhänge sind quadratisch in Q. Trägt man den Druck p deshalb nicht über Q,
+          sondern über <b>Q²</b> auf, werden aus zwei Parabeln zwei <em>Geraden</em> — das ist der
+          ganze Trick des PQ²-Diagramms. Schnittpunkte von Geraden lassen sich zeichnen, ablesen
+          und diskutieren.</p>
+      </div>
+
+      <span class="section-anchor" id="s2"></span>
+      <h2 class="section-title">2. Die Maschinenlinie</h2>
+      <div class="prose">
+        <p>Zwei Messpunkte legen die Gerade fest. Ohne Bewegung (Q = 0) steht der volle
+          Gießdruck p<sub>0</sub> aus dem Hydrauliksystem an. Beim Leerschuss (kein Widerstand)
+          erreicht der Kolben seine Maximalgeschwindigkeit — das entspricht dem maximalen
+          Volumenstrom Q<sub>max</sub>, bei dem für das Werkzeug kein Druck mehr übrig bleibt:</p>
+      </div>
+      <div class="eq">
+        p<sub>M</sub>(Q) = p<sub>0</sub> · ( 1 −
+        <span class="frac"><span class="num">Q²</span><span class="den">Q²<sub>max</sub></span></span> )
+      </div>
+      <div class="prose">
+        <p>Über Q² aufgetragen ist das eine fallende Gerade von (0, p<sub>0</sub>) nach
+          (Q²<sub>max</sub>, 0). Beide Achsenabschnitte stehen im Maschinendatenblatt — bei DieLogic
+          kommen sie aus den Maschinen-Presets.</p>
+      </div>
+
+      <span class="section-anchor" id="s3"></span>
+      <h2 class="section-title">3. Die Werkzeuglinie</h2>
+      <div class="prose">
+        <p>Auf der Werkzeugseite wirkt der Anschnitt als Drossel. Nach Bernoulli/Torricelli setzt
+          der Druck vor dem Anschnitt die Schmelze auf die Geschwindigkeit
+          v<sub>A</sub> = Q / (c<sub>d</sub>·A<sub>A</sub>):</p>
+      </div>
+      <div class="derivation-box">
+        <div class="step"><span class="step-num">①</span>
+          <span>Druck wird kinetische Energie: p = ρ·v<sub>A</sub>²/2 (mit Verlusten im Beiwert c<sub>d</sub>)</span></div>
+        <div class="step"><span class="step-num">②</span>
+          <span>Kontinuität am Anschnitt: v<sub>A</sub> = Q / (c<sub>d</sub>·A<sub>A</sub>)</span></div>
+        <div class="step"><span class="step-num">③</span>
+          <span>Einsetzen liefert die Werkzeuglinie — eine Ursprungsgerade in Q²:</span></div>
+      </div>
+      <div class="eq">
+        p<sub>W</sub>(Q) =
+        <span class="frac"><span class="num">ρ</span><span class="den">2 c<sub>d</sub>² A<sub>A</sub>²</span></span>
+        · Q²
+      </div>
+      <div class="insight-box">
+        <div class="label">Kernaussage</div>
+        <p>Die Anschnittfläche steht im Nenner im Quadrat: Ein größerer Anschnitt kippt die
+          Werkzeuglinie flach (mehr Volumenstrom, weniger Anschnittgeschwindigkeit), ein kleinerer
+          stellt sie steil. Die Maschinenlinie bleibt davon unberührt — Anschnittauslegung und
+          Maschinenwahl lassen sich im Diagramm getrennt diskutieren.</p>
+      </div>
+
+      <span class="section-anchor" id="s4"></span>
+      <h2 class="section-title">4. Der Arbeitspunkt</h2>
+      <div class="prose">
+        <p>Der Arbeitspunkt ist der Schnitt beider Geraden, p<sub>M</sub> = p<sub>W</sub>.
+          Auflösen nach Q ergibt in geschlossener Form:</p>
+      </div>
+      <div class="eq">
+        Q* = <span class="sqrt"><span class="rad">
+        <span class="frac"><span class="num">p<sub>0</sub></span><span class="den">C<sub>W</sub> + p<sub>0</sub>/Q²<sub>max</sub></span></span>
+        </span></span>
+        &nbsp;&nbsp;mit&nbsp;&nbsp;
+        C<sub>W</sub> = <span class="frac"><span class="num">ρ</span><span class="den">2 c<sub>d</sub>² A<sub>A</sub>²</span></span>
+      </div>
+      <div class="prose">
+        <p>Aus Q* folgt alles Weitere: die Anschnittgeschwindigkeit v<sub>A</sub> = Q*/(c<sub>d</sub>·A<sub>A</sub>),
+          der Metalldruck am Arbeitspunkt p* = C<sub>W</sub>·Q*² und die Füllzeit
+          t<sub>f</sub> = V<sub>A</sub>/Q* für das Volumen ab Anschnitt. Liegt v<sub>A</sub>
+          außerhalb des Zielbands oder t<sub>f</sub> über der zulässigen Füllzeit, wird am
+          Anschnitt oder an der Maschine gedreht — und das Diagramm zeigt sofort, welche der
+          beiden Geraden sich bewegt.</p>
+      </div>
+      <div class="warning-box">
+        <b>Grenzen des Modells:</b> Die Werkzeuglinie fasst alle Strömungsverluste in einem
+        konstanten Beiwert c<sub>d</sub> zusammen und setzt eine volle Füllkammer voraus. Reale
+        Gießläufe mit stark umlenkender Führung oder früh erstarrenden Randschichten weichen ab —
+        das PQ²-Diagramm ist ein Auslegungswerkzeug, kein Ersatz für die Formfüllsimulation.
+      </div>
+      <p style="margin-top:1.5rem;">
+        <a href="../app/chart.html?id=pq2" class="btn btn-primary">Im Dashboard ausprobieren: PQ²-Diagramm →</a>
+      </p>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>

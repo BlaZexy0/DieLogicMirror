@@ -1,0 +1,125 @@
+/* Baut die Eingabe-Sidebar aus der Felddefinition, validiert Grenzen und
+   hebt auf Wunsch die Eingaben eines Diagramms hervor. */
+
+import { groups, PRESET_KEYS } from '../config/fields.js';
+import { state, notify } from '../core/state.js';
+
+function fieldHTML(f) {
+  return '<div class="field" data-field="' + f.key + '"><label>' + f.label +
+    ' <span class="unit">' + f.unit + '</span></label>' +
+    '<input data-k="' + f.key + '" type="number" step="any" value="' + f.def + '"></div>';
+}
+
+/* onlyKeys: optionales Set von Feldnamen — dann werden nur diese Felder
+   gebaut (Einzelseiten-Modus). Leere Gruppen entfallen. */
+export function buildInputs(container, onlyKeys = null) {
+  const keep = f => !onlyKeys || onlyKeys.has(f.key);
+  for (const g of groups) {
+    let inner;
+    if (g.columns) {
+      const cols = g.columns
+        .map(c => ({ title: c.title, fields: c.fields.filter(keep) }))
+        .filter(c => c.fields.length);
+      if (!cols.length) continue;
+      inner = '<div class="chamber-grid">' + cols.map(c =>
+        '<div class="input-column"><h4>' + c.title + '</h4>' + c.fields.map(fieldHTML).join('') + '</div>'
+      ).join('') + '</div>';
+    } else {
+      const fs = g.fields.filter(keep);
+      if (!fs.length) continue;
+      inner = '<div class="fields">' + fs.map(fieldHTML).join('') + '</div>';
+    }
+    const el = document.createElement('div');
+    el.className = 'group' + (g.wide ? ' wide' : '');
+    el.dataset.group = g.id;
+    el.innerHTML = '<h3>' + g.title + '</h3>' + inner;
+    container.appendChild(el);
+  }
+
+  container.querySelectorAll('input[data-k]').forEach(e => {
+    e.value = state.values[e.dataset.k];
+    e.oninput = () => {
+      state.values[e.dataset.k] = Number(e.value);
+      if (PRESET_KEYS[e.dataset.k]) {
+        state.machine = '';
+        const ms = document.getElementById('machineSel');
+        if (ms) ms.value = '';
+      }
+      notify();
+    };
+  });
+}
+
+/* Werte programmatisch setzen (Preset, JSON-Import) — aktualisiert Zustand
+   und sichtbare Eingabefelder. */
+export function applyValues(fields) {
+  for (const k in fields) {
+    if (fields[k] == null) continue;
+    state.values[k] = Number(fields[k]);
+    const e = document.querySelector('[data-k="' + k + '"]');
+    if (e) e.value = fields[k];
+  }
+}
+
+/* Felder, die zwingend > 0 sein müssen (Divisionen, Achsen, Wurzeln). */
+const POSITIVE_KEYS = ['density', 'diam', 'length', 'gate', 'vent', 'Cd',
+  'force', 'injForce', 'area', 'psel', 'safety', 'vmax', 'vsel', 'tmax', 'vAirMax', 'solK',
+  'tieX', 'tieY'];
+
+export function validate(v) {
+  const bad = new Set();
+  const msgs = [];
+
+  /* min/max-Paare: strict = Gleichheit ebenfalls ungültig (Achsen/Divisionen). */
+  const pair = (a, b, label, strict) => {
+    if (!isFinite(v[a]) || !isFinite(v[b])) return;
+    if (strict ? v[a] >= v[b] : v[a] > v[b]) { bad.add(a); bad.add(b); msgs.push(label); }
+  };
+  pair('pmin', 'pmax', 'Druck min ≥ max', true);
+  pair('dmin', 'dmax', 'Kolben-Ø min ≥ max', true);
+  pair('lmin', 'lmax', 'Kammerlänge min ≥ max', true);
+  pair('vmin', 'vmax', 'Kolbengeschw. min ≥ max', true);
+  pair('wallMin', 'wallMax', 'Wandstärke min ≥ max', true);
+  pair('fillMin', 'fillMax', 'Füllgrad-Ziel min > max', false);
+  pair('gateMin', 'gateMax', 'Anschnittgeschw.-Ziel min > max', false);
+  pair('pSpecMin', 'pSpecMax', 'Ziel-Gießdruck min > max', false);
+
+  let nonpos = false;
+  for (const k of POSITIVE_KEYS) if (!(v[k] > 0)) { bad.add(k); nonpos = true; }
+  if (nonpos) msgs.push('rot markierte Felder müssen > 0 sein');
+
+  /* Gewählte Werte gegen ihre Grenzen. */
+  if (v.diam < v.dmin || v.diam > v.dmax) bad.add('diam');
+  if (v.length < v.lmin || v.length > v.lmax) bad.add('length');
+  if (v.vsel < v.vmin || v.vsel > v.vmax) bad.add('vsel');
+  if (v.psel < v.pmin || v.psel > v.pmax) bad.add('psel');
+
+  document.querySelectorAll('input[data-k]').forEach(e =>
+    e.classList.toggle('invalid', bad.has(e.dataset.k)));
+  const err = document.getElementById('error');
+  if (err) err.textContent = msgs.length ? '⚠ ' + msgs.join(' · ') : '';
+}
+
+/* Hervorhebung der Eingaben eines Diagramms. */
+export function highlightInputs(keys, opts = {}) {
+  clearHighlights();
+  const set = new Set(keys);
+  let first = null;
+  document.querySelectorAll('.field[data-field]').forEach(el => {
+    if (set.has(el.dataset.field)) {
+      el.classList.add('hl');
+      const grp = el.closest('.group');
+      if (grp) grp.classList.add('hl');
+      if (!first) first = el;
+    }
+  });
+  if (opts.curve) {
+    const cg = document.getElementById('curve-group');
+    if (cg) { cg.classList.add('hl'); if (!first) first = cg; }
+  }
+  if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+export function clearHighlights() {
+  document.querySelectorAll('.hl').forEach(el => el.classList.remove('hl'));
+}
