@@ -51,7 +51,10 @@ def test_full_config_builds_working_process():
     state = process.state_at_time(6.0)
     assert np.isfinite(state.air_pressure)
     assert 150.0 < state.melt_temperature <= 680.0
-    assert process.critical_crossing() is not None
+    # demo.json: v1=0.3 stays under the dosed-fill limit and the fast phase
+    # starts only at sleeve-full -> no supercritical crossing is flagged.
+    assert process.critical_velocity > 0.3
+    assert process.critical_crossing() is None
 
 
 def test_minimal_config():

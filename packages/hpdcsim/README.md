@@ -52,10 +52,11 @@ Model sections select an implementation via `"type"`:
 | `motion` | `two_stage` (a1,v1,a2,v2 — s_u/s_end default to the volume-derived strokes), `profile` (explicit positions/velocities) |
 | `vacuum.model` | `sealed`, `ideal` (pump_pressure), `pumped` (pump_speed, ultimate_pressure), `conductance` (pump_pressure, discharge_coefficient) |
 | `thermal` | `constant`, `lumped` (htc, wall_temperature), `multi_surface` (surfaces: name → htc/wall_temperature) |
+| `process.critical_velocity_model` | `garber_lopez` (default), `nogowizin` |
 
 Custom implementations plug into the same JSON via
-`register_motion_type` / `register_vacuum_model` / `register_thermal_model` —
-see `examples/custom_models.py`.
+`register_motion_type` / `register_vacuum_model` / `register_thermal_model` /
+`register_critical_velocity_model` — see `examples/custom_models.py`.
 
 ## Physical model
 
@@ -65,9 +66,14 @@ see `examples/custom_models.py`.
   Quasi-static bookkeeping: melt stays in the sleeve until the remaining
   chamber equals the melt volume, then fills runner → part → overflow. Fill
   completes at `L − biscuit`; profiles pushing past that are rejected.
-- **Slow-shot wave safety**: critical plunger velocity
-  `2(√(gD) − √(gh))` (Garber/López) and Froude number from the current free
-  surface; `critical_crossing()` locates the first violation.
+- **Slow-shot wave safety**: selectable critical-velocity criterion —
+  `garber_lopez` (`2(√(gD) − √(gh))`, default) or `nogowizin`
+  (`√(gD)·(1.386 − 1.915φ + 0.615φ²)`) — evaluated **once at the dosed fill
+  state** (the fill fraction the classic limits are quoted at) and constant
+  over the shot. `ProcessState.critical_velocity` turns `nan` as soon as the
+  sleeve cross-section is full, and `critical_crossing()` searches only
+  while a free surface exists — a fast second phase after chamber-full is
+  never flagged. The Froude number stays instantaneous (informational).
 - **Air**: one lumped volume (sleeve headspace + unfilled cavity). Pressure
   is delegated to a `VacuumModel` — closed-form models implement
   `pressure_at(process, air)`; path-dependent models override

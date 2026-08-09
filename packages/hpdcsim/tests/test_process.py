@@ -95,10 +95,49 @@ def test_attached_thermal_fills_state_temperature():
 
 
 def test_critical_crossing():
+    # Default fixture accelerates at s_u=0.25 < stroke_to_fill: the ramp
+    # crosses the (constant, dosed-fill) Garber/Lopez limit before the
+    # sleeve runs full.
     process = build_process()
     crossing = process.critical_crossing()
     assert abs(crossing.velocity_margin) < 1e-6
     assert 0.0 < crossing.stroke < process.stroke_to_fill
+    # The criterion is evaluated at the dosed fill, constant over the shot.
+    state0 = process.state_at_stroke(0.0)
+    assert abs(state0.critical_velocity - process.critical_velocity) < 1e-12
+    assert abs(crossing.critical_velocity - process.critical_velocity) < 1e-12
+
+
+def test_no_flag_after_sleeve_full():
+    # Slow phase stays subcritical; acceleration starts only at
+    # stroke_to_fill (no free surface left) -> nothing may be flagged.
+    from hpdcsim import TwoStageLaw
+    process = build_process(motion=TwoStageLaw(a1=2.0, v1=0.3, a2=15.0,
+                                               v2=2.5))
+    assert process.critical_velocity > 0.3
+    assert process.critical_crossing() is None
+    # After the sleeve is full the criterion no longer applies.
+    state = process.state_at_stroke(process.stroke_to_fill + 0.05)
+    assert np.isnan(state.critical_velocity)
+    assert state.is_subcritical
+
+
+def test_critical_velocity_models():
+    garber = build_process()
+    nogo = build_process(critical_velocity_model="nogowizin")
+    phi = garber.sleeve.fill_fraction
+    section = garber.sleeve.section(phi)
+    assert garber.critical_velocity_model == "garber_lopez"
+    assert nogo.critical_velocity_model == "nogowizin"
+    assert abs(garber.critical_velocity - section.critical_velocity) < 1e-12
+    expected = (np.sqrt(section.gravity * section.diameter)
+                * (1.386 - 1.915*phi + 0.615*phi*phi))
+    assert abs(nogo.critical_velocity - expected) < 1e-12
+    try:
+        build_process(critical_velocity_model="unbekannt")
+        assert False, "unknown model must raise"
+    except ValueError:
+        pass
 
 
 def test_arrays_and_csv_export():

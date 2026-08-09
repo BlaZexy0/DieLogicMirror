@@ -93,6 +93,47 @@ class CircularSection:
         return float(velocity) / self.wave_speed_hydraulic
 
 
+# --- critical-velocity criteria -----------------------------------------
+# A criterion maps the DOSED melt cross-section (the initial fill state,
+# where the classic slow-shot limits are defined) to a critical plunger
+# velocity. Selected per process via ShotProcess(critical_velocity_model=…)
+# or the JSON key process.critical_velocity_model.
+
+def critical_velocity_garber_lopez(section):
+    """Garber/Lopez: 2*(sqrt(g*D) - sqrt(g*h))."""
+    return 2.0 * (section.wave_speed_D - section.wave_speed_h)
+
+
+def critical_velocity_nogowizin(section):
+    """Nogowizin: sqrt(g*D) * (1.386 - 1.915*phi + 0.615*phi^2)."""
+    phi = section.fill_fraction
+    return (np.sqrt(section.gravity * section.diameter)
+            * (1.386 - 1.915 * phi + 0.615 * phi * phi))
+
+
+CRITICAL_VELOCITY_MODELS = {
+    "garber_lopez": critical_velocity_garber_lopez,
+    "nogowizin": critical_velocity_nogowizin,
+}
+
+
+def register_critical_velocity_model(name, fn):
+    """fn(section: CircularSection) -> float, evaluated at the dosed fill."""
+    CRITICAL_VELOCITY_MODELS[str(name)] = fn
+
+
+def resolve_critical_velocity_model(model):
+    """Accept a registry name or a callable; return (name, fn)."""
+    if callable(model):
+        return getattr(model, "__name__", "custom"), model
+    try:
+        return str(model), CRITICAL_VELOCITY_MODELS[model]
+    except KeyError:
+        raise ValueError(
+            f"unknown critical_velocity_model {model!r}; "
+            f"available: {sorted(CRITICAL_VELOCITY_MODELS)}.") from None
+
+
 def circular_section(diameter, fill_fraction, gravity=GRAVITY):
     """Build a CircularSection from bore diameter and area fill fraction."""
     diameter, fill = float(diameter), float(fill_fraction)

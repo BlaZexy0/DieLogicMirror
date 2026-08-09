@@ -14,7 +14,13 @@ import math
 REQUIRED_KEYS = ("part", "runner", "overflow", "biscuit", "density",
                  "diam", "length", "gate")
 
-DEFAULT_PROCESS = {"dosing_time": 4.0, "dwell_time": 1.0}
+DEFAULT_PROCESS = {
+    "dosing_time": 4.0,
+    "dwell_time": 1.0,
+    # Wie das Dashboard (js/core/physics.js): Nogowizin am dosierten Füllgrad.
+    # Über den process-Block des Requests umstellbar (z. B. "garber_lopez").
+    "critical_velocity_model": "nogowizin",
+}
 DEFAULT_SPECIFIC_HEAT = 1050.0     # J/(kg K) — wie hpdcsim examples/demo.json
 DEFAULT_POUR_TEMP = 680.0          # °C, falls Tcast fehlt
 POUR_HOLE_POSITION_FRACTION = 0.2  # Eingusslage: 20 % der Kammerlänge

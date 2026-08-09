@@ -9,8 +9,12 @@ from .components import (CastingSystem, Environment, Melt, Overflow, Part,
 from .config import (ConfigError, load_process, process_from_dict,
                      register_motion_type, register_thermal_model,
                      register_vacuum_model)
-from .geometry import (GRAVITY, CircularSection, area_fraction_from_height,
-                       circular_section, height_from_fill_fraction)
+from .geometry import (CRITICAL_VELOCITY_MODELS, GRAVITY, CircularSection,
+                       area_fraction_from_height, circular_section,
+                       critical_velocity_garber_lopez,
+                       critical_velocity_nogowizin,
+                       height_from_fill_fraction,
+                       register_critical_velocity_model)
 from .laws import PlungerLaw, ShotPlan, TwoStageLaw, VelocityFunctionLaw
 from .motion import MotionProfile, MotionSample
 from .process import Event, Phase, ProcessState, ShotProcess
@@ -22,7 +26,8 @@ from .vacuum import (ATMOSPHERE, AirState, ConductanceVacuum, IdealVacuum,
 __version__ = "0.1.0"
 
 __all__ = [
-    "ATMOSPHERE", "AirState", "CastingSystem", "CircularSection",
+    "ATMOSPHERE", "AirState", "CRITICAL_VELOCITY_MODELS", "CastingSystem",
+    "CircularSection",
     "ConductanceVacuum", "ConfigError", "ConstantTemperature", "Environment",
     "Event", "GRAVITY", "IdealVacuum", "LumpedCapacitance", "Melt",
     "MotionProfile", "MotionSample", "MultiSurfaceLumped", "NoVacuum",
@@ -30,7 +35,9 @@ __all__ = [
     "Runner", "ShotPlan", "ShotProcess", "ShotSleeve", "ThermalModel",
     "TwoStageLaw", "VacuumModel", "VacuumSystem", "VelocityFunctionLaw",
     "area_fraction_from_height", "circular_section",
+    "critical_velocity_garber_lopez", "critical_velocity_nogowizin",
     "height_from_fill_fraction", "load_process", "orifice_mass_flow",
-    "process_from_dict", "register_motion_type", "register_thermal_model",
+    "process_from_dict", "register_critical_velocity_model",
+    "register_motion_type", "register_thermal_model",
     "register_vacuum_model",
 ]

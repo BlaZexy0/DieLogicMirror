@@ -68,15 +68,23 @@ async function run() {
   }
 }
 
+const VCRIT_LABELS = { nogowizin: 'Nogowizin', garber_lopez: 'Garber/López' };
+
 function statusText(res) {
   const m = res.meta;
+  const model = VCRIT_LABELS[m.critical_velocity_model] || m.critical_velocity_model;
   const parts = ['φ = ' + fmt(m.phi * 100) + ' %',
     'Füllende bei ' + fmt(m.fill_complete_mm) + ' mm',
     'Pressrest ' + fmt(m.biscuit_mm) + ' mm'];
+  if (m.v_crit !== null && m.v_crit !== undefined) {
+    parts.push('v<sub>krit</sub> = ' + fmt(m.v_crit) + ' m/s (' + model + ')');
+  }
   if (m.curve_clamped) parts.push('Kurve am Füllende gekappt');
   if (res.critical_crossing) {
     parts.push('<b>v<sub>krit</sub> überschritten ab ' +
-      fmt(res.critical_crossing.s_mm) + ' mm (Garber/López)</b>');
+      fmt(res.critical_crossing.s_mm) + ' mm</b>');
+  } else {
+    parts.push('1. Phase unterkritisch ✓');
   }
   return parts.join(' · ');
 }

@@ -49,6 +49,18 @@ def test_wave_speeds_and_critical_velocity():
     assert abs(circular_section(0.09, 1.0).critical_velocity) < 1e-9
 
 
+def test_critical_velocity_model_registry():
+    from hpdcsim import (CRITICAL_VELOCITY_MODELS,
+                         critical_velocity_garber_lopez,
+                         critical_velocity_nogowizin)
+    s = circular_section(0.09, 0.35)
+    g = 9.80665
+    assert abs(critical_velocity_garber_lopez(s) - s.critical_velocity) < 1e-12
+    expected = np.sqrt(g*0.09) * (1.386 - 1.915*0.35 + 0.615*0.35**2)
+    assert abs(critical_velocity_nogowizin(s) - expected) < 1e-12
+    assert set(CRITICAL_VELOCITY_MODELS) >= {"garber_lopez", "nogowizin"}
+
+
 def test_validation():
     raises(ValueError, circular_section, -1.0, 0.5)
     raises(ValueError, circular_section, 0.09, 1.5)

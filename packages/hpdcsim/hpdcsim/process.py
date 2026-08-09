@@ -18,7 +18,7 @@ from scipy.optimize import brentq
 
 from .components import (CastingSystem, Environment, Melt, ShotSleeve,
                          VacuumSystem)
-from .geometry import CircularSection
+from .geometry import CircularSection, resolve_critical_velocity_model
 from .laws import PlungerLaw, ShotPlan
 from .motion import MotionProfile
 from .thermal import ThermalModel
@@ -70,6 +70,7 @@ class ProcessState:
     runner_fill: float
     part_fill: float
     overflow_fill: float
+    critical_velocity: float = np.nan  # criterion at the DOSED fill; nan once the sleeve is full
 
     @property
     def sleeve_fill(self): return self.section.fill_fraction
@@ -97,15 +98,14 @@ class ProcessState:
         return self.wetted_area + self.downstream_wetted_area
 
     @property
-    def critical_velocity(self):
-        """Critical plunger velocity of the current sleeve free surface."""
-        return self.section.critical_velocity
-    @property
     def velocity_margin(self):
-        """critical_velocity - plunger_velocity (negative = supercritical)."""
+        """critical_velocity - plunger_velocity (negative = supercritical);
+        nan once the sleeve is full (the criterion no longer applies)."""
         return self.critical_velocity - self.plunger_velocity
     @property
-    def is_subcritical(self): return self.plunger_velocity <= self.critical_velocity
+    def is_subcritical(self):
+        """False only while a free surface exists AND the margin is negative."""
+        return not self.velocity_margin < 0.0
     @property
     def froude(self):
         """Plunger Froude number; nan once the sleeve free surface is gone."""
@@ -117,7 +117,8 @@ class ShotProcess:
                  motion: MotionProfile | PlungerLaw, *, dosing_time, dwell_time,
                  melt: Melt | None = None, vacuum: VacuumSystem | None = None,
                  thermal: ThermalModel | None = None,
-                 environment: Environment | None = None):
+                 environment: Environment | None = None,
+                 critical_velocity_model="garber_lopez"):
         if dosing_time <= 0.0 or dwell_time < 0.0:
             raise ValueError("dosing_time must be > 0 and dwell_time >= 0.")
         plan = ShotPlan(sleeve, casting)
@@ -151,6 +152,11 @@ class ShotProcess:
         self.thermal = thermal
         self.biscuit_length = plan.biscuit_length
         self.fill_complete_stroke = plan.fill_complete_stroke
+        # Slow-shot criterion, evaluated once at the dosed fill state.
+        name, fn = resolve_critical_velocity_model(critical_velocity_model)
+        self.critical_velocity_model = name
+        self.critical_velocity = float(
+            fn(sleeve.section(sleeve.fill_fraction)))
         self._pressure_solution = None
         self._thermal_solution = None
         self._solving_thermal = False
@@ -309,6 +315,8 @@ class ShotProcess:
         gate_flow = plunger_flow if region in ("part", "overflow", "complete") else 0.0
         gate_area = casting.runner.gate_area
         gate_velocity = gate_flow/gate_area if gate_area else np.nan
+        vcrit = (self.critical_velocity if section.fill_fraction < 1.0
+                 else np.nan)
         return ProcessState(
             t, phase, stroke, velocity, acceleration, section, melt,
             sleeve_melt, vr, vp, vo, region, melt_mass,
@@ -316,6 +324,7 @@ class ShotProcess:
             downstream_wetted, free_surface, plunger_flow, gate_flow,
             gate_velocity, dosing_rate, air_state.pour_hole_open,
             air_state.vacuum_active, runner_fill, part_fill, overflow_fill,
+            critical_velocity=vcrit,
         )
 
     def state_at_stroke(self, stroke) -> ProcessState:
@@ -344,8 +353,10 @@ class ShotProcess:
 
     def critical_crossing(self, *, count=2000):
         """First stroke where the plunger velocity reaches the critical
-        velocity, searched while a sleeve free surface exists. Returns the
-        ProcessState at the crossing, or None."""
+        velocity of the dosed fill state, searched only while a sleeve free
+        surface exists — once the chamber runs full the criterion no longer
+        applies and nothing is flagged. Returns the ProcessState at the
+        crossing, or None."""
         end = min(self.profile.end_position, self.stroke_to_fill)
         margin = lambda s: self.state_at_stroke(s).velocity_margin
         grid = np.linspace(0.0, end, count)

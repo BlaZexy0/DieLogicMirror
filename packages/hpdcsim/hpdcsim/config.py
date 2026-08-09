@@ -200,7 +200,8 @@ def process_from_dict(config) -> ShotProcess:
                if "thermal" in config else None)
 
     process_data = dict(_expect_dict(config["process"], "process"))
-    unknown = set(process_data) - {"dosing_time", "dwell_time"}
+    unknown = set(process_data) - {"dosing_time", "dwell_time",
+                                   "critical_velocity_model"}
     if unknown:
         raise ConfigError(f"process: unknown keys {sorted(unknown)}.")
     if {"dosing_time", "dwell_time"} - set(process_data):
@@ -211,7 +212,9 @@ def process_from_dict(config) -> ShotProcess:
                            dosing_time=process_data["dosing_time"],
                            dwell_time=process_data["dwell_time"],
                            melt=melt, vacuum=vacuum, thermal=thermal,
-                           environment=environment)
+                           environment=environment,
+                           critical_velocity_model=process_data.get(
+                               "critical_velocity_model", "garber_lopez"))
     except ValueError as error:
         raise ConfigError(f"process: {error}") from error
 

@@ -53,6 +53,9 @@ def run_shot_simulation(values, curve, *, count=400, process=None, vacuum=None):
             "s_mm": _clean(ev.stroke * 1000.0),
         })
 
+    meta["critical_velocity_model"] = proc.critical_velocity_model
+    meta["v_crit"] = _clean(proc.critical_velocity)
+
     crossing = proc.critical_crossing(count=800)
     critical = None
     if crossing is not None:
