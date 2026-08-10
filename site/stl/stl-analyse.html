@@ -456,7 +456,7 @@
           color: COLORS[colorIdx++ % COLORS.length],
           volume: meshVolume(tris),
           area: meshArea(tris),
-          role: '',
+          role: file.role || '',
           proj: {},
         });
       } catch (e) {
@@ -799,16 +799,23 @@
 
   window.addEventListener('resize', draw);
 
-  /* ── Beispieldateien aus assets/ als Startbelegung ─────────── */
+  /* ── Beispieldateien aus assets/ als Startbelegung ───────────
+     Minimaler Gießlauf mit fertiger Zuordnung: Pressrest — Anguss —
+     Bauteil — Überläufe, damit die Dashboard-Übernahme sofort geht. */
   async function loadDefaults() {
-    const urls = ['../assets/cone_binary.stl', '../assets/cylinder_ascii.stl'];
+    const defaults = [
+      ['../assets/biscuit.stl',  'biscuit'],
+      ['../assets/runner.stl',   'runner'],
+      ['../assets/part.stl',     'part'],
+      ['../assets/overflow.stl', 'overflow'],
+    ];
     const files = [];
-    for (const url of urls) {
+    for (const [url, role] of defaults) {
       try {
         const res = await fetch(url);
         if (!res.ok) continue;
         const buf = await res.arrayBuffer();
-        files.push({ name: url.split('/').pop(), arrayBuffer: async () => buf });
+        files.push({ name: url.split('/').pop(), role, arrayBuffer: async () => buf });
       } catch (e) { /* z. B. file:// — dann ohne Beispieldateien starten */ }
     }
     if (files.length) addFiles(files);
