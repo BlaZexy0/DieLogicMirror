@@ -180,6 +180,58 @@
     }
     .machine-info:empty { display: none; }
     .warn-lift { color: var(--warn); font-weight: 700; }
+
+    /* ── Zuordnung + Dashboard-Übernahme ───────────────────── */
+    .stl-toolbar label { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+    .stl-toolbar input[type="number"] {
+      width: 80px;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      text-align: right;
+    }
+    .role-sel {
+      padding: 0.3rem 0.4rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 0.8rem;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .stl-table tr.row-pref td { background: #e7f4f2; }
+    .stl-table tr.row-toosmall td { background: #fdf2f6; color: var(--muted); }
+    .badge {
+      display: inline-block;
+      padding: 0.1rem 0.55rem;
+      border-radius: 999px;
+      font-family: var(--sans);
+      font-size: 0.68rem;
+      font-weight: 700;
+      margin-left: 0.55rem;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .badge-pref { background: var(--primary); color: #fff; }
+    .badge-toosmall { background: var(--warn); color: #fff; }
+    .dash-btn {
+      padding: 0.3rem 0.75rem;
+      border: 1px solid var(--primary);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--primary);
+      font-family: var(--sans);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+    }
+    .dash-btn:hover:not(:disabled) { background: var(--primary); color: #fff; }
+    .dash-btn:disabled { border-color: var(--border); color: var(--muted); opacity: 0.55; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -187,9 +239,11 @@
 <section class="page-hero">
   <div class="inner">
     <h1>STL-Analyse</h1>
-    <p class="subtitle">STL-Dateien direkt im Browser auswerten: Volumen, Oberfläche und
+    <p class="subtitle">STL-Dateien direkt im Browser auswerten: Volumen, Masse, Oberfläche und
       projizierte Fläche je Bauteil — mit umschaltbarer Projektionsrichtung (X/Y/Z) und
-      Summenzeile über alle geladenen Dateien. Die Dateien verlassen Ihren Rechner nicht.</p>
+      Summenzeile über alle geladenen Dateien. Dateien als Bauteil, Anguss, Überlauf und
+      Pressrest zuordnen und die Auslegung direkt ins Dashboard übernehmen.
+      Die Dateien verlassen Ihren Rechner nicht.</p>
   </div>
 </section>
 
@@ -204,6 +258,9 @@
       <button data-dir="Y">Y</button>
       <button data-dir="Z" class="active">Z</button>
     </div>
+    <label for="density-input">Dichte
+      <input type="number" id="density-input" value="2700" min="1" step="10"> kg/m³
+    </label>
     <span class="stl-hint">100 % clientseitig — kein Upload zu einem Server.</span>
   </div>
   <div class="stl-status" id="status"></div>
@@ -229,7 +286,9 @@
       <thead>
         <tr>
           <th>Datei</th>
+          <th style="text-align:left">Zuordnung</th>
           <th>Volumen</th>
+          <th>Masse</th>
           <th>Oberfläche</th>
           <th id="proj-col-head">Proj. Fläche</th>
           <th></th>
@@ -244,6 +303,9 @@
   <div class="stl-table-card" style="margin-top:1.2rem;">
     <div class="machine-head">
       <h2>Max. Nachdruck je Maschine — projizierte Fläche als Sprengfläche</h2>
+      <label for="ptarget-input">Auslegungsdruck
+        <input type="number" id="ptarget-input" value="600" min="1" step="50"> bar
+      </label>
       <label for="safety-input">Sicherheitsfaktor S
         <input type="number" id="safety-input" value="1.3" min="1" step="0.05">
       </label>
@@ -257,6 +319,7 @@
           <th>p<sub>max</sub> nur Schließkraft</th>
           <th>mit Sicherheit S</th>
           <th>mit S + Außermittigkeit</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="machine-body"></tbody>
@@ -276,7 +339,13 @@
     (in m²) und dem Hebelfaktor k = 1 + 2|e<sub>x</sub>|/a<sub>x</sub> + 2|e<sub>y</sub>|/a<sub>y</sub>
     aus der Außermittigkeit des Gesamtschwerpunkts gegenüber dem Ursprung (a = Säulenabstände
     der Maschine). Die drei Spalten: nur Schließkraft (S = 1, k = 1), mit Sicherheitsfaktor S,
-    mit S und Außermittigkeit.</p>
+    mit S und Außermittigkeit. Die Masse je Datei ist Volumen × Dichte.
+    <strong>Empfohlen</strong> markiert die kleinste Maschine, deren maximaler Nachdruck
+    (mit S und Außermittigkeit) den eingestellten Auslegungsdruck erreicht;
+    <strong>zu klein</strong> markierte Maschinen erreichen ihn nicht. „→ Dashboard" übernimmt
+    projizierte Fläche (als Sprengfläche), Außermittigkeit, Massen aus der Zuordnung, Dichte,
+    Sicherheitsfaktor, Auslegungsdruck und das Maschinen-Preset in das Dashboard und öffnet es —
+    möglich, sobald alle vier Zuordnungen (Bauteil, Anguss, Überlauf, Pressrest) vergeben sind.</p>
 
 </div>
 
@@ -387,6 +456,7 @@
           color: COLORS[colorIdx++ % COLORS.length],
           volume: meshVolume(tris),
           area: meshArea(tris),
+          role: '',
           proj: {},
         });
       } catch (e) {
@@ -499,6 +569,28 @@
     return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
+  /* Zuordnung der Dateien zu den Massenbilanz-Feldern des Dashboards. */
+  const ROLES = [['part', 'Bauteil'], ['runner', 'Anguss'], ['overflow', 'Überlauf'], ['biscuit', 'Pressrest']];
+
+  function getDensity() {
+    return Math.max(parseFloat(document.getElementById('density-input').value) || 2700, 1);
+  }
+
+  /* Masse in kg: Volumen [mm³] · Dichte [kg/m³] · 1e-9 */
+  function massKg(volume) { return volume * getDensity() * 1e-9; }
+
+  function roleSums() {
+    const sums = { part: 0, runner: 0, overflow: 0, biscuit: 0 };
+    for (const m of models) if (m.role) sums[m.role] += massKg(m.volume);
+    return sums;
+  }
+
+  function missingRoles() {
+    const have = {};
+    for (const m of models) if (m.role) have[m.role] = true;
+    return ROLES.filter(([key]) => !have[key]).map(([, label]) => label);
+  }
+
   function renderTable() {
     const table = document.getElementById('result-table');
     const empty = document.getElementById('table-empty');
@@ -511,9 +603,13 @@
     document.getElementById('result-body').innerHTML = models.map((m, i) => {
       const p = getProjection(m, dir);
       totV += m.volume; totA += m.area; totP += p.area;
+      const opts = '<option value="">– wählen –</option>' + ROLES.map(([key, label]) =>
+        `<option value="${key}"${m.role === key ? ' selected' : ''}>${label}</option>`).join('');
       return `<tr>
         <td class="name" title="${escapeHtml(m.name)}"><span class="dot" style="background:${m.color}"></span>${escapeHtml(m.name)}</td>
+        <td style="text-align:left"><select class="role-sel" data-idx="${i}" aria-label="Zuordnung für ${escapeHtml(m.name)}">${opts}</select></td>
         <td>${fmt(m.volume)} mm³ <span class="sub">(${fmt(m.volume / 1000)} cm³)</span></td>
+        <td>${fmt(massKg(m.volume))} kg</td>
         <td>${fmt(m.area)} mm²</td>
         <td>${fmt(p.area)} mm²</td>
         <td><button class="remove-btn" data-idx="${i}" title="Entfernen" aria-label="${escapeHtml(m.name)} entfernen">✕</button></td>
@@ -521,7 +617,9 @@
     }).join('');
     document.getElementById('result-foot').innerHTML = `<tr>
       <td class="name">Summe (${models.length} ${models.length === 1 ? 'Datei' : 'Dateien'})</td>
+      <td></td>
       <td>${fmt(totV)} mm³ <span class="sub">(${fmt(totV / 1000)} cm³)</span></td>
+      <td>${fmt(massKg(totV))} kg</td>
       <td>${fmt(totA)} mm²</td>
       <td>${fmt(totP)} mm²</td>
       <td></td>
@@ -545,32 +643,89 @@
     let totP = 0;
     for (const m of models) totP += getProjection(m, dir).area;
     const S = Math.max(parseFloat(document.getElementById('safety-input').value) || 1.3, 1);
+    const pTarget = Math.max(parseFloat(document.getElementById('ptarget-input').value) || 600, 1);
     const has = totP > 0 && cog && MACHINES.length > 0;
     table.hidden = !has;
     empty.hidden = has;
     if (!has) { info.textContent = ''; return; }
 
     const ex = Math.abs(cog.cu), ey = Math.abs(cog.cv);
+    const missing = missingRoles();
+    const ready = missing.length === 0;
     info.innerHTML = 'Sprengfläche A = Σ proj. Fläche (' + dir + ') = <strong>' + fmt(totP) +
       ' mm²</strong> · Außermittigkeit e = Schwerpunkt vom Ursprung: <strong>' +
-      a.uName + '</strong> ' + fmt(cog.cu) + ' mm · <strong>' + a.vName + '</strong> ' + fmt(cog.cv) + ' mm';
+      a.uName + '</strong> ' + fmt(cog.cu) + ' mm · <strong>' + a.vName + '</strong> ' + fmt(cog.cv) + ' mm' +
+      (ready
+        ? ' · Dashboard-Übernahme bereit — alle vier Zuordnungen vorhanden.'
+        : ' · Für die Dashboard-Übernahme fehlt die Zuordnung: <strong>' + missing.join(', ') + '</strong>.');
 
+    /* Eignung: Maschine schafft den Auslegungsdruck (mit S + Außermittigkeit).
+       Bevorzugt = kleinste geeignete Maschine; zu kleine Maschinen werden markiert. */
     const A_m2 = totP * 1e-6;
-    document.getElementById('machine-body').innerHTML = MACHINES.map((mc) => {
+    const rows = MACHINES.map((mc) => {
       const f = mc.fields;
       const p0 = f.force / (100 * A_m2);                       // nur Schließkraft (S = 1, k = 1)
       const pS = p0 / S;                                       // mit Sicherheitsfaktor
       const k = 1 + 2 * ex / f.tieX + 2 * ey / f.tieY;         // Hebelfaktor Säulenlast
       const pK = pS / k;
       const lift = k - 1 >= 1;                                 // F_Säule,min ≤ 0 → Form klafft
-      return `<tr>
-        <td class="name">${escapeHtml(mc.name)}</td>
-        <td>${fmt(f.force)} kN</td>
-        <td>${fmt(p0)} bar</td>
-        <td>${fmt(pS)} bar</td>
-        <td>${fmt(pK)} bar <span class="sub">(k ${k.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 3 })})</span>${lift ? ' <span class="warn-lift" title="Schwerpunkt zu weit außermittig — die Form klafft an der gegenüberliegenden Ecke">⚠ Abheben</span>' : ''}</td>
+      return { mc, f, p0, pS, k, pK, ok: pK >= pTarget && !lift };
+    });
+    let pref = null;
+    for (const r of rows) if (r.ok && (!pref || r.f.force < pref.f.force)) pref = r;
+
+    document.getElementById('machine-body').innerHTML = rows.map((r) => {
+      const cls = r === pref ? ' class="row-pref"' : (!r.ok ? ' class="row-toosmall"' : '');
+      const badge = r === pref
+        ? '<span class="badge badge-pref" title="Kleinste Maschine, die den Auslegungsdruck von ' + fmt(pTarget) + ' bar erreicht">empfohlen</span>'
+        : (!r.ok ? '<span class="badge badge-toosmall" title="Erreicht den Auslegungsdruck von ' + fmt(pTarget) + ' bar nicht">zu klein</span>' : '');
+      return `<tr${cls}>
+        <td class="name">${escapeHtml(r.mc.name)}${badge}</td>
+        <td>${fmt(r.f.force)} kN</td>
+        <td>${fmt(r.p0)} bar</td>
+        <td>${fmt(r.pS)} bar</td>
+        <td>${fmt(r.pK)} bar <span class="sub">(k ${r.k.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 3 })})</span>${r.k - 1 >= 1 ? ' <span class="warn-lift" title="Schwerpunkt zu weit außermittig — die Form klafft an der gegenüberliegenden Ecke">⚠ Abheben</span>' : ''}</td>
+        <td><button class="dash-btn" data-id="${escapeHtml(r.mc.id)}"${ready ? '' : ' disabled'} title="${ready
+          ? 'Werte übernehmen und Dashboard öffnen'
+          : 'Erst jeder Datei eine Zuordnung geben — es fehlt: ' + missing.join(', ')}">→ Dashboard</button></td>
       </tr>`;
     }).join('');
+  }
+
+  /* ── Übernahme ins Dashboard ───────────────────────────────── */
+  /* Schreibt die ermittelten Werte in den localStorage-Zustand des
+     Dashboards (gleicher Origin) und öffnet es. Nicht betroffene
+     Eingaben bleiben erhalten. */
+  const DASH_KEY = 'hpdc-dashboard-state-v1';
+
+  function openDashboard(mc) {
+    const cog = combinedCog();
+    let totP = 0;
+    for (const m of models) totP += getProjection(m, dir).area;
+    if (!(totP > 0) || !cog) return;
+    const S = Math.max(parseFloat(document.getElementById('safety-input').value) || 1.3, 1);
+    const pTarget = Math.max(parseFloat(document.getElementById('ptarget-input').value) || 600, 1);
+    const sums = roleSums();
+    const kg = (x) => Math.round(x * 1000) / 1000;
+
+    let data = {};
+    try { data = JSON.parse(localStorage.getItem(DASH_KEY)) || {}; } catch (e) { /* neu anlegen */ }
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) data = {};
+    data.values = Object.assign({}, data.values, {
+      part: kg(sums.part),
+      runner: kg(sums.runner),
+      overflow: kg(sums.overflow),
+      biscuit: kg(sums.biscuit),
+      density: getDensity(),
+      area: Number((totP * 1e-6).toPrecision(4)),
+      eccX: Math.round(Math.abs(cog.cu) * 10) / 10,
+      eccY: Math.round(Math.abs(cog.cv) * 10) / 10,
+      safety: S,
+      psel: pTarget,
+    }, mc.fields);
+    data.machine = mc.id;
+    try { localStorage.setItem(DASH_KEY, JSON.stringify(data)); } catch (e) { /* Dashboard startet dann mit Defaults */ }
+    window.location.href = '../app/index.html';
   }
 
   function update() {
@@ -611,6 +766,21 @@
     update();
   });
 
+  document.getElementById('result-body').addEventListener('change', (e) => {
+    const sel = e.target.closest('.role-sel');
+    if (!sel) return;
+    const m = models[Number(sel.dataset.idx)];
+    if (m) m.role = sel.value;
+    renderMachines();
+  });
+
+  document.getElementById('machine-body').addEventListener('click', (e) => {
+    const btn = e.target.closest('.dash-btn');
+    if (!btn || btn.disabled) return;
+    const mc = MACHINES.find((m) => m.id === btn.dataset.id);
+    if (mc) openDashboard(mc);
+  });
+
   const card = document.getElementById('canvas-card');
   for (const ev of ['dragenter', 'dragover']) {
     card.addEventListener(ev, (e) => { e.preventDefault(); card.classList.add('dragover'); });
@@ -624,6 +794,8 @@
   });
 
   document.getElementById('safety-input').addEventListener('input', renderMachines);
+  document.getElementById('ptarget-input').addEventListener('input', renderMachines);
+  document.getElementById('density-input').addEventListener('input', () => { renderTable(); renderMachines(); });
 
   window.addEventListener('resize', draw);
 
