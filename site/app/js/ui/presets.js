@@ -11,7 +11,7 @@ function summaryHTML(m) {
   const f = m.fields;
   return 'F<sub>s</sub> ' + f.force + ' kN · F<sub>gieß</sub> ' + f.injForce + ' kN · ' +
     'v<sub>max</sub> ' + f.vmax + ' m/s · a<sub>max</sub> ' + f.amax + ' m/s² · ' +
-    'Ø ' + f.dmin + '–' + f.dmax + ' mm · L<sub>max</sub> ' + f.lmax + ' mm · ' +
+    'Ø ' + f.dmin + '–' + f.dmax + ' mm · L ' + f.lmin + '–' + f.lmax + ' mm · ' +
     'Säulen ' + f.tieX + ' × ' + f.tieY + ' mm';
 }
 

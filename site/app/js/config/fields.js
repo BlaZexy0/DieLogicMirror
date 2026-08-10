@@ -13,6 +13,7 @@ export const groups = [
       { key: 'amax',     label: 'Beschleunigung max.',     unit: 'm/s²', def: 60 },
       { key: 'dmin',     label: 'Kolben-Ø min.',           unit: 'mm',   def: 120 },
       { key: 'dmax',     label: 'Kolben-Ø max.',           unit: 'mm',   def: 200 },
+      { key: 'lmin',     label: 'Kammerlänge min.',        unit: 'mm',   def: 500 },
       { key: 'lmax',     label: 'Kammerlänge max.',        unit: 'mm',   def: 900 },
       { key: 'tieX',     label: 'Säulenabstand horizontal', unit: 'mm',  def: 1100 },
       { key: 'tieY',     label: 'Säulenabstand vertikal',   unit: 'mm',  def: 1100 }
@@ -49,8 +50,7 @@ export const groups = [
     id: 'chamber', title: 'Füllkammer und Kolben',
     fields: [
       { key: 'diam',   label: 'Gewählter Kolben-Ø',    unit: 'mm', def: 150 },
-      { key: 'length', label: 'Gewählte Kammerlänge',  unit: 'mm', def: 700 },
-      { key: 'lmin',   label: 'Kammerlänge min.',      unit: 'mm', def: 500 }
+      { key: 'length', label: 'Gewählte Kammerlänge',  unit: 'mm', def: 700 }
     ]
   },
   {
@@ -115,7 +115,7 @@ export const groups = [
 
 /* Felder, die von Maschinen-Presets gesetzt werden. Handänderung eines dieser
    Felder setzt die Preset-Auswahl auf „manuell" zurück. */
-export const PRESET_KEYS = { force: 1, vmax: 1, amax: 1, dmin: 1, dmax: 1, lmax: 1, injForce: 1, tieX: 1, tieY: 1 };
+export const PRESET_KEYS = { force: 1, vmax: 1, amax: 1, dmin: 1, dmax: 1, lmin: 1, lmax: 1, injForce: 1, tieX: 1, tieY: 1 };
 
 /* Standard-Schusskurve: Wegpunkte [s in mm, v in m/s]. */
 export const DEFAULT_CURVE = [[60, 0.4], [318, 0.4], [470, 4], [675, 4]];
