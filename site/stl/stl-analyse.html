@@ -349,12 +349,14 @@
 
   <p class="stl-footnote">Volumen über die Summe signierter Tetraeder (setzt ein geschlossenes Netz
     voraus), Oberfläche als Summe der Dreiecksflächen. Die projizierte Fläche ist die Silhouette des
-    Bauteils senkrecht zur gewählten Richtung, per Rasterung bestimmt — Überdeckungen innerhalb einer
-    Datei werden also nur einfach gezählt. Die Summenzeile addiert die Einzelwerte der Dateien.
+    Bauteils senkrecht zur gewählten Richtung, per Rasterung bestimmt. Die Summenzeile addiert
+    Volumen, Masse und Oberfläche der Dateien; ihre projizierte Fläche ist dagegen die
+    <strong>vereinigte</strong> Silhouette aller Dateien — Überdeckungen, auch zwischen
+    verschiedenen Dateien, zählen nur einfach.
     <strong>S</strong> markiert den flächengewichteten Gesamtschwerpunkt der projizierten Flächen,
     <strong>0</strong> den Ursprung des STL-Koordinatensystems.
     Der maximale Nachdruck je Maschine folgt dem Zuhaltungs-Modell des Dashboards:
-    p<sub>max</sub> = F<sub>s</sub> / (100 · S · k · A) mit A als Summe der projizierten Flächen
+    p<sub>max</sub> = F<sub>s</sub> / (100 · S · k · A) mit A als vereinigter projizierter Fläche
     (in m²) und dem Hebelfaktor k = 1 + 2|e<sub>x</sub>|/a<sub>x</sub> + 2|e<sub>y</sub>|/a<sub>y</sub>
     aus der Außermittigkeit des Gesamtschwerpunkts gegenüber dem Ursprung (a = Säulenabstände
     der Maschine). Die drei Spalten: nur Schließkraft (S = 1, k = 1), mit Sicherheitsfaktor S,
@@ -449,14 +451,32 @@
     };
   }
 
-  /* Flächengewichteter Gesamtschwerpunkt aller Silhouetten in der aktuellen Richtung. */
-  function combinedCog() {
-    let a = 0, su = 0, sv = 0;
+  /* Vereinigte Silhouette aller Dateien in der aktuellen Richtung:
+     alle Pfade in einem Path2D gerastert (nonzero, Umlaufsinn ist je
+     Dreieck vereinheitlicht) — Überdeckungen zwischen Dateien zählen
+     dadurch nur einfach, der Schwerpunkt ist deckungsgewichtet. */
+  const unionCache = {};   // je Richtung: { area, cu, cv }
+
+  function invalidateUnion() { for (const k in unionCache) delete unionCache[k]; }
+
+  function unionSilhouette() {
+    if (unionCache[dir]) return unionCache[dir];
+    let minU = Infinity, minV = Infinity, maxU = -Infinity, maxV = -Infinity;
+    const all = new Path2D();
     for (const m of models) {
       const p = getProjection(m, dir);
-      a += p.area; su += p.area * p.cu; sv += p.area * p.cv;
+      if (!(p.w > 0) || !(p.h > 0)) continue;
+      all.addPath(p.path);
+      if (p.minU < minU) minU = p.minU;
+      if (p.minV < minV) minV = p.minV;
+      if (p.minU + p.w > maxU) maxU = p.minU + p.w;
+      if (p.minV + p.h > maxV) maxV = p.minV + p.h;
     }
-    return a > 0 ? { cu: su / a, cv: sv / a } : null;
+    if (!(maxU > minU) || !(maxV > minV)) return null;
+    const props = rasterProps(all, minU, minV, maxU - minU, maxV - minV);
+    if (!(props.area > 0)) return null;
+    unionCache[dir] = props;
+    return props;
   }
 
   function getProjection(model, axis) {
@@ -485,6 +505,7 @@
       }
     }
     statusEl.textContent = errors.length ? 'Nicht lesbar — ' + errors.join(' · ') : '';
+    invalidateUnion();
     update();
   }
 
@@ -533,7 +554,7 @@
 
     /* Ursprung (0) und Gesamtschwerpunkt (S) der projizierten Fläche */
     const toX = (u) => tx + u * s, toY = (v) => ty - v * s;
-    const cog = combinedCog();
+    const cog = unionSilhouette();
     const font = '700 11px ' + getComputedStyle(document.body).fontFamily;
     if (cog) {
       ctx.strokeStyle = '#4c6870';
@@ -620,10 +641,10 @@
     document.getElementById('proj-col-head').textContent = 'Proj. Fläche (' + dir + ')';
     if (!models.length) return;
 
-    let totV = 0, totA = 0, totP = 0;
+    let totV = 0, totA = 0;
     document.getElementById('result-body').innerHTML = models.map((m, i) => {
       const p = getProjection(m, dir);
-      totV += m.volume; totA += m.area; totP += p.area;
+      totV += m.volume; totA += m.area;
       const opts = '<option value="">– wählen –</option>' + ROLES.map(([key, label]) =>
         `<option value="${key}"${m.role === key ? ' selected' : ''}>${label}</option>`).join('');
       return `<tr>
@@ -636,13 +657,14 @@
         <td><button class="remove-btn" data-idx="${i}" title="Entfernen" aria-label="${escapeHtml(m.name)} entfernen">✕</button></td>
       </tr>`;
     }).join('');
+    const un = unionSilhouette();
     document.getElementById('result-foot').innerHTML = `<tr>
       <td class="name">Summe (${models.length} ${models.length === 1 ? 'Datei' : 'Dateien'})</td>
       <td></td>
       <td>${fmt(totV)} mm³ <span class="sub">(${fmt(totV / 1000)} cm³)</span></td>
       <td>${fmt(massKg(totV))} kg</td>
       <td>${fmt(totA)} mm²</td>
-      <td>${fmt(totP)} mm²</td>
+      <td>${fmt(un ? un.area : 0)} mm² <span class="sub">(vereinigt)</span></td>
       <td></td>
     </tr>`;
   }
@@ -661,9 +683,8 @@
     const empty = document.getElementById('machine-empty');
     const info = document.getElementById('machine-info');
     const a = AXES[dir];
-    const cog = combinedCog();
-    let totP = 0;
-    for (const m of models) totP += getProjection(m, dir).area;
+    const cog = unionSilhouette();
+    const totP = cog ? cog.area : 0;
     const S = Math.max(parseFloat(document.getElementById('safety-input').value) || 1.3, 1);
     const pTarget = Math.max(parseFloat(document.getElementById('ptarget-input').value) || 600, 1);
     const has = totP > 0 && cog && MACHINES.length > 0;
@@ -674,7 +695,7 @@
     const ex = Math.abs(cog.cu), ey = Math.abs(cog.cv);
     const missing = missingRoles();
     const ready = missing.length === 0;
-    info.innerHTML = 'Sprengfläche A = Σ proj. Fläche (' + dir + ') = <strong>' + fmt(totP) +
+    info.innerHTML = 'Sprengfläche A = vereinigte proj. Fläche (' + dir + ') = <strong>' + fmt(totP) +
       ' mm²</strong> · Außermittigkeit e = Schwerpunkt vom Ursprung: <strong>' +
       a.uName + '</strong> ' + fmt(cog.cu) + ' mm · <strong>' + a.vName + '</strong> ' + fmt(cog.cv) + ' mm' +
       (ready
@@ -719,9 +740,8 @@
      Quelle, die auch das Dashboard (js/core/state.js) nutzt. Nicht
      betroffene Eingaben bleiben erhalten. */
   function openDashboard(mc) {
-    const cog = combinedCog();
-    let totP = 0;
-    for (const m of models) totP += getProjection(m, dir).area;
+    const cog = unionSilhouette();
+    const totP = cog ? cog.area : 0;
     if (!(totP > 0) || !cog) return;
     const S = Math.max(parseFloat(document.getElementById('safety-input').value) || 1.3, 1);
     const pTarget = Math.max(parseFloat(document.getElementById('ptarget-input').value) || 600, 1);
@@ -748,7 +768,7 @@
     const a = AXES[dir];
     document.getElementById('proj-label').innerHTML =
       'Projektion entlang <strong>' + dir + '</strong> auf die ' + a.uName + '–' + a.vName + '-Ebene';
-    const cog = combinedCog();
+    const cog = unionSilhouette();
     document.getElementById('cog-label').innerHTML = cog
       ? 'Schwerpunkt S vom Ursprung: <strong>' + a.uName + '</strong> ' + fmt(cog.cu) +
         ' mm · <strong>' + a.vName + '</strong> ' + fmt(cog.cv) + ' mm'
@@ -779,6 +799,7 @@
     const btn = e.target.closest('.remove-btn');
     if (!btn) return;
     models.splice(Number(btn.dataset.idx), 1);
+    invalidateUnion();
     update();
   });
 
