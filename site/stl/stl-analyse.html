@@ -44,6 +44,18 @@
     .stl-hint { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
     .stl-status { font-size: 0.8rem; color: var(--warn); margin-top: 0.4rem; }
     .stl-status:empty { display: none; }
+    .stl-note {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 0.7rem 1.1rem;
+      margin-bottom: 1.2rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .stl-note strong { color: var(--text); }
 
     /* ── Projektionsfenster ────────────────────────────────── */
     .stl-canvas-card {
@@ -265,6 +277,12 @@
   </div>
   <div class="stl-status" id="status"></div>
 
+  <div class="stl-note"><strong>Konvention:</strong> Der Ursprung des STL-Koordinatensystems
+    (<strong>0</strong>) gilt als Werkzeugmitte (Mitte des Säulenfelds). Die Außermittigkeit des
+    Schwerpunkts — und damit der Hebelfaktor k und die Maschinenempfehlung — wird direkt vom
+    Ursprung gemessen. Die Dateien daher schon im CAD passend zur Werkzeugmitte positioniert
+    exportieren; diese Seite verschiebt oder dreht nichts.</div>
+
   <div class="stl-canvas-card" id="canvas-card">
     <canvas id="proj-canvas"></canvas>
     <div class="canvas-empty" id="canvas-empty">
@@ -272,7 +290,8 @@
         <path d="M21 4 L37 12 L37 30 L21 38 L5 30 L5 12 Z" stroke="#4c6870" stroke-width="1.5" stroke-linejoin="round"/>
         <path d="M5 12 L21 20 L37 12 M21 20 L21 38" stroke="#4c6870" stroke-width="1.5" stroke-linejoin="round"/>
       </svg>
-      <div>Noch keine STL-Dateien geladen.<br>Dateien auswählen oder hierher ziehen.</div>
+      <div>Noch keine STL-Dateien geladen.<br>Dateien auswählen oder hierher ziehen.<br>
+        Der STL-Ursprung (0) gilt als Werkzeugmitte.</div>
     </div>
     <div class="canvas-caption">
       <span id="proj-label"></span>
