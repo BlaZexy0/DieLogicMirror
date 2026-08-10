@@ -135,7 +135,7 @@ input {
   border-radius: 6px;
   font: inherit;
 }
-input.invalid {
+input.invalid, select.invalid {
   border-color: var(--bad);
   background: #fff2f0;
   color: var(--bad);

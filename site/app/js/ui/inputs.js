@@ -115,6 +115,16 @@ export function validate(v) {
 
   document.querySelectorAll('input[data-k]').forEach(e =>
     e.classList.toggle('invalid', bad.has(e.dataset.k)));
+
+  /* Ungültige Preset-Felder sind bei gewähltem Preset ausgeblendet —
+     dann stattdessen die Preset-Auswahl selbst markieren. */
+  const ms = document.getElementById('machineSel');
+  if (ms) {
+    const presetBad = !!state.machine && [...bad].some(k => PRESET_KEYS[k]);
+    ms.classList.toggle('invalid', presetBad);
+    if (presetBad) msgs.push('Maschinenwerte des gewählten Presets ungültig — Preset prüfen oder „manuell" wählen');
+  }
+
   const err = document.getElementById('error');
   if (err) err.textContent = msgs.length ? '⚠ ' + msgs.join(' · ') : '';
 }
