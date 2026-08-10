@@ -34,7 +34,14 @@ export function buildInputs(container, onlyKeys = null) {
     } else {
       const fs = g.fields.filter(keep);
       if (!fs.length) continue;
-      inner = '<div class="fields">' + fs.map(fieldHTML).join('') + '</div>';
+      /* adv-Felder eingeklappt hinter „Erweiterte Optionen" — außer es gibt
+         nur adv-Felder (Einzelseiten-Modus), dann normal anzeigen. */
+      const norm = fs.filter(f => !f.adv), adv = fs.filter(f => f.adv);
+      inner = '<div class="fields">' + (norm.length ? norm : adv).map(fieldHTML).join('') + '</div>' +
+        (norm.length && adv.length
+          ? '<details class="adv-fields"><summary>Erweiterte Optionen</summary><div class="fields">' +
+            adv.map(fieldHTML).join('') + '</div></details>'
+          : '');
     }
     const el = document.createElement('div');
     el.className = 'group' + (g.wide ? ' wide' : '');
@@ -137,6 +144,8 @@ export function highlightInputs(keys, opts = {}) {
   document.querySelectorAll('.field[data-field]').forEach(el => {
     if (set.has(el.dataset.field)) {
       el.classList.add('hl');
+      const det = el.closest('details');
+      if (det) det.open = true;
       const grp = el.closest('.group');
       if (grp) grp.classList.add('hl');
       if (!first) first = el;

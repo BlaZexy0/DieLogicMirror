@@ -26,14 +26,10 @@ export const groups = [
       { key: 'pmin',   label: 'Druck min.',        unit: 'bar', def: 100 },
       { key: 'pmax',   label: 'Druck max.',        unit: 'bar', def: 1200 },
       { key: 'psel',   label: 'Auslegungsdruck',   unit: 'bar', def: 600 },
-      { key: 'safety', label: 'Sicherheitsfaktor', unit: '-',   def: 1.3 }
-    ]
-  },
-  {
-    id: 'clamping', title: 'Zuhaltung (Außermittigkeit Schwerpunkt)',
-    fields: [
-      { key: 'eccX', label: 'Außermittigkeit Schwerpunkt x', unit: 'mm', def: 40 },
-      { key: 'eccY', label: 'Außermittigkeit Schwerpunkt y', unit: 'mm', def: 25 }
+      { key: 'safety', label: 'Sicherheitsfaktor', unit: '-',   def: 1.3 },
+      /* adv: standardmäßig hinter „Erweiterte Optionen" eingeklappt. */
+      { key: 'eccX', label: 'Außermittigkeit Schwerpunkt x', unit: 'mm', def: 0, adv: true },
+      { key: 'eccY', label: 'Außermittigkeit Schwerpunkt y', unit: 'mm', def: 0, adv: true }
     ]
   },
   {

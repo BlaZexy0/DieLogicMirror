@@ -27,9 +27,10 @@ export function renderKpis(el, v, shot) {
   const ratioLD = v.length / v.diam;
   const eta = mdos > 0 ? 100 * v.part / mdos : NaN;
 
-  /* Zuhaltung + spezifischer Gießdruck */
-  const kClamp = 1 + 2 * Math.abs(v.eccX) / v.tieX + 2 * Math.abs(v.eccY) / v.tieY;
-  const pMaxClamp = v.force / (100 * v.area * v.safety * kClamp);
+  /* Zuhaltung + spezifischer Gießdruck (Rechenkern: shared/clampmodel.js) */
+  const kClamp = (v.tieX > 0 && v.tieY > 0)
+    ? window.__CLAMP_MODEL__.leverK(v.eccX, v.eccY, v.tieX, v.tieY) : 1;
+  const pMaxClamp = window.__CLAMP_MODEL__.pMax(v.force, v.area, v.safety, kClamp);
   const pSpec = v.injForce * 1e4 / A;
 
   /* PQ²-Arbeitspunkt (gleiche Rechnung wie im PQ²-Diagramm) */
@@ -69,7 +70,7 @@ export function renderKpis(el, v, shot) {
 
     + group('Zuhaltung und Maschine',
       kpi('Benötigte Schließkraft', fmt(req / 10) + ' t', fmt(req) + ' kN / ' + fmt(v.force) + ' kN verfügbar', cap(req, v.force))
-      + kpi('Max. Nachdruck', fmt(pMaxClamp) + ' bar', 'Zuhaltung · e = (' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · S = ' + fmt(v.safety), cap(v.psel, pMaxClamp))
+      + kpi('Max. Nachdruck', fmt(pMaxClamp) + ' bar', 'Zuhaltung · e = (' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k = ' + fmt(kClamp) + ' · S = ' + fmt(v.safety), cap(v.psel, pMaxClamp))
       + kpi('Spez. Gießdruck', fmt(pSpec) + ' bar', 'Gießkraft / Kolbenfläche · Ziel ' + fmt(v.pSpecMin) + '–' + fmt(v.pSpecMax) + ' bar', band(pSpec, v.pSpecMin, v.pSpecMax)))
 
     + group('Schusskurve und Anschnitt',

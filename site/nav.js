@@ -21,7 +21,6 @@
     ['phild',     'Auslegungsfenster (φ, L/D)'],
     ['area',      'Zulässige Sprengfläche'],
     ['machine',   'Erforderliche Maschinengröße'],
-    ['clamp',     'Max. Nachdruck (Zuhaltung)'],
     ['filltime',  'Füllzeit ab Anschnitt'],
     ['fill',      'Füllgrad der Füllkammer'],
     ['vent',      'Entlüftungsgeschwindigkeit'],

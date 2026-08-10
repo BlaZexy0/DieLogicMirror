@@ -6,7 +6,6 @@ import pq2 from './pq2.js';
 import phild from './phild.js';
 import area from './area.js';
 import machine from './machine.js';
-import clamp from './clamp.js';
 import filltime from './filltime.js';
 import fill from './fill.js';
 import vent from './vent.js';
@@ -23,7 +22,7 @@ import gatesol from './gatesol.js';
 
 export const charts = [
   shotcurve, pq2, phild,
-  area, machine, clamp, filltime, fill, vent, sleeve, gate, slowshot,
+  area, machine, filltime, fill, vent, sleeve, gate, slowshot,
   pspec, windowChart, ftwall, gvwall, ventreq, yieldChart, gatesol
 ];
 
