@@ -42,6 +42,7 @@
     { label: 'Diagramme', children: CHARTS.map(([id, title]) => (
       { label: title, href: '/app/chart.html?id=' + id }
     )) },
+    { label: 'STL-Analyse', href: '/stl/index.html' },
     { label: 'Theorie', children: [
       { label: 'Das PQ²-Diagramm', href: '/theorie/pq2.html' },
       { label: 'Kritische Kolbengeschwindigkeit', href: '/theorie/kritische-geschwindigkeit.html' },
@@ -64,12 +65,19 @@
   /* ── Aktiven Link erkennen ────────────────────────────────── */
   function isActive(href) {
     if (!href) return false;
-    const path = window.location.pathname;
     const clean = href.split('#')[0];
     const [hrefPath, hrefQuery] = clean.split('?');
     if (!hrefPath || hrefPath === '/') return false;
-    const pathMatch = path.endsWith(hrefPath) || path.endsWith(hrefPath.replace(/^\//, ''));
-    if (!pathMatch) return false;
+    // Href relativ zur Seite auflösen und Pfade exakt vergleichen —
+    // sonst matcht z. B. /index.html#preise auf jeder …/index.html-Seite.
+    const norm = (p) => p.replace(/\/$/, '/index.html');
+    let target;
+    try {
+      target = new URL(resolveHref(hrefPath), window.location.href).pathname;
+    } catch (e) {
+      return false;
+    }
+    if (norm(target) !== norm(window.location.pathname)) return false;
     if (hrefQuery) return window.location.search === '?' + hrefQuery;
     return true;
   }
@@ -120,6 +128,7 @@
       <li><a href="${r('/app/chart.html?id=shotcurve')}">Schusskurve</a></li>
       <li><a href="${r('/app/chart.html?id=pq2')}">PQ²-Diagramm</a></li>
       <li><a href="${r('/app/chart.html?id=phild')}">Auslegungsfenster (φ, L/D)</a></li>
+      <li><a href="${r('/stl/index.html')}">STL-Analyse</a></li>
     </ul>
   </div>
 

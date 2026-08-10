@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STL-Analyse — DieLogic</title>
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png">
+  <link rel="apple-touch-icon" href="../assets/icon-180.png">
+  <link rel="stylesheet" href="../shared.css">
+  <script src="../nav.js" data-base=".."></script>
+  <style>
+    .stl-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+
+    /* ── Werkzeugleiste ────────────────────────────────────── */
+    .stl-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.9rem 1.2rem;
+      margin-bottom: 1.2rem;
+      box-shadow: var(--shadow);
+    }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .seg button {
+      padding: 0.45rem 1rem;
+      border: none;
+      background: var(--surface);
+      cursor: pointer;
+      font-family: var(--sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      transition: background 0.15s, color 0.15s;
+    }
+    .seg button + button { border-left: 1px solid var(--border); }
+    .seg button.active { background: var(--primary); color: white; }
+    .seg-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+    .stl-hint { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+    .stl-status { font-size: 0.8rem; color: var(--warn); margin-top: 0.4rem; }
+    .stl-status:empty { display: none; }
+
+    /* ── Projektionsfenster ────────────────────────────────── */
+    .stl-canvas-card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 1.2rem;
+      overflow: hidden;
+    }
+    .stl-canvas-card.dragover { outline: 2px dashed var(--primary); outline-offset: -6px; }
+    #proj-canvas { display: block; width: 100%; height: 480px; }
+    .canvas-empty {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      pointer-events: none;
+      text-align: center;
+      padding: 1rem;
+    }
+    .canvas-empty[hidden] { display: none; }
+    .canvas-caption {
+      border-top: 1px solid var(--border);
+      padding: 0.55rem 1.2rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .canvas-caption strong { color: var(--text); font-weight: 600; }
+
+    /* ── Ergebnistabelle ───────────────────────────────────── */
+    .stl-table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+    .stl-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .stl-table th {
+      background: var(--dark);
+      color: #c3d8de;
+      padding: 0.55rem 0.9rem;
+      text-align: right;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      white-space: nowrap;
+    }
+    .stl-table th:first-child { text-align: left; }
+    .stl-table td {
+      padding: 0.55rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+    .stl-table td.name {
+      text-align: left;
+      font-family: var(--sans);
+      font-size: 0.85rem;
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .stl-table .dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 0.5rem;
+      vertical-align: baseline;
+    }
+    .stl-table td .sub { color: var(--muted); font-size: 0.72rem; }
+    .stl-table tfoot td { font-weight: 700; border-top: 2px solid var(--dark); border-bottom: none; background: #f8fafa; }
+    .stl-table .remove-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+    }
+    .stl-table .remove-btn:hover { color: var(--warn); background: #fdf2f6; }
+    .table-empty { padding: 1.4rem 1.2rem; font-size: 0.85rem; color: var(--muted); }
+    .stl-footnote { font-size: 0.75rem; color: var(--muted); margin-top: 0.8rem; line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>STL-Analyse</h1>
+    <p class="subtitle">STL-Dateien direkt im Browser auswerten: Volumen, Oberfläche und
+      projizierte Fläche je Bauteil — mit umschaltbarer Projektionsrichtung (X/Y/Z) und
+      Summenzeile über alle geladenen Dateien. Die Dateien verlassen Ihren Rechner nicht.</p>
+  </div>
+</section>
+
+<div class="stl-wrap">
+
+  <div class="stl-toolbar">
+    <input type="file" id="file-input" accept=".stl,model/stl,application/sla" multiple hidden>
+    <button class="btn btn-primary" id="upload-btn">+ STL-Dateien hinzufügen</button>
+    <span class="seg-label">Projektionsrichtung:</span>
+    <div class="seg" id="dir-seg" role="group" aria-label="Projektionsrichtung">
+      <button data-dir="X">X</button>
+      <button data-dir="Y">Y</button>
+      <button data-dir="Z" class="active">Z</button>
+    </div>
+    <span class="stl-hint">100 % clientseitig — kein Upload zu einem Server.</span>
+  </div>
+  <div class="stl-status" id="status"></div>
+
+  <div class="stl-canvas-card" id="canvas-card">
+    <canvas id="proj-canvas"></canvas>
+    <div class="canvas-empty" id="canvas-empty">
+      <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
+        <path d="M21 4 L37 12 L37 30 L21 38 L5 30 L5 12 Z" stroke="#4c6870" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M5 12 L21 20 L37 12 M21 20 L21 38" stroke="#4c6870" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+      <div>Noch keine STL-Dateien geladen.<br>Dateien auswählen oder hierher ziehen.</div>
+    </div>
+    <div class="canvas-caption">
+      <span id="proj-label"></span>
+      <span id="cog-label"></span>
+      <span>Einheiten: STL ist einheitenlos — angenommen wird <strong>mm</strong>.</span>
+    </div>
+  </div>
+
+  <div class="stl-table-card">
+    <table class="stl-table" id="result-table" hidden>
+      <thead>
+        <tr>
+          <th>Datei</th>
+          <th>Volumen</th>
+          <th>Oberfläche</th>
+          <th id="proj-col-head">Proj. Fläche</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="result-body"></tbody>
+      <tfoot id="result-foot"></tfoot>
+    </table>
+    <div class="table-empty" id="table-empty">Die Kennwerte der geladenen Dateien erscheinen hier.</div>
+  </div>
+
+  <p class="stl-footnote">Volumen über die Summe signierter Tetraeder (setzt ein geschlossenes Netz
+    voraus), Oberfläche als Summe der Dreiecksflächen. Die projizierte Fläche ist die Silhouette des
+    Bauteils senkrecht zur gewählten Richtung, per Rasterung bestimmt — Überdeckungen innerhalb einer
+    Datei werden also nur einfach gezählt. Die Summenzeile addiert die Einzelwerte der Dateien.
+    <strong>S</strong> markiert den flächengewichteten Gesamtschwerpunkt der projizierten Flächen,
+    <strong>0</strong> den Ursprung des STL-Koordinatensystems.</p>
+
+</div>
+
+<script src="stl-math.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* Achszuordnung der Projektion: entlang `dir` blicken, (u,v) spannen die Bildebene auf */
+  const AXES = {
+    X: { u: 1, v: 2, uName: 'Y', vName: 'Z' },
+    Y: { u: 0, v: 2, uName: 'X', vName: 'Z' },
+    Z: { u: 0, v: 1, uName: 'X', vName: 'Y' },
+  };
+  const COLORS = ['#008c82', '#8cbee6', '#9a77e8', '#c2447e', '#d4a908', '#4c9f70', '#e07b39', '#5f8391'];
+  const PAD = 36;
+
+  const models = [];      // { name, tris, color, volume, area, proj: {X,Y,Z} }
+  let dir = 'Z';
+  let colorIdx = 0;
+
+  const canvas = document.getElementById('proj-canvas');
+  const fileInput = document.getElementById('file-input');
+  const statusEl = document.getElementById('status');
+
+  /* ── Projektion: Silhouette als Path2D + gerasterte Fläche ── */
+
+  function buildProjection(tris, axis) {
+    const { u, v } = AXES[axis];
+    const path = new Path2D();
+    let minU = Infinity, minV = Infinity, maxU = -Infinity, maxV = -Infinity;
+    for (let i = 0; i < tris.length; i += 9) {
+      const u0 = tris[i + u], v0 = tris[i + v];
+      const u1 = tris[i + 3 + u], v1 = tris[i + 3 + v];
+      const u2 = tris[i + 6 + u], v2 = tris[i + 6 + v];
+      if (u0 < minU) minU = u0; if (u0 > maxU) maxU = u0;
+      if (u1 < minU) minU = u1; if (u1 > maxU) maxU = u1;
+      if (u2 < minU) minU = u2; if (u2 > maxU) maxU = u2;
+      if (v0 < minV) minV = v0; if (v0 > maxV) maxV = v0;
+      if (v1 < minV) minV = v1; if (v1 > maxV) maxV = v1;
+      if (v2 < minV) minV = v2; if (v2 > maxV) maxV = v2;
+      const cross = (u1 - u0) * (v2 - v0) - (v1 - v0) * (u2 - u0);
+      if (cross === 0) continue;                 // degeneriert in dieser Ansicht
+      path.moveTo(u0, v0);
+      if (cross > 0) { path.lineTo(u1, v1); path.lineTo(u2, v2); }
+      else           { path.lineTo(u2, v2); path.lineTo(u1, v1); }  // Umlaufsinn vereinheitlichen
+      path.closePath();
+    }
+    const w = maxU - minU, h = maxV - minV;
+    return { path, minU, minV, w, h, ...rasterProps(path, minU, minV, w, h) };
+  }
+
+  /* Silhouette rastern: Fläche als Pixeldeckung, Schwerpunkt (cu,cv) deckungsgewichtet. */
+  function rasterProps(path, minU, minV, w, h) {
+    if (!(w > 0) || !(h > 0)) return { area: 0, cu: minU + (w || 0) / 2, cv: minV + (h || 0) / 2 };
+    const MAXPX = 1500;
+    const scale = MAXPX / Math.max(w, h);
+    const pw = Math.max(1, Math.round(w * scale));
+    const ph = Math.max(1, Math.round(h * scale));
+    const off = document.createElement('canvas');
+    off.width = pw; off.height = ph;
+    const ctx = off.getContext('2d', { willReadFrequently: true });
+    ctx.setTransform(scale, 0, 0, scale, -minU * scale, -minV * scale);
+    ctx.fillStyle = '#000';
+    ctx.fill(path, 'nonzero');
+    const data = ctx.getImageData(0, 0, pw, ph).data;
+    let cover = 0, su = 0, sv = 0;
+    for (let py = 0, i = 3; py < ph; py++) {
+      for (let px = 0; px < pw; px++, i += 4) {
+        const a = data[i];
+        if (a) { cover += a; su += a * (px + 0.5); sv += a * (py + 0.5); }
+      }
+    }
+    if (!cover) return { area: 0, cu: minU + w / 2, cv: minV + h / 2 };
+    return {
+      area: (cover / 255) / (scale * scale),
+      cu: minU + (su / cover) / scale,
+      cv: minV + (sv / cover) / scale,
+    };
+  }
+
+  /* Flächengewichteter Gesamtschwerpunkt aller Silhouetten in der aktuellen Richtung. */
+  function combinedCog() {
+    let a = 0, su = 0, sv = 0;
+    for (const m of models) {
+      const p = getProjection(m, dir);
+      a += p.area; su += p.area * p.cu; sv += p.area * p.cv;
+    }
+    return a > 0 ? { cu: su / a, cv: sv / a } : null;
+  }
+
+  function getProjection(model, axis) {
+    if (!model.proj[axis]) model.proj[axis] = buildProjection(model.tris, axis);
+    return model.proj[axis];
+  }
+
+  /* ── Dateien laden ─────────────────────────────────────────── */
+
+  async function addFiles(fileList) {
+    const errors = [];
+    for (const file of fileList) {
+      try {
+        const tris = parseSTL(await file.arrayBuffer());
+        models.push({
+          name: file.name,
+          tris,
+          color: COLORS[colorIdx++ % COLORS.length],
+          volume: meshVolume(tris),
+          area: meshArea(tris),
+          proj: {},
+        });
+      } catch (e) {
+        errors.push(file.name + ': ' + e.message);
+      }
+    }
+    statusEl.textContent = errors.length ? 'Nicht lesbar — ' + errors.join(' · ') : '';
+    update();
+  }
+
+  /* ── Zeichnen ──────────────────────────────────────────────── */
+
+  function draw() {
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    /* dezentes Raster */
+    ctx.strokeStyle = 'rgba(0,39,51,0.06)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+    if (!models.length) return;
+
+    let minU = 0, minV = 0, maxU = 0, maxV = 0;   // Ursprung immer im Bild
+    for (const m of models) {
+      const p = getProjection(m, dir);
+      if (p.minU < minU) minU = p.minU;
+      if (p.minV < minV) minV = p.minV;
+      if (p.minU + p.w > maxU) maxU = p.minU + p.w;
+      if (p.minV + p.h > maxV) maxV = p.minV + p.h;
+    }
+    const w = Math.max(maxU - minU, 1e-9);
+    const h = Math.max(maxV - minV, 1e-9);
+    const s = Math.min((W - 2 * PAD) / w, (H - 2 * PAD) / h);
+    if (!isFinite(s) || s <= 0) return;
+    const tx = (W - w * s) / 2 - minU * s;
+    const ty = (H + h * s) / 2 + minV * s;   // v-Achse zeigt im Bild nach oben
+
+    for (const m of models) {
+      ctx.setTransform(dpr * s, 0, 0, -dpr * s, dpr * tx, dpr * ty);
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = m.color;
+      ctx.fill(getProjection(m, dir).path, 'nonzero');
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalAlpha = 1;
+
+    /* Ursprung (0) und Gesamtschwerpunkt (S) der projizierten Fläche */
+    const toX = (u) => tx + u * s, toY = (v) => ty - v * s;
+    const cog = combinedCog();
+    const font = '700 11px ' + getComputedStyle(document.body).fontFamily;
+    if (cog) {
+      ctx.strokeStyle = '#4c6870';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(toX(0), toY(0)); ctx.lineTo(toX(cog.cu), toY(cog.cv)); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.strokeStyle = '#002733';
+    ctx.fillStyle = '#002733';
+    ctx.lineWidth = 1.4;
+    ctx.font = font;
+    ctx.beginPath(); ctx.arc(toX(0), toY(0), 4, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(toX(0) - 8, toY(0)); ctx.lineTo(toX(0) + 8, toY(0));
+    ctx.moveTo(toX(0), toY(0) - 8); ctx.lineTo(toX(0), toY(0) + 8);
+    ctx.stroke();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('0', toX(0) + 7, toY(0) + 7);
+    if (cog) {
+      const gx = toX(cog.cu), gy = toY(cog.cv);
+      ctx.fillStyle = '#c2447e';
+      ctx.beginPath(); ctx.arc(gx, gy, 5, 0, 2 * Math.PI); ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(gx, gy, 5, 0, 2 * Math.PI); ctx.stroke();
+      ctx.fillText('S', gx + 8, gy + 7);
+    }
+
+    /* Achsenkreuz der Bildebene, unten links */
+    const a = AXES[dir], ox = 18, oy = H - 18, len = 34;
+    ctx.strokeStyle = '#4c6870';
+    ctx.fillStyle = '#4c6870';
+    ctx.lineWidth = 1.4;
+    ctx.font = '600 11px ' + getComputedStyle(document.body).fontFamily;
+    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox + len, oy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, oy - len); ctx.stroke();
+    ctx.textAlign = 'left';    ctx.textBaseline = 'middle'; ctx.fillText(a.uName, ox + len + 5, oy);
+    ctx.textAlign = 'center';  ctx.textBaseline = 'bottom'; ctx.fillText(a.vName, ox, oy - len - 4);
+  }
+
+  /* ── Tabelle ───────────────────────────────────────────────── */
+
+  function fmt(v) {
+    if (!isFinite(v)) return '–';
+    const av = Math.abs(v);
+    const opts = av >= 1000 ? { maximumFractionDigits: 0 }
+               : av >= 1    ? { maximumFractionDigits: 2 }
+               :              { maximumSignificantDigits: 3 };
+    return v.toLocaleString('de-DE', opts);
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function renderTable() {
+    const table = document.getElementById('result-table');
+    const empty = document.getElementById('table-empty');
+    table.hidden = models.length === 0;
+    empty.hidden = models.length > 0;
+    document.getElementById('proj-col-head').textContent = 'Proj. Fläche (' + dir + ')';
+    if (!models.length) return;
+
+    let totV = 0, totA = 0, totP = 0;
+    document.getElementById('result-body').innerHTML = models.map((m, i) => {
+      const p = getProjection(m, dir);
+      totV += m.volume; totA += m.area; totP += p.area;
+      return `<tr>
+        <td class="name" title="${escapeHtml(m.name)}"><span class="dot" style="background:${m.color}"></span>${escapeHtml(m.name)}</td>
+        <td>${fmt(m.volume)} mm³ <span class="sub">(${fmt(m.volume / 1000)} cm³)</span></td>
+        <td>${fmt(m.area)} mm²</td>
+        <td>${fmt(p.area)} mm²</td>
+        <td><button class="remove-btn" data-idx="${i}" title="Entfernen" aria-label="${escapeHtml(m.name)} entfernen">✕</button></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('result-foot').innerHTML = `<tr>
+      <td class="name">Summe (${models.length} ${models.length === 1 ? 'Datei' : 'Dateien'})</td>
+      <td>${fmt(totV)} mm³ <span class="sub">(${fmt(totV / 1000)} cm³)</span></td>
+      <td>${fmt(totA)} mm²</td>
+      <td>${fmt(totP)} mm²</td>
+      <td></td>
+    </tr>`;
+  }
+
+  function update() {
+    const a = AXES[dir];
+    document.getElementById('proj-label').innerHTML =
+      'Projektion entlang <strong>' + dir + '</strong> auf die ' + a.uName + '–' + a.vName + '-Ebene';
+    const cog = combinedCog();
+    document.getElementById('cog-label').innerHTML = cog
+      ? 'Schwerpunkt S vom Ursprung: <strong>' + a.uName + '</strong> ' + fmt(cog.cu) +
+        ' mm · <strong>' + a.vName + '</strong> ' + fmt(cog.cv) + ' mm'
+      : '';
+    document.getElementById('canvas-empty').hidden = models.length > 0;
+    renderTable();
+    draw();
+  }
+
+  /* ── Ereignisse ────────────────────────────────────────────── */
+
+  document.getElementById('upload-btn').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) addFiles([...fileInput.files]);
+    fileInput.value = '';
+  });
+
+  document.getElementById('dir-seg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-dir]');
+    if (!btn) return;
+    dir = btn.dataset.dir;
+    for (const b of e.currentTarget.querySelectorAll('button')) b.classList.toggle('active', b === btn);
+    update();
+  });
+
+  document.getElementById('result-body').addEventListener('click', (e) => {
+    const btn = e.target.closest('.remove-btn');
+    if (!btn) return;
+    models.splice(Number(btn.dataset.idx), 1);
+    update();
+  });
+
+  const card = document.getElementById('canvas-card');
+  for (const ev of ['dragenter', 'dragover']) {
+    card.addEventListener(ev, (e) => { e.preventDefault(); card.classList.add('dragover'); });
+  }
+  card.addEventListener('dragleave', () => card.classList.remove('dragover'));
+  card.addEventListener('drop', (e) => {
+    e.preventDefault();
+    card.classList.remove('dragover');
+    const files = [...e.dataTransfer.files].filter(f => /\.stl$/i.test(f.name));
+    if (files.length) addFiles(files);
+  });
+
+  window.addEventListener('resize', draw);
+
+  /* ── Beispieldateien aus assets/ als Startbelegung ─────────── */
+  async function loadDefaults() {
+    const urls = ['../assets/cone_binary.stl', '../assets/cylinder_ascii.stl'];
+    const files = [];
+    for (const url of urls) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const buf = await res.arrayBuffer();
+        files.push({ name: url.split('/').pop(), arrayBuffer: async () => buf });
+      } catch (e) { /* z. B. file:// — dann ohne Beispieldateien starten */ }
+    }
+    if (files.length) addFiles(files);
+  }
+
+  update();
+  loadDefaults();
+})();
+</script>
+
+</body>
+</html>
