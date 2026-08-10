@@ -369,6 +369,8 @@
 </div>
 
 <script src="../app/config/machines.js"></script>
+<script src="../app/shared/contract.js"></script>
+<script src="../app/shared/clampmodel.js"></script>
 <script src="stl-math.js"></script>
 <script>
 (function () {
@@ -646,12 +648,13 @@
   }
 
   /* ── Max. Nachdruck je Maschinen-Preset ────────────────────── */
-  /* Modell wie im Dashboard-Diagramm „Max. Nachdruck (Zuhaltung)":
-     p_max = F_s / (100 · S · k · A) [bar, F in kN, A in m²] mit dem
-     Hebelfaktor k = 1 + 2|e_x|/a_x + 2|e_y|/a_y der meistbelasteten
-     Säule. Sprengfläche A = Summe der projizierten Flächen, Außer-
-     mittigkeit e = Gesamtschwerpunkt S relativ zum Ursprung. */
+  /* Rechenkern: shared/clampmodel.js — dieselbe Implementierung wie im
+     Dashboard-Diagramm „Max. Nachdruck (Zuhaltung)". Sprengfläche A =
+     Summe der projizierten Flächen, Außermittigkeit e = Gesamtschwer-
+     punkt S relativ zum Ursprung (= Werkzeugmitte). */
   const MACHINES = (window.__MACHINES__ && window.__MACHINES__.machines) || [];
+  const CLAMP = window.__CLAMP_MODEL__;
+  const CONTRACT = window.__DASH_CONTRACT__;
 
   function renderMachines() {
     const table = document.getElementById('machine-table');
@@ -683,10 +686,10 @@
     const A_m2 = totP * 1e-6;
     const rows = MACHINES.map((mc) => {
       const f = mc.fields;
-      const p0 = f.force / (100 * A_m2);                       // nur Schließkraft (S = 1, k = 1)
-      const pS = p0 / S;                                       // mit Sicherheitsfaktor
-      const k = 1 + 2 * ex / f.tieX + 2 * ey / f.tieY;         // Hebelfaktor Säulenlast
-      const pK = pS / k;
+      const p0 = CLAMP.pMax(f.force, A_m2, 1, 1);              // nur Schließkraft (S = 1, k = 1)
+      const pS = CLAMP.pMax(f.force, A_m2, S, 1);              // mit Sicherheitsfaktor
+      const k = CLAMP.leverK(ex, ey, f.tieX, f.tieY);          // Hebelfaktor Säulenlast
+      const pK = CLAMP.pMax(f.force, A_m2, S, k);
       const lift = k - 1 >= 1;                                 // F_Säule,min ≤ 0 → Form klafft
       return { mc, f, p0, pS, k, pK, ok: pK >= pTarget && !lift };
     });
@@ -712,11 +715,9 @@
   }
 
   /* ── Übernahme ins Dashboard ───────────────────────────────── */
-  /* Schreibt die ermittelten Werte in den localStorage-Zustand des
-     Dashboards (gleicher Origin) und öffnet es. Nicht betroffene
-     Eingaben bleiben erhalten. */
-  const DASH_KEY = 'hpdc-dashboard-state-v1';
-
+  /* Schlüssel und Schreiblogik kommen aus shared/contract.js — dieselbe
+     Quelle, die auch das Dashboard (js/core/state.js) nutzt. Nicht
+     betroffene Eingaben bleiben erhalten. */
   function openDashboard(mc) {
     const cog = combinedCog();
     let totP = 0;
@@ -727,10 +728,7 @@
     const sums = roleSums();
     const kg = (x) => Math.round(x * 1000) / 1000;
 
-    let data = {};
-    try { data = JSON.parse(localStorage.getItem(DASH_KEY)) || {}; } catch (e) { /* neu anlegen */ }
-    if (typeof data !== 'object' || data === null || Array.isArray(data)) data = {};
-    data.values = Object.assign({}, data.values, {
+    const values = CONTRACT.stlHandoffValues({
       part: kg(sums.part),
       runner: kg(sums.runner),
       overflow: kg(sums.overflow),
@@ -742,8 +740,7 @@
       safety: S,
       psel: pTarget,
     }, mc.fields);
-    data.machine = mc.id;
-    try { localStorage.setItem(DASH_KEY, JSON.stringify(data)); } catch (e) { /* Dashboard startet dann mit Defaults */ }
+    CONTRACT.writeDashboardState(localStorage, values, mc.id);
     window.location.href = '../app/index.html';
   }
 

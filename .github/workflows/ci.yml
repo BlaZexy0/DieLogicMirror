@@ -1,0 +1,35 @@
+# CI: läuft bei jedem Push auf main und bei Pull Requests.
+# Zwei Jobs: hpdcsim (Python-Tests) und Frontend (Syntax + Node-Tests
+# gegen die Beispiel-STLs, das Zuhaltungs-Modell, den Übernahme-Vertrag
+# und die Preset-/Feld-Konsistenz).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  hpdcsim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Abhängigkeiten installieren
+        run: pip install -r backend/requirements.txt "./packages/hpdcsim[plot]"
+      - name: Tests
+        run: python packages/hpdcsim/tests/run_tests.py
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Syntax-Check (alle JS + Inline-Script der STL-Seite)
+        run: node site/tests/syntax-check.mjs
+      - name: Frontend-Tests
+        run: node --test site/tests/frontend.test.mjs

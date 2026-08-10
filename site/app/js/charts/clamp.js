@@ -7,14 +7,14 @@ import { heat } from './helpers.js';
 import { fmt } from '../core/format.js';
 import { frac } from './mathfmt.js';
 
-/* Hebelfaktor k: Mehrbelastung der meistbelasteten Säule gegenüber zentrischem Angriff. */
+/* Rechenkern kommt aus shared/clampmodel.js (klassisches Script, vor den
+   Modulen geladen) — dieselbe Implementierung nutzt auch die STL-Analyse. */
 function leverK(v, ex, ey) {
-  return 1 + 2 * Math.abs(ex) / v.tieX + 2 * Math.abs(ey) / v.tieY;
+  return window.__CLAMP_MODEL__.leverK(ex, ey, v.tieX, v.tieY);
 }
 
-/* Max. Nachdruck [bar] bei Außermittigkeit (ex, ey): F in kN, A in m² → Faktor 100. */
 function pMax(v, ex, ey) {
-  return v.force / (100 * v.area * v.safety * leverK(v, ex, ey));
+  return window.__CLAMP_MODEL__.pMax(v.force, v.area, v.safety, leverK(v, ex, ey));
 }
 
 /* Größte „runde" Stufe ≤ x (für Konturlevels). */

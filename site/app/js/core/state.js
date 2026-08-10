@@ -7,7 +7,11 @@
 
 import { allFields, DEFAULT_CURVE } from '../config/fields.js';
 
-const STORAGE_KEY = 'hpdc-dashboard-state-v1';
+/* Der Schlüssel kommt aus dem gemeinsamen Vertrag (shared/contract.js,
+   als klassisches Script vor den Modulen geladen) — dieselbe Quelle
+   nutzt die STL-Analyse für die Übernahme. */
+if (!window.__DASH_CONTRACT__) throw new Error('shared/contract.js nicht geladen (window.__DASH_CONTRACT__ fehlt).');
+const STORAGE_KEY = window.__DASH_CONTRACT__.STORAGE_KEY;
 
 export const state = {
   values: {},
