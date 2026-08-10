@@ -20,8 +20,9 @@ dielogic/
 │   │   ├── datenschutz.html  Datenschutzerklärung (DSGVO)
 │   │   ├── agb.html          Allgemeine Geschäftsbedingungen
 │   │   └── widerruf.html     Widerrufsbelehrung + Musterformular
-│   ├── stl/             STL-Analyse — clientseitig: Volumen, Oberfläche,
-│   │                    projizierte Fläche (X/Y/Z) je Datei + Summen
+│   ├── stl/             STL-Analyse (stl-analyse.html) — clientseitig: Volumen,
+│   │                    Oberfläche, projizierte Fläche (X/Y/Z) je Datei + Summen,
+│   │                    max. Nachdruck je Maschinen-Preset (Zuhaltungs-Modell)
 │   ├── shared.css       Design-Tokens + Basis-Styles (DieLogic Teal)
 │   ├── nav.js           injiziert Site-Navigation + Footer (selbstversorgend)
 │   ├── assets/          logo.svg (Vektor-Logo), icon-*.png (Favicons,

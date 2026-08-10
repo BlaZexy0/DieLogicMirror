@@ -144,6 +144,42 @@
     .stl-table .remove-btn:hover { color: var(--warn); background: #fdf2f6; }
     .table-empty { padding: 1.4rem 1.2rem; font-size: 0.85rem; color: var(--muted); }
     .stl-footnote { font-size: 0.75rem; color: var(--muted); margin-top: 0.8rem; line-height: 1.6; }
+
+    /* ── Maschinen-Karte ───────────────────────────────────── */
+    .machine-head {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: 0.9rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .machine-head h2 { font-size: 1rem; font-weight: 700; color: var(--text); margin-right: auto; }
+    .machine-head label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .machine-head input {
+      width: 70px;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      text-align: right;
+    }
+    .machine-info {
+      padding: 0.55rem 1.2rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .machine-info:empty { display: none; }
+    .warn-lift { color: var(--warn); font-weight: 700; }
   </style>
 </head>
 <body>
@@ -205,15 +241,46 @@
     <div class="table-empty" id="table-empty">Die Kennwerte der geladenen Dateien erscheinen hier.</div>
   </div>
 
+  <div class="stl-table-card" style="margin-top:1.2rem;">
+    <div class="machine-head">
+      <h2>Max. Nachdruck je Maschine — projizierte Fläche als Sprengfläche</h2>
+      <label for="safety-input">Sicherheitsfaktor S
+        <input type="number" id="safety-input" value="1.3" min="1" step="0.05">
+      </label>
+    </div>
+    <div class="machine-info" id="machine-info"></div>
+    <table class="stl-table" id="machine-table" hidden>
+      <thead>
+        <tr>
+          <th>Maschine</th>
+          <th>Schließkraft F<sub>s</sub></th>
+          <th>p<sub>max</sub> nur Schließkraft</th>
+          <th>mit Sicherheit S</th>
+          <th>mit S + Außermittigkeit</th>
+        </tr>
+      </thead>
+      <tbody id="machine-body"></tbody>
+    </table>
+    <div class="table-empty" id="machine-empty">Sobald eine projizierte Fläche vorliegt, steht hier
+      der maximal mögliche Nachdruck je Maschinen-Preset.</div>
+  </div>
+
   <p class="stl-footnote">Volumen über die Summe signierter Tetraeder (setzt ein geschlossenes Netz
     voraus), Oberfläche als Summe der Dreiecksflächen. Die projizierte Fläche ist die Silhouette des
     Bauteils senkrecht zur gewählten Richtung, per Rasterung bestimmt — Überdeckungen innerhalb einer
     Datei werden also nur einfach gezählt. Die Summenzeile addiert die Einzelwerte der Dateien.
     <strong>S</strong> markiert den flächengewichteten Gesamtschwerpunkt der projizierten Flächen,
-    <strong>0</strong> den Ursprung des STL-Koordinatensystems.</p>
+    <strong>0</strong> den Ursprung des STL-Koordinatensystems.
+    Der maximale Nachdruck je Maschine folgt dem Zuhaltungs-Modell des Dashboards:
+    p<sub>max</sub> = F<sub>s</sub> / (100 · S · k · A) mit A als Summe der projizierten Flächen
+    (in m²) und dem Hebelfaktor k = 1 + 2|e<sub>x</sub>|/a<sub>x</sub> + 2|e<sub>y</sub>|/a<sub>y</sub>
+    aus der Außermittigkeit des Gesamtschwerpunkts gegenüber dem Ursprung (a = Säulenabstände
+    der Maschine). Die drei Spalten: nur Schließkraft (S = 1, k = 1), mit Sicherheitsfaktor S,
+    mit S und Außermittigkeit.</p>
 
 </div>
 
+<script src="../app/config/machines.js"></script>
 <script src="stl-math.js"></script>
 <script>
 (function () {
@@ -461,6 +528,51 @@
     </tr>`;
   }
 
+  /* ── Max. Nachdruck je Maschinen-Preset ────────────────────── */
+  /* Modell wie im Dashboard-Diagramm „Max. Nachdruck (Zuhaltung)":
+     p_max = F_s / (100 · S · k · A) [bar, F in kN, A in m²] mit dem
+     Hebelfaktor k = 1 + 2|e_x|/a_x + 2|e_y|/a_y der meistbelasteten
+     Säule. Sprengfläche A = Summe der projizierten Flächen, Außer-
+     mittigkeit e = Gesamtschwerpunkt S relativ zum Ursprung. */
+  const MACHINES = (window.__MACHINES__ && window.__MACHINES__.machines) || [];
+
+  function renderMachines() {
+    const table = document.getElementById('machine-table');
+    const empty = document.getElementById('machine-empty');
+    const info = document.getElementById('machine-info');
+    const a = AXES[dir];
+    const cog = combinedCog();
+    let totP = 0;
+    for (const m of models) totP += getProjection(m, dir).area;
+    const S = Math.max(parseFloat(document.getElementById('safety-input').value) || 1.3, 1);
+    const has = totP > 0 && cog && MACHINES.length > 0;
+    table.hidden = !has;
+    empty.hidden = has;
+    if (!has) { info.textContent = ''; return; }
+
+    const ex = Math.abs(cog.cu), ey = Math.abs(cog.cv);
+    info.innerHTML = 'Sprengfläche A = Σ proj. Fläche (' + dir + ') = <strong>' + fmt(totP) +
+      ' mm²</strong> · Außermittigkeit e = Schwerpunkt vom Ursprung: <strong>' +
+      a.uName + '</strong> ' + fmt(cog.cu) + ' mm · <strong>' + a.vName + '</strong> ' + fmt(cog.cv) + ' mm';
+
+    const A_m2 = totP * 1e-6;
+    document.getElementById('machine-body').innerHTML = MACHINES.map((mc) => {
+      const f = mc.fields;
+      const p0 = f.force / (100 * A_m2);                       // nur Schließkraft (S = 1, k = 1)
+      const pS = p0 / S;                                       // mit Sicherheitsfaktor
+      const k = 1 + 2 * ex / f.tieX + 2 * ey / f.tieY;         // Hebelfaktor Säulenlast
+      const pK = pS / k;
+      const lift = k - 1 >= 1;                                 // F_Säule,min ≤ 0 → Form klafft
+      return `<tr>
+        <td class="name">${escapeHtml(mc.name)}</td>
+        <td>${fmt(f.force)} kN</td>
+        <td>${fmt(p0)} bar</td>
+        <td>${fmt(pS)} bar</td>
+        <td>${fmt(pK)} bar <span class="sub">(k ${k.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 3 })})</span>${lift ? ' <span class="warn-lift" title="Schwerpunkt zu weit außermittig — die Form klafft an der gegenüberliegenden Ecke">⚠ Abheben</span>' : ''}</td>
+      </tr>`;
+    }).join('');
+  }
+
   function update() {
     const a = AXES[dir];
     document.getElementById('proj-label').innerHTML =
@@ -472,6 +584,7 @@
       : '';
     document.getElementById('canvas-empty').hidden = models.length > 0;
     renderTable();
+    renderMachines();
     draw();
   }
 
@@ -509,6 +622,8 @@
     const files = [...e.dataTransfer.files].filter(f => /\.stl$/i.test(f.name));
     if (files.length) addFiles(files);
   });
+
+  document.getElementById('safety-input').addEventListener('input', renderMachines);
 
   window.addEventListener('resize', draw);
 
