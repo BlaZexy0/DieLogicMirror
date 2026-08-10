@@ -4,9 +4,23 @@
 
 export const groups = [
   {
-    id: 'machine', title: 'Maschine und Druck',
+    id: 'machineFields', title: 'Maschinenwerte', preset: true,
+    note: 'Diese Felder setzt das Maschinen-Preset. Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
     fields: [
-      { key: 'force',  label: 'Maschinenkraft',    unit: 'kN',  def: 13500 },
+      { key: 'force',    label: 'Maschinenkraft',          unit: 'kN',   def: 13500 },
+      { key: 'injForce', label: 'Gießkraft (Schuss)',      unit: 'kN',   def: 2000 },
+      { key: 'vmax',     label: 'Kolbengeschw. max.',      unit: 'm/s',  def: 7 },
+      { key: 'amax',     label: 'Beschleunigung max.',     unit: 'm/s²', def: 60 },
+      { key: 'dmin',     label: 'Kolben-Ø min.',           unit: 'mm',   def: 120 },
+      { key: 'dmax',     label: 'Kolben-Ø max.',           unit: 'mm',   def: 200 },
+      { key: 'lmax',     label: 'Kammerlänge max.',        unit: 'mm',   def: 900 },
+      { key: 'tieX',     label: 'Säulenabstand horizontal', unit: 'mm',  def: 1100 },
+      { key: 'tieY',     label: 'Säulenabstand vertikal',   unit: 'mm',  def: 1100 }
+    ]
+  },
+  {
+    id: 'machine', title: 'Druck und Sprengfläche',
+    fields: [
       { key: 'area',   label: 'Sprengfläche',      unit: 'm²',  def: 0.15 },
       { key: 'pmin',   label: 'Druck min.',        unit: 'bar', def: 100 },
       { key: 'pmax',   label: 'Druck max.',        unit: 'bar', def: 1200 },
@@ -15,10 +29,8 @@ export const groups = [
     ]
   },
   {
-    id: 'clamping', title: 'Zuhaltung (Säulen und Schwerpunkt)',
+    id: 'clamping', title: 'Zuhaltung (Außermittigkeit Schwerpunkt)',
     fields: [
-      { key: 'tieX', label: 'Säulenabstand horizontal', unit: 'mm', def: 1100 },
-      { key: 'tieY', label: 'Säulenabstand vertikal',   unit: 'mm', def: 1100 },
       { key: 'eccX', label: 'Außermittigkeit Schwerpunkt x', unit: 'mm', def: 40 },
       { key: 'eccY', label: 'Außermittigkeit Schwerpunkt y', unit: 'mm', def: 25 }
     ]
@@ -34,24 +46,11 @@ export const groups = [
     ]
   },
   {
-    id: 'chamber', title: 'Füllkammer und Kolben', wide: true,
-    columns: [
-      {
-        title: 'Kolben',
-        fields: [
-          { key: 'diam', label: 'Gewählter Kolben-Ø', unit: 'mm', def: 150 },
-          { key: 'dmin', label: 'Kolben-Ø min.',      unit: 'mm', def: 120 },
-          { key: 'dmax', label: 'Kolben-Ø max.',      unit: 'mm', def: 200 }
-        ]
-      },
-      {
-        title: 'Kammerlänge',
-        fields: [
-          { key: 'length', label: 'Gewählte Kammerlänge', unit: 'mm', def: 700 },
-          { key: 'lmin',   label: 'Kammerlänge min.',     unit: 'mm', def: 500 },
-          { key: 'lmax',   label: 'Kammerlänge max.',     unit: 'mm', def: 900 }
-        ]
-      }
+    id: 'chamber', title: 'Füllkammer und Kolben',
+    fields: [
+      { key: 'diam',   label: 'Gewählter Kolben-Ø',    unit: 'mm', def: 150 },
+      { key: 'length', label: 'Gewählte Kammerlänge',  unit: 'mm', def: 700 },
+      { key: 'lmin',   label: 'Kammerlänge min.',      unit: 'mm', def: 500 }
     ]
   },
   {
@@ -76,8 +75,6 @@ export const groups = [
     id: 'process', title: 'Prozessfenster', wide: true,
     fields: [
       { key: 'vmin',    label: 'Kolbengeschw. min.',        unit: 'm/s', def: 1 },
-      { key: 'vmax',    label: 'Kolbengeschw. max.',        unit: 'm/s', def: 7 },
-      { key: 'amax',    label: 'Beschleunigung max.',       unit: 'm/s²', def: 60 },
       { key: 'vsel',    label: 'Gewählte Kolbengeschw.',    unit: 'm/s', def: 4 },
       { key: 'v1sel',   label: 'Kolbengeschw. 1. Phase',    unit: 'm/s', def: 0.4 },
       { key: 'tmax',    label: 'Füllzeit max.',             unit: 'ms',  def: 100 },
@@ -104,7 +101,6 @@ export const groups = [
   {
     id: 'hydraulics', title: 'Hydraulik und Ausbringung', wide: true,
     fields: [
-      { key: 'injForce',   label: 'Gießkraft (Schuss)',       unit: 'kN',     def: 2000 },
       { key: 'Cd',         label: 'Durchflussbeiwert',        unit: '-',      def: 0.5 },
       { key: 'pSpecMin',   label: 'Ziel-Gießdruck min.',      unit: 'bar',    def: 800 },
       { key: 'pSpecMax',   label: 'Ziel-Gießdruck max.',      unit: 'bar',    def: 1200 },

@@ -39,10 +39,12 @@ export function buildInputs(container, onlyKeys = null) {
     const el = document.createElement('div');
     el.className = 'group' + (g.wide ? ' wide' : '');
     el.dataset.group = g.id;
+    if (g.preset) el.dataset.preset = '1';
     el.innerHTML = '<h3>' + g.title + '</h3>' + inner +
       (g.note ? '<p class="group-note">' + g.note + '</p>' : '');
     container.appendChild(el);
   }
+  updatePresetVisibility();
 
   container.querySelectorAll('input[data-k], select[data-k]').forEach(e => {
     e.value = state.values[e.dataset.k];
@@ -56,6 +58,13 @@ export function buildInputs(container, onlyKeys = null) {
       notify();
     };
   });
+}
+
+/* Preset-Feldgruppen nur im Modus „manuell" zeigen — bei gewähltem
+   Maschinen-Preset kommen die Werte aus dem Preset und sind ausgeblendet. */
+export function updatePresetVisibility() {
+  const hide = !!state.machine;
+  document.querySelectorAll('.group[data-preset]').forEach(el => { el.hidden = hide; });
 }
 
 /* Werte programmatisch setzen (Preset, JSON-Import) — aktualisiert Zustand
