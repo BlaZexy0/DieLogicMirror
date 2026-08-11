@@ -45,6 +45,8 @@
     { label: 'Theorie', children: [
       { label: 'Das PQ²-Diagramm', href: '/theorie/pq2.html' },
       { label: 'Kritische Kolbengeschwindigkeit', href: '/theorie/kritische-geschwindigkeit.html' },
+      { label: 'Kreissegmente der Füllkammer', href: '/theorie/kreissegmente.html' },
+      { label: 'Nebenbedingungen der Auslegung', href: '/theorie/nebenbedingungen.html' },
     ] },
     { label: 'Preise', href: '/index.html#preise' },
     { label: 'Über uns', href: '/ueber-uns.html' },
@@ -137,6 +139,8 @@
       <li><a href="${r('/index.html#diagramme')}">Alle 19 Diagramme</a></li>
       <li><a href="${r('/theorie/pq2.html')}">Theorie: PQ²-Diagramm</a></li>
       <li><a href="${r('/theorie/kritische-geschwindigkeit.html')}">Theorie: Kritische Geschwindigkeit</a></li>
+      <li><a href="${r('/theorie/kreissegmente.html')}">Theorie: Kreissegmente der Füllkammer</a></li>
+      <li><a href="${r('/theorie/nebenbedingungen.html')}">Theorie: Nebenbedingungen der Auslegung</a></li>
     </ul>
   </div>
 

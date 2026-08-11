@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nebenbedingungen der Auslegung · Theorie · DieLogic</title>
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png">
+  <link rel="apple-touch-icon" href="../assets/icon-180.png">
+  <link rel="stylesheet" href="../shared.css">
+  <script src="../nav.js" data-base=".."></script>
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[
+      {left:'$$',right:'$$',display:true},
+      {left:'$',right:'$',display:false}
+    ]})"></script>
+  <style>
+    /* ── Seitenspezifische Extras (nicht in shared.css) ─────── */
+    .math-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 0.9rem 1.2rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+      text-align: center;
+    }
+    .katex-display { overflow-x: auto; padding: 0.25rem 0; }
+
+    /* Nebenbedingungs-Karten */
+    .nb-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--primary);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.2rem 1.4rem;
+      margin: 1.2rem 0;
+      scroll-margin-top: 80px;
+    }
+    .nb-card .math-block { background: #f8fafa; box-shadow: none; }
+    .nb-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.6rem;
+    }
+    .nb-card h4 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--primary2);
+      margin: 1.2rem 0 0.4rem;
+    }
+    .nb-tag {
+      background: var(--dark);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .nb-method { font-size: 0.72rem; font-weight: 600; color: var(--muted); }
+
+    /* Symbolverzeichnis */
+    dl.sym {
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      gap: 0.25rem 1rem;
+      margin: 0.8rem 0;
+      padding: 0.8rem 1rem;
+      background: #f8fafa;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+    }
+    dl.sym dt { font-weight: 600; color: var(--primary2); }
+    dl.sym dd { margin: 0; color: #2a3f4a; }
+
+    /* Quellenzeile */
+    .src { font-size: 0.78rem; color: var(--muted); margin-top: 0.8rem; line-height: 1.6; }
+    .src b { color: var(--text); }
+
+    /* Literaturverzeichnis */
+    .refs ol { margin: 0.8rem 0 0.8rem 1.2rem; font-size: 0.85rem; line-height: 1.7; color: #2a3f4a; }
+    .refs ol li { margin-bottom: 0.5rem; overflow-wrap: break-word; }
+    .refs a { color: var(--primary); }
+  </style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="../index.html">DieLogic</a>
+  <span>›</span>
+  <a href="../index.html#theorie">Theorie</a>
+  <span>›</span>
+  Nebenbedingungen der Auslegung
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Nebenbedingungen der gießtechnischen Auslegung</h1>
+    <p class="subtitle">Vollständige Sammlung der Auslegungs-Nebenbedingungen N1–N20 für den
+      Aluminium-Druckguss (HPDC) — mit Formeln, Grenzwert-Logik und Quellen.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">Anschnitt</span>
+      <span class="hero-tag">Füllzeit</span>
+      <span class="hero-tag">Füllkammer</span>
+      <span class="hero-tag">Maschine</span>
+      <span class="hero-tag">Schusskurve</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#uebersicht">Kurzübersicht N1–N20</a></li>
+        <li><a href="#kat-a">A · Anschnitt</a></li>
+        <li><a href="#kat-b">B · Füllzeit</a></li>
+        <li><a href="#kat-c">C · Füllkammer &amp; Kolben</a></li>
+        <li><a href="#kat-d">D · Maschine &amp; Druck</a></li>
+        <li><a href="#kat-e">E · Entlüftung</a></li>
+        <li><a href="#kat-f">F · Thermik &amp; Erstarrung</a></li>
+        <li><a href="#kat-g">G · Geometrie</a></li>
+        <li><a href="#kat-h">H · Prozessmonitoring</a></li>
+        <li><a href="#kat-i">I · Vakuum</a></li>
+        <li><a href="#kat-j">J · Schusskurve</a></li>
+        <li><a href="#literatur">Literaturverzeichnis</a></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <div class="draft-note">
+        ⚠️ <b>Mockup-Artikel</b> — Kurzfassung als Platzhalter für die ausführliche Version.
+        Inhalte vor Veröffentlichung fachlich gegenlesen. Diesen Kasten danach löschen.
+      </div>
+
+      <div class="prose">
+        <p>
+          Die folgende Übersicht fasst <strong>alle implementierten Nebenbedingungen</strong> der
+          gießtechnischen Auslegung zusammen. Sämtliche im Auslegungs-Dashboard hinterlegten
+          Diagramme und Kennzahlen werden anhand dieser Kriterien bewertet. Jedes Kriterium ist als
+          <strong>empirisch</strong>, <strong>analytisch</strong> oder, sofern beide Ansätze
+          kombiniert werden, als <strong>hybrid</strong> gekennzeichnet.
+        </p>
+        <p>
+          Die Quellen werden im jeweiligen Kriterium unter <strong>„Quellen für das
+          Kriterium“</strong> mit fortlaufenden Verweisen wie [1], [2] usw. angegeben und im
+          <a href="#literatur">Literaturverzeichnis</a> gesammelt aufgeführt.
+        </p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- Kurzübersicht -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="uebersicht"></span>
+      <h2 class="section-title">Kurzübersicht</h2>
+
+      <table class="th-table">
+        <thead><tr><th>Nr.</th><th>Nebenbedingung</th><th>Kriterium (Kurzform)</th></tr></thead>
+        <tbody>
+          <tr><td><a href="#n1"><span class="nb-tag">N1</span></a></td><td>Minimale Anschnittgeschwindigkeit</td><td>$v_{g}\ge v_{g,\min}$ (Atomisierung)</td></tr>
+          <tr><td><a href="#n2"><span class="nb-tag">N2</span></a></td><td>Maximale Anschnittgeschwindigkeit</td><td>$v_{g}\le v_{g,\max}$ (Erosion)</td></tr>
+          <tr><td><a href="#n3"><span class="nb-tag">N3</span></a></td><td>Minimale Füllzeit</td><td>$t_{f}\ge t_{f,\min}$ (Entlüftung)</td></tr>
+          <tr><td><a href="#n4"><span class="nb-tag">N4</span></a></td><td>Maximale Formfüllzeit</td><td>$t_{f}\le t_{f,\max}$ (Erstarrung)</td></tr>
+          <tr><td><a href="#n5"><span class="nb-tag">N5</span></a></td><td>Füllgrad der Füllkammer</td><td>$\varphi_{\min}\le \varphi\le \varphi_{\max}$</td></tr>
+          <tr><td><a href="#n6"><span class="nb-tag">N6</span></a></td><td>Kritische Kolbengeschwindigkeit 1. Phase</td><td>$v_{1}\le v_{krit}$ (Wellenbildung)</td></tr>
+          <tr><td><a href="#n7"><span class="nb-tag">N7</span></a></td><td>Minimaler Pressrest</td><td>$e_{PR}\ge e_{PR,\min}$</td></tr>
+          <tr><td><a href="#n8"><span class="nb-tag">N8</span></a></td><td>Schließkraft / Sprengfläche</td><td>$F_{Masch}\ge S\,p\,A_{proj}$</td></tr>
+          <tr><td><a href="#n9"><span class="nb-tag">N9</span></a></td><td>Maximale Kolbengeschwindigkeit (Maschine)</td><td>$v_{p}\le v_{p,\max}$</td></tr>
+          <tr><td><a href="#n10"><span class="nb-tag">N10</span></a></td><td>Maximale Beschleunigung (Maschine)</td><td>$a\le a_{\max}$</td></tr>
+          <tr><td><a href="#n11"><span class="nb-tag">N11</span></a></td><td>Spezifischer Gießdruck</td><td>$p_{spez,\min}\le p_{spez}\le p_{spez,\max}$</td></tr>
+          <tr><td><a href="#n12"><span class="nb-tag">N12</span></a></td><td>Entlüftungsmachzahl und Entlüftungsquerschnitt</td><td>$M\le M_{\max}=0{,}8$</td></tr>
+          <tr><td><a href="#n13"><span class="nb-tag">N13</span></a></td><td>Mindestquerschnitt der Entlüftung</td><td>$A_{Ent}\ge \dot V_{Luft,max}/(M_{max}\,a_{Schall})$</td></tr>
+          <tr><td><a href="#n14"><span class="nb-tag">N14</span></a></td><td>Anschnitt-Erstarrungszeit</td><td>$t_{erst}\ge t_{Nachdruck}$</td></tr>
+          <tr><td><a href="#n15"><span class="nb-tag">N15</span></a></td><td>Geometriegrenzen (Kolben, Kammer, Hub)</td><td>$d,\,L,\,s$ innerhalb Grenzen</td></tr>
+          <tr><td><a href="#n16"><span class="nb-tag">N16</span></a></td><td>RMS-Beschleunigung und Energiekennzahl</td><td>$a_{RMS,2}$ und $E_{f}$ innerhalb des validierten Gutteilfensters</td></tr>
+          <tr><td><a href="#n17"><span class="nb-tag">N17</span></a></td><td>Vakuum bei Beginn der Formfüllung</td><td>$p_{Kav}(t_{\text{Füllbeginn}})\le p_{Kav,\max}$</td></tr>
+          <tr><td><a href="#n18"><span class="nb-tag">N18</span></a></td><td>Schusskurve der langsamen Phase</td><td>$v_{1}(s)$ innerhalb des validierten Profil- und Wellenfensters</td></tr>
+          <tr><td><a href="#n19"><span class="nb-tag">N19</span></a></td><td>Umschaltpunkt zur schnellen Phase</td><td>$s_{2}$ beim tatsächlichen Beginn der Formfüllung</td></tr>
+          <tr><td><a href="#n20"><span class="nb-tag">N20</span></a></td><td>Qualitätsziele zur Optimierung der Schusskurve</td><td>$J_{AE}$, $J_{TL}$, $J_{ACT}$ als Pareto-Zielgrößen</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- A · Anschnitt -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="kat-a"></span>
+      <h2 class="section-title">A · Anschnitt</h2>
+
+      <div class="nb-card" id="n1">
+        <h3><span class="nb-tag">N1</span> Minimale Anschnittgeschwindigkeit <span class="nb-method">(empirisch)</span></h3>
+        <div class="prose">
+          <p>Niedrige Anschnittgeschwindigkeiten sind grundsätzlich vorteilhaft: Sie erfordern
+            weniger Maschinenleistung und verringern die Erosion der Form im Bereich des
+            Anschnitts. Die Anschnittgeschwindigkeit darf jedoch den für den angestrebten
+            Strömungszustand erforderlichen Mindestwert nicht unterschreiten. Wird der untere
+            Anwendungsbereich des J-Faktors deutlich unterschritten, bleibt der Metallstrom
+            kontinuierlich oder geht lediglich in eine grobe Partikelströmung über. Eine
+            vollständig atomisierte Strömung ist nicht für jede Bauteil- und Anschnittgeometrie
+            zwingend erforderlich. Die Wirkung des Strömungszustands auf die Bauteilporosität
+            hängt wesentlich von Füllweg, Querschnittsänderungen, Überläufen und Schussprofil
+            ab. [1] [2]</p>
+          <p>Der J-Faktor wird nach der in den Untersuchungen verwendeten Wallace-Beziehung durch
+            Anschnittgeschwindigkeit, Schmelzedichte und den geometrischen Formfaktor des
+            Anschnitts beschrieben:</p>
+        </div>
+        <div class="math-block">
+          $$J = D_g \cdot \rho \cdot v_g^{1{,}71} \qquad\qquad D_g = \frac{A_g}{a+b}$$
+        </div>
+        <div class="prose">
+          <p>Dabei ist $D_g$ der geometrische Formfaktor des Anschnitts. Für einen rechteckigen
+            Anschnitt gilt $D_g=A_g/(a+b)$. Die Bezeichnung $D_g$ vermeidet eine Verwechslung mit
+            dem an anderer Stelle verwendeten Durchmesser $D$. Der Formfaktor ist nicht als
+            hydraulischer Durchmesser zu interpretieren. Grenzwerte des J-Faktors dürfen nur
+            zusammen mit der zugehörigen Gleichungs-, Geometrie- und Einheitenkonvention verwendet
+            werden. [2]</p>
+          <p>Für Aluminiumlegierungen wird ein J-Faktor von etwa <strong>700 als praxisorientierte
+            Untergrenze</strong> angegeben. Dieser Wert kennzeichnet keine zwingende
+            Atomisierungsschwelle, sondern einen unteren Auslegungsbereich, der nicht deutlich
+            unterschritten werden sollte. Die ausgeprägte Atomisierung wird in der verwendeten
+            SI-Konvention bei <strong>$J_{\mathrm{atom}}=1064$</strong> angesetzt. Damit wird
+            zwischen Mindestanforderung und Atomisierungsschwelle unterschieden.
+            [1] [2] [3] [4] [5] [6]</p>
+        </div>
+        <div class="math-block">
+          $$v_{g,\mathrm{min}} = \left(\frac{J_{\mathrm{min}}}{D_g \cdot \rho}\right)^{\frac{1}{1{,}71}}$$
+        </div>
+        <dl class="sym">
+          <dt>$v_{g,\min}$</dt><dd>minimale Anschnittgeschwindigkeit zum Erreichen der Atomisierungsschwelle [m/s]</dd>
+          <dt>$J$</dt><dd>empirischer J-Faktor in der ausdrücklich festgelegten Quellenkonvention</dd>
+          <dt>$J_{atom}$</dt><dd>Atomisierungsschwelle; hier 1064 für Aluminiumlegierungen</dd>
+          <dt>$D_g$</dt><dd>geometrischer Formfaktor des Anschnitts $D_g=A_g/(a+b)$ [m]</dd>
+          <dt>$A_{g}$</dt><dd>Anschnittquerschnitt [m²]</dd>
+          <dt>$a$</dt><dd>Anschnittdicke [m]</dd>
+          <dt>$b$</dt><dd>Anschnittbreite [m]</dd>
+          <dt>$\rho$</dt><dd>Dichte der Metallschmelze [kg/m³]</dd>
+        </dl>
+        <div class="prose">
+          <p><strong>Logik der Grenze:</strong> Für die Auslegung gilt ein abgestuftes Kriterium.
+            Bei $J&lt;700$ ist die Anschnittauslegung kritisch und grundsätzlich zu überarbeiten
+            oder gesondert zu validieren. Der Bereich $700\le J&lt;1064$ ist als funktionsfähiger
+            Übergangsbereich zulässig, sofern Füllbild und Bauteilqualität durch Versuch oder
+            validierte Simulation bestätigt werden. Bei $J\ge 1064$ wird in der verwendeten
+            Konvention der atomisierte Strömungsbereich erreicht. Eine vollständige Atomisierung
+            ist jedoch nicht generell erforderlich und ein höherer J-Faktor führt nicht automatisch
+            zu einer besseren Bauteilqualität. Füllweg, Überlaufanordnung und Schussprofil bleiben
+            gemeinsam zu bewerten. [1] [2] [3] [4] [5] [6]</p>
+        </div>
+        <div class="insight-box">
+          <div class="label">Auslegungshinweis</div>
+          <p>Als Mindestanforderung ist $J\ge 700$ anzusetzen. Werte zwischen 700 und 1064 sind
+            als Übergangsbereich zu kennzeichnen. $J=1064$ dient als Schwelle für ausgeprägte
+            Atomisierung. Höhere Qualitätszielwerte dürfen nur bauteil- und prozessspezifisch
+            festgelegt werden.</p>
+        </div>
+        <p class="src"><b>Quellen für das Kriterium:</b> [1] Koya et al. (2020) · [2] Koya et al.
+          (2023) · [3] Herman (2012) · [4] Miller (2006) · [5] North American Die Casting
+          Association (2015) · [6] Hao et al. (1998).</p>
+      </div>
+
+      <div class="nb-card" id="n2">
+        <h3><span class="nb-tag">N2</span> Maximale Anschnittgeschwindigkeit</h3>
+        <div class="prose">
+          <p>Die Anschnittgeschwindigkeit darf einen werkstoff- und prozessabhängigen Maximalwert
+            nicht überschreiten. Bei zu hohen Geschwindigkeiten wird der Metallstrom übermäßig
+            zerstäubt und turbulent — das erhöht Lufteinschlüsse und Porosität und steigert das
+            Risiko von <strong>Kavitations- und Erosionsschäden</strong> im Werkzeugstahl.
+            Zusätzlich kann die verringerte thermische Grenzschicht zu lokalem Anhaften
+            (Verschweißen) führen.</p>
+        </div>
+        <div class="math-block">
+          $$v_{g,\max} \le 41\,\mathrm{m/s} \quad(\text{NADCA, Aluminium})
+            \qquad\text{bzw.}\qquad
+            v_{g,\max} \le 65\,\mathrm{m/s} \quad(\text{weitere Studien})$$
+        </div>
+        <p class="src"><b>Quellen für das Kriterium:</b> NADCA Product Specification Standards
+          (2015) · Miller, <i>Gating Manual</i> #512 (2006) · Hao et al., <i>Atomization in
+          HPDC</i> (1998).</p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- B · Füllzeit -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="kat-b"></span>
+      <h2 class="section-title">B · Füllzeit</h2>
+
+      <div class="nb-card" id="n3">
+        <h3><span class="nb-tag">N3</span> Minimale Füllzeit</h3>
+        <div class="prose">
+          <p>Die minimale Füllzeit ist vom Überlauf- bzw. Entlüftungsquerschnitt abhängig, da die
+            Form während des Füllens <strong>entlüftet</strong> werden muss. Die verdrängte Luft
+            kann höchstens mit Schallgeschwindigkeit durch die Entlüftungskanäle entweichen. Wird
+            schneller gefüllt, als die Luft entweichen kann, entstehen Lufteinschlüsse und
+            Porosität.</p>
+        </div>
+        <div class="math-block">
+          $$t_f \;\ge\; t_{f,\min} = \frac{V_{Luft}}{A_{Ent}\cdot v_{Luft,\max}}
+            \qquad (v_{Luft,\max} \le a_{Schall})$$
+        </div>
+        <p class="src"><b>Modell:</b> Kontinuität der verdrängten Luft, begrenzt durch
+          Schallgeschwindigkeit (vgl. Dashboard-Diagramm
+          <a href="../app/chart.html?id=ventreq">„Entlüftungsbedarf“</a>).</p>
+      </div>
+
+      <div class="nb-card" id="n4">
+        <h3><span class="nb-tag">N4</span> Maximale Formfüllzeit</h3>
+        <div class="prose">
+          <p>Wird die maximale Formfüllzeit überschritten, kann die Schmelze bereits während des
+            Füllens vorzeitig erstarren. Mögliche Folgen sind Kaltfließstellen und eine
+            unvollständige Formfüllung. Die zulässige Füllzeit wird im Wesentlichen durch die
+            Wärmeübertragung zwischen Schmelze und Werkzeug bestimmt. Der verwendete Ansatz und
+            die Richtwerte für Aluminium basieren auf den im NADCA-Kontext veröffentlichten
+            Auslegungsbeziehungen.</p>
+        </div>
+        <div class="math-block">
+          $$t_{f,\max} = k\, s\, \frac{T_i - T_f + S\,Z}{T_f - T_m}
+            \qquad\text{bzw. (Aluminium):}\qquad
+            t_{f,\max} = 40\, s \cdot 10^{-3}$$
+        </div>
+        <dl class="sym">
+          <dt>$k$</dt><dd>NADCA-Faktor [ms/mm]</dd>
+          <dt>$s$</dt><dd>mittlere Wandstärke</dd>
+          <dt>$T_{i},\,T_{f},\,T_{m}$</dt><dd>Guss-, Fließ-, Formtemperatur</dd>
+          <dt>$S,\,Z$</dt><dd>zul. Erstarrung [%], Z-Konstante [°C/%]</dd>
+        </dl>
+        <p class="src"><b>Quellen für das Kriterium:</b> López &amp; Faura (2004) · Ward,
+          <i>NADCA Alucast EC-700 PQ²</i> (2013) · López Rodríguez (2002) · Karni (1991).</p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- C · Füllkammer & Kolben -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="kat-c"></span>
+      <h2 class="section-title">C · Füllkammer und Kolbenbewegung</h2>
+
+      <div class="nb-card" id="n5">
+        <h3><span class="nb-tag">N5</span> Füllgrad der Füllkammer</h3>
+        <div class="prose">
+          <p>Der <a href="kreissegmente.html">Füllgrad</a> $\varphi$ (Verhältnis von
+            Dosiervolumen zu Kammervolumen) muss in einem Zielband liegen (typisch
+            <strong>40–60&nbsp;%</strong>). Ein zu geringer Füllgrad begünstigt Lufteinschluss in
+            der langsamen Phase, ein zu hoher lässt keine geordnete Wellenbildung zu.</p>
+        </div>
+        <div class="math-block">
+          $$\varphi = \frac{V_{dosiert}}{A\,L}, \quad A = \tfrac{\pi}{4}d^2
+            \qquad\Rightarrow\qquad
+            \varphi_{\min} \le \varphi \le \varphi_{\max}$$
+        </div>
+        <p class="src"><b>Modell:</b> Massenbilanz Füllkammer · $V_{dosiert}$ = Bauteil + Anguss
+          + Überlauf + Pressrest.</p>
+      </div>
+
+      <div class="nb-card" id="n6">
+        <h3><span class="nb-tag">N6</span> Kritische Kolbengeschwindigkeit der 1. Phase</h3>
+        <div class="prose">
+          <p>In der langsamen Phase darf die Kolbengeschwindigkeit die
+            <a href="kritische-geschwindigkeit.html">kritische Geschwindigkeit</a> nicht
+            überschreiten, da andernfalls die Schmelzewelle überschlagen und Luft einschließen
+            kann. Ausgangspunkt ist die Ausbreitung einer Schwerewelle in der teilgefüllten
+            zylindrischen Füllkammer. Die lokale Wellengeschwindigkeit wird aus dem Zusammenhang
+            $\sqrt{g\,A/T}$ bestimmt, wobei $T$ die Sehnenlänge der freien Oberfläche und $A$ die
+            zugehörige benetzte Querschnittsfläche des
+            <a href="kreissegmente.html">Kreissegments</a> bezeichnet. Die Nogowizin-Formel ist
+            eine Näherung der über die maßgebenden Füllstandsgrenzen integrierten Lösung und
+            beschreibt $v_{\mathrm{krit}}$ als Funktion von Kammerdurchmesser und Füllgrad.
+            Ergänzend kann das vereinfachte Garber-Modell verwendet werden.</p>
+        </div>
+        <div class="math-block">
+          $$v_{krit} = \sqrt{9{,}81\,D}\,\bigl(1{,}386 - 1{,}915\,\varphi + 0{,}615\,\varphi^2\bigr)
+            \quad(\text{Nogowizin})$$
+        </div>
+        <div class="math-block">
+          $$v_{krit} = 0{,}3\,\sqrt{9{,}81\,d}\,\bigl(0{,}4 + 0{,}9\,\varphi\bigr)
+            \quad(\text{Garber, vereinfacht})$$
+        </div>
+        <div class="prose">
+          <p>Bedingung: <strong>$v_{1.\,Phase}\le v_{krit}(D,\varphi)$</strong>.</p>
+        </div>
+        <p class="src"><b>Modelle:</b> Nogowizin · Garber (vereinfacht) — beide im Dashboard
+          implementiert.</p>
+      </div>
+
+      <div class="nb-card" id="n7">
+        <h3><span class="nb-tag">N7</span> Minimaler Pressrest</h3>
+        <div class="prose">
+          <p>Der Pressrest (Biscuit) muss eine Mindestdicke aufweisen, damit der Nachdruck sicher
+            wirkt und der Kolben nicht bis in den Anguss durchläuft. Das Kurvenende muss zudem
+            <strong>vor</strong> dem Pressrest liegen.</p>
+        </div>
+        <div class="math-block">
+          $$e_{PR} = \frac{V_{PR}}{A} \;\ge\; e_{PR,\min}
+            \qquad\text{und}\qquad
+            s_{Kurvenende} \le L - e_{PR}$$
+        </div>
+        <p class="src"><b>Modell:</b> Massenbilanz Pressrestvolumen (Dashboard-Check
+          „Pressrest ≥ Minimum“).</p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- D · Maschine & Druck -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="kat-d"></span>
+      <h2 class="section-title">D · Maschine und Druck</h2>
+
+      <div class="nb-card" id="n8">
+        <h3><span class="nb-tag">N8</span> Schließkraft / zulässige Sprengfläche</h3>
+        <div class="prose">
+          <p>Die verfügbare Schließkraft der Maschine muss die aus Metalldruck und projizierter
+            Fläche resultierende Sprengkraft einschließlich des Sicherheitsfaktors $S$
+            überschreiten. Andernfalls kann sich die Form öffnen. Alle Größen sind in einem
+            konsistenten Einheitensystem einzusetzen.</p>
+        </div>
+        <div class="math-block">
+          $$F_{Masch} \ge S\,p\,A_{proj}
+            \qquad\Leftrightarrow\qquad
+            A_{proj} \le \frac{F_{Masch}}{S\,p}$$
+        </div>
+        <dl class="sym">
+          <dt>$F_{Masch}$</dt><dd>verfügbare Schließkraft der Maschine</dd>
+          <dt>$A_{proj}$</dt><dd>projizierte Fläche (Sprengfläche)</dd>
+          <dt>$p$</dt><dd>wirksamer Metalldruck</dd>
+          <dt>$S$</dt><dd>Sicherheitsfaktor</dd>
+        </dl>
+        <p class="src"><b>Modell:</b> Kräftegleichgewicht $F=p\,A$ (Dashboard
+          <a href="../app/chart.html?id=area">„Zulässige Sprengfläche“</a>).</p>
+      </div>
+
+      <div class="nb-card" id="n9">
+        <h3><span class="nb-tag">N9</span> Maximale Kolbengeschwindigkeit (Maschinenlimit)</h3>
+        <div class="prose">
+          <p>Die Spitzengeschwindigkeit der Schusskurve darf das Maschinenlimit nicht
+            überschreiten. Dieses Limit ist als weiche Grenze zu behandeln: Der angegebene
+            Maximalwert bezieht sich häufig auf den Leerschuss. Die unter realer Belastung
+            erreichbare Kolbengeschwindigkeit hängt zusätzlich von Schmelzewiderstand,
+            Druckaufbau, Hydraulikzustand und der verfügbaren Maschinenleistung ab.</p>
+        </div>
+        <div class="math-block">
+          $$v_{p,\text{peak}} \;\le\; v_{p,\max}$$
+        </div>
+        <p class="src"><b>Quellen für das Kriterium:</b> Maschinen-Preset / Prozessfenster
+          (Dashboard-Check).</p>
+      </div>
+
+      <div class="nb-card" id="n10">
+        <h3><span class="nb-tag">N10</span> Maximale Beschleunigung (Maschinenlimit)</h3>
+        <div class="prose">
+          <p>Die aus der Schusskurve resultierende Spitzenbeschleunigung darf die hydraulisch
+            mögliche Maximalbeschleunigung nicht überschreiten.</p>
+        </div>
+        <div class="math-block">
+          $$a_{\text{peak}} = \max_k \left|\frac{v_{k}^2 - v_{k-1}^2}{2\,\Delta s_k}\right|
+            \;\le\; a_{\max}$$
+        </div>
+        <p class="src"><b>Modell:</b> stückweise konstant beschleunigtes Bewegungsprofil
+          (Dashboard).</p>
+      </div>
+
+      <div class="nb-card" id="n11">
+        <h3><span class="nb-tag">N11</span> Spezifischer Gießdruck</h3>
+        <div class="prose">
+          <p>Der spezifische Gießdruck, also die auf die Kolbenfläche bezogene Gießkraft, muss
+            innerhalb des festgelegten Zielbands liegen. Ein zu niedriger Wert kann die
+            Bauteildichte beeinträchtigen, ein zu hoher Wert belastet Werkzeug und Maschine.</p>
+        </div>
+        <div class="math-block">
+          $$p_{spez} = \frac{F_{\mathrm{Giess}}}{A_{Kolben}} = \frac{F_{\mathrm{Giess}}}{\tfrac{\pi}{4}d^2}
+            \qquad\Rightarrow\qquad
+            p_{spez,\min} \le p_{spez} \le p_{spez,\max}$$
+        </div>
+        <p class="src"><b>Modell:</b> Hydraulik/Ausbringung (Dashboard
+          <a href="../app/chart.html?id=pspec">„Spezifischer Gießdruck“</a>).</p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- E · Entlüftung -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="kat-e"></span>
+      <h2 class="section-title">E · Entlüftung</h2>
+
+      <div class="nb-card" id="n12">
+        <h3><span class="nb-tag">N12/N13</span> Entlüftungsmachzahl und erforderlicher Entlüftungsquerschnitt</h3>
+        <div class="prose">
+          <p>Die beiden bisherigen Kriterien werden zu einer gemeinsamen Nebenbedingung
+            zusammengeführt. Der Entlüftungsquerschnitt ist so auszulegen, dass die beim Füllen
+            verdrängte Luft mit ausreichender Reserve abströmen kann. Maßgebend ist die Machzahl
+            $M=v_{\mathrm{Luft}}/a_{\mathrm{Schall}}$. Als Auslegungsgrenze wird $M_{\max}=0{,}8$
+            verwendet. Dadurch bleibt die Strömung unterhalb des kritischen Bereichs und es steht
+            eine Reserve bis zur Schallgrenze zur Verfügung.</p>
+        </div>
+        <div class="math-block">
+          $$M = \frac{v_{Luft}}{a_{Schall}} = \frac{\dot V_{Luft}}{A_{Ent}\,a_{Schall}}
+            \le M_{max}=0{,}8$$
+        </div>
+        <p class="src"><b>Gemeinsame Nebenbedingung:</b> Der vorhandene Entlüftungsquerschnitt
+          muss so groß sein, dass die maximale Entlüftungsmachzahl zu keinem Zeitpunkt
+          überschritten wird.</p>
+      </div>
+
+      <div class="nb-card" id="n13">
+        <h3><span class="nb-tag">N13</span> Aus N12 abgeleiteter Mindestquerschnitt</h3>
+        <div class="prose">
+          <p>Der erforderliche Entlüftungsquerschnitt wird unmittelbar aus der maximal zulässigen
+            Machzahl und dem maximalen Luftvolumenstrom abgeleitet:</p>
+        </div>
+        <div class="math-block">
+          $$A_{Ent} \ge A_{Ent,erf} = \frac{\dot V_{Luft,max}}{M_{max}\,a_{Schall}}$$
+        </div>
+        <p class="src"><b>Bewertung:</b> N12 und N13 bilden fachlich ein gemeinsames Kriterium.
+          N12 legt die maximale Machzahl fest; N13 beschreibt den daraus resultierenden
+          Mindestquerschnitt.</p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- F · Thermik & Erstarrung -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="kat-f"></span>
+      <h2 class="section-title">F · Thermik und Erstarrung</h2>
+
+      <div class="nb-card" id="n14">
+        <h3><span class="nb-tag">N14</span> Anschnitt-Erstarrungszeit ≥ Nachdruckzeit</h3>
+        <div class="prose">
+          <p>Der Anschnitt darf erst <strong>nach</strong> Ende der Nachdruckphase erstarren,
+            damit der Nachdruck Volumendefizite (Schwindung) ausgleichen kann. Die Erstarrungszeit
+            skaliert nach Chvorinov mit dem Quadrat der Anschnittdicke.</p>
+        </div>
+        <div class="math-block">
+          $$t_{erst} = k_{sol}\, e_p^{\,2} \;\ge\; t_{Nachdruck}$$
+        </div>
+        <dl class="sym">
+          <dt>$k_{sol}$</dt><dd>Erstarrungskonstante [ms/mm²]</dd>
+          <dt>$e_{p}$</dt><dd>Anschnittdicke</dd>
+          <dt>$t_{Nachdruck}$</dt><dd>Nachdruckzeit</dd>
+        </dl>
+        <p class="src"><b>Modell:</b> Chvorinov-Ansatz (Dashboard
+          <a href="../app/chart.html?id=gatesol">„Anschnitt-Erstarrungszeit“</a>).</p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- G · Geometrie -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="kat-g"></span>
+      <h2 class="section-title">G · Geometrie</h2>
+
+      <div class="nb-card" id="n15">
+        <h3><span class="nb-tag">N15</span> Geometriegrenzen (Kolben, Kammer, Hub)</h3>
+        <div class="prose">
+          <p>Die gewählten Geometriewerte müssen innerhalb der zulässigen bzw. verfügbaren Grenzen
+            liegen: Kolbendurchmesser, Kammerlänge, Bauteilwandstärke sowie der Kurvenhub, der den
+            Gesamthub abdecken muss.</p>
+        </div>
+        <div class="math-block">
+          $$d_{\min} \le d \le d_{\max}, \qquad
+            L_{\min} \le L \le L_{\max}, \qquad
+            s_{\min} \le s \le s_{\max}$$
+        </div>
+        <div class="math-block">
+          $$s_{Kurvenhub} \;\ge\; s_{Gesamthub}
+            = s_{voll} + \frac{V_{\text{Anguss+Bauteil+Überlauf}}}{A}$$
+        </div>
+        <p class="src"><b>Modell:</b> Grenzwertfelder Füllkammer/Kolben und Bauteilgeometrie
+          (Dashboard-Validierung).</p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- H · Prozessmonitoring -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="kat-h"></span>
+      <h2 class="section-title">H · Prozessmonitoring</h2>
+
+      <div class="nb-card" id="n16">
+        <h3><span class="nb-tag">N16</span> RMS-Beschleunigung und Energiekennzahl</h3>
+        <div class="prose">
+          <p>Die maximale Kolbengeschwindigkeit und die Spitzenbeschleunigung beschreiben nur
+            einzelne Zeitpunkte des Schussprofils. Für die Qualitätsbewertung werden deshalb
+            zusätzlich zwei integrale Kennzahlen verwendet, die den Verlauf der Kolbenbewegung
+            über einen endlichen Zeitraum berücksichtigen.</p>
+          <p>Die RMS-Beschleunigung der schnellen Phase beschreibt die mittlere quadratische
+            Beschleunigungsbeanspruchung zwischen dem Beginn und dem Ende der zweiten Phase:</p>
+        </div>
+        <div class="math-block">
+          $$a_{\mathrm{RMS},2}=
+            \sqrt{\frac{1}{t_{e2}-t_{s2}}
+            \int_{t_{s2}}^{t_{e2}} \ddot{x}(t)^2\,\mathrm{d}t}$$
+        </div>
+        <div class="prose">
+          <p>Die Energiekennzahl $E_{f}$ berücksichtigt die gesamte relevante
+            Geschwindigkeitsgeschichte von der langsamen bis zum Ende der schnellen Phase. Sie ist
+            proportional zur über den Bewegungsablauf integrierten Wirkung
+            geschwindigkeitsabhängiger Strömungskräfte:</p>
+        </div>
+        <div class="math-block">
+          $$E_f=\int_{0}^{t_{e2}} \dot{x}(t)^3\,\mathrm{d}t$$
+        </div>
+        <dl class="sym">
+          <dt>$a_{RMS,2}$</dt><dd>RMS-Beschleunigung der zweiten Phase [m/s²]</dd>
+          <dt>$E_{f}$</dt><dd>Energiekennzahl des Kolbengeschwindigkeitsverlaufs [m³/s²]</dd>
+          <dt>$x(t)$</dt><dd>Kolbenposition [m]</dd>
+          <dt>$\dot{x}(t)$</dt><dd>Kolbengeschwindigkeit [m/s]</dd>
+          <dt>$\ddot{x}(t)$</dt><dd>Kolbenbeschleunigung [m/s²]</dd>
+          <dt>$t_{s2}$</dt><dd>Beginn der schnellen Phase [s]</dd>
+          <dt>$t_{e2}$</dt><dd>Ende der schnellen Phase beziehungsweise Beginn der Nachdruckphase [s]</dd>
+        </dl>
+        <div class="prose">
+          <p><strong>Logik der Grenze:</strong> Für beide Kennzahlen existiert kein allgemein
+            gültiger Literaturgrenzwert. Die zulässigen Bereiche sind für die konkrete Kombination
+            aus Maschine, Werkzeug, Anschnittsystem, Legierung und Qualitätsanforderung anhand
+            freigegebener Gutteile festzulegen:</p>
+        </div>
+        <div class="math-block">
+          $$a_{\mathrm{RMS},\min}\le a_{\mathrm{RMS},2}\le a_{\mathrm{RMS},\max},
+            \qquad E_{f,\min}\le E_f\le E_{f,\max}$$
+        </div>
+        <div class="prose">
+          <p>Die Untergrenzen kennzeichnen eine unzureichende dynamische Wirkung des
+            Schussprofils. Die Obergrenzen werden durch Maschinenleistung, maximale
+            Beschleunigung, Ruck, Schließkraft, Gratbildung sowie die Belastbarkeit von Werkzeug
+            und Anschnitt begrenzt. Die Kennzahlen ergänzen <a href="#n9">N9</a> und
+            <a href="#n10">N10</a>; sie ersetzen die dort festgelegten Maschinenlimits nicht.</p>
+        </div>
+        <p class="src"><b>Quellen für das Kriterium:</b> Fiorese &amp; Bonollo (2016) · Fiorese
+          et al. (2017a, 2017b) · Fiorese et al. (2018).</p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- I · Vakuum -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="kat-i"></span>
+      <h2 class="section-title">I · Vakuum</h2>
+
+      <div class="nb-card" id="n17">
+        <h3><span class="nb-tag">N17</span> Vakuum bei Beginn der Formfüllung</h3>
+        <div class="prose">
+          <p>Bei vakuumunterstütztem Aluminium-Druckguss ist nicht allein der Sollwert am
+            Vakuumaggregat maßgebend. Entscheidend ist der tatsächlich in der Kavität erreichte
+            absolute Druck zu dem Zeitpunkt, an dem die Schmelze mit der Formfüllung beginnt. Eine
+            zu frühe Umschaltung in die schnelle Phase verkürzt die Evakuierungszeit und kann zu
+            einem zu hohen Restdruck in der Kavität führen.</p>
+        </div>
+        <div class="math-block">
+          $$p_{\mathrm{Kav}}\!\left(t_{\text{Füllbeginn}}\right) \le p_{\mathrm{Kav,max}}$$
+        </div>
+        <dl class="sym">
+          <dt>$p_{Kav}$</dt><dd>gemessener absoluter Kavitätsdruck [mbar abs oder kPa abs]</dd>
+          <dt>$t_{\text{Füllbeginn}}$</dt><dd>Zeitpunkt des tatsächlichen Beginns der Formfüllung [s]</dd>
+          <dt>$p_{Kav,\max}$</dt><dd>maximal zulässiger Kavitätsdruck zum Füllbeginn</dd>
+        </dl>
+        <div class="prose">
+          <p><strong>Logik der Grenze:</strong> Der Wert $p_{Kav,\max}$ ist werkzeug- und
+            qualitätsspezifisch aus Dichtheits-, Porositäts- oder mechanischen Abnahmekriterien
+            abzuleiten. Ein einzelner universeller Grenzwert wird nicht festgelegt. Der
+            Drucksensor ist so anzuordnen, dass der Messwert den Kavitätszustand repräsentiert und
+            nicht durch eine vorzeitig mit Metall verschlossene Mess- oder Vakuumleitung
+            verfälscht wird.</p>
+          <p>Die Nebenbedingung ist nur aktiv, wenn der Prozess mit Vakuum betrieben wird. Ohne
+            Vakuumunterstützung wird N17 als „nicht anwendbar“ dokumentiert und nicht gegen einen
+            Ersatzwert geprüft.</p>
+        </div>
+        <p class="src"><b>Quellen für das Kriterium:</b> Yu et al. (2017) · Sui &amp; Han
+          (2019).</p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- J · Schusskurve -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="kat-j"></span>
+      <h2 class="section-title">J · Schusskurve und Geschwindigkeitsprofile</h2>
+
+      <div class="nb-card" id="n18">
+        <h3><span class="nb-tag">N18</span> Schusskurve der langsamen Phase</h3>
+        <div class="prose">
+          <p>Die langsame Phase wird nicht durch einen einzelnen Geschwindigkeitswert ausreichend
+            beschrieben. Für die Wellenbildung sind die vollständige Geschwindigkeitsgeschichte,
+            der Beschleunigungsverlauf, der Füllgrad, der Kammerdurchmesser, die wirksame
+            Kammerlänge und der Ausgangszustand der freien Oberfläche maßgebend. Eine zu niedrige
+            Geschwindigkeit lässt die Welle am Kammerende reflektieren; eine zu hohe
+            Geschwindigkeit oder Beschleunigung führt zum Kontakt mit der Kammerdecke, zur
+            Ausbildung eines Deckenstrahls und zum Überschlagen der Welle (Tszeng &amp; Chu, 1994;
+            López et al., 2000; Yuan et al., 2008).</p>
+          <p><strong>Allgemeine Freigabebedingung:</strong></p>
+        </div>
+        <div class="math-block">
+          $$v_{1,\min}(s)\le v_1(s)\le v_{1,\max}(s), \qquad
+            |a_1(s)|\le a_{\mathrm{Masch,max}}, \qquad
+            |j_1(s)|\le j_{\mathrm{Masch,max}}$$
+        </div>
+        <div class="prose">
+          <p>Zusätzlich muss das Profil die Prozessziele erfüllen: keine brechende oder
+            reflektierende Welle, kein vorzeitiger Deckenstrahl, möglichst geringe Restluft am
+            Läufereintritt, begrenzte Kontaktzeit zwischen Schmelze und Luft sowie begrenzter
+            Temperaturverlust. Diese Ziele sind teilweise konkurrierend und werden daher gemeinsam
+            bewertet (Frings et al., 2016, 2018).</p>
+        </div>
+
+        <h4>Profil P1 · Konstante langsame Geschwindigkeit</h4>
+        <div class="math-block">
+          $$v_1(t)=v_{\mathrm{konst}}$$
+        </div>
+        <div class="prose">
+          <p>Dieses Profil ist einfach parametrierbar, aber nur in einem engen, validierten
+            Prozessfenster geeignet. Bei 50&nbsp;% Füllgrad und 0,13&nbsp;m/s wurde in einem
+            Wasseranalogversuch eine vorlaufende, am Kammerende reflektierende Welle beobachtet.
+            Bei 28,8&nbsp;% Füllgrad und 1,03&nbsp;m/s trat dagegen frühzeitiger Deckenkontakt mit
+            starkem Lufteinschluss auf. Beide Werte sind Versuchsbedingungen und keine allgemein
+            gültigen Grenzen (Yuan et al., 2008).</p>
+        </div>
+
+        <h4>Profil P2 · Konstante Beschleunigung mit Geschwindigkeitsplateau</h4>
+        <div class="math-block">
+          $$v_1(s)=
+            \begin{cases}
+            \sqrt{2a_1s}, &amp; 0\le s&lt;s_{\mathrm{sw}}\\
+            v_f, &amp; s_{\mathrm{sw}}\le s\le s_2
+            \end{cases}, \qquad a_1=\frac{v_f^2}{2s_{\mathrm{sw}}}$$
+        </div>
+        <div class="prose">
+          <p>Die freien Parameter sind die Endgeschwindigkeit $v_{f}$ und die Position $s_{sw}$,
+            an der das Plateau erreicht wird. In den Optimierungsstudien wurde dieses Profil
+            verwendet, weil es mit üblichen Maschinensteuerungen gut umsetzbar ist. Seine Freigabe
+            erfolgt nicht über die dort untersuchten absoluten Parametergrenzen, sondern über
+            Maschinenlimits und die mehrkriterielle Bewertung von Restluft, Temperaturverlust und
+            Luftkontaktzeit (Frings et al., 2016, 2018).</p>
+        </div>
+
+        <h4>Profil P3 · Wegexponentielles Profil</h4>
+        <div class="math-block">
+          $$v_1(s)=a\,s \qquad\Longleftrightarrow\qquad v_1(t)=a\,b\left(e^{at}-1\right)$$
+        </div>
+        <div class="prose">
+          <p>Das Profil ist repräsentativ für Steuerungen, bei denen Geschwindigkeiten an
+            Kolbenpositionen vorgegeben werden. Es erzeugt gegenüber einem zeitpotenzförmigen
+            Profil häufig kürzere Füllzeiten. Die Parameter $a$ und $b$ sind so zu wählen, dass
+            die Welle erst am Kammerende ihr Stabilitätslimit erreicht. Ein universeller Wert für
+            $a$ ist nicht übertragbar, da das Optimum von Füllgrad, Hub, Durchmesser und
+            Kammergeometrie abhängt (López et al., 2000).</p>
+        </div>
+
+        <h4>Profil P4 · Zeitpotenzprofil</h4>
+        <div class="math-block">
+          $$v_1(t)=\gamma t^n, \qquad a_1(t)=n\gamma t^{n-1}$$
+        </div>
+        <div class="prose">
+          <p>Dieses Profil bildet zeitbasierte Maschinensteuerungen ab. Für $n&lt;1$ entsteht am
+            Start eine mathematisch unendliche Beschleunigung und das Profil ist ohne Glättung
+            unzulässig. Für gleiche Wellenrandbedingungen ergaben die analytischen Untersuchungen
+            meist längere Füllzeiten als beim wegexponentiellen Profil. Das Profil wird daher nur
+            verwendet, wenn die Maschinensteuerung dies erfordert oder eine validierte Optimierung
+            einen Vorteil nachweist (López et al., 2000).</p>
+        </div>
+
+        <h4>Profil P5 · López-Faura-Hernández-Profil</h4>
+        <div class="math-block">
+          $$a_1(t)=\frac{2c_0^2}{3\ell}\left(1-\frac{c_0t}{\ell}\right)^{-4/3}
+            \qquad\qquad
+            v_1(t)=2c_0\left[\left(1-\frac{c_0t}{\ell}\right)^{-1/3}-1\right]$$
+        </div>
+        <div class="prose">
+          <p>Mit $c_{0}=\sqrt{gA_{l0}/T_{0}}$ für die Kreisquerschnittsformulierung und
+            $\ell\approx L$ wird eine Wellenentwicklung angestrebt, die die Anfangsluft bis zum
+            Kammerende verdrängt. Nach Erreichen der zulässigen Endgeschwindigkeit wird diese
+            konstant gehalten. Das Profil kann die Restluft minimieren, ist aber empfindlich
+            gegenüber dreidimensionalen Effekten und kann bei ungünstiger Kombination aus Füllgrad
+            und Kammergeometrie einen Deckenstrahl erzeugen. Es ist deshalb mit 3D-CFD oder
+            Versuchen abzusichern (Faura et al., 2001; López et al., 2003; Zamora et al., 2007,
+            2008).</p>
+        </div>
+        <div class="insight-box">
+          <div class="label">Bevorzugte Implementierung</div>
+          <p>P2 ist das robuste Standardprofil für Maschinen mit stützpunktbasierter Schusskurve.
+            P5 dient als physikalisch begründetes Sollprofil und als Initialisierung einer
+            Optimierung. P1 ist nur für ein nachgewiesenes enges Fenster zulässig. P3 und P4 sind
+            alternative Parametrisierungen, nicht zusätzliche allgemeingültige Prozessgrenzen.</p>
+        </div>
+        <p class="src"><b>Quellen für das Kriterium:</b> Tszeng &amp; Chu (1994) · López et al.
+          (2000) · Faura et al. (2001) · López et al. (2003) · Zamora et al. (2007, 2008) · Yuan
+          et al. (2008) · Frings et al. (2016, 2018).</p>
+      </div>
+
+      <div class="nb-card" id="n19">
+        <h3><span class="nb-tag">N19</span> Umschaltpunkt zur schnellen Phase</h3>
+        <div class="prose">
+          <p>Der Beginn der schnellen Phase ist an den tatsächlichen Beginn der Formfüllung zu
+            koppeln. Die Umschaltung darf weder so früh erfolgen, dass Luft und eine unvollständig
+            aufgebaute Welle beschleunigt werden, noch so spät, dass bereits Schmelze mit der
+            langsamen Geschwindigkeit in den Anschnitt eintritt. Die Freigabebedingung lautet:</p>
+        </div>
+        <div class="math-block">
+          $$s_2=s\!\left(t_{\text{Füllbeginn}}\right)-\Delta s_{\mathrm{dyn}},
+            \qquad |\Delta s_{\mathrm{dyn}}|\le\Delta s_{\mathrm{zul}}$$
+        </div>
+        <div class="prose">
+          <p>$\Delta s_{\mathrm{dyn}}$ berücksichtigt die dynamische Verzögerung der Maschine
+            zwischen Umschaltsignal und erreichter schneller Geschwindigkeit. Der Sollpunkt wird
+            aus Metallvolumen, Kolbenfläche, Pressrest, Läuferfüllung und realer Kompressibilität
+            bestimmt und anschließend mit Werkzeugdruck-, Kontakt- oder Kavitätssignalen
+            validiert.</p>
+          <p><strong>Profilübergang:</strong> Zwischen langsamer und schneller Phase ist ein
+            stetiger, maschinengerechter Übergang zu verwenden. Geschwindigkeitssprung,
+            Beschleunigung und Ruck müssen innerhalb der Maschinenlimits liegen. Die tatsächliche
+            Kurve wird zusätzlich mit <a href="#n16">N16</a> über $a_{RMS,2}$ und $E_{f}$
+            bewertet.</p>
+        </div>
+        <p class="src"><b>Quellen für das Kriterium:</b> Frings et al. (2016) · Zamora et al.
+          (2008) · Takada et al. (2023) · Itakura et al. (2025).</p>
+      </div>
+
+      <div class="nb-card" id="n20">
+        <h3><span class="nb-tag">N20</span> Qualitätsziele zur Optimierung der Schusskurve</h3>
+        <div class="prose">
+          <p>Eine optimierte Schusskurve ist nicht allein durch eine minimale Restluft definiert.
+            Für die langsame Phase werden mindestens drei Zielgrößen gemeinsam bewertet:</p>
+        </div>
+        <div class="math-block">
+          $$J_{AE}=V_{\mathrm{Luft}}(t_{\text{Ende,langsam}})$$
+        </div>
+        <div class="math-block">
+          $$J_{TL}=\frac{1}{V_{\mathrm{Metall}}}\int_{\Omega_{\mathrm{Metall}}}
+            \left[T(\mathbf{x},t_0)-T(\mathbf{x},t_{\text{Ende,langsam}})\right]\,\mathrm{d}V$$
+        </div>
+        <div class="math-block">
+          $$J_{ACT}=\int_{t_0}^{t_{\text{Ende,langsam}}} A_{\text{Metall-Luft}}(t)\,\mathrm{d}t$$
+        </div>
+        <div class="prose">
+          <p>Die Zielgrößen stehen für eingeschlossene Luft, mittleren Temperaturverlust und
+            zeitlich integrierte Metall-Luft-Kontaktfläche. Sie sind als Optimierungs- und
+            Vergleichsgrößen zu verwenden, nicht als universelle Grenzwerte. Die zulässigen
+            Maximalwerte werden aus Gutteilen, Qualitätsanforderungen und validierter Simulation
+            festgelegt. Eine Pareto-Bewertung ist einer unbegründeten Einzelgewichtung vorzuziehen
+            (Frings et al., 2016, 2018).</p>
+        </div>
+        <p class="src"><b>Quellen für das Kriterium:</b> Frings et al. (2016, 2018).</p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- Literaturverzeichnis -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="literatur"></span>
+      <h2 class="section-title">Literaturverzeichnis</h2>
+
+      <div class="refs">
+        <div class="prose">
+          <p><strong>Zitierstil: APA 7th Edition.</strong> Kurzbelege im Text folgen dem
+            Autor-Jahr-System.</p>
+        </div>
+        <ol>
+          <li>Koya, E., Nakagawa, M., Kitagawa, S., Ishimoto, J., Nakano, Y., &amp; Ochiai, N. (2020). CFD analysis of mechanisms underlying the porosity-reducing effect of atomized flows in high-pressure die cast products. <i>MATEC Web of Conferences, 326</i>, Article 06006. <a href="https://doi.org/10.1051/matecconf/202032606006">https://doi.org/10.1051/matecconf/202032606006</a></li>
+          <li>Koya, E., Nakagawa, M., Kitagawa, S., Ishimoto, J., Nakano, Y., &amp; Ochiai, N. (2023). Visualization of microscopic behavior of atomized flow in high-pressure die casting products using a multiphase flow analysis system. <i>International Journal of Metalcasting, 17</i>(4), 2508–2521. <a href="https://doi.org/10.1007/s40962-023-01015-8">https://doi.org/10.1007/s40962-023-01015-8</a></li>
+          <li>Herman, E. A. (2012). <i>Die casting process control</i>. [Verlagsangabe der verwendeten Ausgabe ergänzen].</li>
+          <li>Miller, A. (2006). <i>Gating manual</i> (Publication No. 512). North American Die Casting Association.</li>
+          <li>North American Die Casting Association. (2015). <i>Product specification standards for die castings</i>.</li>
+          <li>Hao, S. W., Hu, B. H., Niu, X. P., &amp; Pehlke, R. D. (1998). Atomization in high pressure die casting: A problem and a challenge. <i>Die Casting Engineer, 42</i>(5), 42–56.</li>
+          <li>López, J., &amp; Faura, F. (2004). [Vollständige bibliografische Angaben anhand der Originalquelle ergänzen].</li>
+          <li>Karni, Y. (1991). [Vollständige bibliografische Angaben anhand der Originalquelle ergänzen].</li>
+          <li>Fiorese, E., &amp; Bonollo, F. (2016). Plunger kinematic parameters affecting quality of high-pressure die-cast aluminum alloys. <i>Metallurgical and Materials Transactions A, 47</i>, 3731–3746. <a href="https://doi.org/10.1007/s11661-016-3522-7">https://doi.org/10.1007/s11661-016-3522-7</a></li>
+          <li>Fiorese, E., Richiedei, D., &amp; Bonollo, F. (2017a). Improving the quality of die castings through optimal plunger motion planning: Analytical computation and experimental validation. <i>International Journal of Advanced Manufacturing Technology, 88</i>, 1475–1484. <a href="https://doi.org/10.1007/s00170-016-8875-y">https://doi.org/10.1007/s00170-016-8875-y</a></li>
+          <li>Fiorese, E., Richiedei, D., &amp; Bonollo, F. (2017b). Analytical computation and experimental assessment of the effect of the plunger speed on tensile properties in high-pressure die casting. <i>International Journal of Advanced Manufacturing Technology, 91</i>, 463–476. <a href="https://doi.org/10.1007/s00170-016-9758-y">https://doi.org/10.1007/s00170-016-9758-y</a></li>
+          <li>Fiorese, E., Bonollo, F., &amp; Battaglia, E. (2018). A tool for predicting the effect of the plunger motion profile on the static properties of aluminium high pressure die cast components. <i>Metals, 8</i>(10), Article 798. <a href="https://doi.org/10.3390/met8100798">https://doi.org/10.3390/met8100798</a></li>
+          <li>Sui, D., &amp; Han, Q. (2019). Effects of different parameters on porosity defects between the horizontal and vertical shot sleeve processes. <i>International Journal of Metalcasting, 13</i>(2), 417–426. <a href="https://doi.org/10.1007/s40962-018-0267-7">https://doi.org/10.1007/s40962-018-0267-7</a></li>
+          <li>Yu, W., Yuan, Z., Guo, Z., &amp; Xiong, S. (2017). Characterization of A390 aluminum alloy produced at different slow shot speeds using vacuum assisted high pressure die casting. <i>Transactions of Nonferrous Metals Society of China, 27</i>, 2529–2538. <a href="https://doi.org/10.1016/S1003-6326(17)60281-4">https://doi.org/10.1016/S1003-6326(17)60281-4</a></li>
+          <li>Faura, F., López, J., &amp; Hernández, J. (2001). On the optimum plunger acceleration law in the slow shot phase of pressure die casting machines. <i>International Journal of Machine Tools and Manufacture, 41</i>(2), 173–191.</li>
+          <li>Frings, M., Behr, M., &amp; Elgeti, S. (2016). Study on objective functions for the slow shot phase in high-pressure die casting. <i>AIP Conference Proceedings, 1769</i>, Article 040001. <a href="https://doi.org/10.1063/1.4963423">https://doi.org/10.1063/1.4963423</a></li>
+          <li>Frings, M., Berkels, B., Behr, M., &amp; Elgeti, S. (2018). Comparison of optimization algorithms for the slow shot phase in HPDC. <i>AIP Conference Proceedings, 1960</i>, Article 110005. <a href="https://doi.org/10.1063/1.5034962">https://doi.org/10.1063/1.5034962</a></li>
+          <li>Itakura, F., Yamada, T., Maeda, Y., Hasuno, A., &amp; Mochida, Y. (2025). Examination of variable tilting speed on flow behavior during ladle pouring in die casting using SPH simulation. <i>International Journal of Metalcasting, 19</i>(2), 1194–1201. <a href="https://doi.org/10.1007/s40962-024-01378-6">https://doi.org/10.1007/s40962-024-01378-6</a></li>
+          <li>López, J., Hernández, J., Faura, F., &amp; Trapaga, G. (2000). Shot sleeve wave dynamics in the slow phase of die casting injection. <i>Journal of Fluids Engineering, 122</i>(2), 349–356.</li>
+          <li>López, J., Faura, F., Hernández, J., &amp; Gómez, P. (2003). On the critical plunger speed and three-dimensional effects in high-pressure die casting injection chambers. <i>Journal of Manufacturing Science and Engineering, 125</i>(3), 529–537. <a href="https://doi.org/10.1115/1.1580525">https://doi.org/10.1115/1.1580525</a></li>
+          <li>Takada, K., Sugihara, T., Maeda, Y., Hasuno, A., &amp; Mochida, Y. (2023). Direct observation and simulation of molten metal moving behavior during ladle pouring and plunger slow moving phase in die casting process. <i>International Journal of Metalcasting, 17</i>(2), 1149–1155. <a href="https://doi.org/10.1007/s40962-022-00839-0">https://doi.org/10.1007/s40962-022-00839-0</a></li>
+          <li>Tszeng, T. C., &amp; Chu, Y. L. (1994). A study of wave formation in shot sleeve of a die casting machine. <i>Journal of Engineering for Industry, 116</i>(2), 175–182.</li>
+          <li>Yang, J., Yuan, L., Xiong, S., &amp; Liu, B. (2007). Numerical simulation on the liquid metal flow of the acceleration phase in the shot sleeve of cold chamber die casting process. <i>Materials Science Forum, 561–565</i>, 1801–1804. <a href="https://doi.org/10.4028/www.scientific.net/MSF.561-565.1801">https://doi.org/10.4028/www.scientific.net/MSF.561-565.1801</a></li>
+          <li>Yuan, L., Yang, J., Xiong, S.-M., &amp; Liu, B.-C. (2008). Water analogue validation of numerical model for fluid flow during slow shot phase in die casting process. <i>International Journal of Cast Metals Research, 21</i>(6), 401–407. <a href="https://doi.org/10.1179/136404608X370198">https://doi.org/10.1179/136404608X370198</a></li>
+          <li>Zamora, R., Faura, F., López, J., &amp; Hernández, J. (2007). Experimental verification of numerical predictions for the optimum plunger speed in the slow phase of a high-pressure die casting machine. <i>International Journal of Advanced Manufacturing Technology, 33</i>, 266–276. <a href="https://doi.org/10.1007/s00170-006-0456-z">https://doi.org/10.1007/s00170-006-0456-z</a></li>
+          <li>Zamora, R., Hernández-Ortega, J. J., Faura, F., López, J., &amp; Hernández, J. (2008). Experimental investigation of porosity formation during the slow injection phase in high-pressure die-casting processes. <i>Journal of Manufacturing Science and Engineering, 130</i>(5), Article 051009. <a href="https://doi.org/10.1115/1.2815344">https://doi.org/10.1115/1.2815344</a></li>
+        </ol>
+        <div class="insight-box">
+          <div class="label">Quellenregel</div>
+          <p>Grenzwerte werden nur gemeinsam mit Gleichungsdefinition, Einheitensystem und
+            Geltungsbereich übernommen. Unvollständige Datensätze sind vor formaler Freigabe
+            anhand der Originalquelle zu vervollständigen.</p>
+        </div>
+      </div>
+
+      <p style="margin-top:1.5rem;">
+        <a href="../app/index.html" class="btn btn-primary">Im Dashboard prüfen →</a>
+        &nbsp;
+        <a href="kritische-geschwindigkeit.html" class="btn btn-outline">Theorie: Kritische Kolbengeschwindigkeit →</a>
+      </p>
+
+    </article>
+  </div><!-- .content-cols -->
+</div><!-- .content-wrap -->
+
+</body>
+</html>
