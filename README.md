@@ -20,9 +20,13 @@ dielogic/
 │   │   ├── datenschutz.html  Datenschutzerklärung (DSGVO)
 │   │   ├── agb.html          Allgemeine Geschäftsbedingungen
 │   │   └── widerruf.html     Widerrufsbelehrung + Musterformular
-│   ├── stl/             STL-Analyse (stl-analyse.html) — clientseitig: Volumen,
-│   │                    Oberfläche, projizierte Fläche (X/Y/Z) je Datei + Summen,
-│   │                    max. Nachdruck je Maschinen-Preset (Zuhaltungs-Modell)
+│   ├── stl/             STL-Analyse — clientseitig: Volumen, Oberfläche,
+│   │                    projizierte Fläche (X/Y/Z) je Datei + Summen, max.
+│   │                    Nachdruck je Maschinen-Preset (Zuhaltungs-Modell)
+│   │   ├── stl-analyse.html  Seite (Markup + Styles)
+│   │   ├── stl-math.js       Netz-Kennwerte (Parser, Volumen, Fläche) — getestet
+│   │   ├── stl-logic.js      Zuordnung/Massenbilanz/Maschinentabelle — getestet
+│   │   └── stl-app.js        Ansicht + Verdrahtung (Canvas, Tabellen, Events)
 │   ├── shared.css       Design-Tokens + Basis-Styles (DieLogic Teal)
 │   ├── nav.js           injiziert Site-Navigation + Footer (selbstversorgend)
 │   ├── assets/          logo.svg (Vektor-Logo), icon-*.png (Favicons,
@@ -35,8 +39,12 @@ dielogic/
 │                            Luftdruck-Serie mit 2. Achse in der Schusskurve)
 ├── backend/         FastAPI: /api/sim/shot (hpdcsim) + statische Auslieferung
 │   ├── app.py  sim.py  core.py  convert.py  requirements.txt  README.md
+│   └── tests/       convert-Unit-Tests, API-Tests (TestClient), Physik-Fixtures
 ├── packages/
 │   └── hpdcsim/     Simulationspaket (eigenes pyproject, pytest-Suite)
+├── fixtures/
+│   └── physics/     geteilte Referenzfälle: bekannte Eingaben + Sollwerte,
+│                    geprüft von physics.js UND hpdcsim (siehe README dort)
 ├── render.yaml      Render-Blueprint (Web Service: Build, Start, Healthcheck)
 └── .venv/           lokale Python-Umgebung (nicht einchecken)
 ```
@@ -66,6 +74,22 @@ Das Dashboard lädt seine ES-Module direkt aus `app/js/` — kein
 Build-Schritt, aber ein Webserver ist nötig (file://-Doppelklick wird
 nicht unterstützt). Ohne Backend entfällt nur die Luftdruck-Serie mit einem
 Hinweis in der Schusskurve — alle 19 Diagramme rechnen unabhängig davon im Browser.
+
+## Tests
+
+Wie in CI (`.github/workflows/ci.yml`):
+
+```bash
+node site/tests/syntax-check.mjs                # Syntax aller JS + Inline-Scripts
+node --test site/tests/frontend.test.mjs site/tests/physics-fixtures.test.mjs
+.venv/bin/python packages/hpdcsim/tests/run_tests.py
+.venv/bin/python backend/tests/run_tests.py     # braucht zusätzlich httpx (TestClient)
+```
+
+Die Physik-Fixtures (`fixtures/physics/`) sind der Anker zwischen beiden
+Physik-Implementierungen: dieselben Eingabe-/Sollwert-Dateien laufen gegen
+`site/app/js/core/physics.js` (Node) und gegen `backend/convert.py` →
+`hpdcsim` (Python).
 
 ## Vor dem Livegang (Rechtsseiten)
 

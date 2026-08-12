@@ -1,7 +1,8 @@
 # CI: läuft bei jedem Push auf main und bei Pull Requests.
-# Zwei Jobs: hpdcsim (Python-Tests) und Frontend (Syntax + Node-Tests
-# gegen die Beispiel-STLs, das Zuhaltungs-Modell, den Übernahme-Vertrag
-# und die Preset-/Feld-Konsistenz).
+# Zwei Jobs: Python (hpdcsim-Tests + Backend-Tests inkl. /api/sim/shot und
+# Physik-Fixtures) und Frontend (Syntax + Node-Tests gegen die Beispiel-STLs,
+# das Zuhaltungs-Modell, den Übernahme-Vertrag, die Preset-/Feld-Konsistenz,
+# die STL-Rechenlogik und dieselben Physik-Fixtures gegen physics.js).
 name: CI
 
 on:
@@ -18,9 +19,12 @@ jobs:
         with:
           python-version: '3.13'
       - name: Abhängigkeiten installieren
-        run: pip install -r backend/requirements.txt "./packages/hpdcsim[plot]"
-      - name: Tests
+        # httpx: nur für den FastAPI-TestClient der Backend-Tests.
+        run: pip install -r backend/requirements.txt "./packages/hpdcsim[plot]" httpx
+      - name: hpdcsim-Tests
         run: python packages/hpdcsim/tests/run_tests.py
+      - name: Backend-Tests (convert + API + Physik-Fixtures)
+        run: python backend/tests/run_tests.py
 
   frontend:
     runs-on: ubuntu-latest
@@ -29,7 +33,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Syntax-Check (alle JS + Inline-Script der STL-Seite)
+      - name: Syntax-Check (alle JS + Inline-Scripts der HTML-Seiten)
         run: node site/tests/syntax-check.mjs
-      - name: Frontend-Tests
-        run: node --test site/tests/frontend.test.mjs
+      - name: Frontend-Tests (inkl. Physik-Fixtures gegen physics.js)
+        run: node --test site/tests/frontend.test.mjs site/tests/physics-fixtures.test.mjs

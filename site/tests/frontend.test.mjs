@@ -6,7 +6,8 @@
       (site/assets/{part,runner,biscuit,overflow}.stl)
    2. das geteilte Zuhaltungs-Modell (shared/clampmodel.js)
    3. der Übernahme-Vertrag STL → Dashboard (shared/contract.js)
-   4. die Konsistenz von Felddefinition und Maschinen-Presets */
+   4. die Konsistenz von Felddefinition und Maschinen-Presets
+   5. die Rechenlogik der STL-Seite (stl/stl-logic.js) */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -19,6 +20,7 @@ const require = createRequire(import.meta.url);
 const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const { parseSTL, meshVolume, meshArea, meshBounds } = require(path.join(site, 'stl/stl-math.js'));
+const logic = require(path.join(site, 'stl/stl-logic.js'));
 const clamp = require(path.join(site, 'app/shared/clampmodel.js'));
 const contract = require(path.join(site, 'app/shared/contract.js'));
 
@@ -146,6 +148,66 @@ test('fields: keine doppelten Schlüssel', () => {
 test('fields: Maschinenwerte-Gruppe entspricht exakt PRESET_KEYS', () => {
   const bundle = groups.find(g => g.preset).fields.map(f => f.key).sort();
   assert.deepEqual(bundle, Object.keys(PRESET_KEYS).sort());
+});
+
+/* ── 5 · Rechenlogik der STL-Seite ───────────────────────────── */
+
+test('stl-logic: roleSums summiert Massen je Rolle', () => {
+  const models = [
+    { volume: 120000, role: 'part' },     // 0,324 kg bei 2700 kg/m³
+    { volume: 14400, role: 'runner' },
+    { volume: 6000, role: 'overflow' },
+    { volume: 6000, role: 'overflow' },   // zwei Dateien derselben Rolle addieren
+    { volume: 95937, role: 'biscuit' },
+    { volume: 99999, role: '' },          // ohne Zuordnung: zählt nicht
+  ];
+  const sums = logic.roleSums(models, 2700);
+  closeTo(sums.part, 0.324);
+  closeTo(sums.runner, 0.03888);
+  closeTo(sums.overflow, 0.0324);
+  closeTo(sums.biscuit, 0.2590299);
+});
+
+test('stl-logic: missingRoles nennt fehlende Zuordnungen', () => {
+  assert.deepEqual(logic.missingRoles([]), ['Bauteil', 'Anguss', 'Überlauf', 'Pressrest']);
+  assert.deepEqual(
+    logic.missingRoles([{ role: 'part' }, { role: 'biscuit' }, { role: '' }]),
+    ['Anguss', 'Überlauf']);
+  assert.deepEqual(
+    logic.missingRoles([{ role: 'part' }, { role: 'runner' }, { role: 'overflow' }, { role: 'biscuit' }]),
+    []);
+});
+
+test('stl-logic: machineRows empfiehlt die kleinste geeignete Maschine', () => {
+  // A = 0,15 m² (150 000 mm²), zentrisch: pK = F/(100·0,15·1,3)
+  // → HCC-340 174 bar, HCC-800 410 bar (zu klein), HCC-1600 821 bar (empfohlen).
+  const { rows, pref } = logic.machineRows(MACHINES, clamp,
+    { areaMm2: 150000, ex: 0, ey: 0, safety: 1.3, pTarget: 600 });
+  assert.equal(rows.length, MACHINES.length);
+  closeTo(rows[0].pK, 3400 / (100 * 0.15 * 1.3));
+  assert.deepEqual(rows.map(r => r.ok), [false, false, true]);
+  assert.equal(pref.mc.id, 'hcc1600');
+  // Ohne Sicherheitsfaktor/Außermittigkeit: p0 = F/(100·A)
+  closeTo(rows[2].p0, 16000 / (100 * 0.15));
+  assert.equal(rows[2].k, 1);
+});
+
+test('stl-logic: machineRows markiert Abheben (k − 1 ≥ 1) als ungeeignet', () => {
+  // e = 300 mm: HCC-340 (Säulenabstand 560) hebt ab (2·300/560 ≥ 1),
+  // die größeren Maschinen nicht.
+  const { rows, pref } = logic.machineRows(MACHINES, clamp,
+    { areaMm2: 20000, ex: 300, ey: 0, safety: 1.3, pTarget: 600 });
+  assert.equal(rows[0].lift, true);
+  assert.equal(rows[0].ok, false);      // trotz ausreichenden Drucks
+  assert.ok(rows[0].pK >= 600);
+  assert.equal(rows[1].lift, false);
+  assert.equal(pref.mc.id, 'hcc800');
+});
+
+test('stl-logic: keine geeignete Maschine → pref null', () => {
+  const { pref } = logic.machineRows(MACHINES, clamp,
+    { areaMm2: 1e6, ex: 0, ey: 0, safety: 1.3, pTarget: 600 });
+  assert.equal(pref, null);
 });
 
 test('machines: jedes Preset setzt genau die PRESET_KEYS, plausibel', () => {
