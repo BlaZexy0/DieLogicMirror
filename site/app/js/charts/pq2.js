@@ -43,7 +43,7 @@ function pqCore(v) {
 export default {
   id: 'pq2',
   title: 'PQ²-Diagramm (Arbeitspunkt)',
-  desc: 'Maschine × Werkzeug · MPE-Hüllkurve · Operational Window · Achsenmodi Q, Q², v_p, t_f',
+  desc: 'Maschine × Werkzeug · Hüllkurve · Operational Window · Achsenmodi Q, Q², v_p, t_f',
   tab: 'q',
   tabs: [['q', 'Q'], ['q2', 'Q²'], ['vp', 'v_p'], ['tf', 't_f']],
   inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax'],
@@ -73,10 +73,10 @@ export default {
       series('Werkzeug', C.series2, Qarr, Q => Cdie * Q * Q)
     ];
     if (isFinite(QtLo) && isFinite(QtHi) && QtHi > QtLo)
-      ys.push(series('MPE (alle Ø)', C.series4, Qarr, Q => (Q >= QtLo && Q <= QtHi) ? pEnv(Q) : NaN));
+      ys.push(series('Hüllkurve (alle Ø)', C.series4, Qarr, Q => (Q >= QtLo && Q <= QtHi) ? pEnv(Q) : NaN));
 
     const q = line(x, ys, xl, 'Metalldruck in bar',
-      'Statisch ' + fmt(p0) + ' bar · Q_dry ' + fmt(Qmax * 1000) + ' l/s · Cd=' + fmt(v.Cd) + ' · MPE a = ' + fmt(c.aMPE / 1e6) + ' MW (Ø ' + fmt(v.dmin) + '–' + fmt(v.dmax) + ')');
+      'Statisch ' + fmt(p0) + ' bar · Q_dry ' + fmt(Qmax * 1000) + ' l/s · Cd=' + fmt(v.Cd) + ' · Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW (Ø ' + fmt(v.dmin) + '–' + fmt(v.dmax) + ')');
     q.y0 = 0; q.y1 = p0 * 1.05;
 
     const xMinD = Math.min(x[0], x[x.length - 1]), xMaxD = Math.max(x[0], x[x.length - 1]);
@@ -139,15 +139,15 @@ von CSIRO experimentell bestätigte Form über die Trockenschuss-Geschwindigkeit
 <p class="math-note">Nullstellen: Q = 0 → voller statischer Druck p₀; Q = Q<sub>dry</sub> → alle Leistung geht in
 die Kolbenbewegung, kein Druck aufs Metall. Im Q²-Modus eine Gerade mit Steigung −p₀/Q<sub>dry</sub>².</p>
 
-<h4>4 · Machine Performance Envelope (Hüllkurve) — Gl. 2.10–2.14</h4>
-<p class="math-note">Jeder Kolben-Ø liefert eine eigene Maschinenlinie. Die MPE ist die Einhüllende aller
+<h4>4 · Hüllkurve (Machine Performance Envelope) — Gl. 2.10–2.14</h4>
+<p class="math-note">Jeder Kolben-Ø liefert eine eigene Maschinenlinie. Die Hüllkurve ist die Einhüllende aller
 dieser Linien — <b>Herleitung A (Karni, physikalisch)</b>: Die Leistung des Akkumulators ist näherungsweise
 konstant, Power = P·A<sub>K</sub>·v = P<sub>acc</sub>·A<sub>h</sub>·v ≈ const (2.10–2.12) — eine Hyperbel P·Q = const:</p>
 <div class="eq">P<sub>env</sub>(Q) = ${frac('a', 'Q')}&emsp;(2.13)&emsp;mit&emsp;a = ${frac('2·√3', '9')} · A<sub>h</sub> · P<sub>acc</sub> · v<sub>dry</sub> = ${frac('2·√3', '9')} · F<sub>G</sub> · v<sub>dry</sub>&emsp;(2.14)</div>
 <p class="math-note"><b>Herleitung B (formal)</b>: p<sub>M</sub>(Q; A<sub>K</sub>) = F<sub>G</sub>/A<sub>K</sub> − F<sub>G</sub>·Q²/(A<sub>K</sub>³·v<sub>dry</sub>²)
 nach dem Scharparameter A<sub>K</sub> maximieren: ∂p/∂A<sub>K</sub> = 0 ⇒ A<sub>K,opt</sub>(Q) = √3·Q/v<sub>dry</sub>;
-Einsetzen liefert dieselbe Hyperbel. Jede Kolbenparabel berührt die MPE genau einmal — bei
-v<sub>p</sub> = v<sub>dry</sub>/√3 ≈ 0,577·v<sub>dry</sub> und P = ⅔·p₀(D). Die MPE ist eine reine
+Einsetzen liefert dieselbe Hyperbel. Jede Kolbenparabel berührt die Hüllkurve genau einmal — bei
+v<sub>p</sub> = v<sub>dry</sub>/√3 ≈ 0,577·v<sub>dry</sub> und P = ⅔·p₀(D). Die Hüllkurve ist eine reine
 Maschineneigenschaft (unabhängig von Kolben und Werkzeug); a hat die Dimension einer Leistung — die
 Energie, die der Akkumulator während der Einspritzphase an die Schmelze abgibt.</p>
 <p class="math-note">Gezeichnet zwischen den Berührpunkten Q<sub>t</sub> = A<sub>K</sub>·v<sub>dry</sub>/√3 von
@@ -156,7 +156,7 @@ a = <b data-m="aMPE"></b> · gültig für Q = <b data-m="Qt"></b> · Berührpunk
 <b data-m="Qtcur"></b> · optimaler Kolben-Ø am Arbeitspunkt: <b data-m="Dopt"></b></p>
 
 <h4>5 · Arbeitspunkt — Gl. 2.15/2.16</h4>
-<p class="math-note">Schnittpunkt Maschinen- × Werkzeuglinie. Mit der MPE-Konstante a lässt sich die
+<p class="math-note">Schnittpunkt Maschinen- × Werkzeuglinie. Mit der Hüllkurven-Konstante a lässt sich die
 Maschinenlinie äquivalent schreiben und der Arbeitspunkt lösen:</p>
 <div class="eq">P<sub>M</sub> = p₀ · ( 1 − ${frac('4', '27')} · ${frac('p₀² · Q²', 'a²')} )&emsp;(2.15)&emsp;⇒&emsp;Q<sub>s</sub>² = ${frac('p₀', 'C<sub>t</sub>/A<sub>a</sub>² + (4/27) · p₀²/a²')}&emsp;(2.16)</div>
 <div class="eq">gleichwertig:&emsp;Q<sub>s</sub> = ${sqrt(frac('p₀', 'C<sub>W</sub> + p₀ / Q<sub>dry</sub>²'), true)}&emsp;&emsp;p<sub>s</sub> = C<sub>W</sub> · Q<sub>s</sub>²</div>
@@ -186,7 +186,7 @@ t<sub>max,Zerstäubung</sub> = <b data-m="tmaxZ"></b> · Arbeitspunkt t<sub>f</s
 Anschnittfläche (Fig. 3.3): steilste Linie durch (t<sub>f,max</sub>, v<sub>a,max</sub>), flachste durch
 (t<sub>f,min</sub>, v<sub>a,min</sub>):</p>
 <div class="eq">A<sub>a,min</sub> = ${frac('V<sub>a</sub>', 't<sub>f,max</sub> · v<sub>a,max</sub>')}&emsp;&emsp;A<sub>a,max</sub> = ${frac('V<sub>a</sub>', 't<sub>f,min</sub> · v<sub>a,min</sub>')}&emsp;mit&ensp;t<sub>f,min</sub> = max(t<sub>vent</sub>, t<sub>min,J</sub>)</div>
-<p class="math-note">Die Länge der Werkzeuglinie innerhalb von Fenster und MPE ist nach Karni ein Maß für die
+<p class="math-note">Die Länge der Werkzeuglinie innerhalb von Fenster und Hüllkurve ist nach Karni ein Maß für die
 <b>Flexibilität</b> der Auslegung. Aktuell: zulässige Spanne <b data-m="AgRange"></b> · gewählt
 A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
   },
@@ -212,7 +212,7 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
     const tf = c.Vag / c.Qs * 1000;
     set('tf', fmt(tf) + ' ms');
     set('tf2', fmt(tf) + ' ms');
-    /* MPE */
+    /* Hüllkurve */
     set('aMPE', fmt(c.aMPE / 1e6) + ' MW');
     set('Qt', fmt(c.QtLo * 1000) + '–' + fmt(c.QtHi * 1000) + ' l/s (Ø ' + fmt(v.dmin) + '–' + fmt(v.dmax) + ')');
     set('Qtcur', fmt(c.Ap * v.vmax / S3 * 1000) + ' l/s (v_p = ' + fmt(v.vmax / S3) + ' m/s, P = ' + fmt(2 * c.p0 / 3) + ' bar)');
