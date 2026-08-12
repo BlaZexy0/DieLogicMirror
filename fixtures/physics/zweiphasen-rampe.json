@@ -1,0 +1,25 @@
+{
+  "name": "zweiphasen-rampe",
+  "beschreibung": "Zweiphasen-Kurve, bei der „Kammer voll“ mitten auf der Beschleunigungsrampe liegt (269,1 mm in der Rampe 250→320 mm) — prüft die Wurzel-Interpolation v = √(v₀² + 2aΔs) auf beiden Seiten. 80-mm-Kolben, schwere Legierung (6800 kg/m³).",
+  "inputs": {
+    "values": {
+      "part": 6, "runner": 1.5, "overflow": 0.9, "biscuit": 1.2, "density": 6800,
+      "diam": 80, "length": 550, "gate": 500, "vent": 300, "Tcast": 950,
+      "vmax": 8, "amax": 80, "tmax": 120, "gateMin": 25, "gateMax": 55, "biscuitMin": 20
+    },
+    "curve": [[30, 0.25], [250, 0.25], [320, 3], [520, 3]]
+  },
+  "expected": {
+    "phi":              { "value": 0.5106575714178458,  "rtol": 1e-9, "note": "(9,6/6800)/(π/4·0,08²·0,55)" },
+    "s_fill_mm":        { "value": 269.1383357201848,   "rtol": 1e-9, "note": "(1−φ)·550 mm — liegt auf der Rampe 250→320 mm" },
+    "biscuit_mm":       { "value": 35.1077080349769,    "rtol": 1e-9, "note": "(1,2/6800)/A" },
+    "fill_complete_mm": { "value": 514.8922919650232,   "rtol": 1e-9, "note": "550 − Pressrestlänge; Kurvenende 520 mm → Backend kappt" },
+    "v_crit":           { "value": 0.5035111247898695,  "rtol": 1e-3, "note": "√(g·0,08)·Nogowizin-Polynom; g = 9,80665" },
+    "v_slow_max":       { "value": 1.5830525462768428,  "rtol": 1e-9, "note": "= v(Kammer voll) auf der Rampe (überkritisch — bewusst)" },
+    "t_sleeve_full_s":  { "value": 1.140881382543078,   "rtol": 1e-9, "note": "0,24 s Anlauf + 0,88 s konstant + Rampenanteil" },
+    "v_sleeve_full":    { "value": 1.5830525462768428,  "rtol": 1e-9, "note": "√(0,25² + 2a·19,14 mm), a = (3²−0,25²)/(2·70 mm)" },
+    "t_part_full_s":    { "value": 1.2192640933898533,  "rtol": 1e-9, "note": "Bauteil gefüllt bei 488,64 mm im konstanten 3-m/s-Segment" },
+    "gate_v_part_full": { "value": 30.15928947446202,   "rtol": 1e-9, "note": "3 m/s · (π/4·80²)/500" },
+    "fill_time_ms":     { "value": 67.35035986435523,   "rtol": 1e-4, "note": "t(Füllende) − t(Anguss gefüllt); Backend kappt 1 µm davor" }
+  }
+}

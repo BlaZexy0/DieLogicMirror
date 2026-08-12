@@ -1,0 +1,25 @@
+{
+  "name": "konstante-geschwindigkeit",
+  "beschreibung": "Konstante 2 m/s nach 1 mm Anlauframpe — alle Zeiten von Hand nachrechenbar: t(s) ≈ 0,001 s + (s − 1 mm)/2 m/s. 100-mm-Kolben, 650-mm-Kammer, 6,4 kg bei 2600 kg/m³.",
+  "inputs": {
+    "values": {
+      "part": 4, "runner": 1, "overflow": 0.6, "biscuit": 0.8, "density": 2600,
+      "diam": 100, "length": 650, "gate": 900, "vent": 400, "Tcast": 680,
+      "vmax": 6, "amax": 50, "tmax": 150, "gateMin": 15, "gateMax": 40, "biscuitMin": 25
+    },
+    "curve": [[1, 2], [615, 2]]
+  },
+  "expected": {
+    "phi":              { "value": 0.4821735554026651,  "rtol": 1e-9, "note": "(6,4/2600)/(π/4·0,1²·0,65)" },
+    "s_fill_mm":        { "value": 336.58718898826766,  "rtol": 1e-9, "note": "(1−φ)·650 mm" },
+    "biscuit_mm":       { "value": 39.17660137646654,   "rtol": 1e-9, "note": "(0,8/2600)/A" },
+    "fill_complete_mm": { "value": 610.8233986235335,   "rtol": 1e-9, "note": "650 − Pressrestlänge; Kurvenende 615 mm liegt dahinter → Backend kappt" },
+    "v_crit":           { "value": 0.5997364067011077,  "rtol": 1e-3, "note": "√(g·0,1)·Nogowizin-Polynom; g = 9,80665" },
+    "v_slow_max":       { "value": 2.0,                 "rtol": 1e-9, "note": "konstant 2 m/s (überkritisch — bewusst)" },
+    "t_sleeve_full_s":  { "value": 0.16879359449413384, "rtol": 1e-9, "note": "0,001 + (336,587 − 1)/2000" },
+    "v_sleeve_full":    { "value": 2.0,                 "rtol": 1e-9, "note": "konstantes Segment" },
+    "t_part_full_s":    { "value": 0.2912204737955918,  "rtol": 1e-9, "note": "Bauteil gefüllt bei 581,45 mm" },
+    "gate_v_part_full": { "value": 17.453292519943297,  "rtol": 1e-9, "note": "2 m/s · (π/4·100²)/900" },
+    "fill_time_ms":     { "value": 112.63272895734133,  "rtol": 1e-4, "note": "(610,823 − 385,558 mm)/2 m/s; Backend kappt 1 µm vor dem Füllende" }
+  }
+}
