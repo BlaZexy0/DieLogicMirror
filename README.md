@@ -82,6 +82,8 @@ Wie in CI (`.github/workflows/ci.yml`):
 ```bash
 node site/tests/syntax-check.mjs                # Syntax aller JS + Inline-Scripts
 node --test site/tests/*.test.mjs               # Frontend, Physik-Fixtures, Grenzen, Render-Rauchtest
+node site/tools/gen-theory-svgs.mjs             # statische SVGs der Theorie-Artikel neu erzeugen
+                                                # (site/assets/theorie/ — nach Änderungen an Charts/Defaults)
 .venv/bin/python packages/hpdcsim/tests/run_tests.py
 .venv/bin/python backend/tests/run_tests.py     # braucht zusätzlich httpx (TestClient)
 ```
