@@ -130,6 +130,20 @@ mehreren Kurvenschranken (wie im (φ, L/D)-Fenster) liefert
 Grenze je Stützstelle. Eine neue Restriktion ist damit ein weiterer
 Eintrag im Array — Zeichnung, Legende und Hover kommen automatisch.
 
+**Offene Frage — zentraler Grenzen-Katalog?** Derzeit definiert jedes
+Diagramm seine Grenzen selbst (eine Zeile pro Grenze in `calc()`). Dieselbe
+physikalische Grenze taucht dadurch mehrfach in verschiedener Geometrie auf
+(z. B. `vmax`: Horizontale in der Schusskurve, Kurve D(t) in der Füllzeit;
+`gateMin`/`gateMax`: Band, Hyperbeln, x-Grenzen im PQ²). Alternative: ein
+Katalog `config/limits.js`, gruppiert nach Grenzen-id mit einer Projektions-
+Variante pro Diagramm — Label/Note/Farbe einmal, Diagramme rufen nur noch
+`limitsFor(chartId, v, ctx)`. Neue Grenze = ein Varianten-Block in einer
+Datei, kein Diagramm-Code. Kosten: Projektionen brauchen diagramm-lokale
+Zwischenwerte per `ctx` (Kopplung), und die geometrische Herleitung steht
+dann nicht mehr im Diagramm-Modul. Ausnahmen blieben ohnehin lokal
+(`vcrit` hängt an Sim-Zustand + Tab; das (φ, L/D)-Band geht über
+`feasibleBand()`). Noch nicht entschieden.
+
 ## Neues Diagramm hinzufügen
 
 1. Datei in `js/charts/` anlegen (z. B. `mychart.js`), Default-Export mit

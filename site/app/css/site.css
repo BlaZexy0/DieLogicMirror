@@ -6,7 +6,9 @@
 header { top: 56px; }
 
 .layout {
-  margin-top: 138px;              /* 56px Nav + 82px Dashboard-Kopf */
+  /* Kein eigener margin-top: die Nav ist sticky und damit im Fluss — sie
+     schiebt das Layout schon um 56px; die 82px aus main.css ergeben
+     zusammen die 138px unter beiden Köpfen. */
   height: calc(100vh - 138px);
 }
 

@@ -73,9 +73,12 @@ header .header-actions { display: flex; align-items: center; gap: 10px; flex-shr
 /* ── Grundraster ── */
 .layout {
   display: grid;
-  grid-template-columns: 410px minmax(0, 1fr);
+  /* Sidebar schrumpft auf schmalen Desktops (1080–1600px) mit, statt 410px
+     fest zu belegen; auf sehr breiten Schirmen (TV) wird das Layout auf
+     2400px gedeckelt und zentriert, damit die Diagramme nicht zerlaufen. */
+  grid-template-columns: clamp(300px, 26vw, 410px) minmax(0, 1fr);
   gap: 22px;
-  max-width: none;
+  max-width: 2400px;
   width: 100%;
   margin: 82px auto 0;
   height: calc(100vh - 82px);
@@ -431,10 +434,18 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
 .math-out { color: var(--bad); font-weight: bold; }
 
 /* ── Responsiv ── */
+/* Schmale Desktops/Tablets quer: eine Diagramm-Spalte, damit die Canvases
+   nicht auf ~350px zusammengedrückt werden. */
+@media (max-width: 1400px) and (min-width: 1081px) {
+  .charts { grid-template-columns: 1fr; }
+}
 @media (max-width: 1080px) {
   body { overflow: auto; }
   header { position: static; height: auto; flex-wrap: wrap; }
-  .layout { display: block; height: auto; margin: 0; padding: 16px; }
+  /* Gestapelt: Dashboard (KPIs + Diagramme) zuerst, die langen Eingaben
+     danach — sonst liegen ~4000px Formular vor dem ersten Diagramm. */
+  .layout { display: flex; flex-direction: column; height: auto; margin: 0; padding: 16px; }
+  .content { order: -1; }
   .sidebar, .content { height: auto; overflow: visible; position: static; }
   .charts { grid-template-columns: 1fr; }
   .group, .group.wide { grid-column: span 6; }
