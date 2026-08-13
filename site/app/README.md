@@ -120,6 +120,14 @@ ein Objekt pro Restriktion in `q.limits = [ … ]` (Erzeuger in
   statt schraffiert; bei `on:'y'` dürfen `min`/`max` Funktionen sein
   (Band zwischen Kurven, z. B. das v_a-Fenster im Prozessfenster).
 - `refline(id, label, on, value)` — reine Referenzlinie ohne Fläche.
+- Maske: `limit(…, fn, { mask: true })` (Kurvenschranke auf `y`) — die
+  Ausschlussseite ist prinzipiell unerreichbar und wird deckend grau
+  gefüllt (`theme.chart.maskFill`), die Frontlinie durchgezogen gezeichnet;
+  alle anderen Grenzen des Diagramms werden auf die erreichbare Seite
+  geclippt (z. B. die Hüllkurve im PQ²).
+- `q.feasible = 'Label'` — füllt die Schnittmenge der erlaubten Seiten
+  aller harten Grenzen grün (`theme.chart.okFill`, wie das machbare Band
+  im (φ, L/D)-Fenster) und setzt einen Legendeneintrag.
 
 Linien- und Heatmap-Renderer zeichnen daraus Linien, Schraffuren und die
 Legende (render/limits.js); der Heatmap-Hover meldet verletzte Grenzen am

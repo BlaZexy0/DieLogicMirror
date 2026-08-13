@@ -38,12 +38,25 @@ function pqCore(v) {
   const pEnv = Q => aMPE / Q / 1e5;                             // bar
   const QtLo = 0.25 * PI * Math.pow(v.dmin / 1000, 2) * v.vmax / S3;
   const QtHi = 0.25 * PI * Math.pow(v.dmax / 1000, 2) * v.vmax / S3;
+  /* Erreichbarkeitsgrenze über ALLE Kolben-Ø: innerhalb der Berührpunkte
+     die Hüllkurve a/Q, außerhalb die Parabel des Grenz-Kolbens (Ø min bzw.
+     Ø max) — oberhalb davon ist kein Betriebspunkt erreichbar. */
+  const Alo = 0.25 * PI * Math.pow(v.dmin / 1000, 2);
+  const Ahi = 0.25 * PI * Math.pow(v.dmax / 1000, 2);
+  const pReach = Q => {
+    let A = S3 * Q / v.vmax;                 // unbeschränktes Optimum A_opt(Q)
+    if (Alo > 0 && A < Alo) A = Alo;
+    if (Ahi > 0 && A > Ahi) A = Ahi;
+    if (!(A > 0)) return Infinity;
+    const r = Q / (A * v.vmax);
+    return Math.max(v.injForce * 1e3 / (A * 1e5) * (1 - r * r), 0);
+  };
   /* Hydraulische v_a-Grenze (J-Faktor, J = C_d): v_a = J·√(2·p₀/ρ) */
   const vaHydr = v.Cd * Math.sqrt(2 * p0 * 1e5 / v.density);
   /* Minimale Füllzeit aus der Entlüftungsbedingung (Operational Window, Zone C):
      die verdrängte Luft V_luft muss durch A_ent mit höchstens v_luft,max entweichen. */
   const tVent = (v.vent > 0 && v.vAirMax > 0) ? (total(v) / v.density) / (v.vent * 1e-6 * v.vAirMax) : NaN;
-  return { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, pEnv, QtLo, QtHi, vaHydr, tVent };
+  return { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, pEnv, pReach, QtLo, QtHi, vaHydr, tVent };
 }
 
 export default {
@@ -92,14 +105,12 @@ export default {
     if (tb === 'tf') Qarr.reverse();
     const x = Qarr.map(fx);
 
+    /* Hüllkurve/Erreichbarkeitsgrenze ist keine Serie mehr, sondern die
+       Masken-Grenze unten (graue Deckfläche oberhalb, schwarze Frontlinie). */
     const ys = [
-      series('Maschine (Ø ' + fmt(v.diam) + ')', C.series1, Qarr, Q => fy(p0 * (1 - (Q / Qmax) * (Q / Qmax)), Q)),
+      series('Maschine (Ø ' + fmt(v.diam) + ')', C.series4, Qarr, Q => fy(p0 * (1 - (Q / Qmax) * (Q / Qmax)), Q)),
       series('Werkzeug', C.series2, Qarr, Q => fy(Cdie * Q * Q, Q))
     ];
-    /* Im Leistungsmodus ist die Hüllkurve die Horizontale y = a (als Grenze
-       unten), als Kurve gezeichnet wird sie nur in den Druckmodi. */
-    if (yb !== 'pw' && isFinite(QtLo) && isFinite(QtHi) && QtHi > QtLo)
-      ys.push(series('Hüllkurve (alle Ø)', C.series4, Qarr, Q => (Q >= QtLo && Q <= QtHi) ? fy(pEnv(Q), Q) : NaN));
 
     const q = line(x, ys, xl, yl,
       'Statisch ' + fmt(p0) + ' bar · Q_dry ' + fmt(Qmax * 1000) + ' l/s · Cd=' + fmt(v.Cd) + ' · Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW (Ø ' + fmt(v.dmin) + '–' + fmt(v.dmax) + ')'
@@ -131,8 +142,16 @@ export default {
     };
     if (v.gateMin > 0) ylim('gateMin', 'v_a min ' + fmt(v.gateMin) + ' m/s', 'min', Pg(v.gateMin), 'keine Zerstäubung');
     if (v.gateMax > 0) ylim('gateMax', 'v_a max ' + fmt(v.gateMax) + ' m/s', 'max', Pg(v.gateMax), 'Erosionsrisiko');
-    if (yb === 'pw')
-      q.limits.push(limit('mpe', 'Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW', 'y', 'max', c.aMPE / 1e6, { note: 'über Akkumulator-Leistung' }));
+
+    /* Erreichbarkeitsgrenze als Maske: oberhalb grau (für keinen Kolben-Ø
+       erreichbar), alle anderen Grenzen werden darauf gestutzt. Im
+       Leistungsmodus wird die Hüllkurve dabei zur Horizontalen y = a. */
+    q.limits.push(limit('mpe', 'Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW', 'y', 'max',
+      xv => fy(c.pReach(ix(xv)), ix(xv)), { mask: true, note: 'unerreichbar (alle Ø)' }));
+
+    /* Grüner zulässiger Bereich: Schnittmenge aller harten Grenzen —
+       das Operational Window unterhalb der Erreichbarkeitsgrenze. */
+    q.feasible = 'Operational Window';
 
     const opx = fx(Qs), opy = fy(Cdie * Qs * Qs, Qs);
     const unit = tb === 'q' ? ' l/s' : tb === 'q2' ? ' (l/s)²' : tb === 'vp' ? ' m/s' : ' ms';
@@ -182,8 +201,10 @@ Einsetzen liefert dieselbe Hyperbel. Jede Kolbenparabel berührt die Hüllkurve 
 v<sub>p</sub> = v<sub>dry</sub>/√3 ≈ 0,577·v<sub>dry</sub> und P = ⅔·p₀(D). Die Hüllkurve ist eine reine
 Maschineneigenschaft (unabhängig von Kolben und Werkzeug); a hat die Dimension einer Leistung — die
 Energie, die der Akkumulator während der Einspritzphase an die Schmelze abgibt.</p>
-<p class="math-note">Gezeichnet zwischen den Berührpunkten Q<sub>t</sub> = A<sub>K</sub>·v<sub>dry</sub>/√3 von
-Ø<sub>min</sub> und Ø<sub>max</sub>; außerhalb gilt die Parabel des Grenz-Kolbens. Aktuell:
+<p class="math-note">Im Diagramm ist die Fläche <b>oberhalb</b> der Erreichbarkeitsgrenze grau
+maskiert: zwischen den Berührpunkten Q<sub>t</sub> = A<sub>K</sub>·v<sub>dry</sub>/√3 von Ø<sub>min</sub> und
+Ø<sub>max</sub> ist das die Hüllkurve a/Q, außerhalb die Parabel des Grenz-Kolbens — dort kommt kein
+Betriebspunkt hin, egal welcher Kolben montiert ist; alle anderen Grenzflächen sind darauf gestutzt. Aktuell:
 a = <b data-m="aMPE"></b> · gültig für Q = <b data-m="Qt"></b> · Berührpunkt aktueller Kolben bei
 <b data-m="Qtcur"></b> · optimaler Kolben-Ø am Arbeitspunkt: <b data-m="Dopt"></b></p>
 

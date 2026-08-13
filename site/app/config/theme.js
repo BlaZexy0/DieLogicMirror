@@ -42,7 +42,9 @@ window.__THEME__ = {
     "areaFill": "rgba(0,39,51,.07)",
     "band": "rgba(0,140,130,.13)",
     "iso": "#4c6870",
-    "isoLine": "rgba(76,104,112,.6)"
+    "isoLine": "rgba(76,104,112,.6)",
+    "maskFill": "rgba(226,231,233,.93)",
+    "okFill": "rgba(0,140,130,.30)"
   },
   "limits": {
     "gateMin": "#7b5cd6",
@@ -52,7 +54,7 @@ window.__THEME__ = {
     "hydr": "#8c5a00",
     "vmax": "#8c5a00",
     "vcrit": "#c2447e",
-    "mpe": "#c79200",
+    "mpe": "#000000",
     "fill100": "#5f8391",
     "force": "#8c5a00",
     "intTime": "#8c5a00",

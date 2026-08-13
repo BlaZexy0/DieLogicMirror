@@ -22,6 +22,11 @@
    Referenzlinie  { id, label, on:'x'|'y', value, severity:'ref' }
      Nur Orientierung (gestrichelte Linie), keine Fläche.
 
+   Maske          { …, fn, mask: true }   (Kurvenschranke auf 'y')
+     Ausschlussseite prinzipiell unerreichbar: deckend grau gefüllt,
+     Frontlinie durchgezogen; alle übrigen Grenzen werden vom Renderer
+     auf die erreichbare Seite geclippt.
+
    Die Farbe kommt aus theme.limits[id] (config/theme.js), Fallback
    theme.chart.limit; per l.c überschreibbar. */
 

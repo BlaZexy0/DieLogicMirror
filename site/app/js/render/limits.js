@@ -41,6 +41,16 @@ function fillExcluded(x, path, color) {
   x.restore();
 }
 
+/* Fläche zwischen einer Pixel-Polyline und einer horizontalen Kante. */
+function sidePath(pts, edge) {
+  const p = new Path2D();
+  pts.forEach(([a, b], i) => i ? p.lineTo(a, b) : p.moveTo(a, b));
+  p.lineTo(pts[pts.length - 1][0], edge);
+  p.lineTo(pts[0][0], edge);
+  p.closePath();
+  return p;
+}
+
 /* Zusammenhängende endliche Abschnitte einer Kurvenschranke:
    [{ pts: [[x, y], …] }] in Datenkoordinaten. */
 function finiteRuns(xs, fn) {
@@ -69,9 +79,58 @@ export function drawLimits(x, f, X, Y, d) {
   x.save();
   x.beginPath(); x.rect(left, top, f.pw, f.ph); x.clip();
 
+  /* Maske (l.mask, Kurvenschranke on:'y'): die ausgeschlossene Seite ist
+     prinzipiell unerreichbar (z. B. oberhalb der Hüllkurve im PQ²). Alle
+     übrigen Grenzen werden auf die erreichbare Seite geclippt, die Maske
+     selbst wird zuletzt als deckende graue Fläche mit durchgezogener
+     Frontlinie gezeichnet. */
+  /* Zulässiger Bereich (d.feasible): Schnittmenge der erlaubten Seiten
+     aller harten Grenzen, grün gefüllt wie das machbare Band im
+     (φ, L/D)-Auslegungsfenster. Liegt unter Schraffuren und Linien. */
+  if (d.feasible) {
+    x.save();
+    let any = false;
+    for (const l of limits) {
+      if ((l.severity || 'hard') !== 'hard') continue;
+      let p = null;
+      if (l.fn) {
+        const pts = d.x.map(xv => [X(xv), Y(l.fn(xv))]).filter(pt => isFinite(pt[1]));
+        if (pts.length > 1) p = sidePath(pts, l.kind === 'max' ? bot + 1 : top - 1);
+      } else if (l.on === 'x') {
+        const px = X(l.value);
+        const keepRight = (l.kind === 'min') === ascX;   // erlaubte Pixelseite
+        p = new Path2D();
+        if (keepRight) p.rect(px, top - 1, right - px + 1, f.ph + 2);
+        else p.rect(left - 1, top - 1, px - left + 1, f.ph + 2);
+      } else if (typeof l.value === 'number') {
+        const py = Y(l.value);
+        p = new Path2D();
+        if (l.kind === 'max') p.rect(left - 1, py, f.pw + 2, bot - py + 1);
+        else p.rect(left - 1, top - 1, f.pw + 2, py - top + 1);
+      }
+      if (p) { x.clip(p); any = true; }
+    }
+    if (any) {
+      x.fillStyle = C.okFill || 'rgba(0,140,130,.30)';
+      x.fillRect(left, top, f.pw, f.ph);
+    }
+    x.restore();
+  }
+
+  const mask = limits.find(l => l.mask && l.fn && l.on === 'y');
+  const rest = mask ? limits.filter(l => l !== mask) : limits;
+  let maskPts = null;
+  if (mask) {
+    maskPts = d.x.map(xv => [X(xv), Y(mask.fn(xv))]).filter(p => isFinite(p[1]));
+    if (maskPts.length > 1) {
+      x.save();
+      x.clip(sidePath(maskPts, mask.kind === 'max' ? bot : top));   // erlaubte Seite
+    } else maskPts = null;
+  }
+
   const notes = [];   // Flächen-Kurzlabels, nach den Linien gezeichnet
 
-  for (const l of limits) {
+  for (const l of rest) {
     const sev = l.severity || 'hard';
     const col = limitColor(l);
 
@@ -187,6 +246,41 @@ export function drawLimits(x, f, X, Y, d) {
     x.fillStyle = n.c; x.textAlign = n.align || 'center';
     x.fillText(n.l, n.px, n.py);
   }
+
+  /* Maske über allem: graue Deckfläche + durchgezogene Frontlinie */
+  if (maskPts) {
+    x.restore();                          // Clip auf die erreichbare Seite aufheben
+    const col = limitColor(mask);
+    const edgeEx = mask.kind === 'max' ? top : bot;
+    const p = new Path2D();
+    maskPts.forEach(([a, b], i) => i ? p.lineTo(a, b) : p.moveTo(a, b));
+    p.lineTo(maskPts[maskPts.length - 1][0], edgeEx);
+    p.lineTo(maskPts[0][0], edgeEx);
+    p.closePath();
+    x.fillStyle = C.maskFill || 'rgba(226,231,233,.93)';
+    x.fill(p);
+    x.strokeStyle = col; x.lineWidth = 1.8;
+    x.beginPath();
+    maskPts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b));
+    x.stroke();
+    const mid = maskPts[Math.floor(maskPts.length / 2)];
+    if (mask.note) {
+      const py = (mid[1] + edgeEx) / 2;
+      if (Math.abs(mid[1] - edgeEx) > 26) {
+        x.fillStyle = C.iso || col; x.textAlign = 'center'; x.font = '10px Arial';
+        x.fillText(mask.note, mid[0], py + 4);
+      }
+    }
+    const at = maskPts[Math.floor(maskPts.length * 0.4)];
+    if (at && at[1] > top + 8 && at[1] < bot - 4) {
+      x.font = '10px Arial';
+      const tw = x.measureText(mask.label).width;
+      x.fillStyle = 'rgba(255,255,255,.88)';
+      x.fillRect(at[0] + 4, at[1] - 16, tw + 6, 13);
+      x.fillStyle = col; x.textAlign = 'left';
+      x.fillText(mask.label, at[0] + 7, at[1] - 6);
+    }
+  }
   x.restore();
 }
 
@@ -195,13 +289,18 @@ export function legendItems(limits) {
   return (limits || []).map(l => ({
     label: l.label,
     sev: l.severity || 'hard',
+    mask: !!l.mask,
     color: limitColor(l)
   }));
 }
 
 /* Einen Legenden-Swatch zeichnen (bei lx, ly-Grundlinie), gibt Breite zurück. */
 export function drawLegendSwatch(x, item, lx, ly) {
-  if (item.sev === 'target') {
+  if (item.mask) {
+    x.fillStyle = theme.chart.maskFill || 'rgba(226,231,233,.93)';
+    x.fillRect(lx, ly - 8, 12, 9);
+    x.strokeStyle = item.color; x.strokeRect(lx, ly - 8, 12, 9);
+  } else if (item.sev === 'target') {
     x.fillStyle = item.color || theme.chart.band;
     x.fillRect(lx, ly - 8, 12, 9);
     x.strokeStyle = theme.chart.axis; x.strokeRect(lx, ly - 8, 12, 9);
