@@ -1,6 +1,6 @@
 /* Anschnitt-Erstarrungszeit über Anschnittdicke. */
 
-import { series, line } from './helpers.js';
+import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { frac, sqrt } from './mathfmt.js';
@@ -17,8 +17,7 @@ export default {
     const q = line(x, [series('Erstarrungszeit', theme.chart.series1, x, f)],
       'Anschnittdicke mm', 'Erstarrungszeit ms', 'Konstante ' + fmt(v.solK) + ' ms/mm²');
     q.y0 = 0;
-    q.href = v.intTime;
-    q.hrefl = 'Nachdruck ' + fmt(v.intTime) + ' ms';
+    q.limits = [limit('intTime', 'Nachdruck ' + fmt(v.intTime) + ' ms', 'y', 'min', v.intTime, { note: 'Anschnitt erstarrt vor Nachdruck-Ende' })];
     q.pt = [v.gateTh, f(v.gateTh)];
     q.ptl = fmt(v.gateTh) + ' mm → ' + fmt(f(v.gateTh)) + ' ms';
     return q;

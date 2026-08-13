@@ -76,6 +76,7 @@ js/
     machines.js        übernimmt window.__MACHINES__
   render/            Canvas-Renderer (theme-gesteuert)
     base.js            Rahmen, Achsen, Marker, Farbrampe, Konturen
+    limits.js          zeichnet Grenzen: Schraffuren, Zielbänder, Legende
     line.js / heat.js / map.js / donut.js / draw.js / hover.js
   charts/            EIN Modul pro Diagramm
     registry.js        Liste aller Diagramme (Reihenfolge = Anordnung)
@@ -102,11 +103,39 @@ gezeichnet: das machbare Band ist ein analytisch berechnetes Polygon
 (r_lo(φ) ≤ r ≤ r_hi(φ)), die Grenzen sind beschriftete Kurven, der Hover wertet
 die Formeln exakt aus.
 
+## Grenzen (Restriktionen) in Diagrammen
+
+Fast jedes Diagramm hat Grenzen: Zielbänder, Maximal-/Minimalwerte, teils
+von anderen Eingaben abhängige Kurven. Sie werden deklarativ beschrieben —
+ein Objekt pro Restriktion in `q.limits = [ … ]` (Erzeuger in
+`js/charts/helpers.js`, Objektmodell in `js/core/limits.js`):
+
+- `limit(id, label, on, kind, bound, {note})` — harte Grenze. `bound` ist
+  eine Zahl (konstante Schranke auf Achse `on: 'x'|'y'`) oder eine Funktion
+  `x → y` (Kurvenschranke). `kind: 'min'|'max'` sagt, auf welcher Seite der
+  zulässige Bereich liegt; `fn` darf `Infinity` liefern, wo die Grenze nicht
+  gilt (z. B. v_krit nur bis „Kammer voll"). Gezeichnet als gestrichelte
+  Linie/Kurve, die Ausschlussseite schraffiert, `note` steht in der Fläche.
+- `target(id, label, on, min, max)` — Zielband (weiche Empfehlung), gefüllt
+  statt schraffiert; bei `on:'y'` dürfen `min`/`max` Funktionen sein
+  (Band zwischen Kurven, z. B. das v_a-Fenster im Prozessfenster).
+- `refline(id, label, on, value)` — reine Referenzlinie ohne Fläche.
+
+Linien- und Heatmap-Renderer zeichnen daraus Linien, Schraffuren und die
+Legende (render/limits.js); der Heatmap-Hover meldet verletzte Grenzen am
+Mauspunkt. Die Farbe kommt aus `theme.limits[id]` (config/theme.js) —
+gleiche id = gleiche Farbe in jedem Diagramm. Für machbare Bänder zwischen
+mehreren Kurvenschranken (wie im (φ, L/D)-Fenster) liefert
+`feasibleBand()` aus `js/core/limits.js` die Polygone samt bindender
+Grenze je Stützstelle. Eine neue Restriktion ist damit ein weiterer
+Eintrag im Array — Zeichnung, Legende und Hover kommen automatisch.
+
 ## Neues Diagramm hinzufügen
 
 1. Datei in `js/charts/` anlegen (z. B. `mychart.js`), Default-Export mit
    `id`, `title`, `desc`, `inputs` (Feld-Keys für die Hervorhebung) und
    `calc(v, {shot})`, das eine Linien-/Heat-/Map-/Donut-Spezifikation liefert
-   (siehe bestehende Module und `js/charts/helpers.js`).
+   (siehe bestehende Module und `js/charts/helpers.js`); Grenzen als
+   `q.limits` (siehe oben).
 2. In `js/charts/registry.js` importieren und in die Liste aufnehmen.
    Dashboard-Karte und Einzelseite entstehen automatisch.

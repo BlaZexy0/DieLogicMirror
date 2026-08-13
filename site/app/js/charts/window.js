@@ -1,6 +1,6 @@
 /* Prozessfenster Anschnitt (Heatmap: Kolbengeschw. × Anschnittfläche → Anschnittgeschw.). */
 
-import { heat } from './helpers.js';
+import { heat, target } from './helpers.js';
 import { fmt } from '../core/format.js';
 import { pistonArea } from '../core/physics.js';
 import { frac } from './mathfmt.js';
@@ -17,7 +17,11 @@ export default {
     const q = heat(v.vmin, v.vmax, v.gate * 0.3, v.gate * 2,
       (vp, Ag) => vp * Ap / Ag,
       'Kolbengeschw. m/s', 'Anschnittfläche mm²', 'Anschnittgeschw. m/s',
-      0, 80, [v.gateMin, 40, v.gateMax, 60, 70]);
+      0, 80, [20, 40, 60]);
+    /* Zielband v_a ∈ [gateMin, gateMax] ⇔ A_a zwischen zwei Hyperbeln */
+    if (v.gateMin > 0 && v.gateMax > 0)
+      q.limits = [target('gateBand', 'Ziel v_a ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s', 'y',
+        vp => vp * Ap / v.gateMax, vp => vp * Ap / v.gateMin)];
     q.pt = [v.vsel, v.gate];
     q.ptl = 'Ist ' + fmt(v.vsel) + ' m/s · ' + fmt(v.gate) + ' mm²';
     q.info = 'Zielband ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s';

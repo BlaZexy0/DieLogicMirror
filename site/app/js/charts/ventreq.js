@@ -1,6 +1,6 @@
 /* Entlüftungsbedarf über Füllzeit. */
 
-import { series, line } from './helpers.js';
+import { series, line, limit, refline } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { total, afterGate, pistonArea } from '../core/physics.js';
 import { theme } from '../core/theme.js';
@@ -29,9 +29,9 @@ export default {
       'Luftvolumen ' + fmt(Vm * 1e6) + ' cm³ · ' + fmt(v.vAirMax) + ' m/s');
     q.y0 = 0;
     q.y1 = yCap;
-    q.hrefs = [
-      { y: v.vent, l: 'Ist Entlüftung ' + fmt(v.vent) + ' mm²' },
-      { y: v.gate, l: 'Anschnittfläche ' + fmt(v.gate) + ' mm²', c: C.series2 }
+    q.limits = [
+      limit('ventAvail', 'Ist Entlüftung ' + fmt(v.vent) + ' mm²', 'y', 'max', v.vent, { note: 'Bedarf über vorhandener Entlüftung' }),
+      refline('gateRef', 'Anschnittfläche ' + fmt(v.gate) + ' mm²', 'y', v.gate, { c: C.series2 })
     ];
     const tOp = 1e9 * (afterGate(v) / v.density) / (v.vsel * pistonArea(v));
     q.pt = [tOp, f(tOp)];

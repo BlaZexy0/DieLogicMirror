@@ -1,6 +1,6 @@
 /* Füllgrad der Füllkammer (Heatmap: Kammerlänge × Kolben-Ø → Füllgrad). */
 
-import { heat } from './helpers.js';
+import { heat, limit } from './helpers.js';
 import { fmt } from '../core/format.js';
 import { total } from '../core/physics.js';
 import { frac } from './mathfmt.js';
@@ -18,8 +18,11 @@ export default {
     const q = heat(v.lmin, v.lmax, v.dmin, v.dmax,
       (L, d) => 100e9 * ((total(v) + v.biscuit) / v.density) / (L * 0.25 * PI * d * d),
       'Kammerlänge mm', 'Kolben-Ø mm', 'Füllgrad %', 0, 100, [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
-    q.capHi = true;
-    q.info = 'Dosiergewicht ' + fmt(total(v) + v.biscuit) + ' kg (inkl. Pressrest) · grau: Füllgrad über 100 %';
+    /* Füllgrad ≤ 100 % ⇔ D ≥ D₁₀₀(L) = √(4·V_dos/(π·L)) — als Kurvengrenze */
+    const Vdos = (total(v) + v.biscuit) / v.density;
+    q.limits = [limit('fill100', 'φ = 100 %', 'y', 'min',
+      L => Math.sqrt(4e9 * Vdos / (PI * L)), { note: 'Dosiervolumen passt nicht in die Kammer' })];
+    q.info = 'Dosiergewicht ' + fmt(total(v) + v.biscuit) + ' kg (inkl. Pressrest) · schraffiert: Füllgrad über 100 %';
     q.pt = [v.length, v.diam];
     q.ptl = 'Kammer ' + fmt(v.length) + ' mm · Ø ' + fmt(v.diam) + ' mm';
     return q;
@@ -33,8 +36,8 @@ zum Kammervolumen:</p>
 <div class="eq">V<sub>dos</sub> = ${frac('m<sub>Bauteil</sub> + m<sub>Anguss</sub> + m<sub>Überlauf</sub> + m<sub>Pressrest</sub>', 'ρ')}</div>
 <div class="eq">φ(L, D) = ${frac('V<sub>dos</sub>', 'A<sub>K</sub> · L')} · 100 % = ${frac('4 · V<sub>dos</sub>', 'π · D² · L')} · 100 %</div>
 <p class="math-note">Die Heatmap zeigt φ über (L, D); niedriger Füllgrad heißt viel Luft in der Kammer,
-hoher Füllgrad wenig Reserve für die 1. Phase. Graue Bereiche liegen über 100 % — das Dosiervolumen
-passt dort nicht in die Kammer. Aktuell: V<sub>dos</sub> = <b data-m="Vdos"></b> ·
+hoher Füllgrad wenig Reserve für die 1. Phase. Schraffierte Bereiche liegen über 100 % — das Dosiervolumen
+passt dort nicht in die Kammer; die Grenzkurve ist D₁₀₀(L) = √(4·V<sub>dos</sub>/(π·L)). Aktuell: V<sub>dos</sub> = <b data-m="Vdos"></b> ·
 φ(Ø <span data-m="D"></span>, L <span data-m="L"></span>) = <b data-m="phi"></b></p>`;
   },
 

@@ -1,7 +1,7 @@
 /* Schusskurve: Kolbenbewegung (t–v / t–s / s–v) mit Prozessereignissen,
    Ereignistabelle und Plausibilitätsprüfungen. */
 
-import { series, line } from './helpers.js';
+import { series, line, limit, refline } from './helpers.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { sim } from '../core/simstore.js';
@@ -57,12 +57,17 @@ export default {
     }));
 
     if (tb !== 'ts') {
-      q.hrefs = [{ y: shot.vcrit, l: 'v_krit 1. Phase ' + fmt(shot.vcrit) + ' m/s', c: C.crit }];
+      /* v_krit gilt nur in der 1. Phase (bis „Kammer voll") — als Kurven-
+         schranke endet Grenze samt Schraffur genau dort. */
+      const xFill = tb === 'sv' ? shot.sFill * 1000
+        : (shot.events[0].inP ? shot.events[0].t : Infinity);
+      q.limits = [limit('vcrit', 'v_krit 1. Phase ' + fmt(shot.vcrit) + ' m/s', 'y', 'max',
+        xv => xv <= xFill ? shot.vcrit : Infinity, { note: 'Wellenüberschlag' })];
       if (v.vmax <= Math.max.apply(null, q.ys[0].y) * 1.35)
-        q.hrefs.push({ y: v.vmax, l: 'v_max Maschine ' + fmt(v.vmax) + ' m/s', c: C.limit });
+        q.limits.push(limit('vmax', 'v_max Maschine ' + fmt(v.vmax) + ' m/s', 'y', 'max', v.vmax));
       q.y1 = Math.max(Math.max.apply(null, q.ys[0].y), shot.vcrit) * 1.12;
     } else {
-      q.hrefs = [{ y: shot.totalStroke * 1000, l: 'Gesamthub ' + fmt(shot.totalStroke * 1000) + ' mm', c: C.limit }];
+      q.limits = [refline('stroke', 'Gesamthub ' + fmt(shot.totalStroke * 1000) + ' mm', 'y', shot.totalStroke * 1000)];
     }
 
     const nodes = shot.profile;

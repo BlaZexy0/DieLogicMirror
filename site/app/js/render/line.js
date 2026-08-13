@@ -1,9 +1,10 @@
-/* Liniendiagramme: Serien, Zielbänder, vertikale Bänder, Ereignismarker,
-   horizontale Referenzlinien, Betriebspunkt. */
+/* Liniendiagramme: Serien, Grenzen (d.limits — Ausschlussflächen, Ziel-
+   bänder, Referenzlinien), Ereignismarker, Betriebspunkt. */
 
 import { lineFrame, heading, axes, marker, text } from './base.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
+import { drawLimits, legendItems, drawLegendSwatch } from './limits.js';
 
 const PI = Math.PI;
 
@@ -18,7 +19,11 @@ export function drawLine(x, w, h, d) {
   for (let i = 0; i < left.length; i++) all = all.concat(left[i].y.filter(isFinite));
   let y0 = d.y0 == null ? Math.min.apply(null, [0].concat(all)) : d.y0;
   let y1 = d.y1 == null ? Math.max.apply(null, all) * 1.08 : d.y1;
-  if (d.hrefs) for (let i = 0; i < d.hrefs.length; i++) if (d.y1 == null) y1 = Math.max(y1, d.hrefs[i].y * 1.08);
+  /* y-Skala schließt konstante Grenzen auf der linken Achse mit ein. */
+  if (d.limits && d.y1 == null) for (const l of d.limits) {
+    if (l.on === 'y' && typeof l.value === 'number') y1 = Math.max(y1, l.value * 1.08);
+    if (l.on === 'y' && l.severity === 'target' && typeof l.max === 'number') y1 = Math.max(y1, l.max * 1.08);
+  }
   axes(x, w, h, f, x0, x1, y0, y1, d);
   const X = a => f.L + (a - x0) / (x1 - x0) * f.pw;
   const Y = a => f.T + (y1 - a) / (y1 - y0) * f.ph;
@@ -50,40 +55,8 @@ export function drawLine(x, w, h, d) {
     }
   }
 
-  /* vertikale Bereichs-Bänder (z. B. „keine Zerstäubung" im PQ²) */
-  if (d.vbands) for (let i = 0; i < d.vbands.length; i++) {
-    const vb = d.vbands[i];
-    const px0 = Math.max(f.L, Math.min(f.L + f.pw, X(vb.x0)));
-    const px1 = Math.max(f.L, Math.min(f.L + f.pw, X(vb.x1)));
-    if (px1 - px0 > 1) {
-      x.fillStyle = vb.c;
-      x.fillRect(px0, f.T, px1 - px0, f.ph);
-      if (px1 - px0 > 68) {
-        x.fillStyle = C.text; x.textAlign = 'center'; x.font = '10px Arial';
-        x.fillText(vb.l, (px0 + px1) / 2, f.T + 13 + 13 * i);
-      }
-    }
-  }
-
-  /* vertikale Grenzlinien, Beschriftung läuft entlang der Linie nach oben */
-  if (d.vlines) for (let i = 0; i < d.vlines.length; i++) {
-    const vl = d.vlines[i], px = X(vl.x);
-    if (px < f.L + 1 || px > f.L + f.pw - 1) continue;
-    x.save();
-    x.strokeStyle = vl.c || C.limit; x.lineWidth = 1.3; x.setLineDash([5, 4]);
-    x.beginPath(); x.moveTo(px, f.T); x.lineTo(px, f.T + f.ph); x.stroke();
-    x.setLineDash([]);
-    x.fillStyle = vl.c || C.limit; x.font = '10px Arial'; x.textAlign = 'left';
-    x.translate(px - 4, f.T + f.ph - 8); x.rotate(-PI / 2); x.fillText(vl.l, 0, 0);
-    x.restore();
-  }
-
-  /* horizontales Zielband */
-  if (d.band) {
-    x.fillStyle = C.band;
-    x.fillRect(f.L, Y(d.band[1]), f.pw, Y(d.band[0]) - Y(d.band[1]));
-    text(x, 'Zielbereich', w - f.R - 4, Y(d.band[1]) + 13, 'right');
-  }
+  /* Grenzen: Zielbänder, Ausschluss-Schraffuren, Grenz-/Referenzlinien */
+  drawLimits(x, f, X, Y, d);
 
   /* Prozessereignisse (nummerierte Chips + vertikale Linien) */
   if (d.events) for (let i = 0; i < d.events.length; i++) {
@@ -140,26 +113,21 @@ export function drawLine(x, w, h, d) {
   }
   x.restore();
 
-  /* Legende */
-  for (let i = 0; i < d.ys.length; i++) {
-    x.fillStyle = d.ys[i].c;
-    x.fillRect(f.L + i * 140, 66, 12, 3);
-    text(x, d.ys[i].n, f.L + 17 + i * 140, 72, 'left');
-  }
-
-  /* horizontale Referenzlinien */
-  let hrefs = d.hrefs || [];
-  if (d.href != null) hrefs = hrefs.concat([{ y: d.href, l: d.hrefl, c: C.limit }]);
-  for (let i = 0; i < hrefs.length; i++) {
-    const hr = hrefs[i];
-    if (hr.y < y0 || hr.y > y1) continue;
-    x.save();
-    x.strokeStyle = hr.c || C.limit; x.lineWidth = 1.4; x.setLineDash([6, 4]);
-    x.beginPath(); x.moveTo(f.L, Y(hr.y)); x.lineTo(w - f.R, Y(hr.y)); x.stroke();
-    x.setLineDash([]);
-    x.fillStyle = hr.c || C.limit; x.textAlign = 'right'; x.font = '11px Arial';
-    x.fillText(hr.l || '', w - f.R - 4, Y(hr.y) - 4);
-    x.restore();
+  /* Legende: Serien + Grenzen, mit Umbruch (max. 2 Zeilen — was nicht mehr
+     passt, ist weiterhin an seiner Linie im Diagramm beschriftet). */
+  const items = d.ys.map(s => ({ label: s.n, sev: 'series', color: s.c }))
+    .concat(legendItems(d.limits));
+  let lx = f.L, ly = 70;
+  const maxLy = f.T - 9;
+  x.font = '10.5px Arial';
+  for (const it of items) {
+    const tw = x.measureText(it.label).width;
+    if (lx + 17 + tw > w - f.R) { lx = f.L; ly += 13; }
+    if (ly > maxLy) break;
+    drawLegendSwatch(x, it, lx, ly);
+    x.fillStyle = C.text; x.textAlign = 'left'; x.font = '10.5px Arial';
+    x.fillText(it.label, lx + 17, ly);
+    lx += 17 + tw + 14;
   }
 
   if (d.pt) marker(x, f, X(d.pt[0]), Y(d.pt[1]), d.ptl);

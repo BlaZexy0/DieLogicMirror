@@ -35,5 +35,5 @@ jobs:
           node-version: '24'
       - name: Syntax-Check (alle JS + Inline-Scripts der HTML-Seiten)
         run: node site/tests/syntax-check.mjs
-      - name: Frontend-Tests (inkl. Physik-Fixtures gegen physics.js)
-        run: node --test site/tests/frontend.test.mjs site/tests/physics-fixtures.test.mjs
+      - name: Frontend-Tests (alle *.test.mjs — inkl. Physik-Fixtures, Grenzen-Modell, Render-Rauchtest)
+        run: node --test site/tests/*.test.mjs

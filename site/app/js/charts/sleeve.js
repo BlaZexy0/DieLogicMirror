@@ -1,6 +1,6 @@
 /* Füllkammer-Auswahl: Füllgrad über Kolben-Ø mit Zielband. */
 
-import { series, line } from './helpers.js';
+import { series, line, target } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { total } from '../core/physics.js';
 import { theme } from '../core/theme.js';
@@ -20,7 +20,7 @@ export default {
       d => 100e9 * ((total(v) + v.biscuit) / v.density) / (v.length * 0.25 * PI * d * d))],
       'Kolben-Ø mm', 'Füllgrad %',
       'Dosiert ' + fmt(total(v) + v.biscuit) + ' kg (inkl. Pressrest) · Kammer ' + fmt(v.length) + ' mm');
-    q.band = [v.fillMin, v.fillMax];
+    q.limits = [target('fillBand', 'Ziel φ ' + fmt(v.fillMin) + '–' + fmt(v.fillMax) + ' %', 'y', v.fillMin, v.fillMax)];
     q.y0 = 0; q.y1 = 100;
     const fOp = 100e9 * ((total(v) + v.biscuit) / v.density) / (v.length * 0.25 * PI * v.diam * v.diam);
     q.pt = [v.diam, fOp];

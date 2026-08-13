@@ -1,6 +1,6 @@
 /* Erforderliche Maschinengröße (Kraftbedarf über Druck). */
 
-import { series, line } from './helpers.js';
+import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { frac } from './mathfmt.js';
@@ -20,8 +20,7 @@ export default {
     ], 'Druck in bar', 'Maschinengröße kN', 'Fläche ' + fmt(v.area) + ' m² · S=' + fmt(v.safety));
     q.pt = [v.psel, v.area * v.safety * v.psel / 0.01];
     q.ptl = 'Bedarf: ' + fmt(v.area * v.safety * v.psel / 0.01) + ' kN';
-    q.href = v.force;
-    q.hrefl = 'Verfügbar ' + fmt(v.force) + ' kN';
+    q.limits = [limit('force', 'Verfügbar ' + fmt(v.force) + ' kN', 'y', 'max', v.force, { note: 'über Maschinenkraft' })];
     return q;
   },
 

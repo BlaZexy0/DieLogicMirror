@@ -1,6 +1,6 @@
 /* Empfohlene Füllzeit nach NADCA über Wandstärke. */
 
-import { series, line } from './helpers.js';
+import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { frac } from './mathfmt.js';
@@ -17,8 +17,7 @@ export default {
     const q = line(x, [series('Empf. Füllzeit', theme.chart.series1, x, f)],
       'Wandstärke mm', 'Füllzeit ms', 'Tguss ' + fmt(v.Tcast) + ' °C · Tform ' + fmt(v.Tdie) + ' °C');
     q.y0 = 0;
-    q.href = v.tmax;
-    q.hrefl = 'tmax ' + fmt(v.tmax) + ' ms';
+    q.limits = [limit('tmax', 't_f max ' + fmt(v.tmax) + ' ms', 'y', 'max', v.tmax, { note: 'Füllzeit zu lang' })];
     q.pt = [v.wall, f(v.wall)];
     q.ptl = fmt(v.wall) + ' mm → ' + fmt(f(v.wall)) + ' ms';
     return q;

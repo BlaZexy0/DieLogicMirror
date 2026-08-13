@@ -1,6 +1,6 @@
 /* Spezifischer Gießdruck über Kolben-Ø. */
 
-import { series, line } from './helpers.js';
+import { series, line, target } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { frac, sqrt } from './mathfmt.js';
@@ -18,7 +18,7 @@ export default {
     const f = d => v.injForce * 1e4 / (0.25 * PI * d * d);
     const q = line(x, [series('Gießdruck', theme.chart.series1, x, f)],
       'Kolben-Ø mm', 'Spez. Gießdruck bar', 'Gießkraft ' + fmt(v.injForce) + ' kN');
-    q.band = [v.pSpecMin, v.pSpecMax];
+    q.limits = [target('pspecBand', 'Ziel ' + fmt(v.pSpecMin) + '–' + fmt(v.pSpecMax) + ' bar', 'y', v.pSpecMin, v.pSpecMax)];
     q.y0 = 0;
     q.pt = [v.diam, f(v.diam)];
     q.ptl = 'Ø ' + fmt(v.diam) + ' mm → ' + fmt(f(v.diam)) + ' bar';

@@ -6,6 +6,7 @@ import { MAP_LABELS } from './map.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { vCrit } from '../core/physics.js';
+import { violates } from '../core/limits.js';
 
 const PI = Math.PI;
 export const HOVER_IDLE = 'Bewege die Maus über das Diagramm, um den aktuellen Wert anzuzeigen.';
@@ -81,7 +82,10 @@ export function showHover(card, ev) {
   if (d.z) {
     const y0 = d.y[0], y1 = d.y[d.y.length - 1];
     const yv = y1 - (py - f.T) / f.ph * (y1 - y0);
-    box.innerHTML = '<b>' + d.xl + ':</b> ' + fmt(xv) + ' · <b>' + d.yl + ':</b> ' + fmt(yv) + ' · <b>' + d.cl + ':</b> ' + fmt(heatVal(d, xv, yv));
+    let msg = '<b>' + d.xl + ':</b> ' + fmt(xv) + ' · <b>' + d.yl + ':</b> ' + fmt(yv) + ' · <b>' + d.cl + ':</b> ' + fmt(heatVal(d, xv, yv));
+    const bad = (d.limits || []).filter(l => violates(l, xv, yv));
+    if (bad.length) msg += ' · <b style="color:' + theme.ui.bad + '">verletzt: ' + bad.map(l => l.label).join(', ') + '</b>';
+    box.innerHTML = msg;
   } else {
     let msg = '<b>' + d.xl + ':</b> ' + fmt(xv);
     for (let i = 0; i < d.ys.length; i++) {

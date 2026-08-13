@@ -1,8 +1,9 @@
 /* Farbschema des Dashboards — hier direkt editieren, kein Build nötig.
    'ui' wird als CSS-Variablen auf die Seite angewendet, 'chart' wird von den
-   Canvas-Renderern gelesen, 'map'/'mapLines' färben das (φ, L/D)-
-   Auslegungsfenster, 'heatStops' ist die Farbrampe der Heatmaps
-   (RGB-Stützstellen von niedrig nach hoch).
+   Canvas-Renderern gelesen, 'limits' färbt die Grenzen/Restriktionen der
+   Diagramme (Schlüssel = limit-id, Fallback chart.limit),
+   'map'/'mapLines' färben das (φ, L/D)-Auslegungsfenster, 'heatStops' ist
+   die Farbrampe der Heatmaps (RGB-Stützstellen von niedrig nach hoch).
    Hinweis: bei eigenen Farben auf ausreichenden Kontrast und
    unterscheidbare Helligkeit der Serienfarben achten (Farbfehlsichtigkeit). */
 
@@ -40,11 +41,21 @@ window.__THEME__ = {
     "event": "#9aacb2",
     "areaFill": "rgba(0,39,51,.07)",
     "band": "rgba(0,140,130,.13)",
-    "bandNoAtom": "rgba(154,119,232,.16)",
-    "bandErosion": "rgba(194,68,126,.12)",
-    "bandSlow": "rgba(224,164,0,.16)",
     "iso": "#4c6870",
     "isoLine": "rgba(76,104,112,.6)"
+  },
+  "limits": {
+    "gateMin": "#7b5cd6",
+    "gateMax": "#c2447e",
+    "tmax": "#b28000",
+    "vent": "#4c6870",
+    "hydr": "#8c5a00",
+    "vmax": "#8c5a00",
+    "vcrit": "#c2447e",
+    "fill100": "#5f8391",
+    "force": "#8c5a00",
+    "intTime": "#8c5a00",
+    "ventAvail": "#8c5a00"
   },
   "map": {
     "ok": "rgba(0,140,130,.30)",

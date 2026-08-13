@@ -1,6 +1,6 @@
 /* Empfohlene Anschnittgeschwindigkeit über Wandstärke mit Zielband. */
 
-import { series, line } from './helpers.js';
+import { series, line, target } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { frac } from './mathfmt.js';
@@ -16,7 +16,7 @@ export default {
     const f = s => v.gateMax - (v.gateMax - v.gateMin) * (s - v.wallMin) / (v.wallMax - v.wallMin);
     const q = line(x, [series('Empfehlung', theme.chart.series1, x, f)],
       'Wandstärke mm', 'Anschnittgeschw. m/s', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s');
-    q.band = [v.gateMin, v.gateMax];
+    q.limits = [target('gateBand', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s', 'y', v.gateMin, v.gateMax)];
     q.y0 = 0;
     q.pt = [v.wall, f(v.wall)];
     q.ptl = fmt(v.wall) + ' mm → ' + fmt(f(v.wall)) + ' m/s';

@@ -9,6 +9,7 @@
 
 import { seq, fmt } from '../core/format.js';
 import { total } from '../core/physics.js';
+import { feasibleBand } from '../core/limits.js';
 import { frac, sqrt, cbrt } from './mathfmt.js';
 
 const PI = Math.PI, GRAV = 9.81;
@@ -43,18 +44,15 @@ export default {
       return rD(phi, Dc);
     };
 
-    /* Machbares Band: Polygon(e) zwischen r_lo(φ) und r_hi(φ) */
+    /* Machbares Band: Polygon(e) zwischen r_lo(φ) und r_hi(φ) — Scanline-
+       Hüllkurven aus core/limits.js (max der unteren, min der oberen
+       Schranken; das Band zerfällt automatisch, wo es sich zuschnürt). */
     const phis = seq(0.02, 0.98, 481);
-    const band = [];
-    let lo = [], hi = [];
-    for (const phi of phis) {
-      const rlo = Math.max(rD(phi, DmaxEff), rL(phi, Lmin));
-      const rhi = Math.min(rD(phi, Dmin), rL(phi, Lmax), rCrit(phi));
-      const a = Math.max(rlo, R_MIN), b = Math.min(rhi, R_MAX);
-      if (b > a + 1e-9) { lo.push([phi * 100, a]); hi.push([phi * 100, b]); }
-      else if (lo.length) { band.push(lo.concat(hi.reverse())); lo = []; hi = []; }
-    }
-    if (lo.length) band.push(lo.concat(hi.reverse()));
+    const band = feasibleBand(phis,
+      [phi => rD(phi, DmaxEff), phi => rL(phi, Lmin)],
+      [phi => rD(phi, Dmin), phi => rL(phi, Lmax), rCrit],
+      R_MIN, R_MAX)
+      .polys.map(poly => poly.map(([phi, r]) => [phi * 100, r]));
 
     /* Grenzkurven zum Zeichnen */
     const cphis = seq(0.02, 0.98, 241);

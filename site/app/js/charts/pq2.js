@@ -7,7 +7,7 @@
    – Operational Window: t_f- und v_a-Grenzen inkl. Entlüftungsbedingung.
    Achsenmodi Q / Q² / v_p / t_f. */
 
-import { series, line } from './helpers.js';
+import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { pistonArea, afterGate, total } from '../core/physics.js';
 import { theme } from '../core/theme.js';
@@ -79,28 +79,20 @@ export default {
       'Statisch ' + fmt(p0) + ' bar · Q_dry ' + fmt(Qmax * 1000) + ' l/s · Cd=' + fmt(v.Cd) + ' · Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW (Ø ' + fmt(v.dmin) + '–' + fmt(v.dmax) + ')');
     q.y0 = 0; q.y1 = p0 * 1.05;
 
-    const xMinD = Math.min(x[0], x[x.length - 1]), xMaxD = Math.max(x[0], x[x.length - 1]);
-    function band(qa, qb, c2, l) {
-      let a = fx(Math.max(qa, 1e-9));
-      let b = qb === null ? (tb === 'tf' ? xMinD : xMaxD) : fx(qb);
-      if (qa <= 0) a = tb === 'tf' ? xMaxD : xMinD;
-      let lo = Math.min(a, b), hi = Math.max(a, b);
-      lo = Math.max(lo, xMinD); hi = Math.min(hi, xMaxD);
-      if (hi > lo) return { x0: lo, x1: hi, c: c2, l };
-    }
-    q.vbands = [];
-    let b;
-    if (v.gateMin > 0 && Ag > 0) { b = band(0, v.gateMin * Ag, C.bandNoAtom, 'keine Zerstäubung'); if (b) q.vbands.push(b); }
-    if (v.gateMax > 0 && Ag > 0) { b = band(v.gateMax * Ag, null, C.bandErosion, 'Erosionsrisiko'); if (b) q.vbands.push(b); }
-    if (v.tmax > 0) { b = band(0, Vag / (v.tmax / 1000), C.bandSlow, 'Füllung zu langsam'); if (b) q.vbands.push(b); }
-
-    /* Grenzlinien: v_a-Fenster, hydraulisches Limit (J), Entlüftungsbedingung (OW Zone C) */
-    const cMin = (theme.mapLines && theme.mapLines.len) || '#7b5cd6';
-    q.vlines = [];
-    if (v.gateMin > 0 && Ag > 0) q.vlines.push({ x: fx(v.gateMin * Ag), l: 'v_a min ' + fmt(v.gateMin) + ' m/s', c: cMin });
-    if (v.gateMax > 0 && Ag > 0) q.vlines.push({ x: fx(v.gateMax * Ag), l: 'v_a max ' + fmt(v.gateMax) + ' m/s', c: C.crit });
-    if (c.vaHydr > 0) q.vlines.push({ x: fx(c.vaHydr * Ag), l: 'hydraul. Limit (J) ' + fmt(c.vaHydr) + ' m/s', c: C.limit });
-    if (isFinite(tVent) && tVent > 0) q.vlines.push({ x: fx(Vag / tVent), l: 'Entlüftung: t_f ≥ ' + fmt(tVent * 1000) + ' ms', c: C.iso });
+    /* Grenzen in Q formuliert; im t_f-Modus (t_f = V_a/Q) dreht sich die
+       Richtung um, deshalb kippt kind dort von min↔max. Zeichnung, Schraffur
+       und Legende übernimmt der Renderer (render/limits.js). */
+    q.limits = [];
+    const qlim = (id, label, kindQ, Qv, note) => {
+      if (!(Qv > 0) || !isFinite(Qv)) return;
+      const kind = tb === 'tf' ? (kindQ === 'min' ? 'max' : 'min') : kindQ;
+      q.limits.push(limit(id, label, 'x', kind, fx(Qv), { note }));
+    };
+    if (v.gateMin > 0 && Ag > 0) qlim('gateMin', 'v_a min ' + fmt(v.gateMin) + ' m/s', 'min', v.gateMin * Ag, 'keine Zerstäubung');
+    if (v.gateMax > 0 && Ag > 0) qlim('gateMax', 'v_a max ' + fmt(v.gateMax) + ' m/s', 'max', v.gateMax * Ag, 'Erosionsrisiko');
+    if (v.tmax > 0) qlim('tmax', 't_f max ' + fmt(v.tmax) + ' ms', 'min', Vag / (v.tmax / 1000), 'Füllung zu langsam');
+    if (c.vaHydr > 0) qlim('hydr', 'hydraul. Limit (J) ' + fmt(c.vaHydr) + ' m/s', 'max', c.vaHydr * Ag);
+    if (isFinite(tVent) && tVent > 0) qlim('vent', 'Entlüftung: t_f ≥ ' + fmt(tVent * 1000) + ' ms', 'max', Vag / tVent, 'Entlüftung überfordert');
 
     const opx = fx(Qs);
     const unit = tb === 'q' ? ' l/s' : tb === 'q2' ? ' (l/s)²' : tb === 'vp' ? ' m/s' : ' ms';
