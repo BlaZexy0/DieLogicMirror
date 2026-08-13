@@ -125,6 +125,7 @@ export const groups = [
       { key: 'vAirMax',    label: 'Max. Entlüftungsgeschw.',  unit: 'm/s', def: 150 },
       { key: 'biscuitMin', label: 'Pressrest min.',           unit: 'mm',  def: 25 },
       { key: 'gateTh',     label: 'Anschnittdicke',           unit: 'mm',  def: 3 },
+      { key: 'Jatom',      label: 'Zerstäubungsfaktor J',     unit: '-',   def: 750 },
       { key: 'intTime',    label: 'Nachdruckzeit',            unit: 'ms',  def: 60 }
     ]
   }

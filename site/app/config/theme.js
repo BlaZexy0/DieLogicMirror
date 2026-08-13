@@ -49,6 +49,7 @@ window.__THEME__ = {
   "limits": {
     "gateMin": "#7b5cd6",
     "gateMax": "#c2447e",
+    "atom": "#4b2ea3",
     "tmax": "#b28000",
     "vent": "#4c6870",
     "hydr": "#8c5a00",

@@ -55,12 +55,18 @@ function pqCore(v) {
     const rc = Q / Qmax;
     return Math.max(v.injForce * 1e3 / (A * 1e5) * (1 - r * r), p0 * (1 - rc * rc), 0);
   };
-  /* Hydraulische v_a-Grenze (J-Faktor, J = C_d): v_a = J·√(2·p₀/ρ) */
+  /* Hydraulische v_a-Grenze (Pego Guerra, dort „J" = C_d): v_a = C_d·√(2·p₀/ρ) */
   const vaHydr = v.Cd * Math.sqrt(2 * p0 * 1e5 / v.density);
+  /* Zerstäubungs-Minimum nach Herman/NADCA (UPCT Gl. 2.38):
+     v_a^1.71 · e_p · ρ ≥ J — empirisch in inch-pound-Einheiten
+     (v [in/s], e_p [in], ρ [lb/in³]); J > 750 gilt als konservativ. */
+  const vaAtom = (v.Jatom > 0 && v.gateTh > 0)
+    ? Math.pow(v.Jatom / ((v.gateTh / 25.4) * (v.density * 3.6127e-5)), 1 / 1.71) * 0.0254
+    : NaN;
   /* Minimale Füllzeit aus der Entlüftungsbedingung (Operational Window, Zone C):
      die verdrängte Luft V_luft muss durch A_ent mit höchstens v_luft,max entweichen. */
   const tVent = (v.vent > 0 && v.vAirMax > 0) ? (total(v) / v.density) / (v.vent * 1e-6 * v.vAirMax) : NaN;
-  return { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, pEnv, pReach, QtLo, QtHi, Alo, Ahi, vaHydr, tVent };
+  return { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, pEnv, pReach, QtLo, QtHi, Alo, Ahi, vaHydr, vaAtom, tVent };
 }
 
 export default {
@@ -71,7 +77,7 @@ export default {
   tabs: [['q', 'Q'], ['q2', 'Q²'], ['vp', 'v_p'], ['tf', 't_f']],
   tab2: 'pm',
   tabs2: [['pm', 'p_m'], ['ph', 'p_hyd'], ['pw', 'P·Q']],
-  inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax', 'pAcc'],
+  inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax', 'pAcc', 'gateTh', 'Jatom'],
 
   calc(v) {
     const c = pqCore(v);
@@ -139,7 +145,7 @@ export default {
       q.limits.push(limit(id, label, 'x', kind, fx(Qv), { note }));
     };
     if (v.tmax > 0) qlim('tmax', 't_f max ' + fmt(v.tmax) + ' ms', 'min', Vag / (v.tmax / 1000), 'Füllung zu langsam');
-    if (c.vaHydr > 0 && Ag > 0) qlim('hydr', 'hydraul. Limit (J) ' + fmt(c.vaHydr) + ' m/s', 'max', c.vaHydr * Ag);
+    if (c.vaHydr > 0 && Ag > 0) qlim('hydr', 'hydraul. Limit ' + fmt(c.vaHydr) + ' m/s', 'max', c.vaHydr * Ag);
     if (isFinite(tVent) && tVent > 0) qlim('vent', 'Entlüftung: t_f ≥ ' + fmt(tVent * 1000) + ' ms', 'max', Vag / tVent, 'Entlüftung überfordert');
 
     /* v_a-Grenzen auf der Druckachse: P(v_a) = ρ/2·(v_a/C_d)² — unabhängig
@@ -152,8 +158,11 @@ export default {
         ? limit(id, label, 'y', kind, xv => fy(Pbar, ix(xv)), { note })
         : limit(id, label, 'y', kind, fy(Pbar, 0), { note }));
     };
-    if (v.gateMin > 0) ylim('gateMin', 'v_a min ' + fmt(v.gateMin) + ' m/s', 'min', Pg(v.gateMin), 'keine Zerstäubung');
+    if (v.gateMin > 0) ylim('gateMin', 'v_a min ' + fmt(v.gateMin) + ' m/s', 'min', Pg(v.gateMin), 'unter NADCA-Ziel');
     if (v.gateMax > 0) ylim('gateMax', 'v_a max ' + fmt(v.gateMax) + ' m/s', 'max', Pg(v.gateMax), 'Erosionsrisiko');
+    /* Zerstäubungs-Minimum aus dem J-Faktor (UPCT Gl. 2.38) — unabhängige
+       Untergrenze neben dem NADCA-Zielband; die schärfere gewinnt im Band. */
+    if (isFinite(c.vaAtom)) ylim('atom', 'Zerstäubung J ' + fmt(v.Jatom) + ': v_a ≥ ' + fmt(c.vaAtom) + ' m/s', 'min', Pg(c.vaAtom), 'keine Zerstäubung');
 
     /* Erreichbarkeitsgrenze als Maske: oberhalb grau (für keinen Kolben-Ø
        erreichbar), alle anderen Grenzen werden darauf gestutzt. Im
@@ -265,8 +274,15 @@ P<sub>acc</sub> = <b data-m="pAccM"></b> · a = <b data-m="aMPE2"></b></p>
 
 <h4>7 · Füllzeit- und v_a-Grenzen</h4>
 <p class="math-note">Untergrenzen der Füllzeit aus drei unabhängigen Bedingungen; die schärfste gilt:</p>
-<div class="eq">Entlüftung (Zone C):&ensp;t<sub>f</sub> ≥ t<sub>vent</sub> = ${frac('V<sub>luft</sub>', 'A<sub>ent</sub> · v<sub>luft,max</sub>')}&emsp;·&emsp;Erosion:&ensp;t<sub>f</sub> ≥ ${frac('V<sub>a</sub>', 'A<sub>a</sub> · v<sub>a,max</sub>')}&emsp;·&emsp;Hydraulik (J = C<sub>d</sub>):&ensp;t<sub>f</sub> ≥ ${frac('V<sub>a</sub>', 'A<sub>a</sub> · v<sub>a,hydr</sub>')}&ensp;mit&ensp;v<sub>a,hydr</sub> = J · ${sqrt(frac('2 · p₀', 'ρ'), true)}</div>
+<div class="eq">Entlüftung (Zone C):&ensp;t<sub>f</sub> ≥ t<sub>vent</sub> = ${frac('V<sub>luft</sub>', 'A<sub>ent</sub> · v<sub>luft,max</sub>')}&emsp;·&emsp;Erosion:&ensp;t<sub>f</sub> ≥ ${frac('V<sub>a</sub>', 'A<sub>a</sub> · v<sub>a,max</sub>')}&emsp;·&emsp;Hydraulik:&ensp;t<sub>f</sub> ≥ ${frac('V<sub>a</sub>', 'A<sub>a</sub> · v<sub>a,hydr</sub>')}&ensp;mit&ensp;v<sub>a,hydr</sub> = C<sub>d</sub> · ${sqrt(frac('2 · p₀', 'ρ'), true)}</div>
 <div class="eq">Obergrenzen:&ensp;t<sub>f</sub> ≤ ${frac('V<sub>a</sub>', 'A<sub>a</sub> · v<sub>a,min</sub>')}&ensp;(Zerstäubung)&emsp;und&emsp;t<sub>f</sub> ≤ t<sub>max</sub>&ensp;(thermisch — NADCA-Formel, siehe „Empfohlene Füllzeit")</div>
+<p class="math-note"><b>Zerstäubungs-Minimum (Herman-J-Faktor, UPCT Gl. 2.38):</b> unabhängig vom NADCA-Zielband
+liefert das Atomisierungs-Kriterium eine harte Untergrenze der Anschnittgeschwindigkeit:</p>
+<div class="eq">v<sub>a</sub><sup>1.71</sup> · e<sub>p</sub> · ρ ≥ J&emsp;⇒&emsp;v<sub>a,min</sub>(J) = ( ${frac('J', 'ρ · e<sub>p</sub>')} )<sup>1/1.71</sup></div>
+<p class="math-note">Empirische Formel in inch-pound-Einheiten (v in in/s, Anschnittdicke e<sub>p</sub> in inch,
+ρ in lb/in³); J &gt; 750 gilt als konservativ (Herman [5], UPCT §2.3.3). Im Fenster wirkt die schärfere der
+beiden Untergrenzen. Aktuell: J = <b data-m="Jat"></b> · e<sub>p</sub> = <b data-m="ep"></b> ·
+v<sub>a,min</sub>(J) = <b data-m="vaAtom"></b></p>
 <p class="math-note"><b>Volumen-Konvention:</b> V<sub>luft</sub> = Dosiervolumen ohne Pressrest (Bauteil + Anguss +
 Überlauf) — die verdrängte Luft aus Kavität und Lauf; die Füllzeit-Achse rechnet dagegen ab Anschnitt mit
 V<sub>a</sub> (Bauteil + Überlauf). Das UPCT-TFG nutzt für beides V<sub>m</sub> inkl. Anguss (Gl. 2.27) —
@@ -290,7 +306,8 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
     const c = pqCore(v);
     if (!c) {
       ['AK', 'p0', 'Qmax', 'Va', 'CW', 'Qs', 'ps', 'vp', 'va', 'tf', 'tf2', 'Qt', 'Qtcur', 'Dopt', 'aMPE',
-        'vah', 'tminJ', 'tminE', 'tmaxZ', 'tVent', 'AgRange', 'AgSel', 'Pgmin', 'Pgmax', 'pAccM', 'aMPE2'].forEach(k => set(k, '—'));
+        'vah', 'tminJ', 'tminE', 'tmaxZ', 'tVent', 'AgRange', 'AgSel', 'Pgmin', 'Pgmax', 'pAccM', 'aMPE2',
+        'Jat', 'ep', 'vaAtom'].forEach(k => set(k, '—'));
       return;
     }
     set('AK', fmt(pistonArea(v)) + ' mm²');
@@ -320,6 +337,9 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
     set('Dopt', 'Ø ' + fmt(Dopt) + ' mm (A_opt = √3·Q_s/v_dry)');
     /* Füllzeitgrenzen */
     set('vah', fmt(c.vaHydr) + ' m/s');
+    set('Jat', v.Jatom > 0 ? fmt(v.Jatom) : '—');
+    set('ep', v.gateTh > 0 ? fmt(v.gateTh) + ' mm (' + fmt(v.gateTh / 25.4) + ' in)' : '—');
+    set('vaAtom', isFinite(c.vaAtom) ? fmt(c.vaAtom) + ' m/s (' + fmt(c.vaAtom / 0.0254) + ' in/s)' : '—');
     const tminJ = c.Vag / (c.Ag * c.vaHydr) * 1000;
     set('tminJ', fmt(tminJ) + ' ms');
     set('tminE', v.gateMax > 0 ? fmt(c.Vag / (c.Ag * v.gateMax) * 1000) + ' ms' : '—');
