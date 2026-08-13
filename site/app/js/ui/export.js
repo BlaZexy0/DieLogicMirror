@@ -17,14 +17,20 @@ function download(blob, name) {
   URL.revokeObjectURL(a.href);
 }
 
-/* Diagramm hochauflösend neu zeichnen und als PNG kopieren (Fallback: Download). */
+/* Diagramm als PNG kopieren (Fallback: Download). Gezeichnet wird in der
+   logischen Größe des Bildschirm-Canvas mit 2× Auflösung — der Export sieht
+   exakt aus wie die Karte auf dem Bildschirm, nur schärfer. */
 export function copyChart(card, def) {
   const d = card.data;
-  const W = def && def.wide ? 1400 : 1000;
-  const H = def && def.wide ? Math.round(1400 * (def.aspect || 0.5)) : 800;
+  const cv = card.querySelector('canvas');
+  const W = (cv && cv.clientWidth) || 1000;
+  const H = (cv && cv.clientHeight) || Math.round(W * ((def && def.aspect) || 0.8));
+  const S = 2;
   const o = document.createElement('canvas');
-  o.width = W; o.height = H;
-  drawAny(o.getContext('2d'), W, H, d, def);
+  o.width = W * S; o.height = H * S;
+  const x = o.getContext('2d');
+  x.setTransform(S, 0, 0, S, 0, 0);
+  drawAny(x, W, H, d, def);
   o.toBlob(blob => {
     const b = card.querySelector('.png-btn'), old = b.innerHTML;
     const ok = () => { b.classList.add('copied'); b.innerHTML = CHECK_SVG; };
