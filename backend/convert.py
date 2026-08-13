@@ -17,9 +17,10 @@ REQUIRED_KEYS = ("part", "runner", "overflow", "biscuit", "density",
 DEFAULT_PROCESS = {
     "dosing_time": 4.0,
     "dwell_time": 1.0,
-    # Wie das Dashboard (js/core/physics.js): Nogowizin am dosierten Füllgrad.
-    # Über den process-Block des Requests umstellbar (z. B. "garber_lopez").
-    "critical_velocity_model": "nogowizin",
+    # Wie das Dashboard (js/core/physics.js): OpenFOAM-CFD-Tabelle am
+    # dosierten Füllgrad. Über den process-Block des Requests umstellbar
+    # (z. B. "segment_fit", "nogowizin" oder "garber_lopez").
+    "critical_velocity_model": "cfd_table",
 }
 DEFAULT_SPECIFIC_HEAT = 1050.0     # J/(kg K) — wie hpdcsim examples/demo.json
 DEFAULT_POUR_TEMP = 680.0          # °C, falls Tcast fehlt

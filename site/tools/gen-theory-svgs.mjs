@@ -2,7 +2,7 @@
    Canvas-2D-Recorder spielt drawAny() ab und schreibt SVG-Dateien.
    Abdeckung: genau die API, die drawLine/drawLimits/base.js benutzen. */
 import path from 'node:path';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
@@ -177,7 +177,7 @@ const { theme } = await import(path.join(site, 'app/js/core/theme.js'));
 Object.assign(theme, globalThis.__THEME__);
 
 const { allFields, DEFAULT_CURVE } = await import(path.join(site, 'app/js/config/fields.js'));
-const { computeShot } = await import(path.join(site, 'app/js/core/physics.js'));
+const { computeShot, vCritTheory } = await import(path.join(site, 'app/js/core/physics.js'));
 const { drawAny } = await import(path.join(site, 'app/js/render/draw.js'));
 const { chartsById } = await import(path.join(site, 'app/js/charts/registry.js'));
 
@@ -188,19 +188,114 @@ const shot = computeShot(values, DEFAULT_CURVE.map(p => p.slice()));
 const outDir = path.join(site, 'assets/theorie');
 mkdirSync(outDir, { recursive: true });
 
+/* ── Nogowizin-Fit-Abbildung: exakte Segment-Lösung vs. Polynom ──
+   Deckenkriterium: v_krit/√(gD) = ∫_{y0}^{1} √(T̂(y)/Â(y)) dy mit
+   T̂ = 2√(y(1−y)) (Sehne), Â = φ(y)·π/4 (Segmentfläche), y = h/D. */
+function vkritFit() {
+  const PI = Math.PI;
+  const areaFrac = y => (Math.acos(1 - 2 * y) - 2 * (1 - 2 * y) * Math.sqrt(Math.max(0, y * (1 - y)))) / PI;
+  const segH = phi => {
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 80; i++) { const m = (lo + hi) / 2; if (areaFrac(m) < phi) lo = m; else hi = m; }
+    return (lo + hi) / 2;
+  };
+  const fExact = phi0 => {
+    const y0 = segH(phi0), n = 4000;
+    let s = 0;
+    for (let i = 0; i <= n; i++) {
+      const y = Math.min(y0 + (1 - y0) * i / n, 1 - 1e-12);
+      const w = (i === 0 || i === n) ? 1 : (i % 2 ? 4 : 2);
+      s += w * Math.sqrt(2 * Math.sqrt(Math.max(1e-15, y * (1 - y))) / (areaFrac(y) * PI / 4));
+    }
+    return s * (1 - y0) / n / 3;
+  };
+  const nog = phi => 1.386 - 1.915 * phi + 0.615 * phi * phi;
+  const x = [], yE = [], yN = [], yS = [];
+  for (let p = 5; p <= 95; p++) {
+    const phi = p / 100;
+    x.push(p); yE.push(fExact(phi)); yN.push(nog(phi)); yS.push(vCritTheory(1 / 9.81, phi));
+  }
+  const C = theme.chart;
+  return {
+    title: 'Fits an die exakte Segment-Lösung',
+    info: 'Deckenkriterium v_krit = ω(D) − ω(h₀) · Nogowizin: ≈2 % für φ = 0,2–0,75, am Rand bis 28 % · Segment-Fit (DieLogic): ≤ 0,25 % überall',
+    x,
+    ys: [
+      { n: 'exakte Lösung (Integral)', c: C.series1, y: yE },
+      { n: 'Nogowizin 1,386 − 1,915·φ + 0,615·φ²', c: (theme.limits && theme.limits.vcrit) || C.crit, y: yN },
+      { n: 'Segment-Fit (1−φ)^(5/6)·(2,3173 − 2,4762·φ^(1/3) + 1,3404·φ^(2/3) − 0,3552·φ)', c: C.series2, y: yS }
+    ],
+    xl: 'Füllgrad φ in %',
+    yl: 'v_krit / √(g·D)',
+    y0: 0,
+    limits: [{ id: 'fillBand', label: 'Füllgrad-Ziel 40–60 %', on: 'x', min: 40, max: 60, severity: 'target' }]
+  };
+}
+
+
+/* ── Realitäts-Check: Flachwassertheorie vs. OpenFOAM-CFD ── */
+function vkritSim() {
+  const rows = readFileSync(path.join(site, 'assets/v_krit_sim.csv'), 'utf8')
+    .trim().split('\n').slice(1).map(l => l.split(';').map(Number));
+  const g = 9.81;
+  const byPhi = new Map();
+  for (const [D, phi, V] of rows) {
+    const f = V / Math.sqrt(g * D / 1000);
+    if (!byPhi.has(phi)) byPhi.set(phi, []);
+    byPhi.get(phi).push(f);
+  }
+  const phis = [...byPhi.keys()].sort((a, b) => a - b);
+  const x = phis.map(p => p * 100);
+  const mean = phis.map(p => byPhi.get(p).reduce((a, b) => a + b) / byPhi.get(p).length);
+  const lo = phis.map(p => Math.min(...byPhi.get(p)));
+  const hi = phis.map(p => Math.max(...byPhi.get(p)));
+  const at = xv => {
+    let k = 0;
+    while (k < x.length - 2 && x[k + 1] < xv) k++;
+    const t = Math.max(0, Math.min(1, (xv - x[k]) / (x[k + 1] - x[k])));
+    return { k, t };
+  };
+  const interp = arr => xv => { const { k, t } = at(xv); return arr[k] * (1 - t) + arr[k + 1] * t; };
+  const C = theme.chart;
+  return {
+    title: 'Flachwassertheorie vs. OpenFOAM-CFD',
+    info: 'f = v_krit/√(g·D) · CFD-Raster Ø 60–300 mm × φ 0,1–0,9 · Theorie ab φ ≈ 0,3 zunehmend optimistisch (Brechen vor Deckenberührung)',
+    x,
+    ys: [
+      { n: 'Flachwassertheorie (Deckenkriterium)', c: C.series1, y: phis.map(p => vCritTheory(1 / 9.81, p)) },
+      { n: 'OpenFOAM-CFD (Mittel über Ø)', c: C.series2, y: mean }
+    ],
+    xl: 'Füllgrad φ in %',
+    yl: 'v_krit / √(g·D)',
+    y0: 0,
+    limits: [
+      { id: 'simSpread', label: 'CFD-Spanne über Ø 60–300 mm', on: 'y', min: interp(lo), max: interp(hi), severity: 'target' },
+      { id: 'fillBand', label: 'Füllgrad-Ziel 40–60 %', on: 'x', min: 40, max: 60, severity: 'target' }
+    ]
+  };
+}
+
 const W = 880, H = 560;
 const jobs = [
   { file: 'pq2-q.svg', id: 'pq2', tab: 'q', tab2: 'pm' },
   { file: 'pq2-q2.svg', id: 'pq2', tab: 'q2', tab2: 'pm' },
   { file: 'pq2-pw.svg', id: 'pq2', tab: 'q', tab2: 'pw' },
+  { file: 'shotcurve-sv.svg', id: 'shotcurve', tab: 'sv' },
+  { file: 'vkrit-fit.svg', build: vkritFit },
+  { file: 'vkrit-sim.svg', build: vkritSim },
 ];
 for (const j of jobs) {
-  const def = chartsById[j.id];
-  if (j.tab) def.tab = j.tab;
-  if (j.tab2) def.tab2 = j.tab2;
-  const d = def.calc(values, { shot });
-  if (d.err) { console.error(j.file + ': ' + d.err); continue; }
-  d.title = def.title;
+  let d, def = null;
+  if (j.build) {
+    d = j.build();
+  } else {
+    def = chartsById[j.id];
+    if (j.tab) def.tab = j.tab;
+    if (j.tab2) def.tab2 = j.tab2;
+    d = def.calc(values, { shot });
+    if (d.err) { console.error(j.file + ': ' + d.err); continue; }
+    d.title = def.title;
+  }
   const ctx = new SVGCtx(W, H);
   drawAny(ctx, W, H, d, def);
   writeFileSync(path.join(outDir, j.file), ctx.svg());

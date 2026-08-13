@@ -25,8 +25,48 @@ export function segHeight(phi) {
   return mid;
 }
 
-/* Kritische Kolbengeschwindigkeit 1. Phase nach Nogowizin. D in m. */
+/* Kritische Kolbengeschwindigkeit 1. Phase: bilineare Interpolation der
+   OpenFOAM-CFD-Tabelle (site/assets/v_krit_sim.csv → core/vkritTable.js),
+   v_krit = √(9,81·D)·f(D, φ). Die CFD zeigt gegenüber der Flachwasser-
+   theorie: Brechen VOR Deckenberührung (Theorie ab φ ≈ 0,3 zunehmend
+   optimistisch) und einen Klein-Ø-Abschlag bei hohen Füllgraden — deshalb
+   Tabelle statt Formel. Randregeln: D auf 60–300 mm geklemmt; φ < 0,1
+   nutzt die 0,1-Spalte (konservativ, f steigt zu kleinen φ); φ > 0,9
+   läuft linear auf 0 bei φ = 1. Details: Theorie-Artikel „Kritische
+   Kolbengeschwindigkeit". D in m. */
+import { VKRIT_D_MM, VKRIT_PHI, VKRIT_F } from './vkritTable.js';
+
+function tableF(Dmm, phi) {
+  const Dc = Math.max(VKRIT_D_MM[0], Math.min(VKRIT_D_MM[VKRIT_D_MM.length - 1], Dmm));
+  let i = 0;
+  while (i < VKRIT_D_MM.length - 2 && VKRIT_D_MM[i + 1] < Dc) i++;
+  const tD = (Dc - VKRIT_D_MM[i]) / (VKRIT_D_MM[i + 1] - VKRIT_D_MM[i]);
+  const row = j => VKRIT_F[i][j] * (1 - tD) + VKRIT_F[i + 1][j] * tD;
+  const pLo = VKRIT_PHI[0], pHi = VKRIT_PHI[VKRIT_PHI.length - 1];
+  if (phi <= pLo) return row(0);
+  if (phi >= pHi) return row(VKRIT_PHI.length - 1) * Math.max(0, (1 - phi) / (1 - pHi));
+  let j = 0;
+  while (j < VKRIT_PHI.length - 2 && VKRIT_PHI[j + 1] < phi) j++;
+  const tP = (phi - VKRIT_PHI[j]) / (VKRIT_PHI[j + 1] - VKRIT_PHI[j]);
+  return row(j) * (1 - tP) + row(j + 1) * tP;
+}
+
 export function vCrit(Dm, phi) {
+  return Math.sqrt(9.81 * Dm) * tableF(Dm * 1000, phi);
+}
+
+/* Flachwassertheorie als Referenz (Deckenkriterium, DieLogic-Segment-Fit
+   ans exakte Integral ∫√(g·T/A)dh; max. 0,25 % Abweichung vom Integral —
+   aber gegenüber der CFD ab mittleren Füllgraden optimistisch). */
+export function vCritTheory(Dm, phi) {
+  const p = Math.max(0, Math.min(1, phi));
+  const u = Math.cbrt(p);
+  return Math.sqrt(9.81 * Dm) * Math.pow(1 - p, 5 / 6)
+    * (2.3173 - 2.4762 * u + 1.3404 * u * u - 0.3552 * p);
+}
+
+/* Klassische Näherung nach Nogowizin (Referenz). */
+export function vCritNogowizin(Dm, phi) {
   return Math.sqrt(9.81 * Dm) * (1.386 - 1.915 * phi + 0.615 * phi * phi);
 }
 
@@ -136,7 +176,7 @@ export function computeShot(v, curvePoints) {
   const vSlow = prof.maxVelBefore(sFill);
 
   const checks = [];
-  checks.push([vSlow <= vcrit + 1e-9, '1. Phase: max. ' + fmt(vSlow) + ' m/s bis Kammer voll ' + (vSlow <= vcrit ? '≤' : '>') + ' v_krit ' + fmt(vcrit) + ' m/s (Nogowizin).']);
+  checks.push([vSlow <= vcrit + 1e-9, '1. Phase: max. ' + fmt(vSlow) + ' m/s bis Kammer voll ' + (vSlow <= vcrit ? '≤' : '>') + ' v_krit ' + fmt(vcrit) + ' m/s (CFD).']);
   checks.push([prof.vmax <= v.vmax + 1e-9, 'Spitzengeschwindigkeit ' + fmt(prof.vmax) + ' m/s ' + (prof.vmax <= v.vmax ? '≤' : '>') + ' Maschinenlimit ' + fmt(v.vmax) + ' m/s.']);
   const aPk = Math.max(prof.amax, -prof.amin, 0);
   if (v.amax > 0) checks.push([aPk <= v.amax + 1e-9, 'Spitzenbeschleunigung ' + fmt(aPk) + ' m/s² ' + (aPk <= v.amax ? '≤' : '>') + ' Maschinenlimit ' + fmt(v.amax) + ' m/s².']);

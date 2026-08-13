@@ -33,7 +33,7 @@ def test_shot_happy_path():
 
     meta = data["meta"]
     assert abs(meta["phi"] - 0.544926) < 1e-4
-    assert meta["critical_velocity_model"] == "nogowizin"
+    assert meta["critical_velocity_model"] == "cfd_table"
     assert meta["v_crit"] > 0
     assert meta["curve_clamped"] is True
 

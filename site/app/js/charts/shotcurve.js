@@ -165,7 +165,7 @@ Gesamthub = <b data-m="stroke"></b> · Pressrest = <b data-m="lb"></b></p>
 <h4>3 · Abgeleitete Größen und Prüfungen</h4>
 <div class="eq">v<sub>a</sub> = v<sub>p</sub> · ${frac('A<sub>K</sub>', 'A<sub>a</sub>')}&emsp;(Anschnittgeschwindigkeit aus der Kolbengeschwindigkeit)</div>
 <div class="eq">t<sub>f</sub> = t(Überlauf gefüllt) − t(Anguss gefüllt)&emsp;(Füllzeit ab Anschnitt)</div>
-<div class="eq">v<sub>krit</sub>(D, φ) = ${sqrt('9,81 · D')} · f(φ)&emsp;mit&emsp;f(φ) = 1,386 − 1,915·φ + 0,615·φ²&emsp;(Nogowizin — Grenze der 1. Phase bis „Kammer voll")</div>
+<div class="eq">v<sub>krit</sub>(D, φ) = ${sqrt('9,81 · D')} · f(D, φ)&emsp;—&emsp;f aus der OpenFOAM-CFD-Tabelle, bilinear interpoliert&emsp;(Grenze der 1. Phase bis „Kammer voll")</div>
 <p class="math-note">Aktuell: A<sub>K</sub>/A<sub>a</sub> = <b data-m="ratio"></b> · t<sub>f</sub> = <b data-m="tf"></b> ·
 v<sub>krit</sub> = <b data-m="vcrit"></b> · max. v der 1. Phase = <b data-m="vslow"></b></p>`;
   },

@@ -111,9 +111,63 @@ def critical_velocity_nogowizin(section):
             * (1.386 - 1.915 * phi + 0.615 * phi * phi))
 
 
+def critical_velocity_segment_fit(section):
+    """DieLogic segment fit of the shallow-water ceiling criterion
+    v_crit = integral of sqrt(g*T/A) dh from the dosed level to the crown,
+    evaluated for the circular section and fitted with basis functions from
+    the endpoint asymptotics (phi^(1/3) cusp when empty, (1-phi)^(5/6)
+    decay when full):
+
+        sqrt(g*D) * (1-phi)^(5/6)
+            * (2.3173 - 2.4762*u + 1.3404*u^2 - 0.3552*phi),  u = phi^(1/3)
+
+    Max deviation from the exact integral: 0.25 % for phi in [0.01, 0.98].
+    Mirrors vCrit() in site/app/js/core/physics.js."""
+    phi = min(max(section.fill_fraction, 0.0), 1.0)
+    u = phi ** (1.0 / 3.0)
+    return (np.sqrt(section.gravity * section.diameter)
+            * (1.0 - phi) ** (5.0 / 6.0)
+            * (2.3173 - 2.4762 * u + 1.3404 * u * u - 0.3552 * phi))
+
+
+def critical_velocity_cfd_table(section):
+    """Bilinear interpolation of DieLogic's OpenFOAM CFD table
+    (site/assets/v_krit_sim.csv -> _vkrit_table.py): v_crit =
+    sqrt(9.81*D) * f(D, phi). Edge rules: D clamped to the 60-300 mm grid;
+    phi below 0.1 uses the 0.1 column (conservative, f rises toward small
+    phi); phi above 0.9 ramps linearly to 0 at phi = 1.
+    Mirrors vCrit() in site/app/js/core/physics.js (which normalises the
+    table with g = 9.81; the residual g-difference is < 0.1 %)."""
+    from ._vkrit_table import VKRIT_D_MM, VKRIT_PHI, VKRIT_F
+    d_mm = min(max(section.diameter * 1000.0, VKRIT_D_MM[0]), VKRIT_D_MM[-1])
+    phi = section.fill_fraction
+    i = 0
+    while i < len(VKRIT_D_MM) - 2 and VKRIT_D_MM[i + 1] < d_mm:
+        i += 1
+    t_d = (d_mm - VKRIT_D_MM[i]) / (VKRIT_D_MM[i + 1] - VKRIT_D_MM[i])
+
+    def row(j):
+        return VKRIT_F[i][j] * (1.0 - t_d) + VKRIT_F[i + 1][j] * t_d
+
+    p_lo, p_hi = VKRIT_PHI[0], VKRIT_PHI[-1]
+    if phi <= p_lo:
+        f = row(0)
+    elif phi >= p_hi:
+        f = row(len(VKRIT_PHI) - 1) * max(0.0, (1.0 - phi) / (1.0 - p_hi))
+    else:
+        j = 0
+        while j < len(VKRIT_PHI) - 2 and VKRIT_PHI[j + 1] < phi:
+            j += 1
+        t_p = (phi - VKRIT_PHI[j]) / (VKRIT_PHI[j + 1] - VKRIT_PHI[j])
+        f = row(j) * (1.0 - t_p) + row(j + 1) * t_p
+    return np.sqrt(section.gravity * section.diameter) * f
+
+
 CRITICAL_VELOCITY_MODELS = {
     "garber_lopez": critical_velocity_garber_lopez,
     "nogowizin": critical_velocity_nogowizin,
+    "segment_fit": critical_velocity_segment_fit,
+    "cfd_table": critical_velocity_cfd_table,
 }
 
 

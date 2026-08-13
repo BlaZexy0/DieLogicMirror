@@ -8,15 +8,26 @@
    und wird als ein geschlossenes Polygon gefüllt statt pixelweise. */
 
 import { seq, fmt } from '../core/format.js';
-import { total } from '../core/physics.js';
+import { total, vCrit } from '../core/physics.js';
 import { feasibleBand } from '../core/limits.js';
 import { frac, sqrt, cbrt } from './mathfmt.js';
 
 const PI = Math.PI, GRAV = 9.81;
 const R_MIN = 1, R_MAX = 12;
 
-/* Nogowizin-Faktor f(φ) der kritischen Geschwindigkeit. */
-function fPhi(phi) { return 1.386 - 1.915 * phi + 0.615 * phi * phi; }
+/* Grenz-Ø der kritischen Geschwindigkeit: v₁ ≤ v_krit(D, φ) ⇔ D ≥ D_c(φ).
+   v_krit kommt aus der CFD-Tabelle (core/physics.js) und ist in D monoton —
+   D_c per Bisektion. */
+function DcritFor(v1, phi) {
+  let lo = 0.01, hi = 2;                        // m
+  if (vCrit(hi, phi) < v1) return Infinity;     // selbst Ø 2 m zu langsam
+  if (vCrit(lo, phi) >= v1) return lo;
+  for (let i = 0; i < 50; i++) {
+    const m = (lo + hi) / 2;
+    if (vCrit(m, phi) < v1) lo = m; else hi = m;
+  }
+  return (lo + hi) / 2;
+}
 
 export default {
   id: 'phild',
@@ -40,8 +51,8 @@ export default {
     const rL = (phi, L) => Math.sqrt(PI * L * L * L * phi / (4 * V)); // konst. L: Wurzelkurve
     const rCrit = phi => {                                            // v1 ≤ v_krit ⇔ D ≥ Dc(φ)
       if (!(v1 > 0)) return Infinity;
-      const f = fPhi(phi), Dc = v1 * v1 / (GRAV * f * f);
-      return rD(phi, Dc);
+      const Dc = DcritFor(v1, phi);
+      return isFinite(Dc) ? rD(phi, Dc) : 0;
     };
 
     /* Machbares Band: Polygon(e) zwischen r_lo(φ) und r_hi(φ) — Scanline-
@@ -131,7 +142,7 @@ Hyperbeln (r ∝ 1/φ), Kurven konstanter Länge sind Wurzelkurven (r ∝ √φ)
 <div class="eq">Längenbereich:&ensp;r = ${sqrt(frac('π · L³ · φ', '4V'), true)}&ensp;mit L = L<sub>max</sub> (obere) bzw. L = L<sub>min</sub> (untere Grenze)</div>
 <div class="eq">Pressrest:&ensp;b = ${frac('V<sub>b</sub>', 'A')} = ${frac('4V<sub>b</sub>', 'π · D²')} ≥ b<sub>min</sub>&ensp;⇔&ensp;D ≤ D<sub>b</sub> = ${sqrt(frac('4V<sub>b</sub>', 'π · b<sub>min</sub>'), true)}&ensp;⇒&ensp;r ≥ ${frac('4V', 'π · φ · D<sub>b</sub>³')}</div>
 <p class="math-note">Aktuell: D<sub>b</sub> = <b data-m="Db"></b> — der Mindest-Pressrest begrenzt den maximalen Kolben-Ø.</p>
-<div class="eq">Langsame Phase (Nogowizin):&ensp;v<sub>krit</sub>(D, φ) = ${sqrt('9,81 · D')} · f(φ)&ensp;mit&ensp;f(φ) = 1,386 − 1,915·φ + 0,615·φ²</div>
+<div class="eq">Langsame Phase:&ensp;v₁ ≤ v<sub>krit</sub>(D, φ) = ${sqrt('9,81 · D')} · f(D, φ)&ensp;—&ensp;f aus der OpenFOAM-CFD-Tabelle (bilinear interpoliert), Grenz-Ø per Bisektion</div>
 <div class="eq">v₁ ≤ v<sub>krit</sub>&ensp;⇔&ensp;D ≥ D<sub>c</sub>(φ) = ${frac('v₁²', '9,81 · f(φ)²')}&ensp;⇒&ensp;r ≤ ${frac('4V', 'π · φ · D<sub>c</sub>(φ)³')} = ${frac('4V · 9,81³ · f(φ)⁶', 'π · φ · v₁⁶')}</div>
 
 <h4>4 · Machbares Band</h4>

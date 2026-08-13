@@ -1,6 +1,6 @@
-/* Kritische Kolbengeschwindigkeit der 1. Phase als Heatmap — nach Nogowizin,
-   identisch zur Prüfung in der Schusskurve und zur v_krit-Grenze im
-   (φ, λ)-Auslegungsfenster. */
+/* Kritische Kolbengeschwindigkeit der 1. Phase als Heatmap — OpenFOAM-
+   CFD-Tabelle (core/physics.js), identisch zur Prüfung in der Schusskurve
+   und zur v_krit-Grenze im (φ, λ)-Auslegungsfenster. */
 
 import { heat, limit } from './helpers.js';
 import { fmt } from '../core/format.js';
@@ -10,7 +10,7 @@ import { sqrt } from './mathfmt.js';
 export default {
   id: 'slowshot',
   title: 'Kritische Kolbengeschw. 1. Phase',
-  desc: 'Nogowizin — konsistent zur Schusskurve',
+  desc: 'OpenFOAM-CFD — konsistent zur Schusskurve',
   heat: true,
   inputs: ['dmin', 'dmax', 'part', 'runner', 'overflow', 'biscuit', 'density', 'length', 'diam', 'v1sel'],
 
@@ -47,17 +47,22 @@ export default {
     const ff = 100e9 * ((total(v) + v.biscuit) / v.density) / (v.length * pistonArea(v));
     q.pt = [ff, v.diam];
     q.ptl = 'Ø ' + fmt(v.diam) + ' mm · Füllgrad ' + fmt(ff) + ' %';
-    q.info = 'Nogowizin — identisch zur Schusskurven-Prüfung · Füllgrad inkl. Pressrest · v₁ = ' + fmt(v.v1sel) + ' m/s';
+    q.info = 'OpenFOAM-CFD-Tabelle — identisch zur Schusskurven-Prüfung · Füllgrad inkl. Pressrest · v₁ = ' + fmt(v.v1sel) + ' m/s';
     return q;
   },
 
   mathHTML() {
     return `
-<h4>Kritische Kolbengeschwindigkeit der 1. Phase (Nogowizin)</h4>
+<h4>Kritische Kolbengeschwindigkeit der 1. Phase (OpenFOAM-CFD)</h4>
 <p class="math-note">Die langsame Phase soll eine Schmelzewelle vor dem Kolben herschieben, ohne sie zu
 überschlagen und Luft einzuwirbeln. Die Grenzgeschwindigkeit skaliert mit der
-Schwerewellen-Geschwindigkeit √(g·D) und fällt mit dem Füllgrad:</p>
-<div class="eq">v<sub>krit</sub>(D, φ) = ${sqrt('9,81 · D')} · f(φ)&emsp;mit&emsp;f(φ) = 1,386 − 1,915·φ + 0,615·φ²</div>
+Schwerewellen-Geschwindigkeit √(g·D) und fällt mit dem Füllgrad. DieLogic interpoliert
+die eigene OpenFOAM-CFD-Tabelle (Ø 60–300 mm × φ 0,1–0,9) bilinear:</p>
+<div class="eq">v<sub>krit</sub>(D, φ) = ${sqrt('9,81 · D')} · f(D, φ)&emsp;—&emsp;f aus der CFD-Tabelle (v_krit_sim.csv)</div>
+<p class="math-note">Die Flachwassertheorie (Deckenkriterium) und die Nogowizin-Näherung sind ab
+mittleren Füllgraden <b>optimistisch</b> — die 3D-Rechnung zeigt Brechen vor Deckenberührung
+(bei φ = 0,7 rund +28 % Theorie-Überschätzung) und bei φ ≥ 0,8 einen zusätzlichen Abschlag für
+kleine Kolben-Ø. Herleitung und Vergleich: Theorie-Artikel „Kritische Kolbengeschwindigkeit".</p>
 <p class="math-note">Dieselbe Formel wird in der Schusskurven-Prüfung („1. Phase bis Kammer voll") und als
 v<sub>krit</sub>-Grenze im (φ, λ)-Auslegungsfenster verwendet — alle drei Diagramme sind konsistent.
 φ ist der Füllgrad inkl. Pressrest (Dosiergewicht).</p>

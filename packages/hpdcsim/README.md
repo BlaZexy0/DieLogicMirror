@@ -52,7 +52,7 @@ Model sections select an implementation via `"type"`:
 | `motion` | `two_stage` (a1,v1,a2,v2 — s_u/s_end default to the volume-derived strokes), `profile` (explicit positions/velocities) |
 | `vacuum.model` | `sealed`, `ideal` (pump_pressure), `pumped` (pump_speed, ultimate_pressure), `conductance` (pump_pressure, discharge_coefficient) |
 | `thermal` | `constant`, `lumped` (htc, wall_temperature), `multi_surface` (surfaces: name → htc/wall_temperature) |
-| `process.critical_velocity_model` | `garber_lopez` (default), `nogowizin` |
+| `process.critical_velocity_model` | `garber_lopez` (default), `nogowizin`, `segment_fit` |
 
 Custom implementations plug into the same JSON via
 `register_motion_type` / `register_vacuum_model` / `register_thermal_model` /
@@ -67,8 +67,10 @@ Custom implementations plug into the same JSON via
   chamber equals the melt volume, then fills runner → part → overflow. Fill
   completes at `L − biscuit`; profiles pushing past that are rejected.
 - **Slow-shot wave safety**: selectable critical-velocity criterion —
-  `garber_lopez` (`2(√(gD) − √(gh))`, default) or `nogowizin`
-  (`√(gD)·(1.386 − 1.915φ + 0.615φ²)`) — evaluated **once at the dosed fill
+  `garber_lopez` (`2(√(gD) − √(gh))`, default), `nogowizin`
+  (`√(gD)·(1.386 − 1.915φ + 0.615φ²)`) or `segment_fit` (DieLogic fit of the
+  exact shallow-water ceiling criterion, ≤ 0.25 % deviation; mirrors the
+  dashboard) — evaluated **once at the dosed fill
   state** (the fill fraction the classic limits are quoted at) and constant
   over the shot. `ProcessState.critical_velocity` turns `nan` as soon as the
   sleeve cross-section is full, and `critical_crossing()` searches only

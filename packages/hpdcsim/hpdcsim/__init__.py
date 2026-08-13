@@ -13,6 +13,8 @@ from .geometry import (CRITICAL_VELOCITY_MODELS, GRAVITY, CircularSection,
                        area_fraction_from_height, circular_section,
                        critical_velocity_garber_lopez,
                        critical_velocity_nogowizin,
+                       critical_velocity_cfd_table,
+                       critical_velocity_segment_fit,
                        height_from_fill_fraction,
                        register_critical_velocity_model)
 from .laws import PlungerLaw, ShotPlan, TwoStageLaw, VelocityFunctionLaw
@@ -36,6 +38,7 @@ __all__ = [
     "TwoStageLaw", "VacuumModel", "VacuumSystem", "VelocityFunctionLaw",
     "area_fraction_from_height", "circular_section",
     "critical_velocity_garber_lopez", "critical_velocity_nogowizin",
+    "critical_velocity_cfd_table", "critical_velocity_segment_fit",
     "height_from_fill_fraction", "load_process", "orifice_mass_flow",
     "process_from_dict", "register_critical_velocity_model",
     "register_motion_type", "register_thermal_model",

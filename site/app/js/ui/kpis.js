@@ -93,7 +93,7 @@ export function renderKpis(el, v, shot) {
         ? kpi('Schusskurve', 'Fehler', shot.error, 'bad')
         : kpi('Schusszeit', fmt(shot.profile.endTime) + ' s', 'Kurvenhub ' + fmt(shot.profile.travel * 1000) + ' mm')
         + kpi('Füllzeit ab Anschnitt', shot.fill === null ? '—' : fmt(shot.fill) + ' ms', 'aus Schusskurve · max ' + fmt(v.tmax) + ' ms', shot.fill === null ? 'warn' : cap(shot.fill, v.tmax))
-        + kpi('v_krit 1. Phase', fmt(shot.vcrit) + ' m/s', 'Ist max. ' + fmt(shot.vSlow) + ' m/s (Nogowizin)', cap(shot.vSlow, shot.vcrit))))
+        + kpi('v_krit 1. Phase', fmt(shot.vcrit) + ' m/s', 'Ist max. ' + fmt(shot.vSlow) + ' m/s (CFD-Tabelle)', cap(shot.vSlow, shot.vcrit))))
 
     + group('Thermik und Qualität',
       kpi('Empf. Füllzeit (NADCA)', fmt(tNadca) + ' ms',

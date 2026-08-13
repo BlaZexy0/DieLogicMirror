@@ -58,7 +58,12 @@ def test_critical_velocity_model_registry():
     assert abs(critical_velocity_garber_lopez(s) - s.critical_velocity) < 1e-12
     expected = np.sqrt(g*0.09) * (1.386 - 1.915*0.35 + 0.615*0.35**2)
     assert abs(critical_velocity_nogowizin(s) - expected) < 1e-12
-    assert set(CRITICAL_VELOCITY_MODELS) >= {"garber_lopez", "nogowizin"}
+    from hpdcsim import critical_velocity_segment_fit
+    u = 0.35 ** (1.0/3.0)
+    expected_seg = (np.sqrt(g*0.09) * (1 - 0.35) ** (5.0/6.0)
+                    * (2.3173 - 2.4762*u + 1.3404*u*u - 0.3552*0.35))
+    assert abs(critical_velocity_segment_fit(s) - expected_seg) < 1e-12
+    assert set(CRITICAL_VELOCITY_MODELS) >= {"garber_lopez", "nogowizin", "segment_fit"}
 
 
 def test_validation():

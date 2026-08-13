@@ -48,7 +48,7 @@ def test_config_defaults():
     close(config["casting"]["part"]["volume"], 12 / 2700)
     close(config["casting"]["overflow"]["volume"], 2 / 2700)
     close(config["casting"]["vent_area"], 800e-6)
-    assert config["process"]["critical_velocity_model"] == "nogowizin"
+    assert config["process"]["critical_velocity_model"] == "cfd_table"
     close(meta["phi"], PHI)
     close(meta["biscuit_mm"], BISCUIT_MM)
     close(meta["fill_complete_mm"], FILL_COMPLETE_MM)
