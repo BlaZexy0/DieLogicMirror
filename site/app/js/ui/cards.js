@@ -24,11 +24,18 @@ export function buildCard(def, container, opts = {}) {
       '<button data-tab="' + t[0] + '"' + (def.tab === t[0] ? ' class="active"' : '') + '>' + t[1] + '</button>'
     ).join('') + '</div>';
   }
-  /* Zweite Tab-Gruppe (y-Achsenmodi), z. B. PQ²: p_m / p_hyd / P·Q */
+  /* Zweite Tab-Gruppe (y-Achsenmodi, z. B. PQ²): beide Tab-Gruppen wandern
+     in eine eigene Zeile unter dem Kopf, damit Titel und Buttons einzeilig
+     bleiben wie bei allen anderen Diagrammen. */
+  let tabbarHtml = '';
   if (def.tabs2) {
-    tabsHtml += '<div class="tabs">' + def.tabs2.map(t =>
+    const tabs2Html = '<div class="tabs">' + def.tabs2.map(t =>
       '<button data-tab2="' + t[0] + '"' + (def.tab2 === t[0] ? ' class="active"' : '') + '>' + t[1] + '</button>'
     ).join('') + '</div>';
+    tabbarHtml = '<div class="tabbar">' +
+      '<span class="tabbar-group"><span class="tabbar-label">x</span>' + tabsHtml + '</span>' +
+      '<span class="tabbar-group"><span class="tabbar-label">y</span>' + tabs2Html + '</span></div>';
+    tabsHtml = '';
   }
   const hlHtml = opts.onHighlight
     ? '<button class="hl-btn" title="Eingaben dieses Diagramms in der Seitenleiste hervorheben" aria-label="Eingaben hervorheben">' + TARGET_SVG + '</button>'
@@ -45,6 +52,7 @@ export function buildCard(def, container, opts = {}) {
     '<div class="head-right">' + tabsHtml + hlHtml + csvHtml +
     '<button class="png-btn" title="Als PNG kopieren" aria-label="Als PNG kopieren">' + COPY_SVG + '</button>' +
     linkHtml + '</div></div>' +
+    tabbarHtml +
     '<div class="body"><div class="canvas-wrap"><canvas></canvas></div>' +
     '<div class="hover-value">' + HOVER_IDLE + '</div>' +
     (def.extraHTML ? def.extraHTML() : '') + '</div>';
@@ -84,8 +92,10 @@ export function renderCard(card, def, v, shot) {
   if (card.dataset.fit && document.documentElement.clientWidth > 1080) {
     const cont = card.closest('.content');
     const head = card.querySelector('.head');
+    const tabbar = card.querySelector('.tabbar');
     if (cont && cont.clientHeight > 300) {
-      const avail = cont.clientHeight - (head ? head.offsetHeight : 52) - 96;
+      const avail = cont.clientHeight - (head ? head.offsetHeight : 52)
+        - (tabbar ? tabbar.offsetHeight : 0) - 96;
       h = Math.max(300, Math.min(h, avail));
     }
   }
