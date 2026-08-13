@@ -64,9 +64,11 @@ assert.ok(!shot.error, 'computeShot mit Defaults darf nicht fehlschlagen: ' + sh
 
 for (const def of charts) {
   const tabs = def.tabs ? def.tabs.map(t => t[0]) : [null];
-  for (const tab of tabs) {
-    test(`render-smoke: ${def.id}${tab ? ' [' + tab + ']' : ''}`, () => {
+  const tabs2 = def.tabs2 ? def.tabs2.map(t => t[0]) : [null];
+  for (const tab of tabs) for (const tab2 of tabs2) {
+    test(`render-smoke: ${def.id}${tab ? ' [' + tab + ']' : ''}${tab2 ? ' [' + tab2 + ']' : ''}`, () => {
       if (tab) def.tab = tab;
+      if (tab2) def.tab2 = tab2;
       const d = def.calc(values, { shot });
       assert.ok(d, def.id + ': calc lieferte nichts');
       if (d.err) return;                  // Fehlermeldung ist ein gültiges Ergebnis

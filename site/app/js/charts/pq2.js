@@ -4,8 +4,14 @@
    – Werkzeuglinie (Die Line):      P = (C_t/A_g²)·Q²,  C_t = ρ/(2·C_d²)
    – Maschinenlinie (CSIRO-Form):   P = p₀·(1 − Q²/Q_dry²)
    – Machine Performance Envelope:  P = a/Q,  a = (2√3/9)·F_G·v_dry
-   – Operational Window: t_f- und v_a-Grenzen inkl. Entlüftungsbedingung.
-   Achsenmodi Q / Q² / v_p / t_f. */
+   – Operational Window als Rechteck nach dem UPCT-TFG „Optimización de la
+     cámara de inyección en procesos FIAP" (sources/PQ2.pdf, Gl. 2.25–2.27):
+     t_f-Grenzen auf der Q-Achse (Q = V_a/t_f), v_a-Grenzen auf der
+     Druckachse (P = ρ/2·(v_a/C_d)², unabhängig von A_a) — plus
+     Entlüftungsbedingung und hydraulisches Limit.
+   Achsenmodi x: Q / Q² / v_p / t_f.
+   Achsenmodi y: Metalldruck / Hydraulikdruck (P_h = P·P_acc/p₀) / Leistung
+   P·Q — dort wird die Hüllkurve zur Horizontalen y = a. */
 
 import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
@@ -43,61 +49,95 @@ function pqCore(v) {
 export default {
   id: 'pq2',
   title: 'PQ²-Diagramm (Arbeitspunkt)',
-  desc: 'Maschine × Werkzeug · Hüllkurve · Operational Window · Achsenmodi Q, Q², v_p, t_f',
+  desc: 'Maschine × Werkzeug · Hüllkurve · Operational Window · x: Q, Q², v_p, t_f · y: p_m, p_hyd, P·Q',
   tab: 'q',
   tabs: [['q', 'Q'], ['q2', 'Q²'], ['vp', 'v_p'], ['tf', 't_f']],
-  inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax'],
+  tab2: 'pm',
+  tabs2: [['pm', 'p_m'], ['ph', 'p_hyd'], ['pw', 'P·Q']],
+  inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax', 'pAcc'],
 
   calc(v) {
     const c = pqCore(v);
     if (!c) return { err: 'Anschnittfläche, Cd, v_max und Gießkraft müssen > 0 sein.' };
     const C = theme.chart;
     const { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, pEnv, QtLo, QtHi, tVent } = c;
-    const tb = this.tab;
+    const tb = this.tab, yb = this.tab2 || 'pm';
 
     const tfOp = Vag / Qs * 1000;
     const tfPlot = 2.5 * Math.max(tfOp, v.tmax || 0) || 500;
 
-    let fx, xl, Qlo = 0;
-    if (tb === 'q') { fx = Q => Q * 1000; xl = 'Durchfluss Q in l/s'; }
-    else if (tb === 'q2') { fx = Q => Q * Q * 1e6; xl = 'Q² in (l/s)² — Maschinenlinie wird Gerade'; }
-    else if (tb === 'vp') { fx = Q => Q / Ap; xl = 'Kolbengeschwindigkeit v_p in m/s'; }
-    else { fx = Q => Q > 0 ? Vag / Q * 1000 : Infinity; xl = 'Füllzeit ab Anschnitt t_f in ms (Bauteil + Überlauf)'; Qlo = Vag / (tfPlot / 1000); }
+    /* x-Achse: fx bildet Q → Achsenwert ab, ix ist die Umkehrung (für
+       Kurvenschranken, die als Funktion des Achsenwerts ausgewertet werden). */
+    let fx, ix, xl, Qlo = 0;
+    if (tb === 'q') { fx = Q => Q * 1000; ix = x => x / 1000; xl = 'Durchfluss Q in l/s'; }
+    else if (tb === 'q2') { fx = Q => Q * Q * 1e6; ix = x => Math.sqrt(Math.max(x, 0)) / 1000; xl = 'Q² in (l/s)² — Maschinenlinie wird Gerade'; }
+    else if (tb === 'vp') { fx = Q => Q / Ap; ix = x => x * Ap; xl = 'Kolbengeschwindigkeit v_p in m/s'; }
+    else { fx = Q => Q > 0 ? Vag / Q * 1000 : Infinity; ix = x => x > 0 ? Vag / (x / 1000) : Infinity; xl = 'Füllzeit ab Anschnitt t_f in ms (Bauteil + Überlauf)'; Qlo = Vag / (tfPlot / 1000); }
+
+    /* y-Achse: Metalldruck [bar], Hydraulikdruck der Antriebsseite
+       (P_h = P·A_K/A_h = P·P_acc/p₀, statischer Schnittpunkt = P_acc) oder
+       Leistung P·Q [MW] — dort wird die Hüllkurve P·Q = a zur Horizontalen. */
+    let fy, yl, yUnit, y1;
+    if (yb === 'ph') {
+      if (!(v.pAcc > 0)) return { err: 'Akkumulatordruck muss > 0 sein für die Hydraulikdruck-Achse.' };
+      const sc = v.pAcc / p0;
+      fy = P => P * sc; yl = 'Hydraulikdruck (Antriebsseite) in bar'; yUnit = ' bar'; y1 = v.pAcc * 1.05;
+    } else if (yb === 'pw') {
+      fy = (P, Q) => P * 1e5 * Q / 1e6; yl = 'Leistung P·Q in MW'; yUnit = ' MW'; y1 = c.aMPE / 1e6 * 1.15;
+    } else {
+      fy = P => P; yl = 'Metalldruck in bar'; yUnit = ' bar'; y1 = p0 * 1.05;
+    }
 
     const Qarr = seq(Math.max(Qlo, Qmax * 1e-4), Qmax, 160);
     if (tb === 'tf') Qarr.reverse();
     const x = Qarr.map(fx);
 
     const ys = [
-      series('Maschine (Ø ' + fmt(v.diam) + ')', C.series1, Qarr, Q => p0 * (1 - (Q / Qmax) * (Q / Qmax))),
-      series('Werkzeug', C.series2, Qarr, Q => Cdie * Q * Q)
+      series('Maschine (Ø ' + fmt(v.diam) + ')', C.series1, Qarr, Q => fy(p0 * (1 - (Q / Qmax) * (Q / Qmax)), Q)),
+      series('Werkzeug', C.series2, Qarr, Q => fy(Cdie * Q * Q, Q))
     ];
-    if (isFinite(QtLo) && isFinite(QtHi) && QtHi > QtLo)
-      ys.push(series('Hüllkurve (alle Ø)', C.series4, Qarr, Q => (Q >= QtLo && Q <= QtHi) ? pEnv(Q) : NaN));
+    /* Im Leistungsmodus ist die Hüllkurve die Horizontale y = a (als Grenze
+       unten), als Kurve gezeichnet wird sie nur in den Druckmodi. */
+    if (yb !== 'pw' && isFinite(QtLo) && isFinite(QtHi) && QtHi > QtLo)
+      ys.push(series('Hüllkurve (alle Ø)', C.series4, Qarr, Q => (Q >= QtLo && Q <= QtHi) ? fy(pEnv(Q), Q) : NaN));
 
-    const q = line(x, ys, xl, 'Metalldruck in bar',
-      'Statisch ' + fmt(p0) + ' bar · Q_dry ' + fmt(Qmax * 1000) + ' l/s · Cd=' + fmt(v.Cd) + ' · Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW (Ø ' + fmt(v.dmin) + '–' + fmt(v.dmax) + ')');
-    q.y0 = 0; q.y1 = p0 * 1.05;
+    const q = line(x, ys, xl, yl,
+      'Statisch ' + fmt(p0) + ' bar · Q_dry ' + fmt(Qmax * 1000) + ' l/s · Cd=' + fmt(v.Cd) + ' · Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW (Ø ' + fmt(v.dmin) + '–' + fmt(v.dmax) + ')'
+      + (yb === 'ph' ? ' · P_acc ' + fmt(v.pAcc) + ' bar' : ''));
+    q.y0 = 0; q.y1 = y1;
 
-    /* Grenzen in Q formuliert; im t_f-Modus (t_f = V_a/Q) dreht sich die
-       Richtung um, deshalb kippt kind dort von min↔max. Zeichnung, Schraffur
-       und Legende übernimmt der Renderer (render/limits.js). */
+    /* ── Operational Window (UPCT Gl. 2.25–2.27) als deklarative Grenzen ──
+       t_f-Grenzen in Q formuliert (x-Achse); im t_f-Modus dreht sich die
+       Richtung um, deshalb kippt kind dort von min↔max. */
     q.limits = [];
     const qlim = (id, label, kindQ, Qv, note) => {
       if (!(Qv > 0) || !isFinite(Qv)) return;
       const kind = tb === 'tf' ? (kindQ === 'min' ? 'max' : 'min') : kindQ;
       q.limits.push(limit(id, label, 'x', kind, fx(Qv), { note }));
     };
-    if (v.gateMin > 0 && Ag > 0) qlim('gateMin', 'v_a min ' + fmt(v.gateMin) + ' m/s', 'min', v.gateMin * Ag, 'keine Zerstäubung');
-    if (v.gateMax > 0 && Ag > 0) qlim('gateMax', 'v_a max ' + fmt(v.gateMax) + ' m/s', 'max', v.gateMax * Ag, 'Erosionsrisiko');
     if (v.tmax > 0) qlim('tmax', 't_f max ' + fmt(v.tmax) + ' ms', 'min', Vag / (v.tmax / 1000), 'Füllung zu langsam');
-    if (c.vaHydr > 0) qlim('hydr', 'hydraul. Limit (J) ' + fmt(c.vaHydr) + ' m/s', 'max', c.vaHydr * Ag);
+    if (c.vaHydr > 0 && Ag > 0) qlim('hydr', 'hydraul. Limit (J) ' + fmt(c.vaHydr) + ' m/s', 'max', c.vaHydr * Ag);
     if (isFinite(tVent) && tVent > 0) qlim('vent', 'Entlüftung: t_f ≥ ' + fmt(tVent * 1000) + ' ms', 'max', Vag / tVent, 'Entlüftung überfordert');
 
-    const opx = fx(Qs);
+    /* v_a-Grenzen auf der Druckachse: P(v_a) = ρ/2·(v_a/C_d)² — unabhängig
+       von der Anschnittfläche (UPCT Gl. 2.26). In den Druckmodi Horizontalen,
+       im Leistungsmodus Kurven y = P(v_a)·Q(x). */
+    const Pg = vg => v.density * (vg / v.Cd) * (vg / v.Cd) / 2 / 1e5;   // bar
+    const ylim = (id, label, kind, Pbar, note) => {
+      if (!(Pbar > 0) || !isFinite(Pbar)) return;
+      q.limits.push(yb === 'pw'
+        ? limit(id, label, 'y', kind, xv => fy(Pbar, ix(xv)), { note })
+        : limit(id, label, 'y', kind, fy(Pbar, 0), { note }));
+    };
+    if (v.gateMin > 0) ylim('gateMin', 'v_a min ' + fmt(v.gateMin) + ' m/s', 'min', Pg(v.gateMin), 'keine Zerstäubung');
+    if (v.gateMax > 0) ylim('gateMax', 'v_a max ' + fmt(v.gateMax) + ' m/s', 'max', Pg(v.gateMax), 'Erosionsrisiko');
+    if (yb === 'pw')
+      q.limits.push(limit('mpe', 'Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW', 'y', 'max', c.aMPE / 1e6, { note: 'über Akkumulator-Leistung' }));
+
+    const opx = fx(Qs), opy = fy(Cdie * Qs * Qs, Qs);
     const unit = tb === 'q' ? ' l/s' : tb === 'q2' ? ' (l/s)²' : tb === 'vp' ? ' m/s' : ' ms';
-    q.pt = [opx, Cdie * Qs * Qs];
-    q.ptl = 'Arbeitspunkt ' + fmt(opx) + unit + ' / ' + fmt(Cdie * Qs * Qs) + ' bar';
+    q.pt = [opx, opy];
+    q.ptl = 'Arbeitspunkt ' + fmt(opx) + unit + ' / ' + fmt(opy) + yUnit;
     return q;
   },
 
@@ -159,11 +199,25 @@ Maschinenlinie äquivalent schreiben und der Arbeitspunkt lösen:</p>
 Volumenstromachse in Füllzeit — dieselben zwei Linien in vier Koordinaten:</p>
 <div class="eq">v<sub>a</sub>(P) = C<sub>d</sub> · ${sqrt(frac('2 · P', 'ρ'), true)}&emsp;(3.1)&emsp;·&emsp;v<sub>p</sub> = ${frac('Q', 'A<sub>K</sub>')}&emsp;·&emsp;t<sub>f</sub> = ${frac('V<sub>a</sub>', 'Q')}&emsp;(3.3)</div>
 <p class="math-note">Das <b>Operational Window</b> ist das Rechteck [t<sub>f,min</sub>, t<sub>f,max</sub>] ×
-[v<sub>a,min</sub>, v<sub>a,max</sub>]. Verletzungsfolgen (Fig. 3.1/3.2): über t<sub>f,max</sub> (Zone A) kalte
-Läufe und schlechte Oberflächen, unter v<sub>a,min</sub> (B) poröser Guss (keine Zerstäubung), unter
-t<sub>f,min</sub> (C) unvollständige Entlüftung, über v<sub>a,max</sub> (D) Formerosion und Kleben.
-Aktuell am Arbeitspunkt: v<sub>p</sub> = <b data-m="vp"></b> · v<sub>a</sub> = <b data-m="va"></b> ·
+[v<sub>a,min</sub>, v<sub>a,max</sub>]. Im PQ²-Plan wird es nach dem UPCT-TFG (Gl. 2.25–2.27) konvertiert:
+die t<sub>f</sub>-Seiten sind Vertikalen bei Q = V<sub>a</sub>/t<sub>f</sub>, die v<sub>a</sub>-Seiten
+Horizontalen auf der Druckachse — <b>unabhängig von der Anschnittfläche</b>:</p>
+<div class="eq">P(v<sub>a</sub>) = ${frac('ρ', '2')} · ( ${frac('v<sub>a</sub>', 'C<sub>d</sub>')} )²&emsp;(UPCT 2.26)&emsp;·&emsp;Q(t<sub>f</sub>) = ${frac('V<sub>a</sub>', 't<sub>f</sub>')}&emsp;(UPCT 2.27)</div>
+<p class="math-note">Die Werkzeuglinie schneidet die v<sub>a</sub>-Horizontale genau bei Q = v<sub>a</sub>·A<sub>a</sub> —
+die alte Darstellung als Vertikale ist der Spezialfall „A<sub>a</sub> fest". Verletzungsfolgen (Fig. 3.1/3.2):
+über t<sub>f,max</sub> (Zone A) kalte Läufe und schlechte Oberflächen, unter v<sub>a,min</sub> (B) poröser Guss
+(keine Zerstäubung), unter t<sub>f,min</sub> (C) unvollständige Entlüftung, über v<sub>a,max</sub> (D) Formerosion
+und Kleben. Aktuell: P(v<sub>a,min</sub>) = <b data-m="Pgmin"></b> · P(v<sub>a,max</sub>) = <b data-m="Pgmax"></b> ·
+am Arbeitspunkt: v<sub>p</sub> = <b data-m="vp"></b> · v<sub>a</sub> = <b data-m="va"></b> ·
 t<sub>f</sub> = <b data-m="tf"></b></p>
+
+<h4>6b · y-Achsenmodi: Hydraulikdruck und Leistung</h4>
+<div class="eq">P<sub>h</sub> = P · ${frac('A<sub>K</sub>', 'A<sub>h</sub>')} = P · ${frac('P<sub>acc</sub>', 'p₀')}&emsp;·&emsp;Leistung = P · Q&emsp;⇒&emsp;Hüllkurve P·Q = a wird die Horizontale y = a</div>
+<p class="math-note">Der Hydraulikdruck-Modus skaliert die Druckachse aufs Antriebssystem (Kräftegleichgewicht
+am Kolben, statischer Achsenabschnitt = P<sub>acc</sub>); der Leistungsmodus zeigt P·Q — die Maschinenkurve
+jedes Kolben-Ø berührt dort ihr Maximum exakt auf der a-Linie (bei v<sub>p</sub> = v<sub>dry</sub>/√3), die
+v<sub>a</sub>-Fenstergrenzen werden zu Ursprungsgeraden y = P(v<sub>a</sub>)·Q. Aktuell:
+P<sub>acc</sub> = <b data-m="pAccM"></b> · a = <b data-m="aMPE2"></b></p>
 
 <h4>7 · Füllzeit- und v_a-Grenzen</h4>
 <p class="math-note">Untergrenzen der Füllzeit aus drei unabhängigen Bedingungen; die schärfste gilt:</p>
@@ -188,7 +242,7 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
     const c = pqCore(v);
     if (!c) {
       ['AK', 'p0', 'Qmax', 'Va', 'CW', 'Qs', 'ps', 'vp', 'va', 'tf', 'tf2', 'Qt', 'Qtcur', 'Dopt', 'aMPE',
-        'vah', 'tminJ', 'tminE', 'tmaxZ', 'tVent', 'AgRange', 'AgSel'].forEach(k => set(k, '—'));
+        'vah', 'tminJ', 'tminE', 'tmaxZ', 'tVent', 'AgRange', 'AgSel', 'Pgmin', 'Pgmax', 'pAccM', 'aMPE2'].forEach(k => set(k, '—'));
       return;
     }
     set('AK', fmt(pistonArea(v)) + ' mm²');
@@ -204,6 +258,12 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
     const tf = c.Vag / c.Qs * 1000;
     set('tf', fmt(tf) + ' ms');
     set('tf2', fmt(tf) + ' ms');
+    /* Operational Window auf der Druckachse + y-Modi */
+    const Pg = vg => v.density * (vg / v.Cd) * (vg / v.Cd) / 2 / 1e5;
+    set('Pgmin', v.gateMin > 0 ? fmt(Pg(v.gateMin)) + ' bar' : '—');
+    set('Pgmax', v.gateMax > 0 ? fmt(Pg(v.gateMax)) + ' bar' : '—');
+    set('pAccM', v.pAcc > 0 ? fmt(v.pAcc) + ' bar (A_h = ' + fmt(v.injForce / v.pAcc * 10) + ' cm²)' : '—');
+    set('aMPE2', fmt(c.aMPE / 1e6) + ' MW');
     /* Hüllkurve */
     set('aMPE', fmt(c.aMPE / 1e6) + ' MW');
     set('Qt', fmt(c.QtLo * 1000) + '–' + fmt(c.QtHi * 1000) + ' l/s (Ø ' + fmt(v.dmin) + '–' + fmt(v.dmax) + ')');

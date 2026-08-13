@@ -24,6 +24,12 @@ export function buildCard(def, container, opts = {}) {
       '<button data-tab="' + t[0] + '"' + (def.tab === t[0] ? ' class="active"' : '') + '>' + t[1] + '</button>'
     ).join('') + '</div>';
   }
+  /* Zweite Tab-Gruppe (y-Achsenmodi), z. B. PQ²: p_m / p_hyd / P·Q */
+  if (def.tabs2) {
+    tabsHtml += '<div class="tabs">' + def.tabs2.map(t =>
+      '<button data-tab2="' + t[0] + '"' + (def.tab2 === t[0] ? ' class="active"' : '') + '>' + t[1] + '</button>'
+    ).join('') + '</div>';
+  }
   const hlHtml = opts.onHighlight
     ? '<button class="hl-btn" title="Eingaben dieses Diagramms in der Seitenleiste hervorheben" aria-label="Eingaben hervorheben">' + TARGET_SVG + '</button>'
     : '';
@@ -45,7 +51,7 @@ export function buildCard(def, container, opts = {}) {
 
   card.querySelectorAll('.tabs button').forEach(b => {
     b.onclick = () => {
-      def.tab = b.dataset.tab;
+      if (b.dataset.tab2) def.tab2 = b.dataset.tab2; else def.tab = b.dataset.tab;
       b.parentNode.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
       notify();
     };

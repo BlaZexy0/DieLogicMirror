@@ -52,6 +52,7 @@ window.__THEME__ = {
     "hydr": "#8c5a00",
     "vmax": "#8c5a00",
     "vcrit": "#c2447e",
+    "mpe": "#c79200",
     "fill100": "#5f8391",
     "force": "#8c5a00",
     "intTime": "#8c5a00",

@@ -98,6 +98,7 @@ export const groups = [
     id: 'hydraulics', title: 'Hydraulik und Ausbringung', wide: true,
     fields: [
       { key: 'Cd',         label: 'Durchflussbeiwert',        unit: '-',      def: 0.5 },
+      { key: 'pAcc',       label: 'Akkumulatordruck',         unit: 'bar',    def: 160 },
       { key: 'pSpecMin',   label: 'Ziel-Gießdruck min.',      unit: 'bar',    def: 800 },
       { key: 'pSpecMax',   label: 'Ziel-Gießdruck max.',      unit: 'bar',    def: 1200 },
       { key: 'vAirMax',    label: 'Max. Entlüftungsgeschw.',  unit: 'm/s',    def: 150 },
