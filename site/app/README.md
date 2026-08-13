@@ -127,7 +127,13 @@ ein Objekt pro Restriktion in `q.limits = [ … ]` (Erzeuger in
   geclippt (z. B. die Hüllkurve im PQ²).
 - `q.feasible = 'Label'` — füllt die Schnittmenge der erlaubten Seiten
   aller harten Grenzen grün (`theme.chart.okFill`, wie das machbare Band
-  im (φ, L/D)-Fenster) und setzt einen Legendeneintrag.
+  im (φ, L/D)-Fenster) und setzt einen Legendeneintrag. Optional teilt
+  `q.feasibleSplit = { fn, label }` das Band an einer Kurve: oberhalb
+  heller gefüllt (z. B. Maschinenlinie im PQ² — Fenster erfüllt, aber
+  nicht mit dem aktuellen Kolben-Ø erreichbar).
+- `q.limitText = 'legend'` — unterdrückt alle Grenzen-Texte im Diagramm
+  (Flächen-Notizen und Linien-Labels); die Grenzen sind dann nur über die
+  Legende benannt.
 
 Linien- und Heatmap-Renderer zeichnen daraus Linien, Schraffuren und die
 Legende (render/limits.js); der Heatmap-Hover meldet verletzte Grenzen am

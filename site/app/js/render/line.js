@@ -116,8 +116,10 @@ export function drawLine(x, w, h, d) {
   /* Legende: Serien + Grenzen, mit Umbruch (max. 2 Zeilen — was nicht mehr
      passt, ist weiterhin an seiner Linie im Diagramm beschriftet). */
   const items = d.ys.map(s => ({ label: s.n, sev: 'series', color: s.c }))
-    .concat(d.feasible ? [{ label: typeof d.feasible === 'string' ? d.feasible : 'zulässiger Bereich',
+    .concat(d.feasible ? [{ label: typeof d.feasible === 'string' ? d.feasible : 'machbares Band',
       sev: 'target', color: C.okFill || 'rgba(0,140,130,.30)' }] : [])
+    .concat(d.feasible && d.feasibleSplit && d.feasibleSplit.label
+      ? [{ label: d.feasibleSplit.label, sev: 'target', color: 'rgba(0,140,130,.13)' }] : [])
     .concat(legendItems(d.limits));
   let lx = f.L, ly = 70;
   const maxLy = f.T - 9;

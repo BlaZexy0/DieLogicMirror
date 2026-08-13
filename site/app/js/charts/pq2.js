@@ -49,7 +49,11 @@ function pqCore(v) {
     if (Ahi > 0 && A > Ahi) A = Ahi;
     if (!(A > 0)) return Infinity;
     const r = Q / (A * v.vmax);
-    return Math.max(v.injForce * 1e3 / (A * 1e5) * (1 - r * r), 0);
+    /* Der montierte Kolben zählt immer zur Erreichbarkeit — auch wenn sein Ø
+       außerhalb dmin–dmax liegt; sonst liefe seine Maschinenlinie in die
+       graue Maske hinein. */
+    const rc = Q / Qmax;
+    return Math.max(v.injForce * 1e3 / (A * 1e5) * (1 - r * r), p0 * (1 - rc * rc), 0);
   };
   /* Hydraulische v_a-Grenze (J-Faktor, J = C_d): v_a = J·√(2·p₀/ρ) */
   const vaHydr = v.Cd * Math.sqrt(2 * p0 * 1e5 / v.density);
@@ -149,9 +153,16 @@ export default {
     q.limits.push(limit('mpe', 'Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW', 'y', 'max',
       xv => fy(c.pReach(ix(xv)), ix(xv)), { mask: true, note: 'unerreichbar (alle Ø)' }));
 
-    /* Grüner zulässiger Bereich: Schnittmenge aller harten Grenzen —
-       das Operational Window unterhalb der Erreichbarkeitsgrenze. */
-    q.feasible = 'Operational Window';
+    /* Grünes machbares Band (wie im (φ, L/D)-Fenster): Schnittmenge aller
+       harten Grenzen. Oberhalb der Maschinenlinie des aktuellen Kolbens
+       heller — Fenster erfüllt, aber nur mit anderem Ø erreichbar.
+       Grenzen sind nur in der Legende benannt (kein Text im Diagramm). */
+    q.feasible = 'machbares Band';
+    q.feasibleSplit = {
+      fn: xv => fy(p0 * (1 - Math.pow(ix(xv) / Qmax, 2)), ix(xv)),
+      label: 'machbar (anderer Kolben-Ø)'
+    };
+    q.limitText = 'legend';
 
     const opx = fx(Qs), opy = fy(Cdie * Qs * Qs, Qs);
     const unit = tb === 'q' ? ' l/s' : tb === 'q2' ? ' (l/s)²' : tb === 'vp' ? ' m/s' : ' ms';
@@ -237,14 +248,21 @@ t<sub>f</sub> = <b data-m="tf"></b></p>
 <p class="math-note">Der Hydraulikdruck-Modus skaliert die Druckachse aufs Antriebssystem (Kräftegleichgewicht
 am Kolben, statischer Achsenabschnitt = P<sub>acc</sub>); der Leistungsmodus zeigt P·Q — die Maschinenkurve
 jedes Kolben-Ø berührt dort ihr Maximum exakt auf der a-Linie (bei v<sub>p</sub> = v<sub>dry</sub>/√3), die
-v<sub>a</sub>-Fenstergrenzen werden zu Ursprungsgeraden y = P(v<sub>a</sub>)·Q. Aktuell:
+v<sub>a</sub>-Fenstergrenzen werden zu Ursprungsgeraden y = P(v<sub>a</sub>)·Q.
+<b>Hinweis:</b> die Hydraulik-Achse ist exakt für den gewählten Kolben; Kurven anderer Ø (Erreichbarkeits-
+grenze) sind auf dieser Achse nur umskalierter Metalldruck — ihre Werte oberhalb P<sub>acc</sub> sind keine
+realen Hydraulikdrücke und liegen außerhalb des gezeichneten Bereichs. Aktuell:
 P<sub>acc</sub> = <b data-m="pAccM"></b> · a = <b data-m="aMPE2"></b></p>
 
 <h4>7 · Füllzeit- und v_a-Grenzen</h4>
 <p class="math-note">Untergrenzen der Füllzeit aus drei unabhängigen Bedingungen; die schärfste gilt:</p>
 <div class="eq">Entlüftung (Zone C):&ensp;t<sub>f</sub> ≥ t<sub>vent</sub> = ${frac('V<sub>luft</sub>', 'A<sub>ent</sub> · v<sub>luft,max</sub>')}&emsp;·&emsp;Erosion:&ensp;t<sub>f</sub> ≥ ${frac('V<sub>a</sub>', 'A<sub>a</sub> · v<sub>a,max</sub>')}&emsp;·&emsp;Hydraulik (J = C<sub>d</sub>):&ensp;t<sub>f</sub> ≥ ${frac('V<sub>a</sub>', 'A<sub>a</sub> · v<sub>a,hydr</sub>')}&ensp;mit&ensp;v<sub>a,hydr</sub> = J · ${sqrt(frac('2 · p₀', 'ρ'), true)}</div>
 <div class="eq">Obergrenzen:&ensp;t<sub>f</sub> ≤ ${frac('V<sub>a</sub>', 'A<sub>a</sub> · v<sub>a,min</sub>')}&ensp;(Zerstäubung)&emsp;und&emsp;t<sub>f</sub> ≤ t<sub>max</sub>&ensp;(thermisch — NADCA-Formel, siehe „Empfohlene Füllzeit")</div>
-<p class="math-note">Aktuell: t<sub>vent</sub> = <b data-m="tVent"></b> · t<sub>min,Erosion</sub> = <b data-m="tminE"></b> ·
+<p class="math-note"><b>Volumen-Konvention:</b> V<sub>luft</sub> = Dosiervolumen ohne Pressrest (Bauteil + Anguss +
+Überlauf) — die verdrängte Luft aus Kavität und Lauf; die Füllzeit-Achse rechnet dagegen ab Anschnitt mit
+V<sub>a</sub> (Bauteil + Überlauf). Das UPCT-TFG nutzt für beides V<sub>m</sub> inkl. Anguss (Gl. 2.27) —
+hier gilt die App-Konvention (siehe Seitenleiste).
+Aktuell: t<sub>vent</sub> = <b data-m="tVent"></b> · t<sub>min,Erosion</sub> = <b data-m="tminE"></b> ·
 t<sub>min,J</sub> = <b data-m="tminJ"></b> (v<sub>a,hydr</sub> = <b data-m="vah"></b>) ·
 t<sub>max,Zerstäubung</sub> = <b data-m="tmaxZ"></b> · Arbeitspunkt t<sub>f</sub> = <b data-m="tf2"></b></p>
 
@@ -283,7 +301,7 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
     const Pg = vg => v.density * (vg / v.Cd) * (vg / v.Cd) / 2 / 1e5;
     set('Pgmin', v.gateMin > 0 ? fmt(Pg(v.gateMin)) + ' bar' : '—');
     set('Pgmax', v.gateMax > 0 ? fmt(Pg(v.gateMax)) + ' bar' : '—');
-    set('pAccM', v.pAcc > 0 ? fmt(v.pAcc) + ' bar (A_h = ' + fmt(v.injForce / v.pAcc * 10) + ' cm²)' : '—');
+    set('pAccM', v.pAcc > 0 ? fmt(v.pAcc) + ' bar (A_h = ' + fmt(v.injForce / v.pAcc * 100) + ' cm²)' : '—');
     set('aMPE2', fmt(c.aMPE / 1e6) + ' MW');
     /* Hüllkurve */
     set('aMPE', fmt(c.aMPE / 1e6) + ' MW');

@@ -19,6 +19,12 @@ export function lineFrame(w, h, d) {
     f.R = 86;
     f.pw = w - f.L - f.R;
   }
+  /* Grenzen nur in der Legende benannt (d.limitText === 'legend'): eine
+     dritte Legendenzeile darf nicht abgeschnitten werden — Plot rückt ab. */
+  if (d && d.limitText === 'legend') {
+    f.T += 13;
+    f.ph -= 13;
+  }
   return f;
 }
 

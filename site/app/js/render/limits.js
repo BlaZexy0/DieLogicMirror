@@ -75,6 +75,9 @@ export function drawLimits(x, f, X, Y, d) {
   const C = theme.chart;
   const left = f.L, right = f.L + f.pw, top = f.T, bot = f.T + f.ph;
   const ascX = X(d.x[d.x.length - 1]) >= X(d.x[0]);
+  /* d.limitText === 'legend': keine Texte im Diagramm — die Grenzen sind
+     ausschließlich über die Legende benannt (z. B. PQ²). */
+  const showText = d.limitText !== 'legend';
 
   x.save();
   x.beginPath(); x.rect(left, top, f.pw, f.ph); x.clip();
@@ -113,6 +116,17 @@ export function drawLimits(x, f, X, Y, d) {
     if (any) {
       x.fillStyle = C.okFill || 'rgba(0,140,130,.30)';
       x.fillRect(left, top, f.pw, f.ph);
+      /* Oberhalb der Trennkurve (d.feasibleSplit.fn, z. B. Maschinenlinie
+         des aktuellen Kolbens) wird das Grün aufgehellt: Fenster erfüllt,
+         aber mit dem aktuellen Kolben-Ø nicht erreichbar. */
+      if (d.feasibleSplit && d.feasibleSplit.fn) {
+        const pts = d.x.map(xv => [X(xv), Y(d.feasibleSplit.fn(xv))]).filter(pt => isFinite(pt[1]));
+        if (pts.length > 1) {
+          x.clip(sidePath(pts, top - 1));
+          x.fillStyle = 'rgba(255,255,255,.6)';
+          x.fillRect(left, top, f.pw, f.ph);
+        }
+      }
     }
     x.restore();
   }
@@ -188,7 +202,7 @@ export function drawLimits(x, f, X, Y, d) {
         x.setLineDash([]);
         /* Label mit hellem Rücken auf ~40 % der sichtbaren Kurve */
         const at = px[Math.floor(px.length * 0.4)];
-        if (at && at[1] > top + 8 && at[1] < bot - 4) {
+        if (showText && at && at[1] > top + 8 && at[1] < bot - 4) {
           x.font = '10px Arial';
           const tw = x.measureText(l.label).width;
           x.fillStyle = 'rgba(255,255,255,.88)';
@@ -214,10 +228,12 @@ export function drawLimits(x, f, X, Y, d) {
         x.strokeStyle = col; x.lineWidth = 1.3; x.setLineDash([5, 4]);
         x.beginPath(); x.moveTo(px, top); x.lineTo(px, bot); x.stroke();
         x.setLineDash([]);
-        x.save();
-        x.fillStyle = col; x.font = '10px Arial'; x.textAlign = 'left';
-        x.translate(px - 4, bot - 8); x.rotate(-Math.PI / 2); x.fillText(l.label, 0, 0);
-        x.restore();
+        if (showText) {
+          x.save();
+          x.fillStyle = col; x.font = '10px Arial'; x.textAlign = 'left';
+          x.translate(px - 4, bot - 8); x.rotate(-Math.PI / 2); x.fillText(l.label, 0, 0);
+          x.restore();
+        }
       }
     } else {
       const py = Y(l.value);
@@ -234,17 +250,21 @@ export function drawLimits(x, f, X, Y, d) {
         x.strokeStyle = col; x.lineWidth = 1.4; x.setLineDash([6, 4]);
         x.beginPath(); x.moveTo(left, py); x.lineTo(right, py); x.stroke();
         x.setLineDash([]);
-        x.fillStyle = col; x.textAlign = 'right'; x.font = '11px Arial';
-        x.fillText(l.label, right - 4, py - 4);
+        if (showText) {
+          x.fillStyle = col; x.textAlign = 'right'; x.font = '11px Arial';
+          x.fillText(l.label, right - 4, py - 4);
+        }
       }
     }
   }
 
   /* Flächen-Kurzlabels zuletzt (über den Schraffuren) */
-  x.font = '10px Arial';
-  for (const n of notes) {
-    x.fillStyle = n.c; x.textAlign = n.align || 'center';
-    x.fillText(n.l, n.px, n.py);
+  if (showText) {
+    x.font = '10px Arial';
+    for (const n of notes) {
+      x.fillStyle = n.c; x.textAlign = n.align || 'center';
+      x.fillText(n.l, n.px, n.py);
+    }
   }
 
   /* Maske über allem: graue Deckfläche + durchgezogene Frontlinie */
@@ -264,7 +284,7 @@ export function drawLimits(x, f, X, Y, d) {
     maskPts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b));
     x.stroke();
     const mid = maskPts[Math.floor(maskPts.length / 2)];
-    if (mask.note) {
+    if (showText && mask.note) {
       const py = (mid[1] + edgeEx) / 2;
       if (Math.abs(mid[1] - edgeEx) > 26) {
         x.fillStyle = C.iso || col; x.textAlign = 'center'; x.font = '10px Arial';
@@ -272,7 +292,7 @@ export function drawLimits(x, f, X, Y, d) {
       }
     }
     const at = maskPts[Math.floor(maskPts.length * 0.4)];
-    if (at && at[1] > top + 8 && at[1] < bot - 4) {
+    if (showText && at && at[1] > top + 8 && at[1] < bot - 4) {
       x.font = '10px Arial';
       const tw = x.measureText(mask.label).width;
       x.fillStyle = 'rgba(255,255,255,.88)';
