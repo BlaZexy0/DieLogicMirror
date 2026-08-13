@@ -148,12 +148,22 @@ export function drawLimits(x, f, X, Y, d) {
     const sev = l.severity || 'hard';
     const col = limitColor(l);
 
-    /* ── Zielband: weiche Füllung zwischen min und max ── */
+    /* ── Zielband: weiche Füllung zwischen min und max, Ränder gestrichelt
+       (sonst geht das Band auf Heatmaps optisch unter) ── */
     if (sev === 'target') {
+      const edge = C.bandLine || 'rgba(0,140,130,.65)';
+      const dashEdge = (fn) => {
+        x.strokeStyle = edge; x.lineWidth = 1.2; x.setLineDash([4, 4]);
+        x.beginPath();
+        fn();
+        x.stroke();
+        x.setLineDash([]);
+      };
       x.fillStyle = l.c || C.band;
       if (l.on === 'x') {
         const a = X(l.min), b = X(l.max);
         x.fillRect(Math.min(a, b), top, Math.abs(b - a), f.ph);
+        dashEdge(() => { x.moveTo(a, top); x.lineTo(a, bot); x.moveTo(b, top); x.lineTo(b, bot); });
         notes.push({ px: (a + b) / 2, py: top + 13, l: l.label, c: C.text });
       } else if (typeof l.min === 'function' || typeof l.max === 'function') {
         const fLo = typeof l.min === 'function' ? l.min : () => l.min;
@@ -167,11 +177,17 @@ export function drawLimits(x, f, X, Y, d) {
         });
         path.closePath();
         x.fill(path);
-        const mid = loP[Math.floor(loP.length / 2)];
-        notes.push({ px: X(mid[0]), py: (Y(fLo(mid[0])) + Y(fHi(mid[0]))) / 2, l: l.label, c: C.text });
+        dashEdge(() => {
+          loP.forEach(([xv, yv], i) => i ? x.lineTo(X(xv), Y(yv)) : x.moveTo(X(xv), Y(yv)));
+          hiP.forEach(([xv, yv], i) => i ? x.lineTo(X(xv), Y(yv)) : x.moveTo(X(xv), Y(yv)));
+        });
+        /* Label bei ~30 % der Breite — die Mitte kollidiert oft mit dem Marker */
+        const at = loP[Math.floor(loP.length * 0.3)];
+        notes.push({ px: X(at[0]), py: (Y(fLo(at[0])) + Y(fHi(at[0]))) / 2, l: l.label, c: C.text });
       } else {
         const a = Y(l.max), b = Y(l.min);
         x.fillRect(left, a, f.pw, b - a);
+        dashEdge(() => { x.moveTo(left, a); x.lineTo(right, a); x.moveTo(left, b); x.lineTo(right, b); });
         notes.push({ px: right - 4, py: a + 13, l: l.label, c: C.text, align: 'right' });
       }
       continue;
@@ -310,7 +326,11 @@ export function legendItems(limits) {
     label: l.label,
     sev: l.severity || 'hard',
     mask: !!l.mask,
-    color: limitColor(l)
+    /* Zielbänder: Swatch in der tatsächlichen Bandfarbe, nicht im
+       Grenzlinien-Fallback (sonst ockerfarbener Swatch zu türkisem Band). */
+    color: (l.severity === 'target')
+      ? (l.c || (theme.limits && theme.limits[l.id]) || theme.chart.band)
+      : limitColor(l)
   }));
 }
 

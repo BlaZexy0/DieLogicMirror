@@ -2,7 +2,7 @@
    identisch zur Prüfung in der Schusskurve und zur v_krit-Grenze im
    (φ, λ)-Auslegungsfenster. */
 
-import { heat } from './helpers.js';
+import { heat, limit } from './helpers.js';
 import { fmt } from '../core/format.js';
 import { total, pistonArea, vCrit } from '../core/physics.js';
 import { sqrt } from './mathfmt.js';
@@ -25,6 +25,25 @@ export default {
     const q = heat(0, 100, v.dmin, v.dmax,
       (ff, d) => vCrit(d / 1000, ff / 100),
       'Füllgrad %', 'Kolben-Ø mm', 'Krit. Kolbengeschw. m/s', 0, hi, levels);
+    /* Verletzungszone: unterhalb der Kurve v_krit(D, φ) = v₁ ist die gewählte
+       1.-Phase-Geschwindigkeit zu schnell (Wellenüberschlag). v_krit steigt
+       mit D — der Grenz-Ø je Füllgrad wird per Bisektion bestimmt. */
+    if (v.v1sel > 0 && v.dmax > v.dmin) {
+      const span = v.dmax - v.dmin;
+      const Dstar = ff2 => {
+        const phi = Math.min(Math.max(ff2 / 100, 0.001), 0.999);
+        let lo = v.dmin, hi = v.dmax;
+        if (vCrit(lo / 1000, phi) >= v.v1sel) return v.dmin - span;   // ganze Spalte ok
+        if (vCrit(hi / 1000, phi) < v.v1sel) return v.dmax + span;    // ganze Spalte verletzt
+        for (let i = 0; i < 40; i++) {
+          const m = (lo + hi) / 2;
+          if (vCrit(m / 1000, phi) < v.v1sel) lo = m; else hi = m;
+        }
+        return (lo + hi) / 2;
+      };
+      q.limits = [limit('vcrit', 'v_krit = v₁ ' + fmt(v.v1sel) + ' m/s', 'y', 'min', Dstar,
+        { note: 'v₁ über v_krit (Wellenüberschlag)' })];
+    }
     const ff = 100e9 * ((total(v) + v.biscuit) / v.density) / (v.length * pistonArea(v));
     q.pt = [ff, v.diam];
     q.ptl = 'Ø ' + fmt(v.diam) + ' mm · Füllgrad ' + fmt(ff) + ' %';

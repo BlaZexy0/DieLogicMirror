@@ -2,7 +2,7 @@
    Schwerpunkts (Hebelfaktor k aus shared/clampmodel.js, dieselbe
    Implementierung wie in der STL-Analyse). */
 
-import { series, line } from './helpers.js';
+import { series, line, refline } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { frac } from './mathfmt.js';
@@ -36,6 +36,10 @@ export default {
       'Kraft ' + fmt(v.force) + ' kN · S=' + fmt(v.safety) +
       ' · e=(' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k=' + fmt(k) +
       (lift ? ' · ⚠ Abheben' : ''));
+    /* Gewählte Sprengfläche als Referenz: die Schnittpunkte mit den Kurven
+       zeigen direkt den maximal zulässigen Druck je Sicherheitsfaktor. */
+    if (v.area > 0)
+      q.limits = [refline('areaSel', 'Sprengfläche ' + fmt(v.area) + ' m²', 'y', v.area)];
     q.pt = [v.psel, v.area];
     q.ptl = 'Auslegung: ' + fmt(v.psel) + ' bar / ' + fmt(v.area) + ' m²';
     return q;

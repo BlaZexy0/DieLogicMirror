@@ -30,7 +30,10 @@ export default {
     q.y0 = 0;
     q.y1 = yCap;
     q.limits = [
-      limit('ventAvail', 'Ist Entlüftung ' + fmt(v.vent) + ' mm²', 'y', 'max', v.vent, { note: 'Bedarf über vorhandener Entlüftung' }),
+      /* Als Kurvenschranke formuliert: Schraffur nur dort, wo der Bedarf die
+         vorhandene Entlüftung tatsächlich übersteigt (links vom Schnittpunkt) */
+      limit('ventAvail', 'Ist Entlüftung ' + fmt(v.vent) + ' mm²', 'y', 'max',
+        t => f(t) > v.vent ? v.vent : Infinity, { note: 'Bedarf über vorhandener Entlüftung' }),
       refline('gateRef', 'Anschnittfläche ' + fmt(v.gate) + ' mm²', 'y', v.gate, { c: C.series2 })
     ];
     const tOp = 1e9 * (afterGate(v) / v.density) / (v.vsel * pistonArea(v));

@@ -1,6 +1,6 @@
 /* Anschnittfläche für Zielgeschwindigkeit. */
 
-import { series, line } from './helpers.js';
+import { series, line, target } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { pistonArea } from '../core/physics.js';
 import { theme } from '../core/theme.js';
@@ -16,11 +16,18 @@ export default {
     const C = theme.chart;
     const A = pistonArea(v);
     const x = seq(v.vmin, v.vmax, 140);
+    /* Kurvenfarben = Fensterfarben von v_a min/max (wie im PQ²/Prozessfenster) */
+    const cMin = (theme.limits && theme.limits.gateMin) || C.series1;
+    const cMax = (theme.limits && theme.limits.gateMax) || C.series2;
     const q = line(x, [
-      series(fmt(v.gateMin) + ' m/s', C.series1, x, s => s * A / v.gateMin),
-      series(fmt(v.gateMax) + ' m/s', C.series2, x, s => s * A / v.gateMax)
+      series(fmt(v.gateMin) + ' m/s', cMin, x, s => s * A / v.gateMin),
+      series(fmt(v.gateMax) + ' m/s', cMax, x, s => s * A / v.gateMax)
     ], 'Kolbengeschwindigkeit m/s', 'Anschnittfläche mm²',
       'Ø ' + fmt(v.diam) + ' mm · Auswahl ' + fmt(v.gate) + ' mm²');
+    /* Zulässiges Fenster zwischen den beiden Kurven als Zielband */
+    if (v.gateMin > 0 && v.gateMax > 0)
+      q.limits = [target('gateBand', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s', 'y',
+        s => s * A / v.gateMax, s => s * A / v.gateMin)];
     q.pt = [v.vsel, v.gate];
     q.ptl = 'Auswahl ' + fmt(v.gate) + ' mm² bei ' + fmt(v.vsel) + ' m/s';
     return q;

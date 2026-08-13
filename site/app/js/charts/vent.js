@@ -1,6 +1,6 @@
 /* Entlüftungsgeschwindigkeit über Kolbengeschwindigkeit. */
 
-import { series, line } from './helpers.js';
+import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { pistonArea } from '../core/physics.js';
 import { theme } from '../core/theme.js';
@@ -10,7 +10,7 @@ export default {
   id: 'vent',
   title: 'Entlüftungsgeschwindigkeit',
   desc: 'Querschnittsverhältnis',
-  inputs: ['vmin', 'vmax', 'diam', 'vent', 'vsel'],
+  inputs: ['vmin', 'vmax', 'diam', 'vent', 'vsel', 'vAirMax'],
 
   calc(v) {
     const A = pistonArea(v);
@@ -18,6 +18,9 @@ export default {
     const q = line(x, [series('Entlüftung', theme.chart.series1, x, s => s * A / v.vent)],
       'Kolbengeschwindigkeit m/s', 'Entlüftungsgeschwindigkeit m/s',
       'Ø ' + fmt(v.diam) + ' mm · Entlüftung ' + fmt(v.vent) + ' mm²');
+    if (v.vAirMax > 0)
+      q.limits = [limit('vAirMax', 'v_luft max ' + fmt(v.vAirMax) + ' m/s', 'y', 'max', v.vAirMax,
+        { note: 'über zulässiger Luftgeschwindigkeit' })];
     q.pt = [v.vsel, v.vsel * A / v.vent];
     q.ptl = fmt(v.vsel) + ' m/s → ' + fmt(v.vsel * A / v.vent) + ' m/s';
     return q;

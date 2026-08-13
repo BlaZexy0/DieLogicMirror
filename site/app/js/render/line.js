@@ -58,23 +58,28 @@ export function drawLine(x, w, h, d) {
   /* Grenzen: Zielbänder, Ausschluss-Schraffuren, Grenz-/Referenzlinien */
   drawLimits(x, f, X, Y, d);
 
-  /* Prozessereignisse (nummerierte Chips + vertikale Linien) */
+  /* Prozessereignisse (nummerierte Chips + vertikale Linien). Chips, die
+     dichter als eine Chip-Breite liegen, weichen zeilenweise nach unten aus. */
+  let lastChipX = -Infinity, chipRow = 0;
   if (d.events) for (let i = 0; i < d.events.length; i++) {
     const ev = d.events[i], ex = X(ev.x);
     if (ex < f.L || ex > f.L + f.pw) continue;
+    chipRow = (ex - lastChipX < 20) ? chipRow + 1 : 0;
+    lastChipX = ex;
+    const cy = f.T + 4 + chipRow * 19;
     x.strokeStyle = C.event; x.lineWidth = 1; x.globalAlpha = 0.75;
-    x.beginPath(); x.moveTo(ex, f.T + 14); x.lineTo(ex, f.T + f.ph); x.stroke();
+    x.beginPath(); x.moveTo(ex, cy + 10); x.lineTo(ex, f.T + f.ph); x.stroke();
     x.globalAlpha = 1;
     if (ev.y != null) {
       x.beginPath(); x.arc(ex, Y(ev.y), 4.5, 0, 2 * PI);
       x.fillStyle = C.surface; x.fill();
       x.strokeStyle = C.event; x.lineWidth = 1.5; x.stroke();
     }
-    x.beginPath(); x.arc(ex, f.T + 4, 9, 0, 2 * PI);
+    x.beginPath(); x.arc(ex, cy, 9, 0, 2 * PI);
     x.fillStyle = C.surface; x.fill();
     x.strokeStyle = C.series2; x.lineWidth = 1.5; x.stroke();
     x.fillStyle = C.series2; x.textAlign = 'center'; x.font = 'bold 10px Arial';
-    x.fillText('' + ev.n, ex, f.T + 7.5);
+    x.fillText('' + ev.n, ex, cy + 3.5);
   }
 
   x.save();

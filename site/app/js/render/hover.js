@@ -92,6 +92,13 @@ export function showHover(card, ev) {
       const s = d.ys[i], val = interp(d.x, s.y, xv);
       msg += ' · <b>' + s.n + ':</b> ' + (isFinite(val) ? fmt(val) + (s.u ? ' ' + s.u : '') : '—');
     }
+    /* Bei genau einer Serie: verletzte Grenzen am Kurvenpunkt melden (wie
+       beim Heatmap-Hover). Bei mehreren Serien wäre unklar, welche gemeint ist. */
+    if (d.ys.length === 1 && d.limits && d.limits.length) {
+      const val = interp(d.x, d.ys[0].y, xv);
+      const bad = d.limits.filter(l => violates(l, xv, val));
+      if (bad.length) msg += ' · <b style="color:' + theme.ui.bad + '">verletzt: ' + bad.map(l => l.label).join(', ') + '</b>';
+    }
     box.innerHTML = msg + ' <span class="unit">' + d.yl + '</span>';
   }
 }

@@ -7,6 +7,7 @@ import { frame, heading, axes, marker, text, turbo, contours } from './base.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { drawLimits, legendItems, drawLegendSwatch } from './limits.js';
+import { violates } from '../core/limits.js';
 
 const PI = Math.PI;
 
@@ -19,7 +20,9 @@ export function drawHeat(x, w, h, d) {
     x.fillStyle = turbo((d.z[j][i] - d.lo) / (d.hi - d.lo));
     x.fillRect(f.L + i * cw, f.T + f.ph - (j + 1) * ch, cw + 1, ch + 1);
   }
-  contours(x, f, d);
+  /* Kontur-Labels nicht in Ausschlussflächen setzen (dort unlesbar) */
+  contours(x, f, d, (xv, yv) =>
+    (d.limits || []).some(l => (l.severity || 'hard') === 'hard' && violates(l, xv, yv)));
 
   const mx0 = d.x[0], mx1 = d.x[d.x.length - 1], my0 = d.y[0], my1 = d.y[d.y.length - 1];
   const X = a => f.L + (a - mx0) / (mx1 - mx0) * f.pw;

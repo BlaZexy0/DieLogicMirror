@@ -50,8 +50,10 @@ export function axes(x, w, h, f, x0, x1, y0, y1, d) {
     x.strokeStyle = theme.chart.grid;
     x.beginPath(); x.moveTo(X, f.T); x.lineTo(X, h - f.B); x.stroke();
     x.beginPath(); x.moveTo(f.L, Y); x.lineTo(w - f.R, Y); x.stroke();
-    text(x, fmt(x0 + i * (x1 - x0) / 5), X, h - f.B + 18);
-    text(x, fmt(y1 - i * (y1 - y0) / 5), f.L - 7, Y + 4, 'right');
+    /* Winzige Float-Reste (z. B. −1e-13 statt 0) nicht als „-0" anzeigen */
+    const tx = x0 + i * (x1 - x0) / 5, ty = y1 - i * (y1 - y0) / 5;
+    text(x, fmt(Math.abs(tx) < Math.abs(x1 - x0) * 1e-9 ? 0 : tx), X, h - f.B + 18);
+    text(x, fmt(Math.abs(ty) < Math.abs(y1 - y0) * 1e-9 ? 0 : ty), f.L - 7, Y + 4, 'right');
   }
   text(x, d.xl, f.L + f.pw / 2, h - 11);
   x.save(); x.translate(14, f.T + f.ph / 2); x.rotate(-PI / 2); text(x, d.yl, 0, 0); x.restore();
@@ -91,7 +93,7 @@ export function turbo(t) {
 }
 
 /* Marching-Squares-Konturen mit Wertelabels. */
-export function contours(ctx, f, d) {
+export function contours(ctx, f, d, skipLabel) {
   const nx = d.x.length, ny = d.y.length, cw = f.pw / (nx - 1), ch = f.ph / (ny - 1);
   ctx.save();
   ctx.lineWidth = 1.15; ctx.strokeStyle = 'rgba(255,255,255,.95)';
@@ -111,7 +113,8 @@ export function contours(ctx, f, d) {
       if ((v[3] - L) * (v[0] - L) < 0) p.push([X(i), Y(j + 1 - cut(v[3], v[0]))]);
       if (p.length >= 2) {
         ctx.moveTo(p[0][0], p[0][1]); ctx.lineTo(p[1][0], p[1][1]);
-        if (!label && i > nx * 0.35 && i < nx * 0.65 && j > ny * 0.2 && j < ny * 0.8) label = p[0];
+        if (!label && i > nx * 0.35 && i < nx * 0.65 && j > ny * 0.2 && j < ny * 0.8
+          && !(skipLabel && skipLabel(d.x[i], d.y[j]))) label = p[0];
       }
     }
     ctx.stroke();
