@@ -60,7 +60,7 @@ function pqCore(v) {
   /* Minimale Füllzeit aus der Entlüftungsbedingung (Operational Window, Zone C):
      die verdrängte Luft V_luft muss durch A_ent mit höchstens v_luft,max entweichen. */
   const tVent = (v.vent > 0 && v.vAirMax > 0) ? (total(v) / v.density) / (v.vent * 1e-6 * v.vAirMax) : NaN;
-  return { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, pEnv, pReach, QtLo, QtHi, vaHydr, tVent };
+  return { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, pEnv, pReach, QtLo, QtHi, Alo, Ahi, vaHydr, tVent };
 }
 
 export default {
@@ -83,6 +83,12 @@ export default {
     const tfOp = Vag / Qs * 1000;
     const tfPlot = 2.5 * Math.max(tfOp, v.tmax || 0) || 500;
 
+    /* Achsen so wählen, dass die GESAMTE Erreichbarkeitsgrenze sichtbar ist:
+       x bis zum Nullpunkt der Ø-max-Parabel (Q_dry des größten Kolbens),
+       y bis zum statischen Druck des kleinsten Kolbens. */
+    const QmaxAll = Math.max(Qmax, c.Ahi > 0 ? c.Ahi * v.vmax : 0);
+    const pTop = Math.max(p0, c.Alo > 0 ? v.injForce * 1e3 / (c.Alo * 1e5) : p0);
+
     /* x-Achse: fx bildet Q → Achsenwert ab, ix ist die Umkehrung (für
        Kurvenschranken, die als Funktion des Achsenwerts ausgewertet werden). */
     let fx, ix, xl, Qlo = 0;
@@ -98,21 +104,23 @@ export default {
     if (yb === 'ph') {
       if (!(v.pAcc > 0)) return { err: 'Akkumulatordruck muss > 0 sein für die Hydraulikdruck-Achse.' };
       const sc = v.pAcc / p0;
-      fy = P => P * sc; yl = 'Hydraulikdruck (Antriebsseite) in bar'; yUnit = ' bar'; y1 = v.pAcc * 1.05;
+      fy = P => P * sc; yl = 'Hydraulikdruck (Antriebsseite) in bar'; yUnit = ' bar'; y1 = pTop * sc * 1.05;
     } else if (yb === 'pw') {
       fy = (P, Q) => P * 1e5 * Q / 1e6; yl = 'Leistung P·Q in MW'; yUnit = ' MW'; y1 = c.aMPE / 1e6 * 1.15;
     } else {
-      fy = P => P; yl = 'Metalldruck in bar'; yUnit = ' bar'; y1 = p0 * 1.05;
+      fy = P => P; yl = 'Metalldruck in bar'; yUnit = ' bar'; y1 = pTop * 1.05;
     }
 
-    const Qarr = seq(Math.max(Qlo, Qmax * 1e-4), Qmax, 160);
+    const Qarr = seq(Math.max(Qlo, QmaxAll * 1e-4), QmaxAll, 200);
     if (tb === 'tf') Qarr.reverse();
     const x = Qarr.map(fx);
 
     /* Hüllkurve/Erreichbarkeitsgrenze ist keine Serie mehr, sondern die
        Masken-Grenze unten (graue Deckfläche oberhalb, schwarze Frontlinie). */
     const ys = [
-      series('Maschine (Ø ' + fmt(v.diam) + ')', C.series4, Qarr, Q => fy(p0 * (1 - (Q / Qmax) * (Q / Qmax)), Q)),
+      /* Maschinenlinie endet bei Q_dry des gewählten Kolbens (NaN dahinter) */
+      series('Maschine (Ø ' + fmt(v.diam) + ')', C.series4, Qarr,
+        Q => Q <= Qmax ? fy(p0 * (1 - (Q / Qmax) * (Q / Qmax)), Q) : NaN),
       series('Werkzeug', C.series2, Qarr, Q => fy(Cdie * Q * Q, Q))
     ];
 
@@ -250,8 +258,9 @@ am Kolben, statischer Achsenabschnitt = P<sub>acc</sub>); der Leistungsmodus zei
 jedes Kolben-Ø berührt dort ihr Maximum exakt auf der a-Linie (bei v<sub>p</sub> = v<sub>dry</sub>/√3), die
 v<sub>a</sub>-Fenstergrenzen werden zu Ursprungsgeraden y = P(v<sub>a</sub>)·Q.
 <b>Hinweis:</b> die Hydraulik-Achse ist exakt für den gewählten Kolben; Kurven anderer Ø (Erreichbarkeits-
-grenze) sind auf dieser Achse nur umskalierter Metalldruck — ihre Werte oberhalb P<sub>acc</sub> sind keine
-realen Hydraulikdrücke und liegen außerhalb des gezeichneten Bereichs. Aktuell:
+grenze) sind auf dieser Achse nur umskalierter Metalldruck — ihre Werte oberhalb P<sub>acc</sub> sind
+Äquivalenzwerte, keine realen Hydraulikdrücke (ein kleinerer Kolben erzeugt mehr Metalldruck bei
+gleichem P<sub>acc</sub>). Aktuell:
 P<sub>acc</sub> = <b data-m="pAccM"></b> · a = <b data-m="aMPE2"></b></p>
 
 <h4>7 · Füllzeit- und v_a-Grenzen</h4>

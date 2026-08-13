@@ -41,6 +41,10 @@ export function renderKpis(el, v, shot) {
     Qs = Math.sqrt(p0 / (Cdie + p0 / (Qmax * Qmax)));
     ps = Cdie * Qs * Qs;
   }
+  /* Hüllkurven-Konstante a = (2√3/9)·F_G·v_dry (PQ²) und Leistung am Arbeitspunkt */
+  const aMPE = (v.injForce > 0 && v.vmax > 0)
+    ? (2 * Math.sqrt(3) / 9) * v.injForce * 1e3 * v.vmax / 1e6 : null;   // MW
+  const pwOp = Qs !== null ? ps * 1e5 * Qs / 1e6 : null;                 // MW
 
   /* Anschnittgeschwindigkeit: bevorzugt aus der Schusskurve (Bauteil gefüllt) */
   const gvStat = v.vsel * A / v.gate;
@@ -71,7 +75,11 @@ export function renderKpis(el, v, shot) {
     + group('Zuhaltung und Maschine',
       kpi('Benötigte Schließkraft', fmt(req / 10) + ' t', fmt(req) + ' kN / ' + fmt(v.force) + ' kN verfügbar', cap(req, v.force))
       + kpi('Max. Nachdruck', fmt(pMaxClamp) + ' bar', 'Zuhaltung · e = (' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k = ' + fmt(kClamp) + ' · S = ' + fmt(v.safety), cap(v.psel, pMaxClamp))
-      + kpi('Spez. Gießdruck', fmt(pSpec) + ' bar', 'Gießkraft / Kolbenfläche · Ziel ' + fmt(v.pSpecMin) + '–' + fmt(v.pSpecMax) + ' bar', band(pSpec, v.pSpecMin, v.pSpecMax)))
+      + kpi('Spez. Gießdruck', fmt(pSpec) + ' bar', 'Gießkraft / Kolbenfläche · Ziel ' + fmt(v.pSpecMin) + '–' + fmt(v.pSpecMax) + ' bar', band(pSpec, v.pSpecMin, v.pSpecMax))
+      + kpi('Hüllkurven-Konstante a', aMPE === null ? '—' : fmt(aMPE) + ' MW',
+        'Akku-Leistung (2√3/9)·F_G·v_dry (PQ²)'
+        + (pwOp === null ? '' : ' · Arbeitspunkt nutzt ' + fmt(pwOp) + ' MW'),
+        aMPE === null ? 'warn' : undefined))
 
     + group('Schusskurve und Anschnitt',
       kpi('Anschnittgeschwindigkeit', fmt(gvShown) + ' m/s',
