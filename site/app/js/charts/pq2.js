@@ -161,7 +161,7 @@ export default {
     q.limits.push(limit('mpe', 'Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW', 'y', 'max',
       xv => fy(c.pReach(ix(xv)), ix(xv)), { mask: true, note: 'unerreichbar (alle Ø)' }));
 
-    /* Grünes machbares Band (wie im (φ, L/D)-Fenster): Schnittmenge aller
+    /* Grünes machbares Band (wie im (φ, λ)-Fenster): Schnittmenge aller
        harten Grenzen. Oberhalb der Maschinenlinie des aktuellen Kolbens
        heller — Fenster erfüllt, aber nur mit anderem Ø erreichbar.
        Grenzen sind nur in der Legende benannt (kein Text im Diagramm). */

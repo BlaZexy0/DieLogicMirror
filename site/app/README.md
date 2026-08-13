@@ -34,7 +34,7 @@ Modi als klassisches Skript geladen und ist ohne Build direkt editierbar.
   unter `fields` entsprechen den Eingabefeld-Keys (siehe `js/config/fields.js`).
 - **`config/theme.js`** — komplettes Farbschema (`window.__THEME__`):
   UI-Farben (werden als CSS-Variablen gesetzt), Diagrammfarben (Serien, Marker,
-  Grenzlinien, Zielbänder), Farben/Linienfarben des (φ, L/D)-Fensters und die
+  Grenzlinien, Zielbänder), Farben/Linienfarben des (φ, λ)-Fensters und die
   Heatmap-Farbrampe. Bei eigenen Farben auf Kontrast und unterscheidbare
   Helligkeit der Serienfarben achten (Farbfehlsichtigkeit).
 
@@ -98,7 +98,7 @@ Ein Diagrammmodul kann optional `mathHTML()` (statisches Gleichungs-Markup) und
 `renderMath(el, v)` (füllt `data-m`-Platzhalter mit live berechneten Werten)
 exportieren. `chart.html` zeigt diesen Abschnitt dann als Karte
 „Mathematik & Herleitung" unter dem Diagramm — derzeit beim
-(φ, L/D)-Auslegungsfenster umgesetzt. Das Auslegungsfenster wird geometrisch
+(φ, λ)-Auslegungsfenster umgesetzt. Das Auslegungsfenster wird geometrisch
 gezeichnet: das machbare Band ist ein analytisch berechnetes Polygon
 (r_lo(φ) ≤ r ≤ r_hi(φ)), die Grenzen sind beschriftete Kurven, der Hover wertet
 die Formeln exakt aus.
@@ -127,7 +127,7 @@ ein Objekt pro Restriktion in `q.limits = [ … ]` (Erzeuger in
   geclippt (z. B. die Hüllkurve im PQ²).
 - `q.feasible = 'Label'` — füllt die Schnittmenge der erlaubten Seiten
   aller harten Grenzen grün (`theme.chart.okFill`, wie das machbare Band
-  im (φ, L/D)-Fenster) und setzt einen Legendeneintrag. Optional teilt
+  im (φ, λ)-Fenster) und setzt einen Legendeneintrag. Optional teilt
   `q.feasibleSplit = { fn, label }` das Band an einer Kurve: oberhalb
   heller gefüllt (z. B. Maschinenlinie im PQ² — Fenster erfüllt, aber
   nicht mit dem aktuellen Kolben-Ø erreichbar).
@@ -139,7 +139,7 @@ Linien- und Heatmap-Renderer zeichnen daraus Linien, Schraffuren und die
 Legende (render/limits.js); der Heatmap-Hover meldet verletzte Grenzen am
 Mauspunkt. Die Farbe kommt aus `theme.limits[id]` (config/theme.js) —
 gleiche id = gleiche Farbe in jedem Diagramm. Für machbare Bänder zwischen
-mehreren Kurvenschranken (wie im (φ, L/D)-Fenster) liefert
+mehreren Kurvenschranken (wie im (φ, λ)-Fenster) liefert
 `feasibleBand()` aus `js/core/limits.js` die Polygone samt bindender
 Grenze je Stützstelle. Eine neue Restriktion ist damit ein weiterer
 Eintrag im Array — Zeichnung, Legende und Hover kommen automatisch.
@@ -155,7 +155,7 @@ Variante pro Diagramm — Label/Note/Farbe einmal, Diagramme rufen nur noch
 Datei, kein Diagramm-Code. Kosten: Projektionen brauchen diagramm-lokale
 Zwischenwerte per `ctx` (Kopplung), und die geometrische Herleitung steht
 dann nicht mehr im Diagramm-Modul. Ausnahmen blieben ohnehin lokal
-(`vcrit` hängt an Sim-Zustand + Tab; das (φ, L/D)-Band geht über
+(`vcrit` hängt an Sim-Zustand + Tab; das (φ, λ)-Band geht über
 `feasibleBand()`). Noch nicht entschieden.
 
 ## Neues Diagramm hinzufügen

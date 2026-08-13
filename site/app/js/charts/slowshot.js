@@ -1,6 +1,6 @@
 /* Kritische Kolbengeschwindigkeit der 1. Phase als Heatmap — nach Nogowizin,
    identisch zur Prüfung in der Schusskurve und zur v_krit-Grenze im
-   (φ, L/D)-Auslegungsfenster. */
+   (φ, λ)-Auslegungsfenster. */
 
 import { heat } from './helpers.js';
 import { fmt } from '../core/format.js';
@@ -40,7 +40,7 @@ export default {
 Schwerewellen-Geschwindigkeit √(g·D) und fällt mit dem Füllgrad:</p>
 <div class="eq">v<sub>krit</sub>(D, φ) = ${sqrt('9,81 · D')} · f(φ)&emsp;mit&emsp;f(φ) = 1,386 − 1,915·φ + 0,615·φ²</div>
 <p class="math-note">Dieselbe Formel wird in der Schusskurven-Prüfung („1. Phase bis Kammer voll") und als
-v<sub>krit</sub>-Grenze im (φ, L/D)-Auslegungsfenster verwendet — alle drei Diagramme sind konsistent.
+v<sub>krit</sub>-Grenze im (φ, λ)-Auslegungsfenster verwendet — alle drei Diagramme sind konsistent.
 φ ist der Füllgrad inkl. Pressrest (Dosiergewicht).</p>
 <p class="math-note">Aktuell: φ = <b data-m="phi"></b> · v<sub>krit</sub>(Ø <span data-m="D"></span>) = <b data-m="vc"></b> ·
 gewählte v₁ = <b data-m="v1"></b> ⇒ <b data-m="cmp"></b></p>`;

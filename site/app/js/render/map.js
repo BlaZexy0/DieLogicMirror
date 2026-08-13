@@ -1,4 +1,4 @@
-/* (φ, L/D)-Auslegungskarte, geometrisch: das machbare Band wird als Polygon
+/* (φ, λ)-Auslegungskarte, geometrisch: das machbare Band wird als Polygon
    gefüllt, die Grenzen als analytische Kurven mit Beschriftung gezeichnet.
    Labels werden kollisionsfrei platziert: Grenzkurven-Labels haben Vorrang,
    Iso-Labels weichen aus oder entfallen. */

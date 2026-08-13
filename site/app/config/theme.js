@@ -2,7 +2,7 @@
    'ui' wird als CSS-Variablen auf die Seite angewendet, 'chart' wird von den
    Canvas-Renderern gelesen, 'limits' färbt die Grenzen/Restriktionen der
    Diagramme (Schlüssel = limit-id, Fallback chart.limit),
-   'map'/'mapLines' färben das (φ, L/D)-Auslegungsfenster, 'heatStops' ist
+   'map'/'mapLines' färben das (φ, λ)-Auslegungsfenster, 'heatStops' ist
    die Farbrampe der Heatmaps (RGB-Stützstellen von niedrig nach hoch).
    Hinweis: bei eigenen Farben auf ausreichenden Kontrast und
    unterscheidbare Helligkeit der Serienfarben achten (Farbfehlsichtigkeit). */

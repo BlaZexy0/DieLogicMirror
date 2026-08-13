@@ -73,7 +73,7 @@ export function showHover(card, ev) {
     const verdict = bad.length
       ? '<b style="color:' + theme.ui.bad + '">verletzt: ' + bad.map(k => MAP_LABELS[k]).join(', ') + '</b>'
       : '<b style="color:' + theme.ui.ok + '">MACHBAR</b>';
-    box.innerHTML = '<b>φ:</b> ' + fmt(xv) + ' % · <b>L/D:</b> ' + fmt(yv) + ' → <b>Ø</b> ' + fmt(D * 1000) + ' mm · <b>L</b> ' + fmt(L * 1000) + ' mm · <b>Pressrest</b> ' + fmt(b) + ' mm · <b>v_krit</b> ' + fmt(vc) + ' m/s · ' + verdict;
+    box.innerHTML = '<b>φ:</b> ' + fmt(xv) + ' % · <b>λ:</b> ' + fmt(yv) + ' → <b>Ø</b> ' + fmt(D * 1000) + ' mm · <b>L</b> ' + fmt(L * 1000) + ' mm · <b>Pressrest</b> ' + fmt(b) + ' mm · <b>v_krit</b> ' + fmt(vc) + ' m/s · ' + verdict;
     return;
   }
 

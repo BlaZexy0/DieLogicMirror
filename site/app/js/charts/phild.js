@@ -1,4 +1,4 @@
-/* (φ, L/D)-Auslegungsfenster: Machbarkeit der Füllkammer bei fester Dosiermenge.
+/* (φ, λ)-Auslegungsfenster: Machbarkeit der Füllkammer bei fester Dosiermenge.
 
    Geometrische Formulierung: Bei festem Dosiervolumen V legt jeder Punkt
    (φ, r = L/D) genau eine Kammer fest:
@@ -20,7 +20,7 @@ function fPhi(phi) { return 1.386 - 1.915 * phi + 0.615 * phi * phi; }
 
 export default {
   id: 'phild',
-  title: 'Auslegungsfenster (φ, L/D)',
+  title: 'Auslegungsfenster (φ, λ)',
   desc: 'Machbarkeit der Füllkammer bei fester Dosiermenge',
   inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'dmin', 'dmax', 'lmin', 'lmax', 'biscuitMin', 'v1sel', 'fillMin', 'fillMax', 'diam', 'length'],
 
@@ -103,8 +103,8 @@ export default {
       band, curves, iso, cur,
       fillMin: v.fillMin, fillMax: v.fillMax,
       params: { V, Vb, dmin: v.dmin, dmax: v.dmax, lmin: v.lmin, lmax: v.lmax, Db: Db * 1000, biscuitMin: v.biscuitMin, v1 },
-      xl: 'Anfangs-Füllgrad φ in %', yl: 'Kammerverhältnis L/D',
-      info: 'Dosiert ' + fmt(V * 1e6) + ' cm³ (inkl. Pressrest) · jedes (φ, L/D) legt genau eine Kammer (Ø, L) fest'
+      xl: 'Anfangs-Füllgrad φ in %', yl: 'Kammerverhältnis λ = L/D',
+      info: 'Dosiert ' + fmt(V * 1e6) + ' cm³ (inkl. Pressrest) · jedes (φ, λ) legt genau eine Kammer (Ø, L) fest'
     };
   },
 
@@ -118,7 +118,7 @@ export default {
 <p class="math-note">Aktuell: V = <b data-m="V"></b> · V<sub>b</sub> = <b data-m="Vb"></b></p>
 
 <h4>2 · Koordinaten und Transformation</h4>
-<p class="math-note">Achsen: Anfangs-Füllgrad φ = V / (A·L) und Kammerverhältnis r = L/D mit Kolbenfläche A = π·D²/4.
+<p class="math-note">Achsen: Anfangs-Füllgrad φ = V / (A·L) und Kammerverhältnis λ = L/D (in den Formeln kurz r) mit Kolbenfläche A = π·D²/4.
 Da das Dosiervolumen V fest ist, legt jeder Punkt (φ, r) genau eine Kammer fest:</p>
 <div class="eq">V = φ · ${frac('π · D²', '4')} · L</div>
 <div class="eq">D(φ, r) = ${cbrt(frac('4V', 'π · φ · r'), true)}&emsp;&emsp;L(φ, r) = r · D = ${cbrt(frac('4V · r²', 'π · φ'), true)}</div>
@@ -160,7 +160,7 @@ und die v<sub>krit</sub>-Kurve. Seine Ecken sind die vier Grenzkombinationen:</p
       const phi = 4 * V / (PI * Math.pow(Dmm / 1000, 2) * (Lmm / 1000));
       const r = Lmm / Dmm;
       const out = phi >= 1 ? ' — <span class="math-out">außerhalb (φ ≥ 100 %, Kammer zu klein)</span>' : '';
-      return '<li>Ø ' + fmt(Dmm) + ' × L ' + fmt(Lmm) + ' mm → φ = ' + fmt(phi * 100) + ' %, L/D = ' + fmt(r) + out + '</li>';
+      return '<li>Ø ' + fmt(Dmm) + ' × L ' + fmt(Lmm) + ' mm → φ = ' + fmt(phi * 100) + ' %, λ = ' + fmt(r) + out + '</li>';
     };
     set('corners', '<ul>'
       + corner(v.dmin, v.lmin) + corner(v.dmin, v.lmax)

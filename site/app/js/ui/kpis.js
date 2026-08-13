@@ -66,7 +66,7 @@ export function renderKpis(el, v, shot) {
       + kpi('Dosiervolumen', fmt(Vdos * 1e6) + ' cm³', 'inkl. Pressrest · Dichte ' + fmt(v.density) + ' kg/m³')
       + kpi('Materialausbeute', fmt(eta) + ' %', 'Bauteil / Dosiergewicht · Rest ist Kreislaufmaterial')
       + kpi('Füllgrad', fmt(fill) + ' %', 'Ziel ' + fmt(v.fillMin) + '–' + fmt(v.fillMax) + ' % · inkl. Pressrest', band(fill, v.fillMin, v.fillMax))
-      + kpi('Kammerverhältnis L/D', fmt(ratioLD), 'gewählte Kammer · Ø ' + fmt(v.diam) + ' × L ' + fmt(v.length) + ' mm')
+      + kpi('Kammerverhältnis λ', fmt(ratioLD), 'λ = L/D · gewählte Kammer · Ø ' + fmt(v.diam) + ' × L ' + fmt(v.length) + ' mm')
       + kpi('Kammer voll bei', fmt(sFill) + ' mm', 'Füllgrad inkl. Pressrest ' + fmt(fill) + ' %', cap(fill, 100))
       + kpi('Anschnitt erreicht', fmt(p1) + ' mm', 'nur Angussvolumen')
       + kpi('Gesamtschuss gefüllt', fmt(p3) + ' mm', 'inkl. Pressrest · Kammer ' + fmt(v.length) + ' mm' + (p3 > v.length ? ' · Überlauf!' : ''), cap(p3, v.length))

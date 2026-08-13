@@ -89,7 +89,7 @@ export function drawLimits(x, f, X, Y, d) {
      Frontlinie gezeichnet. */
   /* Zulässiger Bereich (d.feasible): Schnittmenge der erlaubten Seiten
      aller harten Grenzen, grün gefüllt wie das machbare Band im
-     (φ, L/D)-Auslegungsfenster. Liegt unter Schraffuren und Linien. */
+     (φ, λ)-Auslegungsfenster. Liegt unter Schraffuren und Linien. */
   if (d.feasible) {
     x.save();
     let any = false;
