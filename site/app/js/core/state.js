@@ -5,7 +5,7 @@
    Der Zustand wird in localStorage gespiegelt: Dashboard und Einzelseiten
    sehen dieselbe Auslegung, und ein Reload verliert nichts. */
 
-import { allFields, DEFAULT_CURVE } from '../config/fields.js';
+import { allFields, DEFAULT_CURVE, PRESET_DOMAINS } from '../config/fields.js';
 
 /* Der Schlüssel kommt aus dem gemeinsamen Vertrag (shared/contract.js,
    als klassisches Script vor den Modulen geladen) — dieselbe Quelle
@@ -16,7 +16,9 @@ const STORAGE_KEY = window.__DASH_CONTRACT__.STORAGE_KEY;
 export const state = {
   values: {},
   curve: DEFAULT_CURVE.map(p => p.slice()),
-  machine: ''
+  machine: '',
+  alloy: '',
+  part: ''
 };
 
 for (const f of allFields()) state.values[f.key] = f.def;
@@ -50,7 +52,9 @@ function loadPersisted() {
         .filter(p => Array.isArray(p) && p.length >= 2)
         .map(p => [Number(p[0]), Number(p[1])]);
     }
-    if (typeof data.machine === 'string') state.machine = data.machine;
+    for (const d of PRESET_DOMAINS) {
+      if (typeof data[d.stateKey] === 'string') state[d.stateKey] = data[d.stateKey];
+    }
   } catch (e) {
     console.warn('Gespeicherter Zustand konnte nicht geladen werden — Defaults werden verwendet.', e);
   }
@@ -59,7 +63,8 @@ function loadPersisted() {
 export function persist() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      values: state.values, curve: state.curve, machine: state.machine
+      values: state.values, curve: state.curve,
+      machine: state.machine, alloy: state.alloy, part: state.part
     }));
   } catch (e) { /* localStorage voll oder deaktiviert — Zustand lebt dann nur in der Seite */ }
 }
@@ -68,6 +73,6 @@ export function persist() {
 export function resetState() {
   for (const f of allFields()) state.values[f.key] = f.def;
   state.curve = DEFAULT_CURVE.map(p => p.slice());
-  state.machine = '';
+  for (const d of PRESET_DOMAINS) state[d.stateKey] = '';
   persist();
 }

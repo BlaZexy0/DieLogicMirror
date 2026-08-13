@@ -145,9 +145,30 @@ test('fields: keine doppelten Schlüssel', () => {
   assert.equal(new Set(keys).size, keys.length);
 });
 
-test('fields: Maschinenwerte-Gruppe entspricht exakt PRESET_KEYS', () => {
-  const bundle = groups.find(g => g.preset).fields.map(f => f.key).sort();
-  assert.deepEqual(bundle, Object.keys(PRESET_KEYS).sort());
+test('fields: Preset-Gruppen entsprechen exakt PRESET_KEYS (key → Domäne)', () => {
+  const expected = {};
+  for (const g of groups) {
+    if (g.preset) for (const f of g.fields) expected[f.key] = g.preset;
+  }
+  assert.deepEqual(PRESET_KEYS, expected);
+  /* Jede Preset-Domäne hat genau eine Feldgruppe. */
+  const domains = groups.filter(g => g.preset).map(g => g.preset).sort();
+  assert.deepEqual(domains, ['alloy', 'machine', 'part']);
+});
+
+test('presets: Alle Legierungs-/Bauteil-Preset-Felder sind Felder ihrer Domäne', () => {
+  const require2 = createRequire(import.meta.url);
+  require2(path.join(site, 'app/config/alloys.js'));
+  require2(path.join(site, 'app/config/parts.js'));
+  for (const [list, dom] of [[globalThis.__ALLOYS__.alloys, 'alloy'], [globalThis.__PARTS__.parts, 'part']]) {
+    assert.ok(list.length > 0);
+    for (const p of list) {
+      for (const k of Object.keys(p.fields)) {
+        assert.equal(PRESET_KEYS[k], dom, `Preset „${p.id}": Feld „${k}" gehört nicht zur Domäne ${dom}`);
+        assert.ok(Number.isFinite(p.fields[k]), `Preset „${p.id}": Feld „${k}" nicht numerisch`);
+      }
+    }
+  }
 });
 
 /* ── 5 · Rechenlogik der STL-Seite ───────────────────────────── */
@@ -210,11 +231,12 @@ test('stl-logic: keine geeignete Maschine → pref null', () => {
   assert.equal(pref, null);
 });
 
-test('machines: jedes Preset setzt genau die PRESET_KEYS, plausibel', () => {
+test('machines: jedes Preset setzt genau die Maschinen-PRESET_KEYS, plausibel', () => {
+  const machineKeys = Object.keys(PRESET_KEYS).filter(k => PRESET_KEYS[k] === 'machine').sort();
   assert.ok(MACHINES.length > 0);
   for (const m of MACHINES) {
-    assert.deepEqual(Object.keys(m.fields).sort(), Object.keys(PRESET_KEYS).sort(),
-      `Preset „${m.id}" weicht von PRESET_KEYS ab`);
+    assert.deepEqual(Object.keys(m.fields).sort(), machineKeys,
+      `Preset „${m.id}" weicht von den Maschinen-PRESET_KEYS ab`);
     for (const [k, v] of Object.entries(m.fields))
       assert.ok(Number.isFinite(v) && v > 0, `Preset „${m.id}": ${k} muss > 0 sein`);
     assert.ok(m.fields.dmin < m.fields.dmax, `Preset „${m.id}": dmin < dmax verletzt`);

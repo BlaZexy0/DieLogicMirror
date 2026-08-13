@@ -32,6 +32,17 @@ Modi als klassisches Skript geladen und ist ohne Build direkt editierbar.
 - **`config/machines.js`** — Maschinen-Presets (`window.__MACHINES__`).
   Neuer Eintrag in der Liste = neue Maschine im Auswahlmenü. Die Feldnamen
   unter `fields` entsprechen den Eingabefeld-Keys (siehe `js/config/fields.js`).
+- **`config/alloys.js`** — Legierungs-Presets (`window.__ALLOYS__`): Dichte,
+  Gieß-/Fließtemperatur, Z- und Erstarrungskonstante je Legierung.
+- **`config/parts.js`** — Bauteiltyp-Presets (`window.__PARTS__`), z. B.
+  Strukturgussteil: Wandstärken, Formtemperatur, zul. Erstarrung, NADCA-Faktor.
+
+Alle drei Preset-Domänen funktionieren gleich (definiert in
+`js/config/fields.js`, `PRESET_DOMAINS`): bei gewähltem Preset ist die
+zugehörige Feldgruppe ausgeblendet und eine Zusammenfassung unter dem Select
+zeigt die übernommenen Werte; Handänderung eines Preset-Felds springt zurück
+auf „manuell". Eine neue Domäne = Eintrag in `PRESET_DOMAINS`, Feldgruppe mit
+`preset: '<id>'`, config-Datei und Select in beiden HTML-Seiten.
 - **`config/theme.js`** — komplettes Farbschema (`window.__THEME__`):
   UI-Farben (werden als CSS-Variablen gesetzt), Diagrammfarben (Serien, Marker,
   Grenzlinien, Zielbänder), Farben/Linienfarben des (φ, λ)-Fensters und die

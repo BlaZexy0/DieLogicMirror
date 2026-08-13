@@ -62,7 +62,8 @@ export function exportShotCSV(shot) {
 
 /* Komplette Auslegung (Werte + Kurve + Preset) als JSON-Datei. */
 export function saveStateJSON() {
-  const data = { values: state.values, curve: state.curve, machine: state.machine };
+  const data = { values: state.values, curve: state.curve,
+    machine: state.machine, alloy: state.alloy, part: state.part };
   download(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'DieLogic_Auslegung.json');
   const sb = document.getElementById('saveBtn');
   if (sb) {
@@ -84,6 +85,8 @@ export function loadStateJSON(file) {
         renderCurveTable();
       }
       state.machine = data.machine || '';
+      state.alloy = data.alloy || '';
+      state.part = data.part || '';
       const ms = document.getElementById('machineSel');
       if (ms) ms.value = state.machine;
       notify();

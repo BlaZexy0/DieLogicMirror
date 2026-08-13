@@ -1,49 +1,73 @@
-/* Maschinen-Preset-Auswahl: befüllt das Select aus config/machines.json und
-   wendet ein gewähltes Preset auf die Eingabefelder an. Bei gewähltem Preset
-   sind die Preset-Feldgruppen ausgeblendet; eine Zusammenfassung unter dem
-   Select zeigt die übernommenen Werte. */
+/* Preset-Auswahlen (Maschine, Legierung, Bauteiltyp): befüllt je Domäne das
+   Select aus der zugehörigen config-Datei und wendet ein gewähltes Preset auf
+   die Eingabefelder an. Bei gewähltem Preset ist die zugehörige Feldgruppe
+   ausgeblendet; eine Zusammenfassung unter dem Select zeigt die übernommenen
+   Werte. Die Domänen sind in js/config/fields.js (PRESET_DOMAINS) definiert. */
 
-import { loadMachines, machines, machineById } from '../core/machines.js';
+import { allFields, PRESET_DOMAINS } from '../config/fields.js';
 import { state, subscribe, notify } from '../core/state.js';
 import { applyValues, updatePresetVisibility } from './inputs.js';
 
-function summaryHTML(m) {
-  const f = m.fields;
-  return 'F<sub>s</sub> ' + f.force + ' kN · F<sub>gieß</sub> ' + f.injForce + ' kN · ' +
-    'v<sub>max</sub> ' + f.vmax + ' m/s · a<sub>max</sub> ' + f.amax + ' m/s² · ' +
-    'Ø ' + f.dmin + '–' + f.dmax + ' mm · L ' + f.lmin + '–' + f.lmax + ' mm · ' +
-    'Säulen ' + f.tieX + ' × ' + f.tieY + ' mm';
+const FIELD_DEFS = {};
+allFields().forEach(f => { FIELD_DEFS[f.key] = f; });
+
+const lists = {};   // Domänen-id → Preset-Array aus window[global]
+
+export function presetList(dom) {
+  if (!lists[dom.id]) {
+    const data = window[dom.global];
+    if (!data) throw new Error(dom.config + ' nicht geladen (window.' + dom.global + ' fehlt).');
+    lists[dom.id] = data[dom.listKey] || [];
+  }
+  return lists[dom.id];
 }
 
-function syncUI(sel, sum) {
-  sel.value = state.machine || '';
-  const m = machineById(state.machine);
-  sum.hidden = !m;
-  sum.innerHTML = m ? summaryHTML(m) : '';
-  updatePresetVisibility();
+export function presetById(dom, id) {
+  return presetList(dom).find(p => p.id === id) || null;
 }
 
-export async function initPresetSelect(sel) {
-  await loadMachines();
-  machines.forEach(m => {
+/* Übernommene Werte als Kurzzusammenfassung (Labels + Einheiten aus fields.js). */
+function summaryHTML(p) {
+  return Object.entries(p.fields).map(([k, val]) => {
+    const f = FIELD_DEFS[k];
+    return (f ? f.label : k) + ' <b>' + val + (f && f.unit ? '&nbsp;' + f.unit : '') + '</b>';
+  }).join(' · ');
+}
+
+export function initPresetSelect(dom, sel) {
+  presetList(dom).forEach(p => {
     const op = document.createElement('option');
-    op.value = m.id;
-    op.textContent = m.name;
+    op.value = p.id;
+    op.textContent = p.name;
     sel.appendChild(op);
   });
 
   const sum = document.createElement('p');
   sum.className = 'group-note';
-  sum.id = 'presetSummary';
   sel.insertAdjacentElement('afterend', sum);
 
   sel.onchange = () => {
-    state.machine = sel.value;
-    const m = machineById(sel.value);
-    if (m) applyValues(m.fields);
+    state[dom.stateKey] = sel.value;
+    const p = presetById(dom, sel.value);
+    if (p) applyValues(p.fields);
     notify();
   };
 
-  subscribe(() => syncUI(sel, sum));
-  syncUI(sel, sum);
+  const sync = () => {
+    sel.value = state[dom.stateKey] || '';
+    const p = presetById(dom, state[dom.stateKey]);
+    sum.hidden = !p;
+    sum.innerHTML = p ? summaryHTML(p) : '';
+    updatePresetVisibility();
+  };
+  subscribe(sync);
+  sync();
+}
+
+/* Alle Domänen initialisieren, deren Select im Dokument existiert. */
+export function initPresetSelects() {
+  for (const dom of PRESET_DOMAINS) {
+    const sel = document.getElementById(dom.selId);
+    if (sel) initPresetSelect(dom, sel);
+  }
 }

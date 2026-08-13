@@ -5,7 +5,7 @@ import { state, subscribe, notify, resetState } from './core/state.js';
 import { computeShot } from './core/physics.js';
 import { charts } from './charts/registry.js';
 import { buildInputs, validate, highlightInputs, clearHighlights, applyValues } from './ui/inputs.js';
-import { initPresetSelect } from './ui/presets.js';
+import { initPresetSelects } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
 import { renderKpis } from './ui/kpis.js';
 import { buildCard, renderCard } from './ui/cards.js';
@@ -37,7 +37,7 @@ function render() {
 
 async function init() {
   await loadTheme();
-  await initPresetSelect(document.getElementById('machineSel'));
+  initPresetSelects();
   buildInputs(document.getElementById('groups'));
   renderCurveTable();
   wireAddPoint(document.getElementById('addPoint'));
@@ -49,8 +49,10 @@ async function init() {
   document.getElementById('resetBtn').onclick = () => {
     resetState();
     applyValues(state.values);
-    const ms = document.getElementById('machineSel');
-    if (ms) ms.value = '';
+    ['machineSel', 'alloySel', 'partSel'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (sel) sel.value = '';
+    });
     renderCurveTable();
     notify();
   };

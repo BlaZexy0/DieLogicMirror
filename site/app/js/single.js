@@ -5,7 +5,7 @@ import { loadTheme } from './core/theme.js';
 import { state, subscribe } from './core/state.js';
 import { computeShot } from './core/physics.js';
 import { charts, chartsById } from './charts/registry.js';
-import { PRESET_KEYS } from './config/fields.js';
+import { PRESET_KEYS, PRESET_DOMAINS } from './config/fields.js';
 import { buildInputs, validate } from './ui/inputs.js';
 import { initPresetSelect } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
@@ -42,10 +42,12 @@ async function init() {
   });
   nav.onchange = () => { location.href = 'chart.html?id=' + nav.value; };
 
-  /* Maschinen-Preset nur zeigen, wenn das Diagramm Preset-Felder nutzt */
-  const showPreset = def.inputs.some(k => PRESET_KEYS[k]);
-  if (showPreset) await initPresetSelect(document.getElementById('machineSel'));
-  else document.getElementById('preset-group').style.display = 'none';
+  /* Preset-Auswahlen nur zeigen, wenn das Diagramm Felder der Domäne nutzt */
+  for (const dom of PRESET_DOMAINS) {
+    const uses = def.inputs.some(k => PRESET_KEYS[k] === dom.id);
+    if (uses) initPresetSelect(dom, document.getElementById(dom.selId));
+    else document.getElementById(dom.groupElId).style.display = 'none';
+  }
 
   buildInputs(document.getElementById('groups'), new Set(def.inputs));
 

@@ -1,8 +1,11 @@
 /* Baut die Eingabe-Sidebar aus der Felddefinition, validiert Grenzen und
    hebt auf Wunsch die Eingaben eines Diagramms hervor. */
 
-import { groups, PRESET_KEYS } from '../config/fields.js';
+import { groups, PRESET_KEYS, PRESET_DOMAINS } from '../config/fields.js';
 import { state, notify } from '../core/state.js';
+
+const DOMAIN_BY_ID = {};
+PRESET_DOMAINS.forEach(d => { DOMAIN_BY_ID[d.id] = d; });
 
 function fieldHTML(f) {
   const label = '<label>' + f.label +
@@ -46,7 +49,7 @@ export function buildInputs(container, onlyKeys = null) {
     const el = document.createElement('div');
     el.className = 'group' + (g.wide ? ' wide' : '');
     el.dataset.group = g.id;
-    if (g.preset) el.dataset.preset = '1';
+    if (g.preset) el.dataset.preset = g.preset;
     el.innerHTML = '<h3>' + g.title + '</h3>' + inner +
       (g.note ? '<p class="group-note">' + g.note + '</p>' : '');
     container.appendChild(el);
@@ -57,21 +60,25 @@ export function buildInputs(container, onlyKeys = null) {
     e.value = state.values[e.dataset.k];
     e.oninput = () => {
       state.values[e.dataset.k] = e.tagName === 'SELECT' ? e.value : Number(e.value);
-      if (PRESET_KEYS[e.dataset.k]) {
-        state.machine = '';
-        const ms = document.getElementById('machineSel');
-        if (ms) ms.value = '';
+      /* Handänderung eines Preset-Felds → zugehörige Domäne auf „manuell" */
+      const dom = DOMAIN_BY_ID[PRESET_KEYS[e.dataset.k]];
+      if (dom) {
+        state[dom.stateKey] = '';
+        const sel = document.getElementById(dom.selId);
+        if (sel) sel.value = '';
       }
       notify();
     };
   });
 }
 
-/* Preset-Feldgruppen nur im Modus „manuell" zeigen — bei gewähltem
-   Maschinen-Preset kommen die Werte aus dem Preset und sind ausgeblendet. */
+/* Preset-Feldgruppen nur im Modus „manuell" zeigen — bei gewähltem Preset
+   der jeweiligen Domäne kommen die Werte aus dem Preset und sind ausgeblendet. */
 export function updatePresetVisibility() {
-  const hide = !!state.machine;
-  document.querySelectorAll('.group[data-preset]').forEach(el => { el.hidden = hide; });
+  document.querySelectorAll('.group[data-preset]').forEach(el => {
+    const dom = DOMAIN_BY_ID[el.dataset.preset];
+    el.hidden = !!(dom && state[dom.stateKey]);
+  });
 }
 
 /* Werte programmatisch setzen (Preset, JSON-Import) — aktualisiert Zustand
@@ -124,12 +131,13 @@ export function validate(v) {
     e.classList.toggle('invalid', bad.has(e.dataset.k)));
 
   /* Ungültige Preset-Felder sind bei gewähltem Preset ausgeblendet —
-     dann stattdessen die Preset-Auswahl selbst markieren. */
-  const ms = document.getElementById('machineSel');
-  if (ms) {
-    const presetBad = !!state.machine && [...bad].some(k => PRESET_KEYS[k]);
-    ms.classList.toggle('invalid', presetBad);
-    if (presetBad) msgs.push('Maschinenwerte des gewählten Presets ungültig — Preset prüfen oder „manuell" wählen');
+     dann stattdessen die jeweilige Preset-Auswahl markieren. */
+  for (const dom of PRESET_DOMAINS) {
+    const sel = document.getElementById(dom.selId);
+    if (!sel) continue;
+    const presetBad = !!state[dom.stateKey] && [...bad].some(k => PRESET_KEYS[k] === dom.id);
+    sel.classList.toggle('invalid', presetBad);
+    if (presetBad) msgs.push('Werte des gewählten ' + dom.title + 's ungültig — Preset prüfen oder „manuell" wählen');
   }
 
   const err = document.getElementById('error');

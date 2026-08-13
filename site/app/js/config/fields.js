@@ -2,9 +2,22 @@
    Die 'key'-Namen sind die kanonischen Feldnamen — Charts referenzieren sie
    in ihrer inputs-Liste, Maschinen-Presets (config/machines.json) setzen sie. */
 
+/* Preset-Domänen: jede hat ein Select in der Sidebar, einen Zustands-Schlüssel
+   (state[stateKey]) und eine Feldgruppe (groups[].preset === id), die bei
+   gewähltem Preset ausgeblendet ist. Die Listen kommen aus config/<config>
+   (klassisches Script, setzt window[global]). */
+export const PRESET_DOMAINS = [
+  { id: 'machine', title: 'Maschinen-Preset', stateKey: 'machine', selId: 'machineSel',
+    groupElId: 'preset-group', global: '__MACHINES__', listKey: 'machines', config: 'config/machines.js' },
+  { id: 'alloy', title: 'Legierungs-Preset', stateKey: 'alloy', selId: 'alloySel',
+    groupElId: 'alloy-preset-group', global: '__ALLOYS__', listKey: 'alloys', config: 'config/alloys.js' },
+  { id: 'part', title: 'Bauteiltyp-Preset', stateKey: 'part', selId: 'partSel',
+    groupElId: 'part-preset-group', global: '__PARTS__', listKey: 'parts', config: 'config/parts.js' }
+];
+
 export const groups = [
   {
-    id: 'machineFields', title: 'Maschinenwerte', preset: true,
+    id: 'machineFields', title: 'Maschinenwerte', preset: 'machine',
     note: 'Diese Felder setzt das Maschinen-Preset. Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
     fields: [
       { key: 'force',    label: 'Maschinenkraft',          unit: 'kN',   def: 13500 },
@@ -35,11 +48,21 @@ export const groups = [
   {
     id: 'mass', title: 'Massenbilanz',
     fields: [
-      { key: 'part',     label: 'Bauteilgewicht',   unit: 'kg',    def: 12 },
-      { key: 'runner',   label: 'Angussgewicht',    unit: 'kg',    def: 3 },
-      { key: 'overflow', label: 'Überlaufgewicht',  unit: 'kg',    def: 2 },
-      { key: 'biscuit',  label: 'Pressrestgewicht', unit: 'kg',    def: 1.2 },
-      { key: 'density',  label: 'Dichte',           unit: 'kg/m³', def: 2700 }
+      { key: 'part',     label: 'Bauteilgewicht',   unit: 'kg', def: 12 },
+      { key: 'runner',   label: 'Angussgewicht',    unit: 'kg', def: 3 },
+      { key: 'overflow', label: 'Überlaufgewicht',  unit: 'kg', def: 2 },
+      { key: 'biscuit',  label: 'Pressrestgewicht', unit: 'kg', def: 1.2 }
+    ]
+  },
+  {
+    id: 'alloyFields', title: 'Legierungswerte', preset: 'alloy',
+    note: 'Diese Felder setzt das Legierungs-Preset (config/alloys.js). Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
+    fields: [
+      { key: 'density', label: 'Dichte',            unit: 'kg/m³',  def: 2700 },
+      { key: 'Tcast',   label: 'Gießtemperatur',    unit: '°C',     def: 660 },
+      { key: 'Tflow',   label: 'Min. Fließtemp.',   unit: '°C',     def: 580 },
+      { key: 'Zconst',  label: 'Z-Konstante',       unit: '°C/%',   def: 4.8 },
+      { key: 'solK',    label: 'Erstarrungskonstante', unit: 'ms/mm²', def: 10 }
     ]
   },
   {
@@ -81,38 +104,39 @@ export const groups = [
     ]
   },
   {
-    id: 'geometry', title: 'Bauteilgeometrie und Thermik', wide: true,
+    id: 'partFields', title: 'Bauteilgeometrie und Thermik', preset: 'part', wide: true,
+    note: 'Diese Felder setzt das Bauteiltyp-Preset (config/parts.js). Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
     fields: [
       { key: 'wall',    label: 'Wandstärke',      unit: 'mm',    def: 3.5 },
       { key: 'wallMin', label: 'Wandstärke min.', unit: 'mm',    def: 1.5 },
       { key: 'wallMax', label: 'Wandstärke max.', unit: 'mm',    def: 8 },
-      { key: 'Tcast',   label: 'Gießtemperatur',  unit: '°C',    def: 660 },
-      { key: 'Tflow',   label: 'Min. Fließtemp.', unit: '°C',    def: 580 },
       { key: 'Tdie',    label: 'Formtemperatur',  unit: '°C',    def: 200 },
       { key: 'Sfrac',   label: 'Zul. Erstarrung', unit: '%',     def: 20 },
-      { key: 'Zconst',  label: 'Z-Konstante',     unit: '°C/%',  def: 4.8 },
       { key: 'kfill',   label: 'NADCA-Faktor k',  unit: 'ms/mm', def: 35 }
     ]
   },
   {
     id: 'hydraulics', title: 'Hydraulik und Ausbringung', wide: true,
     fields: [
-      { key: 'Cd',         label: 'Durchflussbeiwert',        unit: '-',      def: 0.5 },
-      { key: 'pAcc',       label: 'Akkumulatordruck',         unit: 'bar',    def: 160 },
-      { key: 'pSpecMin',   label: 'Ziel-Gießdruck min.',      unit: 'bar',    def: 800 },
-      { key: 'pSpecMax',   label: 'Ziel-Gießdruck max.',      unit: 'bar',    def: 1200 },
-      { key: 'vAirMax',    label: 'Max. Entlüftungsgeschw.',  unit: 'm/s',    def: 150 },
-      { key: 'biscuitMin', label: 'Pressrest min.',           unit: 'mm',     def: 25 },
-      { key: 'gateTh',     label: 'Anschnittdicke',           unit: 'mm',     def: 3 },
-      { key: 'solK',       label: 'Erstarrungskonstante',     unit: 'ms/mm²', def: 10 },
-      { key: 'intTime',    label: 'Nachdruckzeit',            unit: 'ms',     def: 60 }
+      { key: 'Cd',         label: 'Durchflussbeiwert',        unit: '-',   def: 0.5 },
+      { key: 'pAcc',       label: 'Akkumulatordruck',         unit: 'bar', def: 160 },
+      { key: 'pSpecMin',   label: 'Ziel-Gießdruck min.',      unit: 'bar', def: 800 },
+      { key: 'pSpecMax',   label: 'Ziel-Gießdruck max.',      unit: 'bar', def: 1200 },
+      { key: 'vAirMax',    label: 'Max. Entlüftungsgeschw.',  unit: 'm/s', def: 150 },
+      { key: 'biscuitMin', label: 'Pressrest min.',           unit: 'mm',  def: 25 },
+      { key: 'gateTh',     label: 'Anschnittdicke',           unit: 'mm',  def: 3 },
+      { key: 'intTime',    label: 'Nachdruckzeit',            unit: 'ms',  def: 60 }
     ]
   }
 ];
 
-/* Felder, die von Maschinen-Presets gesetzt werden. Handänderung eines dieser
-   Felder setzt die Preset-Auswahl auf „manuell" zurück. */
-export const PRESET_KEYS = { force: 1, vmax: 1, amax: 1, dmin: 1, dmax: 1, lmin: 1, lmax: 1, injForce: 1, tieX: 1, tieY: 1 };
+/* Felder, die von einem Preset gesetzt werden: key → Domänen-id. Handänderung
+   eines dieser Felder setzt die jeweilige Preset-Auswahl auf „manuell" zurück.
+   Abgeleitet aus den Feldgruppen mit preset-Domäne. */
+export const PRESET_KEYS = {};
+for (const g of groups) {
+  if (g.preset) for (const f of g.fields) PRESET_KEYS[f.key] = g.preset;
+}
 
 /* Standard-Schusskurve: Wegpunkte [s in mm, v in m/s]. */
 export const DEFAULT_CURVE = [[60, 0.4], [318, 0.4], [470, 4], [675, 4]];

@@ -31,6 +31,16 @@
           <select id="machineSel"><option value="">— manuell —</option></select>
           <p class="group-note">Presets kommen aus <code>config/machines.js</code>.</p>
         </div>
+        <div class="group" id="alloy-preset-group">
+          <h3>Legierungs-Preset</h3>
+          <select id="alloySel"><option value="">— manuell —</option></select>
+          <p class="group-note">Presets kommen aus <code>config/alloys.js</code>.</p>
+        </div>
+        <div class="group" id="part-preset-group">
+          <h3>Bauteiltyp-Preset</h3>
+          <select id="partSel"><option value="">— manuell —</option></select>
+          <p class="group-note">Presets kommen aus <code>config/parts.js</code>.</p>
+        </div>
         <div class="group" id="curve-group">
           <h3>Schusskurve (1. + 2. Phase)</h3>
           <p class="curve-note">Wegpunkte als Weg s [mm] / Kolbengeschwindigkeit v [m/s]. Zwischen den Punkten wird konstant beschleunigt; der Ursprung (0&nbsp;mm, 0&nbsp;m/s) wird automatisch ergänzt.</p>
@@ -55,6 +65,8 @@
 
   <script src="config/theme.js"></script>
   <script src="config/machines.js"></script>
+  <script src="config/alloys.js"></script>
+  <script src="config/parts.js"></script>
   <script src="shared/contract.js"></script>
   <script src="shared/clampmodel.js"></script>
   <script type="module" src="js/single.js"></script>
