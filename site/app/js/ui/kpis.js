@@ -80,7 +80,7 @@ export function renderKpis(el, v, shot, chamberEl) {
     group('Zuhaltung und Maschine',
       kpi('Benötigte Schließkraft', fmt(req / 10) + ' t', fmt(req) + ' kN / ' + fmt(v.force) + ' kN verfügbar', cap(req, v.force))
       + kpi('Max. Nachdruck', fmt(pMaxClamp) + ' bar', 'Zuhaltung · e = (' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k = ' + fmt(kClamp) + ' · S = ' + fmt(v.safety), cap(v.psel, pMaxClamp))
-      + kpi('Spez. Gießdruck', fmt(pSpec) + ' bar', 'Gießkraft / Kolbenfläche · Ziel ' + fmt(v.pSpecMin) + '–' + fmt(v.pSpecMax) + ' bar', band(pSpec, v.pSpecMin, v.pSpecMax))
+      + kpi('Spez. Gießdruck', fmt(pSpec) + ' bar', 'Gießkraft / Kolbenfläche · Band Bedarf ' + fmt(v.psel) + ' – Zuhaltung ' + fmt(pMaxClamp) + ' bar', band(pSpec, v.psel, pMaxClamp))
       + kpi('Hüllkurven-Konstante a', aMPE === null ? '—' : fmt(aMPE) + ' MW',
         'Akku-Leistung (2√3/9)·F_G·v_dry (PQ²)'
         + (pwOp === null ? '' : ' · Arbeitspunkt nutzt ' + fmt(pwOp) + ' MW'),
@@ -109,7 +109,7 @@ export function renderKpis(el, v, shot, chamberEl) {
       + kpi('Entlüftungsbedarf', fmt(Areq) + ' mm²',
         'bei t_f ' + fmt(tOp) + ' ms (v₂-Mittel) · vorhanden ' + fmt(v.vent) + ' mm²', isFinite(Areq) ? cap(Areq, v.vent) : 'warn')
       + kpi('Anschnitt-Erstarrung', fmt(tErst) + ' ms',
-        'k·s² bei s = ' + fmt(v.gateTh) + ' mm · Nachdruck ' + fmt(v.intTime) + ' ms', tErst < v.intTime ? 'bad' : 'ok')
+        'k·s² bei s = ' + fmt(v.gateTh) + ' mm · Nachdruckaufbau ' + fmt(v.intTime) + ' ms', tErst < v.intTime ? 'bad' : 'ok')
       + (shot.error
         ? kpi('Kurve vs. Maschinenlimits', '—', 'Schusskurve ungültig', 'warn')
         : (() => {

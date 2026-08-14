@@ -29,7 +29,9 @@ export const groups = [
       { key: 'lmin',     label: 'Kammerlänge min.',        unit: 'mm',   def: 500 },
       { key: 'lmax',     label: 'Kammerlänge max.',        unit: 'mm',   def: 900 },
       { key: 'tieX',     label: 'Säulenabstand horizontal', unit: 'mm',  def: 1100 },
-      { key: 'tieY',     label: 'Säulenabstand vertikal',   unit: 'mm',  def: 1100 }
+      { key: 'tieY',     label: 'Säulenabstand vertikal',   unit: 'mm',  def: 1100 },
+      { key: 'pAcc',     label: 'Akkumulatordruck',         unit: 'bar', def: 160 },
+      { key: 'intTime',  label: 'Nachdruckaufbauzeit',      unit: 'ms',  def: 60 }
     ]
   },
   {
@@ -70,14 +72,17 @@ export const groups = [
     fields: [
       { key: 'diam',   label: 'Gewählter Kolben-Ø',    unit: 'mm', def: 150 },
       { key: 'length', label: 'Gewählte Kammerlänge',  unit: 'mm', def: 700 },
-      { key: 'sealStroke', label: 'Einfüllöffnung verschlossen', unit: 'mm', def: 150 }
+      { key: 'sealStroke', label: 'Einfüllöffnung verschlossen', unit: 'mm', def: 150 },
+      { key: 'biscuitMin', label: 'Pressrest min.',    unit: 'mm', def: 25 }
     ]
   },
   {
     id: 'gating', title: 'Anschnitt',
     fields: [
-      { key: 'gate',   label: 'Anschnittfläche', unit: 'mm²', def: 1800 },
-      { key: 'gateTh', label: 'Anschnittdicke',  unit: 'mm',  def: 3 }
+      { key: 'gate',   label: 'Anschnittfläche',      unit: 'mm²', def: 1800 },
+      { key: 'gateTh', label: 'Anschnittdicke',       unit: 'mm',  def: 3 },
+      { key: 'Cd',     label: 'Durchflussbeiwert',    unit: '-',   def: 0.5 },
+      { key: 'Jatom',  label: 'Zerstäubungsfaktor J', unit: '-',   def: 750 }
     ]
   },
   {
@@ -87,6 +92,7 @@ export const groups = [
       { key: 'vacModel', label: 'Vakuum-Modell', unit: '', def: 'aus', type: 'select',
         options: [['aus', 'ohne Vakuum'], ['ideal', 'Idealpumpe (Enddruck)'], ['conductance', 'Entlüftung (Drossel)']] },
       { key: 'vent', label: 'Entlüftungsfläche', unit: 'mm²', def: 800 },
+      { key: 'vAirMax',  label: 'Max. Entlüftungsgeschw.', unit: 'm/s', def: 150 },
       { key: 'vacPump',  label: 'Pumpen-Enddruck',    unit: 'mbar', def: 80 },
       { key: 'vacStart', label: 'Vakuum ab Kolbenweg', unit: 'mm',  def: 150 }
     ]
@@ -115,19 +121,6 @@ export const groups = [
       { key: 'kfill',   label: 'NADCA-Faktor k',  unit: 'ms/mm', def: 35 }
     ]
   },
-  {
-    id: 'hydraulics', title: 'Hydraulik und Ausbringung', wide: true,
-    fields: [
-      { key: 'Cd',         label: 'Durchflussbeiwert',        unit: '-',   def: 0.5 },
-      { key: 'pAcc',       label: 'Akkumulatordruck',         unit: 'bar', def: 160 },
-      { key: 'pSpecMin',   label: 'Ziel-Gießdruck min.',      unit: 'bar', def: 800 },
-      { key: 'pSpecMax',   label: 'Ziel-Gießdruck max.',      unit: 'bar', def: 1200 },
-      { key: 'vAirMax',    label: 'Max. Entlüftungsgeschw.',  unit: 'm/s', def: 150 },
-      { key: 'biscuitMin', label: 'Pressrest min.',           unit: 'mm',  def: 25 },
-      { key: 'Jatom',      label: 'Zerstäubungsfaktor J',     unit: '-',   def: 750 },
-      { key: 'intTime',    label: 'Nachdruckaufbauzeit',      unit: 'ms',  def: 60 }
-    ]
-  }
 ];
 
 /* Felder, die von einem Preset gesetzt werden: key → Domänen-id. Handänderung

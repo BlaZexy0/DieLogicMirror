@@ -112,7 +112,7 @@ export const POSITIVE_KEYS = ['density', 'diam', 'length', 'gate', 'vent', 'Cd',
    Limit"; Gewichte, Bandgrenzen und Positionen können 0 sein). Die
    Außermittigkeiten eccX/eccY bleiben bewusst vorzeichenbehaftet. */
 export const NONNEG_KEYS = ['runner', 'overflow', 'biscuit', 'amax',
-  'fillMin', 'fillMax', 'gateMin', 'gateMax', 'pSpecMin', 'pSpecMax',
+  'fillMin', 'fillMax', 'gateMin', 'gateMax',
   'sealStroke', 'vacStart', 'vacPump', 'biscuitMin', 'intTime', 'Sfrac'];
 
 export const NEGATIVE_OK = new Set(['eccX', 'eccY']);
@@ -131,7 +131,6 @@ export function validate(v) {
   pair('wallMin', 'wallMax', 'Wandstärke min ≥ max', true);
   pair('fillMin', 'fillMax', 'Füllgrad-Ziel min > max', false);
   pair('gateMin', 'gateMax', 'Anschnittgeschw.-Ziel min > max', false);
-  pair('pSpecMin', 'pSpecMax', 'Ziel-Gießdruck min > max', false);
 
   let nonpos = false;
   for (const k of POSITIVE_KEYS) if (!(v[k] > 0)) { bad.add(k); nonpos = true; }
