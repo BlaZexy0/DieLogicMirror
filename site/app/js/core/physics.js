@@ -173,10 +173,15 @@ export function computeShot(v, curvePoints) {
   const totalStroke = sFill + (Vr + Vp + Vo) / A, biscLen = Vb / A;
   let fill = null;
   if (evs[1].inP && evs[3].inP) fill = (evs[3].t - evs[1].t) * 1000;
-  const vSlow = prof.maxVelBefore(sFill);
+  /* v1 = max. Kolbengeschwindigkeit bis „Kammer voll" (1. Phase);
+     v2 = mittlere Kolbengeschwindigkeit nach dem Anschnitt (2. Phase):
+     Weg/Zeit zwischen „Anguss gefüllt" und „Überlauf gefüllt". */
+  const v1 = prof.maxVelBefore(sFill);
+  const v2 = (evs[1].inP && evs[3].inP && evs[3].t > evs[1].t)
+    ? (evs[3].s - evs[1].s) / 1000 / (evs[3].t - evs[1].t) : null;
 
   const checks = [];
-  checks.push([vSlow <= vcrit + 1e-9, '1. Phase: max. ' + fmt(vSlow) + ' m/s bis Kammer voll ' + (vSlow <= vcrit ? '≤' : '>') + ' v_krit ' + fmt(vcrit) + ' m/s (CFD).']);
+  checks.push([v1 <= vcrit + 1e-9, '1. Phase: max. ' + fmt(v1) + ' m/s bis Kammer voll ' + (v1 <= vcrit ? '≤' : '>') + ' v_krit ' + fmt(vcrit) + ' m/s (CFD).']);
   checks.push([prof.vmax <= v.vmax + 1e-9, 'Spitzengeschwindigkeit ' + fmt(prof.vmax) + ' m/s ' + (prof.vmax <= v.vmax ? '≤' : '>') + ' Maschinenlimit ' + fmt(v.vmax) + ' m/s.']);
   const aPk = Math.max(prof.amax, -prof.amin, 0);
   if (v.amax > 0) checks.push([aPk <= v.amax + 1e-9, 'Spitzenbeschleunigung ' + fmt(aPk) + ' m/s² ' + (aPk <= v.amax ? '≤' : '>') + ' Maschinenlimit ' + fmt(v.amax) + ' m/s².']);
@@ -189,6 +194,6 @@ export function computeShot(v, curvePoints) {
   return {
     profile: prof, samples: prof.samples(320), events: evs,
     phi, sFill, vcrit, wave: waveSpeed(v.diam / 1000, phi),
-    gateR, totalStroke, biscLen, fill, vSlow, Vdose, checks
+    gateR, totalStroke, biscLen, fill, v1, v2, Vdose, checks
   };
 }

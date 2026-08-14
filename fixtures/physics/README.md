@@ -46,7 +46,7 @@ Toleranz, weil zwei Fälle systematisch abweichen:
 | `biscuit_mm` | Pressrestlänge | `r.biscLen` | `plan.biscuit_length` |
 | `fill_complete_mm` | Hub „Füllende“ | `r.totalStroke` | `plan.fill_complete_stroke` |
 | `v_crit` | krit. Geschw. (Nogowizin) | `r.vcrit` | `proc.critical_velocity` |
-| `v_slow_max` | max. Kolbengeschw. bis Kammer voll | `r.vSlow` | Profil-Maximum bis `s_fill` |
+| `v_slow_max` | max. Kolbengeschw. bis Kammer voll (v1) | `r.v1` | Profil-Maximum bis `s_fill` |
 | `t_sleeve_full_s` | Zeit bis Kammer voll (ab Schussbeginn) | `r.events[0].t` | `profile.time_at_position` |
 | `v_sleeve_full` | Kolbengeschw. bei Kammer voll | `r.events[0].v` | `profile.velocity_at_position` |
 | `t_part_full_s` | Zeit bis Bauteil gefüllt | `r.events[2].t` | `profile.time_at_position` |

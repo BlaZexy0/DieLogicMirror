@@ -39,9 +39,10 @@ function makeCtx() {
 
 globalThis.document = {
   createElement: () => ({ width: 0, height: 0, getContext: () => makeCtx() }),
+  documentElement: {},
   body: {},
 };
-globalThis.getComputedStyle = () => ({ fontFamily: 'Arial' });
+globalThis.getComputedStyle = () => ({ fontFamily: 'Arial', getPropertyValue: () => '' });
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
 
 /* Klassische Scripts wie auf der Seite laden (setzen window.__…__) */
@@ -61,6 +62,27 @@ const values = {};
 for (const f of allFields()) values[f.key] = f.def;
 const shot = computeShot(values, DEFAULT_CURVE.map(p => p.slice()));
 assert.ok(!shot.error, 'computeShot mit Defaults darf nicht fehlschlagen: ' + shot.error);
+
+/* ── Füllkammer-Schema: SVG-String je Variante prüfen ── */
+const { buildSvg } = await import(path.join(site, 'app/js/ui/chamber.js'));
+
+for (const va of ['A', 'B', 'C']) {
+  test('chamber-svg: Variante ' + va + ' vollständig und ohne NaN', () => {
+    const svg = buildSvg(values, va);
+    for (const t of ['aktive Länge L', 'Füllgrad φ', 'Kammerrohr ≠ L',
+      'Einfüllöffnung verschlossen', 'Vakuum ab Kolbenweg', 'Trennebene', 'Dosiergewicht'])
+      assert.ok(svg.includes(t), `Variante ${va}: „${t}" fehlt im SVG`);
+    assert.ok(!svg.includes('NaN'), `Variante ${va}: NaN im SVG`);
+  });
+}
+
+test('chamber-svg: nicht-finite Eingaben lassen keine Elemente verschwinden', () => {
+  const svg = buildSvg(Object.assign({}, values,
+    { sealStroke: undefined, vacStart: NaN, density: NaN, length: NaN }), 'A');
+  assert.ok(!svg.includes('NaN'), 'NaN-Koordinaten im SVG');
+  const walls = (svg.match(/url\(#ch-steel\)/g) || []).length;
+  assert.equal(walls, 3, 'Kammerwände fehlen (erwartet 3 Wand-Rechtecke)');
+});
 
 for (const def of charts) {
   const tabs = def.tabs ? def.tabs.map(t => t[0]) : [null];

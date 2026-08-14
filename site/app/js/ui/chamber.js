@@ -58,7 +58,9 @@ function ext(x, y1, y2, col) {
   return '<line x1="' + x + '" y1="' + y1 + '" x2="' + x + '" y2="' + y2 + '" stroke="' + col + '" stroke-width=".7"/>';
 }
 
-function buildSvg(v) {
+/* variantKey nur für Tests — im Betrieb kommt die Variante aus den Tabs. */
+export function buildSvg(v, variantKey) {
+  const va = variantKey || variant;
   const C = themeColors();
   const A = pistonArea(v);
   const mdos = total(v) + v.biscuit;
@@ -66,7 +68,7 @@ function buildSvg(v) {
   const phi = isFinite(phiRaw) ? Math.min(Math.max(phiRaw, 0), 1) : 0;
   const sF = (1 - phi) * v.length;
 
-  const tubeEnd = VARIANTS[variant].tubeEnd;
+  const tubeEnd = VARIANTS[va].tubeEnd;
   const part = tubeEnd;                          // Trennebene: das Rohr endet immer dort
   const XF0 = part - 110, DIE1 = part + 150;     // feste Hälfte (vom Rohr durchdrungen), Auswerferseite
   const ghost = Math.min(Math.max(XP + (1 - phi) * (XA - XP), XP + 2), XA - 2);
@@ -105,7 +107,7 @@ function buildSvg(v) {
   s += label(part - 10, 62, 'Trennebene', { fill: C.muted, anchor: 'end', size: 10.5 });
 
   /* Variante C: Bohrung läuft durchs Werkzeug bis zum aktiven Ende weiter */
-  if (variant === 'C') {
+  if (va === 'C') {
     s += '<rect x="' + tubeEnd + '" y="' + YT + '" width="' + (XA - tubeEnd) + '" height="' + (YB - YT) + '" fill="' + C.surface + '"/>';
     s += '<line x1="' + XA + '" y1="' + YT + '" x2="' + XA + '" y2="' + YB + '" stroke="#7d949c" stroke-width="2"/>';
     s += '<line x1="' + (tubeEnd + 24) + '" y1="' + YT + '" x2="' + XA + '" y2="' + YT + '" stroke="#7d949c" stroke-width="1.2"/>';
@@ -158,7 +160,7 @@ function buildSvg(v) {
   s += label(650, mTop - 9, 'Füllgrad φ = ' + fmt(phiRaw * 100) + ' %', { fill: C.deep, anchor: 'end' });
 
   /* aktive Länge L (grün, ab Kolbenstirn) */
-  s += ext(XP, YB + WT + 2, 356, C.muted) + ext(XA, (variant === 'C' ? YB : YB + WT) + 2, 356, C.muted);
+  s += ext(XP, YB + WT + 2, 356, C.muted) + ext(XA, (va === 'C' ? YB : YB + WT) + 2, 356, C.muted);
   s += dimH(XP, XA, 348, 'aktive Länge L = ' + fmt(v.length) + ' mm', C.green, 'ch-maG', { width: 1.6, size: 12, bold: true });
   s += label(XP, 368, 'ab Kolbenstirn', { fill: C.green, size: 10.5, bold: true });
 
@@ -172,10 +174,10 @@ function buildSvg(v) {
     + '<line x1="' + x0 + '" y1="70" x2="' + x0 + '" y2="' + leftWallBot + '" stroke="#7d949c" stroke-width="1.2"/>'
     + '<line x1="' + (x0 + 24) + '" y1="70" x2="' + (x0 + 24) + '" y2="' + yBot + '" stroke="#7d949c" stroke-width="1.2"/>';
 
-  if (variant === 'A') {
+  if (va === 'A') {
     s += '<line x1="' + XA + '" y1="180" x2="' + XA + '" y2="' + YB + '" stroke="#7d949c" stroke-width="2"/>';
     s += runner(part, 180, YT) + '<line x1="' + part + '" y1="180" x2="' + (part + 24) + '" y2="180" stroke="#7d949c" stroke-width="1.2"/>';
-  } else if (variant === 'B') {
+  } else if (va === 'B') {
     /* Verdränger: massiv von unten bis 80 % von D, Öffnung oben zum Werkzeug */
     const dTop = YB - 0.8 * (YB - YT);
     s += '<rect x="' + XA + '" y="' + dTop + '" width="' + (tubeEnd - XA) + '" height="' + (YB - dTop) + '" fill="url(#ch-displ)" stroke="#41565e" stroke-width="1.3"/>';

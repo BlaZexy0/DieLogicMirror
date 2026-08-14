@@ -93,10 +93,9 @@ export const groups = [
   },
   {
     id: 'process', title: 'Prozessfenster', wide: true,
+    /* v1 (max. bis „Kammer voll") und v2 (Mittel nach Anschnitt) sind
+       keine Eingaben mehr — computeShot leitet sie aus der Schusskurve ab. */
     fields: [
-      { key: 'vmin',    label: 'Kolbengeschw. min.',        unit: 'm/s', def: 1 },
-      { key: 'vsel',    label: 'Gewählte Kolbengeschw.',    unit: 'm/s', def: 4 },
-      { key: 'v1sel',   label: 'Kolbengeschw. 1. Phase',    unit: 'm/s', def: 0.4 },
       { key: 'tmax',    label: 'Füllzeit max.',             unit: 'ms',  def: 100 },
       { key: 'fillMin', label: 'Füllgrad Ziel min.',        unit: '%',   def: 40 },
       { key: 'fillMax', label: 'Füllgrad Ziel max.',        unit: '%',   def: 60 },

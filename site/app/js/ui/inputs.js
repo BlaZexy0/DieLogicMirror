@@ -99,17 +99,18 @@ export function applyValues(fields) {
 }
 
 /* Felder, die zwingend > 0 sein müssen (Divisionen, Achsen, Wurzeln,
-   physikalisch zwingend positive Größen). */
-const POSITIVE_KEYS = ['density', 'diam', 'length', 'gate', 'vent', 'Cd',
-  'force', 'injForce', 'area', 'psel', 'safety', 'vmax', 'vsel', 'tmax', 'vAirMax', 'solK',
+   physikalisch zwingend positive Größen). Exportiert für den
+   Konsistenz-Test: jedes numerische Feld gehört in genau eine Klasse. */
+export const POSITIVE_KEYS = ['density', 'diam', 'length', 'gate', 'vent', 'Cd',
+  'force', 'injForce', 'area', 'psel', 'safety', 'vmax', 'tmax', 'vAirMax', 'solK',
   'tieX', 'tieY',
-  'dmin', 'dmax', 'lmin', 'lmax', 'pmax', 'part', 'v1sel', 'Tcast', 'Tflow', 'Tdie',
+  'dmin', 'dmax', 'lmin', 'lmax', 'pmax', 'part', 'Tcast', 'Tflow', 'Tdie',
   'Zconst', 'wall', 'wallMin', 'wallMax', 'kfill', 'gateTh', 'Jatom', 'pAcc'];
 
 /* Felder, die 0 sein dürfen, aber nicht negativ (amax = 0 heißt „kein
    Limit"; Gewichte, Bandgrenzen und Positionen können 0 sein). Die
    Außermittigkeiten eccX/eccY bleiben bewusst vorzeichenbehaftet. */
-const NONNEG_KEYS = ['runner', 'overflow', 'biscuit', 'amax', 'pmin', 'vmin',
+export const NONNEG_KEYS = ['runner', 'overflow', 'biscuit', 'amax', 'pmin',
   'fillMin', 'fillMax', 'gateMin', 'gateMax', 'pSpecMin', 'pSpecMax',
   'sealStroke', 'vacStart', 'vacPump', 'vacValve', 'biscuitMin', 'intTime', 'Sfrac'];
 
@@ -127,7 +128,6 @@ export function validate(v) {
   pair('pmin', 'pmax', 'Druck min ≥ max', true);
   pair('dmin', 'dmax', 'Kolben-Ø min ≥ max', true);
   pair('lmin', 'lmax', 'Kammerlänge min ≥ max', true);
-  pair('vmin', 'vmax', 'Kolbengeschw. min ≥ max', true);
   pair('wallMin', 'wallMax', 'Wandstärke min ≥ max', true);
   pair('fillMin', 'fillMax', 'Füllgrad-Ziel min > max', false);
   pair('gateMin', 'gateMax', 'Anschnittgeschw.-Ziel min > max', false);
@@ -144,7 +144,6 @@ export function validate(v) {
   /* Gewählte Werte gegen ihre Grenzen. */
   if (v.diam < v.dmin || v.diam > v.dmax) bad.add('diam');
   if (v.length < v.lmin || v.length > v.lmax) bad.add('length');
-  if (v.vsel < v.vmin || v.vsel > v.vmax) bad.add('vsel');
   if (v.psel < v.pmin || v.psel > v.pmax) bad.add('psel');
 
   document.querySelectorAll('input[data-k]').forEach(e =>

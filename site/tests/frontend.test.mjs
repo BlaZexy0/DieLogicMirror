@@ -31,6 +31,11 @@ const MACHINES = globalThis.__MACHINES__.machines;
 const { allFields, groups, PRESET_KEYS } = await import(
   path.join(site, 'app/js/config/fields.js'));
 
+/* inputs.js zieht core/state.js mit — der braucht localStorage. */
+globalThis.localStorage = { getItem: () => null, setItem: () => {} };
+const { POSITIVE_KEYS, NONNEG_KEYS, NEGATIVE_OK } = await import(
+  path.join(site, 'app/js/ui/inputs.js'));
+
 function loadAsset(name) {
   const buf = readFileSync(path.join(site, 'assets', name));
   return parseSTL(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
@@ -117,6 +122,24 @@ test('contract: alle Übernahme-Schlüssel sind Dashboard-Felder', () => {
     assert.ok(known.has(k), `Übernahme-Schlüssel „${k}" ist kein Dashboard-Feld`);
     assert.ok(Number.isFinite(vals[k]), `Übernahme-Wert „${k}" ist nicht numerisch`);
   }
+});
+
+/* Vorzeichen-Klassen der Validierung dürfen nicht von der Felddefinition
+   wegdriften: jedes numerische Feld gehört in genau eine der Klassen
+   > 0 (POSITIVE_KEYS), ≥ 0 (NONNEG_KEYS) oder vorzeichenbehaftet
+   (NEGATIVE_OK) — und jeder Klassen-Eintrag muss ein echtes Feld sein. */
+test('inputs: jedes numerische Feld hat genau eine Vorzeichen-Klasse', () => {
+  const numeric = allFields().filter(f => f.type !== 'select');
+  for (const f of numeric) {
+    const n = (POSITIVE_KEYS.includes(f.key) ? 1 : 0)
+      + (NONNEG_KEYS.includes(f.key) ? 1 : 0)
+      + (NEGATIVE_OK.has(f.key) ? 1 : 0);
+    assert.equal(n, 1,
+      `Feld „${f.key}" ist in ${n} Vorzeichen-Klassen — erwartet genau 1 von POSITIVE_KEYS / NONNEG_KEYS / NEGATIVE_OK (inputs.js)`);
+  }
+  const known = new Set(numeric.map(f => f.key));
+  for (const k of [...POSITIVE_KEYS, ...NONNEG_KEYS, ...NEGATIVE_OK])
+    assert.ok(known.has(k), `Klassen-Eintrag „${k}" ist kein Eingabefeld`);
 });
 
 test('contract: writeDashboardState mischt, statt zu überschreiben', () => {

@@ -25,7 +25,7 @@ function quantities(r) {
     biscuit_mm: r.biscLen * 1000,
     fill_complete_mm: r.totalStroke * 1000,
     v_crit: r.vcrit,
-    v_slow_max: r.vSlow,
+    v_slow_max: r.v1,
     t_sleeve_full_s: r.events[0].t,
     v_sleeve_full: r.events[0].v,
     t_part_full_s: r.events[2].t,

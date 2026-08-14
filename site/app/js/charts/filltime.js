@@ -12,9 +12,10 @@ export default {
   title: 'Füllzeit ab Anschnitt',
   desc: 'Bauteil + Überlauf',
   heat: true,
-  inputs: ['tmax', 'dmin', 'dmax', 'part', 'overflow', 'density', 'vsel', 'diam', 'vmax'],
+  inputs: ['tmax', 'dmin', 'dmax', 'part', 'overflow', 'density', 'diam', 'vmax'],
+  usesCurve: true,
 
-  calc(v) {
+  calc(v, o) {
     if (!(v.vmax > 0)) return { err: 'Kolbengeschw. max. muss > 0 sein.' };
     /* Farbskala endet bei v_max der Maschine — schnellere Bereiche sind
        mit dieser Maschine nicht fahrbar und werden grau dargestellt. */
@@ -28,9 +29,13 @@ export default {
     q.limits = [limit('vmax', 'v_max ' + fmt(v.vmax) + ' m/s', 'y', 'min',
       t => Math.sqrt(4e9 * Va / (PI * t * v.vmax)), { note: 'über v_max der Maschine' })];
     q.info = 'Ab Anschnitt ' + fmt(afterGate(v)) + ' kg · Bauteil + Überlauf · schraffiert: über vₘₐₓ = ' + fmt(v.vmax) + ' m/s';
-    const tOp = 1e9 * (afterGate(v) / v.density) / (v.vsel * 0.25 * PI * v.diam * v.diam);
-    q.pt = [tOp, v.diam];
-    q.ptl = 'Ø ' + fmt(v.diam) + ' mm · ' + fmt(v.vsel) + ' m/s → ' + fmt(tOp) + ' ms';
+    /* Betriebspunkt mit v2 = mittlere Kolbengeschw. nach Anschnitt (Schusskurve) */
+    const v2 = o && o.shot && !o.shot.error ? o.shot.v2 : null;
+    if (v2 > 0) {
+      const tOp = 1e9 * (afterGate(v) / v.density) / (v2 * 0.25 * PI * v.diam * v.diam);
+      q.pt = [tOp, v.diam];
+      q.ptl = 'Ø ' + fmt(v.diam) + ' mm · v₂ ' + fmt(v2) + ' m/s → ' + fmt(tOp) + ' ms';
+    }
     return q;
   },
 
@@ -44,16 +49,17 @@ Pressrest) muss in der Füllzeit t<sub>f</sub> vom Kolben gefördert werden:</p>
 <p class="math-note">Die Heatmap zeigt v<sub>p</sub> über (t<sub>f</sub>, D); die weißen Konturen sind Linien
 konstanter Kolbengeschwindigkeit. Die Farbskala endet bei v<sub>max</sub> der Maschine — schraffierte Bereiche
 verlangen mehr Kolbengeschwindigkeit, als die Maschine kann; die Grenzkurve ist D(t) = √(4·V<sub>a</sub>/(π·t·v<sub>max</sub>)). Aktuell: V<sub>a</sub> = <b data-m="Va"></b> ·
-bei Ø <span data-m="D"></span> und v<sub>p</sub> = <span data-m="vsel"></span>: t<sub>f</sub> = <b data-m="tf"></b></p>`;
+bei Ø <span data-m="D"></span> und v₂ = <span data-m="vsel"></span> (Mittel nach Anschnitt, aus der Schusskurve): t<sub>f</sub> = <b data-m="tf"></b></p>`;
   },
 
-  renderMath(el, v) {
+  renderMath(el, v, shot) {
     const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
     const Va = afterGate(v) / v.density;
+    const v2 = shot && !shot.error && shot.v2 != null ? shot.v2 : NaN;
     set('Va', fmt(Va * 1e6) + ' cm³');
     set('D', fmt(v.diam) + ' mm');
-    set('vsel', fmt(v.vsel) + ' m/s');
-    const tf = 1e9 * Va / (v.vsel * 0.25 * PI * v.diam * v.diam);
+    set('vsel', fmt(v2) + ' m/s');
+    const tf = 1e9 * Va / (v2 * 0.25 * PI * v.diam * v.diam);
     set('tf', isFinite(tf) ? fmt(tf) + ' ms' : '—');
   }
 };

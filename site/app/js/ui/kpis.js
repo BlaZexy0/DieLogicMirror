@@ -48,17 +48,19 @@ export function renderKpis(el, v, shot, chamberEl) {
     ? (2 * Math.sqrt(3) / 9) * v.injForce * 1e3 * v.vmax / 1e6 : null;   // MW
   const pwOp = Qs !== null ? ps * 1e5 * Qs / 1e6 : null;                 // MW
 
-  /* Anschnittgeschwindigkeit: bevorzugt aus der Schusskurve (Bauteil gefüllt) */
-  const gvStat = v.vsel * A / v.gate;
+  /* Anschnittgeschwindigkeit: bevorzugt aus der Schusskurve (Bauteil gefüllt);
+     sonst mit v2 = mittlerer Kolbengeschw. nach Anschnitt (ebenfalls Kurve) */
+  const v2 = !shot.error && shot.v2 != null ? shot.v2 : NaN;
+  const gvMean = v.gate > 0 ? v2 * A / v.gate : NaN;
   const evPart = !shot.error && shot.events && shot.events[2];
   const gvShot = evPart && evPart.inP && evPart.gv != null ? evPart.gv : null;
-  const gvShown = gvShot != null ? gvShot : gvStat;
+  const gvShown = gvShot != null ? gvShot : gvMean;
 
   /* Thermik und Qualität */
   const denN = v.Tflow - v.Tdie;
   const tNadca = denN !== 0 ? v.kfill * v.wall * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / denN : NaN;
   const Vm = total(v) / v.density;
-  const tOp = 1e9 * (afterGate(v) / v.density) / (v.vsel * A);
+  const tOp = 1e9 * (afterGate(v) / v.density) / (v2 * A);
   const Areq = tOp > 0 && v.vAirMax > 0 ? Vm / (tOp / 1000) / v.vAirMax * 1e6 : NaN;
   const tErst = v.solK * v.gateTh * v.gateTh;
 
@@ -87,8 +89,8 @@ export function renderKpis(el, v, shot, chamberEl) {
     + group('Schusskurve und Anschnitt',
       kpi('Anschnittgeschwindigkeit', fmt(gvShown) + ' m/s',
         (gvShot != null
-          ? 'aus Schusskurve (Bauteil gefüllt) · stationär ' + fmt(gvStat) + ' m/s'
-          : 'stationär bei gewählter Kolbengeschw.')
+          ? 'aus Schusskurve (Bauteil gefüllt) · Mittel v₂ → ' + fmt(gvMean) + ' m/s'
+          : 'aus v₂ (Mittel nach Anschnitt)')
         + ' · Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s', band(gvShown, v.gateMin, v.gateMax))
       + kpi('PQ²-Arbeitspunkt', Qs === null ? '—' : fmt(Qs * 1000) + ' l/s',
         Qs === null ? 'Eingaben unvollständig' : 'Metalldruck p_s ' + fmt(ps) + ' bar · Schnittpunkt Maschine × Werkzeug', Qs === null ? 'warn' : undefined)
@@ -96,14 +98,16 @@ export function renderKpis(el, v, shot, chamberEl) {
         ? kpi('Schusskurve', 'Fehler', shot.error, 'bad')
         : kpi('Schusszeit', fmt(shot.profile.endTime) + ' s', 'Kurvenhub ' + fmt(shot.profile.travel * 1000) + ' mm')
         + kpi('Füllzeit ab Anschnitt', shot.fill === null ? '—' : fmt(shot.fill) + ' ms', 'aus Schusskurve · max ' + fmt(v.tmax) + ' ms', shot.fill === null ? 'warn' : cap(shot.fill, v.tmax))
-        + kpi('v_krit 1. Phase', fmt(shot.vcrit) + ' m/s', 'Ist max. ' + fmt(shot.vSlow) + ' m/s (CFD-Tabelle)', cap(shot.vSlow, shot.vcrit))))
+        + kpi('v₁ / v₂ aus Kurve', fmt(shot.v1) + ' / ' + (shot.v2 == null ? '—' : fmt(shot.v2)) + ' m/s',
+          'v₁ = max. bis Kammer voll · v₂ = Mittel nach Anschnitt')
+        + kpi('v_krit 1. Phase', fmt(shot.vcrit) + ' m/s', 'Ist max. v₁ ' + fmt(shot.v1) + ' m/s (CFD-Tabelle)', cap(shot.v1, shot.vcrit))))
 
     + group('Thermik und Qualität',
       kpi('Empf. Füllzeit (NADCA)', fmt(tNadca) + ' ms',
         'bei s = ' + fmt(v.wall) + ' mm · Ist ' + (shot.error || shot.fill === null ? '—' : fmt(shot.fill)) + ' ms aus Schusskurve',
         (shot.error || shot.fill === null || !isFinite(tNadca)) ? 'warn' : cap(shot.fill, tNadca))
       + kpi('Entlüftungsbedarf', fmt(Areq) + ' mm²',
-        'bei t_f ' + fmt(tOp) + ' ms (stationär) · vorhanden ' + fmt(v.vent) + ' mm²', isFinite(Areq) ? cap(Areq, v.vent) : 'warn')
+        'bei t_f ' + fmt(tOp) + ' ms (v₂-Mittel) · vorhanden ' + fmt(v.vent) + ' mm²', isFinite(Areq) ? cap(Areq, v.vent) : 'warn')
       + kpi('Anschnitt-Erstarrung', fmt(tErst) + ' ms',
         'k·s² bei s = ' + fmt(v.gateTh) + ' mm · Nachdruck ' + fmt(v.intTime) + ' ms', tErst < v.intTime ? 'bad' : 'ok')
       + (shot.error

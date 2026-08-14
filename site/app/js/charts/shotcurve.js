@@ -189,6 +189,6 @@ v<sub>krit</sub> = <b data-m="vcrit"></b> · max. v der 1. Phase = <b data-m="vs
     set('ratio', shot.gateR ? fmt(shot.gateR) : '—');
     set('tf', shot.fill === null ? '—' : fmt(shot.fill) + ' ms');
     set('vcrit', fmt(shot.vcrit) + ' m/s');
-    set('vslow', fmt(shot.vSlow) + ' m/s');
+    set('vslow', fmt(shot.v1) + ' m/s');
   }
 };

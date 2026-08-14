@@ -10,9 +10,10 @@ export default {
   id: 'ventreq',
   title: 'Entlüftungsbedarf',
   desc: 'über Füllzeit',
-  inputs: ['part', 'runner', 'overflow', 'density', 'tmax', 'vAirMax', 'vent', 'gate', 'vsel', 'diam'],
+  inputs: ['part', 'runner', 'overflow', 'density', 'tmax', 'vAirMax', 'vent', 'gate', 'diam'],
+  usesCurve: true,
 
-  calc(v) {
+  calc(v, o) {
     const C = theme.chart;
     const Vm = total(v) / v.density;
     const f = t => Vm / (t / 1000) / v.vAirMax * 1e6;
@@ -36,9 +37,12 @@ export default {
         t => f(t) > v.vent ? v.vent : Infinity, { note: 'Bedarf über vorhandener Entlüftung' }),
       refline('gateRef', 'Anschnittfläche ' + fmt(v.gate) + ' mm²', 'y', v.gate, { c: C.series2 })
     ];
-    const tOp = 1e9 * (afterGate(v) / v.density) / (v.vsel * pistonArea(v));
-    q.pt = [tOp, f(tOp)];
-    q.ptl = fmt(tOp) + ' ms → ' + fmt(f(tOp)) + ' mm²';
+    const v2 = o && o.shot && !o.shot.error ? o.shot.v2 : null;
+    if (v2 > 0) {
+      const tOp = 1e9 * (afterGate(v) / v.density) / (v2 * pistonArea(v));
+      q.pt = [tOp, f(tOp)];
+      q.ptl = fmt(tOp) + ' ms → ' + fmt(f(tOp)) + ' mm²';
+    }
     return q;
   },
 
@@ -53,13 +57,14 @@ v<sub>luft,max</sub> entweichen — sonst staut sie sich und wird eingeschlossen
 zeigen die vorhandene Entlüftungsfläche und als Referenz die Anschnittfläche — die Entlüftung liegt
 üblicherweise in deren Größenordnung (häufige Faustregel: rund die Hälfte der Anschnittfläche).</p>
 <p class="math-note">Aktuell: V<sub>luft</sub> = <b data-m="V"></b> · Betriebspunkt t<sub>f</sub> = <b data-m="tf"></b>
-(aus v<sub>sel</sub> und Kolben-Ø) ⇒ A<sub>ent,erf</sub> = <b data-m="Areq"></b> · vorhanden <b data-m="Avail"></b></p>`;
+(aus v₂, dem Mittel nach Anschnitt aus der Schusskurve, und Kolben-Ø) ⇒ A<sub>ent,erf</sub> = <b data-m="Areq"></b> · vorhanden <b data-m="Avail"></b></p>`;
   },
 
-  renderMath(el, v) {
+  renderMath(el, v, shot) {
     const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
     const Vm = total(v) / v.density;
-    const tOp = 1e9 * (afterGate(v) / v.density) / (v.vsel * pistonArea(v));
+    const v2 = shot && !shot.error && shot.v2 != null ? shot.v2 : NaN;
+    const tOp = 1e9 * (afterGate(v) / v.density) / (v2 * pistonArea(v));
     const Areq = v.vAirMax > 0 && tOp > 0 ? Vm / (tOp / 1000) / v.vAirMax * 1e6 : NaN;
     set('V', fmt(Vm * 1e6) + ' cm³');
     set('tf', isFinite(tOp) ? fmt(tOp) + ' ms' : '—');

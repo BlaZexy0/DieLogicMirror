@@ -33,9 +33,10 @@ export default {
   id: 'phild',
   title: 'Auslegungsfenster (φ, λ)',
   desc: 'Machbarkeit der Füllkammer bei fester Dosiermenge',
-  inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'dmin', 'dmax', 'lmin', 'lmax', 'biscuitMin', 'v1sel', 'fillMin', 'fillMax', 'diam', 'length'],
+  inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'dmin', 'dmax', 'lmin', 'lmax', 'biscuitMin', 'fillMin', 'fillMax', 'diam', 'length'],
+  usesCurve: true,
 
-  calc(v) {
+  calc(v, o) {
     const rho = v.density;
     const V = (total(v) + v.biscuit) / rho, Vb = v.biscuit / rho;
     const k = 4 * V / PI;
@@ -44,7 +45,8 @@ export default {
     const bmin = v.biscuitMin / 1000;
     const Db = bmin > 0 ? Math.sqrt(4 * Vb / (PI * bmin)) : Infinity; // max. Ø aus Pressrest
     const DmaxEff = Math.min(Dmax, Db);
-    const v1 = v.v1sel;
+    /* v1 = max. Kolbengeschwindigkeit bis „Kammer voll" aus der Schusskurve */
+    const v1 = o && o.shot && !o.shot.error && o.shot.v1 > 0 ? o.shot.v1 : 0;
 
     /* Grenzkurven als r(φ) */
     const rD = (phi, D) => k / (phi * D * D * D);                    // konst. Ø: Hyperbel
