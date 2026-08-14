@@ -45,7 +45,7 @@
     { label: 'Diagramme', children: CHARTS.map(([id, title]) => (
       { label: title, href: '/app/chart.html?id=' + id }
     )) },
-    { label: 'STL-Analyse', href: '/stl/stl-analyse.html' },
+    { label: 'Sprengflächenanalyse', href: '/stl/stl-analyse.html' },
     { label: 'Theorie', children: [
       { label: 'Das PQ²-Diagramm', href: '/theorie/pq2.html' },
       { label: 'Kritische Kolbengeschwindigkeit', href: '/theorie/kritische-geschwindigkeit.html' },
@@ -133,7 +133,7 @@
       <li><a href="${r('/app/chart.html?id=shotcurve')}">Schusskurve</a></li>
       <li><a href="${r('/app/chart.html?id=pq2')}">PQ²-Diagramm</a></li>
       <li><a href="${r('/app/chart.html?id=phild')}">Auslegungsfenster (φ, λ)</a></li>
-      <li><a href="${r('/stl/stl-analyse.html')}">STL-Analyse</a></li>
+      <li><a href="${r('/stl/stl-analyse.html')}">Sprengflächenanalyse</a></li>
     </ul>
   </div>
 
