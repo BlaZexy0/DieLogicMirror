@@ -175,6 +175,15 @@ select {
 .adv-fields summary:hover { color: var(--green); }
 .adv-fields[open] summary { margin-bottom: 8px; }
 .curve-note { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+/* Schusskurven-Modus (Punkte / López / V₁-V₂) + Generator-Parameter */
+.cgen-tabs { margin-bottom: 8px; }
+.cgen-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cgen-error { color: var(--bad); font-weight: bold; }
 #error { color: var(--bad); font-weight: bold; }
 
 /* Hervorhebung der Diagramm-Eingaben */

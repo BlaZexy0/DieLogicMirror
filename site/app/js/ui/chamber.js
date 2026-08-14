@@ -236,7 +236,7 @@ export function buildChamberCard(container) {
   card.className = 'card chamber-card';
   card.innerHTML =
     '<div class="head"><div><h3>Füllkammer</h3><small>Seitenansicht · aktive Länge L, Kolben-Ø D, Füllgrad φ, Hub bis „Kammer voll“</small></div>'
-    + '<div class="head-right"><div class="tabs">'
+    + '<div class="head-right"><span class="tabbar-label">Darstellung:</span><div class="tabs">'
     + '<button data-v="A" class="active">Bündig</button>'
     + '<button data-v="B">Verdränger</button>'
     + '<button data-v="C">Verlängert</button>'

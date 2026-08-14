@@ -3,6 +3,7 @@
 import { loadTheme } from './core/theme.js';
 import { state, subscribe, notify, resetState } from './core/state.js';
 import { computeShot } from './core/physics.js';
+import { applyCurveGen } from './core/curvegen.js';
 import { charts } from './charts/registry.js';
 import { buildInputs, validate, highlightInputs, clearHighlights, applyValues } from './ui/inputs.js';
 import { initPresetSelects } from './ui/presets.js';
@@ -31,6 +32,9 @@ function onHighlight(def, btn) {
 
 function render() {
   const v = state.values;
+  /* Generierte Kurvenmodi: Wegpunkte aus den aktuellen Eingaben neu erzeugen */
+  const genErr = applyCurveGen(v);
+  if (state.curveGen.mode !== 'points') renderCurveTable(genErr);
   const shot = computeShot(v, state.curve);
   validate(v);
   renderChamber(chamberCard, v);

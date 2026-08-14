@@ -31,10 +31,48 @@ const MACHINES = globalThis.__MACHINES__.machines;
 const { allFields, groups, PRESET_KEYS } = await import(
   path.join(site, 'app/js/config/fields.js'));
 
-/* inputs.js zieht core/state.js mit — der braucht localStorage. */
+/* inputs.js/curvegen.js ziehen core/state.js mit — der braucht localStorage. */
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
 const { POSITIVE_KEYS, NONNEG_KEYS, NEGATIVE_OK } = await import(
   path.join(site, 'app/js/ui/inputs.js'));
+const { generateCurve } = await import(path.join(site, 'app/js/core/curvegen.js'));
+const { computeShot } = await import(path.join(site, 'app/js/core/physics.js'));
+
+function defaultValues() {
+  const v = {};
+  for (const f of allFields()) v[f.key] = f.def;
+  return v;
+}
+
+/* ── Schusskurven-Generatoren (core/curvegen.js) ─────────────── */
+
+test('curvegen: López-Modus — gültige Kurve, v1 ≤ v_krit, Hub bis Schussende', () => {
+  const v = defaultValues();
+  const r = generateCurve(v, { mode: 'lopez' });
+  assert.ok(!r.error, r.error);
+  assert.ok(r.points.length >= 4);
+  for (let i = 1; i < r.points.length; i++)
+    assert.ok(r.points[i][0] > r.points[i - 1][0], 'Wegpunkte müssen streng steigen');
+  const shot = computeShot(v, r.points);
+  assert.ok(!shot.error, shot.error);
+  assert.ok(shot.v1 <= shot.vcrit + 1e-6, `v1 ${shot.v1} > v_krit ${shot.vcrit}`);
+  assert.ok(shot.checks[0][0], 'v_krit-Prüfung muss bestehen: ' + shot.checks[0][1]);
+  // Kurvenende = Kammer − Pressrest (deckt den Gesamthub ab)
+  assert.ok(shot.profile.travel >= shot.totalStroke - 1e-9, 'Kurvenhub deckt Gesamthub nicht ab');
+  assert.ok(shot.profile.travel <= v.length / 1000 - shot.biscLen + 2e-3, 'Kurve läuft in den Pressrest');
+});
+
+test('curvegen: V1/V2-Modus — Plateau bei V1, Fehler bei zu flacher Rampe', () => {
+  const v = defaultValues();
+  const ok = generateCurve(v, { mode: 'v1v2', v1: 0.4, a1: 5, v2: 4, a2: 30 });
+  assert.ok(!ok.error, ok.error);
+  const shot = computeShot(v, ok.points);
+  assert.ok(!shot.error, shot.error);
+  closeTo(shot.v1, 0.4, 1e-3);
+  closeTo(shot.profile.vmax, 4, 1e-3);
+  const bad = generateCurve(v, { mode: 'v1v2', v1: 4, a1: 0.01, v2: 5, a2: 30 });
+  assert.ok(bad.error, 'zu flache Rampe muss einen Fehler liefern');
+});
 
 function loadAsset(name) {
   const buf = readFileSync(path.join(site, 'assets', name));

@@ -13,9 +13,16 @@ import { allFields, DEFAULT_CURVE, PRESET_DOMAINS } from '../config/fields.js';
 if (!window.__DASH_CONTRACT__) throw new Error('shared/contract.js nicht geladen (window.__DASH_CONTRACT__ fehlt).');
 const STORAGE_KEY = window.__DASH_CONTRACT__.STORAGE_KEY;
 
+/* Schusskurven-Definition: 'points' = editierbare Wegpunkte,
+   'lopez' = López-Faura-Hernández-Anfahrt + NADCA-Füllzeit,
+   'v1v2' = Rampen auf V₁ und V₂ (core/curvegen.js erzeugt die Punkte). */
+export const CURVE_MODES = ['points', 'lopez', 'v1v2'];
+export const DEFAULT_CURVEGEN = { mode: 'points', v1: 0.4, a1: 5, v2: 4, a2: 30 };
+
 export const state = {
   values: {},
   curve: DEFAULT_CURVE.map(p => p.slice()),
+  curveGen: Object.assign({}, DEFAULT_CURVEGEN),
   machine: '',
   alloy: '',
   part: ''
@@ -52,6 +59,13 @@ function loadPersisted() {
         .filter(p => Array.isArray(p) && p.length >= 2)
         .map(p => [Number(p[0]), Number(p[1])]);
     }
+    if (data.curveGen && typeof data.curveGen === 'object') {
+      if (CURVE_MODES.includes(data.curveGen.mode)) state.curveGen.mode = data.curveGen.mode;
+      for (const k of ['v1', 'a1', 'v2', 'a2']) {
+        const x = Number(data.curveGen[k]);
+        if (isFinite(x) && x > 0) state.curveGen[k] = x;
+      }
+    }
     for (const d of PRESET_DOMAINS) {
       if (typeof data[d.stateKey] === 'string') state[d.stateKey] = data[d.stateKey];
     }
@@ -63,7 +77,7 @@ function loadPersisted() {
 export function persist() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      values: state.values, curve: state.curve,
+      values: state.values, curve: state.curve, curveGen: state.curveGen,
       machine: state.machine, alloy: state.alloy, part: state.part
     }));
   } catch (e) { /* localStorage voll oder deaktiviert — Zustand lebt dann nur in der Seite */ }
@@ -73,6 +87,7 @@ export function persist() {
 export function resetState() {
   for (const f of allFields()) state.values[f.key] = f.def;
   state.curve = DEFAULT_CURVE.map(p => p.slice());
+  state.curveGen = Object.assign({}, DEFAULT_CURVEGEN);
   for (const d of PRESET_DOMAINS) state[d.stateKey] = '';
   persist();
 }

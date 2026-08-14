@@ -4,6 +4,7 @@
 import { loadTheme } from './core/theme.js';
 import { state, subscribe } from './core/state.js';
 import { computeShot } from './core/physics.js';
+import { applyCurveGen } from './core/curvegen.js';
 import { charts, chartsById } from './charts/registry.js';
 import { PRESET_KEYS, PRESET_DOMAINS } from './config/fields.js';
 import { buildInputs, validate } from './ui/inputs.js';
@@ -19,6 +20,9 @@ let mathSec = null;
 
 function render() {
   const v = state.values;
+  /* Generierte Kurvenmodi liefern die Kurve auch für Diagramme ohne Kurven-UI */
+  const genErr = applyCurveGen(v);
+  if (def.usesCurve && state.curveGen.mode !== 'points') renderCurveTable(genErr);
   const shot = computeShot(v, state.curve);
   validate(v);
   renderCard(card, def, v, shot);
