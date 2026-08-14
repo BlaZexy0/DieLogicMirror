@@ -188,6 +188,18 @@ select {
   box-shadow: 0 0 0 2px rgba(0, 140, 130, .18);
 }
 
+/* ── Füllkammer-Schema oberhalb der KPI-Kacheln ── */
+#chamber { margin: 14px 0; }
+.chamber-svg { overflow-x: auto; }
+.chamber-svg svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-width: 720px;
+  max-width: 1150px;
+  margin: 0 auto;
+}
+
 /* ── KPI-Kacheln (gruppiert) ── */
 .summary { margin: 14px 0 26px; }
 .kpi-head {

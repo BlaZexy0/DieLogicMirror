@@ -8,10 +8,12 @@ import { buildInputs, validate, highlightInputs, clearHighlights, applyValues } 
 import { initPresetSelects } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
 import { renderKpis } from './ui/kpis.js';
+import { buildChamberCard, renderChamber } from './ui/chamber.js';
 import { buildCard, renderCard } from './ui/cards.js';
 import { initSim } from './core/simstore.js';
 
 const cards = {};
+let chamberCard = null;
 let activeHl = null;
 
 function onHighlight(def, btn) {
@@ -31,6 +33,7 @@ function render() {
   const v = state.values;
   const shot = computeShot(v, state.curve);
   validate(v);
+  renderChamber(chamberCard, v);
   renderKpis(document.getElementById('summary'), v, shot);
   charts.forEach(def => renderCard(cards[def.id], def, v, shot));
 }
@@ -42,6 +45,7 @@ async function init() {
   renderCurveTable();
   wireAddPoint(document.getElementById('addPoint'));
 
+  chamberCard = buildChamberCard(document.getElementById('chamber'));
   const chartsEl = document.getElementById('charts');
   charts.forEach(def => { cards[def.id] = buildCard(def, chartsEl, { link: true, onHighlight }); });
   initSim();

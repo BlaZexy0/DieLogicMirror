@@ -69,7 +69,8 @@ export const groups = [
     id: 'chamber', title: 'Füllkammer und Kolben',
     fields: [
       { key: 'diam',   label: 'Gewählter Kolben-Ø',    unit: 'mm', def: 150 },
-      { key: 'length', label: 'Gewählte Kammerlänge',  unit: 'mm', def: 700 }
+      { key: 'length', label: 'Gewählte Kammerlänge',  unit: 'mm', def: 700 },
+      { key: 'sealStroke', label: 'Einfüllöffnung verschlossen', unit: 'mm', def: 150 }
     ]
   },
   {
