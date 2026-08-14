@@ -235,9 +235,9 @@ export function buildChamberCard(container) {
   card.innerHTML =
     '<div class="head"><div><h3>Füllkammer</h3><small>Seitenansicht · aktive Länge L, Kolben-Ø D, Füllgrad φ, Hub bis „Kammer voll“</small></div>'
     + '<div class="head-right"><div class="tabs">'
-    + '<button data-v="A" class="active">bündig</button>'
+    + '<button data-v="A" class="active">Bündig</button>'
     + '<button data-v="B">Verdränger</button>'
-    + '<button data-v="C">verlängert</button>'
+    + '<button data-v="C">Verlängert</button>'
     + '</div><button class="png-btn" title="Als PNG kopieren" aria-label="Als PNG kopieren">' + COPY_SVG + '</button></div></div>'
     + '<div class="body chamber-svg"></div>';
 

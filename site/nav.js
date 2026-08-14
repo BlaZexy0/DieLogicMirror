@@ -14,6 +14,10 @@
  */
 
 (function () {
+  /* Aktuelle Site-Version — einzige Quelle, erscheint neben dem Logo
+     auf jeder Seite. Bei Releases hier hochzählen. */
+  const VERSION = 'v0.9.0';
+
   /* ── Diagramm-Einzelseiten (Reihenfolge = js/charts/registry.js) ── */
   const CHARTS = [
     ['shotcurve', 'Schusskurve'],
@@ -192,6 +196,14 @@
   letter-spacing: -0.02em;
   white-space: nowrap;
 }
+.dl-nav-version {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  align-self: flex-end;
+  padding-bottom: 0.15rem;
+  white-space: nowrap;
+}
 .dl-nav-links {
   display: flex;
   gap: 0;
@@ -344,6 +356,7 @@
   <a class="dl-nav-logo" href="${resolveHref('/index.html')}">
     ${LOGO_IMG}
     <span class="dl-nav-logo-text">DieLogic</span>
+    <span class="dl-nav-version">${VERSION}</span>
   </a>
   <ul class="dl-nav-links">
     ${buildNavLinks()}
