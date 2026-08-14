@@ -63,7 +63,7 @@ export function renderKpis(el, v, shot) {
   el.innerHTML =
     group('Füllkammer und Massenbilanz',
       kpi('Dosiergewicht', fmt(mdos) + ' kg', 'Bauteil + Anguss + Überlauf + Pressrest ' + fmt(v.biscuit) + ' kg')
-      + kpi('Dosiervolumen', fmt(Vdos * 1e6) + ' cm³', 'inkl. Pressrest · Dichte ' + fmt(v.density) + ' kg/m³')
+      + kpi('Dosiervolumen', fmt(Vdos * 1e6) + ' cm³', 'inkl. Pressrest · Flüssigdichte ' + fmt(v.density) + ' kg/m³')
       + kpi('Materialausbeute', fmt(eta) + ' %', 'Bauteil / Dosiergewicht · Rest ist Kreislaufmaterial')
       + kpi('Füllgrad', fmt(fill) + ' %', 'Ziel ' + fmt(v.fillMin) + '–' + fmt(v.fillMax) + ' % · inkl. Pressrest', band(fill, v.fillMin, v.fillMax))
       + kpi('Kammerverhältnis λ', fmt(ratioLD), 'λ = L/D · gewählte Kammer · Ø ' + fmt(v.diam) + ' × L ' + fmt(v.length) + ' mm')

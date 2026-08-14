@@ -283,6 +283,10 @@
     Ursprung gemessen. Die Dateien daher schon im CAD passend zur Werkzeugmitte positioniert
     exportieren; diese Seite verschiebt oder dreht nichts.</div>
 
+  <div class="stl-note"><strong style="color:var(--warn)">Achtung:</strong> Sprengfläche und
+    Gewichte sind abhängig von Schwindungsfaktor und Dichte (flüssig/fest). Beim Hinzufügen
+    der Daten beachten!</div>
+
   <div class="stl-canvas-card" id="canvas-card">
     <canvas id="proj-canvas"></canvas>
     <div class="canvas-empty" id="canvas-empty">
@@ -369,9 +373,11 @@
     <strong>Empfohlen</strong> markiert die kleinste Maschine, deren maximaler Nachdruck
     (mit S und Außermittigkeit) den eingestellten Auslegungsdruck erreicht;
     <strong>zu klein</strong> markierte Maschinen erreichen ihn nicht. „→ Dashboard" übernimmt
-    projizierte Fläche (als Sprengfläche), Außermittigkeit, Massen aus der Zuordnung, Dichte,
+    projizierte Fläche (als Sprengfläche), Außermittigkeit, Massen aus der Zuordnung,
     Sicherheitsfaktor, Auslegungsdruck und das Maschinen-Preset in das Dashboard und öffnet es —
-    möglich, sobald alle vier Zuordnungen (Bauteil, Anguss, Überlauf, Pressrest) vergeben sind.</p>
+    möglich, sobald alle vier Zuordnungen (Bauteil, Anguss, Überlauf, Pressrest) vergeben sind.
+    Die Dichte wird nicht übernommen: hier ist sie die Feststoffdichte für die Massen,
+    im Dashboard rechnet die Flüssigdichte die Schmelzevolumina.</p>
 
 </div>
 

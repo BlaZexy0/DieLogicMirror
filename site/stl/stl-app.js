@@ -353,7 +353,6 @@
       runner: kg(sums.runner),
       overflow: kg(sums.overflow),
       biscuit: kg(sums.biscuit),
-      density: getDensity(),
       area: Number((totP * 1e-6).toPrecision(4)),
       eccX: Math.round(Math.abs(cog.cu) * 10) / 10,
       eccY: Math.round(Math.abs(cog.cv) * 10) / 10,

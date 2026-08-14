@@ -58,7 +58,7 @@ export const groups = [
     id: 'alloyFields', title: 'Legierungswerte', preset: 'alloy',
     note: 'Diese Felder setzt das Legierungs-Preset (config/alloys.js). Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
     fields: [
-      { key: 'density', label: 'Dichte',            unit: 'kg/m³',  def: 2700 },
+      { key: 'density', label: 'Dichte flüssig',    unit: 'kg/m³',  def: 2400 },
       { key: 'Tcast',   label: 'Gießtemperatur',    unit: '°C',     def: 660 },
       { key: 'Tflow',   label: 'Min. Fließtemp.',   unit: '°C',     def: 580 },
       { key: 'Zconst',  label: 'Z-Konstante',       unit: '°C/%',   def: 4.8 },

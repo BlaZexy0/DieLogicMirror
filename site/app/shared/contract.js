@@ -14,11 +14,14 @@
   /* values-Objekt der STL-Übernahme. Massen in kg, area in m², ecc in mm,
      psel in bar; machineFields = Felder des gewählten Maschinen-Presets.
      Alle Schlüssel müssen Eingabefelder des Dashboards sein
-     (js/config/fields.js) — der Frontend-Test prüft das. */
+     (js/config/fields.js) — der Frontend-Test prüft das.
+     Die Dichte wird bewusst NICHT übernommen: die STL-Seite rechnet die
+     Massen mit der Feststoffdichte, das Dashboard rechnet seine Volumina
+     mit der Flüssigdichte — die bleibt dort unangetastet. */
   function stlHandoffValues(o, machineFields) {
     return Object.assign({
       part: o.part, runner: o.runner, overflow: o.overflow, biscuit: o.biscuit,
-      density: o.density, area: o.area, eccX: o.eccX, eccY: o.eccY,
+      area: o.area, eccX: o.eccX, eccY: o.eccY,
       safety: o.safety, psel: o.psel
     }, machineFields);
   }
