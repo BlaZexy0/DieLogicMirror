@@ -4,6 +4,7 @@
 
 import { series, line, refline } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
+import { pMaxMachine } from '../core/physics.js';
 import { theme } from '../core/theme.js';
 import { frac } from './mathfmt.js';
 
@@ -17,13 +18,23 @@ export default {
   id: 'area',
   title: 'Zulässige Sprengfläche',
   desc: 'Maschinenkraft, Druck und Außermittigkeit',
-  inputs: ['force', 'safety', 'pmin', 'pmax', 'psel', 'area', 'eccX', 'eccY', 'tieX', 'tieY'],
+  inputs: ['force', 'safety', 'injForce', 'dmin', 'psel', 'area', 'eccX', 'eccY', 'tieX', 'tieY'],
 
   calc(v) {
     const C = theme.chart;
     const k = leverK(v);
     const lift = k - 1 >= 1;
-    const x = seq(v.pmin, v.pmax, 140);
+    /* Druckachse bis zum max. spezifischen Gießdruck der Maschine; die
+       Hyperbeln A(p) = F/(100·S·k·p) laufen für p → 0 gegen unendlich —
+       y wird beim Säulenfeld a_x × a_y gekappt (mehr Sprengfläche passt
+       physisch nicht zwischen die Säulen) und x beginnt, wo die oberste
+       Kurve unter diese Kappe kommt. */
+    const pMax = pMaxMachine(v);
+    if (!(pMax > 0) || !isFinite(pMax)) return { err: 'Gießkraft und Kolben-Ø min. müssen > 0 sein.' };
+    const yCap = v.tieX > 0 && v.tieY > 0 ? v.tieX * v.tieY * 1e-6 : 0.01 * v.force / (pMax / 50);
+    let p0 = 0.01 * v.force / yCap;
+    if (!isFinite(p0) || p0 <= 0 || p0 >= pMax) p0 = pMax / 100;
+    const x = seq(p0, pMax, 140);
     const ss = [
       series('S=1,00 · zentrisch', C.series1, x, p => 0.01 * v.force / p),
       series('S=' + fmt(v.safety) + ' · zentrisch', C.series2, x, p => 0.01 * v.force / (v.safety * p))
@@ -35,7 +46,10 @@ export default {
     const q = line(x, ss, 'Druck in bar', 'Max. Sprengfläche m²',
       'Kraft ' + fmt(v.force) + ' kN · S=' + fmt(v.safety) +
       ' · e=(' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k=' + fmt(k) +
-      (lift ? ' · ⚠ Abheben' : ''));
+      (lift ? ' · ⚠ Abheben' : '') +
+      ' · y gekappt beim Säulenfeld ' + fmt(yCap) + ' m²');
+    q.y0 = 0;
+    q.y1 = yCap;
     /* Gewählte Sprengfläche als Referenz: die Schnittpunkte mit den Kurven
        zeigen direkt den maximal zulässigen Druck je Sicherheitsfaktor. */
     if (v.area > 0)

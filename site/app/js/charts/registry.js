@@ -20,10 +20,17 @@ import ventreq from './ventreq.js';
 import yieldChart from './yield.js';
 import gatesol from './gatesol.js';
 
+/* Reihenfolge = thematische Gruppen: Schusskurve/Arbeitspunkt/Fenster ·
+   Füllkammer · Anschnitt · Füllzeit/Thermik · Entlüftung ·
+   Maschine/Zuhaltung · Ausbringung. nav.js listet dieselbe Reihenfolge. */
 export const charts = [
   shotcurve, pq2, phild,
-  area, machine, filltime, fill, vent, sleeve, gate, slowshot,
-  pspec, windowChart, ftwall, gvwall, ventreq, yieldChart, gatesol
+  fill, sleeve, slowshot,
+  gate, windowChart, gvwall, gatesol,
+  filltime, ftwall,
+  vent, ventreq,
+  area, machine, pspec,
+  yieldChart
 ];
 
 export const chartsById = {};

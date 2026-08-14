@@ -33,7 +33,7 @@ export default {
   tabs: [['tv', 't–v'], ['ts', 't–s'], ['sv', 's–v']],
   usesCurve: true,
   csv: true,
-  inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'diam', 'length', 'gate', 'vent', 'vmax', 'amax', 'tmax', 'biscuitMin', 'gateMin', 'gateMax', 'vacModel', 'vacPump', 'vacValve', 'vacStart'],
+  inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'diam', 'length', 'gate', 'vent', 'vmax', 'amax', 'tmax', 'biscuitMin', 'gateMin', 'gateMax', 'vacModel', 'vacPump', 'vacStart'],
 
   calc(v, { shot }) {
     if (shot.error) return { err: shot.error, title: this.title };

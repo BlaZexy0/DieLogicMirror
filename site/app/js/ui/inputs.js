@@ -3,6 +3,7 @@
 
 import { groups, PRESET_KEYS, PRESET_DOMAINS } from '../config/fields.js';
 import { state, notify } from '../core/state.js';
+import { pMaxMachine } from '../core/physics.js';
 
 const DOMAIN_BY_ID = {};
 PRESET_DOMAINS.forEach(d => { DOMAIN_BY_ID[d.id] = d; });
@@ -104,15 +105,15 @@ export function applyValues(fields) {
 export const POSITIVE_KEYS = ['density', 'diam', 'length', 'gate', 'vent', 'Cd',
   'force', 'injForce', 'area', 'psel', 'safety', 'vmax', 'tmax', 'vAirMax', 'solK',
   'tieX', 'tieY',
-  'dmin', 'dmax', 'lmin', 'lmax', 'pmax', 'part', 'Tcast', 'Tflow', 'Tdie',
+  'dmin', 'dmax', 'lmin', 'lmax', 'part', 'Tcast', 'Tflow', 'Tdie',
   'Zconst', 'wall', 'wallMin', 'wallMax', 'kfill', 'gateTh', 'Jatom', 'pAcc'];
 
 /* Felder, die 0 sein dürfen, aber nicht negativ (amax = 0 heißt „kein
    Limit"; Gewichte, Bandgrenzen und Positionen können 0 sein). Die
    Außermittigkeiten eccX/eccY bleiben bewusst vorzeichenbehaftet. */
-export const NONNEG_KEYS = ['runner', 'overflow', 'biscuit', 'amax', 'pmin',
+export const NONNEG_KEYS = ['runner', 'overflow', 'biscuit', 'amax',
   'fillMin', 'fillMax', 'gateMin', 'gateMax', 'pSpecMin', 'pSpecMax',
-  'sealStroke', 'vacStart', 'vacPump', 'vacValve', 'biscuitMin', 'intTime', 'Sfrac'];
+  'sealStroke', 'vacStart', 'vacPump', 'biscuitMin', 'intTime', 'Sfrac'];
 
 export const NEGATIVE_OK = new Set(['eccX', 'eccY']);
 
@@ -125,7 +126,6 @@ export function validate(v) {
     if (!isFinite(v[a]) || !isFinite(v[b])) return;
     if (strict ? v[a] >= v[b] : v[a] > v[b]) { bad.add(a); bad.add(b); msgs.push(label); }
   };
-  pair('pmin', 'pmax', 'Druck min ≥ max', true);
   pair('dmin', 'dmax', 'Kolben-Ø min ≥ max', true);
   pair('lmin', 'lmax', 'Kammerlänge min ≥ max', true);
   pair('wallMin', 'wallMax', 'Wandstärke min ≥ max', true);
@@ -144,7 +144,10 @@ export function validate(v) {
   /* Gewählte Werte gegen ihre Grenzen. */
   if (v.diam < v.dmin || v.diam > v.dmax) bad.add('diam');
   if (v.length < v.lmin || v.length > v.lmax) bad.add('length');
-  if (v.psel < v.pmin || v.psel > v.pmax) bad.add('psel');
+  /* Auslegungsdruck gegen den max. spezifischen Gießdruck der Maschine
+     (Gießkraft auf Ø dmin) — ersetzt das frühere pmin/pmax-Paar. */
+  const pM = pMaxMachine(v);
+  if (isFinite(pM) && v.psel > pM) bad.add('psel');
 
   document.querySelectorAll('input[data-k]').forEach(e =>
     e.classList.toggle('invalid', bad.has(e.dataset.k)));

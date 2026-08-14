@@ -2,6 +2,7 @@
 
 import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
+import { pMaxMachine } from '../core/physics.js';
 import { theme } from '../core/theme.js';
 import { frac } from './mathfmt.js';
 
@@ -9,15 +10,22 @@ export default {
   id: 'machine',
   title: 'Erforderliche Maschinengröße',
   desc: 'Kraftbedarf über Druck',
-  inputs: ['area', 'safety', 'pmin', 'pmax', 'psel', 'force'],
+  inputs: ['area', 'safety', 'injForce', 'dmin', 'psel', 'force'],
 
   calc(v) {
     const C = theme.chart;
-    const x = seq(v.pmin, v.pmax, 140);
+    /* Druckachse 0 … max. spezifischer Gießdruck der Maschine (Ø dmin) */
+    const pMax = pMaxMachine(v);
+    if (!(pMax > 0) || !isFinite(pMax)) return { err: 'Gießkraft und Kolben-Ø min. müssen > 0 sein.' };
+    const x = seq(0, pMax, 140);
     const q = line(x, [
       series('S=1,00', C.series1, x, p => v.area * p / 0.01),
       series('S=' + fmt(v.safety), C.series2, x, p => v.area * v.safety * p / 0.01)
     ], 'Druck in bar', 'Maschinengröße kN', 'Fläche ' + fmt(v.area) + ' m² · S=' + fmt(v.safety));
+    /* y knapp über Maschinenkraft und Betriebspunkt kappen — sonst dominiert
+       bei großem pMax die Schraffur „über Maschinenkraft" das ganze Bild. */
+    q.y0 = 0;
+    q.y1 = Math.max(1.6 * v.force, 1.25 * v.area * v.safety * v.psel * 100) || undefined;
     q.pt = [v.psel, v.area * v.safety * v.psel / 0.01];
     q.ptl = 'Bedarf: ' + fmt(v.area * v.safety * v.psel / 0.01) + ' kN';
     q.limits = [limit('force', 'Verfügbar ' + fmt(v.force) + ' kN', 'y', 'max', v.force, { note: 'über Maschinenkraft' })];

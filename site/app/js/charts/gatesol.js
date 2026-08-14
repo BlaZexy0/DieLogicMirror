@@ -29,11 +29,11 @@ export default {
 <p class="math-note">Die Erstarrungszeit wächst quadratisch mit der Dicke (Chvorinov-artiger Ansatz mit der
 Erstarrungskonstante k<sub>s</sub>):</p>
 <div class="eq">t<sub>erst</sub>(s) = k<sub>s</sub> · s²</div>
-<p class="math-note">Der Anschnitt darf erst nach Ende der Nachdruckzeit t<sub>N</sub> zufrieren, sonst ist
+<p class="math-note">Der Anschnitt darf erst nach der Nachdruckaufbauzeit t<sub>N</sub> zufrieren, sonst ist
 die Kavität vom Nachdruck abgeschnitten, bevor die Schwindung ausgeglichen ist:</p>
 <div class="eq">t<sub>erst</sub> ≥ t<sub>N</sub>&ensp;⇔&ensp;s ≥ ${sqrt(frac('t<sub>N</sub>', 'k<sub>s</sub>'), true)}</div>
 <p class="math-note">Aktuell: t<sub>erst</sub>(s = <span data-m="s"></span>) = <b data-m="t"></b> ·
-Nachdruckzeit t<sub>N</sub> = <b data-m="tN"></b> ⇒ Mindestdicke = <b data-m="smin"></b></p>`;
+Nachdruckaufbauzeit t<sub>N</sub> = <b data-m="tN"></b> ⇒ Mindestdicke = <b data-m="smin"></b></p>`;
   },
 
   renderMath(el, v) {

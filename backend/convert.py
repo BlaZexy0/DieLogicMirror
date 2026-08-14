@@ -101,9 +101,9 @@ def _vacuum_config(vac, fill_complete, travel):
     pump = _num(vac, "pump_mbar") * 100.0          # mbar → Pa
     if pump <= 0:
         raise ConvertError("Pumpen-Enddruck muss > 0 mbar sein.")
-    valve = _num(vac, "valve_mm2") / 1e6           # mm² → m²
+    valve = _num(vac, "valve_mm2") / 1e6           # mm² → m² (Entlüftungsfläche)
     if valve <= 0:
-        raise ConvertError("Ventilquerschnitt muss > 0 mm² sein.")
+        raise ConvertError("Entlüftungsfläche muss > 0 mm² sein.")
     start = _num(vac, "start_mm") / 1000.0         # mm → m
     if start < 0:
         raise ConvertError("Vakuum-Start muss ≥ 0 mm sein.")

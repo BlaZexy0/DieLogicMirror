@@ -11,6 +11,9 @@ export function total(v) { return v.part + v.runner + v.overflow; }
 export function afterGate(v) { return v.part + v.overflow; }
 export function pistonArea(v) { return 0.25 * PI * v.diam * v.diam; }           // mm²
 export function travel(m, v) { return 1e9 * (m / v.density) / pistonArea(v); }  // mm für Masse m
+/* Max. spezifischer Gießdruck der Maschine: Gießkraft auf dem kleinsten
+   Kolben (Ø dmin) — obere Grenze der Druckachsen und für psel. In bar. */
+export function pMaxMachine(v) { return v.injForce * 1e4 / (0.25 * PI * v.dmin * v.dmin); }
 
 /* Höhe eines Kreissegments mit Flächenanteil phi (bisektion). */
 export function segHeight(phi) {

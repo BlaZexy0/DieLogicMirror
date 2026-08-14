@@ -13,7 +13,9 @@ export function toSimPayload(values, curve, count = 400) {
     payload.vacuum = {
       model: values.vacModel,
       pump_mbar: values.vacPump,
-      valve_mm2: values.vacValve,
+      /* Die Entlüftungsfläche drosselt — ein separater Ventilquerschnitt
+         entfällt, das Backend-Feld heißt weiterhin valve_mm2. */
+      valve_mm2: values.vent,
       start_mm: values.vacStart
     };
   }

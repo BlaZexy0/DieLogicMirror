@@ -34,13 +34,13 @@ export const groups = [
   },
   {
     id: 'machine', title: 'Druck und Sprengfläche',
+    /* Die Druckachse läuft von 0 bis zum max. spezifischen Gießdruck der
+       Maschine (Gießkraft auf Ø dmin) — pmin/pmax sind keine Eingaben mehr. */
     fields: [
       { key: 'area',   label: 'Sprengfläche',      unit: 'm²',  def: 0.15 },
-      { key: 'pmin',   label: 'Druck min.',        unit: 'bar', def: 100 },
-      { key: 'pmax',   label: 'Druck max.',        unit: 'bar', def: 1200 },
       { key: 'psel',   label: 'Auslegungsdruck',   unit: 'bar', def: 600 },
-      { key: 'safety', label: 'Sicherheitsfaktor', unit: '-',   def: 1.3 },
       /* adv: standardmäßig hinter „Erweiterte Optionen" eingeklappt. */
+      { key: 'safety', label: 'Sicherheitsfaktor', unit: '-',   def: 1.3, adv: true },
       { key: 'eccX', label: 'Außermittigkeit Schwerpunkt x', unit: 'mm', def: 0, adv: true },
       { key: 'eccY', label: 'Außermittigkeit Schwerpunkt y', unit: 'mm', def: 0, adv: true }
     ]
@@ -74,20 +74,20 @@ export const groups = [
     ]
   },
   {
-    id: 'gating', title: 'Anschnitt und Entlüftung',
+    id: 'gating', title: 'Anschnitt',
     fields: [
-      { key: 'gate', label: 'Anschnittfläche',   unit: 'mm²', def: 1800 },
-      { key: 'vent', label: 'Entlüftungsfläche', unit: 'mm²', def: 800 }
+      { key: 'gate',   label: 'Anschnittfläche', unit: 'mm²', def: 1800 },
+      { key: 'gateTh', label: 'Anschnittdicke',  unit: 'mm',  def: 3 }
     ]
   },
   {
-    id: 'vacuum', title: 'Vakuum (Simulation)',
-    note: 'Wirkt auf die simulierte Luftdruck-Kurve in der Schusskurve (Backend). „Ventil + Entlüftung" rechnet zusätzlich mit der Entlüftungsfläche und dem Eingussquerschnitt.',
+    id: 'vacuum', title: 'Vakuum und Entlüftung',
+    note: 'Die Entlüftungsfläche treibt Entlüftungs-KPIs und -Diagramme und drosselt im Vakuum-Modell „Entlüftung" die simulierte Luftdruck-Kurve der Schusskurve (Backend).',
     fields: [
       { key: 'vacModel', label: 'Vakuum-Modell', unit: '', def: 'aus', type: 'select',
-        options: [['aus', 'ohne Vakuum'], ['ideal', 'Idealpumpe (Enddruck)'], ['conductance', 'Ventil + Entlüftung (Drossel)']] },
+        options: [['aus', 'ohne Vakuum'], ['ideal', 'Idealpumpe (Enddruck)'], ['conductance', 'Entlüftung (Drossel)']] },
+      { key: 'vent', label: 'Entlüftungsfläche', unit: 'mm²', def: 800 },
       { key: 'vacPump',  label: 'Pumpen-Enddruck',    unit: 'mbar', def: 80 },
-      { key: 'vacValve', label: 'Ventilquerschnitt',  unit: 'mm²',  def: 100 },
       { key: 'vacStart', label: 'Vakuum ab Kolbenweg', unit: 'mm',  def: 150 }
     ]
   },
@@ -124,9 +124,8 @@ export const groups = [
       { key: 'pSpecMax',   label: 'Ziel-Gießdruck max.',      unit: 'bar', def: 1200 },
       { key: 'vAirMax',    label: 'Max. Entlüftungsgeschw.',  unit: 'm/s', def: 150 },
       { key: 'biscuitMin', label: 'Pressrest min.',           unit: 'mm',  def: 25 },
-      { key: 'gateTh',     label: 'Anschnittdicke',           unit: 'mm',  def: 3 },
       { key: 'Jatom',      label: 'Zerstäubungsfaktor J',     unit: '-',   def: 750 },
-      { key: 'intTime',    label: 'Nachdruckzeit',            unit: 'ms',  def: 60 }
+      { key: 'intTime',    label: 'Nachdruckaufbauzeit',      unit: 'ms',  def: 60 }
     ]
   }
 ];
