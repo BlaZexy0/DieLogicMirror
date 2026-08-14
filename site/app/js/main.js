@@ -34,7 +34,7 @@ function render() {
   const shot = computeShot(v, state.curve);
   validate(v);
   renderChamber(chamberCard, v);
-  renderKpis(document.getElementById('summary'), v, shot);
+  renderKpis(document.getElementById('summary'), v, shot, document.getElementById('chamber-kpis'));
   charts.forEach(def => renderCard(cards[def.id], def, v, shot));
 }
 

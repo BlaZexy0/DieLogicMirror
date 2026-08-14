@@ -14,7 +14,9 @@ function group(title, tiles) {
   return '<div class="kpi-head">' + title + '</div><div class="kpi-grid">' + tiles + '</div>';
 }
 
-export function renderKpis(el, v, shot) {
+/* chamberEl: Ziel für die Füllkammer-Gruppe (links neben dem Schema);
+   el bekommt die übrigen Gruppen. Ohne chamberEl landet alles in el. */
+export function renderKpis(el, v, shot, chamberEl) {
   const A = pistonArea(v);
   const mdos = total(v) + v.biscuit;
   const Vdos = mdos / v.density;                                   // m³
@@ -60,7 +62,7 @@ export function renderKpis(el, v, shot) {
   const Areq = tOp > 0 && v.vAirMax > 0 ? Vm / (tOp / 1000) / v.vAirMax * 1e6 : NaN;
   const tErst = v.solK * v.gateTh * v.gateTh;
 
-  el.innerHTML =
+  const chamberHtml =
     group('Füllkammer und Massenbilanz',
       kpi('Dosiergewicht', fmt(mdos) + ' kg', 'Bauteil + Anguss + Überlauf + Pressrest ' + fmt(v.biscuit) + ' kg')
       + kpi('Dosiervolumen', fmt(Vdos * 1e6) + ' cm³', 'inkl. Pressrest · Flüssigdichte ' + fmt(v.density) + ' kg/m³')
@@ -70,9 +72,10 @@ export function renderKpis(el, v, shot) {
       + kpi('Kammer voll bei', fmt(sFill) + ' mm', 'Füllgrad inkl. Pressrest ' + fmt(fill) + ' %', cap(fill, 100))
       + kpi('Anschnitt erreicht', fmt(p1) + ' mm', 'nur Angussvolumen')
       + kpi('Gesamtschuss gefüllt', fmt(p3) + ' mm', 'inkl. Pressrest · Kammer ' + fmt(v.length) + ' mm' + (p3 > v.length ? ' · Überlauf!' : ''), cap(p3, v.length))
-      + kpi('Pressrest', fmt(biscLen) + ' mm', 'min ' + fmt(v.biscuitMin) + ' mm', biscLen < v.biscuitMin ? 'bad' : 'ok'))
+      + kpi('Pressrest', fmt(biscLen) + ' mm', 'min ' + fmt(v.biscuitMin) + ' mm', biscLen < v.biscuitMin ? 'bad' : 'ok'));
 
-    + group('Zuhaltung und Maschine',
+  const restHtml =
+    group('Zuhaltung und Maschine',
       kpi('Benötigte Schließkraft', fmt(req / 10) + ' t', fmt(req) + ' kN / ' + fmt(v.force) + ' kN verfügbar', cap(req, v.force))
       + kpi('Max. Nachdruck', fmt(pMaxClamp) + ' bar', 'Zuhaltung · e = (' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k = ' + fmt(kClamp) + ' · S = ' + fmt(v.safety), cap(v.psel, pMaxClamp))
       + kpi('Spez. Gießdruck', fmt(pSpec) + ' bar', 'Gießkraft / Kolbenfläche · Ziel ' + fmt(v.pSpecMin) + '–' + fmt(v.pSpecMax) + ' bar', band(pSpec, v.pSpecMin, v.pSpecMax))
@@ -111,4 +114,11 @@ export function renderKpis(el, v, shot) {
           return kpi('Kurve vs. Maschinenlimits', fmt(shot.profile.vmax) + ' m/s · ' + fmt(aPk) + ' m/s²',
             'Spitzen v/a · Limits ' + fmt(v.vmax) + ' m/s · ' + fmt(v.amax) + ' m/s²', ok ? 'ok' : 'bad');
         })()));
+
+  if (chamberEl) {
+    chamberEl.innerHTML = chamberHtml;
+    el.innerHTML = restHtml;
+  } else {
+    el.innerHTML = chamberHtml + restHtml;
+  }
 }

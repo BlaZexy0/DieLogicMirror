@@ -16,8 +16,12 @@ function fieldHTML(f) {
     return '<div class="field" data-field="' + f.key + '">' + label +
       '<select data-k="' + f.key + '">' + opts + '</select></div>';
   }
+  /* Alle Felder außer den Außermittigkeiten (Vorzeichen = Richtung) sind
+     physikalische Beträge — min="0" hält Spinner und Browser-Validierung
+     im Positiven; validate() prüft zusätzlich hart. */
+  const min = NEGATIVE_OK.has(f.key) ? '' : ' min="0"';
   return '<div class="field" data-field="' + f.key + '">' + label +
-    '<input data-k="' + f.key + '" type="number" step="any" value="' + f.def + '"></div>';
+    '<input data-k="' + f.key + '" type="number" step="any"' + min + ' value="' + f.def + '"></div>';
 }
 
 /* onlyKeys: optionales Set von Feldnamen — dann werden nur diese Felder
@@ -94,10 +98,22 @@ export function applyValues(fields) {
   }
 }
 
-/* Felder, die zwingend > 0 sein müssen (Divisionen, Achsen, Wurzeln). */
+/* Felder, die zwingend > 0 sein müssen (Divisionen, Achsen, Wurzeln,
+   physikalisch zwingend positive Größen). */
 const POSITIVE_KEYS = ['density', 'diam', 'length', 'gate', 'vent', 'Cd',
   'force', 'injForce', 'area', 'psel', 'safety', 'vmax', 'vsel', 'tmax', 'vAirMax', 'solK',
-  'tieX', 'tieY'];
+  'tieX', 'tieY',
+  'dmin', 'dmax', 'lmin', 'lmax', 'pmax', 'part', 'v1sel', 'Tcast', 'Tflow', 'Tdie',
+  'Zconst', 'wall', 'wallMin', 'wallMax', 'kfill', 'gateTh', 'Jatom', 'pAcc'];
+
+/* Felder, die 0 sein dürfen, aber nicht negativ (amax = 0 heißt „kein
+   Limit"; Gewichte, Bandgrenzen und Positionen können 0 sein). Die
+   Außermittigkeiten eccX/eccY bleiben bewusst vorzeichenbehaftet. */
+const NONNEG_KEYS = ['runner', 'overflow', 'biscuit', 'amax', 'pmin', 'vmin',
+  'fillMin', 'fillMax', 'gateMin', 'gateMax', 'pSpecMin', 'pSpecMax',
+  'sealStroke', 'vacStart', 'vacPump', 'vacValve', 'biscuitMin', 'intTime', 'Sfrac'];
+
+export const NEGATIVE_OK = new Set(['eccX', 'eccY']);
 
 export function validate(v) {
   const bad = new Set();
@@ -120,6 +136,10 @@ export function validate(v) {
   let nonpos = false;
   for (const k of POSITIVE_KEYS) if (!(v[k] > 0)) { bad.add(k); nonpos = true; }
   if (nonpos) msgs.push('rot markierte Felder müssen > 0 sein');
+
+  let neg = false;
+  for (const k of NONNEG_KEYS) if (!(v[k] >= 0)) { bad.add(k); neg = true; }
+  if (neg) msgs.push('rot markierte Felder dürfen nicht negativ sein');
 
   /* Gewählte Werte gegen ihre Grenzen. */
   if (v.diam < v.dmin || v.diam > v.dmax) bad.add('diam');
