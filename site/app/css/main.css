@@ -238,13 +238,136 @@ select {
 }
 .kpi { padding: 11px; border-left: 4px solid var(--line); }
 .kpi span, .kpi small { display: block; color: var(--muted); font-size: 12px; }
-.kpi b { display: block; font-size: 19px; margin: 3px 0; }
+.kpi small { margin-top: 5px; }
+.kpi b { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; font-size: 19px; margin: 3px 0; }
 .kpi.ok { border-left-color: var(--ok-border); }
 .kpi.ok b { color: var(--ok); }
 .kpi.warn { border-left-color: var(--warn-border); }
 .kpi.warn b { color: var(--warn-text); }
 .kpi.bad { border-left-color: var(--bad); }
 .kpi.bad b { color: var(--bad); }
+
+/* Status-Tag: Bewertung nie als Farbe allein (✓/!/✕ + Marge als Text). */
+.kpi .tag {
+  font-size: 11px;
+  font-weight: bold;
+  border-radius: 4px;
+  padding: 1px 6px;
+  align-self: center;
+  white-space: nowrap;
+}
+.kpi.ok .tag { background: #dcefe3; color: var(--ok); }
+.kpi.warn .tag { background: #f6ecd2; color: var(--warn-text); }
+.kpi.bad .tag { background: #f6ded9; color: var(--bad); }
+
+/* „Keine Daten": neutral (grau, gestrichelt) — keine Warnung. */
+.kpi.nodata { border-left-color: var(--muted); border-left-style: dashed; }
+.kpi.nodata b { color: var(--muted); }
+.kpi.nodata .tag { background: var(--bg); color: var(--muted); border: 1px dashed var(--line); }
+
+/* Bullet: Track = plausibler Bereich, Band = Ziel, Marker = Ist. */
+.kpi-bullet {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--pale);
+  margin-top: 8px;
+}
+.kpi-bullet .band {
+  position: absolute;
+  top: 0; bottom: 0;
+  border-radius: 6px;
+  background: var(--green);
+  opacity: .26;
+}
+.kpi-bullet .mark {
+  position: absolute;
+  top: -3px; bottom: -3px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--deep);
+  transform: translateX(-50%);
+}
+.kpi.bad .kpi-bullet .mark { background: var(--bad); }
+.kpi-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 10.5px;
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Meter: Füllung = Auslastung, Farbe trägt die Bewertung; Limit-Marke. */
+.kpi-meter {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--pale);
+  margin-top: 8px;
+  overflow: hidden;
+}
+.kpi-meter .fill {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  border-radius: 6px;
+  background: var(--green);
+}
+.kpi.warn .kpi-meter .fill { background: var(--warn-border); }
+.kpi.bad .kpi-meter .fill { background: var(--bad); }
+.kpi-meter .limit {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: var(--deep);
+  opacity: .55;
+}
+.meter-row {
+  display: grid;
+  grid-template-columns: 14px 1fr 52px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+}
+.meter-row .kpi-meter { margin-top: 0; }
+.meter-row .mlbl { color: var(--muted); font-size: 11px; }
+.meter-row .mval {
+  font-size: 11px;
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Prüfliste über den KPI-Gruppen. */
+.checkbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+.checkbar .verdict { font-weight: bold; font-size: 15px; }
+.checkbar .dotrow { display: flex; gap: 4px; }
+.checkbar .dot { width: 13px; height: 13px; border-radius: 3px; background: var(--ok-border); }
+.checkbar .dot.warn { background: var(--warn-border); }
+.checkbar .dot.bad { background: var(--bad); }
+.checkbar .fails, .checkbar .tights { color: var(--muted); font-size: 13px; }
+.ck-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.checkbar .fails .ck-link { color: var(--bad); }
+.checkbar .tights .ck-link { color: var(--warn-text); }
+.kpi.flash { outline: 2px solid var(--green); outline-offset: 2px; }
 
 /* ── Diagramm-Karten ── */
 .charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
