@@ -54,36 +54,43 @@ function loadPersisted() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return;
-    const data = JSON.parse(raw);
-    if (data.values) {
-      for (const k in state.values) {
-        if (data.values[k] == null) continue;
-        if (typeof state.values[k] === 'string') {
-          /* Select-Felder (z. B. vacModel) sind Strings. */
-          state.values[k] = String(data.values[k]);
-        } else {
-          const x = Number(data.values[k]);
-          if (isFinite(x)) state.values[k] = x;
-        }
-      }
-    }
-    if (Array.isArray(data.curve) && data.curve.length) {
-      state.curve = data.curve
-        .filter(p => Array.isArray(p) && p.length >= 2)
-        .map(p => [Number(p[0]), Number(p[1])]);
-    }
-    if (data.curveGen && typeof data.curveGen === 'object') {
-      if (CURVE_MODES.includes(data.curveGen.mode)) state.curveGen.mode = data.curveGen.mode;
-      for (const k of ['v1', 'a1', 'v2', 'a2']) {
-        const x = Number(data.curveGen[k]);
-        if (isFinite(x) && x > 0) state.curveGen[k] = x;
-      }
-    }
-    for (const d of PRESET_DOMAINS) {
-      if (typeof data[d.stateKey] === 'string') state[d.stateKey] = data[d.stateKey];
-    }
+    applyData(JSON.parse(raw));
   } catch (e) {
     console.warn('Gespeicherter Zustand konnte nicht geladen werden — Defaults werden verwendet.', e);
+  }
+}
+
+/* Zustandsdaten aus einer externen Quelle (localStorage, Share-Link,
+   JSON-Datei) geprüft in den Zustand übernehmen. Unbekannte Schlüssel
+   werden ignoriert, Typen erzwungen — die Quelle ist nicht vertrauenswürdig. */
+export function applyData(data) {
+  if (!data || typeof data !== 'object') return;
+  if (data.values) {
+    for (const k in state.values) {
+      if (data.values[k] == null) continue;
+      if (typeof state.values[k] === 'string') {
+        /* Select-Felder (z. B. vacModel) sind Strings. */
+        state.values[k] = String(data.values[k]);
+      } else {
+        const x = Number(data.values[k]);
+        if (isFinite(x)) state.values[k] = x;
+      }
+    }
+  }
+  if (Array.isArray(data.curve) && data.curve.length) {
+    state.curve = data.curve
+      .filter(p => Array.isArray(p) && p.length >= 2)
+      .map(p => [Number(p[0]), Number(p[1])]);
+  }
+  if (data.curveGen && typeof data.curveGen === 'object') {
+    if (CURVE_MODES.includes(data.curveGen.mode)) state.curveGen.mode = data.curveGen.mode;
+    for (const k of ['v1', 'a1', 'v2', 'a2']) {
+      const x = Number(data.curveGen[k]);
+      if (isFinite(x) && x > 0) state.curveGen[k] = x;
+    }
+  }
+  for (const d of PRESET_DOMAINS) {
+    if (typeof data[d.stateKey] === 'string') state[d.stateKey] = data[d.stateKey];
   }
 }
 

@@ -12,6 +12,7 @@ import { initPresetSelect } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
 import { buildCard, renderCard } from './ui/cards.js';
 import { initSim } from './core/simstore.js';
+import { consumeShareLink } from './core/share.js';
 
 const id = new URLSearchParams(location.search).get('id');
 const def = chartsById[id] || charts[0];
@@ -30,6 +31,8 @@ function render() {
 }
 
 async function init() {
+  /* Geteilter Stand (#s=…) auch auf Einzelseiten. */
+  consumeShareLink();
   await loadTheme();
   document.title = def.title + ' · DieLogic Dashboard';
   document.getElementById('chartTitle').textContent = def.title;

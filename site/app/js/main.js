@@ -12,6 +12,7 @@ import { renderKpis } from './ui/kpis.js';
 import { buildChamberCard, renderChamber } from './ui/chamber.js';
 import { buildCard, renderCard } from './ui/cards.js';
 import { initSim } from './core/simstore.js';
+import { shareURL, consumeShareLink } from './core/share.js';
 
 const cards = {};
 let chamberCard = null;
@@ -43,6 +44,8 @@ function render() {
 }
 
 async function init() {
+  /* Vor dem Aufbau der Eingaben, damit ein geteilter Stand überall greift. */
+  consumeShareLink();
   await loadTheme();
   initPresetSelects();
   buildInputs(document.getElementById('groups'));
@@ -53,6 +56,18 @@ async function init() {
   const chartsEl = document.getElementById('charts');
   charts.forEach(def => { cards[def.id] = buildCard(def, chartsEl, { link: true, onHighlight }); });
   initSim();
+
+  const shareBtn = document.getElementById('shareBtn');
+  shareBtn.onclick = () => {
+    const url = shareURL();
+    const done = () => {
+      const old = shareBtn.textContent;
+      shareBtn.textContent = 'Kopiert ✓';
+      setTimeout(() => { shareBtn.textContent = old; }, 1600);
+    };
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, () => prompt('Link kopieren:', url));
+    else prompt('Link kopieren:', url);
+  };
 
   document.getElementById('resetBtn').onclick = () => {
     resetState();
