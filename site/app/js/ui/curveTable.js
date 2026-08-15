@@ -1,14 +1,14 @@
-/* Schusskurven-UI: Modus-Umschalter (Punkte / López / V₁-V₂), die
+/* Schusskurven-UI: Modus-Umschalter (Punkte / DieLogic / V₁-V₂), die
    V₁/V₂-Parameterfelder und die Wegpunkt-Tabelle. In den generierten Modi
    ist die Tabelle schreibgeschützt — die Punkte kommen aus core/curvegen.js. */
 
 import { state, notify } from '../core/state.js';
 
-const MODES = [['points', 'Punkte'], ['lopez', 'López'], ['v1v2', 'V₁ / V₂']];
+const MODES = [['points', 'Punkte'], ['lopez', 'DieLogic'], ['v1v2', 'V₁ / V₂']];
 
 const NOTES = {
   points: 'Wegpunkte als Weg s [mm] / Kolbengeschwindigkeit v [m/s]. Zwischen den Punkten wird konstant beschleunigt; der Ursprung (0 mm, 0 m/s) wird automatisch ergänzt.',
-  lopez: 'López-Faura-Hernández-Anfahrt (Profil P5 der Theorie „Nebenbedingungen") bis v_krit, Plateau bis „Kammer voll", dann Rampe mit a_max auf die Geschwindigkeit der empfohlenen NADCA-Füllzeit. Die Punkte werden aus den Eingaben erzeugt.',
+  lopez: 'DieLogic-Kurve: Anfahrt nach López-Faura-Hernández (Profil P5 der Theorie „Nebenbedingungen") bis v_krit, Plateau bis „Kammer voll", dann Rampe mit a_max auf die Geschwindigkeit der empfohlenen NADCA-Füllzeit. Die Punkte werden aus den Eingaben erzeugt.',
   v1v2: 'Rampe mit a₁ auf V₁, Plateau bis „Kammer voll", Rampe mit a₂ auf V₂ bis zum Schussende. Die Punkte werden aus den Eingaben erzeugt.'
 };
 

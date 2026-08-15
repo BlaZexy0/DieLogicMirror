@@ -74,9 +74,9 @@ export default {
   title: 'PQ²-Diagramm (Arbeitspunkt)',
   desc: 'Maschine × Werkzeug · Hüllkurve · Operational Window · x: Q, Q², v_p, t_f · y: p_m, p_hyd, P·Q',
   tab: 'q',
-  tabs: [['q', 'Q'], ['q2', 'Q²'], ['vp', 'v_p'], ['tf', 't_f']],
+  tabs: [['q', 'Q'], ['q2', 'Q²'], ['vp', 'v<sub>p</sub>'], ['tf', 't<sub>f</sub>']],
   tab2: 'pm',
-  tabs2: [['pm', 'p_m'], ['ph', 'p_hyd'], ['pw', 'P·Q']],
+  tabs2: [['pm', 'p<sub>m</sub>'], ['ph', 'p<sub>hyd</sub>'], ['pw', 'P·Q']],
   inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax', 'pAcc', 'gateTh', 'Jatom'],
 
   calc(v) {

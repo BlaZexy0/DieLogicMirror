@@ -89,7 +89,7 @@ export const groups = [
     id: 'vacuum', title: 'Vakuum und Entlüftung',
     note: 'Die Entlüftungsfläche treibt Entlüftungs-KPIs und -Diagramme und drosselt im Vakuum-Modell „Entlüftung" die simulierte Luftdruck-Kurve der Schusskurve (Backend).',
     fields: [
-      { key: 'vacModel', label: 'Vakuum-Modell', unit: '', def: 'aus', type: 'select',
+      { key: 'vacModel', label: 'Vakuum-Modell', unit: '', def: 'conductance', type: 'select',
         options: [['aus', 'ohne Vakuum'], ['ideal', 'Idealpumpe (Enddruck)'], ['conductance', 'Entlüftung (Drossel)']] },
       { key: 'vent', label: 'Entlüftungsfläche', unit: 'mm²', def: 800 },
       { key: 'vAirMax',  label: 'Max. Entlüftungsgeschw.', unit: 'm/s', def: 150 },
