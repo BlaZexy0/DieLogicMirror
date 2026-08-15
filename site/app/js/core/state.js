@@ -28,7 +28,20 @@ export const state = {
   part: ''
 };
 
-for (const f of allFields()) state.values[f.key] = f.def;
+/* Standardzustand: Feld-Defaults, überlagert von den Default-Presets der
+   Domänen (PRESET_DOMAINS[].def) — die Preset-Configs sind klassische
+   Scripts und zu diesem Zeitpunkt bereits geladen. */
+function applyDefaults() {
+  for (const f of allFields()) state.values[f.key] = f.def;
+  for (const d of PRESET_DOMAINS) {
+    state[d.stateKey] = d.def || '';
+    const list = (window[d.global] || {})[d.listKey] || [];
+    const p = list.find(x => x.id === d.def);
+    if (p) Object.assign(state.values, p.fields);
+  }
+}
+
+applyDefaults();
 loadPersisted();
 
 const subscribers = [];
@@ -85,9 +98,8 @@ export function persist() {
 
 /* Alles auf die Defaults zurücksetzen (und persistieren). */
 export function resetState() {
-  for (const f of allFields()) state.values[f.key] = f.def;
+  applyDefaults();
   state.curve = DEFAULT_CURVE.map(p => p.slice());
   state.curveGen = Object.assign({}, DEFAULT_CURVEGEN);
-  for (const d of PRESET_DOMAINS) state[d.stateKey] = '';
   persist();
 }

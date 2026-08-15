@@ -5,13 +5,15 @@
 /* Preset-Domänen: jede hat ein Select in der Sidebar, einen Zustands-Schlüssel
    (state[stateKey]) und eine Feldgruppe (groups[].preset === id), die bei
    gewähltem Preset ausgeblendet ist. Die Listen kommen aus config/<config>
-   (klassisches Script, setzt window[global]). */
+   (klassisches Script, setzt window[global]). 'def' ist das beim ersten
+   Besuch (und nach Reset) vorausgewählte Preset — die Feldgruppen sind
+   dadurch standardmäßig eingeklappt, „manuell" zeigt sie wieder. */
 export const PRESET_DOMAINS = [
-  { id: 'machine', title: 'Maschinen-Preset', stateKey: 'machine', selId: 'machineSel',
+  { id: 'machine', title: 'Maschinen-Preset', stateKey: 'machine', selId: 'machineSel', def: 'hcc1600',
     groupElId: 'preset-group', global: '__MACHINES__', listKey: 'machines', config: 'config/machines.js' },
-  { id: 'alloy', title: 'Legierungs-Preset', stateKey: 'alloy', selId: 'alloySel',
+  { id: 'alloy', title: 'Legierungs-Preset', stateKey: 'alloy', selId: 'alloySel', def: 'alsi9cu3',
     groupElId: 'alloy-preset-group', global: '__ALLOYS__', listKey: 'alloys', config: 'config/alloys.js' },
-  { id: 'part', title: 'Bauteiltyp-Preset', stateKey: 'part', selId: 'partSel',
+  { id: 'part', title: 'Bauteiltyp-Preset', stateKey: 'part', selId: 'partSel', def: 'gehaeuse',
     groupElId: 'part-preset-group', global: '__PARTS__', listKey: 'parts', config: 'config/parts.js' }
 ];
 
@@ -71,7 +73,9 @@ export const groups = [
     id: 'chamber', title: 'Füllkammer und Kolben',
     fields: [
       { key: 'diam',   label: 'Gewählter Kolben-Ø',    unit: 'mm', def: 150 },
-      { key: 'length', label: 'Gewählte Kammerlänge',  unit: 'mm', def: 700 },
+      /* def passt zur Default-Maschine (HCC-1600, lmin 1000) und hält den
+         Füllgrad mit der Default-Massenbilanz im Zielband. */
+      { key: 'length', label: 'Gewählte Kammerlänge',  unit: 'mm', def: 1000 },
       { key: 'sealStroke', label: 'Einfüllöffnung verschlossen', unit: 'mm', def: 150 },
       { key: 'biscuitMin', label: 'Pressrest min.',    unit: 'mm', def: 25 }
     ]
@@ -131,8 +135,9 @@ for (const g of groups) {
   if (g.preset) for (const f of g.fields) PRESET_KEYS[f.key] = g.preset;
 }
 
-/* Standard-Schusskurve: Wegpunkte [s in mm, v in m/s]. */
-export const DEFAULT_CURVE = [[60, 0.4], [318, 0.4], [470, 4], [675, 4]];
+/* Standard-Schusskurve: Wegpunkte [s in mm, v in m/s] — abgestimmt auf die
+   Default-Geometrie (Ø 150 × L 1000: „Kammer voll" ≈ 574 mm, Gesamthub ≈ 972 mm). */
+export const DEFAULT_CURVE = [[60, 0.4], [574, 0.4], [720, 4], [972, 4]];
 
 export function allFields() {
   const a = [];
