@@ -106,14 +106,17 @@ export const POSITIVE_KEYS = ['density', 'diam', 'length', 'gate', 'vent', 'Cd',
   'force', 'injForce', 'area', 'psel', 'safety', 'vmax', 'tmax', 'vAirMax', 'solK',
   'tieX', 'tieY',
   'dmin', 'dmax', 'lmin', 'lmax', 'part', 'Tcast', 'Tflow', 'Tdie',
-  'Zconst', 'wall', 'wallMin', 'wallMax', 'kfill', 'gateTh', 'Jatom', 'pAcc'];
+  'Zconst', 'wall', 'wallMin', 'wallMax', 'kfill', 'gateTh', 'Jatom', 'pAcc',
+  /* sealStroke/vacPump verlangt auch das Backend > 0 (convert.py) —
+     die Klassen hier müssen mit der Simulation übereinstimmen. */
+  'sealStroke', 'vacPump'];
 
 /* Felder, die 0 sein dürfen, aber nicht negativ (amax = 0 heißt „kein
    Limit"; Gewichte, Bandgrenzen und Positionen können 0 sein). Die
    Außermittigkeiten eccX/eccY bleiben bewusst vorzeichenbehaftet. */
 export const NONNEG_KEYS = ['runner', 'overflow', 'biscuit', 'amax',
   'fillMin', 'fillMax', 'gateMin', 'gateMax',
-  'sealStroke', 'vacStart', 'vacPump', 'biscuitMin', 'intTime', 'Sfrac'];
+  'vacStart', 'biscuitMin', 'intTime', 'Sfrac'];
 
 export const NEGATIVE_OK = new Set(['eccX', 'eccY']);
 
@@ -143,6 +146,8 @@ export function validate(v) {
   /* Gewählte Werte gegen ihre Grenzen. */
   if (v.diam < v.dmin || v.diam > v.dmax) bad.add('diam');
   if (v.length < v.lmin || v.length > v.lmax) bad.add('length');
+  /* Verschluss-Hub muss in der Kammer liegen (Backend prüft dasselbe). */
+  if (v.sealStroke > v.length) bad.add('sealStroke');
   /* Auslegungsdruck gegen den max. spezifischen Gießdruck der Maschine
      (Gießkraft auf Ø dmin) — ersetzt das frühere pmin/pmax-Paar. */
   const pM = pMaxMachine(v);

@@ -96,6 +96,26 @@ def test_vent_zero_omitted():
     assert "vent_area" not in config["casting"]
 
 
+# ── Einfüllöffnung (sealStroke → pour_hole_position) ────────────
+
+def test_seal_stroke_sets_pour_hole_position():
+    config, _ = sim_config_from_browser(dict(VALUES, sealStroke=150), CURVE)
+    close(config["sleeve"]["pour_hole_position"], 0.150)
+
+
+def test_seal_stroke_defaults_to_fraction():
+    # Ohne sealStroke (direkte API-Nutzung): 20 % der Kammerlänge.
+    config, _ = sim_config_from_browser(VALUES, CURVE)
+    close(config["sleeve"]["pour_hole_position"], 0.2 * 0.7)
+
+
+def test_seal_stroke_must_lie_in_chamber():
+    raises_convert_error(lambda: sim_config_from_browser(
+        dict(VALUES, sealStroke=0), CURVE), "Einfüllöffnung")
+    raises_convert_error(lambda: sim_config_from_browser(
+        dict(VALUES, sealStroke=750), CURVE), "Einfüllöffnung")
+
+
 # ── Eingabefehler ───────────────────────────────────────────────
 
 def test_missing_key():
@@ -122,6 +142,32 @@ def test_overfilled_chamber():
 def test_biscuit_required():
     raises_convert_error(
         lambda: sim_config_from_browser(dict(VALUES, biscuit=0), CURVE), "Pressrest")
+
+
+def test_runner_and_part_required():
+    # Das Dashboard erlaubt Angussgewicht 0 (NONNEG_KEYS) — hpdcsim braucht
+    # aber einen Anguss; die Meldung muss deutsch sein, nicht der interne
+    # ConfigError ("runner volume must be greater than zero").
+    raises_convert_error(
+        lambda: sim_config_from_browser(dict(VALUES, runner=0), CURVE), "Anguss")
+    raises_convert_error(
+        lambda: sim_config_from_browser(dict(VALUES, part=0), CURVE), "Bauteil")
+
+
+def test_overflow_zero_allowed_negative_rejected():
+    config, _ = sim_config_from_browser(dict(VALUES, overflow=0), CURVE)
+    close(config["casting"]["overflow"]["volume"], 0.0)
+    raises_convert_error(
+        lambda: sim_config_from_browser(dict(VALUES, overflow=-1), CURVE), "Überlauf")
+
+
+def test_optional_values_must_be_finite():
+    # Tcast/vent/sealStroke sind optional, aber wenn vorhanden endlich —
+    # NaN aus dem JSON-Body darf nicht bis in die hpdcsim-Konfig laufen.
+    raises_convert_error(
+        lambda: sim_config_from_browser(dict(VALUES, Tcast=math.nan), CURVE), "Tcast")
+    raises_convert_error(
+        lambda: sim_config_from_browser(dict(VALUES, vent=math.inf), CURVE), "vent")
 
 
 def test_curve_negative_velocity():

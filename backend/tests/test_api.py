@@ -83,6 +83,19 @@ def test_shot_invalid_inputs_are_422():
     assert r.status_code == 422
     assert "Pressrest" in r.json()["detail"]
 
+    r = shot(runner=0)  # Dashboard erlaubt 0, die Simulation nicht —
+    assert r.status_code == 422  # Meldung muss deutsch sein
+    assert "Anguss" in r.json()["detail"]
+
+
+def test_seal_stroke_drives_pour_hole_event():
+    # Das Dashboard-Feld „Einfüllöffnung verschlossen" bestimmt, wo die
+    # Luftkompression beginnt — nicht mehr die hartkodierten 20 % von L.
+    events = {e["id"]: e for e in shot(sealStroke=150).json()["events"]}
+    assert abs(events["pour_hole_sealed"]["s_mm"] - 150.0) < 1e-6
+    events = {e["id"]: e for e in shot().json()["events"]}
+    assert abs(events["pour_hole_sealed"]["s_mm"] - 140.0) < 1e-6  # 0,2·700
+
 
 def test_shot_curve_validation():
     payload = {"values": VALUES, "curve": [], "count": 200}

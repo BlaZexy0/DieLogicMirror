@@ -7,6 +7,8 @@ Dosiervolumen = (Bauteil + Anguss + Überlauf + Pressrest) / Dichte,
 Füllgrad φ = V_dose / (A·L). Die Schusskurve kommt als [s_mm, v_m_s]-Punkte;
 hpdcsim verlangt, dass das Profil nicht über den Füllende-Hub
 (L − Pressrestlänge) hinausfährt — die Kurve wird deshalb dort gekappt.
+Die Einfüllöffnung schließt beim Hub values.sealStroke (Dashboard-Feld
+„Einfüllöffnung verschlossen"); fehlt er, gilt 20 % der Kammerlänge.
 """
 
 import math
@@ -24,7 +26,7 @@ DEFAULT_PROCESS = {
 }
 DEFAULT_SPECIFIC_HEAT = 1050.0     # J/(kg K) — wie hpdcsim examples/demo.json
 DEFAULT_POUR_TEMP = 680.0          # °C, falls Tcast fehlt
-POUR_HOLE_POSITION_FRACTION = 0.2  # Eingusslage: 20 % der Kammerlänge
+POUR_HOLE_POSITION_FRACTION = 0.2  # Eingusslage: 20 % der Kammerlänge, falls sealStroke fehlt
 CLAMP_MARGIN = 1e-6                # m, Abstand zum Füllende-Hub beim Kappen
 
 
@@ -42,6 +44,14 @@ def _num(values, key):
     return x
 
 
+def _num_opt(values, key, default):
+    """Optionaler Wert: fehlt der Schlüssel (oder ist er None), gilt der
+    Default — ist er vorhanden, muss er eine endliche Zahl sein."""
+    if key not in values or values[key] is None:
+        return float(default)
+    return _num(values, key)
+
+
 def _clamped_curve(curve, limit):
     """Kurvenpunkte [s_m, v] aufsteigend, Ursprung ergänzt, bei `limit` gekappt
     (Geschwindigkeit am Kappunkt linear interpoliert)."""
@@ -51,6 +61,8 @@ def _clamped_curve(curve, limit):
             s, v = float(p[0]) / 1000.0, float(p[1])
         except (TypeError, ValueError, IndexError):
             raise ConvertError("Schusskurve: Punkte müssen [s_mm, v_m_s]-Paare sein.")
+        # Nicht-endliche Punkte still überspringen — wie buildProfile()
+        # in site/app/js/core/physics.js (leere Tabellenzeilen o. ä.).
         if not (math.isfinite(s) and math.isfinite(v)):
             continue
         if v < 0:
@@ -66,9 +78,13 @@ def _clamped_curve(curve, limit):
     if pts[0][0] > 0:
         pts.insert(0, (0.0, 0.0))
 
+    # Liegt die ganze Kurve hinter dem Kappunkt, bleibt der ergänzte Ursprung
+    # und der erste Punkt wird auf den Kappunkt interpoliert (getestet in
+    # test_curve_entirely_beyond_fill_complete_clamps_from_origin).
     cut = limit - CLAMP_MARGIN
-    if pts[0][0] >= cut:
-        raise ConvertError("Schusskurve beginnt hinter dem Füllende-Hub.")
+    if cut <= 0:
+        raise ConvertError(
+            "Füllende-Hub ist null — das Pressrestvolumen lässt keinen Kolbenweg zu.")
     clamped = False
     out = [pts[0]]
     for prev, p in zip(pts, pts[1:]):
@@ -137,6 +153,12 @@ def sim_config_from_browser(values, curve, process=None, vacuum=None):
     Vp = _num(values, "part") / rho
     Vo = _num(values, "overflow") / rho
     Vb = _num(values, "biscuit") / rho
+    if Vr <= 0:
+        raise ConvertError("Angussgewicht muss > 0 sein (hpdcsim braucht einen Anguss).")
+    if Vp <= 0:
+        raise ConvertError("Bauteilgewicht muss > 0 sein.")
+    if Vo < 0:
+        raise ConvertError("Überlaufgewicht darf nicht negativ sein.")
     if Vb <= 0:
         raise ConvertError("Pressrestgewicht muss > 0 sein (hpdcsim braucht einen Pressrest).")
     Vdose = Vr + Vp + Vo + Vb
@@ -154,19 +176,29 @@ def sim_config_from_browser(values, curve, process=None, vacuum=None):
     gate_area = _num(values, "gate") / 1e6
     if gate_area <= 0:
         raise ConvertError("Anschnittfläche muss > 0 sein.")
-    vent = float(values.get("vent", 0) or 0) / 1e6
+    vent = _num_opt(values, "vent", 0.0) / 1e6
+
+    # Einfüllöffnung: Verschluss-Hub aus dem Dashboard (sealStroke, mm) —
+    # derselbe Wert wie im Füllkammer-Schema; ohne Angabe (direkte
+    # API-Nutzung) 20 % der Kammerlänge.
+    seal = _num_opt(values, "sealStroke",
+                    POUR_HOLE_POSITION_FRACTION * L * 1000.0) / 1000.0
+    if not 0 < seal <= L:
+        raise ConvertError(
+            f"Einfüllöffnung-Verschlusshub ({seal * 1000:.0f} mm) muss > 0 mm "
+            f"sein und in der Kammer ({L * 1000:.0f} mm) liegen.")
 
     config = {
         "sleeve": {
             "diameter": D,
             "length": L,
             "fill_fraction": phi,
-            "pour_hole_position": POUR_HOLE_POSITION_FRACTION * L,
+            "pour_hole_position": seal,
         },
         "melt": {
             "density": rho,
             "specific_heat": DEFAULT_SPECIFIC_HEAT,
-            "pouring_temperature": float(values.get("Tcast", DEFAULT_POUR_TEMP)),
+            "pouring_temperature": _num_opt(values, "Tcast", DEFAULT_POUR_TEMP),
         },
         "casting": {
             "runner": {"volume": Vr, "gate_area": gate_area},

@@ -64,8 +64,10 @@ Wissenswertes zur Übersetzung (`convert.py`):
 - Volumina aus Massen/Dichte wie im Dashboard; φ = V_dose/(A·L).
 - hpdcsim verweigert Profile, die über den Füllende-Hub (L − Pressrest)
   hinausfahren — die Schusskurve wird dort gekappt (`meta.curve_clamped`).
-- Ohne eigene Felder gesetzt: Eingusslage 0,2·L, c_p = 1050 J/(kg·K),
-  Dosierzeit 4 s, Beruhigungszeit 1 s.
+- Die Einfüllöffnung schließt bei `values.sealStroke` (Dashboard-Feld
+  „Einfüllöffnung verschlossen", mm) — dort beginnt die Luftkompression.
+- Ohne eigene Felder gesetzt: Eingusslage 0,2·L (falls `sealStroke` fehlt),
+  c_p = 1050 J/(kg·K), Dosierzeit 4 s, Beruhigungszeit 1 s.
 
 ## Schnelltest ohne Server
 
