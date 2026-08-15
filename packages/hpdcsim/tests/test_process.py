@@ -161,3 +161,16 @@ def test_dosing_phase_states():
     assert abs(state.melt_volume - 0.5*process.sleeve.melt_volume) < 1e-12
     assert state.pour_hole_open and state.plunger_velocity == 0.0
     assert process.state_at_time(5.0).phase is Phase.DWELL
+
+
+def test_shot_end_sample_keeps_end_velocity():
+    # Regression: exactly at t = total_time the state must report the
+    # profile's end velocity — the subtraction t - shot_start_time can
+    # exceed end_time by one ULP, which used to flip the phase to COMPLETE
+    # and zero the last sample of every time-spaced sweep.
+    process = build_process()
+    state = process.state_at_time(process.total_time)
+    assert state.phase is Phase.SHOT
+    assert abs(state.plunger_velocity - process.profile.velocities[-1]) < 1e-12
+    after = process.state_at_time(process.total_time + 1e-6)
+    assert after.phase is Phase.COMPLETE and after.plunger_velocity == 0.0

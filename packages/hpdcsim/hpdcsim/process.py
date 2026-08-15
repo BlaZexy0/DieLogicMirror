@@ -226,8 +226,12 @@ class ShotProcess:
             stroke = velocity = acceleration = 0.0
             melt = self.sleeve.melt_volume
         else:
+            # Decide the phase from t vs. total_time (sums of the same terms,
+            # so the comparison is exact): shot_t = t - shot_start_time can
+            # exceed end_time by one ULP at the very last sample, which used
+            # to flip the phase to COMPLETE and zero the final velocity.
             shot_t = t - self.shot_start_time
-            phase = Phase.SHOT if shot_t <= self.profile.end_time else Phase.COMPLETE
+            phase = Phase.SHOT if t <= self.total_time else Phase.COMPLETE
             sample = self.profile.sample_at_time(min(shot_t, self.profile.end_time))
             stroke, acceleration = sample.position, sample.acceleration
             velocity = sample.velocity if phase is Phase.SHOT else 0.0

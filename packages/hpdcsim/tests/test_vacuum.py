@@ -1,6 +1,7 @@
 import numpy as np
 
-from common import build_casting, build_process, build_sleeve, raises
+from common import (build_casting, build_process, build_profile, build_sleeve,
+                    raises)
 from hpdcsim import (ATMOSPHERE, ConductanceVacuum, IdealVacuum, NoVacuum,
                      PumpedVacuum, VacuumModel, VacuumSystem,
                      orifice_mass_flow)
@@ -67,6 +68,24 @@ def test_conductance_pour_hole_orifice_overpressure():
 def test_conductance_requires_valve_area():
     process = with_vacuum(ConductanceVacuum(8e3))  # valve_area missing
     raises(ValueError, process.air_pressure_at_stroke, 0.3)
+
+
+def test_conductance_end_of_fill_does_not_undershoot():
+    # Regression: on the last solver step the valve is already closed
+    # (stroke == end_position) while the air volume collapses by orders of
+    # magnitude; the vents' exponential step must stop at their ambient
+    # sink instead of crushing the pressure toward zero.
+    from hpdcsim.laws import ShotPlan
+
+    sleeve, casting = build_sleeve(), build_casting(vent_area=8e-4)
+    plan = ShotPlan(sleeve, casting)
+    process = build_process(
+        sleeve=sleeve, casting=casting,
+        motion=build_profile(s_end=plan.fill_complete_stroke - 1e-6),
+        vacuum=VacuumSystem(0.15, ConductanceVacuum(8e3), valve_area=8e-4))
+    _, pressures = process.air_model.solve(process)
+    assert pressures.min() >= 8e3*0.99          # never below the pump plenum
+    assert pressures[-1] >= ATMOSPHERE*0.99     # valve closed -> sink is ambient
 
 
 def test_orifice_mass_flow_properties():

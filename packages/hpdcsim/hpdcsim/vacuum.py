@@ -33,6 +33,19 @@ class AirState:
     vacuum_active: bool
 
 
+def _solver_times(process, count):
+    """Integration grid over the whole process, concentrated on the shot
+    phase: before the shot the plunger stands still and the pour hole vents,
+    so a coarse prefix (a tenth of the points) suffices — the fine remainder
+    covers the shot, where the air volume actually collapses."""
+    t0, t1 = process.shot_start_time, process.total_time
+    if t0 <= 0.0 or t1 <= t0:
+        return np.linspace(0.0, t1, count)
+    pre = max(2, count // 10)
+    shot = max(2, count - pre + 1)
+    return np.r_[np.linspace(0.0, t0, pre)[:-1], np.linspace(t0, t1, shot)]
+
+
 def orifice_mass_flow(discharge_coefficient, area, p_up, p_down,
                       temperature, gas_constant, heat_capacity_ratio):
     """Compressible orifice mass flow (isentropic, choked when the pressure
@@ -127,7 +140,7 @@ class PumpedVacuum(VacuumModel):
 
     def solve(self, process, count=2000):
         ambient = process.environment.ambient_pressure
-        times = np.linspace(0.0, process.total_time, count)
+        times = _solver_times(process, count)
         pressures = np.empty_like(times)
         q = None
         for i, t in enumerate(times):
@@ -178,7 +191,7 @@ class ConductanceVacuum(VacuumModel):
         gas_rt = env.gas_constant * env.ambient_temperature
         flow_args = (env.ambient_temperature, env.gas_constant,
                      env.heat_capacity_ratio)
-        times = np.linspace(0.0, process.total_time, count)
+        times = _solver_times(process, count)
         pressures = np.empty_like(times)
         mass = None
         for i, t in enumerate(times):
@@ -208,9 +221,15 @@ class ConductanceVacuum(VacuumModel):
                         pressure, self.pump_pressure, *flow_args)
                 if outflow > 0.0:
                     mass *= np.exp(-outflow / mass * dt)
-                    if air.vacuum_active and pressure > self.pump_pressure:
-                        # valve flow stops at the plenum pressure; one step
-                        # must not carry the air below it
-                        mass = max(mass, self.pump_pressure*volume/gas_rt)
+                    # Every orifice stops at its downstream pressure; one
+                    # step must not carry the air below the lowest active
+                    # sink — the pump plenum while the valve is open,
+                    # ambient for the vents (the frozen-rate exponential
+                    # would otherwise crush the mass toward zero when the
+                    # air volume collapses at the end of fill).
+                    floor = (self.pump_pressure if air.vacuum_active
+                             else env.ambient_pressure)
+                    if pressure > floor:
+                        mass = max(mass, floor*volume/gas_rt)
             pressures[i] = mass * gas_rt / volume
         return times, pressures
