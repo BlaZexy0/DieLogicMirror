@@ -101,7 +101,7 @@
         }).join('\n          ');
 
         return `<li class="dl-nav-group">
-        <span class="dl-nav-group-label">${item.label}</span>
+        <button type="button" class="dl-nav-group-label" aria-haspopup="true" aria-expanded="false">${item.label}</button>
         <div class="dl-nav-dropdown">
           ${dropdownItems}
         </div>
@@ -246,13 +246,18 @@
 .dl-nav-group > .dl-nav-group-label {
   color: #8fb8c4;
   font-size: 0.85rem;
+  font-family: inherit;
   padding: 0 0.9rem;
   line-height: 56px;
-  cursor: default;
+  cursor: pointer;
   display: inline-block;
   transition: color 0.15s;
+  background: none;
+  border: 0;
 }
-.dl-nav-group:hover > .dl-nav-group-label { color: white; }
+.dl-nav-group:hover > .dl-nav-group-label,
+.dl-nav-group.open > .dl-nav-group-label,
+.dl-nav-group:focus-within > .dl-nav-group-label { color: white; }
 .dl-nav-dropdown {
   position: absolute;
   top: 56px;
@@ -271,7 +276,11 @@
   z-index: 200;
   box-shadow: 0 8px 24px rgba(0,20,27,0.35);
 }
-.dl-nav-group:hover .dl-nav-dropdown {
+/* Aufklappen bei Maus-Hover, per Klick/Touch (.open) und bei
+   Tastatur-Fokus im Menü (:focus-within). */
+.dl-nav-group:hover .dl-nav-dropdown,
+.dl-nav-group.open .dl-nav-dropdown,
+.dl-nav-group:focus-within .dl-nav-dropdown {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -372,6 +381,34 @@
     } else {
       document.body.insertAdjacentHTML('afterbegin', navHTML);
     }
+    wireDropdowns();
+  }
+
+  /* Aufklapp-Menüs klickbar (Touch) und per Tastatur nutzbar machen —
+     :hover allein erreicht weder Touch-Geräte noch Tab-Fokus. */
+  function wireDropdowns() {
+    const groups = Array.from(document.querySelectorAll('.dl-nav .dl-nav-group'));
+    const closeAll = (except) => groups.forEach(g => {
+      if (g !== except) {
+        g.classList.remove('open');
+        g.querySelector('.dl-nav-group-label').setAttribute('aria-expanded', 'false');
+      }
+    });
+    groups.forEach(g => {
+      const btn = g.querySelector('.dl-nav-group-label');
+      btn.addEventListener('click', () => {
+        const open = g.classList.toggle('open');
+        btn.setAttribute('aria-expanded', String(open));
+        closeAll(g);
+      });
+    });
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t && t.closest && t.closest('.dl-nav-group'))) closeAll(null);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeAll(null);
+    });
   }
 
   function injectFooter() {
