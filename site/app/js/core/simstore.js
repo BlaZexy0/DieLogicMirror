@@ -10,6 +10,7 @@ import { toSimPayload, fetchSim } from './simapi.js';
 export const sim = { status: 'idle', data: null, error: null };
 
 const DEBOUNCE_MS = 400;
+const TIMEOUT_MS = 15000;
 let timer = null, ctrl = null, lastKey = '';
 
 function key() {
@@ -24,18 +25,24 @@ function schedule() {
 
 async function run() {
   if (ctrl) ctrl.abort();
-  ctrl = new AbortController();
+  const mine = ctrl = new AbortController();
+  /* Hängendes Backend: nach TIMEOUT_MS abbrechen — sonst bliebe der
+     Status für immer 'loading'. */
+  const kill = setTimeout(() => mine.abort(), TIMEOUT_MS);
   lastKey = key();
   sim.status = 'loading';
   try {
-    sim.data = await fetchSim(toSimPayload(state.values, state.curve), ctrl.signal);
+    sim.data = await fetchSim(toSimPayload(state.values, state.curve), mine.signal);
     sim.error = null;
     sim.status = 'ok';
   } catch (e) {
-    if (e.name === 'AbortError') return;
+    if (mine !== ctrl) return;    // von einem neueren Abruf abgelöst
     sim.data = null;
     sim.status = 'error';
-    sim.error = (e instanceof TypeError) ? 'offline' : e.message;
+    sim.error = e.name === 'AbortError' ? 'Zeitüberschreitung (' + TIMEOUT_MS / 1000 + ' s)'
+      : (e instanceof TypeError) ? 'offline' : e.message;
+  } finally {
+    clearTimeout(kill);
   }
   notify();   // lastKey unverändert → schedule() löst keinen neuen Abruf aus
 }

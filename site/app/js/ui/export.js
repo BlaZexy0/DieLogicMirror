@@ -1,7 +1,7 @@
 /* Export/Import: PNG in Zwischenablage, Schusskurven-CSV, Auslegung als JSON. */
 
 import { drawAny } from '../render/draw.js';
-import { state, notify } from '../core/state.js';
+import { state, notify, applyData } from '../core/state.js';
 import { applyValues } from './inputs.js';
 import { renderCurveTable } from './curveTable.js';
 
@@ -60,9 +60,10 @@ export function exportShotCSV(shot) {
   download(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'DieLogic_Schusskurve.csv');
 }
 
-/* Komplette Auslegung (Werte + Kurve + Preset) als JSON-Datei. */
+/* Komplette Auslegung (Werte + Kurve + Kurvenmodus + Presets) als
+   JSON-Datei — dieselben Felder wie der Share-Link (core/share.js). */
 export function saveStateJSON() {
-  const data = { values: state.values, curve: state.curve,
+  const data = { values: state.values, curve: state.curve, curveGen: state.curveGen,
     machine: state.machine, alloy: state.alloy, part: state.part };
   download(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'DieLogic_Auslegung.json');
   const sb = document.getElementById('saveBtn');
@@ -73,22 +74,17 @@ export function saveStateJSON() {
   }
 }
 
-/* JSON-Auslegung laden und anwenden. */
+/* JSON-Auslegung laden: über applyData — dieselbe geprüfte Übernahme wie
+   Share-Link und localStorage (Datei ist nicht vertrauenswürdig). Danach
+   DOM-Felder und Kurventabelle nachziehen; die Preset-Selects
+   synchronisiert notify() über ihre Subscriber. */
 export function loadStateJSON(file) {
   const r = new FileReader();
   r.onload = () => {
     try {
-      const data = JSON.parse(r.result);
-      if (data.values) applyValues(data.values);
-      if (Array.isArray(data.curve) && data.curve.length) {
-        state.curve = data.curve.map(p => [Number(p[0]), Number(p[1])]);
-        renderCurveTable();
-      }
-      state.machine = data.machine || '';
-      state.alloy = data.alloy || '';
-      state.part = data.part || '';
-      const ms = document.getElementById('machineSel');
-      if (ms) ms.value = state.machine;
+      applyData(JSON.parse(r.result));
+      applyValues(state.values);
+      renderCurveTable();
       notify();
     } catch (e) {
       alert('Datei konnte nicht gelesen werden: ' + e.message);

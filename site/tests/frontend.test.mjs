@@ -37,6 +37,8 @@ const { POSITIVE_KEYS, NONNEG_KEYS, NEGATIVE_OK } = await import(
   path.join(site, 'app/js/ui/inputs.js'));
 const { generateCurve } = await import(path.join(site, 'app/js/core/curvegen.js'));
 const { computeShot } = await import(path.join(site, 'app/js/core/physics.js'));
+const { state, applyData } = await import(path.join(site, 'app/js/core/state.js'));
+const { charts } = await import(path.join(site, 'app/js/charts/registry.js'));
 
 function defaultValues() {
   const v = {};
@@ -66,12 +68,59 @@ test('curvegen: V1/V2-Modus — Plateau bei V1, Fehler bei zu flacher Rampe', ()
   const v = defaultValues();
   const ok = generateCurve(v, { mode: 'v1v2', v1: 0.4, a1: 5, v2: 4, a2: 30 });
   assert.ok(!ok.error, ok.error);
+  assert.ok(!ok.warn, ok.warn);
   const shot = computeShot(v, ok.points);
   assert.ok(!shot.error, shot.error);
   closeTo(shot.v1, 0.4, 1e-3);
   closeTo(shot.profile.vmax, 4, 1e-3);
   const bad = generateCurve(v, { mode: 'v1v2', v1: 4, a1: 0.01, v2: 5, a2: 30 });
   assert.ok(bad.error, 'zu flache Rampe muss einen Fehler liefern');
+});
+
+test('curvegen: V1/V2 — zu kleines a₂ kappt V₂, statt a₂ zu überschreiten', () => {
+  const v = defaultValues();
+  const r = generateCurve(v, { mode: 'v1v2', v1: 0.4, a1: 5, v2: 6.5, a2: 8 });
+  assert.ok(!r.error, r.error);
+  assert.ok(r.warn, 'Hinweis auf gekappte Rampe erwartet');
+  const shot = computeShot(v, r.points);
+  assert.ok(!shot.error, shot.error);
+  const aPk = Math.max(shot.profile.amax, -shot.profile.amin, 0);
+  assert.ok(aPk <= 8 + 1e-6, 'Beschleunigung über a₂: ' + aPk);
+  assert.ok(shot.profile.vmax < 6.5, 'V₂ darf nicht erreicht werden');
+  assert.ok(shot.profile.travel >= shot.totalStroke - 1e-9, 'Kurvenhub deckt Gesamthub nicht ab');
+});
+
+test('curvegen: López — kleines a_max wird nicht überschritten (2. Phase gekappt)', () => {
+  const v = Object.assign(defaultValues(), { amax: 3 });
+  const r = generateCurve(v, { mode: 'lopez' });
+  assert.ok(!r.error, r.error);
+  assert.ok(r.warn, 'Hinweis auf gekappte Rampe erwartet');
+  const shot = computeShot(v, r.points);
+  assert.ok(!shot.error, shot.error);
+  const aPk = Math.max(shot.profile.amax, -shot.profile.amin, 0);
+  assert.ok(aPk <= 3 + 1e-6, 'Beschleunigung über a_max: ' + aPk);
+  assert.ok(shot.checks[2][0], 'Beschleunigungs-Prüfung muss bestehen: ' + shot.checks[2][1]);
+});
+
+/* ── Zustands-Übernahme (core/state.js) ──────────────────────── */
+
+test('state: applyData verwirft ungültige Kurvenpunkte statt NaN zu übernehmen', () => {
+  const before = state.curve.map(p => p.slice());
+  applyData({ curve: [['x', 'y'], [null, {}], [NaN, 1]] });
+  assert.deepEqual(state.curve, before, 'nur ungültige Punkte → Kurve unverändert');
+  applyData({ curve: [[10, 0.2], ['kaputt', 1], [500, 3]] });
+  assert.deepEqual(state.curve, [[10, 0.2], [500, 3]], 'gültige Punkte bleiben, kaputte fliegen raus');
+});
+
+/* ── Navigation (site/nav.js) ────────────────────────────────── */
+
+test('nav: CHARTS-Liste entspricht der Registry (Ids, Titel, Reihenfolge)', () => {
+  const src = readFileSync(path.join(site, 'nav.js'), 'utf8');
+  const m = src.match(/const CHARTS = \[([\s\S]*?)\n  \];/);
+  assert.ok(m, 'CHARTS-Array in nav.js nicht gefunden');
+  const navCharts = new Function('return [' + m[1] + ']')();
+  assert.deepEqual(navCharts, charts.map(c => [c.id, c.title]),
+    'nav.js CHARTS muss js/charts/registry.js entsprechen (Reihenfolge = Registry)');
 });
 
 function loadAsset(name) {

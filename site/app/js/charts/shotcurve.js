@@ -94,8 +94,11 @@ export default {
         });
         q.rl = 'Luftdruck in mbar (Anzeige ≤ ' + fmt(P_CLIP_MBAR) + ')';
       }
-    } else if (sim.status === 'error' && sim.error === 'offline') {
-      q.info += ' · Luftdruck-Simulation: Backend nicht erreichbar';
+    } else if (sim.status === 'error') {
+      /* Auch fachliche 422-Meldungen des Backends (convert.py) anzeigen —
+         sonst verschwände die Luftdruck-Serie kommentarlos. */
+      const msg = sim.error === 'offline' ? 'Backend nicht erreichbar' : (sim.error || 'Fehler');
+      q.info += ' · Luftdruck-Simulation: ' + (msg.length > 90 ? msg.slice(0, 87) + '…' : msg);
     }
     return q;
   },

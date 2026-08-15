@@ -72,10 +72,7 @@ async function init() {
   document.getElementById('resetBtn').onclick = () => {
     resetState();
     applyValues(state.values);
-    ['machineSel', 'alloySel', 'partSel'].forEach(id => {
-      const sel = document.getElementById(id);
-      if (sel) sel.value = '';
-    });
+    /* Preset-Selects synchronisiert notify() über ihre Subscriber. */
     renderCurveTable();
     notify();
   };

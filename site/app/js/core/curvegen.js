@@ -12,7 +12,8 @@
 
    Reine Rechenlogik + ein dünner state-Wrapper (applyCurveGen). */
 
-import { state } from './state.js';
+import { state, addPreparer } from './state.js';
+import { fmt } from './format.js';
 import { total, afterGate, pistonArea, vCrit, waveSpeed } from './physics.js';
 
 /* Punkte aufräumen: runden, streng steigende s erzwingen. */
@@ -27,15 +28,34 @@ function clean(pts) {
   return out;
 }
 
-/* Rampe von vFrom auf vTo ab s0, dann Plateau bis sEnd. a in m/s², s in mm. */
+/* Rampe von vFrom Richtung vTo ab s0 mit Beschleunigungsbetrag a, dann
+   Plateau bis sEnd; a = 0 heißt „kein Limit" (kürzestmögliche Rampe).
+   Reicht der Weg für die Rampe nicht, endet sie bei sEnd mit der tatsächlich
+   erreichten Geschwindigkeit (wie hpdcsim MotionProfile.shot_curve) — die
+   Beschleunigung überschreitet a dadurch nie. a in m/s², s in mm.
+   Rückgabe: erreichte End-Geschwindigkeit, oder null wenn vTo erreicht wird. */
 function ramp(pts, vFrom, vTo, s0, sEnd, a) {
+  /* Endpunkt aufrunden, damit die Kurve den Gesamthub sicher abdeckt */
+  const end = Math.ceil(sEnd * 10) / 10;
   let ds = a > 0 ? Math.abs(vTo * vTo - vFrom * vFrom) / (2 * a) * 1000 : 5;
   /* Aufrunden + kleine Marge: die 0,1-mm-Rundung der Punkte darf die
      Beschleunigung nur senken, nie über das Limit heben */
   ds = Math.max(Math.ceil(ds * 10) / 10 + 0.2, 1);
-  if (s0 + ds < sEnd - 0.5) pts.push([s0 + ds, vTo]);
-  /* Endpunkt aufrunden, damit die Kurve den Gesamthub sicher abdeckt */
-  pts.push([Math.ceil(sEnd * 10) / 10, vTo]);
+  if (a <= 0 || s0 + ds < sEnd - 0.5) {
+    if (s0 + ds < sEnd - 0.5) pts.push([s0 + ds, vTo]);
+    pts.push([end, vTo]);
+    return null;
+  }
+  /* Rampe passt nicht: v² = v₀² ± 2a·Δs bis zum Schussende. Δs ab dem
+     gerundeten s0 (clean() rundet ebenso), v in die sichere Richtung
+     gerundet — beim Beschleunigen ab, beim Bremsen auf. */
+  const s0r = Math.round(s0 * 10) / 10;
+  const dsm = Math.max(end - s0r, 0.1) / 1000;
+  const up = vTo >= vFrom;
+  const v = Math.sqrt(Math.max(vFrom * vFrom + (up ? 2 : -2) * a * dsm, 0));
+  const vEnd = up ? Math.floor(v * 1000) / 1000 : Math.ceil(v * 1000) / 1000;
+  pts.push([end, vEnd]);
+  return vEnd;
 }
 
 export function generateCurve(v, g) {
@@ -82,8 +102,12 @@ export function generateCurve(v, g) {
     if (!(tN > 0)) return { error: 'NADCA-Füllzeit nicht berechenbar — Temperaturen und k prüfen.' };
     let v2 = 1e9 * (afterGate(v) / v.density) / (tN * A);
     if (v.vmax > 0) v2 = Math.min(v2, v.vmax);
-    ramp(pts, vTop, v2, sFill, sEnd, v.amax);
-    return { points: clean(pts) };
+    const w = ramp(pts, vTop, v2, sFill, sEnd, v.amax);
+    return {
+      points: clean(pts),
+      warn: w === null ? null
+        : 'a_max reicht nicht — 2. Phase erreicht ' + fmt(w) + ' statt ' + fmt(v2) + ' m/s.'
+    };
   }
 
   if (g.mode === 'v1v2') {
@@ -93,20 +117,31 @@ export function generateCurve(v, g) {
     if (s1 >= sFill - 0.5)
       return { error: 'Rampe auf V₁ (' + Math.round(s1) + ' mm) reicht über „Kammer voll" (' + Math.round(sFill) + ' mm) — a₁ erhöhen oder V₁ senken.' };
     const pts = [[s1, g.v1], [sFill, g.v1]];
-    ramp(pts, g.v1, g.v2, sFill, sEnd, g.a2);
-    return { points: clean(pts) };
+    const w = ramp(pts, g.v1, g.v2, sFill, sEnd, g.a2);
+    return {
+      points: clean(pts),
+      warn: w === null ? null
+        : 'Rampe auf V₂ passt nicht vor das Schussende — erreicht ' + fmt(w) + ' statt ' + fmt(g.v2) + ' m/s (a₂ erhöhen oder V₂ senken).'
+    };
   }
 
   return { error: 'Unbekannter Kurvenmodus „' + g.mode + '".' };
 }
 
 /* In generierten Modi state.curve aus den aktuellen Eingaben neu erzeugen.
-   Rückgabe: Fehlertext oder null; bei Fehler bleibt die letzte Kurve stehen. */
+   Rückgabe: Fehler-/Hinweistext oder null; bei Fehler bleibt die letzte
+   Kurve stehen, ein Hinweis (z. B. gekappte Rampe) übernimmt die Kurve. */
 export function applyCurveGen(v) {
   const g = state.curveGen;
   if (!g || g.mode === 'points') return null;
   const r = generateCurve(v, g);
   if (r.error) return r.error;
   state.curve = r.points;
-  return null;
+  return r.warn || null;
 }
+
+/* Generierte Kurven VOR persist() und den Subscribern aktualisieren:
+   localStorage und alle Subscriber (z. B. die Backend-Simulation in
+   core/simstore.js) sehen so dieselbe Kurve wie die Diagramme — sonst
+   hinge das von der Subscriber-Reihenfolge ab. */
+addPreparer(() => { applyCurveGen(state.values); });

@@ -45,10 +45,20 @@ applyDefaults();
 loadPersisted();
 
 const subscribers = [];
+const preparers = [];
 
 export function subscribe(fn) { subscribers.push(fn); }
 
-export function notify() { persist(); subscribers.forEach(fn => fn()); }
+/* Preparer laufen vor persist() und den Subscribern: abgeleiteter Zustand
+   (z. B. generierte Schusskurven, core/curvegen.js) wird zuerst aktuell,
+   damit localStorage und alle Subscriber denselben Stand sehen. */
+export function addPreparer(fn) { preparers.push(fn); }
+
+export function notify() {
+  preparers.forEach(fn => fn());
+  persist();
+  subscribers.forEach(fn => fn());
+}
 
 function loadPersisted() {
   try {
@@ -78,9 +88,14 @@ export function applyData(data) {
     }
   }
   if (Array.isArray(data.curve) && data.curve.length) {
-    state.curve = data.curve
+    /* Nur endliche Zahlenpaare übernehmen und die Länge begrenzen —
+       kaputte Quellen lassen die Kurve unverändert statt NaN zu speichern. */
+    const pts = data.curve
       .filter(p => Array.isArray(p) && p.length >= 2)
-      .map(p => [Number(p[0]), Number(p[1])]);
+      .map(p => [Number(p[0]), Number(p[1])])
+      .filter(p => isFinite(p[0]) && isFinite(p[1]))
+      .slice(0, 200);
+    if (pts.length) state.curve = pts;
   }
   if (data.curveGen && typeof data.curveGen === 'object') {
     if (CURVE_MODES.includes(data.curveGen.mode)) state.curveGen.mode = data.curveGen.mode;

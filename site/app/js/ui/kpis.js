@@ -44,9 +44,10 @@ function group(title, tiles) {
 
 const clampPct = x => Math.max(0, Math.min(100, x));
 
-/* Bullet: Track über [lo, hi], Zielband [bandLo, bandHi], Marker bei val. */
+/* Bullet: Track über [lo, hi], Zielband [bandLo, bandHi], Marker bei val.
+   Nicht-endliche Anteile (z. B. hi == lo bei Null-Eingaben) → 0 %. */
 function bullet(lo, hi, bandLo, bandHi, val, lblL, lblM, lblR) {
-  const pct = x => clampPct(100 * (x - lo) / (hi - lo));
+  const pct = x => { const p = 100 * (x - lo) / (hi - lo); return isFinite(p) ? clampPct(p) : 0; };
   return '<div class="kpi-bullet">'
     + '<span class="band" style="left:' + pct(bandLo) + '%;width:' + (pct(bandHi) - pct(bandLo)) + '%"></span>'
     + '<span class="mark" style="left:' + pct(val) + '%"></span></div>'
