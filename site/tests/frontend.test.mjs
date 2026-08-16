@@ -8,7 +8,8 @@
    3. der Übernahme-Vertrag STL → Dashboard (shared/contract.js)
    4. die Konsistenz von Felddefinition und Maschinen-Presets
    5. die Rechenlogik der STL-Seite (stl/stl-logic.js)
-   6. die Rechenlogik der Teilekosten-Seite (kosten/teilekosten-logic.js) */
+   6. die Rechenlogik der Teilekosten-Seite (kosten/teilekosten-logic.js)
+   7. die Zeitleisten-Logik der Zyklusanalyse (zyklus/zyklus-logic.js) */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -23,6 +24,7 @@ const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { parseSTL, meshVolume, meshArea, meshBounds } = require(path.join(site, 'stl/stl-math.js'));
 const logic = require(path.join(site, 'stl/stl-logic.js'));
 const kosten = require(path.join(site, 'kosten/teilekosten-logic.js'));
+const zyklus = require(path.join(site, 'zyklus/zyklus-logic.js'));
 const clamp = require(path.join(site, 'app/shared/clampmodel.js'));
 const contract = require(path.join(site, 'app/shared/contract.js'));
 
@@ -434,4 +436,52 @@ test('teilekosten: 100 % Ausschuss und t_Z = 0 liefern keine endlichen Kosten', 
   assert.ok(!Number.isFinite(r.leverMass.total));
   assert.ok(!Number.isFinite(kosten.computeCost(
     Object.assign({}, KOSTEN_V, { tz: 0 })).total));
+});
+
+/* ── 7 · Zeitleisten-Logik der Zyklusanalyse ─────────────────── */
+
+const ZDURS = {
+  dosieren: 8, schuss: 4, halten: 15, oeffnen: 5,
+  entnahme: 6, spruehen: 8, schliessen: 4, neben: 2,
+};
+
+test('zyklus: layoutCycle — feste Kette, Werkzeugzustand und Zyklusende', () => {
+  const r = zyklus.layoutCycle(ZDURS, []);
+  assert.deepEqual(r.errors, []);
+  const by = Object.fromEntries(r.items.map(i => [i.id, i]));
+  assert.equal(by.schuss.start, 8);
+  assert.equal(by.halten.start, 12);   // Erstarren folgt immer auf den Schuss
+  assert.equal(by.oeffnen.start, 27);
+  assert.equal(by.schliessen.end, 50);
+  assert.equal(r.mainEnd, 52);
+  assert.equal(r.total, 52);
+  // Form offen zwischen Ende „öffnen" und Beginn „schließen"
+  assert.deepEqual(r.die, { openStart: 27, open: 32, closeStart: 46, closed: 50 });
+});
+
+test('zyklus: Parallelvorgänge ankern am Phasenbeginn, klemmen bei 0, strecken den Zyklus', () => {
+  const r = zyklus.layoutCycle(ZDURS, [
+    { label: 'Kernzüge einfahren', track: 'kern', anchor: 'schliessen', lag: -3, dur: 3 },
+    { label: 'Früh', track: 'cooling', anchor: 'start', lag: -10, dur: 2 },
+    { label: 'Nachlauf', track: 'cooling', anchor: 'mainEnd', lag: 0, dur: 4 },
+  ]);
+  assert.deepEqual(r.errors, []);
+  const kern = r.items.find(i => i.label === 'Kernzüge einfahren');
+  assert.equal(kern.start, 43);
+  assert.equal(kern.end, 46);          // endet genau am Beginn „Form schließen"
+  assert.equal(r.items.find(i => i.label === 'Früh').start, 0);  // Versatz vor Zyklusstart gekappt
+  assert.equal(r.mainEnd, 52);
+  assert.equal(r.total, 56);           // Nachlauf streckt den Zyklus
+});
+
+test('zyklus: unbekannter Bezugspunkt und ungültige Dauer → Fehler, endliche Lagen', () => {
+  const r = zyklus.layoutCycle(Object.assign({}, ZDURS, { halten: -5 }), [
+    { label: 'X', track: 'handling', anchor: 'gibtsnicht', lag: 0, dur: 2 },
+  ]);
+  assert.equal(r.errors.length, 1);
+  assert.equal(r.items.find(i => i.label === 'X').start, 0);
+  const by = Object.fromEntries(r.items.map(i => [i.id, i]));
+  assert.equal(by.halten.dur, 0);      // ungültige Dauer zählt als 0
+  assert.equal(by.oeffnen.start, 12);  // Kette rückt nach
+  r.items.forEach(i => assert.ok(Number.isFinite(i.start) && Number.isFinite(i.end)));
 });
