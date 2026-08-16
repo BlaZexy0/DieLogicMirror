@@ -337,6 +337,16 @@ test('stl-logic: machineRows markiert Abheben (k − 1 ≥ 1) als ungeeignet', (
   assert.equal(pref.mc.id, 'hcc800');
 });
 
+test('stl-logic: sideCoreArea = A_S·tan(α), Randfälle abgesichert', () => {
+  closeTo(logic.sideCoreArea(5000, 45), 5000);            // tan 45° = 1
+  closeTo(logic.sideCoreArea(5000, 20), 5000 * Math.tan(20 * Math.PI / 180));
+  assert.equal(logic.sideCoreArea(0, 20), 0);             // kein Schieber
+  assert.equal(logic.sideCoreArea(5000, 0), 0);           // α = 0: selbsthemmend abgestützt
+  assert.equal(logic.sideCoreArea(-1, 20), 0);
+  assert.equal(logic.sideCoreArea(NaN, 20), 0);
+  assert.ok(Number.isNaN(logic.sideCoreArea(5000, 90)));  // physikalisch sinnlos
+});
+
 test('stl-logic: keine geeignete Maschine → pref null', () => {
   const { pref } = logic.machineRows(MACHINES, clamp,
     { areaMm2: 1e6, ex: 0, ey: 0, safety: 1.3, pTarget: 600 });

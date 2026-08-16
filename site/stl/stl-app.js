@@ -251,6 +251,14 @@
     return Math.max(parseFloat(document.getElementById('density-input').value) || 2700, 1);
   }
 
+  /* Seitenschieber-Zuschlag A_S·tan(α) in mm² — Winkel auf [0, 89°] begrenzt,
+     Rechnung in stl-logic.js. */
+  function getCoreAdd() {
+    const areaS = Math.max(parseFloat(document.getElementById('core-area-input').value) || 0, 0);
+    const deg = Math.min(Math.max(parseFloat(document.getElementById('core-angle-input').value) || 0, 0), 89);
+    return LOGIC.sideCoreArea(areaS, deg);
+  }
+
   function renderTable() {
     const table = document.getElementById('result-table');
     const empty = document.getElementById('table-empty');
@@ -296,7 +304,8 @@
     const info = document.getElementById('machine-info');
     const a = AXES[dir];
     const cog = unionSilhouette();
-    const totP = cog ? cog.area : 0;
+    const coreAdd = getCoreAdd();
+    const totP = (cog ? cog.area : 0) + coreAdd;
     const S = Math.max(parseFloat(document.getElementById('safety-input').value) || 1.3, 1);
     const pTarget = Math.max(parseFloat(document.getElementById('ptarget-input').value) || 600, 1);
     const has = totP > 0 && cog && MACHINES.length > 0;
@@ -306,8 +315,11 @@
 
     const missing = LOGIC.missingRoles(models);
     const ready = missing.length === 0;
-    info.innerHTML = 'Sprengfläche A = vereinigte proj. Fläche (' + dir + ') = <strong>' + fmt(totP) +
-      ' mm²</strong> · Außermittigkeit e = Schwerpunkt vom Ursprung: <strong>' +
+    info.innerHTML = 'Sprengfläche A = vereinigte proj. Fläche (' + dir + ')' +
+      (coreAdd > 0
+        ? ' ' + fmt(cog.area) + ' mm² + Seitenschieber A<sub>S</sub>·tan α ' + fmt(coreAdd) + ' mm² = <strong>' + fmt(totP) + ' mm²</strong>'
+        : ' = <strong>' + fmt(totP) + ' mm²</strong>') +
+      ' · Außermittigkeit e = Schwerpunkt vom Ursprung: <strong>' +
       a.uName + '</strong> ' + fmt(cog.cu) + ' mm · <strong>' + a.vName + '</strong> ' + fmt(cog.cv) + ' mm' +
       (ready
         ? ' · Dashboard-Übernahme bereit — alle vier Zuordnungen vorhanden.'
@@ -341,7 +353,7 @@
      betroffene Eingaben bleiben erhalten. */
   function openDashboard(mc) {
     const cog = unionSilhouette();
-    const totP = cog ? cog.area : 0;
+    const totP = (cog ? cog.area : 0) + getCoreAdd();
     if (!(totP > 0) || !cog) return;
     const S = Math.max(parseFloat(document.getElementById('safety-input').value) || 1.3, 1);
     const pTarget = Math.max(parseFloat(document.getElementById('ptarget-input').value) || 600, 1);
@@ -431,6 +443,8 @@
 
   document.getElementById('safety-input').addEventListener('input', renderMachines);
   document.getElementById('ptarget-input').addEventListener('input', renderMachines);
+  document.getElementById('core-area-input').addEventListener('input', renderMachines);
+  document.getElementById('core-angle-input').addEventListener('input', renderMachines);
   document.getElementById('density-input').addEventListener('input', () => { renderTable(); renderMachines(); });
 
   window.addEventListener('resize', draw);

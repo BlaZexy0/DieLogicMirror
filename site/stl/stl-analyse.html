@@ -254,7 +254,8 @@
     <p class="subtitle">STL-Dateien direkt im Browser auswerten: Volumen, Masse, Oberfläche und
       projizierte Fläche je Bauteil — mit umschaltbarer Projektionsrichtung (X/Y/Z) und
       Summenzeile über alle geladenen Dateien. Dateien als Bauteil, Anguss, Überlauf und
-      Pressrest zuordnen und die Auslegung direkt ins Dashboard übernehmen.
+      Pressrest zuordnen und die Auslegung direkt ins Dashboard übernehmen. Seitenschieber
+      gehen über Fläche und Sperrwinkel als Zuschlag in die Sprengfläche ein.
       Die Dateien verlassen Ihren Rechner nicht.</p>
   </div>
 </section>
@@ -270,9 +271,6 @@
       <button data-dir="Y">Y</button>
       <button data-dir="Z" class="active">Z</button>
     </div>
-    <label for="density-input">Dichte
-      <input type="number" id="density-input" value="2700" min="1" step="10"> kg/m³
-    </label>
     <span class="stl-hint">100 % clientseitig — kein Upload zu einem Server.</span>
   </div>
   <div class="stl-status" id="status"></div>
@@ -305,6 +303,12 @@
   </div>
 
   <div class="stl-table-card">
+    <div class="machine-head">
+      <h2>Geladene Dateien</h2>
+      <label for="density-input">Dichte (fest)
+        <input type="number" id="density-input" value="2700" min="1" step="10"> kg/m³
+      </label>
+    </div>
     <table class="stl-table" id="result-table" hidden>
       <thead>
         <tr>
@@ -325,12 +329,18 @@
 
   <div class="stl-table-card" style="margin-top:1.2rem;">
     <div class="machine-head">
-      <h2>Max. Nachdruck je Maschine — projizierte Fläche als Sprengfläche</h2>
+      <h2>Max. Nachdruck je Maschine — Sprengfläche aus projizierter Fläche + Seitenschiebern</h2>
       <label for="ptarget-input">Auslegungsdruck
         <input type="number" id="ptarget-input" value="600" min="1" step="50"> bar
       </label>
       <label for="safety-input">Sicherheitsfaktor S
         <input type="number" id="safety-input" value="1.3" min="1" step="0.05">
+      </label>
+      <label for="core-area-input" title="Projizierte Schieberfläche in Zugrichtung — wirkt mit A·tan(α) auf die Sprengfläche">Seitenschieber A<sub>S</sub>
+        <input type="number" id="core-area-input" value="0" min="0" step="100" style="width:90px"> mm²
+      </label>
+      <label for="core-angle-input" title="Sperrwinkel der Abstützschräge — üblich 15–25°">Sperrwinkel α
+        <input type="number" id="core-angle-input" value="20" min="0" max="89" step="1"> °
       </label>
     </div>
     <div class="machine-info" id="machine-info"></div>
@@ -360,10 +370,16 @@
     <strong>S</strong> markiert den flächengewichteten Gesamtschwerpunkt der projizierten Flächen,
     <strong>0</strong> den Ursprung des STL-Koordinatensystems.
     Der maximale Nachdruck je Maschine folgt dem Zuhaltungs-Modell des Dashboards:
-    p<sub>max</sub> = F<sub>s</sub> / (100 · S · k · A) mit A als vereinigter projizierter Fläche
+    p<sub>max</sub> = F<sub>s</sub> / (100 · S · k · A) mit A als Sprengfläche
     (in m²) und dem Hebelfaktor k = 1 + 2|e<sub>x</sub>|/a<sub>x</sub> + 2|e<sub>y</sub>|/a<sub>y</sub>
     aus der Außermittigkeit des Gesamtschwerpunkts gegenüber dem Ursprung (a = Säulenabstände
-    der Maschine). Die drei Spalten: nur Schließkraft (S = 1, k = 1), mit Sicherheitsfaktor S,
+    der Maschine). Die Sprengfläche ist die vereinigte projizierte Fläche plus dem
+    <strong>Seitenschieber-Zuschlag</strong> A<sub>S</sub> · tan(α): der Metalldruck wirkt auf die
+    in Zugrichtung projizierte Schieberfläche A<sub>S</sub>, die Abstützschräge mit Sperrwinkel α
+    leitet davon den Anteil tan(α) in die Öffnungsrichtung (üblich 15–25°). Der Zuschlag geht in
+    die Drucktabelle und die Dashboard-Übernahme ein, verschiebt aber den Schwerpunkt S nicht —
+    die Lage der Schieber ist hier unbekannt.
+    Die drei Spalten: nur Schließkraft (S = 1, k = 1), mit Sicherheitsfaktor S,
     mit S und Außermittigkeit. Die Masse je Datei ist Volumen × Dichte —
     <strong>Schwindung beachten:</strong> das STL-Volumen beschreibt das kalte, erstarrte
     Bauteil. Mit der Feststoffdichte ergibt sich die Masse des fertigen Teils; wer daraus
@@ -373,7 +389,8 @@
     <strong>Empfohlen</strong> markiert die kleinste Maschine, deren maximaler Nachdruck
     (mit S und Außermittigkeit) den eingestellten Auslegungsdruck erreicht;
     <strong>zu klein</strong> markierte Maschinen erreichen ihn nicht. „→ Dashboard" übernimmt
-    projizierte Fläche (als Sprengfläche), Außermittigkeit, Massen aus der Zuordnung,
+    die Sprengfläche (vereinigte projizierte Fläche + Seitenschieber-Zuschlag),
+    Außermittigkeit, Massen aus der Zuordnung,
     Sicherheitsfaktor, Auslegungsdruck und das Maschinen-Preset in das Dashboard und öffnet es —
     möglich, sobald alle vier Zuordnungen (Bauteil, Anguss, Überlauf, Pressrest) vergeben sind.
     Die Dichte wird nicht übernommen: hier ist sie die Feststoffdichte für die Massen,

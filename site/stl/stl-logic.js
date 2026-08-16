@@ -33,6 +33,18 @@
     return out;
   }
 
+  /* Seitenschieber: Beitrag zur Sprengfläche in Öffnungsrichtung.
+     Der Metalldruck wirkt auf die in Zugrichtung projizierte Schieberfläche;
+     die Abstützschräge mit Sperrwinkel α leitet davon den Anteil tan(α) in
+     die Öffnungsrichtung — wirksame Fläche = A_S · tan(α), üblich 15–25°.
+     Ungültige oder nicht-positive Eingaben ergeben 0; α ≥ 90° ist
+     physikalisch sinnlos und ergibt NaN (die Seite begrenzt die Eingabe). */
+  function sideCoreArea(areaMm2, angleDeg) {
+    if (!isFinite(areaMm2) || !isFinite(angleDeg) || areaMm2 <= 0 || angleDeg <= 0) return 0;
+    if (angleDeg >= 90) return NaN;
+    return areaMm2 * Math.tan(angleDeg * Math.PI / 180);
+  }
+
   /* Maschinentabelle: max. Nachdruck je Preset in drei Stufen (nur
      Schließkraft, mit Sicherheitsfaktor, mit Sicherheit + Außermittigkeit)
      plus Eignung. clamp = Zuhaltungs-Modell (shared/clampmodel.js).
@@ -64,7 +76,7 @@
     return { rows: rows, pref: pref };
   }
 
-  var api = { ROLES: ROLES, massKg: massKg, roleSums: roleSums, missingRoles: missingRoles, machineRows: machineRows };
+  var api = { ROLES: ROLES, massKg: massKg, roleSums: roleSums, missingRoles: missingRoles, sideCoreArea: sideCoreArea, machineRows: machineRows };
   root.__STL_LOGIC__ = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
