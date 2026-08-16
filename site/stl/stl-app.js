@@ -376,17 +376,32 @@
   }
 
   /* ── Projektionsbild kopieren ──────────────────────────────── */
-  /* Die Zeichenfläche ist transparent — für die Zwischenablage auf weißem
-     Grund zusammensetzen. Ohne Clipboard-API (z. B. file:// oder fehlende
-     Berechtigung) fällt der Button auf einen PNG-Download zurück. */
+  /* Verhalten und Optik wie die PNG-Buttons der Dashboard-Karten
+     (app/js/ui/export.js): in die Zwischenablage kopieren, ohne
+     Clipboard-API oder bei verweigerter Berechtigung als Download —
+     Quittung ist in beiden Fällen das Häkchen. Die Zeichenfläche ist
+     transparent, daher vor dem Export auf weißen Grund zusammensetzen. */
   const copyBtn = document.getElementById('copy-img-btn');
+  const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 
-  function flashCopyBtn(text) {
-    copyBtn.textContent = text;
-    setTimeout(() => { copyBtn.textContent = 'Bild kopieren'; }, 1600);
+  function flashCopied() {
+    const old = copyBtn.innerHTML;
+    copyBtn.classList.add('copied');
+    copyBtn.innerHTML = CHECK_SVG;
+    setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = old; }, 1400);
   }
 
-  async function copyProjectionImage() {
+  function downloadBlob(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function copyProjectionImage() {
     const off = document.createElement('canvas');
     off.width = canvas.width;
     off.height = canvas.height;
@@ -394,27 +409,14 @@
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, off.width, off.height);
     ctx.drawImage(canvas, 0, 0);
-    let blob;
-    try {
-      blob = await new Promise((res, rej) =>
-        off.toBlob((b) => (b ? res(b) : rej(new Error('toBlob fehlgeschlagen'))), 'image/png'));
-    } catch (e) {
-      flashCopyBtn('Kopieren nicht möglich');
-      return;
-    }
-    if (navigator.clipboard && window.ClipboardItem) {
-      try {
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        flashCopyBtn('✓ Kopiert');
-        return;
-      } catch (e) { /* Berechtigung verweigert o. Ä. → Download-Fallback */ }
-    }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'sprengflaeche-' + dir + '.png';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    flashCopyBtn('Als PNG gespeichert');
+    off.toBlob((blob) => {
+      if (!blob) return;
+      const name = 'DieLogic_Sprengflaeche_' + dir + '.png';
+      if (navigator.clipboard && window.ClipboardItem)
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+          .then(flashCopied, () => { downloadBlob(blob, name); flashCopied(); });
+      else { downloadBlob(blob, name); flashCopied(); }
+    }, 'image/png');
   }
 
   function update() {
