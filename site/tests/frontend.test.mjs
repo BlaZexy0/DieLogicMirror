@@ -7,7 +7,8 @@
    2. das geteilte Zuhaltungs-Modell (shared/clampmodel.js)
    3. der Übernahme-Vertrag STL → Dashboard (shared/contract.js)
    4. die Konsistenz von Felddefinition und Maschinen-Presets
-   5. die Rechenlogik der STL-Seite (stl/stl-logic.js) */
+   5. die Rechenlogik der STL-Seite (stl/stl-logic.js)
+   6. die Rechenlogik der Teilekosten-Seite (kosten/teilekosten-logic.js) */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,6 +22,7 @@ const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const { parseSTL, meshVolume, meshArea, meshBounds } = require(path.join(site, 'stl/stl-math.js'));
 const logic = require(path.join(site, 'stl/stl-logic.js'));
+const kosten = require(path.join(site, 'kosten/teilekosten-logic.js'));
 const clamp = require(path.join(site, 'app/shared/clampmodel.js'));
 const contract = require(path.join(site, 'app/shared/contract.js'));
 
@@ -353,4 +355,70 @@ test('machines: jedes Preset setzt genau die Maschinen-PRESET_KEYS, plausibel', 
     assert.ok(m.fields.lmin < m.fields.lmax, `Preset „${m.id}": lmin < lmax verletzt`);
     assert.ok(m.id && m.name, `Preset ohne id/name`);
   }
+});
+
+/* ── 6 · Rechenlogik der Teilekosten-Seite ───────────────────── */
+
+/* Beispielwerte des Kosten-Presets (app/config/kosten.js) mit den
+   Dashboard-Default-Massen (12 kg Bauteil, 18,2 kg Schuss). */
+const KOSTEN_V = {
+  mpart: 12, mdose: 18.2, tz: 52, kav: 1, a: 4, oee: 78,
+  pAl: 2.6, pRe: 0.35, kr: 2, eKg: 0.75, pE: 0.18,
+  pM: 95, pP: 48, nP: 0.5, wz: 180000, st: 120000,
+};
+
+test('teilekosten: computeCost — Sollwerte mit den Preset-Defaults', () => {
+  const r = kosten.computeCost(KOSTEN_V);
+  closeTo(r.pph, 51.84);                       // 3600/52 · 0,78 · 0,96
+  closeTo(r.matAlloy, 31.2);                   // 12 kg · 2,60 €/kg
+  closeTo(r.matLoss, 18.2 * 0.02 * 2.6 / 0.96);
+  closeTo(r.matRemelt, (6.2 + 12 * 0.04) * 0.35 / 0.96);
+  closeTo(r.energyKwh, 18.2 * 0.75 / 0.96);
+  closeTo(r.machine, (95 + 0.5 * 48) / 51.84);
+  closeTo(r.tool, 180000 / (120000 * 0.96));
+  closeTo(r.total,
+    r.matAlloy + r.matLoss + r.matRemelt + r.energy + r.machine + r.tool);
+  closeTo(r.total, 41.03865, 1e-4);
+});
+
+test('teilekosten: Zykluszeit-Hebel = Ableitung der Stückkosten nach t_Z', () => {
+  const r = kosten.computeCost(KOSTEN_V);
+  const d = 0.5;
+  const fd = (kosten.costAtTz(KOSTEN_V, KOSTEN_V.tz + d)
+    - kosten.costAtTz(KOSTEN_V, KOSTEN_V.tz - d)) / (2 * d);
+  closeTo(r.leverTime, fd * 100, 1e-6);        // €/s → ct/s; Modell ist linear in t_Z
+});
+
+test('teilekosten: Material-Hebel = Ableitung nach Bauteilgewicht (Schuss gekoppelt)', () => {
+  const r = kosten.computeCost(KOSTEN_V);
+  // analytisch: p_Leg + (k_r·p_Leg + a·p_Um + e·p_E)/(1 − a)
+  closeTo(r.leverMass.total,
+    2.6 + (0.02 * 2.6 + 0.04 * 0.35 + 0.75 * 0.18) / 0.96);
+  closeTo(r.leverMass.total,
+    r.leverMass.alloy + r.leverMass.dross + r.leverMass.remelt + r.leverMass.energy);
+  const d = 0.01;                              // ±10 g
+  const fd = (kosten.costAtPartMass(KOSTEN_V, KOSTEN_V.mpart + d)
+    - kosten.costAtPartMass(KOSTEN_V, KOSTEN_V.mpart - d)) / (2 * d);
+  closeTo(r.leverMass.total, fd, 1e-6);
+  // Maschine, Personal, Werkzeug hängen nicht an der Masse:
+  const light = kosten.computeCost(Object.assign({}, KOSTEN_V,
+    { mpart: KOSTEN_V.mpart - d, mdose: KOSTEN_V.mdose - d * KOSTEN_V.kav }));
+  closeTo(light.machine, r.machine);
+  closeTo(light.tool, r.tool);
+});
+
+test('teilekosten: Mehrfach-Kavität koppelt Schussgewicht je Kavität', () => {
+  const v4 = Object.assign({}, KOSTEN_V, { kav: 4, mpart: 3, mdose: 18.2 });
+  const d = 0.004;
+  const fd = (kosten.costAtPartMass(v4, v4.mpart + d)
+    - kosten.costAtPartMass(v4, v4.mpart - d)) / (2 * d);
+  closeTo(kosten.computeCost(v4).leverMass.total, fd, 1e-6);
+});
+
+test('teilekosten: 100 % Ausschuss und t_Z = 0 liefern keine endlichen Kosten', () => {
+  const r = kosten.computeCost(Object.assign({}, KOSTEN_V, { a: 100 }));
+  assert.ok(!Number.isFinite(r.total));
+  assert.ok(!Number.isFinite(r.leverMass.total));
+  assert.ok(!Number.isFinite(kosten.computeCost(
+    Object.assign({}, KOSTEN_V, { tz: 0 })).total));
 });

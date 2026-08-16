@@ -46,6 +46,7 @@
       { label: title, href: '/app/chart.html?id=' + id }
     )) },
     { label: 'Sprengflächenanalyse', href: '/stl/stl-analyse.html' },
+    { label: 'Teilekosten', href: '/kosten/teilekosten.html' },
     { label: 'Theorie', children: [
       { label: 'Das PQ²-Diagramm', href: '/theorie/pq2.html' },
       { label: 'Kritische Kolbengeschwindigkeit', href: '/theorie/kritische-geschwindigkeit.html' },
@@ -134,6 +135,7 @@
       <li><a href="${r('/app/chart.html?id=pq2')}">PQ²-Diagramm</a></li>
       <li><a href="${r('/app/chart.html?id=phild')}">Auslegungsfenster (φ, λ)</a></li>
       <li><a href="${r('/stl/stl-analyse.html')}">Sprengflächenanalyse</a></li>
+      <li><a href="${r('/kosten/teilekosten.html')}">Teilekosten-Kalkulation</a></li>
     </ul>
   </div>
 
