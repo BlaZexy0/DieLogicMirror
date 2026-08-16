@@ -313,12 +313,14 @@ test('stl-logic: missingRoles nennt fehlende Zuordnungen', () => {
 
 test('stl-logic: machineRows empfiehlt die kleinste geeignete Maschine', () => {
   // A = 0,15 m² (150 000 mm²), zentrisch: pK = F/(100·0,15·1,3)
-  // → HCC-340 174 bar, HCC-800 410 bar (zu klein), HCC-1600 821 bar (empfohlen).
+  // → HCC-340 174 bar, HCC-800 410 bar (zu klein); ab HCC-1600 (821 bar)
+  // erreichen alle den Zieldruck — empfohlen ist die kleinste davon.
   const { rows, pref } = logic.machineRows(MACHINES, clamp,
     { areaMm2: 150000, ex: 0, ey: 0, safety: 1.3, pTarget: 600 });
   assert.equal(rows.length, MACHINES.length);
   closeTo(rows[0].pK, 3400 / (100 * 0.15 * 1.3));
-  assert.deepEqual(rows.map(r => r.ok), [false, false, true]);
+  assert.deepEqual(rows.map(r => r.ok), MACHINES.map(m => m.fields.force >= 600 * 100 * 0.15 * 1.3));
+  assert.deepEqual(rows.slice(0, 3).map(r => r.ok), [false, false, true]);
   assert.equal(pref.mc.id, 'hcc1600');
   // Ohne Sicherheitsfaktor/Außermittigkeit: p0 = F/(100·A)
   closeTo(rows[2].p0, 16000 / (100 * 0.15));
@@ -348,8 +350,9 @@ test('stl-logic: sideCoreArea = A_S·tan(α), Randfälle abgesichert', () => {
 });
 
 test('stl-logic: keine geeignete Maschine → pref null', () => {
+  // 6 m² Sprengfläche: selbst die HCC-16000 schafft nur 160 000/(100·6·1,3) ≈ 205 bar.
   const { pref } = logic.machineRows(MACHINES, clamp,
-    { areaMm2: 1e6, ex: 0, ey: 0, safety: 1.3, pTarget: 600 });
+    { areaMm2: 6e6, ex: 0, ey: 0, safety: 1.3, pTarget: 600 });
   assert.equal(pref, null);
 });
 

@@ -375,6 +375,48 @@
     window.location.href = '../app/index.html';
   }
 
+  /* ── Projektionsbild kopieren ──────────────────────────────── */
+  /* Die Zeichenfläche ist transparent — für die Zwischenablage auf weißem
+     Grund zusammensetzen. Ohne Clipboard-API (z. B. file:// oder fehlende
+     Berechtigung) fällt der Button auf einen PNG-Download zurück. */
+  const copyBtn = document.getElementById('copy-img-btn');
+
+  function flashCopyBtn(text) {
+    copyBtn.textContent = text;
+    setTimeout(() => { copyBtn.textContent = 'Bild kopieren'; }, 1600);
+  }
+
+  async function copyProjectionImage() {
+    const off = document.createElement('canvas');
+    off.width = canvas.width;
+    off.height = canvas.height;
+    const ctx = off.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, off.width, off.height);
+    ctx.drawImage(canvas, 0, 0);
+    let blob;
+    try {
+      blob = await new Promise((res, rej) =>
+        off.toBlob((b) => (b ? res(b) : rej(new Error('toBlob fehlgeschlagen'))), 'image/png'));
+    } catch (e) {
+      flashCopyBtn('Kopieren nicht möglich');
+      return;
+    }
+    if (navigator.clipboard && window.ClipboardItem) {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        flashCopyBtn('✓ Kopiert');
+        return;
+      } catch (e) { /* Berechtigung verweigert o. Ä. → Download-Fallback */ }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'sprengflaeche-' + dir + '.png';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    flashCopyBtn('Als PNG gespeichert');
+  }
+
   function update() {
     const a = AXES[dir];
     document.getElementById('proj-label').innerHTML =
@@ -385,6 +427,7 @@
         ' mm · <strong>' + a.vName + '</strong> ' + fmt(cog.cv) + ' mm'
       : '';
     document.getElementById('canvas-empty').hidden = models.length > 0;
+    copyBtn.disabled = models.length === 0;
     renderTable();
     renderMachines();
     draw();
@@ -441,6 +484,7 @@
     if (files.length) addFiles(files);
   });
 
+  copyBtn.addEventListener('click', copyProjectionImage);
   document.getElementById('safety-input').addEventListener('input', renderMachines);
   document.getElementById('ptarget-input').addEventListener('input', renderMachines);
   document.getElementById('core-area-input').addEventListener('input', renderMachines);
