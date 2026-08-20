@@ -276,9 +276,18 @@ function vkritSim() {
 }
 
 const W = 880, H = 560;
+/* Didaktisch reduzierte PQ²-Varianten für die Theorieseite: nur die beiden
+   Kennlinien und die graue Hüllkurven-Maske — kein Band, keine Fenstergrenzen.
+   keepPt lässt zusätzlich den Arbeitspunkt stehen. */
+const simplify = keepPt => d => {
+  d.limits = d.limits.filter(l => l.mask);
+  delete d.feasible; delete d.feasibleSplit;
+  if (!keepPt) { delete d.pt; delete d.ptl; }
+};
 const jobs = [
+  { file: 'pq2-grund.svg', id: 'pq2', tab: 'q', tab2: 'pm', post: d => { simplify(false)(d); d.title = 'PQ²-Diagramm — Maschinenlinie, Werkzeuglinie, Hüllkurve'; } },
   { file: 'pq2-q.svg', id: 'pq2', tab: 'q', tab2: 'pm' },
-  { file: 'pq2-q2.svg', id: 'pq2', tab: 'q2', tab2: 'pm' },
+  { file: 'pq2-q2.svg', id: 'pq2', tab: 'q2', tab2: 'pm', post: simplify(true) },
   { file: 'pq2-pw.svg', id: 'pq2', tab: 'q', tab2: 'pw' },
   { file: 'shotcurve-sv.svg', id: 'shotcurve', tab: 'sv' },
   { file: 'vkrit-fit.svg', build: vkritFit },
@@ -295,6 +304,7 @@ for (const j of jobs) {
     d = def.calc(values, { shot });
     if (d.err) { console.error(j.file + ': ' + d.err); continue; }
     d.title = def.title;
+    if (j.post) j.post(d);
   }
   const ctx = new SVGCtx(W, H);
   drawAny(ctx, W, H, d, def);
