@@ -240,7 +240,7 @@
   }
 
   /* Rechenkerne: Netz-Kennwerte aus stl-math.js, Zuordnung/Maschinentabelle
-     aus stl-logic.js, Zuhaltung aus shared/clampmodel.js, Übernahme aus
+     aus stl-logic.js, Zuhaltung aus shared/clampmodel.js, Übernahme (ins Projekt) aus
      shared/contract.js — hier wird nur gerendert. */
   const MACHINES = (window.__MACHINES__ && window.__MACHINES__.machines) || [];
   const CLAMP = window.__CLAMP_MODEL__;
@@ -371,7 +371,16 @@
       safety: S,
       psel: pTarget,
     }, mc.fields);
-    CONTRACT.writeDashboardState(localStorage, values, mc.id);
+    /* Geometrie-Abschnitt des Projekts: was analysiert wurde, mit Ergebnis —
+       die Netze selbst bleiben in den Dateien (zu groß für den Speicher). */
+    window.__PROJECT__.setSection('geometry', {
+      density: getDensity(), safety: S, psel: pTarget, coreAdd: getCoreAdd(),
+      machine: mc.id, areaTotal: totP, cog: { u: cog.cu, v: cog.cv },
+      files: models.map(m => ({ name: m.name, role: m.role, volume: m.volume, area: m.area,
+        proj: { X: getProjection(m, 'X').area, Y: getProjection(m, 'Y').area, Z: getProjection(m, 'Z').area } })),
+      analysedAt: new Date().toISOString()
+    });
+    CONTRACT.writeDashboardState(window.__PROJECT__, values, mc.id);
     window.location.href = '../app/index.html';
   }
 

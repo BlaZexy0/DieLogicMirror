@@ -1,9 +1,36 @@
 # DieLogic — Website + Backend
 
-Die DieLogic-Website mit integriertem Dashboard und optionalem
-Simulations-Backend: Landingpage, das vollständige HPDC-Dashboard
-(clientseitig, ohne Abhängigkeiten) und ein FastAPI-Backend, das die
-serverseitige Schuss-Simulation mit `hpdcsim` bereitstellt.
+Die DieLogic-Website mit integriertem Dashboard und optionalem Backend:
+Landingpage, das vollständige HPDC-Dashboard (clientseitig, ohne
+Abhängigkeiten), die Werkzeuge Sprengflächenanalyse, Teilekosten und
+Zyklusanalyse — alle auf einem gemeinsamen **Projekt** — sowie ein
+FastAPI-Backend für Konten (auf Einladung), Projektablage mit Revisionen
+und die serverseitige Schuss-Simulation mit `hpdcsim`.
+
+## Projekte: die gemeinsame Klammer
+
+Jedes Werkzeug arbeitet auf dem **aktuellen Projekt** (z. B. „DieCastPartA"
+mit Beschreibung, Kunde, Teilenummer). Das Projekt ist ein JSON-Dokument mit
+einem Abschnitt je Werkzeug:
+
+| Abschnitt  | Werkzeug                         | liefert an andere                                   |
+|------------|----------------------------------|-----------------------------------------------------|
+| `design`   | Dashboard + alle Diagramme       | Bauteil-/Schussgewicht, Maschinen-Preset            |
+| `geometry` | Sprengflächenanalyse (STL)       | schreibt Massen, Sprengfläche, Maschine nach `design` |
+| `cycle`    | Zyklusanalyse                    | Zykluszeit                                          |
+| `cost`     | Teilekosten                      | — (bezieht Massen aus `design`, t_Z aus `cycle`)    |
+
+`site/app/shared/project.js` hält den Speicher (localStorage, mehrere
+Projekte, Migration des alten Dashboard-Schlüssels), `derived()` die
+Querbezüge; `projectbar.js` ist die Projektleiste auf jeder Werkzeugseite
+(wechseln, anlegen, bearbeiten, JSON-Export/-Import, ☁ Speichern).
+Mit Konto ist die **Datenbank der Stand der Wahrheit**: jede Änderung wird
+automatisch als Arbeitsstand synchronisiert (der Browser ist nur Cache),
+lokale Projekte werden beim Anmelden übernommen, und „Revision" legt einen
+benannten Schnappschuss (Autor, Zeit, Notiz) an. Projekte gehören der
+Organisation, nicht der Person (B2B). Ohne Konto bleibt alles im Browser.
+Verwaltung (Verlauf, Kopie, Export/Import, Zurücksetzen, Archivieren,
+Mitglieder, Einladungen): `/app/konto.html`.
 
 ## Struktur
 
@@ -11,11 +38,11 @@ serverseitige Schuss-Simulation mit `hpdcsim` bereitstellt.
 dielogic/
 ├── site/            die statische Website — dieser Ordner ist der Webspace-Inhalt
 │   ├── index.html       Landingpage (Hero, Schritte, Werkzeuge, Katalog, Theorie, Preise)
-│   ├── kontakt.html     Kontaktseite
-│   ├── ueber-uns.html   Über-uns-Seite (Teamfoto-Mockup + [Platzhalter]-Team)
 │   ├── theorie/         Theorie-Artikel (Kurzfassungen als Mockup, Formeln im
 │   │                    .eq-Markup — keine externen Abhängigkeiten)
-│   ├── recht/           Rechtsseiten — Mustertexte mit [Platzhaltern]!
+│   ├── recht/           Rechts-/Unternehmensseiten — Mustertexte mit [Platzhaltern]!
+│   │   ├── kontakt.html      Kontaktseite
+│   │   ├── ueber-uns.html    Über-uns-Seite (Teamfoto-Mockup + [Platzhalter]-Team)
 │   │   ├── impressum.html    Impressum (§ 5 DDG)
 │   │   ├── datenschutz.html  Datenschutzerklärung (DSGVO)
 │   │   ├── agb.html          Allgemeine Geschäftsbedingungen
@@ -27,6 +54,8 @@ dielogic/
 │   │   ├── stl-math.js       Netz-Kennwerte (Parser, Volumen, Fläche) — getestet
 │   │   ├── stl-logic.js      Zuordnung/Massenbilanz/Maschinentabelle — getestet
 │   │   └── stl-app.js        Ansicht + Verdrahtung (Canvas, Tabellen, Events)
+│   ├── kosten/          Teilekosten-Kalkulation (Abschnitt cost, verknüpfte Felder)
+│   ├── zyklus/          Zyklusanalyse (Abschnitt cycle, Zeitleiste)
 │   ├── shared.css       Design-Tokens + Basis-Styles (DieLogic Teal)
 │   ├── nav.js           injiziert Site-Navigation + Footer (selbstversorgend)
 │   ├── assets/          logo.svg (Vektor-Logo), icon-*.png (Favicons,
@@ -34,12 +63,17 @@ dielogic/
 │   └── app/             das Dashboard (Port von ../hpdc-dashboard)
 │       ├── index.html       Gesamt-Dashboard (Schusskurve inkl. Luftdruck-Simulation)
 │       ├── chart.html       Diagramm-Einzelseite
+│       ├── konto.html       Konto: Einladung einlösen, Anmelden, Projekte/Revisionen,
+│       │                    Mitglieder, Einladungen (Admin)
+│       ├── shared/          project.js (Projektspeicher + Querbezüge), projectbar.js
+│       │                    (Projektleiste), contract.js (STL → design), clampmodel.js
 │       ├── css/site.css     Layout-Offsets für die 56px-Navigation
 │       └── js/…             u. a. core/simapi.js + core/simstore.js (Backend-Anbindung;
 │                            Luftdruck-Serie mit 2. Achse in der Schusskurve)
-├── backend/         FastAPI: /api/sim/shot (hpdcsim) + statische Auslieferung
-│   ├── app.py  sim.py  core.py  convert.py  requirements.txt  README.md
-│   └── tests/       convert-Unit-Tests, API-Tests (TestClient), Physik-Fixtures
+├── backend/         FastAPI: /api/auth (Einladung, Sitzung), /api/org, /api/projects
+│   │                (Revisionen), /api/sim/shot (hpdcsim) + statische Auslieferung
+│   ├── app.py  db.py  auth.py  projects.py  manage.py  sim.py  core.py  convert.py
+│   └── tests/       API-Tests (TestClient, SQLite), convert-Unit-Tests, Physik-Fixtures
 ├── packages/
 │   └── hpdcsim/     Simulationspaket (eigenes pyproject, pytest-Suite)
 ├── fixtures/

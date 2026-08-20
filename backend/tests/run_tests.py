@@ -12,6 +12,7 @@ def main():
     tests_dir = Path(__file__).resolve().parent
     sys.path.insert(0, str(tests_dir))
     sys.path.insert(0, str(tests_dir.parents[1]))  # Repo-Root: `backend` als Paket
+    importlib.import_module("conftest")  # Test-Datenbank setzen, bevor backend.* importiert wird
     passed = failed = 0
     for file in sorted(tests_dir.glob("test_*.py")):
         module = importlib.import_module(file.stem)

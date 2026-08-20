@@ -278,6 +278,8 @@
 
 </div>
 
+<script src="../app/shared/project.js"></script>
+<script src="../app/shared/projectbar.js" data-base=".."></script>
 <script src="zyklus-logic.js"></script>
 <script>
 (function () {
@@ -304,37 +306,14 @@
     cooling:  { fill: '#4c9f70', text: '#ffffff' }
   };
 
-  var DEFAULT_DURS = {
-    dosieren: 8, schuss: 4, halten: 15, oeffnen: 5,
-    entnahme: 6, spruehen: 8, schliessen: 4, neben: 2
-  };
-  var DEFAULT_SCHIEBER = [
-    { name: 'Schieber 1', pullLag: 1, pullDur: 3, pushLag: -3, pushDur: 3 }
-  ];
-  var DEFAULT_SECTIONS = {
-    handling: [{ label: 'Ablage & Kühlstrecke', anchor: 'spruehen', lag: 0, dur: 6 }],
-    spray:    [],
-    cooling:  [{ label: 'Intensivkühlung Werkzeug', anchor: 'halten', lag: 0, dur: 15 }]
-  };
-  var SECTION_META = [
-    ['handling', 'Bauteilhandling'],
-    ['spray', 'Sprühroboter'],
-    ['cooling', 'Kühlung']
-  ];
+  var P = window.__PROJECT__;
+  var SECTION_META = LOGIC.SECTION_META;
 
-  function deepCopyState() {
-    return {
-      durs: Object.assign({}, DEFAULT_DURS),
-      schieber: DEFAULT_SCHIEBER.map(function (s) { return Object.assign({}, s); }),
-      sections: {
-        handling: DEFAULT_SECTIONS.handling.map(function (e) { return Object.assign({}, e); }),
-        spray: DEFAULT_SECTIONS.spray.map(function (e) { return Object.assign({}, e); }),
-        cooling: DEFAULT_SECTIONS.cooling.map(function (e) { return Object.assign({}, e); })
-      }
-    };
-  }
+  /* Zustand = cycle-Abschnitt des aktuellen Projekts (Beispielzyklus, wenn
+     das Projekt noch keinen hat). Jede Änderung wird sofort zurückgeschrieben. */
+  var st = LOGIC.sanitizeState(P.getSection('cycle'));
+  function persist() { P.setSection('cycle', st); }
 
-  var st = deepCopyState();
   var view = 'full';   // 'full' | 'closed' | 'open'
 
   function fmt(x, d) {
@@ -349,19 +328,7 @@
 
   /* ── Layout aufbauen: Schieber → zwei Vorgänge, Abschnitte flach ── */
 
-  function buildExtras() {
-    var list = [];
-    st.schieber.forEach(function (s) {
-      list.push({ label: s.name + ' — ziehen', track: 'kern', anchor: 'oeffnen', lag: s.pullLag, dur: s.pullDur, short: 'ziehen' });
-      list.push({ label: s.name + ' — einfahren', track: 'kern', anchor: 'schliessen', lag: s.pushLag, dur: s.pushDur, short: 'einfahren' });
-    });
-    SECTION_META.forEach(function (m) {
-      st.sections[m[0]].forEach(function (e) {
-        list.push({ label: e.label, track: m[0], anchor: e.anchor, lag: e.lag, dur: e.dur, short: '' });
-      });
-    });
-    return list;
-  }
+  function buildExtras() { return LOGIC.extrasFromState(st); }
 
   /* Zeilenliste des Diagramms: Gruppenkopf + eine Zeile je Eintrag. */
   function buildRows(r, extras) {
@@ -506,6 +473,7 @@
   /* ── Rendern ────────────────────────────────────────────── */
 
   function renderChart() {
+    persist();
     var extras = buildExtras();
     var r = LOGIC.layoutCycle(st.durs, extras);
     document.getElementById('k-total').textContent = fmt(r.total);
@@ -688,7 +656,7 @@
   copyBtn.addEventListener('click', copyChartImage);
 
   document.getElementById('reset-btn').addEventListener('click', function () {
-    st = deepCopyState();
+    st = LOGIC.defaultState();
     renderMainGrid();
     renderKern();
     renderParallel();

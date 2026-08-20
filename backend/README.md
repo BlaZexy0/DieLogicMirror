@@ -1,9 +1,39 @@
 # DieLogic Backend
 
 FastAPI-Backend: liefert die statische Website (`../site/`) aus und stellt
-unter `/api/…` die serverseitige Simulation mit
-[`hpdcsim`](../packages/hpdcsim) bereit. Phase 1 — noch ohne Benutzer/Abrechnung
-(dafür vorgesehen: `auth.py`, `presets.py`, `billing.py`).
+unter `/api/…` Konten (nur auf Einladung), die Projektablage mit Revisionen
+und die serverseitige Simulation mit [`hpdcsim`](../packages/hpdcsim) bereit.
+Noch offen: Abrechnung (`billing.py`).
+
+## Datenbank & Konten
+
+- `DATABASE_URL` (Postgres, z. B. Render: `postgres://…` wird automatisch zu
+  `postgresql+psycopg://`); ohne Variable eine SQLite-Datei `data/dielogic.db`.
+  Das Schema wird beim Start angelegt (`create_all`).
+- **Mandanten:** `orgs` → `users` (Rolle `admin`/`member`) → `projects`
+  (mit `draft` = laufend synchronisierter Arbeitsstand) → `project_revisions`
+  (benannte, unveränderliche Schnappschüsse mit Autor/Notiz).
+- **Einladung statt Registrierung:** ein Einladungslink
+  `/app/konto.html?token=…` ist 14 Tage gültig und einmal einlösbar.
+- **Erster Admin ohne Shell** (Render Free): `DIELOGIC_ADMIN_EMAIL` und
+  `DIELOGIC_ADMIN_TOKEN` setzen — solange kein Benutzer existiert, legt der
+  Start die Organisation `DIELOGIC_ORG` (Standard `dielogic`) an und eine
+  Admin-Einladung mit genau diesem Token. Danach im Browser
+  `https://<host>/app/konto.html?token=<DIELOGIC_ADMIN_TOKEN>` öffnen,
+  Namen/Passwort setzen. Weitere Personen lädt man auf der Konto-Seite ein
+  (Link kopieren und weitergeben).
+- **CLI** (lokal oder mit Shell-Zugang):
+
+  ```bash
+  python -m backend.manage create-org acme "ACME Druckguss GmbH"
+  python -m backend.manage invite jane@acme.de --org acme --admin --base-url https://dielogic.de
+  python -m backend.manage invites      # offene Einladungen mit Link
+  python -m backend.manage users
+  python -m backend.manage disable jane@acme.de
+  ```
+
+- Sitzungen: zufälliger Token im HttpOnly-Cookie `dl_session` (30 Tage,
+  serverseitig in `sessions`, `Secure` hinter HTTPS). Passwörter: scrypt.
 
 ## Setup & Start
 
@@ -23,6 +53,17 @@ andere rechnet weiter im Browser.
 ## API
 
 - `GET /api/health` — Lebenszeichen.
+- Konto: `GET /api/auth/invite/{token}`, `POST /api/auth/register`
+  `{token, name, password}`, `POST /api/auth/login` `{email, password}`,
+  `POST /api/auth/logout`, `GET /api/auth/me`.
+- Organisation: `GET /api/org/members`; Admin: `GET|POST /api/org/invites`
+  `{email, role}`, `DELETE /api/org/invites/{id}`,
+  `POST /api/org/members/{id}/disable`.
+- Projekte (auf die eigene Organisation beschränkt): `GET|POST /api/projects`,
+  `GET|PUT|DELETE /api/projects/{id}` (DELETE = archivieren),
+  `PUT /api/projects/{id}/draft` `{data}` (Autosave des Arbeitsstands),
+  `GET|POST /api/projects/{id}/revisions` (`{data: {design, geometry, cycle,
+  cost}, note}`, max. 1 MB), `GET /api/projects/{id}/revisions/{rev}`.
 - `POST /api/sim/shot` — Body:
 
   ```json

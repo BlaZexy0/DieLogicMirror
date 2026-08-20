@@ -34,6 +34,70 @@
     { id: 'neben',      label: 'Nebenzeiten / Puffer',   track: 'haupt' }
   ];
 
+  /* Abschnitte der Parallelvorgänge (ohne Kernzüge — die kommen aus den
+     Schiebern). Reihenfolge = Reihenfolge auf der Seite. */
+  var SECTION_META = [
+    ['handling', 'Bauteilhandling'],
+    ['spray', 'Sprühroboter'],
+    ['cooling', 'Kühlung']
+  ];
+
+  /* Beispielzyklus — Ausgangszustand der Seite und Fallback eines Projekts
+     ohne cycle-Abschnitt. */
+  function defaultState() {
+    return {
+      durs: { dosieren: 8, schuss: 4, halten: 15, oeffnen: 5, entnahme: 6, spruehen: 8, schliessen: 4, neben: 2 },
+      schieber: [{ name: 'Schieber 1', pullLag: 1, pullDur: 3, pushLag: -3, pushDur: 3 }],
+      sections: {
+        handling: [{ label: 'Ablage & Kühlstrecke', anchor: 'spruehen', lag: 0, dur: 6 }],
+        spray: [],
+        cooling: [{ label: 'Intensivkühlung Werkzeug', anchor: 'halten', lag: 0, dur: 15 }]
+      }
+    };
+  }
+
+  /* Fremden Zustand (Projekt-Abschnitt, Import) in einen vollständigen
+     Zustand überführen: fehlende Teile aus dem Beispiel, Zahlen erzwungen. */
+  function sanitizeState(src) {
+    var d = defaultState();
+    if (!src || typeof src !== 'object') return d;
+    var out = { durs: {}, schieber: [], sections: {} };
+    MAIN_PHASES.forEach(function (p) {
+      var x = src.durs ? Number(src.durs[p.id]) : NaN;
+      out.durs[p.id] = isFinite(x) && x >= 0 ? x : d.durs[p.id];
+    });
+    var num = function (x, def) { x = Number(x); return isFinite(x) ? x : def; };
+    (Array.isArray(src.schieber) ? src.schieber : d.schieber).slice(0, 50).forEach(function (s, i) {
+      if (!s || typeof s !== 'object') return;
+      out.schieber.push({ name: typeof s.name === 'string' ? s.name.slice(0, 80) : 'Schieber ' + (i + 1),
+        pullLag: num(s.pullLag, 0), pullDur: num(s.pullDur, 0), pushLag: num(s.pushLag, 0), pushDur: num(s.pushDur, 0) });
+    });
+    SECTION_META.forEach(function (m) {
+      var list = src.sections && Array.isArray(src.sections[m[0]]) ? src.sections[m[0]] : d.sections[m[0]];
+      out.sections[m[0]] = list.slice(0, 50).filter(function (e) { return e && typeof e === 'object'; }).map(function (e) {
+        return { label: typeof e.label === 'string' ? e.label.slice(0, 80) : 'Vorgang',
+          anchor: typeof e.anchor === 'string' ? e.anchor : 'start', lag: num(e.lag, 0), dur: num(e.dur, 0) };
+      });
+    });
+    return out;
+  }
+
+  /* Schieber → je zwei Vorgänge (ziehen/einfahren), Abschnitte flach —
+     die extras-Liste für layoutCycle(). */
+  function extrasFromState(st) {
+    var list = [];
+    (st.schieber || []).forEach(function (s) {
+      list.push({ label: s.name + ' — ziehen', track: 'kern', anchor: 'oeffnen', lag: s.pullLag, dur: s.pullDur, short: 'ziehen' });
+      list.push({ label: s.name + ' — einfahren', track: 'kern', anchor: 'schliessen', lag: s.pushLag, dur: s.pushDur, short: 'einfahren' });
+    });
+    SECTION_META.forEach(function (m) {
+      ((st.sections || {})[m[0]] || []).forEach(function (e) {
+        list.push({ label: e.label, track: m[0], anchor: e.anchor, lag: e.lag, dur: e.dur, short: '' });
+      });
+    });
+    return list;
+  }
+
   function cleanDur(x) { return isFinite(x) && x > 0 ? Number(x) : 0; }
 
   /* Zeitplan auflösen.
@@ -82,7 +146,9 @@
     };
   }
 
-  var api = { TRACKS: TRACKS, MAIN_PHASES: MAIN_PHASES, layoutCycle: layoutCycle };
+  var api = { TRACKS: TRACKS, MAIN_PHASES: MAIN_PHASES, SECTION_META: SECTION_META,
+    defaultState: defaultState, sanitizeState: sanitizeState,
+    extrasFromState: extrasFromState, layoutCycle: layoutCycle };
   root.__ZYKLUS_LOGIC__ = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

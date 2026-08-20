@@ -48,6 +48,7 @@ globalThis.localStorage = { getItem: () => null, setItem: () => {} };
 /* Klassische Scripts wie auf der Seite laden (setzen window.__…__) */
 require(path.join(site, 'app/config/theme.js'));
 require(path.join(site, 'app/config/machines.js'));
+require(path.join(site, 'app/shared/project.js'));
 require(path.join(site, 'app/shared/contract.js'));
 require(path.join(site, 'app/shared/clampmodel.js'));
 const { theme } = await import(path.join(site, 'app/js/core/theme.js'));

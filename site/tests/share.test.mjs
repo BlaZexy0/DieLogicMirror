@@ -14,6 +14,7 @@ const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 /* Browser-Umgebung stubben — state.js braucht Vertrag, localStorage und
    die Preset-Configs; share.js braucht location und history. */
 globalThis.window = globalThis;
+require(path.join(site, 'app/shared/project.js'));
 require(path.join(site, 'app/shared/contract.js'));
 require(path.join(site, 'app/config/machines.js'));
 require(path.join(site, 'app/config/alloys.js'));

@@ -27,6 +27,7 @@ const kosten = require(path.join(site, 'kosten/teilekosten-logic.js'));
 const zyklus = require(path.join(site, 'zyklus/zyklus-logic.js'));
 const clamp = require(path.join(site, 'app/shared/clampmodel.js'));
 const contract = require(path.join(site, 'app/shared/contract.js'));
+const project = require(path.join(site, 'app/shared/project.js'));
 
 globalThis.window = globalThis;
 require(path.join(site, 'app/config/machines.js'));
@@ -35,7 +36,8 @@ const MACHINES = globalThis.__MACHINES__.machines;
 const { allFields, groups, PRESET_KEYS } = await import(
   path.join(site, 'app/js/config/fields.js'));
 
-/* inputs.js/curvegen.js ziehen core/state.js mit — der braucht localStorage. */
+/* inputs.js/curvegen.js ziehen core/state.js mit — der braucht das Projekt-Modul
+   (project.js fällt ohne localStorage auf einen Leerspeicher zurück). */
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
 const { POSITIVE_KEYS, NONNEG_KEYS, NEGATIVE_OK } = await import(
   path.join(site, 'app/js/ui/inputs.js'));
@@ -233,23 +235,31 @@ test('inputs: jedes numerische Feld hat genau eine Vorzeichen-Klasse', () => {
     assert.ok(known.has(k), `Klassen-Eintrag „${k}" ist kein Eingabefeld`);
 });
 
-test('contract: writeDashboardState mischt, statt zu überschreiben', () => {
-  const mem = new Map([[contract.STORAGE_KEY,
-    JSON.stringify({ values: { wall: 9 }, curve: [[60, 0.4]], machine: 'alt' })]]);
-  const storage = { getItem: k => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
-  assert.ok(contract.writeDashboardState(storage, { area: 0.03 }, 'hcc800'));
-  const data = JSON.parse(mem.get(contract.STORAGE_KEY));
+function memStorage(init) {
+  const mem = new Map(Object.entries(init || {}));
+  return { getItem: k => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v), removeItem: k => mem.delete(k), mem };
+}
+
+test('contract: writeDashboardState mischt in den design-Abschnitt, statt zu überschreiben', () => {
+  project._reset();
+  project.init(memStorage({ [contract.STORAGE_KEY]:
+    JSON.stringify({ values: { wall: 9 }, curve: [[60, 0.4]], machine: 'alt' }) }));
+  assert.ok(contract.writeDashboardState(project, { area: 0.03 }, 'hcc800'));
+  const data = project.getSection('design');
   assert.equal(data.values.wall, 9);          // fremde Eingabe bleibt
   assert.equal(data.values.area, 0.03);       // Übernahme angekommen
   assert.deepEqual(data.curve, [[60, 0.4]]);  // Schusskurve bleibt
   assert.equal(data.machine, 'hcc800');
+  project._reset();
 });
 
-test('contract: korrupter localStorage-Inhalt wird ersetzt', () => {
-  const mem = new Map([[contract.STORAGE_KEY, '{kaputt']]);
-  const storage = { getItem: k => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
-  assert.ok(contract.writeDashboardState(storage, { area: 0.03 }, 'hcc340'));
-  assert.equal(JSON.parse(mem.get(contract.STORAGE_KEY)).values.area, 0.03);
+test('contract: Projekt ohne design-Abschnitt bekommt einen', () => {
+  project._reset();
+  project.init(memStorage());
+  assert.ok(contract.writeDashboardState(project, { area: 0.03 }, 'hcc340'));
+  assert.equal(project.getSection('design').values.area, 0.03);
+  assert.equal(project.getSection('design').machine, 'hcc340');
+  project._reset();
 });
 
 /* ── 4 · Felddefinition und Maschinen-Presets ────────────────── */

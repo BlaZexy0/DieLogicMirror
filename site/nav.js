@@ -55,8 +55,8 @@
       { label: 'Nebenbedingungen der Auslegung', href: '/theorie/nebenbedingungen.html' },
     ] },
     { label: 'Preise', href: '/index.html#preise' },
-    { label: 'Über uns', href: '/ueber-uns.html' },
-    { label: 'Kontakt', href: '/kontakt.html' },
+    { label: 'Über uns', href: '/recht/ueber-uns.html' },
+    { label: 'Kontakt', href: '/recht/kontakt.html' },
   ];
 
   /* ── Basispfad auflösen ───────────────────────────────────── */
@@ -159,8 +159,8 @@
       <li><a href="${r('/recht/datenschutz.html')}">Datenschutzerklärung</a></li>
       <li><a href="${r('/recht/agb.html')}">AGB</a></li>
       <li><a href="${r('/recht/widerruf.html')}">Widerrufsbelehrung</a></li>
-      <li><a href="${r('/ueber-uns.html')}">Über uns</a></li>
-      <li><a href="${r('/kontakt.html')}">Kontakt</a></li>
+      <li><a href="${r('/recht/ueber-uns.html')}">Über uns</a></li>
+      <li><a href="${r('/recht/kontakt.html')}">Kontakt</a></li>
     </ul>
   </div>
 
@@ -375,7 +375,7 @@
     ${buildNavLinks()}
   </ul>
   <div class="dl-nav-cta">
-    <a href="${resolveHref('/app/index.html')}">Dashboard öffnen</a>
+    <a href="${resolveHref('/app/konto.html')}" id="dl-nav-account">Anmelden</a>
   </div>
 </nav>`;
 
@@ -419,10 +419,26 @@
     document.body.insertAdjacentHTML('beforeend', buildFooter());
   }
 
+  /* Angemeldet? Dann zeigt der Knopf den Namen statt „Anmelden" — nur
+     hinter dem Backend (http/https); bei file:// oder statischem Hosting
+     bleibt der Link zur Konto-Seite. */
+  function showAccount() {
+    if (location.protocol === 'file:' || typeof fetch !== 'function') return;
+    fetch(resolveHref('/api/auth/me'), { credentials: 'same-origin' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(me => {
+        const a = document.getElementById('dl-nav-account');
+        if (a && me && me.user) a.textContent = '👤 ' + (me.user.name || me.user.email);
+        a.title = 'Projekte & Konto';
+      })
+      .catch(() => {});
+  }
+
   function init() {
     injectStyles();
     injectNav();
     if (wantFooter) injectFooter();
+    showAccount();
   }
 
   if (document.readyState === 'loading') {

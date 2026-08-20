@@ -5,9 +5,28 @@ services:
     name: dielogic
     runtime: python
     plan: free
+    region: frankfurt
     buildCommand: pip install -r backend/requirements.txt ./packages/hpdcsim
     startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.4
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dielogic-db
+          property: connectionString
+      # Ersten Admin ohne Shell anlegen: beide im Render-Dashboard setzen
+      # (sync: false = Wert wird nicht aus dieser Datei gelesen). Einlösen
+      # unter https://<host>/app/konto.html?token=<DIELOGIC_ADMIN_TOKEN>.
+      - key: DIELOGIC_ADMIN_EMAIL
+        sync: false
+      - key: DIELOGIC_ADMIN_TOKEN
+        sync: false
+
+databases:
+  # Projekte, Benutzer, Einladungen. Region Frankfurt (EU-Datenhaltung);
+  # der Free-Plan läuft nach 90 Tagen aus — vor Produktivbetrieb hochstufen.
+  - name: dielogic-db
+    plan: free
+    region: frankfurt

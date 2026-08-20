@@ -45,6 +45,7 @@
       flex: none;
     }
     .tk-field input:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+    .tk-field input.linked { border-color: var(--primary); background: rgba(0,140,130,0.06); }
 
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 0.9rem; margin-bottom: 1.2rem; }
     .kpi {
@@ -239,7 +240,9 @@
 
 </div>
 
-<script src="../app/shared/contract.js"></script>
+<script src="../app/shared/project.js"></script>
+<script src="../app/shared/projectbar.js" data-base=".."></script>
+<script src="../zyklus/zyklus-logic.js"></script>
 <script src="../app/config/kosten.js"></script>
 <script src="teilekosten-logic.js"></script>
 <script>
@@ -248,23 +251,14 @@
 
   var LOGIC = window.__TEILEKOSTEN_LOGIC__;
 
-  /* ── Gespeicherte Dashboard-Auslegung lesen (nur lesend) ── */
-  function readAuslegung() {
-    try {
-      var raw = localStorage.getItem(window.__DASH_CONTRACT__.STORAGE_KEY);
-      var data = raw ? JSON.parse(raw) : null;
-      return (data && typeof data === 'object' && data.values) ? data.values : null;
-    } catch (e) { return null; }
-  }
-  function pick(values, key, fallback) {
-    var x = values ? Number(values[key]) : NaN;
-    return isFinite(x) ? x : fallback;
-  }
-
-  var stored = readAuslegung();
-  var part = pick(stored, 'part', 12), runner = pick(stored, 'runner', 3);
-  var overflow = pick(stored, 'overflow', 2), biscuit = pick(stored, 'biscuit', 1.2);
-  var mdose = Math.round((part + runner + overflow + biscuit) * 10) / 10;
+  /* ── Projekt: verknüpfte Werte + gespeicherte Eingaben ── */
+  var P = window.__PROJECT__;
+  var LINKED = ['mpart', 'mdose', 'tz'];
+  var LINK_LABEL = { mpart: 'Bauteilgewicht', mdose: 'Schussgewicht', tz: 'Zykluszeit' };
+  var saved = P.getSection('cost') || {};
+  /* linked[k] = Feld folgt dem Projekt (Auslegung/Zyklusanalyse); eine
+     Eingabe von Hand löst die Verknüpfung, bis sie wiederhergestellt wird. */
+  var linked = Object.assign({ mpart: true, mdose: true, tz: true }, saved.linked || {});
 
   /* Preise/Sätze aus dem editierbaren Preset; die Duplikate hier sind nur
      Fallback, falls das Preset nicht lädt. */
@@ -273,22 +267,61 @@
     tz: 52, kav: 1, a: 4, oee: 78,
     pAl: 2.6, pRe: 0.35, kr: 2, eKg: 0.75, pE: 0.18,
     pM: 95, pP: 48, nP: 0.5, wz: 180000, st: 120000
-  }, K, { mpart: part, mdose: mdose });
+  }, K, { mpart: 12, mdose: 18.2 }, saved.values || {});
   var H_MONTH = isFinite(K.hMonth) ? K.hMonth : 500; // ≈ Produktionsstunden je Monat im 3-Schicht-Betrieb
 
-  document.getElementById('handoff-note').innerHTML = stored
-    ? 'Bauteil- und Schussgewicht aus der <strong>gespeicherten Dashboard-Auslegung</strong> übernommen. '
-      + 'Preise und Sätze sind Beispielwerte aus dem Preset <code>app/config/kosten.js</code>.'
-    : 'Keine gespeicherte Auslegung gefunden — es gelten die Dashboard-Standardwerte; '
-      + 'Preise und Sätze sind Beispielwerte aus dem Preset <code>app/config/kosten.js</code>.';
-
   var KEYS = ['mpart', 'mdose', 'tz', 'kav', 'a', 'oee', 'pAl', 'pRe', 'kr', 'eKg', 'pE', 'pM', 'pP', 'nP', 'wz', 'st'];
+
+  function applyLinks() {
+    var D = P.derived();
+    LINKED.forEach(function (k) {
+      var el = document.getElementById('i-' + k);
+      var on = linked[k] && D[k] != null;
+      if (on) el.value = D[k];
+      el.classList.toggle('linked', on);
+      el.title = on ? 'Aus dem Projekt: ' + D.sources[k] + ' — Eingabe von Hand löst die Verknüpfung.' : '';
+    });
+    var parts = LINKED.map(function (k) {
+      if (linked[k] && D[k] != null) return LINK_LABEL[k] + ' ← ' + D.sources[k];
+      if (linked[k]) return LINK_LABEL[k] + ': noch keine Quelle im Projekt (Standardwert)';
+      return LINK_LABEL[k] + ': von Hand gesetzt';
+    });
+    var anyBroken = LINKED.some(function (k) { return !linked[k]; });
+    document.getElementById('handoff-note').innerHTML = 'Projekt <strong>' + escapeHtml(P.current().name) + '</strong> — '
+      + parts.join(' · ')
+      + (anyBroken ? ' &nbsp;<a href="#" id="relink">Verknüpfungen wiederherstellen</a>' : '')
+      + '. Preise und Sätze sind Beispielwerte aus dem Preset <code>app/config/kosten.js</code>.';
+    var rl = document.getElementById('relink');
+    if (rl) rl.addEventListener('click', function (e) {
+      e.preventDefault();
+      LINKED.forEach(function (k) { linked[k] = true; });
+      applyLinks();
+      render();
+    });
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function persist() {
+    var v = {};
+    KEYS.forEach(function (k) { v[k] = val(k); });
+    P.setSection('cost', { values: v, linked: linked, dg: parseFloat(document.getElementById('i-dg').value) || 0 });
+  }
+
   KEYS.forEach(function (k) {
     var el = document.getElementById('i-' + k);
     el.value = DEF[k];
-    el.addEventListener('input', render);
+    el.addEventListener('input', function () {
+      if (LINKED.indexOf(k) >= 0 && linked[k]) { linked[k] = false; applyLinks(); }
+      render();
+    });
   });
+  if (isFinite(saved.dg)) document.getElementById('i-dg').value = saved.dg;
   document.getElementById('i-dg').addEventListener('input', render);
+  applyLinks();
 
   function fmt(x, d) {
     if (!isFinite(x)) return '—';
@@ -357,6 +390,7 @@
   }
 
   function render() {
+    persist();
     var v = {};
     KEYS.forEach(function (k) { v[k] = val(k); });
     var r = LOGIC.computeCost(v);

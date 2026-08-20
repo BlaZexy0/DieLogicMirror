@@ -16,6 +16,7 @@
   <header>
     <h1 id="chartTitle">Diagramm</h1>
     <div class="header-actions">
+      <div id="project-mount"></div>
       <select id="chartNav" class="nav-select" title="Zu einem anderen Diagramm wechseln"></select>
       <a class="back-link" href="index.html">← Übersicht</a>
     </div>
@@ -67,6 +68,8 @@
   <script src="config/machines.js"></script>
   <script src="config/alloys.js"></script>
   <script src="config/parts.js"></script>
+  <script src="shared/project.js"></script>
+  <script src="shared/projectbar.js" data-base=".." data-mount="project-mount"></script>
   <script src="shared/contract.js"></script>
   <script src="shared/clampmodel.js"></script>
   <script type="module" src="js/single.js"></script>

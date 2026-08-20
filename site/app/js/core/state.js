@@ -2,16 +2,15 @@
    UI-Module schreiben in den Zustand und rufen notify(); die Seiten-Einstiege
    (main.js / single.js) abonnieren mit subscribe() und rendern neu.
 
-   Der Zustand wird in localStorage gespiegelt: Dashboard und Einzelseiten
-   sehen dieselbe Auslegung, und ein Reload verliert nichts. */
+   Der Zustand ist der design-Abschnitt des aktuellen Projekts
+   (shared/project.js, als klassisches Script vor den Modulen geladen):
+   Dashboard, Einzelseiten und die anderen Werkzeuge sehen dieselbe
+   Auslegung, und ein Reload verliert nichts. */
 
 import { allFields, DEFAULT_CURVE, PRESET_DOMAINS } from '../config/fields.js';
 
-/* Der Schlüssel kommt aus dem gemeinsamen Vertrag (shared/contract.js,
-   als klassisches Script vor den Modulen geladen) — dieselbe Quelle
-   nutzt die STL-Analyse für die Übernahme. */
-if (!window.__DASH_CONTRACT__) throw new Error('shared/contract.js nicht geladen (window.__DASH_CONTRACT__ fehlt).');
-const STORAGE_KEY = window.__DASH_CONTRACT__.STORAGE_KEY;
+if (!window.__PROJECT__) throw new Error('shared/project.js nicht geladen (window.__PROJECT__ fehlt).');
+const PROJECT = window.__PROJECT__;
 
 /* Schusskurven-Definition: 'points' = editierbare Wegpunkte,
    'lopez' = López-Faura-Hernández-Anfahrt + NADCA-Füllzeit,
@@ -62,9 +61,8 @@ export function notify() {
 
 function loadPersisted() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    applyData(JSON.parse(raw));
+    const data = PROJECT.getSection('design');
+    if (data) applyData(data);
   } catch (e) {
     console.warn('Gespeicherter Zustand konnte nicht geladen werden — Defaults werden verwendet.', e);
   }
@@ -111,10 +109,10 @@ export function applyData(data) {
 
 export function persist() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    PROJECT.setSection('design', {
       values: state.values, curve: state.curve, curveGen: state.curveGen,
       machine: state.machine, alloy: state.alloy, part: state.part
-    }));
+    });
   } catch (e) { /* localStorage voll oder deaktiviert — Zustand lebt dann nur in der Seite */ }
 }
 

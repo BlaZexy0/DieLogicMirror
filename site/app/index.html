@@ -16,8 +16,7 @@
   <header>
     <h1>Dashboard — Gießtechnische Auslegung + Schusskurve</h1>
     <div class="header-actions">
-      <button id="shareBtn" class="save-btn" title="Link zur aktuellen Auslegung kopieren — wer ihn öffnet, sieht exakt diesen Stand">🔗 Link kopieren</button>
-      <button id="resetBtn" class="save-btn" title="Alle Eingaben, Schusskurve und Preset auf die Standardwerte zurücksetzen">↺ Zurücksetzen</button>
+      <div id="project-mount"></div>
     </div>
   </header>
 
@@ -73,6 +72,8 @@
   <script src="config/machines.js"></script>
   <script src="config/alloys.js"></script>
   <script src="config/parts.js"></script>
+  <script src="shared/project.js"></script>
+  <script src="shared/projectbar.js" data-base=".." data-mount="project-mount"></script>
   <script src="shared/contract.js"></script>
   <script src="shared/clampmodel.js"></script>
   <script type="module" src="js/main.js"></script>

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projekte &amp; Konto · DieLogic</title>
+  <meta name="description" content="DieLogic-Konto: Anmeldung auf Einladung, Projekte der Organisation, Mitglieder und Einladungen.">
+  <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png">
+  <link rel="apple-touch-icon" href="../assets/icon-180.png">
+  <link rel="manifest" href="../assets/site.webmanifest">
+  <link rel="stylesheet" href="../shared.css">
+  <script src="../nav.js" data-base=".."></script>
+  <style>
+    .kt-wrap { max-width: 1000px; margin: 0 auto; padding: 1.6rem 1.5rem 3rem; }
+    .kt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+    @media (max-width: 800px) { .kt-grid { grid-template-columns: 1fr; } }
+    .kt-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.3rem; }
+    .kt-card h2 { font-size: 1rem; margin: 0 0 .8rem; }
+    .kt-card p { font-size: .85rem; color: var(--muted); line-height: 1.55; }
+    .kt-card label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted); margin: .7rem 0 .25rem; }
+    .kt-card input, .kt-card select { width: 100%; font: inherit; padding: .5rem .65rem; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; background: #fff; }
+    .kt-row { display: flex; gap: .6rem; align-items: flex-end; }
+    .kt-row > * { flex: 1; }
+    .kt-row > .btn { flex: 0 0 auto; }
+    .kt-actions { margin-top: 1rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+    .kt-err { color: #c2447e; font-size: .82rem; min-height: 1.2em; margin-top: .5rem; }
+    .kt-ok { color: var(--primary); font-size: .82rem; }
+    table.kt { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: .4rem; }
+    table.kt th, table.kt td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table.kt th { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+    table.kt td.r { text-align: right; white-space: nowrap; }
+    .pill { display: inline-block; font-size: .68rem; font-weight: 700; padding: .1rem .45rem; border-radius: 999px; background: var(--bg); color: var(--muted); }
+    .pill.admin { background: rgba(0,140,130,.12); color: var(--primary); }
+    .pill.off { text-decoration: line-through; }
+    .link-box { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .5rem .6rem; word-break: break-all; margin-top: .5rem; }
+    .muted { color: var(--muted); }
+    .hidden { display: none !important; }
+    .btn-link { background: none; border: 0; color: var(--primary); font: inherit; font-size: .8rem; cursor: pointer; padding: 0; text-decoration: underline; }
+    .kt-note { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius); padding: .7rem 1.1rem; margin-bottom: 1.2rem; font-size: .82rem; color: var(--muted); line-height: 1.55; }
+  </style>
+</head>
+<body>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Projekte &amp; Konto</h1>
+    <p class="subtitle">Alle Projekte der Organisation an einem Ort — mit Revisionsverlauf, Kopie,
+      Export/Import, Zurücksetzen und Archivierung. Die Datenbank ist der Stand der Wahrheit; die
+      Werkzeuge speichern automatisch. Projekte gehören der Organisation, nicht der Person; Zugang gibt
+      es nur auf Einladung.</p>
+  </div>
+</section>
+
+<div class="kt-wrap">
+
+  <div id="nobackend" class="kt-note hidden">Diese Installation läuft ohne Backend (statisches Hosting) —
+    Projekte bleiben lokal im Browser; Export/Import als JSON siehe oben.</div>
+
+  <!-- ── Projekte in diesem Browser (immer, auch als Gast) ── -->
+  <div class="kt-card" id="local" style="margin-bottom:1.2rem;">
+    <h2>Projekte in diesem Browser</h2>
+    <p>Ohne Anmeldung liegen Projekte nur in diesem Browser. Nach der Anmeldung werden sie automatisch in
+      die Datenbank der Organisation übernommen und dort laufend gespeichert. „Aktiv" ist das Projekt, auf
+      dem Dashboard, Diagramme, Sprengflächen-, Zyklus- und Kostenanalyse gerade arbeiten.</p>
+    <table class="kt"><thead><tr><th>Projekt</th><th>Kunde / Teile-Nr.</th><th>Stand</th><th class="r">Geändert</th><th></th></tr></thead>
+      <tbody id="local-body"></tbody></table>
+    <div class="kt-actions">
+      <button class="btn btn-outline btn-sm" id="local-new">+ Neues Projekt</button>
+      <button class="btn btn-outline btn-sm" id="local-import">⤒ Projekt importieren (JSON)</button>
+      <input type="file" id="local-file" accept="application/json,.json" class="hidden">
+      <span class="kt-err" id="local-err" style="margin:0;"></span>
+    </div>
+  </div>
+
+  <!-- ── Einladung einlösen ──────────────────────────────── -->
+  <div id="invite" class="kt-card hidden" style="max-width:520px;margin:0 auto;">
+    <h2>Einladung annehmen</h2>
+    <p id="invite-text">Einladung wird geprüft …</p>
+    <form id="register-form" class="hidden">
+      <label for="r-name">Ihr Name</label><input id="r-name" required maxlength="200" autocomplete="name">
+      <label for="r-pw">Passwort (mind. 10 Zeichen)</label><input id="r-pw" type="password" required minlength="10" autocomplete="new-password">
+      <label for="r-pw2">Passwort wiederholen</label><input id="r-pw2" type="password" required minlength="10" autocomplete="new-password">
+      <div class="kt-err" id="register-err"></div>
+      <div class="kt-actions"><button class="btn btn-primary" type="submit">Konto anlegen</button></div>
+    </form>
+  </div>
+
+  <!-- ── Anmelden ────────────────────────────────────────── -->
+  <div id="login" class="kt-card hidden" style="max-width:520px;margin:0 auto;">
+    <h2>Anmelden</h2>
+    <p>Noch kein Konto? DieLogic ist derzeit nur auf Einladung nutzbar — bitte einen Einladungslink
+      anfordern (<a href="../recht/kontakt.html">Kontakt</a>).</p>
+    <form id="login-form">
+      <label for="l-email">E-Mail</label><input id="l-email" type="email" required autocomplete="username">
+      <label for="l-pw">Passwort</label><input id="l-pw" type="password" required autocomplete="current-password">
+      <div class="kt-err" id="login-err"></div>
+      <div class="kt-actions"><button class="btn btn-primary" type="submit">Anmelden</button></div>
+    </form>
+  </div>
+
+  <!-- ── Angemeldet ──────────────────────────────────────── -->
+  <div id="account" class="hidden">
+    <div class="kt-note">Angemeldet als <strong id="a-user"></strong> in <strong id="a-org"></strong>
+      <span id="a-role" class="pill"></span> &nbsp;·&nbsp; <button class="btn-link" id="logout">Abmelden</button></div>
+
+    <div class="kt-grid">
+      <div class="kt-card" style="grid-column:1 / -1;">
+        <h2>Projekte der Organisation</h2>
+        <p>Die Datenbank ist der Stand der Wahrheit: Änderungen in den Werkzeugen werden laufend gespeichert,
+          „Revision" legt einen benannten Schnappschuss an. „Öffnen" macht ein Projekt hier zum aktiven;
+          „Verlauf" zeigt alle Revisionen, jede lässt sich als Kopie wiederherstellen.</p>
+        <table class="kt"><thead><tr><th>Projekt</th><th>Kunde / Teile-Nr.</th><th class="r">Rev</th><th class="r">Zuletzt</th><th></th></tr></thead>
+          <tbody id="proj-body"><tr><td colspan="5" class="muted">Lade …</td></tr></tbody></table>
+        <div class="kt-actions">
+          <button class="btn btn-outline btn-sm" id="org-new">+ Neues Projekt</button>
+          <button class="btn btn-outline btn-sm" id="org-import">⤒ Projekt importieren (JSON)</button>
+          <input type="file" id="org-file" accept="application/json,.json" class="hidden">
+          <span class="kt-err" id="org-err" style="margin:0;"></span>
+        </div>
+        <div id="rev-panel" class="hidden" style="margin-top:1rem;">
+          <h2 id="rev-title">Verlauf</h2>
+          <table class="kt"><thead><tr><th class="r">Rev</th><th>Notiz</th><th>Autor</th><th class="r">Zeit</th><th></th></tr></thead>
+            <tbody id="rev-body"></tbody></table>
+        </div>
+      </div>
+
+      <div class="kt-card">
+        <h2>Mitglieder</h2>
+        <table class="kt"><thead><tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th></th></tr></thead>
+          <tbody id="mem-body"></tbody></table>
+      </div>
+
+      <div class="kt-card" id="invite-card">
+        <h2>Einladungen</h2>
+        <p id="invite-help">Administratoren laden per Link ein. Den Link einfach weitergeben — er ist 14 Tage gültig und
+          einmal einlösbar.</p>
+        <form id="invite-form" class="hidden">
+          <div class="kt-row">
+            <div><label for="i-email">E-Mail</label><input id="i-email" type="email" required></div>
+            <div style="flex:0 0 9rem;"><label for="i-role">Rolle</label>
+              <select id="i-role"><option value="member">Mitglied</option><option value="admin">Admin</option></select></div>
+            <button class="btn btn-primary btn-sm" type="submit">Einladen</button>
+          </div>
+          <div class="kt-err" id="invite-err"></div>
+          <div id="invite-result" class="hidden"><span class="kt-ok">Einladung erstellt — Link weitergeben:</span>
+            <div class="link-box" id="invite-link"></div>
+            <div class="kt-actions"><button type="button" class="btn btn-outline btn-sm" id="copy-link">Link kopieren</button></div></div>
+        </form>
+        <table class="kt" id="inv-table"><thead><tr><th>E-Mail</th><th>Rolle</th><th class="r">Gültig bis</th><th></th></tr></thead>
+          <tbody id="inv-body"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="shared/project.js"></script>
+<script>
+(function () {
+  'use strict';
+  var P = window.__PROJECT__;
+  var me = null;
+
+  function $(id) { return document.getElementById(id); }
+  function show(id, on) { $(id).classList.toggle('hidden', !on); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function fmt(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? '' : d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+  async function api(method, path, body) {
+    var r = await fetch(path, { method: method, credentials: 'same-origin',
+      headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+    if (r.status === 204) return null;
+    var data = null;
+    try { data = await r.json(); } catch (e) { /* keine JSON-Antwort */ }
+    if (!r.ok) { var err = new Error(data && typeof data.detail === 'string' ? data.detail : 'HTTP ' + r.status); err.status = r.status; throw err; }
+    return data;
+  }
+
+  /* ── Einladung ── */
+  var token = new URLSearchParams(location.search).get('token');
+
+  async function showInvite() {
+    show('invite', true);
+    try {
+      var inv = await api('GET', '/api/auth/invite/' + encodeURIComponent(token));
+      $('invite-text').innerHTML = 'Sie wurden als <strong>' + esc(inv.email) + '</strong> in die Organisation <strong>'
+        + esc(inv.org.name) + '</strong> eingeladen' + (inv.role === 'admin' ? ' (Administrator)' : '') + '. Bitte Namen und Passwort festlegen.';
+      show('register-form', true);
+    } catch (err) {
+      $('invite-text').innerHTML = '<span style="color:#c2447e">' + esc(err.message) + '</span>';
+    }
+  }
+
+  $('register-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    $('register-err').textContent = '';
+    if ($('r-pw').value !== $('r-pw2').value) { $('register-err').textContent = 'Die Passwörter stimmen nicht überein.'; return; }
+    try {
+      await api('POST', '/api/auth/register', { token: token, name: $('r-name').value.trim(), password: $('r-pw').value });
+      history.replaceState(null, '', location.pathname);
+      token = null;
+      start();
+    } catch (err) { $('register-err').textContent = err.message; }
+  });
+
+  /* ── Anmelden ── */
+  $('login-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    $('login-err').textContent = '';
+    try {
+      await api('POST', '/api/auth/login', { email: $('l-email').value.trim(), password: $('l-pw').value });
+      start();
+    } catch (err) { $('login-err').textContent = err.message; }
+  });
+
+  $('logout').addEventListener('click', async function () {
+    await api('POST', '/api/auth/logout').catch(function () {});
+    me = null;
+    start();
+  });
+
+  /* ── Konto ── */
+  async function showAccount() {
+    show('account', true);
+    show('local', false);
+    /* Lokale Projekte ohne Serverbezug in die Datenbank übernehmen */
+    var orphans = P.list().filter(function (p) { return !p.remote && !P.isEmptyStarter(p); });
+    for (var i = 0; i < orphans.length; i++) {
+      var o = orphans[i];
+      try {
+        var r = await api('POST', '/api/projects', Object.assign({ data: P.sectionsOf(o) },
+          { name: o.name, description: o.description, customer: o.customer, part_no: o.partNo }));
+        P.markSaved(o.id, { id: r.id, rev: r.rev });
+      } catch (err) { console.warn('Übernahme fehlgeschlagen:', err.message); }
+    }
+    $('a-user').textContent = me.user.name ? me.user.name + ' (' + me.user.email + ')' : me.user.email;
+    $('a-org').textContent = me.org.name;
+    $('a-role').textContent = me.user.role === 'admin' ? 'Admin' : 'Mitglied';
+    $('a-role').className = 'pill' + (me.user.role === 'admin' ? ' admin' : '');
+    loadProjects();
+    loadMembers();
+    if (me.user.role === 'admin') { show('invite-form', true); loadInvites(); }
+    else { $('invite-help').textContent = 'Einladungen sprechen die Administratoren der Organisation aus.'; show('inv-table', false); }
+  }
+
+  async function loadProjects() {
+    var rows;
+    try { rows = await api('GET', '/api/projects'); }
+    catch (err) { $('proj-body').innerHTML = '<tr><td colspan="5" class="muted">' + esc(err.message) + '</td></tr>'; return; }
+    var local = {};
+    P.list().forEach(function (p) { if (p.remote) local[p.remote.id] = p; });
+    var cur = P.current();
+    $('proj-body').innerHTML = rows.length ? rows.map(function (r) {
+      var l = local[r.id];
+      var active = l && l.id === cur.id;
+      return '<tr><td><strong>' + esc(r.name) + '</strong> ' + (active ? '<span class="pill admin">aktiv</span>' : '')
+        + '<br><span class="muted">' + esc(r.description) + '</span></td>'
+        + '<td>' + esc(r.customer) + (r.part_no ? ' / ' + esc(r.part_no) : '') + '</td>'
+        + '<td class="r">' + r.rev + '</td><td class="r">' + fmt(r.updated_at) + '</td>'
+        + '<td class="r" style="white-space:nowrap;">'
+        + (active ? '' : '<button class="btn btn-outline btn-sm" data-open="' + esc(r.id) + '">Öffnen</button> ')
+        + '<button class="btn-link" data-revs="' + esc(r.id) + '" data-name="' + esc(r.name) + '">Verlauf</button> · '
+        + '<button class="btn-link" data-dup="' + esc(r.id) + '" data-name="' + esc(r.name) + '">Kopie</button> · '
+        + '<button class="btn-link" data-export="' + esc(r.id) + '">Export</button> · '
+        + '<button class="btn-link" data-reset="' + esc(r.id) + '" data-name="' + esc(r.name) + '" title="Alle Eingaben auf die Standardwerte">Zurücksetzen</button> · '
+        + '<button class="btn-link" data-archive="' + esc(r.id) + '" data-name="' + esc(r.name) + '">Archivieren</button></td></tr>';
+    }).join('') : '<tr><td colspan="5" class="muted">Noch keine Projekte — „+ Neues Projekt" oder in einem Werkzeug anlegen.</td></tr>';
+  }
+
+  /* Serverprojekt → lokales Dokument (Cache) */
+  async function fetchDoc(id) {
+    var full = await api('GET', '/api/projects/' + id);
+    var have = P.list().filter(function (p) { return p.remote && p.remote.id === id; })[0];
+    return docFrom(full, full.data, have ? have.id : undefined);
+  }
+
+  async function createOnServer(meta, data, makeCurrent) {
+    var r = await api('POST', '/api/projects', Object.assign({ data: data || {} }, meta));
+    P.put(Object.assign({ name: r.name, description: r.description, customer: r.customer, partNo: r.part_no,
+      remote: { id: r.id, rev: r.rev, savedAt: r.updated_at }, dirty: false }, data || {}), !!makeCurrent);
+    return r;
+  }
+
+  async function orgAction(b) {
+    var id = b.dataset.open || b.dataset.revs || b.dataset.dup || b.dataset.export || b.dataset.reset || b.dataset.archive;
+    var name = b.dataset.name || '';
+    if (b.dataset.open) {
+      P.put(await fetchDoc(id), true);
+      location.href = 'index.html';
+    } else if (b.dataset.revs) {
+      await showRevisions(id, name);
+    } else if (b.dataset.dup) {
+      var doc = await fetchDoc(id);
+      var full = await api('GET', '/api/projects/' + id);
+      await createOnServer({ name: name + ' (Kopie)', description: full.description, customer: full.customer, part_no: full.part_no },
+        P.sectionsOf(doc), false);
+    } else if (b.dataset.export) {
+      var d = await fetchDoc(id);
+      var tmp = P.put(d, false);
+      download(P.fileName(tmp), P.exportJSON(tmp.id));
+      return;
+    } else if (b.dataset.reset) {
+      if (!confirm('Alle Eingaben von „' + name + '" (Auslegung, Geometrie, Zyklus, Kosten) auf die Standardwerte zurücksetzen?')) return;
+      await api('PUT', '/api/projects/' + id + '/draft', { data: {} });
+      P.put(await fetchDoc(id), false);
+    } else if (b.dataset.archive) {
+      if (!confirm('Projekt „' + name + '" archivieren? Es verschwindet aus der Liste; die Revisionen bleiben in der Datenbank.')) return;
+      await api('DELETE', '/api/projects/' + id);
+      P.list().forEach(function (p) { if (p.remote && p.remote.id === id) P.remove(p.id); });
+    }
+    loadProjects();
+  }
+  $('proj-body').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    orgAction(b).catch(function (err) { alert(err.message); });
+  });
+  $('org-new').addEventListener('click', function () {
+    var name = prompt('Name des neuen Projekts:', 'DieCastPartA');
+    if (!name) return;
+    createOnServer({ name: name.trim() }, {}, false).then(loadProjects, function (err) { $('org-err').textContent = err.message; });
+  });
+  $('org-import').addEventListener('click', function () { $('org-file').click(); });
+  $('org-file').addEventListener('change', function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    $('org-err').textContent = '';
+    f.text().then(function (txt) {
+      var p;
+      try { p = P.importJSON(txt); }
+      catch (err) { $('org-err').textContent = 'Import fehlgeschlagen: ' + err.message; return; }
+      var before = P.list().filter(function (q) { return q.id !== p.id; })[0];
+      return createOnServer({ name: p.name, description: p.description, customer: p.customer, part_no: p.partNo }, P.sectionsOf(p), false)
+        .then(function () { P.remove(p.id); if (before) P.select(before.id); loadProjects(); },
+          function (err) { $('org-err').textContent = err.message; });
+    });
+    e.target.value = '';
+  });
+
+  function docFrom(full, data, localId) {
+    return Object.assign({ id: localId, name: full.name, description: full.description, customer: full.customer,
+      partNo: full.part_no, createdAt: full.created_at, updatedAt: full.updated_at,
+      remote: { id: full.id, rev: full.rev, savedAt: full.updated_at }, dirty: false }, data || {});
+  }
+
+  async function showRevisions(id, name) {
+    show('rev-panel', true);
+    $('rev-title').textContent = 'Verlauf — ' + name;
+    var revs = await api('GET', '/api/projects/' + id + '/revisions');
+    $('rev-body').innerHTML = revs.map(function (r) {
+      return '<tr><td class="r">' + r.rev + '</td><td>' + esc(r.note) + '</td><td>' + esc(r.author ? (r.author.name || r.author.email) : '—') + '</td>'
+        + '<td class="r">' + fmt(r.created_at) + '</td>'
+        + '<td class="r"><button class="btn btn-ghost btn-sm" data-restore="' + esc(id) + '" data-rev="' + r.rev + '" data-name="' + esc(name) + '">Als Kopie öffnen</button></td></tr>';
+    }).join('') || '<tr><td colspan="5" class="muted">Keine Revisionen.</td></tr>';
+    $('rev-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function restore(id, rev, name) {
+    var r = await api('GET', '/api/projects/' + id + '/revisions/' + rev);
+    await createOnServer({ name: name + ' (Rev ' + rev + ')', description: 'Wiederhergestellt aus Revision ' + rev + ' von „' + name + '".' }, r.data || {}, true);
+    location.href = 'index.html';
+  }
+
+  $('rev-body').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-restore]'); if (!b) return;
+    restore(b.dataset.restore, Number(b.dataset.rev), b.dataset.name).catch(function (err) { alert(err.message); });
+  });
+
+  async function loadMembers() {
+    var rows = await api('GET', '/api/org/members');
+    $('mem-body').innerHTML = rows.map(function (m) {
+      var canDisable = me.user.role === 'admin' && m.id !== me.user.id && !m.disabled;
+      return '<tr><td>' + esc(m.name) + '</td><td>' + esc(m.email) + '</td>'
+        + '<td><span class="pill' + (m.role === 'admin' ? ' admin' : '') + (m.disabled ? ' off' : '') + '">' + (m.disabled ? 'deaktiviert' : m.role === 'admin' ? 'Admin' : 'Mitglied') + '</span></td>'
+        + '<td class="r">' + (canDisable ? '<button class="btn-link" data-disable="' + esc(m.id) + '">deaktivieren</button>' : '') + '</td></tr>';
+    }).join('');
+  }
+  $('mem-body').addEventListener('click', async function (e) {
+    var b = e.target.closest('button[data-disable]'); if (!b) return;
+    if (!confirm('Dieses Konto deaktivieren? Die Person kann sich danach nicht mehr anmelden.')) return;
+    try { await api('POST', '/api/org/members/' + b.dataset.disable + '/disable'); loadMembers(); }
+    catch (err) { alert(err.message); }
+  });
+
+  async function loadInvites() {
+    var rows = await api('GET', '/api/org/invites');
+    var base = location.origin + location.pathname.replace(/\/app\/konto\.html$/, '');
+    $('inv-body').innerHTML = rows.length ? rows.map(function (i) {
+      var url = base + '/app/konto.html?token=' + i.token;
+      return '<tr><td>' + esc(i.email) + '</td><td>' + (i.role === 'admin' ? 'Admin' : 'Mitglied') + '</td>'
+        + '<td class="r">' + (i.expires_at ? fmt(i.expires_at) : 'unbegrenzt') + '</td>'
+        + '<td class="r"><button class="btn-link" data-copy="' + esc(url) + '">Link kopieren</button> · <button class="btn-link" data-revoke="' + esc(i.id) + '">zurückziehen</button></td></tr>';
+    }).join('') : '<tr><td colspan="4" class="muted">Keine offenen Einladungen.</td></tr>';
+  }
+  $('inv-body').addEventListener('click', async function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.copy) { copy(b.dataset.copy, b); }
+    if (b.dataset.revoke) {
+      try { await api('DELETE', '/api/org/invites/' + b.dataset.revoke); loadInvites(); }
+      catch (err) { alert(err.message); }
+    }
+  });
+  function copy(text, btn) {
+    var done = function () { var old = btn.textContent; btn.textContent = 'kopiert ✓'; setTimeout(function () { btn.textContent = old; }, 1400); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () { prompt('Link kopieren:', text); });
+    else prompt('Link kopieren:', text);
+  }
+
+  $('invite-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    $('invite-err').textContent = '';
+    show('invite-result', false);
+    try {
+      var r = await api('POST', '/api/org/invites', { email: $('i-email').value.trim(), role: $('i-role').value });
+      $('invite-link').textContent = r.url;
+      $('copy-link').onclick = function () { copy(r.url, $('copy-link')); };
+      show('invite-result', true);
+      $('i-email').value = '';
+      loadInvites();
+    } catch (err) { $('invite-err').textContent = err.message; }
+  });
+
+  /* ── Lokale Projekte ── */
+  function download(name, text) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+  }
+  function renderLocal() {
+    var cur = P.current();
+    $('local-body').innerHTML = P.list().map(function (p) {
+      var sections = ['design', 'geometry', 'cycle', 'cost'].filter(function (k) { return p[k]; });
+      var label = { design: 'Auslegung', geometry: 'Geometrie', cycle: 'Zyklus', cost: 'Kosten' };
+      var stand = '<span class="muted">' + (sections.length ? sections.map(function (k) { return label[k]; }).join(', ') : 'leer') + '</span>';
+      return '<tr><td><strong>' + esc(p.name) + '</strong> ' + (p.id === cur.id ? '<span class="pill admin">aktiv</span>' : '')
+        + '<br><span class="muted">' + esc(p.description) + '</span></td>'
+        + '<td>' + esc(p.customer) + (p.partNo ? ' / ' + esc(p.partNo) : '') + '</td>'
+        + '<td>' + stand + '</td><td class="r">' + fmt(p.updatedAt) + '</td>'
+        + '<td class="r" style="white-space:nowrap;">'
+        + (p.id === cur.id ? '' : '<button class="btn btn-outline btn-sm" data-act="activate" data-id="' + p.id + '">Aktivieren</button> ')
+        + '<button class="btn-link" data-act="dup" data-id="' + p.id + '">Kopie</button> · '
+        + '<button class="btn-link" data-act="export" data-id="' + p.id + '">Export</button> · '
+        + '<button class="btn-link" data-act="reset" data-id="' + p.id + '" title="Alle Eingaben dieses Projekts auf die Standardwerte">Zurücksetzen</button> · '
+        + '<button class="btn-link" data-act="del" data-id="' + p.id + '">Entfernen</button></td></tr>';
+    }).join('');
+  }
+  $('local-body').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-act]'); if (!b) return;
+    var p = P.get(b.dataset.id); if (!p) return;
+    switch (b.dataset.act) {
+      case 'activate': P.select(p.id); break;
+      case 'dup': P.duplicate(p.id); break;
+      case 'export': download(P.fileName(p), P.exportJSON(p.id)); return;
+      case 'reset':
+        if (!confirm('Alle Eingaben von „' + p.name + '" (Auslegung, Geometrie, Zyklus, Kosten) auf die Standardwerte zurücksetzen?')) return;
+        var before = P.current().id;
+        P.select(p.id);
+        ['design', 'geometry', 'cycle', 'cost'].forEach(function (k) { P.setSection(k, null); });
+        P.select(before);
+        break;
+      case 'del':
+        if (!confirm('Projekt „' + p.name + '" aus diesem Browser entfernen? Es ist nirgends sonst gespeichert.')) return;
+        P.remove(p.id);
+        break;
+    }
+    renderLocal();
+    if (me) loadProjects();
+  });
+  $('local-new').addEventListener('click', function () {
+    var name = prompt('Name des neuen Projekts:', 'DieCastPartA');
+    if (!name) return;
+    P.create({ name: name.trim() });
+    renderLocal();
+  });
+  $('local-import').addEventListener('click', function () { $('local-file').click(); });
+  $('local-file').addEventListener('change', function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    $('local-err').textContent = '';
+    f.text().then(function (txt) {
+      try { P.importJSON(txt); renderLocal(); }
+      catch (err) { $('local-err').textContent = 'Import fehlgeschlagen: ' + err.message; }
+    });
+    e.target.value = '';
+  });
+
+  /* ── Start ── */
+  async function start() {
+    ['invite', 'login', 'account', 'nobackend'].forEach(function (id) { show(id, false); });
+    show('local', true);
+    renderLocal();
+    if (location.protocol === 'file:') { show('nobackend', true); return; }
+    try { me = await api('GET', '/api/auth/me'); }
+    catch (err) {
+      me = null;
+      if (err.status !== 401) { show('nobackend', true); return; }
+    }
+    var navBtn = document.getElementById('dl-nav-account');
+    if (navBtn) navBtn.textContent = me ? '👤 ' + (me.user.name || me.user.email) : 'Anmelden';
+    if (me) showAccount();
+    else if (token) showInvite();
+    else show('login', true);
+  }
+  start();
+})();
+</script>
+
+</body>
+</html>

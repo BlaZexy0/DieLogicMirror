@@ -1,14 +1,16 @@
 /* DieLogic – app/shared/contract.js
-   Gemeinsamer Vertrag zwischen STL-Analyse und Dashboard: der
-   localStorage-Schlüssel und der Aufbau/das Schreiben der Übernahme-Werte
-   stehen nur hier — keine duplizierten Literale in den Seiten.
-   Klassisches Script: Browser-Global window.__DASH_CONTRACT__ (vor den
-   ES-Modulen laden), CommonJS-Export für Tests. */
+   Gemeinsamer Vertrag zwischen STL-Analyse und Dashboard: der Aufbau und
+   das Schreiben der Übernahme-Werte stehen nur hier — keine duplizierten
+   Literale in den Seiten. Ziel ist der design-Abschnitt des aktuellen
+   Projekts (shared/project.js); STORAGE_KEY ist der alte Dashboard-Schlüssel,
+   den project.js beim ersten Start migriert.
+   Klassisches Script: Browser-Global window.__DASH_CONTRACT__ (nach
+   project.js, vor den ES-Modulen laden), CommonJS-Export für Tests. */
 (function (root) {
   'use strict';
 
-  /* Nicht ändern, ohne eine Migration bereitzustellen — unter diesem
-     Schlüssel liegen die gespeicherten Auslegungen der Nutzer. */
+  /* Alter Dashboard-Schlüssel (bis v0.9): wird von project.js einmalig in
+     ein Projekt überführt. Nicht ändern — sonst verlieren Nutzer ihren Stand. */
   var STORAGE_KEY = 'hpdc-dashboard-state-v1';
 
   /* values-Objekt der STL-Übernahme. Massen in kg, area in m², ecc in mm,
@@ -26,18 +28,13 @@
     }, machineFields);
   }
 
-  /* Werte in den gespeicherten Dashboard-Zustand mischen — nicht betroffene
-     Eingaben und die Schusskurve bleiben erhalten. storage ist
-     localStorage-artig (Tests übergeben einen Stub). */
-  function writeDashboardState(storage, values, machineId) {
-    var data = {};
-    try { data = JSON.parse(storage.getItem(STORAGE_KEY)) || {}; }
-    catch (e) { /* korrupt oder leer → neu anlegen */ }
-    if (typeof data !== 'object' || data === null || Array.isArray(data)) data = {};
-    data.values = Object.assign({}, data.values, values);
-    data.machine = machineId;
-    try { storage.setItem(STORAGE_KEY, JSON.stringify(data)); return true; }
-    catch (e) { return false; /* localStorage voll/deaktiviert */ }
+  /* Werte in den design-Abschnitt des aktuellen Projekts mischen — nicht
+     betroffene Eingaben und die Schusskurve bleiben erhalten. project ist
+     das Projekt-Modul (window.__PROJECT__; Tests übergeben es explizit). */
+  function writeDashboardState(project, values, machineId) {
+    var P = project || root.__PROJECT__;
+    if (!P) throw new Error('shared/project.js nicht geladen (window.__PROJECT__ fehlt).');
+    return P.mergeDesign(values, machineId);
   }
 
   var api = {

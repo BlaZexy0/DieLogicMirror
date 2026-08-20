@@ -1,4 +1,4 @@
-"""DieLogic-Backend: API (/api/…) + Auslieferung der statischen Website (site/).
+"""DieLogic-Backend: API (/api/…: Simulation, Anmeldung, Projekte) + Auslieferung der statischen Website (site/).
 
 Starten (aus dem Ordner dielogic/):
     .venv/bin/uvicorn backend.app:app --reload
@@ -9,12 +9,26 @@ from pathlib import Path, PurePosixPath
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
+from .auth import bootstrap_from_env, router as auth_router
+from .db import SessionLocal, init_db
+from .projects import router as projects_router
 from .sim import router as sim_router
 
 SITE_DIR = Path(__file__).resolve().parent.parent / "site"
 
 app = FastAPI(title="DieLogic Backend", version="0.1.0")
 app.include_router(sim_router)
+app.include_router(auth_router)
+app.include_router(projects_router)
+
+
+@app.on_event("startup")
+def _startup():
+    """Schema anlegen (create_all ist idempotent) und ggf. den ersten Admin
+    per Umgebungsvariablen einladen — siehe auth.bootstrap_from_env."""
+    init_db()
+    with SessionLocal() as db:
+        bootstrap_from_env(db)
 
 # Ohne Cache-Control raten Browser die Frischedauer aus Last-Modified
 # (heuristisches Caching) und zeigen nach einem Deploy tagelang alte
