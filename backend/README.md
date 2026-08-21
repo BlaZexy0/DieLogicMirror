@@ -22,6 +22,10 @@ Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
   `https://<host>/app/konto.html?token=<DIELOGIC_ADMIN_TOKEN>` öffnen,
   Namen/Passwort setzen. Weitere Personen lädt man auf der Konto-Seite ein
   (Link kopieren und weitergeben).
+- **Demo-Konto:** `DIELOGIC_DEMO_PASSWORD=<mind. 10 Zeichen>` setzen → beim
+  Start entsteht die Organisation „Demo" mit Admin `demo@dielogic.de`; die
+  Login-Seite zeigt dann „Als Demo anmelden" samt Zugangsdaten. Nur zum
+  Ausprobieren — in Produktion weglassen.
 - **CLI** (lokal oder mit Shell-Zugang):
 
   ```bash

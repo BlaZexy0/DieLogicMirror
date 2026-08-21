@@ -97,7 +97,9 @@
       <label for="l-email">E-Mail</label><input id="l-email" type="email" required autocomplete="username">
       <label for="l-pw">Passwort</label><input id="l-pw" type="password" required autocomplete="current-password">
       <div class="kt-err" id="login-err"></div>
-      <div class="kt-actions"><button class="btn btn-primary" type="submit">Anmelden</button></div>
+      <div class="kt-actions"><button class="btn btn-primary" type="submit">Anmelden</button>
+        <button class="btn btn-outline" type="button" id="demo-login" hidden>Als Demo anmelden</button>
+        <span class="muted" id="demo-hint" hidden style="font-size:.78rem;"></span></div>
     </form>
   </div>
 
@@ -245,6 +247,22 @@
       start();
     } catch (err) { $('login-err').textContent = err.message; }
   });
+
+  /* Demo-Konto (nur wenn der Server DIELOGIC_DEMO_PASSWORD gesetzt hat) */
+  async function showDemo() {
+    try {
+      var d = await api('GET', '/api/auth/demo');
+      if (!d || !d.email) return;
+      $('demo-login').hidden = false;
+      $('demo-hint').hidden = false;
+      $('demo-hint').textContent = d.email + ' / ' + d.password;
+      $('demo-login').onclick = async function () {
+        $('login-err').textContent = '';
+        try { await api('POST', '/api/auth/login', { email: d.email, password: d.password }); if (goNext()) return; start(); }
+        catch (err) { $('login-err').textContent = err.message; }
+      };
+    } catch (e) { /* kein Demo */ }
+  }
 
   $('logout').addEventListener('click', async function () {
     await api('POST', '/api/auth/logout').catch(function () {});
@@ -478,7 +496,7 @@
     if (navBtn) navBtn.textContent = me ? '👤 ' + (me.user.name || me.user.email) : 'Anmelden';
     if (me) showAccount();
     else if (token) showInvite();
-    else show('login', true);
+    else { show('login', true); showDemo(); }
   }
   start();
 })();

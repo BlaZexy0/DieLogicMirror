@@ -160,3 +160,10 @@ def test_disable_member_ends_access():
     assert admin.post(f"/api/org/members/{jane_id}/disable").status_code == 204
     assert jane.get("/api/auth/me").status_code == 401
     assert jane.post("/api/auth/login", json={"email": "jane@example.com", "password": PW}).status_code == 401
+
+
+def test_demo_account_from_env():
+    c = _client()
+    assert c.get("/api/auth/demo").json() == {"email": "demo@dielogic.de", "password": "demo-demo-demo"}
+    r = c.post("/api/auth/login", json={"email": "demo@dielogic.de", "password": "demo-demo-demo"})
+    assert r.status_code == 200 and r.json()["org"]["slug"] == "demo" and r.json()["user"]["role"] == "admin"

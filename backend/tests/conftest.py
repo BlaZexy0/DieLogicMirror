@@ -11,3 +11,4 @@ _tmp = Path(tempfile.mkdtemp(prefix="dielogic-test-"))
 os.environ["DATABASE_URL"] = f"sqlite:///{_tmp / 'test.db'}"
 os.environ["DIELOGIC_ADMIN_EMAIL"] = "owner@example.com"
 os.environ["DIELOGIC_ADMIN_TOKEN"] = "bootstrap-token-for-tests"
+os.environ["DIELOGIC_DEMO_PASSWORD"] = "demo-demo-demo"

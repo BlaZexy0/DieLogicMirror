@@ -173,6 +173,36 @@ def bootstrap_from_env(db: Session) -> None:
     db.commit()
 
 
+DEMO_EMAIL = "demo@dielogic.de"
+
+
+def bootstrap_demo(db: Session) -> None:
+    """Demo-Zugang zum schnellen Ausprobieren: DIELOGIC_DEMO_PASSWORD setzen →
+    Organisation „Demo" mit Admin demo@dielogic.de (Passwort wird bei jedem
+    Start auf den Env-Wert gesetzt). Nur für Entwicklung/Vorführung — in
+    Produktion die Variable weglassen."""
+    pw = os.environ.get("DIELOGIC_DEMO_PASSWORD", "")
+    if len(pw) < MIN_PASSWORD:
+        return
+    org = db.scalar(select(Org).where(Org.slug == "demo"))
+    if not org:
+        org = Org(slug="demo", name="Demo Druckguss GmbH")
+        db.add(org)
+        db.commit()
+    user = db.scalar(select(User).where(User.email == DEMO_EMAIL))
+    if not user:
+        user = User(org_id=org.id, email=DEMO_EMAIL, name="Demo", pw_hash=hash_password(pw), role="admin")
+        db.add(user)
+    else:
+        user.pw_hash, user.disabled = hash_password(pw), False
+    db.commit()
+
+
+def demo_credentials() -> dict | None:
+    pw = os.environ.get("DIELOGIC_DEMO_PASSWORD", "")
+    return {"email": DEMO_EMAIL, "password": pw} if len(pw) >= MIN_PASSWORD else None
+
+
 # ── Schemas ───────────────────────────────────────────────────────────
 
 class RegisterIn(BaseModel):
@@ -205,6 +235,12 @@ def me_out(user: User) -> dict:
 def get_invite(token: str, db: Session = Depends(get_db)):
     inv = _valid_invite(db, token)
     return {"email": inv.email, "role": inv.role, "org": {"slug": inv.org.slug, "name": inv.org.name}}
+
+
+@router.get("/auth/demo")
+def demo():
+    """Zugangsdaten des Demo-Kontos (nur wenn DIELOGIC_DEMO_PASSWORD gesetzt)."""
+    return demo_credentials() or {}
 
 
 @router.post("/auth/register")

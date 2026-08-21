@@ -10,7 +10,7 @@ from pathlib import Path, PurePosixPath
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
-from .auth import bootstrap_from_env, router as auth_router
+from .auth import bootstrap_demo, bootstrap_from_env, router as auth_router
 from .db import SessionLocal, init_db
 from .orgsettings import router as orgsettings_router
 from .projects import router as projects_router
@@ -39,6 +39,7 @@ def _startup():
     init_db()
     with SessionLocal() as db:
         bootstrap_from_env(db)
+        bootstrap_demo(db)
 
 # Ohne Cache-Control raten Browser die Frischedauer aus Last-Modified
 # (heuristisches Caching) und zeigen nach einem Deploy tagelang alte
