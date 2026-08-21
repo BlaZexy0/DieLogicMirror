@@ -10,6 +10,8 @@
   <link rel="apple-touch-icon" href="../assets/icon-180.png">
   <link rel="manifest" href="../assets/site.webmanifest">
   <link rel="stylesheet" href="../shared.css">
+  <script src="../version.js"></script>
+  <script src="../app/config/palette.js"></script>
   <script src="../nav.js" data-base=".."></script>
   <style>
     .kt-wrap { max-width: 1000px; margin: 0 auto; padding: 1.6rem 1.5rem 3rem; }
@@ -69,24 +71,8 @@
 
 <div class="kt-wrap">
 
-  <div id="nobackend" class="kt-note hidden">Diese Installation läuft ohne Backend (statisches Hosting) —
-    Projekte bleiben lokal im Browser; Export/Import als JSON siehe oben.</div>
-
-  <!-- ── Projekte in diesem Browser (immer, auch als Gast) ── -->
-  <div class="kt-card" id="local" style="margin-bottom:1.2rem;">
-    <h2>Projekte in diesem Browser</h2>
-    <p>Ohne Anmeldung liegen Projekte nur in diesem Browser. Nach der Anmeldung werden sie automatisch in
-      die Datenbank der Organisation übernommen und dort laufend gespeichert. „Aktiv" ist das Projekt, auf
-      dem Dashboard, Diagramme, Sprengflächen-, Zyklus- und Kostenanalyse gerade arbeiten.</p>
-    <table class="kt"><thead><tr><th>Projekt</th><th>Kunde / Teile-Nr.</th><th>Stand</th><th class="r">Geändert</th><th></th></tr></thead>
-      <tbody id="local-body"></tbody></table>
-    <div class="kt-actions">
-      <button class="btn btn-outline btn-sm" id="local-new">+ Neues Projekt</button>
-      <button class="btn btn-outline btn-sm" id="local-import">⤒ Projekt importieren (JSON)</button>
-      <input type="file" id="local-file" accept="application/json,.json" class="hidden">
-      <span class="kt-err" id="local-err" style="margin:0;"></span>
-    </div>
-  </div>
+  <div id="nobackend" class="kt-note hidden">Das Backend ist nicht erreichbar — Anmeldung und Projekte
+    stehen erst wieder zur Verfügung, wenn der Server antwortet.</div>
 
   <!-- ── Einladung einlösen ──────────────────────────────── -->
   <div id="invite" class="kt-card hidden" style="max-width:520px;margin:0 auto;">
@@ -104,8 +90,9 @@
   <!-- ── Anmelden ────────────────────────────────────────── -->
   <div id="login" class="kt-card hidden" style="max-width:520px;margin:0 auto;">
     <h2>Anmelden</h2>
-    <p>Noch kein Konto? DieLogic ist derzeit nur auf Einladung nutzbar — bitte einen Einladungslink
-      anfordern (<a href="../recht/kontakt.html">Kontakt</a>).</p>
+    <p>Die Werkzeuge arbeiten auf den Projekten Ihrer Organisation — bitte anmelden. Noch kein Konto?
+      DieLogic ist derzeit nur auf Einladung nutzbar — bitte einen Einladungslink anfordern
+      (<a href="../recht/kontakt.html">Kontakt</a>).</p>
     <form id="login-form">
       <label for="l-email">E-Mail</label><input id="l-email" type="email" required autocomplete="username">
       <label for="l-pw">Passwort</label><input id="l-pw" type="password" required autocomplete="current-password">
@@ -192,7 +179,6 @@
   </div>
 </div>
 
-<script src="config/palette.js"></script>
 <script src="shared/project.js"></script>
 <script>
 (function () {
@@ -242,6 +228,7 @@
     if ($('r-pw').value !== $('r-pw2').value) { $('register-err').textContent = 'Die Passwörter stimmen nicht überein.'; return; }
     try {
       await api('POST', '/api/auth/register', { token: token, name: $('r-name').value.trim(), password: $('r-pw').value });
+      if (goNext()) return;
       history.replaceState(null, '', location.pathname);
       token = null;
       start();
@@ -254,6 +241,7 @@
     $('login-err').textContent = '';
     try {
       await api('POST', '/api/auth/login', { email: $('l-email').value.trim(), password: $('l-pw').value });
+      if (goNext()) return;
       start();
     } catch (err) { $('login-err').textContent = err.message; }
   });
@@ -267,11 +255,10 @@
   /* ── Konto ── */
   async function showAccount() {
     show('account', true);
-    show('local', false);
     window.__KONTO_ME__ = me;
     window.dispatchEvent(new CustomEvent('konto:account', { detail: me }));
     /* Lokale Projekte ohne Serverbezug in die Datenbank übernehmen */
-    var orphans = P.list().filter(function (p) { return !p.remote && !P.isEmptyStarter(p); });
+    var orphans = P.list().filter(function (p) { return !p.remote; });
     for (var i = 0; i < orphans.length; i++) {
       var o = orphans[i];
       try {
@@ -465,74 +452,22 @@
     } catch (err) { $('invite-err').textContent = err.message; }
   });
 
-  /* ── Lokale Projekte ── */
   function download(name, text) {
     var a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
     a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
   }
-  function renderLocal() {
-    var cur = P.current();
-    $('local-body').innerHTML = P.list().map(function (p) {
-      var sections = ['design', 'geometry', 'cycle', 'cost'].filter(function (k) { return p[k]; });
-      var label = { design: 'Auslegung', geometry: 'Geometrie', cycle: 'Zyklus', cost: 'Kosten' };
-      var stand = '<span class="muted">' + (sections.length ? sections.map(function (k) { return label[k]; }).join(', ') : 'leer') + '</span>';
-      return '<tr><td><strong>' + esc(p.name) + '</strong> ' + (p.id === cur.id ? '<span class="pill admin">aktiv</span>' : '')
-        + '<br><span class="muted">' + esc(p.description) + '</span></td>'
-        + '<td>' + esc(p.customer) + (p.partNo ? ' / ' + esc(p.partNo) : '') + '</td>'
-        + '<td>' + stand + '</td><td class="r">' + fmt(p.updatedAt) + '</td>'
-        + '<td class="r" style="white-space:nowrap;">'
-        + (p.id === cur.id ? '' : '<button class="btn btn-outline btn-sm" data-act="activate" data-id="' + p.id + '">Aktivieren</button> ')
-        + '<button class="btn-link" data-act="dup" data-id="' + p.id + '">Kopie</button> · '
-        + '<button class="btn-link" data-act="export" data-id="' + p.id + '">Export</button> · '
-        + '<button class="btn-link" data-act="reset" data-id="' + p.id + '" title="Alle Eingaben dieses Projekts auf die Standardwerte">Zurücksetzen</button> · '
-        + '<button class="btn-link" data-act="del" data-id="' + p.id + '">Entfernen</button></td></tr>';
-    }).join('');
-  }
-  $('local-body').addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-act]'); if (!b) return;
-    var p = P.get(b.dataset.id); if (!p) return;
-    switch (b.dataset.act) {
-      case 'activate': P.select(p.id); break;
-      case 'dup': P.duplicate(p.id); break;
-      case 'export': download(P.fileName(p), P.exportJSON(p.id)); return;
-      case 'reset':
-        if (!confirm('Alle Eingaben von „' + p.name + '" (Auslegung, Geometrie, Zyklus, Kosten) auf die Standardwerte zurücksetzen?')) return;
-        var before = P.current().id;
-        P.select(p.id);
-        ['design', 'geometry', 'cycle', 'cost'].forEach(function (k) { P.setSection(k, null); });
-        P.select(before);
-        break;
-      case 'del':
-        if (!confirm('Projekt „' + p.name + '" aus diesem Browser entfernen? Es ist nirgends sonst gespeichert.')) return;
-        P.remove(p.id);
-        break;
-    }
-    renderLocal();
-    if (me) loadProjects();
-  });
-  $('local-new').addEventListener('click', function () {
-    var name = prompt('Name des neuen Projekts:', 'DieCastPartA');
-    if (!name) return;
-    P.create({ name: name.trim() });
-    renderLocal();
-  });
-  $('local-import').addEventListener('click', function () { $('local-file').click(); });
-  $('local-file').addEventListener('change', function (e) {
-    var f = e.target.files[0]; if (!f) return;
-    $('local-err').textContent = '';
-    f.text().then(function (txt) {
-      try { P.importJSON(txt); renderLocal(); }
-      catch (err) { $('local-err').textContent = 'Import fehlgeschlagen: ' + err.message; }
-    });
-    e.target.value = '';
-  });
 
   /* ── Start ── */
+  /* Von einer Werkzeugseite hierher geleitet? Nach der Anmeldung zurück. */
+  var NEXT = new URLSearchParams(location.search).get('next');
+  function goNext() {
+    if (NEXT && /^\/[^\/]/.test(NEXT)) { location.replace(NEXT); return true; }
+    return false;
+  }
+
   async function start() {
     ['invite', 'login', 'account', 'nobackend'].forEach(function (id) { show(id, false); });
-    show('local', true);
-    renderLocal();
     if (location.protocol === 'file:') { show('nobackend', true); return; }
     try { me = await api('GET', '/api/auth/me'); }
     catch (err) {
@@ -549,10 +484,10 @@
 })();
 </script>
 
-<script src="config/machines.js"></script>
-<script src="config/alloys.js"></script>
-<script src="config/parts.js"></script>
-<script src="config/kosten.js"></script>
+<script src="config/examples/machines.js"></script>
+<script src="config/examples/alloys.js"></script>
+<script src="config/examples/parts.js"></script>
+<script src="config/examples/kosten.js"></script>
 <script type="module">
 /* Stammdaten-Editor: Listen (Maschinen/Legierungen/Bauteiltypen) mit den
    Feldern aus js/config/fields.js, Kosten & Sätze als Formular. Speichern
@@ -602,7 +537,7 @@ function render() {
   $('sd-perm').textContent = admin ? 'Als Administrator können Sie die Werte bearbeiten.' : 'Nur Administratoren können die Werte ändern.';
   document.querySelectorAll('#sd-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   const src = settings[tab];
-  $('sd-source').textContent = src ? 'Quelle: eigene Werte der Organisation, zuletzt geändert ' + fmtDate(src.updated_at) + '.' : 'Quelle: Beispielwerte (app/config/' + tab + '.js) — noch nicht angepasst.';
+  $('sd-source').textContent = src ? 'Quelle: eigene Werte der Organisation, zuletzt geändert ' + fmtDate(src.updated_at) + '.' : 'Quelle: Beispielwerte (app/config/examples/' + tab + '.js) — noch nicht angepasst.';
   $('sd-add').hidden = tab === 'kosten';
   $('sd-actions').querySelectorAll('button').forEach(b => { b.disabled = !admin; });
   if (!work[tab]) work[tab] = currentData(tab);

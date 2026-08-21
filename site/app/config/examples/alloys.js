@@ -1,4 +1,5 @@
-/* Legierungs-Presets — hier direkt editieren, kein Build nötig.
+/* Legierungs-Presets (Beispielwerte). Produktiv pflegt jede Organisation ihre eigenen
+   auf der Konto-Seite (Stammdaten); diese Datei ist Startvorlage und Fallback.
    Einheiten: density = Dichte der SCHMELZE bei Gießtemperatur [kg/m³] —
    nicht die Raumtemperatur-Dichte, denn alle Volumina im Dashboard
    (Füllkammer, Füllgrad, Anschnitt-Strömung) sind flüssige Schmelze.

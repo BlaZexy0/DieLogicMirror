@@ -10,11 +10,11 @@
    dadurch standardmäßig eingeklappt, „manuell" zeigt sie wieder. */
 export const PRESET_DOMAINS = [
   { id: 'machine', title: 'Maschinen-Preset', stateKey: 'machine', selId: 'machineSel', def: 'hcc1600',
-    groupElId: 'preset-group', global: '__MACHINES__', listKey: 'machines', config: 'config/machines.js' },
+    groupElId: 'preset-group', global: '__MACHINES__', listKey: 'machines', config: 'config/examples/machines.js' },
   { id: 'alloy', title: 'Legierungs-Preset', stateKey: 'alloy', selId: 'alloySel', def: 'alsi9cu3',
-    groupElId: 'alloy-preset-group', global: '__ALLOYS__', listKey: 'alloys', config: 'config/alloys.js' },
+    groupElId: 'alloy-preset-group', global: '__ALLOYS__', listKey: 'alloys', config: 'config/examples/alloys.js' },
   { id: 'part', title: 'Bauteiltyp-Preset', stateKey: 'part', selId: 'partSel', def: 'gehaeuse',
-    groupElId: 'part-preset-group', global: '__PARTS__', listKey: 'parts', config: 'config/parts.js' }
+    groupElId: 'part-preset-group', global: '__PARTS__', listKey: 'parts', config: 'config/examples/parts.js' }
 ];
 
 export const groups = [

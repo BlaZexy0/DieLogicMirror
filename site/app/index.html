@@ -4,12 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Dashboard · DieLogic</title>
+  <link rel="stylesheet" href="../shared.css">
   <link rel="stylesheet" href="css/main.css">
   <meta name="theme-color" content="#002733">
   <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png">
   <link rel="apple-touch-icon" href="../assets/icon-180.png">
   <link rel="stylesheet" href="css/site.css">
+  <script src="../version.js"></script>
+  <script src="../app/config/palette.js"></script>
   <script src="../nav.js" data-base=".." data-footer="none"></script>
 </head>
 <body>
@@ -69,13 +72,12 @@
   </main>
 
   <script src="config/theme.js"></script>
-  <script src="config/machines.js"></script>
-  <script src="config/alloys.js"></script>
-  <script src="config/parts.js"></script>
+  <script src="config/examples/machines.js"></script>
+  <script src="config/examples/alloys.js"></script>
+  <script src="config/examples/parts.js"></script>
   <script src="shared/orgpresets.js"></script>
   <script src="shared/project.js"></script>
   <script src="shared/projectbar.js" data-base=".." data-mount="project-mount"></script>
-  <script src="shared/contract.js"></script>
   <script src="shared/clampmodel.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>

@@ -2,7 +2,7 @@
    Seiten-Code der STL-Analyse: Dateien laden, Projektion zeichnen, Tabellen
    rendern, Ereignisse. Rechenlogik liegt in stl-math.js (Netz-Kennwerte),
    stl-logic.js (Zuordnung/Maschinentabelle), shared/clampmodel.js und
-   shared/contract.js — dieses Script ist reine Ansicht und Verdrahtung. */
+   stl-logic.js (handoffValues) — dieses Script ist reine Ansicht und Verdrahtung. */
 (function () {
   'use strict';
 
@@ -242,10 +242,9 @@
 
   /* Rechenkerne: Netz-Kennwerte aus stl-math.js, Zuordnung/Maschinentabelle
      aus stl-logic.js, Zuhaltung aus shared/clampmodel.js, Übernahme (ins Projekt) aus
-     shared/contract.js — hier wird nur gerendert. */
+     stl-logic.js — hier wird nur gerendert. */
   const MACHINES = (window.__MACHINES__ && window.__MACHINES__.machines) || [];
   const CLAMP = window.__CLAMP_MODEL__;
-  const CONTRACT = window.__DASH_CONTRACT__;
   const LOGIC = window.__STL_LOGIC__;
 
   function getDensity() {
@@ -349,9 +348,9 @@
   }
 
   /* ── Übernahme ins Dashboard ───────────────────────────────── */
-  /* Schlüssel und Schreiblogik kommen aus shared/contract.js — dieselbe
-     Quelle, die auch das Dashboard (js/core/state.js) nutzt. Nicht
-     betroffene Eingaben bleiben erhalten. */
+  /* Schlüssel aus stl-logic.js (handoffValues); geschrieben wird in den
+     design-Abschnitt des Projekts — nicht betroffene Eingaben und die
+     Schusskurve bleiben erhalten. */
   function openDashboard(mc) {
     const cog = unionSilhouette();
     const totP = (cog ? cog.area : 0) + getCoreAdd();
@@ -361,7 +360,7 @@
     const sums = LOGIC.roleSums(models, getDensity());
     const kg = (x) => Math.round(x * 1000) / 1000;
 
-    const values = CONTRACT.stlHandoffValues({
+    const values = LOGIC.handoffValues({
       part: kg(sums.part),
       runner: kg(sums.runner),
       overflow: kg(sums.overflow),
@@ -381,7 +380,8 @@
         proj: { X: getProjection(m, 'X').area, Y: getProjection(m, 'Y').area, Z: getProjection(m, 'Z').area } })),
       analysedAt: new Date().toISOString()
     });
-    CONTRACT.writeDashboardState(window.__PROJECT__, values, mc.id);
+    if (!window.__PROJECT__.current()) { alert('Kein Projekt aktiv — bitte zuerst anmelden.'); return; }
+    window.__PROJECT__.mergeDesign(values, mc.id);
     window.location.href = '../app/index.html';
   }
 

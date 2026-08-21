@@ -21,26 +21,19 @@ function memStorage(init) {
 }
 function fresh(init) { P._reset(); const s = memStorage(init); P.init(s); return s; }
 
-test('leerer Speicher → ein Startprojekt, das sofort aktuell ist', () => {
-  const s = fresh();
-  const cur = P.current();
-  assert.equal(P.list().length, 1);
-  assert.equal(cur.name, 'Beispielprojekt');
-  assert.equal(cur.design, null);
-  assert.ok(s.mem.has(P.STORE_KEY), 'Speicher wurde angelegt');
-});
-
-test('Migration: alter Dashboard-Zustand wird zum design-Abschnitt', () => {
-  const legacy = { values: { part: 7, wall: 2.5 }, curve: [[60, 0.4], [470, 4]], machine: 'hcc800' };
-  fresh({ [P.LEGACY_KEY]: JSON.stringify(legacy) });
-  const cur = P.current();
-  assert.equal(cur.name, 'Übernommene Auslegung');
-  assert.deepEqual(cur.design, legacy);
-  assert.equal(P.derived().mpart, 7);
+test('leerer Speicher → kein Projekt; Abschnitte sind dann null/false', () => {
+  fresh();
+  assert.equal(P.list().length, 0);
+  assert.equal(P.current(), null);
+  assert.equal(P.getSection('design'), null);
+  assert.equal(P.setSection('design', { values: {} }), false);
+  assert.deepEqual(P.derived(), { mpart: null, mdose: null, tz: null, machine: null, sources: {} });
+  P.create({ name: 'A' });
+  assert.equal(P.current().name, 'A');
 });
 
 test('Abschnitte: setSection/getSection liefern Kopien und markieren dirty', () => {
-  fresh();
+  fresh(); P.create({ name: 'A' }); P.current().dirty = false;
   assert.equal(P.current().dirty, false);
   assert.ok(P.setSection('cycle', Z.defaultState()));
   const c = P.getSection('cycle');
@@ -60,12 +53,12 @@ test('Speicher überlebt einen Neustart (gleicher Storage)', () => {
   assert.equal(P.current().id, id);
   assert.equal(P.current().name, 'DieCastPartA');
   assert.equal(P.getSection('cost').values.tz, 40);
-  assert.equal(P.list().length, 2);
+  assert.equal(P.list().length, 1);
 });
 
 test('Projekte: anlegen, wechseln, umbenennen, duplizieren, entfernen', () => {
   fresh();
-  const a = P.current();
+  const a = P.create({ name: 'A' });
   const b = P.create({ name: 'B' });
   assert.equal(P.current().id, b.id);
   assert.ok(P.select(a.id));
@@ -83,11 +76,12 @@ test('Projekte: anlegen, wechseln, umbenennen, duplizieren, entfernen', () => {
   assert.ok(P.remove(d.id));
   assert.notEqual(P.current().id, d.id);
   P.remove(a.id); P.remove(b.id);
-  assert.equal(P.list().length, 1, 'das letzte Projekt wird durch ein neues ersetzt');
+  assert.equal(P.list().length, 0);
+  assert.equal(P.current(), null);
 });
 
 test('derived: Massen aus der Auslegung, Zykluszeit aus der Zyklusanalyse', () => {
-  fresh();
+  fresh(); P.create({ name: 'A' });
   assert.deepEqual(P.derived(), { mpart: null, mdose: null, tz: null, machine: null, sources: {} });
   P.setSection('design', { values: { part: 12, runner: 3, overflow: 2, biscuit: 1.2 }, machine: 'hcc800' });
   let d = P.derived();
@@ -120,7 +114,7 @@ test('zyklus: sanitizeState repariert Lücken und erzwingt Zahlen', () => {
 });
 
 test('Export/Import: Rundreise als neues Projekt, Fremddateien werden abgewiesen', () => {
-  fresh();
+  fresh(); P.create({ name: 'x' });
   P.update(P.current().id, { name: 'DieCastPartA', description: 'Test' });
   P.setSection('design', { values: { part: 5 } });
   P.markSaved(P.current().id, { id: 'srv1', rev: 3 });
@@ -151,7 +145,7 @@ test('Export/Import: Rundreise als neues Projekt, Fremddateien werden abgewiesen
 
 test('markSaved: Serverbezug setzen, dirty zurücknehmen; put ersetzt gleiche id', () => {
   fresh();
-  const cur = P.current();
+  const cur = P.create({ name: 'A' });
   P.setSection('design', { values: { part: 1 } });
   assert.equal(cur.dirty, true);
   P.markSaved(cur.id, { id: 'srv9', rev: 2 });
@@ -163,19 +157,10 @@ test('markSaved: Serverbezug setzen, dirty zurücknehmen; put ersetzt gleiche id
   assert.equal(P.getSection('design').values.part, 2);
 });
 
-test('kaputter Speicher wird durch ein Startprojekt ersetzt', () => {
+test('kaputter Speicher → leer; unbekannte currentId → erstes Projekt', () => {
   fresh({ [P.STORE_KEY]: '{kaputt' });
-  assert.equal(P.list().length, 1);
+  assert.equal(P.list().length, 0);
   fresh({ [P.STORE_KEY]: JSON.stringify({ currentId: 'weg', projects: { abc123: { name: 'X' } } }) });
   assert.equal(P.current().id, 'abc123', 'unbekannte currentId → erstes Projekt');
 });
 
-test('isEmptyStarter: nur unberührte Startprojekte ohne Abschnitte', () => {
-  fresh();
-  const cur = P.current();
-  assert.ok(P.isEmptyStarter(cur));
-  P.setSection('cycle', Z.defaultState());
-  assert.ok(!P.isEmptyStarter(P.current()));
-  const b = P.create({ name: 'B' });   // create() markiert dirty → kein Starter
-  assert.ok(!P.isEmptyStarter(b));
-});

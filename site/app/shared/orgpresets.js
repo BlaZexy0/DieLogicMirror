@@ -1,7 +1,7 @@
 /* DieLogic – app/shared/orgpresets.js
    Stammdaten der Organisation über die Beispiel-Presets legen: Maschinen,
    Legierungen, Bauteiltypen (window.__MACHINES__/__ALLOYS__/__PARTS__) und
-   Kosten & Sätze (window.__KOSTEN__.defaults). Nach den config/*.js laden.
+   Kosten & Sätze (window.__KOSTEN__.defaults). Nach den config/examples/*.js laden.
 
    Synchron: der zuletzt vom Server geholte Stand liegt im localStorage und
    wird sofort angewendet — die ES-Module des Dashboards lesen die Globals

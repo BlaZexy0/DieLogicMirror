@@ -1,50 +1,8 @@
 /* Grundlayout und Komponenten. Die Farbwerte hier sind nur Fallbacks —
    config/theme.json überschreibt die CSS-Variablen beim Laden (js/core/theme.js). */
 
-/* Farb-Tokens = app/config/palette.js (gleiche Namen wie shared.css;
-   config/theme.js darf sie zur Laufzeit überschreiben). */
-:root {
-  --dark: #002733;
-  --dark2: #0a3945;
-  --dark3: #1b4a57;
-  --primary: #008c82;
-  --primary2: #00726a;
-  --primary-deep: #00534d;
-  --primary-light: #3fc2b6;
-  --pale: #e5f3f2;
-  --pale-border: #b8ddd2;
-  --accent: #8cbee6;
-  --ok: #0d7a3c;
-  --ok-border: #12a150;
-  --ok-bg: #dcefe3;
-  --warn: #c2447e;
-  --warn-soft: #eec3d4;
-  --warn-bg: #fdf2f6;
-  --warn-text: #8a6d00;
-  --warn-border: #e0a400;
-  --gold: #d4a908;
-  --note-bg: #fff8e1;
-  --note-border: #e6c34a;
-  --note-text: #6b5307;
-  --bad: #b42318;
-  --bad-bg: #fff2f0;
-  --bg: #f3f6f6;
-  --surface: #ffffff;
-  --surface2: #f8fafa;
-  --border: #ccd4d6;
-  --border-light: #e5e9eb;
-  --text: #002733;
-  --text-body: #2a3f4a;
-  --muted: #4c6870;
-  --muted-light: #9aacb4;
-  --ondark: #8fb8c4;
-  --ondark2: #7a9aa6;
-  --cat-purple: #9a77e8;
-  --cat-green: #4c9f70;
-  --cat-slate: #557786;
-  --cat-orange: #e07b39;
-}
-
+/* Farb-Tokens kommen aus ../../shared.css (Spiegel von config/palette.js) —
+   die Seiten laden shared.css vor dieser Datei. */
 * { box-sizing: border-box; }
 
 body {

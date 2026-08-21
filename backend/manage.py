@@ -5,12 +5,11 @@ Aufruf aus dem Repo-Root (DATABASE_URL wie beim Server, sonst SQLite):
     python -m backend.manage init
     python -m backend.manage create-org acme "ACME Druckguss GmbH"
     python -m backend.manage invite jane@acme.de --org acme [--admin] [--base-url https://dielogic.de]
-    python -m backend.manage invites              # offene Einladungen mit Link
-    python -m backend.manage users                # alle Konten
     python -m backend.manage disable jane@acme.de
     python -m backend.manage set-role jane@acme.de admin
 
-Die Einladungs-Links einfach weitergeben (E-Mail, Chat): /app/konto.html?token=…
+Offene Einladungen, Mitglieder und weitere Einladungen verwaltet die
+Konto-Seite (/app/konto.html); die CLI ist für den Start ohne Browser-Zugang.
 """
 
 from __future__ import annotations
@@ -21,7 +20,7 @@ import sys
 from sqlalchemy import select
 
 from .auth import create_invite, invite_url
-from .db import AuthSession, Invite, Org, SessionLocal, User, init_db
+from .db import AuthSession, Org, SessionLocal, User, init_db
 
 
 def _org(db, slug: str) -> Org:
@@ -55,26 +54,6 @@ def cmd_invite(args):
             sys.exit(str(error))
         print(f"Einladung für {inv.email} ({inv.role}) in {org.slug}, gültig bis {inv.expires_at:%Y-%m-%d}:")
         print("  " + invite_url(args.base_url, inv.token))
-
-
-def cmd_invites(args):
-    with SessionLocal() as db:
-        rows = db.scalars(select(Invite).where(Invite.used_at.is_(None)).order_by(Invite.created_at)).all()
-        if not rows:
-            print("Keine offenen Einladungen.")
-        for inv in rows:
-            until = f"{inv.expires_at:%Y-%m-%d}" if inv.expires_at else "unbegrenzt"
-            print(f"{inv.org.slug:12} {inv.email:32} {inv.role:7} bis {until}  {invite_url(args.base_url, inv.token)}")
-
-
-def cmd_users(_args):
-    with SessionLocal() as db:
-        rows = db.scalars(select(User).order_by(User.org_id, User.created_at)).all()
-        if not rows:
-            print("Keine Benutzer.")
-        for u in rows:
-            flag = "  (deaktiviert)" if u.disabled else ""
-            print(f"{u.org.slug:12} {u.email:32} {u.role:7} {u.name}{flag}")
 
 
 def cmd_disable(args):
@@ -116,12 +95,6 @@ def main(argv=None):
     p.add_argument("--admin", action="store_true")
     p.add_argument("--base-url", default="http://127.0.0.1:8000")
     p.set_defaults(fn=cmd_invite)
-
-    p = sub.add_parser("invites")
-    p.add_argument("--base-url", default="http://127.0.0.1:8000")
-    p.set_defaults(fn=cmd_invites)
-
-    sub.add_parser("users").set_defaults(fn=cmd_users)
 
     p = sub.add_parser("disable")
     p.add_argument("email")

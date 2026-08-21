@@ -5,7 +5,7 @@
    1. stl-math.js gegen die Sollwerte der mitgelieferten Beispiel-STLs
       (site/assets/{part,runner,biscuit,overflow}.stl)
    2. das geteilte Zuhaltungs-Modell (shared/clampmodel.js)
-   3. der Übernahme-Vertrag STL → Dashboard (shared/contract.js)
+   3. die Übernahme STL → Projekt (stl-logic.js handoffValues + project.mergeDesign)
    4. die Konsistenz von Felddefinition und Maschinen-Presets
    5. die Rechenlogik der STL-Seite (stl/stl-logic.js)
    6. die Rechenlogik der Teilekosten-Seite (kosten/teilekosten-logic.js)
@@ -26,11 +26,10 @@ const logic = require(path.join(site, 'stl/stl-logic.js'));
 const kosten = require(path.join(site, 'kosten/teilekosten-logic.js'));
 const zyklus = require(path.join(site, 'zyklus/zyklus-logic.js'));
 const clamp = require(path.join(site, 'app/shared/clampmodel.js'));
-const contract = require(path.join(site, 'app/shared/contract.js'));
 const project = require(path.join(site, 'app/shared/project.js'));
 
 globalThis.window = globalThis;
-require(path.join(site, 'app/config/machines.js'));
+require(path.join(site, 'app/config/examples/machines.js'));
 const MACHINES = globalThis.__MACHINES__.machines;
 
 const { allFields, groups, PRESET_KEYS } = await import(
@@ -199,15 +198,11 @@ test('clampmodel: p_max = F / (100·S·k·A)', () => {
   closeTo(clamp.pMax(3400, 0.03, 1.3, 1), 871.79, 1e-4);        // HCC-340-Größenordnung
 });
 
-/* ── 3 · Übernahme-Vertrag STL → Dashboard ───────────────────── */
+/* ── 3 · Übernahme STL → Projekt ─────────────────────────────── */
 
-test('contract: STORAGE_KEY bleibt stabil (gespeicherte Nutzer-Zustände)', () => {
-  assert.equal(contract.STORAGE_KEY, 'hpdc-dashboard-state-v1');
-});
-
-test('contract: alle Übernahme-Schlüssel sind Dashboard-Felder', () => {
+test('handoff: alle Übernahme-Schlüssel sind Dashboard-Felder', () => {
   const known = new Set(allFields().map(f => f.key));
-  const vals = contract.stlHandoffValues({
+  const vals = logic.handoffValues({
     part: 0.324, runner: 0.039, overflow: 0.032, biscuit: 0.259,
     density: 2700, area: 0.03, eccX: 12, eccY: 3, safety: 1.3, psel: 600
   }, MACHINES[0].fields);
@@ -240,11 +235,12 @@ function memStorage(init) {
   return { getItem: k => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v), removeItem: k => mem.delete(k), mem };
 }
 
-test('contract: writeDashboardState mischt in den design-Abschnitt, statt zu überschreiben', () => {
+test('mergeDesign: mischt in den design-Abschnitt, statt zu überschreiben', () => {
   project._reset();
-  project.init(memStorage({ [contract.STORAGE_KEY]:
-    JSON.stringify({ values: { wall: 9 }, curve: [[60, 0.4]], machine: 'alt' }) }));
-  assert.ok(contract.writeDashboardState(project, { area: 0.03 }, 'hcc800'));
+  project.init(memStorage());
+  project.create({ name: 'T' });
+  project.setSection('design', { values: { wall: 9 }, curve: [[60, 0.4]], machine: 'alt' });
+  assert.ok(project.mergeDesign({ area: 0.03 }, 'hcc800'));
   const data = project.getSection('design');
   assert.equal(data.values.wall, 9);          // fremde Eingabe bleibt
   assert.equal(data.values.area, 0.03);       // Übernahme angekommen
@@ -253,10 +249,11 @@ test('contract: writeDashboardState mischt in den design-Abschnitt, statt zu üb
   project._reset();
 });
 
-test('contract: Projekt ohne design-Abschnitt bekommt einen', () => {
+test('mergeDesign: Projekt ohne design-Abschnitt bekommt einen', () => {
   project._reset();
   project.init(memStorage());
-  assert.ok(contract.writeDashboardState(project, { area: 0.03 }, 'hcc340'));
+  project.create({ name: 'T' });
+  assert.ok(project.mergeDesign({ area: 0.03 }, 'hcc340'));
   assert.equal(project.getSection('design').values.area, 0.03);
   assert.equal(project.getSection('design').machine, 'hcc340');
   project._reset();
@@ -282,8 +279,8 @@ test('fields: Preset-Gruppen entsprechen exakt PRESET_KEYS (key → Domäne)', (
 
 test('presets: Alle Legierungs-/Bauteil-Preset-Felder sind Felder ihrer Domäne', () => {
   const require2 = createRequire(import.meta.url);
-  require2(path.join(site, 'app/config/alloys.js'));
-  require2(path.join(site, 'app/config/parts.js'));
+  require2(path.join(site, 'app/config/examples/alloys.js'));
+  require2(path.join(site, 'app/config/examples/parts.js'));
   for (const [list, dom] of [[globalThis.__ALLOYS__.alloys, 'alloy'], [globalThis.__PARTS__.parts, 'part']]) {
     assert.ok(list.length > 0);
     for (const p of list) {
@@ -384,7 +381,7 @@ test('machines: jedes Preset setzt genau die Maschinen-PRESET_KEYS, plausibel', 
 
 /* ── 6 · Rechenlogik der Teilekosten-Seite ───────────────────── */
 
-/* Beispielwerte des Kosten-Presets (app/config/kosten.js) mit den
+/* Beispielwerte des Kosten-Presets (app/config/examples/kosten.js) mit den
    Dashboard-Default-Massen (12 kg Bauteil, 18,2 kg Schuss). */
 const KOSTEN_V = {
   mpart: 12, mdose: 18.2, tz: 52, kav: 1, a: 4, oee: 78,

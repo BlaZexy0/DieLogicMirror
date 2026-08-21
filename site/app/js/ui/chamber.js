@@ -27,13 +27,12 @@ const VARIANTS = {
 let variant = 'A';
 
 function themeColors() {
-  const cs = getComputedStyle(document.documentElement);
-  const c = (name, fb) => (cs.getPropertyValue(name) || '').trim() || fb;
+  const P = window.__PALETTE__;
   return {
-    deep: c('--dark', '#002733'),
-    green: c('--primary', '#008c82'),
-    muted: c('--muted', '#4c6870'),
-    surface: c('--surface', '#ffffff')
+    deep: P.dark,
+    green: P.primary,
+    muted: P.muted,
+    surface: P.surface
   };
 }
 

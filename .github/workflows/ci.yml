@@ -1,6 +1,6 @@
 # CI: läuft bei jedem Push auf main und bei Pull Requests.
-# Zwei Jobs: Python (hpdcsim-Tests + Backend-Tests inkl. /api/sim/shot und
-# Physik-Fixtures) und Frontend (Syntax + Node-Tests gegen die Beispiel-STLs,
+# Zwei Jobs: Python (hpdcsim-Tests + Backend-Tests mit pytest: Konto, Projekte,
+# Stammdaten, /api/sim/shot, Physik-Fixtures) und Frontend (Syntax + Node-Tests gegen die Beispiel-STLs,
 # das Zuhaltungs-Modell, den Übernahme-Vertrag, die Preset-/Feld-Konsistenz,
 # die STL-Rechenlogik und dieselben Physik-Fixtures gegen physics.js).
 name: CI
@@ -20,11 +20,11 @@ jobs:
           python-version: '3.13'
       - name: Abhängigkeiten installieren
         # httpx: nur für den FastAPI-TestClient der Backend-Tests.
-        run: pip install -r backend/requirements.txt "./packages/hpdcsim[plot]" httpx
+        run: pip install -r backend/requirements.txt "./packages/hpdcsim[plot]" httpx pytest
       - name: hpdcsim-Tests
         run: python packages/hpdcsim/tests/run_tests.py
-      - name: Backend-Tests (convert + API + Physik-Fixtures)
-        run: python backend/tests/run_tests.py
+      - name: Backend-Tests (pytest)
+        run: pytest backend/tests -q
 
   frontend:
     runs-on: ubuntu-latest

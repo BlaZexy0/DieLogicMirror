@@ -4,6 +4,7 @@ Starten (aus dem Ordner dielogic/):
     .venv/bin/uvicorn backend.app:app --reload
 """
 
+import re
 from pathlib import Path, PurePosixPath
 
 from fastapi import FastAPI, Request
@@ -17,7 +18,14 @@ from .sim import router as sim_router
 
 SITE_DIR = Path(__file__).resolve().parent.parent / "site"
 
-app = FastAPI(title="DieLogic Backend", version="0.1.0")
+def site_version() -> str:
+    """Einzige Quelle: site/version.js (window.__DL_VERSION__ = '…')."""
+    m = re.search(r"__DL_VERSION__\s*=\s*'([^']+)'", (SITE_DIR / "version.js").read_text())
+    return m.group(1) if m else "0"
+
+
+VERSION = site_version()
+app = FastAPI(title="DieLogic Backend", version=VERSION)
 app.include_router(sim_router)
 app.include_router(auth_router)
 app.include_router(projects_router)
@@ -53,7 +61,7 @@ async def cache_headers(request: Request, call_next):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "version": VERSION}
 
 
 # Zuletzt mounten, damit /api/… Vorrang hat. html=True liefert index.html aus.

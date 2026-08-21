@@ -9,6 +9,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png">
   <link rel="apple-touch-icon" href="../assets/icon-180.png">
   <link rel="stylesheet" href="../shared.css">
+  <script src="../version.js"></script>
+  <script src="../app/config/palette.js"></script>
   <script src="../nav.js" data-base=".."></script>
   <style>
     .tk-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 4rem; }
@@ -236,15 +238,13 @@
     können zusätzlich die Erstarrungszeit und damit die Zykluszeit verkürzen, das ist nicht
     modelliert). Rüstkosten, Nacharbeit, Gemeinkosten und Ausschuss-Entdeckungszeitpunkt sind
     nicht modelliert — alle Preise sind Beispielwerte (Preset:
-    <code>app/config/kosten.js</code>) wie auf der Preisseite.</p>
+    <code>app/config/examples/kosten.js</code>) wie auf der Preisseite.</p>
 
 </div>
-
-<script src="../app/config/palette.js"></script>
 <script src="../app/shared/project.js"></script>
 <script src="../app/shared/projectbar.js" data-base=".."></script>
 <script src="../zyklus/zyklus-logic.js"></script>
-<script src="../app/config/kosten.js"></script>
+<script src="../app/config/examples/kosten.js"></script>
 <script src="../app/shared/orgpresets.js"></script>
 <script src="teilekosten-logic.js"></script>
 <script>
@@ -263,14 +263,10 @@
      Eingabe von Hand löst die Verknüpfung, bis sie wiederhergestellt wird. */
   var linked = Object.assign({ mpart: true, mdose: true, tz: true }, saved.linked || {});
 
-  /* Preise/Sätze aus dem editierbaren Preset; die Duplikate hier sind nur
-     Fallback, falls das Preset nicht lädt. */
-  var K = (window.__KOSTEN__ && window.__KOSTEN__.defaults) || {};
-  var DEF = Object.assign({
-    tz: 52, kav: 1, a: 4, oee: 78,
-    pAl: 2.6, pRe: 0.35, kr: 2, eKg: 0.75, pE: 0.18,
-    pM: 95, pP: 48, nP: 0.5, wz: 180000, st: 120000
-  }, K, { mpart: 12, mdose: 18.2 }, saved.values || {});
+  /* Preise/Sätze: Beispielwerte (config/examples/kosten.js), überlagert von
+     den Stammdaten der Organisation (shared/orgpresets.js). */
+  var K = window.__KOSTEN__.defaults;
+  var DEF = Object.assign({}, K, { mpart: 12, mdose: 18.2 }, saved.values || {});
   var H_MONTH = isFinite(K.hMonth) ? K.hMonth : 500; // ≈ Produktionsstunden je Monat im 3-Schicht-Betrieb
 
   var KEYS = ['mpart', 'mdose', 'tz', 'kav', 'a', 'oee', 'pAl', 'pRe', 'kr', 'eKg', 'pE', 'pM', 'pP', 'nP', 'wz', 'st'];
@@ -290,10 +286,10 @@
       return LINK_LABEL[k] + ': von Hand gesetzt';
     });
     var anyBroken = LINKED.some(function (k) { return !linked[k]; });
-    document.getElementById('handoff-note').innerHTML = 'Projekt <strong>' + escapeHtml(PR.current().name) + '</strong> — '
+    document.getElementById('handoff-note').innerHTML = 'Projekt <strong>' + escapeHtml((PR.current() || { name: '—' }).name) + '</strong> — '
       + parts.join(' · ')
       + (anyBroken ? ' &nbsp;<a href="#" id="relink">Verknüpfungen wiederherstellen</a>' : '')
-      + '. Preise und Sätze sind Beispielwerte aus dem Preset <code>app/config/kosten.js</code>.';
+      + '. Preise und Sätze: ' + (window.__KOSTEN__.source === 'org' ? 'Stammdaten der Organisation' : 'Beispielwerte — auf der Konto-Seite als Stammdaten hinterlegen') + '.';
     var rl = document.getElementById('relink');
     if (rl) rl.addEventListener('click', function (e) {
       e.preventDefault();

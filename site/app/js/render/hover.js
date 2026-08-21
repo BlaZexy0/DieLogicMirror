@@ -71,8 +71,8 @@ export function showHover(card, ev) {
     if (b < P.biscuitMin) bad.push('bisc');
     if (P.v1 > vc) bad.push('crit');
     const verdict = bad.length
-      ? '<b style="color:' + theme.ui.bad + '">verletzt: ' + bad.map(k => MAP_LABELS[k]).join(', ') + '</b>'
-      : '<b style="color:' + theme.ui.ok + '">MACHBAR</b>';
+      ? '<b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + bad.map(k => MAP_LABELS[k]).join(', ') + '</b>'
+      : '<b style="color:' + window.__PALETTE__.ok + '">MACHBAR</b>';
     box.innerHTML = '<b>φ:</b> ' + fmt(xv) + ' % · <b>λ:</b> ' + fmt(yv) + ' → <b>Ø</b> ' + fmt(D * 1000) + ' mm · <b>L</b> ' + fmt(L * 1000) + ' mm · <b>Pressrest</b> ' + fmt(b) + ' mm · <b>v_krit</b> ' + fmt(vc) + ' m/s · ' + verdict;
     return;
   }
@@ -84,7 +84,7 @@ export function showHover(card, ev) {
     const yv = y1 - (py - f.T) / f.ph * (y1 - y0);
     let msg = '<b>' + d.xl + ':</b> ' + fmt(xv) + ' · <b>' + d.yl + ':</b> ' + fmt(yv) + ' · <b>' + d.cl + ':</b> ' + fmt(heatVal(d, xv, yv));
     const bad = (d.limits || []).filter(l => violates(l, xv, yv));
-    if (bad.length) msg += ' · <b style="color:' + theme.ui.bad + '">verletzt: ' + bad.map(l => l.label).join(', ') + '</b>';
+    if (bad.length) msg += ' · <b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + bad.map(l => l.label).join(', ') + '</b>';
     box.innerHTML = msg;
   } else {
     let msg = '<b>' + d.xl + ':</b> ' + fmt(xv);
@@ -97,7 +97,7 @@ export function showHover(card, ev) {
     if (d.ys.length === 1 && d.limits && d.limits.length) {
       const val = interp(d.x, d.ys[0].y, xv);
       const bad = d.limits.filter(l => violates(l, xv, val));
-      if (bad.length) msg += ' · <b style="color:' + theme.ui.bad + '">verletzt: ' + bad.map(l => l.label).join(', ') + '</b>';
+      if (bad.length) msg += ' · <b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + bad.map(l => l.label).join(', ') + '</b>';
     }
     box.innerHTML = msg + ' <span class="unit">' + d.yl + '</span>';
   }

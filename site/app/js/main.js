@@ -12,7 +12,6 @@ import { renderKpis } from './ui/kpis.js';
 import { buildChamberCard, renderChamber } from './ui/chamber.js';
 import { buildCard, renderCard } from './ui/cards.js';
 import { initSim } from './core/simstore.js';
-import { consumeShareLink } from './core/share.js';
 
 const cards = {};
 let chamberCard = null;
@@ -44,8 +43,6 @@ function render() {
 }
 
 async function init() {
-  /* Vor dem Aufbau der Eingaben, damit ein geteilter Stand überall greift. */
-  consumeShareLink();
   await loadTheme();
   initPresetSelects();
   buildInputs(document.getElementById('groups'));

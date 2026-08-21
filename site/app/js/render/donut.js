@@ -30,7 +30,7 @@ export function drawDonut(x, w, h, d) {
   }
   x.fillStyle = C.text; x.textAlign = 'center'; x.font = 'bold 26px Arial';
   x.fillText(fmt(d.share) + ' %', g.cx, g.cy + 2);
-  x.fillStyle = theme.ui.muted; x.font = '11px Arial';
+  x.fillStyle = window.__PALETTE__.muted; x.font = '11px Arial';
   x.fillText('Ausbeute', g.cx, g.cy + 20);
 
   let lx = g.cx + g.R + 24, ly = g.cy - (d.segs.length - 1) * 13;

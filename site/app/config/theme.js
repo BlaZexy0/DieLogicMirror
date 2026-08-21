@@ -1,5 +1,5 @@
 /* Farbschema des Dashboards — hier direkt editieren, kein Build nötig.
-   'ui' (Schlüssel = app/config/palette.js) wird als CSS-Variablen angewendet, 'chart' wird von den
+   UI-Farben liegen in config/palette.js; 'chart' wird von den
    Canvas-Renderern gelesen, 'limits' färbt die Grenzen/Restriktionen der
    Diagramme (Schlüssel = limit-id, Fallback chart.limit),
    'map'/'mapLines' färben das (φ, λ)-Auslegungsfenster, 'heatStops' ist
@@ -9,25 +9,6 @@
 
 window.__THEME__ = {
   "name": "DieLogic Teal (Standard)",
-  "ui": {
-    "dark": "#002733",
-    "primary": "#008c82",
-    "pale": "#e5f3f2",
-    "bg": "#f3f6f6",
-    "border": "#ccd4d6",
-    "muted": "#4c6870",
-    "accent": "#8cbee6",
-    "surface": "#ffffff",
-    "primaryDeep": "#00534d",
-    "ok": "#0d7a3c",
-    "okBorder": "#12a150",
-    "okBg": "#dcefe3",
-    "warnText": "#8a6d00",
-    "warnBorder": "#e0a400",
-    "bad": "#b42318",
-    "badBg": "#fff2f0",
-    "noteBg": "#fff8e1"
-  },
   "chart": {
     "surface": "#ffffff",
     "text": "#002733",

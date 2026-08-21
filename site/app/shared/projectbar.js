@@ -1,9 +1,9 @@
 /* DieLogic – app/shared/projectbar.js
    Projektleiste auf allen Werkzeugseiten: zeigt das aktuelle Projekt,
    wechselt zwischen Projekten, legt neue an, bearbeitet Name/Beschreibung.
-   Mit Konto ist die Datenbank die Quelle: jede Änderung wird (entprellt)
-   als Arbeitsstand zum Server synchronisiert, noch nicht bekannte Projekte
-   werden beim Anmelden angelegt, fremde Stände hereingeholt. „Revision"
+   Die Datenbank ist die Quelle: ohne Anmeldung leitet die Leiste zur
+   Konto-Seite um; jede Änderung wird (entprellt) als Arbeitsstand zum
+   Server synchronisiert, fremde Stände werden hereingeholt. „Revision"
    legt einen benannten Schnappschuss an. Alles Weitere (Export/Import,
    Kopie, Archivieren, Zurücksetzen, Verlauf, Mitglieder) liegt gesammelt
    auf der Konto-Seite (app/konto.html).
@@ -16,23 +16,7 @@
 (function () {
   'use strict';
 
-  /* Farben: Spiegel von app/config/palette.js (Leiste ist selbstversorgend). */
-  var C = {
-    border: '#ccd4d6',
-    borderLight: '#e5e9eb',
-    dark: '#002733',
-    gold: '#d4a908',
-    muted: '#4c6870',
-    primary: '#008c82',
-    primary2: '#00726a',
-    primaryLight: '#3fc2b6',
-    surface: '#ffffff',
-    surface2: '#f8fafa',
-    warn: '#c2447e',
-    warnSoft: '#eec3d4',
-    warnText: '#8a6d00',
-  };
-
+  var C = window.__PALETTE__;   // app/config/palette.js — vor nav.js geladen
   var P = window.__PROJECT__;
   if (!P) throw new Error('shared/project.js muss vor projectbar.js geladen sein.');
 
@@ -42,8 +26,7 @@
   var compact = !!mountId;
   var KONTO = base + '/app/konto.html';
 
-  var session = null;      // { user, org } oder null (Gast / kein Backend)
-  var backendOk = null;    // null = unbekannt, false = kein Backend erreichbar
+  var session = null;      // { user, org }
   var busy = false;
 
   /* ── Hilfen ───────────────────────────────────────────────── */
@@ -123,6 +106,7 @@
 
   function render() {
     var cur = P.current();
+    if (!cur) return '<span class="dl-pb-label">Projekt</span><span class="dl-pb-status">' + (session ? 'wird angelegt …' : '—') + '</span>';
     var opts = P.list().map(function (p) {
       return '<option value="' + esc(p.id) + '"' + (p.id === cur.id ? ' selected' : '') + '>' + esc(p.name) + '</option>';
     }).join('');
@@ -227,6 +211,7 @@
       var b = e.target.closest('button, a');
       if (!b) return;
       var cur = P.current();
+      if (!cur && b.id !== 'dl-pb-new') return;
       switch (b.id) {
         case 'dl-pb-edit':
           openMeta('Projekt bearbeiten', cur, function (meta) { P.update(cur.id, meta); refresh(); });
@@ -279,7 +264,7 @@
   async function flushSync(keepalive) {
     clearTimeout(timer);
     var ids = Object.keys(pending); pending = {};
-    var dirty = P.list().filter(function (p) { return !P.isEmptyStarter(p) && (p.dirty || ids.indexOf(p.id) >= 0 || !p.remote); });
+    var dirty = P.list().filter(function (p) { return p.dirty || ids.indexOf(p.id) >= 0 || !p.remote; });
     if (!session || !dirty.length) { if (syncState.status === 'saving') { syncState.status = 'ok'; refresh(); } return; }
     busy = true;
     syncState.status = 'saving';
@@ -327,7 +312,7 @@
     var remote = await api('GET', '/api/projects');
     var byRemote = {};
     P.list().forEach(function (p) { if (p.remote) byRemote[p.remote.id] = p; });
-    var curId = P.current().id, curChanged = false;
+    var curId = P.current() ? P.current().id : null, curChanged = false;
     for (var i = 0; i < remote.length; i++) {
       var r = remote[i], have = byRemote[r.id];
       if (have && (have.dirty || (have.remote.savedAt && have.remote.savedAt >= r.updated_at))) continue;
@@ -338,11 +323,13 @@
       var put = P.put(doc, false);
       if (have && have.id === curId && put) curChanged = true;
     }
-    /* Sobald Projekte aus der Datenbank da sind, hat das leere Startprojekt
-       ausgedient — es würde nur als Dublette stören. */
-    if (remote.length) {
-      P.list().forEach(function (p) { if (P.isEmptyStarter(p)) { if (p.id === curId) curChanged = true; P.remove(p.id); } });
+    /* Organisation ohne Projekt: das erste auf dem Server anlegen. */
+    if (!remote.length && !P.list().length) {
+      var res = await api('POST', '/api/projects', { name: 'Erstes Projekt', description: 'Angelegt beim ersten Öffnen der Werkzeuge.', data: {} });
+      P.put({ name: res.name, description: res.description, remote: { id: res.id, rev: res.rev, savedAt: res.updated_at }, dirty: false }, true);
+      curChanged = true;
     }
+    if (!P.current() && P.list().length) { P.select(P.list()[0].id); curChanged = true; }
     if (curChanged) {
       var key = 'dl-pb-reloaded-' + curId;
       if (!sessionStorage.getItem(key)) { sessionStorage.setItem(key, '1'); location.reload(); return; }
@@ -353,10 +340,15 @@
   async function initSession() {
     try {
       session = await api('GET', '/api/auth/me');
-      backendOk = true;
     } catch (err) {
       session = null;
-      backendOk = err.status === 401;   // 401 = Backend da, nur nicht angemeldet
+      if (err.status === 401) {
+        /* Die Werkzeuge arbeiten nur mit Konto — die Datenbank ist die Quelle. */
+        location.replace(KONTO + '?next=' + encodeURIComponent(location.pathname + location.search));
+        return;
+      }
+      bar.insertAdjacentHTML('beforeend', '<span class="dl-pb-status dirty">Backend nicht erreichbar — Änderungen bleiben nur in diesem Browser.</span>');
+      return;
     }
     refresh();
     if (session) {
@@ -367,7 +359,7 @@
 
   function start() {
     mount();
-    if (location.protocol !== 'file:') initSession();
+    initSession();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

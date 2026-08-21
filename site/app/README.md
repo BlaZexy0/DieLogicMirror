@@ -1,8 +1,9 @@
 # DieLogic Dashboard
 
-Gießtechnische Auslegung + Schusskurve für den Druckguss (HPDC),
-vorbereitet für die Integration in eine Website. Reines Vanilla-JS mit
-ES-Modulen — kein Build-Schritt, keine Abhängigkeiten.
+Gießtechnische Auslegung + Schusskurve für den Druckguss (HPDC) — das
+Herz der DieLogic-Website. Reines Vanilla-JS mit ES-Modulen, kein
+Build-Schritt. Arbeitet auf dem aktuellen Projekt (`../shared/project.js`)
+und setzt ein Konto voraus (Projektleiste `../shared/projectbar.js`).
 
 ## Starten
 
@@ -14,8 +15,10 @@ Simulationskarte) oder lokal `python3 -m http.server 8000` im
 unterstützt (Browser blockieren ES-Module über file://; der frühere
 Python-Bundler `build.py` → `dist/app.js` wurde dafür entfernt).
 
-Die Konfiguration (`config/theme.js`, `config/machines.js`) wird in beiden
-Modi als klassisches Skript geladen und ist ohne Build direkt editierbar.
+Farben (`config/palette.js`), Diagrammfarben (`config/theme.js`) und die
+Beispiel-Presets (`config/examples/*.js`) werden als klassische Skripte vor
+den Modulen geladen; produktiv überlagern die Stammdaten der Organisation
+(`../shared/orgpresets.js`) die Beispiel-Presets.
 
 ## Seiten
 
@@ -29,12 +32,12 @@ Modi als klassisches Skript geladen und ist ohne Build direkt editierbar.
 
 ## Konfiguration (ohne Code-Änderung, ohne Build)
 
-- **`config/machines.js`** — Maschinen-Presets (`window.__MACHINES__`).
+- **`config/examples/machines.js`** — Maschinen-Presets (`window.__MACHINES__`), Beispielwerte.
   Neuer Eintrag in der Liste = neue Maschine im Auswahlmenü. Die Feldnamen
   unter `fields` entsprechen den Eingabefeld-Keys (siehe `js/config/fields.js`).
-- **`config/alloys.js`** — Legierungs-Presets (`window.__ALLOYS__`): Dichte,
+- **`config/examples/alloys.js`** — Legierungs-Presets (`window.__ALLOYS__`): Dichte,
   Gieß-/Fließtemperatur, Z- und Erstarrungskonstante je Legierung.
-- **`config/parts.js`** — Bauteiltyp-Presets (`window.__PARTS__`), z. B.
+- **`config/examples/parts.js`** — Bauteiltyp-Presets (`window.__PARTS__`), z. B.
   Strukturgussteil: Wandstärken, Formtemperatur, zul. Erstarrung, NADCA-Faktor.
 
 Alle drei Preset-Domänen funktionieren gleich (definiert in
@@ -43,9 +46,9 @@ zugehörige Feldgruppe ausgeblendet und eine Zusammenfassung unter dem Select
 zeigt die übernommenen Werte; Handänderung eines Preset-Felds springt zurück
 auf „manuell". Eine neue Domäne = Eintrag in `PRESET_DOMAINS`, Feldgruppe mit
 `preset: '<id>'`, config-Datei und Select in beiden HTML-Seiten.
-- **`config/theme.js`** — komplettes Farbschema (`window.__THEME__`):
-  UI-Farben (werden als CSS-Variablen gesetzt), Diagrammfarben (Serien, Marker,
-  Grenzlinien, Zielbänder), Farben/Linienfarben des (φ, λ)-Fensters und die
+- **`config/palette.js`** — UI-Farben (einzige Quelle, siehe ../../README).
+- **`config/theme.js`** — Diagrammfarben (`window.__THEME__`): Serien, Marker,
+  Grenzlinien, Zielbänder, Farben/Linienfarben des (φ, λ)-Fensters und die
   Heatmap-Farbrampe. Bei eigenen Farben auf Kontrast und unterscheidbare
   Helligkeit der Serienfarben achten (Farbfehlsichtigkeit).
 
@@ -61,30 +64,26 @@ klassische `<script>`-Tags geladen — ohne Build direkt editierbar.
 - **PNG-Button** — kopiert das Diagramm hochauflösend in die Zwischenablage
   (Fallback: Download).
 - **CSV ⬇** (nur Schusskurve) — exportiert Kurven-Samples und Ereignisse.
-- **↺ Zurücksetzen (Kopfzeile)** — alles zurück auf die Standardwerte.
-  (Die früheren 💾-Speichern/📂-Laden-Buttons wurden entfernt; die
-  JSON-Funktionen `saveStateJSON`/`loadStateJSON` liegen weiter in
-  `js/ui/export.js` und können von einem künftigen Auslegungs-Manager
-  wiederverwendet werden.)
-- **Automatische Persistenz** — der Zustand wird in `localStorage` gespiegelt:
-  Dashboard und Einzelseiten teilen dieselbe Auslegung, ein Reload verliert
-  nichts.
+- **Projektleiste (Kopfzeile)** — Projekt wechseln/anlegen/bearbeiten,
+  Revision anlegen; Zurücksetzen, Export/Import, Verlauf auf der Konto-Seite.
+- **Automatische Persistenz** — der Zustand ist der `design`-Abschnitt des
+  aktuellen Projekts und wird laufend in die Datenbank synchronisiert.
 
 ## Architektur
 
 ```
 config/            Daten, die man ohne Code-Kenntnis ändert (kein Build nötig)
-  machines.js        Maschinen-Presets  (window.__MACHINES__)
-  theme.js           Farbschema         (window.__THEME__)
-css/main.css       Layout/Komponenten (Farben via CSS-Variablen aus dem Theme)
+  palette.js         UI-Farben          (window.__PALETTE__)
+  theme.js           Diagrammfarben     (window.__THEME__)
+  examples/          Beispiel-Presets   (window.__MACHINES__/__ALLOYS__/__PARTS__/__KOSTEN__)
+css/main.css       Layout/Komponenten (Farb-Tokens aus ../shared.css)
 js/
   config/fields.js   Eingabegruppen: Keys, Labels, Einheiten, Defaults
   core/              Logik ohne DOM
     format.js          Zahlformat (de-DE), seq()
     physics.js         HPDC-Mathematik: Profil, Schussmodell, v_krit, Prüfungen
     state.js           zentraler Zustand + subscribe/notify
-    theme.js           übernimmt window.__THEME__, setzt CSS-Variablen
-    machines.js        übernimmt window.__MACHINES__
+    theme.js           übernimmt window.__THEME__
   render/            Canvas-Renderer (theme-gesteuert)
     base.js            Rahmen, Achsen, Marker, Farbrampe, Konturen
     limits.js          zeichnet Grenzen: Schraffuren, Zielbänder, Legende

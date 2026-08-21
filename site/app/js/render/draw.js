@@ -19,7 +19,7 @@ function errCanvas(x, w, h, d) {
   x.fillStyle = theme.chart.surface;
   x.fillRect(0, 0, w, h);
   text(x, d.title || '', w / 2, 22, 'center', 'bold 15px Arial');
-  x.fillStyle = theme.ui.bad;
+  x.fillStyle = window.__PALETTE__.bad;
   x.textAlign = 'center'; x.font = 'bold 13px Arial';
   x.fillText('⚠ ' + d.err, w / 2, h / 2);
 }

@@ -1,4 +1,5 @@
-/* Bauteiltyp-Presets — hier direkt editieren, kein Build nötig.
+/* Bauteiltyp-Presets (Beispielwerte). Produktiv pflegt jede Organisation ihre eigenen
+   auf der Konto-Seite (Stammdaten); diese Datei ist Startvorlage und Fallback.
    Einheiten: wall = charakteristische Wandstärke [mm], wallMin/wallMax =
    Wandstärkenbereich [mm], Tdie = Formtemperatur [°C], Sfrac = zulässiger
    Feststoffanteil am Ende der Füllung [%], kfill = NADCA-Faktor k [ms/mm].

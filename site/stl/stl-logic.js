@@ -76,7 +76,22 @@
     return { rows: rows, pref: pref };
   }
 
-  var api = { ROLES: ROLES, massKg: massKg, roleSums: roleSums, missingRoles: missingRoles, sideCoreArea: sideCoreArea, machineRows: machineRows };
+  /* values-Objekt der Übernahme ins Dashboard (design-Abschnitt des Projekts).
+     Massen in kg, area in m², ecc in mm, psel in bar; machineFields = Felder
+     des gewählten Maschinen-Presets. Alle Schlüssel müssen Eingabefelder des
+     Dashboards sein (js/config/fields.js) — der Frontend-Test prüft das.
+     Die Dichte wird bewusst NICHT übernommen: hier Feststoffdichte, im
+     Dashboard Flüssigdichte. */
+  function handoffValues(o, machineFields) {
+    return Object.assign({
+      part: o.part, runner: o.runner, overflow: o.overflow, biscuit: o.biscuit,
+      area: o.area, eccX: o.eccX, eccY: o.eccY,
+      safety: o.safety, psel: o.psel
+    }, machineFields);
+  }
+
+  var api = {
+    handoffValues: handoffValues, ROLES: ROLES, massKg: massKg, roleSums: roleSums, missingRoles: missingRoles, sideCoreArea: sideCoreArea, machineRows: machineRows };
   root.__STL_LOGIC__ = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

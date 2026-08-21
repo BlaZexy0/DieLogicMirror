@@ -14,21 +14,9 @@
  */
 
 (function () {
-  /* Aktuelle Site-Version — einzige Quelle, erscheint neben dem Logo
-     auf jeder Seite. Bei Releases hier hochzählen. */
-  /* Farben: Spiegel von app/config/palette.js (nav.js ist selbstversorgend
-     und läuft vor allen anderen Scripts). */
-  const C = {
-    dark: '#002733',
-    dark2: '#0a3945',
-    dark3: '#1b4a57',
-    ondark: '#8fb8c4',
-    ondark2: '#7a9aa6',
-    primary: '#008c82',
-    primary2: '#00726a',
-  };
-
-  const VERSION = 'v0.9.0';
+  /* Farben: app/config/palette.js, Version: version.js — beide vor nav.js geladen. */
+  const C = window.__PALETTE__;
+  const VERSION = 'v' + (window.__DL_VERSION__ || '?');
 
   /* ── Diagramm-Einzelseiten (Reihenfolge = js/charts/registry.js) ── */
   const CHARTS = [

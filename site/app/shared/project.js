@@ -11,11 +11,9 @@
    setSection(). Die Querbezüge (Massen → Schussgewicht, Zyklus → Zykluszeit)
    liefert derived(): so rechnen alle Werkzeuge auf demselben Stand.
 
-   Ablage: localStorage['dielogic-projects-v1'] = { currentId, projects: {id: doc} }.
-   Ohne Konto bleibt alles lokal im Browser; mit Konto spiegelt
-   projectbar.js die Projekte auf den Server (Revisionen je Speichern).
-   Der alte Dashboard-Schlüssel (hpdc-dashboard-state-v1) wird beim ersten
-   Laden in ein Projekt „Übernommene Auslegung" überführt.
+   Ablage: localStorage['dielogic-projects-v1'] = { currentId, projects: {id: doc} }
+   — ein Cache der Datenbank; projectbar.js synchronisiert (Arbeitsstand
+   laufend, Revisionen auf Wunsch).
 
    Klassisches Script: Browser-Global window.__PROJECT__, CommonJS-Export für
    Tests. Muss vor den ES-Modulen (js/core/state.js) geladen sein. */
@@ -23,7 +21,6 @@
   'use strict';
 
   var STORE_KEY = 'dielogic-projects-v1';
-  var LEGACY_KEY = 'hpdc-dashboard-state-v1';
   var SCHEMA = 1;
   var SECTIONS = ['design', 'geometry', 'cycle', 'cost'];
   var EVENT = 'dielogic:project';
@@ -100,8 +97,8 @@
     catch (e) { /* kein DOM */ }
   }
 
-  /* Speicher laden; ohne Speicher: Migration des alten Dashboard-Zustands
-     oder ein leeres Startprojekt. */
+  /* Speicher laden. Ohne Projekte bleibt der Cache leer — projectbar.js
+     holt die Projekte der Organisation bzw. legt das erste an. */
   function init(stor) {
     storage = stor || root.localStorage || { getItem: function () { return null; }, setItem: function () {}, removeItem: function () {} };
     var raw = readJSON(STORE_KEY);
@@ -113,18 +110,8 @@
       });
       if (typeof raw.currentId === 'string') store.currentId = raw.currentId;
     }
-    if (!Object.keys(store.projects).length) {
-      var legacy = readJSON(LEGACY_KEY);
-      var p = newProject(isObj(legacy) && isObj(legacy.values)
-        ? { name: 'Übernommene Auslegung', description: 'Automatisch aus dem bisherigen Dashboard-Stand dieses Browsers übernommen.' }
-        : { name: 'Beispielprojekt', description: 'Startprojekt mit den Standardwerten — umbenennen oder ein neues Projekt anlegen.' });
-      if (isObj(legacy) && isObj(legacy.values)) p.design = clone(legacy);
-      store.projects[p.id] = p;
-      store.currentId = p.id;
-      save();
-    }
     if (!store.projects[store.currentId]) {
-      store.currentId = list()[0].id;
+      store.currentId = Object.keys(store.projects).length ? list()[0].id : '';
       save();
     }
     return store;
@@ -140,7 +127,7 @@
       .sort(function (a, b) { return a.updatedAt < b.updatedAt ? 1 : -1; });
   }
 
-  function current() { ensure(); return store.projects[store.currentId]; }
+  function current() { ensure(); return store.projects[store.currentId] || null; }
   function get(id) { ensure(); return store.projects[id] || null; }
 
   function select(id) {
@@ -197,11 +184,7 @@
     ensure();
     if (!store.projects[id]) return false;
     delete store.projects[id];
-    if (!Object.keys(store.projects).length) {
-      var p = newProject({ name: 'Neues Projekt' });
-      store.projects[p.id] = p;
-    }
-    if (store.currentId === id) store.currentId = list()[0].id;
+    if (store.currentId === id) store.currentId = Object.keys(store.projects).length ? list()[0].id : '';
     save();
     emit('remove', id);
     return true;
@@ -231,23 +214,18 @@
     return p;
   }
 
-  /* Unberührtes Startprojekt (kein Abschnitt, nie bearbeitet, kein
-     Serverbezug) — wird nicht in die Datenbank übernommen. */
-  function isEmptyStarter(p) {
-    return !p.remote && !p.dirty && SECTIONS.every(function (s) { return !p[s]; });
-  }
-
   /* ── Abschnitte ────────────────────────────────────────────── */
 
   function getSection(name) {
     if (SECTIONS.indexOf(name) < 0) throw new Error('Unbekannter Abschnitt: ' + name);
     var p = current();
-    return p[name] ? clone(p[name]) : null;
+    return p && p[name] ? clone(p[name]) : null;
   }
 
   function setSection(name, data) {
     if (SECTIONS.indexOf(name) < 0) throw new Error('Unbekannter Abschnitt: ' + name);
     var p = current();
+    if (!p) return false;
     var next = isObj(data) ? clone(data) : null;
     /* Unverändert (z. B. Seite nur geöffnet und gerendert) → kein neuer
        Stand, sonst gälte jedes Öffnen als ungespeicherte Änderung. */
@@ -281,6 +259,7 @@
   function derived(doc) {
     var p = doc || current();
     var out = { mpart: null, mdose: null, tz: null, machine: null, sources: {} };
+    if (!p) return out;
     var v = p.design && isObj(p.design.values) ? p.design.values : null;
     if (v) {
       var part = Number(v.part), runner = Number(v.runner), overflow = Number(v.overflow), biscuit = Number(v.biscuit);
@@ -335,16 +314,16 @@
 
   /* Dateiname für den Export: „DieLogic_DieCastPartA.json" */
   function fileName(p) {
-    p = p || current();
+    p = p || current() || {};
     return 'DieLogic_' + (p.name || 'Projekt').replace(/[^\wäöüÄÖÜß.-]+/g, '_').slice(0, 60) + '.json';
   }
 
   var api = {
-    STORE_KEY: STORE_KEY, LEGACY_KEY: LEGACY_KEY, SECTIONS: SECTIONS, EVENT: EVENT, SCHEMA: SCHEMA,
+    STORE_KEY: STORE_KEY, SECTIONS: SECTIONS, EVENT: EVENT, SCHEMA: SCHEMA,
     init: init, list: list, current: current, get: get, select: select,
     create: create, update: update, duplicate: duplicate, remove: remove, put: put, markSaved: markSaved,
     getSection: getSection, setSection: setSection, mergeDesign: mergeDesign,
-    sectionsOf: sectionsOf, derived: derived, isEmptyStarter: isEmptyStarter,
+    sectionsOf: sectionsOf, derived: derived,
     exportJSON: exportJSON, importJSON: importJSON, fileName: fileName,
     _reset: function () { store = null; storage = null; }
   };

@@ -20,10 +20,11 @@ einem Abschnitt je Werkzeug:
 | `cycle`    | Zyklusanalyse                    | Zykluszeit                                          |
 | `cost`     | Teilekosten                      | — (bezieht Massen aus `design`, t_Z aus `cycle`)    |
 
-`site/app/shared/project.js` hält den Speicher (localStorage, mehrere
-Projekte, Migration des alten Dashboard-Schlüssels), `derived()` die
-Querbezüge; `projectbar.js` ist die Projektleiste auf jeder Werkzeugseite
-(wechseln, anlegen, bearbeiten, JSON-Export/-Import, ☁ Speichern).
+`site/app/shared/project.js` hält den Browser-Cache der Projekte und mit
+`derived()` die Querbezüge; `projectbar.js` ist die Projektleiste auf jeder
+Werkzeugseite (wechseln, anlegen, bearbeiten, Revision) und synchronisiert
+mit dem Server. Die Werkzeuge setzen ein Konto voraus — ohne Anmeldung
+leitet die Leiste zur Konto-Seite um.
 Mit Konto ist die **Datenbank der Stand der Wahrheit**: jede Änderung wird
 automatisch als Arbeitsstand synchronisiert (der Browser ist nur Cache),
 lokale Projekte werden beim Anmelden übernommen, und „Revision" legt einen
@@ -35,7 +36,7 @@ Mitglieder, Einladungen): `/app/konto.html`.
 **Stammdaten der Organisation:** Maschinen, Legierungen, Bauteiltypen und
 Kosten & Sätze (Legierungspreis, Strompreis, Stundensätze …) pflegt ein
 Admin auf der Konto-Seite; sie ersetzen in allen Werkzeugen die
-Beispielwerte aus `app/config/*.js` (`shared/orgpresets.js` legt sie beim
+Beispielwerte aus `app/config/examples/*.js` (`shared/orgpresets.js` legt sie beim
 Laden über die Globals, Backend `/api/org/settings`).
 
 ## Struktur
@@ -62,7 +63,8 @@ dielogic/
 │   │   └── stl-app.js        Ansicht + Verdrahtung (Canvas, Tabellen, Events)
 │   ├── kosten/          Teilekosten-Kalkulation (Abschnitt cost, verknüpfte Felder)
 │   ├── zyklus/          Zyklusanalyse (Abschnitt cycle, Zeitleiste)
-│   ├── shared.css       Basis-Styles; :root-Tokens = Spiegel von app/config/palette.js
+│   ├── shared.css       Basis-Styles + :root-Tokens (Spiegel von app/config/palette.js)
+│   ├── version.js       Versionsnummer (Nav + /api/health)
 │   ├── tools/           Generatoren: gen-theory-svgs, gen-vkrit-table, gen-palette
 │   │                    (assets/palette.svg + .png — Farbtafel mit Kontrastwerten)
 │   ├── nav.js           injiziert Site-Navigation + Footer (selbstversorgend)
@@ -73,13 +75,13 @@ dielogic/
 │       ├── chart.html       Diagramm-Einzelseite
 │       ├── konto.html       Konto: Einladung einlösen, Anmelden, Projekte/Revisionen,
 │       │                    Mitglieder, Einladungen (Admin)
-│       ├── config/          palette.js (DIE Farbquelle — CSS-Tokens, theme.js und die
-│       │                    JS-Konstanten in nav.js/projectbar.js spiegeln sie; Test
-│       │                    palette.test.mjs prüft Gleichheit + WCAG-Kontrast),
-│       │                    theme.js (Diagramm-Farben), machines/alloys/parts/kosten
-│       ├── shared/          project.js (Projektspeicher + Querbezüge), projectbar.js,
-│       │                    orgpresets.js (Stammdaten der Organisation über die Presets),
-│       │                    (Projektleiste), contract.js (STL → design), clampmodel.js
+│       ├── config/          palette.js (DIE Farbquelle — shared.css spiegelt sie, alle
+│       │                    Scripts lesen window.__PALETTE__; Test prüft Gleichheit +
+│       │                    WCAG-Kontrast), theme.js (Diagramm-Farben),
+│       │                    examples/ (Beispiel-Presets: machines/alloys/parts/kosten)
+│       ├── shared/          project.js (Projekt-Cache + Querbezüge), projectbar.js
+│       │                    (Projektleiste, Sync), orgpresets.js (Stammdaten der
+│       │                    Organisation über die Presets), clampmodel.js
 │       ├── css/site.css     Layout-Offsets für die 56px-Navigation
 │       └── js/…             u. a. core/simapi.js + core/simstore.js (Backend-Anbindung;
 │                            Luftdruck-Serie mit 2. Achse in der Schusskurve)
@@ -135,7 +137,7 @@ node site/tools/gen-theory-svgs.mjs             # statische SVGs der Theorie-Art
 node site/tools/gen-vkrit-table.mjs             # v_krit-CFD-Tabelle (JS + Python) aus
                                                 # site/assets/v_krit_sim.csv neu erzeugen
 .venv/bin/python packages/hpdcsim/tests/run_tests.py
-.venv/bin/python backend/tests/run_tests.py     # braucht zusätzlich httpx (TestClient)
+.venv/bin/python -m pytest backend/tests -q     # braucht zusätzlich httpx + pytest
 ```
 
 Die Physik-Fixtures (`fixtures/physics/`) sind der Anker zwischen beiden
@@ -159,10 +161,12 @@ Simulations-Requests ergänzt werden.
 
 - **Navigation/Footer:** `site/nav.js` — Linkliste (`NAV_LINKS`),
   Diagrammliste (`CHARTS`, Reihenfolge = `site/app/js/charts/registry.js`).
-- **Farbschema:** Tokens in `site/shared.css`; das Dashboard hat sein
-  eigenes Schema in `site/app/config/theme.js` (beide DieLogic Teal:
-  `#008c82` auf Petrol `#002733`).
-- **Maschinen-Presets:** `site/app/config/machines.js`.
+- **Farbschema:** `site/app/config/palette.js` (einzige Quelle; `shared.css`
+  spiegelt sie als Tokens, Test prüft Gleichheit). Diagrammfarben:
+  `site/app/config/theme.js`. Farbtafel: `site/assets/palette.svg`.
+- **Version:** `site/version.js` (Nav-Badge und `/api/health`).
+- **Presets (Beispielwerte):** `site/app/config/examples/*.js` — produktiv
+  pflegt jede Organisation ihre eigenen als Stammdaten auf der Konto-Seite.
 - **Logo/Icons:** `site/assets/logo.svg` bearbeiten, danach PNGs rendern:
   ```bash
   cd site/assets

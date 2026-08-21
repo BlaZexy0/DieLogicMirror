@@ -1,4 +1,5 @@
-/* Maschinen-Presets — hier direkt editieren, kein Build nötig.
+/* Maschinen-Presets (Beispielwerte). Produktiv pflegt jede Organisation ihre eigenen
+   auf der Konto-Seite (Stammdaten); diese Datei ist Startvorlage und Fallback.
    Einheiten: force = Schließkraft [kN], vmax [m/s], amax [m/s²],
    dmin/dmax = Kolben-Ø-Bereich [mm], lmin/lmax = Kammerlängen-Bereich [mm],
    injForce = dyn. Gießkraft [kN], tieX/tieY = Säulenabstand horizontal/vertikal [mm],

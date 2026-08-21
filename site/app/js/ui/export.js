@@ -61,7 +61,7 @@ export function exportShotCSV(shot) {
 }
 
 /* Komplette Auslegung (Werte + Kurve + Kurvenmodus + Presets) als
-   JSON-Datei — dieselben Felder wie der Share-Link (core/share.js). */
+   JSON-Datei — dieselben Felder wie der design-Abschnitt des Projekts. */
 export function saveStateJSON() {
   const data = { values: state.values, curve: state.curve, curveGen: state.curveGen,
     machine: state.machine, alloy: state.alloy, part: state.part };

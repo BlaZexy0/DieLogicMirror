@@ -14,8 +14,8 @@ const O = require(path.join(site, 'app/shared/orgpresets.js'));
 function globals() {
   const g = {};
   const load = f => { const prev = globalThis.window; globalThis.window = g; require(path.join(site, f)); globalThis.window = prev; };
-  delete require.cache[require.resolve(path.join(site, 'app/config/machines.js'))];
-  ['app/config/machines.js', 'app/config/alloys.js', 'app/config/parts.js', 'app/config/kosten.js'].forEach(f => { delete require.cache[require.resolve(path.join(site, f))]; load(f); });
+  delete require.cache[require.resolve(path.join(site, 'app/config/examples/machines.js'))];
+  ['app/config/examples/machines.js', 'app/config/examples/alloys.js', 'app/config/examples/parts.js', 'app/config/examples/kosten.js'].forEach(f => { delete require.cache[require.resolve(path.join(site, f))]; load(f); });
   return g;
 }
 

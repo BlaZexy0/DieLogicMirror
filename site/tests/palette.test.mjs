@@ -46,30 +46,17 @@ test('shared.css :root spiegelt die Palette vollständig', () => {
   for (const [k, v] of Object.entries(P.colors)) assert.equal(tok[cssKey(k)], v, `--${cssKey(k)}`);
 });
 
-test('app/css/main.css :root spiegelt die Palette und nutzt keine alten Namen', () => {
+test('app/css/main.css hat keinen eigenen :root und keine alten Token-Namen', () => {
   const css = read('app/css/main.css');
-  const tok = rootTokens(css);
-  for (const [k, v] of Object.entries(P.colors)) assert.equal(tok[cssKey(k)], v, `--${cssKey(k)}`);
+  assert.doesNotMatch(css, /:root \{/);
   assert.doesNotMatch(css, /var\(--(green|deep|line|blue|header-from|header-to)\)/);
 });
 
-test('theme.js ui: Schlüssel sind Palettenschlüssel mit identischen Werten', () => {
-  for (const [k, v] of Object.entries(THEME.ui)) {
-    assert.ok(k in P.colors, `theme.ui.${k} ist kein Palettenschlüssel`);
-    assert.equal(v, P.colors[k], `theme.ui.${k}`);
-  }
-  for (const k of ['ok', 'bad', 'muted']) assert.ok(THEME.ui[k], `theme.ui.${k} wird von den Renderern gelesen`);
+test('theme.js hat keinen ui-Block mehr (UI-Farben = palette.js)', () => {
+  assert.equal(THEME.ui, undefined);
 });
 
-test('nav.js und projectbar.js: Konstanten = Palette', () => {
-  for (const [file, name] of [['nav.js', 'const C'], ['app/shared/projectbar.js', 'var C']]) {
-    const c = constBlock(read(file), name);
-    assert.ok(Object.keys(c).length > 3, file);
-    for (const [k, v] of Object.entries(c)) assert.equal(v, P.colors[k], `${file}: ${k}`);
-  }
-});
-
-test('keine losen Hex-Literale mehr in Seiten-Styles und nav/projectbar (außer Konstanten-Block)', () => {
+test('keine losen Hex-Literale mehr in Seiten-Styles und nav/projectbar', () => {
   const pages = ['index.html', 'shared.css', 'kosten/teilekosten.html', 'zyklus/zyklus-analyse.html',
     'stl/stl-analyse.html', 'app/konto.html', 'recht/ueber-uns.html', 'theorie/pq2.html', 'theorie/kreissegmente.html'];
   for (const f of pages) {

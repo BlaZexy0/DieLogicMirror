@@ -3,7 +3,7 @@
 FastAPI-Backend: liefert die statische Website (`../site/`) aus und stellt
 unter `/api/…` Konten (nur auf Einladung), die Projektablage mit Revisionen
 und die serverseitige Simulation mit [`hpdcsim`](../packages/hpdcsim) bereit.
-Noch offen: Abrechnung (`billing.py`).
+Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
 
 ## Datenbank & Konten
 
@@ -27,8 +27,6 @@ Noch offen: Abrechnung (`billing.py`).
   ```bash
   python -m backend.manage create-org acme "ACME Druckguss GmbH"
   python -m backend.manage invite jane@acme.de --org acme --admin --base-url https://dielogic.de
-  python -m backend.manage invites      # offene Einladungen mit Link
-  python -m backend.manage users
   python -m backend.manage disable jane@acme.de
   ```
 

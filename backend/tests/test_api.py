@@ -22,7 +22,7 @@ def shot(payload_extra=None, **overrides):
 
 def test_health():
     r = client.get("/api/health")
-    assert r.status_code == 200 and r.json() == {"status": "ok"}
+    assert r.status_code == 200 and r.json()["status"] == "ok" and r.json()["version"]
 
 
 def test_shot_happy_path():
