@@ -167,11 +167,13 @@ class SVGCtx {
 }
 
 /* ── Konfiguration + Module laden (wie render-smoke) ── */
+require(path.join(site, 'app/config/palette.js'));
+globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+require(path.join(site, 'app/shared/project.js'));
 require(path.join(site, 'app/config/theme.js'));
 require(path.join(site, 'app/config/examples/machines.js'));
-require(path.join(site, 'app/config/alloys.js'));
-require(path.join(site, 'app/config/parts.js'));
-require(path.join(site, 'app/shared/contract.js'));
+require(path.join(site, 'app/config/examples/alloys.js'));
+require(path.join(site, 'app/config/examples/parts.js'));
 require(path.join(site, 'app/shared/clampmodel.js'));
 const { theme } = await import(path.join(site, 'app/js/core/theme.js'));
 Object.assign(theme, globalThis.__THEME__);
