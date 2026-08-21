@@ -547,7 +547,12 @@ let me = null, settings = {}, tab = 'machines', work = {};   // work[key] = edit
 
 function currentData(key) {
   const s = settings[key];
-  return s && s.data ? JSON.parse(JSON.stringify(s.data)) : JSON.parse(JSON.stringify(DEFAULTS[key]));
+  const data = JSON.parse(JSON.stringify(s && s.data ? s.data : DEFAULTS[key]));
+  /* Vorhandene Einträge behalten ihre id — Projekte verweisen darauf
+     (design.machine/alloy/part). Nur neue Einträge leiten die id aus dem
+     Namen ab, bis sie gespeichert sind. */
+  if (Array.isArray(data)) data.forEach(p => { p._fixedId = true; });
+  return data;
 }
 
 function render() {
@@ -610,7 +615,11 @@ $('sd-add').addEventListener('click', () => {
   work[tab].push(p); render();
   const inp = $('sd-body').querySelector('tr:last-child input.name'); if (inp) inp.focus();
 });
-$('sd-load-defaults').addEventListener('click', () => { work[tab] = JSON.parse(JSON.stringify(DEFAULTS[tab])); render(); });
+$('sd-load-defaults').addEventListener('click', () => {
+  work[tab] = JSON.parse(JSON.stringify(DEFAULTS[tab]));
+  work[tab].forEach(p => { p._fixedId = true; });
+  render();
+});
 $('sd-save').addEventListener('click', async () => {
   $('sd-err').textContent = ''; $('sd-ok').textContent = '';
   const data = tab === 'kosten' ? work.kosten : work[tab].map(p => ({ id: p.id, name: p.name.trim(), fields: p.fields }));
