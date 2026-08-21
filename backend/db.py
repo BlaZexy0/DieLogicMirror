@@ -173,6 +173,20 @@ class ProjectRevision(Base):
     author: Mapped[User | None] = relationship()
 
 
+class OrgSetting(Base):
+    """Stammdaten der Organisation: je Schlüssel (machines, alloys, parts,
+    kosten) ein JSON-Dokument — die Presets der Firma statt der Beispiele
+    aus site/app/config/*.js."""
+    __tablename__ = "org_settings"
+    __table_args__ = (UniqueConstraint("org_id", "key"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    org_id: Mapped[str] = mapped_column(ForeignKey("orgs.id"), nullable=False, index=True)
+    key: Mapped[str] = mapped_column(String(32), nullable=False)
+    data: Mapped[dict] = mapped_column(JSON, nullable=False)
+    updated_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 def init_db(bind=None) -> None:
     Base.metadata.create_all(bind or engine)
 

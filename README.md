@@ -32,6 +32,12 @@ Organisation, nicht der Person (B2B). Ohne Konto bleibt alles im Browser.
 Verwaltung (Verlauf, Kopie, Export/Import, Zurücksetzen, Archivieren,
 Mitglieder, Einladungen): `/app/konto.html`.
 
+**Stammdaten der Organisation:** Maschinen, Legierungen, Bauteiltypen und
+Kosten & Sätze (Legierungspreis, Strompreis, Stundensätze …) pflegt ein
+Admin auf der Konto-Seite; sie ersetzen in allen Werkzeugen die
+Beispielwerte aus `app/config/*.js` (`shared/orgpresets.js` legt sie beim
+Laden über die Globals, Backend `/api/org/settings`).
+
 ## Struktur
 
 ```
@@ -71,14 +77,16 @@ dielogic/
 │       │                    JS-Konstanten in nav.js/projectbar.js spiegeln sie; Test
 │       │                    palette.test.mjs prüft Gleichheit + WCAG-Kontrast),
 │       │                    theme.js (Diagramm-Farben), machines/alloys/parts/kosten
-│       ├── shared/          project.js (Projektspeicher + Querbezüge), projectbar.js
+│       ├── shared/          project.js (Projektspeicher + Querbezüge), projectbar.js,
+│       │                    orgpresets.js (Stammdaten der Organisation über die Presets),
 │       │                    (Projektleiste), contract.js (STL → design), clampmodel.js
 │       ├── css/site.css     Layout-Offsets für die 56px-Navigation
 │       └── js/…             u. a. core/simapi.js + core/simstore.js (Backend-Anbindung;
 │                            Luftdruck-Serie mit 2. Achse in der Schusskurve)
-├── backend/         FastAPI: /api/auth (Einladung, Sitzung), /api/org, /api/projects
-│   │                (Revisionen), /api/sim/shot (hpdcsim) + statische Auslieferung
-│   ├── app.py  db.py  auth.py  projects.py  manage.py  sim.py  core.py  convert.py
+├── backend/         FastAPI: /api/auth (Einladung, Sitzung), /api/org (Mitglieder,
+│   │                Einladungen, Stammdaten), /api/projects (Revisionen),
+│   │                /api/sim/shot (hpdcsim) + statische Auslieferung
+│   ├── app.py  db.py  auth.py  projects.py  orgsettings.py  manage.py  sim.py  core.py  convert.py
 │   └── tests/       API-Tests (TestClient, SQLite), convert-Unit-Tests, Physik-Fixtures
 ├── packages/
 │   └── hpdcsim/     Simulationspaket (eigenes pyproject, pytest-Suite)

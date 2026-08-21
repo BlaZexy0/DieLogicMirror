@@ -35,8 +35,10 @@ function applyDefaults() {
   for (const d of PRESET_DOMAINS) {
     state[d.stateKey] = d.def || '';
     const list = (window[d.global] || {})[d.listKey] || [];
-    const p = list.find(x => x.id === d.def);
-    if (p) Object.assign(state.values, p.fields);
+    /* Organisations-Presets (shared/orgpresets.js) kennen die Beispiel-ids
+       nicht unbedingt → dann das erste Preset der Liste. */
+    const p = list.find(x => x.id === d.def) || list[0];
+    if (p) { state[d.stateKey] = p.id; Object.assign(state.values, p.fields); }
   }
 }
 

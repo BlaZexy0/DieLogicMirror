@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .auth import bootstrap_from_env, router as auth_router
 from .db import SessionLocal, init_db
+from .orgsettings import router as orgsettings_router
 from .projects import router as projects_router
 from .sim import router as sim_router
 
@@ -20,6 +21,7 @@ app = FastAPI(title="DieLogic Backend", version="0.1.0")
 app.include_router(sim_router)
 app.include_router(auth_router)
 app.include_router(projects_router)
+app.include_router(orgsettings_router)
 
 
 @app.on_event("startup")

@@ -56,6 +56,9 @@ andere rechnet weiter im Browser.
 - Konto: `GET /api/auth/invite/{token}`, `POST /api/auth/register`
   `{token, name, password}`, `POST /api/auth/login` `{email, password}`,
   `POST /api/auth/logout`, `GET /api/auth/me`.
+- Stammdaten: `GET /api/org/settings` (alle Mitglieder) → `{machines|alloys|parts|kosten: {data, updated_at}}`;
+  Admin: `PUT /api/org/settings/{key}` `{data}` (Listen: `[{id, name, fields{…}}]`,
+  kosten: `{pAl, pE, …}`), `DELETE /api/org/settings/{key}` = zurück auf Beispielwerte.
 - Organisation: `GET /api/org/members`; Admin: `GET|POST /api/org/invites`
   `{email, role}`, `DELETE /api/org/invites/{id}`,
   `POST /api/org/members/{id}/disable`.
