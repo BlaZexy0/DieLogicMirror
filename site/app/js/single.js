@@ -34,6 +34,7 @@ async function init() {
   document.title = def.title + ' · DieLogic Dashboard';
   document.getElementById('chartTitle').textContent = def.title;
   document.getElementById('chartDesc').textContent = def.desc;
+  document.getElementById('chartSub').textContent = def.desc;
 
   /* Navigation zwischen den Einzelseiten */
   const nav = document.getElementById('chartNav');

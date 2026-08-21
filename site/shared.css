@@ -127,6 +127,13 @@ body {
 .page-hero .inner { max-width: 800px; margin: 0 auto; }
 .page-hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
 .page-hero .subtitle { color: var(--ondark); font-size: 0.95rem; line-height: 1.6; }
+/* Kompakt (Werkzeugseiten hinter dem Login — gleiches Maß wie der
+   Dashboard-Kopf): 82px hoch, Titel + eine Zeile, keine Tags. */
+.page-hero.compact { padding: 14px 28px; min-height: 82px; display: flex; align-items: center; }
+.page-hero.compact .inner { max-width: none; margin: 0; min-width: 0; }
+.page-hero.compact h1 { font-size: 1.35rem; margin-bottom: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.page-hero.compact .subtitle { font-size: 0.85rem; line-height: 1.4; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.page-hero.compact .hero-tags { display: none; }
 
 .page-content {
   max-width: 800px;

@@ -156,6 +156,10 @@
       vertical-align: baseline;
     }
     .stl-table td .sub { color: var(--muted); font-size: 0.72rem; }
+    /* Maschinentabelle: 6 Spalten müssen in die 1100px-Karte passen */
+    #machine-table th, #machine-table td { padding: 0.5rem 0.6rem; }
+    #machine-table td .sub { display: block; line-height: 1.1; }
+    #machine-table td:last-child { padding-left: 0.3rem; }
     .stl-table tfoot td { font-weight: 700; border-top: 2px solid var(--dark); border-bottom: none; background: var(--surface2); }
     .stl-table .remove-btn {
       border: none;
@@ -262,15 +266,10 @@
 </head>
 <body>
 
-<section class="page-hero">
+<section class="page-hero compact">
   <div class="inner">
     <h1>Sprengflächenanalyse</h1>
-    <p class="subtitle">STL-Dateien direkt im Browser auswerten: Volumen, Masse, Oberfläche und
-      projizierte Fläche je Bauteil — mit umschaltbarer Projektionsrichtung (X/Y/Z) und
-      Summenzeile über alle geladenen Dateien. Dateien als Bauteil, Anguss, Überlauf und
-      Pressrest zuordnen und die Auslegung direkt ins Dashboard übernehmen. Seitenschieber
-      gehen über Fläche und Sperrwinkel als Zuschlag in die Sprengfläche ein.
-      Die Dateien verlassen Ihren Rechner nicht.</p>
+    <p class="subtitle">STL-Dateien im Browser auswerten: Volumen, Masse, projizierte Fläche, Maschinenwahl — und die Auslegung ins Projekt übernehmen.</p>
   </div>
 </section>
 

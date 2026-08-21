@@ -1,33 +1,33 @@
-/* Einbettung in die DieLogic-Website: über dem Dashboard sitzt die 56px hohe
-   Site-Navigation (nav.js). Diese Datei verschiebt nur den fixierten Kopf und
-   die Layout-Höhen — main.css bleibt unverändert, das Dashboard funktioniert
-   ohne diese Datei weiterhin standalone. */
+/* Einbettung in die DieLogic-Website: über dem Dashboard sitzen die 56px hohe
+   Site-Navigation (nav.js, sticky) und die 44px hohe Projektleiste
+   (shared/projectbar.js, im Fluss). Diese Datei verschiebt nur den fixierten
+   Kopf und die Layout-Höhen — main.css bleibt unverändert. */
 
-header { top: 56px; }
+header { top: 100px; }
 
-/* Mit der Projektleiste im Kopf (shared/projectbar.js, kompakt) muss der
-   Titel Platz lassen: eine Zeile, kleiner, bei Bedarf abgeschnitten. */
-header h1 { font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; margin-right: 16px; }
+/* Gleiches Schema wie .page-hero der übrigen Seiten (shared.css): Verlauf
+   Petrol → Petrol 2, Titel fett, gedämpfte Unterzeile — nur kompakt. */
+header { background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%); padding: 14px 28px; }
+header .header-title { min-width: 0; margin-right: 16px; }
+header h1 { font-size: 1.35rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header .header-sub { color: var(--ondark); font-size: 0.85rem; line-height: 1.4; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.save-btn, .back-link, .nav-select { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); color: var(--ondark); font-weight: 600; }
+.save-btn:hover, .back-link:hover { background: rgba(255,255,255,.16); color: var(--surface); }
 header .header-actions { flex-wrap: nowrap; }
 header .header-actions .save-btn, header .header-actions .back-link { padding: 8px 12px; font-size: 13px; }
-@media (max-width: 1280px) {
-  header h1 { font-size: 17px; }
-  .dl-pb.compact .dl-pb-user { display: none; }
-}
 
 .layout {
-  /* Kein eigener margin-top: die Nav ist sticky und damit im Fluss — sie
-     schiebt das Layout schon um 56px; die 82px aus main.css ergeben
-     zusammen die 138px unter beiden Köpfen. */
-  height: calc(100vh - 138px);
+  /* Nav (56) + Projektleiste (44) sind im Fluss und schieben das Layout;
+     die 82px des fixierten Kopfs kommen aus main.css: 56 + 44 + 82 = 182. */
+  height: calc(100vh - 182px);
 }
 
 .sidebar {
-  height: calc(100vh - 178px);
-  top: 158px;
+  height: calc(100vh - 222px);
+  top: 202px;
 }
 
-.content { height: calc(100vh - 178px); }
+.content { height: calc(100vh - 222px); }
 
 @media (max-width: 1080px) {
   /* main.css schaltet hier auf normales Scrollen um — Offsets zurücknehmen */

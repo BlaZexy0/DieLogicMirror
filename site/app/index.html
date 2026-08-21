@@ -17,9 +17,11 @@
 </head>
 <body>
   <header>
-    <h1>Dashboard — Gießtechnische Auslegung + Schusskurve</h1>
+    <div class="header-title">
+      <h1>Dashboard — Gießtechnische Auslegung + Schusskurve</h1>
+      <p class="header-sub">Massenbilanz, Maschine, Füllkammer, Anschnitt, Prozessfenster und Schusskurve — alle Diagramme auf dem aktuellen Projekt.</p>
+    </div>
     <div class="header-actions">
-      <div id="project-mount"></div>
     </div>
   </header>
 
@@ -77,7 +79,7 @@
   <script src="config/examples/parts.js"></script>
   <script src="shared/orgpresets.js"></script>
   <script src="shared/project.js"></script>
-  <script src="shared/projectbar.js" data-base=".." data-mount="project-mount"></script>
+  <script src="shared/projectbar.js" data-base=".."></script>
   <script src="shared/clampmodel.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>

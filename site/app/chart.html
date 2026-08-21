@@ -17,9 +17,11 @@
 </head>
 <body>
   <header>
-    <h1 id="chartTitle">Diagramm</h1>
+    <div class="header-title">
+      <h1 id="chartTitle">Diagramm</h1>
+      <p class="header-sub" id="chartSub"></p>
+    </div>
     <div class="header-actions">
-      <div id="project-mount"></div>
       <select id="chartNav" class="nav-select" title="Zu einem anderen Diagramm wechseln"></select>
       <a class="back-link" href="index.html">← Übersicht</a>
     </div>
@@ -33,17 +35,17 @@
         <div class="group" id="preset-group">
           <h3>Maschinen-Preset</h3>
           <select id="machineSel"><option value="">— manuell —</option></select>
-          <p class="group-note">Presets kommen aus <code>config/machines.js</code>.</p>
+          <p class="group-note">Presets: Stammdaten der Organisation (Konto-Seite), sonst Beispielwerte.</p>
         </div>
         <div class="group" id="alloy-preset-group">
           <h3>Legierungs-Preset</h3>
           <select id="alloySel"><option value="">— manuell —</option></select>
-          <p class="group-note">Presets kommen aus <code>config/alloys.js</code>.</p>
+          <p class="group-note">Presets: Stammdaten der Organisation (Konto-Seite), sonst Beispielwerte.</p>
         </div>
         <div class="group" id="part-preset-group">
           <h3>Bauteiltyp-Preset</h3>
           <select id="partSel"><option value="">— manuell —</option></select>
-          <p class="group-note">Presets kommen aus <code>config/parts.js</code>.</p>
+          <p class="group-note">Presets: Stammdaten der Organisation (Konto-Seite), sonst Beispielwerte.</p>
         </div>
         <div class="group" id="curve-group">
           <h3>Schusskurve (1. + 2. Phase)</h3>
@@ -73,7 +75,7 @@
   <script src="config/examples/parts.js"></script>
   <script src="shared/orgpresets.js"></script>
   <script src="shared/project.js"></script>
-  <script src="shared/projectbar.js" data-base=".." data-mount="project-mount"></script>
+  <script src="shared/projectbar.js" data-base=".."></script>
   <script src="shared/clampmodel.js"></script>
   <script type="module" src="js/single.js"></script>
 </body>
