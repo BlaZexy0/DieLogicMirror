@@ -19,12 +19,12 @@
     .kt-card h2 { font-size: 1rem; margin: 0 0 .8rem; }
     .kt-card p { font-size: .85rem; color: var(--muted); line-height: 1.55; }
     .kt-card label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted); margin: .7rem 0 .25rem; }
-    .kt-card input, .kt-card select { width: 100%; font: inherit; padding: .5rem .65rem; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; background: #fff; }
+    .kt-card input, .kt-card select { width: 100%; font: inherit; padding: .5rem .65rem; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; background: var(--surface); }
     .kt-row { display: flex; gap: .6rem; align-items: flex-end; }
     .kt-row > * { flex: 1; }
     .kt-row > .btn { flex: 0 0 auto; }
     .kt-actions { margin-top: 1rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
-    .kt-err { color: #c2447e; font-size: .82rem; min-height: 1.2em; margin-top: .5rem; }
+    .kt-err { color: var(--warn); font-size: .82rem; min-height: 1.2em; margin-top: .5rem; }
     .kt-ok { color: var(--primary); font-size: .82rem; }
     table.kt { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: .4rem; }
     table.kt th, table.kt td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -154,6 +154,7 @@
   </div>
 </div>
 
+<script src="config/palette.js"></script>
 <script src="shared/project.js"></script>
 <script>
 (function () {
@@ -193,7 +194,7 @@
         + esc(inv.org.name) + '</strong> eingeladen' + (inv.role === 'admin' ? ' (Administrator)' : '') + '. Bitte Namen und Passwort festlegen.';
       show('register-form', true);
     } catch (err) {
-      $('invite-text').innerHTML = '<span style="color:#c2447e">' + esc(err.message) + '</span>';
+      $('invite-text').innerHTML = '<span style="color:' + window.__PALETTE__.warn + '">' + esc(err.message) + '</span>';
     }
   }
 

@@ -30,8 +30,8 @@ function themeColors() {
   const cs = getComputedStyle(document.documentElement);
   const c = (name, fb) => (cs.getPropertyValue(name) || '').trim() || fb;
   return {
-    deep: c('--deep', '#002733'),
-    green: c('--green', '#008c82'),
+    deep: c('--dark', '#002733'),
+    green: c('--primary', '#008c82'),
     muted: c('--muted', '#4c6870'),
     surface: c('--surface', '#ffffff')
   };

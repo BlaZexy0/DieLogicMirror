@@ -16,6 +16,18 @@
 (function () {
   /* Aktuelle Site-Version — einzige Quelle, erscheint neben dem Logo
      auf jeder Seite. Bei Releases hier hochzählen. */
+  /* Farben: Spiegel von app/config/palette.js (nav.js ist selbstversorgend
+     und läuft vor allen anderen Scripts). */
+  const C = {
+    dark: '#002733',
+    dark2: '#0a3945',
+    dark3: '#1b4a57',
+    ondark: '#8fb8c4',
+    ondark2: '#7a9aa6',
+    primary: '#008c82',
+    primary2: '#00726a',
+  };
+
   const VERSION = 'v0.9.0';
 
   /* ── Diagramm-Einzelseiten (Reihenfolge = js/charts/registry.js) ── */
@@ -125,7 +137,7 @@
       DieLogic
     </div>
     <p class="dl-footer-desc">Gießtechnische Auslegung + Schusskurve für den Druckguss (HPDC) — komplett im Browser, ohne Abhängigkeiten.</p>
-    <p class="dl-footer-desc" style="margin-top:1rem;color:#5a7a86;">© 2026 DieLogic</p>
+    <p class="dl-footer-desc" style="margin-top:1rem;color:${C.ondark2};">© 2026 DieLogic</p>
   </div>
 
   <div class="dl-footer-col">
@@ -166,8 +178,8 @@
 
   <div class="dl-footer-bottom">
     DieLogic — Auslegungsrechnung und Visualisierung im Browser. Für Gießerei-Ingenieure gebaut.
-    &nbsp;·&nbsp; <a href="${r('/recht/impressum.html')}" style="color:#5a7a86;">Impressum</a>
-    &nbsp;·&nbsp; <a href="${r('/recht/datenschutz.html')}" style="color:#5a7a86;">Datenschutz</a>
+    &nbsp;·&nbsp; <a href="${r('/recht/impressum.html')}" style="color:${C.ondark2};">Impressum</a>
+    &nbsp;·&nbsp; <a href="${r('/recht/datenschutz.html')}" style="color:${C.ondark2};">Datenschutz</a>
   </div>
 </footer>`;
   }
@@ -176,7 +188,7 @@
   const NAV_CSS = `
 .dl-nav {
   height: 56px;
-  background: #002733;
+  background: ${C.dark};
   display: flex;
   align-items: center;
   padding: 0 2rem;
@@ -203,7 +215,7 @@
 .dl-nav-version {
   font-size: 0.7rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255,255,255,.6);
   align-self: flex-end;
   padding-bottom: 0.15rem;
   white-space: nowrap;
@@ -216,7 +228,7 @@
   padding: 0;
 }
 .dl-nav-links a {
-  color: #8fb8c4;
+  color: ${C.ondark};
   font-size: 0.85rem;
   padding: 0 0.9rem;
   text-decoration: none;
@@ -228,7 +240,7 @@
 .dl-nav-links a:hover { color: white; }
 .dl-nav-links > li > a.active {
   color: white;
-  border-bottom: 2px solid #008c82;
+  border-bottom: 2px solid ${C.primary};
 }
 .dl-nav-cta { display: flex; gap: 0.5rem; margin-left: 1.5rem; }
 .dl-nav-cta a {
@@ -239,16 +251,16 @@
   font-size: 0.78rem;
   font-weight: 600;
   text-decoration: none;
-  background: #008c82;
+  background: ${C.primary};
   color: white;
   transition: background 0.15s;
   white-space: nowrap;
 }
-.dl-nav-cta a:hover { background: #00726a; }
+.dl-nav-cta a:hover { background: ${C.primary2}; }
 
 .dl-nav-group { position: relative; display: inline-block; }
 .dl-nav-group > .dl-nav-group-label {
-  color: #8fb8c4;
+  color: ${C.ondark};
   font-size: 0.85rem;
   font-family: inherit;
   padding: 0 0.9rem;
@@ -266,8 +278,8 @@
   position: absolute;
   top: 56px;
   left: 0;
-  background: #0a3945;
-  border: 1px solid #1b4a57;
+  background: ${C.dark2};
+  border: 1px solid ${C.dark3};
   border-radius: 6px;
   padding: 0.4rem 0;
   min-width: 280px;
@@ -278,7 +290,7 @@
   transform: translateY(-4px);
   transition: all 0.15s;
   z-index: 200;
-  box-shadow: 0 8px 24px rgba(0,20,27,0.35);
+  box-shadow: 0 8px 24px rgba(0,20,27,.35);
 }
 /* Aufklappen bei Maus-Hover, per Klick/Touch (.open) und bei
    Tastatur-Fokus im Menü (:focus-within). */
@@ -294,19 +306,19 @@
   padding: 0.45rem 1rem;
   font-size: 0.82rem;
   line-height: 1.4;
-  color: #8fb8c4;
+  color: ${C.ondark};
   text-decoration: none;
 }
-.dl-nav-dropdown a:hover { color: white; background: rgba(255,255,255,0.05); }
+.dl-nav-dropdown a:hover { color: white; background: rgba(255,255,255,.05); }
 .dl-nav-dropdown a.active {
   color: white;
-  border-left: 2px solid #008c82;
+  border-left: 2px solid ${C.primary};
   padding-left: calc(1rem - 2px);
 }
 
 .dl-footer {
-  background: #002733;
-  color: #8fb8c4;
+  background: ${C.dark};
+  color: ${C.ondark};
   padding: 2.5rem 2rem;
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr;
@@ -335,7 +347,7 @@
 .dl-footer-col ul { list-style: none; margin: 0; padding: 0; }
 .dl-footer-col li a {
   font-size: 0.8rem;
-  color: #8fb8c4;
+  color: ${C.ondark};
   text-decoration: none;
   display: block;
   padding: 0.2rem 0;
@@ -343,11 +355,11 @@
 .dl-footer-col li a:hover { color: white; }
 .dl-footer-bottom {
   grid-column: 1 / -1;
-  border-top: 1px solid #0a3945;
+  border-top: 1px solid ${C.dark2};
   margin-top: 2rem;
   padding-top: 1.5rem;
   font-size: 0.75rem;
-  color: #5a7a86;
+  color: ${C.ondark2};
   text-align: center;
 }
 

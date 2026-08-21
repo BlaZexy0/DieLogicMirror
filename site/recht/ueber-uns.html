@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Über uns · DieLogic</title>
-  <meta name="theme-color" content="#002733">
+  <meta name="theme-color" content="var(--dark)">
   <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png">
   <link rel="apple-touch-icon" href="../assets/icon-180.png">
@@ -25,13 +25,13 @@
       font-weight: 800;
       margin-bottom: 0.8rem;
     }
-    .about-cols p { font-size: 0.92rem; line-height: 1.75; color: #2a3f4a; margin-bottom: 0.8rem; }
+    .about-cols p { font-size: 0.92rem; line-height: 1.75; color: var(--text-body); margin-bottom: 0.8rem; }
     .team-photo {
       display: block;
       width: 100%;
       height: auto;
       border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0,39,51,0.18);
+      box-shadow: 0 8px 32px rgba(0,39,51,.18);
       margin-bottom: 3rem;
     }
     .team-section h2, .values-section h2 {
@@ -58,7 +58,7 @@
       width: 84px; height: 84px;
       margin: 0 auto 1rem;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--dark2), #00463f);
+      background: linear-gradient(135deg, var(--dark2), var(--primary-deep));
       display: flex; align-items: center; justify-content: center;
     }
     .member-avatar svg { width: 44px; height: 44px; }
@@ -146,7 +146,7 @@
 
       <div class="member-card">
         <div class="member-avatar">
-          <svg viewBox="0 0 44 44" fill="none"><circle cx="22" cy="15" r="8" fill="#8fb8c4"/><path d="M6 40 Q6 26 22 26 Q38 26 38 40 Z" fill="#8fb8c4"/></svg>
+          <svg viewBox="0 0 44 44" fill="none"><circle cx="22" cy="15" r="8" fill="var(--ondark)"/><path d="M6 40 Q6 26 22 26 Q38 26 38 40 Z" fill="var(--ondark)"/></svg>
         </div>
         <h3><span class="ph">[Vorname Nachname]</span></h3>
         <div class="member-role">Gründung · Gießereitechnik</div>
@@ -156,7 +156,7 @@
 
       <div class="member-card">
         <div class="member-avatar">
-          <svg viewBox="0 0 44 44" fill="none"><circle cx="22" cy="15" r="8" fill="#3fc2b6"/><path d="M6 40 Q6 26 22 26 Q38 26 38 40 Z" fill="#3fc2b6"/></svg>
+          <svg viewBox="0 0 44 44" fill="none"><circle cx="22" cy="15" r="8" fill="var(--primary-light)"/><path d="M6 40 Q6 26 22 26 Q38 26 38 40 Z" fill="var(--primary-light)"/></svg>
         </div>
         <h3><span class="ph">[Vorname Nachname]</span></h3>
         <div class="member-role">Softwareentwicklung</div>
@@ -166,7 +166,7 @@
 
       <div class="member-card">
         <div class="member-avatar">
-          <svg viewBox="0 0 44 44" fill="none"><circle cx="22" cy="15" r="8" fill="#e5f3f2"/><path d="M6 40 Q6 26 22 26 Q38 26 38 40 Z" fill="#e5f3f2"/></svg>
+          <svg viewBox="0 0 44 44" fill="none"><circle cx="22" cy="15" r="8" fill="var(--pale)"/><path d="M6 40 Q6 26 22 26 Q38 26 38 40 Z" fill="var(--pale)"/></svg>
         </div>
         <h3><span class="ph">[Vorname Nachname]</span></h3>
         <div class="member-role">Kunden &amp; Support</div>

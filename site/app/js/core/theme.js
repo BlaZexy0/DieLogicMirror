@@ -16,12 +16,8 @@ export async function loadTheme() {
 function applyCssVars() {
   const u = theme.ui || {};
   const root = document.documentElement.style;
-  const map = {
-    '--deep': u.deep, '--green': u.green, '--pale': u.pale, '--bg': u.bg,
-    '--line': u.line, '--muted': u.muted, '--blue': u.blue, '--surface': u.surface,
-    '--header-from': u.headerFrom, '--header-to': u.headerTo,
-    '--ok': u.ok, '--ok-border': u.okBorder,
-    '--warn-text': u.warnText, '--warn-border': u.warnBorder, '--bad': u.bad
-  };
+  /* Schlüssel wie in config/palette.js → CSS-Variable (camelCase → kebab) */
+  const map = {};
+  for (const k in u) map['--' + k.replace(/[A-Z]/g, c => '-' + c.toLowerCase())] = u[k];
   for (const k in map) if (map[k]) root.setProperty(k, map[k]);
 }

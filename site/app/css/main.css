@@ -1,22 +1,48 @@
 /* Grundlayout und Komponenten. Die Farbwerte hier sind nur Fallbacks —
    config/theme.json überschreibt die CSS-Variablen beim Laden (js/core/theme.js). */
 
+/* Farb-Tokens = app/config/palette.js (gleiche Namen wie shared.css;
+   config/theme.js darf sie zur Laufzeit überschreiben). */
 :root {
-  --deep: #002733;
-  --green: #008c82;
+  --dark: #002733;
+  --dark2: #0a3945;
+  --dark3: #1b4a57;
+  --primary: #008c82;
+  --primary2: #00726a;
+  --primary-deep: #00534d;
+  --primary-light: #3fc2b6;
   --pale: #e5f3f2;
-  --bg: #f3f6f6;
-  --line: #ccd4d6;
-  --muted: #4c6870;
-  --blue: #8cbee6;
-  --surface: #ffffff;
-  --header-from: #002733;
-  --header-to: #00534d;
+  --pale-border: #b8ddd2;
+  --accent: #8cbee6;
   --ok: #0d7a3c;
   --ok-border: #12a150;
-  --warn-text: #a67600;
+  --ok-bg: #dcefe3;
+  --warn: #c2447e;
+  --warn-soft: #eec3d4;
+  --warn-bg: #fdf2f6;
+  --warn-text: #8a6d00;
   --warn-border: #e0a400;
+  --gold: #d4a908;
+  --note-bg: #fff8e1;
+  --note-border: #e6c34a;
+  --note-text: #6b5307;
   --bad: #b42318;
+  --bad-bg: #fff2f0;
+  --bg: #f3f6f6;
+  --surface: #ffffff;
+  --surface2: #f8fafa;
+  --border: #ccd4d6;
+  --border-light: #e5e9eb;
+  --text: #002733;
+  --text-body: #2a3f4a;
+  --muted: #4c6870;
+  --muted-light: #9aacb4;
+  --ondark: #8fb8c4;
+  --ondark2: #7a9aa6;
+  --cat-purple: #9a77e8;
+  --cat-green: #4c9f70;
+  --cat-slate: #557786;
+  --cat-orange: #e07b39;
 }
 
 * { box-sizing: border-box; }
@@ -24,7 +50,7 @@
 body {
   margin: 0;
   background: var(--bg);
-  color: var(--deep);
+  color: var(--dark);
   font: 14px Arial, sans-serif;
   overflow: hidden;
 }
@@ -36,8 +62,8 @@ header {
   z-index: 20;
   height: 82px;
   padding: 20px 28px;
-  background: linear-gradient(120deg, var(--header-from), var(--header-to));
-  color: #fff;
+  background: linear-gradient(120deg, var(--dark), var(--primary-deep));
+  color: var(--surface);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -46,9 +72,9 @@ header {
 h1 { margin: 0; font-size: 28px; }
 header .header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .save-btn, .back-link {
-  background: rgba(255, 255, 255, .14);
-  border: 1px solid rgba(255, 255, 255, .45);
-  color: #fff;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.45);
+  color: var(--surface);
   padding: 11px 18px;
   border-radius: 9px;
   font-weight: bold;
@@ -57,18 +83,18 @@ header .header-actions { display: flex; align-items: center; gap: 10px; flex-shr
   white-space: nowrap;
   text-decoration: none;
 }
-.save-btn:hover, .back-link:hover { background: rgba(255, 255, 255, .26); }
+.save-btn:hover, .back-link:hover { background: rgba(255,255,255,.26); }
 .nav-select {
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, .45);
-  background: rgba(255, 255, 255, .14);
-  color: #fff;
+  border: 1px solid rgba(255,255,255,.45);
+  background: rgba(255,255,255,.14);
+  color: var(--surface);
   font: inherit;
   font-weight: bold;
   max-width: 320px;
 }
-.nav-select option { color: var(--deep); }
+.nav-select option { color: var(--dark); }
 
 /* ── Grundraster ── */
 .layout {
@@ -102,7 +128,7 @@ h2 { margin: 4px 0; }
 
 .panel, .card, .kpi {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 5px 18px #00273312;
 }
@@ -113,8 +139,8 @@ h2 { margin: 4px 0; }
 .group {
   grid-column: span 4;
   padding: 12px;
-  background: #f8fafa;
-  border: 1px solid #e5e9eb;
+  background: var(--surface2);
+  border: 1px solid var(--border-light);
   border-radius: 9px;
 }
 .group.wide { grid-column: span 6; }
@@ -134,28 +160,28 @@ h2 { margin: 4px 0; }
 input {
   width: 100%;
   padding: 7px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
   font: inherit;
 }
 input.invalid, select.invalid {
   border-color: var(--bad);
-  background: #fff2f0;
+  background: var(--bad-bg);
   color: var(--bad);
   font-weight: bold;
 }
 select {
   width: 100%;
   padding: 7px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
   font: inherit;
   background: var(--surface);
-  color: var(--deep);
+  color: var(--dark);
 }
 .chamber-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .input-column { padding-left: 10px; border-left: 3px solid var(--pale); }
-.input-column h4 { margin: 0 0 7px; color: var(--green); }
+.input-column h4 { margin: 0 0 7px; color: var(--primary); }
 .input-column .field { margin-bottom: 7px; }
 .hint {
   margin-top: 11px;
@@ -172,7 +198,7 @@ select {
   color: var(--muted);
   user-select: none;
 }
-.adv-fields summary:hover { color: var(--green); }
+.adv-fields summary:hover { color: var(--primary); }
 .adv-fields[open] summary { margin-bottom: 8px; }
 .curve-note { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
 /* Schusskurven-Modus (Punkte / López / V₁-V₂) + Generator-Parameter */
@@ -188,13 +214,13 @@ select {
 
 /* Hervorhebung der Diagramm-Eingaben */
 .field.hl input {
-  border-color: var(--green);
-  box-shadow: 0 0 0 2px rgba(0, 140, 130, .25);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(0,140,130,.25);
 }
-.field.hl label { color: var(--green); }
+.field.hl label { color: var(--primary); }
 .group.hl {
-  border-color: var(--green);
-  box-shadow: 0 0 0 2px rgba(0, 140, 130, .18);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(0,140,130,.18);
 }
 
 /* ── Füllkammer-Zeile: KPI-Gruppe links, Schema rechts ── */
@@ -236,7 +262,7 @@ select {
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 10px;
 }
-.kpi { padding: 11px; border-left: 4px solid var(--line); }
+.kpi { padding: 11px; border-left: 4px solid var(--border); }
 .kpi span, .kpi small { display: block; color: var(--muted); font-size: 12px; }
 .kpi small { margin-top: 5px; }
 .kpi b { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; font-size: 19px; margin: 3px 0; }
@@ -256,14 +282,14 @@ select {
   align-self: center;
   white-space: nowrap;
 }
-.kpi.ok .tag { background: #dcefe3; color: var(--ok); }
-.kpi.warn .tag { background: #f6ecd2; color: var(--warn-text); }
-.kpi.bad .tag { background: #f6ded9; color: var(--bad); }
+.kpi.ok .tag { background: var(--ok-bg); color: var(--ok); }
+.kpi.warn .tag { background: var(--note-bg); color: var(--warn-text); }
+.kpi.bad .tag { background: var(--bad-bg); color: var(--bad); }
 
 /* „Keine Daten": neutral (grau, gestrichelt) — keine Warnung. */
 .kpi.nodata { border-left-color: var(--muted); border-left-style: dashed; }
 .kpi.nodata b { color: var(--muted); }
-.kpi.nodata .tag { background: var(--bg); color: var(--muted); border: 1px dashed var(--line); }
+.kpi.nodata .tag { background: var(--bg); color: var(--muted); border: 1px dashed var(--border); }
 
 /* Bullet: Track = plausibler Bereich, Band = Ziel, Marker = Ist. */
 .kpi-bullet {
@@ -277,7 +303,7 @@ select {
   position: absolute;
   top: 0; bottom: 0;
   border-radius: 6px;
-  background: var(--green);
+  background: var(--primary);
   opacity: .26;
 }
 .kpi-bullet .mark {
@@ -285,7 +311,7 @@ select {
   top: -3px; bottom: -3px;
   width: 3px;
   border-radius: 2px;
-  background: var(--deep);
+  background: var(--dark);
   transform: translateX(-50%);
 }
 .kpi.bad .kpi-bullet .mark { background: var(--bad); }
@@ -311,7 +337,7 @@ select {
   position: absolute;
   top: 0; bottom: 0; left: 0;
   border-radius: 6px;
-  background: var(--green);
+  background: var(--primary);
 }
 .kpi.warn .kpi-meter .fill { background: var(--warn-border); }
 .kpi.bad .kpi-meter .fill { background: var(--bad); }
@@ -319,7 +345,7 @@ select {
   position: absolute;
   top: 0; bottom: 0;
   width: 2px;
-  background: var(--deep);
+  background: var(--dark);
   opacity: .55;
 }
 .meter-row {
@@ -345,7 +371,7 @@ select {
   gap: 14px;
   flex-wrap: wrap;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 14px;
   margin-bottom: 14px;
@@ -367,7 +393,7 @@ select {
 }
 .checkbar .fails .ck-link { color: var(--bad); }
 .checkbar .tights .ck-link { color: var(--warn-text); }
-.kpi.flash { outline: 2px solid var(--green); outline-offset: 2px; }
+.kpi.flash { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* ── Diagramm-Karten ── */
 .charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -377,7 +403,7 @@ select {
   justify-content: space-between;
   align-items: center;
   padding: 12px 14px;
-  border-bottom: 1px solid #e5e9eb;
+  border-bottom: 1px solid var(--border-light);
   gap: 10px;
   flex-wrap: wrap;
 }
@@ -388,8 +414,8 @@ button {
   border: 0;
   border-radius: 7px;
   padding: 8px 10px;
-  background: var(--green);
-  color: #fff;
+  background: var(--primary);
+  color: var(--surface);
   font-weight: bold;
   cursor: pointer;
 }
@@ -404,29 +430,29 @@ button {
   flex-shrink: 0;
   transition: background .15s, color .15s, border-color .15s;
 }
-.png-btn { background: var(--green); color: #fff; }
+.png-btn { background: var(--primary); color: var(--surface); }
 .png-btn svg, .hl-btn svg { width: 18px; height: 18px; display: block; }
-.png-btn:hover { background: #00726a; }
+.png-btn:hover { background: var(--primary2); }
 .png-btn.copied { background: var(--ok); }
 .hl-btn {
-  background: #f8fafa;
-  border: 1px solid var(--line);
+  background: var(--surface2);
+  border: 1px solid var(--border);
   color: var(--muted);
 }
-.hl-btn:hover { color: var(--deep); border-color: var(--green); }
-.hl-btn.active { background: var(--green); border-color: var(--green); color: #fff; }
+.hl-btn:hover { color: var(--dark); border-color: var(--primary); }
+.hl-btn.active { background: var(--primary); border-color: var(--primary); color: var(--surface); }
 .single-link {
-  background: #f8fafa;
-  border: 1px solid var(--line);
+  background: var(--surface2);
+  border: 1px solid var(--border);
   color: var(--muted);
   text-decoration: none;
   font-weight: bold;
   font-size: 16px;
 }
-.single-link:hover { color: var(--deep); border-color: var(--green); }
+.single-link:hover { color: var(--dark); border-color: var(--primary); }
 .tabs {
   display: inline-flex;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -449,18 +475,18 @@ button {
 .tabs button {
   border: 0;
   border-radius: 0;
-  border-right: 1px solid var(--line);
-  background: #f8fafa;
+  border-right: 1px solid var(--border);
+  background: var(--surface2);
   color: var(--muted);
   font-size: 12px;
   font-weight: bold;
   padding: 7px 12px;
 }
 .tabs button:last-child { border-right: 0; }
-.tabs button.active { background: var(--green); color: #fff; }
-.tabs button:not(.active):hover { color: var(--deep); }
+.tabs button.active { background: var(--primary); color: var(--surface); }
+.tabs button:not(.active):hover { color: var(--dark); }
 .csv-btn { padding: 8px 11px; font-size: 12px; border-radius: 8px; white-space: nowrap; }
-.csv-btn:hover { background: #00726a; }
+.csv-btn:hover { background: var(--primary2); }
 .body { padding: 10px; }
 .canvas-wrap { width: 100%; height: 400px; }
 canvas { display: block; width: 100%; height: 100%; background: var(--surface); }
@@ -468,14 +494,14 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
   margin-top: 8px;
   min-height: 26px;
   padding: 7px 9px;
-  border: 1px solid #e5e9eb;
+  border: 1px solid var(--border-light);
   border-radius: 7px;
-  background: #f8fafa;
+  background: var(--surface2);
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
 }
-.hover-value b { color: var(--deep); }
+.hover-value b { color: var(--dark); }
 
 /* ── Schusskurven-Tabelle ── */
 .ctab { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
@@ -484,7 +510,7 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
   color: var(--muted);
   text-align: left;
   padding: 2px 4px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 .ctab td { padding: 2px 3px; }
 .ctab input { padding: 5px 6px; font-size: 12px; text-align: right; }
@@ -501,16 +527,16 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
 .row-add {
   display: inline-flex;
   align-items: center;
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--border);
   background: transparent;
-  color: var(--green);
+  color: var(--primary);
   font-size: 12px;
   font-weight: bold;
   border-radius: 6px;
   padding: 5px 10px;
   cursor: pointer;
 }
-.row-add:hover { border-color: var(--green); background: var(--pale); }
+.row-add:hover { border-color: var(--primary); background: var(--pale); }
 
 /* ── Ereignistabelle + Prüfliste (Schusskurve) ── */
 .ev-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
@@ -519,13 +545,13 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
   color: var(--muted);
   text-align: right;
   padding: 5px 8px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 .ev-table th:first-child, .ev-table th:nth-child(2) { text-align: left; }
 .ev-table td {
   padding: 5px 8px;
-  border-bottom: 1px solid #f0f4f4;
+  border-bottom: 1px solid var(--surface2);
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -538,8 +564,8 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1.5px solid var(--green);
-  color: var(--green);
+  border: 1.5px solid var(--primary);
+  color: var(--primary);
   background: var(--surface);
   font-size: 10px;
   font-weight: bold;
@@ -552,7 +578,7 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
   align-items: flex-start;
   font-size: 12.5px;
   padding: 4px 0;
-  border-bottom: 1px solid #f0f4f4;
+  border-bottom: 1px solid var(--surface2);
   line-height: 1.45;
 }
 .checks li:last-child { border-bottom: 0; }
@@ -562,15 +588,15 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
 
 /* ── Mathe-Erklärung (Einzelseite) ── */
 .math-body { padding: 14px 18px; font-size: 13px; line-height: 1.55; }
-.math-body h4 { margin: 16px 0 6px; color: var(--green); font-size: 13.5px; }
+.math-body h4 { margin: 16px 0 6px; color: var(--primary); font-size: 13.5px; }
 .math-body h4:first-child { margin-top: 0; }
 .eq {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 15px;
   margin: 6px 0;
   padding: 8px 12px;
-  background: #f8fafa;
-  border: 1px solid #e5e9eb;
+  background: var(--surface2);
+  border: 1px solid var(--border-light);
   border-radius: 7px;
   overflow-x: auto;
   white-space: nowrap;
@@ -599,7 +625,7 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
 .eq .sqrt.tall::before { font-size: 2.3em; line-height: 1; font-weight: 300; }
 .eq .sqrt .rad { border-top: 1.2px solid currentColor; padding: 2px 6px 0 4px; }
 .math-note { color: var(--muted); font-size: 12.5px; margin: 4px 0 8px; }
-.math-note b, .math-corners b { color: var(--deep); }
+.math-note b, .math-corners b { color: var(--dark); }
 .math-corners ul { margin: 4px 0; padding-left: 20px; }
 .math-corners li { padding: 2px 0; font-variant-numeric: tabular-nums; }
 .math-out { color: var(--bad); font-weight: bold; }

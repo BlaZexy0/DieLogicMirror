@@ -40,8 +40,9 @@ jobs:
       - name: Generierte Dateien aktuell? (Theorie-SVGs + v_krit-Tabellen)
         # Die eingecheckten Artefakte müssen zum Code passen — beide
         # Generatoren sind deterministisch, ein Diff heißt: Regenerieren
-        # vergessen (node site/tools/gen-theory-svgs.mjs bzw. gen-vkrit-table.mjs).
+        # vergessen (node site/tools/gen-theory-svgs.mjs, gen-vkrit-table.mjs bzw. gen-palette.mjs).
         run: |
           node site/tools/gen-theory-svgs.mjs
           node site/tools/gen-vkrit-table.mjs
-          git diff --exit-code -- site/assets/theorie site/app/js/core/vkritTable.js packages/hpdcsim/hpdcsim/_vkrit_table.py
+          node site/tools/gen-palette.mjs
+          git diff --exit-code -- site/assets/theorie site/assets/palette.svg site/app/js/core/vkritTable.js packages/hpdcsim/hpdcsim/_vkrit_table.py

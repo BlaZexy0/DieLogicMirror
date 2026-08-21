@@ -56,7 +56,9 @@ dielogic/
 │   │   └── stl-app.js        Ansicht + Verdrahtung (Canvas, Tabellen, Events)
 │   ├── kosten/          Teilekosten-Kalkulation (Abschnitt cost, verknüpfte Felder)
 │   ├── zyklus/          Zyklusanalyse (Abschnitt cycle, Zeitleiste)
-│   ├── shared.css       Design-Tokens + Basis-Styles (DieLogic Teal)
+│   ├── shared.css       Basis-Styles; :root-Tokens = Spiegel von app/config/palette.js
+│   ├── tools/           Generatoren: gen-theory-svgs, gen-vkrit-table, gen-palette
+│   │                    (assets/palette.svg + .png — Farbtafel mit Kontrastwerten)
 │   ├── nav.js           injiziert Site-Navigation + Footer (selbstversorgend)
 │   ├── assets/          logo.svg (Vektor-Logo), icon-*.png (Favicons,
 │   │                    aus logo.svg gerendert), site.webmanifest, team-mockup.svg
@@ -65,6 +67,10 @@ dielogic/
 │       ├── chart.html       Diagramm-Einzelseite
 │       ├── konto.html       Konto: Einladung einlösen, Anmelden, Projekte/Revisionen,
 │       │                    Mitglieder, Einladungen (Admin)
+│       ├── config/          palette.js (DIE Farbquelle — CSS-Tokens, theme.js und die
+│       │                    JS-Konstanten in nav.js/projectbar.js spiegeln sie; Test
+│       │                    palette.test.mjs prüft Gleichheit + WCAG-Kontrast),
+│       │                    theme.js (Diagramm-Farben), machines/alloys/parts/kosten
 │       ├── shared/          project.js (Projektspeicher + Querbezüge), projectbar.js
 │       │                    (Projektleiste), contract.js (STL → design), clampmodel.js
 │       ├── css/site.css     Layout-Offsets für die 56px-Navigation

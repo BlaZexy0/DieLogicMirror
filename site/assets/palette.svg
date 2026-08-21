@@ -1,0 +1,253 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1256 1706" width="1256" height="1706" font-family="-apple-system,Inter,Segoe UI,Helvetica,Arial,sans-serif" role="img" aria-label="DieLogic Farbpalette">
+<rect width="1256" height="1706" fill="#ffffff"/>
+<text x="28" y="38" font-size="22" font-weight="700" fill="#002733">DieLogic — Farbpalette</text>
+<text x="28" y="56" font-size="11.5" fill="#4c6870">Quelle: site/app/config/palette.js · Spiegel in shared.css, app/css/main.css (:root) und config/theme.js (ui) · Kontrast nach WCAG 2.x, T = als Text geeignet (≥ 4,5:1), t = nur groß/fett (≥ 3:1)</text>
+<text x="28" y="106" font-size="11" font-weight="700" letter-spacing="1.2" fill="#4c6870">MARKE</text>
+<rect x="28" y="126" width="56" height="56" rx="8" fill="#002733" stroke="none"/>
+<text x="56" y="160" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="96" y="141" font-size="13.5" font-weight="700" fill="#002733">dark</text>
+<text x="96" y="157" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--dark · #002733</text>
+<text x="96" y="173" font-size="10.5" fill="#2a3f4a">Petrol — Kopf, Hero, Fließtext</text>
+<text x="96" y="202" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 15.7:1 T   auf Petrol 1.0:1 –</text>
+<rect x="328" y="126" width="56" height="56" rx="8" fill="#0a3945" stroke="none"/>
+<text x="356" y="160" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="396" y="141" font-size="13.5" font-weight="700" fill="#002733">dark2</text>
+<text x="396" y="157" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--dark2 · #0a3945</text>
+<text x="396" y="173" font-size="10.5" fill="#2a3f4a">Petrol, Verlauf/Dropdowns</text>
+<text x="396" y="202" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 12.5:1 T   auf Petrol 1.3:1 –</text>
+<rect x="628" y="126" width="56" height="56" rx="8" fill="#1b4a57" stroke="none"/>
+<text x="656" y="160" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="696" y="141" font-size="13.5" font-weight="700" fill="#002733">dark3</text>
+<text x="696" y="157" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--dark3 · #1b4a57</text>
+<text x="696" y="173" font-size="10.5" fill="#2a3f4a">Petrol, Karten auf dunkel, Zyklus</text>
+<text x="696" y="186" font-size="10.5" fill="#2a3f4a">„geschlossen&quot;</text>
+<text x="696" y="202" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 9.7:1 T   auf Petrol 1.6:1 –</text>
+<rect x="928" y="126" width="56" height="56" rx="8" fill="#008c82" stroke="none"/>
+<text x="956" y="160" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="996" y="141" font-size="13.5" font-weight="700" fill="#002733">primary</text>
+<text x="996" y="157" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--primary · #008c82</text>
+<text x="996" y="173" font-size="10.5" fill="#2a3f4a">DieLogic Teal — Buttons, Links, Serien</text>
+<text x="996" y="202" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 4.1:1 t   auf Petrol 3.8:1 t</text>
+<rect x="28" y="244" width="56" height="56" rx="8" fill="#00726a" stroke="none"/>
+<text x="56" y="278" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="96" y="259" font-size="13.5" font-weight="700" fill="#002733">primary2</text>
+<text x="96" y="275" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--primary2 · #00726a</text>
+<text x="96" y="291" font-size="10.5" fill="#2a3f4a">Teal hover</text>
+<text x="96" y="320" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 5.8:1 T   auf Petrol 2.7:1 –</text>
+<rect x="328" y="244" width="56" height="56" rx="8" fill="#00534d" stroke="none"/>
+<text x="356" y="278" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="396" y="259" font-size="13.5" font-weight="700" fill="#002733">primaryDeep</text>
+<text x="396" y="275" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--primary-deep · #00534d</text>
+<text x="396" y="291" font-size="10.5" fill="#2a3f4a">Teal dunkel — Verlaufsende</text>
+<text x="396" y="304" font-size="10.5" fill="#2a3f4a">Kopfzeile/Hero</text>
+<text x="396" y="320" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 9.0:1 T   auf Petrol 1.8:1 –</text>
+<rect x="628" y="244" width="56" height="56" rx="8" fill="#3fc2b6" stroke="none"/>
+<text x="656" y="278" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="696" y="259" font-size="13.5" font-weight="700" fill="#002733">primaryLight</text>
+<text x="696" y="275" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--primary-light · #3fc2b6</text>
+<text x="696" y="291" font-size="10.5" fill="#2a3f4a">Teal hell — Akzent auf dunklem Grund,</text>
+<text x="696" y="304" font-size="10.5" fill="#2a3f4a">Flächen</text>
+<text x="696" y="320" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 2.2:1 –   auf Petrol 7.2:1 T</text>
+<rect x="928" y="244" width="56" height="56" rx="8" fill="#e5f3f2" stroke="#ccd4d6"/>
+<text x="956" y="278" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="996" y="259" font-size="13.5" font-weight="700" fill="#002733">pale</text>
+<text x="996" y="275" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--pale · #e5f3f2</text>
+<text x="996" y="291" font-size="10.5" fill="#2a3f4a">Teal-Tint — Flächen, bevorzugte Zeilen</text>
+<text x="996" y="320" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.1:1 –   auf Petrol 13.8:1 T</text>
+<rect x="28" y="362" width="56" height="56" rx="8" fill="#b8ddd2" stroke="none"/>
+<text x="56" y="396" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="96" y="377" font-size="13.5" font-weight="700" fill="#002733">paleBorder</text>
+<text x="96" y="393" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--pale-border · #b8ddd2</text>
+<text x="96" y="409" font-size="10.5" fill="#2a3f4a">Rahmen auf Teal-Tint</text>
+<text x="96" y="438" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.5:1 –   auf Petrol 10.7:1 T</text>
+<rect x="328" y="362" width="56" height="56" rx="8" fill="#8cbee6" stroke="none"/>
+<text x="356" y="396" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="396" y="377" font-size="13.5" font-weight="700" fill="#002733">accent</text>
+<text x="396" y="393" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--accent · #8cbee6</text>
+<text x="396" y="409" font-size="10.5" fill="#2a3f4a">Hellblau — Serie 3, Flächen</text>
+<text x="396" y="438" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 2.0:1 –   auf Petrol 7.9:1 T</text>
+<text x="28" y="494" font-size="11" font-weight="700" letter-spacing="1.2" fill="#4c6870">STATUS</text>
+<rect x="28" y="514" width="56" height="56" rx="8" fill="#0d7a3c" stroke="none"/>
+<text x="56" y="548" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="96" y="529" font-size="13.5" font-weight="700" fill="#002733">ok</text>
+<text x="96" y="545" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--ok · #0d7a3c</text>
+<text x="96" y="561" font-size="10.5" fill="#2a3f4a">erfüllt</text>
+<text x="96" y="590" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 5.4:1 T   auf Petrol 2.9:1 –</text>
+<rect x="328" y="514" width="56" height="56" rx="8" fill="#12a150" stroke="none"/>
+<text x="356" y="548" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="396" y="529" font-size="13.5" font-weight="700" fill="#002733">okBorder</text>
+<text x="396" y="545" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--ok-border · #12a150</text>
+<text x="396" y="561" font-size="10.5" fill="#2a3f4a"></text>
+<text x="396" y="590" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 3.4:1 t   auf Petrol 4.7:1 T</text>
+<rect x="628" y="514" width="56" height="56" rx="8" fill="#dcefe3" stroke="none"/>
+<text x="656" y="548" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="696" y="529" font-size="13.5" font-weight="700" fill="#002733">okBg</text>
+<text x="696" y="545" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--ok-bg · #dcefe3</text>
+<text x="696" y="561" font-size="10.5" fill="#2a3f4a"></text>
+<text x="696" y="590" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.2:1 –   auf Petrol 13.1:1 T</text>
+<rect x="928" y="514" width="56" height="56" rx="8" fill="#c2447e" stroke="none"/>
+<text x="956" y="548" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="996" y="529" font-size="13.5" font-weight="700" fill="#002733">warn</text>
+<text x="996" y="545" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--warn · #c2447e</text>
+<text x="996" y="561" font-size="10.5" fill="#2a3f4a">Magenta — Grenzen, Warnung, Löschen</text>
+<text x="996" y="590" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 4.7:1 T   auf Petrol 3.3:1 t</text>
+<rect x="28" y="632" width="56" height="56" rx="8" fill="#eec3d4" stroke="none"/>
+<text x="56" y="666" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="96" y="647" font-size="13.5" font-weight="700" fill="#002733">warnSoft</text>
+<text x="96" y="663" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--warn-soft · #eec3d4</text>
+<text x="96" y="679" font-size="10.5" fill="#2a3f4a">Rahmen auf Magenta-Tint</text>
+<text x="96" y="708" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.6:1 –   auf Petrol 10.0:1 T</text>
+<rect x="328" y="632" width="56" height="56" rx="8" fill="#fdf2f6" stroke="#ccd4d6"/>
+<text x="356" y="666" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="396" y="647" font-size="13.5" font-weight="700" fill="#002733">warnBg</text>
+<text x="396" y="663" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--warn-bg · #fdf2f6</text>
+<text x="396" y="679" font-size="10.5" fill="#2a3f4a">Magenta-Tint</text>
+<text x="396" y="708" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.1:1 –   auf Petrol 14.4:1 T</text>
+<rect x="628" y="632" width="56" height="56" rx="8" fill="#8a6d00" stroke="none"/>
+<text x="656" y="666" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="696" y="647" font-size="13.5" font-weight="700" fill="#002733">warnText</text>
+<text x="696" y="663" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--warn-text · #8a6d00</text>
+<text x="696" y="679" font-size="10.5" fill="#2a3f4a">Amber als Text (knapp) — 4.9:1 auf</text>
+<text x="696" y="692" font-size="10.5" fill="#2a3f4a">Weiß</text>
+<text x="696" y="708" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 4.9:1 T   auf Petrol 3.2:1 t</text>
+<rect x="928" y="632" width="56" height="56" rx="8" fill="#e0a400" stroke="none"/>
+<text x="956" y="666" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="996" y="647" font-size="13.5" font-weight="700" fill="#002733">warnBorder</text>
+<text x="996" y="663" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--warn-border · #e0a400</text>
+<text x="996" y="679" font-size="10.5" fill="#2a3f4a">Amber-Rahmen, Serie 4 (nicht als Text)</text>
+<text x="996" y="708" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 2.2:1 –   auf Petrol 7.1:1 T</text>
+<rect x="28" y="750" width="56" height="56" rx="8" fill="#d4a908" stroke="none"/>
+<text x="56" y="784" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="96" y="765" font-size="13.5" font-weight="700" fill="#002733">gold</text>
+<text x="96" y="781" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--gold · #d4a908</text>
+<text x="96" y="797" font-size="10.5" fill="#2a3f4a">Gold — Kategorie/Sprühen/Energie</text>
+<text x="96" y="810" font-size="10.5" fill="#2a3f4a">(nicht als Text)</text>
+<text x="96" y="826" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 2.2:1 –   auf Petrol 7.1:1 T</text>
+<rect x="328" y="750" width="56" height="56" rx="8" fill="#fff8e1" stroke="#ccd4d6"/>
+<text x="356" y="784" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="396" y="765" font-size="13.5" font-weight="700" fill="#002733">noteBg</text>
+<text x="396" y="781" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--note-bg · #fff8e1</text>
+<text x="396" y="797" font-size="10.5" fill="#2a3f4a">Hinweisbox</text>
+<text x="396" y="826" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.1:1 –   auf Petrol 14.8:1 T</text>
+<rect x="628" y="750" width="56" height="56" rx="8" fill="#e6c34a" stroke="none"/>
+<text x="656" y="784" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="696" y="765" font-size="13.5" font-weight="700" fill="#002733">noteBorder</text>
+<text x="696" y="781" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--note-border · #e6c34a</text>
+<text x="696" y="797" font-size="10.5" fill="#2a3f4a"></text>
+<text x="696" y="826" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.7:1 –   auf Petrol 9.2:1 T</text>
+<rect x="928" y="750" width="56" height="56" rx="8" fill="#6b5307" stroke="none"/>
+<text x="956" y="784" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="996" y="765" font-size="13.5" font-weight="700" fill="#002733">noteText</text>
+<text x="996" y="781" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--note-text · #6b5307</text>
+<text x="996" y="797" font-size="10.5" fill="#2a3f4a"></text>
+<text x="996" y="826" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 7.3:1 T   auf Petrol 2.1:1 –</text>
+<rect x="28" y="868" width="56" height="56" rx="8" fill="#b42318" stroke="none"/>
+<text x="56" y="902" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="96" y="883" font-size="13.5" font-weight="700" fill="#002733">bad</text>
+<text x="96" y="899" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--bad · #b42318</text>
+<text x="96" y="915" font-size="10.5" fill="#2a3f4a">verletzt</text>
+<text x="96" y="944" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 6.6:1 T   auf Petrol 2.4:1 –</text>
+<rect x="328" y="868" width="56" height="56" rx="8" fill="#fff2f0" stroke="#ccd4d6"/>
+<text x="356" y="902" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="396" y="883" font-size="13.5" font-weight="700" fill="#002733">badBg</text>
+<text x="396" y="899" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--bad-bg · #fff2f0</text>
+<text x="396" y="915" font-size="10.5" fill="#2a3f4a"></text>
+<text x="396" y="944" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.1:1 –   auf Petrol 14.4:1 T</text>
+<text x="28" y="1000" font-size="11" font-weight="700" letter-spacing="1.2" fill="#4c6870">FLÄCHEN &amp; LINIEN</text>
+<rect x="28" y="1020" width="56" height="56" rx="8" fill="#f3f6f6" stroke="#ccd4d6"/>
+<text x="56" y="1054" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="96" y="1035" font-size="13.5" font-weight="700" fill="#002733">bg</text>
+<text x="96" y="1051" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--bg · #f3f6f6</text>
+<text x="96" y="1067" font-size="10.5" fill="#2a3f4a">Seitenhintergrund</text>
+<text x="96" y="1096" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.1:1 –   auf Petrol 14.4:1 T</text>
+<rect x="328" y="1020" width="56" height="56" rx="8" fill="#ffffff" stroke="#ccd4d6"/>
+<text x="356" y="1054" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="396" y="1035" font-size="13.5" font-weight="700" fill="#002733">surface</text>
+<text x="396" y="1051" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--surface · #ffffff</text>
+<text x="396" y="1067" font-size="10.5" fill="#2a3f4a">Karten</text>
+<text x="396" y="1096" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.0:1 –   auf Petrol 15.7:1 T</text>
+<rect x="628" y="1020" width="56" height="56" rx="8" fill="#f8fafa" stroke="#ccd4d6"/>
+<text x="656" y="1054" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="696" y="1035" font-size="13.5" font-weight="700" fill="#002733">surface2</text>
+<text x="696" y="1051" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--surface2 · #f8fafa</text>
+<text x="696" y="1067" font-size="10.5" fill="#2a3f4a">Zebra, Fußzeilen, Eingabefelder</text>
+<text x="696" y="1096" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.0:1 –   auf Petrol 15.0:1 T</text>
+<rect x="928" y="1020" width="56" height="56" rx="8" fill="#ccd4d6" stroke="none"/>
+<text x="956" y="1054" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="996" y="1035" font-size="13.5" font-weight="700" fill="#002733">border</text>
+<text x="996" y="1051" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--border · #ccd4d6</text>
+<text x="996" y="1067" font-size="10.5" fill="#2a3f4a">Rahmen, Achsen</text>
+<text x="996" y="1096" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.5:1 –   auf Petrol 10.4:1 T</text>
+<rect x="28" y="1138" width="56" height="56" rx="8" fill="#e5e9eb" stroke="none"/>
+<text x="56" y="1172" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="96" y="1153" font-size="13.5" font-weight="700" fill="#002733">borderLight</text>
+<text x="96" y="1169" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--border-light · #e5e9eb</text>
+<text x="96" y="1185" font-size="10.5" fill="#2a3f4a">Trennlinien, Diagrammgitter</text>
+<text x="96" y="1214" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 1.2:1 –   auf Petrol 12.8:1 T</text>
+<text x="28" y="1270" font-size="11" font-weight="700" letter-spacing="1.2" fill="#4c6870">TEXT</text>
+<rect x="28" y="1290" width="56" height="56" rx="8" fill="#002733" stroke="none"/>
+<text x="56" y="1324" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="96" y="1305" font-size="13.5" font-weight="700" fill="#002733">text</text>
+<text x="96" y="1321" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--text · #002733</text>
+<text x="96" y="1337" font-size="10.5" fill="#2a3f4a">= dark</text>
+<text x="96" y="1366" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 15.7:1 T   auf Petrol 1.0:1 –</text>
+<rect x="328" y="1290" width="56" height="56" rx="8" fill="#2a3f4a" stroke="none"/>
+<text x="356" y="1324" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="396" y="1305" font-size="13.5" font-weight="700" fill="#002733">textBody</text>
+<text x="396" y="1321" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--text-body · #2a3f4a</text>
+<text x="396" y="1337" font-size="10.5" fill="#2a3f4a">Fließtext in Prosa-Blöcken</text>
+<text x="396" y="1366" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 11.0:1 T   auf Petrol 1.4:1 –</text>
+<rect x="628" y="1290" width="56" height="56" rx="8" fill="#4c6870" stroke="none"/>
+<text x="656" y="1324" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="696" y="1305" font-size="13.5" font-weight="700" fill="#002733">muted</text>
+<text x="696" y="1321" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--muted · #4c6870</text>
+<text x="696" y="1337" font-size="10.5" fill="#2a3f4a">Nebentext, Achsbeschriftung — 6.0:1</text>
+<text x="696" y="1350" font-size="10.5" fill="#2a3f4a">auf Weiß</text>
+<text x="696" y="1366" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 6.0:1 T   auf Petrol 2.6:1 –</text>
+<rect x="928" y="1290" width="56" height="56" rx="8" fill="#9aacb4" stroke="none"/>
+<text x="956" y="1324" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="996" y="1305" font-size="13.5" font-weight="700" fill="#002733">mutedLight</text>
+<text x="996" y="1321" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--muted-light · #9aacb4</text>
+<text x="996" y="1337" font-size="10.5" fill="#2a3f4a">nur Flächen/Linien</text>
+<text x="996" y="1350" font-size="10.5" fill="#2a3f4a">(Nebenzeiten-Balken)</text>
+<text x="996" y="1366" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 2.4:1 –   auf Petrol 6.7:1 T</text>
+<rect x="28" y="1408" width="56" height="56" rx="8" fill="#8fb8c4" stroke="none"/>
+<text x="56" y="1442" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="96" y="1423" font-size="13.5" font-weight="700" fill="#002733">ondark</text>
+<text x="96" y="1439" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--ondark · #8fb8c4</text>
+<text x="96" y="1455" font-size="10.5" fill="#2a3f4a">Text auf dunklem Grund — 7.3:1</text>
+<text x="96" y="1484" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 2.1:1 –   auf Petrol 7.3:1 T</text>
+<rect x="328" y="1408" width="56" height="56" rx="8" fill="#7a9aa6" stroke="none"/>
+<text x="356" y="1442" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="396" y="1423" font-size="13.5" font-weight="700" fill="#002733">ondark2</text>
+<text x="396" y="1439" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--ondark2 · #7a9aa6</text>
+<text x="396" y="1455" font-size="10.5" fill="#2a3f4a">Fußzeilen-Links auf dunkel — 4.6:1</text>
+<text x="396" y="1484" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 3.0:1 –   auf Petrol 5.2:1 T</text>
+<text x="28" y="1540" font-size="11" font-weight="700" letter-spacing="1.2" fill="#4c6870">KATEGORIEN: WERKZEUGE (LANDINGPAGE), ZYKLUS-SPUREN, STL-ROLLEN</text>
+<rect x="28" y="1560" width="56" height="56" rx="8" fill="#9a77e8" stroke="none"/>
+<text x="56" y="1594" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="96" y="1575" font-size="13.5" font-weight="700" fill="#002733">catPurple</text>
+<text x="96" y="1591" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--cat-purple · #9a77e8</text>
+<text x="96" y="1607" font-size="10.5" fill="#2a3f4a">Kernzüge / Zyklusanalyse</text>
+<text x="96" y="1636" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 3.4:1 t   auf Petrol 4.6:1 T</text>
+<rect x="328" y="1560" width="56" height="56" rx="8" fill="#4c9f70" stroke="none"/>
+<text x="356" y="1594" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="396" y="1575" font-size="13.5" font-weight="700" fill="#002733">catGreen</text>
+<text x="396" y="1591" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--cat-green · #4c9f70</text>
+<text x="396" y="1607" font-size="10.5" fill="#2a3f4a">Kühlung / Teilekosten (Fläche, nicht</text>
+<text x="396" y="1620" font-size="10.5" fill="#2a3f4a">als Text)</text>
+<text x="396" y="1636" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 3.2:1 t   auf Petrol 4.9:1 T</text>
+<rect x="628" y="1560" width="56" height="56" rx="8" fill="#557786" stroke="none"/>
+<text x="656" y="1594" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="696" y="1575" font-size="13.5" font-weight="700" fill="#002733">catSlate</text>
+<text x="696" y="1591" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--cat-slate · #557786</text>
+<text x="696" y="1607" font-size="10.5" fill="#2a3f4a">Form öffnen/schließen, Nebentext auf</text>
+<text x="696" y="1620" font-size="10.5" fill="#2a3f4a">Landing — 4.5:1</text>
+<text x="696" y="1636" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 4.8:1 T   auf Petrol 3.3:1 t</text>
+<rect x="928" y="1560" width="56" height="56" rx="8" fill="#e07b39" stroke="none"/>
+<text x="956" y="1594" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="996" y="1575" font-size="13.5" font-weight="700" fill="#002733">catOrange</text>
+<text x="996" y="1591" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--cat-orange · #e07b39</text>
+<text x="996" y="1607" font-size="10.5" fill="#2a3f4a">STL: Datei ohne Rolle</text>
+<text x="996" y="1636" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf Weiß 3.0:1 –   auf Petrol 5.3:1 T</text>
+</svg>

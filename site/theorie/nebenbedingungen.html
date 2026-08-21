@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nebenbedingungen der Auslegung · Theorie · DieLogic</title>
-  <meta name="theme-color" content="#002733">
+  <meta name="theme-color" content="var(--dark)">
   <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png">
   <link rel="apple-touch-icon" href="../assets/icon-180.png">
@@ -43,7 +43,7 @@
       margin: 1.2rem 0;
       scroll-margin-top: 80px;
     }
-    .nb-card .math-block { background: #f8fafa; box-shadow: none; }
+    .nb-card .math-block { background: var(--surface2); box-shadow: none; }
     .nb-card h3 {
       font-size: 1rem;
       font-weight: 700;
@@ -62,7 +62,7 @@
     }
     .nb-tag {
       background: var(--dark);
-      color: #fff;
+      color: var(--surface);
       font-size: 0.72rem;
       font-weight: 700;
       padding: 2px 9px;
@@ -79,20 +79,20 @@
       gap: 0.25rem 1rem;
       margin: 0.8rem 0;
       padding: 0.8rem 1rem;
-      background: #f8fafa;
+      background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       font-size: 0.85rem;
     }
     dl.sym dt { font-weight: 600; color: var(--primary2); }
-    dl.sym dd { margin: 0; color: #2a3f4a; }
+    dl.sym dd { margin: 0; color: var(--text-body); }
 
     /* Quellenzeile */
     .src { font-size: 0.78rem; color: var(--muted); margin-top: 0.8rem; line-height: 1.6; }
     .src b { color: var(--text); }
 
     /* Literaturverzeichnis */
-    .refs ol { margin: 0.8rem 0 0.8rem 1.2rem; font-size: 0.85rem; line-height: 1.7; color: #2a3f4a; }
+    .refs ol { margin: 0.8rem 0 0.8rem 1.2rem; font-size: 0.85rem; line-height: 1.7; color: var(--text-body); }
     .refs ol li { margin-bottom: 0.5rem; overflow-wrap: break-word; }
     .refs a { color: var(--primary); }
   </style>

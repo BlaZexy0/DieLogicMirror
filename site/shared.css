@@ -7,24 +7,52 @@
    ============================================================ */
 
 /* ── Design-Tokens ─────────────────────────────────────────── */
+/* Farb-Tokens: Spiegel von app/config/palette.js (dort dokumentiert,
+   Test palette.test.mjs hält beide gleich). Hier nichts von Hand ändern. */
 :root {
-  --dark:    #002733;   /* Petrol, dunkel (Header/Hero) */
-  --dark2:   #0a3945;
-  --dark3:   #1b4a57;
-  --primary: #008c82;   /* DieLogic Teal */
-  --primary2:#00726a;
-  --accent:  #8cbee6;
-  --warn:    #c2447e;
-  --bg:      #f3f6f6;
+  --dark: #002733;
+  --dark2: #0a3945;
+  --dark3: #1b4a57;
+  --primary: #008c82;
+  --primary2: #00726a;
+  --primary-deep: #00534d;
+  --primary-light: #3fc2b6;
+  --pale: #e5f3f2;
+  --pale-border: #b8ddd2;
+  --accent: #8cbee6;
+  --ok: #0d7a3c;
+  --ok-border: #12a150;
+  --ok-bg: #dcefe3;
+  --warn: #c2447e;
+  --warn-soft: #eec3d4;
+  --warn-bg: #fdf2f6;
+  --warn-text: #8a6d00;
+  --warn-border: #e0a400;
+  --gold: #d4a908;
+  --note-bg: #fff8e1;
+  --note-border: #e6c34a;
+  --note-text: #6b5307;
+  --bad: #b42318;
+  --bad-bg: #fff2f0;
+  --bg: #f3f6f6;
   --surface: #ffffff;
-  --border:  #ccd4d6;
-  --text:    #002733;
-  --muted:   #4c6870;
-  --ondark:  #8fb8c4;   /* gedämpfter Text auf dunklem Grund */
-  --mono:    'JetBrains Mono','Fira Code','Courier New',monospace;
-  --sans:    -apple-system,'Inter',BlinkMacSystemFont,'Segoe UI',sans-serif;
-  --radius:  8px;
-  --shadow:  0 2px 12px rgba(0,39,51,0.08);
+  --surface2: #f8fafa;
+  --border: #ccd4d6;
+  --border-light: #e5e9eb;
+  --text: #002733;
+  --text-body: #2a3f4a;
+  --muted: #4c6870;
+  --muted-light: #9aacb4;
+  --ondark: #8fb8c4;
+  --ondark2: #7a9aa6;
+  --cat-purple: #9a77e8;
+  --cat-green: #4c9f70;
+  --cat-slate: #557786;
+  --cat-orange: #e07b39;
+  --mono: 'JetBrains Mono','Fira Code','Courier New',monospace;
+  --sans: -apple-system,'Inter',BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --radius: 8px;
+  --shadow: 0 2px 12px rgba(0,39,51,.08);
 }
 
 /* ── Reset ─────────────────────────────────────────────────── */
@@ -117,7 +145,7 @@ body {
 .page-content p, .page-content li, .page-content address {
   font-size: 0.92rem;
   line-height: 1.75;
-  color: #2a3f4a;
+  color: var(--text-body);
   font-style: normal;
 }
 .page-content p { margin-bottom: 0.8rem; }
@@ -145,12 +173,12 @@ body {
 
 .hero-tags { display: flex; gap: 0.5rem; margin-top: 1.2rem; flex-wrap: wrap; }
 .hero-tag {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,.08);
   color: var(--ondark);
   font-size: 0.72rem;
   padding: 0.2rem 0.6rem;
   border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,.1);
 }
 
 .content-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem; }
@@ -196,12 +224,12 @@ body {
   margin: 1.5rem 0 0.6rem;
   color: var(--text);
 }
-.prose p { font-size: 0.92rem; line-height: 1.75; color: #2a3f4a; margin-bottom: 0.8rem; }
-.prose ul { margin: 0 0 0.8rem 1.4rem; font-size: 0.9rem; line-height: 1.75; color: #2a3f4a; }
+.prose p { font-size: 0.92rem; line-height: 1.75; color: var(--text-body); margin-bottom: 0.8rem; }
+.prose ul { margin: 0 0 0.8rem 1.4rem; font-size: 0.9rem; line-height: 1.75; color: var(--text-body); }
 
 .derivation-box {
-  background: #eaf5f1;
-  border: 1px solid #b8ddd2;
+  background: var(--pale);
+  border: 1px solid var(--pale-border);
   border-radius: var(--radius);
   padding: 1.2rem 1.5rem;
   margin: 1.2rem 0;
@@ -220,7 +248,7 @@ body {
 
 .insight-box {
   background: var(--dark);
-  color: #c3d8de;
+  color: var(--ondark);
   border-radius: var(--radius);
   padding: 1.2rem 1.5rem;
   margin: 1.2rem 0;
@@ -230,14 +258,14 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #3fc2b6;
+  color: var(--primary-light);
   margin-bottom: 0.4rem;
 }
-.insight-box p { font-size: 0.88rem; line-height: 1.65; color: #b3cdd4; margin: 0; }
+.insight-box p { font-size: 0.88rem; line-height: 1.65; color: var(--ondark); margin: 0; }
 
 .warning-box {
-  background: #fdf2f6;
-  border: 1px solid #eec3d4;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-soft);
   border-left: 3px solid var(--warn);
   border-radius: var(--radius);
   padding: 1rem 1.2rem;
@@ -249,7 +277,7 @@ body {
 .th-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 1rem 0; }
 .th-table th {
   background: var(--dark);
-  color: #c3d8de;
+  color: var(--ondark);
   padding: 0.55rem 0.9rem;
   text-align: left;
   font-size: 0.72rem;
@@ -258,7 +286,7 @@ body {
   letter-spacing: 0.07em;
 }
 .th-table td { padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--border); }
-.th-table tr:nth-child(even) td { background: #f8fafa; }
+.th-table tr:nth-child(even) td { background: var(--surface2); }
 
 /* Formel-Markup (ohne Abhängigkeiten — identisch zur Mathe-Karte der App) */
 .eq {
@@ -295,7 +323,7 @@ body {
 
 /* Platzhalter-Markierung: [Eckige Klammern] vor Veröffentlichung ersetzen */
 .ph {
-  background: #fff3cd;
+  background: var(--note-bg);
   border-radius: 3px;
   padding: 0 0.2rem;
   font-family: var(--mono);
@@ -304,14 +332,14 @@ body {
 
 /* Hinweiskasten „Mustertext" — nach dem Ausfüllen löschen */
 .draft-note {
-  background: #fff8e1;
-  border: 1px solid #e6c34a;
-  border-left: 4px solid #d4a908;
+  background: var(--note-bg);
+  border: 1px solid var(--note-border);
+  border-left: 4px solid var(--gold);
   border-radius: var(--radius);
   padding: 0.9rem 1.2rem;
   margin: 0 0 1.8rem;
   font-size: 0.85rem;
   line-height: 1.6;
-  color: #6b5307;
+  color: var(--note-text);
 }
 

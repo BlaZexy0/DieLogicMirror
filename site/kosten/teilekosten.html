@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Teilekosten-Kalkulation — DieLogic</title>
-  <meta name="theme-color" content="#002733">
+  <meta name="theme-color" content="var(--dark)">
   <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png">
   <link rel="apple-touch-icon" href="../assets/icon-180.png">
@@ -26,7 +26,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.07em;
-      color: #c3d8de;
+      color: var(--ondark);
       background: var(--dark);
       padding: 0.55rem 1rem;
     }
@@ -45,7 +45,7 @@
       flex: none;
     }
     .tk-field input:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
-    .tk-field input.linked { border-color: var(--primary); background: rgba(0,140,130,0.06); }
+    .tk-field input.linked { border-color: var(--primary); background: rgba(0,140,130,.06); }
 
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 0.9rem; margin-bottom: 1.2rem; }
     .kpi {
@@ -72,14 +72,14 @@
 
     .tk-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     .tk-table th {
-      background: var(--dark); color: #c3d8de; padding: 0.5rem 0.9rem; text-align: right;
+      background: var(--dark); color: var(--ondark); padding: 0.5rem 0.9rem; text-align: right;
       font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
     }
     .tk-table th:first-child { text-align: left; }
     .tk-table td { padding: 0.5rem 0.9rem; border-bottom: 1px solid var(--border); text-align: right; font-family: var(--mono); font-size: 0.8rem; }
     .tk-table td:first-child { text-align: left; font-family: var(--sans); font-size: 0.84rem; }
     .tk-table td .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 0.5rem; vertical-align: baseline; }
-    .tk-table tfoot td { font-weight: 700; border-top: 2px solid var(--dark); border-bottom: none; background: #f8fafa; }
+    .tk-table tfoot td { font-weight: 700; border-top: 2px solid var(--dark); border-bottom: none; background: var(--surface2); }
 
     .lever-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.4rem; padding: 0.6rem 1.1rem 1.1rem; align-items: start; }
     @media (max-width: 860px) { .lever-grid { grid-template-columns: 1fr; } }
@@ -240,6 +240,7 @@
 
 </div>
 
+<script src="../app/config/palette.js"></script>
 <script src="../app/shared/project.js"></script>
 <script src="../app/shared/projectbar.js" data-base=".."></script>
 <script src="../zyklus/zyklus-logic.js"></script>
@@ -252,10 +253,11 @@
   var LOGIC = window.__TEILEKOSTEN_LOGIC__;
 
   /* ── Projekt: verknüpfte Werte + gespeicherte Eingaben ── */
-  var P = window.__PROJECT__;
+  var P = window.__PALETTE__;
+  var PR = window.__PROJECT__;
   var LINKED = ['mpart', 'mdose', 'tz'];
   var LINK_LABEL = { mpart: 'Bauteilgewicht', mdose: 'Schussgewicht', tz: 'Zykluszeit' };
-  var saved = P.getSection('cost') || {};
+  var saved = PR.getSection('cost') || {};
   /* linked[k] = Feld folgt dem Projekt (Auslegung/Zyklusanalyse); eine
      Eingabe von Hand löst die Verknüpfung, bis sie wiederhergestellt wird. */
   var linked = Object.assign({ mpart: true, mdose: true, tz: true }, saved.linked || {});
@@ -273,7 +275,7 @@
   var KEYS = ['mpart', 'mdose', 'tz', 'kav', 'a', 'oee', 'pAl', 'pRe', 'kr', 'eKg', 'pE', 'pM', 'pP', 'nP', 'wz', 'st'];
 
   function applyLinks() {
-    var D = P.derived();
+    var D = PR.derived();
     LINKED.forEach(function (k) {
       var el = document.getElementById('i-' + k);
       var on = linked[k] && D[k] != null;
@@ -287,7 +289,7 @@
       return LINK_LABEL[k] + ': von Hand gesetzt';
     });
     var anyBroken = LINKED.some(function (k) { return !linked[k]; });
-    document.getElementById('handoff-note').innerHTML = 'Projekt <strong>' + escapeHtml(P.current().name) + '</strong> — '
+    document.getElementById('handoff-note').innerHTML = 'Projekt <strong>' + escapeHtml(PR.current().name) + '</strong> — '
       + parts.join(' · ')
       + (anyBroken ? ' &nbsp;<a href="#" id="relink">Verknüpfungen wiederherstellen</a>' : '')
       + '. Preise und Sätze sind Beispielwerte aus dem Preset <code>app/config/kosten.js</code>.';
@@ -308,7 +310,7 @@
   function persist() {
     var v = {};
     KEYS.forEach(function (k) { v[k] = val(k); });
-    P.setSection('cost', { values: v, linked: linked, dg: parseFloat(document.getElementById('i-dg').value) || 0 });
+    PR.setSection('cost', { values: v, linked: linked, dg: parseFloat(document.getElementById('i-dg').value) || 0 });
   }
 
   KEYS.forEach(function (k) {
@@ -334,12 +336,12 @@
   /* Kostenblöcke mit Anzeige-Label und Farbe (Reihenfolge = Tabelle + Balken). */
   function blocksOf(r) {
     return [
-      ['Legierung (Neumetall im Teil)', r.matAlloy, '#008c82'],
-      ['Krätze- / Schmelzverlust', r.matLoss, '#c2447e'],
-      ['Umschmelzen Kreislauf + Ausschuss', r.matRemelt, '#3fc2b6'],
-      ['Energie (Schmelzen, Warmhalten)', r.energy, '#d4a908'],
-      ['Maschine + Personal', r.machine, '#1b4a57'],
-      ['Werkzeugamortisation', r.tool, '#8cbee6']
+      ['Legierung (Neumetall im Teil)', r.matAlloy, P.primary],
+      ['Krätze- / Schmelzverlust', r.matLoss, P.warn],
+      ['Umschmelzen Kreislauf + Ausschuss', r.matRemelt, P.primaryLight],
+      ['Energie (Schmelzen, Warmhalten)', r.energy, P.gold],
+      ['Maschine + Personal', r.machine, P.dark3],
+      ['Werkzeugamortisation', r.tool, P.accent]
     ];
   }
 
@@ -371,20 +373,20 @@
     /* Gitter + Achsen */
     var step = Math.max(1, Math.round((y1 - y0) / 5));
     for (var c = Math.ceil(y0 / step) * step; c <= y1; c += step) {
-      s += '<line x1="' + L + '" y1="' + Y(c) + '" x2="' + (W - R) + '" y2="' + Y(c) + '" stroke="#e3e9ea" stroke-width="1"/>';
-      s += '<text x="' + (L - 7) + '" y="' + (Y(c) + 4) + '" text-anchor="end" font-family="Arial" font-size="11" fill="#4c6870">' + fmt(c, 0) + ' €</text>';
+      s += '<line x1="' + L + '" y1="' + Y(c) + '" x2="' + (W - R) + '" y2="' + Y(c) + '" stroke="' + P.borderLight + '" stroke-width="1"/>';
+      s += '<text x="' + (L - 7) + '" y="' + (Y(c) + 4) + '" text-anchor="end" font-family="Arial" font-size="11" fill="' + P.muted + '">' + fmt(c, 0) + ' €</text>';
     }
     for (var tt = 30; tt <= t1; tt += 10) {
-      s += '<line x1="' + X(tt) + '" y1="' + T + '" x2="' + X(tt) + '" y2="' + (H - B) + '" stroke="#eef2f3" stroke-width="1"/>';
-      s += '<text x="' + X(tt) + '" y="' + (H - B + 16) + '" text-anchor="middle" font-family="Arial" font-size="11" fill="#4c6870">' + tt + '</text>';
+      s += '<line x1="' + X(tt) + '" y1="' + T + '" x2="' + X(tt) + '" y2="' + (H - B) + '" stroke="' + P.borderLight + '" stroke-width="1"/>';
+      s += '<text x="' + X(tt) + '" y="' + (H - B + 16) + '" text-anchor="middle" font-family="Arial" font-size="11" fill="' + P.muted + '">' + tt + '</text>';
     }
-    s += '<text x="' + ((L + W - R) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-family="Arial" font-size="11.5" fill="#4c6870">Zykluszeit t<tspan baseline-shift="sub" font-size="8.5">Z</tspan> in s</text>';
+    s += '<text x="' + ((L + W - R) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-family="Arial" font-size="11.5" fill="' + P.muted + '">Zykluszeit t<tspan baseline-shift="sub" font-size="8.5">Z</tspan> in s</text>';
     /* Kurve */
     var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1); }).join('');
-    s += '<path d="' + d + '" fill="none" stroke="#008c82" stroke-width="2.2"/>';
+    s += '<path d="' + d + '" fill="none" stroke="' + P.primary + '" stroke-width="2.2"/>';
     /* aktueller Punkt */
-    s += '<circle cx="' + X(v.tz) + '" cy="' + Y(r.total) + '" r="5" fill="#c2447e" stroke="#fff" stroke-width="1.6"/>';
-    s += '<text x="' + Math.min(X(v.tz) + 10, W - R - 150) + '" y="' + (Y(r.total) - 13) + '" font-family="Arial" font-size="11.5" font-weight="700" fill="#c2447e" paint-order="stroke" stroke="#ffffff" stroke-width="3.5">'
+    s += '<circle cx="' + X(v.tz) + '" cy="' + Y(r.total) + '" r="5" fill="' + P.warn + '" stroke="' + P.surface + '" stroke-width="1.6"/>';
+    s += '<text x="' + Math.min(X(v.tz) + 10, W - R - 150) + '" y="' + (Y(r.total) - 13) + '" font-family="Arial" font-size="11.5" font-weight="700" fill="' + P.warn + '" paint-order="stroke" stroke="' + P.surface + '" stroke-width="3.5">'
       + fmt(v.tz, 1) + ' s → ' + fmt(r.total, 2) + ' €/Teil</text>';
     return s + '</svg>';
   }
@@ -428,10 +430,10 @@
 
     /* Material-Hebel-Karte */
     var leverRows = [
-      ['Legierung (Neumetall)', ml.alloy, '#008c82'],
-      ['Krätze- / Schmelzverlust', ml.dross, '#c2447e'],
-      ['Umschmelzen Ausschussanteil', ml.remelt, '#3fc2b6'],
-      ['Energie (Schmelzen, Warmhalten)', ml.energy, '#d4a908']
+      ['Legierung (Neumetall)', ml.alloy, P.primary],
+      ['Krätze- / Schmelzverlust', ml.dross, P.warn],
+      ['Umschmelzen Ausschussanteil', ml.remelt, P.primaryLight],
+      ['Energie (Schmelzen, Warmhalten)', ml.energy, P.gold]
     ];
     var lr = '';
     leverRows.forEach(function (b) {

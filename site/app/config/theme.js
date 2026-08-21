@@ -1,5 +1,5 @@
 /* Farbschema des Dashboards — hier direkt editieren, kein Build nötig.
-   'ui' wird als CSS-Variablen auf die Seite angewendet, 'chart' wird von den
+   'ui' (Schlüssel = app/config/palette.js) wird als CSS-Variablen angewendet, 'chart' wird von den
    Canvas-Renderern gelesen, 'limits' färbt die Grenzen/Restriktionen der
    Diagramme (Schlüssel = limit-id, Fallback chart.limit),
    'map'/'mapLines' färben das (φ, λ)-Auslegungsfenster, 'heatStops' ist
@@ -10,21 +10,23 @@
 window.__THEME__ = {
   "name": "DieLogic Teal (Standard)",
   "ui": {
-    "deep": "#002733",
-    "green": "#008c82",
+    "dark": "#002733",
+    "primary": "#008c82",
     "pale": "#e5f3f2",
     "bg": "#f3f6f6",
-    "line": "#ccd4d6",
+    "border": "#ccd4d6",
     "muted": "#4c6870",
-    "blue": "#8cbee6",
+    "accent": "#8cbee6",
     "surface": "#ffffff",
-    "headerFrom": "#002733",
-    "headerTo": "#00534d",
+    "primaryDeep": "#00534d",
     "ok": "#0d7a3c",
     "okBorder": "#12a150",
-    "warnText": "#a67600",
+    "okBg": "#dcefe3",
+    "warnText": "#8a6d00",
     "warnBorder": "#e0a400",
-    "bad": "#b42318"
+    "bad": "#b42318",
+    "badBg": "#fff2f0",
+    "noteBg": "#fff8e1"
   },
   "chart": {
     "surface": "#ffffff",
@@ -58,7 +60,7 @@ window.__THEME__ = {
     "vmax": "#8c5a00",
     "vcrit": "#c2447e",
     "mpe": "#000000",
-    "fill100": "#5f8391",
+    "fill100": "#557786",
     "force": "#8c5a00",
     "intTime": "#8c5a00",
     "ventAvail": "#8c5a00"

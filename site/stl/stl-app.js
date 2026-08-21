@@ -12,7 +12,8 @@
     Y: { u: 0, v: 2, uName: 'X', vName: 'Z' },
     Z: { u: 0, v: 1, uName: 'X', vName: 'Y' },
   };
-  const COLORS = ['#008c82', '#8cbee6', '#9a77e8', '#c2447e', '#d4a908', '#4c9f70', '#e07b39', '#5f8391'];
+  const PAL = window.__PALETTE__;
+  const COLORS = [PAL.primary, PAL.catGreen, PAL.catOrange, PAL.catPurple, PAL.warn, PAL.accent, PAL.gold, PAL.catSlate];
   const PAD = 36;
 
   const models = [];      // { name, tris, color, volume, area, role, proj: {X,Y,Z} }
@@ -185,14 +186,14 @@
     const cog = unionSilhouette();
     const font = '700 11px ' + getComputedStyle(document.body).fontFamily;
     if (cog) {
-      ctx.strokeStyle = '#4c6870';
+      ctx.strokeStyle = PAL.muted;
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
       ctx.beginPath(); ctx.moveTo(toX(0), toY(0)); ctx.lineTo(toX(cog.cu), toY(cog.cv)); ctx.stroke();
       ctx.setLineDash([]);
     }
-    ctx.strokeStyle = '#002733';
-    ctx.fillStyle = '#002733';
+    ctx.strokeStyle = PAL.dark;
+    ctx.fillStyle = PAL.dark;
     ctx.lineWidth = 1.4;
     ctx.font = font;
     ctx.beginPath(); ctx.arc(toX(0), toY(0), 4, 0, 2 * Math.PI); ctx.stroke();
@@ -204,9 +205,9 @@
     ctx.fillText('0', toX(0) + 7, toY(0) + 7);
     if (cog) {
       const gx = toX(cog.cu), gy = toY(cog.cv);
-      ctx.fillStyle = '#c2447e';
+      ctx.fillStyle = PAL.warn;
       ctx.beginPath(); ctx.arc(gx, gy, 5, 0, 2 * Math.PI); ctx.fill();
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = PAL.surface;
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(gx, gy, 5, 0, 2 * Math.PI); ctx.stroke();
       ctx.fillText('S', gx + 8, gy + 7);
@@ -214,8 +215,8 @@
 
     /* Achsenkreuz der Bildebene, unten links */
     const a = AXES[dir], ox = 18, oy = H - 18, len = 34;
-    ctx.strokeStyle = '#4c6870';
-    ctx.fillStyle = '#4c6870';
+    ctx.strokeStyle = PAL.muted;
+    ctx.fillStyle = PAL.muted;
     ctx.lineWidth = 1.4;
     ctx.font = '600 11px ' + getComputedStyle(document.body).fontFamily;
     ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox + len, oy); ctx.stroke();
@@ -415,7 +416,7 @@
     off.width = canvas.width;
     off.height = canvas.height;
     const ctx = off.getContext('2d');
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = PAL.surface;
     ctx.fillRect(0, 0, off.width, off.height);
     ctx.drawImage(canvas, 0, 0);
     off.toBlob((blob) => {
