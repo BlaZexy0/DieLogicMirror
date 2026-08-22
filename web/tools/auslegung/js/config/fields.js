@@ -66,7 +66,15 @@ export const groups = [
       { key: 'Tcast',   label: 'Gießtemperatur',    unit: '°C',     def: 660 },
       { key: 'Tflow',   label: 'Min. Fließtemp.',   unit: '°C',     def: 580 },
       { key: 'Zconst',  label: 'Z-Konstante',       unit: '°C/%',   def: 4.8 },
-      { key: 'solK',    label: 'Erstarrungskonstante', unit: 'ms/mm²', def: 10 }
+      { key: 'solK',    label: 'Erstarrungskonstante', unit: 'ms/mm²', def: 10 },
+      /* Thermik für die Wärmebilanz der Zyklusanalyse (Wärmeeintrag des
+         Gussstücks von Liquidus bis Entformung) — im Dashboard eingeklappt. */
+      { key: 'Tliq',    label: 'Liquidustemperatur',   unit: '°C',       def: 593,  adv: true },
+      { key: 'Tsol',    label: 'Solidustemperatur',    unit: '°C',       def: 521,  adv: true },
+      { key: 'hf',      label: 'Erstarrungswärme',     unit: 'kJ/kg',    def: 403,  adv: true },
+      { key: 'cp20',    label: 'c_p bei 20 °C',        unit: 'J/(kg·K)', def: 846,  adv: true },
+      { key: 'cpS',     label: 'c_p bei Solidus',      unit: 'J/(kg·K)', def: 1034, adv: true },
+      { key: 'cpL',     label: 'c_p bei Liquidus',     unit: 'J/(kg·K)', def: 1056, adv: true }
     ]
   },
   {

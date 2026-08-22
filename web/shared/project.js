@@ -255,10 +255,13 @@
        mdose  Schussgewicht [kg]       ⇐ part + runner + overflow + biscuit
        tz     Zykluszeit [s]           ⇐ cycle (Zeitleiste, __ZYKLUS_LOGIC__)
        machine Maschinen-Preset        ⇐ design.machine
+       Tdie   Formtemperatur [°C]      ⇐ design.values.Tdie
+       alloyThermal { Tliq, Tsol, hf, cp20, cpS, cpL } ⇐ design.values (Legierung)
+       Afgr   Formgravuroberfläche [m²] ⇐ geometry.files[].area (Summe)
      Fehlende Quellen liefern null. */
   function derived(doc) {
     var p = doc || current();
-    var out = { mpart: null, mdose: null, tz: null, machine: null, sources: {} };
+    var out = { mpart: null, mdose: null, tz: null, machine: null, Tdie: null, alloyThermal: null, Afgr: null, sources: {} };
     if (!p) return out;
     var v = p.design && isObj(p.design.values) ? p.design.values : null;
     if (v) {
@@ -269,9 +272,23 @@
         out.sources.mdose = 'Auslegung (Bauteil + Anguss + Überlauf + Pressrest)';
       }
     }
+    if (v) {
+      var Tdie = Number(v.Tdie);
+      if (isFinite(Tdie) && Tdie > 0) { out.Tdie = Tdie; out.sources.Tdie = 'Auslegung (Formtemperatur)'; }
+      var th = {}, thOk = true;
+      ['Tliq', 'Tsol', 'hf', 'cp20', 'cpS', 'cpL'].forEach(function (k) {
+        var x = Number(v[k]); if (isFinite(x) && x > 0) th[k] = x; else thOk = false;
+      });
+      if (thOk) { out.alloyThermal = th; out.sources.alloyThermal = 'Auslegung (Legierungswerte)'; }
+    }
     if (p.design && typeof p.design.machine === 'string' && p.design.machine) {
       out.machine = p.design.machine;
       out.sources.machine = 'Auslegung (Maschinen-Preset)';
+    }
+    if (p.geometry && Array.isArray(p.geometry.files)) {
+      var A = 0;
+      p.geometry.files.forEach(function (f) { var a = Number(f && f.area); if (isFinite(a) && a > 0) A += a; });
+      if (A > 0) { out.Afgr = Math.round(A * 1e-6 * 1e4) / 1e4; out.sources.Afgr = 'Sprengflächenanalyse (Netzoberfläche aller STL)'; }
     }
     var Z = root.__ZYKLUS_LOGIC__;
     if (p.cycle && Z && typeof Z.extrasFromState === 'function') {

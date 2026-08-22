@@ -36,7 +36,9 @@ den Modulen geladen; produktiv überlagern die Stammdaten der Organisation
   Neuer Eintrag in der Liste = neue Maschine im Auswahlmenü. Die Feldnamen
   unter `fields` entsprechen den Eingabefeld-Keys (siehe `js/config/fields.js`).
 - **`/shared/examples/alloys.js`** — Legierungs-Presets (`window.__ALLOYS__`): Dichte,
-  Gieß-/Fließtemperatur, Z- und Erstarrungskonstante je Legierung.
+  Gieß-/Fließtemperatur, Z- und Erstarrungskonstante je Legierung; dazu die
+  Thermik für die Wärmebilanz der Zyklusanalyse (Tliq, Tsol, hf, cp20, cpS, cpL —
+  im Dashboard hinter „Erweiterte Optionen").
 - **`/shared/examples/parts.js`** — Bauteiltyp-Presets (`window.__PARTS__`), z. B.
   Strukturgussteil: Wandstärken, Formtemperatur, zul. Erstarrung, NADCA-Faktor.
 

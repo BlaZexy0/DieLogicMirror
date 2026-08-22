@@ -162,6 +162,51 @@
     .zk-btn.ghost:hover { background: var(--bg); color: var(--text); }
 
     .zk-footnote { font-size: 0.75rem; color: var(--muted); margin-top: 0.8rem; line-height: 1.65; }
+    /* ── Wärmebilanz & Temperiersystem ─────────────────────── */
+    .zk-cols { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 1.4rem; padding: 0.3rem 1.2rem 1rem; }
+    .zk-cols > div { min-width: 0; }
+    @media (max-width: 900px) { .zk-cols { grid-template-columns: 1fr; } }
+    .zk-group { margin-bottom: 0.9rem; }
+    .zk-group h3 { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin: 0 0 0.4rem; }
+    .zk-field { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.33rem; }
+    .zk-field label { font-size: 0.78rem; color: var(--muted); font-weight: 600; line-height: 1.3; }
+    .zk-field .unit { font-weight: 400; font-size: 0.71rem; }
+    .zk-field input, .zk-field select {
+      width: 84px; padding: 0.28rem 0.5rem; border: 1px solid var(--border); border-radius: 6px;
+      font-family: var(--mono); font-size: 0.8rem; text-align: right; flex: none;
+    }
+    .zk-field select { width: auto; max-width: 190px; font-family: var(--sans); text-align: left; background: var(--surface); color: var(--text); cursor: pointer; }
+    .zk-field input:focus, .zk-field select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+    .zk-field input.linked { border-color: var(--primary); background: rgba(0,140,130,.06); }
+    .zk-field .ro { font-family: var(--mono); font-size: 0.8rem; color: var(--text); white-space: nowrap; }
+    .zk-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.6rem; margin-bottom: 0.9rem; }
+    .zk-kpi { background: var(--bg); border: 1px solid var(--border-light); border-radius: 8px; padding: 0.5rem 0.7rem; }
+    .zk-kpi .l { font-size: 0.68rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .zk-kpi .v { font-family: var(--mono); font-size: 1.05rem; font-weight: 600; color: var(--primary2); }
+    .zk-kpi.hero { border-left: 3px solid var(--primary); }
+    .zk-kpi.hero .v { color: var(--primary); font-size: 1.25rem; }
+    .zk-kpi.bad .v { color: var(--warn); }
+    .zk-kpi .s { font-size: 0.7rem; color: var(--muted); }
+    .zk-links { font-size: 0.76rem; color: var(--muted); padding: 0 1.2rem 0.9rem; line-height: 1.6; }
+    .zk-links a { color: var(--primary); }
+    .zk-badge { display: inline-block; padding: 0.08rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+    .zk-badge.ok { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok-border); }
+    .zk-badge.bad { background: var(--bad-bg); color: var(--bad); border: 1px solid var(--warn-border); }
+    .zk-bar { height: 8px; background: var(--border-light); border-radius: 4px; overflow: hidden; min-width: 110px; }
+    .zk-bar i { display: block; height: 100%; background: var(--primary2); }
+    .zk-bar i.bad { background: var(--warn); }
+    .zk-table td.num { font-family: var(--mono); text-align: right; }
+    #tt-cap td:first-child { white-space: normal; }
+    #tt-cap td:first-child small { display: block; color: var(--muted); font-size: 0.7rem; }
+    #tt-cap .zk-bar { min-width: 70px; }
+    #tt-halves th, #tt-halves td { padding: 0.3rem 0.35rem; }
+    #tt-halves input.short { width: 48px; padding: 0.25rem 0.3rem; }
+    .zk-table input.short { width: 58px; }
+    details.zk-eq { padding: 0 1.2rem 0.9rem; }
+    details.zk-eq summary { cursor: pointer; font-size: 0.78rem; color: var(--primary); font-weight: 600; }
+    details.zk-eq .eq { margin-top: 0.5rem; }
+    details.zk-eq p { font-size: 0.78rem; color: var(--muted); line-height: 1.55; margin: 0.4rem 0 0; }
+
   </style>
 </head>
 <body>
@@ -169,7 +214,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Zyklusanalyse</h1>
-    <p class="subtitle">Der Druckguss-Zyklus als Zeitleiste: Hauptzyklus, Kernzüge, Handling, Sprühen und Kühlung — mit Zustandsband der Form.</p>
+    <p class="subtitle">Der Druckguss-Zyklus als Zeitleiste — Hauptzyklus, Kernzüge, Handling, Sprühen, Kühlung — und die Wärmebilanz je Zyklus: wie viel Wärme bringt das Gussstück ein, was geht von selbst weg, was muss das Temperiersystem leisten?</p>
   </div>
 </section>
 
@@ -249,6 +294,103 @@
     </div>
   </div>
 
+  <!-- ── Wärmebilanz je Zyklus ────────────────────────────── -->
+  <div class="zk-card" id="thermal-card">
+    <div class="head">
+      <h2>Wärmebilanz je Zyklus</h2>
+      <small>Wärmeeintrag des Gussstücks = natürliche Verluste + Temperiersystem. Der Rest, den die Form nicht von selbst loswird, ist die Kühlleistung.</small>
+      <span class="kpi-inline">Temperierleistung <span id="k-pt">—</span> kW</span>
+    </div>
+    <div class="zk-cols">
+      <div>
+        <div class="zk-group"><h3>Gussstück &amp; Legierung</h3>
+          <div class="zk-field"><label>Schussgewicht (Dosierung) <span class="unit">kg</span></label><input type="number" step="0.1" min="0" data-th="mdose"></div>
+          <div class="zk-field"><label>Entformungstemperatur t<sub>e</sub> <span class="unit">°C</span></label><input type="number" step="5" data-th="te"></div>
+          <div class="zk-field"><label>Legierung <span class="unit">T<sub>liq</sub> / T<sub>sol</sub> / h<sub>f</sub></span></label><span class="ro" id="th-alloy">—</span></div>
+          <div class="zk-field"><label>Wärme je kg <span class="unit">q = Q/G</span></label><span class="ro" id="th-q">—</span></div>
+        </div>
+        <div class="zk-group"><h3>Form &amp; Maschine</h3>
+          <div class="zk-field"><label>Formtemperatur (tiefe Zone) t<sub>f</sub> <span class="unit">°C</span></label><input type="number" step="5" data-th="Tdie"></div>
+          <div class="zk-field"><label>Formgravur-Oberfläche A<sub>fgr</sub> <span class="unit">m²</span></label><input type="number" step="0.01" min="0" data-th="Afgr"></div>
+          <div class="zk-field"><label>Form B × H × L <span class="unit">mm</span></label>
+            <span><input type="number" step="10" min="0" data-th="dieB" style="width:62px"> <input type="number" step="10" min="0" data-th="dieH" style="width:62px"> <input type="number" step="10" min="0" data-th="dieL" style="width:62px"></span></div>
+          <div class="zk-field"><label>Öffnungsweg <span class="unit">mm</span></label><input type="number" step="10" min="0" data-th="sOpen"></div>
+          <div class="zk-field"><label>Gravur min. vor dem Gießen t<sub>fomin</sub> <span class="unit">°C</span></label><input type="number" step="5" data-th="tfomin"></div>
+          <div class="zk-field"><label>Gravur max. (Kontakt) t<sub>fomax</sub> <span class="unit">°C</span></label><input type="number" step="5" data-th="TFomax"></div>
+          <div class="zk-field"><label>Außenfläche t<sub>fa</sub> <span class="unit">nach (12.3)</span></label><span class="ro" id="th-tfa">—</span></div>
+        </div>
+        <div class="zk-group"><h3>Umgebung &amp; Verluste</h3>
+          <div class="zk-field"><label>Lufttemperatur <span class="unit">°C</span></label><input type="number" step="1" data-th="tluft"></div>
+          <div class="zk-field"><label>Aufspannplatten fest / beweglich <span class="unit">°C</span></label>
+            <span><input type="number" step="5" data-th="tpl1" style="width:62px"> <input type="number" step="5" data-th="tpl2" style="width:62px"></span></div>
+          <div class="zk-field"><label>Luft zwischen offenen Hälften <span class="unit">°C</span></label><input type="number" step="5" data-th="tluft1"></div>
+          <div class="zk-field"><label>α Konvektion + Strahlung <span class="unit">W/(m²·K)</span></label><input type="number" step="0.1" min="0" data-th="alphaKonStr"></div>
+          <div class="zk-field"><label>α Kontakt Aufspannplatte <span class="unit">W/(m²·K)</span></label><input type="number" step="5" min="0" data-th="alphaK"></div>
+          <div class="zk-field"><label>α Ausblasen <span class="unit">W/(m²·K)</span></label><input type="number" step="1" min="0" data-th="alphaBl"></div>
+          <div class="zk-field"><label>Formtrennstoff je Zyklus <span class="unit">kg</span></label><input type="number" step="0.005" min="0" data-th="mSpray"></div>
+          <div class="zk-field"><label>Blasphase <span class="unit">= „Sprühen &amp; Ausblasen"</span></label><span class="ro" id="th-taubl">—</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="zk-kpis" id="th-kpis"></div>
+        <div id="th-chart"></div>
+        <div class="zk-errors" id="th-errors" style="padding:0.4rem 0 0;"></div>
+      </div>
+    </div>
+    <div class="zk-links" id="th-links"></div>
+    <details class="zk-eq"><summary>Formeln und Quellen</summary>
+      <div class="eq">Q = G · [h<sub>f</sub> + c<sub>l</sub>·(t<sub>L</sub> − t<sub>S</sub>) + c<sub>m</sub>·(t<sub>S</sub> − t<sub>e</sub>)]&emsp;(12.2)&emsp;·&emsp;c<sub>l</sub> = ½(c<sub>S</sub> + c<sub>L</sub>),&ensp;c<sub>m</sub> = c<sub>20</sub> + <span class="frac"><span class="num">t<sub>S</sub> + t<sub>e</sub> − 40</span><span class="den">2·t<sub>S</sub> − 40</span></span>·(c<sub>S</sub> − c<sub>20</sub>)</div>
+      <div class="eq">Q<sub>U</sub> = Q<sub>Kon+Str</sub> + Q<sub>Pl</sub> + Q<sub>Luft</sub> + Q<sub>Bl</sub> + Q<sub>Spr</sub>&emsp;(12.6)&emsp;·&emsp;Q<sub>T</sub> = Q − Q<sub>U</sub>&emsp;(12.1, 5.19)&emsp;·&emsp;P<sub>T</sub> = Q<sub>T</sub>/τ<sub>z</sub>&emsp;(5.4)</div>
+      <div class="eq">Q<sub>Kon+Str</sub> = α<sub>kon+str</sub>·A<sub>fa</sub>·τ<sub>z</sub>·(t<sub>fa</sub> − t<sub>luft</sub>)&emsp;(12.7, 12.9)&emsp;·&emsp;Q<sub>Pl</sub> = α<sub>k</sub>·τ<sub>z</sub>·[A<sub>k1</sub>(t<sub>fa</sub> − t<sub>pl1</sub>) + A<sub>k2</sub>(t<sub>fa</sub> − t<sub>pl2</sub>)]&emsp;(12.10)</div>
+      <div class="eq">Q<sub>Luft</sub> = V<sub>luft</sub>·(t<sub>luft1</sub> − t<sub>luft</sub>) kJ/(K·m³)&emsp;(12.14)&emsp;·&emsp;Q<sub>Bl</sub> = α<sub>bl</sub>·A<sub>fgr</sub>·τ<sub>bl</sub>·(½(t<sub>e</sub> + t<sub>fomin</sub>) − t<sub>luft</sub>)&emsp;(12.15)&emsp;·&emsp;Q<sub>Spr</sub> = 2594 kJ/kg · m<sub>1</sub>&emsp;(12.22)</div>
+      <p>Die Außenflächentemperatur folgt aus t<sub>fa</sub> = t<sub>luft</sub> + 0,6·(t<sub>f</sub> − 20 °C) (12.3) und gilt hier auch für die Aufspannflächen der Form; A<sub>fa</sub> = 2·L·(B + H), A<sub>k1</sub> = A<sub>k2</sub> = B·H, V<sub>luft</sub> = B·H·Öffnungsweg. Die Überhitzung der Schmelze über Liquidus geht laut Quelle in Gießkammer und feste Aufspannplatte und zählt nicht zum Formwärmeeintrag. Quellen: Temperiersystem der Druckgießform (Kap. 5) und Heizung und Kühlung der Druckgießformen mit Temperiergeräten (Kap. 12), Gleichungsnummern wie dort; Abgleich in <code>docs/heat_flow_hpd_die.md</code>.</p>
+    </details>
+  </div>
+  <!-- ── Temperiersystem ──────────────────────────────────── -->
+  <div class="zk-card" id="temp-card">
+    <div class="head">
+      <h2>Temperiersystem — reicht die Kühlung?</h2>
+      <small>Drei Kapazitäten in Reihe je Formhälfte: Wärmeleitung Gravur → Kanal, Übergang Kanalwand → Fluid, Abtransport im Fluid. Jede muss Q<sub>T</sub> der Hälfte tragen (5.26).</small>
+      <span class="kpi-inline">Volumenstrom <span id="k-vdot">—</span> l/min</span>
+    </div>
+    <div class="zk-cols">
+      <div>
+        <div class="zk-group"><h3>Wärmeträger &amp; Kanal</h3>
+          <div class="zk-field"><label>Fluid</label><select data-tt="fluid" id="tt-fluid"></select></div>
+          <div class="zk-field"><label>Vorlauftemperatur T<sub>V</sub> <span class="unit">°C</span></label><input type="number" step="5" data-tt="TV"></div>
+          <div class="zk-field"><label>Temperierdifferenz ΔT = T<sub>R</sub> − T<sub>V</sub> <span class="unit">K</span></label><input type="number" step="1" min="0.5" data-tt="dT"></div>
+          <div class="zk-field"><label>Kanaldurchmesser d <span class="unit">mm</span></label><input type="number" step="1" min="1" data-tt="d"></div>
+          <div class="zk-field"><label>Strömungsgeschwindigkeit w <span class="unit">m/s</span></label><input type="number" step="0.1" min="0.1" data-tt="w"></div>
+          <div class="zk-field"><label>Wärmeleitfähigkeit Formstahl λ<sub>F</sub> <span class="unit">W/(m·K)</span></label><input type="number" step="1" min="1" data-tt="lambdaF"></div>
+          <div class="zk-field"><label>Anteil Q<sub>T</sub> bewegliche Hälfte <span class="unit">%</span></label><input type="number" step="5" min="0" max="100" data-tt="share"></div>
+          <div class="zk-field"><label>Mindestgeschwindigkeit w<sub>min</sub> <span class="unit">Re = 10⁴</span></label><span class="ro" id="tt-wmin">—</span></div>
+          <div class="zk-field"><label>Wärmeübergang α <span class="unit">(5.24)</span></label><span class="ro" id="tt-alpha">—</span></div>
+        </div>
+        <div class="zk-group"><h3>Kanäle je Formhälfte</h3>
+          <div style="overflow-x:auto;">
+            <table class="zk-table" id="tt-halves">
+              <thead><tr><th></th><th class="r">Kreisläufe</th><th class="r">l<sub>K</sub> m</th><th class="r">L<sub>K</sub> m</th><th class="r">a mm</th><th class="r">b mm</th></tr></thead>
+              <tbody>
+                <tr data-half="0"><td>beweglich</td><td class="r"><input type="number" class="short" step="1" min="0" data-k="n"></td><td class="r"><input type="number" class="short" step="0.1" min="0" data-k="lK"></td><td class="r"><input type="number" class="short" step="0.1" min="0" data-k="LK"></td><td class="r"><input type="number" class="short" step="1" min="1" data-k="a"></td><td class="r"><input type="number" class="short" step="5" min="0" data-k="b"></td></tr>
+                <tr data-half="1"><td>fest</td><td class="r"><input type="number" class="short" step="1" min="0" data-k="n"></td><td class="r"><input type="number" class="short" step="0.1" min="0" data-k="lK"></td><td class="r"><input type="number" class="short" step="0.1" min="0" data-k="LK"></td><td class="r"><input type="number" class="short" step="1" min="1" data-k="a"></td><td class="r"><input type="number" class="short" step="5" min="0" data-k="b"></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p style="font-size:0.72rem;color:var(--muted);margin:0.4rem 0 0;line-height:1.5;">l<sub>K</sub> = wirksame Kanallänge im Bereich der Gravur, L<sub>K</sub> = Gesamtlänge — je Kreislauf. a = Abstand Kanalmitte–Gravur, b = Kanalteilung (0 = Einzelkanal nach 5.20, sonst Kanalreihe nach 5.25).</p>
+        </div>
+      </div>
+      <div>
+        <div class="zk-kpis" id="tt-kpis"></div>
+        <div style="overflow-x:auto;"><table class="zk-table" id="tt-cap"></table></div>
+      </div>
+    </div>
+    <details class="zk-eq"><summary>Formeln und Quellen</summary>
+      <div class="eq">Re = w·d/ν ≥ 10⁴&emsp;(5.8)&emsp;·&emsp;α = 0,023 · <span class="frac"><span class="num">λ</span><span class="den">d</span></span> · Re<sup>0,8</sup> · Pr<sup>0,4</sup>&emsp;(5.24)&emsp;·&emsp;V̇ = n · ¼πd² · w&emsp;(5.9)</div>
+      <div class="eq">Q<sub>Kλ</sub> = <span class="frac"><span class="num">2π·λ<sub>F</sub>·l<sub>K</sub>·τ<sub>z</sub></span><span class="den">2π·a/b + ln(b/(π·d))</span></span> · (T<sub>Fo</sub> − T<sub>F</sub>)&emsp;(5.25; Einzelkanal: Nenner ln(4a/d), 5.20)&emsp;·&emsp;T<sub>Fo</sub> = ½(T<sub>Fomax</sub> + T<sub>F</sub>)&emsp;(5.21)</div>
+      <div class="eq">Q<sub>Kα</sub> = α · π·d·L<sub>K</sub> · τ<sub>z</sub> · (T<sub>F</sub> − T<sub>Fl</sub>)&emsp;(5.22)&emsp;·&emsp;Q<sub>KΔT</sub> = ρ·c·V̇·τ<sub>z</sub>·ΔT&emsp;(5.23)&emsp;·&emsp;T<sub>Fl</sub> = T<sub>V</sub> + ΔT/2&emsp;·&emsp;Q<sub>Kλ1</sub>+Q<sub>Kλ2</sub> ≥ Q<sub>T</sub>, Q<sub>Kα1</sub>+Q<sub>Kα2</sub> ≥ Q<sub>T</sub>, Q<sub>KΔT1</sub>+Q<sub>KΔT2</sub> ≥ Q<sub>T</sub>&emsp;(5.26)</div>
+      <p>Stoffwerte: Wasser bei 80 °C (ρ 971,8 kg/m³, c 4195 J/(kg·K), λ 0,668 W/(m·K), ν 0,365·10⁻⁶ m²/s, Pr 2,23 — Tab. 12.4) oder Wärmeträgeröl Marlotherm SH bei 140 °C (958 / 1990 / 0,115 / 1,4·10⁻⁶ / 24,0 — Tab. 5.2). ΔT ≤ 10 K hält die Formtemperatur homogen. Noch nicht geprüft: Druckverlust und Pumpenkennlinie (5.27–5.29, 5.10).</p>
+    </details>
+  </div>
   <p class="zk-footnote"><strong>Modell der Zeitleiste:</strong> Der Hauptzyklus ist eine feste
     Kette auf einer Zeile — Erstarren &amp; Halten folgt immer auf den Schuss, die Entnahme auf das
     Öffnen usw.; editiert werden nur die Dauern, die Nummern in den Balken entsprechen der Liste
@@ -259,9 +401,10 @@
     Spur-Auswahl gibt es nicht. Das Zustandsband oben zeigt geschlossen → öffnet →
     <strong>offen</strong> → schließt → geschlossen; die offene Zeit ist rosa hinterlegt, und die
     Ansicht lässt sich auf „Form zu" (Dosieren bis Öffnungsbeginn) oder „Form offen" (Öffnen bis
-    Schließen-Ende) einschränken. Die Zykluszeit ist das späteste Ende über alle Vorgänge. Noch
-    nicht modelliert: Wärmebilanz und physikalische Mindestdauern (z.&nbsp;B. Erstarrungszeit aus
-    k·s²) — sie folgen als nächste Ausbaustufe.</p>
+    Schließen-Ende) einschränken. Die Zykluszeit ist das späteste Ende über alle Vorgänge und geht als τ<sub>z</sub> in die
+    Wärmebilanz ein (Formzuhaltezeit = Schuss + Erstarren, Nebenzeit = Rest, Blasphase = „Sprühen &amp;
+    Ausblasen"). Noch nicht modelliert: physikalische Mindestdauern (z.&nbsp;B. Erstarrungszeit aus
+    k·s²) und die Rückwirkung der Kühlleistung auf die Haltezeit — sie folgen als nächste Ausbaustufe.</p>
 
 </div>
 <script src="/shared/project.js"></script>
@@ -466,6 +609,7 @@
     document.getElementById('k-total').textContent = fmt(r.total);
     document.getElementById('errors').textContent = r.errors.join(' · ');
     document.getElementById('chart').innerHTML = svgTimeline(r, buildRows(r, extras));
+    renderThermal(r);
   }
 
   function renderMainGrid() {
@@ -564,6 +708,204 @@
     };
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgEl.outerHTML);
   }
+
+
+  /* ── Wärmebilanz & Temperiersystem ──────────────────────── */
+  var LOSS_STYLE = [
+    ['Qkon',  'Konvektion + Strahlung', P.catSlate],
+    ['Qpl',   'Aufspannplatten',        P.dark3],
+    ['Qluft', 'Luft (offene Form)',     P.accent],
+    ['Qbl',   'Ausblasen',              P.gold],
+    ['Qspr',  'Formtrennstoff',         P.catPurple]
+  ];
+  var TH_LINK_LABEL = { mdose: 'Schussgewicht', Tdie: 'Formtemperatur', Afgr: 'Formgravur-Oberfläche' };
+  var thCard = document.getElementById('thermal-card');
+  var ttCard = document.getElementById('temp-card');
+
+  /* Verknüpfte Werte aus dem Projekt übernehmen (solange verknüpft). */
+  function applyThermalLinks() {
+    var D = PR.derived();
+    var th = st.thermal;
+    Object.keys(TH_LINK_LABEL).forEach(function (k) {
+      if (th.linked[k] && D[k] != null) th[k] = D[k];
+    });
+    return D;
+  }
+
+  function fillThermalInputs() {
+    var th = st.thermal;
+    Array.prototype.forEach.call(thCard.querySelectorAll('input[data-th]'), function (el) {
+      if (document.activeElement !== el) el.value = th[el.dataset.th];
+    });
+    Array.prototype.forEach.call(ttCard.querySelectorAll('[data-tt]'), function (el) {
+      if (document.activeElement !== el) el.value = th.temp[el.dataset.tt];
+    });
+    Array.prototype.forEach.call(ttCard.querySelectorAll('tr[data-half]'), function (tr) {
+      var h = th.temp.halves[Number(tr.dataset.half)];
+      Array.prototype.forEach.call(tr.querySelectorAll('input[data-k]'), function (el) {
+        if (document.activeElement !== el) el.value = h[el.dataset.k];
+      });
+    });
+  }
+
+  function kpi(label, value, sub, cls) {
+    return '<div class="zk-kpi' + (cls ? ' ' + cls : '') + '"><div class="l">' + label + '</div><div class="v">' + value + '</div>' +
+      (sub ? '<div class="s">' + sub + '</div>' : '') + '</div>';
+  }
+
+  /* Gestapelter Balken: Q = Verluste + Temperiersystem. */
+  function svgBalance(rep) {
+    var W = 600, H = 118, L = 8, R = 8, BAR_Y = 28, BAR_H = 30;
+    var b = rep.balance, l = rep.losses, Q = b.Q;
+    var segs = LOSS_STYLE.map(function (s) { return { label: s[1], v: l[s[0]], c: s[2] }; });
+    var total = Math.max(Q, b.QU, 1e-9);
+    if (b.QT > 0) segs.push({ label: 'Temperiersystem', v: b.QT, c: P.primary2 });
+    var X = function (v) { return L + v / total * (W - L - R); };
+    var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" font-family="Arial" aria-label="Wärmebilanz je Zyklus">';
+    s += '<text x="' + L + '" y="16" font-size="11.5" font-weight="700" fill="' + P.muted + '">Wärmeeintrag Q = ' + fmt(Q, 0) + ' kJ je Zyklus</text>';
+    s += '<text x="' + (W - R) + '" y="16" font-size="11" text-anchor="end" fill="' + P.muted + '">' + (b.deficit ? 'Verluste > Eintrag: Form muss beheizt werden' : 'Temperiersystem ' + fmt(b.k * 100, 0) + ' %') + '</text>';
+    var x = L;
+    segs.forEach(function (sg) {
+      if (!(sg.v > 0)) return;
+      var w = sg.v / total * (W - L - R);
+      s += '<rect x="' + x.toFixed(1) + '" y="' + BAR_Y + '" width="' + w.toFixed(1) + '" height="' + BAR_H + '" fill="' + sg.c + '"/>';
+      var lab = fmt(sg.v, 0);
+      if (w > lab.length * 7 + 6)
+        s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (BAR_Y + BAR_H / 2 + 4) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + P.surface + '">' + lab + '</text>';
+      x += w;
+    });
+    if (b.deficit) {
+      s += '<line x1="' + X(Q) + '" y1="' + (BAR_Y - 4) + '" x2="' + X(Q) + '" y2="' + (BAR_Y + BAR_H + 4) + '" stroke="' + P.warn + '" stroke-width="2"/>';
+      s += '<text x="' + X(Q) + '" y="' + (BAR_Y + BAR_H + 16) + '" font-size="10.5" text-anchor="middle" fill="' + P.warn + '">Q</text>';
+    }
+    /* Legende */
+    var lx = L, ly = BAR_Y + BAR_H + 30;
+    segs.forEach(function (sg) {
+      var tw = sg.label.length * 6.2 + 22;
+      if (lx + tw > W - R) { lx = L; ly += 16; }
+      s += '<rect x="' + lx + '" y="' + (ly - 9) + '" width="10" height="10" rx="2" fill="' + sg.c + '"/>';
+      s += '<text x="' + (lx + 14) + '" y="' + ly + '" font-size="10.5" fill="' + P.muted + '">' + sg.label + '</text>';
+      lx += tw;
+    });
+    return s + '</svg>';
+  }
+
+  function capRow(label, cap, demand, ok, extra) {
+    var ratio = demand > 0 ? cap / demand : (cap > 0 ? 2 : 0);
+    var pct = Math.min(ratio, 1.5) / 1.5 * 100;
+    return '<tr><td>' + label + (extra ? '<small>' + extra + '</small>' : '') + '</td><td class="num">' + fmt(cap, 0) + '</td><td class="num">' + fmt(demand, 0) + '</td>' +
+      '<td><div class="zk-bar"><i class="' + (ok ? '' : 'bad') + '" style="width:' + pct.toFixed(0) + '%"></i></div></td>' +
+      '<td><span class="zk-badge ' + (ok ? 'ok' : 'bad') + '">' + (ok ? 'reicht' : 'zu wenig') + '</span></td></tr>';
+  }
+
+  function renderThermal(layout) {
+    var D = applyThermalLinks();
+    var th = st.thermal;
+    fillThermalInputs();
+    var rep = LOGIC.thermalReport(th, layout, st.durs, D.alloyThermal);
+    var al = rep.alloy;
+    document.getElementById('th-alloy').textContent = fmt(al.Tliq, 0) + ' / ' + fmt(al.Tsol, 0) + ' °C · ' + fmt(al.hf, 0) + ' kJ/kg';
+    document.getElementById('th-tfa').textContent = fmt(rep.tfa, 0) + ' °C';
+    document.getElementById('th-taubl').textContent = fmt(rep.tauBl) + ' s';
+    document.getElementById('th-q').textContent = rep.input ? fmt(rep.input.q, 0) + ' kJ/kg' : '—';
+    /* Verknüpfungen */
+    Array.prototype.forEach.call(thCard.querySelectorAll('input[data-th]'), function (el) {
+      var k = el.dataset.th, on = TH_LINK_LABEL[k] && th.linked[k] && D[k] != null;
+      el.classList.toggle('linked', !!on);
+      el.title = on ? 'Aus dem Projekt: ' + D.sources[k] + ' — Eingabe von Hand löst die Verknüpfung.' : '';
+    });
+    var notes = Object.keys(TH_LINK_LABEL).map(function (k) {
+      if (th.linked[k] && D[k] != null) return TH_LINK_LABEL[k] + ' ← ' + D.sources[k];
+      if (th.linked[k]) return TH_LINK_LABEL[k] + ': noch keine Quelle im Projekt (Standardwert)';
+      return TH_LINK_LABEL[k] + ': von Hand gesetzt';
+    });
+    notes.push(D.alloyThermal ? 'Legierungs-Thermik ← ' + D.sources.alloyThermal : 'Legierungs-Thermik: Auslegung hat keine Legierungswerte — Fallback AlSi9Cu3(Fe)');
+    var anyBroken = Object.keys(TH_LINK_LABEL).some(function (k) { return !th.linked[k]; });
+    document.getElementById('th-links').innerHTML = notes.join(' · ') + (anyBroken ? ' &nbsp;<a href="#" id="th-relink">Verknüpfungen wiederherstellen</a>' : '');
+    var rl = document.getElementById('th-relink');
+    if (rl) rl.addEventListener('click', function (e) { e.preventDefault(); Object.keys(TH_LINK_LABEL).forEach(function (k) { th.linked[k] = true; }); renderChart(); });
+
+    if (!rep.input || !rep.balance) {
+      document.getElementById('th-kpis').innerHTML = '';
+      document.getElementById('th-chart').innerHTML = '';
+      document.getElementById('th-errors').textContent = 'Wärmeeintrag nicht berechenbar — Schussgewicht > 0 und T_liq > T_sol nötig.';
+      document.getElementById('k-pt').textContent = '—';
+      renderTempering(null);
+      return;
+    }
+    document.getElementById('th-errors').textContent = rep.tz > 0 ? '' : 'Zykluszeit 0 — Dauern im Hauptzyklus eintragen.';
+    var b = rep.balance;
+    document.getElementById('k-pt').textContent = isFinite(b.PT) ? fmt(b.PT, 1) : '—';
+    document.getElementById('th-kpis').innerHTML =
+      kpi('Temperierleistung P<sub>T</sub>', (isFinite(b.PT) ? fmt(b.PT, 1) : '—') + ' kW', 'Q<sub>T</sub>/τ<sub>z</sub> bei τ<sub>z</sub> = ' + fmt(rep.tz) + ' s', 'hero' + (b.deficit ? ' bad' : '')) +
+      kpi('Wärmeeintrag Q', fmt(b.Q, 0) + ' kJ', fmt(rep.input.q, 0) + ' kJ/kg · ' + fmt(th.mdose, 1) + ' kg') +
+      kpi('Verluste Q<sub>U</sub>', fmt(b.QU, 0) + ' kJ', fmt(b.QU / b.Q * 100, 0) + ' % des Eintrags') +
+      kpi('Temperiersystem Q<sub>T</sub>', fmt(b.QT, 0) + ' kJ', b.deficit ? 'negativ — Heizen nötig' : 'k = ' + fmt(b.k * 100, 0) + ' % (Richtwert 40–60 %)', b.deficit ? 'bad' : '') +
+      kpi('Mittlere Wärmeleistung', fmt(b.Q / rep.tz, 1) + ' kW', 'Q/τ<sub>z</sub> gesamt · Nebenzeit ' + fmt(rep.tauNz) + ' s');
+    document.getElementById('th-chart').innerHTML = svgBalance(rep);
+    renderTempering(rep);
+  }
+
+  function renderTempering(rep) {
+    var th = st.thermal;
+    var sel = document.getElementById('tt-fluid');
+    if (!sel.options.length) {
+      Object.keys(LOGIC.FLUIDS).forEach(function (id) {
+        var o = document.createElement('option'); o.value = id; o.textContent = LOGIC.FLUIDS[id].label; sel.appendChild(o);
+      });
+    }
+    sel.value = th.temp.fluid;
+    if (!rep || !rep.halves) {
+      document.getElementById('tt-kpis').innerHTML = '';
+      document.getElementById('tt-cap').innerHTML = '';
+      document.getElementById('k-vdot').textContent = '—';
+      return;
+    }
+    var h0 = rep.halves[0], h1 = rep.halves[1], tot = rep.total;
+    document.getElementById('tt-wmin').textContent = fmt(h0.wMin, 2) + ' m/s' + (h0.turbulent ? '' : ' — Strömung nicht turbulent!');
+    document.getElementById('tt-alpha').textContent = fmt(h0.alpha, 0) + ' W/(m²·K)';
+    document.getElementById('k-vdot').textContent = fmt(tot.Vdot * 6e4, 1);
+    var allOk = tot.okLambda && tot.okAlpha && tot.okDT && h0.turbulent;
+    document.getElementById('tt-kpis').innerHTML =
+      kpi('Kühlung', allOk ? 'reicht' : 'reicht nicht', allOk ? 'alle drei Kapazitäten ≥ Q<sub>T</sub> je Hälfte' : 'mindestens eine Kapazität unter Q<sub>T</sub>', 'hero' + (allOk ? '' : ' bad')) +
+      kpi('Volumenstrom gesamt', fmt(tot.Vdot * 6e4, 1) + ' l/min', fmt(h0.VdotLmin, 1) + ' + ' + fmt(h1.VdotLmin, 1) + ' l/min') +
+      kpi('Re', fmt(h0.Re, 0), h0.turbulent ? 'turbulent (≥ 10⁴)' : 'laminar/Übergang — w erhöhen', h0.turbulent ? '' : 'bad') +
+      kpi('Fluid-Bilanz', fmt((h0.QKdT + h1.QKdT) / rep.tz, 1) + ' kW', 'ρ·c·V̇·ΔT beider Hälften');
+    var rows = '<thead><tr><th>Kapazität je Zyklus</th><th class="r">kann kJ</th><th class="r">muss kJ</th><th>Auslastung</th><th></th></tr></thead><tbody>';
+    [['beweglich', h0], ['fest', h1]].forEach(function (pair) {
+      var h = pair[1];
+      rows += '<tr><td class="sect" colspan="5">' + pair[0] + ' — Q<sub>T</sub>-Anteil ' + fmt(h.QT, 0) + ' kJ</td></tr>';
+      rows += capRow('Wärmeleitung Gravur → Kanal Q<sub>Kλ</sub>', h.QKlambda, h.QT, h.okLambda, 'T<sub>Fo</sub> = ' + fmt(h.TFo, 0) + ' °C');
+      rows += capRow('Übergang Kanalwand → Fluid Q<sub>Kα</sub>', h.QKalpha, h.QT, h.okAlpha, 'A<sub>K</sub> = ' + fmt(h.AK, 2) + ' m²');
+      rows += capRow('Abtransport im Fluid Q<sub>KΔT</sub>', h.QKdT, h.QT, h.okDT, fmt(h.VdotLmin, 1) + ' l/min');
+    });
+    document.getElementById('tt-cap').innerHTML = rows + '</tbody>';
+  }
+
+  thCard.addEventListener('input', function (e) {
+    var el = e.target.closest('input[data-th]');
+    if (!el) return;
+    var k = el.dataset.th, x = parseFloat(el.value);
+    if (!isFinite(x)) return;
+    st.thermal[k] = x;
+    if (TH_LINK_LABEL[k] && st.thermal.linked[k]) st.thermal.linked[k] = false;
+    renderChart();
+  });
+  ttCard.addEventListener('input', function (e) {
+    var el = e.target.closest('[data-tt], tr[data-half] input[data-k]');
+    if (!el) return;
+    if (el.dataset.tt === 'fluid') {
+      st.thermal.temp.fluid = el.value;
+      st.thermal.temp.TV = LOGIC.FLUIDS[el.value].TV;
+    } else if (el.dataset.tt) {
+      var x = parseFloat(el.value); if (!isFinite(x)) return;
+      st.thermal.temp[el.dataset.tt] = x;
+    } else {
+      var y = parseFloat(el.value); if (!isFinite(y)) return;
+      st.thermal.temp.halves[Number(el.closest('tr').dataset.half)][el.dataset.k] = y;
+    }
+    renderChart();
+  });
 
   /* ── Ereignisse ─────────────────────────────────────────── */
 

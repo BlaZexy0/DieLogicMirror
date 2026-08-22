@@ -106,6 +106,7 @@ export const POSITIVE_KEYS = ['density', 'diam', 'length', 'gate', 'vent', 'Cd',
   'force', 'injForce', 'area', 'psel', 'safety', 'vmax', 'tmax', 'vAirMax', 'solK',
   'tieX', 'tieY',
   'dmin', 'dmax', 'lmin', 'lmax', 'part', 'Tcast', 'Tflow', 'Tdie',
+  'Tliq', 'Tsol', 'hf', 'cp20', 'cpS', 'cpL',
   'Zconst', 'wall', 'wallMin', 'wallMax', 'kfill', 'gateTh', 'Jatom', 'pAcc',
   /* sealStroke/vacPump verlangt auch das Backend > 0 (convert.py) —
      die Klassen hier müssen mit der Simulation übereinstimmen. */

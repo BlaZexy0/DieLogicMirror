@@ -17,7 +17,7 @@ einem Abschnitt je Werkzeug:
 |------------|----------------------------------|-----------------------------------------------------|
 | `design`   | Dashboard + alle Diagramme       | Bauteil-/Schussgewicht, Maschinen-Preset            |
 | `geometry` | Sprengflächenanalyse (STL)       | schreibt Massen, Sprengfläche, Maschine nach `design` |
-| `cycle`    | Zyklusanalyse                    | Zykluszeit                                          |
+| `cycle`    | Zyklusanalyse (Zeitleiste + Wärmebilanz) | Zykluszeit (bezieht Tdie, Legierungs-Thermik aus `design`, Gravurfläche aus `geometry`) |
 | `cost`     | Teilekosten                      | — (bezieht Massen aus `design`, t_Z aus `cycle`)    |
 
 `web/shared/project.js` hält den Browser-Cache der Projekte und mit
@@ -65,7 +65,9 @@ dielogic/
 │   │   ├── sprengflaeche/   STL-Analyse: stl-math.js (Netz-Kennwerte, getestet),
 │   │   │                    stl-logic.js (Massenbilanz/Maschinentabelle, getestet), stl-app.js
 │   │   ├── teilekosten/     Teilekosten-Kalkulation (Abschnitt cost, verknüpfte Felder)
-│   │   └── zyklus/          Zyklusanalyse (Abschnitt cycle, Zeitleiste)
+│   │   └── zyklus/          Zyklusanalyse (Abschnitt cycle): Zeitleiste + Wärmebilanz je Zyklus
+│   │                        und Kapazitätsprüfung des Temperiersystems (zyklus-logic.js, getestet
+│   │                        gegen die Zahlenbeispiele der Quellen — docs/heat_flow_hpd_die.md)
 │   ├── konto/           Konto: Einladung einlösen, Anmelden, Projekte/Revisionen,
 │   │                    Mitglieder, Einladungen, Stammdaten (Admin)
 │   ├── theorie/         Theorie-Artikel (Formeln im .eq-Markup, statische SVGs aus assets/)
@@ -85,6 +87,7 @@ dielogic/
 ├── fixtures/        Referenzdaten, die JS UND Python prüfen
 │   ├── physics/     Referenzfälle: bekannte Eingaben + Sollwerte (siehe README dort)
 │   └── vkrit/       v_krit_sim.csv — OpenFOAM-CFD-Tabelle, Quelle für beide v_krit-Tabellen
+├── docs/            Quellen-Notizen (heat_flow_hpd_die.md: Wärmebilanz-Gleichungen + Abgleich)
 ├── tests/web/       Node-Tests der Website (nicht ausgeliefert)
 ├── scripts/         Generatoren: gen-theory-svgs, gen-vkrit-table, gen-palette (nicht ausgeliefert)
 ├── render.yaml      Render-Blueprint (Web Service: Build, Start, Healthcheck)
