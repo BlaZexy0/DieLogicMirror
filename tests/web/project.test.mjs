@@ -27,7 +27,7 @@ test('leerer Speicher → kein Projekt; Abschnitte sind dann null/false', () => 
   assert.equal(P.current(), null);
   assert.equal(P.getSection('design'), null);
   assert.equal(P.setSection('design', { values: {} }), false);
-  assert.deepEqual(P.derived(), { mpart: null, mdose: null, tz: null, machine: null, Tdie: null, alloyThermal: null, Afgr: null, sources: {} });
+  assert.deepEqual(P.derived(), { mpart: null, mdose: null, tz: null, machine: null, machinePreset: null, alloy: null, Tcast: null, Tdie: null, area: null, Acav: null, sources: {} });
   P.create({ name: 'A' });
   assert.equal(P.current().name, 'A');
 });
@@ -82,7 +82,7 @@ test('Projekte: anlegen, wechseln, umbenennen, duplizieren, entfernen', () => {
 
 test('derived: Massen aus der Auslegung, Zykluszeit aus der Zyklusanalyse', () => {
   fresh(); P.create({ name: 'A' });
-  assert.deepEqual(P.derived(), { mpart: null, mdose: null, tz: null, machine: null, Tdie: null, alloyThermal: null, Afgr: null, sources: {} });
+  assert.deepEqual(P.derived(), { mpart: null, mdose: null, tz: null, machine: null, machinePreset: null, alloy: null, Tcast: null, Tdie: null, area: null, Acav: null, sources: {} });
   P.setSection('design', { values: { part: 12, runner: 3, overflow: 2, biscuit: 1.2 }, machine: 'hcc800' });
   let d = P.derived();
   assert.equal(d.mpart, 12);
@@ -98,20 +98,32 @@ test('derived: Massen aus der Auslegung, Zykluszeit aus der Zyklusanalyse', () =
   c.sections.handling.push({ label: 'Lange Ablage', anchor: 'mainEnd', lag: 0, dur: 3.5 });
   P.setSection('cycle', c);
   assert.equal(P.derived().tz, 55.5);
-  /* Wärmebilanz: Formtemperatur + Legierungs-Thermik aus der Auslegung, Gravurfläche aus den STL-Netzen */
+  /* Wärmebilanz: Temperaturen + Sprengfläche aus der Auslegung, Presets über die Listen, Gravurfläche aus den STL-Netzen */
   assert.equal(P.derived().Tdie, null);
-  assert.equal(P.derived().alloyThermal, null);
-  P.setSection('design', { values: { part: 12, runner: 3, overflow: 2, biscuit: 1.2, Tdie: 210,
-    Tliq: 593, Tsol: 521, hf: 403, cp20: 846, cpS: 1034, cpL: 1056 }, machine: 'hcc800' });
+  assert.equal(P.derived().alloy, null);
+  P.setSection('design', { values: { part: 12, runner: 3, overflow: 2, biscuit: 1.2, Tdie: 210, Tcast: 665, area: 0.2 }, machine: 'hcc800', alloy: 'alsi12' });
   d = P.derived();
-  assert.equal(d.Tdie, 210);
-  assert.deepEqual(d.alloyThermal, { Tliq: 593, Tsol: 521, hf: 403, cp20: 846, cpS: 1034, cpL: 1056 });
-  assert.match(d.sources.alloyThermal, /Legierungswerte/);
-  assert.equal(d.Afgr, null);
+  assert.equal(d.Tdie, 210); assert.equal(d.Tcast, 665); assert.equal(d.area, 0.2);
+  assert.equal(d.alloy, null, 'ohne geladene Preset-Liste und ohne Thermik-Werte keine Legierung');
+  assert.equal(d.machinePreset, null);
+  /* Preset-Listen geladen (wie auf den Werkzeugseiten): id → Eintrag, Stammdaten-Overlay inklusive */
+  globalThis.window = globalThis;
+  require(path.join(site, 'shared/examples/alloys.js'));
+  require(path.join(site, 'shared/examples/machines.js'));
+  d = P.derived();
+  assert.equal(d.alloy.id, 'alsi12'); assert.match(d.alloy.name, /AlSi12/); assert.equal(d.alloy.fields.hf, 400);
+  assert.equal(d.machinePreset.id, 'hcc800'); assert.equal(d.machinePreset.fields.tieX, 810);
+  assert.match(d.sources.alloy, /Legierungs-Preset/);
+  /* Unbekannte Preset-id, aber vollständige Legierungswerte in der Auslegung → manuelle Legierung */
+  P.setSection('design', { values: { Tcast: 650, Tliq: 600, Tsol: 550, hf: 390, cp20: 900, cpS: 1000, cpL: 1100 }, alloy: 'eigene' });
+  d = P.derived();
+  assert.equal(d.alloy.id, 'eigene'); assert.equal(d.alloy.fields.Tliq, 600); assert.match(d.sources.alloy, /Legierungswerte/);
+  delete globalThis.window; delete globalThis.__ALLOYS__; delete globalThis.__MACHINES__;
+  assert.equal(d.Acav, null);
   P.setSection('geometry', { files: [{ name: 'a', area: 250000 }, { name: 'b', area: 150000 }, { name: 'c', area: 'x' }] });
   d = P.derived();
-  assert.equal(d.Afgr, 0.4);   // 400 000 mm² → 0,4 m²
-  assert.match(d.sources.Afgr, /Sprengflächenanalyse/);
+  assert.equal(d.Acav, 0.4);   // 400 000 mm² → 0,4 m²
+  assert.match(d.sources.Acav, /Sprengflächenanalyse/);
 });
 
 test('zyklus: sanitizeState repariert Lücken und erzwingt Zahlen', () => {

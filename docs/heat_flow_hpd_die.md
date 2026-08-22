@@ -40,16 +40,20 @@ of the two scans. Findings:
   used to sanity-check the thermal data added to the example alloys
   (`web/shared/examples/alloys.js`: Tliq, Tsol, hf, cp20, cpS, cpL).
 
-Implementation map (`web/tools/zyklus/zyklus-logic.js`):
+Implementation map (`web/tools/zyklus/zyklus-logic.js`). The model is driven
+by project data (shot mass, alloy preset incl. pouring temperature, die
+temperature, projected area / STL surface, machine tie-bar spacing, timeline);
+the empirical coefficients and reference temperatures of the sources are
+constants (`HEAT`), not inputs. Only the ejection temperature, optional die
+dimensions and the cooling-circuit layout (fluid, circuits, d, w) are entered.
 
 | Function | Equations |
 |---|---|
-| `meanHeatCapacities`, `heatInput` | (12.2) with c_l, c_m of 12.4.1 |
-| `outerSurfaceTemp` | (12.3) |
-| `heatLosses` | (12.7)+(12.9) as one coefficient, (12.10), (12.14), (12.15), (12.22) |
-| `heatBalance` | (12.1)/(5.19), P_T = Q_T/τz (5.4), k = Q_T/Q |
-| `temperingCapacity` | Re, (5.8), (5.24), (5.9), (5.21), (5.20)/(5.25), (5.22), (5.23), checks (5.26) |
+| `meanHeatCapacities`, `heatInput` | (12.2) with c_l, c_m of 12.4.1; superheat `m·c_L·(T_cast − T_liq)` reported separately (goes to the shot sleeve per Source B) |
+| `heatLosses` | (12.3) for t_fa; (12.7)+(12.9) as one coefficient; (12.10) both platens; (12.14) with V = B·H·L; (12.15) with t_fomin = T_die + 30 K; spray mass (12.21) with x₀ = 10 mm, Δt = T_eject − T_die; (12.22) |
+| `computeHeat` | (12.1)/(5.19), P_T = Q_T/τz (5.4), k = Q_T/Q |
+| `coolingCheck` | Re, (5.8), (5.24), (5.9); ΔT from (5.23) solved for ΔT, checked ≤ 10 K; (5.21); (5.25) with b = B/n per half, l_K = 0.7·H, L_K = 2·H, a = 15 mm; (5.22); (5.26) |
+| `dieFromMachine` | die plate B = H = 0.8 × tie-bar spacing, L = 0.5·B (estimate, overridable) |
 
 Not implemented (next steps): pressure loss / pump check (5.27–5.29, 5.10),
-warm-up transient (5.31–5.37), spray-mass estimate from the skin layer
-(12.19–12.21, 5.15–5.18) — the spray mass is an input.
+warm-up transient (5.31–5.37), per-circuit channel geometry.

@@ -255,13 +255,15 @@
        mdose  Schussgewicht [kg]       ⇐ part + runner + overflow + biscuit
        tz     Zykluszeit [s]           ⇐ cycle (Zeitleiste, __ZYKLUS_LOGIC__)
        machine Maschinen-Preset        ⇐ design.machine
-       Tdie   Formtemperatur [°C]      ⇐ design.values.Tdie
-       alloyThermal { Tliq, Tsol, hf, cp20, cpS, cpL } ⇐ design.values (Legierung)
-       Afgr   Formgravuroberfläche [m²] ⇐ geometry.files[].area (Summe)
+       machinePreset { id, name, fields } ⇐ design.machine über window.__MACHINES__
+       alloy  { id, name, fields }     ⇐ design.alloy über window.__ALLOYS__
+                                        (sonst Legierungswerte aus design.values)
+       Tcast, Tdie, area               ⇐ design.values (Gieß-, Formtemperatur, Sprengfläche)
+       Acav   Formgravuroberfläche [m²] ⇐ geometry.files[].area (Summe)
      Fehlende Quellen liefern null. */
   function derived(doc) {
     var p = doc || current();
-    var out = { mpart: null, mdose: null, tz: null, machine: null, Tdie: null, alloyThermal: null, Afgr: null, sources: {} };
+    var out = { mpart: null, mdose: null, tz: null, machine: null, machinePreset: null, alloy: null, Tcast: null, Tdie: null, area: null, Acav: null, sources: {} };
     if (!p) return out;
     var v = p.design && isObj(p.design.values) ? p.design.values : null;
     if (v) {
@@ -273,22 +275,41 @@
       }
     }
     if (v) {
-      var Tdie = Number(v.Tdie);
-      if (isFinite(Tdie) && Tdie > 0) { out.Tdie = Tdie; out.sources.Tdie = 'Auslegung (Formtemperatur)'; }
-      var th = {}, thOk = true;
-      ['Tliq', 'Tsol', 'hf', 'cp20', 'cpS', 'cpL'].forEach(function (k) {
-        var x = Number(v[k]); if (isFinite(x) && x > 0) th[k] = x; else thOk = false;
+      ['Tcast', 'Tdie', 'area'].forEach(function (k) {
+        var x = Number(v[k]);
+        if (isFinite(x) && x > 0) { out[k] = x; out.sources[k] = 'Auslegung (' + { Tcast: 'Gießtemperatur', Tdie: 'Formtemperatur', area: 'Sprengfläche' }[k] + ')'; }
       });
-      if (thOk) { out.alloyThermal = th; out.sources.alloyThermal = 'Auslegung (Legierungswerte)'; }
+    }
+    /* Presets des Projekts: id → Eintrag der (ggf. durch Stammdaten
+       ersetzten) Preset-Listen, sofern die Seite sie geladen hat. */
+    function preset(listGlobal, listKey, id) {
+      var g = root[listGlobal];
+      var list = g && Array.isArray(g[listKey]) ? g[listKey] : [];
+      for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === id) return list[i];
+      return null;
     }
     if (p.design && typeof p.design.machine === 'string' && p.design.machine) {
       out.machine = p.design.machine;
       out.sources.machine = 'Auslegung (Maschinen-Preset)';
+      var m = preset('__MACHINES__', 'machines', p.design.machine);
+      if (m) { out.machinePreset = { id: m.id, name: m.name, fields: clone(m.fields || {}) }; }
+    }
+    if (p.design && typeof p.design.alloy === 'string' && p.design.alloy) {
+      var a = preset('__ALLOYS__', 'alloys', p.design.alloy);
+      if (a) { out.alloy = { id: a.id, name: a.name, fields: clone(a.fields || {}) }; out.sources.alloy = 'Auslegung (Legierungs-Preset)'; }
+    }
+    if (!out.alloy && v) {
+      /* Kein Preset auflösbar (manuell oder Liste nicht geladen): Legierungswerte der Auslegung */
+      var f = {}, all = true;
+      ['density', 'Tcast', 'Tflow', 'Tliq', 'Tsol', 'hf', 'cp20', 'cpS', 'cpL'].forEach(function (k) {
+        var x = Number(v[k]); if (isFinite(x)) f[k] = x; else if (k !== 'Tflow' && k !== 'density') all = false;
+      });
+      if (all) { out.alloy = { id: p.design.alloy || 'manuell', name: 'Legierungswerte der Auslegung', fields: f }; out.sources.alloy = 'Auslegung (Legierungswerte)'; }
     }
     if (p.geometry && Array.isArray(p.geometry.files)) {
       var A = 0;
       p.geometry.files.forEach(function (f) { var a = Number(f && f.area); if (isFinite(a) && a > 0) A += a; });
-      if (A > 0) { out.Afgr = Math.round(A * 1e-6 * 1e4) / 1e4; out.sources.Afgr = 'Sprengflächenanalyse (Netzoberfläche aller STL)'; }
+      if (A > 0) { out.Acav = Math.round(A * 1e-6 * 1e4) / 1e4; out.sources.Acav = 'Sprengflächenanalyse (Netzoberfläche aller STL)'; }
     }
     var Z = root.__ZYKLUS_LOGIC__;
     if (p.cycle && Z && typeof Z.extrasFromState === 'function') {

@@ -17,7 +17,7 @@ einem Abschnitt je Werkzeug:
 |------------|----------------------------------|-----------------------------------------------------|
 | `design`   | Dashboard + alle Diagramme       | Bauteil-/Schussgewicht, Maschinen-Preset            |
 | `geometry` | Sprengflächenanalyse (STL)       | schreibt Massen, Sprengfläche, Maschine nach `design` |
-| `cycle`    | Zyklusanalyse (Zeitleiste + Wärmebilanz) | Zykluszeit (bezieht Tdie, Legierungs-Thermik aus `design`, Gravurfläche aus `geometry`) |
+| `cycle`    | Zyklusanalyse (Zeitleiste + Wärmebilanz) | Zykluszeit (bezieht Schussgewicht, Legierung, Temperaturen, Sprengfläche, Maschine aus `design`, Gravurfläche aus `geometry`) |
 | `cost`     | Teilekosten                      | — (bezieht Massen aus `design`, t_Z aus `cycle`)    |
 
 `web/shared/project.js` hält den Browser-Cache der Projekte und mit
