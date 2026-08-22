@@ -60,9 +60,13 @@ export const groups = [
   },
   {
     id: 'alloyFields', title: 'Legierungswerte', preset: 'alloy',
-    note: 'Diese Felder setzt das Legierungs-Preset (config/alloys.js). Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
+    note: 'Diese Felder setzt das Legierungs-Preset (/shared/examples/alloys.js). Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
     fields: [
       { key: 'density', label: 'Dichte flüssig',    unit: 'kg/m³',  def: 2400 },
+      /* Feststoffdichte und Schwindmaß nutzt die Sprengflächenanalyse für
+         Massen und die Umrechnung Werkzeugmaß ↔ fertiges Bauteil. */
+      { key: 'densitySolid', label: 'Dichte fest',   unit: 'kg/m³', def: 2700, adv: true },
+      { key: 'shrink',       label: 'Schwindmaß',    unit: '%',     def: 0.55, adv: true },
       { key: 'Tcast',   label: 'Gießtemperatur',    unit: '°C',     def: 660 },
       { key: 'Tflow',   label: 'Min. Fließtemp.',   unit: '°C',     def: 580 },
       { key: 'Zconst',  label: 'Z-Konstante',       unit: '°C/%',   def: 4.8 },
@@ -123,7 +127,7 @@ export const groups = [
   },
   {
     id: 'partFields', title: 'Bauteilgeometrie und Thermik', preset: 'part', wide: true,
-    note: 'Diese Felder setzt das Bauteiltyp-Preset (config/parts.js). Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
+    note: 'Diese Felder setzt das Bauteiltyp-Preset (/shared/examples/parts.js). Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
     fields: [
       { key: 'wall',    label: 'Wandstärke',      unit: 'mm',    def: 3.5 },
       { key: 'wallMin', label: 'Wandstärke min.', unit: 'mm',    def: 1.5 },

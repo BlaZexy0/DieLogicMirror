@@ -244,11 +244,52 @@
      aus stl-logic.js, Zuhaltung aus shared/clampmodel.js, Übernahme (ins Projekt) aus
      stl-logic.js — hier wird nur gerendert. */
   const MACHINES = (window.__MACHINES__ && window.__MACHINES__.machines) || [];
+  const ALLOYS = (window.__ALLOYS__ && window.__ALLOYS__.alloys) || [];
   const CLAMP = window.__CLAMP_MODEL__;
   const LOGIC = window.__STL_LOGIC__;
 
-  function getDensity() {
-    return Math.max(parseFloat(document.getElementById('density-input').value) || 2700, 1);
+  /* Legierung der Seite (Preset-Liste, ggf. Stammdaten der Organisation).
+     Vorbelegt mit der Legierung des Projekts, sonst der erste Eintrag. */
+  function currentAlloy() {
+    const id = document.getElementById('alloy-select').value;
+    return ALLOYS.find(a => a.id === id) || null;
+  }
+  const num = (x, def) => { const v = Number(x); return isFinite(v) && v > 0 ? v : def; };
+  /* Feststoffdichte [kg/m³] für die Massen — die Flüssigdichte (density) des
+     Presets rechnet dagegen im Dashboard die Schmelzevolumina. */
+  function getDensity() { const a = currentAlloy(); return a ? num(a.fields.densitySolid, 2700) : 2700; }
+  function getShrink() { const a = currentAlloy(); return a ? num(a.fields.shrink, 0) : 0; }
+  function onToolScale() { return document.getElementById('shrink-toggle').checked; }
+  /* Volumenfaktor: Modelle auf Werkzeugmaß sind um (1 + s/100)³ größer als
+     das kalte Bauteil — sonst 1. */
+  function volumeFactor() { return onToolScale() ? LOGIC.shrinkVolumeFactor(getShrink()) : 1; }
+  /* Kaltes Bauteilvolumen [mm³] aus dem STL-Volumen. */
+  function partVolume(v) { return v / volumeFactor(); }
+
+  function fillAlloySelect() {
+    const sel = document.getElementById('alloy-select');
+    if (!ALLOYS.length) { sel.innerHTML = '<option value="">– keine Presets –</option>'; sel.disabled = true; return; }
+    const D = window.__PROJECT__ ? window.__PROJECT__.derived() : null;
+    const pre = D && D.alloy ? D.alloy.id : null;
+    sel.innerHTML = ALLOYS.map(a =>
+      `<option value="${a.id}"${a.id === pre ? ' selected' : ''}>${escapeHtml(a.name)}</option>`).join('');
+    if (!pre) sel.selectedIndex = 0;
+  }
+
+  /* Zeile unter der Kopfzeile: was aus der Legierung in die Massen eingeht. */
+  function renderAlloyInfo() {
+    const el = document.getElementById('alloy-info');
+    const a = currentAlloy();
+    if (!a) { el.textContent = 'Keine Legierungs-Presets geladen — gerechnet wird mit 2.700 kg/m³ ohne Schwindung.'; return; }
+    const s = getShrink(), f = volumeFactor();
+    el.innerHTML = 'Dichte (fest) <strong>' + fmt(getDensity()) + ' kg/m³</strong> · Schwindmaß '
+      + (s > 0 ? fmt(s) + ' %' : '— ')
+      + (onToolScale() && f > 1
+        ? ' · Modelle auf Werkzeugmaß: Bauteilvolumen = STL-Volumen / '
+          + f.toLocaleString('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+          + ' (−' + fmt((1 - 1 / f) * 100) + ' %)'
+        : ' · Modelle als fertiges Bauteil: Volumen unverändert')
+      + (window.__ALLOYS__ && window.__ALLOYS__.source === 'org' ? ' · Stammdaten der Organisation' : '');
   }
 
   /* Seitenschieber-Zuschlag A_S·tan(α) in mm² — Winkel auf [0, 89°] begrenzt,
@@ -269,16 +310,18 @@
 
     const density = getDensity();
     let totV = 0, totA = 0;
+    renderAlloyInfo();
     document.getElementById('result-body').innerHTML = models.map((m, i) => {
       const p = getProjection(m, dir);
-      totV += m.volume; totA += m.area;
+      const vol = partVolume(m.volume);
+      totV += vol; totA += m.area;
       const opts = '<option value="">– wählen –</option>' + LOGIC.ROLES.map(([key, label]) =>
         `<option value="${key}"${m.role === key ? ' selected' : ''}>${label}</option>`).join('');
       return `<tr>
         <td class="name" title="${escapeHtml(m.name)}"><span class="dot" style="background:${m.color}"></span>${escapeHtml(m.name)}</td>
         <td style="text-align:left"><select class="role-sel" data-idx="${i}" aria-label="Zuordnung für ${escapeHtml(m.name)}">${opts}</select></td>
-        <td>${fmt(m.volume)} mm³ <span class="sub">(${fmt(m.volume / 1000)} cm³)</span></td>
-        <td>${fmt(LOGIC.massKg(m.volume, density))} kg</td>
+        <td>${fmt(vol)} mm³ <span class="sub">(${fmt(vol / 1000)} cm³)</span></td>
+        <td>${fmt(LOGIC.massKg(vol, density))} kg</td>
         <td>${fmt(m.area)} mm²</td>
         <td>${fmt(p.area)} mm²</td>
         <td><button class="remove-btn" data-idx="${i}" title="Entfernen" aria-label="${escapeHtml(m.name)} entfernen">✕</button></td>
@@ -357,7 +400,8 @@
     if (!(totP > 0) || !cog) return;
     const S = Math.max(parseFloat(document.getElementById('safety-input').value) || 1.3, 1);
     const pTarget = Math.max(parseFloat(document.getElementById('ptarget-input').value) || 600, 1);
-    const sums = LOGIC.roleSums(models, getDensity());
+    const alloy = currentAlloy();
+    const sums = LOGIC.roleSums(models, getDensity(), volumeFactor());
     const kg = (x) => Math.round(x * 1000) / 1000;
 
     const values = LOGIC.handoffValues({
@@ -370,18 +414,19 @@
       eccY: Math.round(Math.abs(cog.cv) * 10) / 10,
       safety: S,
       psel: pTarget,
-    }, mc.fields);
+    }, mc.fields, alloy ? alloy.fields : null);
     /* Geometrie-Abschnitt des Projekts: was analysiert wurde, mit Ergebnis —
        die Netze selbst bleiben in den Dateien (zu groß für den Speicher). */
     window.__PROJECT__.setSection('geometry', {
-      density: getDensity(), safety: S, psel: pTarget, coreAdd: getCoreAdd(),
+      alloy: alloy ? alloy.id : null, density: getDensity(), toolScale: onToolScale(),
+      shrink: getShrink(), safety: S, psel: pTarget, coreAdd: getCoreAdd(),
       machine: mc.id, areaTotal: totP, cog: { u: cog.cu, v: cog.cv },
-      files: models.map(m => ({ name: m.name, role: m.role, volume: m.volume, area: m.area,
+      files: models.map(m => ({ name: m.name, role: m.role, volume: partVolume(m.volume), area: m.area,
         proj: { X: getProjection(m, 'X').area, Y: getProjection(m, 'Y').area, Z: getProjection(m, 'Z').area } })),
       analysedAt: new Date().toISOString()
     });
     if (!window.__PROJECT__.current()) { alert('Kein Projekt aktiv — bitte zuerst anmelden.'); return; }
-    window.__PROJECT__.mergeDesign(values, mc.id);
+    window.__PROJECT__.mergeDesign(values, mc.id, alloy ? alloy.id : null);
     window.location.href = '/tools/auslegung/';
   }
 
@@ -501,7 +546,8 @@
   document.getElementById('ptarget-input').addEventListener('input', renderMachines);
   document.getElementById('core-area-input').addEventListener('input', renderMachines);
   document.getElementById('core-angle-input').addEventListener('input', renderMachines);
-  document.getElementById('density-input').addEventListener('input', () => { renderTable(); renderMachines(); });
+  document.getElementById('alloy-select').addEventListener('change', () => { renderTable(); renderAlloyInfo(); });
+  document.getElementById('shrink-toggle').addEventListener('change', () => { renderTable(); renderAlloyInfo(); });
 
   window.addEventListener('resize', draw);
 
@@ -527,6 +573,8 @@
     if (files.length) addFiles(files);
   }
 
+  fillAlloySelect();
+  renderAlloyInfo();
   update();
   loadDefaults();
 })();

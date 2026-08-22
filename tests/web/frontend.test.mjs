@@ -202,20 +202,40 @@ test('clampmodel: p_max = F / (100·S·k·A)', () => {
 
 test('handoff: alle Übernahme-Schlüssel sind Dashboard-Felder', () => {
   const known = new Set(allFields().map(f => f.key));
+  const require3 = createRequire(import.meta.url);
+  require3(path.join(site, 'shared/examples/alloys.js'));
+  const ALLOYS = globalThis.__ALLOYS__.alloys;
   const vals = logic.handoffValues({
     part: 0.324, runner: 0.039, overflow: 0.032, biscuit: 0.259,
     density: 2700, area: 0.03, eccX: 12, eccY: 3, safety: 1.3, psel: 600
-  }, MACHINES[0].fields);
+  }, MACHINES[0].fields, ALLOYS[0].fields);
   for (const k of Object.keys(vals)) {
     assert.ok(known.has(k), `Übernahme-Schlüssel „${k}" ist kein Dashboard-Feld`);
     assert.ok(Number.isFinite(vals[k]), `Übernahme-Wert „${k}" ist nicht numerisch`);
   }
+  /* Beide Presets kommen an, ohne sich zu überschreiben */
+  assert.equal(vals.force, MACHINES[0].fields.force);
+  assert.equal(vals.density, ALLOYS[0].fields.density, 'Flüssigdichte der Legierung für das Dashboard');
+  assert.equal(vals.densitySolid, ALLOYS[0].fields.densitySolid);
+  /* Ohne Legierung bleibt die Übernahme wie bisher */
+  assert.equal(logic.handoffValues({ part: 1 }, MACHINES[0].fields).densitySolid, undefined);
 });
 
 /* Vorzeichen-Klassen der Validierung dürfen nicht von der Felddefinition
    wegdriften: jedes numerische Feld gehört in genau eine der Klassen
    > 0 (POSITIVE_KEYS), ≥ 0 (NONNEG_KEYS) oder vorzeichenbehaftet
    (NEGATIVE_OK) — und jeder Klassen-Eintrag muss ein echtes Feld sein. */
+test('presets: jede Legierung hat plausible Feststoffdichte und Schwindmaß', () => {
+  const require4 = createRequire(import.meta.url);
+  require4(path.join(site, 'shared/examples/alloys.js'));
+  for (const a of globalThis.__ALLOYS__.alloys) {
+    const f = a.fields;
+    assert.ok(f.densitySolid > 1000 && f.densitySolid < 9000, `${a.id}: Feststoffdichte ${f.densitySolid}`);
+    assert.ok(f.densitySolid > f.density, `${a.id}: fest muss dichter sein als flüssig`);
+    assert.ok(f.shrink > 0 && f.shrink < 2, `${a.id}: Schwindmaß ${f.shrink} % unplausibel`);
+  }
+});
+
 test('inputs: jedes numerische Feld hat genau eine Vorzeichen-Klasse', () => {
   const numeric = allFields().filter(f => f.type !== 'select');
   for (const f of numeric) {
@@ -246,6 +266,12 @@ test('mergeDesign: mischt in den design-Abschnitt, statt zu überschreiben', () 
   assert.equal(data.values.area, 0.03);       // Übernahme angekommen
   assert.deepEqual(data.curve, [[60, 0.4]]);  // Schusskurve bleibt
   assert.equal(data.machine, 'hcc800');
+  /* Legierung optional: ohne Angabe bleibt die bisherige stehen */
+  assert.ok(project.mergeDesign({ psel: 700 }, 'hcc800', 'alsi12'));
+  assert.equal(project.getSection('design').alloy, 'alsi12');
+  assert.ok(project.mergeDesign({ psel: 650 }, null));
+  assert.equal(project.getSection('design').alloy, 'alsi12', 'Legierung bleibt');
+  assert.equal(project.getSection('design').machine, 'hcc800', 'Maschine bleibt');
   project._reset();
 });
 
@@ -294,6 +320,16 @@ test('presets: Alle Legierungs-/Bauteil-Preset-Felder sind Felder ihrer Domäne'
 
 /* ── 5 · Rechenlogik der STL-Seite ───────────────────────────── */
 
+test('stl-logic: shrinkVolumeFactor = (1 + s/100)³, Randfälle abgesichert', () => {
+  closeTo(logic.shrinkVolumeFactor(0.55), Math.pow(1.0055, 3));
+  closeTo(logic.shrinkVolumeFactor(0.55), 1.016591, 1e-6);   // Bauteil ≈ 1,63 % kleiner als das Werkzeugmaß
+  assert.equal(logic.shrinkVolumeFactor(0), 1);              // kein Schwindmaß → unverändert
+  assert.equal(logic.shrinkVolumeFactor(-1), 1);
+  assert.equal(logic.shrinkVolumeFactor(NaN), 1);
+  assert.equal(logic.shrinkVolumeFactor(undefined), 1);
+  assert.ok(logic.shrinkVolumeFactor(0.65) > logic.shrinkVolumeFactor(0.45));
+});
+
 test('stl-logic: roleSums summiert Massen je Rolle', () => {
   const models = [
     { volume: 120000, role: 'part' },     // 0,324 kg bei 2700 kg/m³
@@ -308,6 +344,15 @@ test('stl-logic: roleSums summiert Massen je Rolle', () => {
   closeTo(sums.runner, 0.03888);
   closeTo(sums.overflow, 0.0324);
   closeTo(sums.biscuit, 0.2590299);
+  /* Werkzeugmaß: Volumenfaktor teilt alle Volumina (Masse sinkt entsprechend) */
+  const f = logic.shrinkVolumeFactor(0.55);
+  const shrunk = logic.roleSums(models, 2700, f);
+  for (const k of Object.keys(sums)) closeTo(shrunk[k], sums[k] / f, 1e-9);
+  /* unbrauchbarer Faktor → unverändert */
+  for (const bad of [1, 0, -2, NaN, undefined]) {
+    const r = logic.roleSums(models, 2700, bad);
+    for (const k of Object.keys(sums)) closeTo(r[k], sums[k], 1e-9);
+  }
 });
 
 test('stl-logic: missingRoles nennt fehlende Zuordnungen', () => {

@@ -13,13 +13,25 @@
   /* Masse in kg: Volumen [mm³] · Dichte [kg/m³] · 1e-9 */
   function massKg(volumeMm3, density) { return volumeMm3 * density * 1e-9; }
 
+  /* Schwindung: lineares Schwindmaß s [%] der Legierung → Volumenfaktor
+     (1 + s/100)³. Ein auf Werkzeugmaß gezeichnetes Modell (mit Schwindungs-
+     aufmaß) ist um diesen Faktor größer als das kalte, erstarrte Bauteil.
+     Ohne oder mit unbrauchbarem Schwindmaß bleibt der Faktor 1. */
+  function shrinkVolumeFactor(shrinkPercent) {
+    var s = Number(shrinkPercent);
+    if (!isFinite(s) || s <= 0) return 1;
+    return Math.pow(1 + s / 100, 3);
+  }
+
   /* Massensummen je Rolle über alle zugeordneten Dateien.
-     models: [{ volume, role }] mit volume in mm³. */
-  function roleSums(models, density) {
+     models: [{ volume, role }] mit volume in mm³; volumeFactor teilt die
+     STL-Volumina (Modelle auf Werkzeugmaß), Standard 1 = unverändert. */
+  function roleSums(models, density, volumeFactor) {
+    var f = isFinite(volumeFactor) && volumeFactor > 0 ? volumeFactor : 1;
     var sums = { part: 0, runner: 0, overflow: 0, biscuit: 0 };
     for (var i = 0; i < models.length; i++) {
       var m = models[i];
-      if (m.role) sums[m.role] += massKg(m.volume, density);
+      if (m.role) sums[m.role] += massKg(m.volume / f, density);
     }
     return sums;
   }
@@ -77,21 +89,23 @@
   }
 
   /* values-Objekt der Übernahme ins Dashboard (design-Abschnitt des Projekts).
-     Massen in kg, area in m², ecc in mm, psel in bar; machineFields = Felder
-     des gewählten Maschinen-Presets. Alle Schlüssel müssen Eingabefelder des
-     Dashboards sein (js/config/fields.js) — der Frontend-Test prüft das.
-     Die Dichte wird bewusst NICHT übernommen: hier Feststoffdichte, im
-     Dashboard Flüssigdichte. */
-  function handoffValues(o, machineFields) {
+     Massen in kg, area in m², ecc in mm, psel in bar; machineFields und
+     alloyFields = Felder der gewählten Presets (Maschine, Legierung). Alle
+     Schlüssel müssen Eingabefelder des Dashboards sein (js/config/fields.js)
+     — der Frontend-Test prüft das. Die Legierung bringt beide Dichten mit:
+     hier rechnet die Feststoffdichte die Massen, im Dashboard die
+     Flüssigdichte die Schmelzevolumina. */
+  function handoffValues(o, machineFields, alloyFields) {
     return Object.assign({
       part: o.part, runner: o.runner, overflow: o.overflow, biscuit: o.biscuit,
       area: o.area, eccX: o.eccX, eccY: o.eccY,
       safety: o.safety, psel: o.psel
-    }, machineFields);
+    }, machineFields, alloyFields);
   }
 
   var api = {
-    handoffValues: handoffValues, ROLES: ROLES, massKg: massKg, roleSums: roleSums, missingRoles: missingRoles, sideCoreArea: sideCoreArea, machineRows: machineRows };
+    handoffValues: handoffValues, ROLES: ROLES, massKg: massKg, shrinkVolumeFactor: shrinkVolumeFactor,
+    roleSums: roleSums, missingRoles: missingRoles, sideCoreArea: sideCoreArea, machineRows: machineRows };
   root.__STL_LOGIC__ = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

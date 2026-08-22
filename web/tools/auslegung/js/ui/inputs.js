@@ -102,7 +102,7 @@ export function applyValues(fields) {
 /* Felder, die zwingend > 0 sein müssen (Divisionen, Achsen, Wurzeln,
    physikalisch zwingend positive Größen). Exportiert für den
    Konsistenz-Test: jedes numerische Feld gehört in genau eine Klasse. */
-export const POSITIVE_KEYS = ['density', 'diam', 'length', 'gate', 'vent', 'Cd',
+export const POSITIVE_KEYS = ['density', 'densitySolid', 'shrink', 'diam', 'length', 'gate', 'vent', 'Cd',
   'force', 'injForce', 'area', 'psel', 'safety', 'vmax', 'tmax', 'vAirMax', 'solK',
   'tieX', 'tieY',
   'dmin', 'dmax', 'lmin', 'lmax', 'part', 'Tcast', 'Tflow', 'Tdie',

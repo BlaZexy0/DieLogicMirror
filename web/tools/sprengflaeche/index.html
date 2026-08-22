@@ -202,6 +202,25 @@
       font-size: 0.82rem;
       text-align: right;
     }
+    .machine-head select {
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 0.82rem;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      max-width: 320px;
+    }
+    .machine-head input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .machine-head label.check { cursor: pointer; }
+    .machine-head input:focus, .machine-head select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
     .machine-info {
       padding: 0.55rem 1.2rem;
       font-size: 0.78rem;
@@ -294,9 +313,9 @@
     Ursprung gemessen. Die Dateien daher schon im CAD passend zur Werkzeugmitte positioniert
     exportieren; diese Seite verschiebt oder dreht nichts.</div>
 
-  <div class="stl-note"><strong style="color:var(--warn)">Achtung:</strong> Sprengfläche und
-    Gewichte sind abhängig von Schwindungsfaktor und Dichte (flüssig/fest). Beim Hinzufügen
-    der Daten beachten!</div>
+  <div class="stl-note"><strong>Massen:</strong> Gewichte folgen der gewählten Legierung
+    (Feststoffdichte) und dem Schwindmaß — den Schalter „Modelle auf Werkzeugmaß" setzen, wenn die
+    STL-Dateien das Schwindungsaufmaß enthalten. Die Sprengfläche bleibt die Silhouette, wie geladen.</div>
 
   <div class="stl-canvas-card" id="canvas-card">
     <button id="copy-img-btn" disabled title="Als PNG kopieren" aria-label="Als PNG kopieren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
@@ -319,10 +338,14 @@
   <div class="stl-table-card">
     <div class="machine-head">
       <h2>Geladene Dateien</h2>
-      <label for="density-input">Dichte (fest)
-        <input type="number" id="density-input" value="2700" min="1" step="10"> kg/m³
+      <label for="alloy-select" title="Legierungs-Preset — liefert Feststoffdichte für die Massen und das Schwindmaß">Legierung
+        <select id="alloy-select"></select>
+      </label>
+      <label class="check" for="shrink-toggle" title="Sind die Modelle auf Werkzeugmaß gezeichnet (Schwindungsaufmaß eingerechnet), ist das kalte Bauteil um (1 + s/100)³ kleiner — Volumen und Masse werden umgerechnet.">
+        <input type="checkbox" id="shrink-toggle"> Modelle auf Werkzeugmaß (mit Schwindung)
       </label>
     </div>
+    <div class="machine-info" id="alloy-info"></div>
     <table class="stl-table" id="result-table" hidden>
       <thead>
         <tr>
@@ -353,8 +376,8 @@
       <label for="core-area-input" title="Projizierte Schieberfläche in Zugrichtung — wirkt mit A·tan(α) auf die Sprengfläche"><span>Seitenschieber A<sub>S</sub></span>
         <input type="number" id="core-area-input" value="0" min="0" step="100" style="width:90px"> mm²
       </label>
-      <label for="core-angle-input" title="Sperrwinkel der Abstützschräge — üblich 15–25°">Sperrwinkel α
-        <input type="number" id="core-angle-input" value="20" min="0" max="89" step="1"> °
+      <label for="core-angle-input" title="Sperrwinkel der Abstützschräge — üblich 10–15°">Sperrwinkel α
+        <input type="number" id="core-angle-input" value="11" min="0" max="89" step="1"> °
       </label>
     </div>
     <div class="machine-info" id="machine-info"></div>
@@ -390,28 +413,31 @@
     der Maschine). Die Sprengfläche ist die vereinigte projizierte Fläche plus dem
     <strong>Seitenschieber-Zuschlag</strong> A<sub>S</sub> · tan(α): der Metalldruck wirkt auf die
     in Zugrichtung projizierte Schieberfläche A<sub>S</sub>, die Abstützschräge mit Sperrwinkel α
-    leitet davon den Anteil tan(α) in die Öffnungsrichtung (üblich 15–25°). Der Zuschlag geht in
+    leitet davon den Anteil tan(α) in die Öffnungsrichtung (üblich 10–15°). Der Zuschlag geht in
     die Drucktabelle und die Dashboard-Übernahme ein, verschiebt aber den Schwerpunkt S nicht —
     die Lage der Schieber ist hier unbekannt.
     Die drei Spalten: nur Schließkraft (S = 1, k = 1), mit Sicherheitsfaktor S,
-    mit S und Außermittigkeit. Die Masse je Datei ist Volumen × Dichte —
-    <strong>Schwindung beachten:</strong> das STL-Volumen beschreibt das kalte, erstarrte
-    Bauteil. Mit der Feststoffdichte ergibt sich die Masse des fertigen Teils; wer daraus
-    das Schmelze- bzw. Dosiervolumen bestimmt oder mit der Flüssigdichte rechnet, muss die
-    Erstarrungs- und Abkühlschwindung zuschlagen (Aluminium: Flüssigdichte ≈ 2400 statt
-    2700 kg/m³, also grob 10 % mehr Schmelzevolumen je kg).
+    mit S und Außermittigkeit. Die Masse je Datei ist Bauteilvolumen × Feststoffdichte,
+    beides aus dem gewählten <strong>Legierungs-Preset</strong> (Dichte fest, Schwindmaß —
+    produktiv als Stammdaten der Organisation gepflegt).
+    <strong>Schwindung:</strong> Sind die Modelle auf <em>Werkzeugmaß</em> gezeichnet, enthalten
+    sie das Schwindungsaufmaß und sind linear um s größer als das kalte Bauteil — das
+    Bauteilvolumen ist dann STL-Volumen / (1 + s/100)³, bei 0,55 % also rund 1,7 % weniger.
+    Ohne den Schalter gilt das STL als fertiges Bauteil und das Volumen bleibt unverändert.
+    Die projizierte Fläche wird nicht umgerechnet: sie gilt als die Silhouette, wie geladen.
     <strong>Empfohlen</strong> markiert die kleinste Maschine, deren maximaler Nachdruck
     (mit S und Außermittigkeit) den eingestellten Auslegungsdruck erreicht;
     <strong>zu klein</strong> markierte Maschinen erreichen ihn nicht. „→ Dashboard" übernimmt
     die Sprengfläche (vereinigte projizierte Fläche + Seitenschieber-Zuschlag),
     Außermittigkeit, Massen aus der Zuordnung,
-    Sicherheitsfaktor, Auslegungsdruck und das Maschinen-Preset in das Dashboard und öffnet es —
-    möglich, sobald alle vier Zuordnungen (Bauteil, Anguss, Überlauf, Pressrest) vergeben sind.
-    Die Dichte wird nicht übernommen: hier ist sie die Feststoffdichte für die Massen,
-    im Dashboard rechnet die Flüssigdichte die Schmelzevolumina.</p>
+    Sicherheitsfaktor, Auslegungsdruck sowie Maschinen- und Legierungs-Preset in das Dashboard und
+    öffnet es — möglich, sobald alle vier Zuordnungen (Bauteil, Anguss, Überlauf, Pressrest)
+    vergeben sind. Die Legierung bringt beide Dichten mit: hier rechnet die Feststoffdichte die
+    Massen, im Dashboard die Flüssigdichte die Schmelzevolumina.</p>
 
 </div>
 <script src="/shared/examples/machines.js"></script>
+<script src="/shared/examples/alloys.js"></script>
 <script src="/shared/orgpresets.js"></script>
 <script src="/shared/project.js"></script>
 <script src="/shared/projectbar.js"></script>

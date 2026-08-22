@@ -240,10 +240,11 @@
 
   /* Teilwerte in den design-Abschnitt mischen (Übernahme aus der
      STL-Analyse): nicht betroffene Eingaben und die Schusskurve bleiben. */
-  function mergeDesign(values, machineId) {
+  function mergeDesign(values, machineId, alloyId) {
     var d = getSection('design') || {};
     d.values = Object.assign({}, d.values, values);
     if (machineId != null) d.machine = machineId;
+    if (alloyId != null) d.alloy = alloyId;
     return setSection('design', d);
   }
 
