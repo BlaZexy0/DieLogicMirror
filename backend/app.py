@@ -1,4 +1,4 @@
-"""DieLogic-Backend: API (/api/…: Simulation, Anmeldung, Projekte) + Auslieferung der statischen Website (site/).
+"""DieLogic-Backend: API (/api/…: Simulation, Anmeldung, Projekte) + Auslieferung der statischen Website (web/).
 
 Starten (aus dem Ordner dielogic/):
     .venv/bin/uvicorn backend.app:app --reload
@@ -16,11 +16,11 @@ from .orgsettings import router as orgsettings_router
 from .projects import router as projects_router
 from .sim import router as sim_router
 
-SITE_DIR = Path(__file__).resolve().parent.parent / "site"
+SITE_DIR = Path(__file__).resolve().parent.parent / "web"
 
 def site_version() -> str:
-    """Einzige Quelle: site/version.js (window.__DL_VERSION__ = '…')."""
-    m = re.search(r"__DL_VERSION__\s*=\s*'([^']+)'", (SITE_DIR / "version.js").read_text())
+    """Einzige Quelle: web/shared/version.js (window.__DL_VERSION__ = '…')."""
+    m = re.search(r"__DL_VERSION__\s*=\s*'([^']+)'", (SITE_DIR / "shared" / "version.js").read_text())
     return m.group(1) if m else "0"
 
 

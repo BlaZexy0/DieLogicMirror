@@ -1,7 +1,7 @@
 # Physik-Fixtures — geteilte Referenzfälle für JS und Python
 
 Die Physik existiert zweimal: das Dashboard rechnet clientseitig
-(`site/app/js/core/physics.js`), das Backend serverseitig (`backend/convert.py`
+(`web/tools/auslegung/js/core/physics.js`), das Backend serverseitig (`backend/convert.py`
 → `packages/hpdcsim`). Diese Fixtures halten beide Implementierungen
 aneinander fest: **eine** Datei je Referenzfall mit bekannten Eingaben
 (Massen, Geometrie, Schusskurve) und von Hand hergeleiteten Ergebnissen
@@ -10,8 +10,8 @@ aneinander fest: **eine** Datei je Referenzfall mit bekannten Eingaben
 Beide Testsuiten lesen dieselben Dateien und vergleichen gegen dieselben
 Sollwerte:
 
-- JS: `node --test site/tests/physics-fixtures.test.mjs`
-- Python: `python3 backend/tests/run_tests.py` (`test_physics_fixtures.py`)
+- JS: `node --test tests/web/physics-fixtures.test.mjs`
+- Python: `pytest backend/tests` (`test_physics_fixtures.py`)
 
 ## Dateiformat
 

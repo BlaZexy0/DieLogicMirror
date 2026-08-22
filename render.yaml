@@ -18,7 +18,7 @@ services:
           property: connectionString
       # Ersten Admin ohne Shell anlegen: beide im Render-Dashboard setzen
       # (sync: false = Wert wird nicht aus dieser Datei gelesen). Einlösen
-      # unter https://<host>/app/konto.html?token=<DIELOGIC_ADMIN_TOKEN>.
+      # unter https://<host>/konto/?token=<DIELOGIC_ADMIN_TOKEN>.
       - key: DIELOGIC_ADMIN_EMAIL
         sync: false
       - key: DIELOGIC_ADMIN_TOKEN

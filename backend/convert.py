@@ -2,7 +2,7 @@
 hpdcsim-JSON-Konfiguration (SI). Bewusst ohne FastAPI/Pydantic-Import,
 damit die Logik ohne installierte Web-Abhängigkeiten testbar bleibt.
 
-Konventionen wie im Dashboard (app/js/core/physics.js):
+Konventionen wie im Dashboard (web/tools/auslegung/js/core/physics.js):
 Dosiervolumen = (Bauteil + Anguss + Überlauf + Pressrest) / Dichte,
 Füllgrad φ = V_dose / (A·L). Die Schusskurve kommt als [s_mm, v_m_s]-Punkte;
 hpdcsim verlangt, dass das Profil nicht über den Füllende-Hub
@@ -62,7 +62,7 @@ def _clamped_curve(curve, limit):
         except (TypeError, ValueError, IndexError):
             raise ConvertError("Schusskurve: Punkte müssen [s_mm, v_m_s]-Paare sein.")
         # Nicht-endliche Punkte still überspringen — wie buildProfile()
-        # in site/app/js/core/physics.js (leere Tabellenzeilen o. ä.).
+        # in web/tools/auslegung/js/core/physics.js (leere Tabellenzeilen o. ä.).
         if not (math.isfinite(s) and math.isfinite(v)):
             continue
         if v < 0:

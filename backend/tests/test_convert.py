@@ -5,7 +5,7 @@ import math
 
 from backend.convert import ConvertError, sim_config_from_browser
 
-# Dashboard-Defaults (site/app/js/config/fields.js)
+# Dashboard-Defaults (web/tools/auslegung/js/config/fields.js)
 VALUES = {
     "part": 12, "runner": 3, "overflow": 2, "biscuit": 1.2, "density": 2700,
     "diam": 150, "length": 700, "gate": 1800, "vent": 800, "Tcast": 660,

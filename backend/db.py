@@ -176,7 +176,7 @@ class ProjectRevision(Base):
 class OrgSetting(Base):
     """Stammdaten der Organisation: je Schlüssel (machines, alloys, parts,
     kosten) ein JSON-Dokument — die Presets der Firma statt der Beispiele
-    aus site/app/config/*.js."""
+    aus web/shared/examples/*.js."""
     __tablename__ = "org_settings"
     __table_args__ = (UniqueConstraint("org_id", "key"),)
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)

@@ -1,9 +1,9 @@
 """Die generierte Python-Tabelle hpdcsim/_vkrit_table.py gegen die
-CSV-Quelle (site/assets/v_krit_sim.csv) — Gegenstück zu
-site/tests/vkrit-table.test.mjs für die JS-Tabelle: beide eingecheckten
+CSV-Quelle (fixtures/vkrit/v_krit_sim.csv) — Gegenstück zu
+tests/web/vkrit-table.test.mjs für die JS-Tabelle: beide eingecheckten
 Module müssen dieselbe CSV abbilden, sonst rechnen Dashboard und Backend
 mit verschiedenen v_krit-Werten.
-Neu erzeugen: node site/tools/gen-vkrit-table.mjs"""
+Neu erzeugen: node scripts/gen-vkrit-table.mjs"""
 import csv
 import math
 from pathlib import Path
@@ -11,7 +11,7 @@ from pathlib import Path
 from hpdcsim._vkrit_table import VKRIT_D_MM, VKRIT_F, VKRIT_PHI
 
 CSV_PATH = (Path(__file__).resolve().parents[2]
-            / "site" / "assets" / "v_krit_sim.csv")
+            / "fixtures" / "vkrit" / "v_krit_sim.csv")
 G = 9.81  # Normierung der Tabelle (siehe gen-vkrit-table.mjs)
 
 

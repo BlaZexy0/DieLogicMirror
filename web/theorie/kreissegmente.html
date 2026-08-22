@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kreissegmente der Füllkammer · Theorie · DieLogic</title>
+  <meta name="theme-color" content="var(--dark)">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/nav.js"></script>
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[
+      {left:'$$',right:'$$',display:true},
+      {left:'$',right:'$',display:false}
+    ]})"></script>
+  <style>
+    /* ── Seitenspezifische Extras (nicht in shared.css) ─────── */
+    .math-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.5rem;
+      margin: 1.2rem 0;
+      overflow-x: auto;
+    }
+    .katex-display { overflow-x: auto; padding: 0.25rem 0; }
+
+    /* Eingangsfigur: statische Iso-Ansicht, vom Text umflossen */
+    .fig-iso {
+      float: right;
+      width: 390px;
+      max-width: 55%;
+      margin: 0.25rem 0 1rem 1.75rem;
+    }
+    .fig-iso img, .fig-iso svg { width: 100%; height: auto; display: block; background: transparent; mix-blend-mode: multiply; }
+    .fig-iso figcaption {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.4rem;
+      line-height: 1.5;
+    }
+    @media (max-width: 720px) {
+      .fig-iso { float: none; width: 100%; max-width: 100%; margin: 1rem 0; }
+    }
+    /* Kästen neben dem Float verschmälern statt darunter durchzulaufen */
+    .math-block, .derivation-box { overflow: hidden; }
+
+    /* Diagrammkarten */
+    .diagram-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.2rem;
+    }
+    .card-header {
+      padding: 0 0 0.75rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .card-title { font-size: 0.9rem; font-weight: 600; }
+    .canvas-wrap {
+      position: relative;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .canvas-controls {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 0.75rem 0;
+      font-size: 0.82rem;
+    }
+    .ctrl-group { display: flex; align-items: center; gap: 0.5rem; }
+    .ctrl-label { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+    input[type=range] { accent-color: var(--primary); cursor: pointer; width: 140px; }
+    .val-display {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--primary);
+      min-width: 40px;
+    }
+    canvas { display: block; border-radius: 6px 6px 0 0; max-width: 100%; }
+
+    /* Aktiver TOC-Eintrag (Scroll-Spy) */
+    .toc-sidebar li a.active {
+      color: var(--primary);
+      border-left-color: var(--primary);
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="/">DieLogic</a>
+  <span>›</span>
+  <a href="/#theorie">Theorie</a>
+  <span>›</span>
+  Kreissegmente der Füllkammer
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Warum jeder Druckguss-Ingenieur Kreissegmente studieren sollte</h1>
+    <p class="subtitle">Ein Kreissegment beherrscht die Füllkammer: Füllgrad, Breite der freien
+      Oberfläche, benetzter Bogen, die Welle, die mit dem Kolben um die Wette läuft, und das ganze
+      $(\varphi,\,\lambda)$-Auslegungsdiagramm.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">Füllgrad</span>
+      <span class="hero-tag">Kreissegment</span>
+      <span class="hero-tag">Wellengeschwindigkeit</span>
+      <span class="hero-tag">Auslegungsdiagramm</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul id="toc-list">
+        <li><a href="#s1">1. Füllkammer &amp; Füllgrad</a></li>
+        <li><a href="#s2">2. Von der Füllhöhe zum Füllgrad</a></li>
+        <li><a href="#s3">3. Die kritische Geschwindigkeit</a></li>
+        <li><a href="#s4">4. Das (φ, λ)-Auslegungsdiagramm</a></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- Abschnitt 1 -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="s1"></span>
+      <h2 class="section-title">1. Die Füllkammer und der Füllgrad</h2>
+
+      <div class="prose">
+        <figure class="fig-iso">
+          <svg viewBox="0 0 400 330" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" role="img" aria-label="Isometrische Ansicht der liegenden Füllkammer, Füllgrad etwa 30 Prozent">
+            <path d="M131.8 260.2 L335.4 142.7 L335.4 142.7 L337.8 141.0 L339.9 139.1 L341.9 136.8 L343.6 134.3 L345.1 131.4 L346.3 128.3 L347.3 124.9 L348.0 121.3 L348.4 117.5 L348.5 113.5 L348.4 109.3 L348.0 105.0 L347.3 100.6 L346.3 96.2 L345.1 91.6 L343.6 87.1 L341.9 82.5 L339.9 78.0 L337.8 73.5 L335.4 69.1 L332.8 64.8 L330.0 60.7 L327.0 56.7 L324.0 53.0 L320.7 49.4 L317.4 46.1 L314.0 43.0 L310.6 40.2 L307.0 37.7 L303.5 35.5 L300.0 33.6 L296.5 32.1 L293.0 30.9 L289.6 30.0 L286.3 29.5 L283.1 29.4 L280.0 29.6 L277.0 30.1 L274.3 31.1 L271.7 32.3 L68.2 149.8 L65.8 151.5 L63.6 153.4 L61.6 155.7 L59.9 158.2 L58.4 161.1 L57.2 164.2 L56.2 167.6 L55.5 171.2 L55.1 175.0 L55.0 179.0 L55.1 183.2 L55.5 187.5 L56.2 191.9 L57.2 196.3 L58.4 200.9 L59.9 205.4 L61.6 210.0 L63.6 214.5 L65.8 219.0 L68.2 223.4 L70.8 227.7 L73.5 231.8 L76.5 235.8 L79.6 239.5 L82.8 243.1 L86.1 246.4 L89.5 249.5 L93.0 252.3 L96.5 254.8 L100.0 257.0 L103.5 258.9 L107.0 260.4 L110.5 261.6 L113.9 262.5 L117.2 263.0 L120.4 263.1 L123.5 262.9 L126.5 262.4 L129.2 261.4 L131.8 260.2 Z" fill="var(--surface2)" fill-opacity="0.85" stroke="none"/>
+            <path d="M348.5 113.5 L348.4 108.9 L347.9 104.1 L347.0 99.2 L345.8 94.1 L344.3 89.1 L342.5 84.0 L340.4 79.0 L338.0 74.0 L335.4 69.1 L332.5 64.4 L329.3 59.8 L326.0 55.5 L322.5 51.4 L318.9 47.5 L315.2 44.0 L311.3 40.8 L307.4 38.0 L303.5 35.5 L299.6 33.4 L295.7 31.8 L291.9 30.5 L288.1 29.7 L284.5 29.4 L281.0 29.5 L277.7 30.0 L274.6 31.0 L271.7 32.3 L269.0 34.2 L266.6 36.4 L264.5 39.0 L262.7 42.0 L261.2 45.3 L260.0 48.9 L259.2 52.9 L258.6 57.1 L258.5 61.5 L258.6 66.1 L259.2 70.9 L260.0 75.8 L261.2 80.9 L262.7 85.9 L264.5 91.0 L266.6 96.0 L269.0 101.0 L271.7 105.9 L274.6 110.6 L277.7 115.2 L281.0 119.5 L284.5 123.6 L288.1 127.5 L291.9 131.0 L295.7 134.2 L299.6 137.0 L303.5 139.5 L307.4 141.6 L311.3 143.2 L315.2 144.5 L318.9 145.3 L322.5 145.6 L326.0 145.5 L329.3 145.0 L332.5 144.0 L335.4 142.7 L338.0 140.8 L340.4 138.6 L342.5 136.0 L344.3 133.0 L345.8 129.7 L347.0 126.1 L347.9 122.1 L348.4 117.9 L348.5 113.5 Z" fill="var(--border)" stroke="var(--muted)" stroke-width="1.5"/>
+            <path d="M142.7 246.3 L57.3 197.0 L260.8 79.5 L346.2 128.8 Z" fill="var(--accent)" fill-opacity="0.35" stroke="var(--cat-slate)" stroke-width="1"/>
+            <path d="M131.8 260.2 L132.2 259.9 L132.6 259.7 L132.9 259.5 L133.3 259.3 L133.6 259.0 L134.0 258.8 L134.3 258.5 L134.6 258.2 L135.0 258.0 L135.3 257.7 L135.6 257.4 L135.9 257.1 L136.2 256.8 L136.5 256.5 L136.8 256.2 L137.1 255.9 L137.4 255.5 L137.7 255.2 L138.0 254.9 L138.3 254.5 L138.5 254.2 L138.8 253.8 L139.1 253.4 L139.3 253.1 L139.6 252.7 L139.8 252.3 L140.0 251.9 L140.3 251.5 L140.5 251.1 L140.7 250.7 L141.0 250.3 L141.2 249.8 L141.4 249.4 L141.6 249.0 L141.8 248.5 L142.0 248.1 L142.1 247.6 L142.3 247.2 L142.5 246.7 L142.7 246.3 L346.2 128.8 L346.0 129.2 L345.8 129.7 L345.7 130.1 L345.5 130.6 L345.3 131.0 L345.1 131.5 L344.9 131.9 L344.7 132.3 L344.5 132.8 L344.2 133.2 L344.0 133.6 L343.8 134.0 L343.6 134.4 L343.3 134.8 L343.1 135.2 L342.8 135.6 L342.6 135.9 L342.3 136.3 L342.0 136.7 L341.8 137.0 L341.5 137.4 L341.2 137.7 L340.9 138.0 L340.6 138.4 L340.3 138.7 L340.0 139.0 L339.7 139.3 L339.4 139.6 L339.1 139.9 L338.8 140.2 L338.5 140.5 L338.1 140.7 L337.8 141.0 L337.5 141.3 L337.1 141.5 L336.8 141.8 L336.4 142.0 L336.1 142.2 L335.7 142.4 L335.4 142.7 Z" fill="var(--cat-slate)" fill-opacity="0.30" stroke="none"/>
+            <path d="M142.7 246.3 L141.7 248.7 L140.6 251.0 L139.3 253.1 L137.8 255.1 L136.2 256.8 L134.5 258.4 L132.6 259.7 L130.6 260.8 L128.5 261.7 L126.3 262.4 L123.9 262.9 L121.5 263.1 L119.0 263.1 L116.4 262.9 L113.8 262.5 L111.1 261.8 L108.4 260.9 L105.6 259.8 L102.8 258.5 L100.0 257.0 L97.2 255.3 L94.4 253.4 L91.6 251.3 L88.9 249.0 L86.2 246.5 L83.6 243.9 L81.0 241.2 L78.5 238.3 L76.1 235.2 L73.7 232.1 L71.5 228.8 L69.4 225.5 L67.4 222.0 L65.5 218.6 L63.8 215.0 L62.2 211.4 L60.7 207.8 L59.4 204.2 L58.3 200.6 L57.3 197.0 L142.7 246.3 Z" fill="var(--cat-slate)" fill-opacity="0.55" stroke="var(--cat-slate)" stroke-width="1.5"/>
+            <path d="M131.8 260.2 L335.4 142.7" fill="none" stroke="var(--muted)" stroke-width="2"/>
+            <path d="M68.2 149.8 L271.7 32.3" fill="none" stroke="var(--muted)" stroke-width="2"/>
+            <path d="M145.0 231.0 L144.9 226.4 L144.3 221.6 L143.5 216.7 L142.3 211.6 L140.8 206.6 L139.0 201.5 L136.9 196.5 L134.5 191.5 L131.8 186.6 L128.9 181.9 L125.8 177.3 L122.5 173.0 L119.0 168.9 L115.4 165.0 L111.7 161.5 L107.8 158.3 L103.9 155.5 L100.0 153.0 L96.1 150.9 L92.2 149.3 L88.3 148.0 L84.6 147.2 L81.0 146.9 L77.5 147.0 L74.2 147.5 L71.1 148.5 L68.2 149.8 L65.5 151.7 L63.1 153.9 L61.0 156.5 L59.2 159.5 L57.7 162.8 L56.5 166.4 L55.7 170.4 L55.1 174.6 L55.0 179.0 L55.1 183.6 L55.7 188.4 L56.5 193.3 L57.7 198.4 L59.2 203.4 L61.0 208.5 L63.1 213.5 L65.5 218.5 L68.2 223.4 L71.1 228.1 L74.2 232.7 L77.5 237.0 L81.0 241.1 L84.6 245.0 L88.3 248.5 L92.2 251.7 L96.1 254.5 L100.0 257.0 L103.9 259.1 L107.8 260.7 L111.7 262.0 L115.4 262.8 L119.0 263.1 L122.5 263.0 L125.8 262.5 L128.9 261.5 L131.8 260.2 L134.5 258.3 L136.9 256.1 L139.0 253.5 L140.8 250.5 L142.3 247.2 L143.5 243.6 L144.3 239.6 L144.9 235.4 L145.0 231.0 Z" fill="none" stroke="var(--muted)" stroke-width="2"/>
+            <path d="M142.7 246.3 L57.3 197.0" fill="none" stroke="var(--primary-deep)" stroke-width="1.2" stroke-dasharray="5 3"/>
+            <g stroke="var(--dark)" stroke-width="1">
+              <path d="M29.0 153.0 L29.0 257.0" fill="none"/>
+              <path d="M25.0 153.0 L33.0 153.0" fill="none"/>
+              <path d="M25.0 257.0 L33.0 257.0" fill="none"/>
+              <path d="M100.0 153.0 L29.0 153.0" stroke-dasharray="2 3" fill="none"/>
+              <path d="M100.0 257.0 L29.0 257.0" stroke-dasharray="2 3" fill="none"/>
+            </g>
+            <text x="21.0" y="209.0" text-anchor="end" font-size="13" font-weight="700" fill="var(--dark)">D</text>
+            <g stroke="var(--primary-deep)" stroke-width="1">
+              <path d="M42.0 221.6 L42.0 257.0" fill="none"/>
+              <path d="M38.0 221.6 L46.0 221.6" fill="none"/>
+            </g>
+            <text x="49.0" y="243.3" font-size="12" fill="var(--primary-deep)">h</text>
+            <g stroke="var(--dark)" stroke-width="1">
+              <path d="M146.8 286.1 L350.4 168.6" fill="none"/>
+              <path d="M131.8 260.2 L146.8 286.1" stroke-dasharray="2 3" fill="none"/>
+              <path d="M335.4 142.7 L350.4 168.6" stroke-dasharray="2 3" fill="none"/>
+            </g>
+            <text x="248.6" y="241.4" text-anchor="middle" font-size="13" font-weight="700" fill="var(--dark)" transform="rotate(-30.0 248.6 241.4)">L</text>
+            <text x="191.6" y="172.7" text-anchor="middle" font-size="11" fill="var(--primary-deep)" transform="rotate(-30.0 191.6 168.7)">Schmelze</text>
+            <text x="321.7" y="28.1" font-size="10.5" fill="var(--muted)">Kolben</text>
+            <path d="M335.7 32.1 L309.5 73.5" stroke="var(--muted)" stroke-width="1" fill="none"/>
+          </svg>
+          <figcaption>Die liegende Füllkammer in isometrischer Ansicht — teilgefüllt mit
+            Füllgrad $\varphi \approx 0{,}30$ (Füllhöhe $h/D \approx 0{,}34$). Die Schmelze bildet
+            in jedem Querschnitt dasselbe Kreissegment.</figcaption>
+        </figure>
+        <p>
+          In jeder Kaltkammer-Druckgussmaschine beginnt der Schuss auf dieselbe Weise: Flüssiges
+          Metall wird durch die Eingießöffnung in einen liegenden Zylinder — die
+          <strong>Füllkammer</strong> — mit Bohrungsdurchmesser $D$ und Länge $L$ dosiert. Die
+          Schmelze sammelt sich am Boden und füllt bei einem typischen Schuss etwa das untere bis obere
+          Drittel der Bohrung, wie in der nebenstehenden Iso-Ansicht. Dann setzt sich der Kolben
+          in Bewegung.
+        </p>
+        <p>
+          Die meistzitierte Kennzahl dieser Phase ist der <strong>Füllgrad</strong>:
+        </p>
+        <div class="math-block">
+          $$\varphi \;=\; \frac{V_\text{Schmelze}}{V_\text{Kammer}}
+            \;=\; \frac{V_\text{Schmelze}}{\tfrac{\pi}{4}D^2 L}$$
+        </div>
+        <p>
+          Da die Kammer ein <em>Prisma</em> ist — derselbe Kreisquerschnitt, entlang der Länge $L$
+          verschoben — nimmt die Schmelze in jedem Schnitt dieselbe Form ein. Die Länge kürzt sich
+          heraus:
+        </p>
+        <div class="math-block">
+          $$\varphi \;=\; \frac{A\cdot L}{\pi R^2 \cdot L} \;=\; \frac{A}{\pi R^2}$$
+        </div>
+        <p>
+          wobei $A$ die Fläche des benetzten Teils eines Querschnitts ist und $R = D/2$. Diese
+          benetzte Form ist ein <strong>Kreissegment</strong> — ein Kreis, geschnitten von einer
+          horizontalen Sehne. Das gesamte dreidimensionale Kammerproblem kollabiert auf eine
+          einzige zweidimensionale Figur, und genau deshalb verdient das Kreissegment die volle
+          Aufmerksamkeit des Ingenieurs: Jede Größe, auf die es im Prozess ankommt —
+          Schmelzetiefe, Breite der freien Oberfläche, benetzter Stahl, Geschwindigkeit der
+          Schwallwelle, selbst die günstigsten Kammerproportionen — folgt aus ihr.
+        </p>
+      </div>
+      <div style="clear:both;"></div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- Abschnitt 2 -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="s2"></span>
+      <h2 class="section-title">2. Von Kreissegmenten zu physikalischen Größen</h2>
+
+      <div class="prose">
+        <p>
+          Das Kreissegment ist durch einige interessante Größen beschrieben. Das natürliche Maß ist seine Höhe $h$, welche die physikalische Füllhöhe der Schmelze darstellt  — die Tiefe
+          des Metalls über dem tiefsten Punkt der Bohrung. Alles weiteren Größen des Segments folgen aus $h$ und $D$ mit einem
+          einzigen rechtwinkligen Dreieck:
+        </p>
+      </div>
+
+      <div class="derivation-box">
+        <strong style="font-size:0.85rem;color:var(--primary2);">Von der Tiefe zur Fläche</strong>
+        <div class="step">
+          <span class="step-num">①</span>
+          <span>Die freie Oberfläche liegt $R - h$ unter dem Kreismittelpunkt. Pythagoras liefert
+            die halbe Sehne: $w = \sqrt{R^2 - (R-h)^2} = \sqrt{h(D-h)}$</span>
+        </div>
+        <div class="step">
+          <span class="step-num">②</span>
+          <span>Sehnen aufstapeln: Integration der Oberflächenbreite $2\sqrt{y(D-y)}$ vom Boden
+            $y = 0$ bis $y = h$ ergibt die Segmentfläche
+            $A = R^2\arccos\!\bigl(1 - \tfrac{2h}{D}\bigr) - (R-h)\sqrt{h(D-h)}$</span>
+        </div>
+        <div class="step">
+          <span class="step-num">③</span>
+          <span>Division durch die volle Bohrungsfläche $\pi R^2$ ergibt den Füllgrad.</span>
+        </div>
+      </div>
+      <div class="prose">
+        <p>
+          Der Füllgrad ergibt sich wie anfangs aufgezeigt geometrisch aus dem Volumen der Gusstraube
+          und der verwendeten Kammer.  Die Füllhöhe $h$ kann aus ihm jedoch nachweisbar nur numerisch
+          bestimmt werden.
+        </p>
+      </div>
+      <div class="math-block">
+        $$\begin{aligned}
+        \varphi(h,D) &= \frac{1}{\pi}\arccos\!\left(1-\frac{2h}{D}\right)
+        -\frac{2}{\pi}\left(1-\frac{2h}{D}\right)\frac{\sqrt{h(D-h)}}{D},\\[4pt]
+        T(h,D) &= 2\sqrt{h(D-h)},\qquad
+        S(h,D)=D\,\arccos\!\left(1-\frac{2h}{D}\right)\quad(h\le D/2).
+        \end{aligned}$$
+      </div>
+
+      <div class="prose">
+        <figure class="fig-iso" style="width:360px;max-width:48%;">
+          <svg viewBox="0 0 460 400" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" role="img" aria-label="Bohrungsquerschnitt mit Segmentgrößen S, h, T, D, A und Zentriwinkel">
+            <rect x="0" y="0" width="460" height="400" fill="var(--surface2)"/>
+            <circle cx="236" cy="206" r="148" fill="var(--surface2)" stroke="var(--muted)" stroke-width="2"/>
+            <path d="M382.1 229.3 L380.9 236.2 L379.3 243.0 L377.4 249.7 L375.2 256.3 L372.7 262.8 L369.8 269.2 L366.7 275.4 L363.3 281.5 L359.6 287.4 L355.7 293.1 L351.4 298.6 L346.9 304.0 L342.2 309.1 L337.2 314.0 L332.0 318.6 L326.6 323.0 L321.0 327.1 L315.2 331.0 L309.3 334.6 L303.1 337.9 L296.9 340.9 L290.4 343.6 L283.9 346.0 L277.3 348.1 L270.5 349.9 L263.7 351.4 L256.8 352.5 L249.9 353.3 L243.0 353.8 L236.0 354.0 L229.0 353.8 L222.1 353.3 L215.2 352.5 L208.3 351.4 L201.5 349.9 L194.7 348.1 L188.1 346.0 L181.6 343.6 L175.1 340.9 L168.9 337.9 L162.7 334.6 L156.8 331.0 L151.0 327.1 L145.4 323.0 L140.0 318.6 L134.8 314.0 L129.8 309.1 L125.1 304.0 L120.6 298.6 L116.3 293.1 L112.4 287.4 L108.7 281.5 L105.3 275.4 L102.2 269.2 L99.3 262.8 L96.8 256.3 L94.6 249.7 L92.7 243.0 L91.1 236.2 L89.9 229.3 L89.9 229.3 Z" fill="var(--accent)" fill-opacity="0.4" stroke="var(--accent)" stroke-width="1.5"/>
+            <path d="M382.1 229.3 L380.9 236.2 L379.3 243.0 L377.4 249.7 L375.2 256.3 L372.7 262.8 L369.8 269.2 L366.7 275.4 L363.3 281.5 L359.6 287.4 L355.7 293.1 L351.4 298.6 L346.9 304.0 L342.2 309.1 L337.2 314.0 L332.0 318.6 L326.6 323.0 L321.0 327.1 L315.2 331.0 L309.3 334.6 L303.1 337.9 L296.9 340.9 L290.4 343.6 L283.9 346.0 L277.3 348.1 L270.5 349.9 L263.7 351.4 L256.8 352.5 L249.9 353.3 L243.0 353.8 L236.0 354.0 L229.0 353.8 L222.1 353.3 L215.2 352.5 L208.3 351.4 L201.5 349.9 L194.7 348.1 L188.1 346.0 L181.6 343.6 L175.1 340.9 L168.9 337.9 L162.7 334.6 L156.8 331.0 L151.0 327.1 L145.4 323.0 L140.0 318.6 L134.8 314.0 L129.8 309.1 L125.1 304.0 L120.6 298.6 L116.3 293.1 L112.4 287.4 L108.7 281.5 L105.3 275.4 L102.2 269.2 L99.3 262.8 L96.8 256.3 L94.6 249.7 L92.7 243.0 L91.1 236.2 L89.9 229.3" fill="none" stroke="var(--cat-orange)" stroke-width="4.5" stroke-linecap="round"/>
+            <text x="236" y="376" text-anchor="middle" font-size="14" font-weight="700" fill="var(--cat-orange)">S</text>
+            <path d="M89.9 229.3 L382.1 229.3" fill="none" stroke="var(--cat-slate)" stroke-width="2" stroke-dasharray="6 3"/>
+            <path d="M89.9 224.3 L89.9 234.3" stroke="var(--cat-slate)" stroke-width="2"/>
+            <path d="M382.1 224.3 L382.1 234.3" stroke="var(--cat-slate)" stroke-width="2"/>
+            <text x="316.4" y="221.3" text-anchor="middle" font-size="14" font-weight="700" fill="var(--cat-slate)">T</text>
+            <path d="M294.5 215.3 L294.0 218.1 L293.3 220.8 L292.6 223.5 L291.7 226.1 L290.7 228.7 L289.5 231.3 L288.3 233.8 L286.9 236.2 L285.4 238.5 L283.9 240.8 L282.2 243.1 L280.4 245.2 L278.5 247.2 L276.5 249.2 L274.4 251.0 L272.3 252.8 L270.0 254.5 L267.7 256.0 L265.3 257.4 L262.9 258.8 L260.3 260.0 L257.8 261.1 L255.2 262.0 L252.5 262.9 L249.8 263.6 L247.1 264.2 L244.3 264.6 L241.6 264.9 L238.8 265.1 L236.0 265.2 L233.2 265.1 L230.4 264.9 L227.7 264.6 L224.9 264.2 L222.2 263.6 L219.5 262.9 L216.8 262.0 L214.2 261.1 L211.7 260.0 L209.1 258.8 L206.7 257.4 L204.3 256.0 L202.0 254.5 L199.7 252.8 L197.6 251.0 L195.5 249.2 L193.5 247.2 L191.6 245.2 L189.8 243.1 L188.1 240.8 L186.6 238.5 L185.1 236.2 L183.7 233.8 L182.5 231.3 L181.3 228.7 L180.3 226.1 L179.4 223.5 L178.7 220.8 L178.0 218.1 L177.5 215.3" fill="none" stroke="var(--primary)" stroke-width="1.5"/>
+            <path d="M236 206 L382.1 229.3" stroke="var(--muted-light)" stroke-width="1" stroke-dasharray="3 3"/>
+            <path d="M236 206 L89.9 229.3" stroke="var(--muted-light)" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="236" y="283.2" text-anchor="middle" font-size="14" font-weight="700" fill="var(--primary)">θ</text>
+            <text x="159.0" y="283.0" text-anchor="middle" font-size="15" font-weight="700" font-style="italic" fill="var(--primary-deep)">A</text>
+            <g stroke="var(--dark)" stroke-width="1">
+              <path d="M88 36 L384 36" fill="none"/>
+              <path d="M88 32 L88 40" fill="none"/>
+              <path d="M384 32 L384 40" fill="none"/>
+              <path d="M88 58 L88 36" stroke-dasharray="2 3" fill="none"/>
+              <path d="M384 58 L384 36" stroke-dasharray="2 3" fill="none"/>
+            </g>
+            <text x="236" y="29" text-anchor="middle" font-size="14" font-weight="700" fill="var(--dark)">D</text>
+            <g stroke="var(--muted)" stroke-width="1">
+              <path d="M62 229.3 L62 354" fill="none"/>
+              <path d="M58 229.3 L66 229.3" fill="none"/>
+              <path d="M58 354 L66 354" fill="none"/>
+              <path d="M89.9 229.3 L62 229.3" stroke-dasharray="2 3" fill="none"/>
+              <path d="M236 354 L62 354" stroke-dasharray="2 3" fill="none"/>
+            </g>
+            <text x="54" y="296.7" text-anchor="end" font-size="13" font-weight="700" fill="var(--muted)">h</text>
+          </svg>
+          <figcaption>Bohrungsquerschnitt am Beispiel $\varphi=0{,}4$: Das Segment verbindet Füllhöhe $h$, freie Sehne $T$, benetzten Bogen $S$ und Fläche $A$. Alle Größen lassen sich auf $D$ und $h$ zurückführen.</figcaption>
+        </figure>
+        <p>
+          Aus demselben Dreieck folgen die beiden anderen Längen, auf die es im Prozess ankommt —
+          die <strong>Sehne</strong> $T$ (Breite der freien Oberfläche) und der
+          <strong>benetzte Bogen</strong> $S$ (schmelzebedeckter Bohrungsumfang). Im nebenstehenden
+          Querschnitt sind diese Größen gemeinsam mit $A$, $h$, $D$ und dem Zentriwinkel dargestellt;
+          damit wird unmittelbar sichtbar, dass die gesamte Geometrie des Querschnitts durch $D$ und $h$ festgelegt ist.
+        </p>
+      </div>
+
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">
+        Für $h\le D/2$ gilt $S=D\arccos(1-2h/D)$. Oberhalb der halben Füllung
+        wird derselbe Ausdruck als der benetzte, größere Kreisbogen fortgeführt; die Geometrie bleibt
+        vollständig durch $D$ und $h$ bestimmt.
+      </p>
+
+      <div class="prose">
+        <p>
+          Die Füllgrad-Formel ist exakt, geschlossen und streng monoton in $h$. Jedem Füllgrad entspricht
+          also genau eine Höhe. Der umgekehrte Weg — zu gegebenem $\varphi$ das $h$ finden — besitzt
+          keine elementare geschlossene Form. Für die praktische Auslegung ist deshalb besonders nützlich,
+          die Segmentgrößen direkt als Funktionen von $D$ und $h$ zu führen.
+        </p>
+      </div>
+
+      <div style="clear:both;"></div>
+
+      <div class="prose">
+        <p>
+          Die Kleinwinkel-Näherung ist auf kleine Füllgrade zugeschnitten. Für den hier relevanten Bereich
+          um $\varphi=0{,}5$ werden die Größen stattdessen direkt in $\varphi$ entwickelt. Die Entwicklung
+          ist bei halber Füllung zentriert und vermeidet eine zusätzliche Hilfsvariable:
+        </p>
+      </div>
+
+      <div class="math-block">
+        $$\frac{T}{D} \approx 1-2\left(\varphi-\frac12\right)^2,\qquad
+          \frac{S}{D} \approx \frac{\pi}{2}+2\left(\varphi-\frac12\right)+\frac{4}{3}\left(\varphi-\frac12\right)^3,\\[4pt]
+          \frac{h}{D} \approx \frac12+\frac{\pi}{4}\left(\varphi-\frac12\right)+\frac{\pi^3}{96}\left(\varphi-\frac12\right)^3,\qquad
+          \frac{D_h}{D} \approx \frac{\pi}{8}+\left(\varphi-\frac12\right)+\frac{\pi}{4}\left(\varphi-\frac12\right)^2+\frac{4}{3}\left(\varphi-\frac12\right)^3$$
+      </div>
+
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">
+        Die Näherungen sind bei $\varphi=0{,}5$ auf die exakten Werte $T/D=1$, $S/D=\pi/2$,
+        $h/D=1/2$ und $D_h/D=\pi/8$ zentriert und damit für den Bereich um die halbe Füllung gedacht.
+      </p>
+
+      <div class="diagram-card" style="margin:1.5rem 0;">
+        <div class="card-header"><span class="card-title">Geometriekurven über dem Füllgrad $\varphi$</span></div>
+        <div class="card-body" style="padding:0.75rem 0 0;">
+          <div class="canvas-wrap">
+            <svg viewBox="0 0 540 300" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" role="img" aria-label="Geometriekurven des Kreissegments über dem Füllgrad" style="display:block;width:100%;height:auto;border-radius:6px;">
+              <rect x="0" y="0" width="540" height="300" fill="var(--surface2)"/>
+              <g stroke="var(--border-light)" stroke-width="1">
+                <line x1="48.0" y1="16" x2="48.0" y2="262"/>
+                <line x1="48" y1="262.0" x2="524" y2="262.0"/>
+                <line x1="143.2" y1="16" x2="143.2" y2="262"/>
+                <line x1="48" y1="212.8" x2="524" y2="212.8"/>
+                <line x1="238.4" y1="16" x2="238.4" y2="262"/>
+                <line x1="48" y1="163.6" x2="524" y2="163.6"/>
+                <line x1="333.6" y1="16" x2="333.6" y2="262"/>
+                <line x1="48" y1="114.4" x2="524" y2="114.4"/>
+                <line x1="428.8" y1="16" x2="428.8" y2="262"/>
+                <line x1="48" y1="65.2" x2="524" y2="65.2"/>
+                <line x1="524.0" y1="16" x2="524.0" y2="262"/>
+                <line x1="48" y1="16.0" x2="524" y2="16.0"/>
+              </g>
+              <path d="M48.0 262.0 L52.0 254.9 L55.9 250.6 L59.9 247.0 L63.9 243.8 L67.8 240.9 L71.8 238.1 L75.8 235.4 L79.7 232.9 L83.7 230.4 L87.7 228.1 L91.6 225.7 L95.6 223.5 L99.6 221.3 L103.5 219.2 L107.5 217.1 L111.5 215.0 L115.4 213.0 L119.4 211.0 L123.4 209.0 L127.3 207.1 L131.3 205.1 L135.3 203.2 L139.2 201.4 L143.2 199.5 L147.2 197.7 L151.1 195.8 L155.1 194.0 L159.1 192.2 L163.0 190.5 L167.0 188.7 L171.0 186.9 L174.9 185.2 L178.9 183.5 L182.9 181.7 L186.8 180.0 L190.8 178.3 L194.8 176.6 L198.7 174.9 L202.7 173.3 L206.7 171.6 L210.6 169.9 L214.6 168.3 L218.6 166.6 L222.5 165.0 L226.5 163.3 L230.5 161.7 L234.4 160.0 L238.4 158.4 L242.4 156.8 L246.3 155.1 L250.3 153.5 L254.3 151.9 L258.2 150.3 L262.2 148.7 L266.2 147.1 L270.1 145.4 L274.1 143.8 L278.1 142.2 L282.0 140.6 L286.0 139.0 L290.0 137.4 L293.9 135.8 L297.9 134.2 L301.9 132.6 L305.8 130.9 L309.8 129.3 L313.8 127.7 L317.7 126.1 L321.7 124.5 L325.7 122.9 L329.6 121.2 L333.6 119.6 L337.6 118.0 L341.5 116.3 L345.5 114.7 L349.5 113.0 L353.4 111.4 L357.4 109.7 L361.4 108.1 L365.3 106.4 L369.3 104.7 L373.3 103.1 L377.2 101.4 L381.2 99.7 L385.2 98.0 L389.1 96.3 L393.1 94.5 L397.1 92.8 L401.0 91.1 L405.0 89.3 L409.0 87.5 L412.9 85.8 L416.9 84.0 L420.9 82.2 L424.8 80.3 L428.8 78.5 L432.8 76.6 L436.7 74.8 L440.7 72.9 L444.7 70.9 L448.6 69.0 L452.6 67.0 L456.6 65.0 L460.5 63.0 L464.5 60.9 L468.5 58.8 L472.4 56.7 L476.4 54.5 L480.4 52.3 L484.3 49.9 L488.3 47.6 L492.3 45.1 L496.2 42.6 L500.2 39.9 L504.2 37.1 L508.1 34.2 L512.1 31.0 L516.1 27.4 L520.0 23.1 L524.0 16.0" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linejoin="round"/>
+              <path d="M48.0 262.0 L52.0 179.4 L55.9 158.6 L59.9 144.4 L63.9 133.3 L67.8 124.1 L71.8 116.2 L75.8 109.2 L79.7 103.0 L83.7 97.4 L87.7 92.3 L91.6 87.6 L95.6 83.3 L99.6 79.2 L103.5 75.4 L107.5 71.9 L111.5 68.6 L115.4 65.5 L119.4 62.5 L123.4 59.7 L127.3 57.1 L131.3 54.6 L135.3 52.2 L139.2 50.0 L143.2 47.8 L147.2 45.8 L151.1 43.8 L155.1 42.0 L159.1 40.2 L163.0 38.6 L167.0 37.0 L171.0 35.4 L174.9 34.0 L178.9 32.6 L182.9 31.3 L186.8 30.1 L190.8 28.9 L194.8 27.8 L198.7 26.7 L202.7 25.7 L206.7 24.8 L210.6 23.9 L214.6 23.1 L218.6 22.3 L222.5 21.5 L226.5 20.9 L230.5 20.2 L234.4 19.6 L238.4 19.1 L242.4 18.6 L246.3 18.1 L250.3 17.7 L254.3 17.4 L258.2 17.0 L262.2 16.8 L266.2 16.5 L270.1 16.3 L274.1 16.2 L278.1 16.1 L282.0 16.0 L286.0 16.0 L290.0 16.0 L293.9 16.1 L297.9 16.2 L301.9 16.3 L305.8 16.5 L309.8 16.8 L313.8 17.0 L317.7 17.4 L321.7 17.7 L325.7 18.1 L329.6 18.6 L333.6 19.1 L337.6 19.6 L341.5 20.2 L345.5 20.9 L349.5 21.5 L353.4 22.3 L357.4 23.1 L361.4 23.9 L365.3 24.8 L369.3 25.7 L373.3 26.7 L377.2 27.8 L381.2 28.9 L385.2 30.1 L389.1 31.3 L393.1 32.6 L397.1 34.0 L401.0 35.4 L405.0 37.0 L409.0 38.6 L412.9 40.2 L416.9 42.0 L420.9 43.8 L424.8 45.8 L428.8 47.8 L432.8 50.0 L436.7 52.2 L440.7 54.6 L444.7 57.1 L448.6 59.7 L452.6 62.5 L456.6 65.5 L460.5 68.6 L464.5 71.9 L468.5 75.4 L472.4 79.2 L476.4 83.3 L480.4 87.6 L484.3 92.3 L488.3 97.4 L492.3 103.0 L496.2 109.2 L500.2 116.2 L504.2 124.1 L508.1 133.3 L512.1 144.4 L516.1 158.6 L520.0 179.4 L524.0 262.0" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
+              <path d="M48.0 262.0 L52.0 235.2 L55.9 228.0 L59.9 223.0 L63.9 218.9 L67.8 215.4 L71.8 212.3 L75.8 209.5 L79.7 207.0 L83.7 204.6 L87.7 202.4 L91.6 200.3 L95.6 198.3 L99.6 196.4 L103.5 194.6 L107.5 192.8 L111.5 191.2 L115.4 189.5 L119.4 187.9 L123.4 186.4 L127.3 184.9 L131.3 183.5 L135.3 182.0 L139.2 180.6 L143.2 179.3 L147.2 177.9 L151.1 176.6 L155.1 175.3 L159.1 174.0 L163.0 172.8 L167.0 171.6 L171.0 170.3 L174.9 169.1 L178.9 168.0 L182.9 166.8 L186.8 165.6 L190.8 164.5 L194.8 163.3 L198.7 162.2 L202.7 161.1 L206.7 160.0 L210.6 158.9 L214.6 157.8 L218.6 156.7 L222.5 155.6 L226.5 154.6 L230.5 153.5 L234.4 152.5 L238.4 151.4 L242.4 150.4 L246.3 149.3 L250.3 148.3 L254.3 147.2 L258.2 146.2 L262.2 145.2 L266.2 144.1 L270.1 143.1 L274.1 142.1 L278.1 141.1 L282.0 140.0 L286.0 139.0 L290.0 138.0 L293.9 136.9 L297.9 135.9 L301.9 134.9 L305.8 133.9 L309.8 132.8 L313.8 131.8 L317.7 130.8 L321.7 129.7 L325.7 128.7 L329.6 127.6 L333.6 126.6 L337.6 125.5 L341.5 124.5 L345.5 123.4 L349.5 122.4 L353.4 121.3 L357.4 120.2 L361.4 119.1 L365.3 118.0 L369.3 116.9 L373.3 115.8 L377.2 114.7 L381.2 113.5 L385.2 112.4 L389.1 111.2 L393.1 110.0 L397.1 108.9 L401.0 107.7 L405.0 106.4 L409.0 105.2 L412.9 104.0 L416.9 102.7 L420.9 101.4 L424.8 100.1 L428.8 98.7 L432.8 97.4 L436.7 96.0 L440.7 94.5 L444.7 93.1 L448.6 91.6 L452.6 90.1 L456.6 88.5 L460.5 86.8 L464.5 85.2 L468.5 83.4 L472.4 81.6 L476.4 79.7 L480.4 77.7 L484.3 75.6 L488.3 73.4 L492.3 71.0 L496.2 68.5 L500.2 65.7 L504.2 62.6 L508.1 59.1 L512.1 55.0 L516.1 50.0 L520.0 42.8 L524.0 16.0" fill="none" stroke="var(--warn)" stroke-width="2.5" stroke-linejoin="round"/>
+              <path d="M48.0 262.0 L52.0 257.2 L55.9 254.3 L59.9 251.9 L63.9 249.7 L67.8 247.6 L71.8 245.7 L75.8 243.9 L79.7 242.1 L83.7 240.3 L87.7 238.7 L91.6 237.0 L95.6 235.4 L99.6 233.8 L103.5 232.3 L107.5 230.7 L111.5 229.2 L115.4 227.7 L119.4 226.3 L123.4 224.8 L127.3 223.3 L131.3 221.9 L135.3 220.5 L139.2 219.0 L143.2 217.6 L147.2 216.2 L151.1 214.8 L155.1 213.4 L159.1 212.0 L163.0 210.6 L167.0 209.2 L171.0 207.8 L174.9 206.4 L178.9 205.0 L182.9 203.6 L186.8 202.2 L190.8 200.8 L194.8 199.4 L198.7 198.0 L202.7 196.6 L206.7 195.2 L210.6 193.8 L214.6 192.4 L218.6 191.0 L222.5 189.5 L226.5 188.1 L230.5 186.6 L234.4 185.2 L238.4 183.7 L242.4 182.3 L246.3 180.8 L250.3 179.3 L254.3 177.8 L258.2 176.3 L262.2 174.8 L266.2 173.3 L270.1 171.7 L274.1 170.2 L278.1 168.6 L282.0 167.0 L286.0 165.4 L290.0 163.8 L293.9 162.1 L297.9 160.5 L301.9 158.8 L305.8 157.1 L309.8 155.4 L313.8 153.7 L317.7 151.9 L321.7 150.1 L325.7 148.3 L329.6 146.5 L333.6 144.6 L337.6 142.7 L341.5 140.8 L345.5 138.8 L349.5 136.8 L353.4 134.8 L357.4 132.7 L361.4 130.6 L365.3 128.4 L369.3 126.2 L373.3 124.0 L377.2 121.6 L381.2 119.3 L385.2 116.8 L389.1 114.3 L393.1 111.8 L397.1 109.1 L401.0 106.4 L405.0 103.6 L409.0 100.7 L412.9 97.7 L416.9 94.6 L420.9 91.3 L424.8 88.0 L428.8 84.5 L432.8 80.8 L436.7 77.0 L440.7 73.0 L444.7 68.7 L448.6 64.2 L452.6 59.5 L456.6 54.4 L460.5 49.0 L464.5 43.2 L468.5 37.0 L472.4 30.1 L476.4 22.7" fill="none" stroke="var(--dark)" stroke-width="2.5" stroke-linejoin="round"/>
+              <path d="M48 16 L48 262 L524 262" fill="none" stroke="var(--muted-light)" stroke-width="1.5"/>
+              <g font-size="10" fill="var(--muted)">
+                <text x="48.0" y="277" text-anchor="middle">0,0</text>
+                <text x="41" y="265.5" text-anchor="end">0,0</text>
+                <text x="143.2" y="277" text-anchor="middle">0,2</text>
+                <text x="41" y="216.3" text-anchor="end">0,2</text>
+                <text x="238.4" y="277" text-anchor="middle">0,4</text>
+                <text x="41" y="167.1" text-anchor="end">0,4</text>
+                <text x="333.6" y="277" text-anchor="middle">0,6</text>
+                <text x="41" y="117.9" text-anchor="end">0,6</text>
+                <text x="428.8" y="277" text-anchor="middle">0,8</text>
+                <text x="41" y="68.7" text-anchor="end">0,8</text>
+                <text x="524.0" y="277" text-anchor="middle">1,0</text>
+                <text x="41" y="19.5" text-anchor="end">1,0</text>
+              </g>
+              <text x="286" y="294" text-anchor="middle" font-size="11" fill="var(--muted)">Füllgrad φ</text>
+              <rect x="60" y="22" width="22" height="4" fill="var(--primary)"/>
+              <text x="90" y="27" font-size="11" fill="var(--dark)">h/D (Füllhöhe)</text>
+              <rect x="60" y="39" width="22" height="4" fill="var(--accent)"/>
+              <text x="90" y="44" font-size="11" fill="var(--dark)">T/D (Sehne)</text>
+              <rect x="60" y="56" width="22" height="4" fill="var(--warn)"/>
+              <text x="90" y="61" font-size="11" fill="var(--dark)">S/πD (benetzter Bogen)</text>
+              <rect x="60" y="73" width="22" height="4" fill="var(--dark)"/>
+              <text x="90" y="78" font-size="11" fill="var(--dark)">Dₕ/D (hydraulische Tiefe)</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <table class="th-table">
+        <thead><tr><th>Größe</th><th>Symbol</th><th>Abhängigkeit von $D$ und $h$</th></tr></thead>
+        <tbody>
+          <tr><td>Gefüllte Fläche</td><td>$A$</td><td>$\dfrac{D^2}{4}\arccos\!\left(1-\dfrac{2h}{D}\right)-\dfrac{D-2h}{2}\sqrt{h(D-h)}$</td></tr>
+          <tr><td>Volle Bohrungsfläche</td><td>$A_c$</td><td>$\dfrac{\pi D^2}{4}$</td></tr>
+          <tr><td>Füllgrad</td><td>$\varphi$</td><td>$A/A_c$</td></tr>
+          <tr><td>Sehne / freie Oberfläche</td><td>$T$</td><td>$2\sqrt{h(D-h)}$</td></tr>
+          <tr><td>Benetzter Bogen, $h\le D/2$</td><td>$S$</td><td>$D\arcsin\!\left(\dfrac{2\sqrt{h(D-h)}}{D}\right)$</td></tr>
+          <tr><td>Füllhöhe</td><td>$h$</td><td>$h$</td></tr>
+          <tr><td>Hydraulische Tiefe</td><td>$D_h=A/T$</td><td>$\dfrac{A(D,h)}{2\sqrt{h(D-h)}}$</td></tr>
+          <tr><td>Hydraulischer Radius</td><td>$R_h=A/S$</td><td>$\dfrac{A(D,h)}{S(D,h)}$</td></tr>
+        </tbody>
+      </table>
+      <div style="clear:both;"></div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- Abschnitt 3 -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="s3"></span>
+      <h2 class="section-title">3. Die kritische Geschwindigkeit</h2>
+
+      <div class="prose">
+        <p>
+          Die kritische Geschwindigkeit ist physikalisch die Grenze zwischen einer von der freien
+          Oberfläche getragenen Schwallwelle und einem Aufstau, bei dem die Welle die verfügbare
+          Querschnittshöhe erreicht. Der Kolben liefert die Anregung; die Schwerkraft stellt die
+          rückstellende Kraft der freien Oberfläche bereit. Deshalb taucht die charakteristische
+          Geschwindigkeit als $\sqrt{g\,\text{Tiefe}}$ auf. Wird der Kolben schneller als die durch
+          die Querschnittsgeometrie erlaubte Wellenantwort, wächst der Aufstau stark an und die freie
+          Oberfläche kann brechen — mit der Gefahr, Luft in die Schmelze einzutragen. Die kritische
+          Geschwindigkeit ist damit die Kopplung von Kolbenbewegung, Schwerkraft und freiem Querschnitt.
+        </p>
+      </div>
+
+      <h3 class="subsection">Der ebene 2D-Fall</h3>
+
+      <div class="prose">
+        <p>
+          Wie schnell darf der Kolben höchstens fahren? Die saubere Antwort gibt es zuerst im
+          ebenen Fall: ein Rechteckkanal mit Deckenhöhe $D$ und Füllhöhe $h$, in dem die
+          Wellengeschwindigkeit einfach $c = \sqrt{gh}$ ist. Der vorrückende Kolben schiebt eine
+          einfache Welle vor sich her, und entlang der rücklaufenden Charakteristiken ist die
+          Riemann-Invariante $u - 2\sqrt{gh}$ konstant:
+        </p>
+      </div>
+
+      <div class="derivation-box">
+        <strong style="font-size:0.85rem;color:var(--primary2);">Vom Kolben zur Decke</strong>
+        <div class="step">
+          <span class="step-num">①</span>
+          <span>Vor der Welle ruht die Schmelze: $u = 0$ bei Tiefe $h$, also hat die Invariante
+            überall den Wert $-2\sqrt{gh}$.</span>
+        </div>
+        <div class="step">
+          <span class="step-num">②</span>
+          <span>An der Kolbenstirn läuft das Fluid mit dem Kolben, $u = v$:
+            $v - 2\sqrt{g\,h_K} = -2\sqrt{gh}$, also staut sich dort die Höhe
+            $h_K = \bigl(\sqrt{h} + v/(2\sqrt{g})\bigr)^2$ auf.</span>
+        </div>
+        <div class="step">
+          <span class="step-num">③</span>
+          <span>Kritisch wird es, wenn der Aufstau die Decke erreicht: $h_K = D$. Auflösen
+            nach $v$:</span>
+        </div>
+      </div>
+
+      <div class="math-block">
+        $$v_\text{krit} = 2\bigl(\sqrt{gD} - \sqrt{gh}\bigr)$$
+      </div>
+
+      <div class="prose">
+        <p>
+          Im runden Rohr ist das eine Näherung — die Segmentform steckt nicht drin —, aber sie
+          braucht nur $D$ und $h$ und ist deshalb die Zahl fürs Prozessfenster. Was die
+          Segmentform tatsächlich beiträgt, zeigt erst der 3D-Fall. Die praktische
+          Nogowizin-Näherung dieser Grenze und ihre Konsequenzen für die Schusskurve behandelt
+          der Artikel <a href="kritische-geschwindigkeit.html">Kritische Kolbengeschwindigkeit</a>.
+        </p>
+      </div>
+
+      <h3 class="subsection">Der 3D-Fall: die Wellengeschwindigkeit im Kreissegment</h3>
+
+      <div class="prose">
+        <p>
+          In der realen Füllkammer ist der Kanal kein Rechteck, sondern das Kreissegment aus
+          Abschnitt 2 — und seine Geometrie steckt vollständig in der Wellengeschwindigkeit:
+        </p>
+      </div>
+
+      <div class="derivation-box">
+        <strong style="font-size:0.85rem;color:var(--primary2);">3D-Herleitung der kritischen Kolbengeschwindigkeit</strong>
+        <p style="font-size:0.83rem;margin-top:0.5rem;line-height:1.7;">
+          Die Größe $c=\sqrt{gA/T}$ ist im 3D-Fall die <em>lokale linearisierte Langwellengeschwindigkeit</em>,
+          aber noch nicht die kritische Kolbengeschwindigkeit. Für die kritische Geschwindigkeit muss die
+          nichtlineare Aufstauung der Schwallwelle bis zur maximal möglichen Füllhöhe berücksichtigt werden.
+        </p>
+        <div class="step">
+          <span class="step-num">①</span>
+          <span>Für ein prismatisches Gerinne gelten Massenerhaltung und Impulsbilanz. Mit $A=A(h)$ und
+            $T=T(h)=\mathrm dA/\mathrm dh$ lautet die lokale Wellengeschwindigkeit
+            $c(h)=\sqrt{gA(h)/T(h)}$.</span>
+        </div>
+        <div class="step">
+          <span class="step-num">②</span>
+          <span>Die Riemann-Invariante der einfachen Vorwärtswelle enthält nicht $2\sqrt{gh}$, sondern das
+            Querschnittsintegral $\int c/A\,\mathrm dA$. Wegen $\mathrm dA=T\,\mathrm dh$ wird daraus
+            $\int \sqrt{gT(h)/A(h)}\,\mathrm dh$.</span>
+        </div>
+        <div class="step">
+          <span class="step-num">③</span>
+          <span>Vor der Welle ruht die Schmelze. An der Kolbenstirn ist die Geschwindigkeit $v$. Wird der
+            Aufstau von der Ausgangshöhe $h$ bis zur maximalen Höhe $D$ geführt, ergibt die Differenz der
+            Riemann-Invarianten direkt die kritische Kolbengeschwindigkeit.</span>
+        </div>
+      </div>
+
+      <div class="math-block">
+        $$v_{\mathrm{krit},3D}(h)=\sqrt{g}\int_h^D\sqrt{\frac{T(\xi)}{A(\xi)}}\,\mathrm d\xi$$
+      </div>
+
+      <div class="prose">
+        <p>
+          Für den Kreisquerschnitt wird nicht $A/T$ als Ersatz-Tiefe eingesetzt, sondern $A$ und $T$ werden
+          tatsächlich aus der Kreisgeometrie aufgebaut. Mit $x=\xi/D$ gilt
+          $T/D=2\sqrt{x(1-x)}$ und
+          $A/D^2=\frac14\left[\arccos(1-2x)-2(1-2x)\sqrt{x(1-x)}\right]$. Damit lautet die
+          dimensionslose 3D-Grenze unmittelbar als Funktion der Ausgangsfüllhöhe:
+        </p>
+      </div>
+
+      <div class="math-block">
+        $$\boxed{\frac{v_{\mathrm{krit},3D}}{\sqrt{gD}}
+        =\int_{h/D}^{1}\sqrt{\frac{2\sqrt{x(1-x)}}{\frac14\left[\arccos(1-2x)-2(1-2x)\sqrt{x(1-x)}\right]}}\,\mathrm dx}$$
+      </div>
+
+      <div class="prose">
+        <p>
+          Die Integration über $\mathrm dh$ ist der entscheidende Unterschied zum 2D-Fall. Im Rechteckkanal
+          ist $T$ konstant und $A=T h$, sodass das Integral exakt zu
+          $v_{\mathrm{krit},2D}=2(\sqrt{gD}-\sqrt{gh})$ zurückführt. Im runden Querschnitt ändern sich
+          Sehne und Fläche dagegen mit jeder Zwischenhöhe; deshalb muss die gesamte Geometrie zwischen $h$
+          und $D$ integriert werden.
+        </p>
+      </div>
+
+      <div class="diagram-card" style="margin:1.5rem 0;">
+        <div class="card-header"><span class="card-title">Kritische Kolbengeschwindigkeit: 2D und 3D über dem Füllgrad</span></div>
+        <div class="card-body" style="padding:0.75rem 0 0;">
+          <div class="canvas-wrap" style="padding:0.75rem;">
+            <svg viewBox="0 0 720 380" role="img" aria-label="Statisches Diagramm der normierten kritischen Kolbengeschwindigkeit für den ebenen 2D-Fall und den integrierten 3D-Kreisquerschnitt über dem Füllgrad" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="720" height="380" fill="var(--surface2)"/>
+<line x1="72" y1="326" x2="695" y2="326" stroke="var(--muted)" stroke-width="1.5"/>
+<line x1="72" y1="42" x2="72" y2="326" stroke="var(--muted)" stroke-width="1.5"/>
+<g stroke="var(--border-light)" stroke-width="1">
+  <line x1="72" y1="255.0" x2="695" y2="255.0"/>
+  <line x1="72" y1="184.0" x2="695" y2="184.0"/>
+  <line x1="72" y1="113.0" x2="695" y2="113.0"/>
+  <line x1="383.5" y1="42" x2="383.5" y2="326"/>
+</g>
+<g font-family="Arial, sans-serif" font-size="12" fill="var(--muted)">
+  <text x="68" y="322">0</text><text x="365" y="322">0,5</text><text x="672" y="322">1,0</text>
+  <text x="28" y="304">0</text><text x="28" y="239">0,5</text><text x="28" y="174">1</text><text x="28" y="109">1,5</text><text x="28" y="44">2</text>
+  <text x="330" y="347">Füllgrad φ</text><text transform="translate(15 225) rotate(-90)">v_krit / √(gD)</text>
+</g>
+<path d="M 75.1,82.8 L 80.3,98.7 L 85.5,108.7 L 90.7,116.5 L 95.8,122.9 L 101.0,128.5 L 106.2,133.5 L 111.4,138.0 L 116.6,142.1 L 121.8,146.0 L 126.9,149.6 L 132.1,153.0 L 137.3,156.2 L 142.5,159.2 L 147.7,162.2 L 152.9,165.0 L 158.0,167.7 L 163.2,170.3 L 168.4,172.8 L 173.6,175.2 L 178.8,177.5 L 184.0,179.8 L 189.1,182.1 L 194.3,184.2 L 199.5,186.3 L 204.7,188.4 L 209.9,190.4 L 215.1,192.4 L 220.2,194.3 L 225.4,196.2 L 230.6,198.1 L 235.8,199.9 L 241.0,201.7 L 246.2,203.4 L 251.3,205.2 L 256.5,206.9 L 261.7,208.5 L 266.9,210.2 L 272.1,211.8 L 277.2,213.4 L 282.4,215.0 L 287.6,216.6 L 292.8,218.1 L 298.0,219.7 L 303.2,221.2 L 308.3,222.7 L 313.5,224.1 L 318.7,225.6 L 323.9,227.1 L 329.1,228.5 L 334.3,229.9 L 339.4,231.3 L 344.6,232.7 L 349.8,234.1 L 355.0,235.5 L 360.2,236.8 L 365.4,238.2 L 370.5,239.5 L 375.7,240.8 L 380.9,242.2 L 386.1,243.5 L 391.3,244.8 L 396.5,246.1 L 401.6,247.4 L 406.8,248.6 L 412.0,249.9 L 417.2,251.2 L 422.4,252.4 L 427.6,253.7 L 432.7,254.9 L 437.9,256.2 L 443.1,257.4 L 448.3,258.7 L 453.5,259.9 L 458.7,261.1 L 463.8,262.3 L 469.0,263.6 L 474.2,264.8 L 479.4,266.0 L 484.6,267.2 L 489.8,268.4 L 494.9,269.6 L 500.1,270.8 L 505.3,272.0 L 510.5,273.2 L 515.7,274.5 L 520.8,275.7 L 526.0,276.9 L 531.2,278.1 L 536.4,279.3 L 541.6,280.5 L 546.8,281.7 L 551.9,282.9 L 557.1,284.1 L 562.3,285.4 L 567.5,286.6 L 572.7,287.8 L 577.9,289.1 L 583.0,290.3 L 588.2,291.6 L 593.4,292.8 L 598.6,294.1 L 603.8,295.4 L 609.0,296.7 L 614.1,298.0 L 619.3,299.3 L 624.5,300.7 L 629.7,302.0 L 634.9,303.4 L 640.1,304.8 L 645.2,306.3 L 650.4,307.8 L 655.6,309.3 L 660.8,310.9 L 666.0,312.5 L 671.2,314.2 L 676.3,316.1 L 681.5,318.1 L 686.7,320.3 L 691.9,323.1" fill="none" stroke="var(--primary)" stroke-width="3"/>
+<path d="M 75.1,54.1 L 80.3,73.5 L 85.5,85.7 L 90.7,95.2 L 95.8,103.0 L 101.0,109.8 L 106.2,115.8 L 111.4,121.3 L 116.6,126.3 L 121.8,130.9 L 126.9,135.3 L 132.1,139.4 L 137.3,143.2 L 142.5,146.9 L 147.7,150.4 L 152.9,153.8 L 158.0,157.0 L 163.2,160.1 L 168.4,163.1 L 173.6,166.0 L 178.8,168.8 L 184.0,171.5 L 189.1,174.2 L 194.3,176.7 L 199.5,179.2 L 204.7,181.7 L 209.9,184.1 L 215.1,186.4 L 220.2,188.7 L 225.4,190.9 L 230.6,193.1 L 235.8,195.2 L 241.0,197.4 L 246.2,199.4 L 251.3,201.4 L 256.5,203.4 L 261.7,205.4 L 266.9,207.3 L 272.1,209.2 L 277.2,211.1 L 282.4,213.0 L 287.6,214.8 L 292.8,216.6 L 298.0,218.3 L 303.2,220.1 L 308.3,221.8 L 313.5,223.5 L 318.7,225.2 L 323.9,226.9 L 329.1,228.5 L 334.3,230.1 L 339.4,231.8 L 344.6,233.4 L 349.8,234.9 L 355.0,236.5 L 360.2,238.0 L 365.4,239.6 L 370.5,241.1 L 375.7,242.6 L 380.9,244.1 L 386.1,245.6 L 391.3,247.0 L 396.5,248.5 L 401.6,249.9 L 406.8,251.4 L 412.0,252.8 L 417.2,254.2 L 422.4,255.6 L 427.6,257.0 L 432.7,258.4 L 437.9,259.8 L 443.1,261.1 L 448.3,262.5 L 453.5,263.9 L 458.7,265.2 L 463.8,266.5 L 469.0,267.9 L 474.2,269.2 L 479.4,270.5 L 484.6,271.8 L 489.8,273.1 L 494.9,274.4 L 500.1,275.7 L 505.3,277.0 L 510.5,278.3 L 515.7,279.6 L 520.8,280.9 L 526.0,282.1 L 531.2,283.4 L 536.4,284.7 L 541.6,285.9 L 546.8,287.2 L 551.9,288.5 L 557.1,289.7 L 562.3,291.0 L 567.5,292.2 L 572.7,293.5 L 577.9,294.7 L 583.0,296.0 L 588.2,297.2 L 593.4,298.5 L 598.6,299.8 L 603.8,301.0 L 609.0,302.3 L 614.1,303.6 L 619.3,304.8 L 624.5,306.1 L 629.7,307.4 L 634.9,308.7 L 640.1,310.0 L 645.2,311.3 L 650.4,312.6 L 655.6,314.0 L 660.8,315.4 L 666.0,316.7 L 671.2,318.2 L 676.3,319.6 L 681.5,321.2 L 686.7,322.8 L 691.9,324.6" fill="none" stroke="var(--accent)" stroke-width="3"/>
+<g font-family="Arial, sans-serif" font-size="13" fill="var(--text-body)">
+  <line x1="450" y1="58" x2="480" y2="58" stroke="var(--primary)" stroke-width="3"/><text x="487" y="62">2D: 2(1−√(h/D))</text>
+  <line x1="450" y1="84" x2="480" y2="84" stroke="var(--accent)" stroke-width="3"/><text x="487" y="88">3D: ∫ₕᴰ √(T/A) dh / √D</text>
+</g>
+<circle cx="383.5" cy="243.5" r="4" fill="var(--primary)"/>
+<circle cx="383.5" cy="245.6" r="4" fill="var(--accent)"/>
+<text x="393.5" y="235.5" font-family="Arial, sans-serif" font-size="11" fill="var(--primary2)">2D bei φ=0,5</text>
+<text x="393.5" y="260.6" font-family="Arial, sans-serif" font-size="11" fill="var(--primary)">3D bei φ=0,5</text>
+</svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- Abschnitt 4 -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <span class="section-anchor" id="s4"></span>
+      <h2 class="section-title">4. Das $(\varphi,\,\lambda)$-Auslegungsdiagramm</h2>
+
+      <div class="prose">
+        <p>
+          Bisher war $D$ gegeben. Bei der <em>Auslegung</em> der Kammer ist es das nicht: Das
+          Schussvolumen ist durch das Gussteil festgelegt, und der Ingenieur wählt den Füllgrad
+          $\varphi$ und die Schlankheit $\lambda = L/D$ der Füllkammer. Der Bohrungsdurchmesser folgt dann aus der Forderung, dass die Kammer den Schuss fasst:
+        </p>
+      </div>
+
+      <div class="math-block">
+        $$V_\text{Schuss} = \frac{\pi}{4} D^2 L \,\varphi = \frac{\pi}{4} D^3 \varphi\,\lambda
+        \qquad\Longrightarrow\qquad
+        D = \left(\frac{4\,V_\text{Schuss}}{\pi\,\varphi\,\lambda}\right)^{1/3}$$
+      </div>
+
+      <div class="prose">
+        <p>
+          In der $(\varphi, \lambda)$-Ebene zeichnen Maschine und Werkzeug zwei Scharen von
+          Randbedingungskurven: <strong>Iso-$D$</strong>-Hyperbeln
+          $\varphi\lambda = 4V_\text{Schuss}/\pi D^3$ (der Kolbendurchmesser deiner Maschine) und
+          <strong>Iso-$L$</strong>-Kurven $\varphi = 4\lambda^2 V_\text{Schuss}/\pi L^3$ (der Hub
+          deiner Maschine):
+        </p>
+      </div>
+
+      <!-- Iso-D / Iso-L Canvas -->
+      <div class="diagram-card" style="margin:1.5rem 0;">
+        <div class="card-header">
+          <span class="card-title">Iso-$D$- und Iso-$L$-Kurven in der $(\varphi, \lambda)$-Ebene</span>
+        </div>
+        <div class="card-body" style="padding:0.75rem 0 0;">
+          <div class="canvas-controls">
+            <div class="ctrl-group">
+              <span class="ctrl-label">$V_\text{Schuss}$ (cm³)</span>
+              <input type="range" id="vs-slider" min="100" max="2500" step="50" value="500">
+              <span class="val-display" id="vs-val">500</span>
+            </div>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="isoD-canvas" width="500" height="320"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <p style="margin-top:1.5rem;">
+        <a href="/tools/auslegung/chart.html?id=phild" class="btn btn-primary">Im Dashboard: Auslegungsfenster (φ, λ) →</a>
+        &nbsp;
+        <a href="kritische-geschwindigkeit.html" class="btn btn-outline">Theorie: Kritische Kolbengeschwindigkeit →</a>
+      </p>
+
+    </article>
+  </div><!-- .content-cols -->
+</div><!-- .content-wrap -->
+
+<script>
+/* ============================================================
+   Kreissegment-Löser und Farbpalette (gemeinsame Basis)
+   ============================================================ */
+const PI = Math.PI, G = 9.81;
+
+/* ── Kernlöser ────────────────────────────────────────────── */
+function thetaOfPhi(phi) {
+  if (phi <= 0) return 1e-9;
+  if (phi >= 1) return 2*PI - 1e-9;
+  // Startwert über Kleinwinkel-Inversion
+  let th = phi < 0.5
+    ? Math.cbrt(12*PI*phi)
+    : 2*PI - Math.cbrt(12*PI*(1-phi));
+  for (let i = 0; i < 60; i++) {
+    const f  = th - Math.sin(th) - 2*PI*phi;
+    const fp = 1  - Math.cos(th);
+    if (Math.abs(fp) < 1e-15) break;
+    const dth = f / fp;
+    th -= dth;
+    if (Math.abs(dth) < 1e-13) break;
+  }
+  return th;
+}
+
+function etaOfTheta(theta) {
+  return (1 - Math.cos(theta/2)) / 2;
+}
+
+/* ── Farbpalette ──────────────────────────────────────────── */
+const C_BLUE  = window.__PALETTE__.accent;
+const C_GREEN = window.__PALETTE__.primary;
+const C_WARN  = window.__PALETTE__.warn;
+const C_DARK  = window.__PALETTE__.dark;
+const C_MUTED = window.__PALETTE__.muted;
+const C_OPTD  = window.__PALETTE__.catOrange;   // Minima für D = konst
+const C_OPTL  = window.__PALETTE__.catPurple;   // Minima für L = konst
+
+/* ============================================================
+   Iso-D- und Iso-L-Kurven in der (φ, λ)-Ebene
+   ============================================================ */
+(function() {
+  const canvas  = document.getElementById('isoD-canvas');
+  if (!canvas) return;
+  const ctx     = canvas.getContext('2d');
+  const VEl     = document.getElementById('vs-slider');
+  const VVal    = document.getElementById('vs-val');
+
+  const W = canvas.width, H = canvas.height;
+  const pad = {l:55, r:25, t:25, b:40};
+  const pw = W - pad.l - pad.r;
+  const ph = H - pad.t - pad.b;
+
+  const phi_min=0.1, phi_max=0.9, A_min=1.5, A_max=14;
+
+  function tx(phi) { return pad.l + (phi - phi_min)/(phi_max-phi_min)*pw; }
+  function ty(A)   { return pad.t + (1-(A - A_min)/(A_max-A_min))*ph; }
+
+  function draw() {
+    const Vshot = parseFloat(VEl.value)*1e-6; // cm³ → m³
+
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = window.__PALETTE__.surface2;
+    ctx.fillRect(0,0,W,H);
+
+    // Feines Gitter
+    ctx.strokeStyle = window.__PALETTE__.borderLight;
+    ctx.lineWidth = 1;
+    for (let i=0;i<=4;i++) {
+      const x = pad.l + i/4*pw;
+      ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+ph);ctx.stroke();
+      const y = pad.t + i/4*ph;
+      ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pw,y);ctx.stroke();
+    }
+
+    // Iso-D-Kurven (gestrichelt, grün): φλ = 4V/(πD³)
+    const D_vals = [50,60,70,80,90,100,110,120,130]; // mm
+    D_vals.forEach(D_mm => {
+      const D = D_mm*1e-3;
+      ctx.beginPath();
+      ctx.strokeStyle = C_GREEN;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6,4]);
+      let first = true;
+      for (let j=0; j<=200; j++) {
+        const phi = phi_min + (phi_max-phi_min)*j/200;
+        const A = 4*Vshot / (PI*D*D*D*phi);
+        if (A < A_min || A > A_max) { first=true; continue; }
+        const x = tx(phi), y = ty(A);
+        first ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+        first = false;
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Beschriftung rechts
+      const phi_label = 0.75;
+      const A_label = 4*Vshot/(PI*D*D*D*phi_label);
+      if (A_label >= A_min && A_label <= A_max) {
+        ctx.fillStyle = C_GREEN;
+        ctx.font = '10px system-ui';
+        ctx.fillText(`D=${D_mm}`, tx(phi_label)+2, ty(A_label)-3);
+      }
+    });
+
+    // Iso-L-Kurven (gepunktet, blau): φ = 4λ²V/(πL³)
+    const L_vals = [80,120,160,200,260,320,400,500,600,800]; // mm
+    L_vals.forEach(L_mm => {
+      const L = L_mm*1e-3;
+      ctx.beginPath();
+      ctx.strokeStyle = C_BLUE;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([2,4]);
+      let first = true;
+      for (let j=0; j<=200; j++) {
+        const A = A_min + (A_max-A_min)*j/200;
+        const phi = 4*A*A*Vshot / (PI*L*L*L);
+        if (phi < phi_min || phi > phi_max) { first=true; continue; }
+        const x = tx(phi), y = ty(A);
+        first ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+        first = false;
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Beschriftung oben
+      const A_label2 = 10;
+      const phi_label2 = 4*A_label2*A_label2*Vshot/(PI*L*L*L);
+      if (phi_label2 >= phi_min && phi_label2 <= phi_max && A_label2 <= A_max) {
+        ctx.fillStyle = C_BLUE;
+        ctx.font = '10px system-ui';
+        ctx.fillText(`L=${L_mm}mm`, tx(phi_label2)+2, ty(A_label2)-3);
+      }
+    });
+
+    // Legende
+    ctx.setLineDash([6,4]);
+    ctx.strokeStyle = C_GREEN; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(pad.l+10, pad.t+12); ctx.lineTo(pad.l+36, pad.t+12); ctx.stroke();
+    ctx.fillStyle=C_DARK; ctx.font='11px system-ui';
+    ctx.fillText('Iso-D (mm)', pad.l+40, pad.t+16);
+    ctx.setLineDash([2,4]);
+    ctx.strokeStyle = C_BLUE;
+    ctx.beginPath(); ctx.moveTo(pad.l+10, pad.t+28); ctx.lineTo(pad.l+36, pad.t+28); ctx.stroke();
+    ctx.fillText('Iso-L (mm)', pad.l+40, pad.t+32);
+    ctx.setLineDash([]);
+
+    // Achsen
+    ctx.strokeStyle = window.__PALETTE__.mutedLight;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t+ph);
+    ctx.lineTo(pad.l+pw, pad.t+ph); ctx.stroke();
+
+    ctx.fillStyle = C_MUTED;
+    ctx.font = '11px system-ui';
+    ctx.fillText('Füllgrad φ', pad.l+pw/2-25, H-6);
+    ctx.save();
+    ctx.translate(14, pad.t+ph/2+30);
+    ctx.rotate(-PI/2);
+    ctx.fillText('Schlankheit λ = L/D', 0, 0);
+    ctx.restore();
+
+    [0.1,0.3,0.5,0.7,0.9].forEach(p => {
+      ctx.fillStyle = C_MUTED;
+      ctx.font = '10px system-ui';
+      ctx.fillText(p.toFixed(1), tx(p)-10, pad.t+ph+16);
+    });
+    [2,4,6,8,10,12,14].forEach(a => {
+      ctx.fillStyle = C_MUTED;
+      ctx.font = '10px system-ui';
+      ctx.fillText(a, pad.l-28, ty(a)+4);
+    });
+  }
+
+  VEl.addEventListener('input', () => { VVal.textContent = VEl.value; draw(); });
+
+  draw();
+})();
+</script>
+<script>
+/* ── Aktiver TOC-Abschnitt ─────────────────────────────────── */
+(function() {
+  const anchors = ['s1','s2','s3','s4'].map(id => document.getElementById(id));
+  const links   = document.querySelectorAll('#toc-list a');
+  window.addEventListener('scroll', () => {
+    let cur = 0;
+    anchors.forEach((el,i) => { if (el && el.getBoundingClientRect().top < 120) cur = i; });
+    links.forEach((a,i) => a.classList.toggle('active', i===cur));
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>

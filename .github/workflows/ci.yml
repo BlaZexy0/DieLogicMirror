@@ -34,15 +34,15 @@ jobs:
         with:
           node-version: '24'
       - name: Syntax-Check (alle JS + Inline-Scripts der HTML-Seiten)
-        run: node site/tests/syntax-check.mjs
+        run: node tests/web/syntax-check.mjs
       - name: Frontend-Tests (alle *.test.mjs — inkl. Physik-Fixtures, Grenzen-Modell, Render-Rauchtest)
-        run: node --test site/tests/*.test.mjs
+        run: node --test tests/web/*.test.mjs
       - name: Generierte Dateien aktuell? (Theorie-SVGs + v_krit-Tabellen)
         # Die eingecheckten Artefakte müssen zum Code passen — beide
         # Generatoren sind deterministisch, ein Diff heißt: Regenerieren
-        # vergessen (node site/tools/gen-theory-svgs.mjs, gen-vkrit-table.mjs bzw. gen-palette.mjs).
+        # vergessen (node scripts/gen-theory-svgs.mjs, gen-vkrit-table.mjs bzw. gen-palette.mjs).
         run: |
-          node site/tools/gen-theory-svgs.mjs
-          node site/tools/gen-vkrit-table.mjs
-          node site/tools/gen-palette.mjs
-          git diff --exit-code -- site/assets/theorie site/assets/palette.svg site/app/js/core/vkritTable.js packages/hpdcsim/hpdcsim/_vkrit_table.py
+          node scripts/gen-theory-svgs.mjs
+          node scripts/gen-vkrit-table.mjs
+          node scripts/gen-palette.mjs
+          git diff --exit-code -- web/assets/theorie web/assets/palette.svg web/tools/auslegung/js/core/vkritTable.js packages/hpdcsim/hpdcsim/_vkrit_table.py

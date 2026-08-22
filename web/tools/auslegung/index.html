@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dashboard · DieLogic</title>
+  <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="css/main.css">
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="stylesheet" href="css/site.css">
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/nav.js" data-footer="none"></script>
+</head>
+<body>
+  <header>
+    <div class="header-title">
+      <h1>Dashboard — Gießtechnische Auslegung + Schusskurve</h1>
+      <p class="header-sub">Massenbilanz, Maschine, Füllkammer, Anschnitt, Prozessfenster und Schusskurve — alle Diagramme auf dem aktuellen Projekt.</p>
+    </div>
+    <div class="header-actions">
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <h2>Eingaben</h2>
+      <p class="sub">Massenbilanz, Maschine, Füllkammer, Anschnitt, Prozessfenster und Schusskurve</p>
+      <section class="panel">
+        <div class="group" id="preset-group">
+          <h3>Presets</h3>
+          <div class="fields">
+            <div class="field"><label>Maschine</label>
+              <select id="machineSel"><option value="">— manuell —</option></select></div>
+            <div class="field"><label>Legierung</label>
+              <select id="alloySel"><option value="">— manuell —</option></select></div>
+            <div class="field"><label>Bauteiltyp</label>
+              <select id="partSel"><option value="">— manuell —</option></select></div>
+          </div>
+        </div>
+        <div class="group" id="curve-group">
+          <h3>Schusskurve (1. + 2. Phase)</h3>
+          <p class="curve-note">Wegpunkte als Weg s [mm] / Kolbengeschwindigkeit v [m/s]. Zwischen den Punkten wird konstant beschleunigt; der Ursprung (0&nbsp;mm, 0&nbsp;m/s) wird automatisch ergänzt.</p>
+          <table class="ctab">
+            <thead><tr><th style="width:40%">s [mm]</th><th style="width:44%">v [m/s]</th><th></th></tr></thead>
+            <tbody id="curveBody"></tbody>
+          </table>
+          <button id="addPoint" class="row-add">+ Punkt hinzufügen</button>
+        </div>
+        <div id="groups" class="groups"></div>
+        <div class="hint">
+          Dosiergewicht = Bauteil + Anguss + Überlauf + Pressrest. Gewicht ab Anschnitt = Bauteil + Überlauf.<br>
+          <b>Konvention:</b> Der Pressrest zählt zur dosierten Schmelze — alle Füllgrad-Angaben (KPI, Diagramme, Schusskurve, Auslegungsfenster) rechnen mit dem Dosiergewicht. Füllzeit und Entlüftung rechnen ab Anschnitt (Bauteil + Überlauf, ohne Anguss und Pressrest).<br>
+          🔴 <b>Roter Marker</b> = aktueller Betriebspunkt in jedem Diagramm. Rot umrandete Felder liegen außerhalb ihrer min/max-Grenzen.
+          <span id="error"></span>
+        </div>
+      </section>
+    </aside>
+
+    <section class="content">
+      <div id="checkbar"></div>
+      <div class="chamber-row">
+        <div id="chamber-kpis"></div>
+        <div id="chamber"></div>
+      </div>
+      <div id="summary" class="summary"></div>
+      <h2>Auslegungsdiagramme</h2>
+      <p class="sub">Schusskurve · PQ² mit Achsenmodi · (φ, λ)-Auslegungsfenster · Diagramme der gießtechnischen Auslegung · PNG-Export · 🎯 hebt die Eingaben eines Diagramms hervor · ↗ öffnet die Einzelseite</p>
+      <section id="charts" class="charts"></section>
+    </section>
+  </main>
+
+  <script src="/shared/theme.js"></script>
+  <script src="/shared/examples/machines.js"></script>
+  <script src="/shared/examples/alloys.js"></script>
+  <script src="/shared/examples/parts.js"></script>
+  <script src="/shared/orgpresets.js"></script>
+  <script src="/shared/project.js"></script>
+  <script src="/shared/projectbar.js"></script>
+  <script src="/shared/clampmodel.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

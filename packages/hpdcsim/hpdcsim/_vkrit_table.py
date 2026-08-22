@@ -1,5 +1,5 @@
-"""GENERATED from site/assets/v_krit_sim.csv - do not edit by hand.
-Regenerate: node site/tools/gen-vkrit-table.mjs
+"""GENERATED from fixtures/vkrit/v_krit_sim.csv - do not edit by hand.
+Regenerate: node scripts/gen-vkrit-table.mjs
 OpenFOAM CFD table of the critical slow-shot velocity:
 VKRIT_F[i][j] = v_krit / sqrt(9.81 * D) at VKRIT_D_MM[i], VKRIT_PHI[j]."""
 

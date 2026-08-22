@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projekte &amp; Konto · DieLogic</title>
+  <meta name="description" content="DieLogic-Konto: Anmeldung auf Einladung, Projekte der Organisation, Mitglieder und Einladungen.">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/nav.js"></script>
+  <style>
+    .kt-wrap { max-width: 1000px; margin: 0 auto; padding: 1.6rem 1.5rem 3rem; }
+    .kt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+    @media (max-width: 800px) { .kt-grid { grid-template-columns: 1fr; } }
+    .kt-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.3rem; }
+    .kt-card h2 { font-size: 1rem; margin: 0 0 .8rem; }
+    .kt-card p { font-size: .85rem; color: var(--muted); line-height: 1.55; }
+    .kt-card label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted); margin: .7rem 0 .25rem; }
+    .kt-card input, .kt-card select { width: 100%; font: inherit; padding: .5rem .65rem; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; background: var(--surface); }
+    .kt-row { display: flex; gap: .6rem; align-items: flex-end; }
+    .kt-row > * { flex: 1; }
+    .kt-row > .btn { flex: 0 0 auto; }
+    .kt-actions { margin-top: 1rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+    .kt-err { color: var(--warn); font-size: .82rem; min-height: 1.2em; margin-top: .5rem; }
+    .kt-ok { color: var(--primary); font-size: .82rem; }
+    table.kt { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: .4rem; }
+    table.kt th, table.kt td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table.kt th { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+    table.kt td.r { text-align: right; white-space: nowrap; }
+    .pill { display: inline-block; font-size: .68rem; font-weight: 700; padding: .1rem .45rem; border-radius: 999px; background: var(--bg); color: var(--muted); }
+    .pill.admin { background: rgba(0,140,130,.12); color: var(--primary); }
+    .pill.off { text-decoration: line-through; }
+    .link-box { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .5rem .6rem; word-break: break-all; margin-top: .5rem; }
+    .muted { color: var(--muted); }
+    .hidden { display: none !important; }
+    .btn-link { background: none; border: 0; color: var(--primary); font: inherit; font-size: .8rem; cursor: pointer; padding: 0; text-decoration: underline; }
+    .sd-tabs { display: flex; gap: .3rem; border-bottom: 1px solid var(--border); margin-top: .6rem; }
+    .sd-tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: .45rem .8rem; font: inherit; font-size: .82rem; font-weight: 600; color: var(--muted); cursor: pointer; }
+    .sd-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); }
+    table.sd { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    table.sd th, table.sd td { padding: .25rem .3rem; border-bottom: 1px solid var(--border-light); text-align: left; vertical-align: middle; white-space: nowrap; }
+    table.sd th { font-size: .66rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; }
+    table.sd th small { display: block; text-transform: none; letter-spacing: 0; font-weight: 500; }
+    table.sd input { width: 6.2rem; font: inherit; font-size: .78rem; padding: .25rem .35rem; border: 1px solid var(--border); border-radius: 6px; text-align: right; }
+    table.sd input.name { width: 14rem; text-align: left; }
+    table.sd th:first-child, table.sd td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; box-shadow: 2px 0 0 var(--border-light); }
+    table.sd input:disabled { background: var(--surface2); color: var(--muted); border-color: var(--border-light); }
+    table.sd td.id { font-family: var(--mono); color: var(--muted); font-size: .7rem; }
+    .sd-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .5rem .9rem; margin-top: .6rem; }
+    .sd-form label { margin: 0; }
+    .sd-form input { text-align: right; }
+    .kt-note { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius); padding: .7rem 1.1rem; margin-bottom: 1.2rem; font-size: .82rem; color: var(--muted); line-height: 1.55; }
+  </style>
+</head>
+<body>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Projekte &amp; Konto</h1>
+    <p class="subtitle">Alle Projekte der Organisation an einem Ort — mit Revisionsverlauf, Kopie,
+      Export/Import, Zurücksetzen und Archivierung. Die Datenbank ist der Stand der Wahrheit; die
+      Werkzeuge speichern automatisch. Projekte gehören der Organisation, nicht der Person; Zugang gibt
+      es nur auf Einladung.</p>
+  </div>
+</section>
+
+<div class="kt-wrap">
+
+  <div id="nobackend" class="kt-note hidden">Das Backend ist nicht erreichbar — Anmeldung und Projekte
+    stehen erst wieder zur Verfügung, wenn der Server antwortet.</div>
+
+  <!-- ── Einladung einlösen ──────────────────────────────── -->
+  <div id="invite" class="kt-card hidden" style="max-width:520px;margin:0 auto;">
+    <h2>Einladung annehmen</h2>
+    <p id="invite-text">Einladung wird geprüft …</p>
+    <form id="register-form" class="hidden">
+      <label for="r-name">Ihr Name</label><input id="r-name" required maxlength="200" autocomplete="name">
+      <label for="r-pw">Passwort (mind. 10 Zeichen)</label><input id="r-pw" type="password" required minlength="10" autocomplete="new-password">
+      <label for="r-pw2">Passwort wiederholen</label><input id="r-pw2" type="password" required minlength="10" autocomplete="new-password">
+      <div class="kt-err" id="register-err"></div>
+      <div class="kt-actions"><button class="btn btn-primary" type="submit">Konto anlegen</button></div>
+    </form>
+  </div>
+
+  <!-- ── Anmelden ────────────────────────────────────────── -->
+  <div id="login" class="kt-card hidden" style="max-width:520px;margin:0 auto;">
+    <h2>Anmelden</h2>
+    <p>Die Werkzeuge arbeiten auf den Projekten Ihrer Organisation — bitte anmelden. Noch kein Konto?
+      DieLogic ist derzeit nur auf Einladung nutzbar — bitte einen Einladungslink anfordern
+      (<a href="/recht/kontakt.html">Kontakt</a>).</p>
+    <form id="login-form">
+      <label for="l-email">E-Mail</label><input id="l-email" type="email" required autocomplete="username">
+      <label for="l-pw">Passwort</label><input id="l-pw" type="password" required autocomplete="current-password">
+      <div class="kt-err" id="login-err"></div>
+      <div class="kt-actions"><button class="btn btn-primary" type="submit">Anmelden</button>
+        <button class="btn btn-outline" type="button" id="demo-login" hidden>Als Demo anmelden</button>
+        <span class="muted" id="demo-hint" hidden style="font-size:.78rem;"></span></div>
+    </form>
+  </div>
+
+  <!-- ── Angemeldet ──────────────────────────────────────── -->
+  <div id="account" class="hidden">
+    <div class="kt-note">Angemeldet als <strong id="a-user"></strong> in <strong id="a-org"></strong>
+      <span id="a-role" class="pill"></span> &nbsp;·&nbsp; <button class="btn-link" id="logout">Abmelden</button></div>
+
+    <div class="kt-grid">
+      <div class="kt-card" style="grid-column:1 / -1;">
+        <h2>Projekte der Organisation</h2>
+        <p>Die Datenbank ist der Stand der Wahrheit: Änderungen in den Werkzeugen werden laufend gespeichert,
+          „Revision" legt einen benannten Schnappschuss an. „Öffnen" macht ein Projekt hier zum aktiven;
+          „Verlauf" zeigt alle Revisionen, jede lässt sich als Kopie wiederherstellen.</p>
+        <table class="kt"><thead><tr><th>Projekt</th><th>Kunde / Teile-Nr.</th><th class="r">Rev</th><th class="r">Zuletzt</th><th></th></tr></thead>
+          <tbody id="proj-body"><tr><td colspan="5" class="muted">Lade …</td></tr></tbody></table>
+        <div class="kt-actions">
+          <button class="btn btn-outline btn-sm" id="org-new">+ Neues Projekt</button>
+          <button class="btn btn-outline btn-sm" id="org-import">⤒ Projekt importieren (JSON)</button>
+          <input type="file" id="org-file" accept="application/json,.json" class="hidden">
+          <span class="kt-err" id="org-err" style="margin:0;"></span>
+        </div>
+        <div id="rev-panel" class="hidden" style="margin-top:1rem;">
+          <h2 id="rev-title">Verlauf</h2>
+          <table class="kt"><thead><tr><th class="r">Rev</th><th>Notiz</th><th>Autor</th><th class="r">Zeit</th><th></th></tr></thead>
+            <tbody id="rev-body"></tbody></table>
+        </div>
+      </div>
+
+      <div class="kt-card" style="grid-column:1 / -1;" id="stammdaten">
+        <h2>Stammdaten der Organisation</h2>
+        <p>Maschinen, Legierungen, Bauteiltypen und Kosten &amp; Sätze Ihrer Firma — sie ersetzen in allen
+          Werkzeugen die Beispielwerte. <span id="sd-perm"></span></p>
+        <div class="sd-tabs" id="sd-tabs">
+          <button data-tab="machines" class="active">Maschinen</button>
+          <button data-tab="alloys">Legierungen</button>
+          <button data-tab="parts">Bauteiltypen</button>
+          <button data-tab="kosten">Kosten &amp; Sätze</button>
+        </div>
+        <div id="sd-source" class="muted" style="font-size:.8rem;margin:.5rem 0;"></div>
+        <div id="sd-body" style="overflow-x:auto;"></div>
+        <div class="kt-actions" id="sd-actions">
+          <button class="btn btn-outline btn-sm" id="sd-add">+ Eintrag</button>
+          <button class="btn btn-outline btn-sm" id="sd-load-defaults" title="Beispielwerte aus den mitgelieferten Presets in die Tabelle laden">Beispielwerte laden</button>
+          <span style="flex:1"></span>
+          <button class="btn btn-ghost btn-sm" id="sd-reset" title="Eigene Werte löschen — es gelten wieder die Beispielwerte">Auf Beispielwerte zurücksetzen</button>
+          <button class="btn btn-primary btn-sm" id="sd-save">Speichern</button>
+          <span class="kt-err" id="sd-err" style="margin:0;"></span>
+          <span class="kt-ok" id="sd-ok"></span>
+        </div>
+      </div>
+
+      <div class="kt-card">
+        <h2>Mitglieder</h2>
+        <table class="kt"><thead><tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th></th></tr></thead>
+          <tbody id="mem-body"></tbody></table>
+      </div>
+
+      <div class="kt-card" id="invite-card">
+        <h2>Einladungen</h2>
+        <p id="invite-help">Administratoren laden per Link ein. Den Link einfach weitergeben — er ist 14 Tage gültig und
+          einmal einlösbar.</p>
+        <form id="invite-form" class="hidden">
+          <div class="kt-row">
+            <div><label for="i-email">E-Mail</label><input id="i-email" type="email" required></div>
+            <div style="flex:0 0 9rem;"><label for="i-role">Rolle</label>
+              <select id="i-role"><option value="member">Mitglied</option><option value="admin">Admin</option></select></div>
+            <button class="btn btn-primary btn-sm" type="submit">Einladen</button>
+          </div>
+          <div class="kt-err" id="invite-err"></div>
+          <div id="invite-result" class="hidden"><span class="kt-ok">Einladung erstellt — Link weitergeben:</span>
+            <div class="link-box" id="invite-link"></div>
+            <div class="kt-actions"><button type="button" class="btn btn-outline btn-sm" id="copy-link">Link kopieren</button></div></div>
+        </form>
+        <table class="kt" id="inv-table"><thead><tr><th>E-Mail</th><th>Rolle</th><th class="r">Gültig bis</th><th></th></tr></thead>
+          <tbody id="inv-body"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/shared/project.js"></script>
+<script>
+(function () {
+  'use strict';
+  var P = window.__PROJECT__;
+  var me = null;
+
+  function $(id) { return document.getElementById(id); }
+  function show(id, on) { $(id).classList.toggle('hidden', !on); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function fmt(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? '' : d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+  async function api(method, path, body) {
+    var r = await fetch(path, { method: method, credentials: 'same-origin',
+      headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+    if (r.status === 204) return null;
+    var data = null;
+    try { data = await r.json(); } catch (e) { /* keine JSON-Antwort */ }
+    if (!r.ok) { var err = new Error(data && typeof data.detail === 'string' ? data.detail : 'HTTP ' + r.status); err.status = r.status; throw err; }
+    return data;
+  }
+
+  /* ── Einladung ── */
+  var token = new URLSearchParams(location.search).get('token');
+
+  async function showInvite() {
+    show('invite', true);
+    try {
+      var inv = await api('GET', '/api/auth/invite/' + encodeURIComponent(token));
+      $('invite-text').innerHTML = 'Sie wurden als <strong>' + esc(inv.email) + '</strong> in die Organisation <strong>'
+        + esc(inv.org.name) + '</strong> eingeladen' + (inv.role === 'admin' ? ' (Administrator)' : '') + '. Bitte Namen und Passwort festlegen.';
+      show('register-form', true);
+    } catch (err) {
+      $('invite-text').innerHTML = '<span style="color:' + window.__PALETTE__.warn + '">' + esc(err.message) + '</span>';
+    }
+  }
+
+  $('register-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    $('register-err').textContent = '';
+    if ($('r-pw').value !== $('r-pw2').value) { $('register-err').textContent = 'Die Passwörter stimmen nicht überein.'; return; }
+    try {
+      await api('POST', '/api/auth/register', { token: token, name: $('r-name').value.trim(), password: $('r-pw').value });
+      if (goNext()) return;
+      history.replaceState(null, '', location.pathname);
+      token = null;
+      start();
+    } catch (err) { $('register-err').textContent = err.message; }
+  });
+
+  /* ── Anmelden ── */
+  $('login-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    $('login-err').textContent = '';
+    try {
+      await api('POST', '/api/auth/login', { email: $('l-email').value.trim(), password: $('l-pw').value });
+      if (goNext()) return;
+      start();
+    } catch (err) { $('login-err').textContent = err.message; }
+  });
+
+  /* Demo-Konto (nur wenn der Server DIELOGIC_DEMO_PASSWORD gesetzt hat) */
+  async function showDemo() {
+    try {
+      var d = await api('GET', '/api/auth/demo');
+      if (!d || !d.email) return;
+      $('demo-login').hidden = false;
+      $('demo-hint').hidden = false;
+      $('demo-hint').textContent = d.email + ' / ' + d.password;
+      $('demo-login').onclick = async function () {
+        $('login-err').textContent = '';
+        try { await api('POST', '/api/auth/login', { email: d.email, password: d.password }); if (goNext()) return; start(); }
+        catch (err) { $('login-err').textContent = err.message; }
+      };
+    } catch (e) { /* kein Demo */ }
+  }
+
+  $('logout').addEventListener('click', async function () {
+    await api('POST', '/api/auth/logout').catch(function () {});
+    me = null;
+    start();
+  });
+
+  /* ── Konto ── */
+  async function showAccount() {
+    show('account', true);
+    window.__KONTO_ME__ = me;
+    window.dispatchEvent(new CustomEvent('konto:account', { detail: me }));
+    /* Lokale Projekte ohne Serverbezug in die Datenbank übernehmen */
+    var orphans = P.list().filter(function (p) { return !p.remote; });
+    for (var i = 0; i < orphans.length; i++) {
+      var o = orphans[i];
+      try {
+        var r = await api('POST', '/api/projects', Object.assign({ data: P.sectionsOf(o) },
+          { name: o.name, description: o.description, customer: o.customer, part_no: o.partNo }));
+        P.markSaved(o.id, { id: r.id, rev: r.rev });
+      } catch (err) { console.warn('Übernahme fehlgeschlagen:', err.message); }
+    }
+    $('a-user').textContent = me.user.name ? me.user.name + ' (' + me.user.email + ')' : me.user.email;
+    $('a-org').textContent = me.org.name;
+    $('a-role').textContent = me.user.role === 'admin' ? 'Admin' : 'Mitglied';
+    $('a-role').className = 'pill' + (me.user.role === 'admin' ? ' admin' : '');
+    loadProjects();
+    loadMembers();
+    if (me.user.role === 'admin') { show('invite-form', true); loadInvites(); }
+    else { $('invite-help').textContent = 'Einladungen sprechen die Administratoren der Organisation aus.'; show('inv-table', false); }
+  }
+
+  async function loadProjects() {
+    var rows;
+    try { rows = await api('GET', '/api/projects'); }
+    catch (err) { $('proj-body').innerHTML = '<tr><td colspan="5" class="muted">' + esc(err.message) + '</td></tr>'; return; }
+    var local = {};
+    P.list().forEach(function (p) { if (p.remote) local[p.remote.id] = p; });
+    var cur = P.current();
+    $('proj-body').innerHTML = rows.length ? rows.map(function (r) {
+      var l = local[r.id];
+      var active = l && l.id === cur.id;
+      return '<tr><td><strong>' + esc(r.name) + '</strong> ' + (active ? '<span class="pill admin">aktiv</span>' : '')
+        + '<br><span class="muted">' + esc(r.description) + '</span></td>'
+        + '<td>' + esc(r.customer) + (r.part_no ? ' / ' + esc(r.part_no) : '') + '</td>'
+        + '<td class="r">' + r.rev + '</td><td class="r">' + fmt(r.updated_at) + '</td>'
+        + '<td class="r" style="white-space:nowrap;">'
+        + (active ? '' : '<button class="btn btn-outline btn-sm" data-open="' + esc(r.id) + '">Öffnen</button> ')
+        + '<button class="btn-link" data-revs="' + esc(r.id) + '" data-name="' + esc(r.name) + '">Verlauf</button> · '
+        + '<button class="btn-link" data-dup="' + esc(r.id) + '" data-name="' + esc(r.name) + '">Kopie</button> · '
+        + '<button class="btn-link" data-export="' + esc(r.id) + '">Export</button> · '
+        + '<button class="btn-link" data-reset="' + esc(r.id) + '" data-name="' + esc(r.name) + '" title="Alle Eingaben auf die Standardwerte">Zurücksetzen</button> · '
+        + '<button class="btn-link" data-archive="' + esc(r.id) + '" data-name="' + esc(r.name) + '">Archivieren</button></td></tr>';
+    }).join('') : '<tr><td colspan="5" class="muted">Noch keine Projekte — „+ Neues Projekt" oder in einem Werkzeug anlegen.</td></tr>';
+  }
+
+  /* Serverprojekt → lokales Dokument (Cache) */
+  async function fetchDoc(id) {
+    var full = await api('GET', '/api/projects/' + id);
+    var have = P.list().filter(function (p) { return p.remote && p.remote.id === id; })[0];
+    return docFrom(full, full.data, have ? have.id : undefined);
+  }
+
+  async function createOnServer(meta, data, makeCurrent) {
+    var r = await api('POST', '/api/projects', Object.assign({ data: data || {} }, meta));
+    P.put(Object.assign({ name: r.name, description: r.description, customer: r.customer, partNo: r.part_no,
+      remote: { id: r.id, rev: r.rev, savedAt: r.updated_at }, dirty: false }, data || {}), !!makeCurrent);
+    return r;
+  }
+
+  async function orgAction(b) {
+    var id = b.dataset.open || b.dataset.revs || b.dataset.dup || b.dataset.export || b.dataset.reset || b.dataset.archive;
+    var name = b.dataset.name || '';
+    if (b.dataset.open) {
+      P.put(await fetchDoc(id), true);
+      location.href = '/tools/auslegung/';
+    } else if (b.dataset.revs) {
+      await showRevisions(id, name);
+    } else if (b.dataset.dup) {
+      var doc = await fetchDoc(id);
+      var full = await api('GET', '/api/projects/' + id);
+      await createOnServer({ name: name + ' (Kopie)', description: full.description, customer: full.customer, part_no: full.part_no },
+        P.sectionsOf(doc), false);
+    } else if (b.dataset.export) {
+      var d = await fetchDoc(id);
+      var tmp = P.put(d, false);
+      download(P.fileName(tmp), P.exportJSON(tmp.id));
+      return;
+    } else if (b.dataset.reset) {
+      if (!confirm('Alle Eingaben von „' + name + '" (Auslegung, Geometrie, Zyklus, Kosten) auf die Standardwerte zurücksetzen?')) return;
+      await api('PUT', '/api/projects/' + id + '/draft', { data: {} });
+      P.put(await fetchDoc(id), false);
+    } else if (b.dataset.archive) {
+      if (!confirm('Projekt „' + name + '" archivieren? Es verschwindet aus der Liste; die Revisionen bleiben in der Datenbank.')) return;
+      await api('DELETE', '/api/projects/' + id);
+      P.list().forEach(function (p) { if (p.remote && p.remote.id === id) P.remove(p.id); });
+    }
+    loadProjects();
+  }
+  $('proj-body').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    orgAction(b).catch(function (err) { alert(err.message); });
+  });
+  $('org-new').addEventListener('click', function () {
+    var name = prompt('Name des neuen Projekts:', 'DieCastPartA');
+    if (!name) return;
+    createOnServer({ name: name.trim() }, {}, false).then(loadProjects, function (err) { $('org-err').textContent = err.message; });
+  });
+  $('org-import').addEventListener('click', function () { $('org-file').click(); });
+  $('org-file').addEventListener('change', function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    $('org-err').textContent = '';
+    f.text().then(function (txt) {
+      var p;
+      try { p = P.importJSON(txt); }
+      catch (err) { $('org-err').textContent = 'Import fehlgeschlagen: ' + err.message; return; }
+      var before = P.list().filter(function (q) { return q.id !== p.id; })[0];
+      return createOnServer({ name: p.name, description: p.description, customer: p.customer, part_no: p.partNo }, P.sectionsOf(p), false)
+        .then(function () { P.remove(p.id); if (before) P.select(before.id); loadProjects(); },
+          function (err) { $('org-err').textContent = err.message; });
+    });
+    e.target.value = '';
+  });
+
+  function docFrom(full, data, localId) {
+    return Object.assign({ id: localId, name: full.name, description: full.description, customer: full.customer,
+      partNo: full.part_no, createdAt: full.created_at, updatedAt: full.updated_at,
+      remote: { id: full.id, rev: full.rev, savedAt: full.updated_at }, dirty: false }, data || {});
+  }
+
+  async function showRevisions(id, name) {
+    show('rev-panel', true);
+    $('rev-title').textContent = 'Verlauf — ' + name;
+    var revs = await api('GET', '/api/projects/' + id + '/revisions');
+    $('rev-body').innerHTML = revs.map(function (r) {
+      return '<tr><td class="r">' + r.rev + '</td><td>' + esc(r.note) + '</td><td>' + esc(r.author ? (r.author.name || r.author.email) : '—') + '</td>'
+        + '<td class="r">' + fmt(r.created_at) + '</td>'
+        + '<td class="r"><button class="btn btn-ghost btn-sm" data-restore="' + esc(id) + '" data-rev="' + r.rev + '" data-name="' + esc(name) + '">Als Kopie öffnen</button></td></tr>';
+    }).join('') || '<tr><td colspan="5" class="muted">Keine Revisionen.</td></tr>';
+    $('rev-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function restore(id, rev, name) {
+    var r = await api('GET', '/api/projects/' + id + '/revisions/' + rev);
+    await createOnServer({ name: name + ' (Rev ' + rev + ')', description: 'Wiederhergestellt aus Revision ' + rev + ' von „' + name + '".' }, r.data || {}, true);
+    location.href = '/tools/auslegung/';
+  }
+
+  $('rev-body').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-restore]'); if (!b) return;
+    restore(b.dataset.restore, Number(b.dataset.rev), b.dataset.name).catch(function (err) { alert(err.message); });
+  });
+
+  async function loadMembers() {
+    var rows = await api('GET', '/api/org/members');
+    $('mem-body').innerHTML = rows.map(function (m) {
+      var canDisable = me.user.role === 'admin' && m.id !== me.user.id && !m.disabled;
+      return '<tr><td>' + esc(m.name) + '</td><td>' + esc(m.email) + '</td>'
+        + '<td><span class="pill' + (m.role === 'admin' ? ' admin' : '') + (m.disabled ? ' off' : '') + '">' + (m.disabled ? 'deaktiviert' : m.role === 'admin' ? 'Admin' : 'Mitglied') + '</span></td>'
+        + '<td class="r">' + (canDisable ? '<button class="btn-link" data-disable="' + esc(m.id) + '">deaktivieren</button>' : '') + '</td></tr>';
+    }).join('');
+  }
+  $('mem-body').addEventListener('click', async function (e) {
+    var b = e.target.closest('button[data-disable]'); if (!b) return;
+    if (!confirm('Dieses Konto deaktivieren? Die Person kann sich danach nicht mehr anmelden.')) return;
+    try { await api('POST', '/api/org/members/' + b.dataset.disable + '/disable'); loadMembers(); }
+    catch (err) { alert(err.message); }
+  });
+
+  async function loadInvites() {
+    var rows = await api('GET', '/api/org/invites');
+    var base = location.origin + location.pathname.replace(/\/app\/konto\.html$/, '');
+    $('inv-body').innerHTML = rows.length ? rows.map(function (i) {
+      var url = base + '/konto/?token=' + i.token;
+      return '<tr><td>' + esc(i.email) + '</td><td>' + (i.role === 'admin' ? 'Admin' : 'Mitglied') + '</td>'
+        + '<td class="r">' + (i.expires_at ? fmt(i.expires_at) : 'unbegrenzt') + '</td>'
+        + '<td class="r"><button class="btn-link" data-copy="' + esc(url) + '">Link kopieren</button> · <button class="btn-link" data-revoke="' + esc(i.id) + '">zurückziehen</button></td></tr>';
+    }).join('') : '<tr><td colspan="4" class="muted">Keine offenen Einladungen.</td></tr>';
+  }
+  $('inv-body').addEventListener('click', async function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.copy) { copy(b.dataset.copy, b); }
+    if (b.dataset.revoke) {
+      try { await api('DELETE', '/api/org/invites/' + b.dataset.revoke); loadInvites(); }
+      catch (err) { alert(err.message); }
+    }
+  });
+  function copy(text, btn) {
+    var done = function () { var old = btn.textContent; btn.textContent = 'kopiert ✓'; setTimeout(function () { btn.textContent = old; }, 1400); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () { prompt('Link kopieren:', text); });
+    else prompt('Link kopieren:', text);
+  }
+
+  $('invite-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    $('invite-err').textContent = '';
+    show('invite-result', false);
+    try {
+      var r = await api('POST', '/api/org/invites', { email: $('i-email').value.trim(), role: $('i-role').value });
+      $('invite-link').textContent = r.url;
+      $('copy-link').onclick = function () { copy(r.url, $('copy-link')); };
+      show('invite-result', true);
+      $('i-email').value = '';
+      loadInvites();
+    } catch (err) { $('invite-err').textContent = err.message; }
+  });
+
+  function download(name, text) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+  }
+
+  /* ── Start ── */
+  /* Von einer Werkzeugseite hierher geleitet? Nach der Anmeldung zurück. */
+  var NEXT = new URLSearchParams(location.search).get('next');
+  function goNext() {
+    if (NEXT && /^\/[^\/]/.test(NEXT)) { location.replace(NEXT); return true; }
+    return false;
+  }
+
+  async function start() {
+    ['invite', 'login', 'account', 'nobackend'].forEach(function (id) { show(id, false); });
+    if (location.protocol === 'file:') { show('nobackend', true); return; }
+    try { me = await api('GET', '/api/auth/me'); }
+    catch (err) {
+      me = null;
+      if (err.status !== 401) { show('nobackend', true); return; }
+    }
+    var navBtn = document.getElementById('dl-nav-account');
+    if (navBtn) navBtn.textContent = me ? '👤 ' + (me.user.name || me.user.email) : 'Anmelden';
+    if (me) showAccount();
+    else if (token) showInvite();
+    else { show('login', true); showDemo(); }
+  }
+  start();
+})();
+</script>
+
+<script src="/shared/examples/machines.js"></script>
+<script src="/shared/examples/alloys.js"></script>
+<script src="/shared/examples/parts.js"></script>
+<script src="/shared/examples/kosten.js"></script>
+<script type="module">
+/* Stammdaten-Editor: Listen (Maschinen/Legierungen/Bauteiltypen) mit den
+   Feldern aus js/config/fields.js, Kosten & Sätze als Formular. Speichern
+   → PUT /api/org/settings/{key} (Admin); alle Werkzeuge übernehmen die
+   Werte über shared/orgpresets.js beim nächsten Laden. */
+import { groups, PRESET_DOMAINS } from '/tools/auslegung/js/config/fields.js';
+
+const DEFAULTS = {
+  machines: window.__MACHINES__.machines, alloys: window.__ALLOYS__.alloys, parts: window.__PARTS__.parts,
+  kosten: window.__KOSTEN__.defaults
+};
+const DOMAIN = { machines: 'machine', alloys: 'alloy', parts: 'part' };
+const KOSTEN_FIELDS = [
+  ['pAl', 'Legierungspreis', '€/kg'], ['pRe', 'Umschmelzkosten Kreislauf', '€/kg'], ['kr', 'Schmelzverlust / Krätze', '%'],
+  ['eKg', 'Schmelz- & Warmhalteenergie', 'kWh/kg'], ['pE', 'Strompreis', '€/kWh'], ['pM', 'Maschinenstundensatz Zelle', '€/h'],
+  ['pP', 'Personal', '€/h'], ['nP', 'Bediener je Zelle', '−'], ['wz', 'Werkzeugkosten (Standard)', '€'], ['st', 'Standmenge', 'Schüsse'],
+  ['a', 'Ausschuss (Standard)', '%'], ['oee', 'OEE / Verfügbarkeit', '%'], ['kav', 'Kavitäten (Standard)', '−'], ['tz', 'Zykluszeit (Fallback)', 's'],
+  ['hMonth', 'Produktionsstunden je Monat', 'h']
+];
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }); };
+const slug = s => s.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'eintrag';
+
+async function api(method, path, body) {
+  const r = await fetch(path, { method, credentials: 'same-origin', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 204) return null;
+  let data = null; try { data = await r.json(); } catch (e) { /* leer */ }
+  if (!r.ok) throw new Error(data && typeof data.detail === 'string' ? data.detail : 'HTTP ' + r.status);
+  return data;
+}
+
+function fieldsFor(key) {
+  const dom = PRESET_DOMAINS.find(d => d.id === DOMAIN[key]);
+  return groups.filter(g => g.preset === dom.id).flatMap(g => g.fields).filter(f => f.type !== 'select');
+}
+
+let me = null, settings = {}, tab = 'machines', work = {};   // work[key] = editierbare Kopie
+
+function currentData(key) {
+  const s = settings[key];
+  const data = JSON.parse(JSON.stringify(s && s.data ? s.data : DEFAULTS[key]));
+  /* Vorhandene Einträge behalten ihre id — Projekte verweisen darauf
+     (design.machine/alloy/part). Nur neue Einträge leiten die id aus dem
+     Namen ab, bis sie gespeichert sind. */
+  if (Array.isArray(data)) data.forEach(p => { p._fixedId = true; });
+  return data;
+}
+
+function render() {
+  const admin = me && me.user.role === 'admin';
+  $('sd-perm').textContent = admin ? 'Als Administrator können Sie die Werte bearbeiten.' : 'Nur Administratoren können die Werte ändern.';
+  document.querySelectorAll('#sd-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  const src = settings[tab];
+  $('sd-source').textContent = src ? 'Quelle: eigene Werte der Organisation, zuletzt geändert ' + fmtDate(src.updated_at) + '.' : 'Quelle: Beispielwerte (shared/examples/' + tab + '.js) — noch nicht angepasst.';
+  $('sd-add').hidden = tab === 'kosten';
+  $('sd-actions').querySelectorAll('button').forEach(b => { b.disabled = !admin; });
+  if (!work[tab]) work[tab] = currentData(tab);
+  if (tab === 'kosten') renderKosten(admin); else renderList(admin);
+}
+
+function renderList(admin) {
+  const fields = fieldsFor(tab);
+  const rows = work[tab];
+  let h = '<table class="sd"><thead><tr><th>Name</th><th>id</th>' + fields.map(f => '<th>' + esc(f.label) + '<small>' + esc(f.unit || '') + '</small></th>').join('') + '<th></th></tr></thead><tbody>';
+  rows.forEach((p, i) => {
+    h += '<tr data-i="' + i + '"><td><input class="name" data-k="name" value="' + esc(p.name) + '"' + (admin ? '' : ' disabled') + '></td><td class="id">' + esc(p.id) + '</td>'
+      + fields.map(f => '<td><input type="number" step="any" data-k="' + f.key + '" value="' + (p.fields[f.key] ?? '') + '"' + (admin ? '' : ' disabled') + '></td>').join('')
+      + '<td>' + (admin ? '<button class="btn-link" data-del="' + i + '">entfernen</button>' : '') + '</td></tr>';
+  });
+  h += '</tbody></table>';
+  if (!rows.length) h = '<p class="muted">Keine Einträge — „+ Eintrag" oder „Beispielwerte laden".</p>';
+  $('sd-body').innerHTML = h;
+}
+
+function renderKosten(admin) {
+  const k = work.kosten;
+  $('sd-body').innerHTML = '<div class="sd-form">' + KOSTEN_FIELDS.map(([key, label, unit]) =>
+    '<label>' + esc(label) + ' <span class="muted">' + esc(unit) + '</span><input type="number" step="any" data-k="' + key + '" value="' + (k[key] ?? '') + '"' + (admin ? '' : ' disabled') + '></label>').join('') + '</div>';
+}
+
+/* Eingaben → work */
+$('sd-body').addEventListener('input', e => {
+  const el = e.target.closest('input[data-k]'); if (!el) return;
+  const k = el.dataset.k;
+  if (tab === 'kosten') { const v = parseFloat(el.value); if (isFinite(v)) work.kosten[k] = v; return; }
+  const tr = el.closest('tr'); const p = work[tab][Number(tr.dataset.i)];
+  if (k === 'name') {
+    p.name = el.value;
+    if (!p._fixedId) { p.id = uniqueId(slug(el.value), p); tr.querySelector('td.id').textContent = p.id; }
+  } else { const v = parseFloat(el.value); if (isFinite(v)) p.fields[k] = v; }
+});
+$('sd-body').addEventListener('click', e => {
+  const b = e.target.closest('button[data-del]'); if (!b) return;
+  work[tab].splice(Number(b.dataset.del), 1); render();
+});
+function uniqueId(base, self) {
+  let id = base, n = 2;
+  while (work[tab].some(p => p !== self && p.id === id)) id = base + '-' + n++;
+  return id;
+}
+$('sd-tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) { tab = b.dataset.tab; render(); } });
+$('sd-add').addEventListener('click', () => {
+  const fields = fieldsFor(tab); const tpl = DEFAULTS[tab][0];
+  const p = { id: uniqueId('neu'), name: '', fields: {} };
+  fields.forEach(f => { p.fields[f.key] = tpl ? tpl.fields[f.key] : f.def; });
+  work[tab].push(p); render();
+  const inp = $('sd-body').querySelector('tr:last-child input.name'); if (inp) inp.focus();
+});
+$('sd-load-defaults').addEventListener('click', () => {
+  work[tab] = JSON.parse(JSON.stringify(DEFAULTS[tab]));
+  work[tab].forEach(p => { p._fixedId = true; });
+  render();
+});
+$('sd-save').addEventListener('click', async () => {
+  $('sd-err').textContent = ''; $('sd-ok').textContent = '';
+  const data = tab === 'kosten' ? work.kosten : work[tab].map(p => ({ id: p.id, name: p.name.trim(), fields: p.fields }));
+  if (tab !== 'kosten' && data.some(p => !p.name)) { $('sd-err').textContent = 'Jeder Eintrag braucht einen Namen.'; return; }
+  try {
+    settings[tab] = await api('PUT', '/api/org/settings/' + tab, { data });
+    work[tab] = null;
+    try { localStorage.removeItem('dielogic-org-settings-v1'); } catch (e) { /* egal */ }
+    $('sd-ok').textContent = 'Gespeichert — gilt ab dem nächsten Laden der Werkzeuge.';
+    render();
+  } catch (err) { $('sd-err').textContent = err.message; }
+});
+$('sd-reset').addEventListener('click', async () => {
+  if (!confirm('Eigene Werte für „' + $('sd-tabs').querySelector('.active').textContent + '" löschen? Danach gelten wieder die Beispielwerte.')) return;
+  try {
+    await api('DELETE', '/api/org/settings/' + tab);
+    delete settings[tab]; work[tab] = null;
+    try { localStorage.removeItem('dielogic-org-settings-v1'); } catch (e) { /* egal */ }
+    render();
+  } catch (err) { $('sd-err').textContent = err.message; }
+});
+
+async function load(m) {
+  me = m;
+  try { settings = await api('GET', '/api/org/settings'); } catch (err) { $('sd-err').textContent = err.message; settings = {}; }
+  work = {};
+  render();
+}
+window.addEventListener('konto:account', e => load(e.detail));
+if (window.__KONTO_ME__) load(window.__KONTO_ME__);
+</script>
+
+</body>
+</html>

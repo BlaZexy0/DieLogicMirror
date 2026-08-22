@@ -9,7 +9,7 @@ Aufruf aus dem Repo-Root (DATABASE_URL wie beim Server, sonst SQLite):
     python -m backend.manage set-role jane@acme.de admin
 
 Offene Einladungen, Mitglieder und weitere Einladungen verwaltet die
-Konto-Seite (/app/konto.html); die CLI ist für den Start ohne Browser-Zugang.
+Konto-Seite (/konto/); die CLI ist für den Start ohne Browser-Zugang.
 """
 
 from __future__ import annotations

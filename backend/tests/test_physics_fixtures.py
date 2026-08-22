@@ -1,5 +1,5 @@
 """Physik-Fixtures (fixtures/physics/*.json) gegen den Backend-Pfad
-convert.py → hpdcsim: dieselben Dateien prüft site/tests/
+convert.py → hpdcsim: dieselben Dateien prüft tests/web/
 physics-fixtures.test.mjs gegen die Dashboard-Physik (physics.js) —
 weicht eine Seite von den Sollwerten ab, ist die Physik auseinandergelaufen."""
 import json

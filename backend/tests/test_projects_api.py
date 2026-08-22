@@ -76,7 +76,7 @@ def test_admin_invites_member_and_projects_flow():
     r = admin.post("/api/org/invites", json={"email": "jane@example.com", "role": "member"})
     assert r.status_code == 201, r.text
     token, url = r.json()["token"], r.json()["url"]
-    assert "/app/konto.html?token=" + token in url
+    assert "/konto/?token=" + token in url
     assert any(i["email"] == "jane@example.com" for i in admin.get("/api/org/invites").json())
 
     jane = _client()

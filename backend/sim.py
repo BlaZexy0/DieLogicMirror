@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from .convert import ConvertError
-from .core import run_shot_simulation
+from .simcore import run_shot_simulation
 
 router = APIRouter(prefix="/api/sim", tags=["simulation"])
 

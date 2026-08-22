@@ -122,7 +122,7 @@ def critical_velocity_segment_fit(section):
             * (2.3173 - 2.4762*u + 1.3404*u^2 - 0.3552*phi),  u = phi^(1/3)
 
     Max deviation from the exact integral: 0.25 % for phi in [0.01, 0.98].
-    Mirrors vCrit() in site/app/js/core/physics.js."""
+    Mirrors vCrit() in web/tools/auslegung/js/core/physics.js."""
     phi = min(max(section.fill_fraction, 0.0), 1.0)
     u = phi ** (1.0 / 3.0)
     return (np.sqrt(section.gravity * section.diameter)
@@ -132,11 +132,11 @@ def critical_velocity_segment_fit(section):
 
 def critical_velocity_cfd_table(section):
     """Bilinear interpolation of DieLogic's OpenFOAM CFD table
-    (site/assets/v_krit_sim.csv -> _vkrit_table.py): v_crit =
+    (fixtures/vkrit/v_krit_sim.csv -> _vkrit_table.py): v_crit =
     sqrt(9.81*D) * f(D, phi). Edge rules: D clamped to the 60-300 mm grid;
     phi below 0.1 uses the 0.1 column (conservative, f rises toward small
     phi); phi above 0.9 ramps linearly to 0 at phi = 1.
-    Mirrors vCrit() in site/app/js/core/physics.js (which normalises the
+    Mirrors vCrit() in web/tools/auslegung/js/core/physics.js (which normalises the
     table with g = 9.81; the residual g-difference is < 0.1 %)."""
     from ._vkrit_table import VKRIT_D_MM, VKRIT_PHI, VKRIT_F
     d_mm = min(max(section.diameter * 1000.0, VKRIT_D_MM[0]), VKRIT_D_MM[-1])

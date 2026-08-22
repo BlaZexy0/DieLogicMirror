@@ -1,6 +1,6 @@
 # DieLogic Backend
 
-FastAPI-Backend: liefert die statische Website (`../site/`) aus und stellt
+FastAPI-Backend: liefert die statische Website (`../web/`) aus und stellt
 unter `/api/…` Konten (nur auf Einladung), die Projektablage mit Revisionen
 und die serverseitige Simulation mit [`hpdcsim`](../packages/hpdcsim) bereit.
 Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
@@ -14,12 +14,12 @@ Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
   (mit `draft` = laufend synchronisierter Arbeitsstand) → `project_revisions`
   (benannte, unveränderliche Schnappschüsse mit Autor/Notiz).
 - **Einladung statt Registrierung:** ein Einladungslink
-  `/app/konto.html?token=…` ist 14 Tage gültig und einmal einlösbar.
+  `/konto/?token=…` ist 14 Tage gültig und einmal einlösbar.
 - **Erster Admin ohne Shell** (Render Free): `DIELOGIC_ADMIN_EMAIL` und
   `DIELOGIC_ADMIN_TOKEN` setzen — solange kein Benutzer existiert, legt der
   Start die Organisation `DIELOGIC_ORG` (Standard `dielogic`) an und eine
   Admin-Einladung mit genau diesem Token. Danach im Browser
-  `https://<host>/app/konto.html?token=<DIELOGIC_ADMIN_TOKEN>` öffnen,
+  `https://<host>/konto/?token=<DIELOGIC_ADMIN_TOKEN>` öffnen,
   Namen/Passwort setzen. Weitere Personen lädt man auf der Konto-Seite ein
   (Link kopieren und weitergeben).
 - **Demo-Konto:** `DIELOGIC_DEMO_PASSWORD=<mind. 10 Zeichen>` setzen → beim
@@ -48,7 +48,7 @@ python3 -m venv .venv
 ```
 
 → http://127.0.0.1:8000/ ist die Website, das Dashboard unter
-`/app/index.html` zeigt den simulierten Luftdruck auf der zweiten Achse der Schusskurve. Ohne laufendes
+`/tools/auslegung/` zeigt den simulierten Luftdruck auf der zweiten Achse der Schusskurve. Ohne laufendes
 Backend (statisches Hosting) entfällt nur diese Serie mit einem Hinweis — alles
 andere rechnet weiter im Browser.
 
@@ -119,7 +119,7 @@ Wissenswertes zur Übersetzung (`convert.py`):
 
 ```bash
 PYTHONPATH=packages/hpdcsim python3 -c "
-from backend.core import run_shot_simulation
+from backend.simcore import run_shot_simulation
 print(run_shot_simulation({'part':12,'runner':3,'overflow':2,'biscuit':1.2,
   'density':2700,'diam':150,'length':700,'gate':1800},
   [[60,.4],[318,.4],[470,4],[675,4]])['meta'])"

@@ -2,7 +2,7 @@
 sowie Kosten & Sätze (Legierungspreis, Strompreis, Stundensätze …).
 
 Jede Organisation pflegt ihre eigenen Listen; solange ein Schlüssel fehlt,
-gelten die Beispielwerte aus site/app/config/*.js. Lesen dürfen alle
+gelten die Beispielwerte aus web/shared/examples/*.js. Lesen dürfen alle
 Mitglieder, schreiben nur Administratoren.
 """
 

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprengflächenanalyse — DieLogic</title>
+  <meta name="theme-color" content="var(--dark)">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/nav.js"></script>
+  <style>
+    .stl-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+
+    /* ── Werkzeugleiste ────────────────────────────────────── */
+    .stl-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.9rem 1.2rem;
+      margin-bottom: 1.2rem;
+      box-shadow: var(--shadow);
+    }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .seg button {
+      padding: 0.45rem 1rem;
+      border: none;
+      background: var(--surface);
+      cursor: pointer;
+      font-family: var(--sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      transition: background 0.15s, color 0.15s;
+    }
+    .seg button + button { border-left: 1px solid var(--border); }
+    .seg button.active { background: var(--primary); color: white; }
+    .seg-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+    .stl-hint { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+    .stl-status { font-size: 0.8rem; color: var(--warn); margin-top: 0.4rem; }
+    .stl-status:empty { display: none; }
+    .stl-note {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 0.7rem 1.1rem;
+      margin-bottom: 1.2rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .stl-note strong { color: var(--text); }
+
+    /* ── Projektionsfenster ────────────────────────────────── */
+    .stl-canvas-card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 1.2rem;
+      overflow: hidden;
+    }
+    .stl-canvas-card.dragover { outline: 2px dashed var(--primary); outline-offset: -6px; }
+    #proj-canvas { display: block; width: 100%; height: 480px; }
+    /* „Als PNG kopieren" — gleiche Optik wie die PNG-Buttons der Dashboard-Karten */
+    #copy-img-btn {
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; padding: 0; border: none; border-radius: 8px;
+      background: var(--primary); color: var(--surface); cursor: pointer;
+      transition: background 0.15s;
+    }
+    #copy-img-btn:hover:not(:disabled) { background: var(--primary2); }
+    #copy-img-btn.copied, #copy-img-btn.copied:hover { background: var(--ok); }   /* --ok des Dashboards */
+    #copy-img-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    #copy-img-btn svg { width: 18px; height: 18px; display: block; }
+    .canvas-empty {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      pointer-events: none;
+      text-align: center;
+      padding: 1rem;
+    }
+    .canvas-empty[hidden] { display: none; }
+    .canvas-caption {
+      border-top: 1px solid var(--border);
+      padding: 0.55rem 1.2rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .canvas-caption strong { color: var(--text); font-weight: 600; }
+
+    /* ── Ergebnistabelle ───────────────────────────────────── */
+    .stl-table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+    .stl-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .stl-table th {
+      background: var(--dark);
+      color: var(--ondark);
+      padding: 0.55rem 0.9rem;
+      text-align: right;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      white-space: nowrap;
+    }
+    .stl-table th:first-child { text-align: left; }
+    .stl-table td {
+      padding: 0.55rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+    .stl-table td.name {
+      text-align: left;
+      font-family: var(--sans);
+      font-size: 0.85rem;
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .stl-table .dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 0.5rem;
+      vertical-align: baseline;
+    }
+    .stl-table td .sub { color: var(--muted); font-size: 0.72rem; }
+    /* Maschinentabelle: 6 Spalten müssen in die 1100px-Karte passen */
+    #machine-table th, #machine-table td { padding: 0.5rem 0.6rem; }
+    #machine-table td .sub { display: block; line-height: 1.1; }
+    #machine-table td:last-child { padding-left: 0.3rem; }
+    .stl-table tfoot td { font-weight: 700; border-top: 2px solid var(--dark); border-bottom: none; background: var(--surface2); }
+    .stl-table .remove-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+    }
+    .stl-table .remove-btn:hover { color: var(--warn); background: var(--warn-bg); }
+    .table-empty { padding: 1.4rem 1.2rem; font-size: 0.85rem; color: var(--muted); }
+    .stl-footnote { font-size: 0.75rem; color: var(--muted); margin-top: 0.8rem; line-height: 1.6; }
+
+    /* ── Maschinen-Karte ───────────────────────────────────── */
+    .machine-head {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: 0.9rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .machine-head h2 { font-size: 1rem; font-weight: 700; color: var(--text); margin-right: auto; }
+    .machine-head label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .machine-head input {
+      width: 70px;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      text-align: right;
+    }
+    .machine-info {
+      padding: 0.55rem 1.2rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .machine-info:empty { display: none; }
+    .warn-lift { color: var(--warn); font-weight: 700; }
+
+    /* ── Zuordnung + Dashboard-Übernahme ───────────────────── */
+    .stl-toolbar label { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+    .stl-toolbar input[type="number"] {
+      width: 80px;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      text-align: right;
+    }
+    .role-sel {
+      padding: 0.3rem 0.4rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 0.8rem;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .stl-table tr.row-pref td { background: var(--pale); }
+    .stl-table tr.row-toosmall td { background: var(--warn-bg); color: var(--muted); }
+    .badge {
+      display: inline-block;
+      padding: 0.1rem 0.55rem;
+      border-radius: 999px;
+      font-family: var(--sans);
+      font-size: 0.68rem;
+      font-weight: 700;
+      margin-left: 0.55rem;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .badge-pref { background: var(--primary); color: var(--surface); }
+    .badge-toosmall { background: var(--warn); color: var(--surface); }
+    .dash-btn {
+      padding: 0.3rem 0.75rem;
+      border: 1px solid var(--primary);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--primary);
+      font-family: var(--sans);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+    }
+    .dash-btn:hover:not(:disabled) { background: var(--primary); color: var(--surface); }
+    .dash-btn:disabled { border-color: var(--border); color: var(--muted); opacity: 0.55; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<section class="page-hero compact">
+  <div class="inner">
+    <h1>Sprengflächenanalyse</h1>
+    <p class="subtitle">STL-Dateien im Browser auswerten: Volumen, Masse, projizierte Fläche, Maschinenwahl — und die Auslegung ins Projekt übernehmen.</p>
+  </div>
+</section>
+
+<div class="stl-wrap">
+
+  <div class="stl-toolbar">
+    <input type="file" id="file-input" accept=".stl,model/stl,application/sla" multiple hidden>
+    <button class="btn btn-primary" id="upload-btn">+ STL-Dateien hinzufügen</button>
+    <span class="seg-label">Projektionsrichtung:</span>
+    <div class="seg" id="dir-seg" role="group" aria-label="Projektionsrichtung">
+      <button data-dir="X">X</button>
+      <button data-dir="Y">Y</button>
+      <button data-dir="Z" class="active">Z</button>
+    </div>
+    <span class="stl-hint">100 % clientseitig — kein Upload zu einem Server.</span>
+  </div>
+  <div class="stl-status" id="status"></div>
+
+  <div class="stl-note"><strong>Konvention:</strong> Der Ursprung des STL-Koordinatensystems
+    (<strong>0</strong>) gilt als Werkzeugmitte (Mitte des Säulenfelds). Die Außermittigkeit des
+    Schwerpunkts — und damit der Hebelfaktor k und die Maschinenempfehlung — wird direkt vom
+    Ursprung gemessen. Die Dateien daher schon im CAD passend zur Werkzeugmitte positioniert
+    exportieren; diese Seite verschiebt oder dreht nichts.</div>
+
+  <div class="stl-note"><strong style="color:var(--warn)">Achtung:</strong> Sprengfläche und
+    Gewichte sind abhängig von Schwindungsfaktor und Dichte (flüssig/fest). Beim Hinzufügen
+    der Daten beachten!</div>
+
+  <div class="stl-canvas-card" id="canvas-card">
+    <button id="copy-img-btn" disabled title="Als PNG kopieren" aria-label="Als PNG kopieren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+    <canvas id="proj-canvas"></canvas>
+    <div class="canvas-empty" id="canvas-empty">
+      <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
+        <path d="M21 4 L37 12 L37 30 L21 38 L5 30 L5 12 Z" stroke="var(--muted)" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M5 12 L21 20 L37 12 M21 20 L21 38" stroke="var(--muted)" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+      <div>Noch keine STL-Dateien geladen.<br>Dateien auswählen oder hierher ziehen.<br>
+        Der STL-Ursprung (0) gilt als Werkzeugmitte.</div>
+    </div>
+    <div class="canvas-caption">
+      <span id="proj-label"></span>
+      <span id="cog-label"></span>
+      <span>Einheiten: STL ist einheitenlos — angenommen wird <strong>mm</strong>.</span>
+    </div>
+  </div>
+
+  <div class="stl-table-card">
+    <div class="machine-head">
+      <h2>Geladene Dateien</h2>
+      <label for="density-input">Dichte (fest)
+        <input type="number" id="density-input" value="2700" min="1" step="10"> kg/m³
+      </label>
+    </div>
+    <table class="stl-table" id="result-table" hidden>
+      <thead>
+        <tr>
+          <th>Datei</th>
+          <th style="text-align:left">Zuordnung</th>
+          <th>Volumen</th>
+          <th>Masse</th>
+          <th>Oberfläche</th>
+          <th id="proj-col-head">Proj. Fläche</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="result-body"></tbody>
+      <tfoot id="result-foot"></tfoot>
+    </table>
+    <div class="table-empty" id="table-empty">Die Kennwerte der geladenen Dateien erscheinen hier.</div>
+  </div>
+
+  <div class="stl-table-card" style="margin-top:1.2rem;">
+    <div class="machine-head">
+      <h2>Max. Nachdruck je Maschine — Sprengfläche aus projizierter Fläche + Seitenschiebern</h2>
+      <label for="ptarget-input">Auslegungsdruck
+        <input type="number" id="ptarget-input" value="600" min="1" step="50"> bar
+      </label>
+      <label for="safety-input">Sicherheitsfaktor S
+        <input type="number" id="safety-input" value="1.3" min="1" step="0.05">
+      </label>
+      <label for="core-area-input" title="Projizierte Schieberfläche in Zugrichtung — wirkt mit A·tan(α) auf die Sprengfläche"><span>Seitenschieber A<sub>S</sub></span>
+        <input type="number" id="core-area-input" value="0" min="0" step="100" style="width:90px"> mm²
+      </label>
+      <label for="core-angle-input" title="Sperrwinkel der Abstützschräge — üblich 15–25°">Sperrwinkel α
+        <input type="number" id="core-angle-input" value="20" min="0" max="89" step="1"> °
+      </label>
+    </div>
+    <div class="machine-info" id="machine-info"></div>
+    <table class="stl-table" id="machine-table" hidden>
+      <thead>
+        <tr>
+          <th>Maschine</th>
+          <th>Schließkraft F<sub>s</sub></th>
+          <th>p<sub>max</sub> nur Schließkraft</th>
+          <th>mit Sicherheit S</th>
+          <th>mit S + Außermittigkeit</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="machine-body"></tbody>
+    </table>
+    <div class="table-empty" id="machine-empty">Sobald eine projizierte Fläche vorliegt, steht hier
+      der maximal mögliche Nachdruck je Maschinen-Preset.</div>
+  </div>
+
+  <p class="stl-footnote">Volumen über die Summe signierter Tetraeder (setzt ein geschlossenes Netz
+    voraus), Oberfläche als Summe der Dreiecksflächen. Die projizierte Fläche ist die Silhouette des
+    Bauteils senkrecht zur gewählten Richtung, per Rasterung bestimmt. Die Summenzeile addiert
+    Volumen, Masse und Oberfläche der Dateien; ihre projizierte Fläche ist dagegen die
+    <strong>vereinigte</strong> Silhouette aller Dateien — Überdeckungen, auch zwischen
+    verschiedenen Dateien, zählen nur einfach.
+    <strong>S</strong> markiert den flächengewichteten Gesamtschwerpunkt der projizierten Flächen,
+    <strong>0</strong> den Ursprung des STL-Koordinatensystems.
+    Der maximale Nachdruck je Maschine folgt dem Zuhaltungs-Modell des Dashboards:
+    p<sub>max</sub> = F<sub>s</sub> / (100 · S · k · A) mit A als Sprengfläche
+    (in m²) und dem Hebelfaktor k = 1 + 2|e<sub>x</sub>|/a<sub>x</sub> + 2|e<sub>y</sub>|/a<sub>y</sub>
+    aus der Außermittigkeit des Gesamtschwerpunkts gegenüber dem Ursprung (a = Säulenabstände
+    der Maschine). Die Sprengfläche ist die vereinigte projizierte Fläche plus dem
+    <strong>Seitenschieber-Zuschlag</strong> A<sub>S</sub> · tan(α): der Metalldruck wirkt auf die
+    in Zugrichtung projizierte Schieberfläche A<sub>S</sub>, die Abstützschräge mit Sperrwinkel α
+    leitet davon den Anteil tan(α) in die Öffnungsrichtung (üblich 15–25°). Der Zuschlag geht in
+    die Drucktabelle und die Dashboard-Übernahme ein, verschiebt aber den Schwerpunkt S nicht —
+    die Lage der Schieber ist hier unbekannt.
+    Die drei Spalten: nur Schließkraft (S = 1, k = 1), mit Sicherheitsfaktor S,
+    mit S und Außermittigkeit. Die Masse je Datei ist Volumen × Dichte —
+    <strong>Schwindung beachten:</strong> das STL-Volumen beschreibt das kalte, erstarrte
+    Bauteil. Mit der Feststoffdichte ergibt sich die Masse des fertigen Teils; wer daraus
+    das Schmelze- bzw. Dosiervolumen bestimmt oder mit der Flüssigdichte rechnet, muss die
+    Erstarrungs- und Abkühlschwindung zuschlagen (Aluminium: Flüssigdichte ≈ 2400 statt
+    2700 kg/m³, also grob 10 % mehr Schmelzevolumen je kg).
+    <strong>Empfohlen</strong> markiert die kleinste Maschine, deren maximaler Nachdruck
+    (mit S und Außermittigkeit) den eingestellten Auslegungsdruck erreicht;
+    <strong>zu klein</strong> markierte Maschinen erreichen ihn nicht. „→ Dashboard" übernimmt
+    die Sprengfläche (vereinigte projizierte Fläche + Seitenschieber-Zuschlag),
+    Außermittigkeit, Massen aus der Zuordnung,
+    Sicherheitsfaktor, Auslegungsdruck und das Maschinen-Preset in das Dashboard und öffnet es —
+    möglich, sobald alle vier Zuordnungen (Bauteil, Anguss, Überlauf, Pressrest) vergeben sind.
+    Die Dichte wird nicht übernommen: hier ist sie die Feststoffdichte für die Massen,
+    im Dashboard rechnet die Flüssigdichte die Schmelzevolumina.</p>
+
+</div>
+<script src="/shared/examples/machines.js"></script>
+<script src="/shared/orgpresets.js"></script>
+<script src="/shared/project.js"></script>
+<script src="/shared/projectbar.js"></script>
+<script src="/shared/clampmodel.js"></script>
+<script src="stl-math.js"></script>
+<script src="stl-logic.js"></script>
+<script src="stl-app.js"></script>
+
+</body>
+</html>

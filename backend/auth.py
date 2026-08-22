@@ -2,7 +2,7 @@
 
 Es gibt keine offene Registrierung: ein Admin (CLI backend/manage.py oder
 Organisations-Admin über /api/org/invites) erzeugt eine Einladung für eine
-E-Mail-Adresse; der Link führt auf /app/konto.html?token=… — dort legt die
+E-Mail-Adresse; der Link führt auf /konto/?token=… — dort legt die
 eingeladene Person Namen und Passwort fest. Danach E-Mail + Passwort.
 
 Sitzungen: zufälliger Token in einem HttpOnly-Cookie, serverseitig in der
@@ -131,7 +131,7 @@ def create_invite(db: Session, org: Org, email: str, role: str = "member",
 
 
 def invite_url(base_url: str, token: str) -> str:
-    return base_url.rstrip("/") + "/app/konto.html?token=" + token
+    return base_url.rstrip("/") + "/konto/?token=" + token
 
 
 def _valid_invite(db: Session, token: str) -> Invite:
@@ -153,7 +153,7 @@ def bootstrap_from_env(db: Session) -> None:
     DIELOGIC_ADMIN_TOKEN setzen — solange es keinen Benutzer gibt, wird
     beim Start die Organisation DIELOGIC_ORG (Standard „DieLogic") angelegt
     und eine Admin-Einladung mit genau diesem Token. Einlösen unter
-    /app/konto.html?token=<DIELOGIC_ADMIN_TOKEN>."""
+    /konto/?token=<DIELOGIC_ADMIN_TOKEN>."""
     email = os.environ.get("DIELOGIC_ADMIN_EMAIL", "").strip().lower()
     token = os.environ.get("DIELOGIC_ADMIN_TOKEN", "").strip()
     if not email or not token:

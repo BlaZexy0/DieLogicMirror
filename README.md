@@ -20,7 +20,7 @@ einem Abschnitt je Werkzeug:
 | `cycle`    | Zyklusanalyse                    | Zykluszeit                                          |
 | `cost`     | Teilekosten                      | — (bezieht Massen aus `design`, t_Z aus `cycle`)    |
 
-`site/app/shared/project.js` hält den Browser-Cache der Projekte und mit
+`web/shared/project.js` hält den Browser-Cache der Projekte und mit
 `derived()` die Querbezüge; `projectbar.js` ist die Projektleiste auf jeder
 Werkzeugseite (wechseln, anlegen, bearbeiten, Revision) und synchronisiert
 mit dem Server. Die Werkzeuge setzen ein Konto voraus — ohne Anmeldung
@@ -31,70 +31,62 @@ lokale Projekte werden beim Anmelden übernommen, und „Revision" legt einen
 benannten Schnappschuss (Autor, Zeit, Notiz) an. Projekte gehören der
 Organisation, nicht der Person (B2B). Ohne Konto bleibt alles im Browser.
 Verwaltung (Verlauf, Kopie, Export/Import, Zurücksetzen, Archivieren,
-Mitglieder, Einladungen): `/app/konto.html`.
+Mitglieder, Einladungen): `/konto/`.
 
 **Stammdaten der Organisation:** Maschinen, Legierungen, Bauteiltypen und
 Kosten & Sätze (Legierungspreis, Strompreis, Stundensätze …) pflegt ein
 Admin auf der Konto-Seite; sie ersetzen in allen Werkzeugen die
-Beispielwerte aus `app/config/examples/*.js` (`shared/orgpresets.js` legt sie beim
+Beispielwerte aus `web/shared/examples/*.js` (`web/shared/orgpresets.js` legt sie beim
 Laden über die Globals, Backend `/api/org/settings`).
 
 ## Struktur
 
 ```
 dielogic/
-├── site/            die statische Website — dieser Ordner ist der Webspace-Inhalt
+├── web/             die statische Website — dieser Ordner ist 1:1 der Webspace-Inhalt
+│   │                (Backend mountet ihn unter /). Alle seitenübergreifenden Pfade sind
+│   │                wurzel-absolut (/shared/…, /assets/…, /tools/…), Verschachtelung ist egal.
 │   ├── index.html       Landingpage (Hero, Schritte, Werkzeuge, Katalog, Theorie, Preise)
-│   ├── theorie/         Theorie-Artikel (Kurzfassungen als Mockup, Formeln im
-│   │                    .eq-Markup — keine externen Abhängigkeiten)
+│   ├── shared/          Laufzeit-Bausteine aller Seiten (klassische Scripts, vor den Modulen):
+│   │   ├── palette.js       DIE Farbquelle (window.__PALETTE__; shared.css spiegelt sie,
+│   │   │                    Test prüft Gleichheit + WCAG-Kontrast)
+│   │   ├── shared.css       Basis-Styles + :root-Tokens
+│   │   ├── nav.js           injiziert Site-Navigation + Footer (selbstversorgend)
+│   │   ├── version.js       Versionsnummer (Nav-Badge + /api/health)
+│   │   ├── project.js       Projekt-Cache im Browser + Querbezüge (derived())
+│   │   ├── projectbar.js    Projektleiste auf jeder Werkzeugseite, Sync mit dem Server
+│   │   ├── orgpresets.js    Stammdaten der Organisation überlagern die Beispiel-Presets
+│   │   └── clampmodel.js    Zuhaltungs-Modell (Dashboard-Diagramm + STL-Maschinentabelle)
+│   ├── tools/           ein Ordner je Werkzeug, gleiche Form: index.html + eigene Scripts
+│   │   ├── auslegung/       das Dashboard: index.html (alle Diagramme), chart.html?id=…
+│   │   │                    (Einzelseite), config/ (theme.js Diagrammfarben, examples/
+│   │   │                    Beispiel-Presets machines/alloys/parts/kosten), css/, js/…
+│   │   │                    (core/simapi.js + simstore.js = Backend-Anbindung)
+│   │   ├── sprengflaeche/   STL-Analyse: stl-math.js (Netz-Kennwerte, getestet),
+│   │   │                    stl-logic.js (Massenbilanz/Maschinentabelle, getestet), stl-app.js
+│   │   ├── teilekosten/     Teilekosten-Kalkulation (Abschnitt cost, verknüpfte Felder)
+│   │   └── zyklus/          Zyklusanalyse (Abschnitt cycle, Zeitleiste)
+│   ├── konto/           Konto: Einladung einlösen, Anmelden, Projekte/Revisionen,
+│   │                    Mitglieder, Einladungen, Stammdaten (Admin)
+│   ├── theorie/         Theorie-Artikel (Formeln im .eq-Markup, statische SVGs aus assets/)
 │   ├── recht/           Rechts-/Unternehmensseiten — Mustertexte mit [Platzhaltern]!
-│   │   ├── kontakt.html      Kontaktseite
-│   │   ├── ueber-uns.html    Über-uns-Seite (Teamfoto-Mockup + [Platzhalter]-Team)
-│   │   ├── impressum.html    Impressum (§ 5 DDG)
-│   │   ├── datenschutz.html  Datenschutzerklärung (DSGVO)
-│   │   ├── agb.html          Allgemeine Geschäftsbedingungen
-│   │   └── widerruf.html     Widerrufsbelehrung + Musterformular
-│   ├── stl/             STL-Analyse — clientseitig: Volumen, Oberfläche,
-│   │                    projizierte Fläche (X/Y/Z) je Datei + Summen, max.
-│   │                    Nachdruck je Maschinen-Preset (Zuhaltungs-Modell)
-│   │   ├── stl-analyse.html  Seite (Markup + Styles)
-│   │   ├── stl-math.js       Netz-Kennwerte (Parser, Volumen, Fläche) — getestet
-│   │   ├── stl-logic.js      Zuordnung/Massenbilanz/Maschinentabelle — getestet
-│   │   └── stl-app.js        Ansicht + Verdrahtung (Canvas, Tabellen, Events)
-│   ├── kosten/          Teilekosten-Kalkulation (Abschnitt cost, verknüpfte Felder)
-│   ├── zyklus/          Zyklusanalyse (Abschnitt cycle, Zeitleiste)
-│   ├── shared.css       Basis-Styles + :root-Tokens (Spiegel von app/config/palette.js)
-│   ├── version.js       Versionsnummer (Nav + /api/health)
-│   ├── tools/           Generatoren: gen-theory-svgs, gen-vkrit-table, gen-palette
-│   │                    (assets/palette.svg + .png — Farbtafel mit Kontrastwerten)
-│   ├── nav.js           injiziert Site-Navigation + Footer (selbstversorgend)
-│   ├── assets/          logo.svg (Vektor-Logo), icon-*.png (Favicons,
-│   │                    aus logo.svg gerendert), site.webmanifest, team-mockup.svg
-│   └── app/             das Dashboard (Port von ../hpdc-dashboard)
-│       ├── index.html       Gesamt-Dashboard (Schusskurve inkl. Luftdruck-Simulation)
-│       ├── chart.html       Diagramm-Einzelseite
-│       ├── konto.html       Konto: Einladung einlösen, Anmelden, Projekte/Revisionen,
-│       │                    Mitglieder, Einladungen (Admin)
-│       ├── config/          palette.js (DIE Farbquelle — shared.css spiegelt sie, alle
-│       │                    Scripts lesen window.__PALETTE__; Test prüft Gleichheit +
-│       │                    WCAG-Kontrast), theme.js (Diagramm-Farben),
-│       │                    examples/ (Beispiel-Presets: machines/alloys/parts/kosten)
-│       ├── shared/          project.js (Projekt-Cache + Querbezüge), projectbar.js
-│       │                    (Projektleiste, Sync), orgpresets.js (Stammdaten der
-│       │                    Organisation über die Presets), clampmodel.js
-│       ├── css/site.css     Layout-Offsets für die 56px-Navigation
-│       └── js/…             u. a. core/simapi.js + core/simstore.js (Backend-Anbindung;
-│                            Luftdruck-Serie mit 2. Achse in der Schusskurve)
+│   │                    kontakt, ueber-uns, impressum (§ 5 DDG), datenschutz (DSGVO),
+│   │                    agb, widerruf (+ Musterformular)
+│   ├── assets/          logo.svg, icon-*.png (aus logo.svg gerendert), site.webmanifest,
+│   │                    team-mockup.svg, palette.svg/.png (generiert), theorie/*.svg (generiert)
+│   └── examples/        Beispiel-STLs für die Sprengflächenanalyse (auch von Tests genutzt)
 ├── backend/         FastAPI: /api/auth (Einladung, Sitzung), /api/org (Mitglieder,
 │   │                Einladungen, Stammdaten), /api/projects (Revisionen),
-│   │                /api/sim/shot (hpdcsim) + statische Auslieferung
-│   ├── app.py  db.py  auth.py  projects.py  orgsettings.py  manage.py  sim.py  core.py  convert.py
+│   │                /api/sim/shot (hpdcsim) + statische Auslieferung von web/
+│   ├── app.py  db.py  auth.py  projects.py  orgsettings.py  manage.py  sim.py  simcore.py  convert.py
 │   └── tests/       API-Tests (TestClient, SQLite), convert-Unit-Tests, Physik-Fixtures
 ├── packages/
 │   └── hpdcsim/     Simulationspaket (eigenes pyproject, pytest-Suite)
-├── fixtures/
-│   └── physics/     geteilte Referenzfälle: bekannte Eingaben + Sollwerte,
-│                    geprüft von physics.js UND hpdcsim (siehe README dort)
+├── fixtures/        Referenzdaten, die JS UND Python prüfen
+│   ├── physics/     Referenzfälle: bekannte Eingaben + Sollwerte (siehe README dort)
+│   └── vkrit/       v_krit_sim.csv — OpenFOAM-CFD-Tabelle, Quelle für beide v_krit-Tabellen
+├── tests/web/       Node-Tests der Website (nicht ausgeliefert)
+├── scripts/         Generatoren: gen-theory-svgs, gen-vkrit-table, gen-palette (nicht ausgeliefert)
 ├── render.yaml      Render-Blueprint (Web Service: Build, Start, Healthcheck)
 └── .venv/           lokale Python-Umgebung (nicht einchecken)
 ```
@@ -117,10 +109,10 @@ python3 -m venv .venv                       # einmalig
 **Nur statisch (ohne Simulation):**
 
 ```bash
-cd dielogic/site && python3 -m http.server 8000
+cd dielogic/web && python3 -m http.server 8000
 ```
 
-Das Dashboard lädt seine ES-Module direkt aus `app/js/` — kein
+Das Dashboard lädt seine ES-Module direkt aus `tools/auslegung/js/` — kein
 Build-Schritt, aber ein Webserver ist nötig (file://-Doppelklick wird
 nicht unterstützt). Ohne Backend entfällt nur die Luftdruck-Serie mit einem
 Hinweis in der Schusskurve — alle 19 Diagramme rechnen unabhängig davon im Browser.
@@ -130,19 +122,19 @@ Hinweis in der Schusskurve — alle 19 Diagramme rechnen unabhängig davon im Br
 Wie in CI (`.github/workflows/ci.yml`):
 
 ```bash
-node site/tests/syntax-check.mjs                # Syntax aller JS + Inline-Scripts
-node --test site/tests/*.test.mjs               # Frontend, Physik-Fixtures, Grenzen, Render-Rauchtest
-node site/tools/gen-theory-svgs.mjs             # statische SVGs der Theorie-Artikel neu erzeugen
-                                                # (site/assets/theorie/ — nach Änderungen an Charts/Defaults)
-node site/tools/gen-vkrit-table.mjs             # v_krit-CFD-Tabelle (JS + Python) aus
-                                                # site/assets/v_krit_sim.csv neu erzeugen
+node tests/web/syntax-check.mjs                 # Syntax aller JS + Inline-Scripts
+node --test tests/web/*.test.mjs                # Frontend, Physik-Fixtures, Grenzen, Render-Rauchtest
+node scripts/gen-theory-svgs.mjs                # statische SVGs der Theorie-Artikel neu erzeugen
+                                                # (web/assets/theorie/ — nach Änderungen an Charts/Defaults)
+node scripts/gen-vkrit-table.mjs                # v_krit-CFD-Tabelle (JS + Python) aus
+                                                # fixtures/vkrit/v_krit_sim.csv neu erzeugen
 .venv/bin/python packages/hpdcsim/tests/run_tests.py
 .venv/bin/python -m pytest backend/tests -q     # braucht zusätzlich httpx + pytest
 ```
 
 Die Physik-Fixtures (`fixtures/physics/`) sind der Anker zwischen beiden
 Physik-Implementierungen: dieselben Eingabe-/Sollwert-Dateien laufen gegen
-`site/app/js/core/physics.js` (Node) und gegen `backend/convert.py` →
+`web/tools/auslegung/js/core/physics.js` (Node) und gegen `backend/convert.py` →
 `hpdcsim` (Python).
 
 ## Vor dem Livegang (Rechtsseiten)
@@ -153,35 +145,35 @@ Hoster, USt-IdNr., Zahlungsweg, Stand-Datum …) ausfüllen, die Texte an das
 tatsächliche Geschäftsmodell anpassen und anwaltlich prüfen lassen — die
 Vorlagen sind keine Rechtsberatung. Der gelbe Hinweiskasten oben auf jeder
 Seite wird danach gelöscht. Die Preise auf der Landingpage
-(`site/index.html#preise`) sind ebenfalls Beispielwerte. Geht das Backend
+(`web/index.html#preise`) sind ebenfalls Beispielwerte. Geht das Backend
 mit ins Netz, muss die Datenschutzerklärung um die Verarbeitung der
 Simulations-Requests ergänzt werden.
 
 ## Anpassen
 
-- **Navigation/Footer:** `site/nav.js` — Linkliste (`NAV_LINKS`),
-  Diagrammliste (`CHARTS`, Reihenfolge = `site/app/js/charts/registry.js`).
-- **Farbschema:** `site/app/config/palette.js` (einzige Quelle; `shared.css`
+- **Navigation/Footer:** `web/shared/nav.js` — Linkliste (`NAV_LINKS`),
+  Diagrammliste (`CHARTS`, Reihenfolge = `web/tools/auslegung/js/charts/registry.js`).
+- **Farbschema:** `web/shared/palette.js` (einzige Quelle; `shared/shared.css`
   spiegelt sie als Tokens, Test prüft Gleichheit). Diagrammfarben:
-  `site/app/config/theme.js`. Farbtafel: `site/assets/palette.svg`.
-- **Version:** `site/version.js` (Nav-Badge und `/api/health`).
-- **Presets (Beispielwerte):** `site/app/config/examples/*.js` — produktiv
+  `web/shared/theme.js`. Farbtafel: `web/assets/palette.svg`.
+- **Version:** `web/shared/version.js` (Nav-Badge und `/api/health`).
+- **Presets (Beispielwerte):** `web/shared/examples/*.js` — produktiv
   pflegt jede Organisation ihre eigenen als Stammdaten auf der Konto-Seite.
-- **Logo/Icons:** `site/assets/logo.svg` bearbeiten, danach PNGs rendern:
+- **Logo/Icons:** `web/assets/logo.svg` bearbeiten, danach PNGs rendern:
   ```bash
-  cd site/assets
+  cd web/assets
   for s in 32 192 512; do inkscape logo.svg -w $s -h $s -o icon-$s.png; done
   inkscape logo.svg -w 180 -h 180 -b '#002733' -y 1 -o icon-180.png   # Apple: ohne Transparenz
   ```
-- **Neues Diagramm:** wie in `site/app/README.md`; danach in `site/nav.js`
-  (`CHARTS`) und im Katalog auf `site/index.html` verlinken.
+- **Neues Diagramm:** wie in `web/tools/auslegung/README.md`; danach in `web/shared/nav.js`
+  (`CHARTS`) und im Katalog auf `web/index.html` verlinken.
 - **Simulation:** Einheiten-Übersetzung und Defaults in
-  `backend/convert.py`; im Frontend holt `site/app/js/core/simstore.js` das
+  `backend/convert.py`; im Frontend holt `web/tools/auslegung/js/core/simstore.js` das
   Ergebnis, die Schusskurve zeichnet den Luftdruck auf der zweiten Achse.
 
 ## Herkunft
 
-- `site/app/` ist der Port von `../hpdc-dashboard` (dieser Ordner ist die
-  gepflegte Fassung).
+- `web/tools/auslegung/` ist der Port des früheren eigenständigen `hpdc-dashboard`
+  (dieser Ordner ist die gepflegte Fassung).
 - Arbeitsteilung des Backends: das Frontend zeichnet, Python rechnet —
   die Simulation liefert `hpdcsim`.
