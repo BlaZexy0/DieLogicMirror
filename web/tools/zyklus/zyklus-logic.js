@@ -5,8 +5,7 @@
       Parallelvorgänge (Kernzüge, Ablage, …) ankern an den Phasengrenzen.
    2. Wärmebilanz je Zyklus: Wärmeeintrag des Gussstücks aus Legierung
       und Temperaturen, natürliche Verluste an die Umgebung, Rest =
-      Temperiersystem; dazu die Prüfung der Temperierkreise (Wärmeleitung
-      zum Kanal, Übergang Kanalwand → Fluid, Temperierdifferenz). Gleichungen
+      Temperiersystem (Temperierleistung). Gleichungen
       nach [A] Temperiersystem der Druckgießform, Kap. 5 und [B] Heizung
       und Kühlung der Druckgießformen mit Temperiergeräten, Kap. 12 —
       Nummern in Klammern sind die Quellen-Gleichungen, Herleitung und
@@ -93,14 +92,6 @@
 
   /* ── Wärmebilanz ──────────────────────────────────────────── */
 
-  /* Wärmeträger: Stoffwerte bei typischer Vorlauftemperatur TV
-     ([B] Tab. 12.4 Wasser 80 °C; [A] Tab. 5.2 Marlotherm SH 140 °C).
-     rho kg/m³, c J/(kg·K), lambda W/(m·K), nu m²/s, Pr −. */
-  var FLUIDS = {
-    wasser: { label: 'Wasser (Vorlauf 80 °C)',        TV: 80,  rho: 971.8, c: 4195, lambda: 0.668, nu: 0.365e-6, Pr: 2.23 },
-    oel:    { label: 'Wärmeträgeröl (Vorlauf 140 °C)', TV: 140, rho: 958,   c: 1990, lambda: 0.115, nu: 1.4e-6,  Pr: 24.0 }
-  };
-
   /* Erfahrungswerte der Quellen, die das Modell fest verwendet (keine Eingaben):
      Temperaturen [B] Tab. 12.7 / [A] Tab. 5.4, Wärmeübergang [B] 12.4.2, [A] S. 303. */
   var HEAT = {
@@ -113,11 +104,7 @@
     alphaK: 100,       // Kontakt Form → Aufspannplatte W/(m²·K)
     alphaBl: 40,       // Ausblasen W/(m²·K) (10–20 m/s Luft)
     x0: 0.010,         // Tiefe der beim Sprühen abgekühlten Schicht m (12.21)
-    hSpray: 2594,      // Formtrennstoff: Erwärmen + Verdampfen kJ/kg (12.22)
-    lambdaF: 28,       // Warmarbeitsstahl W/(m·K)
-    a: 15,             // Abstand Kanalmitte – Gravur mm
-    dTmax: 10,         // zulässige Temperierdifferenz Vor-/Rücklauf K ([A] S. 307)
-    ReMin: 1e4         // voll turbulent (5.8)
+    hSpray: 2594       // Formtrennstoff: Erwärmen + Verdampfen kJ/kg (12.22)
   };
 
   /* Legierung, wenn das Projekt keine hat: EN AC-AlSi9Cu3(Fe) ([B] 12.4.1). */
@@ -129,10 +116,9 @@
      oberfläche) oder aus der Zeitleiste (Zykluszeit, Blasphase).
        Teject  Entformungstemperatur °C
        die     Formabmessungen B, H, L mm — null = aus dem Säulenabstand der
-               Maschine geschätzt (B = H = 0,8·Säulenabstand, L = 0,5·B)
-       cooling Temperierkreise: fluid, n Kreisläufe gesamt, d mm, w m/s */
+               Maschine geschätzt (B = H = 0,8·Säulenabstand, L = 0,5·B) */
   function heatDefaults() {
-    return { Teject: 300, die: { B: null, H: null, L: null }, cooling: { fluid: 'wasser', n: 26, d: 12, w: 2.5 } };
+    return { Teject: 300, die: { B: null, H: null, L: null } };
   }
 
   function sanitizeHeat(src) {
@@ -141,13 +127,7 @@
     var num = function (x, def) { x = Number(x); return isFinite(x) ? x : def; };
     var pos = function (x) { x = Number(x); return isFinite(x) && x > 0 ? x : null; };
     var die = src.die && typeof src.die === 'object' ? src.die : {};
-    var c = src.cooling && typeof src.cooling === 'object' ? src.cooling : {};
-    return {
-      Teject: num(src.Teject, d.Teject),
-      die: { B: pos(die.B), H: pos(die.H), L: pos(die.L) },
-      cooling: { fluid: FLUIDS[c.fluid] ? c.fluid : d.cooling.fluid, n: Math.max(Math.round(num(c.n, d.cooling.n)), 0),
-        d: num(c.d, d.cooling.d), w: num(c.w, d.cooling.w) }
-    };
+    return { Teject: num(src.Teject, d.Teject), die: { B: pos(die.B), H: pos(die.H), L: pos(die.L) } };
   }
 
   /* Mittlere spezifische Wärmekapazitäten ([B] 12.4.1): cl halbflüssig,
@@ -202,61 +182,20 @@
       QU: parts[0] + parts[1] + parts[2] + parts[3] + parts[4] };
   }
 
-  /* Temperierkreise beider Formhälften ([A] 5.8–5.9, 5.20–5.26). Die n
-     Kreisläufe werden auf die Hälften verteilt und quer zur Form verlegt
-     (Teilung b = B/n_Hälfte, wirksame Länge lK = 0,7·H, Gesamtlänge
-     LK = 2·H je Kreislauf, Abstand a zur Gravur fest). Aus dem Volumen-
-     strom folgt die Temperierdifferenz ΔT = QT/(ρ·c·V̇·τz) (5.23) — sie
-     muss ≤ 10 K bleiben; Wärmeleitung (5.25) und Wandübergang (5.22)
-     müssen je Hälfte den halben QT tragen (5.26).
-     o: { QT kJ, tz s, fluid {TV,rho,c,lambda,nu,Pr}, n, d mm, w m/s,
-          B, H m, Tdie °C } */
-  function coolingCheck(o) {
-    var f = o.fluid, d = o.d / 1000, a = HEAT.a / 1000;
-    var A = Math.PI / 4 * d * d;
-    var Re = o.w * d / f.nu, wMin = HEAT.ReMin * f.nu / d;
-    var alpha = 0.023 * f.lambda / d * Math.pow(Re, 0.8) * Math.pow(f.Pr, 0.4);   // (5.24)
-    var Vdot = o.n * A * o.w;                                                      // (5.9)
-    var QT = Math.max(o.QT, 0);
-    var dT = Vdot > 0 && o.tz > 0 ? QT * 1000 / (f.rho * f.c * Vdot * o.tz) : Infinity;  // (5.23) umgestellt
-    var TFl = f.TV + (isFinite(dT) ? dT / 2 : 0);
-    var Tsurf = (HEAT.Tsurfmax + o.Tdie) / 2;                                      // (5.21)
-    var nH = [Math.ceil(o.n / 2), Math.floor(o.n / 2)];
-    var halves = nH.map(function (n) {
-      if (!(n > 0)) return { n: 0, QKlambda: 0, QKalpha: 0, QT: QT / 2 };
-      var b = o.B / n, lK = 0.7 * o.H, LK = 2 * o.H;
-      var R = 2 * Math.PI * a / b + Math.log(b / (Math.PI * d));                   // (5.25)
-      var QKlambda = R > 0 ? 2 * Math.PI * HEAT.lambdaF * n * lK * o.tz / R * (Tsurf - o.Tdie) / 1000 : 0;
-      var QKalpha = alpha * n * Math.PI * d * LK * o.tz * (o.Tdie - TFl) / 1000;  // (5.22)
-      return { n: n, b: b, lK: lK, LK: LK, QKlambda: QKlambda, QKalpha: QKalpha, QT: QT / 2 };
-    });
-    var okLambda = halves.every(function (h) { return h.QKlambda >= h.QT; });
-    var okAlpha = halves.every(function (h) { return h.QKalpha >= h.QT; });
-    var okDT = dT <= HEAT.dTmax;
-    var turbulent = Re >= HEAT.ReMin;
-    return { Re: Re, wMin: wMin, turbulent: turbulent, alpha: alpha, Vdot: Vdot, VdotLmin: Vdot * 6e4,
-      dT: dT, TFl: TFl, Tsurf: Tsurf, halves: halves,
-      okLambda: okLambda, okAlpha: okAlpha, okDT: okDT, ok: okLambda && okAlpha && okDT && turbulent };
-  }
-
   /* Gesamte Wärmebilanz. v (flach, wie computeCost in der Teilekosten-Logik):
        mdose kg · Tcast °C · alloy { Tliq, Tsol, hf, cp20, cpS, cpL } · Tdie °C
        Teject °C · Acav m² · die { B, H, L } mm · tz s · tauBl s
-       cooling { fluid, n, d, w }
      Rückgabe: input (heatInput), losses (heatLosses), QT, PT kW, k = QT/Qdie,
-     deficit (Verluste > Eintrag → Form muss beheizt werden), cooling. */
+     deficit (Verluste > Eintrag → Form muss beheizt werden). */
   function computeHeat(v) {
     var al = v.alloy || ALLOY_FALLBACK;
     var input = heatInput({ mdose: v.mdose, Tcast: v.Tcast, Tliq: al.Tliq, Tsol: al.Tsol, Teject: v.Teject,
       hf: al.hf, cp20: al.cp20, cpS: al.cpS, cpL: al.cpL });
     var B = v.die.B / 1000, H = v.die.H / 1000, L = v.die.L / 1000;
     var losses = heatLosses({ tz: v.tz, tauBl: v.tauBl, Tdie: v.Tdie, Teject: v.Teject, Acav: v.Acav, B: B, H: H, L: L });
-    if (!input) return { input: null, losses: losses, QT: NaN, PT: NaN, k: NaN, deficit: false, cooling: null };
+    if (!input) return { input: null, losses: losses, QT: NaN, PT: NaN, k: NaN, deficit: false };
     var QT = input.Qdie - losses.QU;
-    var fluid = FLUIDS[v.cooling.fluid] || FLUIDS.wasser;
-    var cooling = coolingCheck({ QT: QT, tz: v.tz, fluid: fluid, n: v.cooling.n, d: v.cooling.d, w: v.cooling.w, B: B, H: H, Tdie: v.Tdie });
-    return { input: input, losses: losses, QT: QT, PT: v.tz > 0 ? QT / v.tz : NaN, k: QT / input.Qdie,
-      deficit: QT < 0, fluid: fluid, cooling: cooling };
+    return { input: input, losses: losses, QT: QT, PT: v.tz > 0 ? QT / v.tz : NaN, k: QT / input.Qdie, deficit: QT < 0 };
   }
 
   /* Formabmessungen aus dem Säulenabstand der Maschine schätzen (mm). */
@@ -334,10 +273,10 @@
   var api = { TRACKS: TRACKS, MAIN_PHASES: MAIN_PHASES, SECTION_META: SECTION_META,
     defaultState: defaultState, sanitizeState: sanitizeState,
     extrasFromState: extrasFromState, layoutCycle: layoutCycle,
-    FLUIDS: FLUIDS, HEAT: HEAT, ALLOY_FALLBACK: ALLOY_FALLBACK,
+    HEAT: HEAT, ALLOY_FALLBACK: ALLOY_FALLBACK,
     heatDefaults: heatDefaults, sanitizeHeat: sanitizeHeat, dieFromMachine: dieFromMachine,
     meanHeatCapacities: meanHeatCapacities, heatInput: heatInput, heatLosses: heatLosses,
-    coolingCheck: coolingCheck, computeHeat: computeHeat };
+    computeHeat: computeHeat };
   root.__ZYKLUS_LOGIC__ = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

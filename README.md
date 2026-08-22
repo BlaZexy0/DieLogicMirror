@@ -66,8 +66,8 @@ dielogic/
 │   │   │                    stl-logic.js (Massenbilanz/Maschinentabelle, getestet), stl-app.js
 │   │   ├── teilekosten/     Teilekosten-Kalkulation (Abschnitt cost, verknüpfte Felder)
 │   │   └── zyklus/          Zyklusanalyse (Abschnitt cycle): Zeitleiste + Wärmebilanz je Zyklus
-│   │                        und Kapazitätsprüfung des Temperiersystems (zyklus-logic.js, getestet
-│   │                        gegen die Zahlenbeispiele der Quellen — docs/heat_flow_hpd_die.md)
+│   │                        (zyklus-logic.js, getestet gegen die Zahlenbeispiele der Quellen —
+│   │                        docs/heat_flow_hpd_die.md)
 │   ├── konto/           Konto: Einladung einlösen, Anmelden, Projekte/Revisionen,
 │   │                    Mitglieder, Einladungen, Stammdaten (Admin)
 │   ├── theorie/         Theorie-Artikel (Formeln im .eq-Markup, statische SVGs aus assets/)

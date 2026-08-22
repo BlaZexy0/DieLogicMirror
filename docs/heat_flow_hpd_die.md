@@ -30,11 +30,12 @@ of the two scans. Findings:
     `c_m = c_20 + (t_S + t_e − 40)/(2·t_S − 40)·(c_S − c_20)` evaluates to
     996.29 with the example data; Q then becomes 497.68 kJ (+0.2 %). The
     implementation follows the printed formula.
-- **Tempering example, Source A pp. 298–299:** G = 2 kg, q = 700 kJ/kg,
+- **Tempering example, Source A pp. 298–299** (kept for a later tempering-circuit
+  model): G = 2 kg, q = 700 kJ/kg,
   k = 0.5, τz = 70 s → P_T = 10 kW (5.4); d = 10 mm, w = 2 m/s, n₁ = 4,
   n₂ = 2 → V̇₁ = 37.68, V̇₂ = 18.84 l/min (5.9); with Marlotherm SH at
   140 °C (ρ = 958 kg/m³, c = 1990 J/(kg·K)) and ΔT = 6 K → P_T1 = 7.18 kW,
-  P_T2 = 3.59 kW (5.5). Used as the second fixture.
+  P_T2 = 3.59 kW (5.5).
 - Table 12.1 (Q/V per alloy and ejection temperature) and Table 5.3
   (q per alloy) are consistent with (12.2) within a few percent and were
   used to sanity-check the thermal data added to the example alloys
@@ -44,16 +45,16 @@ Implementation map (`web/tools/zyklus/zyklus-logic.js`). The model is driven
 by project data (shot mass, alloy preset incl. pouring temperature, die
 temperature, projected area / STL surface, machine tie-bar spacing, timeline);
 the empirical coefficients and reference temperatures of the sources are
-constants (`HEAT`), not inputs. Only the ejection temperature, optional die
-dimensions and the cooling-circuit layout (fluid, circuits, d, w) are entered.
+constants (`HEAT`), not inputs. Only the ejection temperature and optional die
+dimensions are entered.
 
 | Function | Equations |
 |---|---|
 | `meanHeatCapacities`, `heatInput` | (12.2) with c_l, c_m of 12.4.1; superheat `m·c_L·(T_cast − T_liq)` reported separately (goes to the shot sleeve per Source B) |
 | `heatLosses` | (12.3) for t_fa; (12.7)+(12.9) as one coefficient; (12.10) both platens; (12.14) with V = B·H·L; (12.15) with t_fomin = T_die + 30 K; spray mass (12.21) with x₀ = 10 mm, Δt = T_eject − T_die; (12.22) |
 | `computeHeat` | (12.1)/(5.19), P_T = Q_T/τz (5.4), k = Q_T/Q |
-| `coolingCheck` | Re, (5.8), (5.24), (5.9); ΔT from (5.23) solved for ΔT, checked ≤ 10 K; (5.21); (5.25) with b = B/n per half, l_K = 0.7·H, L_K = 2·H, a = 15 mm; (5.22); (5.26) |
 | `dieFromMachine` | die plate B = H = 0.8 × tie-bar spacing, L = 0.5·B (estimate, overridable) |
 
-Not implemented (next steps): pressure loss / pump check (5.27–5.29, 5.10),
-warm-up transient (5.31–5.37), per-circuit channel geometry.
+Not implemented: the tempering-circuit capacity checks (5.8–5.9, 5.20–5.26),
+pressure loss / pump check (5.27–5.29, 5.10), warm-up transient (5.31–5.37).
+The balance ends at the required tempering duty P_T = Q_T/τz.

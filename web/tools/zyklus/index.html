@@ -162,7 +162,7 @@
     .zk-btn.ghost:hover { background: var(--bg); color: var(--text); }
 
     .zk-footnote { font-size: 0.75rem; color: var(--muted); margin-top: 0.8rem; line-height: 1.65; }
-    /* ── Wärmebilanz & Temperierkreise ─────────────────────── */
+    /* ── Wärmebilanz ───────────────────────────────────────── */
     .zk-cols { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 1.4rem; padding: 0.3rem 1.2rem 1rem; }
     .zk-cols > div { min-width: 0; }
     @media (max-width: 900px) { .zk-cols { grid-template-columns: 1fr; } }
@@ -171,12 +171,11 @@
     .zk-field { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.33rem; }
     .zk-field label { font-size: 0.78rem; color: var(--muted); font-weight: 600; line-height: 1.3; }
     .zk-field .unit { font-weight: 400; font-size: 0.71rem; }
-    .zk-field input, .zk-field select {
+    .zk-field input {
       width: 84px; padding: 0.28rem 0.5rem; border: 1px solid var(--border); border-radius: 6px;
       font-family: var(--mono); font-size: 0.8rem; text-align: right; flex: none;
     }
-    .zk-field select { width: auto; max-width: 190px; font-family: var(--sans); text-align: left; background: var(--surface); color: var(--text); cursor: pointer; }
-    .zk-field input:focus, .zk-field select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+    .zk-field input:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
     .zk-field input.linked { border-color: var(--primary); background: rgba(0,140,130,.06); }
     .zk-field .ro { font-family: var(--mono); font-size: 0.8rem; color: var(--text); white-space: nowrap; }
     .zk-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.6rem; margin-bottom: 0.9rem; }
@@ -189,16 +188,6 @@
     .zk-kpi .s { font-size: 0.7rem; color: var(--muted); }
     .zk-links { font-size: 0.76rem; color: var(--muted); padding: 0 1.2rem 0.9rem; line-height: 1.6; }
     .zk-links a { color: var(--primary); }
-    .zk-badge { display: inline-block; padding: 0.08rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
-    .zk-badge.ok { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok-border); }
-    .zk-badge.bad { background: var(--bad-bg); color: var(--bad); border: 1px solid var(--warn-border); }
-    .zk-bar { height: 8px; background: var(--border-light); border-radius: 4px; overflow: hidden; min-width: 110px; }
-    .zk-bar i { display: block; height: 100%; background: var(--primary2); }
-    .zk-bar i.bad { background: var(--warn); }
-    .zk-table td.num { font-family: var(--mono); text-align: right; }
-    #c-cap td:first-child { white-space: normal; }
-    #c-cap td:first-child small { display: block; color: var(--muted); font-size: 0.7rem; }
-    #c-cap .zk-bar { min-width: 70px; }
     .zk-table input.short { width: 58px; }
     details.zk-eq { padding: 0 1.2rem 0.9rem; }
     details.zk-eq summary { cursor: pointer; font-size: 0.78rem; color: var(--primary); font-weight: 600; }
@@ -212,7 +201,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Zyklusanalyse</h1>
-    <p class="subtitle">Der Druckguss-Zyklus als Zeitleiste — Hauptzyklus, Kernzüge, Handling, Sprühen, Kühlung — und die Wärmebilanz je Zyklus: wie viel Wärme bringt das Gussstück ein, was geht von selbst weg, was muss das Temperiersystem leisten?</p>
+    <p class="subtitle">Der Druckguss-Zyklus als Zeitleiste — Hauptzyklus, Kernzüge, Handling, Sprühen, Kühlung — und die Wärmebilanz je Zyklus: wie viel Wärme bringt das Gussstück ein, was geht von selbst weg, was muss das Temperiersystem abführen?</p>
   </div>
 </section>
 
@@ -328,39 +317,6 @@
       <div class="eq">Q<sub>Kon+Str</sub> = 9,7 · 2L(B+H) · τ<sub>z</sub> · (t<sub>fa</sub> − 20)&emsp;(12.7, 12.9)&emsp;·&emsp;Q<sub>Pl</sub> = 100 · τ<sub>z</sub> · 2·B·H · (t<sub>fa</sub> − 55)&emsp;(12.10)&emsp;·&emsp;t<sub>fa</sub> = 20 + 0,6·(T<sub>Form</sub> − 20)&emsp;(12.3)</div>
       <div class="eq">Q<sub>Luft</sub> = B·H·L · 60 K&emsp;(12.14)&emsp;·&emsp;Q<sub>Bl</sub> = 40 · A<sub>fgr</sub> · τ<sub>bl</sub> · (½(T<sub>e</sub> + T<sub>Form</sub> + 30) − 20)&emsp;(12.15)&emsp;·&emsp;m<sub>Spr</sub> = 0,744 · A<sub>fgr</sub> · 0,01 m · (T<sub>e</sub> − T<sub>Form</sub>)&emsp;(12.21)&emsp;·&emsp;Q<sub>Spr</sub> = 2594 kJ/kg · m<sub>Spr</sub>&emsp;(12.22)</div>
       <p>Wärmeübergangs- und Referenzwerte sind die Erfahrungswerte der Quellen (Luft 20 °C, Aufspannplatten 55 °C, Luft zwischen den offenen Hälften 80 °C, Gravur vor dem Gießen = Formtemperatur + 30 K, α 9,7 / 100 / 40 W/(m²·K)). Formabmessungen: B = H = 0,8 · Säulenabstand der Maschine, L = 0,5·B — bei Bedarf überschreiben. Quellen: Temperiersystem der Druckgießform (Kap. 5), Heizung und Kühlung der Druckgießformen mit Temperiergeräten (Kap. 12); Gleichungsnummern wie dort, Abgleich in <code>docs/heat_flow_hpd_die.md</code>.</p>
-    </details>
-  </div>
-  <!-- ── Temperierkreise ──────────────────────────────────── -->
-  <div class="zk-card" id="cool-card">
-    <div class="head">
-      <h2>Temperierkreise — reicht die Kühlung?</h2>
-      <small>Die Kreisläufe werden auf beide Formhälften verteilt und quer zur Form verlegt. Drei Prüfungen: Wärmeleitung Gravur → Kanal, Übergang Kanalwand → Fluid, Temperierdifferenz Vor-/Rücklauf ≤ 10 K.</small>
-      <span class="kpi-inline">Volumenstrom <span id="k-vdot">—</span> l/min</span>
-    </div>
-    <div class="zk-cols">
-      <div>
-        <div class="zk-group"><h3>Eingaben</h3>
-          <div class="zk-field"><label>Wärmeträger</label><select data-c="fluid" id="c-fluid"></select></div>
-          <div class="zk-field"><label>Kreisläufe gesamt <span class="unit">beide Hälften</span></label><input type="number" step="1" min="0" data-c="n"></div>
-          <div class="zk-field"><label>Kanaldurchmesser <span class="unit">mm</span></label><input type="number" step="1" min="1" data-c="d"></div>
-          <div class="zk-field"><label>Strömungsgeschwindigkeit <span class="unit">m/s</span></label><input type="number" step="0.1" min="0.1" data-c="w"></div>
-        </div>
-        <div class="zk-group"><h3>Ergebnis</h3>
-          <div class="zk-field"><label>Reynoldszahl <span class="unit">≥ 10⁴ turbulent</span></label><span class="ro" id="c-re">—</span></div>
-          <div class="zk-field"><label>Mindestgeschwindigkeit <span class="unit">m/s</span></label><span class="ro" id="c-wmin">—</span></div>
-          <div class="zk-field"><label>Wärmeübergang α <span class="unit">W/(m²·K)</span></label><span class="ro" id="c-alpha">—</span></div>
-          <div class="zk-field"><label>Kanäle je Hälfte <span class="unit">n · Teilung</span></label><span class="ro" id="c-layout">—</span></div>
-        </div>
-      </div>
-      <div>
-        <div class="zk-kpis" id="c-kpis"></div>
-        <div style="overflow-x:auto;"><table class="zk-table" id="c-cap"></table></div>
-      </div>
-    </div>
-    <details class="zk-eq"><summary>Formeln und Quellen</summary>
-      <div class="eq">Re = w·d/ν ≥ 10⁴&emsp;(5.8)&emsp;·&emsp;α = 0,023 · <span class="frac"><span class="num">λ</span><span class="den">d</span></span> · Re<sup>0,8</sup> · Pr<sup>0,4</sup>&emsp;(5.24)&emsp;·&emsp;V̇ = n · ¼πd² · w&emsp;(5.9)&emsp;·&emsp;ΔT = <span class="frac"><span class="num">Q<sub>T</sub></span><span class="den">ρ·c·V̇·τ<sub>z</sub></span></span> ≤ 10 K&emsp;(5.23)</div>
-      <div class="eq">Q<sub>Kλ</sub> = <span class="frac"><span class="num">2π·λ<sub>F</sub>·n·l<sub>K</sub>·τ<sub>z</sub></span><span class="den">2π·a/b + ln(b/(π·d))</span></span> · (T<sub>Fo</sub> − T<sub>Form</sub>)&emsp;(5.25)&emsp;·&emsp;T<sub>Fo</sub> = ½(480 °C + T<sub>Form</sub>)&emsp;(5.21)&emsp;·&emsp;Q<sub>Kα</sub> = α · n·π·d·L<sub>K</sub> · τ<sub>z</sub> · (T<sub>Form</sub> − T<sub>V</sub> − ΔT/2)&emsp;(5.22)&emsp;·&emsp;je Hälfte ≥ Q<sub>T</sub>/2&emsp;(5.26)</div>
-      <p>Kanal-Layout je Hälfte: Teilung b = B/n, wirksame Länge l<sub>K</sub> = 0,7·H, Gesamtlänge L<sub>K</sub> = 2·H je Kreislauf, Abstand zur Gravur a = 15 mm, λ<sub>F</sub> = 28 W/(m·K). Stoffwerte: Wasser 80 °C (Tab. 12.4), Marlotherm SH 140 °C (Tab. 5.2). Noch nicht geprüft: Druckverlust und Pumpenkennlinie (5.27–5.29, 5.10).</p>
     </details>
   </div>
   <p class="zk-footnote"><strong>Modell der Zeitleiste:</strong> Der Hauptzyklus ist eine feste
@@ -685,7 +641,7 @@
   }
 
 
-  /* ── Wärmebilanz & Temperierkreise ──────────────────────── */
+  /* ── Wärmebilanz ────────────────────────────────────────── */
   var LOSS_STYLE = [
     ['Qkon',  'Konvektion + Strahlung', P.catSlate],
     ['Qpl',   'Aufspannplatten',        P.dark3],
@@ -694,7 +650,6 @@
     ['Qspr',  'Formtrennstoff',         P.catPurple]
   ];
   var heatCard = document.getElementById('heat-card');
-  var coolCard = document.getElementById('cool-card');
 
   /* Eingaben für computeHeat() aus Projekt, Zeitleiste und cycle.heat.
      Fehlt etwas im Projekt, gilt der Standardwert — die Quelle wird
@@ -719,7 +674,7 @@
     var die = { B: h.die.B || est.B, H: h.die.H || est.H, L: h.die.L || est.L };
     return {
       v: { mdose: mdose, Tcast: Tcast, alloy: alloyOk ? alloy : null, Tdie: Tdie, Teject: h.Teject, Acav: Acav, die: die,
-        tz: layout.total, tauBl: isFinite(st.durs.spruehen) && st.durs.spruehen > 0 ? Number(st.durs.spruehen) : 0, cooling: h.cooling },
+        tz: layout.total, tauBl: isFinite(st.durs.spruehen) && st.durs.spruehen > 0 ? Number(st.durs.spruehen) : 0 },
       est: est, src: src, alloyName: alloyOk ? D.alloy.name : LOGIC.ALLOY_FALLBACK.name
     };
   }
@@ -764,14 +719,6 @@
     return s + '</svg>';
   }
 
-  function capRow(label, sub, cap, demand, ok) {
-    var ratio = demand > 0 ? cap / demand : (cap > 0 ? 2 : 0);
-    var pct = Math.min(ratio, 1.5) / 1.5 * 100;
-    return '<tr><td>' + label + (sub ? '<small>' + sub + '</small>' : '') + '</td><td class="num">' + fmt(cap, 0) + '</td><td class="num">' + fmt(demand, 0) + '</td>' +
-      '<td><div class="zk-bar"><i class="' + (ok ? '' : 'bad') + '" style="width:' + pct.toFixed(0) + '%"></i></div></td>' +
-      '<td><span class="zk-badge ' + (ok ? 'ok' : 'bad') + '">' + (ok ? 'reicht' : 'zu wenig') + '</span></td></tr>';
-  }
-
   function renderHeat(layout) {
     var h = st.heat;
     var inp = heatInputs(layout), v = inp.v;
@@ -802,7 +749,6 @@
       document.getElementById('h-chart').innerHTML = '';
       document.getElementById('h-errors').textContent = 'Wärmeeintrag nicht berechenbar — Schussgewicht > 0 und Liquidus > Solidus nötig.';
       document.getElementById('k-pt').textContent = '—';
-      renderCooling(null, v);
       return;
     }
     document.getElementById('h-errors').textContent = v.tz > 0 ? '' : 'Zykluszeit 0 — Dauern im Hauptzyklus eintragen.';
@@ -816,46 +762,6 @@
       kpi('Natürliche Verluste Q<sub>U</sub>', fmt(r.losses.QU, 0) + ' kJ', fmt(r.losses.QU / q.Qdie * 100, 0) + ' % · Trennstoff ' + fmt(r.losses.mSpray * 1000, 0) + ' g/Zyklus') +
       kpi('Wärmeleistung gesamt', fmt(q.Qtotal / v.tz, 1) + ' kW', '(Q + Überhitzung)/τ<sub>z</sub> bei τ<sub>z</sub> = ' + fmt(v.tz) + ' s');
     document.getElementById('h-chart').innerHTML = svgBalance(r);
-    renderCooling(r, v);
-  }
-
-  function renderCooling(r, v) {
-    var c = st.heat.cooling;
-    var sel = document.getElementById('c-fluid');
-    if (!sel.options.length) {
-      Object.keys(LOGIC.FLUIDS).forEach(function (id) {
-        var o = document.createElement('option'); o.value = id; o.textContent = LOGIC.FLUIDS[id].label; sel.appendChild(o);
-      });
-    }
-    sel.value = c.fluid;
-    Array.prototype.forEach.call(coolCard.querySelectorAll('input[data-c]'), function (el) { if (document.activeElement !== el) el.value = c[el.dataset.c]; });
-    var k = r && r.cooling;
-    if (!k) {
-      ['c-re', 'c-wmin', 'c-alpha', 'c-layout'].forEach(function (id) { document.getElementById(id).textContent = '—'; });
-      document.getElementById('c-kpis').innerHTML = '';
-      document.getElementById('c-cap').innerHTML = '';
-      document.getElementById('k-vdot').textContent = '—';
-      return;
-    }
-    document.getElementById('c-re').textContent = fmt(k.Re, 0) + (k.turbulent ? '' : ' — nicht turbulent!');
-    document.getElementById('c-wmin').textContent = fmt(k.wMin, 2);
-    document.getElementById('c-alpha').textContent = fmt(k.alpha, 0);
-    document.getElementById('c-layout').textContent = k.halves[0].n + ' + ' + k.halves[1].n + (k.halves[0].b ? ' · b = ' + fmt(k.halves[0].b * 1000, 0) + ' mm' : '');
-    document.getElementById('k-vdot').textContent = fmt(k.VdotLmin, 0);
-    var dTtxt = isFinite(k.dT) ? fmt(k.dT, 1) + ' K' : '∞';
-    document.getElementById('c-kpis').innerHTML =
-      kpi('Kühlung', k.ok ? 'reicht' : 'reicht nicht', k.ok ? 'alle Prüfungen erfüllt' : (!k.turbulent ? 'Strömung nicht turbulent' : !k.okDT ? 'Temperierdifferenz über 10 K' : 'Kanäle tragen Q<sub>T</sub> nicht'), 'hero' + (k.ok ? '' : ' bad')) +
-      kpi('Volumenstrom', fmt(k.VdotLmin, 0) + ' l/min', c.n + ' × ' + fmt(k.VdotLmin / Math.max(c.n, 1), 1) + ' l/min') +
-      kpi('Temperierdifferenz ΔT', dTtxt, 'Vorlauf ' + fmt(r.fluid.TV, 0) + ' → Rücklauf ' + (isFinite(k.dT) ? fmt(r.fluid.TV + k.dT, 0) : '—') + ' °C · zulässig ≤ 10 K', k.okDT ? '' : 'bad') +
-      kpi('Gravur im Mittel', fmt(k.Tsurf, 0) + ' °C', 'T<sub>Fo</sub> = ½(480 + ' + fmt(v.Tdie, 0) + ') · Gefälle zur Form ' + fmt(k.Tsurf - v.Tdie, 0) + ' K');
-    var rows = '<thead><tr><th>Kapazität je Zyklus</th><th class="r">kann kJ</th><th class="r">muss kJ</th><th>Auslastung</th><th></th></tr></thead><tbody>';
-    [['bewegliche Hälfte', k.halves[0]], ['feste Hälfte', k.halves[1]]].forEach(function (pair) {
-      var h = pair[1];
-      rows += '<tr><td class="sect" colspan="5">' + pair[0] + ' — ' + h.n + ' Kreisläufe, Q<sub>T</sub>-Anteil ' + fmt(h.QT, 0) + ' kJ</td></tr>';
-      rows += capRow('Wärmeleitung Gravur → Kanal Q<sub>Kλ</sub>', h.n ? 'l<sub>K</sub> = ' + fmt(h.lK, 2) + ' m · b = ' + fmt(h.b * 1000, 0) + ' mm' : '', h.QKlambda, h.QT, h.QKlambda >= h.QT);
-      rows += capRow('Übergang Kanalwand → Fluid Q<sub>Kα</sub>', h.n ? 'L<sub>K</sub> = ' + fmt(h.LK, 1) + ' m je Kreislauf' : '', h.QKalpha, h.QT, h.QKalpha >= h.QT);
-    });
-    document.getElementById('c-cap').innerHTML = rows + '</tbody>';
   }
 
   heatCard.addEventListener('input', function (e) {
@@ -866,14 +772,6 @@
     else st.heat.die[el.dataset.die] = isFinite(x) && x > 0 ? x : null;
     renderChart();
   });
-  coolCard.addEventListener('input', function (e) {
-    var el = e.target.closest('[data-c]');
-    if (!el) return;
-    if (el.dataset.c === 'fluid') st.heat.cooling.fluid = el.value;
-    else { var x = parseFloat(el.value); if (!isFinite(x)) return; st.heat.cooling[el.dataset.c] = el.dataset.c === 'n' ? Math.max(Math.round(x), 0) : x; }
-    renderChart();
-  });
-
   /* ── Ereignisse ─────────────────────────────────────────── */
 
   document.getElementById('main-grid').addEventListener('input', function (e) {
