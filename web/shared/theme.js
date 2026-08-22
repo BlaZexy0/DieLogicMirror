@@ -23,7 +23,7 @@ window.__THEME__ = {
     "crit": "#c2447e",
     "event": "#9aacb2",
     "areaFill": "rgba(0,39,51,.07)",
-    "band": "rgba(0,140,130,.13)",
+    "band": "rgba(0,140,130,.30)",
     "bandLine": "rgba(0,140,130,.65)",
     "iso": "#4c6870",
     "isoLine": "rgba(76,104,112,.6)",

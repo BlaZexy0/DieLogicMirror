@@ -29,9 +29,9 @@
 <text x="452.50" y="549.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">Füllgrad φ in %</text>
 <text x="0.00" y="0.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle" transform="translate(14.00 297.00) rotate(-90.00)">v_krit / √(g·D)</text>
 <g clip-path="url(#clip0)">
-<path d="M75.00 124.58L122.19 197.60L169.38 245.83L216.56 278.17L263.75 303.35L310.94 324.86L358.13 344.12L405.31 361.42L452.50 377.27L499.69 392.26L546.88 406.98L594.06 422.26L641.25 439.02L688.44 455.78L735.63 470.53L782.81 482.02L830.00 489.21L830.00 487.77L782.81 477.33L735.63 467.61L688.44 454.26L641.25 437.31L594.06 419.95L546.88 404.58L499.69 389.98L452.50 375.27L405.31 359.68L358.13 342.67L310.94 324.01L263.75 303.02L216.56 277.80L169.38 245.27L122.19 196.36L75.00 120.86Z" fill="rgba(0,140,130,.13)" fill-rule="nonzero"/>
+<path d="M75.00 124.58L122.19 197.60L169.38 245.83L216.56 278.17L263.75 303.35L310.94 324.86L358.13 344.12L405.31 361.42L452.50 377.27L499.69 392.26L546.88 406.98L594.06 422.26L641.25 439.02L688.44 455.78L735.63 470.53L782.81 482.02L830.00 489.21L830.00 487.77L782.81 477.33L735.63 467.61L688.44 454.26L641.25 437.31L594.06 419.95L546.88 404.58L499.69 389.98L452.50 375.27L405.31 359.68L358.13 342.67L310.94 324.01L263.75 303.02L216.56 277.80L169.38 245.27L122.19 196.36L75.00 120.86Z" fill="rgba(0,140,130,.30)" fill-rule="nonzero"/>
 <path d="M75.00 124.58L122.19 197.60L169.38 245.83L216.56 278.17L263.75 303.35L310.94 324.86L358.13 344.12L405.31 361.42L452.50 377.27L499.69 392.26L546.88 406.98L594.06 422.26L641.25 439.02L688.44 455.78L735.63 470.53L782.81 482.02L830.00 489.21M830.00 487.77L782.81 477.33L735.63 467.61L688.44 454.26L641.25 437.31L594.06 419.95L546.88 404.58L499.69 389.98L452.50 375.27L405.31 359.68L358.13 342.67L310.94 324.01L263.75 303.02L216.56 277.80L169.38 245.27L122.19 196.36L75.00 120.86" fill="none" stroke="rgba(0,140,130,.65)" stroke-width="1.2" stroke-dasharray="4 4" stroke-linejoin="round"/>
-<rect x="358.13" y="92.00" width="188.75" height="410.00" fill="rgba(0,140,130,.13)"/>
+<rect x="358.13" y="92.00" width="188.75" height="410.00" fill="rgba(0,140,130,.30)"/>
 <path d="M358.13 92.00L358.13 502.00M546.88 92.00L546.88 502.00" fill="none" stroke="rgba(0,140,130,.65)" stroke-width="1.2" stroke-dasharray="4 4" stroke-linejoin="round"/>
 <text x="310.94" y="324.43" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="400" fill="#002733" text-anchor="middle">CFD-Spanne über Ø 60–300 mm</text>
 <text x="452.50" y="105.00" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="400" fill="#002733" text-anchor="middle">Füllgrad-Ziel 40–60 %</text>
@@ -44,9 +44,9 @@
 <text x="92.00" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">Flachwassertheorie (Deckenkriterium)</text>
 <path d="M313.90 66.00L325.90 66.00" fill="none" stroke="#008c82" stroke-width="1.4" stroke-linejoin="round"/>
 <text x="330.90" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">OpenFOAM-CFD (Mittel über Ø)</text>
-<rect x="506.60" y="62.00" width="12.00" height="9.00" fill="rgba(0,140,130,.13)"/>
+<rect x="506.60" y="62.00" width="12.00" height="9.00" fill="rgba(0,140,130,.30)"/>
 <rect x="506.60" y="62.00" width="12.00" height="9.00" fill="none" stroke="#ccd4d6" stroke-width="1.4"/>
 <text x="523.60" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">CFD-Spanne über Ø 60–300 mm</text>
-<rect x="75.00" y="75.00" width="12.00" height="9.00" fill="rgba(0,140,130,.13)"/>
+<rect x="75.00" y="75.00" width="12.00" height="9.00" fill="rgba(0,140,130,.30)"/>
 <rect x="75.00" y="75.00" width="12.00" height="9.00" fill="none" stroke="#ccd4d6" stroke-width="1.4"/>
 <text x="92.00" y="83.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">Füllgrad-Ziel 40–60 %</text></svg>

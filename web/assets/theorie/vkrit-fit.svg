@@ -29,7 +29,7 @@
 <text x="452.50" y="549.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">Füllgrad φ in %</text>
 <text x="0.00" y="0.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle" transform="translate(14.00 297.00) rotate(-90.00)">v_krit / √(g·D)</text>
 <g clip-path="url(#clip0)">
-<rect x="368.61" y="92.00" width="167.78" height="410.00" fill="rgba(0,140,130,.13)"/>
+<rect x="368.61" y="92.00" width="167.78" height="410.00" fill="rgba(0,140,130,.30)"/>
 <path d="M368.61 92.00L368.61 502.00M536.39 92.00L536.39 502.00" fill="none" stroke="rgba(0,140,130,.65)" stroke-width="1.2" stroke-dasharray="4 4" stroke-linejoin="round"/>
 <text x="452.50" y="105.00" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="400" fill="#002733" text-anchor="middle">Füllgrad-Ziel 40–60 %</text>
 </g>
@@ -44,6 +44,6 @@
 <text x="261.60" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">Nogowizin 1,386 − 1,915·φ + 0,615·φ²</text>
 <path d="M75.00 79.00L87.00 79.00" fill="none" stroke="#008c82" stroke-width="1.4" stroke-linejoin="round"/>
 <text x="92.00" y="83.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">Segment-Fit (1−φ)^(5/6)·(2,3173 − 2,4762·φ^(1/3) + 1,3404·φ^(2/3) − 0,3552·φ)</text>
-<rect x="550.67" y="75.00" width="12.00" height="9.00" fill="rgba(0,140,130,.13)"/>
+<rect x="550.67" y="75.00" width="12.00" height="9.00" fill="rgba(0,140,130,.30)"/>
 <rect x="550.67" y="75.00" width="12.00" height="9.00" fill="none" stroke="#ccd4d6" stroke-width="1.4"/>
 <text x="567.67" y="83.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">Füllgrad-Ziel 40–60 %</text></svg>
