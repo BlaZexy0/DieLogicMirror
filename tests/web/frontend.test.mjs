@@ -320,14 +320,21 @@ test('presets: Alle Legierungs-/Bauteil-Preset-Felder sind Felder ihrer Domäne'
 
 /* ── 5 · Rechenlogik der STL-Seite ───────────────────────────── */
 
-test('stl-logic: shrinkVolumeFactor = (1 + s/100)³, Randfälle abgesichert', () => {
+test('stl-logic: Schwindungsfaktoren (1 + s/100)³ und ², Randfälle abgesichert', () => {
   closeTo(logic.shrinkVolumeFactor(0.55), Math.pow(1.0055, 3));
   closeTo(logic.shrinkVolumeFactor(0.55), 1.016591, 1e-6);   // Bauteil ≈ 1,63 % kleiner als das Werkzeugmaß
-  assert.equal(logic.shrinkVolumeFactor(0), 1);              // kein Schwindmaß → unverändert
-  assert.equal(logic.shrinkVolumeFactor(-1), 1);
-  assert.equal(logic.shrinkVolumeFactor(NaN), 1);
-  assert.equal(logic.shrinkVolumeFactor(undefined), 1);
+  closeTo(logic.shrinkAreaFactor(0.55), Math.pow(1.0055, 2));
+  closeTo(logic.shrinkAreaFactor(0.55), 1.011030, 1e-6);     // Kavität ≈ 1,10 % größer als das Bauteil
+  /* beide beschreiben dieselbe lineare Schwindung */
+  for (const s of [0.4, 0.55, 0.8]) closeTo(Math.pow(logic.shrinkAreaFactor(s), 3), Math.pow(logic.shrinkVolumeFactor(s), 2), 1e-12);
+  for (const f of [logic.shrinkVolumeFactor, logic.shrinkAreaFactor]) {
+    assert.equal(f(0), 1);            // kein Schwindmaß → unverändert
+    assert.equal(f(-1), 1);
+    assert.equal(f(NaN), 1);
+    assert.equal(f(undefined), 1);
+  }
   assert.ok(logic.shrinkVolumeFactor(0.65) > logic.shrinkVolumeFactor(0.45));
+  assert.ok(logic.shrinkAreaFactor(0.65) > logic.shrinkAreaFactor(0.45));
 });
 
 test('stl-logic: roleSums summiert Massen je Rolle', () => {

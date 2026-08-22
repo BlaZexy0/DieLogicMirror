@@ -220,6 +220,8 @@
       cursor: pointer;
     }
     .machine-head label.check { cursor: pointer; }
+    .machine-head input.linked { border-color: var(--primary); background: rgba(0,140,130,.06); }
+    .machine-head input#shrink-input { width: 76px; }
     .machine-head input:focus, .machine-head select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
     .machine-info {
       padding: 0.55rem 1.2rem;
@@ -307,15 +309,16 @@
   </div>
   <div class="stl-status" id="status"></div>
 
-  <div class="stl-note"><strong>Konvention:</strong> Der Ursprung des STL-Koordinatensystems
-    (<strong>0</strong>) gilt als Werkzeugmitte (Mitte des Säulenfelds). Die Außermittigkeit des
-    Schwerpunkts — und damit der Hebelfaktor k und die Maschinenempfehlung — wird direkt vom
-    Ursprung gemessen. Die Dateien daher schon im CAD passend zur Werkzeugmitte positioniert
-    exportieren; diese Seite verschiebt oder dreht nichts.</div>
-
-  <div class="stl-note"><strong>Massen:</strong> Gewichte folgen der gewählten Legierung
-    (Feststoffdichte) und dem Schwindmaß — den Schalter „Modelle auf Werkzeugmaß" setzen, wenn die
-    STL-Dateien das Schwindungsaufmaß enthalten. Die Sprengfläche bleibt die Silhouette, wie geladen.</div>
+  <div class="stl-note"><strong>Konvention und Schwindung:</strong> Der Ursprung des
+    STL-Koordinatensystems (<strong>0</strong>) gilt als Werkzeugmitte (Mitte des Säulenfelds) — die
+    Außermittigkeit des Schwerpunkts und damit Hebelfaktor k und Maschinenempfehlung werden direkt
+    vom Ursprung gemessen; die Dateien also schon im CAD passend zur Werkzeugmitte exportieren,
+    diese Seite verschiebt und dreht nichts. Der Schalter <strong>„Modelle auf Werkzeugmaß"</strong>
+    sagt, was die Dateien zeigen: das Werkzeug (Schwindungsaufmaß eingerechnet) oder das fertige
+    Bauteil. Daraus rechnet die Seite beide Seiten aus — <strong>Flächen</strong> (Sprengfläche,
+    Oberfläche) gelten für die Kavität, <strong>Volumen und Massen</strong> für das kalte Bauteil,
+    mit der Feststoffdichte der gewählten Legierung. Das Schwindmaß ist mit dem Legierungs-Preset
+    vorbelegt und je Bauteil überschreibbar.</div>
 
   <div class="stl-canvas-card" id="canvas-card">
     <button id="copy-img-btn" disabled title="Als PNG kopieren" aria-label="Als PNG kopieren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
@@ -341,7 +344,10 @@
       <label for="alloy-select" title="Legierungs-Preset — liefert Feststoffdichte für die Massen und das Schwindmaß">Legierung
         <select id="alloy-select"></select>
       </label>
-      <label class="check" for="shrink-toggle" title="Sind die Modelle auf Werkzeugmaß gezeichnet (Schwindungsaufmaß eingerechnet), ist das kalte Bauteil um (1 + s/100)³ kleiner — Volumen und Masse werden umgerechnet.">
+      <label for="shrink-input" title="Lineares Schwindmaß — mit dem Legierungs-Preset vorbelegt, je Bauteil überschreibbar">Schwindmaß s
+        <input type="number" id="shrink-input" min="0" max="5" step="0.05"> %
+      </label>
+      <label class="check" for="shrink-toggle" title="Sind die Modelle auf Werkzeugmaß gezeichnet (Schwindungsaufmaß eingerechnet), ist das kalte Bauteil um (1 + s/100)³ kleiner; sonst ist die Kavität um (1 + s/100)² größer als die geladene Silhouette.">
         <input type="checkbox" id="shrink-toggle"> Modelle auf Werkzeugmaß (mit Schwindung)
       </label>
     </div>
@@ -417,14 +423,17 @@
     die Drucktabelle und die Dashboard-Übernahme ein, verschiebt aber den Schwerpunkt S nicht —
     die Lage der Schieber ist hier unbekannt.
     Die drei Spalten: nur Schließkraft (S = 1, k = 1), mit Sicherheitsfaktor S,
-    mit S und Außermittigkeit. Die Masse je Datei ist Bauteilvolumen × Feststoffdichte,
-    beides aus dem gewählten <strong>Legierungs-Preset</strong> (Dichte fest, Schwindmaß —
-    produktiv als Stammdaten der Organisation gepflegt).
-    <strong>Schwindung:</strong> Sind die Modelle auf <em>Werkzeugmaß</em> gezeichnet, enthalten
-    sie das Schwindungsaufmaß und sind linear um s größer als das kalte Bauteil — das
-    Bauteilvolumen ist dann STL-Volumen / (1 + s/100)³, bei 0,55 % also rund 1,7 % weniger.
-    Ohne den Schalter gilt das STL als fertiges Bauteil und das Volumen bleibt unverändert.
-    Die projizierte Fläche wird nicht umgerechnet: sie gilt als die Silhouette, wie geladen.
+    mit S und Außermittigkeit. Die Masse je Datei ist Bauteilvolumen × Feststoffdichte aus dem
+    gewählten <strong>Legierungs-Preset</strong> (produktiv als Stammdaten der Organisation
+    gepflegt); das <strong>Schwindmaß</strong> kommt aus demselben Preset und lässt sich
+    überschreiben, weil es bauteilspezifisch ist.
+    <strong>Umrechnung:</strong> Werkzeug und Bauteil unterscheiden sich linear um s, also im
+    Volumen um (1 + s/100)³ und in der Fläche um (1 + s/100)². Sind die Modelle auf
+    <em>Werkzeugmaß</em> gezeichnet, sind die Flächen bereits die der Kavität und nur die Volumen
+    werden geteilt; zeigen sie das <em>fertige Bauteil</em>, bleiben die Volumen und die Flächen
+    werden hochgerechnet. Bei 0,55 % sind das −1,63 % Volumen bzw. +1,10 % Fläche. Der
+    Seitenschieber-Zuschlag A<sub>S</sub>·tan α wird von Hand eingegeben und nicht mitskaliert;
+    die Außermittigkeit bleibt ebenfalls unskaliert (sie würde sich nur um s verschieben).
     <strong>Empfohlen</strong> markiert die kleinste Maschine, deren maximaler Nachdruck
     (mit S und Außermittigkeit) den eingestellten Auslegungsdruck erreicht;
     <strong>zu klein</strong> markierte Maschinen erreichen ihn nicht. „→ Dashboard" übernimmt

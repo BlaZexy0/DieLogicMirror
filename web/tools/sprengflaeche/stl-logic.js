@@ -13,14 +13,20 @@
   /* Masse in kg: Volumen [mm³] · Dichte [kg/m³] · 1e-9 */
   function massKg(volumeMm3, density) { return volumeMm3 * density * 1e-9; }
 
-  /* Schwindung: lineares Schwindmaß s [%] der Legierung → Volumenfaktor
-     (1 + s/100)³. Ein auf Werkzeugmaß gezeichnetes Modell (mit Schwindungs-
-     aufmaß) ist um diesen Faktor größer als das kalte, erstarrte Bauteil.
-     Ohne oder mit unbrauchbarem Schwindmaß bleibt der Faktor 1. */
+  /* Schwindung: lineares Schwindmaß s [%] — das Werkzeug (die Kavität) ist
+     linear um s größer als das kalte, erstarrte Bauteil. Daraus die beiden
+     Umrechnungsfaktoren Bauteil → Kavität:
+       Volumen (1 + s/100)³   Fläche (1 + s/100)²
+     Ohne oder mit unbrauchbarem Schwindmaß bleiben sie 1. */
   function shrinkVolumeFactor(shrinkPercent) {
     var s = Number(shrinkPercent);
     if (!isFinite(s) || s <= 0) return 1;
     return Math.pow(1 + s / 100, 3);
+  }
+  function shrinkAreaFactor(shrinkPercent) {
+    var s = Number(shrinkPercent);
+    if (!isFinite(s) || s <= 0) return 1;
+    return Math.pow(1 + s / 100, 2);
   }
 
   /* Massensummen je Rolle über alle zugeordneten Dateien.
@@ -104,7 +110,7 @@
   }
 
   var api = {
-    handoffValues: handoffValues, ROLES: ROLES, massKg: massKg, shrinkVolumeFactor: shrinkVolumeFactor,
+    handoffValues: handoffValues, ROLES: ROLES, massKg: massKg, shrinkVolumeFactor: shrinkVolumeFactor, shrinkAreaFactor: shrinkAreaFactor,
     roleSums: roleSums, missingRoles: missingRoles, sideCoreArea: sideCoreArea, machineRows: machineRows };
   root.__STL_LOGIC__ = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

@@ -258,13 +258,25 @@
   /* Feststoffdichte [kg/m³] für die Massen — die Flüssigdichte (density) des
      Presets rechnet dagegen im Dashboard die Schmelzevolumina. */
   function getDensity() { const a = currentAlloy(); return a ? num(a.fields.densitySolid, 2700) : 2700; }
-  function getShrink() { const a = currentAlloy(); return a ? num(a.fields.shrink, 0) : 0; }
+  /* Schwindmaß [%]: Vorgabe des Legierungs-Presets, bis es von Hand
+     überschrieben wird (bauteilspezifisch). */
+  let shrinkLinked = true;
+  function alloyShrink() { const a = currentAlloy(); return a ? num(a.fields.shrink, 0) : 0; }
+  function getShrink() { return Math.max(parseFloat(document.getElementById('shrink-input').value) || 0, 0); }
+  function setShrinkFromAlloy() {
+    document.getElementById('shrink-input').value = alloyShrink();
+    shrinkLinked = true;
+  }
   function onToolScale() { return document.getElementById('shrink-toggle').checked; }
-  /* Volumenfaktor: Modelle auf Werkzeugmaß sind um (1 + s/100)³ größer als
-     das kalte Bauteil — sonst 1. */
+  /* Werkzeug (Kavität) und kaltes Bauteil unterscheiden sich linear um s.
+     Der Schalter sagt, was die STL-Dateien zeigen; daraus folgen beide
+     Richtungen: Volumen/Massen gelten für das Bauteil, Flächen für die
+     Kavität. */
   function volumeFactor() { return onToolScale() ? LOGIC.shrinkVolumeFactor(getShrink()) : 1; }
-  /* Kaltes Bauteilvolumen [mm³] aus dem STL-Volumen. */
+  function areaFactor() { return onToolScale() ? 1 : LOGIC.shrinkAreaFactor(getShrink()); }
+  /* Kaltes Bauteilvolumen [mm³] und Kavitätsfläche [mm²] aus den STL-Werten. */
   function partVolume(v) { return v / volumeFactor(); }
+  function cavityArea(a) { return a * areaFactor(); }
 
   function fillAlloySelect() {
     const sel = document.getElementById('alloy-select');
@@ -277,20 +289,38 @@
   }
 
   /* Zeile unter der Kopfzeile: was aus der Legierung in die Massen eingeht. */
+  const de4 = (x) => x.toLocaleString('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
   function renderAlloyInfo() {
     const el = document.getElementById('alloy-info');
+    const inp = document.getElementById('shrink-input');
     const a = currentAlloy();
-    if (!a) { el.textContent = 'Keine Legierungs-Presets geladen — gerechnet wird mit 2.700 kg/m³ ohne Schwindung.'; return; }
-    const s = getShrink(), f = volumeFactor();
-    el.innerHTML = 'Dichte (fest) <strong>' + fmt(getDensity()) + ' kg/m³</strong> · Schwindmaß '
-      + (s > 0 ? fmt(s) + ' %' : '— ')
-      + (onToolScale() && f > 1
-        ? ' · Modelle auf Werkzeugmaß: Bauteilvolumen = STL-Volumen / '
-          + f.toLocaleString('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
-          + ' (−' + fmt((1 - 1 / f) * 100) + ' %)'
-        : ' · Modelle als fertiges Bauteil: Volumen unverändert')
+    inp.classList.toggle('linked', shrinkLinked && !!a);
+    inp.title = shrinkLinked && a
+      ? 'Aus dem Legierungs-Preset ' + a.name + ' — Eingabe von Hand löst die Vorbelegung.'
+      : 'Von Hand gesetzt (bauteilspezifisch).';
+    const s = getShrink(), vf = volumeFactor(), af = areaFactor();
+    const dens = a
+      ? 'Dichte (fest) <strong>' + fmt(getDensity()) + ' kg/m³</strong>'
+      : 'Keine Legierungs-Presets geladen — Dichte (fest) <strong>2.700 kg/m³</strong>';
+    const src = !a ? ''
+      : shrinkLinked ? ' (aus dem Preset)'
+      : ' (von Hand — Preset: ' + fmt(alloyShrink()) + ' % <a href="#" id="shrink-reset">zurücksetzen</a>)';
+    const conv = s <= 0
+      ? ' · ohne Schwindung: Flächen und Volumen wie geladen'
+      : onToolScale()
+        ? ' · Modelle auf Werkzeugmaß: Flächen wie geladen, Bauteilvolumen = Volumen / ' + de4(vf)
+          + ' (−' + fmt((1 - 1 / vf) * 100) + ' %)'
+        : ' · Modelle als fertiges Bauteil: Volumen wie geladen, Kavitätsflächen = Flächen × '
+          + de4(af) + ' (+' + fmt((af - 1) * 100) + ' %)';
+    el.innerHTML = dens + ' · Schwindmaß ' + fmt(s) + ' %' + src + conv
       + (window.__ALLOYS__ && window.__ALLOYS__.source === 'org' ? ' · Stammdaten der Organisation' : '');
+    const rst = document.getElementById('shrink-reset');
+    if (rst) rst.addEventListener('click', (e) => { e.preventDefault(); setShrinkFromAlloy(); renderAll(); });
   }
+
+  /* Legierung/Schwindmaß wirken auf Massen (Tabelle) und Flächen (Tabelle,
+     Maschinentabelle, Übernahme). */
+  function renderAll() { renderTable(); renderMachines(); renderAlloyInfo(); }
 
   /* Seitenschieber-Zuschlag A_S·tan(α) in mm² — Winkel auf [0, 89°] begrenzt,
      Rechnung in stl-logic.js. */
@@ -310,11 +340,10 @@
 
     const density = getDensity();
     let totV = 0, totA = 0;
-    renderAlloyInfo();
     document.getElementById('result-body').innerHTML = models.map((m, i) => {
       const p = getProjection(m, dir);
       const vol = partVolume(m.volume);
-      totV += vol; totA += m.area;
+      totV += vol; totA += cavityArea(m.area);
       const opts = '<option value="">– wählen –</option>' + LOGIC.ROLES.map(([key, label]) =>
         `<option value="${key}"${m.role === key ? ' selected' : ''}>${label}</option>`).join('');
       return `<tr>
@@ -322,8 +351,8 @@
         <td style="text-align:left"><select class="role-sel" data-idx="${i}" aria-label="Zuordnung für ${escapeHtml(m.name)}">${opts}</select></td>
         <td>${fmt(vol)} mm³ <span class="sub">(${fmt(vol / 1000)} cm³)</span></td>
         <td>${fmt(LOGIC.massKg(vol, density))} kg</td>
-        <td>${fmt(m.area)} mm²</td>
-        <td>${fmt(p.area)} mm²</td>
+        <td>${fmt(cavityArea(m.area))} mm²</td>
+        <td>${fmt(cavityArea(p.area))} mm²</td>
         <td><button class="remove-btn" data-idx="${i}" title="Entfernen" aria-label="${escapeHtml(m.name)} entfernen">✕</button></td>
       </tr>`;
     }).join('');
@@ -334,7 +363,7 @@
       <td>${fmt(totV)} mm³ <span class="sub">(${fmt(totV / 1000)} cm³)</span></td>
       <td>${fmt(LOGIC.massKg(totV, density))} kg</td>
       <td>${fmt(totA)} mm²</td>
-      <td>${fmt(un ? un.area : 0)} mm² <span class="sub">(vereinigt)</span></td>
+      <td>${fmt(un ? cavityArea(un.area) : 0)} mm² <span class="sub">(vereinigt)</span></td>
       <td></td>
     </tr>`;
   }
@@ -348,7 +377,8 @@
     const a = AXES[dir];
     const cog = unionSilhouette();
     const coreAdd = getCoreAdd();
-    const totP = (cog ? cog.area : 0) + coreAdd;
+    const projA = cog ? cavityArea(cog.area) : 0;
+    const totP = projA + coreAdd;
     const S = Math.max(parseFloat(document.getElementById('safety-input').value) || 1.3, 1);
     const pTarget = Math.max(parseFloat(document.getElementById('ptarget-input').value) || 600, 1);
     const has = totP > 0 && cog && MACHINES.length > 0;
@@ -360,7 +390,7 @@
     const ready = missing.length === 0;
     info.innerHTML = 'Sprengfläche A = vereinigte proj. Fläche (' + dir + ')' +
       (coreAdd > 0
-        ? ' ' + fmt(cog.area) + ' mm² + Seitenschieber A<sub>S</sub>·tan α ' + fmt(coreAdd) + ' mm² = <strong>' + fmt(totP) + ' mm²</strong>'
+        ? ' ' + fmt(projA) + ' mm² + Seitenschieber A<sub>S</sub>·tan α ' + fmt(coreAdd) + ' mm² = <strong>' + fmt(totP) + ' mm²</strong>'
         : ' = <strong>' + fmt(totP) + ' mm²</strong>') +
       ' · Außermittigkeit e = Schwerpunkt vom Ursprung: <strong>' +
       a.uName + '</strong> ' + fmt(cog.cu) + ' mm · <strong>' + a.vName + '</strong> ' + fmt(cog.cv) + ' mm' +
@@ -396,7 +426,7 @@
      Schusskurve bleiben erhalten. */
   function openDashboard(mc) {
     const cog = unionSilhouette();
-    const totP = (cog ? cog.area : 0) + getCoreAdd();
+    const totP = (cog ? cavityArea(cog.area) : 0) + getCoreAdd();
     if (!(totP > 0) || !cog) return;
     const S = Math.max(parseFloat(document.getElementById('safety-input').value) || 1.3, 1);
     const pTarget = Math.max(parseFloat(document.getElementById('ptarget-input').value) || 600, 1);
@@ -419,10 +449,11 @@
        die Netze selbst bleiben in den Dateien (zu groß für den Speicher). */
     window.__PROJECT__.setSection('geometry', {
       alloy: alloy ? alloy.id : null, density: getDensity(), toolScale: onToolScale(),
-      shrink: getShrink(), safety: S, psel: pTarget, coreAdd: getCoreAdd(),
+      shrink: getShrink(), shrinkFromAlloy: shrinkLinked, safety: S, psel: pTarget, coreAdd: getCoreAdd(),
       machine: mc.id, areaTotal: totP, cog: { u: cog.cu, v: cog.cv },
-      files: models.map(m => ({ name: m.name, role: m.role, volume: partVolume(m.volume), area: m.area,
-        proj: { X: getProjection(m, 'X').area, Y: getProjection(m, 'Y').area, Z: getProjection(m, 'Z').area } })),
+      files: models.map(m => ({ name: m.name, role: m.role, volume: partVolume(m.volume), area: cavityArea(m.area),
+        proj: { X: cavityArea(getProjection(m, 'X').area), Y: cavityArea(getProjection(m, 'Y').area),
+          Z: cavityArea(getProjection(m, 'Z').area) } })),
       analysedAt: new Date().toISOString()
     });
     if (!window.__PROJECT__.current()) { alert('Kein Projekt aktiv — bitte zuerst anmelden.'); return; }
@@ -487,6 +518,7 @@
     copyBtn.disabled = models.length === 0;
     renderTable();
     renderMachines();
+    renderAlloyInfo();
     draw();
   }
 
@@ -546,8 +578,12 @@
   document.getElementById('ptarget-input').addEventListener('input', renderMachines);
   document.getElementById('core-area-input').addEventListener('input', renderMachines);
   document.getElementById('core-angle-input').addEventListener('input', renderMachines);
-  document.getElementById('alloy-select').addEventListener('change', () => { renderTable(); renderAlloyInfo(); });
-  document.getElementById('shrink-toggle').addEventListener('change', () => { renderTable(); renderAlloyInfo(); });
+  document.getElementById('alloy-select').addEventListener('change', () => {
+    if (shrinkLinked) setShrinkFromAlloy();
+    renderAll();
+  });
+  document.getElementById('shrink-input').addEventListener('input', () => { shrinkLinked = false; renderAll(); });
+  document.getElementById('shrink-toggle').addEventListener('change', renderAll);
 
   window.addEventListener('resize', draw);
 
@@ -574,6 +610,7 @@
   }
 
   fillAlloySelect();
+  setShrinkFromAlloy();
   renderAlloyInfo();
   update();
   loadDefaults();
