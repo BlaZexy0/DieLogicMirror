@@ -60,15 +60,17 @@ export function axes(x, w, h, f, x0, x1, y0, y1, d) {
 }
 
 /* Roter Betriebspunkt-Marker mit Führungslinien und Label. */
-export function marker(x, f, px, py, label) {
+export function marker(x, f, px, py, label, opts) {
   if (px < f.L - 2 || px > f.L + f.pw + 2 || py < f.T - 2 || py > f.T + f.ph + 2) return;
-  const MC = theme.chart.marker;
+  /* opts.ref: Referenzpunkt (z. B. Schnittpunkt) — gedämpft, Ring gestrichelt */
+  const ref = !!(opts && opts.ref);
+  const MC = ref ? (theme.chart.iso || theme.chart.muted) : theme.chart.marker;
   x.save();
   x.strokeStyle = MC; x.lineWidth = 1; x.setLineDash([4, 3]);
   x.beginPath(); x.moveTo(f.L, py); x.lineTo(px, py); x.moveTo(px, f.T + f.ph); x.lineTo(px, py); x.stroke();
   x.setLineDash([]);
   x.beginPath(); x.arc(px, py, 6, 0, 2 * PI); x.fillStyle = theme.chart.surface; x.fill();
-  x.lineWidth = 2.2; x.strokeStyle = MC; x.stroke();
+  x.lineWidth = ref ? 1.6 : 2.2; x.strokeStyle = MC; if (ref) x.setLineDash([3, 2]); x.stroke(); x.setLineDash([]);
   x.beginPath(); x.arc(px, py, 2, 0, 2 * PI); x.fillStyle = MC; x.fill();
   if (label) {
     x.font = 'bold 11px Arial'; x.textAlign = 'left';

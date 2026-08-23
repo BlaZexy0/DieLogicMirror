@@ -88,7 +88,7 @@ export default {
   tabs2: [['pm', 'p<sub>m</sub>'], ['ph', 'p<sub>hyd</sub>'], ['pw', 'P·Q']],
   inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax', 'pAcc', 'pAccOp', 'gateTh', 'JatomMin', 'JatomMax'],
 
-  calc(v) {
+  calc(v, o) {
     const c = pqCore(v);
     if (!c) return { err: 'Anschnittfläche, Cd, v_max und Gießkraft müssen > 0 sein.' };
     const C = theme.chart;
@@ -212,10 +212,30 @@ export default {
     };
     q.limitText = 'legend';
 
-    const opx = fx(Qs), opy = fy(Cdie * Qs * Qs, Qs);
+    /* Arbeitspunkt: der Schnittpunkt Maschine × Werkzeug ist der Punkt, auf
+       den sich die UNGEDROSSELTE Maschine einstellt. Die Schusskurve fährt
+       in der 2. Phase v₂ — der reale Betriebspunkt liegt auf der Werkzeug-
+       linie bei Q = A_K·v₂ (darunter, wenn die Maschine gedrosselt wird);
+       die Differenz zur Maschinenlinie ist der Drosselverlust. */
     const unit = tb === 'q' ? ' l/s' : tb === 'q2' ? ' (l/s)²' : tb === 'vp' ? ' m/s' : ' ms';
-    q.pt = [opx, opy];
-    q.ptl = 'Arbeitspunkt ' + fmt(opx) + unit + ' / ' + fmt(opy) + yUnit;
+    const v2 = o && o.shot && !o.shot.error && o.shot.v2 > 0 ? o.shot.v2 : null;
+    const sx = fx(Qs), sy = fy(Cdie * Qs * Qs, Qs);
+    if (v2 !== null) {
+      const Qop = Ap * v2, pOp = Cdie * Qop * Qop;
+      const ox = fx(Qop), oy = fy(pOp, Qop);
+      q.pt = [ox, oy];
+      q.ptl = 'Arbeitspunkt Schusskurve (v₂ ' + fmt(v2) + ' m/s) ' + fmt(ox) + unit + ' / ' + fmt(oy) + yUnit;
+      q.pt2 = [sx, sy];
+      q.ptl2 = 'Schnittpunkt ungedrosselt ' + fmt(sx) + unit + ' / ' + fmt(sy) + yUnit;
+      if (Qop < Qmax) {
+        const pM = machineLine(Qop);
+        if (pM > pOp) q.segs = [{ x1: ox, y1: oy, x2: ox, y2: fy(pM, Qop), c: C.event || C.axis,
+          label: 'gedrosselt Δp ' + fmt(fy(pM, Qop) - oy) + yUnit }];
+      }
+    } else {
+      q.pt = [sx, sy];
+      q.ptl = 'Schnittpunkt Maschine × Werkzeug ' + fmt(sx) + unit + ' / ' + fmt(sy) + yUnit + ' (keine Schusskurve)';
+    }
     return q;
   },
 
@@ -283,6 +303,13 @@ Maschinenlinie äquivalent schreiben und der Arbeitspunkt lösen:</p>
 ${eq('P_{M} = p_{0} \\cdot \\left( 1 - \\frac{4}{27} \\cdot \\frac{p_{0}^{2} \\cdot Q^{2}}{a^{2}} \\right) \\quad (2.15) \\quad \\Rightarrow \\quad Q_{s}^{2} = \\frac{p_{0}}{C_{t}/A_{a}^{2} + (4/27) \\cdot p_{0}^{2}/a^{2}} \\quad (2.16)')}
 ${eq('\\text{gleichwertig:}\\ \\quad Q_{s} = \\sqrt{\\frac{p_{0}}{C_{W} + p_{0} / Q_{\\text{dry}}^{2}}} \\qquad p_{s} = C_{W} \\cdot Q_{s}^{2}')}
 <p class="math-note">Aktuell: Q<sub>s</sub> = <b data-m="Qs"></b> · p<sub>s</sub> = <b data-m="ps"></b></p>
+<p class="math-note"><b>Schnittpunkt ≠ Betriebspunkt:</b> Der Schnittpunkt ist der Punkt, auf den sich die
+<em>ungedrosselte</em> Maschine bei vollem Akkumulatordruck einstellt. Tatsächlich fährt die Schusskurve in der
+2. Phase v₂ — der reale Arbeitspunkt liegt auf der Werkzeuglinie bei Q = A<sub>K</sub>·v₂ mit
+p = C<sub>W</sub>·Q²; liegt er unter dem Schnittpunkt, wird die Maschine gedrosselt (Ventil), und der Abstand zur
+Maschinenlinie ist der verlorene Druck. Liegt er darüber, kann die Maschine diese v₂ nicht liefern.
+Aktuell: v₂ = <b data-m="v2"></b> · Q = <b data-m="Qop"></b> · p = <b data-m="pOp"></b> ·
+Maschinenlinie dort <b data-m="pMop"></b> · Drosselverlust <b data-m="dpOp"></b> · t<sub>f</sub> = <b data-m="tfop"></b></p>
 
 <h4>6 · Achsenmodi und Operational Window — Gl. 3.1–3.3</h4>
 <p class="math-note">Die Druckachse lässt sich in Anschnittgeschwindigkeit übersetzen, die
@@ -343,13 +370,13 @@ ${eq('A_{a,\\min} = \\frac{V_{a}}{t_{f,\\max} \\cdot v_{a,\\max}} \\qquad A_{a,\
 A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
   },
 
-  renderMath(el, v) {
+  renderMath(el, v, shot) {
     const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
     const c = pqCore(v);
     if (!c) {
       ['AK', 'p0', 'Qmax', 'Va', 'CW', 'Qs', 'ps', 'vp', 'va', 'tf', 'tf2', 'Qt', 'Qtcur', 'Dopt', 'aMPE',
         'vah', 'tminJ', 'tminE', 'tmaxZ', 'tVent', 'AgRange', 'AgSel', 'Pgmin', 'Pgmax', 'pAccM', 'aMPE2', 'FG',
-        'Jat', 'ep', 'vaAtom', 'vaAtomMax'].forEach(k => set(k, '—'));
+        'Jat', 'ep', 'vaAtom', 'vaAtomMax', 'v2', 'Qop', 'pOp', 'pMop', 'dpOp', 'tfop'].forEach(k => set(k, '—'));
       return;
     }
     set('AK', fmt(pistonArea(v)) + ' mm²');
@@ -365,6 +392,16 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
     const tf = c.Vag / c.Qs * 1000;
     set('tf', fmt(tf) + ' ms');
     set('tf2', fmt(tf) + ' ms');
+    /* Realer Betriebspunkt aus der Schusskurve */
+    const v2 = shot && !shot.error && shot.v2 > 0 ? shot.v2 : null;
+    if (v2 !== null) {
+      const Qop = c.Ap * v2, pOp = c.Cdie * Qop * Qop;
+      const pM = Qop < c.Qmax ? c.p0 * (1 - (Qop / c.Qmax) ** 2) : 0;
+      set('v2', fmt(v2) + ' m/s'); set('Qop', fmt(Qop * 1000) + ' l/s'); set('pOp', fmt(pOp) + ' bar');
+      set('pMop', Qop < c.Qmax ? fmt(pM) + ' bar' : '— (über Q_dry)');
+      set('dpOp', pM > pOp ? fmt(pM - pOp) + ' bar' : (Qop < c.Qmax ? 'keiner — v₂ über dem Schnittpunkt, nicht erreichbar' : 'nicht erreichbar'));
+      set('tfop', fmt(c.Vag / Qop * 1000) + ' ms');
+    } else ['v2', 'Qop', 'pOp', 'pMop', 'dpOp', 'tfop'].forEach(k => set(k, '— (keine Schusskurve)'));
     /* Operational Window auf der Druckachse + y-Modi */
     const Pg = vg => v.density * (vg / v.Cd) * (vg / v.Cd) / 2 / 1e5;
     set('Pgmin', v.gateMin > 0 ? fmt(Pg(v.gateMin)) + ' bar' : '—');

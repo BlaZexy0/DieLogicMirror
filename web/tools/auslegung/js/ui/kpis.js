@@ -143,15 +143,18 @@ export function renderKpis(el, v, shot, chamberEl) {
 
   /* PQ²-Arbeitspunkt (gleiche Rechnung wie im PQ²-Diagramm) */
   /* PQ²-Arbeitspunkt und Hüllkurve: dieselbe Rechnung wie im PQ²-Diagramm (pqCore) */
+  const v2 = !shot.error && shot.v2 != null ? shot.v2 : NaN;
   const pq = pqCore(v);
   const Qs = pq ? pq.Qs : null, ps = pq ? pq.ps : null;
   const aMPE = (Feff > 0 && v.vmax > 0)
     ? (2 * Math.sqrt(3) / 9) * Feff * 1e3 * v.vmax / 1e6 : null;   // MW
-  const pwOp = pq ? pq.ps * 1e5 * pq.Qs / 1e6 : null;                    // MW
+  /* Realer Betriebspunkt: Q = A_K·v₂ auf der Werkzeuglinie (Schnittpunkt = ungedrosselt) */
+  const Qop = pq && isFinite(v2) && v2 > 0 ? pq.Ap * v2 : null;
+  const pOp = Qop !== null ? pq.Cdie * Qop * Qop : null;
+  const pwOp = Qop !== null ? pOp * 1e5 * Qop / 1e6 : (pq ? pq.ps * 1e5 * pq.Qs / 1e6 : null);   // MW
 
   /* Anschnittgeschwindigkeit: bevorzugt aus der Schusskurve (Bauteil gefüllt);
      sonst mit v2 = mittlerer Kolbengeschw. nach Anschnitt (ebenfalls Kurve) */
-  const v2 = !shot.error && shot.v2 != null ? shot.v2 : NaN;
   const gvMean = v.gate > 0 ? v2 * A / v.gate : NaN;
   const evPart = !shot.error && shot.events && shot.events[2];
   const gvShot = evPart && evPart.inP && evPart.gv != null ? evPart.gv : null;
@@ -236,9 +239,13 @@ export function renderKpis(el, v, shot, chamberEl) {
           bullet(0, Math.max(1.2 * v.JatomMax, 1.05 * Jist), v.JatomMin, v.JatomMax, Jist,
             '0', 'Band ' + fmt(v.JatomMin) + '–' + fmt(v.JatomMax), fmt(Math.max(1.2 * v.JatomMax, 1.05 * Jist))))
         : kpi('Zerstäubung (J-Faktor)', '—', 'braucht Anschnittgeschwindigkeit, -dicke und Dichte', 'nodata'))
-      + kpi('PQ²-Arbeitspunkt', Qs === null ? '—' : fmt(Qs * 1000) + ' l/s',
-        Qs === null ? 'Eingaben unvollständig' : 'Metalldruck p_s ' + fmt(ps) + ' bar · Schnittpunkt Maschine × Werkzeug',
-        Qs === null ? 'nodata' : 'info')
+      + (Qop !== null
+        ? kpi('PQ²-Arbeitspunkt', fmt(Qop * 1000) + ' l/s',
+          'aus Schusskurve v₂ ' + fmt(v2) + ' m/s · Metalldruck ' + fmt(pOp) + ' bar · Schnittpunkt ungedrosselt ' + fmt(Qs * 1000) + ' l/s / ' + fmt(ps) + ' bar',
+          Qop <= Qs ? 'info' : 'bad', Qop <= Qs ? fmt(100 * Qop / Qs) + ' % vom Schnittpunkt' : 'über Schnittpunkt — nicht erreichbar')
+        : kpi('PQ²-Arbeitspunkt', Qs === null ? '—' : fmt(Qs * 1000) + ' l/s',
+          Qs === null ? 'Eingaben unvollständig' : 'Schnittpunkt Maschine × Werkzeug (ungedrosselt) · p_s ' + fmt(ps) + ' bar · keine Schusskurve',
+          Qs === null ? 'nodata' : 'info'))
       + (shot.error
         ? kpi('Schusskurve', 'Fehler', shot.error, 'bad', 'ungültig')
         : kpi('Schusszeit', fmt(shot.profile.endTime) + ' s', 'Kurvenhub ' + fmt(shot.profile.travel * 1000) + ' mm')

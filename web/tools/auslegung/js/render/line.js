@@ -139,5 +139,18 @@ export function drawLine(x, w, h, d) {
     lx += 17 + tw + 14;
   }
 
+  /* Freie Segmente (z. B. Drosselung zwischen Werkzeug- und Maschinenlinie) */
+  if (d.segs) for (const sg of d.segs) {
+    x.save();
+    x.strokeStyle = sg.c || C.marker; x.lineWidth = 1.5; x.setLineDash(sg.dash || [5, 4]);
+    x.beginPath(); x.moveTo(X(sg.x1), Y(sg.y1)); x.lineTo(X(sg.x2), Y(sg.y2)); x.stroke();
+    x.setLineDash([]);
+    if (sg.label) {
+      x.font = '10.5px Arial'; x.fillStyle = sg.c || C.marker; x.textAlign = 'left';
+      x.fillText(sg.label, X(Math.max(sg.x1, sg.x2)) + 6, (Y(sg.y1) + Y(sg.y2)) / 2 + 4);
+    }
+    x.restore();
+  }
+  if (d.pt2) marker(x, f, X(d.pt2[0]), Y(d.pt2[1]), d.ptl2, { ref: true });
   if (d.pt) marker(x, f, X(d.pt[0]), Y(d.pt[1]), d.ptl);
 }

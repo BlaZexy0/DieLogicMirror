@@ -106,3 +106,31 @@ test('pq2: eingestellter Akkumulatordruck skaliert Gießkraft, p₀, Hüllkurve 
   const { hydArea } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
   closeTo(hydArea(v), 1250);
 });
+
+test('pq2: Arbeitspunkt aus der Schusskurve (Q = A_K·v₂ auf der Werkzeuglinie), Schnittpunkt als Referenz', async () => {
+  const v = defaults();
+  const c = pqCore(v);
+  /* ohne Schusskurve: nur der Schnittpunkt */
+  const q0 = calc(v, 'q', 'pm');
+  closeTo(q0.pt[0], c.Qs * 1000); assert.equal(q0.pt2, undefined); assert.match(q0.ptl, /Schnittpunkt/);
+  /* mit Schusskurve v₂ unter dem Schnittpunkt: Betriebspunkt auf der Werkzeuglinie, Drosselsegment bis zur Maschinenlinie */
+  const v2 = 0.6 * c.Qs / c.Ap;
+  pq2.tab = 'q'; pq2.tab2 = 'pm';
+  const q = pq2.calc(v, { shot: { v2 } });
+  const Qop = c.Ap * v2;
+  closeTo(q.pt[0], Qop * 1000); closeTo(q.pt[1], c.Cdie * Qop * Qop);
+  closeTo(q.pt2[0], c.Qs * 1000); closeTo(q.pt2[1], c.ps);
+  assert.match(q.ptl, /Schusskurve/); assert.match(q.ptl2, /ungedrosselt/);
+  assert.equal(q.segs.length, 1);
+  closeTo(q.segs[0].y2, c.p0 * (1 - (Qop / c.Qmax) ** 2));        // Maschinenlinie bei Q_op
+  assert.ok(q.segs[0].y2 > q.segs[0].y1, 'Drosselverlust positiv');
+  /* v₂ über dem Schnittpunkt: kein Drosselsegment (Maschinenlinie liegt unter der Werkzeuglinie) */
+  const qh = pq2.calc(v, { shot: { v2: 1.3 * c.Qs / c.Ap } });
+  assert.equal(qh.segs, undefined);
+  /* t_f-Achse: derselbe Punkt in Füllzeit */
+  pq2.tab = 'tf';
+  const qt = pq2.calc(v, { shot: { v2 } });
+  closeTo(qt.pt[0], c.Vag / Qop * 1000);
+  /* Erklärung: Live-Werte vorhanden */
+  const el = { querySelector: () => null }; pq2.renderMath(el, v, { v2 });
+});
