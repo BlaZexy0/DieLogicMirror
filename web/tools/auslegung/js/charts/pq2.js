@@ -45,18 +45,21 @@ export function pqCore(v) {
      Ø max) — oberhalb davon ist kein Betriebspunkt erreichbar. */
   const Alo = 0.25 * PI * Math.pow(v.dmin / 1000, 2);
   const Ahi = 0.25 * PI * Math.pow(v.dmax / 1000, 2);
-  const pReach = Q => {
+  const reach = Q => {
     let A = S3 * Q / v.vmax;                 // unbeschränktes Optimum A_opt(Q)
     if (Alo > 0 && A < Alo) A = Alo;
     if (Ahi > 0 && A > Ahi) A = Ahi;
-    if (!(A > 0)) return Infinity;
+    if (!(A > 0)) return { p: Infinity, A: Ap };
     const r = Q / (A * v.vmax);
     /* Der montierte Kolben zählt immer zur Erreichbarkeit — auch wenn sein Ø
        außerhalb dmin–dmax liegt; sonst liefe seine Maschinenlinie in die
        graue Maske hinein. */
     const rc = Q / Qmax;
-    return Math.max(v.injForce * 1e3 / (A * 1e5) * (1 - r * r), p0 * (1 - rc * rc), 0);
+    const pA = v.injForce * 1e3 / (A * 1e5) * (1 - r * r), pM = p0 * (1 - rc * rc);
+    return pM >= pA ? { p: Math.max(pM, 0), A: Ap } : { p: Math.max(pA, 0), A };
   };
+  const pReach = Q => reach(Q).p;
+  const aReach = Q => reach(Q).A;
   /* Hydraulische v_a-Grenze (Pego Guerra, dort „J" = C_d): v_a = C_d·√(2·p₀/ρ) */
   const vaHydr = v.Cd * Math.sqrt(2 * p0 * 1e5 / v.density);
   /* Zerstäubung nach Herman/NADCA (UPCT Gl. 2.38): J = v_a^1.71 · e_p · ρ —
@@ -71,7 +74,7 @@ export function pqCore(v) {
   /* Minimale Füllzeit aus der Entlüftungsbedingung (Operational Window, Zone C):
      die verdrängte Luft V_luft muss durch A_ent mit höchstens v_luft,max entweichen. */
   const tVent = (v.vent > 0 && v.vAirMax > 0) ? (total(v) / v.density) / (v.vent * 1e-6 * v.vAirMax) : NaN;
-  return { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, pEnv, pReach, QtLo, QtHi, Alo, Ahi, vaHydr, vaAtom, vaAtomMax, tVent };
+  return { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, pEnv, pReach, aReach, QtLo, QtHi, Alo, Ahi, vaHydr, vaAtom, vaAtomMax, tVent };
 }
 
 export default {
@@ -94,11 +97,15 @@ export default {
     const tfOp = Vag / Qs * 1000;
     const tfPlot = 2.5 * Math.max(tfOp, v.tmax || 0) || 500;
 
-    /* Achsen so wählen, dass die GESAMTE Erreichbarkeitsgrenze sichtbar ist:
-       x bis zum Nullpunkt der Ø-max-Parabel (Q_dry des größten Kolbens),
-       y bis zum statischen Druck des kleinsten Kolbens. */
-    const QmaxAll = Math.max(Qmax, c.Ahi > 0 ? c.Ahi * v.vmax : 0);
-    const pTop = Math.max(p0, c.Alo > 0 ? v.injForce * 1e3 / (c.Alo * 1e5) : p0);
+    /* Die v_p-Achse ist die Geschwindigkeit des MONTIERTEN Kolbens — andere
+       Kolben-Ø haben bei gleichem Q eine andere v_p. Dieser Modus zeigt
+       deshalb nur den montierten Kolben: x bis v_max, Grenze = seine
+       Maschinenlinie. Die übrigen Achsen zeigen die GESAMTE Erreichbarkeits-
+       grenze: x bis zum Nullpunkt der Ø-max-Parabel (Q_dry des größten
+       Kolbens), y bis zum statischen Druck des kleinsten Kolbens. */
+    const pistonOnly = tb === 'vp';
+    const QmaxAll = pistonOnly ? Qmax : Math.max(Qmax, c.Ahi > 0 ? c.Ahi * v.vmax : 0);
+    const pTop = pistonOnly ? p0 : Math.max(p0, c.Alo > 0 ? v.injForce * 1e3 / (c.Alo * 1e5) : p0);
 
     /* x-Achse: fx bildet Q → Achsenwert ab, ix ist die Umkehrung (für
        Kurvenschranken, die als Funktion des Achsenwerts ausgewertet werden). */
@@ -108,14 +115,18 @@ export default {
     else if (tb === 'vp') { fx = Q => Q / Ap; ix = x => x * Ap; xl = 'Kolbengeschwindigkeit v_p in m/s'; }
     else { fx = Q => Q > 0 ? Vag / Q * 1000 : Infinity; ix = x => x > 0 ? Vag / (x / 1000) : Infinity; xl = 'Füllzeit ab Anschnitt t_f in ms (Bauteil + Überlauf)'; Qlo = Vag / (tfPlot / 1000); }
 
-    /* y-Achse: Metalldruck [bar], Hydraulikdruck der Antriebsseite
-       (P_h = P·A_K/A_h = P·P_acc/p₀, statischer Schnittpunkt = P_acc) oder
-       Leistung P·Q [MW] — dort wird die Hüllkurve P·Q = a zur Horizontalen. */
+    /* y-Achse: Metalldruck [bar], Hydraulikdruck der Antriebsseite oder
+       Leistung P·Q [MW] — dort wird die Hüllkurve P·Q = a zur Horizontalen.
+       Hydraulik: P_h = P·A_K/A_h mit A_h = F_G/P_acc, also P_h = 100·P·A·P_acc/F_G
+       (P bar, A m², F_G kN). A ist die Fläche des Kolbens, der den Punkt
+       erreicht — für den montierten Kolben A_K (statischer Schnittpunkt =
+       P_acc), für die Hüllkurve die jeweils optimale Fläche; so bleibt die
+       Antriebsseite immer ≤ P_acc. */
     let fy, yl, yUnit, y1;
     if (yb === 'ph') {
       if (!(v.pAcc > 0)) return { err: 'Akkumulatordruck muss > 0 sein für die Hydraulikdruck-Achse.' };
-      const sc = v.pAcc / p0;
-      fy = P => P * sc; yl = 'Hydraulikdruck (Antriebsseite) in bar'; yUnit = ' bar'; y1 = pTop * sc * 1.05;
+      fy = (P, Q, A = Ap) => 100 * P * A * v.pAcc / v.injForce;
+      yl = 'Hydraulikdruck (Antriebsseite) in bar'; yUnit = ' bar'; y1 = v.pAcc * 1.05;
     } else if (yb === 'pw') {
       fy = (P, Q) => P * 1e5 * Q / 1e6; yl = 'Leistung P·Q in MW'; yUnit = ' MW'; y1 = c.aMPE / 1e6 * 1.15;
     } else {
@@ -128,15 +139,19 @@ export default {
 
     /* Hüllkurve/Erreichbarkeitsgrenze ist keine Serie mehr, sondern die
        Masken-Grenze unten (graue Deckfläche oberhalb, schwarze Frontlinie). */
+    const machineLine = Q => p0 * (1 - (Q / Qmax) * (Q / Qmax));
     const ys = [
-      /* Maschinenlinie endet bei Q_dry des gewählten Kolbens (NaN dahinter) */
-      series('Maschine (Ø ' + fmt(v.diam) + ')', C.series4, Qarr,
-        Q => Q <= Qmax ? fy(p0 * (1 - (Q / Qmax) * (Q / Qmax)), Q) : NaN),
+      /* Maschinenlinie endet bei Q_dry des gewählten Kolbens (NaN dahinter);
+         im v_p-Modus ist sie die Grenzlinie der Maske selbst. */
+      ...(pistonOnly ? [] : [series('Maschine (Ø ' + fmt(v.diam) + ')', C.series4, Qarr,
+        Q => Q <= Qmax ? fy(machineLine(Q), Q) : NaN)]),
       series('Werkzeug', C.series2, Qarr, Q => fy(Cdie * Q * Q, Q))
     ];
 
     const q = line(x, ys, xl, yl,
-      'Statisch ' + fmt(p0) + ' bar · Q_dry ' + fmt(Qmax * 1000) + ' l/s · Cd=' + fmt(v.Cd) + ' · Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW (Ø ' + fmt(v.dmin) + '–' + fmt(v.dmax) + ')'
+      'Statisch ' + fmt(p0) + ' bar · Q_dry ' + fmt(Qmax * 1000) + ' l/s · Cd=' + fmt(v.Cd)
+      + (pistonOnly ? ' · nur Kolben Ø ' + fmt(v.diam) + ' (v_p ≤ v_max ' + fmt(v.vmax) + ' m/s)'
+        : ' · Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW (Ø ' + fmt(v.dmin) + '–' + fmt(v.dmax) + ')')
       + (yb === 'ph' ? ' · P_acc ' + fmt(v.pAcc) + ' bar' : ''));
     q.y0 = 0; q.y1 = y1;
 
@@ -173,16 +188,22 @@ export default {
     /* Erreichbarkeitsgrenze als Maske: oberhalb grau (für keinen Kolben-Ø
        erreichbar), alle anderen Grenzen werden darauf gestutzt. Im
        Leistungsmodus wird die Hüllkurve dabei zur Horizontalen y = a. */
-    q.limits.push(limit('mpe', 'Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW', 'y', 'max',
-      xv => fy(c.pReach(ix(xv)), ix(xv)), { mask: true, note: 'unerreichbar (alle Ø)' }));
+    if (pistonOnly) {
+      q.limits.push(limit('mpe', 'Maschine Ø ' + fmt(v.diam) + ' (darüber unerreichbar)', 'y', 'max',
+        xv => { const Q = ix(xv); return Q <= Qmax ? fy(machineLine(Q), Q) : 0; }, { mask: true, note: 'unerreichbar (Ø ' + fmt(v.diam) + ')' }));
+    } else {
+      q.limits.push(limit('mpe', 'Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW', 'y', 'max',
+        xv => { const Q = ix(xv); return fy(c.pReach(Q), Q, c.aReach(Q)); }, { mask: true, note: 'unerreichbar (alle Ø)' }));
+    }
 
     /* Grünes machbares Band (wie im (φ, λ)-Fenster): Schnittmenge aller
        harten Grenzen. Oberhalb der Maschinenlinie des aktuellen Kolbens
-       heller — Fenster erfüllt, aber nur mit anderem Ø erreichbar.
+       heller — Fenster erfüllt, aber nur mit anderem Ø erreichbar (entfällt
+       im v_p-Modus, der nur den montierten Kolben zeigt).
        Grenzen sind nur in der Legende benannt (kein Text im Diagramm). */
     q.feasible = 'machbares Band';
-    q.feasibleSplit = {
-      fn: xv => fy(p0 * (1 - Math.pow(ix(xv) / Qmax, 2)), ix(xv)),
+    if (!pistonOnly) q.feasibleSplit = {
+      fn: xv => fy(machineLine(ix(xv)), ix(xv)),
       label: 'machbar (anderer Kolben-Ø)'
     };
     q.limitText = 'legend';
@@ -241,6 +262,13 @@ maskiert: zwischen den Berührpunkten Q<sub>t</sub> = A<sub>K</sub>·v<sub>dry</
 Betriebspunkt hin, egal welcher Kolben montiert ist; alle anderen Grenzflächen sind darauf gestutzt. Aktuell:
 a = <b data-m="aMPE"></b> · gültig für Q = <b data-m="Qt"></b> · Berührpunkt aktueller Kolben bei
 <b data-m="Qtcur"></b> · optimaler Kolben-Ø am Arbeitspunkt: <b data-m="Dopt"></b></p>
+<p class="math-note"><b>Achsen mit Kolbenbezug:</b> Die x-Achse v<sub>p</sub> = Q/A<sub>K</sub> ist die
+Geschwindigkeit des <em>montierten</em> Kolbens — ein anderer Ø hätte bei gleichem Q eine andere v<sub>p</sub>.
+Dieser Modus zeigt deshalb nur den montierten Kolben: die Achse endet bei v<sub>max</sub>, die graue Grenze ist
+seine Maschinenlinie, das hellere Band „anderer Kolben-Ø" entfällt. Auf der Hydraulikdruck-Achse wird jeder Punkt
+mit der Fläche des Kolbens umgerechnet, der ihn erreicht (P<sub>h</sub> = P·A/A<sub>h</sub>,
+A<sub>h</sub> = F<sub>G</sub>/P<sub>acc</sub>) — die Antriebsseite bleibt so immer ≤ P<sub>acc</sub>, auch entlang
+der Hüllkurve.</p>
 
 <h4>5 · Arbeitspunkt — Gl. 2.15/2.16</h4>
 <p class="math-note">Schnittpunkt Maschinen- × Werkzeuglinie. Mit der Hüllkurven-Konstante a lässt sich die
