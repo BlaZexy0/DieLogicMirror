@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28" fill="none">
+  <!-- Schritt 3 — Lesen und exportieren — Farben aus der Palette (shared.css), Fallback für die Ansicht außerhalb der Seite -->
+  <symbol id="icon" viewBox="0 0 28 28" fill="none">
+    <circle cx="14" cy="14" r="11" stroke="var(--primary, #008c82)" stroke-width="1.5"/>
+    <circle cx="14" cy="14" r="6" stroke="var(--primary, #008c82)" stroke-width="1.2" stroke-dasharray="3 2"/>
+    <circle cx="14" cy="14" r="2" fill="var(--primary, #008c82)"/>
+    <polyline points="9,14 12.5,17.5 19,10.5" stroke="var(--primary, #008c82)" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <use href="#icon"/>
+</svg>

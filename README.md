@@ -77,6 +77,8 @@ dielogic/
 │   │                    agb, widerruf (+ Musterformular)
 │   ├── assets/          logo.svg, icon-*.png (aus logo.svg gerendert), site.webmanifest,
 │   │                    team-mockup.svg, palette.svg/.png (generiert), theorie/*.svg (generiert)
+│   │                    icons/*.svg: Piktogramme der Startseite (Schritte, Werkzeuge) —
+│   │                    per <use href="…svg#icon"> eingebunden, Farben var(--…, Fallback)
 │   └── examples/        Beispiel-STLs für die Sprengflächenanalyse (auch von Tests genutzt)
 ├── backend/         FastAPI: /api/auth (Einladung, Sitzung), /api/org (Mitglieder,
 │   │                Einladungen, Stammdaten), /api/projects (Revisionen),

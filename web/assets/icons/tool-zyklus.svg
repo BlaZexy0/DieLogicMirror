@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" width="26" height="26" fill="none">
+  <!-- Zyklusanalyse — Farben aus der Palette (shared.css), Fallback für die Ansicht außerhalb der Seite -->
+  <symbol id="icon" viewBox="0 0 26 26" fill="none">
+    <rect x="1" y="1" width="24" height="24" rx="2" stroke="var(--cat-green, #4c9f70)" stroke-width="1.3"/>
+    <rect x="4" y="5" width="10" height="3" rx="0.5" fill="var(--cat-green, #4c9f70)" opacity="0.85"/>
+    <rect x="14.8" y="10" width="4.5" height="3" rx="0.5" fill="var(--cat-green, #4c9f70)" opacity="0.6"/>
+    <rect x="12" y="15" width="7" height="3" rx="0.5" fill="var(--cat-green, #4c9f70)" opacity="0.6"/>
+    <rect x="6" y="20" width="10" height="3" rx="0.5" fill="var(--cat-green, #4c9f70)" opacity="0.35"/>
+    <line x1="21.5" y1="4" x2="21.5" y2="23" stroke="var(--warn, #c2447e)" stroke-width="1" stroke-dasharray="2 2"/>
+  </symbol>
+  <use href="#icon"/>
+</svg>

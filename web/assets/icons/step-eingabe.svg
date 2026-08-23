@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28" fill="none">
+  <!-- Schritt 1 — Auslegung eingeben — Farben aus der Palette (shared.css), Fallback für die Ansicht außerhalb der Seite -->
+  <symbol id="icon" viewBox="0 0 28 28" fill="none">
+    <rect x="5" y="3" width="18" height="22" rx="2" stroke="var(--primary, #008c82)" stroke-width="1.6"/>
+    <rect x="10" y="1" width="8" height="4" rx="1.5" stroke="var(--primary, #008c82)" stroke-width="1.5" fill="none"/>
+    <line x1="9" y1="10" x2="19" y2="10" stroke="var(--primary, #008c82)" stroke-width="1.4"/>
+    <line x1="9" y1="14" x2="19" y2="14" stroke="var(--primary, #008c82)" stroke-width="1.4"/>
+    <line x1="9" y1="18" x2="15" y2="18" stroke="var(--primary, #008c82)" stroke-width="1.4"/>
+    <circle cx="8" cy="10" r="1.2" fill="var(--primary, #008c82)"/>
+    <circle cx="8" cy="14" r="1.2" fill="var(--primary, #008c82)"/>
+    <circle cx="8" cy="18" r="1.2" fill="var(--primary, #008c82)"/>
+  </symbol>
+  <use href="#icon"/>
+</svg>

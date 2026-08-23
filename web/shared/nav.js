@@ -124,7 +124,7 @@
       ${LOGO_IMG}
       DieLogic
     </div>
-    <p class="dl-footer-desc">Gießtechnische Auslegung + Schusskurve für den Druckguss (HPDC) — komplett im Browser, ohne Abhängigkeiten.</p>
+    <p class="dl-footer-desc">Gießtechnische Auslegung für den Druckguss (HPDC): Schusskurve, PQ², Füllkammer, Zyklus und Teilekosten — ein Projekt, alle Werkzeuge.</p>
     <p class="dl-footer-desc" style="margin-top:1rem;color:${C.ondark2};">© 2026 DieLogic</p>
   </div>
 

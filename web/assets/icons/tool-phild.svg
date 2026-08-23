@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" width="26" height="26" fill="none">
+  <!-- Auslegungsfenster (φ, λ) — Farben aus der Palette (shared.css), Fallback für die Ansicht außerhalb der Seite -->
+  <symbol id="icon" viewBox="0 0 26 26" fill="none">
+    <rect x="1" y="1" width="24" height="24" rx="2" stroke="var(--cat-purple, #9a77e8)" stroke-width="1.3"/>
+    <rect x="4" y="4" width="5" height="5" rx="0.5" fill="var(--cat-purple, #9a77e8)" opacity="0.7"/>
+    <rect x="10.5" y="4" width="5" height="5" rx="0.5" fill="var(--cat-purple, #9a77e8)" opacity="0.4"/>
+    <rect x="4" y="10.5" width="5" height="5" rx="0.5" fill="var(--cat-purple, #9a77e8)" opacity="0.4"/>
+    <rect x="10.5" y="10.5" width="5" height="5" rx="0.5" fill="var(--cat-purple, #9a77e8)" opacity="0.7"/>
+    <rect x="17" y="17" width="5" height="5" rx="0.5" fill="var(--cat-purple, #9a77e8)" opacity="0.7"/>
+  </symbol>
+  <use href="#icon"/>
+</svg>
