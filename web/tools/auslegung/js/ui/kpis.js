@@ -126,17 +126,31 @@ function minTag(x, min) {
 /* Kolbenweg-Lineal: 0 … L. Bis s_voll (= (1 − φ)·L) läuft die 1. Phase,
    danach steht die Schmelzesäule p3 = Anguss + (Bauteil + Überlauf) +
    Pressrest. Läuft die Säule über die Kammer hinaus (p3 > L), wird die
-   Skala auf p3 gedehnt und die Kammerlänge als Grenze markiert. */
-function rulerHTML(v, fill, sFill, p1, p3, biscLen) {
+   Skala auf p3 gedehnt und die Kammerlänge als Grenze markiert.
+   Darüber eine zweite, dünne Spur: ab wo die Einfüllöffnung dicht ist und
+   über welchen Kolbenweg Vakuum gezogen wird (vacStart bis Hubende). */
+function rulerHTML(v, fill, sFill, p1, p3, biscLen, travelEnd) {
   const L = v.length;
   const span = Math.max(L, p3);
   const over = p3 > L;
-  const x = s => (100 * Math.max(0, s) / span).toFixed(2) + '%';
+  const x = s => (100 * Math.max(0, Math.min(span, s)) / span).toFixed(2) + '%';
+  const vacOn = v.vacModel && v.vacModel !== 'aus' && v.vacStart >= 0;
+  const sEnd = isFinite(travelEnd) && travelEnd > 0 ? travelEnd : Math.max(0, L - biscLen);
+  const vacHtml = '<div class="kr-vac' + (vacOn ? '' : ' off') + '">'
+    + '<span class="vl">' + (vacOn
+      ? 'Vakuum ab ' + fmt(Math.round(v.vacStart)) + ' mm bis Hubende ' + fmt(Math.round(sEnd)) + ' mm'
+      : 'ohne Vakuum')
+    + (v.sealStroke > 0 ? ' · Einfüllöffnung dicht ab ' + fmt(Math.round(v.sealStroke)) + ' mm' : '') + '</span>'
+    + '<div class="kr-vtrack">'
+    + (vacOn && sEnd > v.vacStart ? '<span class="seg" style="left:' + x(v.vacStart) + ';width:' + (100 * (Math.min(span, sEnd) - Math.max(0, v.vacStart)) / span).toFixed(2) + '%"></span>' : '')
+    + (v.sealStroke > 0 ? '<i class="tick seal" style="left:' + x(v.sealStroke) + '" title="Einfüllöffnung verschlossen"></i>' : '')
+    + '</div></div>';
   const s0 = over ? 0 : sFill;                       // Beginn der Schmelzesäule
   const partLen = Math.max(0, p3 - p1 - biscLen);
   const mm = x => fmt(Math.round(x));
   return '<div class="kruler' + (over ? ' over' : '') + '">'
     + '<div class="kr-head"><span>Kolbenweg</span><span>Kolben-Ø ' + fmt(v.diam) + ' mm</span></div>'
+    + vacHtml
     + '<div class="kr-lbl top"><span style="left:0">0</span>'
     + (over ? '' : '<span style="left:' + x(sFill) + '">Kammer voll ' + mm(sFill) + '</span>')
     + '<span style="left:' + x(L) + '" class="end">' + mm(L) + ' mm</span></div>'
@@ -277,7 +291,7 @@ export function renderKpis(el, v, shot, chamberEl) {
         minStatus(biscLen, v.biscuitMin), minTag(biscLen, v.biscuitMin),
         bullet(0, Math.max(1.6 * v.biscuitMin, 1.15 * biscLen), v.biscuitMin, Math.max(1.6 * v.biscuitMin, 1.15 * biscLen), biscLen,
           '0 mm', 'min ' + fmt(v.biscuitMin), fmt(Math.max(1.6 * v.biscuitMin, 1.15 * biscLen)) + ' mm')),
-    rulerHTML(v, fill, sFill, p1, p3, biscLen));
+    rulerHTML(v, fill, sFill, p1, p3, biscLen, shot.error ? NaN : shot.profile.travel * 1000));
 
   const uClamp = v.force > 0 ? req / v.force : NaN;
   const uHold = pMaxClamp > 0 ? v.psel / pMaxClamp : NaN;
@@ -325,9 +339,39 @@ export function renderKpis(el, v, shot, chamberEl) {
             utilStatus(shot.fill / v.tmax), utilTag(shot.fill / v.tmax), meter(shot.fill / v.tmax)))
         + row('v₁ vs. v_krit (1. Phase)', fmt(shot.v1) + ' m/s',
           'v_krit ' + fmt(shot.vcrit) + ' m/s (CFD-Tabelle) · max. bis „Kammer voll" · v₂ ' + (shot.v2 == null ? '—' : fmt(shot.v2) + ' m/s'),
-          utilStatus(shot.v1 / shot.vcrit), utilTag(shot.v1 / shot.vcrit), meter(shot.v1 / shot.vcrit))))
+          utilStatus(shot.v1 / shot.vcrit), utilTag(shot.v1 / shot.vcrit), meter(shot.v1 / shot.vcrit)))
+      + (!isFinite(tNadca) || shot.error || shot.fill === null
+        ? row('NADCA-Füllzeit', isFinite(tNadca) ? fmt(tNadca) + ' ms' : '—',
+          'empfohlen bei s = ' + fmt(v.wall) + ' mm · Ist-Füllzeit fehlt', 'nodata')
+        : row('NADCA-Füllzeit', fmt(shot.fill) + ' ms',
+          'Ist-Füllzeit in % der Empfehlung ≤ ' + fmt(tNadca) + ' ms bei s = ' + fmt(v.wall) + ' mm',
+          utilStatus(shot.fill / tNadca),
+          fmt(Math.round(100 * shot.fill / tNadca)) + ' %', meter(shot.fill / tNadca)))
+      + (isFinite(Areq) && v.vent > 0
+        ? row('Entlüftungsbedarf', fmt(Areq) + ' mm²',
+          'vorhanden ' + fmt(v.vent) + ' mm² · bei t_f ' + fmt(tOp) + ' ms (v₂-Mittel)',
+          utilStatus(Areq / v.vent), utilTag(Areq / v.vent), meter(Areq / v.vent))
+        : row('Entlüftungsbedarf', '—', 'braucht v₂ aus der Schusskurve und Entlüftungsfläche', 'nodata'))
+      + (shot.error
+        ? row('Kurve vs. Maschinenlimits', '—', 'Schusskurve ungültig', 'nodata')
+        : (() => {
+          const aPk = Math.max(shot.profile.amax, -shot.profile.amin, 0);
+          const uV = v.vmax > 0 ? shot.profile.vmax / v.vmax : 0;
+          const uA = v.amax > 0 ? aPk / v.amax : 0;
+          const worst = Math.max(uV, uA);
+          const rows =
+            '<div class="meter-row"><span class="mlbl">v</span>' + meter(uV)
+            + '<span class="mval">' + fmt(shot.profile.vmax) + '/' + fmt(v.vmax) + '</span></div>'
+            + '<div class="meter-row"><span class="mlbl">a</span>' + meter(uA)
+            + '<span class="mval">' + fmt(aPk) + '/' + fmt(v.amax) + '</span></div>';
+          return row('Kurve vs. Maschinenlimits', fmt(100 * worst) + ' %',
+            'Spitzen v/a gegen Maschinenlimits m/s · m/s²',
+            utilStatus(worst),
+            utilStatus(worst) === 'ok' ? '' : (uV >= uA ? 'v ' : 'a ') + pctTag(worst),
+            rows);
+        })()), '', 'tall')
 
-+ panel('Zuhaltung und Maschine', 'Zuhaltung', '', () =>
+    + panel('Zuhaltung und Maschine', 'Zuhaltung', '', () =>
       (isFinite(uClamp)
         ? row('Schließkraft-Auslastung', fmt(100 * uClamp) + ' %',
           fmt(req) + ' von ' + fmt(v.force) + ' kN (' + fmt(req / 10) + ' t) · S = ' + fmt(v.safety) + ' eingerechnet',
@@ -354,41 +398,11 @@ export function renderKpis(el, v, shot, chamberEl) {
         : row('PQ²-Leistungsauslastung', '—', 'Eingaben unvollständig (Gießkraft, v_max, Anschnitt)', 'nodata')))
 
     + panel('Thermik und Qualität', 'Thermik', '', () =>
-      (!isFinite(tNadca) || shot.error || shot.fill === null
-        ? row('NADCA-Füllzeit', isFinite(tNadca) ? fmt(tNadca) + ' ms' : '—',
-          'empfohlen bei s = ' + fmt(v.wall) + ' mm · Ist-Füllzeit fehlt', 'nodata')
-        : row('NADCA-Füllzeit', fmt(shot.fill) + ' ms',
-          'Ist-Füllzeit in % der Empfehlung ≤ ' + fmt(tNadca) + ' ms bei s = ' + fmt(v.wall) + ' mm',
-          utilStatus(shot.fill / tNadca),
-          fmt(Math.round(100 * shot.fill / tNadca)) + ' %', meter(shot.fill / tNadca)))
-      + (isFinite(Areq) && v.vent > 0
-        ? row('Entlüftungsbedarf', fmt(Areq) + ' mm²',
-          'vorhanden ' + fmt(v.vent) + ' mm² · bei t_f ' + fmt(tOp) + ' ms (v₂-Mittel)',
-          utilStatus(Areq / v.vent), utilTag(Areq / v.vent), meter(Areq / v.vent))
-        : row('Entlüftungsbedarf', '—', 'braucht v₂ aus der Schusskurve und Entlüftungsfläche', 'nodata'))
-      + row('Anschnitt-Erstarrung', fmt(tErst) + ' ms',
+      row('Anschnitt-Erstarrung', fmt(tErst) + ' ms',
         'k·s² bei s = ' + fmt(v.gateTh) + ' mm · Nachdruckaufbau ' + fmt(v.intTime) + ' ms',
         minStatus(tErst, v.intTime), minTag(tErst, v.intTime),
         bullet(0, Math.max(1.5 * v.intTime, 1.15 * tErst), v.intTime, Math.max(1.5 * v.intTime, 1.15 * tErst), tErst,
-          '0 ms', 'min ' + fmt(v.intTime) + ' (Nachdruckaufbau)', fmt(Math.max(1.5 * v.intTime, 1.15 * tErst)) + ' ms'))
-      + (shot.error
-        ? row('Kurve vs. Maschinenlimits', '—', 'Schusskurve ungültig', 'nodata')
-        : (() => {
-          const aPk = Math.max(shot.profile.amax, -shot.profile.amin, 0);
-          const uV = v.vmax > 0 ? shot.profile.vmax / v.vmax : 0;
-          const uA = v.amax > 0 ? aPk / v.amax : 0;
-          const worst = Math.max(uV, uA);
-          const rows =
-            '<div class="meter-row"><span class="mlbl">v</span>' + meter(uV)
-            + '<span class="mval">' + fmt(shot.profile.vmax) + '/' + fmt(v.vmax) + '</span></div>'
-            + '<div class="meter-row"><span class="mlbl">a</span>' + meter(uA)
-            + '<span class="mval">' + fmt(aPk) + '/' + fmt(v.amax) + '</span></div>';
-          return row('Kurve vs. Maschinenlimits', fmt(100 * worst) + ' %',
-            'Spitzen v/a gegen Maschinenlimits m/s · m/s²',
-            utilStatus(worst),
-            utilStatus(worst) === 'ok' ? '' : (uV >= uA ? 'v ' : 'a ') + pctTag(worst),
-            rows);
-        })()), '', 'wide')
+          '0 ms', 'min ' + fmt(v.intTime) + ' (Nachdruckaufbau)', fmt(Math.max(1.5 * v.intTime, 1.15 * tErst)) + ' ms')))
     + '</div>';
 
   if (chamberEl) {

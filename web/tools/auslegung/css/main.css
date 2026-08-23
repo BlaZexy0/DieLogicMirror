@@ -217,6 +217,7 @@ select {
 }
 .kpanel { overflow: hidden; container-type: inline-size; }
 .kpanel.wide { grid-column: 1 / -1; }
+.kpanel.tall { grid-row: span 2; }
 .kpanel-head {
   display: flex;
   align-items: center;
@@ -392,6 +393,13 @@ select {
   margin-bottom: 4px;
 }
 .kr-head span:last-child { font-family: var(--mono); color: var(--text); }
+/* Zweite Spur über dem Lineal: Vakuumbereich und „Einfüllöffnung dicht" */
+.kr-vac { margin: 0 0 8px; }
+.kr-vac .vl { display: block; font-size: 10px; color: var(--primary2); margin-bottom: 2px; }
+.kr-vac.off .vl { color: var(--muted); }
+.kr-vtrack { position: relative; height: 4px; border-radius: 2px; background: var(--border-light); }
+.kr-vtrack .seg { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: var(--primary); }
+.kr-vtrack .tick { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--dark); opacity: .7; }
 .kr-track {
   position: relative;
   height: 10px;
@@ -476,6 +484,7 @@ select {
 }
 @media (max-width: 1000px) {
   .kpanel-grid { grid-template-columns: 1fr; }
+  .kpanel.tall { grid-row: auto; }
   .checkbar { grid-template-columns: auto 1fr; }
   .checkbar .calls { grid-column: 1 / -1; justify-items: start; text-align: left; }
 }
