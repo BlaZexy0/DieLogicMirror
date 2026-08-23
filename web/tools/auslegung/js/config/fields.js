@@ -95,8 +95,7 @@ export const groups = [
       /* def passt zur Default-Maschine (HCC-1600, lmin 1000) und hält den
          Füllgrad mit der Default-Massenbilanz im Zielband. */
       { key: 'length', label: 'Gewählte Kammerlänge',  unit: 'mm', def: 1000 },
-      { key: 'sealStroke', label: 'Einfüllöffnung verschlossen', unit: 'mm', def: 150 },
-      { key: 'biscuitMin', label: 'Pressrest min.',    unit: 'mm', def: 25 }
+      { key: 'sealStroke', label: 'Einfüllöffnung verschlossen', unit: 'mm', def: 150 }
     ]
   },
   {
@@ -118,7 +117,6 @@ export const groups = [
         options: [['aus', 'ohne Vakuum'], ['ideal', 'Idealpumpe (Enddruck)'], ['conductance', 'Entlüftung (Drossel)']] },
       { key: 'vent', label: 'Entlüftungsfläche', unit: 'mm²', def: 800,
         auto: 'Ideal: Entlüftungsbedarf bei der Füllzeit der Schusskurve — A_ent = V_luft/(t_f·v_luft,max), auf 10 mm² aufgerundet' },
-      { key: 'vAirMax',  label: 'Max. Entlüftungsgeschw.', unit: 'm/s', def: 150 },
       { key: 'vacPump',  label: 'Pumpen-Enddruck',    unit: 'mbar', def: 80 },
       { key: 'vacStart', label: 'Vakuum ab Kolbenweg', unit: 'mm',  def: 150 }
     ]
@@ -133,6 +131,8 @@ export const groups = [
       { key: 'fillMax', label: 'Füllgrad Ziel max.',        unit: '%',   def: 60 },
       { key: 'gateMin', label: 'Anschnittgeschw. Ziel min.', unit: 'm/s', def: 30 },
       { key: 'gateMax', label: 'Anschnittgeschw. Ziel max.', unit: 'm/s', def: 50 },
+      { key: 'vAirMax', label: 'Max. Entlüftungsgeschw.',    unit: 'm/s', def: 150 },
+      { key: 'biscuitMin', label: 'Pressrest min.',          unit: 'mm',  def: 25 },
       /* Herman-J-Faktor v_a^1,71·e_p·ρ (inch-pound): unter J_min keine
          Zerstäubung, über J_max Erosion/Überzerstäubung. */
       { key: 'JatomMin', label: 'Zerstäubungsfaktor J min.', unit: '-', def: 750 },
