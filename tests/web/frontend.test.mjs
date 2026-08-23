@@ -40,7 +40,7 @@ const { allFields, groups, PRESET_KEYS } = await import(
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
 const { POSITIVE_KEYS, NONNEG_KEYS, NEGATIVE_OK } = await import(
   path.join(site, 'tools/auslegung/js/ui/inputs.js'));
-const { generateCurve } = await import(path.join(site, 'tools/auslegung/js/core/curvegen.js'));
+const { generateCurve, fillTimeMs } = await import(path.join(site, 'tools/auslegung/js/core/curvegen.js'));
 const { computeShot } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
 const { state, applyData } = await import(path.join(site, 'tools/auslegung/js/core/state.js'));
 const { charts } = await import(path.join(site, 'tools/auslegung/js/charts/registry.js'));
@@ -67,6 +67,57 @@ test('curvegen: López-Modus — gültige Kurve, v1 ≤ v_krit, Hub bis Schussen
   // Kurvenende = Kammer − Pressrest (deckt den Gesamthub ab)
   assert.ok(shot.profile.travel >= shot.totalStroke - 1e-9, 'Kurvenhub deckt Gesamthub nicht ab');
   assert.ok(shot.profile.travel <= v.length / 1000 - shot.biscLen + 2e-3, 'Kurve läuft in den Pressrest');
+});
+
+test('curvegen: López — Rampe der 2. Phase beginnt nie vor „Kammer voll" (Sweep über Ø, L, Masse, a_max)', () => {
+  /* Die Plateau-Rundung auf 0,1 mm darf die Rampe nicht vor s_voll starten
+     lassen — sonst liegt v(s_voll) über v_krit. */
+  let n = 0;
+  for (const diam of [80, 100, 120, 150, 180, 220]) for (const length of [600, 800, 1000, 1400])
+    for (const part of [2, 6, 12, 25]) for (const amax of [30, 60, 200]) {
+      const v = Object.assign(defaultValues(), { diam, length, part, amax, dmin: 50, dmax: 400 });
+      const r = generateCurve(v, { mode: 'lopez' }); if (r.error) continue;
+      const shot = computeShot(v, r.points); if (shot.error) continue; n++;
+      assert.ok(shot.v1 <= shot.vcrit + 1e-9, `Ø${diam} L${length} m${part} a${amax}: v1 ${shot.v1} > v_krit ${shot.vcrit}`);
+      assert.ok(shot.checks[0][0], `Ø${diam} L${length} m${part} a${amax}: ` + shot.checks[0][1]);
+      const aPk = Math.max(shot.profile.amax, -shot.profile.amin, 0);
+      assert.ok(aPk <= amax + 1e-6, `Ø${diam} L${length} m${part}: a ${aPk} > a_max ${amax}`);
+    }
+  assert.ok(n > 100, 'zu wenige gültige Fälle: ' + n);
+});
+
+test('curvegen: López — 2. Phase trifft die NADCA-Füllzeit, sonst ehrlicher Hinweis', () => {
+  const v = defaultValues();
+  const tN = v.kfill * v.wall * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / (v.Tflow - v.Tdie);
+  /* a_max groß genug: Füllzeit ab Anschnitt = NADCA-Empfehlung, inkl. Rampe */
+  const fast = Object.assign({}, v, { amax: 200 });
+  const r = generateCurve(fast, { mode: 'lopez' });
+  assert.ok(!r.error && !r.warn, r.error || r.warn);
+  const shot = computeShot(fast, r.points);
+  closeTo(shot.fill, tN, 0.3);
+  closeTo(r.tN, tN, 1e-9);
+  assert.ok(r.v2 > 1e9 * (v.part + v.overflow) / v.density / (tN * 0.25 * Math.PI * v.diam * v.diam),
+    'v₂ muss über dem Wert ohne Rampe liegen, um die Rampe auszugleichen');
+  /* a_max = 60 (Preset): NADCA-Zeit physikalisch nicht erreichbar → schnellste 2. Phase + Hinweis */
+  const slow = generateCurve(v, { mode: 'lopez' });
+  assert.ok(slow.warn && /a_max .* reicht für die NADCA-Füllzeit/.test(slow.warn), 'Hinweis erwartet: ' + slow.warn);
+  const s2 = computeShot(v, slow.points);
+  assert.ok(s2.fill > tN, 'Füllzeit über NADCA: ' + s2.fill);
+  assert.ok(s2.fill < 70, 'schnellste 2. Phase: ' + s2.fill);
+  const aPk = Math.max(s2.profile.amax, -s2.profile.amin, 0);
+  assert.ok(aPk <= v.amax + 1e-6 && aPk > 0.99 * v.amax, 'volle Beschleunigung erwartet: ' + aPk);
+});
+
+test('curvegen: fillTimeMs — Rampe + Plateau, Grenzfälle', () => {
+  /* ohne Rampe: reine Plateaufahrt 100 mm bei 5 m/s = 20 ms */
+  closeTo(fillTimeMs(1, 5, 0, 500, 600, 700), 20, 1e-9);
+  /* Rampe endet vor dem Anschnitt → wieder Plateau: (800−700)/5 = 20 ms */
+  closeTo(fillTimeMs(1, 5, 100, 500, 700, 800), 20, 1e-9);   // Rampenweg (25−1)/200 = 0,12 m = 120 mm < 200
+  /* Rampe läuft durch die Formfüllung: t = (√(v0²+2aΔs) − v0)/a je Punkt */
+  const t = s => (Math.sqrt(1 + 2 * 100 * (s - 500) / 1000) - 1) / 100;
+  closeTo(fillTimeMs(1, 10, 100, 500, 550, 600), (t(600) - t(550)) * 1000, 1e-9);
+  /* schnelleres v₂ → kürzere Füllzeit */
+  assert.ok(fillTimeMs(1, 6, 60, 500, 600, 900) < fillTimeMs(1, 5, 60, 500, 600, 900));
 });
 
 test('curvegen: V1/V2-Modus — Plateau bei V1, Fehler bei zu flacher Rampe', () => {

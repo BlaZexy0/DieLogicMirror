@@ -8,7 +8,7 @@ const MODES = [['points', 'Punkte'], ['lopez', 'DieLogic'], ['v1v2', 'V₁ / V�
 
 const NOTES = {
   points: 'Wegpunkte als Weg s [mm] / Kolbengeschwindigkeit v [m/s]. Zwischen den Punkten wird konstant beschleunigt; der Ursprung (0 mm, 0 m/s) wird automatisch ergänzt.',
-  lopez: 'DieLogic-Kurve: Anfahrt nach López-Faura-Hernández (Profil P5 der Theorie „Nebenbedingungen") bis v_krit, Plateau bis „Kammer voll", dann Rampe mit a_max auf die Geschwindigkeit der empfohlenen NADCA-Füllzeit. Die Punkte werden aus den Eingaben erzeugt.',
+  lopez: 'DieLogic-Kurve: Anfahrt nach López-Faura-Hernández (Profil P5 der Theorie „Nebenbedingungen") bis v_krit, Plateau bis „Kammer voll", dann Rampe mit a_max auf v₂ — so gewählt, dass die Füllzeit ab Anschnitt samt Rampe die empfohlene NADCA-Füllzeit trifft (höchstens v_max; reicht a_max nicht, fährt die Kurve die schnellste mögliche 2. Phase und sagt es). Die Punkte werden aus den Eingaben erzeugt.',
   v1v2: 'Rampe mit a₁ auf V₁, Plateau bis „Kammer voll", Rampe mit a₂ auf V₂ bis zum Schussende. Die Punkte werden aus den Eingaben erzeugt.'
 };
 

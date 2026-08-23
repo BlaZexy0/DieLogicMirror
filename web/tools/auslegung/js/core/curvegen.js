@@ -5,7 +5,9 @@
      Profil P5): v(t) = 2c₀[(1 − c₀t/ℓ)^(−1/3) − 1] mit c₀ = waveSpeed
      (Schwerewellen-Geschwindigkeit des ruhenden Bads) und ℓ ≈ L, bis
      v_krit (CFD-Tabelle) erreicht ist; Plateau bis „Kammer voll"; dann
-     Rampe mit a_max auf die Geschwindigkeit der NADCA-Füllzeit.
+     Rampe mit a_max auf v₂ — so gewählt, dass die Füllzeit ab Anschnitt
+     (Anguss gefüllt → Überlauf gefüllt) inklusive der noch laufenden
+     Rampe genau die empfohlene NADCA-Füllzeit trifft (v₂ ≤ v_max).
 
    'v1v2' — Rampe mit a₁ auf V₁, Plateau bis „Kammer voll", Rampe mit a₂
      auf V₂ bis zum Schussende (L − Pressrest).
@@ -58,6 +60,19 @@ function ramp(pts, vFrom, vTo, s0, sEnd, a) {
   return vEnd;
 }
 
+/* Füllzeit ab Anschnitt [ms] für eine 2. Phase „Rampe mit a ab s0 von v0 auf
+   v2, dann Plateau": t(sOver) − t(sGate). Alle s in mm, v in m/s, a in m/s². */
+export function fillTimeMs(v0, v2, a, s0, sGate, sOver) {
+  const dRamp = a > 0 ? (v2 * v2 - v0 * v0) / (2 * a) * 1000 : 0;   // Rampenweg [mm]
+  const sRampEnd = s0 + dRamp;
+  const tAt = s => {
+    if (s <= sRampEnd && a > 0) return (Math.sqrt(Math.max(v0 * v0 + 2 * a * (s - s0) / 1000, 0)) - v0) / a;
+    const tRamp = a > 0 ? (v2 - v0) / a : 0;
+    return tRamp + (s - sRampEnd) / 1000 / v2;
+  };
+  return (tAt(sOver) - tAt(sGate)) * 1000;
+}
+
 export function generateCurve(v, g) {
   const A = pistonArea(v);
   const mdos = total(v) + v.biscuit;
@@ -94,20 +109,45 @@ export function generateCurve(v, g) {
     /* Plateau abrunden, damit die Rundung v nicht über v_krit hebt */
     const vTop = Math.floor(vOf(tEnd) * 1000) / 1000;
     pts[pts.length - 1][1] = vTop;
-    if (pts[pts.length - 1][0] < sFill - 0.5) pts.push([sFill, vTop]);
+    /* Plateau-Ende AUF 0,1 mm aufrunden: die Rampe der 2. Phase darf nie
+       vor „Kammer voll" beginnen — sonst liegt v bei s_voll schon über
+       v_krit (Prüfung der 1. Phase nimmt das Maximum bis genau s_voll). */
+    const sR = Math.ceil(sFill * 10) / 10;
+    if (pts[pts.length - 1][0] < sR) pts.push([sR, vTop]);
+    else pts[pts.length - 1][0] = sR;
 
-    /* 2. Phase: Geschwindigkeit für die empfohlene NADCA-Füllzeit */
+    /* 2. Phase: v₂ so, dass die Füllzeit ab Anschnitt die empfohlene
+       NADCA-Füllzeit trifft — mit der Rampe, die ab „Kammer voll" noch in
+       die Formfüllung hineinläuft (bei a_max = 0: sofort auf v₂). */
     const denN = v.Tflow - v.Tdie;
     const tN = denN !== 0 ? v.kfill * v.wall * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / denN : NaN;
     if (!(tN > 0)) return { error: 'NADCA-Füllzeit nicht berechenbar — Temperaturen und k prüfen.' };
-    let v2 = 1e9 * (afterGate(v) / v.density) / (tN * A);
-    if (v.vmax > 0) v2 = Math.min(v2, v.vmax);
-    const w = ramp(pts, vTop, v2, sFill, sEnd, v.amax);
-    return {
-      points: clean(pts),
-      warn: w === null ? null
-        : 'a_max reicht nicht — 2. Phase erreicht ' + fmt(w) + ' statt ' + fmt(v2) + ' m/s.'
-    };
+    const sGate = sR + 1e9 * (v.runner / v.density) / A;      // Anguss gefüllt [mm]
+    const sOver = sR + 1e9 * (total(v) / v.density) / A;      // Überlauf gefüllt [mm]
+    const vFlat = 1e9 * (afterGate(v) / v.density) / (tN * A); // ohne Rampe nötig
+    const want = v2 => fillTimeMs(vTop, v2, v.amax, sR, sGate, sOver);
+    let v2, warn = null;
+    const vCap = v.vmax > 0 ? v.vmax : Infinity;
+    if (!(v.amax > 0)) {
+      v2 = Math.min(vFlat, vCap);
+      if (vFlat > vCap) warn = 'v_max ' + fmt(vCap) + ' m/s reicht für die NADCA-Füllzeit ' + fmt(tN) + ' ms nicht — erreichbar sind ' + fmt(want(vCap)) + ' ms.';
+    } else {
+      /* Schnellstmögliche 2. Phase: volle Rampe bis zum Schussende, höchstens v_max */
+      const vEndMax = Math.floor(Math.sqrt(vTop * vTop + 2 * v.amax * (sEnd - sR) / 1000) * 1000) / 1000;
+      const vFast = Math.min(vCap, vEndMax);
+      if (want(vFast) > tN) {
+        v2 = vFast;
+        warn = (vEndMax < vCap ? 'a_max ' + fmt(v.amax) + ' m/s²' : 'v_max ' + fmt(vCap) + ' m/s')
+          + ' reicht für die NADCA-Füllzeit ' + fmt(tN) + ' ms nicht — die Kurve fährt die schnellste mögliche 2. Phase, Füllzeit ≈ ' + fmt(want(vFast)) + ' ms.';
+      } else {
+        let lo = vTop, hi = vFast;
+        for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (want(m) > tN) lo = m; else hi = m; }
+        v2 = Math.ceil(hi * 1000) / 1000;   // aufrunden: Füllzeit eher kürzer als länger
+      }
+    }
+    const w = ramp(pts, vTop, v2, sR, sEnd, v.amax);
+    if (w !== null && !warn) warn = 'a_max reicht nicht — 2. Phase erreicht ' + fmt(w) + ' statt ' + fmt(v2) + ' m/s.';
+    return { points: clean(pts), warn, v2, tN };
   }
 
   if (g.mode === 'v1v2') {
