@@ -93,3 +93,22 @@ test('Kontrast: Text auf dunklem Grund ≥ 4.5:1', () => {
     assert.ok(contrast(P[k], P.dark) >= 4.5, `${k} auf dark: ${contrast(P[k], P.dark).toFixed(2)}`);
   assert.ok(contrast(P.surface, P.primary) >= 4.0, 'weiß auf primary (Buttons)');
 });
+
+/* Piktogramme der Startseite (web/assets/icons/*.svg): per <use href="…#icon">
+   eingebunden — die Datei muss wohlgeformtes XML sein (kein „--" in Kommentaren,
+   sonst bleibt die Kachel leer), ein <symbol id="icon"> tragen und ihre
+   Farb-Fallbacks müssen den Palettenwerten entsprechen. */
+test('assets/icons: wohlgeformt, Symbol „icon", Fallback-Farben = Palette', () => {
+  const { readdirSync } = require('node:fs');
+  const dir = path.join(site, 'assets/icons');
+  const files = readdirSync(dir).filter(f => f.endsWith('.svg'));
+  assert.ok(files.length >= 10, 'Icons fehlen');
+  for (const f of files) {
+    const svg = read('assets/icons/' + f);
+    for (const [, c] of svg.matchAll(/<!--([\s\S]*?)-->/g)) assert.doesNotMatch(c, /--/, `${f}: „--" im XML-Kommentar`);
+    assert.match(svg, /<symbol id="icon"/, `${f}: <symbol id="icon"> fehlt`);
+    assert.doesNotMatch(svg, /var\(--[a-z-]+\)/, `${f}: var() ohne Fallback`);
+    for (const [, name, hex] of svg.matchAll(/var\(--([a-z-]+), (#[0-9a-f]{6})\)/g))
+      assert.equal(hex, P.colors[name.replace(/-([a-z])/g, (m, ch) => ch.toUpperCase())], `${f}: Fallback für --${name}`);
+  }
+});

@@ -1,10 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" width="26" height="26" fill="none">
-  <!-- PQ²-Diagramm — Farben aus der Palette (shared.css), Fallback für die Ansicht außerhalb der Seite -->
-  <symbol id="icon" viewBox="0 0 26 26" fill="none">
-    <rect x="1" y="1" width="24" height="24" rx="2" stroke="var(--primary, #008c82)" stroke-width="1.3"/>
-    <path d="M4 21 Q13 4 22 21" stroke="var(--primary, #008c82)" stroke-width="1.6" fill="none"/>
-    <path d="M4 21 Q13 30 22 21" stroke="var(--warn, #c2447e)" stroke-width="1.6" fill="none"/>
-    <circle cx="13" cy="16.5" r="2.2" fill="var(--primary, #008c82)"/>
+  <!-- PQ²-Diagramm — fallende Maschinenlinie, steigende Werkzeuglinie, Schnittpunkt.
+       Raster: Motiv innerhalb 2…24, Strich 1,6 (Hilfslinien 1,4 · 70 %), Marker in der Warnfarbe (warn).
+       Farben aus der Palette (shared.css), Fallback für die Ansicht außerhalb der Seite. -->
+  <symbol id="icon" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 3.5 V22.5 H23" stroke="var(--primary, #008c82)" stroke-width="1.4" opacity=".7"/>
+    <path d="M5 5.5 C13 5.5 17.5 11 21 22" stroke="var(--primary, #008c82)" stroke-width="1.8"/>
+    <path d="M5 22 C9 22 14.5 17 17.5 5" stroke="var(--primary, #008c82)" stroke-width="1.8" opacity=".55"/>
+    <circle cx="15.7" cy="10.8" r="1.9" fill="var(--warn, #c2447e)"/>
   </symbol>
   <use href="#icon"/>
 </svg>
