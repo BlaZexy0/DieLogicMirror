@@ -46,13 +46,26 @@ test('pq2: v_p-Achse endet bei v_max und zeigt nur den montierten Kolben', () =>
     /* Arbeitspunkt liegt im Bild */
     assert.ok(q.pt[0] > 0 && q.pt[0] <= v.vmax);
   }
-  /* Q-Achse zeigt weiter alle Kolben-Ø: x bis Q_dry(Ø max), Split vorhanden */
+  /* Q-/Q²-Achse: bis Q_dry des montierten Kolbens, Hüllkurve anderer Ø und Split bleiben;
+     t_f-Achse zeigt weiter alle Kolben-Ø */
   const v = defaults();
-  const q = calc(v, 'q', 'pm');
   const c = pqCore(v);
-  assert.ok(Math.abs(q.x[q.x.length - 1] - c.Ahi * v.vmax * 1000) < 1e-6, 'Q-Achse bis Q_dry des größten Kolbens');
-  assert.ok(q.feasibleSplit && typeof q.feasibleSplit.fn === 'function');
-  assert.ok(maskMax(q) > c.p0, 'Hüllkurve über p₀ des montierten Kolbens (kleinerer Ø erreicht mehr Druck)');
+  for (const tab of ['q', 'q2']) {
+    const q = calc(v, tab, 'pm');
+    const Qend = tab === 'q' ? q.x[q.x.length - 1] / 1000 : Math.sqrt(q.x[q.x.length - 1]) / 1000;
+    closeTo(Qend, c.Qmax, 1e-9);
+    assert.ok(q.feasibleSplit && typeof q.feasibleSplit.fn === 'function');
+    assert.ok(maskMax(q) > c.p0, 'Hüllkurve über p₀ des montierten Kolbens (kleinerer Ø erreicht mehr Druck)');
+    /* Maschinenlinie endet exakt auf der Achse (letzte endliche Stützstelle = 0 bei Q_dry) */
+    const m = q.ys.find(s => /^Maschine/.test(s.n));
+    const fin = m.y.filter(Number.isFinite);
+    closeTo(fin[fin.length - 1], 0, 1e-9);
+  }
+  const qt = calc(v, 'tf', 'pm');
+  const Qt = qt.x.map(x => c.Vag / (x / 1000));
+  closeTo(Math.max(...Qt), c.Ahi * v.vmax, 1e-9);
+  const mt = qt.ys.find(s => /^Maschine/.test(s.n));
+  assert.ok(mt.y.some(y => Number.isFinite(y) && Math.abs(y) < 1e-9), 't_f-Achse: Maschinenlinie erreicht 0 bei Q_dry');
 });
 
 test('pq2: Hydraulikdruck-Achse bleibt ≤ P_acc — montierter Kolben und Hüllkurve', () => {

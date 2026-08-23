@@ -160,6 +160,25 @@ class SVGCtx {
     const anchor = this.textAlign === 'center' ? 'middle' : this.textAlign === 'right' ? 'end' : 'start';
     this.out.push(`<text x="${a.toFixed(2)}" y="${b.toFixed(2)}" font-family="${f.family}" font-size="${f.size}" font-weight="${f.weight}" fill="${this.fillStyle}" text-anchor="${anchor}"${this._tf()}>${esc(s)}</text>`);
   }
+  /* Indizes („v_a", „P_{acc}") als <tspan> in EINEM <text> — der SVG-Renderer
+     setzt die Segmente mit echten Glyphenbreiten (measureText ist hier nur
+     eine Schätzung; render/base.js fillRich ruft diese Methode, wenn vorhanden). */
+  fillRich(s, a, b) {
+    const f = this._font();
+    const anchor = this.textAlign === 'center' ? 'middle' : this.textAlign === 'right' ? 'end' : 'start';
+    const sub = Math.round(f.size * 0.78 * 10) / 10, dy = (f.size * 0.28).toFixed(2);
+    const re = /_(?:\{([^}]*)\}|([A-Za-z0-9]+(?:,[A-Za-z0-9]+)*))/g;
+    let inner = '', last = 0, m, lowered = false;
+    const plain = txt => { if (!txt) return; inner += lowered ? `<tspan dy="-${dy}">${esc(txt)}</tspan>` : esc(txt); lowered = false; };
+    s = String(s);
+    while ((m = re.exec(s))) {
+      plain(s.slice(last, m.index));
+      inner += `<tspan font-size="${sub}" dy="${dy}">${esc(m[1] != null ? m[1] : m[2])}</tspan>`;
+      lowered = true; last = re.lastIndex;
+    }
+    plain(s.slice(last));
+    this.out.push(`<text x="${a.toFixed(2)}" y="${b.toFixed(2)}" font-family="${f.family}" font-size="${f.size}" font-weight="${f.weight}" fill="${this.fillStyle}" text-anchor="${anchor}"${this._tf()}>${inner}</text>`);
+  }
   svg() {
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${this.w} ${this.h}" font-family="Arial, Helvetica, sans-serif" role="img">` +
       `<defs>${this.defs.join('')}</defs>` + this.out.join('\n') + '</svg>';

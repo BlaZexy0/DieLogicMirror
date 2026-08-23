@@ -105,7 +105,12 @@ export default {
        grenze: x bis zum Nullpunkt der Ø-max-Parabel (Q_dry des größten
        Kolbens), y bis zum statischen Druck des kleinsten Kolbens. */
     const pistonOnly = tb === 'vp';
-    const QmaxAll = pistonOnly ? Qmax : Math.max(Qmax, c.Ahi > 0 ? c.Ahi * v.vmax : 0);
+    /* x-Bereich: Q- und Q²-Achse enden bei Q_dry des montierten Kolbens —
+       bis zum größten Kolben-Ø liefe die Achse weit über den relevanten
+       Bereich hinaus und das machbare Band würde zusammengedrückt. Die
+       Hüllkurve anderer Ø bleibt innerhalb dieses Bereichs sichtbar; nur
+       die t_f-Achse zeigt weiter die gesamte Erreichbarkeit. */
+    const QmaxAll = tb === 'tf' ? Math.max(Qmax, c.Ahi > 0 ? c.Ahi * v.vmax : 0) : Qmax;
     const pTop = pistonOnly ? p0 : Math.max(p0, c.Alo > 0 ? c.FG * 1e3 / (c.Alo * 1e5) : p0);
 
     /* x-Achse: fx bildet Q → Achsenwert ab, ix ist die Umkehrung (für
@@ -136,6 +141,10 @@ export default {
     }
 
     const Qarr = seq(Math.max(Qlo, QmaxAll * 1e-4), QmaxAll, 200);
+    /* Q_dry des montierten Kolbens als Stützstelle: dort endet die
+       Maschinenlinie exakt auf der Achse (sonst bricht sie eine Stützstelle
+       davor ab und hängt über dem Nullpunkt). */
+    if (Qmax > Qarr[0] && Qmax < Qarr[Qarr.length - 1]) { Qarr.push(Qmax); Qarr.sort((a, b) => a - b); }
     if (tb === 'tf') Qarr.reverse();
     const x = Qarr.map(fx);
 

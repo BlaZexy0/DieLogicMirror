@@ -36,6 +36,8 @@ export function lineFrame(w, h, d) {
 export function fillRich(x, s, px, py) {
   s = String(s);
   if (s.indexOf('_') < 0) { x.fillText(s, px, py); return; }
+  /* Ein Kontext mit eigener Index-Ausgabe (SVG-Generator: <tspan>) übernimmt */
+  if (typeof x.fillRich === 'function') { x.fillRich(s, px, py); return; }
   const parts = [];
   const re = /_(?:\{([^}]*)\}|([A-Za-z0-9]+(?:,[A-Za-z0-9]+)*))/g;
   let last = 0, m;
