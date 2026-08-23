@@ -3,7 +3,7 @@
 import { heat, limit } from './helpers.js';
 import { fmt } from '../core/format.js';
 import { afterGate } from '../core/physics.js';
-import { frac } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 const PI = Math.PI;
 
@@ -44,8 +44,8 @@ export default {
 <h4>Füllzeit, Kolben-Ø und Kolbengeschwindigkeit</h4>
 <p class="math-note">Kontinuität: das Volumen ab Anschnitt V<sub>a</sub> (Bauteil + Überlauf, ohne Anguss und
 Pressrest) muss in der Füllzeit t<sub>f</sub> vom Kolben gefördert werden:</p>
-<div class="eq">V<sub>a</sub> = ${frac('m<sub>Bauteil</sub> + m<sub>Überlauf</sub>', 'ρ')}&emsp;&emsp;Q = ${frac('V<sub>a</sub>', 't<sub>f</sub>')} = A<sub>K</sub> · v<sub>p</sub></div>
-<div class="eq">⇒&emsp;v<sub>p</sub>(t<sub>f</sub>, D) = ${frac('V<sub>a</sub>', 't<sub>f</sub> · A<sub>K</sub>')} = ${frac('4 · V<sub>a</sub>', 't<sub>f</sub> · π · D²')}</div>
+${eq('V_{a} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Überlauf}}}{\\rho } \\qquad Q = \\frac{V_{a}}{t_{f}} = A_{K} \\cdot v_{p}')}
+${eq('\\Rightarrow \\quad v_{p}(t_{f}, D) = \\frac{V_{a}}{t_{f} \\cdot A_{K}} = \\frac{4 \\cdot V_{a}}{t_{f} \\cdot \\pi \\cdot D^{2}}')}
 <p class="math-note">Die Heatmap zeigt v<sub>p</sub> über (t<sub>f</sub>, D); die weißen Konturen sind Linien
 konstanter Kolbengeschwindigkeit. Die Farbskala endet bei v<sub>max</sub> der Maschine — schraffierte Bereiche
 verlangen mehr Kolbengeschwindigkeit, als die Maschine kann; die Grenzkurve ist D(t) = √(4·V<sub>a</sub>/(π·t·v<sub>max</sub>)). Aktuell: V<sub>a</sub> = <b data-m="Va"></b> ·

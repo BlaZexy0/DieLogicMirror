@@ -4,7 +4,7 @@ import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { pistonArea } from '../core/physics.js';
 import { theme } from '../core/theme.js';
-import { frac } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 export default {
   id: 'vent',
@@ -36,7 +36,7 @@ export default {
 <p class="math-note">Kontinuität: die vom Kolben verdrängte Luft muss durch die Entlüftungsfläche
 A<sub>ent</sub> entweichen — je kleiner die Fläche im Verhältnis zur Kolbenfläche, desto schneller die
 Luftströmung:</p>
-<div class="eq">v<sub>ent</sub> = v<sub>p</sub> · ${frac('A<sub>K</sub>', 'A<sub>ent</sub>')}</div>
+${eq('v_{\\text{ent}} = v_{p} \\cdot \\frac{A_{K}}{A_{\\text{ent}}}')}
 <p class="math-note">Aktuell: A<sub>K</sub> = <b data-m="AK"></b> · Übersetzung A<sub>K</sub>/A<sub>ent</sub> = <b data-m="ratio"></b> ·
 bei v₂ = <span data-m="vsel"></span> (Mittel nach Anschnitt, aus der Schusskurve): v<sub>ent</sub> = <b data-m="vent"></b></p>`;
   },

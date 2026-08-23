@@ -4,7 +4,7 @@ import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { pMaxMachine } from '../core/physics.js';
 import { theme } from '../core/theme.js';
-import { frac } from './mathfmt.js';
+import { eq, tex } from './mathfmt.js';
 
 /* Kraftbilanz F = 100·p·A·S·k aus shared/clampmodel.js — eine Umrechnung für
    Dashboard, KPI-Zeile und STL-Analyse. */
@@ -42,10 +42,10 @@ export default {
 <h4>Erforderliche Schließkraft</h4>
 <p class="math-note">Umkehrung der Sprengflächen-Beziehung: bei gegebener Sprengfläche A und Auslegungsdruck p
 muss die Maschine mindestens aufbringen:</p>
-<div class="eq">F<sub>erf</sub>(p) = S · p · A · 100&emsp;(F in kN, p in bar, A in m² — 1 bar = 100 kN/m²)</div>
+${eq('F_{\\text{erf}}(p) = S \\cdot p \\cdot A \\cdot 100 \\quad (F\\ \\text{in kN,}\\ p\\ \\text{in bar,}\\ A\\ \\text{in}\\ m^{2} \\;\\text{—}\\; 1\\ \\text{bar}\\ = 100\\ \\text{kN}/\\text{m}^{2})')}
 <p class="math-note">Die beiden Kurven zeigen S = 1 (physikalisches Minimum) und den gewählten
 Sicherheitsfaktor; die gestrichelte Linie ist die verfügbare Maschinenkraft. Umstellung nach A liefert das
-Diagramm „Zulässige Sprengfläche": A<sub>max</sub> = ${frac('F<sub>schließ</sub>', '100 · S · p')}.</p>
+Diagramm „Zulässige Sprengfläche": A<sub>max</sub> = ${tex('\\frac{F_{\\text{schließ}}}{100 \\cdot S \\cdot p}')}.</p>
 <p class="math-note">Aktuell bei p = <b data-m="psel"></b>: F<sub>erf</sub> = <b data-m="freq"></b> ·
 verfügbar = <b data-m="favail"></b> · Auslastung = <b data-m="util"></b></p>`;
   },

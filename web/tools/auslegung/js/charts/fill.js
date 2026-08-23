@@ -3,7 +3,7 @@
 import { heat, limit } from './helpers.js';
 import { fmt } from '../core/format.js';
 import { total } from '../core/physics.js';
-import { frac } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 const PI = Math.PI;
 
@@ -33,8 +33,8 @@ export default {
 <h4>Füllgrad der Füllkammer</h4>
 <p class="math-note">Das Dosiervolumen (inkl. Pressrest — siehe Konvention in der Seitenleiste) im Verhältnis
 zum Kammervolumen:</p>
-<div class="eq">V<sub>dos</sub> = ${frac('m<sub>Bauteil</sub> + m<sub>Anguss</sub> + m<sub>Überlauf</sub> + m<sub>Pressrest</sub>', 'ρ')}</div>
-<div class="eq">φ(L, D) = ${frac('V<sub>dos</sub>', 'A<sub>K</sub> · L')} · 100 % = ${frac('4 · V<sub>dos</sub>', 'π · D² · L')} · 100 %</div>
+${eq('V_{\\text{dos}} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Anguss}} + m_{\\text{Überlauf}} + m_{\\text{Pressrest}}}{\\rho }')}
+${eq('\\varphi (L, D) = \\frac{V_{\\text{dos}}}{A_{K} \\cdot L} \\cdot 100 \\% = \\frac{4 \\cdot V_{\\text{dos}}}{\\pi \\cdot D^{2} \\cdot L} \\cdot 100 \\%')}
 <p class="math-note">Die Heatmap zeigt φ über (L, D); niedriger Füllgrad heißt viel Luft in der Kammer,
 hoher Füllgrad wenig Reserve für die 1. Phase. Schraffierte Bereiche liegen über 100 % — das Dosiervolumen
 passt dort nicht in die Kammer; die Grenzkurve ist D₁₀₀(L) = √(4·V<sub>dos</sub>/(π·L)). Aktuell: V<sub>dos</sub> = <b data-m="Vdos"></b> ·

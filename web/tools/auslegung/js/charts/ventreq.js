@@ -4,7 +4,7 @@ import { series, line, limit, refline } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { total, afterGate, pistonArea } from '../core/physics.js';
 import { theme } from '../core/theme.js';
-import { frac } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 export default {
   id: 'ventreq',
@@ -52,7 +52,7 @@ export default {
 <p class="math-note">Die Luft im Formhohlraum (≈ verdrängtes Gesamtvolumen der Füllung,
 V<sub>luft</sub> = m<sub>ges</sub> / ρ) muss während der Füllzeit t<sub>f</sub> mit höchstens
 v<sub>luft,max</sub> entweichen — sonst staut sie sich und wird eingeschlossen:</p>
-<div class="eq">A<sub>ent,erf</sub>(t<sub>f</sub>) = ${frac('V<sub>luft</sub>', 't<sub>f</sub> · v<sub>luft,max</sub>')}</div>
+${eq('A_{\\text{ent},\\text{erf}}(t_{f}) = \\frac{V_{\\text{luft}}}{t_{f} \\cdot v_{\\text{luft},\\max}}')}
 <p class="math-note">Kurze Füllzeiten verlangen große Entlüftungsflächen (Hyperbel). Die gestrichelten Linien
 zeigen die vorhandene Entlüftungsfläche und als Referenz die Anschnittfläche — die Entlüftung liegt
 üblicherweise in deren Größenordnung (häufige Faustregel: rund die Hälfte der Anschnittfläche).</p>

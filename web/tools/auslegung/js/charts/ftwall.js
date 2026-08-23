@@ -3,7 +3,7 @@
 import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
-import { frac } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 export default {
   id: 'ftwall',
@@ -29,7 +29,7 @@ export default {
 <p class="math-note">Die zulässige Füllzeit wächst linear mit der Wandstärke s und mit der Überhitzung der
 Schmelze und sinkt mit kälterer Form. Der zulässige erstarrte Anteil S<sub>zul</sub> geht über die
 Z-Konstante als äquivalente Temperaturspanne ein:</p>
-<div class="eq">t<sub>f</sub>(s) = k · s · ${frac('T<sub>guss</sub> − T<sub>fließ</sub> + S<sub>zul</sub> · Z', 'T<sub>fließ</sub> − T<sub>form</sub>')}</div>
+${eq('t_{f}(s) = k \\cdot s \\cdot \\frac{T_{\\text{guss}} - T_{\\text{fließ}} + S_{\\text{zul}} \\cdot Z}{T_{\\text{fließ}} - T_{\\text{form}}}')}
 <p class="math-note">Zähler: nutzbare thermische Reserve der Schmelze [°C] · Nenner: treibendes
 Temperaturgefälle zur Form [°C] · k: NADCA-Faktor [ms/mm].</p>
 <p class="math-note">Aktuell: Zähler = <b data-m="num"></b> · Nenner = <b data-m="den"></b> ·

@@ -48,6 +48,7 @@ dielogic/
 │   │                wurzel-absolut (/shared/…, /assets/…, /tools/…), Verschachtelung ist egal.
 │   ├── index.html       Landingpage (Hero, Schritte, Werkzeuge, Katalog, Theorie, Preise)
 │   ├── shared/          Laufzeit-Bausteine aller Seiten (klassische Scripts, vor den Modulen):
+│   │   ├── vendor/katex/    KaTeX (lokal, MIT) — rendert alle Formeln der Site; siehe README dort
 │   │   ├── palette.js       DIE Farbquelle (window.__PALETTE__; shared.css spiegelt sie,
 │   │   │                    Test prüft Gleichheit + WCAG-Kontrast)
 │   │   ├── shared.css       Basis-Styles + :root-Tokens
@@ -70,7 +71,7 @@ dielogic/
 │   │                        docs/heat_flow_hpd_die.md)
 │   ├── konto/           Konto: Einladung einlösen, Anmelden, Projekte/Revisionen,
 │   │                    Mitglieder, Einladungen, Stammdaten (Admin)
-│   ├── theorie/         Theorie-Artikel (Formeln im .eq-Markup, statische SVGs aus assets/)
+│   ├── theorie/         Theorie-Artikel (Formeln als TeX über KaTeX, statische SVGs aus assets/)
 │   ├── recht/           Rechts-/Unternehmensseiten — Mustertexte mit [Platzhaltern]!
 │   │                    kontakt, ueber-uns, impressum (§ 5 DDG), datenschutz (DSGVO),
 │   │                    agb, widerruf (+ Musterformular)

@@ -4,7 +4,7 @@ import { series, line, target } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { pistonArea } from '../core/physics.js';
 import { theme } from '../core/theme.js';
-import { frac } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 export default {
   id: 'gate',
@@ -43,7 +43,7 @@ export default {
 <p class="math-note">Kontinuität: derselbe Volumenstrom fließt durch Kolben und Anschnitt,
 Q = A<sub>K</sub> · v<sub>p</sub> = A<sub>a</sub> · v<sub>a</sub>. Für eine Ziel-Anschnittgeschwindigkeit
 v<sub>a</sub> folgt die nötige Fläche:</p>
-<div class="eq">A<sub>a</sub>(v<sub>p</sub>) = ${frac('A<sub>K</sub> · v<sub>p</sub>', 'v<sub>a</sub>')}</div>
+${eq('A_{a}(v_{p}) = \\frac{A_{K} \\cdot v_{p}}{v_{a}}')}
 <p class="math-note">Die beiden Kurven gelten für v<sub>a</sub> = Ziel-min (obere Kurve — langsame Zielgeschwindigkeit
 braucht große Fläche) und Ziel-max (untere Kurve); dazwischen liegt das zulässige Fenster.</p>
 <p class="math-note">Aktuell bei v₂ = <span data-m="vsel"></span> (Mittel nach Anschnitt, aus der Schusskurve):

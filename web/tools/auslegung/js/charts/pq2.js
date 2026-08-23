@@ -17,7 +17,7 @@ import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { pistonArea, afterGate, total } from '../core/physics.js';
 import { theme } from '../core/theme.js';
-import { frac, sqrt } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 const PI = Math.PI, S3 = Math.sqrt(3);
 
@@ -198,7 +198,7 @@ Carleton University, 1997, Kap. 2–3 — dort nach CSIRO (P–Q², 1977) und Ka
 Envelope). Gleichungsnummern unten beziehen sich auf diese Arbeit.</p>
 
 <h4>1 · Grundgrößen</h4>
-<div class="eq">A<sub>K</sub> = ${frac('π · D²', '4')}&emsp;·&emsp;p₀ = ${frac('F<sub>G</sub>', 'A<sub>K</sub>')} = P<sub>acc</sub> · ${frac('A<sub>h</sub>', 'A<sub>K</sub>')}&emsp;·&emsp;Q<sub>dry</sub> = A<sub>K</sub> · v<sub>dry</sub>&emsp;·&emsp;V<sub>a</sub> = ${frac('m<sub>Bauteil</sub> + m<sub>Überlauf</sub>', 'ρ')}</div>
+${eq('A_{K} = \\frac{\\pi \\cdot D^{2}}{4} \\qquad p_{0} = \\frac{F_{G}}{A_{K}} = P_{\\text{acc}} \\cdot \\frac{A_{h}}{A_{K}} \\qquad Q_{\\text{dry}} = A_{K} \\cdot v_{\\text{dry}} \\qquad V_{a} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Überlauf}}}{\\rho }')}
 <p class="math-note">Die Gießkraft F<sub>G</sub> = P<sub>acc</sub>·A<sub>h</sub> stammt aus Akkumulatordruck × Antriebskolbenfläche;
 v<sub>dry</sub> ist die <b>Trockenschuss-Geschwindigkeit</b> (Kolben ohne Metall, alle Verluste im Schusskreis) —
 unser Eingabefeld „Kolbengeschw. max.". Aktuell: A<sub>K</sub> = <b data-m="AK"></b> · p₀ = <b data-m="p0"></b> ·
@@ -207,7 +207,7 @@ Q<sub>dry</sub> = <b data-m="Qmax"></b> · V<sub>a</sub> = <b data-m="Va"></b></
 <h4>2 · Werkzeuglinie (Die Line) — Gl. 2.3/2.5</h4>
 <p class="math-note">Energieerhaltung (Bernoulli) vom Kolben bis zum Anschnitt, Kavitätsdruck ≈ 0 bei
 funktionierender Entlüftung. Alle Verluste stecken im zusammengesetzten Durchflussbeiwert:</p>
-<div class="eq">P = C<sub>t</sub> · v<sub>a</sub>²&emsp;(2.3)&emsp;⇒&emsp;mit v<sub>a</sub> = Q/A<sub>a</sub>:&emsp;P<sub>W</sub>(Q) = ${frac('C<sub>t</sub>', 'A<sub>a</sub>²')} · Q²&emsp;(2.5)&emsp;mit&emsp;C<sub>t</sub> = ${frac('ρ', '2 · C<sub>d</sub>²')}</div>
+${eq('P = C_{t} \\cdot v_{a}^{2} \\quad (2.3) \\quad \\Rightarrow \\quad\\ \\text{mit}\\ v_{a} = Q/A_{a}: \\quad P_{W}(Q) = \\frac{C_{t}}{A_{a}^{2}} \\cdot Q^{2} \\quad (2.5) \\quad\\ \\text{mit}\\ \\quad C_{t} = \\frac{\\rho }{2 \\cdot C_{d}^{2}}')}
 <p class="math-note">C<sub>d</sub> ≈ 0,5 für Aluminium, 0,5–0,6 für Zink; C<sub>t</sub> misst die Effizienz des
 Lauf-/Anschnittsystems und wird in der Praxis aus Messungen bestimmt. Steigung der Geraden im Q²-Modus:
 C<sub>W</sub> = C<sub>t</sub>/A<sub>a</sub>². Aktuell: C<sub>W</sub> = <b data-m="CW"></b></p>
@@ -216,7 +216,7 @@ C<sub>W</sub> = C<sub>t</sub>/A<sub>a</sub>². Aktuell: C<sub>W</sub> = <b data-
 <p class="math-note">Hydraulikseite: P<sub>h</sub> = P<sub>acc</sub> − K<sub>v</sub>·v² (2.6); Kräftegleichgewicht am
 Kolben P = P<sub>h</sub>·A<sub>h</sub>/A<sub>K</sub> (2.7). Mit v = Q/A<sub>K</sub> folgt die Karni-Form und daraus die
 von CSIRO experimentell bestätigte Form über die Trockenschuss-Geschwindigkeit:</p>
-<div class="eq">P<sub>M</sub>(Q) = P<sub>acc</sub> · ${frac('A<sub>h</sub>', 'A<sub>K</sub>')} − K<sub>t</sub> · Q²&emsp;(2.8)&emsp;⇔&emsp;P<sub>M</sub>(Q) = p₀ · ( 1 − ${frac('Q²', 'Q<sub>dry</sub>²')} )&emsp;(2.9)</div>
+${eq('P_{M}(Q) = P_{\\text{acc}} \\cdot \\frac{A_{h}}{A_{K}} - K_{t} \\cdot Q^{2} \\quad (2.8) \\quad \\Leftrightarrow \\quad P_{M}(Q) = p_{0} \\cdot \\left( 1 - \\frac{Q^{2}}{Q_{\\text{dry}}^{2}} \\right) \\quad (2.9)')}
 <p class="math-note">Nullstellen: Q = 0 → voller statischer Druck p₀; Q = Q<sub>dry</sub> → alle Leistung geht in
 die Kolbenbewegung, kein Druck aufs Metall. Im Q²-Modus eine Gerade mit Steigung −p₀/Q<sub>dry</sub>².</p>
 
@@ -224,7 +224,7 @@ die Kolbenbewegung, kein Druck aufs Metall. Im Q²-Modus eine Gerade mit Steigun
 <p class="math-note">Jeder Kolben-Ø liefert eine eigene Maschinenlinie. Die Hüllkurve ist die Einhüllende aller
 dieser Linien — <b>Herleitung A (Karni, physikalisch)</b>: Die Leistung des Akkumulators ist näherungsweise
 konstant, Power = P·A<sub>K</sub>·v = P<sub>acc</sub>·A<sub>h</sub>·v ≈ const (2.10–2.12) — eine Hyperbel P·Q = const:</p>
-<div class="eq">P<sub>env</sub>(Q) = ${frac('a', 'Q')}&emsp;(2.13)&emsp;mit&emsp;a = ${frac('2·√3', '9')} · A<sub>h</sub> · P<sub>acc</sub> · v<sub>dry</sub> = ${frac('2·√3', '9')} · F<sub>G</sub> · v<sub>dry</sub>&emsp;(2.14)</div>
+${eq('P_{\\text{env}}(Q) = \\frac{a}{Q} \\quad (2.13) \\quad\\ \\text{mit}\\ \\quad a = \\frac{2 \\cdot \\sqrt{3}}{9} \\cdot A_{h} \\cdot P_{\\text{acc}} \\cdot v_{\\text{dry}} = \\frac{2 \\cdot \\sqrt{3}}{9} \\cdot F_{G} \\cdot v_{\\text{dry}} \\quad (2.14)')}
 <p class="math-note"><b>Herleitung B (formal)</b>: p<sub>M</sub>(Q; A<sub>K</sub>) = F<sub>G</sub>/A<sub>K</sub> − F<sub>G</sub>·Q²/(A<sub>K</sub>³·v<sub>dry</sub>²)
 nach dem Scharparameter A<sub>K</sub> maximieren: ∂p/∂A<sub>K</sub> = 0 ⇒ A<sub>K,opt</sub>(Q) = √3·Q/v<sub>dry</sub>;
 Einsetzen liefert dieselbe Hyperbel. Jede Kolbenparabel berührt die Hüllkurve genau einmal — bei
@@ -241,19 +241,19 @@ a = <b data-m="aMPE"></b> · gültig für Q = <b data-m="Qt"></b> · Berührpunk
 <h4>5 · Arbeitspunkt — Gl. 2.15/2.16</h4>
 <p class="math-note">Schnittpunkt Maschinen- × Werkzeuglinie. Mit der Hüllkurven-Konstante a lässt sich die
 Maschinenlinie äquivalent schreiben und der Arbeitspunkt lösen:</p>
-<div class="eq">P<sub>M</sub> = p₀ · ( 1 − ${frac('4', '27')} · ${frac('p₀² · Q²', 'a²')} )&emsp;(2.15)&emsp;⇒&emsp;Q<sub>s</sub>² = ${frac('p₀', 'C<sub>t</sub>/A<sub>a</sub>² + (4/27) · p₀²/a²')}&emsp;(2.16)</div>
-<div class="eq">gleichwertig:&emsp;Q<sub>s</sub> = ${sqrt(frac('p₀', 'C<sub>W</sub> + p₀ / Q<sub>dry</sub>²'), true)}&emsp;&emsp;p<sub>s</sub> = C<sub>W</sub> · Q<sub>s</sub>²</div>
+${eq('P_{M} = p_{0} \\cdot \\left( 1 - \\frac{4}{27} \\cdot \\frac{p_{0}^{2} \\cdot Q^{2}}{a^{2}} \\right) \\quad (2.15) \\quad \\Rightarrow \\quad Q_{s}^{2} = \\frac{p_{0}}{C_{t}/A_{a}^{2} + (4/27) \\cdot p_{0}^{2}/a^{2}} \\quad (2.16)')}
+${eq('\\text{gleichwertig:}\\ \\quad Q_{s} = \\sqrt{\\frac{p_{0}}{C_{W} + p_{0} / Q_{\\text{dry}}^{2}}} \\qquad p_{s} = C_{W} \\cdot Q_{s}^{2}')}
 <p class="math-note">Aktuell: Q<sub>s</sub> = <b data-m="Qs"></b> · p<sub>s</sub> = <b data-m="ps"></b></p>
 
 <h4>6 · Achsenmodi und Operational Window — Gl. 3.1–3.3</h4>
 <p class="math-note">Die Druckachse lässt sich in Anschnittgeschwindigkeit übersetzen, die
 Volumenstromachse in Füllzeit — dieselben zwei Linien in vier Koordinaten:</p>
-<div class="eq">v<sub>a</sub>(P) = C<sub>d</sub> · ${sqrt(frac('2 · P', 'ρ'), true)}&emsp;(3.1)&emsp;·&emsp;v<sub>p</sub> = ${frac('Q', 'A<sub>K</sub>')}&emsp;·&emsp;t<sub>f</sub> = ${frac('V<sub>a</sub>', 'Q')}&emsp;(3.3)</div>
+${eq('v_{a}(P) = C_{d} \\cdot \\sqrt{\\frac{2 \\cdot P}{\\rho }} \\quad (3.1) \\qquad v_{p} = \\frac{Q}{A_{K}} \\qquad t_{f} = \\frac{V_{a}}{Q} \\quad (3.3)')}
 <p class="math-note">Das <b>Operational Window</b> ist das Rechteck [t<sub>f,min</sub>, t<sub>f,max</sub>] ×
 [v<sub>a,min</sub>, v<sub>a,max</sub>]. Im PQ²-Plan wird es nach dem UPCT-TFG (Gl. 2.25–2.27) konvertiert:
 die t<sub>f</sub>-Seiten sind Vertikalen bei Q = V<sub>a</sub>/t<sub>f</sub>, die v<sub>a</sub>-Seiten
 Horizontalen auf der Druckachse — <b>unabhängig von der Anschnittfläche</b>:</p>
-<div class="eq">P(v<sub>a</sub>) = ${frac('ρ', '2')} · ( ${frac('v<sub>a</sub>', 'C<sub>d</sub>')} )²&emsp;(UPCT 2.26)&emsp;·&emsp;Q(t<sub>f</sub>) = ${frac('V<sub>a</sub>', 't<sub>f</sub>')}&emsp;(UPCT 2.27)</div>
+${eq('P(v_{a}) = \\frac{\\rho }{2} \\cdot \\left( \\frac{v_{a}}{C_{d}} \\right)^{2} \\quad\\ (\\text{UPCT 2.26}) \\qquad Q(t_{f}) = \\frac{V_{a}}{t_{f}} \\quad\\ (\\text{UPCT 2.27})')}
 <p class="math-note">Die Werkzeuglinie schneidet die v<sub>a</sub>-Horizontale genau bei Q = v<sub>a</sub>·A<sub>a</sub> —
 die alte Darstellung als Vertikale ist der Spezialfall „A<sub>a</sub> fest". Verletzungsfolgen (Fig. 3.1/3.2):
 über t<sub>f,max</sub> (Zone A) kalte Läufe und schlechte Oberflächen, unter v<sub>a,min</sub> (B) poröser Guss
@@ -263,7 +263,7 @@ am Arbeitspunkt: v<sub>p</sub> = <b data-m="vp"></b> · v<sub>a</sub> = <b data-
 t<sub>f</sub> = <b data-m="tf"></b></p>
 
 <h4>6b · y-Achsenmodi: Hydraulikdruck und Leistung</h4>
-<div class="eq">P<sub>h</sub> = P · ${frac('A<sub>K</sub>', 'A<sub>h</sub>')} = P · ${frac('P<sub>acc</sub>', 'p₀')}&emsp;·&emsp;Leistung = P · Q&emsp;⇒&emsp;Hüllkurve P·Q = a wird die Horizontale y = a</div>
+${eq('P_{h} = P \\cdot \\frac{A_{K}}{A_{h}} = P \\cdot \\frac{P_{\\text{acc}}}{p_{0}} \\qquad\\ \\text{Leistung}\\ = P \\cdot Q \\quad \\Rightarrow \\quad\\ \\text{Hüllkurve}\\ P \\cdot Q = a\\ \\text{wird die Horizontale}\\ y = a')}
 <p class="math-note">Der Hydraulikdruck-Modus skaliert die Druckachse aufs Antriebssystem (Kräftegleichgewicht
 am Kolben, statischer Achsenabschnitt = P<sub>acc</sub>); der Leistungsmodus zeigt P·Q — die Maschinenkurve
 jedes Kolben-Ø berührt dort ihr Maximum exakt auf der a-Linie (bei v<sub>p</sub> = v<sub>dry</sub>/√3), die
@@ -276,11 +276,11 @@ P<sub>acc</sub> = <b data-m="pAccM"></b> · a = <b data-m="aMPE2"></b></p>
 
 <h4>7 · Füllzeit- und v_a-Grenzen</h4>
 <p class="math-note">Untergrenzen der Füllzeit aus drei unabhängigen Bedingungen; die schärfste gilt:</p>
-<div class="eq">Entlüftung (Zone C):&ensp;t<sub>f</sub> ≥ t<sub>vent</sub> = ${frac('V<sub>luft</sub>', 'A<sub>ent</sub> · v<sub>luft,max</sub>')}&emsp;·&emsp;Erosion:&ensp;t<sub>f</sub> ≥ ${frac('V<sub>a</sub>', 'A<sub>a</sub> · v<sub>a,max</sub>')}&emsp;·&emsp;Hydraulik:&ensp;t<sub>f</sub> ≥ ${frac('V<sub>a</sub>', 'A<sub>a</sub> · v<sub>a,hydr</sub>')}&ensp;mit&ensp;v<sub>a,hydr</sub> = C<sub>d</sub> · ${sqrt(frac('2 · p₀', 'ρ'), true)}</div>
-<div class="eq">Obergrenzen:&ensp;t<sub>f</sub> ≤ ${frac('V<sub>a</sub>', 'A<sub>a</sub> · v<sub>a,min</sub>')}&ensp;(Zerstäubung)&emsp;und&emsp;t<sub>f</sub> ≤ t<sub>max</sub>&ensp;(thermisch — NADCA-Formel, siehe „Empfohlene Füllzeit")</div>
+${eq('\\text{Entlüftung}\\\\ (\\text{Zone}\\ C): \\; t_{f} \\ge t_{\\text{vent}} = \\frac{V_{\\text{luft}}}{A_{\\text{ent}} \\cdot v_{\\text{luft},\\max}} \\qquad\\ \\text{Erosion:}\\ \\; t_{f} \\ge \\frac{V_{a}}{A_{a} \\cdot v_{a,\\max}} \\qquad\\ \\text{Hydraulik:}\\ \\; t_{f} \\ge \\frac{V_{a}}{A_{a} \\cdot v_{a,\\text{hydr}}} \\;\\ \\text{mit}\\ \\; v_{a,\\text{hydr}} = C_{d} \\cdot \\sqrt{\\frac{2 \\cdot p_{0}}{\\rho }}')}
+${eq('\\text{Obergrenzen:}\\ \\; t_{f} \\le \\frac{V_{a}}{A_{a} \\cdot v_{a,\\min}} \\;\\ (\\text{Zerstäubung}) \\quad\\ \\text{und}\\ \\quad t_{f} \\le t_{\\max} \\;\\ (\\text{thermisch}\\ \\;\\text{—}\\; \\ \\text{NADCA-Formel, siehe}\\ \\text{“Empfohlene Füllzeit”})')}
 <p class="math-note"><b>Zerstäubungs-Minimum (Herman-J-Faktor, UPCT Gl. 2.38):</b> unabhängig vom NADCA-Zielband
 liefert das Atomisierungs-Kriterium eine harte Untergrenze der Anschnittgeschwindigkeit:</p>
-<div class="eq">v<sub>a</sub><sup>1.71</sup> · e<sub>p</sub> · ρ ≥ J&emsp;⇒&emsp;v<sub>a,min</sub>(J) = ( ${frac('J', 'ρ · e<sub>p</sub>')} )<sup>1/1.71</sup></div>
+${eq('v_{a}^{1.71} \\cdot e_{p} \\cdot \\rho \\ge J \\quad \\Rightarrow \\quad v_{a,\\min}(J) = \\left( \\frac{J}{\\rho \\cdot e_{p}} \\right)^{1/1.71}')}
 <p class="math-note">Empirische Formel in inch-pound-Einheiten (v in in/s, Anschnittdicke e<sub>p</sub> in inch,
 ρ in lb/in³); J &gt; 750 gilt als konservativ (Herman [5], UPCT §2.3.3). Im Fenster wirkt die schärfere der
 beiden Untergrenzen. Aktuell: J = <b data-m="Jat"></b> · e<sub>p</sub> = <b data-m="ep"></b> ·
@@ -297,7 +297,7 @@ t<sub>max,Zerstäubung</sub> = <b data-m="tmaxZ"></b> · Arbeitspunkt t<sub>f</s
 <p class="math-note">Werkzeuglinien durch die Ecken des Operational Window liefern die zulässige Spanne der
 Anschnittfläche (Fig. 3.3): steilste Linie durch (t<sub>f,max</sub>, v<sub>a,max</sub>), flachste durch
 (t<sub>f,min</sub>, v<sub>a,min</sub>):</p>
-<div class="eq">A<sub>a,min</sub> = ${frac('V<sub>a</sub>', 't<sub>f,max</sub> · v<sub>a,max</sub>')}&emsp;&emsp;A<sub>a,max</sub> = ${frac('V<sub>a</sub>', 't<sub>f,min</sub> · v<sub>a,min</sub>')}&emsp;mit&ensp;t<sub>f,min</sub> = max(t<sub>vent</sub>, t<sub>min,J</sub>)</div>
+${eq('A_{a,\\min} = \\frac{V_{a}}{t_{f,\\max} \\cdot v_{a,\\max}} \\qquad A_{a,\\max} = \\frac{V_{a}}{t_{f,\\min} \\cdot v_{a,\\min}} \\quad\\ \\text{mit}\\ \\; t_{f,\\min} = \\max(t_{\\text{vent}}, t_{\\min,J})')}
 <p class="math-note">Die Länge der Werkzeuglinie innerhalb von Fenster und Hüllkurve ist nach Karni ein Maß für die
 <b>Flexibilität</b> der Auslegung. Aktuell: zulässige Spanne <b data-m="AgRange"></b> · gewählt
 A<sub>a</sub> = <b data-m="AgSel"></b></p>`;

@@ -6,7 +6,7 @@ import { series, line, refline } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { pMaxMachine } from '../core/physics.js';
 import { theme } from '../core/theme.js';
-import { frac } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 const CLAMP = window.__CLAMP_MODEL__;
 function leverK(v) {
@@ -64,19 +64,19 @@ export default {
 <p class="math-note">Der Metalldruck p wirkt auf die projizierte Fläche der Kavität in Öffnungsrichtung
 (Sprengfläche A) und versucht, die Form aufzudrücken. Die Schließkraft muss mit Sicherheitsfaktor S
 dagegenhalten:</p>
-<div class="eq">F<sub>auf</sub> = p · A&emsp;&emsp;F<sub>schließ</sub> ≥ S · p · A</div>
+${eq('F_{\\text{auf}} = p \\cdot A \\qquad F_{\\text{schließ}} \\ge S \\cdot p \\cdot A')}
 
 <h4>2 · Außermittigkeit (Hebelfaktor k)</h4>
 <p class="math-note">Liegt der Schwerpunkt der Sprengfläche um (e<sub>x</sub>, e<sub>y</sub>) außerhalb
 der Säulenmitte (Säulenabstände a<sub>x</sub> × a<sub>y</sub>, starre Platte, lineare Lastverteilung),
 trägt die meistbelastete Säule das k-fache einer zentrisch belasteten Säule:</p>
-<div class="eq">k = 1 + ${frac('2 · |e<sub>x</sub>|', 'a<sub>x</sub>')} + ${frac('2 · |e<sub>y</sub>|', 'a<sub>y</sub>')}</div>
+${eq('k = 1 + \\frac{2 \\cdot |e_{x}|}{a_{x}} + \\frac{2 \\cdot |e_{y}|}{a_{y}}')}
 <p class="math-note">Bei zentrischem Schwerpunkt (e = 0) ist k = 1. Abheben, wenn k − 1 ≥ 1 —
 dann klafft die Form an der gegenüberliegenden Ecke (F<sub>Säule,min</sub> ≤ 0).
 Aktuell: k = <b data-m="k"></b> ⇒ <b data-m="lift"></b></p>
 
 <h4>3 · Zulässige Sprengfläche</h4>
-<div class="eq">A<sub>max</sub>(p) = ${frac('F<sub>schließ</sub>', '100 · S · k · p')}&emsp;&emsp;(A [m²], F [kN], p [bar] — 1 bar = 100 kN/m²)</div>
+${eq('A_{\\max}(p) = \\frac{F_{\\text{schließ}}}{100 \\cdot S \\cdot k \\cdot p} \\qquad (A [\\text{m}^{2}], F [\\text{kN}], p [\\text{bar}] \\;\\text{—}\\; 1\\ \\text{bar}\\ = 100\\ \\text{kN}/\\text{m}^{2})')}
 <p class="math-note">Aktuell bei p = <b data-m="psel"></b>: A<sub>max</sub>(S = 1, k = 1) = <b data-m="a1"></b> ·
 A<sub>max</sub>(S = <span data-m="S"></span>, k = 1) = <b data-m="aS"></b> ·
 A<sub>max</sub>(S = <span data-m="S2"></span>, k = <span data-m="k2"></span>) = <b data-m="aK"></b> ·

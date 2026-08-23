@@ -6,7 +6,7 @@
 import { series, line, target } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
-import { frac, sqrt } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 const PI = Math.PI;
 
@@ -43,13 +43,13 @@ export default {
 <h4>1 · Spezifischer Gießdruck</h4>
 <p class="math-note">Die dynamische Gießkraft F<sub>G</sub> wirkt über die Kolbenfläche auf die Schmelze —
 das ist derselbe statische Metalldruck p₀ wie im PQ²-Diagramm:</p>
-<div class="eq">p<sub>spez</sub>(D) = ${frac('F<sub>G</sub>', 'A<sub>K</sub>')} = ${frac('4 · F<sub>G</sub>', 'π · D²')}&emsp;(in Einheiten: p [bar] = 10⁴ · F [kN] / A [mm²])</div>
+${eq('p_{\\text{spez}}(D) = \\frac{F_{G}}{A_{K}} = \\frac{4 \\cdot F_{G}}{\\pi \\cdot D^{2}} \\quad\\ (\\text{in Einheiten:}\\ p [\\text{bar}] = 10^{4} \\cdot F [\\text{kN}] / A [\\text{mm}^{2}])')}
 
 <h4>2 · Abgeleitetes Zielband</h4>
 <p class="math-note">Untergrenze ist der Auslegungsdruck p<sub>sel</sub> — weniger liefert der Kolben, als die
 Auslegung verlangt. Obergrenze ist der maximale Nachdruck der Zuhaltung
 p<sub>max</sub> = F<sub>s</sub> / (100 · S · k · A) — mehr hält die Form nicht zu.</p>
-<div class="eq">D(p) = ${sqrt(frac('4 · F<sub>G</sub>', 'π · p'), true)}&emsp;⇒&emsp;Band p<sub>sel</sub> … p<sub>max</sub> ⇔ Ø von D(p<sub>max</sub>) bis D(p<sub>sel</sub>)</div>
+${eq('D(p) = \\sqrt{\\frac{4 \\cdot F_{G}}{\\pi \\cdot p}} \\quad \\Rightarrow \\quad\\ \\text{Band}\\ p_{\\text{sel}} \\dots p_{\\max} \\Leftrightarrow \\text{Ø}\\ \\text{von}\\ D(p_{\\max})\\ \\text{bis}\\ D(p_{\\text{sel}})')}
 <p class="math-note">Aktuell: p<sub>spez</sub>(Ø <span data-m="D"></span>) = <b data-m="p"></b> ·
 Band <span data-m="band"></span> ⇒ Ø-Bereich <b data-m="Dband"></b></p>`;
   },

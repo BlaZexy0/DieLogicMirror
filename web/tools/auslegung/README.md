@@ -20,6 +20,10 @@ Beispiel-Presets (`/shared/examples/*.js`) werden als klassische Skripte vor
 den Modulen geladen; produktiv überlagern die Stammdaten der Organisation
 (`/shared/orgpresets.js`) die Beispiel-Presets.
 
+Formeln in den Mathe-Erklärungen sind TeX und werden über das lokal
+eingebundene KaTeX gerendert (`/shared/vendor/katex`, Helfer `eq()`/`tex()` in
+`js/charts/mathfmt.js`; ohne KaTeX bleibt die TeX-Quelle als `<code>` stehen).
+
 ## Seiten
 
 - **`index.html`** — komplettes Dashboard: alle Eingaben, KPI-Zeile, alle Diagramme.

@@ -9,6 +9,9 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
   <link rel="apple-touch-icon" href="/assets/icon-180.png">
   <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore'})"></script>
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
   <script src="/shared/nav.js"></script>
@@ -312,10 +315,10 @@
       </div>
     </div>
     <details class="zk-eq"><summary>Formeln und Quellen</summary>
-      <div class="eq">Q = G · [h<sub>f</sub> + c<sub>l</sub>·(T<sub>liq</sub> − T<sub>sol</sub>) + c<sub>m</sub>·(T<sub>sol</sub> − T<sub>e</sub>)]&emsp;(12.2)&emsp;·&emsp;c<sub>l</sub> = ½(c<sub>S</sub> + c<sub>L</sub>),&ensp;c<sub>m</sub> = c<sub>20</sub> + <span class="frac"><span class="num">T<sub>sol</sub> + T<sub>e</sub> − 40</span><span class="den">2·T<sub>sol</sub> − 40</span></span>·(c<sub>S</sub> − c<sub>20</sub>)&emsp;·&emsp;Überhitzung G·c<sub>L</sub>·(T<sub>Gieß</sub> − T<sub>liq</sub>) → Gießkammer</div>
-      <div class="eq">Q<sub>U</sub> = Q<sub>Kon+Str</sub> + Q<sub>Pl</sub> + Q<sub>Luft</sub> + Q<sub>Bl</sub> + Q<sub>Spr</sub>&emsp;(12.6)&emsp;·&emsp;Q<sub>T</sub> = Q − Q<sub>U</sub>&emsp;(12.1, 5.19)&emsp;·&emsp;P<sub>T</sub> = Q<sub>T</sub>/τ<sub>z</sub>&emsp;(5.4)</div>
-      <div class="eq">Q<sub>Kon+Str</sub> = 9,7 · 2L(B+H) · τ<sub>z</sub> · (t<sub>fa</sub> − 20)&emsp;(12.7, 12.9)&emsp;·&emsp;Q<sub>Pl</sub> = 100 · τ<sub>z</sub> · 2·B·H · (t<sub>fa</sub> − 55)&emsp;(12.10)&emsp;·&emsp;t<sub>fa</sub> = 20 + 0,6·(T<sub>Form</sub> − 20)&emsp;(12.3)</div>
-      <div class="eq">Q<sub>Luft</sub> = B·H·L · 60 K&emsp;(12.14)&emsp;·&emsp;Q<sub>Bl</sub> = 40 · A<sub>fgr</sub> · τ<sub>bl</sub> · (½(T<sub>e</sub> + T<sub>Form</sub> + 30) − 20)&emsp;(12.15)&emsp;·&emsp;m<sub>Spr</sub> = 0,744 · A<sub>fgr</sub> · 0,01 m · (T<sub>e</sub> − T<sub>Form</sub>)&emsp;(12.21)&emsp;·&emsp;Q<sub>Spr</sub> = 2594 kJ/kg · m<sub>Spr</sub>&emsp;(12.22)</div>
+      <div class="eq">$$Q = G \cdot [h_{f} + c_{l} \cdot (T_{\text{liq}} - T_{\text{sol}}) + c_{m} \cdot (T_{\text{sol}} - T_{e})] \quad (12.2) \qquad c_{l} = \tfrac{1}{2}(c_{S} + c_{L}), \; c_{m} = c_{20} + \frac{T_{\text{sol}} + T_{e} - 40}{2 \cdot T_{\text{sol}} - 40} \cdot (c_{S} - c_{20}) \qquad\ \text{Überhitzung}\ G \cdot c_{L} \cdot (T_{\text{Gieß}} - T_{\text{liq}}) \to \ \text{Gießkammer}$$</div>
+      <div class="eq">$$Q_{U} = Q_{\text{Kon}+\text{Str}} + Q_{\text{Pl}} + Q_{\text{Luft}} + Q_{\text{Bl}} + Q_{\text{Spr}} \quad (12.6) \qquad Q_{T} = Q - Q_{U} \quad (12.1, 5.19) \qquad P_{T} = Q_{T}/\tau _{z} \quad (5.4)$$</div>
+      <div class="eq">$$Q_{\text{Kon}+\text{Str}} = 9{,}7 \cdot 2L(B+H) \cdot \tau _{z} \cdot (t_{\text{fa}} - 20) \quad (12.7, 12.9) \qquad Q_{\text{Pl}} = 100 \cdot \tau _{z} \cdot 2 \cdot B \cdot H \cdot (t_{\text{fa}} - 55) \quad (12.10) \qquad t_{\text{fa}} = 20 + 0{,}6 \cdot (T_{\text{Form}} - 20) \quad (12.3)$$</div>
+      <div class="eq">$$Q_{\text{Luft}} = B \cdot H \cdot L \cdot 60\,\text{K} \quad (12.14) \qquad Q_{\text{Bl}} = 40 \cdot A_{\text{fgr}} \cdot \tau _{\text{bl}} \cdot (\tfrac{1}{2}(T_{e} + T_{\text{Form}} + 30) - 20) \quad (12.15) \qquad m_{\text{Spr}} = 0{,}744 \cdot A_{\text{fgr}} \cdot 0{,}01\,\text{m} \cdot (T_{e} - T_{\text{Form}}) \quad (12.21) \qquad Q_{\text{Spr}} = 2594\ \text{kJ}/\text{kg}\ \cdot m_{\text{Spr}} \quad (12.22)$$</div>
       <p>Wärmeübergangs- und Referenzwerte sind die Erfahrungswerte der Quellen (Luft 20 °C, Aufspannplatten 55 °C, Luft zwischen den offenen Hälften 80 °C, Gravur vor dem Gießen = Formtemperatur + 30 K, α 9,7 / 100 / 40 W/(m²·K)). Formabmessungen: B = H = 0,8 · Säulenabstand der Maschine, L = 0,5·B — bei Bedarf überschreiben. Quellen: Temperiersystem der Druckgießform (Kap. 5), Heizung und Kühlung der Druckgießformen mit Temperiergeräten (Kap. 12); Gleichungsnummern wie dort, Abgleich in <code>docs/heat_flow_hpd_die.md</code>.</p>
     </details>
   </div>

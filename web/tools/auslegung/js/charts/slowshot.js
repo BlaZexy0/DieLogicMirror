@@ -5,7 +5,7 @@
 import { heat, limit } from './helpers.js';
 import { fmt } from '../core/format.js';
 import { total, pistonArea, vCrit } from '../core/physics.js';
-import { sqrt } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 export default {
   id: 'slowshot',
@@ -62,7 +62,7 @@ export default {
 überschlagen und Luft einzuwirbeln. Die Grenzgeschwindigkeit skaliert mit der
 Schwerewellen-Geschwindigkeit √(g·D) und fällt mit dem Füllgrad. DieLogic interpoliert
 die eigene OpenFOAM-CFD-Tabelle (Ø 60–300 mm × φ 0,1–0,9) bilinear:</p>
-<div class="eq">v<sub>krit</sub>(D, φ) = ${sqrt('9,81 · D')} · f(D, φ)&emsp;—&emsp;f aus der CFD-Tabelle (v_krit_sim.csv)</div>
+${eq('v_{\\text{krit}}(D, \\varphi) = \\sqrt{9{,}81 \\cdot D} \\cdot f(D, \\varphi) \\quad \\;\\text{—}\\; \\quad f\\ \\text{aus der CFD-Tabelle}\\\\ (\\text{v\\_krit\\_sim.csv})')}
 <p class="math-note">Die Flachwassertheorie (Deckenkriterium) und die Nogowizin-Näherung sind ab
 mittleren Füllgraden <b>optimistisch</b> — die 3D-Rechnung zeigt Brechen vor Deckenberührung
 (bei φ = 0,7 rund +28 % Theorie-Überschätzung) und bei φ ≥ 0,8 einen zusätzlichen Abschlag für

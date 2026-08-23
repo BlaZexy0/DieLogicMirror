@@ -9,6 +9,9 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
   <link rel="apple-touch-icon" href="/assets/icon-180.png">
   <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore'})"></script>
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
   <script src="/shared/nav.js"></script>
@@ -135,11 +138,7 @@
           Störgrößen, bleiben ∂h′/∂t + (A/T)·∂v′/∂x = 0 und ∂v′/∂t + g·∂h′/∂x = 0. Ineinander
           eingesetzt ergibt das die Wellengleichung — mit der Ausbreitungsgeschwindigkeit:</p>
       </div>
-      <div class="eq">
-        c = <span class="sqrt"><span class="rad">g ·
-        <span class="frac"><span class="num">A</span><span class="den">T</span></span>
-        </span></span>
-      </div>
+      <div class="eq">$$c = \sqrt{g \cdot \frac{A}{T}}$$</div>
       <div class="prose">
         <p>A/T ist die <em>hydraulische Tiefe</em> — die mittlere Tiefe, die ein Querschnitt
           „effektiv" hat. Probe am Rechteckkanal: A = B·h, T = B ⇒ c = √(g·h), die klassische
@@ -156,13 +155,7 @@
           Zauberei, sondern eine Substitution: Statt der Höhe h benutzt man ihr
           „Wellen-Integral"</p>
       </div>
-      <div class="eq">
-        ω(h) = <span style="font-size:1.3em;">∫</span><sub>h₀</sub><sup>h</sup>
-        <span class="frac"><span class="num">g</span><span class="den">c(h′)</span></span> dh′
-        &nbsp;&nbsp;⇔&nbsp;&nbsp;
-        dω = <span class="frac"><span class="num">g</span><span class="den">c</span></span>·dh
-        = <span class="sqrt"><span class="rad">g·<span class="frac"><span class="num">T</span><span class="den">A</span></span></span></span>·dh
-      </div>
+      <div class="eq">$$\omega (h) = \int _{h_{0}}^{h} \frac{g}{c(h')}\ \text{dh}' \Leftrightarrow d\omega = \frac{g}{c} \cdot\ \text{dh}\ = \sqrt{g \cdot \frac{T}{A}} \cdot\ \text{dh}$$</div>
       <div class="derivation-box">
         <div class="step"><span class="step-num">①</span>
           <span>Massenbilanz mit g/c durchmultiplizieren. Wegen dω = (g/c)·dh wird aus ∂h/∂t
@@ -197,11 +190,7 @@
         <p>Direkt am Kolben muss die Schmelze mit Kolbengeschwindigkeit v<sub>K</sub> mitlaufen.
           Also stellt sich dort genau die Höhe h<sub>K</sub> ein, für die</p>
       </div>
-      <div class="eq">
-        v<sub>K</sub> = ω(h<sub>K</sub>) =
-        <span style="font-size:1.3em;">∫</span><sub>h₀</sub><sup>h<sub>K</sub></sup>
-        <span class="sqrt"><span class="rad">g·<span class="frac"><span class="num">T(h)</span><span class="den">A(h)</span></span></span></span> dh
-      </div>
+      <div class="eq">$$v_{K} = \omega (h_{K}) = \int _{h_{0}}^{h_{K}} \sqrt{g \cdot \frac{T(h)}{A(h)}}\ \text{dh}$$</div>
       <div class="prose">
         <p>gilt: Je schneller der Kolben, desto höher türmt sich die Schmelze vor ihm auf. Die
           rechtslaufenden Charakteristiken höherer Wasserstände sind dabei schneller (v + c wächst
@@ -218,13 +207,7 @@
           restliche Kammerluft ein. Die kritische Kolbengeschwindigkeit ist also schlicht das
           Wellen-Integral bis zur Decke:</p>
       </div>
-      <div class="eq">
-        v<sub>krit</sub> =
-        <span style="font-size:1.3em;">∫</span><sub>h₀</sub><sup>D</sup>
-        <span class="sqrt"><span class="rad">g·<span class="frac"><span class="num">T(h)</span><span class="den">A(h)</span></span></span></span> dh
-        &nbsp;&nbsp;=&nbsp;&nbsp;
-        <span class="sqrt"><span class="rad">g·D</span></span> · f(φ)
-      </div>
+      <div class="eq">$$v_{\text{krit}} = \int _{h_{0}}^{D} \sqrt{g \cdot \frac{T(h)}{A(h)}}\ \text{dh}\ = \sqrt{g \cdot D} \cdot f(\varphi)$$</div>
       <div class="prose">
         <p>Der zweite Schritt ist reine Skalierung: Ersetzt man h = D·y, kürzt sich D bis auf den
           Faktor √(g·D) heraus — übrig bleibt ein dimensionsloses Integral f(φ), das nur noch vom
@@ -240,10 +223,7 @@
         <p>Nogowizins Formel — dieselbe, die DieLogic überall rechnet — ersetzt das Integral durch
           ein Polynom zweiter Ordnung:</p>
       </div>
-      <div class="eq">
-        v<sub>krit</sub> = <span class="sqrt"><span class="rad">g · D</span></span>
-        · ( 1,386 − 1,915·φ + 0,615·φ² )
-      </div>
+      <div class="eq">$$v_{\text{krit}} = \sqrt{g \cdot D} \cdot \left( 1{,}386 - 1{,}915 \cdot \varphi + 0{,}615 \cdot \varphi ^{2} \right)$$</div>
       <div class="prose">
         <p>Das lässt sich prüfen: Das exakte Integral aus Abschnitt 6 ist numerisch in Sekunden
           ausgewertet. Der Vergleich zeigt einen sauberen Fit — mit klar erkennbarem
@@ -262,9 +242,7 @@
           dieselbe Anzahl Koeffizienten für einen Fit, der <b>überall</b> passt. DieLogic rechnet
           deshalb mit diesem <b>Segment-Fit</b>:</p>
       </div>
-      <div class="eq">
-        f(φ) = (1 − φ)<sup>5/6</sup> · ( 2,3173 − 2,4762·φ<sup>1/3</sup> + 1,3404·φ<sup>2/3</sup> − 0,3552·φ )
-      </div>
+      <div class="eq">$$f(\varphi) = (1 - \varphi)^{5/6} \cdot ( 2{,}3173 - 2{,}4762 \cdot \varphi ^{1/3} + 1{,}3404 \cdot \varphi ^{2/3} - 0{,}3552 \cdot \varphi)$$</div>
       <div class="fig-wrap">
         <img src="/assets/theorie/vkrit-fit.svg" alt="Nogowizin-Polynom und Segment-Fit im Vergleich zur exakten Lösung" loading="lazy">
         <div class="fig-cap"><b>Fit-Prüfung:</b> exakte Lösung des Deckenkriteriums (dunkel), das

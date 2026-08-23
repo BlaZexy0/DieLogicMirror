@@ -10,7 +10,7 @@
 import { seq, fmt } from '../core/format.js';
 import { total, vCrit } from '../core/physics.js';
 import { feasibleBand } from '../core/limits.js';
-import { frac, sqrt, cbrt } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 const PI = Math.PI;
 const R_MIN = 1, R_MAX = 12;
@@ -126,31 +126,31 @@ export default {
   mathHTML() {
     return `
 <h4>1 · Volumen aus der Massenbilanz</h4>
-<div class="eq">V = ${frac('m<sub>dos</sub>', 'ρ')} = ${frac('m<sub>Bauteil</sub> + m<sub>Anguss</sub> + m<sub>Überlauf</sub> + m<sub>Pressrest</sub>', 'ρ')}</div>
-<div class="eq">V<sub>b</sub> = ${frac('m<sub>Pressrest</sub>', 'ρ')}</div>
+${eq('V = \\frac{m_{\\text{dos}}}{\\rho } = \\frac{m_{\\text{Bauteil}} + m_{\\text{Anguss}} + m_{\\text{Überlauf}} + m_{\\text{Pressrest}}}{\\rho }')}
+${eq('V_{b} = \\frac{m_{\\text{Pressrest}}}{\\rho }')}
 <p class="math-note">Aktuell: V = <b data-m="V"></b> · V<sub>b</sub> = <b data-m="Vb"></b></p>
 
 <h4>2 · Koordinaten und Transformation</h4>
 <p class="math-note">Achsen: Anfangs-Füllgrad φ = V / (A·L) und Kammerverhältnis λ = L/D (in den Formeln kurz r) mit Kolbenfläche A = π·D²/4.
 Da das Dosiervolumen V fest ist, legt jeder Punkt (φ, r) genau eine Kammer fest:</p>
-<div class="eq">V = φ · ${frac('π · D²', '4')} · L</div>
-<div class="eq">D(φ, r) = ${cbrt(frac('4V', 'π · φ · r'), true)}&emsp;&emsp;L(φ, r) = r · D = ${cbrt(frac('4V · r²', 'π · φ'), true)}</div>
-<div class="eq">Umkehrung:&ensp;φ(D, L) = ${frac('4V', 'π · D² · L')}&emsp;&emsp;r(D, L) = ${frac('L', 'D')}</div>
+${eq('V = \\varphi \\cdot \\frac{\\pi \\cdot D^{2}}{4} \\cdot L')}
+${eq('D(\\varphi , r) = \\sqrt[3]{\\frac{4V}{\\pi \\cdot \\varphi \\cdot r}} \\qquad L(\\varphi , r) = r \\cdot D = \\sqrt[3]{\\frac{4V \\cdot r^{2}}{\\pi \\cdot \\varphi }}')}
+${eq('\\text{Umkehrung:}\\ \\; \\varphi (D, L) = \\frac{4V}{\\pi \\cdot D^{2} \\cdot L} \\qquad r(D, L) = \\frac{L}{D}')}
 
 <h4>3 · Grenzkurven</h4>
 <p class="math-note">Jede Grenze wird zu einer Schranke für r bei gegebenem φ. Kurven konstanten Durchmessers sind
 Hyperbeln (r ∝ 1/φ), Kurven konstanter Länge sind Wurzelkurven (r ∝ √φ).</p>
-<div class="eq">Ø-Bereich:&ensp;r = ${frac('4V', 'π · φ · D³')}&ensp;mit D = D<sub>min</sub> (obere Grenze) bzw. D = D<sub>max</sub> (untere Grenze)</div>
-<div class="eq">Längenbereich:&ensp;r = ${sqrt(frac('π · L³ · φ', '4V'), true)}&ensp;mit L = L<sub>max</sub> (obere) bzw. L = L<sub>min</sub> (untere Grenze)</div>
-<div class="eq">Pressrest:&ensp;b = ${frac('V<sub>b</sub>', 'A')} = ${frac('4V<sub>b</sub>', 'π · D²')} ≥ b<sub>min</sub>&ensp;⇔&ensp;D ≤ D<sub>b</sub> = ${sqrt(frac('4V<sub>b</sub>', 'π · b<sub>min</sub>'), true)}&ensp;⇒&ensp;r ≥ ${frac('4V', 'π · φ · D<sub>b</sub>³')}</div>
+${eq('\\text{Ø-Bereich:}\\ \\; r = \\frac{4V}{\\pi \\cdot \\varphi \\cdot D^{3}} \\;\\ \\text{mit}\\ D = D_{\\min}\\ (\\text{obere Grenze})\\ \\text{bzw.}\\ D = D_{\\max}\\ (\\text{untere Grenze})')}
+${eq('\\text{Längenbereich:}\\ \\; r = \\sqrt{\\frac{\\pi \\cdot L^{3} \\cdot \\varphi }{4V}} \\;\\ \\text{mit}\\ L = L_{\\max}\\ (\\text{obere})\\ \\text{bzw.}\\ L = L_{\\min}\\ (\\text{untere Grenze})')}
+${eq('\\text{Pressrest:}\\ \\; b = \\frac{V_{b}}{A} = \\frac{4V_{b}}{\\pi \\cdot D^{2}} \\ge b_{\\min} \\; \\Leftrightarrow \\; D \\le D_{b} = \\sqrt{\\frac{4V_{b}}{\\pi \\cdot b_{\\min}}} \\; \\Rightarrow \\; r \\ge \\frac{4V}{\\pi \\cdot \\varphi \\cdot D_{b}^{3}}')}
 <p class="math-note">Aktuell: D<sub>b</sub> = <b data-m="Db"></b> — der Mindest-Pressrest begrenzt den maximalen Kolben-Ø.</p>
-<div class="eq">Langsame Phase:&ensp;v₁ ≤ v<sub>krit</sub>(D, φ) = ${sqrt('9,81 · D')} · f(D, φ)&ensp;—&ensp;f aus der OpenFOAM-CFD-Tabelle (bilinear interpoliert), Grenz-Ø per Bisektion</div>
-<div class="eq">v₁ ≤ v<sub>krit</sub>&ensp;⇔&ensp;D ≥ D<sub>c</sub>(φ) = ${frac('v₁²', '9,81 · f(φ)²')}&ensp;⇒&ensp;r ≤ ${frac('4V', 'π · φ · D<sub>c</sub>(φ)³')} = ${frac('4V · 9,81³ · f(φ)⁶', 'π · φ · v₁⁶')}</div>
+${eq('\\text{Langsame Phase:}\\ \\; v_{1} \\le v_{\\text{krit}}(D, \\varphi) = \\sqrt{9{,}81 \\cdot D} \\cdot f(D, \\varphi) \\; \\;\\text{—}\\; \\; f\\ \\text{aus der OpenFOAM-CFD-Tabelle}\\\\ (\\text{bilinear interpoliert}),\\ \\text{Grenz-Ø per Bisektion}')}
+${eq('v_{1} \\le v_{\\text{krit}} \\; \\Leftrightarrow \\; D \\ge D_{c}(\\varphi) = \\frac{v_{1}^{2}}{9{,}81 \\cdot f(\\varphi)^{2}} \\; \\Rightarrow \\; r \\le \\frac{4V}{\\pi \\cdot \\varphi \\cdot D_{c}(\\varphi)^{3}} = \\frac{4V \\cdot 9{,}81^{3} \\cdot f(\\varphi)^{6}}{\\pi \\cdot \\varphi \\cdot v_{1}^{6}}')}
 
 <h4>4 · Machbares Band</h4>
-<div class="eq">r<sub>lo</sub>(φ) = max( ${frac('4V', 'π · φ · min(D<sub>max</sub>, D<sub>b</sub>)³')},&ensp;${sqrt(frac('π · L<sub>min</sub>³ · φ', '4V'), true)} )</div>
-<div class="eq">r<sub>hi</sub>(φ) = min( ${frac('4V', 'π · φ · D<sub>min</sub>³')},&ensp;${sqrt(frac('π · L<sub>max</sub>³ · φ', '4V'), true)},&ensp;${frac('4V · 9,81³ · f(φ)⁶', 'π · φ · v₁⁶')} )</div>
-<div class="eq">machbar&ensp;⇔&ensp;r<sub>lo</sub>(φ) ≤ r ≤ r<sub>hi</sub>(φ)</div>
+${eq('r_{\\text{lo}}(\\varphi) = \\max\\left( \\frac{4V}{\\pi \\cdot \\varphi \\cdot \\min(D_{\\max}, D_{b})^{3}}, \\; \\sqrt{\\frac{\\pi \\cdot L_{\\min}^{3} \\cdot \\varphi }{4V}} \\right)')}
+${eq('r_{\\text{hi}}(\\varphi) = \\min\\left( \\frac{4V}{\\pi \\cdot \\varphi \\cdot D_{\\min}^{3}}, \\; \\sqrt{\\frac{\\pi \\cdot L_{\\max}^{3} \\cdot \\varphi }{4V}}, \\; \\frac{4V \\cdot 9{,}81^{3} \\cdot f(\\varphi)^{6}}{\\pi \\cdot \\varphi \\cdot v_{1}^{6}} \\right)')}
+${eq('\\text{machbar}\\ \\; \\Leftrightarrow \\; r_{\\text{lo}}(\\varphi) \\le r \\le r_{\\text{hi}}(\\varphi)')}
 
 <h4>5 · Geometrische Deutung</h4>
 <p class="math-note">Das machbare Gebiet ist das Bild des Maschinen-Rechtecks

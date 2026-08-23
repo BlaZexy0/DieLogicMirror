@@ -9,6 +9,9 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
   <link rel="apple-touch-icon" href="/assets/icon-180.png">
   <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore'})"></script>
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
   <script src="/shared/nav.js"></script>
@@ -104,9 +107,7 @@
           Stromlinie gilt für eine (näherungsweise) verlustfreie Strömung die
           <strong>Bernoulli-Gleichung</strong>:</p>
       </div>
-      <div class="eq">
-        p + <span class="frac"><span class="num">ρ</span><span class="den">2</span></span> · v² = const
-      </div>
+      <div class="eq">$$p + \frac{\rho }{2} \cdot v^{2} =\ \text{const}$$</div>
       <div class="prose">
         <p>Druck und kinetische Energie sind ineinander umtauschbar: Wo die Strömung schnell wird,
           fällt der statische Druck — und umgekehrt. Im Schussaggregat wird dieser Tausch an vier
@@ -148,10 +149,7 @@
         <div class="step"><span class="step-num">③</span>
           <span>Mit v = Q/A<sub>K</sub> und den zwei Messpunkten „statisch" und „Trockenschuss" folgt:</span></div>
       </div>
-      <div class="eq">
-        p<sub>M</sub>(Q) = p<sub>0</sub> · ( 1 −
-        <span class="frac"><span class="num">Q²</span><span class="den">Q²<sub>dry</sub></span></span> )
-      </div>
+      <div class="eq">$$p_{M}(Q) = p_{0} \cdot \left( 1 - \frac{Q^{2}}{Q^{2}_{\text{dry}}} \right)$$</div>
       <div class="prose">
         <p>Ohne Bewegung (Q = 0) steht der volle statische Gießdruck p<sub>0</sub> = F<sub>G</sub>/A<sub>K</sub>
           an; beim Trockenschuss (kein Widerstand) erreicht der Kolben v<sub>dry</sub> — das
@@ -178,11 +176,7 @@
         <div class="step"><span class="step-num">③</span>
           <span>Einsetzen liefert die Werkzeuglinie — quadratisch in Q:</span></div>
       </div>
-      <div class="eq">
-        p<sub>W</sub>(Q) =
-        <span class="frac"><span class="num">ρ</span><span class="den">2 c<sub>d</sub>² A<sub>a</sub>²</span></span>
-        · Q²
-      </div>
+      <div class="eq">$$p_{W}(Q) = \frac{\rho }{2 c_{d}^{2} A_{a}^{2}} \cdot Q^{2}$$</div>
       <div class="insight-box">
         <div class="label">Kernaussage</div>
         <p>Die Anschnittfläche steht im Nenner im Quadrat: Ein größerer Anschnitt kippt die
@@ -200,11 +194,7 @@
           Volumenstrom ist Leistung — die Grenze aller erreichbaren Betriebspunkte ist deshalb
           eine Hyperbel, die <b>Hüllkurve</b>:</p>
       </div>
-      <div class="eq">
-        p<sub>env</sub>(Q) = <span class="frac"><span class="num">a</span><span class="den">Q</span></span>
-        &nbsp;&nbsp;mit&nbsp;&nbsp;
-        a = <span class="frac"><span class="num">2·√3</span><span class="den">9</span></span> · F<sub>G</sub> · v<sub>dry</sub>
-      </div>
+      <div class="eq">$$p_{\text{env}}(Q) = \frac{a}{Q}\ \text{mit}\ a = \frac{2 \cdot \sqrt{3}}{9} \cdot F_{G} \cdot v_{\text{dry}}$$</div>
       <div class="prose">
         <p>Die Konstante a hat die Einheit einer <b>Leistung</b> — im Dashboard steht sie als KPI
           („Hüllkurven-Konstante a", mit den Standardwerten 5,39 MW) und in jeder
@@ -258,13 +248,7 @@
           ganze Trick des PQ²-Diagramms. Ihr Schnittpunkt p<sub>M</sub> = p<sub>W</sub> ist der
           <b>Arbeitspunkt</b>; Auflösen nach Q ergibt in geschlossener Form:</p>
       </div>
-      <div class="eq">
-        Q* = <span class="sqrt"><span class="rad">
-        <span class="frac"><span class="num">p<sub>0</sub></span><span class="den">C<sub>W</sub> + p<sub>0</sub>/Q²<sub>dry</sub></span></span>
-        </span></span>
-        &nbsp;&nbsp;mit&nbsp;&nbsp;
-        C<sub>W</sub> = <span class="frac"><span class="num">ρ</span><span class="den">2 c<sub>d</sub>² A<sub>a</sub>²</span></span>
-      </div>
+      <div class="eq">$$Q^{*} = \sqrt{\frac{p_{0}}{C_{W} + p_{0}/Q^{2}_{\text{dry}}}}\ \text{mit}\ C_{W} = \frac{\rho }{2 c_{d}^{2} A_{a}^{2}}$$</div>
       <div class="fig-wrap">
         <img src="/assets/theorie/pq2-q2.svg" alt="PQ²-Diagramm im Q²-Achsenmodus mit Arbeitspunkt" loading="lazy">
         <div class="fig-cap"><b>Der Q²-Trick, im Dashboard der Achsenmodus „Q²":</b> Die goldene
@@ -286,12 +270,7 @@
           <b>Anschnittgeschwindigkeit</b>. Um sie ins Diagramm zu bekommen, braucht es nur zwei
           Umrechnungen:</p>
       </div>
-      <div class="eq">
-        Q = <span class="frac"><span class="num">V<sub>a</sub></span><span class="den">t<sub>f</sub></span></span>
-        &nbsp;&nbsp;&nbsp;·&nbsp;&nbsp;&nbsp;
-        p(v<sub>a</sub>) = <span class="frac"><span class="num">ρ</span><span class="den">2</span></span> ·
-        ( <span class="frac"><span class="num">v<sub>a</sub></span><span class="den">c<sub>d</sub></span></span> )²
-      </div>
+      <div class="eq">$$Q = \frac{V_{a}}{t_{f}} \qquad p(v_{a}) = \frac{\rho }{2} \cdot \left( \frac{v_{a}}{c_{d}} \right)^{2}$$</div>
       <div class="prose">
         <p>Füllzeit-Grenzen werden damit zu <em>vertikalen</em> Linien auf der Q-Achse (mehr Zeit =
           weniger Volumenstrom). Geschwindigkeits-Grenzen werden zu <em>horizontalen</em> Linien
@@ -365,11 +344,7 @@
           (t<sub>f,max</sub>, v<sub>a,max</sub>) — die kleinste Fläche. Die flachste durch
           (t<sub>f,min</sub>, v<sub>a,min</sub>) — die größte:</p>
       </div>
-      <div class="eq">
-        A<sub>a,min</sub> = <span class="frac"><span class="num">V<sub>a</sub></span><span class="den">t<sub>f,max</sub> · v<sub>a,max</sub></span></span>
-        &nbsp;&nbsp;&nbsp;·&nbsp;&nbsp;&nbsp;
-        A<sub>a,max</sub> = <span class="frac"><span class="num">V<sub>a</sub></span><span class="den">t<sub>f,min</sub> · v<sub>a,min</sub></span></span>
-      </div>
+      <div class="eq">$$A_{a,\min} = \frac{V_{a}}{t_{f,\max} \cdot v_{a,\max}} \qquad A_{a,\max} = \frac{V_{a}}{t_{f,\min} \cdot v_{a,\min}}$$</div>
       <div class="prose">
         <p>Je größer das grüne Band, desto mehr lässt sich später im Betrieb mit leicht änderbaren
           Größen erreichen (Leistungsstufe, Metalldruck, Temperatur), ohne schwer änderbare

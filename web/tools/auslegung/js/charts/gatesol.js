@@ -3,7 +3,7 @@
 import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
-import { frac, sqrt } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 export default {
   id: 'gatesol',
@@ -28,10 +28,10 @@ export default {
 <h4>Erstarrungszeit des Anschnitts</h4>
 <p class="math-note">Die Erstarrungszeit wächst quadratisch mit der Dicke (Chvorinov-artiger Ansatz mit der
 Erstarrungskonstante k<sub>s</sub>):</p>
-<div class="eq">t<sub>erst</sub>(s) = k<sub>s</sub> · s²</div>
+${eq('t_{\\text{erst}}(s) = k_{s} \\cdot s^{2}')}
 <p class="math-note">Der Anschnitt darf erst nach der Nachdruckaufbauzeit t<sub>N</sub> zufrieren, sonst ist
 die Kavität vom Nachdruck abgeschnitten, bevor die Schwindung ausgeglichen ist:</p>
-<div class="eq">t<sub>erst</sub> ≥ t<sub>N</sub>&ensp;⇔&ensp;s ≥ ${sqrt(frac('t<sub>N</sub>', 'k<sub>s</sub>'), true)}</div>
+${eq('t_{\\text{erst}} \\ge t_{N} \\; \\Leftrightarrow \\; s \\ge \\sqrt{\\frac{t_{N}}{k_{s}}}')}
 <p class="math-note">Aktuell: t<sub>erst</sub>(s = <span data-m="s"></span>) = <b data-m="t"></b> ·
 Nachdruckaufbauzeit t<sub>N</sub> = <b data-m="tN"></b> ⇒ Mindestdicke = <b data-m="smin"></b></p>`;
   },

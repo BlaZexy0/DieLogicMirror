@@ -5,7 +5,7 @@ import { series, line, limit, refline } from './helpers.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { sim } from '../core/simstore.js';
-import { frac, sqrt } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 /* Anzeige der Simulations-Luftdruckkurve kappen: nahe der vollständigen
    Füllung divergiert das Modell (Restluftvolumen → 0). */
@@ -152,23 +152,23 @@ export default {
 <p class="math-note">Die Schusskurve wird durch Wegpunkte (s<sub>i</sub>, v<sub>i</sub>) definiert; der Ursprung
 (0 mm, 0 m/s) wird automatisch ergänzt. Zwischen zwei Punkten ist die Beschleunigung konstant — aus den
 Kinematikbeziehungen folgt je Segment:</p>
-<div class="eq">a<sub>i</sub> = ${frac('v<sub>i</sub>² − v<sub>i−1</sub>²', '2 · (s<sub>i</sub> − s<sub>i−1</sub>)')}&emsp;&emsp;Δt<sub>i</sub> = ${frac('2 · (s<sub>i</sub> − s<sub>i−1</sub>)', 'v<sub>i−1</sub> + v<sub>i</sub>')}</div>
-<div class="eq">v(s) = ${sqrt('v<sub>i−1</sub>² + 2 · a<sub>i</sub> · (s − s<sub>i−1</sub>)')}&emsp;&emsp;s(t) = s<sub>i−1</sub> + v<sub>i−1</sub> · Δt + ½ · a<sub>i</sub> · Δt²</div>
+${eq('a_{i} = \\frac{v_{i}^{2} - v_{i - 1}^{2}}{2 \\cdot (s_{i} - s_{i - 1})} \\qquad \\Delta t_{i} = \\frac{2 \\cdot (s_{i} - s_{i - 1})}{v_{i - 1} + v_{i}}')}
+${eq('v(s) = \\sqrt{v_{i - 1}^{2} + 2 \\cdot a_{i} \\cdot (s - s_{i - 1})} \\qquad s(t) = s_{i - 1} + v_{i - 1} \\cdot \\Delta t + \\tfrac{1}{2} \\cdot a_{i} \\cdot \\Delta t^{2}')}
 <p class="math-note">Aktuell: Schusszeit = <b data-m="tEnd"></b> · Kurvenhub = <b data-m="hub"></b> ·
 Spitzengeschwindigkeit = <b data-m="vpk"></b> · Spitzenbeschleunigung = <b data-m="apk"></b></p>
 
 <h4>2 · Füllkammer und Prozessereignisse</h4>
 <p class="math-note">Der Füllgrad bestimmt, wo die Kammer voll ist; jedes weitere Ereignis folgt aus der
 Kontinuität (kumuliertes Volumen durch Kolbenfläche):</p>
-<div class="eq">φ = ${frac('V<sub>dos</sub>', 'A<sub>K</sub> · L')}&emsp;⇒&emsp;s<sub>voll</sub> = (1 − φ) · L</div>
-<div class="eq">s<sub>Ereignis</sub> = s<sub>voll</sub> + ${frac('ΣV<sub>i</sub>', 'A<sub>K</sub>')}&emsp;(nacheinander: Anguss, Bauteil, Überlauf)&emsp;·&emsp;l<sub>Pressrest</sub> = ${frac('V<sub>b</sub>', 'A<sub>K</sub>')}</div>
+${eq('\\varphi = \\frac{V_{\\text{dos}}}{A_{K} \\cdot L} \\quad \\Rightarrow \\quad s_{\\text{voll}} = (1 - \\varphi) \\cdot L')}
+${eq('s_{\\text{Ereignis}} = s_{\\text{voll}} + \\frac{\\sum V_{i}}{A_{K}} \\quad\\ (\\text{nacheinander: Anguss, Bauteil, Überlauf}) \\qquad l_{\\text{Pressrest}} = \\frac{V_{b}}{A_{K}}')}
 <p class="math-note">Aktuell: φ = <b data-m="phi"></b> · Kammer voll bei <b data-m="sfill"></b> ·
 Gesamthub = <b data-m="stroke"></b> · Pressrest = <b data-m="lb"></b></p>
 
 <h4>3 · Abgeleitete Größen und Prüfungen</h4>
-<div class="eq">v<sub>a</sub> = v<sub>p</sub> · ${frac('A<sub>K</sub>', 'A<sub>a</sub>')}&emsp;(Anschnittgeschwindigkeit aus der Kolbengeschwindigkeit)</div>
-<div class="eq">t<sub>f</sub> = t(Überlauf gefüllt) − t(Anguss gefüllt)&emsp;(Füllzeit ab Anschnitt)</div>
-<div class="eq">v<sub>krit</sub>(D, φ) = ${sqrt('9,81 · D')} · f(D, φ)&emsp;—&emsp;f aus der OpenFOAM-CFD-Tabelle, bilinear interpoliert&emsp;(Grenze der 1. Phase bis „Kammer voll")</div>
+${eq('v_{a} = v_{p} \\cdot \\frac{A_{K}}{A_{a}} \\quad\\ (\\text{Anschnittgeschwindigkeit aus der Kolbengeschwindigkeit})')}
+${eq('t_{f} = t(\\text{Überlauf gefüllt}) - t(\\text{Anguss gefüllt}) \\quad\\ (\\text{Füllzeit ab Anschnitt})')}
+${eq('v_{\\text{krit}}(D, \\varphi) = \\sqrt{9{,}81 \\cdot D} \\cdot f(D, \\varphi) \\quad \\;\\text{—}\\; \\quad f\\ \\text{aus der OpenFOAM-CFD-Tabelle, bilinear interpoliert}\\ \\quad\\ (\\text{Grenze der 1. Phase bis}\\ \\text{“Kammer voll”})')}
 <p class="math-note">Aktuell: A<sub>K</sub>/A<sub>a</sub> = <b data-m="ratio"></b> · t<sub>f</sub> = <b data-m="tf"></b> ·
 v<sub>krit</sub> = <b data-m="vcrit"></b> · max. v der 1. Phase = <b data-m="vslow"></b></p>`;
   },

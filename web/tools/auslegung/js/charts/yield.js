@@ -2,7 +2,7 @@
 
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
-import { frac } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 export default {
   id: 'yield',
@@ -30,8 +30,8 @@ export default {
   mathHTML() {
     return `
 <h4>Materialausbeute</h4>
-<div class="eq">m<sub>dos</sub> = m<sub>Bauteil</sub> + m<sub>Anguss</sub> + m<sub>Überlauf</sub> + m<sub>Pressrest</sub></div>
-<div class="eq">η = ${frac('m<sub>Bauteil</sub>', 'm<sub>dos</sub>')} · 100 %&emsp;&emsp;Anteil<sub>i</sub> = ${frac('m<sub>i</sub>', 'm<sub>dos</sub>')} · 100 %</div>
+${eq('m_{\\text{dos}} = m_{\\text{Bauteil}} + m_{\\text{Anguss}} + m_{\\text{Überlauf}} + m_{\\text{Pressrest}}')}
+${eq('\\eta = \\frac{m_{\\text{Bauteil}}}{m_{\\text{dos}}} \\cdot 100 \\% \\qquad\\ \\text{Anteil}_{i} = \\frac{m_{i}}{m_{\\text{dos}}} \\cdot 100 \\%')}
 <p class="math-note">η ist der Anteil der dosierten Schmelze, der im Bauteil landet; Anguss, Überlauf und
 Pressrest gehen ins Recycling (Kreislaufmaterial kostet Energie und Ofenkapazität).</p>
 <p class="math-note">Aktuell: m<sub>dos</sub> = <b data-m="mdos"></b> · η = <b data-m="eta"></b> ·

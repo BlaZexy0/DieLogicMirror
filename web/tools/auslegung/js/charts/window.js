@@ -3,7 +3,7 @@
 import { heat, target } from './helpers.js';
 import { fmt } from '../core/format.js';
 import { pistonArea } from '../core/physics.js';
-import { frac } from './mathfmt.js';
+import { eq } from './mathfmt.js';
 
 export default {
   id: 'window',
@@ -37,7 +37,7 @@ export default {
 <h4>Prozessfenster Anschnitt</h4>
 <p class="math-note">Dieselbe Kontinuitätsbeziehung wie beim Anschnittflächen-Diagramm, hier als Feld über
 Kolbengeschwindigkeit und Anschnittfläche:</p>
-<div class="eq">v<sub>a</sub>(v<sub>p</sub>, A<sub>a</sub>) = v<sub>p</sub> · ${frac('A<sub>K</sub>', 'A<sub>a</sub>')}</div>
+${eq('v_{a}(v_{p}, A_{a}) = v_{p} \\cdot \\frac{A_{K}}{A_{a}}')}
 <p class="math-note">Die weißen Konturen sind Linien konstanter Anschnittgeschwindigkeit; das Zielband ist
 v<sub>a</sub> = <span data-m="band"></span>. Aktuell: v<sub>a</sub>(v₂ = <span data-m="vsel"></span>,
 A<sub>a</sub> = <span data-m="Ag"></span>) = <b data-m="va"></b> — v₂ ist das Mittel nach Anschnitt aus der Schusskurve.</p>`;

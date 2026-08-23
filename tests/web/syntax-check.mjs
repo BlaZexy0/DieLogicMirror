@@ -11,13 +11,13 @@ import path from 'node:path';
 const ls = (pattern) => execFileSync('git', ['ls-files', ...pattern], { encoding: 'utf8' })
   .split('\n').filter(Boolean);
 
-const files = ls(['web/*.js', 'web/**/*.js']);
+const files = ls(['web/*.js', 'web/**/*.js']).filter(f => !f.includes('/vendor/'));
 if (!files.length) throw new Error('git ls-files fand keine JS-Dateien — aus dem Repo-Root starten.');
 for (const f of files) execFileSync(process.execPath, ['--check', f], { stdio: 'inherit' });
 
 const dir = mkdtempSync(path.join(tmpdir(), 'dielogic-syntax-'));
 let inlineCount = 0;
-for (const page of ls(['web/*.html', 'web/**/*.html'])) {
+for (const page of ls(['web/*.html', 'web/**/*.html']).filter(f => !f.includes('/vendor/'))) {
   const html = readFileSync(page, 'utf8');
   const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
   inline.forEach((src, i) => {
