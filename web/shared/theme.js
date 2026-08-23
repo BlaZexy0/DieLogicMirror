@@ -34,6 +34,7 @@ window.__THEME__ = {
     "gateMin": "#7b5cd6",
     "gateMax": "#c2447e",
     "atom": "#4b2ea3",
+    "atomMax": "#8a5cf6",
     "tmax": "#b28000",
     "vent": "#4c6870",
     "vAirMax": "#4c6870",

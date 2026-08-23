@@ -223,11 +223,12 @@ export function renderKpis(el, v, shot, chamberEl) {
           bullet(0, Math.max(1.2 * v.gateMax, 1.05 * gvShown), v.gateMin, v.gateMax, gvShown,
             '0 m/s', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax), fmt(Math.max(1.2 * v.gateMax, 1.05 * gvShown)) + ' m/s'))
         : kpi('Anschnittgeschwindigkeit', '—', 'braucht v₂ aus der Schusskurve', 'nodata'))
-      + (isFinite(Jist) && v.Jatom > 0
+      + (isFinite(Jist) && v.JatomMin > 0
         ? kpi('Zerstäubung (J-Faktor)', fmt(Jist),
-          'Ist-J bei v_a ' + fmt(gvShown) + ' m/s · Ziel ≥ ' + fmt(v.Jatom) + ' (Herman/NADCA)',
-          Jist >= v.Jatom ? 'ok' : 'bad',
-          Jist >= v.Jatom ? fmt(Jist / v.Jatom) + '× Ziel' : 'unter Ziel')
+          'Ist-J bei v_a ' + fmt(gvShown) + ' m/s · Band ' + fmt(v.JatomMin) + '–' + fmt(v.JatomMax) + ' (Herman/NADCA)',
+          bandStatus(Jist, v.JatomMin, v.JatomMax), bandTag(Jist, v.JatomMin, v.JatomMax),
+          bullet(0, Math.max(1.2 * v.JatomMax, 1.05 * Jist), v.JatomMin, v.JatomMax, Jist,
+            '0', 'Band ' + fmt(v.JatomMin) + '–' + fmt(v.JatomMax), fmt(Math.max(1.2 * v.JatomMax, 1.05 * Jist))))
         : kpi('Zerstäubung (J-Faktor)', '—', 'braucht Anschnittgeschwindigkeit, -dicke und Dichte', 'nodata'))
       + kpi('PQ²-Arbeitspunkt', Qs === null ? '—' : fmt(Qs * 1000) + ' l/s',
         Qs === null ? 'Eingaben unvollständig' : 'Metalldruck p_s ' + fmt(ps) + ' bar · Schnittpunkt Maschine × Werkzeug',

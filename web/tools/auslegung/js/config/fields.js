@@ -97,8 +97,7 @@ export const groups = [
     fields: [
       { key: 'gate',   label: 'Anschnittfläche',      unit: 'mm²', def: 1800 },
       { key: 'gateTh', label: 'Anschnittdicke',       unit: 'mm',  def: 3 },
-      { key: 'Cd',     label: 'Durchflussbeiwert',    unit: '-',   def: 0.5 },
-      { key: 'Jatom',  label: 'Zerstäubungsfaktor J', unit: '-',   def: 750 }
+      { key: 'Cd',     label: 'Durchflussbeiwert',    unit: '-',   def: 0.5 }
     ]
   },
   {
@@ -122,7 +121,11 @@ export const groups = [
       { key: 'fillMin', label: 'Füllgrad Ziel min.',        unit: '%',   def: 40 },
       { key: 'fillMax', label: 'Füllgrad Ziel max.',        unit: '%',   def: 60 },
       { key: 'gateMin', label: 'Anschnittgeschw. Ziel min.', unit: 'm/s', def: 30 },
-      { key: 'gateMax', label: 'Anschnittgeschw. Ziel max.', unit: 'm/s', def: 50 }
+      { key: 'gateMax', label: 'Anschnittgeschw. Ziel max.', unit: 'm/s', def: 50 },
+      /* Herman-J-Faktor v_a^1,71·e_p·ρ (inch-pound): unter J_min keine
+         Zerstäubung, über J_max Erosion/Überzerstäubung. */
+      { key: 'JatomMin', label: 'Zerstäubungsfaktor J min.', unit: '-', def: 750 },
+      { key: 'JatomMax', label: 'Zerstäubungsfaktor J max.', unit: '-', def: 6000 }
     ]
   },
   {
