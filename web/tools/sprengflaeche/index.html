@@ -299,8 +299,8 @@
   <div class="stl-toolbar">
     <input type="file" id="file-input" accept=".stl,model/stl,application/sla" multiple hidden>
     <button class="btn btn-primary" id="upload-btn">+ STL-Dateien hinzufügen</button>
-    <span class="seg-label">Projektionsrichtung:</span>
-    <div class="seg" id="dir-seg" role="group" aria-label="Projektionsrichtung">
+    <span class="seg-label">Formöffnungsrichtung:</span>
+    <div class="seg" id="dir-seg" role="group" aria-label="Formöffnungsrichtung">
       <button data-dir="X">X</button>
       <button data-dir="Y">Y</button>
       <button data-dir="Z" class="active">Z</button>
@@ -406,7 +406,8 @@
 
   <p class="stl-footnote">Volumen über die Summe signierter Tetraeder (setzt ein geschlossenes Netz
     voraus), Oberfläche als Summe der Dreiecksflächen. Die projizierte Fläche ist die Silhouette des
-    Bauteils senkrecht zur gewählten Richtung, per Rasterung bestimmt. Die Summenzeile addiert
+    Bauteils senkrecht zur gewählten <strong>Formöffnungsrichtung</strong> — also die Fläche, auf die
+    der Metalldruck gegen die Schließkraft wirkt —, per Rasterung bestimmt. Die Summenzeile addiert
     Volumen, Masse und Oberfläche der Dateien; ihre projizierte Fläche ist dagegen die
     <strong>vereinigte</strong> Silhouette aller Dateien — Überdeckungen, auch zwischen
     verschiedenen Dateien, zählen nur einfach.

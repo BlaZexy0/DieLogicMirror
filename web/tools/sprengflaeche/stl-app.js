@@ -508,7 +508,7 @@
   function update() {
     const a = AXES[dir];
     document.getElementById('proj-label').innerHTML =
-      'Projektion entlang <strong>' + dir + '</strong> auf die ' + a.uName + '–' + a.vName + '-Ebene';
+      'Formöffnungsrichtung <strong>' + dir + '</strong> — Silhouette in der ' + a.uName + '–' + a.vName + '-Ebene';
     const cog = unionSilhouette();
     document.getElementById('cog-label').innerHTML = cog
       ? 'Schwerpunkt S vom Ursprung: <strong>' + a.uName + '</strong> ' + fmt(cog.cu) +
