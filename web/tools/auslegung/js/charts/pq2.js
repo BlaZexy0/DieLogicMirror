@@ -15,7 +15,7 @@
 
 import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
-import { pistonArea, afterGate, total } from '../core/physics.js';
+import { pistonArea, afterGate, total, injForceEff } from '../core/physics.js';
 import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
@@ -25,9 +25,10 @@ const PI = Math.PI, S3 = Math.sqrt(3);
    (ui/kpis.js) — die eine Implementierung des Arbeitspunkts. null bei
    ungültigen Eingaben. */
 export function pqCore(v) {
-  if (!(v.gate > 0) || !(v.Cd > 0) || !(v.vmax > 0) || !(v.injForce > 0) || !(v.density > 0) || !(v.diam > 0)) return null;
+  const FG = injForceEff(v);                                    // Gießkraft kN beim eingestellten Akkumulatordruck
+  if (!(v.gate > 0) || !(v.Cd > 0) || !(v.vmax > 0) || !(FG > 0) || !(v.density > 0) || !(v.diam > 0)) return null;
   const Ap = pistonArea(v) * 1e-6;                              // Kolbenfläche m²
-  const p0 = v.injForce * 1e4 / pistonArea(v);                  // statischer Metalldruck bar (= P_acc·A_h/A_K)
+  const p0 = FG * 1e4 / pistonArea(v);                          // statischer Metalldruck bar (= P_acc·A_h/A_K)
   const Qmax = Ap * v.vmax;                                     // Trockenschuss-Volumenstrom m³/s
   const Ag = v.gate * 1e-6;                                     // Anschnittfläche m²
   const Cdie = v.density / (2 * v.Cd * v.Cd * Ag * Ag) / 1e5;   // Werkzeugkonstante C_t/A_g² in bar/(m³/s)²
@@ -36,7 +37,7 @@ export function pqCore(v) {
   /* Machine Performance Envelope (Pego Guerra Gl. 2.13/2.14):
      P = a/Q mit a = (2√3/9)·F_G·v_dry — Leistungskonstante des Akkumulators.
      Gültig zwischen den Berührpunkten Q_t = A_K·v_dry/√3 von Ø min und Ø max. */
-  const aMPE = (2 * S3 / 9) * (v.injForce * 1e3) * v.vmax;      // W
+  const aMPE = (2 * S3 / 9) * (FG * 1e3) * v.vmax;              // W
   const pEnv = Q => aMPE / Q / 1e5;                             // bar
   const QtLo = 0.25 * PI * Math.pow(v.dmin / 1000, 2) * v.vmax / S3;
   const QtHi = 0.25 * PI * Math.pow(v.dmax / 1000, 2) * v.vmax / S3;
@@ -55,7 +56,7 @@ export function pqCore(v) {
        außerhalb dmin–dmax liegt; sonst liefe seine Maschinenlinie in die
        graue Maske hinein. */
     const rc = Q / Qmax;
-    const pA = v.injForce * 1e3 / (A * 1e5) * (1 - r * r), pM = p0 * (1 - rc * rc);
+    const pA = FG * 1e3 / (A * 1e5) * (1 - r * r), pM = p0 * (1 - rc * rc);
     return pM >= pA ? { p: Math.max(pM, 0), A: Ap } : { p: Math.max(pA, 0), A };
   };
   const pReach = Q => reach(Q).p;
@@ -74,7 +75,7 @@ export function pqCore(v) {
   /* Minimale Füllzeit aus der Entlüftungsbedingung (Operational Window, Zone C):
      die verdrängte Luft V_luft muss durch A_ent mit höchstens v_luft,max entweichen. */
   const tVent = (v.vent > 0 && v.vAirMax > 0) ? (total(v) / v.density) / (v.vent * 1e-6 * v.vAirMax) : NaN;
-  return { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, pEnv, pReach, aReach, QtLo, QtHi, Alo, Ahi, vaHydr, vaAtom, vaAtomMax, tVent };
+  return { FG, Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, pEnv, pReach, aReach, QtLo, QtHi, Alo, Ahi, vaHydr, vaAtom, vaAtomMax, tVent };
 }
 
 export default {
@@ -85,7 +86,7 @@ export default {
   tabs: [['q', 'Q'], ['q2', 'Q²'], ['vp', 'v<sub>p</sub>'], ['tf', 't<sub>f</sub>']],
   tab2: 'pm',
   tabs2: [['pm', 'p<sub>m</sub>'], ['ph', 'p<sub>hyd</sub>'], ['pw', 'P·Q']],
-  inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax', 'pAcc', 'gateTh', 'JatomMin', 'JatomMax'],
+  inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax', 'pAcc', 'pAccOp', 'gateTh', 'JatomMin', 'JatomMax'],
 
   calc(v) {
     const c = pqCore(v);
@@ -105,7 +106,7 @@ export default {
        Kolbens), y bis zum statischen Druck des kleinsten Kolbens. */
     const pistonOnly = tb === 'vp';
     const QmaxAll = pistonOnly ? Qmax : Math.max(Qmax, c.Ahi > 0 ? c.Ahi * v.vmax : 0);
-    const pTop = pistonOnly ? p0 : Math.max(p0, c.Alo > 0 ? v.injForce * 1e3 / (c.Alo * 1e5) : p0);
+    const pTop = pistonOnly ? p0 : Math.max(p0, c.Alo > 0 ? c.FG * 1e3 / (c.Alo * 1e5) : p0);
 
     /* x-Achse: fx bildet Q → Achsenwert ab, ix ist die Umkehrung (für
        Kurvenschranken, die als Funktion des Achsenwerts ausgewertet werden). */
@@ -124,9 +125,10 @@ export default {
        Antriebsseite immer ≤ P_acc. */
     let fy, yl, yUnit, y1;
     if (yb === 'ph') {
-      if (!(v.pAcc > 0)) return { err: 'Akkumulatordruck muss > 0 sein für die Hydraulikdruck-Achse.' };
+      if (!(v.pAcc > 0) || !(v.pAccOp > 0)) return { err: 'Akkumulatordruck (Nenn und eingestellt) muss > 0 sein für die Hydraulikdruck-Achse.' };
+      /* A_h = F_nenn/P_acc,nenn (fest); statisch liegt der montierte Kolben beim eingestellten Druck */
       fy = (P, Q, A = Ap) => 100 * P * A * v.pAcc / v.injForce;
-      yl = 'Hydraulikdruck (Antriebsseite) in bar'; yUnit = ' bar'; y1 = v.pAcc * 1.05;
+      yl = 'Hydraulikdruck (Antriebsseite) in bar'; yUnit = ' bar'; y1 = v.pAccOp * 1.05;
     } else if (yb === 'pw') {
       fy = (P, Q) => P * 1e5 * Q / 1e6; yl = 'Leistung P·Q in MW'; yUnit = ' MW'; y1 = c.aMPE / 1e6 * 1.15;
     } else {
@@ -154,7 +156,7 @@ export default {
       'Statisch ' + fmt(p0) + ' bar · Q_dry ' + fmt(Qmax * 1000) + ' l/s · Cd=' + fmt(v.Cd)
       + (pistonOnly ? ' · nur Kolben Ø ' + fmt(v.diam) + ' (v_p ≤ v_max ' + fmt(v.vmax) + ' m/s)'
         : ' · Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW (Ø ' + fmt(v.dmin) + '–' + fmt(v.dmax) + ')')
-      + (yb === 'ph' ? ' · P_acc ' + fmt(v.pAcc) + ' bar' : ''));
+      + ' · P_acc ' + fmt(v.pAccOp) + ' bar' + (v.pAccOp !== v.pAcc ? ' (Nenn ' + fmt(v.pAcc) + ')' : ''));
     q.y0 = 0; q.y1 = y1;
 
     /* ── Operational Window (UPCT Gl. 2.25–2.27) als deklarative Grenzen ──
@@ -226,7 +228,9 @@ Envelope). Gleichungsnummern unten beziehen sich auf diese Arbeit.</p>
 
 <h4>1 · Grundgrößen</h4>
 ${eq('A_{K} = \\frac{\\pi \\cdot D^{2}}{4} \\qquad p_{0} = \\frac{F_{G}}{A_{K}} = P_{\\text{acc}} \\cdot \\frac{A_{h}}{A_{K}} \\qquad Q_{\\text{dry}} = A_{K} \\cdot v_{\\text{dry}} \\qquad V_{a} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Überlauf}}}{\\rho }')}
-<p class="math-note">Die Gießkraft F<sub>G</sub> = P<sub>acc</sub>·A<sub>h</sub> stammt aus Akkumulatordruck × Antriebskolbenfläche;
+<p class="math-note">Die Gießkraft F<sub>G</sub> = P<sub>acc</sub>·A<sub>h</sub> stammt aus Akkumulatordruck × Antriebskolbenfläche —
+das Preset nennt sie beim Nenndruck, der <em>eingestellte</em> Akkumulatordruck skaliert sie linear mit
+(A<sub>h</sub> fest): weniger Druck, weniger p₀ und weniger Leistung a. Aktuell F<sub>G</sub> = <b data-m="FG"></b>;
 v<sub>dry</sub> ist die <b>Trockenschuss-Geschwindigkeit</b> (Kolben ohne Metall, alle Verluste im Schusskreis) —
 unser Eingabefeld „Kolbengeschw. max.". Aktuell: A<sub>K</sub> = <b data-m="AK"></b> · p₀ = <b data-m="p0"></b> ·
 Q<sub>dry</sub> = <b data-m="Qmax"></b> · V<sub>a</sub> = <b data-m="Va"></b></p>
@@ -302,10 +306,9 @@ ${eq('P_{h} = P \\cdot \\frac{A_{K}}{A_{h}} = P \\cdot \\frac{P_{\\text{acc}}}{p
 am Kolben, statischer Achsenabschnitt = P<sub>acc</sub>); der Leistungsmodus zeigt P·Q — die Maschinenkurve
 jedes Kolben-Ø berührt dort ihr Maximum exakt auf der a-Linie (bei v<sub>p</sub> = v<sub>dry</sub>/√3), die
 v<sub>a</sub>-Fenstergrenzen werden zu Ursprungsgeraden y = P(v<sub>a</sub>)·Q.
-<b>Hinweis:</b> die Hydraulik-Achse ist exakt für den gewählten Kolben; Kurven anderer Ø (Erreichbarkeits-
-grenze) sind auf dieser Achse nur umskalierter Metalldruck — ihre Werte oberhalb P<sub>acc</sub> sind
-Äquivalenzwerte, keine realen Hydraulikdrücke (ein kleinerer Kolben erzeugt mehr Metalldruck bei
-gleichem P<sub>acc</sub>). Aktuell:
+<b>Hinweis:</b> auf der Hydraulik-Achse wird jeder Punkt mit der Fläche des Kolbens umgerechnet, der ihn
+erreicht — der montierte Kolben liegt statisch beim eingestellten Akkumulatordruck, die Hüllkurve anderer Ø
+bei ⅔ davon; nichts liegt über dem Akkumulatordruck. Aktuell:
 P<sub>acc</sub> = <b data-m="pAccM"></b> · a = <b data-m="aMPE2"></b></p>
 
 <h4>7 · Füllzeit- und v_a-Grenzen</h4>
@@ -344,7 +347,7 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
     const c = pqCore(v);
     if (!c) {
       ['AK', 'p0', 'Qmax', 'Va', 'CW', 'Qs', 'ps', 'vp', 'va', 'tf', 'tf2', 'Qt', 'Qtcur', 'Dopt', 'aMPE',
-        'vah', 'tminJ', 'tminE', 'tmaxZ', 'tVent', 'AgRange', 'AgSel', 'Pgmin', 'Pgmax', 'pAccM', 'aMPE2',
+        'vah', 'tminJ', 'tminE', 'tmaxZ', 'tVent', 'AgRange', 'AgSel', 'Pgmin', 'Pgmax', 'pAccM', 'aMPE2', 'FG',
         'Jat', 'ep', 'vaAtom', 'vaAtomMax'].forEach(k => set(k, '—'));
       return;
     }
@@ -365,7 +368,8 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
     const Pg = vg => v.density * (vg / v.Cd) * (vg / v.Cd) / 2 / 1e5;
     set('Pgmin', v.gateMin > 0 ? fmt(Pg(v.gateMin)) + ' bar' : '—');
     set('Pgmax', v.gateMax > 0 ? fmt(Pg(v.gateMax)) + ' bar' : '—');
-    set('pAccM', v.pAcc > 0 ? fmt(v.pAcc) + ' bar (A_h = ' + fmt(v.injForce / v.pAcc * 100) + ' cm²)' : '—');
+    set('pAccM', v.pAcc > 0 ? fmt(v.pAccOp) + ' bar eingestellt (Nenn ' + fmt(v.pAcc) + ' bar, A_h = ' + fmt(v.injForce / v.pAcc * 100) + ' cm²)' : '—');
+    set('FG', fmt(c.FG) + ' kN (Nenn ' + fmt(v.injForce) + ' kN bei ' + fmt(v.pAcc) + ' bar)');
     set('aMPE2', fmt(c.aMPE / 1e6) + ' MW');
     /* Hüllkurve */
     set('aMPE', fmt(c.aMPE / 1e6) + ' MW');

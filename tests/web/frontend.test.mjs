@@ -120,6 +120,23 @@ test('curvegen: fillTimeMs — Rampe + Plateau, Grenzfälle', () => {
   assert.ok(fillTimeMs(1, 6, 60, 500, 600, 900) < fillTimeMs(1, 5, 60, 500, 600, 900));
 });
 
+test('state: Folge-Felder — eingestellter Akkumulatordruck folgt dem Nennwert des Presets', async () => {
+  const { FOLLOWS } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
+  assert.deepEqual(FOLLOWS, { pAccOp: 'pAcc' });
+  const { state, applyData, applyFollows } = await import(path.join(site, 'tools/auslegung/js/core/state.js'));
+  /* Defaults: Preset hcc1600 hat 160 bar → Betriebsdruck 160 */
+  assert.equal(state.values.pAccOp, state.values.pAcc);
+  /* Preset mit anderem Nennwert → Folge-Feld zieht nach */
+  state.values.pAcc = 180; applyFollows();
+  assert.equal(state.values.pAccOp, 180);
+  /* Altes Projekt ohne pAccOp: Vorgabe = Nennwert aus dem Projekt */
+  applyData({ values: { pAcc: 200, injForce: 2500 } });
+  assert.equal(state.values.pAccOp, 200);
+  /* Projekt mit eigenem Betriebsdruck behält ihn */
+  applyData({ values: { pAcc: 200, pAccOp: 120 } });
+  assert.equal(state.values.pAccOp, 120);
+});
+
 test('curvegen: V1/V2-Modus — Plateau bei V1, Fehler bei zu flacher Rampe', () => {
   const v = defaultValues();
   const ok = generateCurve(v, { mode: 'v1v2', v1: 0.4, a1: 5, v2: 4, a2: 30 });

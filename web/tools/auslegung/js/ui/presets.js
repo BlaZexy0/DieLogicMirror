@@ -4,7 +4,7 @@
    ausgeblendet; eine Zusammenfassung unter dem Select zeigt die übernommenen
    Werte. Die Domänen sind in js/config/fields.js (PRESET_DOMAINS) definiert. */
 
-import { allFields, PRESET_DOMAINS } from '../config/fields.js';
+import { allFields, PRESET_DOMAINS, FOLLOWS } from '../config/fields.js';
 import { state, subscribe, notify } from '../core/state.js';
 import { applyValues, updatePresetVisibility } from './inputs.js';
 
@@ -49,7 +49,13 @@ export function initPresetSelect(dom, sel) {
   sel.onchange = () => {
     state[dom.stateKey] = sel.value;
     const p = presetById(dom, sel.value);
-    if (p) applyValues(p.fields);
+    if (p) {
+      applyValues(p.fields);
+      /* Folge-Felder (z. B. eingestellter Akkumulatordruck) auf den neuen Nennwert */
+      const fol = {};
+      for (const k in FOLLOWS) if (p.fields[FOLLOWS[k]] != null) fol[k] = p.fields[FOLLOWS[k]];
+      applyValues(fol);
+    }
     notify();
   };
 

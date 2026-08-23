@@ -10,7 +10,7 @@
    Eine Prüfliste (#checkbar) fasst alle bewerteten Kacheln zusammen. */
 
 import { fmt } from '../core/format.js';
-import { total, afterGate, pistonArea, travel } from '../core/physics.js';
+import { total, afterGate, pistonArea, travel, injForceEff } from '../core/physics.js';
 import { pqCore } from '../charts/pq2.js';
 
 /* Während eines Renders eingesammelte Prüfungen für die Prüfliste. */
@@ -138,14 +138,15 @@ export function renderKpis(el, v, shot, chamberEl) {
   const kClamp = (v.tieX > 0 && v.tieY > 0)
     ? window.__CLAMP_MODEL__.leverK(v.eccX, v.eccY, v.tieX, v.tieY) : 1;
   const pMaxClamp = window.__CLAMP_MODEL__.pMax(v.force, v.area, v.safety, kClamp);
-  const pSpec = v.injForce * 1e4 / A;
+  const Feff = injForceEff(v);
+  const pSpec = Feff * 1e4 / A;
 
   /* PQ²-Arbeitspunkt (gleiche Rechnung wie im PQ²-Diagramm) */
   /* PQ²-Arbeitspunkt und Hüllkurve: dieselbe Rechnung wie im PQ²-Diagramm (pqCore) */
   const pq = pqCore(v);
   const Qs = pq ? pq.Qs : null, ps = pq ? pq.ps : null;
-  const aMPE = (v.injForce > 0 && v.vmax > 0)
-    ? (2 * Math.sqrt(3) / 9) * v.injForce * 1e3 * v.vmax / 1e6 : null;   // MW
+  const aMPE = (Feff > 0 && v.vmax > 0)
+    ? (2 * Math.sqrt(3) / 9) * Feff * 1e3 * v.vmax / 1e6 : null;   // MW
   const pwOp = pq ? pq.ps * 1e5 * pq.Qs / 1e6 : null;                    // MW
 
   /* Anschnittgeschwindigkeit: bevorzugt aus der Schusskurve (Bauteil gefüllt);
@@ -205,7 +206,7 @@ export function renderKpis(el, v, shot, chamberEl) {
           'Auslegung ' + fmt(v.psel) + ' von max. ' + fmt(pMaxClamp) + ' bar (Zuhaltung · e = (' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k = ' + fmt(kClamp) + ')',
           utilStatus(uHold), pctTag(uHold), meter(uHold))
         : kpi('Nachdruck-Auslastung', '—', 'Zuhaltungsmodell unvollständig', 'nodata'))
-      + kpi('Spez. Gießdruck', fmt(pSpec) + ' bar', 'Gießkraft / Kolbenfläche',
+      + kpi('Spez. Gießdruck', fmt(pSpec) + ' bar', 'Gießkraft ' + fmt(Feff) + ' kN bei ' + fmt(v.pAccOp) + ' bar / Kolbenfläche',
         bandStatus(pSpec, v.psel, pMaxClamp), bandTag(pSpec, v.psel, pMaxClamp),
         bullet(0, 1.1 * Math.max(pSpec, pMaxClamp), v.psel, pMaxClamp, pSpec,
           '0', 'Band ' + fmt(Math.round(v.psel)) + '–' + fmt(Math.round(pMaxClamp)), fmt(Math.round(1.1 * Math.max(pSpec, pMaxClamp))) + ' bar'))

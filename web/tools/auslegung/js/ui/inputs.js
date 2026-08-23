@@ -103,7 +103,7 @@ export function applyValues(fields) {
    physikalisch zwingend positive Größen). Exportiert für den
    Konsistenz-Test: jedes numerische Feld gehört in genau eine Klasse. */
 export const POSITIVE_KEYS = ['density', 'densitySolid', 'shrink', 'diam', 'length', 'gate', 'vent', 'Cd',
-  'force', 'injForce', 'area', 'psel', 'safety', 'vmax', 'tmax', 'vAirMax', 'solK',
+  'force', 'injForce', 'pAccOp', 'area', 'psel', 'safety', 'vmax', 'tmax', 'vAirMax', 'solK',
   'tieX', 'tieY',
   'dmin', 'dmax', 'lmin', 'lmax', 'part', 'Tcast', 'Tflow', 'Tdie',
   'Tliq', 'Tsol', 'hf', 'cp20', 'cpS', 'cpL',

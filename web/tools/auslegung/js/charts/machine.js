@@ -14,7 +14,7 @@ export default {
   id: 'machine',
   title: 'Erforderliche Maschinengröße',
   desc: 'Kraftbedarf über Druck',
-  inputs: ['area', 'safety', 'injForce', 'dmin', 'psel', 'force'],
+  inputs: ['area', 'safety', 'injForce', 'pAcc', 'pAccOp', 'dmin', 'psel', 'force'],
 
   calc(v) {
     const C = theme.chart;

@@ -17,7 +17,7 @@ export default {
   id: 'area',
   title: 'Zulässige Sprengfläche',
   desc: 'Maschinenkraft, Druck und Außermittigkeit',
-  inputs: ['force', 'safety', 'injForce', 'dmin', 'psel', 'area', 'eccX', 'eccY', 'tieX', 'tieY'],
+  inputs: ['force', 'safety', 'injForce', 'pAcc', 'pAccOp', 'dmin', 'psel', 'area', 'eccX', 'eccY', 'tieX', 'tieY'],
 
   calc(v) {
     const C = theme.chart;

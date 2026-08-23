@@ -7,7 +7,7 @@
    Dashboard, Einzelseiten und die anderen Werkzeuge sehen dieselbe
    Auslegung, und ein Reload verliert nichts. */
 
-import { allFields, DEFAULT_CURVE, PRESET_DOMAINS } from '../config/fields.js';
+import { FOLLOWS, allFields, DEFAULT_CURVE, PRESET_DOMAINS } from '../config/fields.js';
 
 if (!window.__PROJECT__) throw new Error('shared/project.js nicht geladen (window.__PROJECT__ fehlt).');
 const PROJECT = window.__PROJECT__;
@@ -39,6 +39,17 @@ function applyDefaults() {
        nicht unbedingt → dann das erste Preset der Liste. */
     const p = list.find(x => x.id === d.def) || list[0];
     if (p) { state[d.stateKey] = p.id; Object.assign(state.values, p.fields); }
+  }
+  applyFollows();
+}
+
+/* Folge-Felder (fields.js FOLLOWS) auf den Wert ihrer Quelle setzen —
+   nur die in `keys`, sonst alle. */
+export function applyFollows(keys) {
+  for (const k in FOLLOWS) {
+    if (keys && !keys.includes(k)) continue;
+    const src = state.values[FOLLOWS[k]];
+    if (isFinite(src)) state.values[k] = src;
   }
 }
 
@@ -86,6 +97,8 @@ export function applyData(data) {
         if (isFinite(x)) state.values[k] = x;
       }
     }
+    /* Ältere Projekte ohne ein Folge-Feld: Vorgabe = Wert der Quelle */
+    applyFollows(Object.keys(FOLLOWS).filter(k => data.values[k] == null));
   }
   if (Array.isArray(data.curve) && data.curve.length) {
     /* Nur endliche Zahlenpaare übernehmen und die Länge begrenzen —

@@ -6,6 +6,7 @@
 import { series, line, target } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
+import { injForceEff } from '../core/physics.js';
 import { eq } from './mathfmt.js';
 
 const PI = Math.PI;
@@ -20,14 +21,15 @@ export default {
   id: 'pspec',
   title: 'Spezifischer Gießdruck',
   desc: 'über Kolben-Ø',
-  inputs: ['dmin', 'dmax', 'injForce', 'diam', 'psel', 'force', 'area', 'safety', 'eccX', 'eccY', 'tieX', 'tieY'],
+  inputs: ['dmin', 'dmax', 'injForce', 'pAcc', 'pAccOp', 'diam', 'psel', 'force', 'area', 'safety', 'eccX', 'eccY', 'tieX', 'tieY'],
 
   calc(v) {
     const x = seq(v.dmin, v.dmax, 140);
-    const f = d => v.injForce * 1e4 / (0.25 * PI * d * d);
+    const F = injForceEff(v);
+    const f = d => F * 1e4 / (0.25 * PI * d * d);
     const pClamp = clampMax(v);
     const q = line(x, [series('Gießdruck', theme.chart.series1, x, f)],
-      'Kolben-Ø mm', 'Spez. Gießdruck bar', 'Gießkraft ' + fmt(v.injForce) + ' kN');
+      'Kolben-Ø mm', 'Spez. Gießdruck bar', 'Gießkraft ' + fmt(F) + ' kN bei ' + fmt(v.pAccOp) + ' bar Akkumulatordruck');
     if (v.psel > 0 && isFinite(pClamp)) {
       const lo = Math.min(v.psel, pClamp), hi = Math.max(v.psel, pClamp);
       q.limits = [target('pspecBand', 'Bedarf ' + fmt(v.psel) + ' – Zuhaltung ' + fmt(pClamp) + ' bar', 'y', lo, hi)];
@@ -56,8 +58,9 @@ Band <span data-m="band"></span> ⇒ Ø-Bereich <b data-m="Dband"></b></p>`;
 
   renderMath(el, v) {
     const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
-    const p = v.injForce * 1e4 / (0.25 * PI * v.diam * v.diam);
-    const Dof = pb => Math.sqrt(v.injForce * 1e4 / (0.25 * PI * pb));
+    const F = injForceEff(v);
+    const p = F * 1e4 / (0.25 * PI * v.diam * v.diam);
+    const Dof = pb => Math.sqrt(F * 1e4 / (0.25 * PI * pb));
     const pClamp = clampMax(v);
     set('D', fmt(v.diam) + ' mm');
     set('p', isFinite(p) ? fmt(p) + ' bar' : '—');

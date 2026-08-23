@@ -11,9 +11,15 @@ export function total(v) { return v.part + v.runner + v.overflow; }
 export function afterGate(v) { return v.part + v.overflow; }
 export function pistonArea(v) { return 0.25 * PI * v.diam * v.diam; }           // mm²
 export function travel(m, v) { return 1e9 * (m / v.density) / pistonArea(v); }  // mm für Masse m
-/* Max. spezifischer Gießdruck der Maschine: Gießkraft auf dem kleinsten
-   Kolben (Ø dmin) — obere Grenze der Druckachsen und für psel. In bar. */
-export function pMaxMachine(v) { return v.injForce * 1e4 / (0.25 * PI * v.dmin * v.dmin); }
+/* Effektive Gießkraft [kN]: das Preset nennt F_G bei Nenn-Akkumulatordruck
+   pAcc; der eingestellte Druck pAccOp skaliert sie linear (F_G = P_acc·A_h,
+   Antriebskolbenfläche A_h fest). Ohne gültige Drücke gilt der Nennwert. */
+export function injForceEff(v) {
+  return v.injForce * (v.pAccOp > 0 && v.pAcc > 0 ? v.pAccOp / v.pAcc : 1);
+}
+/* Max. spezifischer Gießdruck der Maschine: effektive Gießkraft auf dem
+   kleinsten Kolben (Ø dmin) — obere Grenze der Druckachsen und für psel. In bar. */
+export function pMaxMachine(v) { return injForceEff(v) * 1e4 / (0.25 * PI * v.dmin * v.dmin); }
 
 /* Höhe eines Kreissegments mit Flächenanteil phi (bisektion). */
 export function segHeight(phi) {

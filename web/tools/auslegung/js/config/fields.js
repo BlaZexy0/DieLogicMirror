@@ -32,7 +32,7 @@ export const groups = [
       { key: 'lmax',     label: 'Kammerlänge max.',        unit: 'mm',   def: 900 },
       { key: 'tieX',     label: 'Säulenabstand horizontal', unit: 'mm',  def: 1100 },
       { key: 'tieY',     label: 'Säulenabstand vertikal',   unit: 'mm',  def: 1100 },
-      { key: 'pAcc',     label: 'Akkumulatordruck',         unit: 'bar', def: 160 },
+      { key: 'pAcc',     label: 'Akkumulatordruck (Nenn)',  unit: 'bar', def: 160 },
       { key: 'intTime',  label: 'Nachdruckaufbauzeit',      unit: 'ms',  def: 60 }
     ]
   },
@@ -41,6 +41,11 @@ export const groups = [
     /* Die Druckachse läuft von 0 bis zum max. spezifischen Gießdruck der
        Maschine (Gießkraft auf Ø dmin) — pmin/pmax sind keine Eingaben mehr. */
     fields: [
+      /* Eingestellter Akkumulatordruck: skaliert die Gießkraft des Presets
+         (Nennwert injForce bei Nenndruck pAcc) linear — A_h bleibt fest.
+         follows: übernimmt den Nennwert des Presets bei Preset-Wechsel und
+         wenn ein gespeichertes Projekt das Feld noch nicht kennt. */
+      { key: 'pAccOp', label: 'Akkumulatordruck (eingestellt)', unit: 'bar', def: 160, follows: 'pAcc' },
       { key: 'area',   label: 'Sprengfläche',      unit: 'm²',  def: 0.15 },
       { key: 'psel',   label: 'Auslegungsdruck',   unit: 'bar', def: 600 },
       /* adv: standardmäßig hinter „Erweiterte Optionen" eingeklappt. */
@@ -145,6 +150,10 @@ export const groups = [
 /* Felder, die von einem Preset gesetzt werden: key → Domänen-id. Handänderung
    eines dieser Felder setzt die jeweilige Preset-Auswahl auf „manuell" zurück.
    Abgeleitet aus den Feldgruppen mit preset-Domäne. */
+/* Felder, die einem anderen Feld folgen (Vorgabe = dessen Wert): { key: source } */
+export const FOLLOWS = {};
+for (const f of allFields()) if (f.follows) FOLLOWS[f.key] = f.follows;
+
 export const PRESET_KEYS = {};
 for (const g of groups) {
   if (g.preset) for (const f of g.fields) PRESET_KEYS[f.key] = g.preset;
