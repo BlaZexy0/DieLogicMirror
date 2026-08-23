@@ -141,10 +141,12 @@ export default {
        Masken-Grenze unten (graue Deckfläche oberhalb, schwarze Frontlinie). */
     const machineLine = Q => p0 * (1 - (Q / Qmax) * (Q / Qmax));
     const ys = [
-      /* Maschinenlinie endet bei Q_dry des gewählten Kolbens (NaN dahinter);
-         im v_p-Modus ist sie die Grenzlinie der Maske selbst. */
-      ...(pistonOnly ? [] : [series('Maschine (Ø ' + fmt(v.diam) + ')', C.series4, Qarr,
-        Q => Q <= Qmax ? fy(machineLine(Q), Q) : NaN)]),
+      /* Maschinenlinie endet bei Q_dry des gewählten Kolbens (NaN dahinter).
+         Im v_p-Modus fällt sie mit der Maskengrenze zusammen — sie bleibt
+         trotzdem eine Serie, damit sie in jedem Modus dieselbe Farbe hat
+         (Serien werden über den Grenzen gezeichnet). */
+      series('Maschine (Ø ' + fmt(v.diam) + ')', C.series4, Qarr,
+        Q => Q <= Qmax ? fy(machineLine(Q), Q) : NaN),
       series('Werkzeug', C.series2, Qarr, Q => fy(Cdie * Q * Q, Q))
     ];
 
@@ -189,7 +191,7 @@ export default {
        erreichbar), alle anderen Grenzen werden darauf gestutzt. Im
        Leistungsmodus wird die Hüllkurve dabei zur Horizontalen y = a. */
     if (pistonOnly) {
-      q.limits.push(limit('mpe', 'Maschine Ø ' + fmt(v.diam) + ' (darüber unerreichbar)', 'y', 'max',
+      q.limits.push(limit('mpe', 'darüber unerreichbar (Ø ' + fmt(v.diam) + ')', 'y', 'max',
         xv => { const Q = ix(xv); return Q <= Qmax ? fy(machineLine(Q), Q) : 0; }, { mask: true, note: 'unerreichbar (Ø ' + fmt(v.diam) + ')' }));
     } else {
       q.limits.push(limit('mpe', 'Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW', 'y', 'max',
