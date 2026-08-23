@@ -14,58 +14,165 @@
   <script src="/shared/palette.js"></script>
   <script src="/shared/nav.js"></script>
   <style>
-    .kt-wrap { max-width: 1000px; margin: 0 auto; padding: 1.6rem 1.5rem 3rem; }
-    .kt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
-    @media (max-width: 800px) { .kt-grid { grid-template-columns: 1fr; } }
-    .kt-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.3rem; }
+    .kt-wrap { max-width: 1100px; margin: 0 auto; padding: 1.6rem 1.5rem 3.5rem; }
+    .hidden { display: none !important; }
+    .muted { color: var(--muted); }
+
+    /* ── Identität (angemeldet) ───────────────────────────── */
+    .kt-id { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.3rem; }
+    .kt-avatar {
+      width: 52px; height: 52px; border-radius: 50%; flex: none;
+      background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+      color: #fff; font-weight: 700; font-size: 1.15rem; letter-spacing: .02em;
+      display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow);
+    }
+    .kt-id .who { min-width: 0; }
+    .kt-id .name { font-size: 1.1rem; font-weight: 700; line-height: 1.25; }
+    .kt-id .sub { font-size: .8rem; color: var(--muted); }
+    .kt-id .sub strong { color: var(--text); font-weight: 600; }
+    .kt-id .right { margin-left: auto; display: flex; align-items: center; gap: .7rem; }
+
+    /* ── Überblick ────────────────────────────────────────── */
+    .kt-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .8rem; margin-bottom: 1.8rem; }
+    .kt-stat {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: .8rem 1rem; display: flex; align-items: center; gap: .85rem;
+    }
+    .kt-stat .ico { width: 38px; height: 38px; border-radius: 10px; background: var(--pale); color: var(--primary); display: flex; align-items: center; justify-content: center; flex: none; }
+    .kt-stat .ico svg { width: 20px; height: 20px; }
+    .kt-stat .v { font-family: var(--mono); font-size: 1.35rem; font-weight: 600; color: var(--primary); line-height: 1.1; }
+    .kt-stat .l { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: .1rem; }
+
+    /* ── Abschnitte ───────────────────────────────────────── */
+    .kt-section { margin-bottom: 2rem; }
+    .kt-section-head { display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin-bottom: .8rem; }
+    .kt-section-head .eyebrow { display: block; font-size: .66rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--primary); margin-bottom: .15rem; }
+    .kt-section-head h2 { font-size: 1.1rem; font-weight: 700; margin: 0; }
+    .kt-section-head p { font-size: .8rem; color: var(--muted); margin: .25rem 0 0; max-width: 760px; line-height: 1.5; }
+    .kt-section-head > div:first-child { flex: 1 1 420px; min-width: 0; }
+    .kt-section-head .actions { margin-left: auto; display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; flex: none; }
+    .kt-two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+    @media (max-width: 820px) { .kt-two { grid-template-columns: 1fr; } }
+
+    .kt-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.1rem 1.3rem; }
     .kt-card h2 { font-size: 1rem; margin: 0 0 .8rem; }
     .kt-card p { font-size: .85rem; color: var(--muted); line-height: 1.55; }
     .kt-card label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted); margin: .7rem 0 .25rem; }
     .kt-card input, .kt-card select { width: 100%; font: inherit; padding: .5rem .65rem; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; background: var(--surface); }
+    .kt-card input:focus, .kt-card select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
     .kt-row { display: flex; gap: .6rem; align-items: flex-end; }
     .kt-row > * { flex: 1; }
     .kt-row > .btn { flex: 0 0 auto; }
     .kt-actions { margin-top: 1rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
     .kt-err { color: var(--warn); font-size: .82rem; min-height: 1.2em; margin-top: .5rem; }
     .kt-ok { color: var(--primary); font-size: .82rem; }
-    table.kt { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: .4rem; }
-    table.kt th, table.kt td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
-    table.kt th { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-    table.kt td.r { text-align: right; white-space: nowrap; }
-    .pill { display: inline-block; font-size: .68rem; font-weight: 700; padding: .1rem .45rem; border-radius: 999px; background: var(--bg); color: var(--muted); }
-    .pill.admin { background: rgba(0,140,130,.12); color: var(--primary); }
-    .pill.off { text-decoration: line-through; }
-    .link-box { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .5rem .6rem; word-break: break-all; margin-top: .5rem; }
-    .muted { color: var(--muted); }
-    .hidden { display: none !important; }
-    .btn-link { background: none; border: 0; color: var(--primary); font: inherit; font-size: .8rem; cursor: pointer; padding: 0; text-decoration: underline; }
-    .sd-tabs { display: flex; gap: .3rem; border-bottom: 1px solid var(--border); margin-top: .6rem; }
-    .sd-tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: .45rem .8rem; font: inherit; font-size: .82rem; font-weight: 600; color: var(--muted); cursor: pointer; }
-    .sd-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); }
-    table.sd { width: 100%; border-collapse: collapse; font-size: .78rem; }
-    table.sd th, table.sd td { padding: .25rem .3rem; border-bottom: 1px solid var(--border-light); text-align: left; vertical-align: middle; white-space: nowrap; }
-    table.sd th { font-size: .66rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; }
-    table.sd th small { display: block; text-transform: none; letter-spacing: 0; font-weight: 500; }
-    table.sd input { width: 6.2rem; font: inherit; font-size: .78rem; padding: .25rem .35rem; border: 1px solid var(--border); border-radius: 6px; text-align: right; }
-    table.sd input.name { width: 14rem; text-align: left; }
-    table.sd th:first-child, table.sd td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; box-shadow: 2px 0 0 var(--border-light); }
-    table.sd input:disabled { background: var(--surface2); color: var(--muted); border-color: var(--border-light); }
-    table.sd td.id { font-family: var(--mono); color: var(--muted); font-size: .7rem; }
-    .sd-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .5rem .9rem; margin-top: .6rem; }
-    .sd-form label { margin: 0; }
-    .sd-form input { text-align: right; }
     .kt-note { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius); padding: .7rem 1.1rem; margin-bottom: 1.2rem; font-size: .82rem; color: var(--muted); line-height: 1.55; }
+    .btn-link { background: none; border: 0; color: var(--primary); font: inherit; font-size: .78rem; font-weight: 600; cursor: pointer; padding: 0; }
+    .btn-link:hover { text-decoration: underline; }
+    .btn-link.danger { color: var(--warn); }
+
+    /* Anmelden / Einladung: zentrierte Karte mit Logo */
+    .kt-auth { max-width: 440px; margin: 1rem auto 0; }
+    .kt-auth .brand { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
+    .kt-auth .brand img { width: 36px; height: 36px; }
+    .kt-auth .brand span { font-weight: 700; font-size: 1.05rem; }
+    .kt-auth h2 { font-size: 1.25rem; margin-bottom: .3rem; }
+
+    .pill { display: inline-block; font-size: .66rem; font-weight: 700; padding: .12rem .5rem; border-radius: 999px; background: var(--bg); color: var(--muted); white-space: nowrap; }
+    .pill.admin { background: var(--pale); color: var(--primary); }
+    .pill.off { text-decoration: line-through; }
+    .link-box { font-family: var(--mono); font-size: .75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .5rem .6rem; word-break: break-all; margin-top: .5rem; }
+
+    /* ── Projektkarten ────────────────────────────────────── */
+    .pj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: .9rem; }
+    .pj {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 1rem 1.1rem .8rem; display: flex; flex-direction: column; gap: .5rem; position: relative;
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .pj:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,39,51,.12); }
+    .pj.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0,140,130,.14), var(--shadow); }
+    .pj .top { display: flex; align-items: flex-start; gap: .6rem; }
+    .pj .title { font-weight: 700; font-size: 1rem; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; flex: 1; }
+    .pj .desc { font-size: .8rem; color: var(--muted); line-height: 1.45; }
+    .pj .meta { display: flex; flex-wrap: wrap; gap: .3rem .9rem; font-size: .75rem; color: var(--muted); }
+    .pj .meta b { color: var(--text); font-weight: 600; }
+    .pj .foot { display: flex; align-items: center; gap: .6rem; margin-top: auto; padding-top: .6rem; border-top: 1px solid var(--border-light); flex-wrap: wrap; }
+    .pj .foot .links { margin-left: auto; display: flex; gap: .55rem; flex-wrap: wrap; }
+    .pj .rev { font-family: var(--mono); font-size: .68rem; font-weight: 700; background: var(--bg); color: var(--muted); border-radius: 999px; padding: .12rem .5rem; white-space: nowrap; }
+    .pj.active .rev { background: var(--pale); color: var(--primary); }
+    .pj .when { font-size: .74rem; color: var(--muted); white-space: nowrap; }
+    .pj-new {
+      border: 1px dashed var(--border); border-radius: var(--radius); background: transparent; color: var(--muted);
+      min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem;
+      cursor: pointer; font: inherit; font-size: .85rem; font-weight: 600; transition: border-color .12s, color .12s, background .12s;
+    }
+    .pj-new:hover, .pj-new:focus-visible { border-color: var(--primary); color: var(--primary); background: rgba(0,140,130,.03); outline: none; }
+    .pj-new .plus { font-size: 1.9rem; line-height: 1; font-weight: 400; }
+    .pj-empty { grid-column: 1 / -1; font-size: .85rem; color: var(--muted); padding: .4rem 0; }
+
+    /* ── Verlauf ──────────────────────────────────────────── */
+    .rev-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1rem 1.1rem; margin-top: 1rem; }
+    .rev-panel .head { display: flex; align-items: center; gap: .7rem; margin-bottom: .4rem; }
+    .rev-panel h3 { font-size: .95rem; margin: 0; }
+    .rev-panel .head .btn-link { margin-left: auto; }
+    .rev-list { list-style: none; margin: 0; padding: 0; }
+    .rev-list li { display: grid; grid-template-columns: 48px 1fr auto; gap: .3rem 1rem; align-items: center; padding: .55rem 0; border-bottom: 1px solid var(--border-light); }
+    .rev-list li:last-child { border-bottom: 0; }
+    .rev-list li.mem-empty { display: block; }
+    .rev-list .no { font-family: var(--mono); font-weight: 700; color: var(--primary); background: var(--pale); border-radius: 999px; text-align: center; padding: .15rem 0; font-size: .72rem; }
+    .rev-list .note { font-size: .85rem; }
+    .rev-list .by { font-size: .74rem; color: var(--muted); }
+
+    /* ── Stammdaten ───────────────────────────────────────── */
+    .sd-tabs { display: flex; gap: .2rem; border-bottom: 1px solid var(--border); margin-top: .2rem; overflow-x: auto; }
+    .sd-tabs button { background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: .5rem .85rem; font: inherit; font-size: .82rem; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: .4rem; }
+    .sd-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .sd-tabs .cnt { font-family: var(--mono); font-size: .66rem; font-weight: 700; background: var(--bg); color: var(--muted); border-radius: 999px; padding: .05rem .4rem; }
+    .sd-tabs button.active .cnt { background: var(--pale); color: var(--primary); }
+    .sd-tabs .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
+    .sd-tabs button.own .dot { background: var(--primary); }
+    .sd-meta { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; font-size: .78rem; color: var(--muted); margin: .6rem 0; }
+    .sd-meta .chip { display: inline-flex; align-items: center; gap: .35rem; font-size: .7rem; font-weight: 700; padding: .15rem .55rem; border-radius: 999px; background: var(--bg); color: var(--muted); }
+    .sd-meta .chip.own { background: var(--pale); color: var(--primary); }
+    .sd-meta .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    table.sd { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    table.sd th, table.sd td { padding: .3rem .35rem; border-bottom: 1px solid var(--border-light); text-align: left; vertical-align: middle; white-space: nowrap; }
+    table.sd tbody tr:nth-child(even) td { background: rgba(0,39,51,.025); }
+    table.sd th { font-size: .64rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; padding-bottom: .4rem; }
+    table.sd th small { display: block; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted-light); }
+    table.sd input { width: 6.2rem; font: inherit; font-family: var(--mono); font-size: .76rem; padding: .28rem .4rem; border: 1px solid transparent; border-radius: 6px; text-align: right; background: transparent; }
+    table.sd tr:hover input:not(:disabled) { border-color: var(--border); background: var(--surface); }
+    table.sd input:focus { outline: 2px solid var(--primary); outline-offset: -1px; background: var(--surface); }
+    table.sd input.name { width: 15rem; text-align: left; font-family: var(--sans); font-weight: 600; }
+    table.sd th:first-child, table.sd td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; box-shadow: 2px 0 0 var(--border-light); }
+    table.sd tbody tr:nth-child(even) td:first-child { background: #f7f9f9; }
+    table.sd input:disabled { color: var(--text); }
+    table.sd td.id { font-family: var(--mono); color: var(--muted-light); font-size: .68rem; }
+    .sd-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .6rem 1rem; margin-top: .6rem; }
+    .sd-form label { margin: 0; }
+    .sd-form input { text-align: right; font-family: var(--mono); }
+
+    /* ── Mitglieder / Einladungen ─────────────────────────── */
+    .mem-list { list-style: none; margin: 0; padding: 0; }
+    .mem-list li { display: flex; align-items: center; gap: .75rem; padding: .55rem 0; border-bottom: 1px solid var(--border-light); }
+    .mem-list li:last-child { border-bottom: 0; }
+    .mem-list .av { width: 34px; height: 34px; border-radius: 50%; background: var(--pale); color: var(--primary); font-weight: 700; font-size: .78rem; display: flex; align-items: center; justify-content: center; flex: none; }
+    .mem-list .av.off { background: var(--bg); color: var(--muted); }
+    .mem-list .av.inv { background: var(--bg); color: var(--muted); font-size: 1rem; }
+    .mem-list .who { min-width: 0; }
+    .mem-list .n { font-weight: 600; font-size: .86rem; }
+    .mem-list .e { font-size: .75rem; color: var(--muted); overflow-wrap: anywhere; }
+    .mem-list .right { margin-left: auto; display: flex; align-items: center; gap: .6rem; flex: none; }
+    .mem-empty { font-size: .82rem; color: var(--muted); padding: .4rem 0; }
   </style>
 </head>
 <body>
 
-<section class="page-hero">
+<section class="page-hero compact">
   <div class="inner">
     <h1>Projekte &amp; Konto</h1>
-    <p class="subtitle">Alle Projekte der Organisation an einem Ort — mit Revisionsverlauf, Kopie,
-      Export/Import, Zurücksetzen und Archivierung. Die Datenbank ist der Stand der Wahrheit; die
-      Werkzeuge speichern automatisch. Projekte gehören der Organisation, nicht der Person; Zugang gibt
-      es nur auf Einladung.</p>
+    <p class="subtitle">Projekte der Organisation mit Revisionsverlauf, Stammdaten, Mitglieder und Einladungen — die Datenbank ist der Stand der Wahrheit, die Werkzeuge speichern automatisch.</p>
   </div>
 </section>
 
@@ -75,7 +182,8 @@
     stehen erst wieder zur Verfügung, wenn der Server antwortet.</div>
 
   <!-- ── Einladung einlösen ──────────────────────────────── -->
-  <div id="invite" class="kt-card hidden" style="max-width:520px;margin:0 auto;">
+  <div id="invite" class="kt-card kt-auth hidden">
+    <div class="brand"><img src="/assets/logo.svg" alt=""><span>DieLogic</span></div>
     <h2>Einladung annehmen</h2>
     <p id="invite-text">Einladung wird geprüft …</p>
     <form id="register-form" class="hidden">
@@ -88,11 +196,11 @@
   </div>
 
   <!-- ── Anmelden ────────────────────────────────────────── -->
-  <div id="login" class="kt-card hidden" style="max-width:520px;margin:0 auto;">
+  <div id="login" class="kt-card kt-auth hidden">
+    <div class="brand"><img src="/assets/logo.svg" alt=""><span>DieLogic</span></div>
     <h2>Anmelden</h2>
-    <p>Die Werkzeuge arbeiten auf den Projekten Ihrer Organisation — bitte anmelden. Noch kein Konto?
-      DieLogic ist derzeit nur auf Einladung nutzbar — bitte einen Einladungslink anfordern
-      (<a href="/recht/kontakt.html">Kontakt</a>).</p>
+    <p>Die Werkzeuge arbeiten auf den Projekten Ihrer Organisation. Noch kein Konto? DieLogic ist derzeit
+      nur auf Einladung nutzbar — bitte einen Einladungslink anfordern (<a href="/recht/kontakt.html">Kontakt</a>).</p>
     <form id="login-form">
       <label for="l-email">E-Mail</label><input id="l-email" type="email" required autocomplete="username">
       <label for="l-pw">Passwort</label><input id="l-pw" type="password" required autocomplete="current-password">
@@ -105,41 +213,64 @@
 
   <!-- ── Angemeldet ──────────────────────────────────────── -->
   <div id="account" class="hidden">
-    <div class="kt-note">Angemeldet als <strong id="a-user"></strong> in <strong id="a-org"></strong>
-      <span id="a-role" class="pill"></span> &nbsp;·&nbsp; <button class="btn-link" id="logout">Abmelden</button></div>
+    <div class="kt-id">
+      <div class="kt-avatar" id="a-avatar">·</div>
+      <div class="who">
+        <div class="name" id="a-user"></div>
+        <div class="sub"><strong id="a-org"></strong> <span id="a-role" class="pill"></span> <span id="a-email" class="muted"></span></div>
+      </div>
+      <div class="right"><button class="btn btn-ghost btn-sm" id="logout">Abmelden</button></div>
+    </div>
 
-    <div class="kt-grid">
-      <div class="kt-card" style="grid-column:1 / -1;">
-        <h2>Projekte der Organisation</h2>
-        <p>Die Datenbank ist der Stand der Wahrheit: Änderungen in den Werkzeugen werden laufend gespeichert,
-          „Revision" legt einen benannten Schnappschuss an. „Öffnen" macht ein Projekt hier zum aktiven;
-          „Verlauf" zeigt alle Revisionen, jede lässt sich als Kopie wiederherstellen.</p>
-        <table class="kt"><thead><tr><th>Projekt</th><th>Kunde / Teile-Nr.</th><th class="r">Rev</th><th class="r">Zuletzt</th><th></th></tr></thead>
-          <tbody id="proj-body"><tr><td colspan="5" class="muted">Lade …</td></tr></tbody></table>
-        <div class="kt-actions">
-          <button class="btn btn-outline btn-sm" id="org-new">+ Neues Projekt</button>
+    <div class="kt-stats">
+      <div class="kt-stat"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div><div><div class="v" id="k-projects">–</div><div class="l">Projekte</div></div></div>
+      <div class="kt-stat"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div><div class="v" id="k-members">–</div><div class="l">Mitglieder</div></div></div>
+      <div class="kt-stat"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div><div><div class="v" id="k-invites">–</div><div class="l">Offene Einladungen</div></div></div>
+      <div class="kt-stat"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></div><div><div class="v" id="k-stamm">–</div><div class="l">Stammdaten angepasst</div></div></div>
+    </div>
+
+    <!-- Projekte -->
+    <section class="kt-section" id="projects">
+      <div class="kt-section-head">
+        <div>
+          <span class="eyebrow">Organisation</span>
+          <h2>Projekte</h2>
+          <p>Änderungen in den Werkzeugen werden laufend gespeichert; „Revision" in der Projektleiste legt einen
+            benannten Schnappschuss an. „Öffnen" macht ein Projekt zum aktiven, „Verlauf" zeigt alle Revisionen —
+            jede lässt sich als Kopie wiederherstellen.</p>
+        </div>
+        <div class="actions">
           <button class="btn btn-outline btn-sm" id="org-import">⤒ Projekt importieren (JSON)</button>
           <input type="file" id="org-file" accept="application/json,.json" class="hidden">
-          <span class="kt-err" id="org-err" style="margin:0;"></span>
-        </div>
-        <div id="rev-panel" class="hidden" style="margin-top:1rem;">
-          <h2 id="rev-title">Verlauf</h2>
-          <table class="kt"><thead><tr><th class="r">Rev</th><th>Notiz</th><th>Autor</th><th class="r">Zeit</th><th></th></tr></thead>
-            <tbody id="rev-body"></tbody></table>
+          <button class="btn btn-primary btn-sm" id="org-new">+ Neues Projekt</button>
         </div>
       </div>
+      <div class="pj-grid" id="proj-body"><div class="pj-empty">Lade …</div></div>
+      <div class="kt-err" id="org-err" style="margin:.4rem 0 0;"></div>
+      <div id="rev-panel" class="rev-panel hidden">
+        <div class="head"><h3 id="rev-title">Verlauf</h3><button class="btn-link" id="rev-close">schließen</button></div>
+        <ul class="rev-list" id="rev-body"></ul>
+      </div>
+    </section>
 
-      <div class="kt-card" style="grid-column:1 / -1;" id="stammdaten">
-        <h2>Stammdaten der Organisation</h2>
-        <p>Maschinen, Legierungen, Bauteiltypen und Kosten &amp; Sätze Ihrer Firma — sie ersetzen in allen
-          Werkzeugen die Beispielwerte. <span id="sd-perm"></span></p>
-        <div class="sd-tabs" id="sd-tabs">
-          <button data-tab="machines" class="active">Maschinen</button>
-          <button data-tab="alloys">Legierungen</button>
-          <button data-tab="parts">Bauteiltypen</button>
-          <button data-tab="kosten">Kosten &amp; Sätze</button>
+    <!-- Stammdaten -->
+    <section class="kt-section" id="stammdaten">
+      <div class="kt-section-head">
+        <div>
+          <span class="eyebrow">Organisation</span>
+          <h2>Stammdaten</h2>
+          <p>Maschinen, Legierungen, Bauteiltypen und Kosten &amp; Sätze Ihrer Firma — sie ersetzen in allen
+            Werkzeugen die Beispielwerte. <span id="sd-perm"></span></p>
         </div>
-        <div id="sd-source" class="muted" style="font-size:.8rem;margin:.5rem 0;"></div>
+      </div>
+      <div class="kt-card">
+        <div class="sd-tabs" id="sd-tabs">
+          <button data-tab="machines" class="active"><span class="dot"></span>Maschinen <span class="cnt"></span></button>
+          <button data-tab="alloys"><span class="dot"></span>Legierungen <span class="cnt"></span></button>
+          <button data-tab="parts"><span class="dot"></span>Bauteiltypen <span class="cnt"></span></button>
+          <button data-tab="kosten"><span class="dot"></span>Kosten &amp; Sätze</button>
+        </div>
+        <div class="sd-meta" id="sd-source"></div>
         <div id="sd-body" style="overflow-x:auto;"></div>
         <div class="kt-actions" id="sd-actions">
           <button class="btn btn-outline btn-sm" id="sd-add">+ Eintrag</button>
@@ -151,33 +282,41 @@
           <span class="kt-ok" id="sd-ok"></span>
         </div>
       </div>
+    </section>
 
-      <div class="kt-card">
-        <h2>Mitglieder</h2>
-        <table class="kt"><thead><tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th></th></tr></thead>
-          <tbody id="mem-body"></tbody></table>
+    <!-- Mitglieder & Einladungen -->
+    <section class="kt-section">
+      <div class="kt-section-head">
+        <div>
+          <span class="eyebrow">Organisation</span>
+          <h2>Mitglieder &amp; Einladungen</h2>
+          <p>Zugang gibt es nur auf Einladung. Administratoren laden per Link ein — er ist 14 Tage gültig und einmal einlösbar.</p>
+        </div>
       </div>
-
-      <div class="kt-card" id="invite-card">
-        <h2>Einladungen</h2>
-        <p id="invite-help">Administratoren laden per Link ein. Den Link einfach weitergeben — er ist 14 Tage gültig und
-          einmal einlösbar.</p>
-        <form id="invite-form" class="hidden">
-          <div class="kt-row">
-            <div><label for="i-email">E-Mail</label><input id="i-email" type="email" required></div>
-            <div style="flex:0 0 9rem;"><label for="i-role">Rolle</label>
-              <select id="i-role"><option value="member">Mitglied</option><option value="admin">Admin</option></select></div>
-            <button class="btn btn-primary btn-sm" type="submit">Einladen</button>
-          </div>
-          <div class="kt-err" id="invite-err"></div>
-          <div id="invite-result" class="hidden"><span class="kt-ok">Einladung erstellt — Link weitergeben:</span>
-            <div class="link-box" id="invite-link"></div>
-            <div class="kt-actions"><button type="button" class="btn btn-outline btn-sm" id="copy-link">Link kopieren</button></div></div>
-        </form>
-        <table class="kt" id="inv-table"><thead><tr><th>E-Mail</th><th>Rolle</th><th class="r">Gültig bis</th><th></th></tr></thead>
-          <tbody id="inv-body"></tbody></table>
+      <div class="kt-two">
+        <div class="kt-card">
+          <h2>Mitglieder</h2>
+          <ul class="mem-list" id="mem-body"></ul>
+        </div>
+        <div class="kt-card" id="invite-card">
+          <h2>Einladungen</h2>
+          <p id="invite-help" class="hidden">Einladungen sprechen die Administratoren der Organisation aus.</p>
+          <form id="invite-form" class="hidden">
+            <div class="kt-row">
+              <div><label for="i-email">E-Mail</label><input id="i-email" type="email" required placeholder="name@firma.de"></div>
+              <div style="flex:0 0 9rem;"><label for="i-role">Rolle</label>
+                <select id="i-role"><option value="member">Mitglied</option><option value="admin">Admin</option></select></div>
+              <button class="btn btn-primary btn-sm" type="submit">Einladen</button>
+            </div>
+            <div class="kt-err" id="invite-err"></div>
+            <div id="invite-result" class="hidden"><span class="kt-ok">Einladung erstellt — Link weitergeben:</span>
+              <div class="link-box" id="invite-link"></div>
+              <div class="kt-actions" style="margin-top:.5rem;"><button type="button" class="btn btn-outline btn-sm" id="copy-link">Link kopieren</button></div></div>
+          </form>
+          <div id="inv-table" style="margin-top:.6rem;"><ul class="mem-list" id="inv-body"></ul></div>
+        </div>
       </div>
-    </div>
+    </section>
   </div>
 </div>
 
@@ -199,6 +338,13 @@
     var d = new Date(iso);
     return isNaN(d) ? '' : d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
   }
+  function initials(name, email) {
+    var src = (name || '').trim() || (email || '').split('@')[0];
+    var parts = src.split(/[\s._-]+/).filter(Boolean);
+    var s = parts.length >= 2 ? parts[0][0] + parts[parts.length - 1][0] : src.slice(0, 2);
+    return s.toUpperCase() || '·';
+  }
+  function setCount(id, n) { $(id).textContent = n == null ? '–' : String(n); }
   async function api(method, path, body) {
     var r = await fetch(path, { method: method, credentials: 'same-origin',
       headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
@@ -285,38 +431,50 @@
         P.markSaved(o.id, { id: r.id, rev: r.rev });
       } catch (err) { console.warn('Übernahme fehlgeschlagen:', err.message); }
     }
-    $('a-user').textContent = me.user.name ? me.user.name + ' (' + me.user.email + ')' : me.user.email;
+    $('a-user').textContent = me.user.name || me.user.email;
+    $('a-email').textContent = me.user.name ? '· ' + me.user.email : '';
+    $('a-avatar').textContent = initials(me.user.name, me.user.email);
     $('a-org').textContent = me.org.name;
     $('a-role').textContent = me.user.role === 'admin' ? 'Admin' : 'Mitglied';
     $('a-role').className = 'pill' + (me.user.role === 'admin' ? ' admin' : '');
     loadProjects();
     loadMembers();
     if (me.user.role === 'admin') { show('invite-form', true); loadInvites(); }
-    else { $('invite-help').textContent = 'Einladungen sprechen die Administratoren der Organisation aus.'; show('inv-table', false); }
+    else { show('invite-help', true); show('inv-table', false); setCount('k-invites', '–'); }
   }
 
   async function loadProjects() {
     var rows;
     try { rows = await api('GET', '/api/projects'); }
-    catch (err) { $('proj-body').innerHTML = '<tr><td colspan="5" class="muted">' + esc(err.message) + '</td></tr>'; return; }
+    catch (err) { $('proj-body').innerHTML = '<div class="pj-empty">' + esc(err.message) + '</div>'; return; }
     var local = {};
     P.list().forEach(function (p) { if (p.remote) local[p.remote.id] = p; });
     var cur = P.current();
-    $('proj-body').innerHTML = rows.length ? rows.map(function (r) {
+    setCount('k-projects', rows.length);
+    var cards = rows.map(function (r) {
       var l = local[r.id];
-      var active = l && l.id === cur.id;
-      return '<tr><td><strong>' + esc(r.name) + '</strong> ' + (active ? '<span class="pill admin">aktiv</span>' : '')
-        + '<br><span class="muted">' + esc(r.description) + '</span></td>'
-        + '<td>' + esc(r.customer) + (r.part_no ? ' / ' + esc(r.part_no) : '') + '</td>'
-        + '<td class="r">' + r.rev + '</td><td class="r">' + fmt(r.updated_at) + '</td>'
-        + '<td class="r" style="white-space:nowrap;">'
-        + (active ? '' : '<button class="btn btn-outline btn-sm" data-open="' + esc(r.id) + '">Öffnen</button> ')
-        + '<button class="btn-link" data-revs="' + esc(r.id) + '" data-name="' + esc(r.name) + '">Verlauf</button> · '
-        + '<button class="btn-link" data-dup="' + esc(r.id) + '" data-name="' + esc(r.name) + '">Kopie</button> · '
-        + '<button class="btn-link" data-export="' + esc(r.id) + '">Export</button> · '
-        + '<button class="btn-link" data-reset="' + esc(r.id) + '" data-name="' + esc(r.name) + '" title="Alle Eingaben auf die Standardwerte">Zurücksetzen</button> · '
-        + '<button class="btn-link" data-archive="' + esc(r.id) + '" data-name="' + esc(r.name) + '">Archivieren</button></td></tr>';
-    }).join('') : '<tr><td colspan="5" class="muted">Noch keine Projekte — „+ Neues Projekt" oder in einem Werkzeug anlegen.</td></tr>';
+      var active = !!(l && cur && l.id === cur.id);
+      var meta = [];
+      if (r.customer) meta.push('Kunde <b>' + esc(r.customer) + '</b>');
+      if (r.part_no) meta.push('Teile-Nr. <b>' + esc(r.part_no) + '</b>');
+      return '<article class="pj' + (active ? ' active' : '') + '">'
+        + '<div class="top"><div class="title">' + esc(r.name) + '</div>' + (active ? '<span class="pill admin">aktiv</span>' : '') + '</div>'
+        + (r.description ? '<div class="desc">' + esc(r.description) + '</div>' : '')
+        + (meta.length ? '<div class="meta">' + meta.join('') + '</div>' : '')
+        + '<div class="foot"><span class="rev" title="Revisionen">Rev ' + r.rev + '</span><span class="when" title="zuletzt gespeichert">' + fmt(r.updated_at) + '</span>'
+        + '<div class="links">'
+        + (active ? '<a class="btn btn-primary btn-sm" href="/tools/auslegung/">Weiter →</a>' : '<button class="btn btn-outline btn-sm" data-open="' + esc(r.id) + '">Öffnen</button>')
+        + '</div></div>'
+        + '<div class="foot" style="border-top:0;padding-top:.1rem;"><div class="links" style="margin-left:0;">'
+        + '<button class="btn-link" data-revs="' + esc(r.id) + '" data-name="' + esc(r.name) + '">Verlauf</button>'
+        + '<button class="btn-link" data-dup="' + esc(r.id) + '" data-name="' + esc(r.name) + '">Kopie</button>'
+        + '<button class="btn-link" data-export="' + esc(r.id) + '">Export</button>'
+        + '<button class="btn-link" data-reset="' + esc(r.id) + '" data-name="' + esc(r.name) + '" title="Alle Eingaben auf die Standardwerte">Zurücksetzen</button>'
+        + '<button class="btn-link danger" data-archive="' + esc(r.id) + '" data-name="' + esc(r.name) + '">Archivieren</button>'
+        + '</div></div></article>';
+    });
+    cards.push('<button type="button" class="pj-new" data-new="1"><span class="plus">+</span>Neues Projekt</button>');
+    $('proj-body').innerHTML = cards.join('');
   }
 
   /* Serverprojekt → lokales Dokument (Cache) */
@@ -364,6 +522,7 @@
   }
   $('proj-body').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.new) { $('org-new').click(); return; }
     orgAction(b).catch(function (err) { alert(err.message); });
   });
   $('org-new').addEventListener('click', function () {
@@ -398,12 +557,14 @@
     $('rev-title').textContent = 'Verlauf — ' + name;
     var revs = await api('GET', '/api/projects/' + id + '/revisions');
     $('rev-body').innerHTML = revs.map(function (r) {
-      return '<tr><td class="r">' + r.rev + '</td><td>' + esc(r.note) + '</td><td>' + esc(r.author ? (r.author.name || r.author.email) : '—') + '</td>'
-        + '<td class="r">' + fmt(r.created_at) + '</td>'
-        + '<td class="r"><button class="btn btn-ghost btn-sm" data-restore="' + esc(id) + '" data-rev="' + r.rev + '" data-name="' + esc(name) + '">Als Kopie öffnen</button></td></tr>';
-    }).join('') || '<tr><td colspan="5" class="muted">Keine Revisionen.</td></tr>';
+      return '<li><span class="no">Rev ' + r.rev + '</span>'
+        + '<div><div class="note">' + (r.note ? esc(r.note) : '<span class="muted">ohne Notiz</span>') + '</div>'
+        + '<div class="by">' + esc(r.author ? (r.author.name || r.author.email) : '—') + ' · ' + fmt(r.created_at) + '</div></div>'
+        + '<button class="btn btn-ghost btn-sm" data-restore="' + esc(id) + '" data-rev="' + r.rev + '" data-name="' + esc(name) + '">Als Kopie öffnen</button></li>';
+    }).join('') || '<li class="mem-empty">Noch keine Revisionen — „Revision" in der Projektleiste legt die erste an.</li>';
     $('rev-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
+  $('rev-close').addEventListener('click', function () { show('rev-panel', false); });
 
   async function restore(id, rev, name) {
     var r = await api('GET', '/api/projects/' + id + '/revisions/' + rev);
@@ -418,11 +579,13 @@
 
   async function loadMembers() {
     var rows = await api('GET', '/api/org/members');
+    setCount('k-members', rows.filter(function (m) { return !m.disabled; }).length);
     $('mem-body').innerHTML = rows.map(function (m) {
       var canDisable = me.user.role === 'admin' && m.id !== me.user.id && !m.disabled;
-      return '<tr><td>' + esc(m.name) + '</td><td>' + esc(m.email) + '</td>'
-        + '<td><span class="pill' + (m.role === 'admin' ? ' admin' : '') + (m.disabled ? ' off' : '') + '">' + (m.disabled ? 'deaktiviert' : m.role === 'admin' ? 'Admin' : 'Mitglied') + '</span></td>'
-        + '<td class="r">' + (canDisable ? '<button class="btn-link" data-disable="' + esc(m.id) + '">deaktivieren</button>' : '') + '</td></tr>';
+      return '<li><span class="av' + (m.disabled ? ' off' : '') + '">' + esc(initials(m.name, m.email)) + '</span>'
+        + '<div class="who"><div class="n">' + esc(m.name || m.email) + (m.id === me.user.id ? ' <span class="muted" style="font-weight:400;">(Sie)</span>' : '') + '</div><div class="e">' + esc(m.email) + '</div></div>'
+        + '<div class="right"><span class="pill' + (m.role === 'admin' ? ' admin' : '') + (m.disabled ? ' off' : '') + '">' + (m.disabled ? 'deaktiviert' : m.role === 'admin' ? 'Admin' : 'Mitglied') + '</span>'
+        + (canDisable ? '<button class="btn-link danger" data-disable="' + esc(m.id) + '">deaktivieren</button>' : '') + '</div></li>';
     }).join('');
   }
   $('mem-body').addEventListener('click', async function (e) {
@@ -435,12 +598,14 @@
   async function loadInvites() {
     var rows = await api('GET', '/api/org/invites');
     var base = location.origin + location.pathname.replace(/\/app\/konto\.html$/, '');
+    setCount('k-invites', rows.length);
     $('inv-body').innerHTML = rows.length ? rows.map(function (i) {
       var url = base + '/konto/?token=' + i.token;
-      return '<tr><td>' + esc(i.email) + '</td><td>' + (i.role === 'admin' ? 'Admin' : 'Mitglied') + '</td>'
-        + '<td class="r">' + (i.expires_at ? fmt(i.expires_at) : 'unbegrenzt') + '</td>'
-        + '<td class="r"><button class="btn-link" data-copy="' + esc(url) + '">Link kopieren</button> · <button class="btn-link" data-revoke="' + esc(i.id) + '">zurückziehen</button></td></tr>';
-    }).join('') : '<tr><td colspan="4" class="muted">Keine offenen Einladungen.</td></tr>';
+      return '<li><span class="av inv">✉</span>'
+        + '<div class="who"><div class="n">' + esc(i.email) + '</div><div class="e">gültig bis ' + (i.expires_at ? fmt(i.expires_at) : 'unbegrenzt') + '</div></div>'
+        + '<div class="right"><span class="pill' + (i.role === 'admin' ? ' admin' : '') + '">' + (i.role === 'admin' ? 'Admin' : 'Mitglied') + '</span>'
+        + '<button class="btn-link" data-copy="' + esc(url) + '">Link kopieren</button><button class="btn-link danger" data-revoke="' + esc(i.id) + '">zurückziehen</button></div></li>';
+    }).join('') : '<li class="mem-empty">Keine offenen Einladungen.</li>';
   }
   $('inv-body').addEventListener('click', async function (e) {
     var b = e.target.closest('button'); if (!b) return;
@@ -558,9 +723,19 @@ function currentData(key) {
 function render() {
   const admin = me && me.user.role === 'admin';
   $('sd-perm').textContent = admin ? 'Als Administrator können Sie die Werte bearbeiten.' : 'Nur Administratoren können die Werte ändern.';
-  document.querySelectorAll('#sd-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('#sd-tabs button').forEach(b => {
+    const key = b.dataset.tab;
+    b.classList.toggle('active', key === tab);
+    b.classList.toggle('own', !!settings[key]);
+    const cnt = b.querySelector('.cnt');
+    if (cnt) { const d = settings[key] && settings[key].data; cnt.textContent = Array.isArray(d) ? d.length : (DEFAULTS[key] || []).length; }
+  });
+  const own = Object.keys(DOMAIN).concat('kosten').filter(k => settings[k]).length;
+  $('k-stamm').textContent = own + ' / 4';
   const src = settings[tab];
-  $('sd-source').textContent = src ? 'Quelle: eigene Werte der Organisation, zuletzt geändert ' + fmtDate(src.updated_at) + '.' : 'Quelle: Beispielwerte (shared/examples/' + tab + '.js) — noch nicht angepasst.';
+  $('sd-source').innerHTML = src
+    ? '<span class="chip own"><span class="dot"></span>eigene Werte</span> zuletzt geändert ' + fmtDate(src.updated_at)
+    : '<span class="chip"><span class="dot"></span>Beispielwerte</span> noch nicht angepasst — Einträge bearbeiten und speichern, damit sie in allen Werkzeugen gelten.';
   $('sd-add').hidden = tab === 'kosten';
   $('sd-actions').querySelectorAll('button').forEach(b => { b.disabled = !admin; });
   if (!work[tab]) work[tab] = currentData(tab);
@@ -577,7 +752,7 @@ function renderList(admin) {
       + '<td>' + (admin ? '<button class="btn-link" data-del="' + i + '">entfernen</button>' : '') + '</td></tr>';
   });
   h += '</tbody></table>';
-  if (!rows.length) h = '<p class="muted">Keine Einträge — „+ Eintrag" oder „Beispielwerte laden".</p>';
+  if (!rows.length) h = '<p class="mem-empty">Keine Einträge — „+ Eintrag" oder „Beispielwerte laden".</p>';
   $('sd-body').innerHTML = h;
 }
 
@@ -633,7 +808,7 @@ $('sd-save').addEventListener('click', async () => {
   } catch (err) { $('sd-err').textContent = err.message; }
 });
 $('sd-reset').addEventListener('click', async () => {
-  if (!confirm('Eigene Werte für „' + $('sd-tabs').querySelector('.active').textContent + '" löschen? Danach gelten wieder die Beispielwerte.')) return;
+  if (!confirm('Eigene Werte für „' + $('sd-tabs').querySelector('.active').textContent.replace(/\s*\d+\s*$/, '').trim() + '" löschen? Danach gelten wieder die Beispielwerte.')) return;
   try {
     await api('DELETE', '/api/org/settings/' + tab);
     delete settings[tab]; work[tab] = null;
