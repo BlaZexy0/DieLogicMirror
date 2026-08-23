@@ -4,7 +4,7 @@ import { drawLine } from './line.js';
 import { drawHeat } from './heat.js';
 import { drawMap } from './map.js';
 import { drawDonut } from './donut.js';
-import { text } from './base.js';
+import { text, fillRich } from './base.js';
 import { theme } from '../core/theme.js';
 
 export function drawAny(x, w, h, d, def) {
@@ -21,5 +21,5 @@ function errCanvas(x, w, h, d) {
   text(x, d.title || '', w / 2, 22, 'center', 'bold 15px Arial');
   x.fillStyle = window.__PALETTE__.bad;
   x.textAlign = 'center'; x.font = 'bold 13px Arial';
-  x.fillText('⚠ ' + d.err, w / 2, h / 2);
+  fillRich(x, '⚠ ' + d.err, w / 2, h / 2);
 }

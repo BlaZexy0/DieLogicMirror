@@ -3,7 +3,7 @@
    Labels werden kollisionsfrei platziert: Grenzkurven-Labels haben Vorrang,
    Iso-Labels weichen aus oder entfallen. */
 
-import { frame, heading, axes, marker } from './base.js';
+import { frame, heading, axes, marker, fillRich } from './base.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 
@@ -122,7 +122,7 @@ export function drawMap(x, w, h, d) {
           x.fillStyle = 'rgba(255,255,255,.88)';
           x.fillRect(pos[0], pos[1], tw + 6, 13);
           x.fillStyle = col; x.textAlign = 'left';
-          x.fillText(c.l, pos[0] + 3, pos[1] + 10);
+          fillRich(x, c.l, pos[0] + 3, pos[1] + 10);
           break;
         }
       }
@@ -135,7 +135,7 @@ export function drawMap(x, w, h, d) {
     const tw = x.measureText(il.l).width;
     for (const a2 of il.cands) {
       const pos = tryLabel(a2[0] + 2, a2[1] - 13, tw + 4, 11);
-      if (pos) { x.textAlign = 'left'; x.fillText(il.l, pos[0] + 2, pos[1] + 9); break; }
+      if (pos) { x.textAlign = 'left'; fillRich(x, il.l, pos[0] + 2, pos[1] + 9); break; }
     }
   });
   x.globalAlpha = 1;
@@ -148,7 +148,7 @@ export function drawMap(x, w, h, d) {
   x.setLineDash([]);
   if (zielRect) {
     x.fillStyle = C.series1; x.font = '10px Arial'; x.textAlign = 'center';
-    x.fillText(zielRect.l, zielRect.x, zielRect.y);
+    fillRich(x, zielRect.l, zielRect.x, zielRect.y);
   }
 
   x.restore();
@@ -167,7 +167,7 @@ export function drawMap(x, w, h, d) {
     } else {
       x.fillStyle = lineColor(key); x.fillRect(lx, ly - 6, 11, 3);
     }
-    x.fillStyle = C.text; x.textAlign = 'left'; x.fillText(lab, lx + 15, ly);
+    x.fillStyle = C.text; x.textAlign = 'left'; fillRich(x, lab, lx + 15, ly);
     lx += tw + 30;
   }
 

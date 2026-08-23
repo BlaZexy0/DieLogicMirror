@@ -5,6 +5,7 @@
    Grenzen überall gleich aussehen. */
 
 import { theme } from '../core/theme.js';
+import { fillRich } from './base.js';
 
 /* Farbe einer Grenze: explizit (l.c) → Theme-Registry (theme.limits[id])
    → Fallback theme.chart.limit. */
@@ -224,7 +225,7 @@ export function drawLimits(x, f, X, Y, d) {
           x.fillStyle = 'rgba(255,255,255,.88)';
           x.fillRect(at[0] + 4, at[1] - 16, tw + 6, 13);
           x.fillStyle = col; x.textAlign = 'left';
-          x.fillText(l.label, at[0] + 7, at[1] - 6);
+          fillRich(x, l.label, at[0] + 7, at[1] - 6);
         }
       }
     } else if (l.on === 'x') {
@@ -247,7 +248,7 @@ export function drawLimits(x, f, X, Y, d) {
         if (showText) {
           x.save();
           x.fillStyle = col; x.font = '10px Arial'; x.textAlign = 'left';
-          x.translate(px - 4, bot - 8); x.rotate(-Math.PI / 2); x.fillText(l.label, 0, 0);
+          x.translate(px - 4, bot - 8); x.rotate(-Math.PI / 2); fillRich(x, l.label, 0, 0);
           x.restore();
         }
       }
@@ -268,7 +269,7 @@ export function drawLimits(x, f, X, Y, d) {
         x.setLineDash([]);
         if (showText) {
           x.fillStyle = col; x.textAlign = 'right'; x.font = '11px Arial';
-          x.fillText(l.label, right - 4, py - 4);
+          fillRich(x, l.label, right - 4, py - 4);
         }
       }
     }
@@ -279,7 +280,7 @@ export function drawLimits(x, f, X, Y, d) {
     x.font = '10px Arial';
     for (const n of notes) {
       x.fillStyle = n.c; x.textAlign = n.align || 'center';
-      x.fillText(n.l, n.px, n.py);
+      fillRich(x, n.l, n.px, n.py);
     }
   }
 
@@ -304,7 +305,7 @@ export function drawLimits(x, f, X, Y, d) {
       const py = (mid[1] + edgeEx) / 2;
       if (Math.abs(mid[1] - edgeEx) > 26) {
         x.fillStyle = C.iso || col; x.textAlign = 'center'; x.font = '10px Arial';
-        x.fillText(mask.note, mid[0], py + 4);
+        fillRich(x, mask.note, mid[0], py + 4);
       }
     }
     const at = maskPts[Math.floor(maskPts.length * 0.4)];
@@ -314,7 +315,7 @@ export function drawLimits(x, f, X, Y, d) {
       x.fillStyle = 'rgba(255,255,255,.88)';
       x.fillRect(at[0] + 4, at[1] - 16, tw + 6, 13);
       x.fillStyle = col; x.textAlign = 'left';
-      x.fillText(mask.label, at[0] + 7, at[1] - 6);
+      fillRich(x, mask.label, at[0] + 7, at[1] - 6);
     }
   }
   x.restore();

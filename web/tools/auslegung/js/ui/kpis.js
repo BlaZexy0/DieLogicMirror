@@ -9,7 +9,7 @@
    Farbe allein. „Keine Daten" ist ein neutraler Stil, keine Warnung.
    Eine Prüfliste (#checkbar) fasst alle bewerteten Kacheln zusammen. */
 
-import { fmt } from '../core/format.js';
+import { fmt, subHTML } from '../core/format.js';
 import { total, afterGate, pistonArea, travel, injForceEff, hydArea } from '../core/physics.js';
 import { pqCore } from '../charts/pq2.js';
 
@@ -33,10 +33,10 @@ function kpi(label, value, sub, status = 'info', tagText = '', barHtml = '') {
     ? '<span class="tag">' + (ICON[status] ? ICON[status] + ' ' : '') + (tagText || (status === 'nodata' ? 'keine Daten' : '')) + '</span>'
     : '';
   return '<div class="kpi ' + status + '" id="' + id + '">'
-    + '<span>' + label + '</span>'
-    + '<b>' + value + tagHtml + '</b>'
+    + '<span>' + subHTML(label) + '</span>'
+    + '<b>' + value + subHTML(tagHtml) + '</b>'
     + barHtml
-    + '<small>' + sub + '</small></div>';
+    + '<small>' + subHTML(sub) + '</small></div>';
 }
 
 function group(title, tiles) {

@@ -1,6 +1,7 @@
 /* Diagramm-Karten: DOM-Aufbau (Kopf, Tabs, Buttons, Canvas, Hover-Zeile)
    und das Neuzeichnen einer Karte. */
 
+import { subHTML } from '../core/format.js';
 import { drawAny } from '../render/draw.js';
 import { showHover, HOVER_IDLE } from '../render/hover.js';
 import { notify } from '../core/state.js';
@@ -48,7 +49,7 @@ export function buildCard(def, container, opts = {}) {
     : '';
 
   card.innerHTML =
-    '<div class="head"><div><h3>' + def.title + '</h3><small>' + def.desc + '</small></div>' +
+    '<div class="head"><div><h3>' + def.title + '</h3><small>' + subHTML(def.desc) + '</small></div>' +
     '<div class="head-right">' + tabsHtml + hlHtml + csvHtml +
     '<button class="png-btn" title="Als PNG kopieren" aria-label="Als PNG kopieren">' + COPY_SVG + '</button>' +
     linkHtml + '</div></div>' +

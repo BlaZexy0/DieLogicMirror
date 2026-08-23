@@ -1,6 +1,6 @@
 /* Ringdiagramm (Materialausbeute). */
 
-import { heading } from './base.js';
+import { heading, fillRich } from './base.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 
@@ -29,9 +29,9 @@ export function drawDonut(x, w, h, d) {
     a0 = a1;
   }
   x.fillStyle = C.text; x.textAlign = 'center'; x.font = 'bold 26px Arial';
-  x.fillText(fmt(d.share) + ' %', g.cx, g.cy + 2);
+  fillRich(x, fmt(d.share) + ' %', g.cx, g.cy + 2);
   x.fillStyle = window.__PALETTE__.muted; x.font = '11px Arial';
-  x.fillText('Ausbeute', g.cx, g.cy + 20);
+  fillRich(x, 'Ausbeute', g.cx, g.cy + 20);
 
   let lx = g.cx + g.R + 24, ly = g.cy - (d.segs.length - 1) * 13;
   x.font = '11.5px Arial';
@@ -40,7 +40,7 @@ export function drawDonut(x, w, h, d) {
     x.fillStyle = s.c; x.fillRect(lx, ly - 9, 11, 11);
     x.strokeStyle = C.surface; x.strokeRect(lx, ly - 9, 11, 11);
     x.fillStyle = C.text; x.textAlign = 'left';
-    x.fillText(s.n + '  ' + fmt(s.kg) + ' kg · ' + fmt(100 * s.kg / tot) + ' %', lx + 17, ly);
+    fillRich(x, s.n + '  ' + fmt(s.kg) + ' kg · ' + fmt(100 * s.kg / tot) + ' %', lx + 17, ly);
     ly += 26;
   }
 }

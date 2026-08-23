@@ -3,6 +3,7 @@
 
 import { loadTheme } from './core/theme.js';
 import { state, subscribe } from './core/state.js';
+import { subHTML } from './core/format.js';
 import { computeShot } from './core/physics.js';
 import { applyCurveGen } from './core/curvegen.js';
 import { applyAuto } from './core/autofit.js';
@@ -36,8 +37,8 @@ async function init() {
   await loadTheme();
   document.title = def.title + ' · DieLogic Dashboard';
   document.getElementById('chartTitle').textContent = def.title;
-  document.getElementById('chartDesc').textContent = def.desc;
-  document.getElementById('chartSub').textContent = def.desc;
+  document.getElementById('chartDesc').innerHTML = subHTML(def.desc);
+  document.getElementById('chartSub').innerHTML = subHTML(def.desc);
 
   /* Navigation zwischen den Einzelseiten */
   const nav = document.getElementById('chartNav');

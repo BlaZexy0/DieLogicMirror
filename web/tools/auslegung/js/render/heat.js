@@ -3,7 +3,7 @@
    Pixel-Maskierung — die Ausschlussfläche wird schraffiert, die Grenze als
    Kurve gezeichnet und in der Legende geführt. */
 
-import { frame, heading, axes, marker, text, turbo, contours } from './base.js';
+import { frame, heading, axes, marker, text, turbo, contours, fillRich } from './base.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { drawLimits, legendItems, drawLegendSwatch } from './limits.js';
@@ -48,7 +48,7 @@ export function drawHeat(x, w, h, d) {
       if (ly > f.T - 9) break;
       drawLegendSwatch(x, it, lx, ly);
       x.fillStyle = theme.chart.text; x.textAlign = 'left'; x.font = '10.5px Arial';
-      x.fillText(it.label, lx + 17, ly);
+      fillRich(x, it.label, lx + 17, ly);
       lx += 17 + tw + 14;
     }
   }

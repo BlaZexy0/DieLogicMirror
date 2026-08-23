@@ -174,6 +174,31 @@ test('autofit: ideale Anschnitt- und Entlüftungsfläche aus Schusskurve bzw. NA
   state.auto.gate = false;
 });
 
+test('Indizes: subHTML (HTML) und fillRich (Canvas) setzen „_token" als Tiefindex', async () => {
+  const { subHTML } = await import(path.join(site, 'tools/auslegung/js/core/format.js'));
+  assert.equal(subHTML('v_a max 50 m/s'), 'v<sub>a</sub> max 50 m/s');
+  assert.equal(subHTML('P_{acc} · Q_dry · t_f,min'), 'P<sub>acc</sub> · Q<sub>dry</sub> · t<sub>f,min</sub>');
+  assert.equal(subHTML('ohne Index'), 'ohne Index');
+  const { fillRich } = await import(path.join(site, 'tools/auslegung/js/render/base.js'));
+  /* Fake-Kontext: zeichnet Segmente mit Font und Position auf */
+  const calls = [];
+  const ctx = { font: 'bold 12px Arial', textAlign: 'center', fillStyle: '#000',
+    measureText: s => ({ width: s.length * 6 }),
+    fillText: (s, x, y) => calls.push([s, x, y, ctx.font]),
+    save() { this._s = [this.font, this.textAlign]; }, restore() { [this.font, this.textAlign] = this._s; } };
+  fillRich(ctx, 'Q_dry 141 l/s', 100, 50);
+  assert.deepEqual(calls.map(c => c[0]), ['Q', 'dry', ' 141 l/s']);
+  assert.match(calls[1][3], /9\.4px/);                  // 78 % von 12px
+  assert.ok(calls[1][2] > 50 && calls[0][2] === 50, 'Index abgesenkt');
+  /* zentriert: Gesamtbreite 6·(1 + 3 + 8) = 72 → Start bei 100 − 36 */
+  assert.equal(calls[0][1], 64);
+  assert.equal(calls[1][1], 70); assert.equal(calls[2][1], 88);
+  assert.equal(ctx.font, 'bold 12px Arial'); assert.equal(ctx.textAlign, 'center');
+  /* ohne Unterstrich: ein normaler Aufruf */
+  calls.length = 0; fillRich(ctx, 'Maschine', 10, 10);
+  assert.deepEqual(calls, [['Maschine', 10, 10, 'bold 12px Arial']]);
+});
+
 test('curvegen: V1/V2-Modus — Plateau bei V1, Fehler bei zu flacher Rampe', () => {
   const v = defaultValues();
   const ok = generateCurve(v, { mode: 'v1v2', v1: 0.4, a1: 5, v2: 4, a2: 30 });

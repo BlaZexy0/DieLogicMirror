@@ -1,7 +1,7 @@
 /* Liniendiagramme: Serien, Grenzen (d.limits — Ausschlussflächen, Ziel-
    bänder, Referenzlinien), Ereignismarker, Betriebspunkt. */
 
-import { lineFrame, heading, axes, marker, text } from './base.js';
+import { lineFrame, heading, axes, marker, text, fillRich } from './base.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { drawLimits, legendItems, drawLegendSwatch } from './limits.js';
@@ -44,13 +44,13 @@ export function drawLine(x, w, h, d) {
     for (let i = 0; i <= 5; i++) {
       const yy = f.T + i * f.ph / 5;
       x.fillStyle = rc; x.textAlign = 'left'; x.font = '11px Arial';
-      x.fillText(fmt(r1 - i * (r1 - r0) / 5), f.L + f.pw + 7, yy + 4);
+      fillRich(x, fmt(r1 - i * (r1 - r0) / 5), f.L + f.pw + 7, yy + 4);
     }
     if (d.rl) {
       x.save();
       x.translate(w - 10, f.T + f.ph / 2); x.rotate(PI / 2);
       x.fillStyle = rc; x.textAlign = 'center'; x.font = '11px Arial';
-      x.fillText(d.rl, 0, 0);
+      fillRich(x, d.rl, 0, 0);
       x.restore();
     }
   }
@@ -79,7 +79,7 @@ export function drawLine(x, w, h, d) {
     x.fillStyle = C.surface; x.fill();
     x.strokeStyle = C.series2; x.lineWidth = 1.5; x.stroke();
     x.fillStyle = C.series2; x.textAlign = 'center'; x.font = 'bold 10px Arial';
-    x.fillText('' + ev.n, ex, cy + 3.5);
+    fillRich(x, '' + ev.n, ex, cy + 3.5);
   }
 
   x.save();
@@ -135,7 +135,7 @@ export function drawLine(x, w, h, d) {
     if (ly > maxLy) break;
     drawLegendSwatch(x, it, lx, ly);
     x.fillStyle = C.text; x.textAlign = 'left'; x.font = '10.5px Arial';
-    x.fillText(it.label, lx + 17, ly);
+    fillRich(x, it.label, lx + 17, ly);
     lx += 17 + tw + 14;
   }
 
@@ -147,7 +147,7 @@ export function drawLine(x, w, h, d) {
     x.setLineDash([]);
     if (sg.label) {
       x.font = '10.5px Arial'; x.fillStyle = sg.c || C.marker; x.textAlign = 'left';
-      x.fillText(sg.label, X(Math.max(sg.x1, sg.x2)) + 6, (Y(sg.y1) + Y(sg.y2)) / 2 + 4);
+      fillRich(x, sg.label, X(Math.max(sg.x1, sg.x2)) + 6, (Y(sg.y1) + Y(sg.y2)) / 2 + 4);
     }
     x.restore();
   }

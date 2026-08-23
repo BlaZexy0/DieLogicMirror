@@ -1,6 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 560" font-family="Arial, Helvetica, sans-serif" role="img"><defs><clipPath id="clip0"><path d="M75.00 92.00h755.00v410.00h-755.00Z"/></clipPath><clipPath id="clip1"><path d="M74.00 91.00h757.00v412.00h-757.00Z"/></clipPath></defs><rect x="0.00" y="0.00" width="880.00" height="560.00" fill="#ffffff"/>
 <text x="440.00" y="22.00" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#002733" text-anchor="middle">Fits an die exakte Segment-Lösung</text>
-<text x="440.00" y="42.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">Deckenkriterium v_krit = ω(D) − ω(h₀) · Nogowizin: ≈2 % für φ = 0,2–0,75, am Rand bis 28 % · Segment-Fit (DieLogic): ≤ 0,25 % überall</text>
+<text x="43.34" y="42.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="start">Deckenkriterium v</text>
+<text x="146.19" y="45.08" font-family="Arial, Helvetica, sans-serif" font-size="8.6" font-weight="400" fill="#002733" text-anchor="start">krit</text>
+<text x="165.11" y="42.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="start"> = ω(D) − ω(h₀) · Nogowizin: ≈2 % für φ = 0,2–0,75, am Rand bis 28 % · Segment-Fit (DieLogic): ≤ 0,25 % überall</text>
 <path d="M40.00 55.00L840.00 55.00" fill="none" stroke="#ccd4d6" stroke-width="1" stroke-linejoin="round"/>
 <path d="M75.00 92.00L75.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
 <path d="M75.00 92.00L830.00 92.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
@@ -27,7 +29,9 @@
 <text x="830.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">95</text>
 <text x="68.00" y="506.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">0</text>
 <text x="452.50" y="549.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">Füllgrad φ in %</text>
-<text x="0.00" y="0.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle" transform="translate(14.00 297.00) rotate(-90.00)">v_krit / √(g·D)</text>
+<text x="-39.71" y="0.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="start" transform="translate(14.00 297.00) rotate(-90.00)">v</text>
+<text x="-33.66" y="3.08" font-family="Arial, Helvetica, sans-serif" font-size="8.6" font-weight="400" fill="#002733" text-anchor="start" transform="translate(14.00 297.00) rotate(-90.00)">krit</text>
+<text x="-14.74" y="0.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="start" transform="translate(14.00 297.00) rotate(-90.00)"> / √(g·D)</text>
 <g clip-path="url(#clip0)">
 <rect x="368.61" y="92.00" width="167.78" height="410.00" fill="rgba(0,140,130,.30)"/>
 <path d="M368.61 92.00L368.61 502.00M536.39 92.00L536.39 502.00" fill="none" stroke="rgba(0,140,130,.65)" stroke-width="1.2" stroke-dasharray="4 4" stroke-linejoin="round"/>

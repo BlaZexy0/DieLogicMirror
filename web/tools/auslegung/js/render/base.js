@@ -28,11 +28,41 @@ export function lineFrame(w, h, d) {
   return f;
 }
 
+/* Beschriftung mit Indizes: „v_a", „t_f max", „Q_dry", „P_{acc}" — der
+   Teil nach „_" (Wort oder {…}) wird als Tiefindex gezeichnet (78 % Größe,
+   abgesenkt). Ohne „_" ein normales fillText. Respektiert x.textAlign, indem
+   die Gesamtbreite vorab gemessen wird. Wird von allen Renderern statt
+   fillText benutzt — so sehen Canvas und Theorie-SVGs dieselben Indizes. */
+export function fillRich(x, s, px, py) {
+  s = String(s);
+  if (s.indexOf('_') < 0) { x.fillText(s, px, py); return; }
+  const parts = [];
+  const re = /_(?:\{([^}]*)\}|([A-Za-z0-9,]+))/g;
+  let last = 0, m;
+  while ((m = re.exec(s))) {
+    if (m.index > last) parts.push({ t: s.slice(last, m.index), sub: false });
+    parts.push({ t: m[1] != null ? m[1] : m[2], sub: true });
+    last = re.lastIndex;
+  }
+  if (last < s.length) parts.push({ t: s.slice(last), sub: false });
+  const font = x.font, ms = /([\d.]+)px/.exec(font), size = ms ? parseFloat(ms[1]) : 11;
+  const subFont = font.replace(/([\d.]+)px/, (Math.round(size * 0.78 * 10) / 10) + 'px');
+  const widths = parts.map(q => { x.font = q.sub ? subFont : font; return x.measureText(q.t).width; });
+  const total = widths.reduce((a, b) => a + b, 0);
+  const al = x.textAlign;
+  let cx = al === 'center' ? px - total / 2 : (al === 'right' || al === 'end') ? px - total : px;
+  x.save();
+  x.textAlign = 'left';
+  parts.forEach((q, i) => { x.font = q.sub ? subFont : font; x.fillText(q.t, cx, q.sub ? py + size * 0.28 : py); cx += widths[i]; });
+  x.restore();
+  x.font = font;
+}
+
 export function text(x, s, a, b, al, font) {
   x.fillStyle = theme.chart.text;
   x.textAlign = al || 'center';
   x.font = font || '11px Arial';
-  x.fillText(s, a, b);
+  fillRich(x, s, a, b);
 }
 
 export function heading(x, w, h, d) {
@@ -80,7 +110,7 @@ export function marker(x, f, px, py, label, opts) {
     if (ly < f.T + 12) ly = py + 22;
     x.fillStyle = 'rgba(255,255,255,.88)';
     x.fillRect(lx - 4, ly - 11, tw + 8, 15);
-    x.fillStyle = MC; x.fillText(label, lx, ly);
+    x.fillStyle = MC; fillRich(x, label, lx, ly);
   }
   x.restore();
 }
