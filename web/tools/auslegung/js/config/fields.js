@@ -102,7 +102,10 @@ export const groups = [
   {
     id: 'gating', title: 'Anschnitt',
     fields: [
-      { key: 'gate',   label: 'Anschnittfläche',      unit: 'mm²', def: 1800 },
+      /* auto: optionaler Auto-Schalter (core/autofit.js) — ideale Fläche aus
+         Projekt und Schusskurve, Feld wird dann schreibgeschützt. */
+      { key: 'gate',   label: 'Anschnittfläche',      unit: 'mm²', def: 1800,
+        auto: 'Ideal: Anschnittgeschwindigkeit in der Mitte des Zielbands bei der Kolbengeschwindigkeit „Bauteil gefüllt" der Schusskurve — A_a = A_K·v_p/v_a,Ziel' },
       { key: 'gateTh', label: 'Anschnittdicke',       unit: 'mm',  def: 3 },
       { key: 'Cd',     label: 'Durchflussbeiwert',    unit: '-',   def: 0.5 }
     ]
@@ -113,7 +116,8 @@ export const groups = [
     fields: [
       { key: 'vacModel', label: 'Vakuum-Modell', unit: '', def: 'conductance', type: 'select',
         options: [['aus', 'ohne Vakuum'], ['ideal', 'Idealpumpe (Enddruck)'], ['conductance', 'Entlüftung (Drossel)']] },
-      { key: 'vent', label: 'Entlüftungsfläche', unit: 'mm²', def: 800 },
+      { key: 'vent', label: 'Entlüftungsfläche', unit: 'mm²', def: 800,
+        auto: 'Ideal: Entlüftungsbedarf bei der Füllzeit der Schusskurve — A_ent = V_luft/(t_f·v_luft,max), auf 10 mm² aufgerundet' },
       { key: 'vAirMax',  label: 'Max. Entlüftungsgeschw.', unit: 'm/s', def: 150 },
       { key: 'vacPump',  label: 'Pumpen-Enddruck',    unit: 'mbar', def: 80 },
       { key: 'vacStart', label: 'Vakuum ab Kolbenweg', unit: 'mm',  def: 150 }
@@ -152,6 +156,10 @@ export const groups = [
 /* Felder, die von einem Preset gesetzt werden: key → Domänen-id. Handänderung
    eines dieser Felder setzt die jeweilige Preset-Auswahl auf „manuell" zurück.
    Abgeleitet aus den Feldgruppen mit preset-Domäne. */
+/* Felder mit Auto-Schalter: { key: Erklärung } */
+export const AUTO_KEYS = {};
+for (const f of allFields()) if (f.auto) AUTO_KEYS[f.key] = f.auto;
+
 /* Felder, die einem anderen Feld folgen (Vorgabe = dessen Wert): { key: source } */
 export const FOLLOWS = {};
 for (const f of allFields()) if (f.follows) FOLLOWS[f.key] = f.follows;

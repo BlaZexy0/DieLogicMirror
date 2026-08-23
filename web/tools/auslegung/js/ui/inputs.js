@@ -1,7 +1,7 @@
 /* Baut die Eingabe-Sidebar aus der Felddefinition, validiert Grenzen und
    hebt auf Wunsch die Eingaben eines Diagramms hervor. */
 
-import { groups, PRESET_KEYS, PRESET_DOMAINS } from '../config/fields.js';
+import { AUTO_KEYS, groups, PRESET_KEYS, PRESET_DOMAINS } from '../config/fields.js';
 import { state, notify } from '../core/state.js';
 import { pMaxMachine } from '../core/physics.js';
 
@@ -21,7 +21,12 @@ function fieldHTML(f) {
      physikalische Beträge — min="0" hält Spinner und Browser-Validierung
      im Positiven; validate() prüft zusätzlich hart. */
   const min = NEGATIVE_OK.has(f.key) ? '' : ' min="0"';
-  return '<div class="field" data-field="' + f.key + '">' + label +
+  /* Auto-Schalter: Feld folgt core/autofit.js und ist dann schreibgeschützt */
+  const auto = f.auto
+    ? '<label class="auto-toggle" title="' + f.auto.replace(/"/g, '&quot;') + '"><input type="checkbox" data-auto="' + f.key + '"> Auto</label>'
+    : '';
+  const lab = auto ? label.replace('</label>', auto + '</label>') : label;
+  return '<div class="field" data-field="' + f.key + '">' + lab +
     '<input data-k="' + f.key + '" type="number" step="any"' + min + ' value="' + f.def + '"></div>';
 }
 
@@ -75,6 +80,26 @@ export function buildInputs(container, onlyKeys = null) {
       notify();
     };
   });
+
+  /* Auto-Schalter: Zustand spiegeln, Felder schreibgeschützt halten */
+  container.querySelectorAll('input[data-auto]').forEach(cb => {
+    cb.checked = !!state.auto[cb.dataset.auto];
+    cb.onchange = () => { state.auto[cb.dataset.auto] = cb.checked; notify(); };
+  });
+  refreshAuto(container);
+}
+
+/* Auto-Felder nach jeder Zustandsänderung auf den berechneten Wert setzen. */
+export function refreshAuto(root = document) {
+  for (const k in AUTO_KEYS) {
+    const on = !!state.auto[k];
+    root.querySelectorAll('input[data-k="' + k + '"]').forEach(e => {
+      e.readOnly = on;
+      e.classList.toggle('auto-on', on);
+      if (on && document.activeElement !== e) e.value = state.values[k];
+    });
+    root.querySelectorAll('input[data-auto="' + k + '"]').forEach(cb => { cb.checked = on; });
+  }
 }
 
 /* Preset-Feldgruppen nur im Modus „manuell" zeigen — bei gewähltem Preset

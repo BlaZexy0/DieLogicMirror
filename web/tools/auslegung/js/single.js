@@ -5,9 +5,10 @@ import { loadTheme } from './core/theme.js';
 import { state, subscribe } from './core/state.js';
 import { computeShot } from './core/physics.js';
 import { applyCurveGen } from './core/curvegen.js';
+import { applyAuto } from './core/autofit.js';
 import { charts, chartsById } from './charts/registry.js';
 import { PRESET_KEYS, PRESET_DOMAINS } from './config/fields.js';
-import { buildInputs, validate } from './ui/inputs.js';
+import { buildInputs, validate, refreshAuto } from './ui/inputs.js';
 import { initPresetSelect } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
 import { buildCard, renderCard } from './ui/cards.js';
@@ -22,6 +23,8 @@ function render() {
   const v = state.values;
   /* Generierte Kurvenmodi liefern die Kurve auch für Diagramme ohne Kurven-UI */
   const genErr = applyCurveGen(v);
+  applyAuto(v);
+  refreshAuto();
   if (def.usesCurve && state.curveGen.mode !== 'points') renderCurveTable(genErr);
   const shot = computeShot(v, state.curve);
   validate(v);

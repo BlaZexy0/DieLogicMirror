@@ -4,8 +4,9 @@ import { loadTheme } from './core/theme.js';
 import { state, subscribe } from './core/state.js';
 import { computeShot } from './core/physics.js';
 import { applyCurveGen } from './core/curvegen.js';
+import { applyAuto } from './core/autofit.js';
 import { charts } from './charts/registry.js';
-import { buildInputs, validate, highlightInputs, clearHighlights } from './ui/inputs.js';
+import { buildInputs, validate, highlightInputs, clearHighlights, refreshAuto } from './ui/inputs.js';
 import { initPresetSelects } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
 import { renderKpis } from './ui/kpis.js';
@@ -34,6 +35,8 @@ function render() {
   const v = state.values;
   /* Generierte Kurvenmodi: Wegpunkte aus den aktuellen Eingaben neu erzeugen */
   const genErr = applyCurveGen(v);
+  applyAuto(v);
+  refreshAuto();
   if (state.curveGen.mode !== 'points') renderCurveTable(genErr);
   const shot = computeShot(v, state.curve);
   validate(v);

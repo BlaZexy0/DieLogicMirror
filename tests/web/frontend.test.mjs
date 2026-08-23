@@ -137,6 +137,43 @@ test('state: Folge-Felder — eingestellter Akkumulatordruck folgt dem Nennwert 
   assert.equal(state.values.pAccOp, 120);
 });
 
+test('autofit: ideale Anschnitt- und Entlüftungsfläche aus Schusskurve bzw. NADCA', async () => {
+  const { idealGate, idealVent, applyAuto } = await import(path.join(site, 'tools/auslegung/js/core/autofit.js'));
+  const { DEFAULT_CURVE } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
+  const { state } = await import(path.join(site, 'tools/auslegung/js/core/state.js'));
+  const v = defaultValues();
+  const shot = computeShot(v, DEFAULT_CURVE.map(p => p.slice()));
+  assert.ok(!shot.error && shot.v2 > 0 && shot.fill > 0);
+  /* Anschnitt: v_a bei „Bauteil gefüllt" in der Bandmitte (30–50 → 40 m/s), auf 10 mm² gerundet */
+  const vp = shot.events[2].v;
+  const Ag = idealGate(v, shot);
+  closeTo(Ag, Math.round(0.25 * Math.PI * v.diam ** 2 * vp / 40 / 10) * 10);
+  closeTo(vp * 0.25 * Math.PI * v.diam ** 2 / Ag, 40, 0.6);
+  /* dieselbe Größe, die die Prüfung bewertet: Anschnittgeschwindigkeit bei Bauteilfüllung im Band */
+  const s2 = computeShot(Object.assign({}, v, { gate: Ag }), DEFAULT_CURVE.map(p => p.slice()));
+  assert.ok(s2.checks.find(c => /Anschnittgeschwindigkeit/.test(c[1]))[0], 'Prüfung muss bestehen');
+  /* Entlüftung: Bedarf bei der Füllzeit der Kurve (Diagramm Entlüftungsbedarf), aufgerundet */
+  const Vm = (v.part + v.runner + v.overflow) / v.density;
+  const need = Vm / (shot.fill / 1000) / v.vAirMax * 1e6;
+  closeTo(idealVent(v, shot), Math.ceil(need / 10) * 10);
+  assert.ok(idealVent(v, shot) >= need);
+  /* ohne Kurve: NADCA-Füllzeit */
+  const tN = v.kfill * v.wall * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / (v.Tflow - v.Tdie);
+  const QN = 1e9 * ((v.part + v.overflow) / v.density) / (tN / 1000);
+  closeTo(idealGate(v, null), Math.round(QN / 40000 / 10) * 10);
+  closeTo(idealVent(v, null), Math.ceil(Vm / (tN / 1000) / v.vAirMax * 1e6 / 10) * 10);
+  /* Randfälle */
+  assert.ok(Number.isNaN(idealGate(Object.assign({}, v, { gateMin: 0, gateMax: 0 }), shot)));
+  assert.ok(Number.isNaN(idealVent(Object.assign({}, v, { vAirMax: 0 }), shot)));
+  /* Zustand: nur eingeschaltete Felder werden gesetzt */
+  const vals = Object.assign({}, v, { gate: 1234, vent: 567 });
+  state.auto.gate = false; state.auto.vent = false;
+  assert.deepEqual(applyAuto(vals), []); assert.equal(vals.gate, 1234);
+  state.auto.gate = true;
+  assert.deepEqual(applyAuto(vals), ['gate']); assert.notEqual(vals.gate, 1234); assert.equal(vals.vent, 567);
+  state.auto.gate = false;
+});
+
 test('curvegen: V1/V2-Modus — Plateau bei V1, Fehler bei zu flacher Rampe', () => {
   const v = defaultValues();
   const ok = generateCurve(v, { mode: 'v1v2', v1: 0.4, a1: 5, v2: 4, a2: 30 });

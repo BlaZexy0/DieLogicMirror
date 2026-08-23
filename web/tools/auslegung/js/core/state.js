@@ -7,7 +7,7 @@
    Dashboard, Einzelseiten und die anderen Werkzeuge sehen dieselbe
    Auslegung, und ein Reload verliert nichts. */
 
-import { FOLLOWS, allFields, DEFAULT_CURVE, PRESET_DOMAINS } from '../config/fields.js';
+import { FOLLOWS, AUTO_KEYS, allFields, DEFAULT_CURVE, PRESET_DOMAINS } from '../config/fields.js';
 
 if (!window.__PROJECT__) throw new Error('shared/project.js nicht geladen (window.__PROJECT__ fehlt).');
 const PROJECT = window.__PROJECT__;
@@ -22,6 +22,9 @@ export const state = {
   values: {},
   curve: DEFAULT_CURVE.map(p => p.slice()),
   curveGen: Object.assign({}, DEFAULT_CURVEGEN),
+  /* Auto-Schalter je Feld (config/fields.js AUTO_KEYS): core/autofit.js
+     setzt die Werte vor jedem Rendern neu, das Feld ist dann schreibgeschützt. */
+  auto: Object.fromEntries(Object.keys(AUTO_KEYS).map(k => [k, false])),
   machine: '',
   alloy: '',
   part: ''
@@ -120,12 +123,15 @@ export function applyData(data) {
   for (const d of PRESET_DOMAINS) {
     if (typeof data[d.stateKey] === 'string') state[d.stateKey] = data[d.stateKey];
   }
+  if (data.auto && typeof data.auto === 'object') {
+    for (const k in state.auto) if (typeof data.auto[k] === 'boolean') state.auto[k] = data.auto[k];
+  }
 }
 
 export function persist() {
   try {
     PROJECT.setSection('design', {
-      values: state.values, curve: state.curve, curveGen: state.curveGen,
+      values: state.values, curve: state.curve, curveGen: state.curveGen, auto: state.auto,
       machine: state.machine, alloy: state.alloy, part: state.part
     });
   } catch (e) { /* localStorage voll oder deaktiviert — Zustand lebt dann nur in der Seite */ }
@@ -136,5 +142,6 @@ export function resetState() {
   applyDefaults();
   state.curve = DEFAULT_CURVE.map(p => p.slice());
   state.curveGen = Object.assign({}, DEFAULT_CURVEGEN);
+  for (const k in state.auto) state.auto[k] = false;
   persist();
 }
