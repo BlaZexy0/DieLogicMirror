@@ -274,7 +274,8 @@ select {
 }
 .krow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(84px, 150px) auto;
+  /* feste Spalten für Wert, Leiste und Urteil — alle Leisten eines Panels gleich lang und bündig */
+  grid-template-columns: minmax(0, 1fr) 104px 150px 112px;
   gap: 10px;
   align-items: center;
   min-height: 44px;
@@ -307,6 +308,10 @@ select {
   border-radius: 4px;
   padding: 1px 6px;
   white-space: nowrap;
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .krow.ok .tag { background: var(--ok-bg); color: var(--ok); }
 .krow.warn .tag { background: var(--note-bg); color: var(--warn-text); border: 1px solid var(--note-border); }
@@ -470,9 +475,9 @@ select {
 .checkbar .tights .ck-link { color: var(--warn-text); }
 .krow.flash { outline: 2px solid var(--primary); outline-offset: -2px; }
 
-/* Schmale Panels (< 470 px): Leiste in eine zweite Zeile unter Name und Wert;
+/* Schmale Panels (< 600 px): Leiste in eine zweite Zeile unter Name und Wert;
    breites Panel unter 900 px: Prüfzeilen einspaltig. */
-@container (max-width: 470px) {
+@container (max-width: 600px) {
   .krow { grid-template-columns: minmax(0, 1fr) auto auto; row-gap: 3px; }
   .krow .klbl { grid-row: 1; grid-column: 1; }
   .krow > b { grid-row: 1; grid-column: 2; }
