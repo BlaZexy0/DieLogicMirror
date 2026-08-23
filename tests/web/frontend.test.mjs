@@ -179,6 +179,7 @@ test('Indizes: subHTML (HTML) und fillRich (Canvas) setzen „_token" als Tiefin
   assert.equal(subHTML('v_a max 50 m/s'), 'v<sub>a</sub> max 50 m/s');
   assert.equal(subHTML('P_{acc} · Q_dry · t_f,min'), 'P<sub>acc</sub> · Q<sub>dry</sub> · t<sub>f,min</sub>');
   assert.equal(subHTML('ohne Index'), 'ohne Index');
+  assert.equal(subHTML('x: Q, v_p, t_f · y'), 'x: Q, v<sub>p</sub>, t<sub>f</sub> · y');   // Komma als Trenner bleibt draußen
   const { fillRich } = await import(path.join(site, 'tools/auslegung/js/render/base.js'));
   /* Fake-Kontext: zeichnet Segmente mit Font und Position auf */
   const calls = [];

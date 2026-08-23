@@ -37,7 +37,7 @@ export function fillRich(x, s, px, py) {
   s = String(s);
   if (s.indexOf('_') < 0) { x.fillText(s, px, py); return; }
   const parts = [];
-  const re = /_(?:\{([^}]*)\}|([A-Za-z0-9,]+))/g;
+  const re = /_(?:\{([^}]*)\}|([A-Za-z0-9]+(?:,[A-Za-z0-9]+)*))/g;
   let last = 0, m;
   while ((m = re.exec(s))) {
     if (m.index > last) parts.push({ t: s.slice(last, m.index), sub: false });
