@@ -45,8 +45,8 @@
 <rect x="275.60" y="62.00" width="12.00" height="9.00" fill="rgba(226,231,233,.93)"/>
 <rect x="275.60" y="62.00" width="12.00" height="9.00" fill="none" stroke="#000000" stroke-width="1.4"/>
 <text x="292.60" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">Hüllkurve a = 5,39 MW</text>
-<path d="M488.02 487.49L488.02 332.44" fill="none" stroke="#9aacb2" stroke-width="1.5" stroke-dasharray="5 4" stroke-linejoin="round"/>
-<text x="494.02" y="413.97" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#9aacb2" text-anchor="start">gedrosselt Δp 725,18 bar</text>
+<path d="M481.73 487.93L481.73 330.26" fill="none" stroke="#9aacb2" stroke-width="1.5" stroke-dasharray="5 4" stroke-linejoin="round"/>
+<text x="487.73" y="413.09" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#9aacb2" text-anchor="start">gedrosselt Δp 737,46 bar</text>
 <path d="M75.00 461.62L764.13 461.62M764.13 502.00L764.13 461.62" fill="none" stroke="#4c6870" stroke-width="1" stroke-dasharray="4 3" stroke-linejoin="round"/>
 <circle cx="764.13" cy="461.62" r="6" fill="#ffffff"/>
 <circle cx="764.13" cy="461.62" r="6" fill="none" stroke="#4c6870" stroke-width="1.6" stroke-dasharray="3 2"/>

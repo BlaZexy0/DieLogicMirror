@@ -415,6 +415,9 @@ select {
 .kr-track .seg.run, .kr-legend i.run { background: var(--gold); }
 .kr-track .seg.part, .kr-legend i.part { background: var(--cat-orange); }
 .kr-track .seg.bisc, .kr-legend i.bisc { background: var(--cat-slate); }
+.kr-track .seg.nv, .kr-legend i.nv {
+  background: repeating-linear-gradient(135deg, var(--primary) 0 3px, var(--pale) 3px 6px);
+}
 .kr-track .tick { position: absolute; top: -5px; bottom: -5px; width: 1px; background: var(--dark); }
 .kr-track .tick.lim { background: var(--bad); width: 2px; }
 .kruler.over .kr-track .seg.part { background: var(--bad); }

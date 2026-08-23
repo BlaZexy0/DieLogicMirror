@@ -33,7 +33,7 @@ export default {
   tabs: [['tv', 't–v'], ['ts', 't–s'], ['sv', 's–v']],
   usesCurve: true,
   csv: true,
-  inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'diam', 'length', 'gate', 'vent', 'vmax', 'amax', 'tmax', 'biscuitMin', 'gateMin', 'gateMax', 'vacModel', 'vacPump', 'vacStart'],
+  inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'densitySolid', 'shrink', 'diam', 'length', 'gate', 'vent', 'vmax', 'amax', 'tmax', 'biscuitMin', 'gateMin', 'gateMax', 'vacModel', 'vacPump', 'vacStart'],
 
   calc(v, { shot }) {
     if (shot.error) return { err: shot.error, title: this.title };
@@ -67,7 +67,8 @@ export default {
         q.limits.push(limit('vmax', 'v_max Maschine ' + fmt(v.vmax) + ' m/s', 'y', 'max', v.vmax));
       q.y1 = Math.max(Math.max.apply(null, q.ys[0].y), shot.vcrit) * 1.12;
     } else {
-      q.limits = [refline('stroke', 'Gesamthub ' + fmt(shot.totalStroke * 1000) + ' mm', 'y', shot.totalStroke * 1000)];
+      q.limits = [refline('stroke', 'Füllende ' + fmt(shot.totalStroke * 1000) + ' mm', 'y', shot.totalStroke * 1000),
+        refline('endpos', 'Endlage ' + fmt((shot.totalStroke + shot.intens) * 1000) + ' mm (nach Nachverdichtung)', 'y', (shot.totalStroke + shot.intens) * 1000)];
     }
 
     const nodes = shot.profile;
@@ -161,9 +162,14 @@ Spitzengeschwindigkeit = <b data-m="vpk"></b> · Spitzenbeschleunigung = <b data
 <p class="math-note">Der Füllgrad bestimmt, wo die Kammer voll ist; jedes weitere Ereignis folgt aus der
 Kontinuität (kumuliertes Volumen durch Kolbenfläche):</p>
 ${eq('\\varphi = \\frac{V_{\\text{dos}}}{A_{K} \\cdot L} \\quad \\Rightarrow \\quad s_{\\text{voll}} = (1 - \\varphi) \\cdot L')}
-${eq('s_{\\text{Ereignis}} = s_{\\text{voll}} + \\frac{\\sum V_{i}}{A_{K}} \\quad\\ (\\text{nacheinander: Anguss, Bauteil, Überlauf}) \\qquad l_{\\text{Pressrest}} = \\frac{V_{b}}{A_{K}}')}
+${eq('s_{\\text{Ereignis}} = s_{\\text{voll}} + \\frac{\\sum V_{i}}{A_{K}} \\quad\\ (\\text{nacheinander: Anguss, Bauteil, Überlauf}) \\qquad V_{i} = \\frac{m_{i}}{\\rho_{\\text{sol}}},\\ \\rho_{\\text{sol}} = \\frac{\\rho_{s}}{(1+s)^{3}}')}
+${eq('\\Delta s_{\\text{NV}} = \\frac{m_{\\text{dos}}}{\\rho_{l} A_{K}} - \\frac{\\sum V_{i}}{A_{K}} - l_{\\text{Pressrest}} \\qquad l_{\\text{Pressrest}} = \\frac{m_{b}}{\\rho_{\\text{sol}} A_{K}}')}
+<p class="math-note">Die Kammer wird flüssig dosiert (ρ<sub>l</sub>), die Kavitäten sind feste Geometrie: das Werkzeug
+ist um das Schwindmaß s größer als das kalte Bauteil (ρ<sub>s</sub>), fasst also V = m/ρ<sub>sol</sub>. Was die Kavität
+beim Füllende flüssig nicht aufnimmt, schiebt der Kolben in der Nachverdichtung Δs<sub>NV</sub> nach — bis zur Endlage
+mit festem Pressrest.</p>
 <p class="math-note">Aktuell: φ = <b data-m="phi"></b> · Kammer voll bei <b data-m="sfill"></b> ·
-Gesamthub = <b data-m="stroke"></b> · Pressrest = <b data-m="lb"></b></p>
+Füllende = <b data-m="stroke"></b> · Nachverdichtungshub = <b data-m="intens"></b> · Pressrest fest = <b data-m="lb"></b></p>
 
 <h4>3 · Abgeleitete Größen und Prüfungen</h4>
 ${eq('v_{a} = v_{p} \\cdot \\frac{A_{K}}{A_{a}} \\quad\\ (\\text{Anschnittgeschwindigkeit aus der Kolbengeschwindigkeit})')}
@@ -176,7 +182,7 @@ v<sub>krit</sub> = <b data-m="vcrit"></b> · max. v der 1. Phase = <b data-m="vs
   renderMath(el, v, shot) {
     const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
     if (!shot || shot.error) {
-      ['tEnd', 'hub', 'vpk', 'apk', 'phi', 'sfill', 'stroke', 'lb', 'ratio', 'tf', 'vcrit', 'vslow']
+      ['tEnd', 'hub', 'vpk', 'apk', 'phi', 'sfill', 'stroke', 'intens', 'lb', 'ratio', 'tf', 'vcrit', 'vslow']
         .forEach(k => set(k, '—'));
       return;
     }
@@ -188,6 +194,7 @@ v<sub>krit</sub> = <b data-m="vcrit"></b> · max. v der 1. Phase = <b data-m="vs
     set('phi', fmt(shot.phi * 100) + ' %');
     set('sfill', fmt(shot.sFill * 1000) + ' mm');
     set('stroke', fmt(shot.totalStroke * 1000) + ' mm');
+    set('intens', fmt(shot.intens * 1000) + ' mm');
     set('lb', fmt(shot.biscLen * 1000) + ' mm');
     set('ratio', shot.gateR ? fmt(shot.gateR) : '—');
     set('tf', shot.fill === null ? '—' : fmt(shot.fill) + ' ms');

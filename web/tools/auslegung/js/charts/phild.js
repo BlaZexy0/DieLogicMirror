@@ -8,7 +8,7 @@
    und wird als ein geschlossenes Polygon gefüllt statt pixelweise. */
 
 import { seq, fmt } from '../core/format.js';
-import { total, vCrit } from '../core/physics.js';
+import { total, vCrit, cavityVolume } from '../core/physics.js';
 import { feasibleBand } from '../core/limits.js';
 import { eq } from './mathfmt.js';
 
@@ -33,12 +33,13 @@ export default {
   id: 'phild',
   title: 'Auslegungsfenster (φ, λ)',
   desc: 'Machbarkeit der Füllkammer bei fester Dosiermenge',
-  inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'dmin', 'dmax', 'lmin', 'lmax', 'biscuitMin', 'fillMin', 'fillMax', 'diam', 'length'],
+  inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'densitySolid', 'shrink', 'dmin', 'dmax', 'lmin', 'lmax', 'biscuitMin', 'fillMin', 'fillMax', 'diam', 'length'],
   usesCurve: true,
 
   calc(v, o) {
     const rho = v.density;
-    const V = (total(v) + v.biscuit) / rho, Vb = v.biscuit / rho;
+    /* Dosierung flüssig; der Pressrest wird fest (ρ_sol) gegen das Minimum geprüft */
+    const V = (total(v) + v.biscuit) / rho, Vb = cavityVolume(v.biscuit, v);
     const k = 4 * V / PI;
     const Dmin = v.dmin / 1000, Dmax = v.dmax / 1000;
     const Lmin = v.lmin / 1000, Lmax = v.lmax / 1000;
@@ -162,7 +163,7 @@ und die v<sub>krit</sub>-Kurve. Seine Ecken sind die vier Grenzkombinationen:</p
 
   renderMath(el, v) {
     const rho = v.density;
-    const V = (v.part + v.runner + v.overflow + v.biscuit) / rho, Vb = v.biscuit / rho;
+    const V = (v.part + v.runner + v.overflow + v.biscuit) / rho, Vb = cavityVolume(v.biscuit, v);
     const bmin = v.biscuitMin / 1000;
     const Db = bmin > 0 ? Math.sqrt(4 * Vb / (PI * bmin)) : Infinity;
     const set = (key, val) => { const s = el.querySelector('[data-m="' + key + '"]'); if (s) s.innerHTML = val; };

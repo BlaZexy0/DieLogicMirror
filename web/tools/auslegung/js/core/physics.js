@@ -10,7 +10,32 @@ const PI = Math.PI;
 export function total(v) { return v.part + v.runner + v.overflow; }
 export function afterGate(v) { return v.part + v.overflow; }
 export function pistonArea(v) { return 0.25 * PI * v.diam * v.diam; }           // mm²
-export function travel(m, v) { return 1e9 * (m / v.density) / pistonArea(v); }  // mm für Masse m
+export function travel(m, v) { return 1e9 * (m / v.density) / pistonArea(v); }  // mm Flüssigsäule der Masse m
+
+/* Zwei Dichten: In der Füllkammer steht die Schmelze flüssig (density) —
+   Füllgrad, „Kammer voll" und die Säule im Kammerrohr rechnen damit. Die
+   Hohlräume von Anguss, Bauteil und Überlauf sind dagegen feste Geometrie:
+   das Werkzeug ist um das lineare Schwindmaß s größer gebaut als das kalte
+   Bauteil (densitySolid), die Kavität fasst also V = m·(1+s)³/ρ_s — das ist
+   die Dichte bei Solidus ρ_sol = ρ_s/(1+s)³. Die Differenz zwischen der
+   flüssig dosierten Masse und dem, was die Kavität beim Füllende flüssig
+   aufnimmt, schiebt der Kolben in der Nachverdichtung nach; der Pressrest
+   ist am Ende fest und wird mit ρ_sol gegen das Minimum geprüft.
+   Ohne Feststoffdichte (alte Projekte, direkte API-Nutzung) fällt alles
+   auf die Flüssigdichte zurück. */
+export function rhoSolidus(v) {
+  if (!(v.densitySolid > 0)) return v.density;
+  const k = 1 + (v.shrink > 0 ? v.shrink / 100 : 0);
+  return v.densitySolid / (k * k * k);
+}
+export function cavityVolume(m, v) { return m / rhoSolidus(v); }                         // m³ Hohlraum der festen Masse m
+export function cavityTravel(m, v) { return 1e9 * cavityVolume(m, v) / pistonArea(v); }  // mm Kolbenweg dafür
+export function biscuitSolid(v) { return cavityTravel(v.biscuit, v); }                   // mm Pressrest fest (Endlage)
+/* Nachverdichtungshub [mm]: vom Füllende (Kavität flüssig voll) bis zur
+   Endlage (Pressrest fest) — speist Erstarrungsschwund von Kavität und Pressrest. */
+export function intensStroke(v) {
+  return travel(total(v) + v.biscuit, v) - cavityTravel(total(v), v) - biscuitSolid(v);
+}
 /* Gießkraft im Betrieb [kN]: F_G = P_ein · A_h mit der Antriebskolbenfläche
    A_h = F_max/P_max aus dem Maschinen-Preset (Gießkraft bei max. Akkumulator-
    druck). Der eingestellte Druck ist auf das Maximum begrenzt; ohne gültige
@@ -158,8 +183,10 @@ export function computeShot(v, curvePoints) {
   catch (e) { return { error: '' + e }; }
 
   const A = 0.25 * PI * Math.pow(v.diam / 1000, 2), rho = v.density, L = v.length / 1000;
-  const Vr = v.runner / rho, Vp = v.part / rho, Vo = v.overflow / rho, Vb = v.biscuit / rho;
-  const Vdose = Vr + Vp + Vo + Vb;
+  /* Kavitäten fest (ρ_sol), Dosierung flüssig (ρ) — siehe rhoSolidus */
+  const rhoS = rhoSolidus(v);
+  const Vr = v.runner / rhoS, Vp = v.part / rhoS, Vo = v.overflow / rhoS;
+  const Vdose = (v.runner + v.part + v.overflow + v.biscuit) / rho;
   const phi = Vdose / (A * L);
   if (phi >= 1) return { error: 'Dosiervolumen (' + fmt(Vdose * 1e6) + ' cm³) übersteigt das Kammervolumen — Füllgrad ≥ 100 %.' };
   if (phi <= 0) return { error: 'Dosiervolumen ist null.' };
@@ -182,7 +209,13 @@ export function computeShot(v, curvePoints) {
     evs.push(ev);
   }
 
-  const totalStroke = sFill + (Vr + Vp + Vo) / A, biscLen = Vb / A;
+  /* Füllende (Kavität flüssig voll), dann Nachverdichtung bis zur Endlage
+     L − Pressrest fest; biscLen = fester Pressrest (Prüfgröße), biscLiquid =
+     Schmelzerest in der Kammer beim Füllende. */
+  const totalStroke = sFill + (Vr + Vp + Vo) / A;
+  const biscLen = (v.biscuit / rhoS) / A;
+  const biscLiquid = L - totalStroke;
+  const intens = Math.max(0, biscLiquid - biscLen);
   let fill = null;
   if (evs[1].inP && evs[3].inP) fill = (evs[3].t - evs[1].t) * 1000;
   /* v1 = max. Kolbengeschwindigkeit bis „Kammer voll" (1. Phase);
@@ -198,14 +231,14 @@ export function computeShot(v, curvePoints) {
   const aPk = Math.max(prof.amax, -prof.amin, 0);
   if (v.amax > 0) checks.push([aPk <= v.amax + 1e-9, 'Spitzenbeschleunigung ' + fmt(aPk) + ' m/s² ' + (aPk <= v.amax ? '≤' : '>') + ' Maschinenlimit ' + fmt(v.amax) + ' m/s².']);
   checks.push([prof.travel >= totalStroke - 1e-9, 'Kurvenhub ' + fmt(prof.travel * 1000) + ' mm ' + (prof.travel >= totalStroke ? 'deckt' : 'deckt NICHT') + ' den Gesamthub ' + fmt(totalStroke * 1000) + ' mm ab.']);
-  checks.push([prof.travel <= L - biscLen + 2e-3, 'Kurvenende ' + fmt(prof.travel * 1000) + ' mm bleibt vor dem Pressrest (Kammer ' + fmt(v.length) + ' mm − Pressrest ' + fmt(biscLen * 1000) + ' mm).']);
-  checks.push([biscLen * 1000 >= v.biscuitMin, 'Pressrest ' + fmt(biscLen * 1000) + ' mm ' + (biscLen * 1000 >= v.biscuitMin ? '≥' : '<') + ' Minimum ' + fmt(v.biscuitMin) + ' mm.']);
+  checks.push([prof.travel <= L - biscLen + 2e-3, 'Kurvenende ' + fmt(prof.travel * 1000) + ' mm bleibt vor der Endlage (Kammer ' + fmt(v.length) + ' mm − Pressrest fest ' + fmt(biscLen * 1000) + ' mm).']);
+  checks.push([biscLen * 1000 >= v.biscuitMin, 'Pressrest fest ' + fmt(biscLen * 1000) + ' mm ' + (biscLen * 1000 >= v.biscuitMin ? '≥' : '<') + ' Minimum ' + fmt(v.biscuitMin) + ' mm (Nachverdichtungshub ' + fmt(intens * 1000) + ' mm).']);
   if (fill !== null) checks.push([fill <= v.tmax, 'Füllzeit ab Anschnitt ' + fmt(fill) + ' ms ' + (fill <= v.tmax ? '≤' : '>') + ' Maximum ' + fmt(v.tmax) + ' ms.']);
   if (gateR && evs[2].inP) checks.push([evs[2].gv >= v.gateMin && evs[2].gv <= v.gateMax, 'Anschnittgeschwindigkeit bei Bauteilfüllung ' + fmt(evs[2].gv) + ' m/s im Zielband ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s.']);
 
   return {
     profile: prof, samples: prof.samples(320), events: evs,
     phi, sFill, vcrit, wave: waveSpeed(v.diam / 1000, phi),
-    gateR, totalStroke, biscLen, fill, v1, v2, Vdose, checks
+    gateR, totalStroke, biscLen, biscLiquid, intens, fill, v1, v2, Vdose, checks
   };
 }

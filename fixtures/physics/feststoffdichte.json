@@ -1,0 +1,93 @@
+{
+ "name": "feststoffdichte",
+ "beschreibung": "Wie 'konstante-geschwindigkeit', aber mit Feststoffdichte 2750 kg/m³ und Schwindmaß 0,5 %: die Dosierung liegt flüssig (2600) in der Kammer, die Kavitäten sind feste Geometrie mit ρ_sol = 2750/(1,005)³ = 2709,16 kg/m³. Füllende und Ereignisse rücken gegenüber der Flüssigrechnung nach vorn; der Rest bis L ist Schmelze, die in der Nachverdichtung nachgeschoben wird.",
+ "inputs": {
+  "values": {
+   "part": 4.0,
+   "runner": 1.0,
+   "overflow": 0.6,
+   "biscuit": 0.8,
+   "density": 2600.0,
+   "densitySolid": 2750.0,
+   "shrink": 0.5,
+   "diam": 100,
+   "length": 650,
+   "gate": 900,
+   "vent": 400,
+   "Tcast": 680,
+   "vmax": 6,
+   "amax": 50,
+   "tmax": 150,
+   "gateMin": 15,
+   "gateMax": 40,
+   "biscuitMin": 25
+  },
+  "curve": [
+   [
+    1,
+    2
+   ],
+   [
+    615,
+    2
+   ]
+  ]
+ },
+ "expected": {
+  "phi": {
+   "value": 0.48217355540266504,
+   "rtol": 1e-09,
+   "note": "(6,4/2600)/(π/4·0,1²·0,65) — Dosierung flüssig, unverändert"
+  },
+  "s_fill_mm": {
+   "value": 336.5871889882677,
+   "rtol": 1e-09,
+   "note": "(1−φ)·650 mm"
+  },
+  "biscuit_mm": {
+   "value": 50.226293769872974,
+   "rtol": 1e-09,
+   "note": "Schmelzerest in der Kammer beim Füllende: 650 − Füllende; fester Pressrest wäre (0,8/2709,16)/A = 37,6 mm"
+  },
+  "fill_complete_mm": {
+   "value": 599.773706230127,
+   "rtol": 1e-09,
+   "note": "s_fill + (5,6/2709,16)/A — Kavität mit ρ_sol = 2750/(1+0,005)³"
+  },
+  "v_crit": {
+   "value": 0.5384123015966239,
+   "rtol": 0.001,
+   "note": "wie konstante-geschwindigkeit (gleiches φ, gleicher Ø): CFD-Tabelle"
+  },
+  "v_slow_max": {
+   "value": 2.0,
+   "rtol": 1e-09,
+   "note": "konstant 2 m/s"
+  },
+  "t_sleeve_full_s": {
+   "value": 0.16879359449413386,
+   "rtol": 1e-09,
+   "note": "0,001 + (s_fill − 1 mm)/2 m/s"
+  },
+  "v_sleeve_full": {
+   "value": 2.0,
+   "rtol": 1e-09,
+   "note": "konstantes Segment"
+  },
+  "t_part_full_s": {
+   "value": 0.28628757540567823,
+   "rtol": 1e-09,
+   "note": "Bauteil gefüllt bei s_fill + (1+4)/2709,16/A"
+  },
+  "gate_v_part_full": {
+   "value": 17.453292519943297,
+   "rtol": 1e-09,
+   "note": "2 m/s · (π/4·100²)/900"
+  },
+  "fill_time_ms": {
+   "value": 108.09446243862078,
+   "rtol": 0.0001,
+   "note": "(Füllende − Anguss gefüllt)/2 m/s — 4,6 kg bei ρ_sol statt ρ flüssig: kürzer als in konstante-geschwindigkeit"
+  }
+ }
+}

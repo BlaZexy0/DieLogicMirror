@@ -2,7 +2,7 @@
 
 import { heat, limit } from './helpers.js';
 import { fmt } from '../core/format.js';
-import { afterGate } from '../core/physics.js';
+import { afterGate, cavityVolume } from '../core/physics.js';
 import { eq } from './mathfmt.js';
 
 const PI = Math.PI;
@@ -12,7 +12,7 @@ export default {
   title: 'Füllzeit ab Anschnitt',
   desc: 'Bauteil + Überlauf',
   heat: true,
-  inputs: ['tmax', 'dmin', 'dmax', 'part', 'overflow', 'density', 'diam', 'vmax'],
+  inputs: ['tmax', 'dmin', 'dmax', 'part', 'overflow', 'densitySolid', 'shrink', 'diam', 'vmax'],
   usesCurve: true,
 
   calc(v, o) {
@@ -22,17 +22,17 @@ export default {
     const levels = [];
     for (let L = 1; L <= Math.floor(v.vmax); L++) levels.push(L);
     const q = heat(0.1, v.tmax, v.dmin, v.dmax,
-      (t, d) => 1e9 * (afterGate(v) / v.density) / (t * 0.25 * PI * d * d),
+      (t, d) => 1e9 * cavityVolume(afterGate(v), v) / (t * 0.25 * PI * d * d),
       'Füllzeit ms', 'Kolben-Ø mm', 'Kolbengeschwindigkeit m/s', 0, v.vmax, levels);
     /* v_p ≤ v_max ⇔ D ≥ √(4·V_a/(π·t·v_max)) — als Kurvengrenze */
-    const Va = afterGate(v) / v.density;
+    const Va = cavityVolume(afterGate(v), v);
     q.limits = [limit('vmax', 'v_max ' + fmt(v.vmax) + ' m/s', 'y', 'min',
       t => Math.sqrt(4e9 * Va / (PI * t * v.vmax)), { note: 'über v_max der Maschine' })];
     q.info = 'Ab Anschnitt ' + fmt(afterGate(v)) + ' kg · Bauteil + Überlauf · schraffiert: über vₘₐₓ = ' + fmt(v.vmax) + ' m/s';
     /* Betriebspunkt mit v2 = mittlere Kolbengeschw. nach Anschnitt (Schusskurve) */
     const v2 = o && o.shot && !o.shot.error ? o.shot.v2 : null;
     if (v2 > 0) {
-      const tOp = 1e9 * (afterGate(v) / v.density) / (v2 * 0.25 * PI * v.diam * v.diam);
+      const tOp = 1e9 * cavityVolume(afterGate(v), v) / (v2 * 0.25 * PI * v.diam * v.diam);
       q.pt = [tOp, v.diam];
       q.ptl = 'Ø ' + fmt(v.diam) + ' mm · v₂ ' + fmt(v2) + ' m/s → ' + fmt(tOp) + ' ms';
     }
@@ -54,7 +54,7 @@ bei Ø <span data-m="D"></span> und v₂ = <span data-m="vsel"></span> (Mittel n
 
   renderMath(el, v, shot) {
     const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
-    const Va = afterGate(v) / v.density;
+    const Va = cavityVolume(afterGate(v), v);
     const v2 = shot && !shot.error && shot.v2 != null ? shot.v2 : NaN;
     set('Va', fmt(Va * 1e6) + ' cm³');
     set('D', fmt(v.diam) + ' mm');

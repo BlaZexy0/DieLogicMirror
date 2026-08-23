@@ -15,7 +15,7 @@
 
 import { series, line, limit } from './helpers.js';
 import { seq, fmt } from '../core/format.js';
-import { pistonArea, afterGate, total, injForceEff } from '../core/physics.js';
+import { pistonArea, afterGate, total, injForceEff, cavityVolume } from '../core/physics.js';
 import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
@@ -33,7 +33,7 @@ export function pqCore(v) {
   const Ag = v.gate * 1e-6;                                     // Anschnittfläche m²
   const Cdie = v.density / (2 * v.Cd * v.Cd * Ag * Ag) / 1e5;   // Werkzeugkonstante C_t/A_g² in bar/(m³/s)²
   const Qs = Math.sqrt(p0 / (Cdie + p0 / (Qmax * Qmax)));       // Arbeitspunkt m³/s
-  const Vag = afterGate(v) / v.density;                         // Volumen ab Anschnitt m³
+  const Vag = cavityVolume(afterGate(v), v);                    // Kavität ab Anschnitt m³ (fest, ρ_sol)
   /* Machine Performance Envelope (Pego Guerra Gl. 2.13/2.14):
      P = a/Q mit a = (2√3/9)·F_G·v_dry — Leistungskonstante des Akkumulators.
      Gültig zwischen den Berührpunkten Q_t = A_K·v_dry/√3 von Ø min und Ø max. */
@@ -74,7 +74,7 @@ export function pqCore(v) {
   const vaAtom = vaOfJ(v.JatomMin), vaAtomMax = vaOfJ(v.JatomMax);
   /* Minimale Füllzeit aus der Entlüftungsbedingung (Operational Window, Zone C):
      die verdrängte Luft V_luft muss durch A_ent mit höchstens v_luft,max entweichen. */
-  const tVent = (v.vent > 0 && v.vAirMax > 0) ? (total(v) / v.density) / (v.vent * 1e-6 * v.vAirMax) : NaN;
+  const tVent = (v.vent > 0 && v.vAirMax > 0) ? cavityVolume(total(v), v) / (v.vent * 1e-6 * v.vAirMax) : NaN;
   return { FG, Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, pEnv, pReach, aReach, QtLo, QtHi, Alo, Ahi, vaHydr, vaAtom, vaAtomMax, tVent };
 }
 
@@ -86,7 +86,7 @@ export default {
   tabs: [['q', 'Q'], ['q2', 'Q²'], ['vp', 'v<sub>p</sub>'], ['tf', 't<sub>f</sub>']],
   tab2: 'pm',
   tabs2: [['pm', 'p<sub>m</sub>'], ['ph', 'p<sub>hyd</sub>'], ['pw', 'P·Q']],
-  inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax', 'pAcc', 'pAccOp', 'gateTh', 'JatomMin', 'JatomMax'],
+  inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'densitySolid', 'shrink', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax', 'pAcc', 'pAccOp', 'gateTh', 'JatomMin', 'JatomMax'],
 
   calc(v, o) {
     const c = pqCore(v);

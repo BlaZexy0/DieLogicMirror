@@ -16,7 +16,7 @@
 
 import { state, addPreparer } from './state.js';
 import { fmt } from './format.js';
-import { total, afterGate, pistonArea, vCrit, waveSpeed } from './physics.js';
+import { total, afterGate, pistonArea, vCrit, waveSpeed, cavityVolume, cavityTravel } from './physics.js';
 
 /* Punkte aufräumen: runden, streng steigende s erzwingen. */
 function clean(pts) {
@@ -79,7 +79,7 @@ export function generateCurve(v, g) {
   const phi = 1e9 * (mdos / v.density) / (v.length * A);
   if (!(phi > 0 && phi < 1)) return { error: 'Füllgrad außerhalb (0, 1) — Kurve nicht generierbar.' };
   const sFill = (1 - phi) * v.length;                       // „Kammer voll" [mm]
-  const sEnd = sFill + 1e9 * (total(v) / v.density) / A;    // Schussende = L − Pressrest [mm]
+  const sEnd = sFill + cavityTravel(total(v), v);            // Füllende: Kavität (fest, ρ_sol) voll [mm]
 
   if (g.mode === 'lopez') {
     const D = v.diam / 1000, l = v.length / 1000;
@@ -122,9 +122,9 @@ export function generateCurve(v, g) {
     const denN = v.Tflow - v.Tdie;
     const tN = denN !== 0 ? v.kfill * v.wall * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / denN : NaN;
     if (!(tN > 0)) return { error: 'NADCA-Füllzeit nicht berechenbar — Temperaturen und k prüfen.' };
-    const sGate = sR + 1e9 * (v.runner / v.density) / A;      // Anguss gefüllt [mm]
-    const sOver = sR + 1e9 * (total(v) / v.density) / A;      // Überlauf gefüllt [mm]
-    const vFlat = 1e9 * (afterGate(v) / v.density) / (tN * A); // ohne Rampe nötig
+    const sGate = sR + cavityTravel(v.runner, v);             // Anguss gefüllt [mm]
+    const sOver = sR + cavityTravel(total(v), v);             // Überlauf gefüllt [mm]
+    const vFlat = 1e9 * cavityVolume(afterGate(v), v) / (tN * A); // ohne Rampe nötig
     const want = v2 => fillTimeMs(vTop, v2, v.amax, sR, sGate, sOver);
     let v2, warn = null;
     const vCap = v.vmax > 0 ? v.vmax : Infinity;

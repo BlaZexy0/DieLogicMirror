@@ -43,7 +43,7 @@ Toleranz, weil zwei Fälle systematisch abweichen:
 |---|---|---|---|
 | `phi` | Füllgrad der Kammer | `r.phi` | `proc.sleeve.fill_fraction` |
 | `s_fill_mm` | Hub „Kammer voll“ | `r.sFill` | `plan.sleeve_full_stroke` |
-| `biscuit_mm` | Pressrestlänge | `r.biscLen` | `plan.biscuit_length` |
+| `biscuit_mm` | Schmelzerest in der Kammer beim Füllende (L − Füllende) | `r.biscLiquid` | `plan.biscuit_length` |
 | `fill_complete_mm` | Hub „Füllende“ | `r.totalStroke` | `plan.fill_complete_stroke` |
 | `v_crit` | krit. Geschw. (Nogowizin) | `r.vcrit` | `proc.critical_velocity` |
 | `v_slow_max` | max. Kolbengeschw. bis Kammer voll (v1) | `r.v1` | Profil-Maximum bis `s_fill` |
@@ -57,8 +57,9 @@ Toleranz, weil zwei Fälle systematisch abweichen:
 
 Die `value`-Einträge stammen aus den geschlossenen Formeln der Auslegung
 (unabhängig nachgerechnet, nicht aus einer der Implementierungen kopiert):
-A = πD²/4, V = m/ρ, φ = V_dose/(A·L), s_fill = (1−φ)·L, Hübe kumulativ über
-V/A; Schusskurve stückweise konstant beschleunigt mit v₁² = v₀² + 2aΔs und
+A = πD²/4, V_dose = m_dos/ρ_flüssig, φ = V_dose/(A·L), s_fill = (1−φ)·L, Hübe
+kumulativ über V_i/A mit V_i = m_i/ρ_sol (Kavitäten fest, ρ_sol = ρ_s/(1+s)³;
+ohne `densitySolid` flüssig); Schusskurve stückweise konstant beschleunigt mit v₁² = v₀² + 2aΔs und
 Δt = 2Δs/(v₀+v₁); v_krit = √(g·D)·(1,386 − 1,915φ + 0,615φ²);
 Anschnittgeschwindigkeit v·A/A_gate. Neue Fälle mit denselben Formeln
 herleiten und die Herleitung in `note`-Feldern dokumentieren.

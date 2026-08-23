@@ -44,6 +44,17 @@ def _num(values, key):
     return x
 
 
+def solidus_density(values):
+    """Dichte der Kavität: das Werkzeug ist um das lineare Schwindmaß s
+    größer als das kalte Bauteil (densitySolid) → ρ_sol = ρ_s/(1+s)³.
+    Ohne Feststoffdichte (alte Projekte, direkte API-Nutzung) flüssig."""
+    rho_s = _num_opt(values, "densitySolid", 0.0)
+    if rho_s <= 0:
+        return _num(values, "density")
+    k = 1.0 + max(0.0, _num_opt(values, "shrink", 0.0)) / 100.0
+    return rho_s / (k * k * k)
+
+
 def _num_opt(values, key, default):
     """Optionaler Wert: fehlt der Schlüssel (oder ist er None), gilt der
     Default — ist er vorhanden, muss er eine endliche Zahl sein."""
@@ -143,16 +154,19 @@ def sim_config_from_browser(values, curve, process=None, vacuum=None):
     rho = _num(values, "density")
     if rho <= 0:
         raise ConvertError("Dichte muss > 0 sein.")
+    rho_sol = solidus_density(values)
     D = _num(values, "diam") / 1000.0
     L = _num(values, "length") / 1000.0
     if D <= 0 or L <= 0:
         raise ConvertError("Kolben-Ø und Kammerlänge müssen > 0 sein.")
     A = 0.25 * math.pi * D * D
 
-    Vr = _num(values, "runner") / rho
-    Vp = _num(values, "part") / rho
-    Vo = _num(values, "overflow") / rho
-    Vb = _num(values, "biscuit") / rho
+    # Kavitäten sind feste Geometrie (ρ_sol), die Dosierung liegt flüssig in
+    # der Kammer (ρ) — dieselbe Konvention wie physics.js (rhoSolidus).
+    Vr = _num(values, "runner") / rho_sol
+    Vp = _num(values, "part") / rho_sol
+    Vo = _num(values, "overflow") / rho_sol
+    Vb = _num(values, "biscuit") / rho_sol           # Pressrest fest (Endlage)
     if Vr <= 0:
         raise ConvertError("Angussgewicht muss > 0 sein (hpdcsim braucht einen Anguss).")
     if Vp <= 0:
@@ -161,7 +175,8 @@ def sim_config_from_browser(values, curve, process=None, vacuum=None):
         raise ConvertError("Überlaufgewicht darf nicht negativ sein.")
     if Vb <= 0:
         raise ConvertError("Pressrestgewicht muss > 0 sein (hpdcsim braucht einen Pressrest).")
-    Vdose = Vr + Vp + Vo + Vb
+    Vdose = (_num(values, "runner") + _num(values, "part")
+             + _num(values, "overflow") + _num(values, "biscuit")) / rho
     phi = Vdose / (A * L)
     if phi >= 1:
         raise ConvertError(
@@ -169,8 +184,11 @@ def sim_config_from_browser(values, curve, process=None, vacuum=None):
     if phi <= 0:
         raise ConvertError("Dosiervolumen ist null.")
 
+    # Füllende = Kammer voll + Kavität; danach Nachverdichtung bis zur
+    # Endlage L − Pressrest fest.
     biscuit_len = Vb / A
-    fill_complete = L - biscuit_len
+    fill_complete = (L - Vdose / A) + (Vr + Vp + Vo) / A
+    intens = L - biscuit_len - fill_complete
     positions_velocities, clamped = _clamped_curve(curve, fill_complete)
 
     gate_area = _num(values, "gate") / 1e6
@@ -224,6 +242,7 @@ def sim_config_from_browser(values, curve, process=None, vacuum=None):
         "phi": phi,
         "fill_complete_mm": fill_complete * 1000.0,
         "biscuit_mm": biscuit_len * 1000.0,
+        "intens_mm": intens * 1000.0,
         "curve_clamped": clamped,
     }
     return config, meta

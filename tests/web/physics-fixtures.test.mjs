@@ -22,7 +22,7 @@ function quantities(r) {
   return {
     phi: r.phi,
     s_fill_mm: r.sFill * 1000,
-    biscuit_mm: r.biscLen * 1000,
+    biscuit_mm: r.biscLiquid * 1000,          // Schmelzerest beim Füllende (= hpdcsim biscuit_length)
     fill_complete_mm: r.totalStroke * 1000,
     v_crit: r.vcrit,
     v_slow_max: r.v1,

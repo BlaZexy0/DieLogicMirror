@@ -17,7 +17,7 @@
    mit Prüfpunkten je Gruppe zusammen. */
 
 import { fmt, subHTML } from '../core/format.js';
-import { total, afterGate, pistonArea, travel, injForceEff, hydArea } from '../core/physics.js';
+import { total, afterGate, pistonArea, travel, injForceEff, hydArea, cavityVolume, cavityTravel, biscuitSolid, intensStroke, rhoSolidus } from '../core/physics.js';
 import { pqCore } from '../charts/pq2.js';
 
 /* Während eines Renders eingesammelte Prüfungen für die Prüfleiste. */
@@ -119,58 +119,70 @@ function bandTag(x, lo, hi) { return x < lo ? 'unter Band' : x > hi ? 'über Ban
 /* Mindestwert-Bewertung (Ist muss über min liegen): Marge als Tag. */
 function minStatus(x, min) { return x < min ? 'bad' : x < 1.1 * min ? 'warn' : 'ok'; }
 function minTag(x, min) {
-  return x < min ? fmt(Math.round(100 * (1 - x / min))) + ' % unter min'
-    : '+' + fmt(Math.round(100 * (x / min - 1))) + ' %';
+  const pct = 100 * Math.abs(x / min - 1);
+  const txt = fmt(pct < 10 ? Math.round(10 * pct) / 10 : Math.round(pct));   // knappe Margen mit einer Nachkommastelle
+  return x < min ? txt + ' % unter min' : '+' + txt + ' %';
 }
 
 /* Kolbenweg-Lineal: 0 … L. Bis s_voll (= (1 − φ)·L) läuft die 1. Phase,
-   danach steht die Schmelzesäule p3 = Anguss + (Bauteil + Überlauf) +
-   Pressrest. Läuft die Säule über die Kammer hinaus (p3 > L), wird die
-   Skala auf p3 gedehnt und die Kammerlänge als Grenze markiert.
+   danach die Formfüllung (Anguss, Bauteil + Überlauf — Kavitäten fest, ρ_sol),
+   dann der Nachverdichtungshub Δs (der Kolben speist den Erstarrungsschwund)
+   bis zur Endlage mit festem Pressrest. Läuft die flüssige Säule p3 über
+   die Kammer hinaus (p3 > L), wird die Skala auf p3 gedehnt und die
+   Kammerlänge als Grenze markiert.
    Darüber eine zweite, dünne Spur: ab wo die Einfüllöffnung dicht ist und
-   über welchen Kolbenweg Vakuum gezogen wird (vacStart bis Hubende). */
-function rulerHTML(v, fill, sFill, p1, p3, biscLen, travelEnd) {
-  const L = v.length;
+   über welchen Kolbenweg Vakuum gezogen wird (vacStart bis Füllende). */
+function rulerHTML(v, g) {
+  const { L, fill, sFill, p1, cav, intens, bisc, p3 } = g;
   const span = Math.max(L, p3);
   const over = p3 > L;
   const x = s => (100 * Math.max(0, Math.min(span, s)) / span).toFixed(2) + '%';
+  const w = len => (100 * Math.max(0, len) / span).toFixed(2) + '%';
   const vacOn = v.vacModel && v.vacModel !== 'aus' && v.vacStart >= 0;
-  const sEnd = isFinite(travelEnd) && travelEnd > 0 ? travelEnd : Math.max(0, L - biscLen);
+  const sEnd = over ? span : sFill + cav;                      // Füllende
   const vacHtml = '<div class="kr-vac' + (vacOn ? '' : ' off') + '">'
     + '<span class="vl">' + (vacOn
-      ? 'Vakuum ab ' + fmt(Math.round(v.vacStart)) + ' mm bis Hubende ' + fmt(Math.round(sEnd)) + ' mm'
+      ? 'Vakuum ab ' + fmt(Math.round(v.vacStart)) + ' mm bis Füllende ' + fmt(Math.round(sEnd)) + ' mm'
       : 'ohne Vakuum')
     + (v.sealStroke > 0 ? ' · Einfüllöffnung dicht ab ' + fmt(Math.round(v.sealStroke)) + ' mm' : '') + '</span>'
     + '<div class="kr-vtrack">'
-    + (vacOn && sEnd > v.vacStart ? '<span class="seg" style="left:' + x(v.vacStart) + ';width:' + (100 * (Math.min(span, sEnd) - Math.max(0, v.vacStart)) / span).toFixed(2) + '%"></span>' : '')
+    + (vacOn && sEnd > v.vacStart ? '<span class="seg" style="left:' + x(v.vacStart) + ';width:' + w(Math.min(span, sEnd) - Math.max(0, v.vacStart)) + '"></span>' : '')
     + (v.sealStroke > 0 ? '<i class="tick seal" style="left:' + x(v.sealStroke) + '" title="Einfüllöffnung verschlossen"></i>' : '')
     + '</div></div>';
-  const s0 = over ? 0 : sFill;                       // Beginn der Schmelzesäule
-  const partLen = Math.max(0, p3 - p1 - biscLen);
   const mm = x => fmt(Math.round(x));
+  const s0 = over ? 0 : sFill;                                 // Beginn der Schmelzesäule
+  const partLen = Math.max(0, cav - p1);
+  const segs = over
+    ? '<span class="seg part" style="left:0;width:' + w(p3) + '"></span>'
+    : '<span class="seg run" style="left:' + x(s0) + ';width:' + w(p1) + '"></span>'
+      + '<span class="seg part" style="left:' + x(s0 + p1) + ';width:' + w(partLen) + '"></span>'
+      + '<span class="seg nv" style="left:' + x(s0 + cav) + ';width:' + w(intens) + '"></span>'
+      + '<span class="seg bisc" style="left:' + x(s0 + cav + intens) + ';width:' + w(bisc) + '"></span>';
   return '<div class="kruler' + (over ? ' over' : '') + '">'
-    + '<div class="kr-head"><span>Kolbenweg</span><span>Kolben-Ø ' + fmt(v.diam) + ' mm</span></div>'
+    + '<div class="kr-head"><span>Kolbenweg</span><span>Ø ' + fmt(v.diam) + ' × L ' + fmt(L) + ' mm</span></div>'
     + vacHtml
+    /* Obere Beschriftung: „Füllende" rechtsbündig an seiner Marke; die
+       Kammerlänge steht im Kopf und nur dann auch hier, wenn Platz ist. */
     + '<div class="kr-lbl top"><span style="left:0">0</span>'
     + (over ? '' : '<span style="left:' + x(sFill) + '">Kammer voll ' + mm(sFill) + '</span>')
-    + '<span style="left:' + x(L) + '" class="end">' + mm(L) + ' mm</span></div>'
-    + '<div class="kr-track">'
-    + '<span class="seg run" style="left:' + x(s0) + ';width:' + x(p1) + '"></span>'
-    + '<span class="seg part" style="left:' + x(s0 + p1) + ';width:' + x(partLen) + '"></span>'
-    + '<span class="seg bisc" style="left:' + x(s0 + p1 + partLen) + ';width:' + x(biscLen) + '"></span>'
+    + (over ? '' : '<span style="left:' + x(sEnd) + '" class="end">Füllende ' + mm(sEnd) + '</span>')
+    + (over || sEnd / span < 0.72 ? '<span style="left:' + x(L) + '" class="end">' + mm(L) + ' mm</span>' : '') + '</div>'
+    + '<div class="kr-track">' + segs
     + '<i class="tick" style="left:0"></i>'
-    + (over ? '' : '<i class="tick" style="left:' + x(sFill) + '"></i>')
+    + (over ? '' : '<i class="tick" style="left:' + x(sFill) + '"></i><i class="tick" style="left:' + x(sEnd) + '"></i>')
     + '<i class="tick' + (over ? ' lim' : '') + '" style="left:' + x(L) + '"></i>'
     + '</div>'
     + '<div class="kr-lbl bot">'
     + (over
       ? '<span style="left:0">Schmelzesäule ' + mm(p3) + ' mm — ' + mm(p3 - L) + ' mm länger als die Kammer</span>'
       : '<span style="left:' + x(sFill / 2) + '">1. Phase · Füllgrad ' + fmt(fill) + ' %</span>'
-        + '<span style="left:' + x(sFill + p3 / 2) + '">Schmelze ' + mm(p3) + ' mm</span>')
+        + '<span style="left:' + x(sFill + cav / 2) + '">Formfüllung ' + mm(cav) + ' mm</span>'
+        + (intens / span > 0.06 ? '<span style="left:' + x(sFill + cav + intens / 2) + '">Δs ' + mm(intens) + '</span>' : ''))
     + '</div>'
     + '<div class="kr-legend"><span><i class="run"></i>Anguss ' + mm(p1) + '</span>'
     + '<span><i class="part"></i>Bauteil + Überlauf ' + mm(partLen) + '</span>'
-    + '<span><i class="bisc"></i>Pressrest ' + mm(biscLen) + ' mm</span></div>'
+    + '<span><i class="nv"></i>Nachverdichtung ' + mm(intens) + '</span>'
+    + '<span><i class="bisc"></i>Pressrest fest ' + mm(bisc) + ' mm</span></div>'
     + '</div>';
 }
 
@@ -226,10 +238,13 @@ export function renderKpis(el, v, shot, chamberEl) {
   const Vdos = mdos / v.density;                                   // m³
   const req = window.__CLAMP_MODEL__.forceKN(v.psel, v.area, v.safety, 1);
   const fill = 100e9 * Vdos / (v.length * A);
-  const p1 = travel(v.runner, v);
-  const p3 = travel(mdos, v);
+  const p3 = travel(mdos, v);                                     // flüssige Säule in der Kammer
   const sFill = (1 - fill / 100) * v.length;
-  const biscLen = travel(v.biscuit, v);
+  const p1 = cavityTravel(v.runner, v);                           // Kavitäten fest (ρ_sol)
+  const cav = cavityTravel(total(v), v);
+  const biscLen = biscuitSolid(v);                                // Pressrest fest (Endlage)
+  const biscLiquid = travel(v.biscuit, v);
+  const intens = intensStroke(v);                                 // Nachverdichtungshub
   const ratioLD = v.length / v.diam;
   const eta = mdos > 0 ? 100 * v.part / mdos : NaN;
 
@@ -270,8 +285,8 @@ export function renderKpis(el, v, shot, chamberEl) {
   /* Thermik und Qualität */
   const denN = v.Tflow - v.Tdie;
   const tNadca = denN !== 0 ? v.kfill * v.wall * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / denN : NaN;
-  const Vm = total(v) / v.density;
-  const tOp = 1e9 * (afterGate(v) / v.density) / (v2 * A);
+  const Vm = cavityVolume(total(v), v);
+  const tOp = 1e9 * cavityVolume(afterGate(v), v) / (v2 * A);
   const Areq = tOp > 0 && v.vAirMax > 0 ? Vm / (tOp / 1000) / v.vAirMax * 1e6 : NaN;
   const tErst = v.solK * v.gateTh * v.gateTh;
 
@@ -279,19 +294,18 @@ export function renderKpis(el, v, shot, chamberEl) {
     kv('Dosiergewicht', fmt(mdos) + ' kg', 'Bauteil + Anguss + Überlauf + Pressrest ' + fmt(v.biscuit) + ' kg')
     + kv('Dosiervolumen', fmt(Vdos * 1e6) + ' cm³', 'inkl. Pressrest · Flüssigdichte ' + fmt(v.density) + ' kg/m³')
     + kv('Materialausbeute', fmt(eta) + ' %', 'Bauteil / Dosiergewicht · Rest ist Kreislaufmaterial')
-    + kv('Kammerverhältnis λ', fmt(ratioLD), 'λ = L/D der gewählten Kammer'),
+    + kv('Kammerverhältnis λ', fmt(ratioLD), 'λ = L/D der gewählten Kammer')
+    + kv('Nachverdichtungshub', fmt(intens) + ' mm', 'Kolbenweg vom Füllende bis zur Endlage — speist den Erstarrungsschwund (ρ flüssig ' + fmt(v.density) + ' → ρ_sol ' + fmt(Math.round(rhoSolidus(v))) + ' kg/m³)'),
     () =>
       row('Füllgrad', fmt(fill) + ' %', 'inkl. Pressrest',
         bandStatus(fill, v.fillMin, v.fillMax), bandTag(fill, v.fillMin, v.fillMax),
         bullet(0, 100, v.fillMin, v.fillMax, fill,
           '0 %', 'Ziel ' + fmt(v.fillMin) + '–' + fmt(v.fillMax), '100 %'))
-      + row('Gesamtschuss gefüllt', fmt(p3) + ' mm', 'Schmelzesäule inkl. Pressrest · Kammer ' + fmt(v.length) + ' mm',
-        p3 > v.length ? 'bad' : 'ok', p3 > v.length ? 'Überlauf' : 'passt', meter(v.length > 0 ? p3 / v.length : 0))
-      + row('Pressrest', fmt(biscLen) + ' mm', 'Minimum ' + fmt(v.biscuitMin) + ' mm',
+      + row('Pressrest', fmt(biscLen) + ' mm', 'fest in der Endlage · flüssig am Füllende ' + fmt(biscLiquid) + ' mm · Minimum ' + fmt(v.biscuitMin) + ' mm',
         minStatus(biscLen, v.biscuitMin), minTag(biscLen, v.biscuitMin),
         bullet(0, Math.max(1.6 * v.biscuitMin, 1.15 * biscLen), v.biscuitMin, Math.max(1.6 * v.biscuitMin, 1.15 * biscLen), biscLen,
           '0 mm', 'min ' + fmt(v.biscuitMin), fmt(Math.max(1.6 * v.biscuitMin, 1.15 * biscLen)) + ' mm')),
-    rulerHTML(v, fill, sFill, p1, p3, biscLen, shot.error ? NaN : shot.profile.travel * 1000));
+    rulerHTML(v, { L: v.length, fill, sFill, p1, cav, intens, bisc: biscLen, p3 }));
 
   const uClamp = v.force > 0 ? req / v.force : NaN;
   const uHold = pMaxClamp > 0 ? v.psel / pMaxClamp : NaN;

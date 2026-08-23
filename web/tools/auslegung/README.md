@@ -75,6 +75,31 @@ klassische `<script>`-Tags geladen — ohne Build direkt editierbar.
 - **Automatische Persistenz** — der Zustand ist der `design`-Abschnitt des
   aktuellen Projekts und wird laufend in die Datenbank synchronisiert.
 
+## Zwei Dichten: flüssig in der Kammer, fest in der Kavität
+
+Alle Massen (Bauteil, Anguss, Überlauf, Pressrest) sind gewogene Festmassen
+— so liefert sie auch die Sprengflächenanalyse (ρ_s · V_STL). Daraus folgen
+zwei Arten von Volumen (`core/physics.js`):
+
+- **flüssig (`density`)** — die Dosierung in der Füllkammer: Füllgrad φ,
+  „Kammer voll", die Schmelzesäule, das (φ, λ)-Fenster, v_krit.
+- **fest (`rhoSolidus`)** — die Kavitäten sind Werkzeuggeometrie: das
+  Werkzeug ist um das lineare Schwindmaß s größer als das kalte Bauteil,
+  fasst also V = m·(1+s)³/ρ_s = m/ρ_sol. Damit rechnen die Ereignisse
+  Anguss/Bauteil/Überlauf gefüllt, Füllzeit, NADCA-Vergleich, Entlüftung,
+  PQ²-Füllzeit, die Kurvengeneratoren und die Auto-Flächen
+  (`cavityVolume`, `cavityTravel`).
+- **Nachverdichtungshub** `intensStroke` = Flüssigsäule − Kavität − Pressrest
+  fest: der Weg vom Füllende bis zur Endlage, auf dem der Kolben den
+  Erstarrungsschwund nachschiebt. Der **Pressrest** wird fest
+  (`biscuitSolid`, Endlage) gegen das Minimum geprüft; `shot.biscLiquid`
+  ist der Schmelzerest beim Füllende.
+
+Ohne `densitySolid` (alte Projekte, direkte API) fällt alles auf die
+Flüssigdichte zurück — `backend/convert.py` (`solidus_density`) folgt
+derselben Konvention, die Fixtures in `fixtures/physics/` halten beide
+Seiten aneinander (`feststoffdichte.json`).
+
 ## Architektur
 
 ```

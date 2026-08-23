@@ -41,7 +41,7 @@ globalThis.localStorage = { getItem: () => null, setItem: () => {} };
 const { POSITIVE_KEYS, NONNEG_KEYS, NEGATIVE_OK } = await import(
   path.join(site, 'tools/auslegung/js/ui/inputs.js'));
 const { generateCurve, fillTimeMs } = await import(path.join(site, 'tools/auslegung/js/core/curvegen.js'));
-const { computeShot } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
+const { computeShot, cavityVolume } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
 const { state, applyData } = await import(path.join(site, 'tools/auslegung/js/core/state.js'));
 const { charts } = await import(path.join(site, 'tools/auslegung/js/charts/registry.js'));
 
@@ -96,7 +96,7 @@ test('curvegen: López — 2. Phase trifft die NADCA-Füllzeit, sonst ehrlicher 
   const shot = computeShot(fast, r.points);
   closeTo(shot.fill, tN, 0.3);
   closeTo(r.tN, tN, 1e-9);
-  assert.ok(r.v2 > 1e9 * (v.part + v.overflow) / v.density / (tN * 0.25 * Math.PI * v.diam * v.diam),
+  assert.ok(r.v2 > 1e9 * cavityVolume(v.part + v.overflow, v) / (tN * 0.25 * Math.PI * v.diam * v.diam),
     'v₂ muss über dem Wert ohne Rampe liegen, um die Rampe auszugleichen');
   /* a_max = 60 (Preset): NADCA-Zeit physikalisch nicht erreichbar → schnellste 2. Phase + Hinweis */
   const slow = generateCurve(v, { mode: 'lopez' });
@@ -153,13 +153,13 @@ test('autofit: ideale Anschnitt- und Entlüftungsfläche aus Schusskurve bzw. NA
   const s2 = computeShot(Object.assign({}, v, { gate: Ag }), DEFAULT_CURVE.map(p => p.slice()));
   assert.ok(s2.checks.find(c => /Anschnittgeschwindigkeit/.test(c[1]))[0], 'Prüfung muss bestehen');
   /* Entlüftung: Bedarf bei der Füllzeit der Kurve (Diagramm Entlüftungsbedarf), aufgerundet */
-  const Vm = (v.part + v.runner + v.overflow) / v.density;
+  const Vm = cavityVolume(v.part + v.runner + v.overflow, v);   // Kavität fest (ρ_sol), nicht flüssig
   const need = Vm / (shot.fill / 1000) / v.vAirMax * 1e6;
   closeTo(idealVent(v, shot), Math.ceil(need / 10) * 10);
   assert.ok(idealVent(v, shot) >= need);
   /* ohne Kurve: NADCA-Füllzeit */
   const tN = v.kfill * v.wall * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / (v.Tflow - v.Tdie);
-  const QN = 1e9 * ((v.part + v.overflow) / v.density) / (tN / 1000);
+  const QN = 1e9 * cavityVolume(v.part + v.overflow, v) / (tN / 1000);
   closeTo(idealGate(v, null), Math.round(QN / 40000 / 10) * 10);
   closeTo(idealVent(v, null), Math.ceil(Vm / (tN / 1000) / v.vAirMax * 1e6 / 10) * 10);
   /* Randfälle */
