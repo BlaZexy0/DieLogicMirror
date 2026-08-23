@@ -25,7 +25,11 @@ function fieldHTML(f) {
   const auto = f.auto
     ? '<label class="auto-toggle" title="' + f.auto.replace(/"/g, '&quot;') + '"><input type="checkbox" data-auto="' + f.key + '"> Auto</label>'
     : '';
-  const lab = auto ? label.replace('</label>', auto + '</label>') : label;
+  /* Reihenfolge in der Flex-Zeile: Name … [Auto] Einheit — der Schalter
+     nimmt den Platz vor der Einheit ein, die Einheit bleibt rechts */
+  const lab = auto
+    ? (f.unit ? label.replace(' <span class="unit">', auto + ' <span class="unit">') : label.replace('</label>', auto + '</label>'))
+    : label;
   return '<div class="field" data-field="' + f.key + '">' + lab +
     '<input data-k="' + f.key + '" type="number" step="any"' + min + ' value="' + f.def + '"></div>';
 }
