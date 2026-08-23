@@ -309,50 +309,16 @@ export function renderKpis(el, v, shot, chamberEl) {
         : Qs !== null
           ? kv('Schnittpunkt ungedrosselt', fmt(Qs / pq.Ap) + ' m/s', 'Maschine × Werkzeug · Q = ' + fmt(Qs * 1000) + ' l/s · p_s = ' + fmt(ps) + ' bar · keine Schusskurve')
           : ''),
-      () =>
-      (isFinite(gvShown)
-        ? row('Anschnittgeschwindigkeit', fmt(gvShown) + ' m/s',
-          (gvShot != null ? 'aus Schusskurve (Bauteil gefüllt) · Mittel v₂ → ' + fmt(gvMean) + ' m/s' : 'aus v₂ (Mittel nach Anschnitt)'),
-          bandStatus(gvShown, v.gateMin, v.gateMax), bandTag(gvShown, v.gateMin, v.gateMax),
-          bullet(0, Math.max(1.2 * v.gateMax, 1.05 * gvShown), v.gateMin, v.gateMax, gvShown,
-            '0 m/s', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax), fmt(Math.max(1.2 * v.gateMax, 1.05 * gvShown)) + ' m/s'))
-        : row('Anschnittgeschwindigkeit', '—', 'braucht v₂ aus der Schusskurve', 'nodata'))
-      + (isFinite(Jist) && v.JatomMin > 0
-        ? row('Zerstäubung (J-Faktor)', fmt(Jist),
-          'Ist-J bei v_a ' + fmt(gvShown) + ' m/s · Band ' + fmt(v.JatomMin) + '–' + fmt(v.JatomMax) + ' (Herman/NADCA)',
-          bandStatus(Jist, v.JatomMin, v.JatomMax), bandTag(Jist, v.JatomMin, v.JatomMax),
-          bullet(0, Math.max(1.2 * v.JatomMax, 1.05 * Jist), v.JatomMin, v.JatomMax, Jist,
-            '0', 'Band ' + fmt(v.JatomMin) + '–' + fmt(v.JatomMax), fmt(Math.max(1.2 * v.JatomMax, 1.05 * Jist))))
-        : row('Zerstäubung (J-Faktor)', '—', 'braucht Anschnittgeschwindigkeit, -dicke und Dichte', 'nodata'))
-      /* Nur als Prüfzeile, wenn die Kurve über dem Schnittpunkt liegt — sonst
-         steht der Arbeitspunkt im Kennwertstreifen */
-      + (Qop !== null && Qop > Qs
-        ? row('PQ²-Arbeitspunkt', fmt(v2) + ' m/s',
-          'v₂ über dem Schnittpunkt Maschine × Werkzeug (' + fmt(Qs / pq.Ap) + ' m/s) — mit dieser Gießkraft nicht erreichbar',
-          'bad', 'nicht erreichbar', meter(Qop / Qs))
-        : '')
-      + (shot.error
-        ? row('Schusskurve', 'Fehler', shot.error, 'bad', 'ungültig')
-        : (shot.fill === null
-          ? row('Füllzeit ab Anschnitt', '—', 'Kurve endet vor „Überlauf gefüllt" — Kurvenhub verlängern', 'nodata')
-          : row('Füllzeit ab Anschnitt', fmt(shot.fill) + ' ms', 'aus Schusskurve · max ' + fmt(v.tmax) + ' ms',
-            utilStatus(shot.fill / v.tmax), utilTag(shot.fill / v.tmax), meter(shot.fill / v.tmax)))
-        + row('v₁ vs. v_krit (1. Phase)', fmt(shot.v1) + ' m/s',
+      () => {
+        /* Reihenfolge: Kolben (1. Phase, Maschinenlimits) → Anschnitt (v_a, J) →
+           Füllzeit (Ist, NADCA) → Entlüftung. Ohne gültige Kurve steht an Stelle
+           von v₁ eine Fehlerzeile. Der PQ²-Arbeitspunkt erscheint nur als Zeile,
+           wenn v₂ über dem Schnittpunkt liegt (sonst Kennwert im Kopf). */
+        const rV1 = shot.error ? row('Schusskurve', 'Fehler', shot.error, 'bad', 'ungültig')
+          : row('v₁ vs. v_krit (1. Phase)', fmt(shot.v1) + ' m/s',
           'v_krit ' + fmt(shot.vcrit) + ' m/s (CFD-Tabelle) · max. bis „Kammer voll" · v₂ ' + (shot.v2 == null ? '—' : fmt(shot.v2) + ' m/s'),
-          utilStatus(shot.v1 / shot.vcrit), utilTag(shot.v1 / shot.vcrit), meter(shot.v1 / shot.vcrit)))
-      + (!isFinite(tNadca) || shot.error || shot.fill === null
-        ? row('NADCA-Füllzeit', isFinite(tNadca) ? fmt(tNadca) + ' ms' : '—',
-          'empfohlen bei s = ' + fmt(v.wall) + ' mm · Ist-Füllzeit fehlt', 'nodata')
-        : row('NADCA-Füllzeit', fmt(shot.fill) + ' ms',
-          'Ist-Füllzeit in % der Empfehlung ≤ ' + fmt(tNadca) + ' ms bei s = ' + fmt(v.wall) + ' mm',
-          utilStatus(shot.fill / tNadca),
-          fmt(Math.round(100 * shot.fill / tNadca)) + ' %', meter(shot.fill / tNadca)))
-      + (isFinite(Areq) && v.vent > 0
-        ? row('Entlüftungsbedarf', fmt(Areq) + ' mm²',
-          'vorhanden ' + fmt(v.vent) + ' mm² · bei t_f ' + fmt(tOp) + ' ms (v₂-Mittel)',
-          utilStatus(Areq / v.vent), utilTag(Areq / v.vent), meter(Areq / v.vent))
-        : row('Entlüftungsbedarf', '—', 'braucht v₂ aus der Schusskurve und Entlüftungsfläche', 'nodata'))
-      + (shot.error
+          utilStatus(shot.v1 / shot.vcrit), utilTag(shot.v1 / shot.vcrit), meter(shot.v1 / shot.vcrit));
+        const rLim = (shot.error
         ? row('Kurve vs. Maschinenlimits', '—', 'Schusskurve ungültig', 'nodata')
         : (() => {
           const aPk = Math.max(shot.profile.amax, -shot.profile.amin, 0);
@@ -369,7 +335,44 @@ export function renderKpis(el, v, shot, chamberEl) {
             utilStatus(worst),
             utilStatus(worst) === 'ok' ? '' : (uV >= uA ? 'v ' : 'a ') + pctTag(worst),
             rows);
-        })()), '', 'tall')
+        })());
+        const rQop = (Qop !== null && Qop > Qs
+        ? row('PQ²-Arbeitspunkt', fmt(v2) + ' m/s',
+          'v₂ über dem Schnittpunkt Maschine × Werkzeug (' + fmt(Qs / pq.Ap) + ' m/s) — mit dieser Gießkraft nicht erreichbar',
+          'bad', 'nicht erreichbar', meter(Qop / Qs))
+        : '');
+        const rGv = (isFinite(gvShown)
+        ? row('Anschnittgeschwindigkeit', fmt(gvShown) + ' m/s',
+          (gvShot != null ? 'aus Schusskurve (Bauteil gefüllt) · Mittel v₂ → ' + fmt(gvMean) + ' m/s' : 'aus v₂ (Mittel nach Anschnitt)'),
+          bandStatus(gvShown, v.gateMin, v.gateMax), bandTag(gvShown, v.gateMin, v.gateMax),
+          bullet(0, Math.max(1.2 * v.gateMax, 1.05 * gvShown), v.gateMin, v.gateMax, gvShown,
+            '0 m/s', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax), fmt(Math.max(1.2 * v.gateMax, 1.05 * gvShown)) + ' m/s'))
+        : row('Anschnittgeschwindigkeit', '—', 'braucht v₂ aus der Schusskurve', 'nodata'));
+        const rJ = (isFinite(Jist) && v.JatomMin > 0
+        ? row('Zerstäubung (J-Faktor)', fmt(Jist),
+          'Ist-J bei v_a ' + fmt(gvShown) + ' m/s · Band ' + fmt(v.JatomMin) + '–' + fmt(v.JatomMax) + ' (Herman/NADCA)',
+          bandStatus(Jist, v.JatomMin, v.JatomMax), bandTag(Jist, v.JatomMin, v.JatomMax),
+          bullet(0, Math.max(1.2 * v.JatomMax, 1.05 * Jist), v.JatomMin, v.JatomMax, Jist,
+            '0', 'Band ' + fmt(v.JatomMin) + '–' + fmt(v.JatomMax), fmt(Math.max(1.2 * v.JatomMax, 1.05 * Jist))))
+        : row('Zerstäubung (J-Faktor)', '—', 'braucht Anschnittgeschwindigkeit, -dicke und Dichte', 'nodata'));
+        const rFz = shot.error ? '' : (shot.fill === null
+          ? row('Füllzeit ab Anschnitt', '—', 'Kurve endet vor „Überlauf gefüllt" — Kurvenhub verlängern', 'nodata')
+          : row('Füllzeit ab Anschnitt', fmt(shot.fill) + ' ms', 'aus Schusskurve · max ' + fmt(v.tmax) + ' ms',
+            utilStatus(shot.fill / v.tmax), utilTag(shot.fill / v.tmax), meter(shot.fill / v.tmax)));
+        const rNadca = (!isFinite(tNadca) || shot.error || shot.fill === null
+        ? row('NADCA-Füllzeit', isFinite(tNadca) ? fmt(tNadca) + ' ms' : '—',
+          'empfohlen bei s = ' + fmt(v.wall) + ' mm · Ist-Füllzeit fehlt', 'nodata')
+        : row('NADCA-Füllzeit', fmt(shot.fill) + ' ms',
+          'Ist-Füllzeit in % der Empfehlung ≤ ' + fmt(tNadca) + ' ms bei s = ' + fmt(v.wall) + ' mm',
+          utilStatus(shot.fill / tNadca),
+          fmt(Math.round(100 * shot.fill / tNadca)) + ' %', meter(shot.fill / tNadca)));
+        const rVent = (isFinite(Areq) && v.vent > 0
+        ? row('Entlüftungsbedarf', fmt(Areq) + ' mm²',
+          'vorhanden ' + fmt(v.vent) + ' mm² · bei t_f ' + fmt(tOp) + ' ms (v₂-Mittel)',
+          utilStatus(Areq / v.vent), utilTag(Areq / v.vent), meter(Areq / v.vent))
+        : row('Entlüftungsbedarf', '—', 'braucht v₂ aus der Schusskurve und Entlüftungsfläche', 'nodata'));
+        return rV1 + rLim + rQop + rGv + rJ + rFz + rNadca + rVent;
+      }, '', 'tall')
 
     + panel('Zuhaltung und Maschine', 'Zuhaltung', '', () =>
       (isFinite(uClamp)
