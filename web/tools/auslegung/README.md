@@ -101,7 +101,7 @@ js/
     inputs.js          Sidebar, Validierung, Eingabe-Hervorhebung
     presets.js         Maschinen-Preset-Auswahl
     curveTable.js      Schusskurven-Editor
-    kpis.js            KPI-Kacheln
+    kpis.js            Prüfpanels (Kennwerte, Prüfzeilen, Kolbenweg-Lineal, Prüfleiste)
     cards.js           Diagrammkarten (Tabs, Buttons, Zeichnen)
     export.js          PNG / CSV / JSON-Speichern+Laden
   main.js            Einstieg Dashboard (index.html)
