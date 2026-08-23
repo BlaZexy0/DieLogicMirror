@@ -8,10 +8,9 @@ import { pMaxMachine } from '../core/physics.js';
 import { theme } from '../core/theme.js';
 import { frac } from './mathfmt.js';
 
+const CLAMP = window.__CLAMP_MODEL__;
 function leverK(v) {
-  return (v.tieX > 0 && v.tieY > 0)
-    ? window.__CLAMP_MODEL__.leverK(v.eccX, v.eccY, v.tieX, v.tieY)
-    : 1;
+  return (v.tieX > 0 && v.tieY > 0) ? CLAMP.leverK(v.eccX, v.eccY, v.tieX, v.tieY) : 1;
 }
 
 export default {
@@ -31,17 +30,17 @@ export default {
        Kurve unter diese Kappe kommt. */
     const pMax = pMaxMachine(v);
     if (!(pMax > 0) || !isFinite(pMax)) return { err: 'Gießkraft und Kolben-Ø min. müssen > 0 sein.' };
-    const yCap = v.tieX > 0 && v.tieY > 0 ? v.tieX * v.tieY * 1e-6 : 0.01 * v.force / (pMax / 50);
-    let p0 = 0.01 * v.force / yCap;
+    const yCap = v.tieX > 0 && v.tieY > 0 ? v.tieX * v.tieY * 1e-6 : CLAMP.areaMax(v.force, pMax / 50, 1, 1);
+    let p0 = CLAMP.pMax(v.force, yCap, 1, 1);
     if (!isFinite(p0) || p0 <= 0 || p0 >= pMax) p0 = pMax / 100;
     const x = seq(p0, pMax, 140);
     const ss = [
-      series('S=1,00 · zentrisch', C.series1, x, p => 0.01 * v.force / p),
-      series('S=' + fmt(v.safety) + ' · zentrisch', C.series2, x, p => 0.01 * v.force / (v.safety * p))
+      series('S=1,00 · zentrisch', C.series1, x, p => CLAMP.areaMax(v.force, p, 1, 1)),
+      series('S=' + fmt(v.safety) + ' · zentrisch', C.series2, x, p => CLAMP.areaMax(v.force, p, v.safety, 1))
     ];
     if (k > 1) {
       ss.push(series('S=' + fmt(v.safety) + ' · k=' + fmt(k), C.series3, x,
-        p => 0.01 * v.force / (v.safety * k * p)));
+        p => CLAMP.areaMax(v.force, p, v.safety, k)));
     }
     const q = line(x, ss, 'Druck in bar', 'Max. Sprengfläche m²',
       'Kraft ' + fmt(v.force) + ' kN · S=' + fmt(v.safety) +
@@ -94,9 +93,9 @@ gewählt: A = <b data-m="asel"></b></p>`;
     set('psel', fmt(v.psel) + ' bar');
     set('S', fmt(v.safety));
     set('S2', fmt(v.safety));
-    set('a1', v.psel > 0 ? fmt(0.01 * v.force / v.psel) + ' m²' : '—');
-    set('aS', ok ? fmt(0.01 * v.force / (v.safety * v.psel)) + ' m²' : '—');
-    set('aK', ok ? fmt(0.01 * v.force / (v.safety * k * v.psel)) + ' m²' : '—');
+    set('a1', v.psel > 0 ? fmt(CLAMP.areaMax(v.force, v.psel, 1, 1)) + ' m²' : '—');
+    set('aS', ok ? fmt(CLAMP.areaMax(v.force, v.psel, v.safety, 1)) + ' m²' : '—');
+    set('aK', ok ? fmt(CLAMP.areaMax(v.force, v.psel, v.safety, k)) + ' m²' : '—');
     set('asel', fmt(v.area) + ' m²');
   }
 };

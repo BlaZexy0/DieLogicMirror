@@ -12,7 +12,7 @@ import { total, vCrit } from '../core/physics.js';
 import { feasibleBand } from '../core/limits.js';
 import { frac, sqrt, cbrt } from './mathfmt.js';
 
-const PI = Math.PI, GRAV = 9.81;
+const PI = Math.PI;
 const R_MIN = 1, R_MAX = 12;
 
 /* Grenz-Ø der kritischen Geschwindigkeit: v₁ ≤ v_krit(D, φ) ⇔ D ≥ D_c(φ).

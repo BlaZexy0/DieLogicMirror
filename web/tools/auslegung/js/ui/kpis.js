@@ -11,6 +11,7 @@
 
 import { fmt } from '../core/format.js';
 import { total, afterGate, pistonArea, travel } from '../core/physics.js';
+import { pqCore } from '../charts/pq2.js';
 
 /* Während eines Renders eingesammelte Prüfungen für die Prüfliste. */
 let CHECKS = [];
@@ -124,7 +125,7 @@ export function renderKpis(el, v, shot, chamberEl) {
   const A = pistonArea(v);
   const mdos = total(v) + v.biscuit;
   const Vdos = mdos / v.density;                                   // m³
-  const req = v.area * v.safety * v.psel / 0.01;
+  const req = window.__CLAMP_MODEL__.forceKN(v.psel, v.area, v.safety, 1);
   const fill = 100e9 * Vdos / (v.length * A);
   const p1 = travel(v.runner, v);
   const p3 = travel(mdos, v);
@@ -140,17 +141,12 @@ export function renderKpis(el, v, shot, chamberEl) {
   const pSpec = v.injForce * 1e4 / A;
 
   /* PQ²-Arbeitspunkt (gleiche Rechnung wie im PQ²-Diagramm) */
-  let Qs = null, ps = null;
-  if (v.gate > 0 && v.Cd > 0 && v.vmax > 0 && v.injForce > 0 && v.density > 0 && v.diam > 0) {
-    const Ap = A * 1e-6, p0 = v.injForce * 1e4 / A, Qmax = Ap * v.vmax, Ag = v.gate * 1e-6;
-    const Cdie = v.density / (2 * v.Cd * v.Cd * Ag * Ag) / 1e5;
-    Qs = Math.sqrt(p0 / (Cdie + p0 / (Qmax * Qmax)));
-    ps = Cdie * Qs * Qs;
-  }
-  /* Hüllkurven-Konstante a = (2√3/9)·F_G·v_dry (PQ²) und Leistung am Arbeitspunkt */
+  /* PQ²-Arbeitspunkt und Hüllkurve: dieselbe Rechnung wie im PQ²-Diagramm (pqCore) */
+  const pq = pqCore(v);
+  const Qs = pq ? pq.Qs : null, ps = pq ? pq.ps : null;
   const aMPE = (v.injForce > 0 && v.vmax > 0)
     ? (2 * Math.sqrt(3) / 9) * v.injForce * 1e3 * v.vmax / 1e6 : null;   // MW
-  const pwOp = Qs !== null ? ps * 1e5 * Qs / 1e6 : null;                 // MW
+  const pwOp = pq ? pq.ps * 1e5 * pq.Qs / 1e6 : null;                    // MW
 
   /* Anschnittgeschwindigkeit: bevorzugt aus der Schusskurve (Bauteil gefüllt);
      sonst mit v2 = mittlerer Kolbengeschw. nach Anschnitt (ebenfalls Kurve) */

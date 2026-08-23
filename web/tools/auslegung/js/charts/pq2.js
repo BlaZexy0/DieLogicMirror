@@ -21,8 +21,10 @@ import { frac, sqrt } from './mathfmt.js';
 
 const PI = Math.PI, S3 = Math.sqrt(3);
 
-/* Gemeinsame Kerngrößen für calc() und renderMath(). null bei ungültigen Eingaben. */
-function pqCore(v) {
+/* Gemeinsame Kerngrößen für calc(), renderMath() und die KPI-Zeile
+   (ui/kpis.js) — die eine Implementierung des Arbeitspunkts. null bei
+   ungültigen Eingaben. */
+export function pqCore(v) {
   if (!(v.gate > 0) || !(v.Cd > 0) || !(v.vmax > 0) || !(v.injForce > 0) || !(v.density > 0) || !(v.diam > 0)) return null;
   const Ap = pistonArea(v) * 1e-6;                              // Kolbenfläche m²
   const p0 = v.injForce * 1e4 / pistonArea(v);                  // statischer Metalldruck bar (= P_acc·A_h/A_K)

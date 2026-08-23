@@ -6,6 +6,10 @@ import { pMaxMachine } from '../core/physics.js';
 import { theme } from '../core/theme.js';
 import { frac } from './mathfmt.js';
 
+/* Kraftbilanz F = 100·p·A·S·k aus shared/clampmodel.js — eine Umrechnung für
+   Dashboard, KPI-Zeile und STL-Analyse. */
+const CLAMP = window.__CLAMP_MODEL__;
+
 export default {
   id: 'machine',
   title: 'Erforderliche Maschinengröße',
@@ -19,15 +23,16 @@ export default {
     if (!(pMax > 0) || !isFinite(pMax)) return { err: 'Gießkraft und Kolben-Ø min. müssen > 0 sein.' };
     const x = seq(0, pMax, 140);
     const q = line(x, [
-      series('S=1,00', C.series1, x, p => v.area * p / 0.01),
-      series('S=' + fmt(v.safety), C.series2, x, p => v.area * v.safety * p / 0.01)
+      series('S=1,00', C.series1, x, p => CLAMP.forceKN(p, v.area, 1, 1)),
+      series('S=' + fmt(v.safety), C.series2, x, p => CLAMP.forceKN(p, v.area, v.safety, 1))
     ], 'Druck in bar', 'Maschinengröße kN', 'Fläche ' + fmt(v.area) + ' m² · S=' + fmt(v.safety));
     /* y knapp über Maschinenkraft und Betriebspunkt kappen — sonst dominiert
        bei großem pMax die Schraffur „über Maschinenkraft" das ganze Bild. */
     q.y0 = 0;
-    q.y1 = Math.max(1.6 * v.force, 1.25 * v.area * v.safety * v.psel * 100) || undefined;
-    q.pt = [v.psel, v.area * v.safety * v.psel / 0.01];
-    q.ptl = 'Bedarf: ' + fmt(v.area * v.safety * v.psel / 0.01) + ' kN';
+    const freq = CLAMP.forceKN(v.psel, v.area, v.safety, 1);
+    q.y1 = Math.max(1.6 * v.force, 1.25 * freq) || undefined;
+    q.pt = [v.psel, freq];
+    q.ptl = 'Bedarf: ' + fmt(freq) + ' kN';
     q.limits = [limit('force', 'Verfügbar ' + fmt(v.force) + ' kN', 'y', 'max', v.force, { note: 'über Maschinenkraft' })];
     return q;
   },
@@ -47,7 +52,7 @@ verfügbar = <b data-m="favail"></b> · Auslastung = <b data-m="util"></b></p>`;
 
   renderMath(el, v) {
     const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
-    const freq = v.area * v.safety * v.psel * 100;
+    const freq = CLAMP.forceKN(v.psel, v.area, v.safety, 1);
     set('psel', fmt(v.psel) + ' bar');
     set('freq', fmt(freq) + ' kN');
     set('favail', fmt(v.force) + ' kN');

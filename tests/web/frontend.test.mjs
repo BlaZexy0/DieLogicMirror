@@ -198,6 +198,18 @@ test('clampmodel: p_max = F / (100·S·k·A)', () => {
   closeTo(clamp.pMax(3400, 0.03, 1.3, 1), 871.79, 1e-4);        // HCC-340-Größenordnung
 });
 
+test('clampmodel: forceKN und areaMax sind die Umkehrungen von pMax (1 bar·m² = 100 kN)', () => {
+  assert.equal(clamp.KN_PER_BAR_M2, 100);
+  assert.equal(clamp.forceKN(600, 0.15, 1, 1), 9000);            // 600 bar auf 0,15 m² → 9.000 kN
+  closeTo(clamp.forceKN(600, 0.15, 1.3, 1), 11700);
+  closeTo(clamp.areaMax(16000, 600, 1.3, 1), 16000 / (100 * 600 * 1.3));
+  /* Rundreise über alle drei Richtungen */
+  const F = 8000, A = 0.1, S = 1.3, k = 1 + 130 / 810;
+  const p = clamp.pMax(F, A, S, k);
+  closeTo(clamp.forceKN(p, A, S, k), F, 1e-9);
+  closeTo(clamp.areaMax(F, p, S, k), A, 1e-12);
+});
+
 /* ── 3 · Übernahme STL → Projekt ─────────────────────────────── */
 
 test('handoff: alle Übernahme-Schlüssel sind Dashboard-Felder', () => {
