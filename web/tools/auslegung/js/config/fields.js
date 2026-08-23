@@ -23,7 +23,10 @@ export const groups = [
     note: 'Diese Felder setzt das Maschinen-Preset. Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
     fields: [
       { key: 'force',    label: 'Maschinenkraft',          unit: 'kN',   def: 13500 },
-      { key: 'injForce', label: 'Gießkraft (Schuss)',      unit: 'kN',   def: 2000 },
+      /* Maschinenkonstante ist der Antriebskolben: Gießkraft bei max.
+         Akkumulatordruck und dieser Druck legen A_h = F/P fest; die Gießkraft
+         im Betrieb folgt aus dem eingestellten Druck (physics.injForceEff). */
+      { key: 'injForce', label: 'Gießkraft bei Akkudruck max.', unit: 'kN', def: 2000 },
       { key: 'vmax',     label: 'Kolbengeschw. max.',      unit: 'm/s',  def: 7 },
       { key: 'amax',     label: 'Beschleunigung max.',     unit: 'm/s²', def: 60 },
       { key: 'dmin',     label: 'Kolben-Ø min.',           unit: 'mm',   def: 120 },
@@ -32,7 +35,7 @@ export const groups = [
       { key: 'lmax',     label: 'Kammerlänge max.',        unit: 'mm',   def: 900 },
       { key: 'tieX',     label: 'Säulenabstand horizontal', unit: 'mm',  def: 1100 },
       { key: 'tieY',     label: 'Säulenabstand vertikal',   unit: 'mm',  def: 1100 },
-      { key: 'pAcc',     label: 'Akkumulatordruck (Nenn)',  unit: 'bar', def: 160 },
+      { key: 'pAcc',     label: 'Akkumulatordruck max.',    unit: 'bar', def: 160 },
       { key: 'intTime',  label: 'Nachdruckaufbauzeit',      unit: 'ms',  def: 60 }
     ]
   },
@@ -41,10 +44,9 @@ export const groups = [
     /* Die Druckachse läuft von 0 bis zum max. spezifischen Gießdruck der
        Maschine (Gießkraft auf Ø dmin) — pmin/pmax sind keine Eingaben mehr. */
     fields: [
-      /* Eingestellter Akkumulatordruck: skaliert die Gießkraft des Presets
-         (Nennwert injForce bei Nenndruck pAcc) linear — A_h bleibt fest.
-         follows: übernimmt den Nennwert des Presets bei Preset-Wechsel und
-         wenn ein gespeichertes Projekt das Feld noch nicht kennt. */
+      /* Eingestellter Akkumulatordruck: die Betriebsgröße der Maschine —
+         höchstens das Maximum des Presets, Gießkraft = P_ein · A_h.
+         follows: startet beim Maximum (Preset-Wechsel, ältere Projekte). */
       { key: 'pAccOp', label: 'Akkumulatordruck (eingestellt)', unit: 'bar', def: 160, follows: 'pAcc' },
       { key: 'area',   label: 'Sprengfläche',      unit: 'm²',  def: 0.15 },
       { key: 'psel',   label: 'Auslegungsdruck',   unit: 'bar', def: 600 },

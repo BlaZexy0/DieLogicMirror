@@ -79,7 +79,7 @@ test('pq2: Metalldruck-Achse — Hüllkurve unverändert (a/Q zwischen den Berü
   assert.ok(Math.abs(c.pReach(c.Qs) - maskOf(q).fn(c.Qs * 1000)) < 1e-9);
 });
 
-test('pq2: eingestellter Akkumulatordruck skaliert Gießkraft, p₀, Hüllkurve und Hydraulikachse', () => {
+test('pq2: eingestellter Akkumulatordruck skaliert Gießkraft, p₀, Hüllkurve und Hydraulikachse', async () => {
   const v = defaults();                       // Nenn: 2000 kN bei 160 bar
   const half = Object.assign({}, v, { pAccOp: 80 });
   closeTo(injForceEff(v), v.injForce);
@@ -96,7 +96,13 @@ test('pq2: eingestellter Akkumulatordruck skaliert Gießkraft, p₀, Hüllkurve 
   /* Metalldruck-Hüllkurve ebenfalls halbiert */
   const qm1 = calc(v, 'q', 'pm'), qm2 = calc(half, 'q', 'pm');
   closeTo(maskMax(qm2), maskMax(qm1) / 2, 1e-6);
-  /* fehlende/ungültige Drücke → Nennwert */
+  /* fehlende/ungültige Drücke → Maximalkraft; über dem Maximum wird gekappt */
   closeTo(injForceEff(Object.assign({}, v, { pAccOp: 0 })), v.injForce);
   closeTo(injForceEff(Object.assign({}, v, { pAcc: 0 })), v.injForce);
+  closeTo(injForceEff(Object.assign({}, v, { pAccOp: 999 })), v.injForce);
+  closeTo(pqCore(Object.assign({}, v, { pAccOp: 999 })).p0, c1.p0);
+  closeTo(calc(Object.assign({}, v, { pAccOp: 999 }), 'q', 'ph').y1, 1.05 * v.pAcc);
+  /* Antriebskolben aus dem Preset: 2000 kN / 160 bar = 1250 cm² (1 kN/bar = 100 cm²) */
+  const { hydArea } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
+  closeTo(hydArea(v), 1250);
 });

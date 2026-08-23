@@ -10,7 +10,7 @@
    Eine Prüfliste (#checkbar) fasst alle bewerteten Kacheln zusammen. */
 
 import { fmt } from '../core/format.js';
-import { total, afterGate, pistonArea, travel, injForceEff } from '../core/physics.js';
+import { total, afterGate, pistonArea, travel, injForceEff, hydArea } from '../core/physics.js';
 import { pqCore } from '../charts/pq2.js';
 
 /* Während eines Renders eingesammelte Prüfungen für die Prüfliste. */
@@ -206,7 +206,12 @@ export function renderKpis(el, v, shot, chamberEl) {
           'Auslegung ' + fmt(v.psel) + ' von max. ' + fmt(pMaxClamp) + ' bar (Zuhaltung · e = (' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k = ' + fmt(kClamp) + ')',
           utilStatus(uHold), pctTag(uHold), meter(uHold))
         : kpi('Nachdruck-Auslastung', '—', 'Zuhaltungsmodell unvollständig', 'nodata'))
-      + kpi('Spez. Gießdruck', fmt(pSpec) + ' bar', 'Gießkraft ' + fmt(Feff) + ' kN bei ' + fmt(v.pAccOp) + ' bar / Kolbenfläche',
+      + (v.pAcc > 0 && v.injForce > 0
+        ? kpi('Gießkraft', fmt(Feff) + ' kN',
+          'Akkumulatordruck ' + fmt(Math.min(v.pAccOp, v.pAcc)) + ' von max. ' + fmt(v.pAcc) + ' bar · A_h = ' + fmt(hydArea(v)) + ' cm² · max. ' + fmt(v.injForce) + ' kN',
+          v.pAccOp > v.pAcc ? 'bad' : 'ok', v.pAccOp > v.pAcc ? 'über Maximum' : fmt(100 * Feff / v.injForce) + ' %', meter(Feff / v.injForce))
+        : kpi('Gießkraft', '—', 'braucht Gießkraft und Akkumulatordruck max.', 'nodata'))
+      + kpi('Spez. Gießdruck', fmt(pSpec) + ' bar', 'Gießkraft ' + fmt(Feff) + ' kN / Kolbenfläche',
         bandStatus(pSpec, v.psel, pMaxClamp), bandTag(pSpec, v.psel, pMaxClamp),
         bullet(0, 1.1 * Math.max(pSpec, pMaxClamp), v.psel, pMaxClamp, pSpec,
           '0', 'Band ' + fmt(Math.round(v.psel)) + '–' + fmt(Math.round(pMaxClamp)), fmt(Math.round(1.1 * Math.max(pSpec, pMaxClamp))) + ' bar'))

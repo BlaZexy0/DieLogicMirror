@@ -11,11 +11,14 @@ export function total(v) { return v.part + v.runner + v.overflow; }
 export function afterGate(v) { return v.part + v.overflow; }
 export function pistonArea(v) { return 0.25 * PI * v.diam * v.diam; }           // mm²
 export function travel(m, v) { return 1e9 * (m / v.density) / pistonArea(v); }  // mm für Masse m
-/* Effektive Gießkraft [kN]: das Preset nennt F_G bei Nenn-Akkumulatordruck
-   pAcc; der eingestellte Druck pAccOp skaliert sie linear (F_G = P_acc·A_h,
-   Antriebskolbenfläche A_h fest). Ohne gültige Drücke gilt der Nennwert. */
+/* Gießkraft im Betrieb [kN]: F_G = P_ein · A_h mit der Antriebskolbenfläche
+   A_h = F_max/P_max aus dem Maschinen-Preset (Gießkraft bei max. Akkumulator-
+   druck). Der eingestellte Druck ist auf das Maximum begrenzt; ohne gültige
+   Drücke gilt die Maximalkraft. */
+export function hydArea(v) { return v.pAcc > 0 ? v.injForce / v.pAcc * 100 : NaN; }   // cm² (kN/bar = 100 cm²)
 export function injForceEff(v) {
-  return v.injForce * (v.pAccOp > 0 && v.pAcc > 0 ? v.pAccOp / v.pAcc : 1);
+  if (!(v.pAccOp > 0) || !(v.pAcc > 0)) return v.injForce;
+  return v.injForce * Math.min(v.pAccOp, v.pAcc) / v.pAcc;
 }
 /* Max. spezifischer Gießdruck der Maschine: effektive Gießkraft auf dem
    kleinsten Kolben (Ø dmin) — obere Grenze der Druckachsen und für psel. In bar. */

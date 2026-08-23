@@ -125,10 +125,10 @@ export default {
        Antriebsseite immer ≤ P_acc. */
     let fy, yl, yUnit, y1;
     if (yb === 'ph') {
-      if (!(v.pAcc > 0) || !(v.pAccOp > 0)) return { err: 'Akkumulatordruck (Nenn und eingestellt) muss > 0 sein für die Hydraulikdruck-Achse.' };
-      /* A_h = F_nenn/P_acc,nenn (fest); statisch liegt der montierte Kolben beim eingestellten Druck */
+      if (!(v.pAcc > 0) || !(v.pAccOp > 0)) return { err: 'Akkumulatordruck (max. und eingestellt) muss > 0 sein für die Hydraulikdruck-Achse.' };
+      /* A_h = F_max/P_max (fest); statisch liegt der montierte Kolben beim eingestellten Druck */
       fy = (P, Q, A = Ap) => 100 * P * A * v.pAcc / v.injForce;
-      yl = 'Hydraulikdruck (Antriebsseite) in bar'; yUnit = ' bar'; y1 = v.pAccOp * 1.05;
+      yl = 'Hydraulikdruck (Antriebsseite) in bar'; yUnit = ' bar'; y1 = Math.min(v.pAccOp, v.pAcc) * 1.05;
     } else if (yb === 'pw') {
       fy = (P, Q) => P * 1e5 * Q / 1e6; yl = 'Leistung P·Q in MW'; yUnit = ' MW'; y1 = c.aMPE / 1e6 * 1.15;
     } else {
@@ -156,7 +156,7 @@ export default {
       'Statisch ' + fmt(p0) + ' bar · Q_dry ' + fmt(Qmax * 1000) + ' l/s · Cd=' + fmt(v.Cd)
       + (pistonOnly ? ' · nur Kolben Ø ' + fmt(v.diam) + ' (v_p ≤ v_max ' + fmt(v.vmax) + ' m/s)'
         : ' · Hüllkurve a = ' + fmt(c.aMPE / 1e6) + ' MW (Ø ' + fmt(v.dmin) + '–' + fmt(v.dmax) + ')')
-      + ' · P_acc ' + fmt(v.pAccOp) + ' bar' + (v.pAccOp !== v.pAcc ? ' (Nenn ' + fmt(v.pAcc) + ')' : ''));
+      + ' · P_acc ' + fmt(Math.min(v.pAccOp, v.pAcc)) + ' bar' + (v.pAccOp < v.pAcc ? ' (max. ' + fmt(v.pAcc) + ')' : ''));
     q.y0 = 0; q.y1 = y1;
 
     /* ── Operational Window (UPCT Gl. 2.25–2.27) als deklarative Grenzen ──
@@ -229,8 +229,9 @@ Envelope). Gleichungsnummern unten beziehen sich auf diese Arbeit.</p>
 <h4>1 · Grundgrößen</h4>
 ${eq('A_{K} = \\frac{\\pi \\cdot D^{2}}{4} \\qquad p_{0} = \\frac{F_{G}}{A_{K}} = P_{\\text{acc}} \\cdot \\frac{A_{h}}{A_{K}} \\qquad Q_{\\text{dry}} = A_{K} \\cdot v_{\\text{dry}} \\qquad V_{a} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Überlauf}}}{\\rho }')}
 <p class="math-note">Die Gießkraft F<sub>G</sub> = P<sub>acc</sub>·A<sub>h</sub> stammt aus Akkumulatordruck × Antriebskolbenfläche —
-das Preset nennt sie beim Nenndruck, der <em>eingestellte</em> Akkumulatordruck skaliert sie linear mit
-(A<sub>h</sub> fest): weniger Druck, weniger p₀ und weniger Leistung a. Aktuell F<sub>G</sub> = <b data-m="FG"></b>;
+die Maschinenkonstante ist der Antriebskolben A<sub>h</sub> = F<sub>max</sub>/P<sub>max</sub> (Preset: Gießkraft bei
+max. Akkumulatordruck). Der <em>eingestellte</em> Akkumulatordruck (höchstens das Maximum) bestimmt die Gießkraft:
+weniger Druck, weniger p₀ und weniger Leistung a. Aktuell F<sub>G</sub> = <b data-m="FG"></b>;
 v<sub>dry</sub> ist die <b>Trockenschuss-Geschwindigkeit</b> (Kolben ohne Metall, alle Verluste im Schusskreis) —
 unser Eingabefeld „Kolbengeschw. max.". Aktuell: A<sub>K</sub> = <b data-m="AK"></b> · p₀ = <b data-m="p0"></b> ·
 Q<sub>dry</sub> = <b data-m="Qmax"></b> · V<sub>a</sub> = <b data-m="Va"></b></p>
@@ -368,8 +369,8 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
     const Pg = vg => v.density * (vg / v.Cd) * (vg / v.Cd) / 2 / 1e5;
     set('Pgmin', v.gateMin > 0 ? fmt(Pg(v.gateMin)) + ' bar' : '—');
     set('Pgmax', v.gateMax > 0 ? fmt(Pg(v.gateMax)) + ' bar' : '—');
-    set('pAccM', v.pAcc > 0 ? fmt(v.pAccOp) + ' bar eingestellt (Nenn ' + fmt(v.pAcc) + ' bar, A_h = ' + fmt(v.injForce / v.pAcc * 100) + ' cm²)' : '—');
-    set('FG', fmt(c.FG) + ' kN (Nenn ' + fmt(v.injForce) + ' kN bei ' + fmt(v.pAcc) + ' bar)');
+    set('pAccM', v.pAcc > 0 ? fmt(Math.min(v.pAccOp, v.pAcc)) + ' bar eingestellt (max. ' + fmt(v.pAcc) + ' bar, A_h = ' + fmt(v.injForce / v.pAcc * 100) + ' cm²)' : '—');
+    set('FG', fmt(c.FG) + ' kN (max. ' + fmt(v.injForce) + ' kN bei ' + fmt(v.pAcc) + ' bar)');
     set('aMPE2', fmt(c.aMPE / 1e6) + ' MW');
     /* Hüllkurve */
     set('aMPE', fmt(c.aMPE / 1e6) + ' MW');

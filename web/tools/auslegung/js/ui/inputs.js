@@ -135,6 +135,7 @@ export function validate(v) {
   pair('wallMin', 'wallMax', 'Wandstärke min ≥ max', true);
   pair('fillMin', 'fillMax', 'Füllgrad-Ziel min > max', false);
   pair('gateMin', 'gateMax', 'Anschnittgeschw.-Ziel min > max', false);
+  pair('pAccOp', 'pAcc', 'Akkumulatordruck über dem Maximum der Maschine', false);
 
   let nonpos = false;
   for (const k of POSITIVE_KEYS) if (!(v[k] > 0)) { bad.add(k); nonpos = true; }

@@ -2,8 +2,9 @@
    auf der Konto-Seite (Stammdaten); diese Datei ist Startvorlage und Fallback.
    Einheiten: force = Schließkraft [kN], vmax [m/s], amax [m/s²],
    dmin/dmax = Kolben-Ø-Bereich [mm], lmin/lmax = Kammerlängen-Bereich [mm],
-   injForce = dyn. Gießkraft [kN], tieX/tieY = Säulenabstand horizontal/vertikal [mm],
-   pAcc = Akkumulatordruck [bar], intTime = Nachdruckaufbauzeit [ms].
+   injForce = Gießkraft bei max. Akkumulatordruck [kN], tieX/tieY = Säulenabstand horizontal/vertikal [mm],
+   pAcc = Akkumulatordruck max. [bar] (beide zusammen = Antriebskolben A_h = F/P;
+   die Gießkraft im Betrieb folgt aus dem eingestellten Druck), intTime = Nachdruckaufbauzeit [ms].
    Die Schlüssel in 'fields' entsprechen den Eingabefeld-Keys des Dashboards
    (siehe js/config/fields.js). Neue Maschine = neuer Eintrag in der Liste. */
 
