@@ -172,7 +172,9 @@ function checklistHTML() {
   if (!rated.length) return '';
   const failed = rated.filter(c => c.status === 'bad');
   const tight = rated.filter(c => c.status === 'warn');
-  const groups = [...new Set(rated.map(c => c.group))];
+  /* Reihenfolge der Prüfleiste = Ablauf des Schusses, unabhängig von der Panel-Reihenfolge */
+  const ORDER = ['Füllkammer', 'Schusskurve', 'Zuhaltung', 'Thermik'];
+  const groups = [...new Set(rated.map(c => c.group))].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
   const links = list => list.map(c =>
     '<button class="ck-link" data-target="' + c.id + '">' + c.name + '</button>').join(' · ');
   let msg = '';
@@ -280,32 +282,6 @@ export function renderKpis(el, v, shot, chamberEl) {
   const uPw = (aMPE !== null && pwOp !== null && aMPE > 0) ? pwOp / aMPE : null;
 
   const restHtml = '<div class="kpanel-grid">'
-    + panel('Zuhaltung und Maschine', 'Zuhaltung', '', () =>
-      (isFinite(uClamp)
-        ? row('Schließkraft-Auslastung', fmt(100 * uClamp) + ' %',
-          fmt(req) + ' von ' + fmt(v.force) + ' kN (' + fmt(req / 10) + ' t) · S = ' + fmt(v.safety) + ' eingerechnet',
-          utilStatus(uClamp), pctTag(uClamp), meter(uClamp))
-        : row('Schließkraft-Auslastung', '—', 'braucht Maschinenkraft', 'nodata'))
-      + (isFinite(uHold)
-        ? row('Nachdruck-Auslastung', fmt(100 * uHold) + ' %',
-          'Auslegung ' + fmt(v.psel) + ' von max. ' + fmt(pMaxClamp) + ' bar (Zuhaltung · e = (' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k = ' + fmt(kClamp) + ')',
-          utilStatus(uHold), pctTag(uHold), meter(uHold))
-        : row('Nachdruck-Auslastung', '—', 'Zuhaltungsmodell unvollständig', 'nodata'))
-      + (v.pAcc > 0 && v.injForce > 0
-        ? row('Gießkraft', fmt(Feff) + ' kN',
-          'Akkumulatordruck ' + fmt(Math.min(v.pAccOp, v.pAcc)) + ' von max. ' + fmt(v.pAcc) + ' bar · A_h = ' + fmt(hydArea(v)) + ' cm² · max. ' + fmt(v.injForce) + ' kN',
-          v.pAccOp > v.pAcc ? 'bad' : 'ok', v.pAccOp > v.pAcc ? 'über Maximum' : fmt(Math.round(100 * Feff / v.injForce)) + ' %', meter(Feff / v.injForce))
-        : row('Gießkraft', '—', 'braucht Gießkraft und Akkumulatordruck max.', 'nodata'))
-      + row('Spez. Gießdruck', fmt(pSpec) + ' bar', 'Gießkraft ' + fmt(Feff) + ' kN / Kolbenfläche',
-        bandStatus(pSpec, v.psel, pMaxClamp), bandTag(pSpec, v.psel, pMaxClamp),
-        bullet(0, 1.1 * Math.max(pSpec, pMaxClamp), v.psel, pMaxClamp, pSpec,
-          '0', 'Band ' + fmt(Math.round(v.psel)) + '–' + fmt(Math.round(pMaxClamp)), fmt(Math.round(1.1 * Math.max(pSpec, pMaxClamp))) + ' bar'))
-      + (uPw !== null
-        ? row('PQ²-Leistungsauslastung', fmt(100 * uPw) + ' %',
-          'Arbeitspunkt ' + fmt(pwOp) + ' von ' + fmt(aMPE) + ' MW Hüllkurve (2√3/9)·F_G·v_dry',
-          utilStatus(uPw), pctTag(uPw), meter(uPw))
-        : row('PQ²-Leistungsauslastung', '—', 'Eingaben unvollständig (Gießkraft, v_max, Anschnitt)', 'nodata')))
-
     + panel('Schusskurve und Anschnitt', 'Schusskurve',
       shot.error ? '' : kv('Schusszeit', fmt(shot.profile.endTime) + ' s', 'Dauer der Schusskurve') + kv('Kurvenhub', fmt(shot.profile.travel * 1000) + ' mm', 'Weg der Schusskurve'),
       () =>
@@ -339,6 +315,32 @@ export function renderKpis(el, v, shot, chamberEl) {
         + row('v₁ vs. v_krit (1. Phase)', fmt(shot.v1) + ' m/s',
           'v_krit ' + fmt(shot.vcrit) + ' m/s (CFD-Tabelle) · max. bis „Kammer voll" · v₂ ' + (shot.v2 == null ? '—' : fmt(shot.v2) + ' m/s'),
           utilStatus(shot.v1 / shot.vcrit), utilTag(shot.v1 / shot.vcrit), meter(shot.v1 / shot.vcrit))))
+
++ panel('Zuhaltung und Maschine', 'Zuhaltung', '', () =>
+      (isFinite(uClamp)
+        ? row('Schließkraft-Auslastung', fmt(100 * uClamp) + ' %',
+          fmt(req) + ' von ' + fmt(v.force) + ' kN (' + fmt(req / 10) + ' t) · S = ' + fmt(v.safety) + ' eingerechnet',
+          utilStatus(uClamp), pctTag(uClamp), meter(uClamp))
+        : row('Schließkraft-Auslastung', '—', 'braucht Maschinenkraft', 'nodata'))
+      + (isFinite(uHold)
+        ? row('Nachdruck-Auslastung', fmt(100 * uHold) + ' %',
+          'Auslegung ' + fmt(v.psel) + ' von max. ' + fmt(pMaxClamp) + ' bar (Zuhaltung · e = (' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k = ' + fmt(kClamp) + ')',
+          utilStatus(uHold), pctTag(uHold), meter(uHold))
+        : row('Nachdruck-Auslastung', '—', 'Zuhaltungsmodell unvollständig', 'nodata'))
+      + (v.pAcc > 0 && v.injForce > 0
+        ? row('Gießkraft', fmt(Feff) + ' kN',
+          'Akkumulatordruck ' + fmt(Math.min(v.pAccOp, v.pAcc)) + ' von max. ' + fmt(v.pAcc) + ' bar · A_h = ' + fmt(hydArea(v)) + ' cm² · max. ' + fmt(v.injForce) + ' kN',
+          v.pAccOp > v.pAcc ? 'bad' : 'ok', v.pAccOp > v.pAcc ? 'über Maximum' : fmt(Math.round(100 * Feff / v.injForce)) + ' %', meter(Feff / v.injForce))
+        : row('Gießkraft', '—', 'braucht Gießkraft und Akkumulatordruck max.', 'nodata'))
+      + row('Spez. Gießdruck', fmt(pSpec) + ' bar', 'Gießkraft ' + fmt(Feff) + ' kN / Kolbenfläche',
+        bandStatus(pSpec, v.psel, pMaxClamp), bandTag(pSpec, v.psel, pMaxClamp),
+        bullet(0, 1.1 * Math.max(pSpec, pMaxClamp), v.psel, pMaxClamp, pSpec,
+          '0', 'Band ' + fmt(Math.round(v.psel)) + '–' + fmt(Math.round(pMaxClamp)), fmt(Math.round(1.1 * Math.max(pSpec, pMaxClamp))) + ' bar'))
+      + (uPw !== null
+        ? row('PQ²-Leistungsauslastung', fmt(100 * uPw) + ' %',
+          'Arbeitspunkt ' + fmt(pwOp) + ' von ' + fmt(aMPE) + ' MW Hüllkurve (2√3/9)·F_G·v_dry',
+          utilStatus(uPw), pctTag(uPw), meter(uPw))
+        : row('PQ²-Leistungsauslastung', '—', 'Eingaben unvollständig (Gießkraft, v_max, Anschnitt)', 'nodata')))
 
     + panel('Thermik und Qualität', 'Thermik', '', () =>
       (!isFinite(tNadca) || shot.error || shot.fill === null

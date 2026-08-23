@@ -188,7 +188,7 @@ select {
 /* ── Füllkammer-Zeile: KPI-Gruppe links, Schema rechts ── */
 .chamber-row {
   display: grid;
-  grid-template-columns: minmax(360px, 480px) minmax(0, 1fr);
+  grid-template-columns: minmax(360px, 2fr) minmax(0, 3fr);
   gap: 14px;
   align-items: start;
   margin: 14px 0;
@@ -212,7 +212,7 @@ select {
 .summary { margin: 14px 0 26px; }
 .kpanel-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 .kpanel { overflow: hidden; container-type: inline-size; }
@@ -262,9 +262,14 @@ select {
 }
 .kv b i, .krow b i { font-style: normal; font-weight: normal; font-size: .8em; color: var(--muted); margin-left: 3px; }
 
-/* Prüfzeilen */
-.krows { display: grid; }
-.kpanel.wide .krows { grid-template-columns: 1fr 1fr; column-gap: 28px; }
+/* Prüfzeilen: ab 480 px Breite je Spalte mehrspaltig (breite Monitore),
+   darunter eine Spalte. Der letzte Zeilenrand wird vom Panel abgeschnitten. */
+.krows {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 480px), 1fr));
+  column-gap: 28px;
+  margin-bottom: -1px;
+}
 .krow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(84px, 150px) auto;
@@ -275,8 +280,6 @@ select {
   border-bottom: 1px solid var(--border-light);
   scroll-margin-top: 80px;
 }
-.krows > .krow:last-child { border-bottom: 0; }
-.kpanel.wide .krows > .krow:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
 .klbl { font-size: 12.5px; font-weight: 500; color: var(--text); line-height: 1.25; }
 .klbl small { display: block; font-size: 10.5px; font-weight: normal; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .krow > b {
@@ -467,11 +470,11 @@ select {
   .krow .tag, .krow > span:last-child { grid-row: 1; grid-column: 3; justify-self: end; }
   .krow .kbar { grid-row: 2; grid-column: 1 / -1; }
 }
-@container (max-width: 900px) {
-  .kpanel.wide .krows { grid-template-columns: 1fr; }
-  .kpanel.wide .krows > .krow:nth-last-child(2):nth-child(odd) { border-bottom: 1px solid var(--border-light); }
+@container (min-width: 1880px) {
+  .kpanel.wide .krows { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (max-width: 1000px) {
+  .kpanel-grid { grid-template-columns: 1fr; }
   .checkbar { grid-template-columns: auto 1fr; }
   .checkbar .calls { grid-column: 1 / -1; justify-items: start; text-align: left; }
 }
