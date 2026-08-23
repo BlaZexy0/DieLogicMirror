@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import logging
 import os
 import secrets
 from datetime import timedelta
@@ -174,6 +175,7 @@ def bootstrap_from_env(db: Session) -> None:
 
 
 DEMO_EMAIL = "demo@dielogic.de"
+log = logging.getLogger("uvicorn.error")
 
 
 def bootstrap_demo(db: Session) -> None:
@@ -182,7 +184,12 @@ def bootstrap_demo(db: Session) -> None:
     Start auf den Env-Wert gesetzt). Nur für Entwicklung/Vorführung — in
     Produktion die Variable weglassen."""
     pw = os.environ.get("DIELOGIC_DEMO_PASSWORD", "")
+    if not pw:
+        return
     if len(pw) < MIN_PASSWORD:
+        # Stumm ignorieren hieße: Demo-Button fehlt und der Login schlägt ohne
+        # erkennbaren Grund fehl — daher laut im Server-Log.
+        log.warning("DIELOGIC_DEMO_PASSWORD ist gesetzt, aber kürzer als %d Zeichen — Demo-Konto wird nicht angelegt.", MIN_PASSWORD)
         return
     org = db.scalar(select(Org).where(Org.slug == "demo"))
     if not org:

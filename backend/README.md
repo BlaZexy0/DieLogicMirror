@@ -25,7 +25,11 @@ Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
 - **Demo-Konto:** `DIELOGIC_DEMO_PASSWORD=<mind. 10 Zeichen>` setzen → beim
   Start entsteht die Organisation „Demo" mit Admin `demo@dielogic.de`; die
   Login-Seite zeigt dann „Als Demo anmelden" samt Zugangsdaten. Nur zum
-  Ausprobieren — in Produktion weglassen.
+  Ausprobieren — in Produktion weglassen. Prüfen: `GET /api/auth/demo`
+  liefert `{}`, solange die Variable fehlt oder zu kurz ist (dann steht
+  eine Warnung im Server-Log); auf Render die Variable im Dashboard unter
+  *Environment* setzen (`sync: false` im Blueprint), der Dienst startet
+  danach neu.
 - **CLI** (lokal oder mit Shell-Zugang):
 
   ```bash
