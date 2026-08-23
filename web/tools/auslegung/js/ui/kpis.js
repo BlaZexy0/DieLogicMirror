@@ -236,6 +236,8 @@ export function renderKpis(el, v, shot, chamberEl) {
   /* Realer Betriebspunkt: Q = A_K·v₂ auf der Werkzeuglinie (Schnittpunkt = ungedrosselt) */
   const Qop = pq && isFinite(v2) && v2 > 0 ? pq.Ap * v2 : null;
   const pOp = Qop !== null ? pq.Cdie * Qop * Qop : null;
+  /* Maschinenlinie am Arbeitspunkt: verfügbarer Metalldruck ungedrosselt (0 über Q_dry) */
+  const pMop = Qop !== null ? (Qop < pq.Qmax ? pq.p0 * (1 - (Qop / pq.Qmax) ** 2) : 0) : null;
   const pwOp = Qop !== null ? pOp * 1e5 * Qop / 1e6 : (pq ? pq.ps * 1e5 * pq.Qs / 1e6 : null);   // MW
 
   /* Anschnittgeschwindigkeit: bevorzugt aus der Schusskurve (Bauteil gefüllt);
@@ -283,7 +285,16 @@ export function renderKpis(el, v, shot, chamberEl) {
 
   const restHtml = '<div class="kpanel-grid">'
     + panel('Schusskurve und Anschnitt', 'Schusskurve',
-      shot.error ? '' : kv('Schusszeit', fmt(shot.profile.endTime) + ' s', 'Dauer der Schusskurve') + kv('Kurvenhub', fmt(shot.profile.travel * 1000) + ' mm', 'Weg der Schusskurve'),
+      (shot.error ? '' : kv('Schusszeit', fmt(shot.profile.endTime) + ' s', 'Dauer der Schusskurve') + kv('Kurvenhub', fmt(shot.profile.travel * 1000) + ' mm', 'Weg der Schusskurve'))
+      /* PQ²-Arbeitspunkt als Kennwerte: Kolbengeschwindigkeit, Metalldruck des
+         Werkzeugs und verfügbarer Druck der Maschine bei diesem Volumenstrom */
+      + (Qop !== null
+        ? kv('PQ²-Arbeitspunkt v₂', fmt(v2) + ' m/s', 'Kolbengeschwindigkeit der 2. Phase aus der Schusskurve · Q = ' + fmt(Qop * 1000) + ' l/s · Schnittpunkt ungedrosselt ' + fmt(Qs / pq.Ap) + ' m/s')
+          + kv('Metalldruck Werkzeug', fmt(pOp) + ' bar', 'p = C_W·Q² am Arbeitspunkt (Werkzeuglinie)')
+          + kv('Metalldruck Maschine', fmt(pMop) + ' bar', 'Maschinenlinie bei Q (ungedrosselt) · Drosselverlust ' + (pMop > pOp ? fmt(pMop - pOp) + ' bar' : 'keiner'))
+        : Qs !== null
+          ? kv('Schnittpunkt ungedrosselt', fmt(Qs / pq.Ap) + ' m/s', 'Maschine × Werkzeug · Q = ' + fmt(Qs * 1000) + ' l/s · p_s = ' + fmt(ps) + ' bar · keine Schusskurve')
+          : ''),
       () =>
       (isFinite(gvShown)
         ? row('Anschnittgeschwindigkeit', fmt(gvShown) + ' m/s',
@@ -299,13 +310,13 @@ export function renderKpis(el, v, shot, chamberEl) {
           bullet(0, Math.max(1.2 * v.JatomMax, 1.05 * Jist), v.JatomMin, v.JatomMax, Jist,
             '0', 'Band ' + fmt(v.JatomMin) + '–' + fmt(v.JatomMax), fmt(Math.max(1.2 * v.JatomMax, 1.05 * Jist))))
         : row('Zerstäubung (J-Faktor)', '—', 'braucht Anschnittgeschwindigkeit, -dicke und Dichte', 'nodata'))
-      + (Qop !== null
-        ? row('PQ²-Arbeitspunkt', fmt(Qop * 1000) + ' l/s',
-          'aus Schusskurve v₂ ' + fmt(v2) + ' m/s · Metalldruck ' + fmt(pOp) + ' bar · Schnittpunkt ungedrosselt ' + fmt(Qs * 1000) + ' l/s / ' + fmt(ps) + ' bar',
-          Qop <= Qs ? 'info' : 'bad', Qop <= Qs ? fmt(Math.round(100 * Qop / Qs)) + ' % vom Schnittpunkt' : 'über Schnittpunkt — nicht erreichbar')
-        : row('PQ²-Arbeitspunkt', Qs === null ? '—' : fmt(Qs * 1000) + ' l/s',
-          Qs === null ? 'Eingaben unvollständig' : 'Schnittpunkt Maschine × Werkzeug (ungedrosselt) · p_s ' + fmt(ps) + ' bar · keine Schusskurve',
-          Qs === null ? 'nodata' : 'info'))
+      /* Nur als Prüfzeile, wenn die Kurve über dem Schnittpunkt liegt — sonst
+         steht der Arbeitspunkt im Kennwertstreifen */
+      + (Qop !== null && Qop > Qs
+        ? row('PQ²-Arbeitspunkt', fmt(v2) + ' m/s',
+          'v₂ über dem Schnittpunkt Maschine × Werkzeug (' + fmt(Qs / pq.Ap) + ' m/s) — mit dieser Gießkraft nicht erreichbar',
+          'bad', 'nicht erreichbar', meter(Qop / Qs))
+        : '')
       + (shot.error
         ? row('Schusskurve', 'Fehler', shot.error, 'bad', 'ungültig')
         : (shot.fill === null
