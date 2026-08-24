@@ -318,8 +318,8 @@ export function renderKpis(el, v, shot, chamberEl) {
          Werkzeugs und verfügbarer Druck der Maschine bei diesem Volumenstrom */
       + (Qop !== null
         ? kv('PQ²-Arbeitspunkt v₂', fmt(v2) + ' m/s', 'Kolbengeschwindigkeit der 2. Phase aus der Schusskurve · Q = ' + fmt(Qop * 1000) + ' l/s · Schnittpunkt ungedrosselt ' + fmt(Qs / pq.Ap) + ' m/s')
-          + kv('Metalldruck Werkzeug', fmt(pOp) + ' bar', 'p = C_W·Q² am Arbeitspunkt (Werkzeuglinie)')
-          + kv('Metalldruck Maschine', fmt(pMop) + ' bar', 'Maschinenlinie bei Q (ungedrosselt) · Drosselverlust ' + (pMop > pOp ? fmt(pMop - pOp) + ' bar' : 'keiner'))
+          + kv('PQ²-Arbeitspunkt p_m', fmt(pOp) + ' bar', 'Metalldruck des Werkzeugs am Arbeitspunkt · p = C_W·Q²')
+          + kv('Maschinenlinie bei Q_AP', fmt(pMop) + ' bar', 'ungedrosselt verfügbarer Metalldruck beim Arbeitspunkt-Volumenstrom · Drosselverlust ' + (pMop > pOp ? fmt(pMop - pOp) + ' bar' : 'keiner'))
         : Qs !== null
           ? kv('Schnittpunkt ungedrosselt', fmt(Qs / pq.Ap) + ' m/s', 'Maschine × Werkzeug · Q = ' + fmt(Qs * 1000) + ' l/s · p_s = ' + fmt(ps) + ' bar · keine Schusskurve')
           : ''),
