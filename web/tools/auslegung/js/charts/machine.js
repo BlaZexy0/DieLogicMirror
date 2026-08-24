@@ -1,7 +1,7 @@
 /* Erforderliche Maschinengröße (Kraftbedarf über Druck). */
 
 import { series, line, limit } from './helpers.js';
-import { seq, fmt } from '../core/format.js';
+import { seq, fmt, subHTML } from '../core/format.js';
 import { pMaxMachine } from '../core/physics.js';
 import { theme } from '../core/theme.js';
 import { eq, tex } from './mathfmt.js';
@@ -51,7 +51,7 @@ verfügbar = <b data-m="favail"></b> · Auslastung = <b data-m="util"></b></p>`;
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     const freq = CLAMP.forceKN(v.psel, v.area, v.safety, 1);
     set('psel', fmt(v.psel) + ' bar');
     set('freq', fmt(freq) + ' kN');

@@ -1,7 +1,7 @@
 /* Entlüftungsbedarf über Füllzeit. */
 
 import { series, line, limit, refline } from './helpers.js';
-import { seq, fmt } from '../core/format.js';
+import { seq, fmt, subHTML } from '../core/format.js';
 import { total, afterGate, pistonArea, cavityVolume } from '../core/physics.js';
 import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
@@ -61,7 +61,7 @@ zeigen die vorhandene Entlüftungsfläche und als Referenz die Anschnittfläche 
   },
 
   renderMath(el, v, shot) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     const Vm = cavityVolume(total(v), v);
     const v2 = shot && !shot.error && shot.v2 != null ? shot.v2 : NaN;
     const tOp = 1e9 * cavityVolume(afterGate(v), v) / (v2 * pistonArea(v));

@@ -2,7 +2,7 @@
    Ereignistabelle und Plausibilitätsprüfungen. */
 
 import { series, line, limit, refline } from './helpers.js';
-import { fmt } from '../core/format.js';
+import { fmt, subHTML } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { sim } from '../core/simstore.js';
 import { eq } from './mathfmt.js';
@@ -141,7 +141,7 @@ export default {
       ic.textContent = c[0] ? '✓' : '✗';
       li.appendChild(ic);
       const sp = document.createElement('span');
-      sp.textContent = c[1];
+      sp.innerHTML = subHTML(c[1]);   // Prüftexte tragen Indizes (v_krit, a_max)
       li.appendChild(sp);
       cl.appendChild(li);
     });
@@ -180,7 +180,7 @@ v<sub>krit</sub> = <b data-m="vcrit"></b> · max. v der 1. Phase = <b data-m="vs
   },
 
   renderMath(el, v, shot) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     if (!shot || shot.error) {
       ['tEnd', 'hub', 'vpk', 'apk', 'phi', 'sfill', 'stroke', 'intens', 'lb', 'ratio', 'tf', 'vcrit', 'vslow']
         .forEach(k => set(k, '—'));

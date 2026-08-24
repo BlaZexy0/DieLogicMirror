@@ -1,7 +1,7 @@
 /* Anschnitt-Erstarrungszeit über Anschnittdicke. */
 
 import { series, line, limit } from './helpers.js';
-import { seq, fmt } from '../core/format.js';
+import { seq, fmt, subHTML } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
@@ -37,7 +37,7 @@ Nachdruckaufbauzeit t<sub>N</sub> = <b data-m="tN"></b> ⇒ Mindestdicke = <b da
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     set('s', fmt(v.gateTh) + ' mm');
     set('t', fmt(v.solK * v.gateTh * v.gateTh) + ' ms');
     set('tN', fmt(v.intTime) + ' ms');

@@ -7,7 +7,7 @@
    Schranke r(φ) — das machbare Gebiet ist das Band r_lo(φ) ≤ r ≤ r_hi(φ)
    und wird als ein geschlossenes Polygon gefüllt statt pixelweise. */
 
-import { seq, fmt } from '../core/format.js';
+import { seq, fmt, subHTML } from '../core/format.js';
 import { total, vCrit, cavityVolume } from '../core/physics.js';
 import { feasibleBand } from '../core/limits.js';
 import { eq } from './mathfmt.js';
@@ -166,7 +166,7 @@ und die v<sub>krit</sub>-Kurve. Seine Ecken sind die vier Grenzkombinationen:</p
     const V = (v.part + v.runner + v.overflow + v.biscuit) / rho, Vb = cavityVolume(v.biscuit, v);
     const bmin = v.biscuitMin / 1000;
     const Db = bmin > 0 ? Math.sqrt(4 * Vb / (PI * bmin)) : Infinity;
-    const set = (key, val) => { const s = el.querySelector('[data-m="' + key + '"]'); if (s) s.innerHTML = val; };
+    const set = (key, val) => { const s = el.querySelector('[data-m="' + key + '"]'); if (s) s.innerHTML = subHTML(val); };
     set('V', fmt(V * 1e6) + ' cm³');
     set('Vb', fmt(Vb * 1e6) + ' cm³');
     set('Db', isFinite(Db) ? fmt(Db * 1000) + ' mm' : '— (kein Mindest-Pressrest gesetzt)');

@@ -1,7 +1,7 @@
 /* Empfohlene Anschnittgeschwindigkeit über Wandstärke mit Zielband. */
 
 import { series, line, target } from './helpers.js';
-import { seq, fmt } from '../core/format.js';
+import { seq, fmt, subHTML } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
@@ -35,7 +35,7 @@ Zielband <span data-m="band"></span></p>`;
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     const span = v.wallMax - v.wallMin;
     const va = span !== 0 ? v.gateMax - (v.gateMax - v.gateMin) * (v.wall - v.wallMin) / span : NaN;
     set('s', fmt(v.wall) + ' mm');

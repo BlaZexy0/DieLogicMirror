@@ -4,7 +4,7 @@
    keine freien Ziel-Gießdruck-Eingaben mehr. */
 
 import { series, line, target } from './helpers.js';
-import { seq, fmt } from '../core/format.js';
+import { seq, fmt, subHTML } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { injForceEff } from '../core/physics.js';
 import { eq } from './mathfmt.js';
@@ -57,7 +57,7 @@ Band <span data-m="band"></span> ⇒ Ø-Bereich <b data-m="Dband"></b></p>`;
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     const F = injForceEff(v);
     const p = F * 1e4 / (0.25 * PI * v.diam * v.diam);
     const Dof = pb => Math.sqrt(F * 1e4 / (0.25 * PI * pb));

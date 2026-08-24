@@ -6,6 +6,7 @@
 
 import { allFields, PRESET_DOMAINS, FOLLOWS } from '../config/fields.js';
 import { state, subscribe, notify } from '../core/state.js';
+import { subHTML } from '../core/format.js';
 import { applyValues, updatePresetVisibility } from './inputs.js';
 
 const FIELD_DEFS = {};
@@ -30,7 +31,7 @@ export function presetById(dom, id) {
 function summaryHTML(p) {
   return Object.entries(p.fields).map(([k, val]) => {
     const f = FIELD_DEFS[k];
-    return (f ? f.label : k) + ' <b>' + val + (f && f.unit ? '&nbsp;' + f.unit : '') + '</b>';
+    return subHTML(f ? f.label : k) + ' <b>' + val + (f && f.unit ? '&nbsp;' + f.unit : '') + '</b>';
   }).join(' · ');
 }
 

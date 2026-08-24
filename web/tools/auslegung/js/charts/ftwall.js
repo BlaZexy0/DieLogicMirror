@@ -1,7 +1,7 @@
 /* Empfohlene Füllzeit nach NADCA über Wandstärke. */
 
 import { series, line, limit } from './helpers.js';
-import { seq, fmt } from '../core/format.js';
+import { seq, fmt, subHTML } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
@@ -37,7 +37,7 @@ t<sub>f</sub>(s = <span data-m="s"></span>) = <b data-m="tf"></b> · Limit t<sub
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     const num = v.Tcast - v.Tflow + v.Sfrac * v.Zconst;
     const den = v.Tflow - v.Tdie;
     set('num', fmt(num) + ' °C');

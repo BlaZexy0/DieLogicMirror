@@ -1,7 +1,7 @@
 /* Anschnittfläche für Zielgeschwindigkeit. */
 
 import { series, line, target } from './helpers.js';
-import { seq, fmt } from '../core/format.js';
+import { seq, fmt, subHTML } from '../core/format.js';
 import { pistonArea } from '../core/physics.js';
 import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
@@ -53,7 +53,7 @@ Auswahl A<sub>a</sub> = <b data-m="Asel"></b> ⇒ v<sub>a</sub> = <b data-m="va"
   },
 
   renderMath(el, v, shot) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     const A = pistonArea(v);
     const v2 = shot && !shot.error && shot.v2 != null ? shot.v2 : NaN;
     set('vsel', fmt(v2) + ' m/s');

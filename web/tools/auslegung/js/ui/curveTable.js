@@ -3,6 +3,7 @@
    ist die Tabelle schreibgeschützt — die Punkte kommen aus core/curvegen.js. */
 
 import { state, notify } from '../core/state.js';
+import { subHTML } from '../core/format.js';
 
 const MODES = [['points', 'Punkte'], ['lopez', 'DieLogic'], ['v1v2', 'V₁ / V₂']];
 
@@ -82,8 +83,8 @@ export function renderCurveTable(genError = null) {
   }
 
   const note = document.querySelector('#curve-group .curve-note');
-  if (note) note.innerHTML = NOTES[mode]
-    + (genError ? ' <span class="cgen-error">⚠ ' + genError + '</span>' : '');
+  if (note) note.innerHTML = subHTML(NOTES[mode])
+    + (genError ? ' <span class="cgen-error">⚠ ' + subHTML(genError) + '</span>' : '');
 
   const addBtn = document.getElementById('addPoint');
   if (addBtn) addBtn.style.display = generated ? 'none' : '';

@@ -1,6 +1,6 @@
 /* Materialausbeute als Ringdiagramm (Anteile am Dosiergewicht). */
 
-import { fmt } from '../core/format.js';
+import { fmt, subHTML } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
@@ -40,7 +40,7 @@ Pressrest <b data-m="aP"></b></p>`;
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     const tot = v.part + v.runner + v.overflow + v.biscuit;
     const pct = m => tot > 0 ? fmt(100 * m / tot) + ' %' : '—';
     set('mdos', fmt(tot) + ' kg');

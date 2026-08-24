@@ -1,7 +1,7 @@
 /* Füllkammer-Auswahl: Füllgrad über Kolben-Ø mit Zielband. */
 
 import { series, line, target } from './helpers.js';
-import { seq, fmt } from '../core/format.js';
+import { seq, fmt, subHTML } from '../core/format.js';
 import { total } from '../core/physics.js';
 import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
@@ -41,7 +41,7 @@ ${eq('D(\\varphi) = \\sqrt{\\frac{4 \\cdot V_{\\text{dos}}}{\\pi \\cdot \\varphi
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     const Vdos = (total(v) + v.biscuit) / v.density;
     const phi = 100e9 * Vdos / (v.length * 0.25 * PI * v.diam * v.diam);
     const Dof = phiPct => Math.sqrt(100e9 * Vdos / (v.length * 0.25 * PI * phiPct));

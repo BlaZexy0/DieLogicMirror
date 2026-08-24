@@ -3,7 +3,7 @@
    Implementierung wie in der STL-Analyse). */
 
 import { series, line, refline } from './helpers.js';
-import { seq, fmt } from '../core/format.js';
+import { seq, fmt, subHTML } from '../core/format.js';
 import { pMaxMachine } from '../core/physics.js';
 import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
@@ -84,7 +84,7 @@ gewählt: A = <b data-m="asel"></b></p>`;
   },
 
   renderMath(el, v) {
-    const set = (key, val) => { const s = el.querySelector('[data-m="' + key + '"]'); if (s) s.innerHTML = val; };
+    const set = (key, val) => { const s = el.querySelector('[data-m="' + key + '"]'); if (s) s.innerHTML = subHTML(val); };
     const k = leverK(v);
     const ok = v.psel > 0 && v.safety > 0;
     set('k', fmt(k));

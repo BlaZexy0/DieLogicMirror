@@ -3,13 +3,14 @@
 
 import { AUTO_KEYS, groups, PRESET_KEYS, PRESET_DOMAINS } from '../config/fields.js';
 import { state, notify } from '../core/state.js';
+import { subHTML } from '../core/format.js';
 import { pMaxMachine } from '../core/physics.js';
 
 const DOMAIN_BY_ID = {};
 PRESET_DOMAINS.forEach(d => { DOMAIN_BY_ID[d.id] = d; });
 
 function fieldHTML(f) {
-  const label = '<label>' + f.label +
+  const label = '<label>' + subHTML(f.label) +
     (f.unit ? ' <span class="unit">' + f.unit + '</span>' : '') + '</label>';
   if (f.type === 'select') {
     const opts = f.options.map(o =>

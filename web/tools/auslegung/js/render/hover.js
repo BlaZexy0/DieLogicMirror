@@ -3,7 +3,7 @@
 import { frame, lineFrame } from './base.js';
 import { donutGeom } from './donut.js';
 import { MAP_LABELS } from './map.js';
-import { fmt } from '../core/format.js';
+import { fmt, subHTML } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { vCrit } from '../core/physics.js';
 import { violates } from '../core/limits.js';
@@ -73,7 +73,7 @@ export function showHover(card, ev) {
     const verdict = bad.length
       ? '<b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + bad.map(k => MAP_LABELS[k]).join(', ') + '</b>'
       : '<b style="color:' + window.__PALETTE__.ok + '">MACHBAR</b>';
-    box.innerHTML = '<b>φ:</b> ' + fmt(xv) + ' % · <b>λ:</b> ' + fmt(yv) + ' → <b>Ø</b> ' + fmt(D * 1000) + ' mm · <b>L</b> ' + fmt(L * 1000) + ' mm · <b>Pressrest</b> ' + fmt(b) + ' mm · <b>v_krit</b> ' + fmt(vc) + ' m/s · ' + verdict;
+    box.innerHTML = '<b>φ:</b> ' + fmt(xv) + ' % · <b>λ:</b> ' + fmt(yv) + ' → <b>Ø</b> ' + fmt(D * 1000) + ' mm · <b>L</b> ' + fmt(L * 1000) + ' mm · <b>Pressrest</b> ' + fmt(b) + ' mm · <b>v<sub>krit</sub></b> ' + fmt(vc) + ' m/s · ' + verdict;
     return;
   }
 
@@ -82,23 +82,23 @@ export function showHover(card, ev) {
   if (d.z) {
     const y0 = d.y[0], y1 = d.y[d.y.length - 1];
     const yv = y1 - (py - f.T) / f.ph * (y1 - y0);
-    let msg = '<b>' + d.xl + ':</b> ' + fmt(xv) + ' · <b>' + d.yl + ':</b> ' + fmt(yv) + ' · <b>' + d.cl + ':</b> ' + fmt(heatVal(d, xv, yv));
+    let msg = '<b>' + subHTML(d.xl) + ':</b> ' + fmt(xv) + ' · <b>' + subHTML(d.yl) + ':</b> ' + fmt(yv) + ' · <b>' + subHTML(d.cl) + ':</b> ' + fmt(heatVal(d, xv, yv));
     const bad = (d.limits || []).filter(l => violates(l, xv, yv));
-    if (bad.length) msg += ' · <b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + bad.map(l => l.label).join(', ') + '</b>';
+    if (bad.length) msg += ' · <b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + subHTML(bad.map(l => l.label).join(', ')) + '</b>';
     box.innerHTML = msg;
   } else {
-    let msg = '<b>' + d.xl + ':</b> ' + fmt(xv);
+    let msg = '<b>' + subHTML(d.xl) + ':</b> ' + fmt(xv);
     for (let i = 0; i < d.ys.length; i++) {
       const s = d.ys[i], val = interp(d.x, s.y, xv);
-      msg += ' · <b>' + s.n + ':</b> ' + (isFinite(val) ? fmt(val) + (s.u ? ' ' + s.u : '') : '—');
+      msg += ' · <b>' + subHTML(s.n) + ':</b> ' + (isFinite(val) ? fmt(val) + (s.u ? ' ' + s.u : '') : '—');
     }
     /* Bei genau einer Serie: verletzte Grenzen am Kurvenpunkt melden (wie
        beim Heatmap-Hover). Bei mehreren Serien wäre unklar, welche gemeint ist. */
     if (d.ys.length === 1 && d.limits && d.limits.length) {
       const val = interp(d.x, d.ys[0].y, xv);
       const bad = d.limits.filter(l => violates(l, xv, val));
-      if (bad.length) msg += ' · <b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + bad.map(l => l.label).join(', ') + '</b>';
+      if (bad.length) msg += ' · <b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + subHTML(bad.map(l => l.label).join(', ')) + '</b>';
     }
-    box.innerHTML = msg + ' <span class="unit">' + d.yl + '</span>';
+    box.innerHTML = msg + ' <span class="unit">' + subHTML(d.yl) + '</span>';
   }
 }

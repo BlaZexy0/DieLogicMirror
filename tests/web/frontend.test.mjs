@@ -13,7 +13,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -172,6 +172,21 @@ test('autofit: ideale Anschnitt- und Entlüftungsfläche aus Schusskurve bzw. NA
   state.auto.gate = true;
   assert.deepEqual(applyAuto(vals), ['gate']); assert.notEqual(vals.gate, 1234); assert.equal(vals.vent, 567);
   state.auto.gate = false;
+});
+
+/* Alle HTML-Pfade, die berechnete Texte mit Indizes einsetzen (Mathe-Werte,
+   Hover, Prüflisten, Generator-Hinweise), müssen durch subHTML laufen —
+   sonst erscheinen „v_krit", „a_max", „Q_dry" mit rohem Unterstrich. */
+test('Indizes: keine rohen innerHTML-Einsetzungen an subHTML vorbei', () => {
+  const chartsDir = path.join(site, 'tools/auslegung/js/charts');
+  for (const f of readdirSync(chartsDir).filter(n => n.endsWith('.js'))) {
+    const src2 = readFileSync(path.join(chartsDir, f), 'utf8');
+    assert.ok(!/innerHTML = val(?![^;]*subHTML)/.test(src2), f + ': set() ohne subHTML');
+  }
+  for (const f of ['render/hover.js', 'ui/curveTable.js', 'ui/kpis.js']) {
+    const src2 = readFileSync(path.join(site, 'tools/auslegung/js', f), 'utf8');
+    assert.ok(src2.includes('subHTML'), f + ' nutzt subHTML nicht');
+  }
 });
 
 test('Indizes: subHTML (HTML) und fillRich (Canvas) setzen „_token" als Tiefindex', async () => {

@@ -1,7 +1,7 @@
 /* Füllgrad der Füllkammer (Heatmap: Kammerlänge × Kolben-Ø → Füllgrad). */
 
 import { heat, limit } from './helpers.js';
-import { fmt } from '../core/format.js';
+import { fmt, subHTML } from '../core/format.js';
 import { total } from '../core/physics.js';
 import { eq } from './mathfmt.js';
 
@@ -42,7 +42,7 @@ passt dort nicht in die Kammer; die Grenzkurve ist D₁₀₀(L) = √(4·V<sub>
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     const Vdos = (total(v) + v.biscuit) / v.density;
     set('Vdos', fmt(Vdos * 1e6) + ' cm³');
     set('D', fmt(v.diam) + ' mm');

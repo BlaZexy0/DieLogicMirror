@@ -1,7 +1,7 @@
 /* Prozessfenster Anschnitt (Heatmap: Kolbengeschw. × Anschnittfläche → Anschnittgeschw.). */
 
 import { heat, target } from './helpers.js';
-import { fmt } from '../core/format.js';
+import { fmt, subHTML } from '../core/format.js';
 import { pistonArea } from '../core/physics.js';
 import { eq } from './mathfmt.js';
 
@@ -44,7 +44,7 @@ A<sub>a</sub> = <span data-m="Ag"></span>) = <b data-m="va"></b> — v₂ ist da
   },
 
   renderMath(el, v, shot) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     const v2 = shot && !shot.error && shot.v2 != null ? shot.v2 : NaN;
     set('band', fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s');
     set('vsel', fmt(v2) + ' m/s');

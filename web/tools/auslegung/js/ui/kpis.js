@@ -202,7 +202,7 @@ function checklistHTML() {
   const ORDER = ['Füllkammer', 'Schusskurve', 'Zuhaltung', 'Thermik'];
   const groups = [...new Set(rated.map(c => c.group))].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
   const links = list => list.map(c =>
-    '<button class="ck-link" data-target="' + c.id + '">' + c.name + '</button>').join(' · ');
+    '<button class="ck-link" data-target="' + c.id + '">' + subHTML(c.name) + '</button>').join(' · ');
   let msg = '';
   if (failed.length) msg += '<span class="fails">✕ verletzt: ' + links(failed) + '</span>';
   if (tight.length) msg += '<span class="tights">! knapp: ' + links(tight) + '</span>';

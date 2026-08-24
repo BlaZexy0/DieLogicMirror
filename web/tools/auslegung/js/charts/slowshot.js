@@ -3,7 +3,7 @@
    und zur v_krit-Grenze im (φ, λ)-Auslegungsfenster. */
 
 import { heat, limit } from './helpers.js';
-import { fmt } from '../core/format.js';
+import { fmt, subHTML } from '../core/format.js';
 import { total, pistonArea, vCrit } from '../core/physics.js';
 import { eq } from './mathfmt.js';
 
@@ -75,7 +75,7 @@ v₁ = <b data-m="v1"></b> (max. bis „Kammer voll", aus der Schusskurve) ⇒ <
   },
 
   renderMath(el, v, shot) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = val; };
+    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
     const ff = 100e9 * ((total(v) + v.biscuit) / v.density) / (v.length * pistonArea(v));
     const vc = vCrit(v.diam / 1000, ff / 100);
     const v1 = shot && !shot.error ? shot.v1 : NaN;
