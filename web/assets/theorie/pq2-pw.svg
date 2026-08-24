@@ -117,17 +117,17 @@
 <rect x="564.35" y="88.00" width="12.00" height="9.00" fill="rgba(226,231,233,.93)"/>
 <rect x="564.35" y="88.00" width="12.00" height="9.00" fill="none" stroke="#000000" stroke-width="1.4"/>
 <text x="581.35" y="96.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">Hüllkurve a = 4,25 MW</text>
-<path d="M411.60 465.87L411.60 181.59" fill="none" stroke="#9aacb2" stroke-width="1.5" stroke-dasharray="5 4" stroke-linejoin="round"/>
-<text x="417.60" y="327.73" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#9aacb2" text-anchor="start">gedrosselt Δp 3,5 MW</text>
+<path d="M442.85 454.85L442.85 168.73" fill="none" stroke="#9aacb2" stroke-width="1.5" stroke-dasharray="5 4" stroke-linejoin="round"/>
+<text x="448.85" y="315.79" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#9aacb2" text-anchor="start">gedrosselt Δp 3,53 MW</text>
 <path d="M75.00 269.65L701.04 269.65M701.04 502.00L701.04 269.65" fill="none" stroke="#4c6870" stroke-width="1" stroke-dasharray="4 3" stroke-linejoin="round"/>
 <circle cx="701.04" cy="269.65" r="6" fill="#ffffff"/>
 <circle cx="701.04" cy="269.65" r="6" fill="none" stroke="#4c6870" stroke-width="1.6" stroke-dasharray="3 2"/>
 <circle cx="701.04" cy="269.65" r="2" fill="#4c6870"/>
 <rect x="399.74" y="249.65" width="286.30" height="15.00" fill="rgba(255,255,255,.88)"/>
 <text x="403.74" y="260.65" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#4c6870" text-anchor="start">Schnittpunkt ungedrosselt 124,55 l/s / 2,86 MW</text>
-<path d="M75.00 465.87L411.60 465.87M411.60 502.00L411.60 465.87" fill="none" stroke="#b42318" stroke-width="1" stroke-dasharray="4 3" stroke-linejoin="round"/>
-<circle cx="411.60" cy="465.87" r="6" fill="#ffffff"/>
-<circle cx="411.60" cy="465.87" r="6" fill="none" stroke="#b42318" stroke-width="2.2"/>
-<circle cx="411.60" cy="465.87" r="2" fill="#b42318"/>
-<rect x="418.60" y="445.87" width="358.90" height="15.00" fill="rgba(255,255,255,.88)"/>
-<text x="422.60" y="456.87" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#b42318" text-anchor="start">Arbeitspunkt Schusskurve (v₂ 3,79 m/s) 66,98 l/s / 0,45 MW</text></svg>
+<path d="M75.00 454.85L442.85 454.85M442.85 502.00L442.85 454.85" fill="none" stroke="#b42318" stroke-width="1" stroke-dasharray="4 3" stroke-linejoin="round"/>
+<circle cx="442.85" cy="454.85" r="6" fill="#ffffff"/>
+<circle cx="442.85" cy="454.85" r="6" fill="none" stroke="#b42318" stroke-width="2.2"/>
+<circle cx="442.85" cy="454.85" r="2" fill="#b42318"/>
+<rect x="449.85" y="434.85" width="358.90" height="15.00" fill="rgba(255,255,255,.88)"/>
+<text x="453.85" y="445.85" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#b42318" text-anchor="start">Arbeitspunkt Schusskurve (v₂ 4,14 m/s) 73,19 l/s / 0,58 MW</text></svg>
