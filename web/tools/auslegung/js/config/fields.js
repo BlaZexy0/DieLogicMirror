@@ -172,7 +172,10 @@ for (const g of groups) {
 
 /* Standard-Schusskurve: Wegpunkte [s in mm, v in m/s] — abgestimmt auf die
    Default-Geometrie (Ø 150 × L 1000: „Kammer voll" ≈ 574 mm, Gesamthub ≈ 972 mm). */
-export const DEFAULT_CURVE = [[60, 0.4], [471, 0.4], [617, 4], [834, 4]];
+/* Startkurve für den frischen Zustand mit den Default-Presets (HCC-1600,
+   AlSi9Cu3): Plateau 0,4 m/s bis „Kammer voll" (474,4 mm), Rampe ≤ a_max,
+   Ende hinter dem Füllende beider Default-Welten (Preset 830 mm, Feld-Defaults 833 mm). */
+export const DEFAULT_CURVE = [[60, 0.4], [475, 0.4], [640, 4.5], [834, 4.5]];
 
 export function allFields() {
   const a = [];
