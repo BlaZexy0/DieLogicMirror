@@ -19,6 +19,7 @@ import gvwall from './gvwall.js';
 import ventreq from './ventreq.js';
 import yieldChart from './yield.js';
 import gatesol from './gatesol.js';
+import bubble from './bubble.js';
 
 /* Reihenfolge = thematische Gruppen: Schusskurve/Arbeitspunkt/Fenster ·
    Füllkammer · Anschnitt · Füllzeit/Thermik · Entlüftung ·
@@ -26,7 +27,7 @@ import gatesol from './gatesol.js';
 export const charts = [
   shotcurve, pq2, phild,
   fill, sleeve, slowshot,
-  gate, windowChart, gvwall, gatesol,
+  gate, windowChart, gvwall, gatesol, bubble,
   filltime, ftwall,
   vent, ventreq,
   area, machine, pspec,

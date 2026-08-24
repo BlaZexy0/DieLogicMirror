@@ -30,6 +30,7 @@
     ['window',    'Prozessfenster Anschnitt'],
     ['gvwall',    'Anschnittgeschw. über Wandstärke'],
     ['gatesol',   'Anschnitt-Erstarrungszeit'],
+    ['bubble',    'Luftblase unter Nachdruck'],
     ['filltime',  'Füllzeit ab Anschnitt'],
     ['ftwall',    'Empfohlene Füllzeit'],
     ['vent',      'Entlüftungsgeschwindigkeit'],
