@@ -172,7 +172,8 @@ function rulerHTML(v, g) {
       + '<span class="seg nv" style="left:' + x(s0 + cav) + ';width:' + w(intens) + '"></span>'
       + '<span class="seg bisc" style="left:' + x(s0 + cav + intens) + ';width:' + w(bisc) + '"></span>';
   return '<div class="kruler' + (over ? ' over' : '') + (g.x0 != null ? ' aligned' : '') + '">'
-    + '<div class="kr-head"><span>Kolbenweg</span><span>Ø ' + fmt(v.diam) + ' × L ' + fmt(L) + ' mm</span></div>'
+    /* Im ausgerichteten Modus stehen D und L bereits im Schema darüber */
+    + (g.x0 != null ? '' : '<div class="kr-head"><span>Kolbenweg</span><span>Ø ' + fmt(v.diam) + ' × L ' + fmt(L) + ' mm</span></div>')
     + vacHtml
     /* Obere Beschriftung: „Füllende" rechtsbündig an seiner Marke; die
        Kammerlänge steht im Kopf und nur dann auch hier, wenn Platz ist. */

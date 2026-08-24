@@ -17,7 +17,7 @@ const X0 = 110;                 // Kammerrohr links
 const XA = 800;                 // aktives Ende (fest — die Zahlen sind live)
 /* Sichtfeld: links der Seitenansicht steht die Frontansicht der Kammer
    (Kreis mit Ø D und Füllhöhe h). */
-const VX = -206, VW = 1236;     // viewBox: x-Start und Breite
+const VX = -216, VW = 1246;     // viewBox: x-Start und Breite
 /* Lage der aktiven Länge im viewBox — das Kolbenweg-Lineal der
    Massenbilanz richtet sich daran aus (ui/kpis.js). */
 export const ACTIVE_SPAN = { x0: (XP - VX) / VW, x1: (XA - VX) / VW };
@@ -211,7 +211,7 @@ export function buildSvg(v, variantKey) {
 
   /* ── Frontansicht: Kreis mit Ø D und Füllhöhe h, gleiche Größe wie die
      Bohrung der Seitenansicht (Ø = YB − YT), links daneben ── */
-  const FCX = -60, FCY = (YT + YB) / 2, FR = (YB - YT) / 2;
+  const FCX = -84, FCY = (YT + YB) / 2, FR = (YB - YT) / 2;   // Luft zwischen Ring und Kolbenstange
   const hFrac = fillHeightFrac(phi);
   const hPx = hFrac * 2 * FR, yLevel = FCY + FR - hPx;
   const hMM = hFrac * v.diam;
