@@ -572,7 +572,7 @@ test('stl-logic: sideCoreArea = A_S·tan(α), Randfälle abgesichert', () => {
 });
 
 test('stl-logic: keine geeignete Maschine → pref null', () => {
-  // 6 m² Sprengfläche: selbst die HCC-16000 schafft nur 160 000/(100·6·1,3) ≈ 205 bar.
+  // 6 m² Sprengfläche: selbst die HCC-9200 schafft nur 92 000/(100·6·1,3) ≈ 118 bar.
   const { pref } = logic.machineRows(MACHINES, clamp,
     { areaMm2: 6e6, ex: 0, ey: 0, safety: 1.3, pTarget: 600 });
   assert.equal(pref, null);
