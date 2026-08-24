@@ -109,20 +109,20 @@
       </div>
       <div class="fig-wrap">
         <img src="/assets/theorie/pq2-druckkette.svg" alt="Druckkette: Druckspeicher, Antriebskolben, Füllkammer mit Einfüllöffnung nach oben, Anschnitt — mit Druckniveau-Verlauf" loading="lazy">
-        <div class="fig-cap"><b>Die Druckkette des Schussaggregats (Standardwerte):</b>
-          ① Im <b>Druckspeicher</b> hält das Gaspolster das Öl auf P<sub>acc</sub> = 160 bar —
-          nichts bewegt sich, reiner Druck.
+        <div class="fig-cap"><b>Die Druckkette des Schussaggregats:</b>
+          ① Im <b>Druckspeicher</b> hält das Gaspolster das Öl auf dem Speicherdruck
+          p<sub>acc</sub> — nichts bewegt sich, reiner Druck.
           ② Auf dem Weg zum <b>Antriebskolben</b> kosten Drosselstellen quadratisch mit der
-          Geschwindigkeit: P<sub>h</sub> = P<sub>acc</sub> − K<sub>v</sub>·v².
-          ③ Das Kolbenpaar übersetzt den Druck über das Flächenverhältnis auf die Schmelze in der
-          <b>Füllkammer</b>: p = P<sub>h</sub>·A<sub>h</sub>/A<sub>K</sub> — mit
-          A<sub>h</sub>/A<sub>K</sub> ≈ 7 werden aus höchstens 160 bar Öldruck bis zu 1.132 bar
-          Metalldruck. Die Einfüllöffnung der Kammer zeigt nach oben und ist beim Schuss vom
-          vorgefahrenen Gießkolben verschlossen. In der Kammer ist die Schmelze langsam
-          (v<sub>p</sub> wenige m/s), ½ρv<sub>p</sub>² bleibt unter 1 bar — der Druck ist
-          praktisch rein statisch.
-          ④ Erst am <b>Anschnitt</b> schlägt Bernoulli zu: Die Engstelle setzt den gesamten
-          statischen Druck in Geschwindigkeit um, p → ½ρv<sub>a</sub>².</div>
+          Geschwindigkeit: p<sub>hyd</sub> = p<sub>acc</sub> − K<sub>v</sub>·v².
+          ③ Das Kolbenpaar übersetzt den Öldruck über das Flächenverhältnis auf die Schmelze in
+          der <b>Füllkammer</b>: der Metalldruck ist p<sub>m</sub> =
+          p<sub>hyd</sub>·A<sub>h</sub>/A<sub>K</sub>. Die Einfüllöffnung der Kammer zeigt nach
+          oben; die Kammer läuft bis zur Trennebene, dort steigt der Anguss in die Kavität, die in
+          beiden Formhälften liegt — in Ruhe läuft nichts aus, erst der Kolben drückt die Schmelze
+          hinauf. In der Kammer ist die Schmelze langsam, ½ρv<sub>p</sub>² ist gegen
+          p<sub>m</sub> vernachlässigbar — der Druck ist praktisch rein statisch.
+          ④ Erst am <b>Anschnitt</b> schlägt Bernoulli zu: Die Engstelle setzt den statischen
+          Metalldruck in Geschwindigkeit um, p<sub>m</sub> → ½ρv<sub>a</sub>².</div>
       </div>
       <div class="prose">
         <p>Die Stationen ①–③ sind die <em>Maschine</em>: Sie bestimmen, wie viel Druck bei welchem
@@ -141,9 +141,9 @@
           mit dem Flächenverhältnis, und die Kontinuität verknüpft Kolbengeschwindigkeit und
           Volumenstrom:</p>
       </div>
-      <div class="eq">$$P_{h} = P_{\text{acc}} - K_{v} \cdot v^{2} \qquad p = P_{h} \cdot \frac{A_{h}}{A_{K}} \qquad v = \frac{Q}{A_{K}}$$</div>
+      <div class="eq">$$p_{\text{hyd}} = p_{\text{acc}} - K_{v} \cdot v^{2} \qquad p_{m} = p_{\text{hyd}} \cdot \frac{A_{h}}{A_{K}} \qquad v = \frac{Q}{A_{K}}$$</div>
       <div class="prose">
-        <p>Einsetzen liefert eine nach unten geöffnete Parabel p<sub>M</sub>(Q) = p₀ − K·Q². Ihre
+        <p>Einsetzen liefert den verfügbaren Metalldruck als nach unten geöffnete Parabel p<sub>m</sub>(Q) = p₀ − K·Q². Ihre
           zwei Parameter muss niemand aus K<sub>v</sub> ausrechnen — sie stecken in zwei
           Messpunkten, die jedes Maschinen-Datenblatt nennt: <b>statisch</b> (Q = 0, der Kolben
           steht, der volle Gießdruck p₀ = F<sub>G</sub>/A<sub>K</sub> liegt an) und
@@ -151,7 +151,7 @@
           Schmelze bleibt kein Druck übrig). Zwischen diesen Achsenabschnitten spannt sich die
           Linie auf:</p>
       </div>
-      <div class="eq">$$p_{M}(Q) = p_{0} \cdot \left( 1 - \frac{Q^{2}}{Q^{2}_{\text{dry}}} \right) \qquad p_{0} = \frac{F_{G}}{A_{K}}, \quad Q_{\text{dry}} = A_{K} \cdot v_{\text{dry}}$$</div>
+      <div class="eq">$$p_{m}(Q) = p_{0} \cdot \left( 1 - \frac{Q^{2}}{Q^{2}_{\text{dry}}} \right) \qquad p_{0} = \frac{F_{G}}{A_{K}}, \quad Q_{\text{dry}} = A_{K} \cdot v_{\text{dry}}$$</div>
       <div class="fig-wrap">
         <img src="/assets/theorie/pq2-maschine.svg" alt="Maschinenlinie des montierten Kolbens unter der grauen Hüllkurven-Front" loading="lazy">
         <div class="fig-cap"><b>Die Maschinenlinie (Standardwerte, Ø 150):</b> Die goldene Parabel
@@ -174,13 +174,13 @@
         <p>Die Werkzeuglinie ist die Nachfragefrage: <em>Wie viel Druck kostet ein gewünschter
           Volumenstrom?</em> Sie ist Station ④ — Bernoulli am Anschnitt, direkt angewandt. In der
           Füllkammer ist die Schmelze langsam und der Druck statisch (p); in der Kavität dahinter
-          herrscht bei funktionierender Entlüftung p ≈ 0. Der komplette Druck geht also in
-          kinetische Energie über; reale Strömungsverluste an der Engstelle fasst der
-          Durchflussbeiwert c<sub>d</sub> ≈ 0,5 zusammen:</p>
+          herrscht bei funktionierender Entlüftung p ≈ 0. Der komplette Metalldruck
+          p<sub>m</sub> geht also in kinetische Energie über; reale Strömungsverluste an der
+          Engstelle fasst der Durchflussbeiwert c<sub>d</sub> ≈ 0,5 zusammen:</p>
       </div>
-      <div class="eq">$$p = \frac{\rho }{2} \cdot \left( \frac{v_{a}}{c_{d}} \right)^{2} \qquad v_{a} = \frac{Q}{A_{a}}$$</div>
+      <div class="eq">$$p_{m} = \frac{\rho }{2} \cdot \left( \frac{v_{a}}{c_{d}} \right)^{2} \qquad v_{a} = \frac{Q}{A_{a}}$$</div>
       <div class="prose">
-        <p>Einsetzen der Kontinuität liefert wieder eine Parabel in Q — diesmal aus dem Ursprung
+        <p>Einsetzen der Kontinuität liefert den nachgefragten Metalldruck — wieder eine Parabel in Q, diesmal aus dem Ursprung
           steigend, mit der <b>Werkzeugkonstante</b> C<sub>W</sub> als einzigem Parameter:</p>
       </div>
       <div class="eq">$$p_{W}(Q) = C_{W} \cdot Q^{2} \qquad C_{W} = \frac{\rho }{2 \cdot c_{d}^{2} \cdot A_{a}^{2}}$$</div>
@@ -206,7 +206,7 @@
           Kolben hinweg? Die Antwort steckt in der Leistung, die die Schmelze aufnimmt — Druck mal
           Volumenstrom. Entlang der Maschinenlinie ist sie</p>
       </div>
-      <div class="eq">$$P(Q) = p_{M}(Q) \cdot Q = p_{0} \cdot Q \cdot \left( 1 - \frac{Q^{2}}{Q^{2}_{\text{dry}}} \right)$$</div>
+      <div class="eq">$$P(Q) = p_{m}(Q) \cdot Q = p_{0} \cdot Q \cdot \left( 1 - \frac{Q^{2}}{Q^{2}_{\text{dry}}} \right)$$</div>
       <div class="prose">
         <p>Null bei Q = 0 (Druck ohne Strom) und bei Q<sub>dry</sub> (Strom ohne Druck), dazwischen
           ein Maximum. Ableiten und Nullsetzen liefert es in geschlossener Form:</p>
@@ -264,7 +264,7 @@
         <p>Lesart: Alles unterhalb der grauen Front ist mit <em>irgendeinem</em> Kolben
           erreichbar, alles unterhalb der goldenen Geraden mit dem <em>montierten</em>. Wo Angebot
           und Nachfrage sich treffen, stellt sich der ungedrosselte Prozess ein. Gleichsetzen
-          p<sub>M</sub> = p<sub>W</sub> und Auflösen nach Q liefert den Arbeitspunkt in
+          p<sub>m</sub> = p<sub>W</sub> und Auflösen nach Q liefert den Arbeitspunkt in
           geschlossener Form:</p>
       </div>
       <div class="eq">$$Q^{*} = \sqrt{\frac{p_{0}}{C_{W} + p_{0}/Q^{2}_{\text{dry}}}}$$</div>
@@ -272,7 +272,8 @@
         <p>Alles Weitere folgt daraus: v<sub>a</sub> = Q*/A<sub>a</sub>, p* = C<sub>W</sub>·Q*² und
           die Füllzeit t<sub>f</sub> = V<sub>a</sub>/Q*. Fährt die reale Schusskurve langsamer als
           dieser Schnittpunkt (v₂ vorgegeben), liegt der Betriebspunkt <em>auf der Werkzeuglinie
-          unterhalb</em> davon — die Differenz zur Maschinenlinie ist gedrosselter Druck. Liegt
+          unterhalb</em> davon — die Differenz zwischen p<sub>m</sub>-Angebot (Maschinenlinie) und
+          p<sub>m</sub>-Bedarf ist gedrosselter Druck. Liegt
           v<sub>a</sub> außerhalb des Zielbands oder t<sub>f</sub> über der zulässigen Füllzeit,
           wird am Anschnitt oder an der Maschine gedreht — und das Diagramm zeigt sofort, welche
           der beiden Geraden sich bewegt.</p>

@@ -1,85 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 500" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Druckkette vom Druckspeicher über Antriebskolben und Füllkammer bis zum Anschnitt">
-  <!-- Handgezeichnetes Schema. Konventionen: Indizes als tspan (70 %, dy 3),
-       Ölkreis gold, Schmelze/Metallseite petrol, Stahlteile grau.
-       Größenlogik: Druckspeicher-Flasche > Antriebszylinder > Füllkammer;
-       die Einfüllöffnung der Kammer zeigt nach oben und ist vom
-       vorgefahrenen Gießkolben bereits verschlossen. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 360" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Druckkette: Druckspeicher, Antriebskolben, Füllkammer bis zur Trennebene, Anguss steigt in die Kavität beider Formhälften">
+  <!-- Handgezeichnetes Schema, angelehnt an das Füllkammer-Schema des
+       Dashboards. Konventionen: keine Zahlenwerte, nur Formelzeichen;
+       Indizes als tspan (70 %, dy 3); Ölkreis gold, Schmelze petrol,
+       Stahl grau, Formhälften schraffiert. Die Füllkammer endet an der
+       Trennebene, der Anguss steigt dort in eine Kavität, die in beiden
+       Hälften liegt. Drücke: p_acc (Speicher), p_hyd (Antriebskolben),
+       p_m (Metalldruck in der Kammer). -->
   <defs>
-    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-      <path d="M0 0L10 5L0 10Z" fill="#008c82"/>
-    </marker>
+    <pattern id="die-hatch" width="7" height="7" patternUnits="userSpaceOnUse">
+      <rect width="7" height="7" fill="#eef2f4"/>
+      <path d="M0 7 L7 0" stroke="#a9bcc3" stroke-width="1"/>
+    </pattern>
   </defs>
 
   <!-- ── Stations-Überschriften ── -->
-  <text x="110" y="34" font-size="12.5" font-weight="700" fill="#1f2937" text-anchor="middle">① Druckspeicher</text>
-  <text x="110" y="52" font-size="11.5" fill="#475569" text-anchor="middle">P<tspan font-size="70%" dy="3">acc</tspan><tspan dy="-3"> = 160 bar</tspan></text>
-  <text x="368" y="34" font-size="12.5" font-weight="700" fill="#1f2937" text-anchor="middle">② Antriebskolben, Fläche A<tspan font-size="70%" dy="3">h</tspan></text>
-  <text x="368" y="52" font-size="11.5" fill="#475569" text-anchor="middle">P<tspan font-size="70%" dy="3">h</tspan><tspan dy="-3"> = P</tspan><tspan font-size="70%" dy="3">acc</tspan><tspan dy="-3"> − K</tspan><tspan font-size="70%" dy="3">v</tspan><tspan dy="-3">·v²</tspan></text>
-  <text x="655" y="34" font-size="12.5" font-weight="700" fill="#1f2937" text-anchor="middle">③ Füllkammer, Fläche A<tspan font-size="70%" dy="3">K</tspan></text>
-  <text x="655" y="52" font-size="11.5" fill="#475569" text-anchor="middle">p = P<tspan font-size="70%" dy="3">h</tspan><tspan dy="-3"> · A</tspan><tspan font-size="70%" dy="3">h</tspan><tspan dy="-3">/A</tspan><tspan font-size="70%" dy="3">K</tspan></text>
-  <text x="838" y="34" font-size="12.5" font-weight="700" fill="#1f2937" text-anchor="middle">④ Anschnitt</text>
-  <text x="838" y="52" font-size="11.5" fill="#475569" text-anchor="middle">p → ½·ρ·v<tspan font-size="70%" dy="3">a</tspan><tspan dy="-3">²</tspan></text>
+  <text x="110" y="30" font-size="12.5" font-weight="700" fill="#1f2937" text-anchor="middle">① Druckspeicher</text>
+  <text x="110" y="48" font-size="11.5" fill="#475569" text-anchor="middle">p<tspan font-size="70%" dy="3">acc</tspan></text>
+  <text x="368" y="30" font-size="12.5" font-weight="700" fill="#1f2937" text-anchor="middle">② Antriebskolben, Fläche A<tspan font-size="70%" dy="3">h</tspan></text>
+  <text x="368" y="48" font-size="11.5" fill="#475569" text-anchor="middle">p<tspan font-size="70%" dy="3">hyd</tspan><tspan dy="-3"> = p</tspan><tspan font-size="70%" dy="3">acc</tspan><tspan dy="-3"> − K</tspan><tspan font-size="70%" dy="3">v</tspan><tspan dy="-3">·v²</tspan></text>
+  <text x="628" y="30" font-size="12.5" font-weight="700" fill="#1f2937" text-anchor="middle">③ Füllkammer, Fläche A<tspan font-size="70%" dy="3">K</tspan></text>
+  <text x="628" y="48" font-size="11.5" fill="#475569" text-anchor="middle">p<tspan font-size="70%" dy="3">m</tspan><tspan dy="-3"> = p</tspan><tspan font-size="70%" dy="3">hyd</tspan><tspan dy="-3"> · A</tspan><tspan font-size="70%" dy="3">h</tspan><tspan dy="-3">/A</tspan><tspan font-size="70%" dy="3">K</tspan></text>
+  <text x="815" y="30" font-size="12.5" font-weight="700" fill="#1f2937" text-anchor="middle">④ Anschnitt</text>
+  <text x="815" y="48" font-size="11.5" fill="#475569" text-anchor="middle">p<tspan font-size="70%" dy="3">m</tspan><tspan dy="-3"> → ½·ρ·v</tspan><tspan font-size="70%" dy="3">a</tspan><tspan dy="-3">²</tspan></text>
 
   <!-- ── ① Druckspeicher: große Flasche, Gaspolster über Öl ── -->
-  <path d="M60 92 Q60 70 110 70 Q160 70 160 92 L160 300 L60 300 Z" fill="#e8edf1"/>
-  <path d="M60 176 Q85 168 110 176 T160 176 L160 300 L60 300 Z" fill="rgba(224,164,0,.25)"/>
-  <path d="M60 92 Q60 70 110 70 Q160 70 160 92 L160 300 L60 300 Z" fill="none" stroke="#64748b" stroke-width="2.5"/>
-  <path d="M60 176 Q85 168 110 176 T160 176" fill="none" stroke="#64748b" stroke-width="1"/>
-  <text x="110" y="130" font-size="11" fill="#64748b" text-anchor="middle">Gaspolster</text>
-  <text x="110" y="245" font-size="11" fill="#9a7100" text-anchor="middle">Öl</text>
+  <path d="M60 102 Q60 80 110 80 Q160 80 160 102 L160 310 L60 310 Z" fill="#e8edf1"/>
+  <path d="M60 186 Q85 178 110 186 T160 186 L160 310 L60 310 Z" fill="rgba(224,164,0,.25)"/>
+  <path d="M60 102 Q60 80 110 80 Q160 80 160 102 L160 310 L60 310 Z" fill="none" stroke="#64748b" stroke-width="2.5"/>
+  <path d="M60 186 Q85 178 110 186 T160 186" fill="none" stroke="#64748b" stroke-width="1"/>
+  <text x="110" y="140" font-size="11" fill="#64748b" text-anchor="middle">Gaspolster</text>
+  <text x="110" y="255" font-size="11" fill="#9a7100" text-anchor="middle">Öl · p<tspan font-size="70%" dy="3">acc</tspan></text>
 
-  <!-- Leitung mit Drossel zum Antriebszylinder -->
-  <rect x="160" y="252" width="110" height="14" fill="rgba(224,164,0,.25)"/>
-  <line x1="160" y1="252" x2="270" y2="252" stroke="#64748b" stroke-width="2"/>
-  <line x1="160" y1="266" x2="270" y2="266" stroke="#64748b" stroke-width="2"/>
-  <path d="M200 245 L220 245 L210 252 Z" fill="#64748b"/>
-  <path d="M200 273 L220 273 L210 266 Z" fill="#64748b"/>
-  <text x="212" y="290" font-size="10.5" fill="#64748b" text-anchor="middle">Drossel −K<tspan font-size="70%" dy="3">v</tspan><tspan dy="-3">·v²</tspan></text>
-  <path d="M270 252 L270 214 L282 214 M270 266 L270 236" fill="none" stroke="#64748b" stroke-width="2"/>
-  <rect x="270" y="236" width="12" height="16" fill="rgba(224,164,0,.25)"/>
+  <!-- Leitung mit Drossel: unten aus der Flasche, T-Stück von unten in den Zylinderboden -->
+  <rect x="160" y="284" width="150" height="14" fill="rgba(224,164,0,.25)"/>
+  <rect x="286" y="262" width="24" height="22" fill="rgba(224,164,0,.25)"/>
+  <path d="M160 284 L286 284 L286 262 M160 298 L310 298 L310 262" fill="none" stroke="#64748b" stroke-width="2"/>
+  <path d="M212 277 L232 277 L222 284 Z" fill="#64748b"/>
+  <path d="M212 305 L232 305 L222 298 Z" fill="#64748b"/>
+  <text x="224" y="318" font-size="10.5" fill="#64748b" text-anchor="middle">Drossel −K<tspan font-size="70%" dy="3">v</tspan><tspan dy="-3">·v²</tspan></text>
 
-  <!-- ── ② Antriebszylinder: kleiner als die Flasche, Öl drückt den Kolben ── -->
-  <rect x="284" y="146" width="86" height="104" fill="rgba(224,164,0,.25)"/>
-  <path d="M282 250 L282 144 L462 144 L462 182 M462 214 L462 252 L282 252" fill="none" stroke="#64748b" stroke-width="2.5"/>
-  <rect x="370" y="146" width="22" height="104" fill="#475569"/>
-  <rect x="392" y="182" width="150" height="32" fill="#94a3b8" stroke="#64748b" stroke-width="1"/>
-  <text x="330" y="204" font-size="13" font-weight="700" fill="#9a7100" text-anchor="middle">P<tspan font-size="70%" dy="3">h</tspan></text>
-  <text x="372" y="272" font-size="10.5" fill="#64748b" text-anchor="middle">A<tspan font-size="70%" dy="3">h</tspan><tspan dy="-3"> = 1.250 cm²</tspan></text>
+  <!-- ── ② Antriebszylinder: kleiner als die Flasche ── -->
+  <rect x="284" y="156" width="86" height="96" fill="rgba(224,164,0,.25)"/>
+  <path d="M282 262 L282 154 L462 154 L462 192 M462 224 L462 262 L310 262 M286 262 L282 262" fill="none" stroke="#64748b" stroke-width="2.5"/>
+  <rect x="370" y="156" width="22" height="104" fill="#475569"/>
+  <rect x="392" y="192" width="150" height="32" fill="#94a3b8" stroke="#64748b" stroke-width="1"/>
+  <text x="330" y="212" font-size="13" font-weight="700" fill="#9a7100" text-anchor="middle">p<tspan font-size="70%" dy="3">hyd</tspan></text>
 
-  <!-- ── ③ Füllkammer: liegendes Rohr, Einfüllöffnung oben (vom Kolben verschlossen) ── -->
-  <!-- Rohrwände -->
-  <path d="M542 176 L560 176 M604 176 L780 176 L806 186 M542 220 L780 220 L806 210" fill="none" stroke="#64748b" stroke-width="2.5"/>
-  <!-- Einfüllöffnung nach oben: Trichterstutzen zwischen x=560 und x=604 -->
-  <path d="M560 176 L560 156 L554 146 M604 176 L604 156 L610 146" fill="none" stroke="#64748b" stroke-width="2.5"/>
-  <text x="582" y="138" font-size="10.5" fill="#64748b" text-anchor="middle">Einfüllöffnung</text>
-  <text x="582" y="152" font-size="9.5" fill="#94a3b8" text-anchor="middle">▼</text>
-  <!-- Schmelze vor dem Kolben -->
-  <path d="M632 178 L780 178 L804 188 L804 208 L780 218 L632 218 Z" fill="rgba(0,140,130,.22)"/>
-  <!-- Gießkolben: hat die Öffnung bereits passiert und verschließt sie -->
-  <rect x="542" y="178" width="90" height="40" fill="#475569"/>
-  <text x="587" y="203" font-size="10" fill="#e8edf1" text-anchor="middle">Gießkolben</text>
-  <text x="712" y="194" font-size="11.5" font-weight="700" fill="#00655e" text-anchor="middle">Schmelze</text>
-  <text x="712" y="209" font-size="10" fill="#00655e" text-anchor="middle">p bis 1.132 bar</text>
-  <text x="668" y="243" font-size="10.5" fill="#64748b" text-anchor="middle">A<tspan font-size="70%" dy="3">K</tspan><tspan dy="-3"> = 177 cm² · ½·ρ·v</tspan><tspan font-size="70%" dy="3">p</tspan><tspan dy="-3">² &lt; 1 bar</tspan></text>
+  <!-- ── Formhälften: Kammer endet an der Trennebene, Kavität in beiden Hälften ── -->
+  <path d="M700 66 L806 66 L806 322 L700 322 Z" fill="url(#die-hatch)" stroke="#7d949c" stroke-width="1.5"/>
+  <path d="M806 66 L876 66 L876 322 L806 322 Z" fill="url(#die-hatch)" stroke="#7d949c" stroke-width="1.5"/>
+  <!-- Kavität (beide Hälften) und Anguss an der Trennebene freistellen -->
+  <rect x="772" y="80" width="68" height="80" fill="#fff"/>
+  <rect x="794" y="160" width="24" height="28" fill="#fff"/>
+  <rect x="700" y="188" width="118" height="42" fill="#fff"/>
+  <path d="M772 80 L840 80 L840 160 L818 160 L818 188 M772 80 L772 160 L794 160 L794 188" fill="none" stroke="#64748b" stroke-width="2.5"/>
+  <line x1="806" y1="66" x2="806" y2="322" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5 4"/>
+  <text x="806" y="338" font-size="10.5" fill="#64748b" text-anchor="middle">Trennebene</text>
+  <text x="806" y="100" font-size="10.5" fill="#475569" text-anchor="middle">Kavität</text>
+  <text x="752" y="308" font-size="9.5" fill="#64748b" text-anchor="middle">feste Seite</text>
+  <text x="841" y="308" font-size="9.5" fill="#64748b" text-anchor="middle">Auswerferseite</text>
 
-  <!-- ── ④ Anschnitt: Druck wird Geschwindigkeit ── -->
-  <line x1="810" y1="198" x2="852" y2="198" stroke="#008c82" stroke-width="4" marker-end="url(#arr)"/>
-  <text x="832" y="184" font-size="12" font-weight="700" fill="#008c82" text-anchor="middle">v<tspan font-size="70%" dy="3">a</tspan></text>
-  <text x="826" y="228" font-size="10.5" fill="#64748b" text-anchor="middle">Kavität: p ≈ 0</text>
-
-  <!-- ── Druckniveau entlang der Kette ── -->
-  <text x="60" y="352" font-size="11" font-weight="700" fill="#475569">Druckniveau entlang der Kette (schematisch, nicht maßstäblich)</text>
-  <line x1="60" y1="470" x2="860" y2="470" stroke="#ccd4d6" stroke-width="1.5"/>
-  <text x="52" y="474" font-size="10" fill="#64748b" text-anchor="end">0 bar</text>
-
-  <polyline points="60,432 212,432 236,438 392,438" fill="none" stroke="#e0a400" stroke-width="2.5"/>
-  <text x="128" y="423" font-size="10.5" fill="#9a7100" text-anchor="middle">P<tspan font-size="70%" dy="3">acc</tspan><tspan dy="-3"> = 160 bar</tspan></text>
-  <text x="316" y="429" font-size="10.5" fill="#9a7100" text-anchor="middle">P<tspan font-size="70%" dy="3">h</tspan><tspan dy="-3"> ≤ 160 bar</tspan></text>
-
-  <line x1="392" y1="438" x2="582" y2="388" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <text x="487" y="404" font-size="10.5" fill="#64748b" text-anchor="middle">Kolbenpaar: ×A<tspan font-size="70%" dy="3">h</tspan><tspan dy="-3">/A</tspan><tspan font-size="70%" dy="3">K</tspan><tspan dy="-3"> ≈ 7</tspan></text>
-
-  <polyline points="582,388 790,388 820,468" fill="none" stroke="#008c82" stroke-width="2.5"/>
-  <text x="686" y="379" font-size="10.5" fill="#00655e" text-anchor="middle">p₀ = F<tspan font-size="70%" dy="3">G</tspan><tspan dy="-3">/A</tspan><tspan font-size="70%" dy="3">K</tspan><tspan dy="-3"> = 1.132 bar (statisch)</tspan></text>
-  <text x="786" y="438" font-size="10.5" fill="#00655e" text-anchor="end">Anschnitt: p → ½·ρ·v<tspan font-size="70%" dy="3">a</tspan><tspan dy="-3">²</tspan></text>
+  <!-- ── ③ Füllkammer: Rohr bis zur Trennebene, Einfüllöffnung oben ── -->
+  <path d="M542 188 L560 188 M604 188 L700 188 M542 230 L700 230" fill="none" stroke="#64748b" stroke-width="2.5"/>
+  <path d="M700 188 L794 188 M700 230 L818 230 L818 160" fill="none" stroke="#64748b" stroke-width="2.5"/>
+  <path d="M560 188 L560 168 L554 158 M604 188 L604 168 L610 158" fill="none" stroke="#64748b" stroke-width="2.5"/>
+  <text x="582" y="150" font-size="10.5" fill="#64748b" text-anchor="middle">Einfüllöffnung</text>
+  <!-- Schmelze: Kammer voll, Anguss und untere Kavität teilgefüllt -->
+  <rect x="634" y="190" width="184" height="40" fill="rgba(0,140,130,.30)"/>
+  <rect x="794" y="162" width="24" height="28" fill="rgba(0,140,130,.30)"/>
+  <rect x="774" y="126" width="64" height="34" fill="rgba(0,140,130,.30)"/>
+  <rect x="542" y="190" width="90" height="40" fill="#475569"/>
+  <text x="587" y="215" font-size="10" fill="#e8edf1" text-anchor="middle">Gießkolben</text>
+  <text x="712" y="205" font-size="11.5" font-weight="700" fill="#00655e" text-anchor="middle">Schmelze</text>
+  <text x="712" y="221" font-size="11" font-weight="700" fill="#00655e" text-anchor="middle">p<tspan font-size="70%" dy="3">m</tspan></text>
+  <text x="698" y="252" font-size="10.5" fill="#64748b" text-anchor="end">der Anguss steigt zur Kavität</text>
 </svg>
