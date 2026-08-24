@@ -83,22 +83,16 @@
         <li><a href="#s2">2. Die Maschinenlinie</a></li>
         <li><a href="#s3">3. Die Werkzeuglinie</a></li>
         <li><a href="#s4">4. Die Hüllkurve</a></li>
-        <li><a href="#s5">5. Das Grundbild</a></li>
-        <li><a href="#s6">6. Der Arbeitspunkt</a></li>
-        <li><a href="#s7">7. Das machbare Band</a></li>
-        <li><a href="#s8">8. Die vier Grenzen</a></li>
-        <li><a href="#s9">9. Die Leistungssicht P·Q</a></li>
-        <li><a href="#s10">10. Spielraum für den Anschnitt</a></li>
+        <li><a href="#s5">5. Grundbild und Arbeitspunkt</a></li>
+        <li><a href="#s6">6. Das machbare Band</a></li>
+        <li><a href="#s7">7. Die vier Grenzen</a></li>
+        <li><a href="#s8">8. Die Leistungssicht P·Q</a></li>
+        <li><a href="#s9">9. Spielraum für den Anschnitt</a></li>
+        <li><a href="#s10">10. Quellen</a></li>
       </ul>
     </aside>
 
     <article class="theory-article">
-
-      <div class="draft-note">
-        📚 <b>Quellen:</b> Formalismus nach M.&nbsp;A. Pego Guerra, <i>Die Casting Design.
-        A Parametric Approach</i> (Carleton University, 1997) und dem TFG „Optimización de la
-        cámara de inyección" (UPC Cartagena). Vor Veröffentlichung fachlich gegenlesen.
-      </div>
 
       <span class="section-anchor" id="s1"></span>
       <h2 class="section-title">1. Bernoulli und die Druckkette</h2>
@@ -114,7 +108,7 @@
           Stationen gespielt, vom Druckspeicher bis zum Anschnitt:</p>
       </div>
       <div class="fig-wrap">
-        <img src="/assets/theorie/pq2-druckkette.svg" alt="Druckkette: Druckspeicher, Antriebskolben, Füllkammer, Anschnitt — mit Druckniveau-Verlauf" loading="lazy">
+        <img src="/assets/theorie/pq2-druckkette.svg" alt="Druckkette: Druckspeicher, Antriebskolben, Füllkammer mit Einfüllöffnung nach oben, Anschnitt — mit Druckniveau-Verlauf" loading="lazy">
         <div class="fig-cap"><b>Die Druckkette des Schussaggregats (Standardwerte):</b>
           ① Im <b>Druckspeicher</b> hält das Gaspolster das Öl auf P<sub>acc</sub> = 160 bar —
           nichts bewegt sich, reiner Druck.
@@ -123,8 +117,10 @@
           ③ Das Kolbenpaar übersetzt den Druck über das Flächenverhältnis auf die Schmelze in der
           <b>Füllkammer</b>: p = P<sub>h</sub>·A<sub>h</sub>/A<sub>K</sub> — mit
           A<sub>h</sub>/A<sub>K</sub> ≈ 7 werden aus höchstens 160 bar Öldruck bis zu 1.132 bar
-          Metalldruck. In der Kammer ist die Schmelze langsam (v<sub>p</sub> wenige m/s),
-          ½ρv<sub>p</sub>² bleibt unter 1 bar — der Druck ist praktisch rein statisch.
+          Metalldruck. Die Einfüllöffnung der Kammer zeigt nach oben und ist beim Schuss vom
+          vorgefahrenen Gießkolben verschlossen. In der Kammer ist die Schmelze langsam
+          (v<sub>p</sub> wenige m/s), ½ρv<sub>p</sub>² bleibt unter 1 bar — der Druck ist
+          praktisch rein statisch.
           ④ Erst am <b>Anschnitt</b> schlägt Bernoulli zu: Die Engstelle setzt den gesamten
           statischen Druck in Geschwindigkeit um, p → ½ρv<sub>a</sub>².</div>
       </div>
@@ -132,75 +128,106 @@
         <p>Die Stationen ①–③ sind die <em>Maschine</em>: Sie bestimmen, wie viel Druck bei welchem
           Volumenstrom auf der Schmelze ankommt. Station ④ ist das <em>Werkzeug</em>: Es bestimmt,
           wie viel Druck ein gewünschter Volumenstrom kostet. Beide Zusammenhänge sind quadratisch
-          in Q — genau daraus entstehen die zwei Kennlinien des Diagramms.</p>
+          in Q — genau daraus entstehen die zwei Kennlinien des Diagramms, und weil beide
+          quadratisch sind, macht der Q²-Maßstab später aus beiden Geraden.</p>
       </div>
 
       <span class="section-anchor" id="s2"></span>
       <h2 class="section-title">2. Die Maschinenlinie</h2>
       <div class="prose">
-        <p>Die Maschinenlinie beschreibt die Stationen ①–③ als Funktion des Volumenstroms: was der
-          Schusszylinder mit dem <em>montierten</em> Kolben liefern kann.</p>
+        <p>Die Maschinenlinie beantwortet die Angebotsfrage: <em>Wie viel Metalldruck bleibt bei
+          welchem Volumenstrom übrig?</em> Sie folgt aus den Stationen ①–③, Zeile für Zeile. Die
+          Hydraulikseite verliert quadratisch mit der Geschwindigkeit, das Kolbenpaar übersetzt
+          mit dem Flächenverhältnis, und die Kontinuität verknüpft Kolbengeschwindigkeit und
+          Volumenstrom:</p>
       </div>
-      <div class="derivation-box">
-        <div class="step"><span class="step-num">①</span>
-          <span>Hydraulikseite: P<sub>h</sub> = P<sub>acc</sub> − K<sub>v</sub>·v² (Drosselverluste im Schusskreis)</span></div>
-        <div class="step"><span class="step-num">②</span>
-          <span>Kräftegleichgewicht am Kolbenpaar: p = P<sub>h</sub> · A<sub>h</sub>/A<sub>K</sub></span></div>
-        <div class="step"><span class="step-num">③</span>
-          <span>Mit v = Q/A<sub>K</sub> und den zwei Messpunkten „statisch" und „Trockenschuss" folgt:</span></div>
-      </div>
-      <div class="eq">$$p_{M}(Q) = p_{0} \cdot \left( 1 - \frac{Q^{2}}{Q^{2}_{\text{dry}}} \right)$$</div>
+      <div class="eq">$$P_{h} = P_{\text{acc}} - K_{v} \cdot v^{2} \qquad p = P_{h} \cdot \frac{A_{h}}{A_{K}} \qquad v = \frac{Q}{A_{K}}$$</div>
       <div class="prose">
-        <p>Ohne Bewegung (Q = 0) steht der volle statische Gießdruck p<sub>0</sub> = F<sub>G</sub>/A<sub>K</sub>
-          an; beim Trockenschuss (kein Widerstand) erreicht der Kolben v<sub>dry</sub> — das
-          entspricht Q<sub>dry</sub> = A<sub>K</sub>·v<sub>dry</sub>, und für das Werkzeug bleibt
-          kein Druck übrig. Beide Achsenabschnitte stecken in den Maschinen-Presets.</p>
+        <p>Einsetzen liefert eine nach unten geöffnete Parabel p<sub>M</sub>(Q) = p₀ − K·Q². Ihre
+          zwei Parameter muss niemand aus K<sub>v</sub> ausrechnen — sie stecken in zwei
+          Messpunkten, die jedes Maschinen-Datenblatt nennt: <b>statisch</b> (Q = 0, der Kolben
+          steht, der volle Gießdruck p₀ = F<sub>G</sub>/A<sub>K</sub> liegt an) und
+          <b>Trockenschuss</b> (kein Widerstand, der Kolben erreicht v<sub>dry</sub>, für die
+          Schmelze bleibt kein Druck übrig). Zwischen diesen Achsenabschnitten spannt sich die
+          Linie auf:</p>
+      </div>
+      <div class="eq">$$p_{M}(Q) = p_{0} \cdot \left( 1 - \frac{Q^{2}}{Q^{2}_{\text{dry}}} \right) \qquad p_{0} = \frac{F_{G}}{A_{K}}, \quad Q_{\text{dry}} = A_{K} \cdot v_{\text{dry}}$$</div>
+      <div class="fig-wrap">
+        <img src="/assets/theorie/pq2-maschine.svg" alt="Maschinenlinie des montierten Kolbens unter der grauen Hüllkurven-Front" loading="lazy">
+        <div class="fig-cap"><b>Die Maschinenlinie (Standardwerte, Ø 150):</b> Die goldene Parabel
+          fällt vom statischen Gießdruck p₀ = 1.132 bar auf null beim Trockenschuss-Volumenstrom
+          Q<sub>dry</sub> = 123,7 l/s. Alles unterhalb der Linie kann die Maschine mit diesem
+          Kolben liefern (gedrosselt), alles oberhalb nicht. Die graue Front ist die Grenze über
+          <em>alle</em> Kolben-Ø — Abschnitt 4; die goldene Linie berührt sie in genau einem
+          Punkt.</div>
+      </div>
+      <div class="prose">
         <p>Wichtig: Jeder Kolben-Ø hat <em>seine eigene</em> Maschinenlinie. Ein kleinerer Kolben
-          hebt p<sub>0</sub> (weniger Fläche, mehr Druck) und senkt Q<sub>dry</sub> — die Linie
-          kippt steil. Ein größerer Kolben macht das Gegenteil.</p>
+          hebt p₀ (weniger Fläche, mehr Druck) und senkt Q<sub>dry</sub> — die Linie kippt steil.
+          Ein größerer Kolben macht das Gegenteil. Der Regler im Grundbild (Abschnitt 5) spielt
+          genau das durch.</p>
       </div>
 
       <span class="section-anchor" id="s3"></span>
       <h2 class="section-title">3. Die Werkzeuglinie</h2>
       <div class="prose">
-        <p>Die Werkzeuglinie ist Station ④ — Bernoulli am Anschnitt, direkt angewandt. In der
+        <p>Die Werkzeuglinie ist die Nachfragefrage: <em>Wie viel Druck kostet ein gewünschter
+          Volumenstrom?</em> Sie ist Station ④ — Bernoulli am Anschnitt, direkt angewandt. In der
           Füllkammer ist die Schmelze langsam und der Druck statisch (p); in der Kavität dahinter
-          herrscht bei funktionierender Entlüftung p ≈ 0. Also muss der komplette Druck in
-          kinetische Energie übergehen:</p>
+          herrscht bei funktionierender Entlüftung p ≈ 0. Der komplette Druck geht also in
+          kinetische Energie über; reale Strömungsverluste an der Engstelle fasst der
+          Durchflussbeiwert c<sub>d</sub> ≈ 0,5 zusammen:</p>
       </div>
-      <div class="derivation-box">
-        <div class="step"><span class="step-num">①</span>
-          <span>Bernoulli von ③ nach ④: p + 0 = 0 + ρ·v<sub>a</sub>²/2 — reale Verluste stecken im Beiwert: p = ρ·(v<sub>a</sub>/c<sub>d</sub>)²/2</span></div>
-        <div class="step"><span class="step-num">②</span>
-          <span>Kontinuität am Anschnitt: v<sub>a</sub> = Q / A<sub>a</sub></span></div>
-        <div class="step"><span class="step-num">③</span>
-          <span>Einsetzen liefert die Werkzeuglinie — quadratisch in Q:</span></div>
+      <div class="eq">$$p = \frac{\rho }{2} \cdot \left( \frac{v_{a}}{c_{d}} \right)^{2} \qquad v_{a} = \frac{Q}{A_{a}}$$</div>
+      <div class="prose">
+        <p>Einsetzen der Kontinuität liefert wieder eine Parabel in Q — diesmal aus dem Ursprung
+          steigend, mit der <b>Werkzeugkonstante</b> C<sub>W</sub> als einzigem Parameter:</p>
       </div>
-      <div class="eq">$$p_{W}(Q) = \frac{\rho }{2 c_{d}^{2} A_{a}^{2}} \cdot Q^{2}$$</div>
+      <div class="eq">$$p_{W}(Q) = C_{W} \cdot Q^{2} \qquad C_{W} = \frac{\rho }{2 \cdot c_{d}^{2} \cdot A_{a}^{2}}$$</div>
+      <div class="fig-wrap">
+        <img src="/assets/theorie/pq2-werkzeug.svg" alt="Drei Werkzeuglinien für kleine, gewählte und große Anschnittfläche" loading="lazy">
+        <div class="fig-cap"><b>Der A<sub>a</sub>²-Hebel:</b> Dieselbe Massenbilanz, drei
+          Anschnittflächen. Die pinke Linie (A<sub>a</sub> = 1.200 mm²) verlangt für jeden
+          Volumenstrom mehr als das Doppelte an Druck wie die gewählte (1.800 mm², türkis); die
+          graue (2.700 mm²) weniger als die Hälfte — die Fläche steht im Nenner im Quadrat.</div>
+      </div>
       <div class="insight-box">
         <div class="label">Kernaussage</div>
-        <p>Die Anschnittfläche steht im Nenner im Quadrat: Ein größerer Anschnitt kippt die
-          Werkzeuglinie flach (mehr Volumenstrom, weniger Anschnittgeschwindigkeit), ein kleinerer
-          stellt sie steil. Die Maschinenlinie bleibt davon unberührt — Anschnittauslegung und
-          Maschinenwahl lassen sich im Diagramm getrennt diskutieren.</p>
+        <p>Ein größerer Anschnitt kippt die Werkzeuglinie flach (mehr Volumenstrom, weniger
+          Anschnittgeschwindigkeit), ein kleinerer stellt sie steil. Die Maschinenlinie bleibt
+          davon unberührt — Anschnittauslegung und Maschinenwahl lassen sich im Diagramm getrennt
+          diskutieren.</p>
       </div>
 
       <span class="section-anchor" id="s4"></span>
       <h2 class="section-title">4. Die Hüllkurve</h2>
       <div class="prose">
         <p>Die Maschinenlinie gilt für <em>einen</em> Kolben. Was kann die Maschine über alle
-          Kolben hinweg? Die Antwort steckt im Akkumulator: Während der Einspritzphase gibt er
-          näherungsweise eine <em>konstante Leistung</em> an die Schmelze ab. Druck mal
-          Volumenstrom ist Leistung — die Grenze aller erreichbaren Betriebspunkte ist deshalb
-          eine Hyperbel, die <b>Hüllkurve</b>:</p>
+          Kolben hinweg? Die Antwort steckt in der Leistung, die die Schmelze aufnimmt — Druck mal
+          Volumenstrom. Entlang der Maschinenlinie ist sie</p>
       </div>
-      <div class="eq">$$p_{\text{env}}(Q) = \frac{a}{Q}\ \text{mit}\ a = \frac{2 \cdot \sqrt{3}}{9} \cdot F_{G} \cdot v_{\text{dry}}$$</div>
+      <div class="eq">$$P(Q) = p_{M}(Q) \cdot Q = p_{0} \cdot Q \cdot \left( 1 - \frac{Q^{2}}{Q^{2}_{\text{dry}}} \right)$$</div>
       <div class="prose">
-        <p>Die Konstante a hat die Einheit einer <b>Leistung</b> — im Dashboard steht sie als KPI
-          („Hüllkurven-Konstante a", mit den Standardwerten 5,39 MW) und in jeder
-          Diagramm-Unterzeile. Jede Kolben-Maschinenlinie berührt die Hüllkurve in genau einem
-          Punkt, bei v<sub>p</sub> = v<sub>dry</sub>/√3 und p = ⅔·p<sub>0</sub>. Oberhalb liegt
-          kein erreichbarer Punkt — egal welcher Kolben montiert ist.</p>
+        <p>Null bei Q = 0 (Druck ohne Strom) und bei Q<sub>dry</sub> (Strom ohne Druck), dazwischen
+          ein Maximum. Ableiten und Nullsetzen liefert es in geschlossener Form:</p>
+      </div>
+      <div class="eq">$$\frac{dP}{dQ} = 0 \;\Rightarrow\; Q^{*} = \frac{Q_{\text{dry}}}{\sqrt{3}}, \quad p^{*} = \tfrac{2}{3} \cdot p_{0}, \quad P_{\max} = \frac{2 \sqrt{3}}{9} \cdot p_{0} \cdot Q_{\text{dry}}$$</div>
+      <div class="prose">
+        <p>Jetzt der entscheidende Schritt: p₀·Q<sub>dry</sub> = (F<sub>G</sub>/A<sub>K</sub>) ·
+          (A<sub>K</sub>·v<sub>dry</sub>) = <b>F<sub>G</sub>·v<sub>dry</sub></b> — die
+          Kolbenfläche kürzt sich heraus. Die maximale Leistung ist für <em>jeden</em> Kolben
+          dieselbe; der Kolben-Ø entscheidet nur, <em>bei welchem Q</em> sie anliegt. Die Grenze
+          aller erreichbaren Betriebspunkte ist deshalb eine Hyperbel konstanter Leistung, die
+          <b>Hüllkurve</b>:</p>
+      </div>
+      <div class="eq">$$p_{\text{env}}(Q) = \frac{a}{Q} \qquad a = \frac{2 \sqrt{3}}{9} \cdot F_{G} \cdot v_{\text{dry}}$$</div>
+      <div class="prose">
+        <p>Die Konstante a hat die Einheit einer <b>Leistung</b> (Standardwerte: 5,39 MW; sie steht
+          in jeder Diagramm-Unterzeile). Jede Kolben-Maschinenlinie berührt die Hüllkurve in genau
+          einem Punkt — im Bild von Abschnitt 2 ist das der Berührpunkt der goldenen Parabel mit
+          der grauen Front. Weil der Maschine nur die Kolben-Ø zwischen Ø min und Ø max zur
+          Verfügung stehen, folgt die graue Front außerhalb der beiden Berührpunkte der Parabel
+          des jeweiligen Grenz-Kolbens.</p>
       </div>
       <div class="insight-box">
         <div class="label">Merkregel</div>
@@ -209,62 +236,50 @@
       </div>
 
       <span class="section-anchor" id="s5"></span>
-      <h2 class="section-title">5. Das Grundbild</h2>
+      <h2 class="section-title">5. Grundbild und Arbeitspunkt</h2>
       <div class="prose">
-        <p>Damit stehen alle drei Linien — und mehr braucht das Grundbild nicht:</p>
+        <p>Beide Kennlinien sind quadratisch in Q. Trägt man den Druck deshalb nicht über Q,
+          sondern über <b>Q²</b> auf, werden aus den zwei Parabeln zwei <em>Geraden</em> — das ist
+          der namensgebende Trick des PQ²-Diagramms, und so zeigt es auch das Grundbild:</p>
       </div>
       <div class="fig-wrap">
-        <img id="grundImg" src="/assets/theorie/pq2-grund.svg" alt="PQ²-Grundbild: Maschinenlinie, Werkzeuglinie und Hüllkurve mit grauer unerreichbarer Fläche" loading="lazy">
+        <img id="grundImg" src="/assets/theorie/pq2-grund.svg" alt="PQ²-Grundbild im Q²-Maßstab: Maschinenlinie und Werkzeuglinie als Geraden, Hüllkurve als graue Front, Schnittpunkt markiert" loading="lazy">
         <canvas id="grundCanvas" width="880" height="560" hidden></canvas>
         <div class="fig-controls" id="grundControls" hidden>
           <label for="grundDiam">Kolben-Ø</label>
           <input type="range" id="grundDiam" min="120" max="200" step="1" value="150">
           <output id="grundDiamOut">Ø 150 mm</output>
         </div>
-        <div class="fig-cap"><b>Das Grundbild (Standardwerte):</b> Die goldene
-          <b>Maschinenlinie</b> des gewählten Kolbens (Ø 150) fällt von p<sub>0</sub> = 1.132 bar
-          auf null bei Q<sub>dry</sub> = 123,7 l/s. Die türkise <b>Werkzeuglinie</b> steigt
-          quadratisch aus dem Ursprung. Die graue Fläche oberhalb der schwarzen Frontlinie ist für
-          <em>keinen</em> Kolben-Ø erreichbar: zwischen den Berührpunkten von Ø&nbsp;min und
-          Ø&nbsp;max folgt die Front der Hüllkurve a/Q, außerhalb der Parabel des jeweiligen
-          Grenz-Kolbens. <b>Der Regler wechselt den montierten Kolben-Ø:</b> Ein kleinerer Kolben
-          hebt p<sub>0</sub> und senkt Q<sub>dry</sub> (steile Linie), ein größerer macht das
-          Gegenteil — aber jede Maschinenlinie bleibt unter der grauen Fläche und berührt die
-          Hüllkurve in genau einem Punkt. Die Hüllkurve selbst bewegt sich nicht: Sie ist eine
-          Eigenschaft der Maschine, nicht des Kolbens.</div>
+        <div class="fig-cap"><b>Das Grundbild im Q²-Maßstab (Standardwerte):</b> Die goldene
+          <b>Maschinenlinie</b> ist eine Gerade von (0, p₀) zur Nullstelle bei Q²<sub>dry</sub>;
+          die türkise <b>Werkzeuglinie</b> eine Ursprungsgerade mit Steigung C<sub>W</sub>. Ihr
+          Schnitt ist der markierte <b>Arbeitspunkt</b>. Die graue Fläche ist für keinen Kolben-Ø
+          erreichbar — die Hüllkurve a/Q wird im Q²-Maßstab zur Kurve a/√(Q²), die Berührlogik
+          bleibt. <b>Der Regler wechselt den montierten Kolben-Ø:</b> Ein kleinerer Kolben hebt
+          p₀ und senkt Q²<sub>dry</sub> (steile Gerade), ein größerer macht das Gegenteil — jede
+          Maschinengerade bleibt unter der grauen Front. Die Front selbst bewegt sich nicht: Sie
+          ist eine Eigenschaft der Maschine, nicht des Kolbens.</div>
       </div>
       <div class="prose">
-        <p>Lesart: Alles unterhalb der grauen Fläche ist mit <em>irgendeinem</em> Kolben
-          erreichbar, alles unterhalb der goldenen Linie mit dem <em>montierten</em>. Die türkise
-          Linie sagt, was das Werkzeug bei jedem Q verlangt. Wo Angebot und Nachfrage sich
-          treffen, stellt sich der Prozess ein — das ist der nächste Abschnitt.</p>
+        <p>Lesart: Alles unterhalb der grauen Front ist mit <em>irgendeinem</em> Kolben
+          erreichbar, alles unterhalb der goldenen Geraden mit dem <em>montierten</em>. Wo Angebot
+          und Nachfrage sich treffen, stellt sich der ungedrosselte Prozess ein. Gleichsetzen
+          p<sub>M</sub> = p<sub>W</sub> und Auflösen nach Q liefert den Arbeitspunkt in
+          geschlossener Form:</p>
+      </div>
+      <div class="eq">$$Q^{*} = \sqrt{\frac{p_{0}}{C_{W} + p_{0}/Q^{2}_{\text{dry}}}}$$</div>
+      <div class="prose">
+        <p>Alles Weitere folgt daraus: v<sub>a</sub> = Q*/A<sub>a</sub>, p* = C<sub>W</sub>·Q*² und
+          die Füllzeit t<sub>f</sub> = V<sub>a</sub>/Q*. Fährt die reale Schusskurve langsamer als
+          dieser Schnittpunkt (v₂ vorgegeben), liegt der Betriebspunkt <em>auf der Werkzeuglinie
+          unterhalb</em> davon — die Differenz zur Maschinenlinie ist gedrosselter Druck. Liegt
+          v<sub>a</sub> außerhalb des Zielbands oder t<sub>f</sub> über der zulässigen Füllzeit,
+          wird am Anschnitt oder an der Maschine gedreht — und das Diagramm zeigt sofort, welche
+          der beiden Geraden sich bewegt.</p>
       </div>
 
       <span class="section-anchor" id="s6"></span>
-      <h2 class="section-title">6. Der Arbeitspunkt</h2>
-      <div class="prose">
-        <p>Beide Kennlinien sind quadratisch in Q. Trägt man den Druck deshalb nicht über Q,
-          sondern über <b>Q²</b> auf, werden aus zwei Parabeln zwei <em>Geraden</em> — das ist der
-          ganze Trick des PQ²-Diagramms. Ihr Schnittpunkt p<sub>M</sub> = p<sub>W</sub> ist der
-          <b>Arbeitspunkt</b>; Auflösen nach Q ergibt in geschlossener Form:</p>
-      </div>
-      <div class="eq">$$Q^{*} = \sqrt{\frac{p_{0}}{C_{W} + p_{0}/Q^{2}_{\text{dry}}}}\ \text{mit}\ C_{W} = \frac{\rho }{2 c_{d}^{2} A_{a}^{2}}$$</div>
-      <div class="fig-wrap">
-        <img src="/assets/theorie/pq2-q2.svg" alt="PQ²-Diagramm im Q²-Achsenmodus mit Arbeitspunkt" loading="lazy">
-        <div class="fig-cap"><b>Der Q²-Trick, im Dashboard der Achsenmodus „Q²":</b> Die goldene
-          Maschinenlinie ist hier eine Gerade von (0, p<sub>0</sub>) zur Nullstelle bei
-          Q²<sub>dry</sub>, die türkise Werkzeuglinie eine Ursprungsgerade. Ihr Schnitt ist der rote
-          Arbeitspunkt. Alles Weitere folgt daraus: v<sub>a</sub> = Q*/A<sub>a</sub>,
-          p* = C<sub>W</sub>·Q*² und die Füllzeit t<sub>f</sub> = V<sub>a</sub>/Q*.</div>
-      </div>
-      <div class="prose">
-        <p>Liegt v<sub>a</sub> außerhalb des Zielbands oder t<sub>f</sub> über der zulässigen
-          Füllzeit, wird am Anschnitt oder an der Maschine gedreht — und das Diagramm zeigt sofort,
-          welche der beiden Linien sich bewegt.</p>
-      </div>
-
-      <span class="section-anchor" id="s7"></span>
-      <h2 class="section-title">7. Das machbare Band</h2>
+      <h2 class="section-title">6. Das machbare Band</h2>
       <div class="prose">
         <p>Prozessgrenzen sprechen nicht in Druck und Volumenstrom, sondern in <b>Füllzeit</b> und
           <b>Anschnittgeschwindigkeit</b>. Um sie ins Diagramm zu bekommen, braucht es nur zwei
@@ -281,50 +296,51 @@
       </div>
       <div class="fig-wrap">
         <img src="/assets/theorie/pq2-q.svg" alt="PQ²-Diagramm mit machbarem Band und allen Grenzen" loading="lazy">
-        <div class="fig-cap"><b>Das vollständige Bild (Achsenmodus „Q"):</b> Das Grundbild aus
-          Abschnitt 5, jetzt mit allen Grenzen. Das grüne machbare Band liegt zwischen „t_f max"
-          (links) und der Entlüftungsbedingung „t_f ≥ 59,03 ms" (rechts), nach unten begrenzt von
-          „v_a min", nach oben von „v_a max". Schraffierte Flächen verletzen je eine Grenze, die
-          graue Fläche ist für keinen Kolben erreichbar. Oberhalb der Maschinenlinie ist das Band
-          heller gefüllt: „machbar (anderer Kolben-Ø)". Die türkise Werkzeuglinie durchquert das
-          Band; der Arbeitspunkt liegt hier knapp <em>außerhalb</em> (über v_a max, 62 m/s statt
-          50) — die Prüfliste im Dashboard meldet genau das.</div>
+        <div class="fig-cap"><b>Das vollständige Bild (Achsenmodus „Q"):</b> Das Grundbild —
+          hier im Q-Maßstab, beide Kennlinien als Parabeln — jetzt mit allen Grenzen. Das grüne
+          machbare Band liegt zwischen „t<sub>f</sub> max" (links) und der Entlüftungsbedingung
+          „t<sub>f</sub> ≥ 59,03 ms" (rechts), nach unten begrenzt von „v<sub>a</sub> min", nach
+          oben von „v<sub>a</sub> max". Schraffierte Flächen verletzen je eine Grenze, die graue
+          Fläche ist für keinen Kolben erreichbar. Oberhalb der Maschinenlinie ist das Band heller
+          gefüllt: „machbar (anderer Kolben-Ø)". Die türkise Werkzeuglinie durchquert das Band;
+          der Schnittpunkt liegt hier knapp <em>außerhalb</em> (über v<sub>a</sub> max, 62 m/s
+          statt 50) — die Prüfliste im Dashboard meldet genau das.</div>
       </div>
 
-      <span class="section-anchor" id="s8"></span>
-      <h2 class="section-title">8. Die vier Grenzen</h2>
+      <span class="section-anchor" id="s7"></span>
+      <h2 class="section-title">7. Die vier Grenzen</h2>
       <div class="prose">
         <p>Hinter den vier Seiten des Bands steckt jeweils andere Physik — die Namen entsprechen
           der Diagramm-Legende:</p>
-        <p><b>„Entlüftung: t_f ≥ …" — die minimale Füllzeit.</b> Ein Entlüftungskanal ist
+        <p><b>„Entlüftung: t<sub>f</sub> ≥ …" — die minimale Füllzeit.</b> Ein Entlüftungskanal ist
           strömungstechnisch eine Düse zwischen Kavität und Umgebung. Ab einem kritischen
           Druckverhältnis erreicht die Luft dort Schallgeschwindigkeit und der Massenstrom sperrt —
           schneller kann die Form nicht entlüften, kürzere Füllzeiten schließen Luft ein.
           Gerechnet wird mit Entlüftungsfläche und maximal zulässiger Luftgeschwindigkeit:
           t<sub>f</sub> ≥ V<sub>Luft</sub>/(A<sub>ent</sub>·v<sub>Luft,max</sub>).</p>
-        <p><b>„t_f max" — die maximale Füllzeit.</b> Dauert die Füllung zu lange, erstarrt die
-          Front, bevor die Form voll ist: kalte Läufe, Bindefehler, schlechte Oberflächen. Das
-          Limit kommt aus der NADCA-Füllzeitformel über Wandstärke und Temperaturen — dieselbe
-          Rechnung wie im Diagramm „Empfohlene Füllzeit".</p>
-        <p><b>„v_a min" und „Zerstäubung J" — die minimale Anschnittgeschwindigkeit.</b> Zu
-          langsame Schmelze füllt als kompakter Strahl: Porosität und Kaltfluss. Das Dashboard
-          zeigt zwei Untergrenzen: das NADCA-Zielband (v_a min) und das empirische
+        <p><b>„t<sub>f</sub> max" — die maximale Füllzeit.</b> Dauert die Füllung zu lange,
+          erstarrt die Front, bevor die Form voll ist: kalte Läufe, Bindefehler, schlechte
+          Oberflächen. Das Limit kommt aus der NADCA-Füllzeitformel über Wandstärke und
+          Temperaturen — dieselbe Rechnung wie im Diagramm „Empfohlene Füllzeit".</p>
+        <p><b>„v<sub>a</sub> min" und „Zerstäubung J" — die minimale Anschnittgeschwindigkeit.</b>
+          Zu langsame Schmelze füllt als kompakter Strahl: Porosität und Kaltfluss. Das Dashboard
+          zeigt zwei Untergrenzen: das NADCA-Zielband (v<sub>a</sub> min) und das empirische
           Atomisierungs-Kriterium v<sub>a</sub><sup>1.71</sup>·e<sub>p</sub>·ρ ≥ J
           (inch-pound-Einheiten; J &gt; 750 gilt als konservativ). Die schärfere von beiden
           begrenzt das Band.</p>
-        <p><b>„v_a max" — die Erosionsgrenze.</b> Zu schnelle Schmelze wäscht die Form rund um den
-          Anschnitt aus und begünstigt Kleben. Diese Grenze ist Erfahrungswissen: für Aluminium
-          etwa 41 m/s, je nach Quelle bis ≈ 65 m/s.</p>
+        <p><b>„v<sub>a</sub> max" — die Erosionsgrenze.</b> Zu schnelle Schmelze wäscht die Form
+          rund um den Anschnitt aus und begünstigt Kleben. Diese Grenze ist Erfahrungswissen: für
+          Aluminium etwa 41 m/s, je nach Quelle bis ≈ 65 m/s.</p>
         <p>Dazu kommt das <b>„hydraul. Limit"</b>: die Anschnittgeschwindigkeit, die der statische
-          Druck p<sub>0</sub> überhaupt liefern kann — v<sub>a</sub> ≤ c<sub>d</sub>·√(2·p<sub>0</sub>/ρ).</p>
+          Druck p₀ überhaupt liefern kann — v<sub>a</sub> ≤ c<sub>d</sub>·√(2·p₀/ρ).</p>
       </div>
 
-      <span class="section-anchor" id="s9"></span>
-      <h2 class="section-title">9. Die Leistungssicht P·Q</h2>
+      <span class="section-anchor" id="s8"></span>
+      <h2 class="section-title">8. Die Leistungssicht P·Q</h2>
       <div class="prose">
         <p>Dass die Hüllkurve „konstante Leistung" bedeutet, lässt sich sichtbar machen: Trägt man
           auf der y-Achse nicht den Druck, sondern das Produkt P·Q auf, wird die Hyperbel zur
-          Horizontalen.</p>
+          Horizontalen — die Herleitung aus Abschnitt 4 als Bild.</p>
       </div>
       <div class="fig-wrap">
         <img src="/assets/theorie/pq2-pw.svg" alt="PQ²-Diagramm im Leistungsmodus P·Q" loading="lazy">
@@ -335,10 +351,10 @@
           machbare Band und alle Grenzen wandern konsistent mit.</div>
       </div>
 
-      <span class="section-anchor" id="s10"></span>
-      <h2 class="section-title">10. Spielraum für den Anschnitt</h2>
+      <span class="section-anchor" id="s9"></span>
+      <h2 class="section-title">9. Spielraum für den Anschnitt</h2>
       <div class="prose">
-        <p>Im Q²-Plan ist die Werkzeuglinie eine Ursprungsgerade, deren Steigung allein von der
+        <p>Im Q²-Maßstab ist die Werkzeuglinie eine Ursprungsgerade, deren Steigung allein von der
           Anschnittfläche abhängt. Das Band begrenzt die zulässigen Flächen deshalb von zwei
           Seiten: Die steilste zulässige Werkzeuglinie läuft durch die Ecke
           (t<sub>f,max</sub>, v<sub>a,max</sub>) — die kleinste Fläche. Die flachste durch
@@ -361,6 +377,23 @@
       <p style="margin-top:1.5rem;">
         <a href="/tools/auslegung/chart.html?id=pq2" class="btn btn-primary">Im Dashboard ausprobieren: PQ²-Diagramm →</a>
       </p>
+
+      <span class="section-anchor" id="s10"></span>
+      <h2 class="section-title">10. Quellen</h2>
+      <div class="prose">
+        <p>Der Formalismus dieses Artikels folgt zwei Arbeiten; alle Diagramme sind die
+          Original-Darstellungen aus dem DieLogic-Dashboard mit den Standardwerten:</p>
+        <ul>
+          <li>M.&nbsp;A. Pego Guerra: <i>Die Casting Die Design. A Parametric Approach.</i>
+            Carleton University, Ottawa 1997 — Maschinen-/Werkzeuglinie, Hüllkurve und
+            Leistungsargument (Kap. zum PQ²-Diagramm).</li>
+          <li>TFG „Optimización de la cámara de inyección en procesos FIAP", UPC Cartagena —
+            PQ²-Methode (Kap. 2), Umrechnung des Prozessfensters (§ 2.2.4, Gl. 2.25–2.27) und die
+            vier Restriktionen (§ 2.3); im Dashboard als „UPCT-TFG" zitiert.</li>
+        </ul>
+        <p class="fig-cap" style="border:0;padding:0.4rem 0 0;">Vor einer Veröffentlichung
+          fachlich gegenlesen lassen.</p>
+      </div>
 
     </article>
   </div>
@@ -397,13 +430,14 @@
   function render() {
     values.diam = Number(slider.value);
     out.textContent = 'Ø ' + values.diam + ' mm';
-    pq2.tab = 'q'; pq2.tab2 = 'pm';
+    pq2.tab = 'q2'; pq2.tab2 = 'pm';
     const d = pq2.calc(values);
     if (d.err) return;
     /* simplify wie im SVG-Generator: nur die Hüllkurven-Maske behalten */
     d.limits = d.limits.filter(l => l.mask);
-    delete d.feasible; delete d.feasibleSplit; delete d.pt; delete d.ptl;
-    d.title = 'PQ²-Diagramm — Maschinenlinie, Werkzeuglinie, Hüllkurve';
+    /* ohne Schusskurve ist d.pt der ungedrosselte Schnittpunkt — der bleibt sichtbar */
+    delete d.feasible; delete d.feasibleSplit; delete d.segs;
+    d.title = 'PQ²-Grundbild — im Q²-Maßstab werden beide Kennlinien zu Geraden';
     const dpr = window.devicePixelRatio || 1;
     canvas.width = W * dpr; canvas.height = H * dpr;
     const x = canvas.getContext('2d');

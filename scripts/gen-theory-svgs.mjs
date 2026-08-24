@@ -306,7 +306,37 @@ const simplify = keepPt => d => {
   if (!keepPt) { delete d.pt; delete d.ptl; }
 };
 const jobs = [
-  { file: 'pq2-grund.svg', id: 'pq2', tab: 'q', tab2: 'pm', post: d => { simplify(false)(d); d.title = 'PQ²-Diagramm — Maschinenlinie, Werkzeuglinie, Hüllkurve'; } },
+  /* Grundbild im Q²-Modus: dort sind beide Kennlinien Geraden — der
+     namensgebende Trick des Diagramms wird sichtbar. */
+  { file: 'pq2-grund.svg', id: 'pq2', tab: 'q2', tab2: 'pm', post: d => { simplify(false)(d); delete d.segs; d.title = 'PQ²-Grundbild — im Q²-Maßstab werden beide Kennlinien zu Geraden'; } },
+  /* Einzelbilder für die Herleitungs-Abschnitte: nur je eine Kennlinie. */
+  { file: 'pq2-maschine.svg', id: 'pq2', tab: 'q', tab2: 'pm', post: d => {
+    simplify(false)(d);
+    delete d.pt2; delete d.ptl2; delete d.segs;             // Schnittpunkt/Drossel gehören zur Werkzeuglinie
+    d.ys = d.ys.filter(sr => /Maschine/.test(sr.n));
+    d.title = 'Die Maschinenlinie — und die Hüllkurve als Grenze aller Kolben';
+  } },
+  /* Werkzeuglinie: drei Anschnittflächen zeigen den A_a²-Hebel — ohne
+     Maschinenanteile, y-Achse auf die steilste Linie skaliert. */
+  { file: 'pq2-werkzeug.svg', build: () => {
+    const def = chartsById.pq2; def.tab = 'q'; def.tab2 = 'pm';
+    const wz = (gate, c, w) => {
+      const q = def.calc({ ...values, gate }, { shot });
+      const sr = q.ys.find(x => /Werkzeug/.test(x.n));
+      return { ...sr, n: 'A_a = ' + gate + ' mm²' + (gate === values.gate ? ' (gewählt)' : ''), c, w };
+    };
+    const C = theme.chart;
+    const d = def.calc(values, { shot });
+    d.ys = [wz(Math.round(values.gate / 1.5), C.warn || '#c2447e', 1.6),
+            wz(values.gate, C.series2, 2.4),
+            wz(Math.round(values.gate * 1.5), '#557786', 1.6)];
+    d.limits = []; delete d.feasible; delete d.feasibleSplit;
+    delete d.pt; delete d.ptl; delete d.pt2; delete d.ptl2; delete d.segs;
+    d.y1 = 1.12 * Math.max(...d.ys[0].y.filter(Number.isFinite));
+    d.title = 'Die Werkzeuglinie — die Anschnittfläche stellt die Steilheit';
+    d.info = 'p_W = ρ/(2·c_d²·A_a²) · Q² — kleinere Fläche: steiler (mehr Druck je Volumenstrom), größere: flacher';
+    return { d, def };
+  } },
   { file: 'pq2-q.svg', id: 'pq2', tab: 'q', tab2: 'pm' },
   { file: 'pq2-q2.svg', id: 'pq2', tab: 'q2', tab2: 'pm', post: simplify(true) },
   { file: 'pq2-pw.svg', id: 'pq2', tab: 'q', tab2: 'pw' },
@@ -318,6 +348,7 @@ for (const j of jobs) {
   let d, def = null;
   if (j.build) {
     d = j.build();
+    if (d && d.d) { def = d.def; d = d.d; }
   } else {
     def = chartsById[j.id];
     if (j.tab) def.tab = j.tab;
