@@ -90,8 +90,6 @@
   }
 
   /* ── Logo (assets/logo.svg — Füllkammer + Schusskurve) ────── */
-  const LOGO_IMG = `<img src="${base}/assets/logo.svg" alt="" width="32" height="32" aria-hidden="true">`;
-
   /* Wortmarke „DiehLogic": zwischen „Die" und „Logic" steht ein H, dessen
      Stämme die Kammerwände sind und dessen Querbalken die Schmelze ist, die
      als Pfeil durch den Anschnitt schießt (Motiv der Logo-Kachel). Das H
@@ -128,7 +126,6 @@
     return `<footer class="dl-footer">
   <div class="dl-footer-col">
     <div class="dl-footer-logo">
-      ${LOGO_IMG}
       <span class="dl-footer-wordmark">${WORDMARK}</span>
     </div>
     <p class="dl-footer-desc">Gießtechnische Auslegung für den Druckguss (HPDC): Schusskurve, PQ², Füllkammer, Zyklus und Teilekosten — ein Projekt, alle Werkzeuge.</p>
@@ -199,7 +196,6 @@
   align-items: center;
   text-decoration: none;
 }
-.dl-nav-logo img { width: 32px; height: 32px; display: block; }
 .dl-h-glyph { height: 0.78em; width: auto; display: inline-block; margin: 0 0.1em; }
 .dl-nav-logo-text {
   font-size: 1.1rem;
@@ -330,7 +326,6 @@
   gap: 0.4rem;
   margin-bottom: 0.5rem;
 }
-.dl-footer-logo img { width: 26px; height: 26px; display: block; }
 .dl-footer-desc { font-size: 0.8rem; line-height: 1.6; max-width: 240px; margin: 0; }
 .dl-footer-col h4 {
   font-size: 0.72rem;
@@ -375,7 +370,6 @@
   function injectNav() {
     const navHTML = `<nav class="dl-nav">
   <a class="dl-nav-logo" href="${resolveHref('/index.html')}">
-    ${LOGO_IMG}
     <span class="dl-nav-logo-text">${WORDMARK}</span>
     <span class="dl-nav-version">${VERSION}</span>
   </a>
