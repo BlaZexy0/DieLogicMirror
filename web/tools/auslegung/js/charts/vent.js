@@ -33,9 +33,11 @@ export default {
   mathHTML() {
     return `
 <h4>Entlüftungsgeschwindigkeit</h4>
-<p class="math-note">Kontinuität: die vom Kolben verdrängte Luft muss durch die Entlüftungsfläche
-A<sub>ent</sub> entweichen — je kleiner die Fläche im Verhältnis zur Kolbenfläche, desto schneller die
-Luftströmung:</p>
+<p class="math-note">Bevor die Schmelze kommt, muss die Luft raus — und sie hat nur die Entlüftungskanäle.
+Deren Fläche wirkt wie eine Düse für die Luft: die Kontinuität übersetzt die Kolbengeschwindigkeit mit dem
+Verhältnis A<sub>K</sub>/A<sub>ent</sub> in die Luftgeschwindigkeit. Wird sie zu hoch (Richtwert
+v<sub>luft,max</sub>, deutlich unter der Schallgrenze), drosselt der Kanal, die Luft staut sich vor der
+Schmelzefront und wird eingeschlossen:</p>
 ${eq('v_{\\text{ent}} = v_{p} \\cdot \\frac{A_{K}}{A_{\\text{ent}}}')}
 <p class="math-note">Aktuell: A<sub>K</sub> = <b data-m="AK"></b> · Übersetzung A<sub>K</sub>/A<sub>ent</sub> = <b data-m="ratio"></b> ·
 bei v₂ = <span data-m="vsel"></span> (Mittel nach Anschnitt, aus der Schusskurve): v<sub>ent</sub> = <b data-m="vent"></b></p>`;

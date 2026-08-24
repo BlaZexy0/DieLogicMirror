@@ -26,9 +26,13 @@ export default {
   mathHTML() {
     return `
 <h4>Empfohlene Füllzeit nach NADCA</h4>
-<p class="math-note">Die zulässige Füllzeit wächst linear mit der Wandstärke s und mit der Überhitzung der
-Schmelze und sinkt mit kälterer Form. Der zulässige erstarrte Anteil S<sub>zul</sub> geht über die
-Z-Konstante als äquivalente Temperaturspanne ein:</p>
+<p class="math-note">Warum gibt es überhaupt eine Füllzeit-Obergrenze? Die Schmelze kühlt beim Einströmen an
+der Formwand ab; fällt sie unter die Mindest-Fließtemperatur, bevor die Kavität voll ist, entstehen Kaltläufe
+und Bindefehler. Die NADCA-Empfehlung bilanziert das als Wärmebudget: dünne Wände haben viel Kontaktfläche je
+Volumen und verlieren ihre Überhitzung schnell (t<sub>f</sub> ∝ s), mehr Überhitzung T<sub>guss</sub> −
+T<sub>fließ</sub> kauft Zeit, eine kalte Form (großes Gefälle T<sub>fließ</sub> − T<sub>form</sub>) nimmt sie.
+Dass unterwegs schon ein Anteil S<sub>zul</sub> erstarren darf, geht über die Z-Konstante als äquivalente
+Temperaturspanne in den Zähler ein:</p>
 ${eq('t_{f}(s) = k \\cdot s \\cdot \\frac{T_{\\text{guss}} - T_{\\text{fließ}} + S_{\\text{zul}} \\cdot Z}{T_{\\text{fließ}} - T_{\\text{form}}}')}
 <p class="math-note">Zähler: nutzbare thermische Reserve der Schmelze [°C] · Nenner: treibendes
 Temperaturgefälle zur Form [°C] · k: NADCA-Faktor [ms/mm].</p>

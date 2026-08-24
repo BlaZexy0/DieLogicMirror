@@ -31,8 +31,12 @@ export default {
   mathHTML() {
     return `
 <h4>Füllgrad der Füllkammer</h4>
-<p class="math-note">Das Dosiervolumen (inkl. Pressrest — siehe Konvention in der Seitenleiste) im Verhältnis
-zum Kammervolumen:</p>
+<p class="math-note">Der Füllgrad entscheidet über die ganze 1. Phase: über der Schmelze steht Luft, die der
+Kolben vor sich herschiebt und die rechtzeitig entweichen muss — und je voller die Kammer, desto weniger
+Geschwindigkeit verträgt die Schmelzewelle, ohne zu brechen (v<sub>krit</sub> fällt mit φ). Zu leer ist auch
+schlecht: viel Luft heißt langer Vorlauf und mehr Gas, das durch die Entlüftung muss. Die Rechnung selbst ist
+reine Geometrie — dosiertes Volumen (flüssig, inkl. Pressrest — Konvention in der Seitenleiste) durch
+Kammervolumen:</p>
 ${eq('V_{\\text{dos}} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Anguss}} + m_{\\text{Überlauf}} + m_{\\text{Pressrest}}}{\\rho }')}
 ${eq('\\varphi (L, D) = \\frac{V_{\\text{dos}}}{A_{K} \\cdot L} \\cdot 100 \\% = \\frac{4 \\cdot V_{\\text{dos}}}{\\pi \\cdot D^{2} \\cdot L} \\cdot 100 \\%')}
 <p class="math-note">Die Heatmap zeigt φ über (L, D); niedriger Füllgrad heißt viel Luft in der Kammer,

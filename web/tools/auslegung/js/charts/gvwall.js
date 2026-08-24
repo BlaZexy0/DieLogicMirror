@@ -26,8 +26,11 @@ export default {
   mathHTML() {
     return `
 <h4>Anschnittgeschwindigkeit über Wandstärke</h4>
-<p class="math-note">Dünne Wände erstarren schnell und brauchen hohe Anschnittgeschwindigkeit, dicke Wände
-vertragen langsamere Füllung. Zwischen den Grenzen des Wandstärkenbereichs wird linear interpoliert:</p>
+<p class="math-note">Dünne Wände erstarren in Millisekunden — die Schmelze muss fein zerstäubt und schnell
+eingebracht werden, bevor die Front ansteht; dicke Wände vertragen (und wollen) eine ruhigere Füllung, weil
+hohe Geschwindigkeit dort nur Lufteinschluss und Formverschleiß kauft. Das ist eine Erfahrungs-Empfehlung,
+keine Naturkonstante: zwischen den Stützstellen des Wandstärkenbereichs (v<sub>a,max</sub> bei
+s<sub>min</sub>, v<sub>a,min</sub> bei s<sub>max</sub>) wird schlicht linear interpoliert:</p>
 ${eq('v_{a}(s) = v_{a,\\max} - \\left( v_{a,\\max} - v_{a,\\min} \\right) \\cdot \\frac{s - s_{\\min}}{s_{\\max} - s_{\\min}}')}
 <p class="math-note">Bei s = s<sub>min</sub> gilt v<sub>a,max</sub>, bei s = s<sub>max</sub> gilt
 v<sub>a,min</sub>. Aktuell: v<sub>a</sub>(s = <span data-m="s"></span>) = <b data-m="va"></b> ·

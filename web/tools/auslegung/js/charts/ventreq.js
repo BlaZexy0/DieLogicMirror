@@ -49,9 +49,11 @@ export default {
   mathHTML() {
     return `
 <h4>Erforderliche Entlüftungsfläche</h4>
-<p class="math-note">Die Luft im Formhohlraum (≈ verdrängtes Gesamtvolumen der Füllung,
-V<sub>luft</sub> = m<sub>ges</sub> / ρ) muss während der Füllzeit t<sub>f</sub> mit höchstens
-v<sub>luft,max</sub> entweichen — sonst staut sie sich und wird eingeschlossen:</p>
+<p class="math-note">Dieselbe Physik wie bei der Entlüftungsgeschwindigkeit, nur als Auslegungsfrage gestellt:
+<em>Wie viel Entlüftungsfläche braucht diese Füllzeit?</em> Das zu verdrängende Luftvolumen ist die gesamte
+Kavität (V<sub>luft</sub> = Σ m<sub>i</sub>/ρ<sub>sol</sub>); es muss während der Füllzeit t<sub>f</sub> mit
+höchstens v<sub>luft,max</sub> durch die Kanäle — sonst staut sich die Luft und wird eingeschlossen. Fläche =
+Volumenstrom durch zulässige Geschwindigkeit:</p>
 ${eq('A_{\\text{ent},\\text{erf}}(t_{f}) = \\frac{V_{\\text{luft}}}{t_{f} \\cdot v_{\\text{luft},\\max}}')}
 <p class="math-note">Kurze Füllzeiten verlangen große Entlüftungsflächen (Hyperbel). Die gestrichelten Linien
 zeigen die vorhandene Entlüftungsfläche und als Referenz die Anschnittfläche — die Entlüftung liegt

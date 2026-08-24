@@ -61,9 +61,10 @@ export default {
   mathHTML() {
     return `
 <h4>1 · Kräftegleichgewicht an der Form</h4>
-<p class="math-note">Der Metalldruck p wirkt auf die projizierte Fläche der Kavität in Öffnungsrichtung
-(Sprengfläche A) und versucht, die Form aufzudrücken. Die Schließkraft muss mit Sicherheitsfaktor S
-dagegenhalten:</p>
+<p class="math-note">Beim Nachdruck steht die ganze Kavität unter Metalldruck p. Druck wirkt überall senkrecht
+auf die Wand — aufsummiert bleibt in Öffnungsrichtung aber genau p mal die <em>projizierte</em> Fläche der
+Kavität übrig (die Sprengfläche A, deshalb zählt die Projektion und nicht die Oberfläche). Diese Kraft
+versucht, die Form aufzudrücken; die Schließkraft muss mit Sicherheitsfaktor S dagegenhalten:</p>
 ${eq('F_{\\text{auf}} = p \\cdot A \\qquad F_{\\text{schließ}} \\ge S \\cdot p \\cdot A')}
 
 <h4>2 · Außermittigkeit (Hebelfaktor k)</h4>

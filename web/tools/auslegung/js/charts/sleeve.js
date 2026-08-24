@@ -31,7 +31,10 @@ export default {
   mathHTML() {
     return `
 <h4>1 · Füllgrad über Kolben-Ø</h4>
-<p class="math-note">Bei fester Kammerlänge L sinkt der Füllgrad quadratisch mit dem Kolben-Ø:</p>
+<p class="math-note">Der Kolben-Ø ist der stärkste Hebel auf den Füllgrad, denn er geht quadratisch in die
+Kammerquerschnittsfläche ein — die Kammerlänge nur linear. Dieses Diagramm beantwortet deshalb die
+Auswahlfrage: <em>Welche Kolben-Ø aus dem Maschinenbereich bringen den Füllgrad ins Zielband?</em> Bei fester
+Kammerlänge L gilt:</p>
 ${eq('\\varphi (D) = \\frac{V_{\\text{dos}}}{A_{K}(D) \\cdot L} \\cdot 100 \\% = \\frac{4 \\cdot V_{\\text{dos}}}{\\pi \\cdot D^{2} \\cdot L} \\cdot 100 \\%')}
 
 <h4>2 · Umkehrung: Ø-Bereich für das Zielband</h4>

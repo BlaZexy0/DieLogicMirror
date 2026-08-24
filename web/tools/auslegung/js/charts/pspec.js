@@ -43,8 +43,10 @@ export default {
   mathHTML() {
     return `
 <h4>1 · Spezifischer Gießdruck</h4>
-<p class="math-note">Die dynamische Gießkraft F<sub>G</sub> wirkt über die Kolbenfläche auf die Schmelze —
-das ist derselbe statische Metalldruck p₀ wie im PQ²-Diagramm:</p>
+<p class="math-note">Der spezifische Gießdruck ist die Druckreserve, die der Antrieb der Schmelze höchstens
+aufprägen kann — er speist Nachdruck und Formfüllung und hängt bei fester Gießkraft nur am Kolben-Ø: kleiner
+Kolben, viel Druck; großer Kolben, wenig. Die dynamische Gießkraft F<sub>G</sub> wirkt über die Kolbenfläche
+auf die Schmelze — das ist derselbe statische Metalldruck p₀ wie im PQ²-Diagramm:</p>
 ${eq('p_{\\text{spez}}(D) = \\frac{F_{G}}{A_{K}} = \\frac{4 \\cdot F_{G}}{\\pi \\cdot D^{2}} \\quad\\ (\\text{in Einheiten:}\\ p [\\text{bar}] = 10^{4} \\cdot F [\\text{kN}] / A [\\text{mm}^{2}])')}
 
 <h4>2 · Abgeleitetes Zielband</h4>

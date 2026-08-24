@@ -695,7 +695,7 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
 .eq {
   /* Abgesetzte Formel (KaTeX, /shared/vendor/katex): linksbündig im Kasten,
      bei Überbreite horizontal scrollbar. */
-  font-size: 1.02rem;
+  font-size: 0.95rem;
   margin: 1rem 0;
   padding: 0.55rem 1.2rem;
   background: var(--surface);

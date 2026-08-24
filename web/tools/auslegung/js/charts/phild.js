@@ -127,8 +127,12 @@ export default {
   mathHTML() {
     return `
 <h4>1 · Volumen aus der Massenbilanz</h4>
+<p class="math-note">Das Auslegungsfenster beantwortet die Kammerfrage als Ganzes: <em>Welche Kombinationen aus
+Kolben-Ø und Kammerlänge sind mit diesem Schuss überhaupt machbar?</em> Fester Ausgangspunkt ist das dosierte
+Volumen — flüssig, denn so liegt es in der Kammer. Nur der Pressrest wird fest gerechnet (ρ<sub>sol</sub> =
+ρ<sub>s</sub>/(1+s)³), weil seine Mindestlänge eine Prüfung der Endlage ist:</p>
 ${eq('V = \\frac{m_{\\text{dos}}}{\\rho } = \\frac{m_{\\text{Bauteil}} + m_{\\text{Anguss}} + m_{\\text{Überlauf}} + m_{\\text{Pressrest}}}{\\rho }')}
-${eq('V_{b} = \\frac{m_{\\text{Pressrest}}}{\\rho }')}
+${eq('V_{b} = \\frac{m_{\\text{Pressrest}}}{\\rho_{\\text{sol}}}')}
 <p class="math-note">Aktuell: V = <b data-m="V"></b> · V<sub>b</sub> = <b data-m="Vb"></b></p>
 
 <h4>2 · Koordinaten und Transformation</h4>

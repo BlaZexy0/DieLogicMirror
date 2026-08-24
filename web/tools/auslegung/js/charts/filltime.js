@@ -42,8 +42,11 @@ export default {
   mathHTML() {
     return `
 <h4>Füllzeit, Kolben-Ø und Kolbengeschwindigkeit</h4>
-<p class="math-note">Kontinuität: das Volumen ab Anschnitt V<sub>a</sub> (Bauteil + Überlauf, ohne Anguss und
-Pressrest) muss in der Füllzeit t<sub>f</sub> vom Kolben gefördert werden:</p>
+<p class="math-note">Die Frage hinter diesem Diagramm: <em>Wie schnell muss der Kolben fahren, damit die Form in
+der gewünschten Zeit voll ist — und schafft das die Maschine?</em> Weil die Schmelze inkompressibel ist, genügt
+dafür die Kontinuität: was vorne in der Kavität ankommt, muss der Kolben hinten verdrängen. Das Volumen ab
+Anschnitt V<sub>a</sub> (Kavität von Bauteil + Überlauf, ohne Anguss und Pressrest) geteilt durch die Füllzeit
+t<sub>f</sub> ist der nötige Volumenstrom, und der ist Kolbenfläche mal Kolbengeschwindigkeit:</p>
 ${eq('V_{a} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Überlauf}}}{\\rho } \\qquad Q = \\frac{V_{a}}{t_{f}} = A_{K} \\cdot v_{p}')}
 ${eq('\\Rightarrow \\quad v_{p}(t_{f}, D) = \\frac{V_{a}}{t_{f} \\cdot A_{K}} = \\frac{4 \\cdot V_{a}}{t_{f} \\cdot \\pi \\cdot D^{2}}')}
 <p class="math-note">Die Heatmap zeigt v<sub>p</sub> über (t<sub>f</sub>, D); die weißen Konturen sind Linien

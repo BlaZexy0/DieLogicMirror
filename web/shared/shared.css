@@ -299,7 +299,7 @@ body {
 .eq {
   /* Abgesetzte Formel (KaTeX, /shared/vendor/katex): linksbündig im Kasten,
      bei Überbreite horizontal scrollbar. */
-  font-size: 1.02rem;
+  font-size: 0.95rem;
   margin: 1rem 0;
   padding: 0.55rem 1.2rem;
   background: var(--surface);
@@ -312,6 +312,9 @@ body {
 .eq .katex-display { margin: 0.3em 0; text-align: left; }
 .eq .katex-display > .katex { text-align: left; white-space: nowrap; }
 .eq code.tex { font-family: var(--mono); font-size: 0.85em; white-space: pre-wrap; }
+/* KaTeX setzt sich selbst auf 1,21em — für die Serifenschrift neben unserer
+   Sans zu groß. 1,05em gleicht die x-Höhen an (gilt auch für Inline-Mathe). */
+body .katex { font-size: 1.05em; }
 
 @media (max-width: 960px) {
   .content-cols { grid-template-columns: 1fr; }
