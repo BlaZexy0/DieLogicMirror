@@ -1,5 +1,7 @@
-/* Kennzahlen oberhalb der Diagramme als vier Prüfpanels:
-   Füllkammer/Massen (links neben dem Kammerschema) · Zuhaltung/Maschine ·
+/* Kennzahlen oberhalb der Diagramme: die Füllkammer/Massen-Gruppe lebt in
+   der Kammerkarte (ui/chamber.js — Schema, ausgerichtetes Kolbenweg-Lineal,
+   Kennwerte, Prüfzeilen, Urteil im Kopf), darunter drei Prüfpanels:
+   Schusskurve/Anschnitt · Zuhaltung/Maschine ·
    Schusskurve/Anschnitt · Thermik/Qualität. Alle Werte sind dieselben
    Formeln wie in den Diagrammen.
 
@@ -19,6 +21,7 @@
 import { fmt, subHTML } from '../core/format.js';
 import { total, afterGate, pistonArea, travel, injForceEff, hydArea, cavityVolume, cavityTravel, biscuitSolid, intensStroke, rhoSolidus } from '../core/physics.js';
 import { pqCore } from '../charts/pq2.js';
+import { ACTIVE_SPAN } from './chamber.js';
 
 /* Während eines Renders eingesammelte Prüfungen für die Prüfleiste. */
 let CHECKS = [];
@@ -62,17 +65,22 @@ function kv(label, value, sub = '') {
 /* Panel: Kopf mit Gruppenurteil, Kennwertstreifen, Zusatz (z. B. Lineal),
    Prüfzeilen. rowsFn wird erst hier aufgerufen, damit die Zeilen der
    richtigen Gruppe zugeordnet werden. */
+function groupVerdict(mine) {
+  if (!mine.length) return '';
+  const bad = mine.filter(c => c.status === 'bad').length;
+  const warn = mine.filter(c => c.status === 'warn').length;
+  const verdict = bad ? bad + ' verletzt' : warn ? warn + ' knapp' : 'alle erfüllt';
+  return '<b>' + (mine.length - bad) + '/' + mine.length + '</b><span class="dotrow">' + dotsHTML(mine) + '</span><span>' + verdict + '</span>';
+}
+
 function panel(title, short, kvHtml, rowsFn, extraHtml = '', cls = '') {
   GROUP = short;
   const n0 = CHECKS.length;
   const rowsHtml = rowsFn();
   const mine = CHECKS.slice(n0);
-  const bad = mine.filter(c => c.status === 'bad').length;
-  const warn = mine.filter(c => c.status === 'warn').length;
-  const verdict = !mine.length ? '' : bad ? bad + ' verletzt' : warn ? warn + ' knapp' : 'alle erfüllt';
   return '<div class="kpanel ' + cls + '">'
     + '<div class="kpanel-head"><h3>' + title + '</h3>'
-    + (mine.length ? '<div class="kverdict"><b>' + (mine.length - bad) + '/' + mine.length + '</b><span class="dotrow">' + dotsHTML(mine) + '</span><span>' + verdict + '</span></div>' : '')
+    + (mine.length ? '<div class="kverdict">' + groupVerdict(mine) + '</div>' : '')
     + '</div>'
     + (kvHtml ? '<div class="kvs">' + kvHtml + '</div>' : '')
     + extraHtml
@@ -136,16 +144,21 @@ function rulerHTML(v, g) {
   const { L, fill, sFill, p1, cav, intens, bisc, p3 } = g;
   const span = Math.max(L, p3);
   const over = p3 > L;
-  const x = s => (100 * Math.max(0, Math.min(span, s)) / span).toFixed(2) + '%';
-  const w = len => (100 * Math.max(0, len) / span).toFixed(2) + '%';
+  /* g.x0/g.x1: Lage der aktiven Länge in Anteilen der Kartenbreite — damit
+     liegt das Lineal exakt unter der Kolbenstirn bzw. dem Kammerende des
+     Schemas. Ohne Angabe volle Breite. */
+  const P0 = 100 * (g.x0 || 0), P1 = 100 * (g.x1 != null ? g.x1 : 1);
+  const x = s => (P0 + (P1 - P0) * Math.max(0, Math.min(span, s)) / span).toFixed(2) + '%';
+  const w = len => ((P1 - P0) * Math.max(0, len) / span).toFixed(2) + '%';
   const vacOn = v.vacModel && v.vacModel !== 'aus' && v.vacStart >= 0;
   const sEnd = over ? span : sFill + cav;                      // Füllende
   const vacHtml = '<div class="kr-vac' + (vacOn ? '' : ' off') + '">'
-    + '<span class="vl">' + (vacOn
+    + '<span class="vl" style="margin-left:' + P0.toFixed(2) + '%">' + (vacOn
       ? 'Vakuum ab ' + fmt(Math.round(v.vacStart)) + ' mm bis Füllende ' + fmt(Math.round(sEnd)) + ' mm'
       : 'ohne Vakuum')
     + (v.sealStroke > 0 ? ' · Einfüllöffnung dicht ab ' + fmt(Math.round(v.sealStroke)) + ' mm' : '') + '</span>'
     + '<div class="kr-vtrack">'
+    + (g.x0 != null ? '<span class="base" style="left:' + x(0) + ';width:' + w(span) + '"></span>' : '')
     + (vacOn && sEnd > v.vacStart ? '<span class="seg" style="left:' + x(v.vacStart) + ';width:' + w(Math.min(span, sEnd) - Math.max(0, v.vacStart)) + '"></span>' : '')
     + (v.sealStroke > 0 ? '<i class="tick seal" style="left:' + x(v.sealStroke) + '" title="Einfüllöffnung verschlossen"></i>' : '')
     + '</div></div>';
@@ -158,17 +171,19 @@ function rulerHTML(v, g) {
       + '<span class="seg part" style="left:' + x(s0 + p1) + ';width:' + w(partLen) + '"></span>'
       + '<span class="seg nv" style="left:' + x(s0 + cav) + ';width:' + w(intens) + '"></span>'
       + '<span class="seg bisc" style="left:' + x(s0 + cav + intens) + ';width:' + w(bisc) + '"></span>';
-  return '<div class="kruler' + (over ? ' over' : '') + '">'
+  return '<div class="kruler' + (over ? ' over' : '') + (g.x0 != null ? ' aligned' : '') + '">'
     + '<div class="kr-head"><span>Kolbenweg</span><span>Ø ' + fmt(v.diam) + ' × L ' + fmt(L) + ' mm</span></div>'
     + vacHtml
     /* Obere Beschriftung: „Füllende" rechtsbündig an seiner Marke; die
        Kammerlänge steht im Kopf und nur dann auch hier, wenn Platz ist. */
-    + '<div class="kr-lbl top"><span style="left:0">0</span>'
+    + '<div class="kr-lbl top"><span style="left:' + x(0) + '">0</span>'
     + (over ? '' : '<span style="left:' + x(sFill) + '">Kammer voll ' + mm(sFill) + '</span>')
     + (over ? '' : '<span style="left:' + x(sEnd) + '" class="end">Füllende ' + mm(sEnd) + '</span>')
     + (over || sEnd / span < 0.72 ? '<span style="left:' + x(L) + '" class="end">' + mm(L) + ' mm</span>' : '') + '</div>'
-    + '<div class="kr-track">' + segs
-    + '<i class="tick" style="left:0"></i>'
+    + '<div class="kr-track">'
+    + (g.x0 != null ? '<span class="seg base" style="left:' + x(0) + ';width:' + w(span) + '"></span>' : '')
+    + segs
+    + '<i class="tick" style="left:' + x(0) + '"></i>'
     + (over ? '' : '<i class="tick" style="left:' + x(sFill) + '"></i><i class="tick" style="left:' + x(sEnd) + '"></i>')
     + '<i class="tick' + (over ? ' lim' : '') + '" style="left:' + x(L) + '"></i>'
     + '</div>'
@@ -228,8 +243,9 @@ function wireLinks(root) {
   });
 }
 
-/* chamberEl: Ziel für das Füllkammer-Panel (links neben dem Schema);
-   el bekommt die übrigen Panels. Ohne chamberEl landet alles in el.
+/* chamberEl: #chamber-kpis in der Kammerkarte (Kennwerte + Prüfzeilen;
+   Lineal → #chamber-ruler, Urteil → #chamber-verdict); el bekommt die
+   übrigen Panels. Ohne chamberEl rendert alles als Panels in el.
    Die Prüfleiste landet in #checkbar, falls vorhanden. */
 export function renderKpis(el, v, shot, chamberEl) {
   CHECKS = [];
@@ -290,13 +306,15 @@ export function renderKpis(el, v, shot, chamberEl) {
   const Areq = tOp > 0 && v.vAirMax > 0 ? Vm / (tOp / 1000) / v.vAirMax * 1e6 : NaN;
   const tErst = v.solK * v.gateTh * v.gateTh;
 
-  const chamberHtml = panel('Füllkammer und Massenbilanz', 'Füllkammer',
+  const chamberKvs =
     kv('Dosiergewicht', fmt(mdos) + ' kg', 'Bauteil + Anguss + Überlauf + Pressrest ' + fmt(v.biscuit) + ' kg')
     + kv('Dosiervolumen', fmt(Vdos * 1e6) + ' cm³', 'inkl. Pressrest · Flüssigdichte ' + fmt(v.density) + ' kg/m³')
     + kv('Materialausbeute', fmt(eta) + ' %', 'Bauteil / Dosiergewicht · Rest ist Kreislaufmaterial')
     + kv('Kammerverhältnis λ', fmt(ratioLD), 'λ = L/D der gewählten Kammer')
-    + kv('Nachverdichtungshub', fmt(intens) + ' mm', 'Kolbenweg vom Füllende bis zur Endlage — speist den Erstarrungsschwund (ρ flüssig ' + fmt(v.density) + ' → ρ_sol ' + fmt(Math.round(rhoSolidus(v))) + ' kg/m³)'),
-    () =>
+    + kv('Nachverdichtungshub', fmt(intens) + ' mm', 'Kolbenweg vom Füllende bis zur Endlage — speist den Erstarrungsschwund (ρ flüssig ' + fmt(v.density) + ' → ρ_sol ' + fmt(Math.round(rhoSolidus(v))) + ' kg/m³)');
+  GROUP = 'Füllkammer';
+  const nCh0 = CHECKS.length;
+  const chamberRows =
       row('Füllgrad', fmt(fill) + ' %', 'inkl. Pressrest',
         bandStatus(fill, v.fillMin, v.fillMax), bandTag(fill, v.fillMin, v.fillMax),
         bullet(0, 100, v.fillMin, v.fillMax, fill,
@@ -304,8 +322,9 @@ export function renderKpis(el, v, shot, chamberEl) {
       + row('Pressrest', fmt(biscLen) + ' mm', 'fest in der Endlage · flüssig am Füllende ' + fmt(biscLiquid) + ' mm · Minimum ' + fmt(v.biscuitMin) + ' mm',
         minStatus(biscLen, v.biscuitMin), minTag(biscLen, v.biscuitMin),
         bullet(0, Math.max(1.6 * v.biscuitMin, 1.15 * biscLen), v.biscuitMin, Math.max(1.6 * v.biscuitMin, 1.15 * biscLen), biscLen,
-          '0 mm', 'min ' + fmt(v.biscuitMin), fmt(Math.max(1.6 * v.biscuitMin, 1.15 * biscLen)) + ' mm')),
-    rulerHTML(v, { L: v.length, fill, sFill, p1, cav, intens, bisc: biscLen, p3 }));
+          '0 mm', 'min ' + fmt(v.biscuitMin), fmt(Math.max(1.6 * v.biscuitMin, 1.15 * biscLen)) + ' mm'));
+  const chamberChecks = CHECKS.slice(nCh0);
+  const rulerGeom = { L: v.length, fill, sFill, p1, cav, intens, bisc: biscLen, p3 };
 
   const uClamp = v.force > 0 ? req / v.force : NaN;
   const uHold = pMaxClamp > 0 ? v.psel / pMaxClamp : NaN;
@@ -423,14 +442,23 @@ export function renderKpis(el, v, shot, chamberEl) {
     + '</div>';
 
   if (chamberEl) {
-    chamberEl.innerHTML = chamberHtml;
+    /* Kammerkarte (ui/chamber.js): Lineal unter dem Schema — an der aktiven
+       Länge ausgerichtet —, dann Kennwerte und Prüfzeilen; Urteil im Kopf. */
+    chamberEl.innerHTML = '<div class="kvs">' + chamberKvs + '</div><div class="krows">' + chamberRows + '</div>';
+    const rEl = document.getElementById('chamber-ruler');
+    if (rEl) rEl.innerHTML = rulerHTML(v, { ...rulerGeom, x0: ACTIVE_SPAN.x0, x1: ACTIVE_SPAN.x1 });
+    const vEl = document.getElementById('chamber-verdict');
+    if (vEl) vEl.innerHTML = groupVerdict(chamberChecks);
     el.innerHTML = restHtml;
+    wireLinks(chamberEl.closest('.chamber-card') || chamberEl);
   } else {
-    el.innerHTML = chamberHtml + restHtml;
+    el.innerHTML = '<div class="kpanel"><div class="kpanel-head"><h3>Füllkammer und Massenbilanz</h3>'
+      + '<div class="kverdict">' + groupVerdict(chamberChecks) + '</div></div>'
+      + '<div class="kvs">' + chamberKvs + '</div>' + rulerHTML(v, rulerGeom)
+      + '<div class="krows">' + chamberRows + '</div></div>' + restHtml;
   }
 
   wireLinks(el);
-  if (chamberEl) wireLinks(chamberEl);
   const bar = document.getElementById('checkbar');
   if (bar) {
     bar.innerHTML = checklistHTML();

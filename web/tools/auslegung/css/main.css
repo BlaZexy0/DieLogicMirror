@@ -185,26 +185,30 @@ select {
   box-shadow: 0 0 0 2px rgba(0,140,130,.18);
 }
 
-/* ── Füllkammer-Zeile: KPI-Gruppe links, Schema rechts ── */
-.chamber-row {
-  display: grid;
-  grid-template-columns: minmax(360px, 2fr) minmax(0, 3fr);
-  gap: 14px;
-  align-items: start;
-  margin: 14px 0;
-}
-@media (max-width: 1400px) {
-  .chamber-row { grid-template-columns: 1fr; }
-}
+/* ── Füllkammer-Karte: Schema, Kolbenweg-Lineal, Kennwerte und Prüfungen
+   in einer Karte. Schema und Lineal teilen dieselbe innere Breite
+   (.chamber-inner), damit die Lineal-Prozente exakt unter der aktiven
+   Länge des Schemas liegen — auch beim horizontalen Scrollen. ── */
+#chamber { margin: 14px 0; }
 .chamber-svg { overflow-x: auto; }
-.chamber-svg svg {
-  display: block;
-  width: 100%;
-  height: auto;
+.chamber-inner {
   min-width: 720px;
   max-width: 1150px;
   margin: 0 auto;
 }
+.chamber-inner svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+#chamber-ruler .kruler.aligned { padding: 0 0 10px; border-bottom: 0; }
+/* Ausgerichtetes Lineal: Spur nur über der aktiven Länge, nicht über die Kartenbreite */
+.kruler.aligned .kr-track, .kruler.aligned .kr-vtrack { background: transparent; }
+.kruler.aligned .kr-track .seg.base { background: var(--pale); border-radius: 3px; }
+.kruler.aligned .kr-vtrack .base { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: var(--border-light); }
+#chamber-kpis { container-type: inline-size; border-top: 1px solid var(--border-light); }
+#chamber-kpis .kvs { border-top: 0; }
+.chamber-card .head .kverdict { margin-right: 8px; }
 
 /* ── Kennzahlen: Prüfpanels ──
    Panel = Kopf (Titel + Gruppenurteil) · Kennwertstreifen · optional

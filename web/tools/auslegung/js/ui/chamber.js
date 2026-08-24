@@ -15,6 +15,9 @@ const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const XP = 225;                 // Kolbenstirn (Startposition)
 const X0 = 110;                 // Kammerrohr links
 const XA = 800;                 // aktives Ende (fest — die Zahlen sind live)
+/* Lage der aktiven Länge im viewBox (0 0 1030 440) — das Kolbenweg-Lineal
+   der Massenbilanz richtet sich daran aus (ui/kpis.js). */
+export const ACTIVE_SPAN = { x0: XP / 1030, x1: XA / 1030 };
 const YT = 130, YB = 290;       // Bohrung oben/unten
 const WT = 20;                  // Wandstärke
 
@@ -196,7 +199,7 @@ export function buildSvg(v, variantKey) {
 /* PNG-Export: SVG serialisieren, in 2× auf Canvas rastern, in die
    Zwischenablage kopieren (Fallback: Download) — wie bei den Diagrammen. */
 function copyPng(card) {
-  const svg = card.querySelector('svg');
+  const svg = card.querySelector('.chamber-draw svg');
   if (!svg) return;
   const xml = new XMLSerializer().serializeToString(svg);
   const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml;charset=utf-8' }));
@@ -234,13 +237,14 @@ export function buildChamberCard(container) {
   const card = document.createElement('article');
   card.className = 'card chamber-card';
   card.innerHTML =
-    '<div class="head"><div><h3>Füllkammer</h3><small>Seitenansicht · aktive Länge L, Kolben-Ø D, Füllgrad φ, Hub bis „Kammer voll“</small></div>'
-    + '<div class="head-right"><span class="tabbar-label">Darstellung:</span><div class="tabs">'
+    '<div class="head"><div><h3>Füllkammer und Massenbilanz</h3><small>Seitenansicht · aktive Länge L, Kolben-Ø D, Füllgrad φ, Hub bis „Kammer voll“ · Kolbenweg-Lineal und Prüfungen darunter</small></div>'
+    + '<div class="head-right"><span class="kverdict" id="chamber-verdict"></span><span class="tabbar-label">Darstellung:</span><div class="tabs">'
     + '<button data-v="A" class="active">Bündig</button>'
     + '<button data-v="B">Verdränger</button>'
     + '<button data-v="C">Verlängert</button>'
     + '</div><button class="png-btn" title="Als PNG kopieren" aria-label="Als PNG kopieren">' + COPY_SVG + '</button></div></div>'
-    + '<div class="body chamber-svg"></div>';
+    + '<div class="body chamber-svg"><div class="chamber-inner"><div class="chamber-draw"></div><div id="chamber-ruler"></div></div></div>'
+    + '<div id="chamber-kpis"></div>';
 
   card.querySelectorAll('.tabs button').forEach(b => {
     b.onclick = () => {
@@ -257,5 +261,5 @@ export function buildChamberCard(container) {
 
 export function renderChamber(card, v) {
   card._v = v;
-  card.querySelector('.chamber-svg').innerHTML = buildSvg(v);
+  card.querySelector('.chamber-draw').innerHTML = buildSvg(v);
 }
