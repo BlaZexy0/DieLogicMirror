@@ -71,7 +71,7 @@ for (const va of ['A', 'B', 'C']) {
   test('chamber-svg: Variante ' + va + ' vollständig und ohne NaN', () => {
     const svg = buildSvg(values, va);
     for (const t of ['aktive Länge L', 'Füllgrad φ', 'Kammerrohr ≠ L',
-      'Einfüllöffnung verschlossen', 'Vakuum ab Kolbenweg', 'Trennebene', 'Dosiergewicht'])
+      'Einfüllöffnung verschlossen', 'Trennebene', 'Dosiergewicht'])
       assert.ok(svg.includes(t), `Variante ${va}: „${t}" fehlt im SVG`);
     assert.ok(!svg.includes('NaN'), `Variante ${va}: NaN im SVG`);
   });

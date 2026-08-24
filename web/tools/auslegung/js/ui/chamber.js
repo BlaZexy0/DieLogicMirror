@@ -97,10 +97,8 @@ export function buildSvg(v, variantKey) {
      Defaults zurück, damit die Wände nie mit NaN-Koordinaten verschwinden. */
   const pxmm = (isFinite(v.length) && v.length > 0) ? (XA - XP) / v.length : 575 / 700;
   const seal = isFinite(v.sealStroke) ? v.sealStroke : 150;
-  const vac = isFinite(v.vacStart) ? v.vacStart : 150;
   const PH1 = Math.min(Math.max(XP + seal * pxmm, XP + 80), tubeEnd - 50);
   const PH0 = PH1 - 80;
-  const vacX = Math.min(Math.max(XP + vac * pxmm, XP + 10), tubeEnd - 4);
 
   let s = '<svg viewBox="' + VX + ' 0 ' + VW + ' 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Füllkammer: Frontansicht (Ø D, Füllhöhe h) und Seitenansicht">';
   s += '<defs>'
@@ -163,10 +161,6 @@ export function buildSvg(v, variantKey) {
   s += '<line x1="' + XP + '" y1="92" x2="' + PH1 + '" y2="92" stroke="' + C.deep + '" stroke-width="1" marker-start="url(#ch-maD)" marker-end="url(#ch-maD)"/>';
   s += label(PH0 - 8, 86, 'Einfüllöffnung verschlossen = ' + fmt(seal) + ' mm', { fill: C.deep, anchor: 'end' });
 
-  /* Darüber: Vakuum ab Kolbenweg (Eingabe aus der Vakuum-Gruppe) */
-  s += ext(vacX, 108, 64, C.muted);
-  s += '<line x1="' + XP + '" y1="70" x2="' + vacX + '" y2="70" stroke="' + C.deep + '" stroke-width="1" marker-start="url(#ch-maD)" marker-end="url(#ch-maD)"/>';
-  s += label(vacX + 8, 74, 'Vakuum ab Kolbenweg = ' + fmt(vac) + ' mm', { fill: C.deep });
 
   /* Kolben-Ø D am offenen Kammerende */
   s += '<line x1="88" y1="' + YT + '" x2="' + X0 + '" y2="' + YT + '" stroke="' + C.muted + '" stroke-width=".7"/>';
@@ -224,6 +218,8 @@ export function buildSvg(v, variantKey) {
   } else if (hPx >= 2 * FR - 0.5) {
     s += '<circle cx="' + FCX + '" cy="' + FCY + '" r="' + FR + '" fill="url(#ch-melt)"/>';
   }
+  /* Bohrungswand liegt vor der Schmelze — Kontur nachziehen */
+  s += '<circle cx="' + FCX + '" cy="' + FCY + '" r="' + FR + '" fill="none" stroke="#7d949c" stroke-width="1.2"/>';
   /* Ø D quer durch den Kreis */
   s += '<line x1="' + (FCX - FR) + '" y1="' + FCY + '" x2="' + (FCX + FR) + '" y2="' + FCY + '" stroke="' + C.deep + '" stroke-width="1" marker-start="url(#ch-maD)" marker-end="url(#ch-maD)" stroke-dasharray="3 3"/>';
   s += label(FCX, FCY - 8, 'D = ' + fmt(v.diam) + ' mm', { fill: C.deep, anchor: 'middle', size: 11, bold: true });
