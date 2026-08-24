@@ -83,7 +83,7 @@ async function init() {
   let rt;
   window.onresize = () => { clearTimeout(rt); rt = setTimeout(render, 120); };
 
-  if (def.id === 'shotcurve') initSim();
+  if (def.usesSim) initSim();
   subscribe(render);
   requestAnimationFrame(() => requestAnimationFrame(render));
 }

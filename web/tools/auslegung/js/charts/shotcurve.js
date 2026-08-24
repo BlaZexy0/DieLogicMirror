@@ -32,6 +32,7 @@ export default {
   tab: 'sv',
   tabs: [['tv', 't–v'], ['ts', 't–s'], ['sv', 's–v']],
   usesCurve: true,
+  usesSim: true,
   csv: true,
   inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'densitySolid', 'shrink', 'diam', 'length', 'gate', 'vent', 'vmax', 'amax', 'tmax', 'biscuitMin', 'gateMin', 'gateMax', 'vacModel', 'vacPump', 'vacStart'],
 
