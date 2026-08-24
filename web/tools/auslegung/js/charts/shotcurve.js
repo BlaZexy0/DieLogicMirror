@@ -68,7 +68,7 @@ export default {
       q.y1 = Math.max(Math.max.apply(null, q.ys[0].y), shot.vcrit) * 1.12;
     } else {
       q.limits = [refline('stroke', 'Füllende ' + fmt(shot.totalStroke * 1000) + ' mm', 'y', shot.totalStroke * 1000),
-        refline('endpos', 'Endlage ' + fmt((shot.totalStroke + shot.intens) * 1000) + ' mm (nach Nachverdichtung)', 'y', (shot.totalStroke + shot.intens) * 1000)];
+        refline('endpos', 'Endlage ' + fmt((shot.totalStroke + shot.intens) * 1000) + ' mm (nach Nachverdichtung + Schwindung)', 'y', (shot.totalStroke + shot.intens) * 1000)];
     }
 
     const nodes = shot.profile;
@@ -169,7 +169,7 @@ ist um das Schwindmaß s größer als das kalte Bauteil (ρ<sub>s</sub>), fasst 
 beim Füllende flüssig nicht aufnimmt, schiebt der Kolben in der Nachverdichtung Δs<sub>NV</sub> nach — bis zur Endlage
 mit festem Pressrest.</p>
 <p class="math-note">Aktuell: φ = <b data-m="phi"></b> · Kammer voll bei <b data-m="sfill"></b> ·
-Füllende = <b data-m="stroke"></b> · Nachverdichtungshub = <b data-m="intens"></b> · Pressrest fest = <b data-m="lb"></b></p>
+Füllende = <b data-m="stroke"></b> · Nachverdichtung + Schwindung = <b data-m="intens"></b> · Pressrest fest = <b data-m="lb"></b></p>
 
 <h4>3 · Abgeleitete Größen und Prüfungen</h4>
 ${eq('v_{a} = v_{p} \\cdot \\frac{A_{K}}{A_{a}} \\quad\\ (\\text{Anschnittgeschwindigkeit aus der Kolbengeschwindigkeit})')}

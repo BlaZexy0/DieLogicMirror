@@ -15,9 +15,25 @@ const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const XP = 225;                 // Kolbenstirn (Startposition)
 const X0 = 110;                 // Kammerrohr links
 const XA = 800;                 // aktives Ende (fest — die Zahlen sind live)
-/* Lage der aktiven Länge im viewBox (0 0 1030 440) — das Kolbenweg-Lineal
-   der Massenbilanz richtet sich daran aus (ui/kpis.js). */
-export const ACTIVE_SPAN = { x0: XP / 1030, x1: XA / 1030 };
+/* Sichtfeld: links der Seitenansicht steht die Frontansicht der Kammer
+   (Kreis mit Ø D und Füllhöhe h). */
+const VX = -206, VW = 1236;     // viewBox: x-Start und Breite
+/* Lage der aktiven Länge im viewBox — das Kolbenweg-Lineal der
+   Massenbilanz richtet sich daran aus (ui/kpis.js). */
+export const ACTIVE_SPAN = { x0: (XP - VX) / VW, x1: (XA - VX) / VW };
+
+/* Füllhöhe h/D eines Kreissegments mit Flächenanteil φ (Bisektion über den
+   Mittelpunktswinkel; siehe Theorie „Kreissegmente der Füllkammer"). */
+export function fillHeightFrac(phi) {
+  if (!(phi > 0)) return 0;
+  if (phi >= 1) return 1;
+  let lo = 0, hi = 2 * Math.PI;
+  for (let i = 0; i < 60; i++) {
+    const th = (lo + hi) / 2;
+    if ((th - Math.sin(th)) / (2 * Math.PI) < phi) lo = th; else hi = th;
+  }
+  return (1 - Math.cos((lo + hi) / 4)) / 2;
+}
 const YT = 130, YB = 290;       // Bohrung oben/unten
 const WT = 20;                  // Wandstärke
 
@@ -74,7 +90,7 @@ export function buildSvg(v, variantKey) {
   const part = tubeEnd;                          // Trennebene: das Rohr endet immer dort
   const XF0 = part - 110, DIE1 = part + 150;     // feste Hälfte (vom Rohr durchdrungen), Auswerferseite
   const ghost = Math.min(Math.max(XP + (1 - phi) * (XA - XP), XP + 2), XA - 2);
-  const meltH = phi * (YB - YT), mTop = YB - meltH;
+  const meltH = fillHeightFrac(phi) * (YB - YT), mTop = YB - meltH;
 
   /* px pro mm entlang der Kammer; Einfüllöffnung endet beim Verschluss-Hub.
      Nicht-finite Eingaben (leeres Feld, veralteter Zustand) fallen auf die
@@ -86,7 +102,7 @@ export function buildSvg(v, variantKey) {
   const PH0 = PH1 - 80;
   const vacX = Math.min(Math.max(XP + vac * pxmm, XP + 10), tubeEnd - 4);
 
-  let s = '<svg viewBox="0 0 1030 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Füllkammer Seitenansicht">';
+  let s = '<svg viewBox="' + VX + ' 0 ' + VW + ' 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Füllkammer: Frontansicht (Ø D, Füllhöhe h) und Seitenansicht">';
   s += '<defs>'
     + '<pattern id="ch-steel" patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(45)">'
     + '<rect width="7" height="7" fill="#dde6e8"/><line x1="0" y1="0" x2="0" y2="7" stroke="#8aa0a8" stroke-width="1.1"/></pattern>'
@@ -193,6 +209,32 @@ export function buildSvg(v, variantKey) {
   /* Trennebene zuletzt: in C sichtbar über der Schmelze */
   s += '<line x1="' + part + '" y1="70" x2="' + part + '" y2="370" stroke="#7d949c" stroke-width="1" stroke-dasharray="7 5" opacity=".85"/>';
 
+  /* ── Frontansicht: Kreis mit Ø D und Füllhöhe h, gleiche Größe wie die
+     Bohrung der Seitenansicht (Ø = YB − YT), links daneben ── */
+  const FCX = -60, FCY = (YT + YB) / 2, FR = (YB - YT) / 2;
+  const hFrac = fillHeightFrac(phi);
+  const hPx = hFrac * 2 * FR, yLevel = FCY + FR - hPx;
+  const hMM = hFrac * v.diam;
+  s += '<circle cx="' + FCX + '" cy="' + FCY + '" r="' + (FR + WT) + '" fill="url(#ch-steel)" stroke="#5d747c" stroke-width="1"/>';
+  s += '<circle cx="' + FCX + '" cy="' + FCY + '" r="' + FR + '" fill="' + C.surface + '" stroke="#7d949c" stroke-width="1.2"/>';
+  if (hPx > 0.5 && hPx < 2 * FR - 0.5) {
+    const halfChord = Math.sqrt(Math.max(FR * FR - (yLevel - FCY) * (yLevel - FCY), 0));
+    s += '<path d="M ' + (FCX - halfChord) + ' ' + yLevel + ' A ' + FR + ' ' + FR + ' 0 ' + (hPx > FR ? 1 : 0) + ' 0 ' + (FCX + halfChord) + ' ' + yLevel + ' Z" fill="url(#ch-melt)"/>';
+    s += '<line x1="' + (FCX - halfChord) + '" y1="' + yLevel + '" x2="' + (FCX + halfChord) + '" y2="' + yLevel + '" stroke="#c97b16" stroke-width="1.5"/>';
+  } else if (hPx >= 2 * FR - 0.5) {
+    s += '<circle cx="' + FCX + '" cy="' + FCY + '" r="' + FR + '" fill="url(#ch-melt)"/>';
+  }
+  /* Ø D quer durch den Kreis */
+  s += '<line x1="' + (FCX - FR) + '" y1="' + FCY + '" x2="' + (FCX + FR) + '" y2="' + FCY + '" stroke="' + C.deep + '" stroke-width="1" marker-start="url(#ch-maD)" marker-end="url(#ch-maD)" stroke-dasharray="3 3"/>';
+  s += label(FCX, FCY - 8, 'D = ' + fmt(v.diam) + ' mm', { fill: C.deep, anchor: 'middle', size: 11, bold: true });
+  /* Füllhöhe h links neben dem Kreis, Beschriftung gedreht (wie Kolben-Ø) */
+  const hx = FCX - FR - WT - 14;
+  s += '<line x1="' + hx + '" y1="' + (FCY + FR) + '" x2="' + hx + '" y2="' + yLevel + '" stroke="' + C.green + '" stroke-width="1.2" marker-start="url(#ch-maG)" marker-end="url(#ch-maG)"/>';
+  s += '<line x1="' + (FCX - Math.sqrt(Math.max(FR * FR - (yLevel - FCY) * (yLevel - FCY), 0))) + '" y1="' + yLevel + '" x2="' + (hx - 4) + '" y2="' + yLevel + '" stroke="' + C.muted + '" stroke-width=".7"/>';
+  s += '<line x1="' + FCX + '" y1="' + (FCY + FR) + '" x2="' + (hx - 4) + '" y2="' + (FCY + FR) + '" stroke="' + C.muted + '" stroke-width=".7"/>';
+  s += label(hx - 6, (FCY + FR + yLevel) / 2, 'h = ' + fmt(hMM) + ' mm', { fill: C.green, size: 11, bold: true, anchor: 'middle', transform: 'rotate(-90 ' + (hx - 6) + ' ' + ((FCY + FR + yLevel) / 2) + ')' });
+  s += label(FCX, YB + WT + 24, 'Frontansicht', { fill: C.muted, anchor: 'middle', size: 10.5 });
+
   return s + '</svg>';
 }
 
@@ -206,7 +248,7 @@ function copyPng(card) {
   const img = new Image();
   img.onload = () => {
     URL.revokeObjectURL(url);
-    const S = 2, W = 1030, H = 440;
+    const S = 2, W = VW, H = 440;
     const o = document.createElement('canvas');
     o.width = W * S; o.height = H * S;
     const x = o.getContext('2d');

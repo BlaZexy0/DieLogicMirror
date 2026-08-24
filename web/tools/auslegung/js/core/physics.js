@@ -31,7 +31,7 @@ export function rhoSolidus(v) {
 export function cavityVolume(m, v) { return m / rhoSolidus(v); }                         // m³ Hohlraum der festen Masse m
 export function cavityTravel(m, v) { return 1e9 * cavityVolume(m, v) / pistonArea(v); }  // mm Kolbenweg dafür
 export function biscuitSolid(v) { return cavityTravel(v.biscuit, v); }                   // mm Pressrest fest (Endlage)
-/* Nachverdichtungshub [mm]: vom Füllende (Kavität flüssig voll) bis zur
+/* Hub Nachverdichtung + Schwindung [mm]: vom Füllende (Kavität flüssig voll) bis zur
    Endlage (Pressrest fest) — speist Erstarrungsschwund von Kavität und Pressrest. */
 export function intensStroke(v) {
   return travel(total(v) + v.biscuit, v) - cavityTravel(total(v), v) - biscuitSolid(v);
@@ -232,7 +232,7 @@ export function computeShot(v, curvePoints) {
   if (v.amax > 0) checks.push([aPk <= v.amax + 1e-9, 'Spitzenbeschleunigung ' + fmt(aPk) + ' m/s² ' + (aPk <= v.amax ? '≤' : '>') + ' Maschinenlimit ' + fmt(v.amax) + ' m/s².']);
   checks.push([prof.travel >= totalStroke - 1e-9, 'Kurvenhub ' + fmt(prof.travel * 1000) + ' mm ' + (prof.travel >= totalStroke ? 'deckt' : 'deckt NICHT') + ' den Gesamthub ' + fmt(totalStroke * 1000) + ' mm ab.']);
   checks.push([prof.travel <= L - biscLen + 2e-3, 'Kurvenende ' + fmt(prof.travel * 1000) + ' mm bleibt vor der Endlage (Kammer ' + fmt(v.length) + ' mm − Pressrest fest ' + fmt(biscLen * 1000) + ' mm).']);
-  checks.push([biscLen * 1000 >= v.biscuitMin, 'Pressrest fest ' + fmt(biscLen * 1000) + ' mm ' + (biscLen * 1000 >= v.biscuitMin ? '≥' : '<') + ' Minimum ' + fmt(v.biscuitMin) + ' mm (Nachverdichtungshub ' + fmt(intens * 1000) + ' mm).']);
+  checks.push([biscLen * 1000 >= v.biscuitMin, 'Pressrest fest ' + fmt(biscLen * 1000) + ' mm ' + (biscLen * 1000 >= v.biscuitMin ? '≥' : '<') + ' Minimum ' + fmt(v.biscuitMin) + ' mm (Hub Nachverdichtung + Schwindung ' + fmt(intens * 1000) + ' mm).']);
   if (fill !== null) checks.push([fill <= v.tmax, 'Füllzeit ab Anschnitt ' + fmt(fill) + ' ms ' + (fill <= v.tmax ? '≤' : '>') + ' Maximum ' + fmt(v.tmax) + ' ms.']);
   if (gateR && evs[2].inP) checks.push([evs[2].gv >= v.gateMin && evs[2].gv <= v.gateMax, 'Anschnittgeschwindigkeit bei Bauteilfüllung ' + fmt(evs[2].gv) + ' m/s im Zielband ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s.']);
 

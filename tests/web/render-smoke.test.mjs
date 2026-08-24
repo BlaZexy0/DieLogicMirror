@@ -82,7 +82,7 @@ test('chamber-svg: nicht-finite Eingaben lassen keine Elemente verschwinden', ()
     { sealStroke: undefined, vacStart: NaN, density: NaN, length: NaN }), 'A');
   assert.ok(!svg.includes('NaN'), 'NaN-Koordinaten im SVG');
   const walls = (svg.match(/url\(#ch-steel\)/g) || []).length;
-  assert.equal(walls, 3, 'Kammerwände fehlen (erwartet 3 Wand-Rechtecke)');
+  assert.equal(walls, 4, 'Kammerwände fehlen (3 Wand-Rechtecke + Ring der Frontansicht)');
 });
 
 for (const def of charts) {

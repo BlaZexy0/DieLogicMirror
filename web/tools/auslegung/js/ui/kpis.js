@@ -134,7 +134,7 @@ function minTag(x, min) {
 
 /* Kolbenweg-Lineal: 0 … L. Bis s_voll (= (1 − φ)·L) läuft die 1. Phase,
    danach die Formfüllung (Anguss, Bauteil + Überlauf — Kavitäten fest, ρ_sol),
-   dann der Nachverdichtungshub Δs (der Kolben speist den Erstarrungsschwund)
+   dann der Hub für Nachverdichtung + Schwindung Δs (der Kolben speist Abkühl- und Erstarrungsschwund)
    bis zur Endlage mit festem Pressrest. Läuft die flüssige Säule p3 über
    die Kammer hinaus (p3 > L), wird die Skala auf p3 gedehnt und die
    Kammerlänge als Grenze markiert.
@@ -196,7 +196,7 @@ function rulerHTML(v, g) {
     + '</div>'
     + '<div class="kr-legend"><span><i class="run"></i>Anguss ' + mm(p1) + '</span>'
     + '<span><i class="part"></i>Bauteil + Überlauf ' + mm(partLen) + '</span>'
-    + '<span><i class="nv"></i>Nachverdichtung ' + mm(intens) + '</span>'
+    + '<span><i class="nv"></i>Nachverdichtung + Schwindung ' + mm(intens) + '</span>'
     + '<span><i class="bisc"></i>Pressrest fest ' + mm(bisc) + ' mm</span></div>'
     + '</div>';
 }
@@ -311,7 +311,7 @@ export function renderKpis(el, v, shot, chamberEl) {
     + kv('Dosiervolumen', fmt(Vdos * 1e6) + ' cm³', 'inkl. Pressrest · Flüssigdichte ' + fmt(v.density) + ' kg/m³')
     + kv('Materialausbeute', fmt(eta) + ' %', 'Bauteil / Dosiergewicht · Rest ist Kreislaufmaterial')
     + kv('Kammerverhältnis λ', fmt(ratioLD), 'λ = L/D der gewählten Kammer')
-    + kv('Nachverdichtungshub', fmt(intens) + ' mm', 'Kolbenweg vom Füllende bis zur Endlage — speist den Erstarrungsschwund (ρ flüssig ' + fmt(v.density) + ' → ρ_sol ' + fmt(Math.round(rhoSolidus(v))) + ' kg/m³)');
+    + kv('Nachverdichtung + Schwindung', fmt(intens) + ' mm', 'Kolbenweg vom Füllende bis zur Endlage — speist Abkühl- und Erstarrungsschwund; die Schmelze verliert schon vor Solidus Temperatur und damit Dichte (ρ flüssig ' + fmt(v.density) + ' → ρ_sol ' + fmt(Math.round(rhoSolidus(v))) + ' kg/m³)');
   GROUP = 'Füllkammer';
   const nCh0 = CHECKS.length;
   const chamberRows =
