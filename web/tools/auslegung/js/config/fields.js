@@ -58,6 +58,7 @@ export const groups = [
   },
   {
     id: 'mass', title: 'Massenbilanz',
+    note: 'Alle Gewichte fest gewogen, je Kavität einzeln: das Angussgewicht ist ohne Pressrest — der steht im eigenen Feld. Dosiergewicht = Summe aller vier.',
     fields: [
       { key: 'part',     label: 'Bauteilgewicht',   unit: 'kg', def: 12 },
       { key: 'runner',   label: 'Angussgewicht',    unit: 'kg', def: 3 },
