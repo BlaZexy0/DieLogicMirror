@@ -22,21 +22,21 @@ export const groups = [
     id: 'machineFields', title: 'Maschinenwerte', preset: 'machine',
     note: 'Diese Felder setzt das Maschinen-Preset. Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
     fields: [
-      { key: 'force',    label: 'Maschinenkraft',          unit: 'kN',   def: 13500 },
+      { key: 'force',    label: 'Maschinenkraft',          unit: 'kN',   def: 16000 },
       /* Maschinenkonstante ist der Antriebskolben: Gießkraft bei max.
          Akkumulatordruck und dieser Druck legen A_h = F/P fest; die Gießkraft
          im Betrieb folgt aus dem eingestellten Druck (physics.injForceEff). */
-      { key: 'injForce', label: 'Gießkraft bei Akkudruck max.', unit: 'kN', def: 2000 },
-      { key: 'vmax',     label: 'Kolbengeschw. max.',      unit: 'm/s',  def: 7 },
-      { key: 'amax',     label: 'Beschleunigung max.',     unit: 'm/s²', def: 60 },
-      { key: 'dmin',     label: 'Kolben-Ø min.',           unit: 'mm',   def: 120 },
-      { key: 'dmax',     label: 'Kolben-Ø max.',           unit: 'mm',   def: 200 },
-      { key: 'lmin',     label: 'Kammerlänge min.',        unit: 'mm',   def: 500 },
+      { key: 'injForce', label: 'Gießkraft bei Akkudruck max.', unit: 'kN', def: 1300 },
+      { key: 'vmax',     label: 'Kolbengeschw. max.',      unit: 'm/s',  def: 8.5 },
+      { key: 'amax',     label: 'Beschleunigung max.',     unit: 'm/s²', def: 110 },
+      { key: 'dmin',     label: 'Kolben-Ø min.',           unit: 'mm',   def: 90 },
+      { key: 'dmax',     label: 'Kolben-Ø max.',           unit: 'mm',   def: 150 },
+      { key: 'lmin',     label: 'Kammerlänge min.',        unit: 'mm',   def: 450 },
       { key: 'lmax',     label: 'Kammerlänge max.',        unit: 'mm',   def: 900 },
-      { key: 'tieX',     label: 'Säulenabstand horizontal', unit: 'mm',  def: 1100 },
-      { key: 'tieY',     label: 'Säulenabstand vertikal',   unit: 'mm',  def: 1100 },
-      { key: 'pAcc',     label: 'Akkumulatordruck max.',    unit: 'bar', def: 160 },
-      { key: 'intTime',  label: 'Nachdruckaufbauzeit',      unit: 'ms',  def: 60 }
+      { key: 'tieX',     label: 'Säulenabstand horizontal', unit: 'mm',  def: 1200 },
+      { key: 'tieY',     label: 'Säulenabstand vertikal',   unit: 'mm',  def: 1200 },
+      { key: 'pAcc',     label: 'Akkumulatordruck max.',    unit: 'bar', def: 190 },
+      { key: 'intTime',  label: 'Nachdruckaufbauzeit',      unit: 'ms',  def: 80 }
     ]
   },
   {
@@ -47,7 +47,7 @@ export const groups = [
       /* Eingestellter Akkumulatordruck: die Betriebsgröße der Maschine —
          höchstens das Maximum des Presets, Gießkraft = P_ein · A_h.
          follows: startet beim Maximum (Preset-Wechsel, ältere Projekte). */
-      { key: 'pAccOp', label: 'Akkumulatordruck (eingestellt)', unit: 'bar', def: 160, follows: 'pAcc' },
+      { key: 'pAccOp', label: 'Akkumulatordruck (eingestellt)', unit: 'bar', def: 190, follows: 'pAcc' },
       { key: 'area',   label: 'Sprengfläche',      unit: 'm²',  def: 0.15 },
       { key: 'psel',   label: 'Auslegungsdruck',   unit: 'bar', def: 600 },
       /* adv: standardmäßig hinter „Erweiterte Optionen" eingeklappt. */
@@ -93,9 +93,9 @@ export const groups = [
     id: 'chamber', title: 'Füllkammer und Kolben',
     fields: [
       { key: 'diam',   label: 'Gewählter Kolben-Ø',    unit: 'mm', def: 150 },
-      /* def passt zur Default-Maschine (HCC-1600, lmin 1000) und hält den
+      /* def passt zur Default-Maschine (HCC-1600, lmax 900) und hält den
          Füllgrad mit der Default-Massenbilanz im Zielband. */
-      { key: 'length', label: 'Gewählte Kammerlänge',  unit: 'mm', def: 1000 },
+      { key: 'length', label: 'Gewählte Kammerlänge',  unit: 'mm', def: 900 },
       { key: 'sealStroke', label: 'Einfüllöffnung verschlossen', unit: 'mm', def: 150 }
     ]
   },
@@ -172,7 +172,7 @@ for (const g of groups) {
 
 /* Standard-Schusskurve: Wegpunkte [s in mm, v in m/s] — abgestimmt auf die
    Default-Geometrie (Ø 150 × L 1000: „Kammer voll" ≈ 574 mm, Gesamthub ≈ 972 mm). */
-export const DEFAULT_CURVE = [[60, 0.4], [574, 0.4], [720, 4], [972, 4]];
+export const DEFAULT_CURVE = [[60, 0.4], [471, 0.4], [617, 4], [834, 4]];
 
 export function allFields() {
   const a = [];

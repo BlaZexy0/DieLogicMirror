@@ -98,14 +98,15 @@ test('curvegen: López — 2. Phase trifft die NADCA-Füllzeit, sonst ehrlicher 
   closeTo(r.tN, tN, 1e-9);
   assert.ok(r.v2 > 1e9 * cavityVolume(v.part + v.overflow, v) / (tN * 0.25 * Math.PI * v.diam * v.diam),
     'v₂ muss über dem Wert ohne Rampe liegen, um die Rampe auszugleichen');
-  /* a_max = 60 (Preset): NADCA-Zeit physikalisch nicht erreichbar → schnellste 2. Phase + Hinweis */
-  const slow = generateCurve(v, { mode: 'lopez' });
+  /* kleines a_max (40): NADCA-Zeit physikalisch nicht erreichbar → schnellste 2. Phase + Hinweis */
+  const vs = Object.assign({}, v, { amax: 40 });
+  const slow = generateCurve(vs, { mode: 'lopez' });
   assert.ok(slow.warn && /a_max .* reicht für die NADCA-Füllzeit/.test(slow.warn), 'Hinweis erwartet: ' + slow.warn);
-  const s2 = computeShot(v, slow.points);
+  const s2 = computeShot(vs, slow.points);
   assert.ok(s2.fill > tN, 'Füllzeit über NADCA: ' + s2.fill);
-  assert.ok(s2.fill < 70, 'schnellste 2. Phase: ' + s2.fill);
+  assert.ok(s2.fill < 95, 'schnellste 2. Phase: ' + s2.fill);
   const aPk = Math.max(s2.profile.amax, -s2.profile.amin, 0);
-  assert.ok(aPk <= v.amax + 1e-6 && aPk > 0.99 * v.amax, 'volle Beschleunigung erwartet: ' + aPk);
+  assert.ok(aPk <= vs.amax + 1e-6 && aPk > 0.99 * vs.amax, 'volle Beschleunigung erwartet: ' + aPk);
 });
 
 test('curvegen: fillTimeMs — Rampe + Plateau, Grenzfälle', () => {
@@ -532,29 +533,31 @@ test('stl-logic: missingRoles nennt fehlende Zuordnungen', () => {
 
 test('stl-logic: machineRows empfiehlt die kleinste geeignete Maschine', () => {
   // A = 0,15 m² (150 000 mm²), zentrisch: pK = F/(100·0,15·1,3)
-  // → HCC-340 174 bar, HCC-800 410 bar (zu klein); ab HCC-1600 (821 bar)
-  // erreichen alle den Zieldruck — empfohlen ist die kleinste davon.
+  // → HCC-200 103 bar, HCC-340 174 bar, HCC-800 410 bar (zu klein); ab
+  // HCC-1600 (821 bar) erreichen alle den Zieldruck — empfohlen die kleinste.
   const { rows, pref } = logic.machineRows(MACHINES, clamp,
     { areaMm2: 150000, ex: 0, ey: 0, safety: 1.3, pTarget: 600 });
   assert.equal(rows.length, MACHINES.length);
-  closeTo(rows[0].pK, 3400 / (100 * 0.15 * 1.3));
+  closeTo(rows[0].pK, 2000 / (100 * 0.15 * 1.3));
   assert.deepEqual(rows.map(r => r.ok), MACHINES.map(m => m.fields.force >= 600 * 100 * 0.15 * 1.3));
-  assert.deepEqual(rows.slice(0, 3).map(r => r.ok), [false, false, true]);
+  assert.deepEqual(rows.slice(0, 4).map(r => r.ok), [false, false, false, true]);
   assert.equal(pref.mc.id, 'hcc1600');
   // Ohne Sicherheitsfaktor/Außermittigkeit: p0 = F/(100·A)
-  closeTo(rows[2].p0, 16000 / (100 * 0.15));
-  assert.equal(rows[2].k, 1);
+  closeTo(rows[3].p0, 16000 / (100 * 0.15));
+  assert.equal(rows[3].k, 1);
 });
 
 test('stl-logic: machineRows markiert Abheben (k − 1 ≥ 1) als ungeeignet', () => {
-  // e = 300 mm: HCC-340 (Säulenabstand 560) hebt ab (2·300/560 ≥ 1),
-  // die größeren Maschinen nicht.
+  // e = 300 mm: HCC-200 (Säulenabstand 470) und HCC-340 (580) heben ab
+  // (2·300/tie ≥ 1), die größeren Maschinen nicht.
   const { rows, pref } = logic.machineRows(MACHINES, clamp,
     { areaMm2: 20000, ex: 300, ey: 0, safety: 1.3, pTarget: 600 });
   assert.equal(rows[0].lift, true);
-  assert.equal(rows[0].ok, false);      // trotz ausreichenden Drucks
-  assert.ok(rows[0].pK >= 600);
-  assert.equal(rows[1].lift, false);
+  assert.equal(rows[0].ok, false);
+  assert.equal(rows[1].lift, true);
+  assert.equal(rows[1].ok, false);      // trotz ausreichenden Drucks
+  assert.ok(rows[1].pK >= 600);
+  assert.equal(rows[2].lift, false);
   assert.equal(pref.mc.id, 'hcc800');
 });
 

@@ -112,7 +112,7 @@ test('derived: Massen aus der Auslegung, Zykluszeit aus der Zyklusanalyse', () =
   require(path.join(site, 'shared/examples/machines.js'));
   d = P.derived();
   assert.equal(d.alloy.id, 'alsi12'); assert.match(d.alloy.name, /AlSi12/); assert.equal(d.alloy.fields.hf, 400);
-  assert.equal(d.machinePreset.id, 'hcc800'); assert.equal(d.machinePreset.fields.tieX, 810);
+  assert.equal(d.machinePreset.id, 'hcc800'); assert.equal(d.machinePreset.fields.tieX, 900);
   assert.match(d.sources.alloy, /Legierungs-Preset/);
   /* Unbekannte Preset-id, aber vollständige Legierungswerte in der Auslegung → manuelle Legierung */
   P.setSection('design', { values: { Tcast: 650, Tliq: 600, Tsol: 550, hf: 390, cp20: 900, cpS: 1000, cpL: 1100 }, alloy: 'eigene' });

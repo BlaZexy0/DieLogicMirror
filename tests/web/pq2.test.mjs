@@ -75,7 +75,7 @@ test('pq2: Hydraulikdruck-Achse bleibt ≤ P_acc — montierter Kolben und Hüll
     assert.ok(!q.err, q.err);
     assert.ok(maskMax(q) <= v.pAccOp * (1 + 1e-9), `${tab}/Ø${diam}: Maske ${maskMax(q)} > P_acc ${v.pAccOp}`);
     /* Q → 0 liegt im Bild (außer t_f-Achse, die bei 250 ms endet): dort statisch genau P_acc */
-    if (tab !== 'tf') assert.ok(Math.abs(maskMax(q) - v.pAccOp) < 1e-6 * v.pAccOp, `${tab}/Ø${diam}: Maske erreicht P_acc statisch`);
+    if (tab !== 'tf') assert.ok(Math.abs(maskMax(q) - v.pAccOp) < 5e-6 * v.pAccOp, `${tab}/Ø${diam}: Maske erreicht P_acc statisch`);
     assert.ok(Math.abs(q.y1 - 1.05 * v.pAccOp) < 1e-9, 'y-Achse bis 1,05·P_acc');
     /* Maschinenlinie des montierten Kolbens: statisch exakt P_acc */
     const m = q.ys.find(s => /^Maschine/.test(s.n));
@@ -93,8 +93,8 @@ test('pq2: Metalldruck-Achse — Hüllkurve unverändert (a/Q zwischen den Berü
 });
 
 test('pq2: eingestellter Akkumulatordruck skaliert Gießkraft, p₀, Hüllkurve und Hydraulikachse', async () => {
-  const v = defaults();                       // Nenn: 2000 kN bei 160 bar
-  const half = Object.assign({}, v, { pAccOp: 80 });
+  const v = defaults();                       // Nenn: 1300 kN bei 190 bar
+  const half = Object.assign({}, v, { pAccOp: 95 });
   closeTo(injForceEff(v), v.injForce);
   closeTo(injForceEff(half), v.injForce / 2);
   closeTo(pMaxMachine(half), pMaxMachine(v) / 2);
@@ -103,9 +103,9 @@ test('pq2: eingestellter Akkumulatordruck skaliert Gießkraft, p₀, Hüllkurve 
   assert.ok(c2.Qs < c1.Qs, 'weniger Druck → kleinerer Arbeitspunkt');
   /* Hydraulikachse: statisch beim eingestellten Druck, nie darüber */
   const q = calc(half, 'q', 'ph');
-  closeTo(maskMax(q), 80, 1e-6);
+  closeTo(maskMax(q), 95, 1e-6);
   const m = q.ys.find(s => /^Maschine/.test(s.n));
-  closeTo(m.y[0], 80, 0.1);
+  closeTo(m.y[0], 95, 0.1);
   /* Metalldruck-Hüllkurve ebenfalls halbiert */
   const qm1 = calc(v, 'q', 'pm'), qm2 = calc(half, 'q', 'pm');
   closeTo(maskMax(qm2), maskMax(qm1) / 2, 1e-6);
@@ -115,9 +115,9 @@ test('pq2: eingestellter Akkumulatordruck skaliert Gießkraft, p₀, Hüllkurve 
   closeTo(injForceEff(Object.assign({}, v, { pAccOp: 999 })), v.injForce);
   closeTo(pqCore(Object.assign({}, v, { pAccOp: 999 })).p0, c1.p0);
   closeTo(calc(Object.assign({}, v, { pAccOp: 999 }), 'q', 'ph').y1, 1.05 * v.pAcc);
-  /* Antriebskolben aus dem Preset: 2000 kN / 160 bar = 1250 cm² (1 kN/bar = 100 cm²) */
+  /* Antriebskolben aus dem Preset: 1300 kN / 190 bar ≈ 684,2 cm² (1 kN/bar = 100 cm²) */
   const { hydArea } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
-  closeTo(hydArea(v), 1250);
+  closeTo(hydArea(v), 1300 / 190 * 100);
 });
 
 test('pq2: Arbeitspunkt aus der Schusskurve (Q = A_K·v₂ auf der Werkzeuglinie), Schnittpunkt als Referenz', async () => {
