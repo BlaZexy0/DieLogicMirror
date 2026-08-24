@@ -92,6 +92,13 @@
   /* ── Logo (assets/logo.svg — Füllkammer + Schusskurve) ────── */
   const LOGO_IMG = `<img src="${base}/assets/logo.svg" alt="" width="32" height="32" aria-hidden="true">`;
 
+  /* Wortmarke „DiehLogic": zwischen „Die" und „Logic" steht ein H, dessen
+     Stämme die Kammerwände sind und dessen Querbalken die Schmelze ist, die
+     als Pfeil durch den Anschnitt schießt (Motiv der Logo-Kachel). Das H
+     ist dekorativ — vorgelesen bleibt der Name „DieLogic". */
+  const H_GLYPH = `<svg class="dl-h-glyph" viewBox="0 0 100 100" aria-hidden="true"><rect x="0" y="0" width="17" height="100" rx="3" fill="${C.surface}"/><rect x="83" y="0" width="17" height="100" rx="3" fill="${C.surface}"/><path d="M17 38 L60 38 L60 26 L83 50 L60 74 L60 62 L17 62 Z" fill="${C.primary}"/></svg>`;
+  const WORDMARK = `Die${H_GLYPH}<span style="color:${C.primaryLight}">Logic</span>`;
+
   /* ── Nav-Links bauen ──────────────────────────────────────── */
   function buildNavLinks() {
     return NAV_LINKS.map(item => {
@@ -122,7 +129,7 @@
   <div class="dl-footer-col">
     <div class="dl-footer-logo">
       ${LOGO_IMG}
-      DieLogic
+      <span class="dl-footer-wordmark">${WORDMARK}</span>
     </div>
     <p class="dl-footer-desc">Gießtechnische Auslegung für den Druckguss (HPDC): Schusskurve, PQ², Füllkammer, Zyklus und Teilekosten — ein Projekt, alle Werkzeuge.</p>
     <p class="dl-footer-desc" style="margin-top:1rem;color:${C.ondark2};">© 2026 DieLogic</p>
@@ -193,6 +200,7 @@
   text-decoration: none;
 }
 .dl-nav-logo img { width: 32px; height: 32px; display: block; }
+.dl-h-glyph { height: 0.78em; width: auto; display: inline-block; margin: 0 0.1em; }
 .dl-nav-logo-text {
   font-size: 1.1rem;
   font-weight: 700;
@@ -368,7 +376,7 @@
     const navHTML = `<nav class="dl-nav">
   <a class="dl-nav-logo" href="${resolveHref('/index.html')}">
     ${LOGO_IMG}
-    <span class="dl-nav-logo-text">DieLogic</span>
+    <span class="dl-nav-logo-text">${WORDMARK}</span>
     <span class="dl-nav-version">${VERSION}</span>
   </a>
   <ul class="dl-nav-links">
