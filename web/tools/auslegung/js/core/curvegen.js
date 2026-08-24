@@ -142,7 +142,9 @@ export function generateCurve(v, g) {
       } else {
         let lo = vTop, hi = vFast;
         for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (want(m) > tN) lo = m; else hi = m; }
-        v2 = Math.ceil(hi * 1000) / 1000;   // aufrunden: Füllzeit eher kürzer als länger
+        /* aufrunden + 0,01 m/s Marge: die 0,1-mm-Rundung der Wegpunkte darf die
+           Füllzeit nicht über die NADCA-Empfehlung heben */
+        v2 = Math.ceil(hi * 1000 + 10) / 1000;
       }
     }
     const w = ramp(pts, vTop, v2, sR, sEnd, v.amax);
