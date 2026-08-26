@@ -44,5 +44,24 @@ export function draftColor(deg, limit) {
   return mix(DRAFT_OK, DRAFT_GOOD, (deg - l) / (2 * l));
 }
 
+/* Abstand zweier Teile: nah = dunkelrot (kritisch), weit = blass.
+   Die vier Stützstellen werden in der Helligkeit monoton heller —
+   dadurch stimmt die Reihenfolge auch für Farbfehlsichtige und im
+   Graudruck, was ein Regenbogenverlauf nicht leistet. */
+const DIST_STOPS = ['#8a1a12', '#d4a908', '#7ecfc6', '#e5f3f2'];
+
+/** Mehrstufiger Verlauf: t von 0 bis 1 über die Stützstellen. */
+export function ramp(stops, t) {
+  const x = Math.max(0, Math.min(1, t)) * (stops.length - 1);
+  const i = Math.min(stops.length - 2, Math.floor(x));
+  return mix(stops[i], stops[i + 1], x - i);
+}
+
+/** Farbe für einen Abstand zwischen den Skalengrenzen. */
+export const distanceColor = (v, min, max) =>
+  ramp(DIST_STOPS, max > min ? (v - min) / (max - min) : 0);
+
+export const DIST_RAMP = DIST_STOPS;
+
 /** Farbe für die Anzahl entformbarer Richtungen. */
 export const COUNT_COLORS = ['#b42318', '#008c82', '#3fc2b6', '#8cbee6', '#b8ddd2', '#d7e3e6', '#e8eef0'];

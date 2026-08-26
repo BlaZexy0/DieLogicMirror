@@ -358,6 +358,14 @@ export function buildParts(log = () => {}) {
   return out;
 }
 
+/* Beide Temperierkreise einer Hälfte. Die Abstandsanalyse braucht sie
+   als Gegenstück zum Gussteil: „wie weit ist die Kavität vom Kanal?" */
+export function buildCooling(side) {
+  const groups = side === 'mov' ? CO.xMov : CO.xFix;
+  const z = side === 'mov' ? CO.zMov : CO.zFix;
+  return S.concat(groups.map(xs => oneCircuit(xs, z)));
+}
+
 /* Nur das Gussteil — der Teilungs-Viewer bietet es als Beispielteil an,
    ohne die ganze Form zu bauen. */
 export function buildCastPart() {

@@ -20,14 +20,16 @@
 <section class="page-hero">
   <div class="inner">
     <h1>3D-Studio</h1>
-    <p class="subtitle">Drei Werkzeuge am selben Bauteil: die Druckgießform als Schnittmodell mit
-      echter Kavität, die Bauteilanalyse mit Formteilung und Entformschrägen, und Offsetflächen
-      aus einem gerasterten Abstandsfeld. Alles rechnet im Browser — die Bauteile kommen als
+    <p class="subtitle">Vier Werkzeuge am selben Bauteil: die Druckgießform als Schnittmodell mit
+      echter Kavität, die Bauteilanalyse mit Formteilung und Entformschrägen — und zwei, die
+      messen: nach innen die Wandstärke (wo erstarrt das Teil zuletzt?), nach außen den Abstand
+      zum Temperierkanal oder zum Nachbarteil. Alles rechnet im Browser; die Bauteile kommen als
       STL oder GLB, es geht nichts an einen Server.</p>
     <div class="hero-tags">
       <span class="hero-tag">6 Entformrichtungen</span>
       <span class="hero-tag">Schnitt mit Deckflächen</span>
-      <span class="hero-tag">Abstandsfeld statt Netzversatz</span>
+      <span class="hero-tag">Wandstärke und Wärmezentrum</span>
+      <span class="hero-tag">Abstand zweier Teile</span>
       <span class="hero-tag">STL- und GLB-Import</span>
     </div>
   </div>
@@ -35,8 +37,8 @@
 
 <section class="tools-section" id="werkzeuge">
   <div class="tools-inner">
-    <h2 class="section-title">Drei Werkzeuge</h2>
-    <p class="section-sub">Eines zeigt die Form, eines entscheidet, wie sie geteilt wird, eines rechnet das Aufmaß.</p>
+    <h2 class="section-title">Vier Werkzeuge</h2>
+    <p class="section-sub">Eines zeigt die Form, eines entscheidet, wie sie geteilt wird — und zwei messen: nach innen die Wandstärke, nach außen den Abstand zum Nachbarn.</p>
 
     <div class="tool-grid">
       <div class="tool-card">
@@ -95,17 +97,44 @@
           </svg>
         </div>
         <h3>Offsetflächen</h3>
-        <p>Das Aufmaß entsteht nicht durch Verschieben von Dreiecken, sondern aus einem
-          <b>Abstandsfeld</b>: das Bauteil wird gerastert, jeder Rasterpunkt bekommt seinen
-          Abstand zur Oberfläche, und die Offsetfläche ist die Fläche gleichen Abstands.</p>
+        <p>Die Frage nach <b>innen</b>: das Aufmaß entsteht nicht durch Verschieben von
+          Dreiecken, sondern aus einem <b>Abstandsfeld</b> — das Bauteil wird gerastert, jeder
+          Rasterpunkt bekommt seinen Abstand zur Oberfläche, und die Offsetfläche ist die Fläche
+          gleichen Abstands. Dasselbe Feld nennt die <b>Wandstärke</b>: innen ist sein Betrag
+          die halbe Wanddicke. (Die Frage nach außen beantwortet die Abstandsanalyse.)</p>
         <ul>
           <li>Keine Selbstdurchdringung, auch bei großen Beträgen</li>
           <li>Konvexe Kanten bekommen korrekt einen Radius in Höhe des Aufmaßes</li>
+          <li>Dicke Bereiche finden: sie erstarren zuletzt — dort sitzen Lunker</li>
           <li>Ein Feld, beliebig viele Aufmaße — nur das Feld kostet Zeit</li>
           <li>Feldschnitt als Rasterbild mit Höhenlinie, Export als STL</li>
         </ul>
         <div class="card-btns">
           <a href="offset.html" class="btn btn-primary">Öffnen</a>
+        </div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card-icon" style="background:rgba(85,119,134,.16)">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#557786" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+            <path d="M3 4 L11 4 L11 22 L3 22 Z"/>
+            <path d="M17 8 L23 8 L23 18 L17 18 Z" stroke="#e07b39"/>
+            <path d="M11 13 H17" stroke="#b42318" stroke-dasharray="2 1.6"/>
+            <path d="M12.6 11.4 L11 13 L12.6 14.6M15.4 11.4 L17 13 L15.4 14.6" stroke="#b42318"/>
+          </svg>
+        </div>
+        <h3>Abstandsanalyse</h3>
+        <p>Zwei Dateien, ein Abstand: für jeden Punkt der einen Oberfläche der kürzeste Weg zur
+          anderen. Wie weit ist die Kavität vom Temperierkanal, vom Auswerferstift, vom
+          Nachbarteil? Zu nah heißt Durchbruchgefahr, zu weit heißt, die Kühlung greift nicht.</p>
+        <ul>
+          <li>Exakt gerechnet — Punkt gegen Dreieck, kein Raster, keine Näherung</li>
+          <li>Farbskala mit selbst gesetzten Grenzen: erst das macht die Karte zur Aussage</li>
+          <li>Beide Teile einzeln ein- und ausblendbar, beide einfärbbar</li>
+          <li>Grobe Netze werden vorher verfeinert — sonst misst man nur die Ecken</li>
+        </ul>
+        <div class="card-btns">
+          <a href="abstand.html" class="btn btn-primary">Öffnen</a>
         </div>
       </div>
     </div>

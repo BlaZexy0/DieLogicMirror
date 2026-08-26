@@ -22,7 +22,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Offsetflächen</h1>
-    <p class="subtitle">Abstandsfeld durch Rasterisierung — daraus die Fläche gleichen Abstands. Aufmaß, Untermaß und Schnitte durch das Feld, ohne Selbstdurchdringung.</p>
+    <p class="subtitle">Abstandsfeld durch Rasterisierung — daraus die Fläche gleichen Abstands und die Wandstärke. Aufmaß, Untermaß und Schnitte durch das Feld, ohne Selbstdurchdringung.</p>
   </div>
 </section>
 
@@ -112,6 +112,23 @@
       Aus <em>einem</em> Feld lassen sich beliebig viele Aufmaße
       abgreifen, solange sie in der Bandbreite liegen — nur das Feld
       selbst kostet Zeit.
+
+      <p style="margin-top:.7rem"><b>Wandstärke und Wärmezentrum:</b> im
+      Inneren ist der Betrag des Feldwertes der Radius der größten Kugel,
+      die dort noch ins Bauteil passt — bei plattenförmigen Bereichen also
+      die <b>halbe Wandstärke</b>. Das macht dieselbe Rechnung zur
+      Dickenanalyse: wo der Betrag am größten ist, liegt die dickste
+      Stelle, und die erstarrt zuletzt. Genau dort sitzen Lunker und
+      Porosität, und bis dorthin muss der Nachdruck über Anguss und
+      Speiser reichen.</p>
+
+      <p style="margin-top:.5rem">Zwei Wege, das abzulesen: ein
+      <b>Untermaß</b> von −s eintippen — alles, was dünner als 2·s ist,
+      verschwindet, stehen bleiben genau die dicken Kerne. Oder den
+      <b>Feldschnitt</b> einschalten: die tiefroten Bereiche sind die
+      dicken Stellen, die Farbskala nennt den Wert in mm. (Der
+      Erstarrungsmodul V/A ist damit nicht identisch — die Kugelprobe ist
+      sein üblicher Stellvertreter und für Wände exakt gleich.)</p>
     </div>
   </aside>
 

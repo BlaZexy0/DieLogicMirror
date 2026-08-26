@@ -72,11 +72,12 @@ dielogic/
 │   │   ├── sprengflaeche/   STL-Analyse: stl-math.js (Netz-Kennwerte, getestet),
 │   │   │                    stl-logic.js (Massenbilanz/Maschinentabelle, getestet), stl-app.js
 │   │   ├── teilekosten/     Teilekosten-Kalkulation (Abschnitt cost, verknüpfte Felder)
-│   │   ├── 3d-studio/       drei 3D-Werkzeuge (ein Nav-Reiter): Formaufbau (Schnittmodell der
-│   │   │                    Druckgießform), Bauteilanalyse (Formteilung, Hinterschnitte,
-│   │   │                    Entformschrägen) und Offsetflächen (Abstandsfeld). ERZEUGT —
-│   │   │                    Quelle ist das eigenständige form3d neben dem Repo, siehe
-│   │   │                    3d-studio/HERKUNFT.md. Bringt Three.js in vendor/ mit.
+│   │   ├── 3d-studio/       vier 3D-Werkzeuge unter EINEM Nav-Reiter: Formaufbau (Schnittmodell
+│   │   │                    der Druckgießform), Bauteilanalyse (Formteilung, Hinterschnitte,
+│   │   │                    Entformschrägen), Offsetflächen (Abstandsfeld: Aufmaß, Wandstärke,
+│   │   │                    Wärmezentrum) und Abstandsanalyse (kürzester Abstand zwischen zwei
+│   │   │                    Dateien). ERZEUGT — Quelle ist das eigenständige form3d neben dem
+│   │   │                    Repo, siehe 3d-studio/HERKUNFT.md. Bringt Three.js in vendor/ mit.
 │   │   └── zyklus/          Zyklusanalyse (Abschnitt cycle): Zeitleiste + Wärmebilanz je Zyklus
 │   │                        (zyklus-logic.js, getestet gegen die Zahlenbeispiele der Quellen —
 │   │                        docs/heat_flow_hpd_die.md)

@@ -21,7 +21,14 @@ export const DEMO_PARTS = [
   { id: 'undercut', label: 'Teil mit Hinterschnitt', file: 'assets/parts/undercut.glb',
     note: 'Pilzkopf und umlaufende Nut — Flächen, die KEINE der sechs Richtungen erreicht.' },
   { id: 'cast', label: 'Gussteil der Beispielform', file: 'assets/parts/cast.glb',
-    note: 'Dasselbe Gussteil, das im Formaufbau-Viewer in der Kavität steckt (mit Kernloch).' }
+    note: 'Dasselbe Gussteil, das im Formaufbau-Viewer in der Kavität steckt (mit Kernloch).' },
+  /* pairOnly: kein Bauteil, sondern ein Gegenstück — nur die
+     Abstandsanalyse bietet es an. In der Formteilung wäre ein
+     Temperierkreis als „Bauteil" nur Verwirrung. */
+  { id: 'coolmov', label: 'Temperierung beweglich (Gegenstück)', file: 'assets/parts/coolmov.glb',
+    pairOnly: true, note: 'Beide Temperierkreise der beweglichen Hälfte aus der Beispielform.' },
+  { id: 'coolfix', label: 'Temperierung fest (Gegenstück)', file: 'assets/parts/coolfix.glb',
+    pairOnly: true, note: 'Beide Temperierkreise der festen Hälfte aus der Beispielform.' }
 ];
 
 /** Beispielteil holen und in die übliche Dreieckssuppe umwandeln. */

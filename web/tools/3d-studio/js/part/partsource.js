@@ -2,9 +2,10 @@
    Beispielteil wählen, eigene STL laden (Knopf oder Ziehen-und-Ablegen),
    Netz aufbereiten und die Kennzahlen anzeigen.
 
-   Beide Seiten (Bauteilanalyse und Offsetflächen) brauchen exakt
-   dasselbe, deshalb steht es hier einmal. Erwartet werden die ids
-   demo-select, stl-btn, stl-input, part-note, model-facts, model-warn.
+   Alle Bauteil-Seiten brauchen exakt dasselbe, deshalb steht es hier
+   einmal. Erwartet werden die ids demo-select, stl-btn, stl-input,
+   part-note, model-facts, model-warn — mit `suffix` auch mehrfach auf
+   einer Seite (die Abstandsanalyse hat zwei Quellen: „-a" und „-b").
 
    Beispielteile kommen als fertige GLB aus assets/parts/ — genauso wie
    eine hochgeladene Datei. Erkannt wird am Dateikopf, nicht an der
@@ -20,24 +21,29 @@ import { $, fmt, facts } from '../ui/controls.js';
    Fortschrittstext erst da, wenn die Rechnung schon vorbei ist. */
 export const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-export function mountPartSource({ busy, viewport, onStart, onLoad }) {
-  const sel = $('demo-select');
-  sel.innerHTML = DEMO_PARTS.map(p => '<option value="' + p.id + '">' + p.label + '</option>').join('');
+export function mountPartSource({ busy, viewport, onStart, onLoad, suffix = '',
+                                  filter = p => !p.pairOnly, start: startId = null }) {
+  const id = name => name + suffix;
+  const list = DEMO_PARTS.filter(filter);
+  const sel = $(id('demo-select'));
+  sel.innerHTML = list.map(p => '<option value="' + p.id + '">' + p.label + '</option>').join('');
   sel.addEventListener('change', () => pickDemo(sel.value));
 
-  $('stl-btn').addEventListener('click', () => $('stl-input').click());
-  $('stl-input').addEventListener('change', e => { if (e.target.files[0]) readFile(e.target.files[0]); });
+  $(id('stl-btn')).addEventListener('click', () => $(id('stl-input')).click());
+  $(id('stl-input')).addEventListener('change', e => { if (e.target.files[0]) readFile(e.target.files[0]); });
 
-  for (const ev of ['dragenter', 'dragover']) {
-    viewport.addEventListener(ev, e => { e.preventDefault(); viewport.classList.add('dragover'); });
+  if (viewport) {
+    for (const ev of ['dragenter', 'dragover']) {
+      viewport.addEventListener(ev, e => { e.preventDefault(); viewport.classList.add('dragover'); });
+    }
+    for (const ev of ['dragleave', 'drop']) {
+      viewport.addEventListener(ev, e => { e.preventDefault(); viewport.classList.remove('dragover'); });
+    }
+    viewport.addEventListener('drop', e => {
+      const f = e.dataTransfer && e.dataTransfer.files[0];
+      if (f) readFile(f);
+    });
   }
-  for (const ev of ['dragleave', 'drop']) {
-    viewport.addEventListener(ev, e => { e.preventDefault(); viewport.classList.remove('dragover'); });
-  }
-  viewport.addEventListener('drop', e => {
-    const f = e.dataTransfer && e.dataTransfer.files[0];
-    if (f) readFile(f);
-  });
 
   function readFile(file) {
     const fr = new FileReader();
@@ -50,7 +56,7 @@ export function mountPartSource({ busy, viewport, onStart, onLoad }) {
           (glb ? 'GLB-Datei · ' : 'STL-Datei · ') + (fr.result.byteLength / 1024).toFixed(0) + ' kB');
       } catch (err) {
         busy.classList.remove('on');
-        $('model-warn').textContent = (glb ? 'GLB' : 'STL')
+        $(id('model-warn')).textContent = (glb ? 'GLB' : 'STL')
           + ' konnte nicht gelesen werden: ' + err.message;
       }
     };
@@ -59,21 +65,21 @@ export function mountPartSource({ busy, viewport, onStart, onLoad }) {
 
   async function load(tris, name, note) {
     if (!tris || tris.length < 36) {
-      $('model-warn').textContent = 'Das Netz enthält weniger als vier Dreiecke.';
+      $(id('model-warn')).textContent = 'Das Netz enthält weniger als vier Dreiecke.';
       return;
     }
     if (onStart) onStart(name);
-    $('part-note').textContent = note || '';
-    $('model-warn').textContent = '';
+    $(id('part-note')).textContent = note || '';
+    $(id('model-warn')).textContent = '';
     busy.textContent = 'Netz aufbereiten …';
     busy.classList.add('on');
     await frame();
     try {
       const model = buildModel(tris);
-      showFacts(model);
+      showFacts(model, id);
       await onLoad(model, name);
     } catch (err) {
-      $('model-warn').textContent = 'Das Netz konnte nicht aufbereitet werden: ' + err.message;
+      $(id('model-warn')).textContent = 'Das Netz konnte nicht aufbereitet werden: ' + err.message;
       console.error(err);
     } finally {
       busy.classList.remove('on');
@@ -93,10 +99,10 @@ export function mountPartSource({ busy, viewport, onStart, onLoad }) {
     }
   }
 
-  /* Beispielteil aus der Adresszeile (?part=…) oder das erste. */
+  /* Beispielteil aus der Adresszeile (?part=…) oder das vorgegebene. */
   function start() {
-    const wanted = new URLSearchParams(location.search).get('part');
-    const first = DEMO_PARTS.find(p => p.id === wanted) || DEMO_PARTS[0];
+    const wanted = new URLSearchParams(location.search).get('part' + suffix);
+    const first = list.find(p => p.id === wanted) || list.find(p => p.id === startId) || list[0];
     sel.value = first.id;
     return pickDemo(first.id);
   }
@@ -104,9 +110,9 @@ export function mountPartSource({ busy, viewport, onStart, onLoad }) {
   return { load, pickDemo, start };
 }
 
-function showFacts(m) {
+function showFacts(m, id) {
   const s = m.bounds.size;
-  facts('model-facts', [
+  facts(id('model-facts'), [
     ['Dreiecke', fmt(m.faceCount, 0)
       + (m.faceCount !== m.rawFaceCount ? ' (roh ' + fmt(m.rawFaceCount, 0) + ')' : '')],
     ['Abmessungen', s.map(v => fmt(v)).join(' × ') + ' mm'],
@@ -115,12 +121,12 @@ function showFacts(m) {
   ]);
 
   if (m.faceCount > 250000) {
-    $('model-warn').textContent = 'Sehr großes Netz (' + fmt(m.faceCount, 0)
+    $(id('model-warn')).textContent = 'Sehr großes Netz (' + fmt(m.faceCount, 0)
       + ' Dreiecke) — jede Rechnung dauert entsprechend.';
     return;
   }
   const openFrac = openEdgeRatio(m);
-  $('model-warn').textContent = openFrac > 0.005
+  $(id('model-warn')).textContent = openFrac > 0.005
     ? 'Achtung: ' + (100 * openFrac).toFixed(1) + ' % der Kanten haben keinen Nachbarn — das Netz ist offen oder nicht mannigfaltig.'
     : '';
 }

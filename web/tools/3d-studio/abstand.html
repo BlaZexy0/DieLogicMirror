@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abstandsanalyse · 3D-Studio · DieLogic</title>
+<meta name="theme-color" content="#002733">
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="stylesheet" href="/shared/shared.css">
+<link rel="stylesheet" href="css/viewer.css">
+<script src="/shared/version.js"></script>
+<script src="/shared/palette.js"></script>
+<script src="/shared/nav.js" data-footer="none"></script>
+<script type="importmap">
+  { "imports": { "three": "./vendor/three/three.module.js" } }
+</script>
+</head>
+<body class="viewer">
+
+<section class="page-hero compact">
+  <div class="inner">
+    <h1>Abstandsanalyse</h1>
+    <p class="subtitle">Zwei Dateien, ein Abstand: für jeden Punkt der einen Oberfläche der kürzeste Weg zur anderen — eingefärbt auf einer Skala, deren Grenzen Sie selbst setzen.</p>
+  </div>
+</section>
+
+<div class="layout">
+  <aside>
+    <h2>Datei A</h2>
+    <div class="row">
+      <span>Beispielteil</span>
+      <select id="demo-select-a"></select>
+    </div>
+    <input type="file" id="stl-input-a" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" hidden>
+    <button type="button" class="btn btn-outline block-btn" id="stl-btn-a">+ Eigene STL/GLB laden</button>
+    <div class="hint" id="part-note-a"></div>
+    <div class="facts" id="model-facts-a"></div>
+    <div class="warn-line" id="model-warn-a"></div>
+
+    <h2>Datei B</h2>
+    <div class="row">
+      <span>Beispielteil</span>
+      <select id="demo-select-b"></select>
+    </div>
+    <input type="file" id="stl-input-b" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" hidden>
+    <button type="button" class="btn btn-outline block-btn" id="stl-btn-b">+ Eigene STL/GLB laden</button>
+    <div class="hint" id="part-note-b"></div>
+    <div class="facts" id="model-facts-b"></div>
+    <div class="warn-line" id="model-warn-b"></div>
+
+    <h2>Abstand</h2>
+    <div class="row">
+      <span title="Größer als dieser Wert wird nicht gesucht — das begrenzt die Rechenzeit und entspricht der Obergrenze der Skala">Suchgrenze</span>
+      <input type="text" id="reach" inputmode="decimal" value="50" spellcheck="false"
+             title="Wert eingeben und mit Eingabetaste bestätigen">
+      <span class="val">mm</span>
+    </div>
+    <button type="button" class="btn btn-primary block-btn" id="run-distance">Abstand berechnen</button>
+    <div class="run-note" id="distance-state"></div>
+    <div class="facts" id="distance-facts"></div>
+
+    <h2>Farbskala</h2>
+    <div class="row">
+      <span title="Alles darunter bekommt die Farbe des unteren Endes">Minimum</span>
+      <input type="text" id="scale-min" inputmode="decimal" value="0" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="row">
+      <span title="Alles darüber bekommt die Farbe des oberen Endes">Maximum</span>
+      <input type="text" id="scale-max" inputmode="decimal" value="20" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <button type="button" class="btn btn-outline block-btn" id="scale-auto">Grenzen aus den Messwerten</button>
+
+    <h2>Anzeige</h2>
+    <label class="inline"><input type="checkbox" id="show-a" checked> Datei A zeigen</label>
+    <label class="inline"><input type="checkbox" id="show-b" checked> Datei B zeigen</label>
+    <div class="row">
+      <span>Einfärben</span>
+      <div class="seg" id="color-seg">
+        <button type="button" data-value="a" class="active">nur A</button>
+        <button type="button" data-value="b">nur B</button>
+        <button type="button" data-value="both">beide</button>
+      </div>
+    </div>
+    <div class="row">
+      <span>Deckkraft</span>
+      <input type="range" id="opacity" min="15" max="100" value="100">
+      <span class="val" id="opacity-val"></span>
+    </div>
+
+    <div class="hint">
+      <b>Wozu:</b> die Offsetflächen beantworten die Frage nach innen —
+      wie dick ist das Bauteil, wo erstarrt es zuletzt. Nach außen steht
+      die andere Frage, und die braucht zwei Körper: <b>wie weit ist die
+      Bauteiloberfläche vom Temperierkanal entfernt</b>, vom
+      Auswerferstift, vom Nachbarteil? Zu nah heißt Durchbruchgefahr und
+      eine Stelle, die zu schnell erstarrt; zu weit heißt, die Kühlung
+      greift dort nicht.
+      <p style="margin-top:.7rem">Gerechnet wird <b>exakt</b>: für jeden
+      Punkt der einen Oberfläche der echte Abstand zum nächsten Dreieck
+      der anderen — kein Raster, keine Näherung. Ein Würfelraster
+      beschleunigt nur die Suche. Grobe Netze (eine ebene Wand aus zwei
+      Dreiecken) werden vorher verfeinert, sonst hätte die Einfärbung
+      dort nichts zu interpolieren.</p>
+    </div>
+  </aside>
+
+  <div id="viewport">
+    <div id="status"></div>
+    <div class="colorbar" id="colorbar">
+      <div class="cb-title" id="cb-title"></div>
+      <div class="cb-body">
+        <div class="cb-scale" id="cb-scale"></div>
+        <div class="cb-ticks" id="cb-ticks"></div>
+      </div>
+      <div class="cb-extra" id="cb-extra"></div>
+    </div>
+    <div id="busy"></div>
+    <div class="drop-hint">Ablegen lädt Datei A</div>
+  </div>
+</div>
+
+<script type="module" src="js/part/distanceapp.js"></script>
+</body>
+</html>

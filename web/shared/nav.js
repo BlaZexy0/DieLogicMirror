@@ -54,6 +54,7 @@
       { label: 'Formaufbau', href: '/tools/3d-studio/form.html' },
       { label: 'Bauteilanalyse', href: '/tools/3d-studio/bauteilanalyse.html' },
       { label: 'Offsetflächen', href: '/tools/3d-studio/offset.html' },
+      { label: 'Abstandsanalyse', href: '/tools/3d-studio/abstand.html' },
     ] },
     { label: 'Theorie', children: [
       { label: 'Das PQ²-Diagramm', href: '/theorie/pq2.html' },

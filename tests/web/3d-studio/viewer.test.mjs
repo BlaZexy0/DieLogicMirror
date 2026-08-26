@@ -465,3 +465,105 @@ test('Offsetseite: Feldschnitt und Farbskala', async () => {
   assert.equal(off.__viewer.sliceMesh.visible, false);
   assert.ok(!bar.classList.contains('on'));
 });
+
+/* ── Abstandsanalyse ─────────────────────────────────────────── */
+test('Abstandsseite: zwei Dateien, Abstand auf Knopfdruck', async () => {
+  const { doc: d5 } = buildDocument(read('abstand.html'));
+  installGlobals(d5);
+  globalThis.location = { search: '', href: 'http://test/abstand.html' };
+  const dist = await import('../../../web/tools/3d-studio/js/part/distanceapp.js');
+  await ready(dist);
+  const s = dist.__viewer.state;
+
+  assert.ok(s.a.model && s.b.model, 'beide Dateien geladen');
+  assert.ok(s.a.name.includes('Gussteil'), 'A ist das Gussteil: ' + s.a.name);
+  assert.ok(s.b.name.includes('Temperierung'), 'B ist die Temperierung: ' + s.b.name);
+  assert.equal(s.analysed, false, 'ohne Bestätigung wird nicht gerechnet');
+  assert.ok(d5.getElementById('model-facts-a').innerHTML.includes('cm²'), 'Kennzahlen A');
+  assert.ok(d5.getElementById('model-facts-b').innerHTML.includes('cm²'), 'Kennzahlen B');
+
+  /* Das Gegenstück darf nur hier in der Auswahl stehen. */
+  const optsA = d5.getElementById('demo-select-a').innerHTML;
+  assert.ok(optsA.includes('coolmov'), 'Gegenstücke sind hier wählbar');
+
+  d5.getElementById('run-distance').dispatch('click');
+  for (let i = 0; i < 1200 && !s.analysed; i++) await new Promise(r => setTimeout(r, 25));
+  assert.ok(s.analysed, 'Abstand gerechnet');
+  assert.ok(s.a.dist && s.a.dist.length === s.a.model.vertexCount, 'ein Wert je Punkt von A');
+  assert.ok(s.b.dist && s.b.dist.length === s.b.model.vertexCount, 'ein Wert je Punkt von B');
+
+  /* Beide Richtungen müssen denselben kleinsten Abstand finden — der
+     kürzeste Weg zwischen zwei Flächen ist symmetrisch. */
+  assert.ok(Math.abs(s.a.stats.min - s.b.stats.min) < 0.5,
+    'kleinster Abstand von beiden Seiten gleich: ' + s.a.stats.min.toFixed(2) + ' / ' + s.b.stats.min.toFixed(2));
+  assert.ok(s.a.stats.min > 0, 'die Körper berühren sich nicht');
+  assert.ok(d5.getElementById('distance-facts').innerHTML.includes('mm'), 'Kennzahlen');
+  assert.equal(d5.getElementById('run-distance').textContent, 'Abstand ist aktuell');
+});
+
+test('Abstandsseite: Skalengrenzen, Sichtbarkeit, Farbskala', async () => {
+  const dist = await import('../../../web/tools/3d-studio/js/part/distanceapp.js');
+  const d5 = globalThis.document;
+  const s = dist.__viewer.state;
+  const colorAt = (mesh, f) => {
+    const c = mesh.geometry.getAttribute('color').array;
+    return [c[f * 9], c[f * 9 + 1], c[f * 9 + 2]].map(v => +v.toFixed(3)).join(',');
+  };
+
+  /* Grenzen wirken sofort — ohne neue Rechnung. */
+  /* Über viele Dreiecke vergleichen — ein einzelnes kann in beiden
+     Skalen am Anschlag liegen und sich daher nicht ändern. */
+  const fingerprint = mesh => {
+    const c = mesh.geometry.getAttribute('color').array;
+    let h = 0;
+    for (let i = 0; i < c.length; i += 97) h = (h * 31 + Math.round(c[i] * 255)) | 0;
+    return h;
+  };
+  const before = fingerprint(dist.__viewer.meshA);
+  const distRef = s.a.dist;
+  const mn = d5.getElementById('scale-min'), mx = d5.getElementById('scale-max');
+  mn.value = '5'; mn.dispatch('change');
+  mx.value = '40'; mx.dispatch('change');
+  assert.equal(s.scale.min, 5);
+  assert.equal(s.scale.max, 40);
+  assert.equal(s.stale, false, 'Umfärben ist keine neue Rechnung');
+  assert.equal(s.a.dist, distRef, 'dieselben Messwerte');
+  assert.notEqual(fingerprint(dist.__viewer.meshA), before, 'andere Einfärbung');
+
+  /* Grenzen aus den Messwerten. */
+  d5.getElementById('scale-auto').dispatch('click');
+  assert.ok(Math.abs(s.scale.min - s.a.stats.min) < 0.2 || Math.abs(s.scale.min - s.b.stats.min) < 0.2,
+    'Minimum übernommen: ' + s.scale.min);
+  assert.ok(s.scale.max >= s.scale.min, 'Grenzen in der richtigen Reihenfolge');
+  assert.equal(d5.getElementById('scale-min').value, String(s.scale.min).replace('.', ','));
+
+  /* Einfärbung umschalten: das ungefärbte Netz wird einfarbig. */
+  const seg = d5.getElementById('color-seg').querySelectorAll('button');
+  seg.find(b => b.dataset.value === 'b').dispatch('click');
+  assert.equal(s.color, 'b');
+  const cA = colorAt(dist.__viewer.meshA, 0).split(',');
+  assert.ok(cA[0] === cA[1] && cA[1] === cA[2], 'A ist jetzt grau: ' + cA.join(','));
+  seg.find(b => b.dataset.value === 'both').dispatch('click');
+
+  /* Ausblenden. */
+  const showB = d5.getElementById('show-b');
+  showB.checked = false; showB.dispatch('change');
+  assert.equal(dist.__viewer.meshB.visible, false, 'B ausgeblendet');
+  assert.equal(dist.__viewer.meshA.visible, true, 'A bleibt');
+  showB.checked = true; showB.dispatch('change');
+  assert.equal(dist.__viewer.meshB.visible, true);
+
+  /* Farbskala mit den gesetzten Grenzen. */
+  const bar = d5.getElementById('colorbar');
+  assert.ok(bar.classList.contains('on'), 'Skala sichtbar');
+  assert.equal(d5.getElementById('cb-title').textContent, 'Abstand A ↔ B');
+  assert.ok(d5.getElementById('cb-ticks').innerHTML.includes('≥'), 'oberes Ende als „ab" beschriftet');
+  assert.ok(d5.getElementById('cb-scale').style.background.includes('linear-gradient'));
+
+  /* Suchgrenze gehört zur Rechnung, nicht zur Anzeige. */
+  const reach = d5.getElementById('reach');
+  reach.value = '12'; reach.dispatch('change');
+  assert.equal(s.reach, 12);
+  assert.equal(s.stale, true, 'die Suchgrenze verlangt eine neue Rechnung');
+  assert.ok(d5.getElementById('distance-state').textContent.includes('Suchgrenze'));
+});

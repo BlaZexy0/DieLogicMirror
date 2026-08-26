@@ -16,7 +16,7 @@
 
 import * as S from '../solids.js';
 import { subtract, union } from '../csg.js';
-import { buildCastPart } from '../diegeom.js';
+import { buildCastPart, buildCooling } from '../diegeom.js';
 
 const tan = deg => Math.tan(deg * Math.PI / 180);
 
@@ -110,7 +110,9 @@ const BUILDERS = {
   cover: coverPart,
   bracket: bracketPart,
   undercut: undercutPart,
-  cast: buildCastPart
+  cast: buildCastPart,
+  coolfix: () => buildCooling('fix'),
+  coolmov: () => buildCooling('mov')
 };
 
 export function buildDemoGeometry(id) {

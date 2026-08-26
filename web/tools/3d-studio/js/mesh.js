@@ -400,3 +400,107 @@ export function cleanMesh(tris, opts = {}) {
   }
   return { tris: t, inserted, passes };
 }
+
+/* Punkt-Dreieck-Abstand (quadriert), Ericson „Real-Time Collision
+   Detection" 5.1.5 — als Skalare ausgeschrieben, weil diese Schleife der
+   heißeste Teil gleich zweier Werkzeuge ist: des Abstandsfeldes
+   (js/part/field.js) und der Abstandsanalyse (js/part/distance.js). */
+export function distSqPointTri(px, py, pz, ax, ay, az, bx, by, bz, cx, cy, cz) {
+  const abx = bx - ax, aby = by - ay, abz = bz - az;
+  const acx = cx - ax, acy = cy - ay, acz = cz - az;
+  const apx = px - ax, apy = py - ay, apz = pz - az;
+  const d1 = abx * apx + aby * apy + abz * apz;
+  const d2 = acx * apx + acy * apy + acz * apz;
+  let qx, qy, qz;
+  if (d1 <= 0 && d2 <= 0) { qx = ax; qy = ay; qz = az; }
+  else {
+    const bpx = px - bx, bpy = py - by, bpz = pz - bz;
+    const d3 = abx * bpx + aby * bpy + abz * bpz;
+    const d4 = acx * bpx + acy * bpy + acz * bpz;
+    if (d3 >= 0 && d4 <= d3) { qx = bx; qy = by; qz = bz; }
+    else {
+      const vc = d1 * d4 - d3 * d2;
+      if (vc <= 0 && d1 >= 0 && d3 <= 0) {
+        const v = d1 / (d1 - d3);
+        qx = ax + abx * v; qy = ay + aby * v; qz = az + abz * v;
+      } else {
+        const cpx = px - cx, cpy = py - cy, cpz = pz - cz;
+        const d5 = abx * cpx + aby * cpy + abz * cpz;
+        const d6 = acx * cpx + acy * cpy + acz * cpz;
+        if (d6 >= 0 && d5 <= d6) { qx = cx; qy = cy; qz = cz; }
+        else {
+          const vb = d5 * d2 - d1 * d6;
+          if (vb <= 0 && d2 >= 0 && d6 <= 0) {
+            const w = d2 / (d2 - d6);
+            qx = ax + acx * w; qy = ay + acy * w; qz = az + acz * w;
+          } else {
+            const va = d3 * d6 - d5 * d4;
+            if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
+              const w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+              qx = bx + (cx - bx) * w; qy = by + (cy - by) * w; qz = bz + (cz - bz) * w;
+            } else {
+              const den = 1 / (va + vb + vc);
+              const v = vb * den, w = vc * den;
+              qx = ax + abx * v + acx * w;
+              qy = ay + aby * v + acy * w;
+              qz = az + abz * v + acz * w;
+            }
+          }
+        }
+      }
+    }
+  }
+  const dx = px - qx, dy = py - qy, dz = pz - qz;
+  return dx * dx + dy * dy + dz * dz;
+}
+
+
+/* ── Verfeinern ──────────────────────────────────────────────────
+   Für eine punktweise Einfärbung (Abstandskarte) muss das Netz fein
+   genug sein: eine ebene Wand aus ZWEI Dreiecken hat vier Eckpunkte, und
+   zwischen ihnen wird linear interpoliert — der wahre Abstandsverlauf
+   auf der Fläche geht dabei verloren. CAD-Exporte tessellieren gekrümmte
+   Flächen fein, ebene aber grob; genau die ebene Wand gegenüber einem
+   Temperierkanal wäre also der schlechteste Fall.
+
+   Deshalb wird jedes Dreieck, dessen längste Kante über maxEdge liegt,
+   an den Kantenmitten in vier geteilt — mehrfach, bis alles klein genug
+   ist. Die Punkte liegen dabei exakt auf der ursprünglichen Fläche, die
+   Geometrie ändert sich also nicht. */
+export function refine(tris, maxEdge, maxFaces = 400000) {
+  const lim = maxEdge * maxEdge;
+  let cur = tris;
+  for (let pass = 0; pass < 8; pass++) {
+    const F = cur.length / 9;
+    const split = new Uint8Array(F);
+    let need = 0;
+    for (let f = 0; f < F; f++) {
+      const o = f * 9;
+      for (let e = 0; e < 3; e++) {
+        const a = o + e * 3, b = o + ((e + 1) % 3) * 3;
+        const dx = cur[b] - cur[a], dy = cur[b + 1] - cur[a + 1], dz = cur[b + 2] - cur[a + 2];
+        if (dx * dx + dy * dy + dz * dz > lim) { split[f] = 1; need++; break; }
+      }
+    }
+    if (!need || F + need * 3 > maxFaces) break;
+    const out = new Float64Array((F + need * 3) * 9);
+    let k = 0;
+    const put = (o, i) => { out[k++] = cur[o + i * 3]; out[k++] = cur[o + i * 3 + 1]; out[k++] = cur[o + i * 3 + 2]; };
+    const mid = (o, i, j) => {
+      out[k++] = (cur[o + i * 3] + cur[o + j * 3]) / 2;
+      out[k++] = (cur[o + i * 3 + 1] + cur[o + j * 3 + 1]) / 2;
+      out[k++] = (cur[o + i * 3 + 2] + cur[o + j * 3 + 2]) / 2;
+    };
+    for (let f = 0; f < F; f++) {
+      const o = f * 9;
+      if (!split[f]) { for (let i = 0; i < 3; i++) put(o, i); continue; }
+      /* Ecken 0,1,2 und Kantenmitten m01, m12, m20 → vier Dreiecke. */
+      put(o, 0); mid(o, 0, 1); mid(o, 2, 0);
+      mid(o, 0, 1); put(o, 1); mid(o, 1, 2);
+      mid(o, 2, 0); mid(o, 1, 2); put(o, 2);
+      mid(o, 0, 1); mid(o, 1, 2); mid(o, 2, 0);
+    }
+    cur = out;
+  }
+  return cur;
+}

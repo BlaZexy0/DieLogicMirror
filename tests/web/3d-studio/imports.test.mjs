@@ -105,7 +105,7 @@ test('alle Imports der JS-Module lösen auf', () => {
 test('alle Imports der HTML-Seiten lösen auf', () => {
   const problems = [];
   const htmls = [];
-  for (const f of ['index.html', 'form.html', 'bauteilanalyse.html', 'offset.html']) htmls.push(join(ROOT, f));
+  for (const f of ['index.html', 'form.html', 'bauteilanalyse.html', 'offset.html', 'abstand.html']) htmls.push(join(ROOT, f));
   for (const f of htmls) {
     assert.ok(existsSync(f), 'fehlt: ' + f);
     const src = readFileSync(f, 'utf8');
@@ -139,6 +139,7 @@ test('jede id, die app.js/die.js anspricht, steht im HTML', () => {
   const pairs = [
     ['bauteilanalyse.html', [join('js', 'part', 'app.js'), join('js', 'part', 'partsource.js')]],
     ['offset.html', [join('js', 'part', 'offsetapp.js'), join('js', 'part', 'partsource.js')]],
+    ['abstand.html', [join('js', 'part', 'distanceapp.js')]],
     ['form.html', [join('js', 'die.js'), join('js', 'ui', 'sidebar.js')]]
   ];
   const problems = [];
@@ -153,6 +154,9 @@ test('jede id, die app.js/die.js anspricht, steht im HTML', () => {
     for (const m of src.matchAll(/slider\('([^']+)'/g)) { used.add(m[1]); used.add(m[1] + '-val'); }
     for (const m of src.matchAll(/seg3\('([^']+)'/g)) used.add(m[1]);
     for (const m of src.matchAll(/numberInput\('([^']+)'/g)) used.add(m[1]);
+    /* Zusammengesetzte ids (Suffix, Schleifen über 'a'/'b') lassen sich
+       statisch nicht auflösen — sie prüft der Verdrahtungstest. */
+    for (const id of [...used]) if (/'|\+|\$\{/.test(id)) used.delete(id);
     for (const id of used) if (!ids.has(id)) problems.push(html + ': keine id „' + id + '"');
   }
   assert.deepEqual(problems, []);

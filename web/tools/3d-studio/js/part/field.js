@@ -29,7 +29,19 @@
 
    Aus dem fertigen Feld lassen sich mehrere Aufmaße ohne Neurechnung
    ableiten: js/part/surfacenets.js zieht die Fläche zum Wert δ heraus.
+
+   Und es steckt mehr darin als die Offsetfläche. INNEN ist der Betrag
+   des Feldwertes der Radius der größten Kugel, die an dieser Stelle noch
+   ins Bauteil passt — bei plattenförmigen Bereichen also die halbe
+   Wandstärke. Das macht dasselbe Feld zur Dickenanalyse: wo der Betrag
+   am größten ist, liegt die dickste Stelle, und die erstarrt zuletzt
+   (Wärmezentrum, Lunkergefahr, Reichweite des Nachdrucks). Ein Untermaß
+   von −s lässt genau die Bereiche stehen, die dicker als 2·s sind; der
+   Feldschnitt im Viewer zeigt dieselbe Information flächig.
+
    Kein Three.js — damit unter Node testbar. */
+
+import { distSqPointTri } from '../mesh.js';
 
 /** Rastermaße vorab abschätzen (für die Anzeige, bevor gerechnet wird). */
 export function fieldSize(model, res, band) {
@@ -41,58 +53,6 @@ export function fieldSize(model, res, band) {
   const origin = [0, 1, 2].map(a => b.min[a] - pad);
   const samples = dims[0] * dims[1] * dims[2];
   return { dims, origin, h, band, samples, bytes: samples * 4 };
-}
-
-/* Punkt-Dreieck-Abstand (quadriert), Ericson „Real-Time Collision
-   Detection" 5.1.5 — als Skalare ausgeschrieben, weil diese Schleife der
-   heißeste Teil des ganzen Werkzeugs ist. */
-function distSqPointTri(px, py, pz, ax, ay, az, bx, by, bz, cx, cy, cz) {
-  const abx = bx - ax, aby = by - ay, abz = bz - az;
-  const acx = cx - ax, acy = cy - ay, acz = cz - az;
-  const apx = px - ax, apy = py - ay, apz = pz - az;
-  const d1 = abx * apx + aby * apy + abz * apz;
-  const d2 = acx * apx + acy * apy + acz * apz;
-  let qx, qy, qz;
-  if (d1 <= 0 && d2 <= 0) { qx = ax; qy = ay; qz = az; }
-  else {
-    const bpx = px - bx, bpy = py - by, bpz = pz - bz;
-    const d3 = abx * bpx + aby * bpy + abz * bpz;
-    const d4 = acx * bpx + acy * bpy + acz * bpz;
-    if (d3 >= 0 && d4 <= d3) { qx = bx; qy = by; qz = bz; }
-    else {
-      const vc = d1 * d4 - d3 * d2;
-      if (vc <= 0 && d1 >= 0 && d3 <= 0) {
-        const v = d1 / (d1 - d3);
-        qx = ax + abx * v; qy = ay + aby * v; qz = az + abz * v;
-      } else {
-        const cpx = px - cx, cpy = py - cy, cpz = pz - cz;
-        const d5 = abx * cpx + aby * cpy + abz * cpz;
-        const d6 = acx * cpx + acy * cpy + acz * cpz;
-        if (d6 >= 0 && d5 <= d6) { qx = cx; qy = cy; qz = cz; }
-        else {
-          const vb = d5 * d2 - d1 * d6;
-          if (vb <= 0 && d2 >= 0 && d6 <= 0) {
-            const w = d2 / (d2 - d6);
-            qx = ax + acx * w; qy = ay + acy * w; qz = az + acz * w;
-          } else {
-            const va = d3 * d6 - d5 * d4;
-            if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
-              const w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
-              qx = bx + (cx - bx) * w; qy = by + (cy - by) * w; qz = bz + (cz - bz) * w;
-            } else {
-              const den = 1 / (va + vb + vc);
-              const v = vb * den, w = vc * den;
-              qx = ax + abx * v + acx * w;
-              qy = ay + aby * v + acy * w;
-              qz = az + abz * v + acz * w;
-            }
-          }
-        }
-      }
-    }
-  }
-  const dx = px - qx, dy = py - qy, dz = pz - qz;
-  return dx * dx + dy * dy + dz * dz;
 }
 
 /* ── Durchgang 1: innen oder außen ───────────────────────────── */
