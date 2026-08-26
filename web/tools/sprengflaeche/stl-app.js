@@ -405,8 +405,8 @@
     document.getElementById('machine-body').innerHTML = rows.map((r) => {
       const cls = r === pref ? ' class="row-pref"' : (!r.ok ? ' class="row-toosmall"' : '');
       const badge = r === pref
-        ? '<span class="badge badge-pref" title="Kleinste Maschine, die den Auslegungsdruck von ' + fmt(pTarget) + ' bar erreicht">empfohlen</span>'
-        : (!r.ok ? '<span class="badge badge-toosmall" title="Erreicht den Auslegungsdruck von ' + fmt(pTarget) + ' bar nicht">zu klein</span>' : '');
+        ? '<span class="badge badge-pref" title="Kleinste Maschine, die den metallseitigen Nachdruck von ' + fmt(pTarget) + ' bar erreicht">empfohlen</span>'
+        : (!r.ok ? '<span class="badge badge-toosmall" title="Erreicht den metallseitigen Nachdruck von ' + fmt(pTarget) + ' bar nicht">zu klein</span>' : '');
       return `<tr${cls}>
         <td class="name">${escapeHtml(r.mc.name)}${badge}</td>
         <td>${fmt(r.f.force)} kN</td>

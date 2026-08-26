@@ -373,7 +373,7 @@
   <div class="stl-table-card" style="margin-top:1.2rem;">
     <div class="machine-head">
       <h2>Max. Nachdruck je Maschine — Sprengfläche aus projizierter Fläche + Seitenschiebern</h2>
-      <label for="ptarget-input">Auslegungsdruck
+      <label for="ptarget-input">Nachdruck (metallseitig)
         <input type="number" id="ptarget-input" value="600" min="1" step="50"> bar
       </label>
       <label for="safety-input">Sicherheitsfaktor S
@@ -413,7 +413,9 @@
     verschiedenen Dateien, zählen nur einfach.
     <strong>S</strong> markiert den flächengewichteten Gesamtschwerpunkt der projizierten Flächen,
     <strong>0</strong> den Ursprung des STL-Koordinatensystems.
-    Der maximale Nachdruck je Maschine folgt dem Zuhaltungs-Modell des Dashboards:
+    Der maximale Nachdruck je Maschine folgt dem Zuhaltungs-Modell des Dashboards
+    (Herleitung: <a href="/theorie/zuhaltung-sprengflaeche.html">Theorie — Zuhaltung und
+    Sprengfläche</a>):
     p<sub>max</sub> = F<sub>s</sub> / (100 · S · k · A) mit A als Sprengfläche
     (in m²) und dem Hebelfaktor k = 1 + 2|e<sub>x</sub>|/a<sub>x</sub> + 2|e<sub>y</sub>|/a<sub>y</sub>
     aus der Außermittigkeit des Gesamtschwerpunkts gegenüber dem Ursprung (a = Säulenabstände
@@ -436,11 +438,11 @@
     Seitenschieber-Zuschlag A<sub>S</sub>·tan α wird von Hand eingegeben und nicht mitskaliert;
     die Außermittigkeit bleibt ebenfalls unskaliert (sie würde sich nur um s verschieben).
     <strong>Empfohlen</strong> markiert die kleinste Maschine, deren maximaler Nachdruck
-    (mit S und Außermittigkeit) den eingestellten Auslegungsdruck erreicht;
+    (mit S und Außermittigkeit) den eingestellten metallseitigen Nachdruck erreicht;
     <strong>zu klein</strong> markierte Maschinen erreichen ihn nicht. „→ Dashboard" übernimmt
     die Sprengfläche (vereinigte projizierte Fläche + Seitenschieber-Zuschlag),
     Außermittigkeit, Massen aus der Zuordnung,
-    Sicherheitsfaktor, Auslegungsdruck sowie Maschinen- und Legierungs-Preset in das Dashboard und
+    Sicherheitsfaktor, metallseitigen Nachdruck sowie Maschinen- und Legierungs-Preset in das Dashboard und
     öffnet es — möglich, sobald alle vier Zuordnungen (Bauteil, Anguss, Überlauf, Pressrest)
     vergeben sind. Die Legierung bringt beide Dichten mit: hier rechnet die Feststoffdichte die
     Massen, im Dashboard die Flüssigdichte die Schmelzevolumina.</p>

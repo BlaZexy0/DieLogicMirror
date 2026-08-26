@@ -67,7 +67,7 @@
      Schließkraft, mit Sicherheitsfaktor, mit Sicherheit + Außermittigkeit)
      plus Eignung. clamp = Zuhaltungs-Modell (shared/clampmodel.js).
      opts: { areaMm2, ex, ey (mm), safety, pTarget (bar) }.
-     Eine Maschine ist geeignet (ok), wenn sie den Auslegungsdruck erreicht
+     Eine Maschine ist geeignet (ok), wenn sie den metallseitigen Nachdruck erreicht
      und die Form nicht abhebt (k − 1 ≥ 1 → meistentlastete Säule bei 0);
      empfohlen (pref) ist die geeignete Maschine mit der kleinsten
      Schließkraft. */
