@@ -110,7 +110,11 @@ export default {
        Bereich hinaus und das machbare Band würde zusammengedrückt. Die
        Hüllkurve anderer Ø bleibt innerhalb dieses Bereichs sichtbar; nur
        die t_f-Achse zeigt weiter die gesamte Erreichbarkeit. */
-    const QmaxAll = tb === 'tf' ? Math.max(Qmax, c.Ahi > 0 ? c.Ahi * v.vmax : 0) : Qmax;
+    /* xFull (Opt-in der Theorieseite): Q-/Q²-Achse bis Q_dry des größten
+       Kolbens festhalten — beim Spielen mit dem Kolben-Ø verschiebt sich
+       dann sichtbar die Maschinenlinie statt der Achse. */
+    const Qfull = Math.max(Qmax, c.Ahi > 0 ? c.Ahi * v.vmax : 0);
+    const QmaxAll = (tb === 'tf' || this.xFull) ? Qfull : Qmax;
     const pTop = pistonOnly ? p0 : Math.max(p0, c.Alo > 0 ? c.FG * 1e3 / (c.Alo * 1e5) : p0);
 
     /* x-Achse: fx bildet Q → Achsenwert ab, ix ist die Umkehrung (für
@@ -156,7 +160,7 @@ export default {
          Im v_p-Modus fällt sie mit der Maskengrenze zusammen — sie bleibt
          trotzdem eine Serie, damit sie in jedem Modus dieselbe Farbe hat
          (Serien werden über den Grenzen gezeichnet). */
-      series('Maschine (Ø ' + fmt(v.diam) + ')', C.series4, Qarr,
+      series('Maschine (Ø ' + fmt(v.diam) + ' mm)', C.series4, Qarr,
         Q => Q <= Qmax ? fy(machineLine(Q), Q) : NaN),
       series('Werkzeug', C.series2, Qarr, Q => fy(Cdie * Q * Q, Q))
     ];

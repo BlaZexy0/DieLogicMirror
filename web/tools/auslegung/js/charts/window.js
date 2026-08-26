@@ -17,7 +17,7 @@ export default {
     const Ap = pistonArea(v);
     const q = heat(0, v.vmax, v.gate * 0.3, v.gate * 2,
       (vp, Ag) => vp * Ap / Ag,
-      'Kolbengeschw. m/s', 'Anschnittfläche mm²', 'Anschnittgeschw. m/s',
+      'Kolbengeschwindigkeit in m/s', 'Anschnittfläche in mm²', 'Anschnittgeschwindigkeit in m/s',
       0, 80, [20, 40, 60]);
     /* Zielband v_a ∈ [gateMin, gateMax] ⇔ A_a zwischen zwei Hyperbeln */
     if (v.gateMin > 0 && v.gateMax > 0)

@@ -12,16 +12,17 @@ import { eq } from './mathfmt.js';
 const P_ATM = 1.01325;                                  // Umgebungsdruck bar
 const K = 273.15;
 
-/* D_vor/D_nach = ((p_ND/p_vor) · (T_liq/T_form))^(1/3), Temperaturen in K.
+/* D_vor/D_nach = ((p_N/p_vor) · (T_liq/T_form))^(1/3), Temperaturen in K.
    p_vor = Druck der eingeschlossenen Luft beim Füllende: ohne Vakuum
-   Umgebungsdruck, mit Vakuum der simulierte Restluftdruck. */
-function ratio(v, p, pVor) {
+   Umgebungsdruck, mit Vakuum der simulierte Restluftdruck.
+   Exportiert für den Kennwert im Thermik-Panel (ui/kpis.js). */
+export function ratio(v, p, pVor) {
   return Math.cbrt((p / (pVor || P_ATM)) * ((v.Tliq + K) / (v.Tdie + K)));
 }
 
 /* Restluftdruck beim Füllende aus der Backend-Simulation [bar], oder null
    (Simulation lädt noch / Fehler / Vakuum-Modell „aus"). */
-function vacPressure(v) {
+export function vacPressure(v) {
   if (!v.vacModel || v.vacModel === 'aus') return null;
   const sd = sim.data;
   if (!sd || !sd.samples || !Array.isArray(sd.samples.p_air_mbar)) return null;
@@ -59,14 +60,14 @@ export default {
       ys.push(series('mit Vakuum (p_vor ' + fmt(pVac * 1000) + ' mbar, Simulation)', C.series1, x, p => ratio(v, p, pVac)));
     }
     const q = line(x, ys,
-      'Nachdruck p_ND in bar', 'Blasen-Ø-Verhältnis D_vor/D_nach',
+      'Nachdruck p_N in bar', 'Blasen-Ø-Verhältnis D_vor/D_nach',
       'T_liq ' + fmt(v.Tliq) + ' °C · T_Form ' + fmt(v.Tdie) + ' °C · max. Nachdruck (Ø ' + fmt(v.diam) + ') ' + fmt(p0) + ' bar'
       + (pVac === null && v.vacModel && v.vacModel !== 'aus' ? ' · Vakuum-Simulation lädt/fehlt — nur ohne Vakuum' : ''));
     q.y0 = 0;
     if (v.psel >= P_ATM && v.psel <= p0) {
       const r = ratio(v, v.psel, pVac !== null ? pVac : undefined);
       q.pt = [v.psel, r];
-      q.ptl = 'Auslegungsdruck ' + fmt(v.psel) + ' bar → Ø-Verhältnis ' + fmt(r) + (pVac !== null ? ' (mit Vakuum)' : '');
+      q.ptl = 'Gewählter Nachdruck ' + fmt(v.psel) + ' bar → Ø-Verhältnis ' + fmt(r) + (pVac !== null ? ' (mit Vakuum)' : '');
     }
     return q;
   },
@@ -80,11 +81,11 @@ ohne Vakuum ist das der Umgebungsdruck, mit Vakuum der <em>simulierte Restluftdr
 beim Füllende (Luftdruck-Kurve der Schusskurve, Backend). Der Nachdruck presst die Blase zusammen,
 bevor das Gefüge erstarrt; ihr Zustand friert etwa bei Formtemperatur ein. Für die eingeschlossene
 Luft als ideales Gas gilt zwischen „vor" (p<sub>vor</sub>, T<sub>liq</sub>) und „nach"
-(p<sub>ND</sub>, T<sub>Form</sub>):</p>
-${eq('\\frac{p_{\\text{vor}} \\cdot V_{\\text{vor}}}{T_{\\text{liq}}} = \\frac{p_{\\text{ND}} \\cdot V_{\\text{nach}}}{T_{\\text{Form}}} \\qquad (T\\ \\text{in K})')}
+(p<sub>N</sub>, T<sub>Form</sub>):</p>
+${eq('\\frac{p_{\\text{vor}} \\cdot V_{\\text{vor}}}{T_{\\text{liq}}} = \\frac{p_{\\text{N}} \\cdot V_{\\text{nach}}}{T_{\\text{Form}}} \\qquad (T\\ \\text{in K})')}
 <p class="math-note">Volumen geht mit der dritten Potenz des Durchmessers — auflösen und Wurzel ziehen
 liefert das Durchmesserverhältnis, das die Kurven zeigen (eine je p<sub>vor</sub>):</p>
-${eq('\\frac{D_{\\text{vor}}}{D_{\\text{nach}}} = \\left( \\frac{p_{\\text{ND}}}{p_{\\text{vor}}} \\cdot \\frac{T_{\\text{liq}}}{T_{\\text{Form}}} \\right)^{1/3}')}
+${eq('\\frac{D_{\\text{vor}}}{D_{\\text{nach}}} = \\left( \\frac{p_{\\text{N}}}{p_{\\text{vor}}} \\cdot \\frac{T_{\\text{liq}}}{T_{\\text{Form}}} \\right)^{1/3}')}
 <p class="math-note">Mit Vakuum liegt p<sub>vor</sub> weit unter Umgebungsdruck: dieselbe Blase wird
 stärker komprimiert (höhere Kurve) — und vor allem ist von vornherein weniger Luft eingeschlossen,
 die Ausgangsblasen sind kleiner. Ohne Simulationsdaten (Modell „ohne Vakuum" oder Simulation lädt)
@@ -96,7 +97,7 @@ montierten Kolbens p<sub>max</sub> = F<sub>G</sub>/A<sub>K</sub> (volle Gießkra
 PQ²-Diagramm). Annahmen: ideales Gas, keine Lösung der Luft in der Schmelze, Blase bleibt kugelig.</p>
 <p class="math-note">Aktuell: p<sub>max</sub>(Ø <span data-m="D"></span>) = <b data-m="pmax"></b> ·
 T<sub>liq</sub>/T<sub>Form</sub> = <b data-m="Tratio"></b> (in K) · p<sub>vor</sub> = <b data-m="pvor"></b> ·
-beim Auslegungsdruck <span data-m="psel"></span>: D<sub>vor</sub>/D<sub>nach</sub> = <b data-m="r"></b>
+beim gewählten Nachdruck p<sub>N</sub> = <span data-m="psel"></span>: D<sub>vor</sub>/D<sub>nach</sub> = <b data-m="r"></b>
 (Blasenvolumen auf <b data-m="vol"></b>)<span data-m="rvac"></span></p>`;
   },
 

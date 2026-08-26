@@ -21,9 +21,9 @@ export default {
     const cMin = (theme.limits && theme.limits.gateMin) || C.series1;
     const cMax = (theme.limits && theme.limits.gateMax) || C.series2;
     const q = line(x, [
-      series(fmt(v.gateMin) + ' m/s', cMin, x, s => s * A / v.gateMin),
-      series(fmt(v.gateMax) + ' m/s', cMax, x, s => s * A / v.gateMax)
-    ], 'Kolbengeschwindigkeit m/s', 'Anschnittfläche mm²',
+      series('A bei ' + fmt(v.gateMin) + ' m/s', cMin, x, s => s * A / v.gateMin),
+      series('A bei ' + fmt(v.gateMax) + ' m/s', cMax, x, s => s * A / v.gateMax)
+    ], 'Kolbengeschwindigkeit in m/s', 'Anschnittfläche in mm²',
       'Ø ' + fmt(v.diam) + ' mm · Auswahl ' + fmt(v.gate) + ' mm²');
     /* Zulässiges Fenster zwischen den beiden Kurven als Zielband */
     if (v.gateMin > 0 && v.gateMax > 0)

@@ -15,7 +15,7 @@ export default {
     const x = seq(0.5, v.gateTh * 2.5, 140);
     const f = s => v.solK * s * s;
     const q = line(x, [series('Erstarrungszeit', theme.chart.series1, x, f)],
-      'Anschnittdicke mm', 'Erstarrungszeit ms', 'Konstante ' + fmt(v.solK) + ' ms/mm²');
+      'Anschnittdicke in mm', 'Erstarrungszeit in ms', 'Konstante ' + fmt(v.solK) + ' ms/mm²');
     q.y0 = 0;
     q.limits = [limit('intTime', 'Nachdruckaufbauzeit ' + fmt(v.intTime) + ' ms', 'y', 'min', v.intTime, { note: 'Anschnitt erstarrt vor dem Nachdruckaufbau' })];
     q.pt = [v.gateTh, f(v.gateTh)];

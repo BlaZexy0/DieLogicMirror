@@ -15,7 +15,7 @@ export default {
     const x = seq(v.wallMin, v.wallMax, 140);
     const f = s => v.gateMax - (v.gateMax - v.gateMin) * (s - v.wallMin) / (v.wallMax - v.wallMin);
     const q = line(x, [series('Empfehlung', theme.chart.series1, x, f)],
-      'Wandstärke mm', 'Anschnittgeschw. m/s', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s');
+      'Wandstärke in mm', 'Anschnittgeschwindigkeit in m/s', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s');
     q.limits = [target('gateBand', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s', 'y', v.gateMin, v.gateMax)];
     q.y0 = 0;
     q.pt = [v.wall, f(v.wall)];

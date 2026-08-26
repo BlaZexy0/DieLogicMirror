@@ -180,7 +180,7 @@ export function validate(v) {
   if (v.length < v.lmin || v.length > v.lmax) bad.add('length');
   /* Verschluss-Hub muss in der Kammer liegen (Backend prüft dasselbe). */
   if (v.sealStroke > v.length) bad.add('sealStroke');
-  /* Auslegungsdruck gegen den max. spezifischen Gießdruck der Maschine
+  /* Metallseitiger Nachdruck gegen den max. spezifischen Gießdruck der Maschine
      (Gießkraft auf Ø dmin) — ersetzt das frühere pmin/pmax-Paar. */
   const pM = pMaxMachine(v);
   if (isFinite(pM) && v.psel > pM) bad.add('psel');

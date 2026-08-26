@@ -17,7 +17,7 @@ export default {
   calc(v) {
     const q = heat(v.lmin, v.lmax, v.dmin, v.dmax,
       (L, d) => 100e9 * ((total(v) + v.biscuit) / v.density) / (L * 0.25 * PI * d * d),
-      'Kammerlänge mm', 'Kolben-Ø mm', 'Füllgrad %', 0, 100, [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+      'Kammerlänge in mm', 'Kolben-Ø in mm', 'Füllgrad in %', 0, 100, [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
     /* Füllgrad ≤ 100 % ⇔ D ≥ D₁₀₀(L) = √(4·V_dos/(π·L)) — als Kurvengrenze */
     const Vdos = (total(v) + v.biscuit) / v.density;
     q.limits = [limit('fill100', 'φ = 100 %', 'y', 'min',

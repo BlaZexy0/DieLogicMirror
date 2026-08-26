@@ -11,6 +11,27 @@ import { violates } from '../core/limits.js';
 const PI = Math.PI;
 export const HOVER_IDLE = 'Bewege die Maus über das Diagramm, um den aktuellen Wert anzuzeigen.';
 
+/* Achsenlabels sind als „Größe in Einheit" formuliert (Konvention, siehe
+   charts/helpers.js) — für den Hover Einheit und Größenname daraus lösen.
+   Zusätze nach Gedankenstrich oder Klammer gehören nicht zur Einheit
+   („Q² in (l/s)² — …" → „(l/s)²"); ohne „ in " ist die Größe einheitenlos. */
+function unitOf(label) {
+  const s = String(label || ''), i = s.lastIndexOf(' in ');
+  if (i < 0) return '';
+  let u = s.slice(i + 4).split(' — ')[0];
+  const p = u.indexOf(' (');
+  if (p > 0) u = u.slice(0, p);
+  return u.trim();
+}
+function nameOf(label) {
+  const s = String(label || ''), i = s.lastIndexOf(' in ');
+  return i < 0 ? s : s.slice(0, i);
+}
+/* Wert mit Einheit ('' → nur die Zahl), nicht-endlich → „—". */
+function vu(val, u) {
+  return isFinite(val) ? fmt(val) + (u ? ' ' + u : '') : '—';
+}
+
 function interp(xs, ys, xv) {
   if (xv <= xs[0]) return ys[0];
   for (let i = 1; i < xs.length; i++) {
@@ -82,15 +103,19 @@ export function showHover(card, ev) {
   if (d.z) {
     const y0 = d.y[0], y1 = d.y[d.y.length - 1];
     const yv = y1 - (py - f.T) / f.ph * (y1 - y0);
-    let msg = '<b>' + subHTML(d.xl) + ':</b> ' + fmt(xv) + ' · <b>' + subHTML(d.yl) + ':</b> ' + fmt(yv) + ' · <b>' + subHTML(d.cl) + ':</b> ' + fmt(heatVal(d, xv, yv));
+    let msg = '<b>' + subHTML(nameOf(d.xl)) + ':</b> ' + vu(xv, unitOf(d.xl))
+      + ' · <b>' + subHTML(nameOf(d.yl)) + ':</b> ' + vu(yv, unitOf(d.yl))
+      + ' · <b>' + subHTML(nameOf(d.cl)) + ':</b> ' + vu(heatVal(d, xv, yv), unitOf(d.cl));
     const bad = (d.limits || []).filter(l => violates(l, xv, yv));
     if (bad.length) msg += ' · <b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + subHTML(bad.map(l => l.label).join(', ')) + '</b>';
     box.innerHTML = msg;
   } else {
-    let msg = '<b>' + subHTML(d.xl) + ':</b> ' + fmt(xv);
+    let msg = '<b>' + subHTML(nameOf(d.xl)) + ':</b> ' + vu(xv, unitOf(d.xl));
+    /* Einheit je Serie: eigenes u (z. B. rechte Achse), sonst die der y-Achse. */
+    const yu = unitOf(d.yl);
     for (let i = 0; i < d.ys.length; i++) {
       const s = d.ys[i], val = interp(d.x, s.y, xv);
-      msg += ' · <b>' + subHTML(s.n) + ':</b> ' + (isFinite(val) ? fmt(val) + (s.u ? ' ' + s.u : '') : '—');
+      msg += ' · <b>' + subHTML(s.n) + ':</b> ' + vu(val, s.u || yu);
     }
     /* Bei genau einer Serie: verletzte Grenzen am Kurvenpunkt melden (wie
        beim Heatmap-Hover). Bei mehreren Serien wäre unklar, welche gemeint ist. */
@@ -99,6 +124,6 @@ export function showHover(card, ev) {
       const bad = d.limits.filter(l => violates(l, xv, val));
       if (bad.length) msg += ' · <b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + subHTML(bad.map(l => l.label).join(', ')) + '</b>';
     }
-    box.innerHTML = msg + ' <span class="unit">' + subHTML(d.yl) + '</span>';
+    box.innerHTML = msg;
   }
 }

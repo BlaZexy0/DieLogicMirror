@@ -21,6 +21,7 @@
 import { fmt, subHTML } from '../core/format.js';
 import { total, afterGate, pistonArea, travel, injForceEff, hydArea, cavityVolume, cavityTravel, biscuitSolid, intensStroke, rhoSolidus } from '../core/physics.js';
 import { pqCore } from '../charts/pq2.js';
+import { ratio as bubbleRatio, vacPressure } from '../charts/bubble.js';
 import { ACTIVE_SPAN } from './chamber.js';
 
 /* Während eines Renders eingesammelte Prüfungen für die Prüfleiste. */
@@ -307,6 +308,13 @@ export function renderKpis(el, v, shot, chamberEl) {
   const Areq = tOp > 0 && v.vAirMax > 0 ? Vm / (tOp / 1000) / v.vAirMax * 1e6 : NaN;
   const tErst = v.solK * v.gateTh * v.gateTh;
 
+  /* Luftblasen-Kompression beim gewählten Nachdruck — dieselbe Rechnung wie
+     das Blasendiagramm: p_vor = Umgebungsdruck, mit Vakuum der simulierte
+     Restluftdruck beim Füllende. */
+  const pVacB = vacPressure(v);
+  const rBub = (v.psel > 0 && v.Tliq > v.Tdie && v.Tdie > -273.15)
+    ? bubbleRatio(v, v.psel, pVacB !== null ? pVacB : undefined) : NaN;
+
   const chamberKvs =
     kv('Dosiergewicht', fmt(mdos) + ' kg', 'Bauteil + Anguss + Überlauf + Pressrest ' + fmt(v.biscuit) + ' kg')
     + kv('Dosiervolumen', fmt(Vdos * 1e6) + ' cm³', 'inkl. Pressrest · Flüssigdichte ' + fmt(v.density) + ' kg/m³')
@@ -416,7 +424,7 @@ export function renderKpis(el, v, shot, chamberEl) {
         : row('Schließkraft-Auslastung', '—', 'braucht Maschinenkraft', 'nodata'))
       + (isFinite(uHold)
         ? row('Nachdruck-Auslastung', fmt(100 * uHold) + ' %',
-          'Auslegung ' + fmt(v.psel) + ' von max. ' + fmt(pMaxClamp) + ' bar (Zuhaltung · e = (' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k = ' + fmt(kClamp) + ')',
+          'Nachdruck ' + fmt(v.psel) + ' von max. ' + fmt(pMaxClamp) + ' bar (Zuhaltung · e = (' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k = ' + fmt(kClamp) + ')',
           utilStatus(uHold), pctTag(uHold), meter(uHold))
         : row('Nachdruck-Auslastung', '—', 'Zuhaltungsmodell unvollständig', 'nodata'))
       + (v.pAcc > 0 && v.injForce > 0
@@ -434,7 +442,13 @@ export function renderKpis(el, v, shot, chamberEl) {
           utilStatus(uPw), pctTag(uPw), meter(uPw))
         : row('PQ²-Leistungsauslastung', '—', 'Eingaben unvollständig (Gießkraft, v_max, Anschnitt)', 'nodata')))
 
-    + panel('Thermik und Qualität', 'Thermik', '', () =>
+    + panel('Thermik und Qualität', 'Thermik',
+      (isFinite(rBub)
+        ? kv('Luftblasen-Kompression D_vor/D_nach', fmt(rBub),
+          'Ø-Verhältnis der eingeschlossenen Luftblase beim Nachdruck ' + fmt(v.psel) + ' bar · p_vor '
+          + (pVacB !== null ? fmt(pVacB * 1000) + ' mbar (Vakuum-Simulation)' : '1013 mbar (ohne Vakuum)')
+          + ' · Blasenvolumen auf ' + fmt(100 / (rBub * rBub * rBub)) + ' %')
+        : ''), () =>
       row('Anschnitt-Erstarrung', fmt(tErst) + ' ms',
         'k·s² bei s = ' + fmt(v.gateTh) + ' mm · Nachdruckaufbau ' + fmt(v.intTime) + ' ms',
         minStatus(tErst, v.intTime), minTag(tErst, v.intTime),

@@ -18,7 +18,7 @@ export default {
     const x = seq(v.dmin, v.dmax, 140);
     const q = line(x, [series('Füllgrad', theme.chart.series1, x,
       d => 100e9 * ((total(v) + v.biscuit) / v.density) / (v.length * 0.25 * PI * d * d))],
-      'Kolben-Ø mm', 'Füllgrad %',
+      'Kolben-Ø in mm', 'Füllgrad in %',
       'Dosiert ' + fmt(total(v) + v.biscuit) + ' kg (inkl. Pressrest) · Kammer ' + fmt(v.length) + ' mm');
     q.limits = [target('fillBand', 'Ziel φ ' + fmt(v.fillMin) + '–' + fmt(v.fillMax) + ' %', 'y', v.fillMin, v.fillMax)];
     q.y0 = 0; q.y1 = 100;

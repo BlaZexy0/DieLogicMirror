@@ -27,7 +27,7 @@ export default {
 
     const q = heat(0, 100, v.dmin, v.dmax,
       (ff, d) => vCrit(d / 1000, ff / 100),
-      'Füllgrad %', 'Kolben-Ø mm', 'Krit. Kolbengeschw. m/s', 0, hi, levels);
+      'Füllgrad in %', 'Kolben-Ø in mm', 'Krit. Kolbengeschwindigkeit in m/s', 0, hi, levels);
     /* Verletzungszone: unterhalb der Kurve v_krit(D, φ) = v₁ ist die gewählte
        1.-Phase-Geschwindigkeit zu schnell (Wellenüberschlag). v_krit steigt
        mit D — der Grenz-Ø je Füllgrad wird per Bisektion bestimmt. */

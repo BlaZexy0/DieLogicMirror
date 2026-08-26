@@ -49,7 +49,7 @@ export const groups = [
          follows: startet beim Maximum (Preset-Wechsel, ältere Projekte). */
       { key: 'pAccOp', label: 'Akkumulatordruck (eingestellt)', unit: 'bar', def: 190, follows: 'pAcc' },
       { key: 'area',   label: 'Sprengfläche',      unit: 'm²',  def: 0.15 },
-      { key: 'psel',   label: 'Auslegungsdruck',   unit: 'bar', def: 600 },
+      { key: 'psel',   label: 'Nachdruck (metallseitig)', unit: 'bar', def: 600 },
       /* adv: standardmäßig hinter „Erweiterte Optionen" eingeklappt. */
       { key: 'safety', label: 'Sicherheitsfaktor', unit: '-',   def: 1.3, adv: true },
       { key: 'eccX', label: 'Außermittigkeit Schwerpunkt x', unit: 'mm', def: 0, adv: true },

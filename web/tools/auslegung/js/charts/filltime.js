@@ -23,7 +23,7 @@ export default {
     for (let L = 1; L <= Math.floor(v.vmax); L++) levels.push(L);
     const q = heat(0.1, v.tmax, v.dmin, v.dmax,
       (t, d) => 1e9 * cavityVolume(afterGate(v), v) / (t * 0.25 * PI * d * d),
-      'Füllzeit ms', 'Kolben-Ø mm', 'Kolbengeschwindigkeit m/s', 0, v.vmax, levels);
+      'Füllzeit in ms', 'Kolben-Ø in mm', 'Kolbengeschwindigkeit in m/s', 0, v.vmax, levels);
     /* v_p ≤ v_max ⇔ D ≥ √(4·V_a/(π·t·v_max)) — als Kurvengrenze */
     const Va = cavityVolume(afterGate(v), v);
     q.limits = [limit('vmax', 'v_max ' + fmt(v.vmax) + ' m/s', 'y', 'min',

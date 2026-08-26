@@ -17,7 +17,7 @@ export default {
     const A = pistonArea(v);
     const x = seq(0, v.vmax, 140);
     const q = line(x, [series('Entlüftung', theme.chart.series1, x, s => s * A / v.vent)],
-      'Kolbengeschwindigkeit m/s', 'Entlüftungsgeschwindigkeit m/s',
+      'Kolbengeschwindigkeit in m/s', 'Entlüftungsgeschwindigkeit in m/s',
       'Ø ' + fmt(v.diam) + ' mm · Entlüftung ' + fmt(v.vent) + ' mm²');
     if (v.vAirMax > 0)
       q.limits = [limit('vAirMax', 'v_luft max ' + fmt(v.vAirMax) + ' m/s', 'y', 'max', v.vAirMax,

@@ -42,7 +42,7 @@ export default {
       ss.push(series('S=' + fmt(v.safety) + ' · k=' + fmt(k), C.series3, x,
         p => CLAMP.areaMax(v.force, p, v.safety, k)));
     }
-    const q = line(x, ss, 'Druck in bar', 'Max. Sprengfläche m²',
+    const q = line(x, ss, 'Druck in bar', 'Max. Sprengfläche in m²',
       'Kraft ' + fmt(v.force) + ' kN · S=' + fmt(v.safety) +
       ' · e=(' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k=' + fmt(k) +
       (lift ? ' · ⚠ Abheben' : '') +

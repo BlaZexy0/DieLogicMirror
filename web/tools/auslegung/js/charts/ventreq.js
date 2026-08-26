@@ -26,7 +26,7 @@ export default {
     if (!isFinite(t0) || t0 < 1 || t0 >= v.tmax) t0 = 1;
     const x = seq(t0, v.tmax, 140);
     const q = line(x, [series('Erf. Entlüftung', C.series1, x, f)],
-      'Füllzeit ms', 'Erf. Entlüftungsfläche mm²',
+      'Füllzeit in ms', 'Erf. Entlüftungsfläche in mm²',
       'Luftvolumen ' + fmt(Vm * 1e6) + ' cm³ · ' + fmt(v.vAirMax) + ' m/s');
     q.y0 = 0;
     q.y1 = yCap;

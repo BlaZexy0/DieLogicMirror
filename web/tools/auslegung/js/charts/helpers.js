@@ -1,4 +1,9 @@
-/* Kleine Bau-Helfer für Diagrammdaten (Serien, Linien-Spezifikation, Heatmap-Raster). */
+/* Kleine Bau-Helfer für Diagrammdaten (Serien, Linien-Spezifikation, Heatmap-Raster).
+
+   Konvention Achsenlabels (xl, yl, cl): „Größe in Einheit", z. B.
+   'Kolben-Ø in mm' — der Hover (render/hover.js) löst die Einheit daraus
+   und hängt sie an die Werte. Zusätze nach „ — " oder in Klammern hinter
+   der Einheit sind erlaubt; einheitenlose Größen kommen ohne „ in " aus. */
 
 import { seq } from '../core/format.js';
 

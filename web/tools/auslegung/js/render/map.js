@@ -8,10 +8,12 @@ import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 
 /* Texte der Verletzungsarten — auch vom Hover verwendet. */
+/* Kurzlabels für den Hover (render/hover.js) — dort steht „verletzt:"
+   davor, die Labels selbst nennen nur die Grenze. */
 export const MAP_LABELS = {
   ok: 'machbar',
-  bore: 'Kolben-Ø-Bereich verletzt',
-  len: 'Kammerlängen-Bereich verletzt',
+  bore: 'Kolben-Ø-Bereich',
+  len: 'Kammerlängen-Bereich',
   bisc: 'Pressrest zu dünn',
   crit: 'v 1. Phase > v_krit'
 };

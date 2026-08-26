@@ -25,7 +25,7 @@ export default {
     const q = line(x, [
       series('S=1,00', C.series1, x, p => CLAMP.forceKN(p, v.area, 1, 1)),
       series('S=' + fmt(v.safety), C.series2, x, p => CLAMP.forceKN(p, v.area, v.safety, 1))
-    ], 'Druck in bar', 'Maschinengröße kN', 'Fläche ' + fmt(v.area) + ' m² · S=' + fmt(v.safety));
+    ], 'Druck in bar', 'Maschinengröße in kN', 'Fläche ' + fmt(v.area) + ' m² · S=' + fmt(v.safety));
     /* y knapp über Maschinenkraft und Betriebspunkt kappen — sonst dominiert
        bei großem pMax die Schraffur „über Maschinenkraft" das ganze Bild. */
     q.y0 = 0;
@@ -42,7 +42,7 @@ export default {
 <h4>Erforderliche Schließkraft</h4>
 <p class="math-note">Die Frage hier: <em>Welche Maschinengröße braucht dieses Bauteil?</em> Es ist die Umkehrung
 der Sprengflächen-Beziehung — Aufdrückkraft = Metalldruck mal projizierte Fläche; bei gegebener Sprengfläche A
-und Auslegungsdruck p muss die Maschine mindestens aufbringen:</p>
+und metallseitigem Nachdruck p muss die Maschine mindestens aufbringen:</p>
 ${eq('F_{\\text{erf}}(p) = S \\cdot p \\cdot A \\cdot 100 \\quad (F\\ \\text{in kN,}\\ p\\ \\text{in bar,}\\ A\\ \\text{in}\\ m^{2} \\;\\text{—}\\; 1\\ \\text{bar}\\ = 100\\ \\text{kN}/\\text{m}^{2})')}
 <p class="math-note">Die beiden Kurven zeigen S = 1 (physikalisches Minimum) und den gewählten
 Sicherheitsfaktor; die gestrichelte Linie ist die verfügbare Maschinenkraft. Umstellung nach A liefert das

@@ -1,5 +1,5 @@
 /* Spezifischer Gießdruck über Kolben-Ø. Das Zielband ist abgeleitet:
-   Untergrenze = Auslegungsdruck psel (das muss der Kolben liefern),
+   Untergrenze = metallseitiger Nachdruck psel (den muss der Kolben liefern),
    Obergrenze = max. Nachdruck der Zuhaltung (shared/clampmodel.js) —
    keine freien Ziel-Gießdruck-Eingaben mehr. */
 
@@ -29,7 +29,7 @@ export default {
     const f = d => F * 1e4 / (0.25 * PI * d * d);
     const pClamp = clampMax(v);
     const q = line(x, [series('Gießdruck', theme.chart.series1, x, f)],
-      'Kolben-Ø mm', 'Spez. Gießdruck bar', 'Gießkraft ' + fmt(F) + ' kN bei ' + fmt(Math.min(v.pAccOp, v.pAcc)) + ' bar Akkumulatordruck');
+      'Kolben-Ø in mm', 'Spez. Gießdruck in bar', 'Gießkraft ' + fmt(F) + ' kN bei ' + fmt(Math.min(v.pAccOp, v.pAcc)) + ' bar Akkumulatordruck');
     if (v.psel > 0 && isFinite(pClamp)) {
       const lo = Math.min(v.psel, pClamp), hi = Math.max(v.psel, pClamp);
       q.limits = [target('pspecBand', 'Bedarf ' + fmt(v.psel) + ' – Zuhaltung ' + fmt(pClamp) + ' bar', 'y', lo, hi)];
@@ -50,10 +50,10 @@ auf die Schmelze — das ist derselbe statische Metalldruck p₀ wie im PQ²-Dia
 ${eq('p_{\\text{spez}}(D) = \\frac{F_{G}}{A_{K}} = \\frac{4 \\cdot F_{G}}{\\pi \\cdot D^{2}} \\quad\\ (\\text{in Einheiten:}\\ p [\\text{bar}] = 10^{4} \\cdot F [\\text{kN}] / A [\\text{mm}^{2}])')}
 
 <h4>2 · Abgeleitetes Zielband</h4>
-<p class="math-note">Untergrenze ist der Auslegungsdruck p<sub>sel</sub> — weniger liefert der Kolben, als die
+<p class="math-note">Untergrenze ist der metallseitige Nachdruck p<sub>N</sub> — weniger liefert der Kolben, als die
 Auslegung verlangt. Obergrenze ist der maximale Nachdruck der Zuhaltung
 p<sub>max</sub> = F<sub>s</sub> / (100 · S · k · A) — mehr hält die Form nicht zu.</p>
-${eq('D(p) = \\sqrt{\\frac{4 \\cdot F_{G}}{\\pi \\cdot p}} \\quad \\Rightarrow \\quad\\ \\text{Band}\\ p_{\\text{sel}} \\dots p_{\\max} \\Leftrightarrow \\text{Ø}\\ \\text{von}\\ D(p_{\\max})\\ \\text{bis}\\ D(p_{\\text{sel}})')}
+${eq('D(p) = \\sqrt{\\frac{4 \\cdot F_{G}}{\\pi \\cdot p}} \\quad \\Rightarrow \\quad\\ \\text{Band}\\ p_{\\text{N}} \\dots p_{\\max} \\Leftrightarrow \\text{Ø}\\ \\text{von}\\ D(p_{\\max})\\ \\text{bis}\\ D(p_{\\text{N}})')}
 <p class="math-note">Aktuell: p<sub>spez</sub>(Ø <span data-m="D"></span>) = <b data-m="p"></b> ·
 Band <span data-m="band"></span> ⇒ Ø-Bereich <b data-m="Dband"></b></p>`;
   },
