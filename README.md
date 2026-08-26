@@ -76,8 +76,9 @@ dielogic/
 │   │   │                    der Druckgießform), Bauteilanalyse (Formteilung, Hinterschnitte,
 │   │   │                    Entformschrägen), Offsetflächen (Abstandsfeld: Aufmaß, Wandstärke,
 │   │   │                    Wärmezentrum) und Abstandsanalyse (kürzester Abstand zwischen zwei
-│   │   │                    Dateien). ERZEUGT — Quelle ist das eigenständige form3d neben dem
-│   │   │                    Repo, siehe 3d-studio/HERKUNFT.md. Bringt Three.js in vendor/ mit.
+│   │   │                    Dateien). Bringt Three.js in vendor/ mit — die einzige
+│   │   │                    Fremdbibliothek, die nur dieses Werkzeug braucht.
+│   │   │                    Eigenes README dort; Modelle erzeugt scripts/3d-studio/.
 │   │   └── zyklus/          Zyklusanalyse (Abschnitt cycle): Zeitleiste + Wärmebilanz je Zyklus
 │   │                        (zyklus-logic.js, getestet gegen die Zahlenbeispiele der Quellen —
 │   │                        docs/heat_flow_hpd_die.md)
@@ -104,7 +105,8 @@ dielogic/
 │   └── vkrit/       v_krit_sim.csv — OpenFOAM-CFD-Tabelle, Quelle für beide v_krit-Tabellen
 ├── docs/            Quellen-Notizen (heat_flow_hpd_die.md: Wärmebilanz-Gleichungen + Abgleich)
 ├── tests/web/       Node-Tests der Website (nicht ausgeliefert)
-├── scripts/         Generatoren: gen-theory-svgs, gen-vkrit-table, gen-palette (nicht ausgeliefert)
+├── scripts/         Generatoren (nicht ausgeliefert): gen-theory-svgs, gen-vkrit-table,
+│   │                gen-palette und 3d-studio/ (die glTF-Modelle des 3D-Studios)
 ├── render.yaml      Render-Blueprint (Web Service: Build, Start, Healthcheck)
 └── .venv/           lokale Python-Umgebung (nicht einchecken)
 ```
@@ -189,10 +191,10 @@ Simulations-Requests ergänzt werden.
   ```
 - **Neues Diagramm:** wie in `web/tools/auslegung/README.md`; danach in `web/shared/nav.js`
   (`CHARTS`) und im Katalog auf `web/index.html` verlinken.
-- **3D-Studio:** hier NICHT von Hand ändern — `web/tools/3d-studio/` und
-  `tests/web/3d-studio/` sind erzeugt. Änderungen gehören ins
-  eigenständige `form3d/` daneben, danach dort `node tools/integrate.mjs`
-  (siehe `web/tools/3d-studio/HERKUNFT.md`).
+- **3D-Studio:** eigenes README unter `web/tools/3d-studio/`. Nach
+  Änderungen an der Geometrie die Modelle neu erzeugen:
+  `node scripts/3d-studio/build-glb.mjs` (Formmodell) und
+  `node scripts/3d-studio/build-parts.mjs` (Beispielteile).
 - **Simulation:** Einheiten-Übersetzung und Defaults in
   `backend/convert.py`; im Frontend holt `web/tools/auslegung/js/core/simstore.js` das
   Ergebnis, die Schusskurve zeichnet den Luftdruck auf der zweiten Achse.

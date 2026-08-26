@@ -146,8 +146,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/* Nur EINE Stelle kennt den Projektordner — tools/integrate.mjs schreibt
-   sie beim Einbau in DieLogic um. */
+/* Nur EINE Stelle kennt den Werkzeugordner. */
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'web', 'tools', '3d-studio');
 const GLB = join(ROOT, 'assets', 'die.glb');
 
