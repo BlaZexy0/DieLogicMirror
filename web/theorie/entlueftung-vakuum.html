@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entlüftung, Vakuum und die Restblase · Theorie · DieLogic</title>
+  <meta name="theme-color" content="var(--dark)">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore'})"></script>
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/nav.js"></script>
+  <style>
+    .fig-wrap {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin: 1.25rem 0;
+    }
+    .fig-wrap img { display: block; width: 100%; border-radius: 6px 6px 0 0; }
+    .fig-cap {
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 0.6rem 0.9rem;
+      border-top: 1px solid var(--border);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="/">DieLogic</a>
+  <span>›</span>
+  <a href="/#theorie">Theorie</a>
+  <span>›</span>
+  Entlüftung, Vakuum und die Restblase
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Wohin mit der Luft? Entlüftung, Vakuum und die Restblase</h1>
+    <p class="subtitle">Beim Schuss müssen mehrere Liter Luft in Millisekunden aus Kammer und
+      Kavität — und was nicht rauskommt, endet als Pore im Bauteil. Hier steht die Physik dahinter:
+      vom Entlüftungsbedarf über Drosselströmung und Choking bis zur Frage, wie stark der
+      Nachdruck die verbliebene Restblase noch zusammendrückt.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">Entlüftung</span>
+      <span class="hero-tag">Drosselströmung</span>
+      <span class="hero-tag">Vakuum</span>
+      <span class="hero-tag">Nachdruck</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#s1">1. Die Luft ist schon drin</a></li>
+        <li><a href="#s2">2. Der Bedarf: Fläche gegen Füllzeit</a></li>
+        <li><a href="#s3">3. Die Übersetzung: Kolben → Luft</a></li>
+        <li><a href="#s4">4. Drossel und Choking</a></li>
+        <li><a href="#s5">5. Vakuum: Idealpumpe und Drossel</a></li>
+        <li><a href="#s6">6. Die Restblase unter Nachdruck</a></li>
+        <li><a href="#s7">7. Konsequenz fürs Dashboard</a></li>
+        <li><a href="#quellen">8. Quellen</a></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <div class="draft-note">
+        📚 <b>Quellen &amp; Prüfung:</b> Kontinuitäts- und Bedarfsformeln wie im Dashboard;
+        Drossel- und Vakuummodelle sind die DieLogic-eigene Implementierung im
+        Simulationskern (hpdcsim), die Blasenkompression folgt dem idealen Gasgesetz.
+        Grenzwerte (v<sub>luft</sub>, Füllzeit) sind Prozessfenster-Eingaben — Kriterien und
+        Literatur dazu im Artikel <a href="nebenbedingungen.html">Nebenbedingungen</a>
+        (Kategorien E und I). Vor Veröffentlichung fachlich gegenlesen.
+      </div>
+
+      <span class="section-anchor" id="s1"></span>
+      <h2 class="section-title">1. Die Luft ist schon drin</h2>
+      <div class="prose">
+        <p>Vor dem Schuss ist alles, was nicht Schmelze ist, Luft: der Kopfraum über der
+          teilgefüllten Kammer und die komplette, noch leere Kavität mit Anguss und Überläufen.
+          Mit den Standardwerten des Dashboards sind das allein in der Kavität rund
+          <b>6,4 Liter</b> — dazu der Kammer-Kopfraum von etwa (1&nbsp;−&nbsp;φ) mal
+          Kammervolumen, bei φ ≈ 47 % noch einmal gut 8 Liter.</p>
+        <p>Solange die Einfüllöffnung offen ist, kann diese Luft drucklos entweichen. Ab dem
+          Kolbenweg „Einfüllöffnung verschlossen" ist sie gefangen — von da an hat sie genau
+          zwei Wege: die Entlüftungskanäle (bzw. das Vakuumventil) oder das Bauteil. Die
+          Simulation behandelt sie deshalb als <em>ein</em> zusammenhängendes Sammelvolumen
+          (Kammer-Kopfraum + ungefüllte Kavität), das der Kolben von hinten zusammenschiebt,
+          während vorn Masse durch die Entlüftung abfließt.</p>
+      </div>
+
+      <span class="section-anchor" id="s2"></span>
+      <h2 class="section-title">2. Der Bedarf: Fläche gegen Füllzeit</h2>
+      <div class="prose">
+        <p>Die härteste Randbedingung setzt die Formfüllung: Ab dem Anschnitt muss das
+          Kavitätsvolumen V<sub>luft</sub> während der Füllzeit t<sub>f</sub> durch die
+          Entlüftungskanäle — und zwar mit begrenzter Geschwindigkeit, denn zu schnelle Luft
+          reißt Schmelzespritzer mit und verschweißt die Kanäle. Fläche = Volumenstrom durch
+          zulässige Geschwindigkeit:</p>
+      </div>
+      <div class="eq">$$A_{\text{ent,erf}} = \frac{V_{\text{luft}}}{t_{f} \cdot v_{\text{luft},\max}}$$</div>
+      <div class="prose">
+        <p>Das ist eine Hyperbel über der Füllzeit: Halbe Füllzeit, doppelter Flächenbedarf.
+          Mit V<sub>luft</sub> = 6,4 l, t<sub>f</sub> ≈ 72 ms und v<sub>luft,max</sub> = 150 m/s
+          landet man bei knapp 600 mm² — in der Größenordnung der halben Anschnittfläche, was
+          auch die klassische Faustregel ist. Der Auto-Schalter der Entlüftungsfläche im Dashboard
+          rechnet genau diese Formel bei der Füllzeit der Schusskurve.</p>
+      </div>
+      <div class="fig-wrap">
+        <img src="/assets/theorie/ventreq.svg" alt="Erforderliche Entlüftungsfläche über der Füllzeit" loading="lazy">
+        <div class="fig-cap"><b>Entlüftungsbedarf über der Füllzeit:</b> die Hyperbel
+          A<sub>ent,erf</sub>(t<sub>f</sub>) mit den Standardwerten (V<sub>luft</sub> ≈ 6,4 l,
+          v<sub>luft,max</sub> = 150 m/s). Gestrichelt die vorhandene Entlüftung (800 mm²) und
+          als Referenz die Anschnittfläche; schraffiert der Bereich, in dem der Bedarf die
+          vorhandene Fläche übersteigt. Der rote Punkt ist die Füllzeit der aktuellen
+          Schusskurve.</div>
+      </div>
+
+      <span class="section-anchor" id="s3"></span>
+      <h2 class="section-title">3. Die Übersetzung: Kolben → Luft</h2>
+      <div class="prose">
+        <p>Dieselbe Physik, aus Sicht der Geschwindigkeit: Was der Kolben an Volumen verdrängt,
+          muss als Luft durch die Entlüftung. Die Kontinuität übersetzt die Kolbengeschwindigkeit
+          mit dem Flächenverhältnis:</p>
+      </div>
+      <div class="eq">$$v_{\text{ent}} = v_{p} \cdot \frac{A_{K}}{A_{\text{ent}}}$$</div>
+      <div class="prose">
+        <p>Das Verhältnis ist brutal: Ein Ø-150-Kolben hat A<sub>K</sub> ≈ 17.700 mm² — gegen
+          800 mm² Entlüftung eine Übersetzung von rund <b>22 : 1</b>. Schon moderate
+          4 m/s Kolbengeschwindigkeit treiben die Luft mit ≈ 90 m/s durch die Kanäle; die
+          zulässige Grenze v<sub>luft,max</sub> ist bei v<sub>p</sub> ≈ 6,8 m/s erreicht.
+          Deshalb prüft das Dashboard diese Grenze gegen v₂ aus der Schusskurve.</p>
+      </div>
+      <div class="fig-wrap">
+        <img src="/assets/theorie/vent.svg" alt="Entlüftungsgeschwindigkeit über der Kolbengeschwindigkeit" loading="lazy">
+        <div class="fig-cap"><b>Die Übersetzung als Gerade:</b> v<sub>ent</sub> über
+          v<sub>p</sub> mit der Steigung A<sub>K</sub>/A<sub>ent</sub> ≈ 22. Schraffiert der
+          Bereich über v<sub>luft,max</sub> = 150 m/s; der rote Punkt markiert v₂ der aktuellen
+          Schusskurve.</div>
+      </div>
+
+      <span class="section-anchor" id="s4"></span>
+      <h2 class="section-title">4. Drossel und Choking</h2>
+      <div class="prose">
+        <p>Die Kontinuitätsrechnung oben tut so, als wäre Luft inkompressibel — für die
+          Auslegungsformeln reicht das, für den tatsächlichen <em>Druckverlauf</em> nicht. Die
+          Simulation behandelt die Entlüftung deshalb als <b>Blende</b>: kompressible, isentrope
+          Ausströmung aus dem Sammelvolumen (Druck p) gegen die Umgebung (p<sub>a</sub>), mit
+          Durchflussbeiwert und Fläche A<sub>ent</sub>.</p>
+      </div>
+      <div class="derivation-box">
+        <div class="step"><span class="step-num">①</span>
+          <span>Solange p/p<sub>a</sub> nahe 1 liegt, wächst der Massenstrom mit der
+            Druckdifferenz — die Entlüftung wirkt wie ein gewöhnlicher Strömungswiderstand.</span></div>
+        <div class="step"><span class="step-num">②</span>
+          <span>Unterschreitet das Druckverhältnis p<sub>a</sub>/p den kritischen Wert
+            (2/(γ+1))<sup>γ/(γ−1)</sup> ≈ 0,53 für Luft, <b>chokt</b> die Blende: Im engsten
+            Querschnitt herrscht Schallgeschwindigkeit, und der Massenstrom hängt nur noch vom
+            Druck <em>im</em> Volumen und der Fläche ab — nicht mehr vom Gegendruck.</span></div>
+        <div class="step"><span class="step-num">③</span>
+          <span>Ab dem Choking hilft also nur noch Fläche: Wer schneller entlüften will, braucht
+            mehr mm², nicht mehr Druckdifferenz. Genau deshalb ist die Entlüftungsfläche die
+            Auslegungsgröße — und nicht der Druck.</span></div>
+      </div>
+      <div class="prose">
+        <p>Das Sammelvolumen selbst wird isotherm bilanziert (p·V = m·R·T bei
+          Umgebungstemperatur): Der Kolben verkleinert V, die Blende trägt Masse aus, daraus
+          folgt der Druckverlauf p(t). Sichtbar ist er im Dashboard als
+          <b>Luftdruck-Kurve der Schusskurve</b> (rechte Achse, mbar) — inklusive des steilen
+          Anstiegs am Füllende, wenn das Restvolumen gegen null geht.</p>
+      </div>
+
+      <span class="section-anchor" id="s5"></span>
+      <h2 class="section-title">5. Vakuum: Idealpumpe und Drossel</h2>
+      <div class="prose">
+        <p>Vakuum ändert an dieser Bilanz nur die Randbedingung. Das Dashboard kennt drei
+          Modelle, wählbar in der Seitenleiste:</p>
+      </div>
+      <div class="derivation-box">
+        <div class="step"><span class="step-num">①</span>
+          <span><b>ohne Vakuum:</b> Umgebungsdruck bis „Einfüllöffnung verschlossen", danach
+            dichte isotherme Kompression — die Luft kann nur noch ins Bauteil.</span></div>
+        <div class="step"><span class="step-num">②</span>
+          <span><b>Idealpumpe (Enddruck):</b> Ab dem Kolbenweg „Vakuum ab" hält das Ventil den
+            Pumpen-Enddruck (Standard 80 mbar); schließt es, komprimiert der Rest isotherm
+            weiter. Obere Abschätzung dessen, was eine Anlage leisten kann.</span></div>
+        <div class="step"><span class="step-num">③</span>
+          <span><b>Entlüftung (Drossel):</b> das realistische Modell aus Abschnitt 4 — die
+            Absaugung muss durch die endliche Entlüftungsfläche, mit Choking als Grenze.
+            Hier zahlt sich Fläche aus, nicht Pumpenleistung.</span></div>
+      </div>
+      <div class="prose">
+        <p>Die entscheidende Zahl am Ende ist der <b>Restluftdruck beim Füllende</b>: der letzte
+          Wert der Luftdruck-Kurve, bevor die Kavität voll ist. Er heißt im nächsten Abschnitt
+          p<sub>vor</sub> — der Druck, unter dem die eingeschlossene Restluft als Blase in der
+          Schmelze steht. Mit den Standardwerten liefert das Drosselmodell dort rund 90 mbar
+          statt 1013 mbar ohne Vakuum: elfmal weniger eingeschlossene Luftmasse, bevor der
+          Nachdruck überhaupt anfängt.</p>
+      </div>
+
+      <span class="section-anchor" id="s6"></span>
+      <h2 class="section-title">6. Die Restblase unter Nachdruck</h2>
+      <div class="prose">
+        <p>Ganz ohne Einschluss geht es nie — die letzte Luft steht beim Füllende als Blase mit
+          p<sub>vor</sub> in der noch flüssigen Schmelze (T ≈ T<sub>liq</sub>). Jetzt übernimmt
+          der Nachdruck: Er presst die Blase zusammen, bis das Gefüge erstarrt; ihr Zustand
+          friert etwa bei Formtemperatur ein. Für die Luft als ideales Gas gilt zwischen
+          „vor" und „nach":</p>
+      </div>
+      <div class="eq">$$\frac{p_{\text{vor}} \cdot V_{\text{vor}}}{T_{\text{liq}}} = \frac{p_{\text{N}} \cdot V_{\text{nach}}}{T_{\text{Form}}} \qquad \Rightarrow \qquad \frac{D_{\text{vor}}}{D_{\text{nach}}} = \left( \frac{p_{\text{N}}}{p_{\text{vor}}} \cdot \frac{T_{\text{liq}}}{T_{\text{Form}}} \right)^{1/3}$$</div>
+      <div class="prose">
+        <p>Die Kubikwurzel ist die eigentliche Botschaft: Das <em>Volumen</em> schrumpft
+          proportional zum Druck, der sichtbare Poren-Durchmesser aber nur mit p<sup>1/3</sup> —
+          eine Verzehnfachung des Durchmesser-Verhältnisses kostet das <b>Tausendfache</b> an
+          Druck. Nachdruck kann Poren also verkleinern, aber nie ersetzen, was Entlüftung und
+          Vakuum vorher an Luftmasse herausgeholt haben: p<sub>vor</sub> steht im Zähler unter
+          der Wurzel — Vakuum wirkt direkt als Faktor auf jede Blase.</p>
+      </div>
+      <div class="fig-wrap">
+        <img src="/assets/theorie/bubble.svg" alt="Blasen-Durchmesserverhältnis über dem Nachdruck" loading="lazy">
+        <div class="fig-cap"><b>Blasen-Ø-Verhältnis über dem Nachdruck</b> (ohne Vakuum,
+          p<sub>vor</sub> = 1013 mbar): flach ansteigende Kubikwurzel bis zum maximalen
+          Nachdruck des montierten Kolbens; der rote Marker ist der gewählte metallseitige
+          Nachdruck (600 bar → Ø-Verhältnis ≈ 10,7). Im Dashboard kommt mit aktiver
+          Vakuum-Simulation eine zweite, höhere Kurve für den simulierten Restdruck
+          p<sub>vor</sub> dazu — dieselbe Blase wird dann mehr als doppelt so stark
+          komprimiert.</div>
+      </div>
+      <div class="insight-box">
+        <div class="label">Die Kette in einem Satz</div>
+        <p>Entlüftung und Vakuum bestimmen, <em>wie viel</em> Luft übrig bleibt und unter
+          welchem p<sub>vor</sub> sie steht; der metallseitige Nachdruck bestimmt nur noch,
+          <em>wie klein</em> diese Restmenge gedrückt wird — mit der Kubikwurzel als hartem
+          Wechselkurs.</p>
+      </div>
+
+      <span class="section-anchor" id="s7"></span>
+      <h2 class="section-title">7. Konsequenz fürs Dashboard</h2>
+      <div class="prose">
+        <p>Jeder Schritt dieser Kette hat im Dashboard eine Prüfung oder Kennzahl: Der
+          <b>Entlüftungsbedarf</b> (Abschnitt 2) steht als Prüfzeile gegen die vorhandene
+          Fläche, die <b>Entlüftungsgeschwindigkeit</b> (Abschnitt 3) als Grenze
+          v<sub>luft,max</sub> in Diagrammen und Prüfleiste, der <b>Druckverlauf</b>
+          (Abschnitte 4–5) als simulierte Luftdruck-Kurve in der Schusskurve, und die
+          <b>Restblase</b> (Abschnitt 6) als Diagramm „Luftblase unter Nachdruck" samt
+          Kennwert „Luftblasen-Kompression" im Thermik-Panel — gerechnet beim gewählten
+          Nachdruck (metallseitig) und mit dem simulierten p<sub>vor</sub>, sobald die
+          Vakuum-Simulation Daten liefert. Die Modellwahl (ohne Vakuum · Idealpumpe ·
+          Entlüftung) gilt überall gleichzeitig — eine Eingabe, ein Luftmodell.</p>
+      </div>
+      <div class="warning-box">
+        <b>Grenzen des Modells:</b> Ein Sammelvolumen kennt keine Luftsäcke — lokal
+        eingeschlossene Taschen hinter Rippen bildet nur die Formfüllsimulation ab. Die
+        Luftbilanz rechnet isotherm (die schnelle Kompression am Füllende ist real eher
+        adiabat, der Enddruck also unterschätzt), die Blase bleibt kugelig, und die Lösung
+        von Luft im Metall sowie Wasserstoff aus der Schmelze sind nicht enthalten. Für die
+        Porositäts-Prognose im Bauteil bleibt das Modell eine Größenordnungs-Rechnung.
+      </div>
+      <p style="margin-top:1.5rem;">
+        <a href="/tools/auslegung/chart.html?id=ventreq" class="btn btn-primary">Im Dashboard: Entlüftungsbedarf →</a>
+        &nbsp;
+        <a href="/tools/auslegung/chart.html?id=bubble" class="btn btn-outline">Zur Luftblase unter Nachdruck →</a>
+      </p>
+
+      <span class="section-anchor" id="quellen"></span>
+      <h2 class="section-title">8. Quellen</h2>
+      <div class="prose">
+        <p>Die Formeln der Abschnitte 2, 3 und 6 sind die Original-Formeln des Dashboards
+          (Kontinuität und ideales Gasgesetz); die Diagramme sind die Original-Darstellungen
+          mit den Standardwerten:</p>
+        <ul>
+          <li>DieLogic-Simulationskern <code>hpdcsim</code> (<code>vacuum.py</code>) —
+            Sammelvolumen-Bilanz, isentrope Blendenströmung mit Choking, Vakuummodelle
+            Idealpumpe und Drossel.</li>
+          <li>Isentrope Düsen-/Blendenströmung und kritisches Druckverhältnis: Standard-
+            Gasdynamik (kompressible Strömung idealer Gase).</li>
+          <li>Grenzwerte und Faustregeln (v<sub>luft,max</sub>, Entlüftungs- zu
+            Anschnittfläche, Füllzeit): Prozessfenster-Eingaben des Dashboards — Kriterien
+            und Literaturbelege im Artikel
+            <a href="nebenbedingungen.html">Nebenbedingungen</a>, Kategorien E (Entlüftung)
+            und I (Vakuum).</li>
+        </ul>
+        <p class="fig-cap" style="border:0;padding:0.4rem 0 0;">Vor einer Veröffentlichung
+          fachlich gegenlesen lassen.</p>
+      </div>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>

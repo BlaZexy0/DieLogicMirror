@@ -432,6 +432,9 @@
     values.diam = Number(slider.value);
     out.textContent = 'Ø ' + values.diam + ' mm';
     pq2.tab = 'q2'; pq2.tab2 = 'pm';
+    /* Achse bis Q_dry des größten Kolbens festhalten — so verschiebt sich
+       beim Spielen mit dem Ø sichtbar die Gerade, nicht die Achse. */
+    pq2.xFull = true;
     const d = pq2.calc(values);
     if (d.err) return;
     /* simplify wie im SVG-Generator: nur die Hüllkurven-Maske behalten */

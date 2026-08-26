@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 210" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Füllkammer im Längsschnitt: Wellenkamm erreicht bei kritischer Kolbengeschwindigkeit die Kammerdecke">
+  <defs>
+    <pattern id="hatch-b" patternUnits="userSpaceOnUse" width="7" height="7">
+      <path d="M-1 8 L8 -1" stroke="#9aacb4" stroke-width="1"/>
+    </pattern>
+    <marker id="arr-b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#00534d"/>
+    </marker>
+  </defs>
+  <!-- Kammerwände -->
+  <rect x="10" y="22" width="320" height="14" fill="url(#hatch-b)" stroke="#4c6870" stroke-width="1.2"/>
+  <rect x="10" y="174" width="320" height="14" fill="url(#hatch-b)" stroke="#4c6870" stroke-width="1.2"/>
+  <!-- Schmelze: Kamm berührt die Decke -->
+  <path d="M64 37 L150 37 C168 38 178 54 188 78 C198 102 212 124 238 132 L330 134 L330 174 L64 174 Z"
+        fill="#aedcd5" stroke="#00534d" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Kolben -->
+  <rect x="0" y="96" width="30" height="18" fill="#557786" stroke="#2a3f4a" stroke-width="1.2"/>
+  <rect x="30" y="38" width="34" height="134" fill="#557786" stroke="#2a3f4a" stroke-width="1.2"/>
+  <!-- Bewegung -->
+  <line x1="72" y1="150" x2="106" y2="150" stroke="#00534d" stroke-width="2" marker-end="url(#arr-b)"/>
+  <text x="78" y="143" font-size="11" font-weight="700" fill="#00534d">v<tspan dy="2.5" font-size="8.5">K</tspan></text>
+  <!-- Beschriftung -->
+  <text x="212" y="52" font-size="11" fill="#4c6870">h<tspan dy="2.5" font-size="8.5">K</tspan><tspan dy="-2.5"> = D</tspan></text>
+  <line x1="209" y1="54" x2="158" y2="42" stroke="#4c6870" stroke-width="1"/>
+  <text x="272" y="88" font-size="11" fill="#9aacb4">Luft</text>
+  <text x="170" y="206" font-size="14" font-weight="700" fill="#002733" text-anchor="middle">v<tspan dy="3" font-size="10.5">K</tspan><tspan dy="-3"> = v</tspan><tspan dy="3" font-size="10.5">krit</tspan></text>
+</svg>

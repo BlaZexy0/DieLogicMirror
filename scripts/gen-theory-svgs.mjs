@@ -209,10 +209,13 @@ const shot = computeShot(values, DEFAULT_CURVE.map(p => p.slice()));
 const outDir = path.join(site, 'assets/theorie');
 mkdirSync(outDir, { recursive: true });
 
-/* ── Nogowizin-Fit-Abbildung: exakte Segment-Lösung vs. Polynom ──
+/* ── Ein Bild für alle Fits: exakte Segment-Lösung, Nogowizin-Polynom,
+   Segment-Fit und OpenFOAM-CFD (Mittel + Spanne) in einem Diagramm.
    Deckenkriterium: v_krit/√(gD) = ∫_{y0}^{1} √(T̂(y)/Â(y)) dy mit
-   T̂ = 2√(y(1−y)) (Sehne), Â = φ(y)·π/4 (Segmentfläche), y = h/D. */
-function vkritFit() {
+   T̂ = 2√(y(1−y)) (Sehne), Â = φ(y)·π/4 (Segmentfläche), y = h/D.
+   x-Bereich = CFD-Raster (φ 0,1–0,9), damit das Spannen-Band nicht über
+   seine Datenlage hinaus verlängert wird. */
+function vkritFits() {
   const PI = Math.PI;
   const areaFrac = y => (Math.acos(1 - 2 * y) - 2 * (1 - 2 * y) * Math.sqrt(Math.max(0, y * (1 - y)))) / PI;
   const segH = phi => {
@@ -231,31 +234,8 @@ function vkritFit() {
     return s * (1 - y0) / n / 3;
   };
   const nog = phi => 1.386 - 1.915 * phi + 0.615 * phi * phi;
-  const x = [], yE = [], yN = [], yS = [];
-  for (let p = 5; p <= 95; p++) {
-    const phi = p / 100;
-    x.push(p); yE.push(fExact(phi)); yN.push(nog(phi)); yS.push(vCritTheory(1 / 9.81, phi));
-  }
-  const C = theme.chart;
-  return {
-    title: 'Fits an die exakte Segment-Lösung',
-    info: 'Deckenkriterium v_krit = ω(D) − ω(h₀) · Nogowizin: ≈2 % für φ = 0,2–0,75, am Rand bis 28 % · Segment-Fit (DieLogic): ≤ 0,25 % überall',
-    x,
-    ys: [
-      { n: 'exakte Lösung (Integral)', c: C.series1, y: yE },
-      { n: 'Nogowizin 1,386 − 1,915·φ + 0,615·φ²', c: (theme.limits && theme.limits.vcrit) || C.crit, y: yN },
-      { n: 'Segment-Fit (1−φ)^(5/6)·(2,3173 − 2,4762·φ^(1/3) + 1,3404·φ^(2/3) − 0,3552·φ)', c: C.series2, y: yS }
-    ],
-    xl: 'Füllgrad φ in %',
-    yl: 'v_krit / √(g·D)',
-    y0: 0,
-    limits: [{ id: 'fillBand', label: 'Füllgrad-Ziel 40–60 %', on: 'x', min: 40, max: 60, severity: 'target' }]
-  };
-}
 
-
-/* ── Realitäts-Check: Flachwassertheorie vs. OpenFOAM-CFD ── */
-function vkritSim() {
+  /* CFD-Läufe je Füllgrad bündeln: Mittel und Spanne über alle Bohrungen. */
   const rows = readFileSync(path.join(site, '../fixtures/vkrit/v_krit_sim.csv'), 'utf8')
     .trim().split('\n').slice(1).map(l => l.split(';').map(Number));
   const g = 9.81;
@@ -266,31 +246,42 @@ function vkritSim() {
     byPhi.get(phi).push(f);
   }
   const phis = [...byPhi.keys()].sort((a, b) => a - b);
-  const x = phis.map(p => p * 100);
-  const mean = phis.map(p => byPhi.get(p).reduce((a, b) => a + b) / byPhi.get(p).length);
-  const lo = phis.map(p => Math.min(...byPhi.get(p)));
-  const hi = phis.map(p => Math.max(...byPhi.get(p)));
+  const cx = phis.map(p => p * 100);
+  const cMean = phis.map(p => byPhi.get(p).reduce((a, b) => a + b) / byPhi.get(p).length);
+  const cLo = phis.map(p => Math.min(...byPhi.get(p)));
+  const cHi = phis.map(p => Math.max(...byPhi.get(p)));
   const at = xv => {
     let k = 0;
-    while (k < x.length - 2 && x[k + 1] < xv) k++;
-    const t = Math.max(0, Math.min(1, (xv - x[k]) / (x[k + 1] - x[k])));
+    while (k < cx.length - 2 && cx[k + 1] < xv) k++;
+    const t = Math.max(0, Math.min(1, (xv - cx[k]) / (cx[k + 1] - cx[k])));
     return { k, t };
   };
   const interp = arr => xv => { const { k, t } = at(xv); return arr[k] * (1 - t) + arr[k + 1] * t; };
+
+  /* Feines gemeinsames Raster im CFD-Bereich; die analytischen Kurven
+     werden direkt ausgewertet, das CFD-Mittel linear interpoliert. */
+  const x = [], yE = [], yN = [], yS = [], yC = [];
+  for (let p = cx[0]; p <= cx[cx.length - 1] + 1e-9; p++) {
+    const phi = p / 100;
+    x.push(p); yE.push(fExact(phi)); yN.push(nog(phi)); yS.push(vCritTheory(1 / 9.81, phi));
+    yC.push(interp(cMean)(p));
+  }
   const C = theme.chart;
   return {
-    title: 'Flachwassertheorie vs. OpenFOAM-CFD',
-    info: 'f = v_krit/√(g·D) · CFD-Raster Ø 60–300 mm × φ 0,1–0,9 · Theorie ab φ ≈ 0,3 zunehmend optimistisch (Brechen vor Deckenberührung)',
+    title: 'Die Fits im Vergleich — exakte Lösung, Nogowizin, Segment-Fit und CFD',
+    info: 'f = v_krit/√(g·D) · Nogowizin: ≈2 % für φ = 0,2–0,75, am Rand bis 28 % · Segment-Fit (DieLogic-Theorie): ≤ 0,25 % überall · CFD ab φ ≈ 0,3 unter allen Flachwasser-Kurven',
     x,
     ys: [
-      { n: 'Flachwassertheorie (Deckenkriterium)', c: C.series1, y: phis.map(p => vCritTheory(1 / 9.81, p)) },
-      { n: 'OpenFOAM-CFD (Mittel über Ø)', c: C.series2, y: mean }
+      { n: 'exakte Lösung (Integral)', c: C.series1, y: yE },
+      { n: 'Nogowizin 1,386 − 1,915·φ + 0,615·φ²', c: (theme.limits && theme.limits.vcrit) || C.crit, y: yN },
+      { n: 'Segment-Fit (1−φ)^(5/6)·(2,3173 − 2,4762·φ^(1/3) + 1,3404·φ^(2/3) − 0,3552·φ)', c: C.series2, y: yS },
+      { n: 'OpenFOAM-CFD (Mittel über Ø 60–300 mm)', c: C.series4, y: yC }
     ],
     xl: 'Füllgrad φ in %',
     yl: 'v_krit / √(g·D)',
     y0: 0,
     limits: [
-      { id: 'simSpread', label: 'CFD-Spanne über Ø 60–300 mm', on: 'y', min: interp(lo), max: interp(hi), severity: 'target' },
+      { id: 'simSpread', label: 'CFD-Spanne über Ø 60–300 mm', on: 'y', min: interp(cLo), max: interp(cHi), severity: 'target' },
       { id: 'fillBand', label: 'Füllgrad-Ziel 40–60 %', on: 'x', min: 40, max: 60, severity: 'target' }
     ]
   };
@@ -307,8 +298,9 @@ const simplify = keepPt => d => {
 };
 const jobs = [
   /* Grundbild im Q²-Modus: dort sind beide Kennlinien Geraden — der
-     namensgebende Trick des Diagramms wird sichtbar. */
-  { file: 'pq2-grund.svg', id: 'pq2', tab: 'q2', tab2: 'pm', post: d => { simplify(false)(d); delete d.segs; d.title = 'PQ²-Grundbild — im Q²-Maßstab werden beide Kennlinien zu Geraden'; } },
+     namensgebende Trick des Diagramms wird sichtbar. xFull hält die Achse
+     wie beim interaktiven Slider bis Q_dry des größten Kolbens fest. */
+  { file: 'pq2-grund.svg', id: 'pq2', tab: 'q2', tab2: 'pm', xFull: true, post: d => { simplify(false)(d); delete d.segs; d.title = 'PQ²-Grundbild — im Q²-Maßstab werden beide Kennlinien zu Geraden'; } },
   /* Einzelbilder für die Herleitungs-Abschnitte: nur je eine Kennlinie. */
   { file: 'pq2-maschine.svg', id: 'pq2', tab: 'q', tab2: 'pm', post: d => {
     simplify(false)(d);
@@ -341,8 +333,18 @@ const jobs = [
   { file: 'pq2-q2.svg', id: 'pq2', tab: 'q2', tab2: 'pm', post: simplify(true) },
   { file: 'pq2-pw.svg', id: 'pq2', tab: 'q', tab2: 'pw' },
   { file: 'shotcurve-sv.svg', id: 'shotcurve', tab: 'sv' },
-  { file: 'vkrit-fit.svg', build: vkritFit },
-  { file: 'vkrit-sim.svg', build: vkritSim },
+  { file: 'vkrit-fits.svg', build: vkritFits },
+  /* Diagramme für den Entlüftungs-/Vakuum-Artikel (entlueftung-vakuum.html).
+     Blasendiagramm ohne Vakuum-Modell: die simulierte Restdruck-Kurve gibt
+     es nur mit Backend — die Theorieseite erklärt das in der Bildunterschrift. */
+  { file: 'vent.svg', id: 'vent' },
+  { file: 'ventreq.svg', id: 'ventreq' },
+  { file: 'bubble.svg', build: () => {
+    const def = chartsById.bubble;
+    const d = def.calc({ ...values, vacModel: 'aus' });
+    d.title = def.title;
+    return { d, def };
+  } },
 ];
 for (const j of jobs) {
   let d, def = null;
@@ -353,6 +355,7 @@ for (const j of jobs) {
     def = chartsById[j.id];
     if (j.tab) def.tab = j.tab;
     if (j.tab2) def.tab2 = j.tab2;
+    def.xFull = !!j.xFull;   // je Job zurücksetzen — die pq2-Jobs teilen sich das def-Objekt
     d = def.calc(values, { shot });
     if (d.err) { console.error(j.file + ': ' + d.err); continue; }
     d.title = def.title;

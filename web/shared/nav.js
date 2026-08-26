@@ -61,6 +61,8 @@
       { label: 'Kritische Kolbengeschwindigkeit', href: '/theorie/kritische-geschwindigkeit.html' },
       { label: 'Kreissegmente der Füllkammer', href: '/theorie/kreissegmente.html' },
       { label: 'Nebenbedingungen der Auslegung', href: '/theorie/nebenbedingungen.html' },
+      { label: 'Entlüftung, Vakuum und die Restblase', href: '/theorie/entlueftung-vakuum.html' },
+      { label: 'Zuhaltung und Sprengfläche', href: '/theorie/zuhaltung-sprengflaeche.html' },
     ] },
     { label: 'Preise', href: '/index.html#preise' },
     { label: 'Über uns', href: '/recht/ueber-uns.html' },
@@ -161,6 +163,8 @@
       <li><a href="${r('/theorie/kritische-geschwindigkeit.html')}">Theorie: Kritische Geschwindigkeit</a></li>
       <li><a href="${r('/theorie/kreissegmente.html')}">Theorie: Kreissegmente der Füllkammer</a></li>
       <li><a href="${r('/theorie/nebenbedingungen.html')}">Theorie: Nebenbedingungen der Auslegung</a></li>
+      <li><a href="${r('/theorie/entlueftung-vakuum.html')}">Theorie: Entlüftung, Vakuum und die Restblase</a></li>
+      <li><a href="${r('/theorie/zuhaltung-sprengflaeche.html')}">Theorie: Zuhaltung und Sprengfläche</a></li>
     </ul>
   </div>
 

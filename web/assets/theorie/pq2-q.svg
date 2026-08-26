@@ -77,19 +77,19 @@
 <path d="M75.00 502.00L78.79 502.00L82.59 501.99L86.38 501.99L90.18 501.97L93.97 501.96L97.76 501.94L101.56 501.92L105.35 501.90L109.15 501.87L112.94 501.84L116.73 501.81L120.53 501.77L124.32 501.74L128.12 501.69L131.91 501.65L135.70 501.60L139.50 501.55L143.29 501.49L147.09 501.44L150.88 501.37L154.67 501.31L158.47 501.24L162.26 501.17L166.06 501.10L169.85 501.02L173.64 500.94L177.44 500.86L181.23 500.77L185.03 500.69L188.82 500.59L192.61 500.50L196.41 500.40L200.20 500.30L203.99 500.19L207.79 500.09L211.58 499.97L215.38 499.86L219.17 499.74L222.96 499.62L226.76 499.50L230.55 499.37L234.35 499.24L238.14 499.11L241.93 498.97L245.73 498.84L249.52 498.69L253.32 498.55L257.11 498.40L260.90 498.25L264.70 498.09L268.49 497.94L272.29 497.77L276.08 497.61L279.87 497.44L283.67 497.27L287.46 497.10L291.26 496.92L295.05 496.74L298.84 496.56L302.64 496.38L306.43 496.19L310.23 495.99L314.02 495.80L317.81 495.60L321.61 495.40L325.40 495.19L329.20 494.99L332.99 494.78L336.78 494.56L340.58 494.34L344.37 494.12L348.17 493.90L351.96 493.67L355.75 493.45L359.55 493.21L363.34 492.98L367.14 492.74L370.93 492.50L374.72 492.25L378.52 492.00L382.31 491.75L386.11 491.50L389.90 491.24L393.69 490.98L397.49 490.71L401.28 490.45L405.08 490.18L408.87 489.90L412.66 489.63L416.46 489.35L420.25 489.06L424.05 488.78L427.84 488.49L431.63 488.20L435.43 487.90L439.22 487.60L443.02 487.30L446.81 487.00L450.60 486.69L454.40 486.38L458.19 486.07L461.98 485.75L465.78 485.43L469.57 485.11L473.37 484.78L477.16 484.45L480.95 484.12L484.75 483.78L488.54 483.44L492.34 483.10L496.13 482.75L499.92 482.41L503.72 482.06L507.51 481.70L511.31 481.34L515.10 480.98L518.89 480.62L522.69 480.25L526.48 479.88L530.28 479.51L534.07 479.13L537.86 478.75L541.66 478.37L545.45 477.98L549.25 477.60L553.04 477.20L556.83 476.81L560.63 476.41L564.42 476.01L568.22 475.60L572.01 475.20L575.80 474.79L579.60 474.37L583.39 473.95L587.19 473.53L590.98 473.11L594.77 472.69L598.57 472.26L602.36 471.82L606.16 471.39L609.95 470.95L613.74 470.51L617.54 470.06L621.33 469.61L625.13 469.16L628.92 468.71L632.71 468.25L636.51 467.79L640.30 467.33L644.10 466.86L647.89 466.39L651.68 465.92L655.48 465.44L659.27 464.96L663.07 464.48L666.86 463.99L670.65 463.50L674.45 463.01L678.24 462.52L682.04 462.02L685.83 461.52L689.62 461.01L693.42 460.50L697.21 459.99L701.01 459.48L704.80 458.96L708.59 458.44L712.39 457.92L716.18 457.39L719.97 456.86L723.77 456.33L727.56 455.80L731.36 455.26L735.15 454.72L738.94 454.17L742.74 453.62L746.53 453.07L750.33 452.52L754.12 451.96L757.91 451.40L761.71 450.84L765.50 450.27L769.30 449.70L773.09 449.13L776.88 448.55L780.68 447.97L784.47 447.39L788.27 446.80L792.06 446.21L795.85 445.62L799.65 445.03L803.44 444.43L807.24 443.83L811.03 443.22L814.82 442.62L818.62 442.00L822.41 441.39L826.21 440.77L830.00 440.15" fill="none" stroke="#008c82" stroke-width="2" stroke-linejoin="round"/>
 </g>
 <path d="M75.00 66.00L87.00 66.00" fill="none" stroke="#e0a400" stroke-width="1.4" stroke-linejoin="round"/>
-<text x="92.00" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">Maschine (Ø 150)</text>
-<path d="M198.40 66.00L210.40 66.00" fill="none" stroke="#008c82" stroke-width="1.4" stroke-linejoin="round"/>
-<text x="215.40" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">Werkzeug</text>
-<rect x="275.60" y="62.00" width="12.00" height="9.00" fill="rgba(0,140,130,.30)"/>
-<rect x="275.60" y="62.00" width="12.00" height="9.00" fill="none" stroke="#ccd4d6" stroke-width="1.4"/>
-<text x="292.60" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">machbares Band</text>
-<rect x="387.45" y="62.00" width="12.00" height="9.00" fill="rgba(0,140,130,.13)"/>
-<rect x="387.45" y="62.00" width="12.00" height="9.00" fill="none" stroke="#ccd4d6" stroke-width="1.4"/>
-<text x="404.45" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">machbar (anderer Kolben-Ø)</text>
-<rect x="568.60" y="62.00" width="12.00" height="9.00" fill="rgba(255,255,255,.45)"/>
-<rect x="568.60" y="62.00" width="12.00" height="9.00" fill="url(#pat0)"/>
-<rect x="568.60" y="62.00" width="12.00" height="9.00" fill="none" stroke="#b28000" stroke-width="1.4"/>
-<text x="585.60" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">t<tspan font-size="8.2" dy="2.94">f</tspan><tspan dy="-2.94"> max 100 ms</tspan></text>
+<text x="92.00" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">Maschine (Ø 150 mm)</text>
+<path d="M215.73 66.00L227.73 66.00" fill="none" stroke="#008c82" stroke-width="1.4" stroke-linejoin="round"/>
+<text x="232.73" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">Werkzeug</text>
+<rect x="292.93" y="62.00" width="12.00" height="9.00" fill="rgba(0,140,130,.30)"/>
+<rect x="292.93" y="62.00" width="12.00" height="9.00" fill="none" stroke="#ccd4d6" stroke-width="1.4"/>
+<text x="309.93" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">machbares Band</text>
+<rect x="404.78" y="62.00" width="12.00" height="9.00" fill="rgba(0,140,130,.13)"/>
+<rect x="404.78" y="62.00" width="12.00" height="9.00" fill="none" stroke="#ccd4d6" stroke-width="1.4"/>
+<text x="421.78" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">machbar (anderer Kolben-Ø)</text>
+<rect x="585.93" y="62.00" width="12.00" height="9.00" fill="rgba(255,255,255,.45)"/>
+<rect x="585.93" y="62.00" width="12.00" height="9.00" fill="url(#pat0)"/>
+<rect x="585.93" y="62.00" width="12.00" height="9.00" fill="none" stroke="#b28000" stroke-width="1.4"/>
+<text x="602.93" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">t<tspan font-size="8.2" dy="2.94">f</tspan><tspan dy="-2.94"> max 100 ms</tspan></text>
 <rect x="75.00" y="75.00" width="12.00" height="9.00" fill="rgba(255,255,255,.45)"/>
 <rect x="75.00" y="75.00" width="12.00" height="9.00" fill="url(#pat6)"/>
 <rect x="75.00" y="75.00" width="12.00" height="9.00" fill="none" stroke="#a34d1c" stroke-width="1.4"/>
