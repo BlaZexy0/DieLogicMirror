@@ -2,7 +2,8 @@
 # Zwei Jobs: Python (hpdcsim-Tests + Backend-Tests mit pytest: Konto, Projekte,
 # Stammdaten, /api/sim/shot, Physik-Fixtures) und Frontend (Syntax + Node-Tests gegen die Beispiel-STLs,
 # das Zuhaltungs-Modell, den Übernahme-Vertrag, die Preset-/Feld-Konsistenz,
-# die STL-Rechenlogik und dieselben Physik-Fixtures gegen physics.js).
+# die STL-Rechenlogik, dieselben Physik-Fixtures gegen physics.js und die
+# Geometrie/Analyse des 3D-Studios).
 name: CI
 
 on:
@@ -35,8 +36,14 @@ jobs:
           node-version: '24'
       - name: Syntax-Check (alle JS + Inline-Scripts der HTML-Seiten)
         run: node tests/web/syntax-check.mjs
-      - name: Frontend-Tests (alle *.test.mjs — inkl. Physik-Fixtures, Grenzen-Modell, Render-Rauchtest)
-        run: node --test tests/web/*.test.mjs
+      - name: Frontend-Tests (alle *.test.mjs — inkl. Physik-Fixtures, Grenzen-Modell, Render-Rauchtest, 3D-Studio)
+        # --import: für die 3D-Studio-Tests wird der nackte Name 'three' auf
+        # web/tools/3d-studio/vendor/ aufgelöst und der WebGL-Renderer durch
+        # eine Attrappe ersetzt (Node hat kein WebGL). Der Hook greift nur bei
+        # genau diesen Namen — die übrigen Tests merken davon nichts.
+        run: >-
+          node --import ./tests/web/3d-studio/stubs/register.mjs
+          --test tests/web/*.test.mjs tests/web/3d-studio/*.test.mjs
       - name: Generierte Dateien aktuell? (Theorie-SVGs + v_krit-Tabellen)
         # Die eingecheckten Artefakte müssen zum Code passen — beide
         # Generatoren sind deterministisch, ein Diff heißt: Regenerieren

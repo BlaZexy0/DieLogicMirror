@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bauteilanalyse · 3D-Studio · DieLogic</title>
+<meta name="theme-color" content="#002733">
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="stylesheet" href="/shared/shared.css">
+<link rel="stylesheet" href="css/viewer.css">
+<script src="/shared/version.js"></script>
+<script src="/shared/palette.js"></script>
+<script src="/shared/nav.js" data-footer="none"></script>
+<script type="importmap">
+  { "imports": { "three": "./vendor/three/three.module.js" } }
+</script>
+</head>
+<body class="viewer">
+
+<section class="page-hero compact">
+  <div class="inner">
+    <h1>Bauteilanalyse</h1>
+    <p class="subtitle">Sichtbarkeit in den sechs Hauptrichtungen → Formteilung auf Hälften und Schieber, Trennlinie, Hinterschnitte und Entformschrägen.</p>
+  </div>
+</section>
+
+<div class="layout">
+  <aside>
+    <h2>Bauteil</h2>
+    <div class="row">
+      <span>Beispielteil</span>
+      <select id="demo-select"></select>
+    </div>
+    <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" hidden>
+    <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ Eigene STL/GLB laden</button>
+    <div class="hint" id="part-note"></div>
+    <div class="facts" id="model-facts"></div>
+    <div class="warn-line" id="model-warn"></div>
+
+    <h2>Formteilung</h2>
+    <div class="row">
+      <span>Formöffnung</span>
+      <div class="seg" id="axis-seg">
+        <button type="button" data-value="0">X</button>
+        <button type="button" data-value="1">Y</button>
+        <button type="button" data-value="2" class="active">Z</button>
+      </div>
+    </div>
+    <div class="row">
+      <span title="Darunter gilt eine Fläche als nicht entformbar — 0° lässt auch senkrechte Wände zu">Mindestschräge</span>
+      <input type="range" id="min-draft" min="0" max="4" step="0.1" value="0.5">
+      <span class="val" id="min-draft-val"></span>
+    </div>
+    <div class="row">
+      <span title="Aufschlag je Dreieck für Schieberrichtungen. Über 1,0 bekommen die Schieber nur, was keine Formhälfte entformen kann; darunter nehmen sie auch flach anliegende Wände.">Schieber-Kosten</span>
+      <input type="range" id="slider-pen" min="0" max="2.5" step="0.05" value="1.2">
+      <span class="val" id="slider-pen-val"></span>
+    </div>
+    <div class="row">
+      <span title="Wie teuer das Überschreiten scharfer Kanten ist — höher heißt: die Trennlinie sucht die Kanten">Kantenschärfe</span>
+      <input type="range" id="edge-w" min="0" max="4" step="0.1" value="1.5">
+      <span class="val" id="edge-w-val"></span>
+    </div>
+
+    <button type="button" class="btn btn-primary block-btn" id="run-analysis">Analyse starten</button>
+    <div class="run-note" id="analysis-state"></div>
+
+    <div class="row">
+      <span>Stufe</span>
+      <div class="seg" id="stage-seg">
+        <button type="button" data-value="1" title="Nur Dreiecke, die aus genau einer Richtung entformbar sind">1 Saat</button>
+        <button type="button" data-value="2" title="Saat plus aufgenommene Inseln">2 + Inseln</button>
+        <button type="button" data-value="3" class="active" title="Bis zur Trennlinie ausgebreitet">3 + Ausbreitung</button>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="facts" id="seg-facts"></div>
+
+    <h2>Darstellung</h2>
+    <div class="row">
+      <span>Einfärbung</span>
+      <div class="seg stack" id="mode-seg">
+        <button type="button" data-value="regions" class="active">Regionen</button>
+        <button type="button" data-value="draft">Schräge</button>
+        <button type="button" data-value="count" title="Aus wie vielen Richtungen ist das Dreieck entformbar?">Sichtbarkeit</button>
+        <button type="button" data-value="plain">Grau</button>
+      </div>
+    </div>
+    <div id="draft-block" class="disabled">
+      <div class="row">
+        <span>Grenzwert</span>
+        <input type="range" id="draft-limit" min="0.5" max="5" step="0.1" value="1.5">
+        <span class="val" id="draft-limit-val"></span>
+      </div>
+      <div class="facts" id="draft-facts"></div>
+    </div>
+    <label class="inline"><input type="checkbox" id="show-parting" checked> Trennlinie zeigen (<span id="parting-count">0</span> Kanten)</label>
+    <label class="inline"><input type="checkbox" id="show-edges"> Netzkanten zeigen</label>
+    <div class="row">
+      <span>Deckkraft</span>
+      <input type="range" id="opacity" min="15" max="100" value="100">
+      <span class="val" id="opacity-val"></span>
+    </div>
+
+    <div class="hint">
+      <b>Was hier gerechnet wird:</b> für jedes Dreieck wird in allen sechs
+      Hauptrichtungen geprüft, ob die Normale dorthin zeigt und ob der Weg
+      dorthin frei ist (verdeckungsgenau, nicht nur über den Winkel).
+      Daraus entstehen die <b>Saat</b> (genau eine Richtung), die
+      <b>Hinterschnitte</b> (keine Richtung) und die mehrdeutigen
+      Dreiecke, über die die Regionen bis zur <b>Trennlinie</b> wachsen.
+      Weder Formhälften noch Schieber müssen dafür vorhanden sein.
+      Die Rechnung läuft erst auf Knopfdruck — bei großen Netzen dauert
+      sie spürbar. Die Entformschräge ist <code>arcsin(n · d)</code> gegen
+      die <em>zugewiesene</em> Richtung; eine Schieberfläche wird also
+      gegen den Schieber bewertet.
+      Offsetflächen haben eine <a href="offset.html">eigene Seite</a> —
+      sie entstehen aus einem Rasterfeld, nicht aus diesem Netz.
+    </div>
+  </aside>
+
+  <div id="viewport">
+    <div id="status"></div>
+    <div class="colorbar" id="colorbar">
+      <div class="cb-title" id="cb-title"></div>
+      <div class="cb-body">
+        <div class="cb-scale" id="cb-scale"></div>
+        <div class="cb-ticks" id="cb-ticks"></div>
+      </div>
+      <div class="cb-extra" id="cb-extra"></div>
+    </div>
+    <div id="busy"></div>
+    <div class="drop-hint">STL oder GLB hier ablegen</div>
+  </div>
+</div>
+
+<script type="module" src="js/part/app.js"></script>
+</body>
+</html>

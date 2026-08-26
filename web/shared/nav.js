@@ -49,6 +49,12 @@
     { label: 'Sprengflächenanalyse', href: '/tools/sprengflaeche/' },
     { label: 'Teilekosten', href: '/tools/teilekosten/' },
     { label: 'Zyklusanalyse', href: '/tools/zyklus/' },
+    { label: '3D-Studio', children: [
+      { label: 'Übersicht', href: '/tools/3d-studio/' },
+      { label: 'Formaufbau', href: '/tools/3d-studio/form.html' },
+      { label: 'Bauteilanalyse', href: '/tools/3d-studio/bauteilanalyse.html' },
+      { label: 'Offsetflächen', href: '/tools/3d-studio/offset.html' },
+    ] },
     { label: 'Theorie', children: [
       { label: 'Das PQ²-Diagramm', href: '/theorie/pq2.html' },
       { label: 'Kritische Kolbengeschwindigkeit', href: '/theorie/kritische-geschwindigkeit.html' },

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D-Studio · DieLogic</title>
+<meta name="description" content="Drei 3D-Werkzeuge für die Druckgießform: Formaufbau als Schnittmodell, Bauteilanalyse mit Formteilung aus der Sichtbarkeit in den sechs Hauptrichtungen, und Offsetflächen aus einem gerasterten Abstandsfeld.">
+<meta name="theme-color" content="#002733">
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="stylesheet" href="/shared/shared.css">
+<link rel="stylesheet" href="css/site.css">
+<script src="/shared/version.js"></script>
+<script src="/shared/palette.js"></script>
+<script src="/shared/nav.js"></script>
+</head>
+<body>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>3D-Studio</h1>
+    <p class="subtitle">Drei Werkzeuge am selben Bauteil: die Druckgießform als Schnittmodell mit
+      echter Kavität, die Bauteilanalyse mit Formteilung und Entformschrägen, und Offsetflächen
+      aus einem gerasterten Abstandsfeld. Alles rechnet im Browser — die Bauteile kommen als
+      STL oder GLB, es geht nichts an einen Server.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">6 Entformrichtungen</span>
+      <span class="hero-tag">Schnitt mit Deckflächen</span>
+      <span class="hero-tag">Abstandsfeld statt Netzversatz</span>
+      <span class="hero-tag">STL- und GLB-Import</span>
+    </div>
+  </div>
+</section>
+
+<section class="tools-section" id="werkzeuge">
+  <div class="tools-inner">
+    <h2 class="section-title">Drei Werkzeuge</h2>
+    <p class="section-sub">Eines zeigt die Form, eines entscheidet, wie sie geteilt wird, eines rechnet das Aufmaß.</p>
+
+    <div class="tool-grid">
+      <div class="tool-card">
+        <div class="tool-card-icon">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#3fc2b6" stroke-width="1.6" stroke-linejoin="round">
+            <path d="M3 6 L11 2 L11 24 L3 20 Z"/><path d="M15 2 L23 6 L23 20 L15 24 Z"/>
+            <path d="M11 9 L15 9 L15 17 L11 17" stroke="#d4a908"/>
+          </svg>
+        </div>
+        <h3>Formaufbau</h3>
+        <p>Eine beispielhafte Kaltkammer-Druckgießform als vollständiges Modell: beide
+          Formhälften mit Einsätzen, Kavität, Gießsystem, Temperierung, Füllkammer,
+          Auswerferpaket, Führung und Vakuumblock.</p>
+        <ul>
+          <li>Kavität, Kammerbohrung, Stift- und Säulenbohrungen sind echte Negative im Stahl</li>
+          <li>Schnittebene mit geschlossenen Schnittflächen je Werkstoffklasse</li>
+          <li>Form öffnen, Stahl-Transparenz, Baugruppen einzeln schalten</li>
+          <li>Zentral- oder 2D-Parallelprojektion, Ansichten X/Y/Z/Iso mit Vorzeichenwechsel</li>
+        </ul>
+        <div class="card-btns">
+          <a href="form.html" class="btn btn-primary">Öffnen</a>
+        </div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card-icon" style="background:rgba(154,119,232,.14)">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#9a77e8" stroke-width="1.6" stroke-linejoin="round">
+            <path d="M13 2 L23 8 L13 14 L3 8 Z"/>
+            <path d="M3 8 L3 18 L13 24 L23 18 L23 8" stroke="#4c9f70"/>
+            <path d="M13 14 L13 24" stroke="#e07b39"/>
+          </svg>
+        </div>
+        <h3>Bauteilanalyse</h3>
+        <p>Für ein Bauteil — Beispielteil oder eigene STL/GLB — wird für jede der sechs
+          Hauptrichtungen berechnet, welche Dreiecke von dort entformbar sind. Daraus entsteht
+          die Zuordnung zu Formhälften und Schiebern, die Trennlinie und die Entformschräge.</p>
+        <ul>
+          <li>Sichtbarkeit ±X ±Y ±Z je Dreieck, verdeckungsgenau</li>
+          <li>Eindeutige Zellen → Inseln → Ausbreiten bis zur Trennlinie, Schritt für Schritt</li>
+          <li>Gerechnet wird auf Knopfdruck — große Netze halten die Seite nicht auf</li>
+          <li>Hinterschnitte, die keine der sechs Richtungen erreicht, werden rot markiert</li>
+          <li>Entformschrägen mit Grenzwert und Flächenbilanz</li>
+          </ul>
+        <div class="card-btns">
+          <a href="bauteilanalyse.html" class="btn btn-primary">Öffnen</a>
+          <a href="bauteilanalyse.html?part=bracket" class="btn btn-ghost">Schieber-Beispiel</a>
+        </div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card-icon" style="background:rgba(224,123,57,.14)">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#e07b39" stroke-width="1.6" stroke-linejoin="round">
+            <rect x="8" y="8" width="10" height="10" rx="1"/>
+            <rect x="3" y="3" width="20" height="20" rx="3" stroke-dasharray="3 2"/>
+            <path d="M13 3v5M13 18v5M3 13h5M18 13h5" stroke="#4c9f70"/>
+          </svg>
+        </div>
+        <h3>Offsetflächen</h3>
+        <p>Das Aufmaß entsteht nicht durch Verschieben von Dreiecken, sondern aus einem
+          <b>Abstandsfeld</b>: das Bauteil wird gerastert, jeder Rasterpunkt bekommt seinen
+          Abstand zur Oberfläche, und die Offsetfläche ist die Fläche gleichen Abstands.</p>
+        <ul>
+          <li>Keine Selbstdurchdringung, auch bei großen Beträgen</li>
+          <li>Konvexe Kanten bekommen korrekt einen Radius in Höhe des Aufmaßes</li>
+          <li>Ein Feld, beliebig viele Aufmaße — nur das Feld kostet Zeit</li>
+          <li>Feldschnitt als Rasterbild mit Höhenlinie, Export als STL</li>
+        </ul>
+        <div class="card-btns">
+          <a href="offset.html" class="btn btn-primary">Öffnen</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="how-section" id="so-funktionierts">
+  <div class="how-inner">
+    <h2 class="section-title">Wie die Formteilung entsteht</h2>
+    <p class="section-sub">Drei Schritte, die man einzeln anschauen kann — ohne dass Hälften oder Schieber im Modell stecken.</p>
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">Schritt 01</div>
+        <h3>Eindeutige Zellen festsetzen</h3>
+        <p>Für jedes Dreieck wird in allen sechs Richtungen geprüft, ob seine Normale dorthin
+          zeigt und ob der Weg frei ist. Wer nur aus <em>einer</em> Richtung entformbar ist,
+          gehört ihr — das ist die Saat. Wer aus <em>keiner</em> entformbar ist, ist ein
+          Hinterschnitt.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">Schritt 02</div>
+        <h3>Inseln aufnehmen</h3>
+        <p>Reste, die vollständig von einer einzigen Region umschlossen sind, schlagen ihr zu;
+          winzige Splitter mitten in einer fremden Region werden aufgelöst. Danach sind die
+          Regionen zusammenhängend statt gesprenkelt.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">Schritt 03</div>
+        <h3>Bis zur Trennlinie ausbreiten</h3>
+        <p>Von der Saat aus wachsen die Regionen über die mehrdeutigen Dreiecke — gut anliegende
+          Flächen billig, scharfe Knicke teuer, Schieber teurer als die Hauptrichtung. Wo zwei
+          Regionen aufeinandertreffen, liegt die Trennlinie.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="note-section">
+  <div class="note-box">
+    <h4>Wie das 3D-Studio ins Projekt passt</h4>
+    <p>Die drei Seiten rechnen alles clientseitig und brauchen weder Backend noch Projekt —
+      deshalb tragen sie auch keine Projektleiste. Die Maße der Beispielform stehen gesammelt in
+      <code>js/config.js</code> und lassen sich aus dem Projektabschnitt <code>design</code>
+      speisen (Kolben-Ø, Kammerlänge, Bauteilmaße); das Formmodell wird danach mit
+      <code>node tools/build-glb.mjs</code> neu erzeugt. Die Bauteilanalyse liest dasselbe
+      Dreiecksformat wie die <a href="/tools/sprengflaeche/">Sprengflächenanalyse</a> —
+      die STL aus <code>geometry</code> ließe sich unmittelbar übernehmen und die
+      Entformschrägen-Bilanz dorthin zurückschreiben.</p>
+  </div>
+</section>
+
+
+
+<script type="module">
+  import { mountNav } from './js/ui/nav.js';
+  mountNav('index.html');
+</script>
+</body>
+</html>

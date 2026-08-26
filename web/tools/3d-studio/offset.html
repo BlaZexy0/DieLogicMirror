@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offsetflächen · 3D-Studio · DieLogic</title>
+<meta name="theme-color" content="#002733">
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="stylesheet" href="/shared/shared.css">
+<link rel="stylesheet" href="css/viewer.css">
+<script src="/shared/version.js"></script>
+<script src="/shared/palette.js"></script>
+<script src="/shared/nav.js" data-footer="none"></script>
+<script type="importmap">
+  { "imports": { "three": "./vendor/three/three.module.js" } }
+</script>
+</head>
+<body class="viewer">
+
+<section class="page-hero compact">
+  <div class="inner">
+    <h1>Offsetflächen</h1>
+    <p class="subtitle">Abstandsfeld durch Rasterisierung — daraus die Fläche gleichen Abstands. Aufmaß, Untermaß und Schnitte durch das Feld, ohne Selbstdurchdringung.</p>
+  </div>
+</section>
+
+<div class="layout">
+  <aside>
+    <h2>Bauteil</h2>
+    <div class="row">
+      <span>Beispielteil</span>
+      <select id="demo-select"></select>
+    </div>
+    <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" hidden>
+    <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ Eigene STL/GLB laden</button>
+    <div class="hint" id="part-note"></div>
+    <div class="facts" id="model-facts"></div>
+    <div class="warn-line" id="model-warn"></div>
+
+    <h2>Rasterfeld</h2>
+    <div class="row">
+      <span title="Zellen entlang der längsten Kante. Feiner heißt genauer und langsamer — der Speicher wächst mit der dritten Potenz.">Auflösung</span>
+      <input type="range" id="res" min="32" max="192" step="8" value="96">
+      <span class="val" id="res-val"></span>
+    </div>
+    <div class="row">
+      <span title="Wie weit um das Bauteil herum der Abstand gespeichert wird. Aufmaße bis zu diesem Betrag lassen sich danach ohne Neurechnung abgreifen.">Bandbreite ±</span>
+      <input type="text" id="band" inputmode="decimal" value="10" spellcheck="false"
+             title="Wert eingeben und mit Eingabetaste bestätigen">
+      <span class="val">mm</span>
+    </div>
+    <div class="facts" id="field-facts"></div>
+    <button type="button" class="btn btn-primary block-btn" id="run-field">Feld berechnen</button>
+    <div class="run-note" id="field-state"></div>
+
+    <h2>Offsetfläche</h2>
+    <div class="row">
+      <span title="Abstand zur Bauteiloberfläche. Plus vergrößert (Aufmaß), minus verkleinert (Untermaß).">Aufmaß</span>
+      <input type="text" id="delta" inputmode="decimal" value="2" spellcheck="false"
+             title="Wert eingeben und mit Eingabetaste bestätigen — z. B. +10 oder −10">
+      <span class="val">mm</span>
+    </div>
+    <div class="row">
+      <span>Anzeige</span>
+      <div class="seg" id="show-seg">
+        <button type="button" data-value="both" class="active">beide</button>
+        <button type="button" data-value="offset">nur Offset</button>
+        <button type="button" data-value="part">nur Bauteil</button>
+      </div>
+    </div>
+    <div class="facts" id="offset-facts"></div>
+    <button type="button" class="btn btn-outline block-btn" id="offset-export">Offsetfläche als STL speichern</button>
+
+    <h2>Feldschnitt</h2>
+    <label class="inline"><input type="checkbox" id="slice-on"> Schnitt durch das Feld zeigen</label>
+    <div id="slice-block" class="disabled">
+      <div class="row">
+        <span>Achse</span>
+        <div class="seg" id="slice-seg">
+          <button type="button" data-value="0">X</button>
+          <button type="button" data-value="1">Y</button>
+          <button type="button" data-value="2" class="active">Z</button>
+        </div>
+      </div>
+      <div class="row">
+        <span>Position</span>
+        <input type="range" id="slice-pos" min="0" max="100" step="1" value="50">
+        <span class="val" id="slice-pos-val"></span>
+      </div>
+    </div>
+
+    <h2>Darstellung</h2>
+    <div class="row">
+      <span>Deckkraft Bauteil</span>
+      <input type="range" id="opacity" min="10" max="100" value="35">
+      <span class="val" id="opacity-val"></span>
+    </div>
+
+    <div class="hint">
+      <b>Warum ein Raster:</b> eine Offsetfläche dadurch zu bauen, dass
+      man jeden Punkt des Netzes nach außen schiebt, geht nur bei kleinen
+      Beträgen gut. Sobald das Aufmaß in die Größenordnung von
+      Verrundungen und Taschen kommt, durchdringen sich die verschobenen
+      Flächen selbst. Hier wird stattdessen für jeden Rasterpunkt der
+      <b>Abstand zur Oberfläche</b> gespeichert (Vorzeichen: innen
+      negativ) — die Offsetfläche ist dann einfach die Fläche gleichen
+      Abstands. Selbstdurchdringungen lösen sich dabei von selbst auf,
+      weil immer der nächste Punkt zählt; an konvexen Kanten entsteht
+      korrekt ein Radius in Höhe des Aufmaßes.
+      Aus <em>einem</em> Feld lassen sich beliebig viele Aufmaße
+      abgreifen, solange sie in der Bandbreite liegen — nur das Feld
+      selbst kostet Zeit.
+    </div>
+  </aside>
+
+  <div id="viewport">
+    <div id="status"></div>
+    <div class="colorbar" id="colorbar">
+      <div class="cb-title" id="cb-title"></div>
+      <div class="cb-body">
+        <div class="cb-scale" id="cb-scale"></div>
+        <div class="cb-ticks" id="cb-ticks"></div>
+      </div>
+      <div class="cb-extra" id="cb-extra"></div>
+    </div>
+    <div id="busy"></div>
+    <div class="drop-hint">STL oder GLB hier ablegen</div>
+  </div>
+</div>
+
+<script type="module" src="js/part/offsetapp.js"></script>
+</body>
+</html>

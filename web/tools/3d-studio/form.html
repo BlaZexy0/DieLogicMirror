@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Formaufbau · 3D-Studio · DieLogic</title>
+<meta name="theme-color" content="#002733">
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="stylesheet" href="/shared/shared.css">
+<link rel="stylesheet" href="css/viewer.css">
+<script src="/shared/version.js"></script>
+<script src="/shared/palette.js"></script>
+<script src="/shared/nav.js" data-footer="none"></script>
+<script type="importmap">
+  { "imports": { "three": "./vendor/three/three.module.js" } }
+</script>
+</head>
+<body class="viewer">
+
+<section class="page-hero compact">
+  <div class="inner">
+    <h1>Formaufbau</h1>
+    <p class="subtitle">Beispielhafte Kaltkammer-Druckgießform: beide Hälften mit Einsätzen, Kavität als echtes Negativ, Gießsystem, Temperierung, Auswerferpaket, Führung und Vakuumblock.</p>
+  </div>
+</section>
+
+<div class="layout">
+  <aside>
+    <h2>Baugruppen</h2>
+    <div id="components"></div>
+
+    <h2>Darstellung</h2>
+    <div class="row">
+      <span>Stahl-Transparenz</span>
+      <input type="range" id="opacity" min="10" max="100" value="40">
+      <span class="val" id="opacity-val"></span>
+    </div>
+    <div class="row">
+      <span>Form öffnen</span>
+      <input type="range" id="open" min="0" max="100" value="0">
+      <span class="val" id="open-val"></span>
+    </div>
+
+    <h2>Schnitt</h2>
+    <label class="inline"><input type="checkbox" id="clip-on"> Schnittebene zeigen</label>
+    <div id="clip-detail" class="disabled">
+      <div class="row">
+        <span>Achse</span>
+        <div class="seg">
+          <button type="button" data-axis="x" class="active">X</button>
+          <button type="button" data-axis="y">Y</button>
+          <button type="button" data-axis="z">Z</button>
+        </div>
+      </div>
+      <div class="row">
+        <span>Position</span>
+        <input type="range" id="clip-pos" min="-100" max="100" value="0">
+        <span class="val" id="clip-pos-val"></span>
+      </div>
+      <label class="inline"><input type="checkbox" id="clip-flip"> Seite umkehren</label>
+    </div>
+
+    <div class="hint">
+      Der Schnitt zeigt die Körper <b>geschlossen</b>: je Werkstoffklasse
+      (Stahl, Gussteil, Anguss, Temperierung, Kolben, Stifte) zeichnet ein
+      Stencil-Durchgang eine massive Schnittfläche in Klassenfarbe.
+      Kavität, Kammerbohrung, Angusskegel, Auswerfer- und Rückdrückstifte,
+      Führungssäulen und -buchsen sind als echte Negative aus dem Stahl
+      geschnitten — mit <code>fit</code>-Spalt aus <code>js/config.js</code>.
+      Die Temperierkanäle bilden Bohrung und Inhalt zugleich ab und sind
+      deshalb bewusst nicht ausgeschnitten.
+      Das Modell kommt als Standard-glTF aus <code>assets/die.glb</code>
+      (neu erzeugen: <code>node tools/build-glb.mjs</code>).
+    </div>
+  </aside>
+
+  <div id="viewport">
+    <div id="status"></div>
+  </div>
+</div>
+
+<script type="module" src="js/die.js"></script>
+</body>
+</html>

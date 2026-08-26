@@ -1,0 +1,114 @@
+/* Übersichtsseite (index.html) und die gemeinsame Kopfleiste.
+   Aufbau und Maße folgen der DieLogic-Startseite (web/index.html):
+   dunkler Hero, Karten auf dunklem Grund, Schrittspalten auf hellem. */
+
+/* ── Kopfleiste (Platzhalter für /shared/nav.js) ────────────── */
+.f3-nav {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1.5rem; padding: 0 1.6rem; height: 56px;
+  background: var(--dark); border-bottom: 1px solid var(--dark3);
+}
+.f3-brand {
+  display: inline-flex; align-items: baseline; gap: .1rem;
+  color: #fff; font-size: 1.12rem; font-weight: 700; text-decoration: none; letter-spacing: -.02em;
+}
+.f3-brand .f3-sub {
+  margin-left: .7rem; padding-left: .7rem; border-left: 1px solid var(--dark3);
+  color: var(--ondark); font-size: .8rem; font-weight: 500; letter-spacing: 0;
+}
+.f3-links { display: flex; gap: .3rem; }
+.f3-links a {
+  color: var(--ondark); text-decoration: none; font-size: .82rem; font-weight: 500;
+  padding: .35rem .8rem; border-radius: var(--radius); transition: all .15s;
+}
+.f3-links a:hover { color: #fff; background: rgba(255,255,255,.06); }
+.f3-links a.active { color: var(--primary-light); background: rgba(0,140,130,.16); }
+
+/* ── Hero ──────────────────────────────────────────────────── */
+.hero {
+  background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 55%, var(--primary-deep) 100%);
+  padding: 4.5rem 2rem 4rem; text-align: center; position: relative; overflow: hidden;
+}
+.hero-bg { position: absolute; inset: 0; pointer-events: none; }
+.hero-content { position: relative; max-width: 780px; margin: 0 auto; }
+.hero-pill {
+  display: inline-flex; align-items: center; gap: .4rem;
+  background: rgba(0,140,130,.15); border: 1px solid rgba(0,140,130,.5);
+  color: var(--primary-light); font-size: .78rem; font-weight: 600;
+  padding: .3rem .8rem; border-radius: 20px; margin-bottom: 1.4rem;
+}
+.hero h1 {
+  font-size: clamp(1.7rem, 3.6vw, 2.7rem); font-weight: 800; color: #fff;
+  letter-spacing: -.03em; line-height: 1.15; margin-bottom: 1rem;
+}
+.hero .subtitle { color: var(--ondark); font-size: 1.02rem; line-height: 1.65; margin: 0 auto 2rem; max-width: 640px; }
+.hero-ctas { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; }
+.hero-stats { display: flex; gap: 2.2rem; margin-top: 2.6rem; flex-wrap: wrap; justify-content: center; }
+.hero-stat { font-size: .8rem; color: var(--ondark); }
+.hero-stat strong { display: block; color: #fff; font-size: 1.15rem; font-weight: 700; font-family: var(--mono); }
+
+/* ── Werkzeugkarten ────────────────────────────────────────── */
+.tools-section { padding: 4.5rem 2rem; background: var(--dark); }
+.tools-inner { max-width: 1080px; margin: 0 auto; }
+.section-title { text-align: center; font-size: 1.6rem; font-weight: 800; margin-bottom: .5rem; }
+.tools-section .section-title { color: #fff; }
+.tools-section .section-sub { text-align: center; color: var(--ondark); margin-bottom: 2.6rem; font-size: .95rem; }
+.tool-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.3rem; }
+.tool-card {
+  background: var(--dark2); border: 1px solid var(--dark3); border-radius: 12px;
+  padding: 1.6rem 1.7rem 1.5rem; display: flex; flex-direction: column;
+  transition: transform .15s, box-shadow .15s, border-color .15s;
+}
+.tool-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,20,27,.35); border-color: var(--primary); }
+.tool-card-icon {
+  width: 46px; height: 46px; border-radius: 11px; margin-bottom: 1.1rem;
+  display: flex; align-items: center; justify-content: center; background: rgba(0,140,130,.15);
+}
+.tool-card h3 { color: #fff; font-size: 1.12rem; font-weight: 700; margin-bottom: .5rem; }
+.tool-card p { font-size: .86rem; color: var(--ondark); line-height: 1.62; margin-bottom: .8rem; }
+.tool-card ul { list-style: none; margin: 0 0 1.1rem; }
+.tool-card li {
+  font-size: .82rem; color: var(--ondark2); line-height: 1.55; padding-left: 1.1rem; position: relative;
+}
+.tool-card li::before { content: '·'; position: absolute; left: .35rem; color: var(--primary-light); font-weight: 700; }
+.tool-card .card-btns { display: flex; gap: .5rem; margin-top: auto; flex-wrap: wrap; }
+
+/* ── Schritte ──────────────────────────────────────────────── */
+.how-section { padding: 4.5rem 2rem; background: var(--bg); }
+.how-inner { max-width: 1000px; margin: 0 auto; }
+.how-section .section-title { color: var(--text); }
+.how-section .section-sub { text-align: center; color: var(--muted); margin-bottom: 2.6rem; font-size: .95rem; }
+.steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+.step { padding: 1.4rem 1.8rem; position: relative; text-align: center; }
+.step:not(:last-child)::after {
+  content: ''; position: absolute; right: 0; top: 15%; bottom: 15%; width: 1px; background: var(--border);
+}
+.step-num { font-size: .7rem; font-weight: 700; color: var(--primary); letter-spacing: .08em; text-transform: uppercase; margin-bottom: .4rem; }
+.step h3 { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .5rem; }
+.step p { font-size: .86rem; color: var(--muted); line-height: 1.65; }
+
+/* ── Hinweiskasten + Fußzeile ──────────────────────────────── */
+.note-section { padding: 0 2rem 4rem; background: var(--bg); }
+.note-box {
+  max-width: 1000px; margin: 0 auto; background: var(--surface);
+  border: 1px solid var(--border); border-left: 3px solid var(--primary);
+  border-radius: var(--radius); padding: 1.1rem 1.4rem;
+  font-size: .86rem; line-height: 1.7; color: var(--text-body);
+}
+.note-box h4 { font-size: .92rem; margin-bottom: .4rem; color: var(--text); }
+.note-box code { font-family: var(--mono); font-size: .84em; background: var(--surface2); padding: 0 .25em; border-radius: 3px; }
+.f3-foot {
+  background: var(--dark); color: var(--ondark2); font-size: .78rem;
+  padding: 1.3rem 2rem; text-align: center; border-top: 1px solid var(--dark3);
+}
+.f3-foot a { color: var(--ondark); }
+
+@media (max-width: 1040px) {
+  .tool-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 860px) {
+  .steps-grid { grid-template-columns: 1fr; }
+  .step:not(:last-child)::after { display: none; }
+  .f3-links a { padding: .35rem .55rem; }
+}
