@@ -219,7 +219,23 @@
         <div class="name" id="a-user"></div>
         <div class="sub"><strong id="a-org"></strong> <span id="a-role" class="pill"></span> <span id="a-email" class="muted"></span></div>
       </div>
-      <div class="right"><button class="btn btn-ghost btn-sm" id="logout">Abmelden</button></div>
+      <div class="right"><button class="btn btn-outline btn-sm" id="pw-open">Passwort ändern</button>
+        <button class="btn btn-ghost btn-sm" id="logout">Abmelden</button></div>
+    </div>
+
+    <!-- Passwort ändern: alle anderen Sitzungen enden dabei. -->
+    <div id="pw-panel" class="hidden" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.2rem;margin-bottom:1rem;max-width:34rem;">
+      <h3 style="margin:0 0 .6rem;font-size:.95rem;">Passwort ändern</h3>
+      <label style="display:block;font-size:.78rem;color:var(--muted);margin-bottom:.15rem;" for="pw-cur">Aktuelles Passwort</label>
+      <input id="pw-cur" type="password" autocomplete="current-password" style="width:100%;margin-bottom:.5rem;">
+      <label style="display:block;font-size:.78rem;color:var(--muted);margin-bottom:.15rem;" for="pw-new">Neues Passwort (mind. 10 Zeichen)</label>
+      <input id="pw-new" type="password" autocomplete="new-password" minlength="10" style="width:100%;margin-bottom:.5rem;">
+      <div class="kt-err" id="pw-err" style="margin:.2rem 0 .5rem;"></div>
+      <div style="display:flex;gap:.5rem;justify-content:flex-end;">
+        <button class="btn btn-ghost btn-sm" id="pw-cancel">Abbrechen</button>
+        <button class="btn btn-primary btn-sm" id="pw-save">Übernehmen</button>
+      </div>
+      <p style="font-size:.75rem;color:var(--muted);margin:.6rem 0 0;">Alle anderen Anmeldungen dieses Kontos werden beendet.</p>
     </div>
 
     <div class="kt-stats">
@@ -590,18 +606,52 @@
     var rows = await api('GET', '/api/org/members');
     setCount('k-members', rows.filter(function (m) { return !m.disabled; }).length);
     $('mem-body').innerHTML = rows.map(function (m) {
-      var canDisable = me.user.role === 'admin' && m.id !== me.user.id && !m.disabled;
+      var admin = me.user.role === 'admin', self = m.id === me.user.id;
+      var acts = '';
+      if (admin && !self && !m.disabled) acts += '<button class="btn-link danger" data-disable="' + esc(m.id) + '">deaktivieren</button>';
+      /* Ohne „aktivieren" war ein Deaktivieren endgültig: erneut einladen
+         scheitert daran, dass zu der Adresse schon ein Konto gehört. */
+      if (admin && m.disabled) acts += '<button class="btn-link" data-enable="' + esc(m.id) + '">aktivieren</button>';
+      if (admin && !self) acts += '<button class="btn-link" data-resetpw="' + esc(m.id) + '" data-mail="' + esc(m.email) + '">Passwort zurücksetzen</button>';
       return '<li><span class="av' + (m.disabled ? ' off' : '') + '">' + esc(initials(m.name, m.email)) + '</span>'
-        + '<div class="who"><div class="n">' + esc(m.name || m.email) + (m.id === me.user.id ? ' <span class="muted" style="font-weight:400;">(Sie)</span>' : '') + '</div><div class="e">' + esc(m.email) + '</div></div>'
+        + '<div class="who"><div class="n">' + esc(m.name || m.email) + (self ? ' <span class="muted" style="font-weight:400;">(Sie)</span>' : '') + '</div><div class="e">' + esc(m.email) + '</div></div>'
         + '<div class="right"><span class="pill' + (m.role === 'admin' ? ' admin' : '') + (m.disabled ? ' off' : '') + '">' + (m.disabled ? 'deaktiviert' : m.role === 'admin' ? 'Admin' : 'Mitglied') + '</span>'
-        + (canDisable ? '<button class="btn-link danger" data-disable="' + esc(m.id) + '">deaktivieren</button>' : '') + '</div></li>';
+        + acts + '</div></li>';
     }).join('');
   }
   $('mem-body').addEventListener('click', async function (e) {
-    var b = e.target.closest('button[data-disable]'); if (!b) return;
-    if (!confirm('Dieses Konto deaktivieren? Die Person kann sich danach nicht mehr anmelden.')) return;
-    try { await api('POST', '/api/org/members/' + b.dataset.disable + '/disable'); loadMembers(); }
-    catch (err) { alert(err.message); }
+    var b = e.target.closest('button[data-disable], button[data-enable], button[data-resetpw]');
+    if (!b) return;
+    try {
+      if (b.dataset.disable) {
+        if (!confirm('Dieses Konto deaktivieren? Die Person kann sich danach nicht mehr anmelden.')) return;
+        await api('POST', '/api/org/members/' + b.dataset.disable + '/disable');
+      } else if (b.dataset.enable) {
+        await api('POST', '/api/org/members/' + b.dataset.enable + '/enable');
+      } else {
+        if (!confirm('Passwort von ' + b.dataset.mail + ' zurücksetzen?\n\nEs wird ein temporäres Passwort erzeugt, das Sie einmalig sehen und weitergeben. Alle Sitzungen dieser Person enden sofort.')) return;
+        var r = await api('POST', '/api/org/members/' + b.dataset.resetpw + '/password');
+        window.prompt('Temporäres Passwort für ' + r.email + ' — jetzt kopieren, es wird nicht noch einmal angezeigt:', r.password);
+      }
+      loadMembers();
+    } catch (err) { alert(err.message); }
+  });
+
+  /* ── Eigenes Passwort ── */
+  function pwShow(on) {
+    show('pw-panel', on);
+    $('pw-err').textContent = '';
+    if (on) { $('pw-cur').value = ''; $('pw-new').value = ''; $('pw-cur').focus(); }
+  }
+  $('pw-open').addEventListener('click', function () { pwShow($('pw-panel').classList.contains('hidden')); });
+  $('pw-cancel').addEventListener('click', function () { pwShow(false); });
+  $('pw-save').addEventListener('click', async function () {
+    $('pw-err').textContent = '';
+    try {
+      await api('POST', '/api/auth/password', { current_password: $('pw-cur').value, new_password: $('pw-new').value });
+      pwShow(false);
+      alert('Passwort geändert. Alle anderen Anmeldungen dieses Kontos wurden beendet.');
+    } catch (err) { $('pw-err').textContent = err.message; }
   });
 
   async function loadInvites() {

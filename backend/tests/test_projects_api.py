@@ -88,9 +88,14 @@ def test_admin_invites_member_and_projects_flow():
     members = jane.get("/api/org/members").json()
     assert {"owner@example.com", "jane@example.com"} <= {m["email"] for m in members}
 
+    # Ein unbekannter Abschnitt ist ein Fehler des Aufrufers — stumm verwerfen
+    # und 200 antworten hieße: das nächste Werkzeug verliert seine Arbeit (H-01).
+    r = jane.post("/api/projects", json={"name": "X", "data": {"design": {}, "unbekannt": {"x": 1}}})
+    assert r.status_code == 422, r.text
+    assert "unbekannt" in r.json()["detail"]
+
     # Projekt anlegen (mit erster Revision) und speichern
-    doc = {"design": {"values": {"part": 12}, "machine": "hcc800"}, "cycle": {"durs": {"schuss": 4}},
-           "unbekannt": {"x": 1}}
+    doc = {"design": {"values": {"part": 12}, "machine": "hcc800"}, "cycle": {"durs": {"schuss": 4}}}
     r = jane.post("/api/projects", json={"name": "DieCastPartA", "description": "Getriebegehäuse", "data": doc})
     assert r.status_code == 201, r.text
     pid = r.json()["id"]
@@ -98,7 +103,8 @@ def test_admin_invites_member_and_projects_flow():
 
     r = admin.get(f"/api/projects/{pid}")  # gleiche Organisation → sichtbar
     assert r.status_code == 200 and r.json()["data"]["design"]["machine"] == "hcc800"
-    assert "unbekannt" not in r.json()["data"]
+    assert jane.put(f"/api/projects/{pid}/draft",
+                    json={"data": {"design": {}, "unbekannt": {}}}).status_code == 422
 
     # Autosave: Draft ändern, dann Revision als Schnappschuss
     r = jane.put(f"/api/projects/{pid}/draft", json={"data": {"design": {"values": {"part": 12.5}}}})
@@ -227,3 +233,57 @@ def test_create_is_idempotent_per_client_id():
     # Eine ungültige Anfrage hinterlässt kein Geisterprojekt (H-04)
     assert admin.post("/api/projects", json={"name": "Kaputt", "data": {"cost": [1, 2]}}).status_code == 422
     assert len(admin.get("/api/projects").json()) == before + 1
+
+
+def test_non_finite_numbers_are_refused_not_stored():
+    """NaN/Infinity machen den Lese-Endpunkt dauerhaft zu 500 — Python nimmt
+    die Literale an, JSONResponse schreibt sie nicht (H-02)."""
+    admin = _client()
+    _login(admin, "owner@example.com")
+    pid = admin.post("/api/projects", json={"name": "Endlich", "data": {}}).json()["id"]
+
+    for body in ('{"data": {"design": {"values": {"part": NaN}}}}',
+                 '{"data": {"design": {"values": {"part": Infinity}}}}',
+                 '{"data": {"design": {"kurve": [1, -Infinity]}}}'):
+        r = admin.put(f"/api/projects/{pid}/draft", content=body,
+                      headers={"Content-Type": "application/json"})
+        assert r.status_code == 422, (body, r.text)
+        assert "NaN" in r.json()["detail"] or "Infinity" in r.json()["detail"]
+
+    # Der Endpunkt bleibt lesbar
+    assert admin.get(f"/api/projects/{pid}").status_code == 200
+
+    # Eine bereits verdorbene Zeile heilt beim Lesen zu null, statt 500 zu bleiben
+    from backend.db import Project, SessionLocal
+    with SessionLocal() as db:
+        p = db.get(Project, pid)
+        p.draft = {"design": {"values": {"part": float("nan"), "ok": 3}}}
+        db.commit()
+    r = admin.get(f"/api/projects/{pid}")
+    assert r.status_code == 200, r.text
+    assert r.json()["data"]["design"]["values"] == {"part": None, "ok": 3}
+
+
+def test_concurrent_revisions_all_succeed():
+    """head_rev war ein Read-Modify-Write ohne Sperre: gleichzeitige
+    „Revision anlegen" endeten in HTTP 500, der Schnappschuss war weg (H-05)."""
+    import threading
+    admin = _client()
+    _login(admin, "owner@example.com")
+    pid = admin.post("/api/projects", json={"name": "Parallel", "data": {}}).json()["id"]
+
+    codes = []
+    def one(i):
+        r = admin.post(f"/api/projects/{pid}/revisions",
+                       json={"data": {"design": {"n": i}}, "note": f"r{i}"})
+        codes.append(r.status_code)
+
+    threads = [threading.Thread(target=one, args=(i,)) for i in range(6)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert codes == [201] * 6, codes
+    revs = sorted(r["rev"] for r in admin.get(f"/api/projects/{pid}/revisions").json())
+    assert revs == [1, 2, 3, 4, 5, 6], revs

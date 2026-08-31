@@ -30,6 +30,9 @@ router = APIRouter(prefix="/api", tags=["auth"])
 
 COOKIE = "dl_session"
 SESSION_DAYS = 30
+log = logging.getLogger("uvicorn.error")
+
+DEMO_EMAIL = "demo@dielogic.de"
 INVITE_DAYS = 14
 MIN_PASSWORD = 10
 
@@ -149,19 +152,45 @@ def _valid_invite(db: Session, token: str) -> Invite:
     return inv
 
 
+# Der Bootstrap-Token ist das einzige frei gewählte Geheimnis im System —
+# reguläre Einladungen sind secrets.token_urlsafe(32) und damit 256 Bit stark.
+# Untergrenze, damit er nicht zu raten ist; Obergrenze = Spaltenbreite von
+# Invite.token (db.py), sonst bricht ein *guter* langer Token den Deploy.
+MIN_BOOTSTRAP_TOKEN = 24
+MAX_TOKEN_CHARS = 64
+
+
 def bootstrap_from_env(db: Session) -> None:
     """Erster Admin ohne Shell (z. B. Render Free): DIELOGIC_ADMIN_EMAIL und
     DIELOGIC_ADMIN_TOKEN setzen — solange es keinen Benutzer gibt, wird
     beim Start die Organisation DIELOGIC_ORG (Standard „DieLogic") angelegt
     und eine Admin-Einladung mit genau diesem Token. Einlösen unter
-    /konto/?token=<DIELOGIC_ADMIN_TOKEN>."""
+    /konto/?token=<DIELOGIC_ADMIN_TOKEN>.
+
+    Die Einladung läuft ab wie jede andere. Solange die Umgebungsvariablen
+    gesetzt sind und noch kein Benutzer existiert, verlängert jeder Start die
+    Frist — der Betreiber sperrt sich also nicht aus, aber ein abgelegter
+    Token ist nicht unbegrenzt gültig."""
     email = os.environ.get("DIELOGIC_ADMIN_EMAIL", "").strip().lower()
     token = os.environ.get("DIELOGIC_ADMIN_TOKEN", "").strip()
     if not email or not token:
         return
-    if db.scalar(select(User).limit(1)):
+    if not MIN_BOOTSTRAP_TOKEN <= len(token) <= MAX_TOKEN_CHARS:
+        log.warning("DIELOGIC_ADMIN_TOKEN muss %d bis %d Zeichen haben (ist %d) — "
+                    "Bootstrap-Einladung wird nicht angelegt.",
+                    MIN_BOOTSTRAP_TOKEN, MAX_TOKEN_CHARS, len(token))
         return
-    if db.scalar(select(Invite).where(Invite.token == token)):
+    # Das Demo-Konto zählt nicht: es entsteht im selben Start (bootstrap_demo)
+    # und würde den Bootstrap sonst dauerhaft blockieren, sobald
+    # bootstrap_from_env einmal fehlschlägt — der Betreiber käme nie mehr an
+    # seinen ersten Admin.
+    if db.scalar(select(User).where(User.email != DEMO_EMAIL).limit(1)):
+        return
+    have = db.scalar(select(Invite).where(Invite.token == token))
+    if have is not None:
+        if have.used_at is None:
+            have.expires_at = now() + timedelta(days=INVITE_DAYS)
+            db.commit()
         return
     slug = os.environ.get("DIELOGIC_ORG", "dielogic").strip().lower() or "dielogic"
     org = db.scalar(select(Org).where(Org.slug == slug))
@@ -169,13 +198,7 @@ def bootstrap_from_env(db: Session) -> None:
         org = Org(slug=slug, name=os.environ.get("DIELOGIC_ORG_NAME", slug.capitalize()))
         db.add(org)
         db.commit()
-    inv = create_invite(db, org, email, role="admin", token=token)
-    inv.expires_at = None  # Bootstrap-Einladung läuft nicht ab
-    db.commit()
-
-
-DEMO_EMAIL = "demo@dielogic.de"
-log = logging.getLogger("uvicorn.error")
+    create_invite(db, org, email, role="admin", token=token)
 
 
 def bootstrap_demo(db: Session) -> None:
@@ -226,6 +249,11 @@ class LoginIn(BaseModel):
 class InviteIn(BaseModel):
     email: str = Field(min_length=3, max_length=320)
     role: str = Field("member", pattern="^(admin|member)$")
+
+
+class PasswordIn(BaseModel):
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=MIN_PASSWORD, max_length=200)
 
 
 def user_out(user: User) -> dict:
@@ -319,6 +347,58 @@ def revoke_invite(invite_id: str, user: User = Depends(admin_user), db: Session 
     if not inv or inv.org_id != user.org_id:
         raise HTTPException(status_code=404, detail="Einladung nicht gefunden.")
     db.delete(inv)
+    db.commit()
+    return Response(status_code=204)
+
+
+@router.post("/auth/password")
+def change_password(body: PasswordIn, request: Request, response: Response,
+                    user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Eigenes Passwort ändern. Alle anderen Sitzungen werden beendet — wer das
+    Passwort wechselt, will in der Regel genau das."""
+    if not verify_password(body.current_password, user.pw_hash):
+        raise HTTPException(status_code=403, detail="Das aktuelle Passwort stimmt nicht.")
+    if body.new_password == body.current_password:
+        raise HTTPException(status_code=422, detail="Das neue Passwort muss sich vom alten unterscheiden.")
+    user.pw_hash = hash_password(body.new_password)
+    keep = request.cookies.get(COOKIE)
+    for sess in db.scalars(select(AuthSession).where(AuthSession.user_id == user.id)).all():
+        if sess.token != keep:
+            db.delete(sess)
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/org/members/{user_id}/password")
+def reset_member_password(user_id: str, user: User = Depends(admin_user),
+                          db: Session = Depends(get_db)):
+    """Passwort eines Mitglieds zurücksetzen (Admin).
+
+    Ohne Mailversand gibt es keinen „Link vergessen"-Weg: der Admin erzeugt
+    ein temporäres Passwort und gibt es auf demselben Weg weiter wie den
+    Einladungslink. Es wird nur hier, einmal, im Klartext zurückgegeben —
+    gespeichert ist wie immer nur der Hash. Alle Sitzungen des Mitglieds
+    enden sofort."""
+    target = db.get(User, user_id)
+    if not target or target.org_id != user.org_id:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden.")
+    temp = secrets.token_urlsafe(12)
+    target.pw_hash = hash_password(temp)
+    for sess in db.scalars(select(AuthSession).where(AuthSession.user_id == target.id)).all():
+        db.delete(sess)
+    db.commit()
+    return {"email": target.email, "password": temp}
+
+
+@router.post("/org/members/{user_id}/enable", status_code=204)
+def enable_member(user_id: str, user: User = Depends(admin_user), db: Session = Depends(get_db)):
+    """Gegenstück zu /disable — ohne das war ein Deaktivieren endgültig:
+    erneut einladen geht nicht, weil zu der E-Mail-Adresse schon ein Konto
+    gehört."""
+    target = db.get(User, user_id)
+    if not target or target.org_id != user.org_id:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden.")
+    target.disabled = False
     db.commit()
     return Response(status_code=204)
 

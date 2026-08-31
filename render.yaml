@@ -19,6 +19,10 @@ services:
       # Ersten Admin ohne Shell anlegen: beide im Render-Dashboard setzen
       # (sync: false = Wert wird nicht aus dieser Datei gelesen). Einlösen
       # unter https://<host>/konto/?token=<DIELOGIC_ADMIN_TOKEN>.
+      # Der Token muss 24 bis 64 Zeichen haben — er ist das einzige frei
+      # gewählte Geheimnis im System (z. B. `openssl rand -base64 33`).
+      # Ist er zu kurz oder zu lang, warnt der Start und legt die Einladung
+      # nicht an; die Site läuft trotzdem.
       - key: DIELOGIC_ADMIN_EMAIL
         sync: false
       - key: DIELOGIC_ADMIN_TOKEN

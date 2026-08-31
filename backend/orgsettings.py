@@ -9,6 +9,7 @@ Mitglieder, schreiben nur Administratoren.
 from __future__ import annotations
 
 import json
+import math
 import re
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from .auth import admin_user, current_user
 from .db import OrgSetting, User, get_db, iso, now
+from .projects import json_safe
 
 router = APIRouter(prefix="/api/org/settings", tags=["org-settings"])
 
@@ -41,6 +43,12 @@ def _num_fields(fields, where: str) -> dict:
             raise HTTPException(status_code=422, detail=f"{where}: ungültiger Feldschlüssel '{k}'.")
         if isinstance(v, bool) or not isinstance(v, (int, float)):
             raise HTTPException(status_code=422, detail=f"{where}: Feld '{k}' muss eine Zahl sein.")
+        # NaN/Infinity sind float und kämen hier durch. Gespeichert machen sie
+        # den Lese-Endpunkt dauerhaft zu einem 500er (JSONResponse schreibt
+        # sie nicht) — siehe projects._reject_non_finite.
+        if not math.isfinite(v):
+            raise HTTPException(status_code=422,
+                                detail=f"{where}: Feld '{k}' ist keine gültige JSON-Zahl (NaN/Infinity).")
         out[k] = v
     return out
 
@@ -79,7 +87,9 @@ def clean_setting(key: str, data) -> dict | list:
 
 
 def _out(row: OrgSetting) -> dict:
-    return {"key": row.key, "data": row.data, "updated_at": iso(row.updated_at)}
+    # json_safe: bereits gespeicherte NaN/Infinity beim Lesen zu null machen,
+    # damit eine einmal verdorbene Zeile den Endpunkt nicht dauerhaft blockiert.
+    return {"key": row.key, "data": json_safe(row.data), "updated_at": iso(row.updated_at)}
 
 
 @router.get("")

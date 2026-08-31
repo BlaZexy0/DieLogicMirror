@@ -4,6 +4,7 @@ Starten (aus dem Ordner dielogic/):
     .venv/bin/uvicorn backend.app:app --reload
 """
 
+import logging
 import re
 from pathlib import Path, PurePosixPath
 
@@ -15,6 +16,8 @@ from .db import SessionLocal, init_db
 from .orgsettings import router as orgsettings_router
 from .projects import router as projects_router
 from .sim import router as sim_router
+
+log = logging.getLogger("uvicorn.error")
 
 SITE_DIR = Path(__file__).resolve().parent.parent / "web"
 
@@ -35,11 +38,22 @@ app.include_router(orgsettings_router)
 @app.on_event("startup")
 def _startup():
     """Schema anlegen (create_all ist idempotent) und ggf. den ersten Admin
-    per Umgebungsvariablen einladen — siehe auth.bootstrap_from_env."""
+    per Umgebungsvariablen einladen — siehe auth.bootstrap_from_env.
+
+    Der Bootstrap ist eine Bequemlichkeit für den ersten Start, kein Teil des
+    Dienstes: eine Fehlkonfiguration (z. B. ein Tippfehler in
+    DIELOGIC_ADMIN_EMAIL) darf nicht die ganze Site abschalten — vorher warf
+    create_invite einen ValueError bis in den uvicorn-Start hinauf und der
+    verweigerte den Dienst samt aller rein statischen Seiten."""
     init_db()
     with SessionLocal() as db:
-        bootstrap_from_env(db)
-        bootstrap_demo(db)
+        for step in (bootstrap_from_env, bootstrap_demo):
+            try:
+                step(db)
+            except Exception:
+                db.rollback()
+                log.exception("%s fehlgeschlagen — die Site startet trotzdem, "
+                              "aber ohne diesen Schritt. Konfiguration prüfen.", step.__name__)
 
 # Ohne Cache-Control raten Browser die Frischedauer aus Last-Modified
 # (heuristisches Caching) und zeigen nach einem Deploy tagelang alte

@@ -16,11 +16,14 @@ Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
 - **Einladung statt Registrierung:** ein Einladungslink
   `/konto/?token=…` ist 14 Tage gültig und einmal einlösbar.
 - **Erster Admin ohne Shell** (Render Free): `DIELOGIC_ADMIN_EMAIL` und
-  `DIELOGIC_ADMIN_TOKEN` setzen — solange kein Benutzer existiert, legt der
-  Start die Organisation `DIELOGIC_ORG` (Standard `dielogic`) an und eine
-  Admin-Einladung mit genau diesem Token. Danach im Browser
+  `DIELOGIC_ADMIN_TOKEN` (24–64 Zeichen, z. B. `openssl rand -base64 33`)
+  setzen — solange kein Benutzer existiert, legt der Start die Organisation
+  `DIELOGIC_ORG` (Standard `dielogic`) an und eine Admin-Einladung mit genau
+  diesem Token; sie ist wie jede Einladung 14 Tage gültig und wird bei jedem
+  Start erneuert, solange sie nicht eingelöst ist. Danach im Browser
   `https://<host>/konto/?token=<DIELOGIC_ADMIN_TOKEN>` öffnen,
-  Namen/Passwort setzen. Weitere Personen lädt man auf der Konto-Seite ein
+  Namen/Passwort setzen. Ein zu kurzer Token oder eine fehlerhafte Adresse
+  hält den Start nicht mehr auf — es steht dann eine Warnung im Server-Log. Weitere Personen lädt man auf der Konto-Seite ein
   (Link kopieren und weitergeben).
 - **Demo-Konto:** `DIELOGIC_DEMO_PASSWORD=<mind. 10 Zeichen>` setzen → beim
   Start entsteht die Organisation „Demo" mit Admin `demo@dielogic.de`; die
