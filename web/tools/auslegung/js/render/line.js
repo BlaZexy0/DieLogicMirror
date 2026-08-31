@@ -1,16 +1,45 @@
 /* Liniendiagramme: Serien, Grenzen (d.limits — Ausschlussflächen, Ziel-
    bänder, Referenzlinien), Ereignismarker, Betriebspunkt. */
 
-import { lineFrame, heading, axes, marker, text, fillRich } from './base.js';
+import { lineFrame, heading, axes, marker, text, fillRich, LEGEND_ROW, LEGEND_MAX_ROWS, LEGEND_TOP } from './base.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { drawLimits, legendItems, drawLegendSwatch } from './limits.js';
 
 const PI = Math.PI;
 
+/* Die Einträge der Legende: Serien, machbares Band, Grenzen. */
+function legendEntries(d, C) {
+  return d.ys.map(s => ({ label: s.n, sev: 'series', color: s.c }))
+    .concat(d.feasible ? [{ label: typeof d.feasible === 'string' ? d.feasible : 'machbares Band',
+      sev: 'target', color: C.okFill || 'rgba(0,140,130,.30)' }] : [])
+    .concat(d.feasible && d.feasibleSplit && d.feasibleSplit.label
+      ? [{ label: d.feasibleSplit.label, sev: 'target', color: 'rgba(0,140,130,.13)' }] : [])
+    .concat(legendItems(d.limits));
+}
+
+/* Wie viele Zeilen braucht die Legende bei dieser Breite? Reine Messung —
+   sie legt die Höhe des Plotrahmens fest, muss also vor ihm laufen. */
+function legendRows(x, w, d, L, R) {
+  const items = legendEntries(d, theme.chart);
+  x.save();
+  x.font = '10.5px Arial';
+  let lx = L, rows = 1;
+  for (const it of items) {
+    const tw = x.measureText(it.label).width;
+    if (lx > L && lx + 17 + tw > w - R) { lx = L; rows++; }
+    lx += 17 + tw + 14;
+  }
+  x.restore();
+  return rows;
+}
+
 export function drawLine(x, w, h, d) {
   heading(x, w, h, d);
   const C = theme.chart;
+  /* Erst mit dem provisorischen Rahmen messen (L und R hängen nicht an der
+     Legendenhöhe), dann den endgültigen Rahmen bilden. */
+  d._legendRows = legendRows(x, w, d, lineFrame(w, h, d).L, lineFrame(w, h, d).R);
   const f = lineFrame(w, h, d);
   const x0 = d.x[0], x1 = d.x[d.x.length - 1];
   const left = d.ys.filter(s => s.axis !== 'right');
@@ -24,8 +53,16 @@ export function drawLine(x, w, h, d) {
     if (l.on === 'y' && typeof l.value === 'number') y1 = Math.max(y1, l.value * 1.08);
     if (l.on === 'y' && l.severity === 'target' && typeof l.max === 'number') y1 = Math.max(y1, l.max * 1.08);
   }
+  /* Null-Spanne: bei gateMin = gateMax, dmin = dmax oder wallMin = wallMax
+     fallen Ober- und Untergrenze zusammen. Die rechte Achse hat den Schutz
+     zwei Zeilen weiter unten seit jeher (r1 - r0 || 1); links und auf der
+     x-Achse fehlte er — jede Koordinate wurde NaN oder ±Infinity und das
+     Diagramm blieb leer. Statt zu klemmen wird ein lesbarer Bereich um den
+     Wert aufgespannt; die Achsenbeschriftung zeigt ihn an. */
+  if (!(y1 > y0)) { const c = isFinite(y0) ? y0 : 0; y0 = c - 0.5; y1 = c + 0.5; }
+  const spanX = (x1 - x0) || 1;
   axes(x, w, h, f, x0, x1, y0, y1, d);
-  const X = a => f.L + (a - x0) / (x1 - x0) * f.pw;
+  const X = a => f.L + (a - x0) / spanX * f.pw;
   const Y = a => f.T + (y1 - a) / (y1 - y0) * f.ph;
 
   /* rechte Achse: eigene Skala für Serien mit axis:'right' */
@@ -43,13 +80,17 @@ export function drawLine(x, w, h, d) {
     x.globalAlpha = 1;
     for (let i = 0; i <= 5; i++) {
       const yy = f.T + i * f.ph / 5;
-      x.fillStyle = rc; x.textAlign = 'left'; x.font = '11px Arial';
+      /* Beschriftung in Textfarbe: die Serienfarben erreichen auf Weiß nur
+         1,98–4,14:1 (series4 sogar 2,22:1) und verfehlen damit den
+         WCAG-Textkontrast. Die Zuordnung trägt die farbige Achse selbst
+         und der gestrichelte Kurvenzug. */
+      x.fillStyle = C.text; x.textAlign = 'left'; x.font = '11px Arial';
       fillRich(x, fmt(r1 - i * (r1 - r0) / 5), f.L + f.pw + 7, yy + 4);
     }
     if (d.rl) {
       x.save();
       x.translate(w - 10, f.T + f.ph / 2); x.rotate(PI / 2);
-      x.fillStyle = rc; x.textAlign = 'center'; x.font = '11px Arial';
+      x.fillStyle = C.text; x.textAlign = 'center'; x.font = '11px Arial';
       fillRich(x, d.rl, 0, 0);
       x.restore();
     }
@@ -118,25 +159,27 @@ export function drawLine(x, w, h, d) {
   }
   x.restore();
 
-  /* Legende: Serien + Grenzen, mit Umbruch (max. 2 Zeilen — was nicht mehr
-     passt, ist weiterhin an seiner Linie im Diagramm beschriftet). */
-  const items = d.ys.map(s => ({ label: s.n, sev: 'series', color: s.c }))
-    .concat(d.feasible ? [{ label: typeof d.feasible === 'string' ? d.feasible : 'machbares Band',
-      sev: 'target', color: C.okFill || 'rgba(0,140,130,.30)' }] : [])
-    .concat(d.feasible && d.feasibleSplit && d.feasibleSplit.label
-      ? [{ label: d.feasibleSplit.label, sev: 'target', color: 'rgba(0,140,130,.13)' }] : [])
-    .concat(legendItems(d.limits));
-  let lx = f.L, ly = 70;
-  const maxLy = f.T - 9;
+  /* Legende: Serien + Grenzen, mit Umbruch. Der Rahmen ist oben bereits auf
+     die nötige Zeilenzahl gewachsen; passt selbst dann nicht alles (mehr als
+     LEGEND_MAX_ROWS Zeilen), wird der Rest gezählt statt verschwiegen. */
+  const items = legendEntries(d, C);
+  let lx = f.L, ly = LEGEND_TOP, row = 1, shown = 0;
   x.font = '10.5px Arial';
   for (const it of items) {
     const tw = x.measureText(it.label).width;
-    if (lx + 17 + tw > w - f.R) { lx = f.L; ly += 13; }
-    if (ly > maxLy) break;
+    if (lx > f.L && lx + 17 + tw > w - f.R) {
+      if (row >= LEGEND_MAX_ROWS) break;
+      lx = f.L; ly += LEGEND_ROW; row++;
+    }
     drawLegendSwatch(x, it, lx, ly);
     x.fillStyle = C.text; x.textAlign = 'left'; x.font = '10.5px Arial';
     fillRich(x, it.label, lx + 17, ly);
     lx += 17 + tw + 14;
+    shown++;
+  }
+  if (shown < items.length) {
+    x.fillStyle = C.text; x.textAlign = 'left'; x.font = 'bold 10.5px Arial';
+    fillRich(x, '+ ' + (items.length - shown) + ' weitere', lx, ly);
   }
 
   /* Freie Segmente (z. B. Drosselung zwischen Werkzeug- und Maschinenlinie) */

@@ -19,14 +19,25 @@ export function lineFrame(w, h, d) {
     f.R = 86;
     f.pw = w - f.L - f.R;
   }
-  /* Grenzen nur in der Legende benannt (d.limitText === 'legend'): eine
-     dritte Legendenzeile darf nicht abgeschnitten werden — Plot rückt ab. */
-  if (d && d.limitText === 'legend') {
-    f.T += 13;
-    f.ph -= 13;
-  }
+  /* Die Legende sitzt über dem Plot. Zwei Zeilen passen immer; braucht sie
+     mehr, rückt der Plot ab — bis LEGEND_MAX_ROWS. Vorher war es eine feste
+     dritte Zeile für d.limitText === 'legend', und alles darüber verschwand
+     stillschweigend: gemessen 8 von 12 Einträgen auf einer 517-px-Karte,
+     während dieselbe Einstellung jede Beschriftung IM Plot unterdrückt.
+     d._legendRows setzt drawLine beim Zeichnen; hover.js liest denselben
+     Wert vom selben Objekt, damit Zeichnung und Mausauswertung dieselbe
+     Geometrie benutzen. */
+  const rows = d && d._legendRows ? Math.min(d._legendRows, LEGEND_MAX_ROWS)
+    : (d && d.limitText === 'legend' ? 3 : 2);
+  const extra = Math.max(0, rows - 2) * LEGEND_ROW;
+  f.T += extra;
+  f.ph -= extra;
   return f;
 }
+
+export const LEGEND_ROW = 13;
+export const LEGEND_MAX_ROWS = 5;
+export const LEGEND_TOP = 70;
 
 /* Beschriftung mit Indizes: „v_a", „t_f max", „Q_dry", „P_{acc}" — der
    Teil nach „_" (Wort oder {…}) wird als Tiefindex gezeichnet (78 % Größe,

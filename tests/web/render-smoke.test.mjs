@@ -144,3 +144,28 @@ test('turbo(): nicht endliche Werte werfen nicht, sondern bleiben leer', async (
   assert.match(turbo(0), /^rgb\(/);
   assert.match(turbo(1), /^rgb\(/);
 });
+
+/* Zusammenfallende Grenzenpaare: gateMin = gateMax, dmin = dmax,
+   wallMin = wallMax. Genau hier fehlte der linken y-Achse der
+   Null-Spannen-Schutz, den die rechte zwei Zeilen später hat — die
+   Diagramme blieben leer (H-17). */
+const EQUAL_PAIRS = [
+  ['gateMin', 'gateMax', 40],
+  ['dmin', 'dmax', 120],
+  ['wallMin', 'wallMax', 3],
+  ['fillMin', 'fillMax', 50],
+];
+for (const [a, b, val] of EQUAL_PAIRS) {
+  test(`entartet: ${a} = ${b} = ${val} — kein Diagramm wirft`, () => {
+    const v = Object.assign({}, values, { [a]: val, [b]: val });
+    const s = computeShot(v, DEFAULT_CURVE.map(p => p.slice()));
+    for (const def of charts) {
+      let d;
+      assert.doesNotThrow(() => { d = def.calc(v, { shot: s }); }, `${def.id}.calc() wirft`);
+      assert.ok(d, `${def.id}: calc lieferte nichts`);
+      if (d.err) continue;
+      d.title = d.title || def.title;
+      assert.doesNotThrow(() => drawAny(makeCtx(), 1000, 800, d, def), `${def.id}: Zeichnen wirft`);
+    }
+  });
+}

@@ -21,10 +21,20 @@ export default {
     if (!(v.gate > 0)) return { err: 'Anschnittfläche muss > 0 mm² sein.' };
     if (!(v.vmax > 0)) return { err: 'Kolbengeschw. max. muss > 0 sein.' };
     if (!(Ap > 0)) return { err: 'Kolben-Ø muss > 0 sein.' };
+    /* Die Farbskala endete fest bei 80 m/s — unabhängig vom Zielband des
+       Anwenders. Mit den Defaults sind dadurch 16,0 % des Feldes gesättigt,
+       bei einem viertelgroßen Anschnitt 72,2 % (Feldmaximum 1112,6 m/s):
+       die Farbe sagt dort nichts mehr aus. Die Skala folgt jetzt dem
+       Zielband mit Luft nach oben, und der Anteil oberhalb wird benannt
+       statt verschwiegen. */
+    const band = v.gateMax > 0 ? v.gateMax : 60;
+    const hi = Math.max(20, Math.ceil(band * 1.5 / 10) * 10);
+    const levels = [0.25, 0.5, 0.75].map(t => Math.round(hi * t / 5) * 5)
+      .filter((z, i, a) => z > 0 && z < hi && a.indexOf(z) === i);
     const q = heat(0, v.vmax, v.gate * 0.3, v.gate * 2,
       (vp, Ag) => vp * Ap / Ag,
       'Kolbengeschwindigkeit in m/s', 'Anschnittfläche in mm²', 'Anschnittgeschwindigkeit in m/s',
-      0, 80, [20, 40, 60]);
+      0, hi, levels);
     /* Zielband v_a ∈ [gateMin, gateMax] ⇔ A_a zwischen zwei Hyperbeln */
     if (v.gateMin > 0 && v.gateMax > 0)
       q.limits = [target('gateBand', 'Ziel v_a ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s', 'y',
@@ -34,7 +44,10 @@ export default {
       q.pt = [v2, v.gate];
       q.ptl = 'Ist v₂ ' + fmt(v2) + ' m/s · ' + fmt(v.gate) + ' mm²';
     }
-    q.info = 'Zielband ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s';
+    let n = 0, over = 0;
+    for (const row of q.z) for (const z of row) { if (isFinite(z)) { n++; if (z > hi) over++; } }
+    q.info = 'Zielband ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s · Farbskala 0–' + fmt(hi) + ' m/s'
+      + (over ? ' · ' + fmt(100 * over / n) + ' % des Feldes liegen darüber' : '');
     return q;
   },
 
