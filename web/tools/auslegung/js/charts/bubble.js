@@ -21,14 +21,27 @@ export function ratio(v, p, pVor) {
 }
 
 /* Restluftdruck beim Füllende aus der Backend-Simulation [bar], oder null
-   (Simulation lädt noch / Fehler / Vakuum-Modell „aus"). */
+   (Simulation lädt noch / Fehler / Vakuum-Modell „aus").
+
+   p_vor ist der Druck der eingeschlossenen Luft in dem Moment, in dem die
+   Kavität voll ist — nicht am Ende des Abtastfensters. Danach drückt der
+   Kolben das Restluftvolumen auf nahezu null; dort liefert das Vakuum-Modell
+   nur noch seinen Rückfallwert (Umgebungsdruck, exakt 1013,25 mbar), weil das
+   Ventil längst geschlossen ist. Diese letzte Probe als p_vor zu nehmen ließ
+   „ohne Vakuum" und „mit Vakuum" als zwei identische Kurven erscheinen. */
 export function vacPressure(v) {
   if (!v.vacModel || v.vacModel === 'aus') return null;
   const sd = sim.data;
   if (!sd || !sd.samples || !Array.isArray(sd.samples.p_air_mbar)) return null;
-  const arr = sd.samples.p_air_mbar;
+  const arr = sd.samples.p_air_mbar, fill = sd.samples.part_fill;
+  if (Array.isArray(fill)) {
+    for (let i = 0; i < arr.length; i++) {
+      if (fill[i] >= 1 - 1e-9 && Number.isFinite(arr[i]) && arr[i] > 0) return arr[i] / 1000;  // mbar → bar
+    }
+  }
+  /* Kein part_fill (älteres Backend) oder Kavität wird nie voll: letzte Probe. */
   for (let i = arr.length - 1; i >= 0; i--) {
-    if (Number.isFinite(arr[i]) && arr[i] > 0) return arr[i] / 1000;   // mbar → bar
+    if (Number.isFinite(arr[i]) && arr[i] > 0) return arr[i] / 1000;
   }
   return null;
 }

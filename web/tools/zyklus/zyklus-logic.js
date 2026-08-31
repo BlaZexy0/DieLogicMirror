@@ -104,6 +104,12 @@
     alphaK: 100,       // Kontakt Form → Aufspannplatte W/(m²·K)
     alphaBl: 40,       // Ausblasen W/(m²·K) (10–20 m/s Luft)
     x0: 0.010,         // Tiefe der beim Sprühen abgekühlten Schicht m (12.21)
+    /* (12.21) rechnet mit (t_spr1 − t_spr2): dem Abfall der besprühten
+       FORMHAUT — ρ_f, c_f und x0 sind Formstoffgrößen (12.19). Nicht zu
+       verwechseln mit Entformungs- minus Formtemperatur; die liegt bei
+       100–120 K und verdoppelte Q_Spr. Beide Zahlenbeispiele der Quelle
+       arbeiten mit ≈ 50 K (S. 705: A 0,4 m², Δ 50 K → 0,15 kg). */
+    dTspray: 50,       // Abkühlung der Formhaut beim Sprühen K (12.19/12.21)
     hSpray: 2594       // Formtrennstoff: Erwärmen + Verdampfen kJ/kg (12.22)
   };
 
@@ -114,11 +120,14 @@
      Projekt (Auslegung: Schussgewicht, Legierung, Gießtemperatur, Form-
      temperatur, Sprengfläche, Maschine; Sprengflächenanalyse: Gravur-
      oberfläche) oder aus der Zeitleiste (Zykluszeit, Blasphase).
-       Teject  Entformungstemperatur °C
-       die     Formabmessungen B, H, L mm — null = aus dem Säulenabstand der
-               Maschine geschätzt (B = H = 0,8·Säulenabstand, L = 0,5·B) */
+       Teject   Entformungstemperatur °C
+       dTspray  Abkühlung der Formhaut beim Sprühen K (12.21) — hängt am
+                Sprühregime (Menge, Dauer, Trennmittelkonzentration); die
+                Zahlenbeispiele der Quelle arbeiten mit ≈ 50 K
+       die      Formabmessungen B, H, L mm — null = aus dem Säulenabstand der
+                Maschine geschätzt (B = H = 0,8·Säulenabstand, L = 0,5·B) */
   function heatDefaults() {
-    return { Teject: 300, die: { B: null, H: null, L: null } };
+    return { Teject: 300, dTspray: HEAT.dTspray, die: { B: null, H: null, L: null } };
   }
 
   function sanitizeHeat(src) {
@@ -127,7 +136,10 @@
     var num = function (x, def) { x = Number(x); return isFinite(x) ? x : def; };
     var pos = function (x) { x = Number(x); return isFinite(x) && x > 0 ? x : null; };
     var die = src.die && typeof src.die === 'object' ? src.die : {};
-    return { Teject: num(src.Teject, d.Teject), die: { B: pos(die.B), H: pos(die.H), L: pos(die.L) } };
+    var dT = Number(src.dTspray);
+    return { Teject: num(src.Teject, d.Teject),
+      dTspray: isFinite(dT) && dT >= 0 ? dT : d.dTspray,
+      die: { B: pos(die.B), H: pos(die.H), L: pos(die.L) } };
   }
 
   /* Mittlere spezifische Wärmekapazitäten ([B] 12.4.1): cl halbflüssig,
@@ -163,9 +175,9 @@
        Qpl   Wärmeleitung in beide Aufspannplatten, Ak = B·H je Seite
        Qluft erwärmte Luft zwischen den geöffneten Hälften, Vluft = B·H·L
        Qbl   Ausblasen der Gravur während der Blasphase
-       Qspr  Formtrennstoff — Masse nach (12.21) aus Gravurfläche und
-             Abkühlung der Randschicht von Teject auf Tdie, Wärme nach (12.22)
-     o: { tz s, tauBl s, Tdie, Teject °C, Acav m², B, H, L m } */
+       Qspr  Formtrennstoff — Masse nach (12.21) aus Gravurfläche und der
+             Abkühlung der besprühten Formhaut, Wärme nach (12.22)
+     o: { tz s, tauBl s, Tdie, Teject °C, dTspray K, Acav m², B, H, L m } */
   function heatLosses(o) {
     var tfa = HEAT.Tair + 0.6 * (o.Tdie - 20);                        // (12.3)
     var Afa = 2 * o.L * (o.B + o.H), Ak = o.B * o.H, Vluft = o.B * o.H * o.L;
@@ -174,7 +186,10 @@
     var Qpl = HEAT.alphaK * o.tz * 2 * Ak * (tfa - HEAT.Tplaten) / 1000;                   // (12.10)
     var Qluft = Vluft * (HEAT.TairOpen - HEAT.Tair);                                         // (12.14)
     var Qbl = HEAT.alphaBl * o.Acav * o.tauBl * ((o.Teject + Tsurf0) / 2 - HEAT.Tair) / 1000; // (12.15)
-    var mSpray = 0.744 * o.Acav * HEAT.x0 * Math.max(o.Teject - o.Tdie, 0);                 // (12.21)
+    /* (12.21): Δt ist der Abfall der besprühten Formhaut (t_spr1 − t_spr2),
+       nicht Entformungs- minus Formtemperatur. */
+    var dTspray = isFinite(o.dTspray) && o.dTspray >= 0 ? o.dTspray : HEAT.dTspray;
+    var mSpray = 0.744 * o.Acav * HEAT.x0 * dTspray;                                        // (12.21)
     var Qspr = HEAT.hSpray * mSpray;                                                         // (12.22)
     var parts = [Qkon, Qpl, Qluft, Qbl, Qspr].map(function (x) { return isFinite(x) ? Math.max(x, 0) : 0; });
     return { tfa: tfa, Afa: Afa, Ak: Ak, Vluft: Vluft, mSpray: mSpray,
@@ -192,7 +207,8 @@
     var input = heatInput({ mdose: v.mdose, Tcast: v.Tcast, Tliq: al.Tliq, Tsol: al.Tsol, Teject: v.Teject,
       hf: al.hf, cp20: al.cp20, cpS: al.cpS, cpL: al.cpL });
     var B = v.die.B / 1000, H = v.die.H / 1000, L = v.die.L / 1000;
-    var losses = heatLosses({ tz: v.tz, tauBl: v.tauBl, Tdie: v.Tdie, Teject: v.Teject, Acav: v.Acav, B: B, H: H, L: L });
+    var losses = heatLosses({ tz: v.tz, tauBl: v.tauBl, Tdie: v.Tdie, Teject: v.Teject,
+      dTspray: v.dTspray, Acav: v.Acav, B: B, H: H, L: L });
     if (!input) return { input: null, losses: losses, QT: NaN, PT: NaN, k: NaN, deficit: false };
     var QT = input.Qdie - losses.QU;
     return { input: input, losses: losses, QT: QT, PT: v.tz > 0 ? QT / v.tz : NaN, k: QT / input.Qdie, deficit: QT < 0 };

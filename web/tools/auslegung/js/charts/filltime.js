@@ -18,9 +18,14 @@ export default {
   calc(v, o) {
     if (!(v.vmax > 0)) return { err: 'Kolbengeschw. max. muss > 0 sein.' };
     /* Farbskala endet bei v_max der Maschine — schnellere Bereiche sind
-       mit dieser Maschine nicht fahrbar und werden grau dargestellt. */
+       mit dieser Maschine nicht fahrbar und werden grau dargestellt.
+       Eine Stufe je 1 m/s, aber höchstens MAX_LEVELS: bis v_max = 40 m/s
+       (jede reale Maschine) ändert das nichts, ein vertippter Wert legt aber
+       sonst den Tab mit einer Milliarden-Allokation lahm. */
+    const MAX_LEVELS = 40;
+    const step = Math.max(1, Math.ceil(v.vmax / MAX_LEVELS));
     const levels = [];
-    for (let L = 1; L <= Math.floor(v.vmax); L++) levels.push(L);
+    for (let L = step; L <= v.vmax; L += step) levels.push(L);
     const q = heat(0.1, v.tmax, v.dmin, v.dmax,
       (t, d) => 1e9 * cavityVolume(afterGate(v), v) / (t * 0.25 * PI * d * d),
       'Füllzeit in ms', 'Kolben-Ø in mm', 'Kolbengeschwindigkeit in m/s', 0, v.vmax, levels);

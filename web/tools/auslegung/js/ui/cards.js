@@ -80,7 +80,13 @@ export function buildCard(def, container, opts = {}) {
 }
 
 export function renderCard(card, def, v, shot) {
-  const d = def.calc(v, { shot });
+  /* Fehler-Isolation je Diagramm: die Karten werden in einer Schleife
+     gerendert (main.js). Ein Wurf in calc() riss bisher alle folgenden mit —
+     sie behielten still ihr altes Bild, während die Seitenleiste bereits neue
+     Zahlen zeigte. Der Fehlerkanal d.err existiert (render/draw.js). */
+  let d;
+  try { d = def.calc(v, { shot }) || { err: 'Kein Ergebnis.' }; }
+  catch (e) { d = { err: (e && e.message) || String(e) }; }
   d.title = def.title;
   card.data = d;
   card.shot = shot;
@@ -107,7 +113,8 @@ export function renderCard(card, def, v, shot) {
   cv.style.width = w + 'px'; cv.style.height = h + 'px';
   const x = cv.getContext('2d');
   x.setTransform(pr, 0, 0, pr, 0, 0);
-  drawAny(x, w, h, d, def);
+  try { drawAny(x, w, h, d, def); }
+  catch (e) { drawAny(x, w, h, { err: (e && e.message) || String(e), title: d.title }, def); }
 
-  if (def.renderExtras) def.renderExtras(card, shot, v);
+  if (def.renderExtras) { try { def.renderExtras(card, shot, v); } catch (e) { /* Karte bleibt lesbar */ } }
 }

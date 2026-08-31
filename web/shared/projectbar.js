@@ -89,6 +89,10 @@
 @media (max-width:1100px){.dl-pb-desc{display:none}.dl-pb{padding:.3rem 1rem}}';
 
   var syncState = { status: 'idle', at: null, error: null }; // idle | saving | ok | error
+  /* Projekte, deren Autosave der Server mit 409 abgelehnt hat: dort liegt ein
+     fremder, neuerer Stand. Sie werden nicht weiter gepusht — der Anwender
+     entscheidet, ob er den Serverstand lädt. */
+  var conflicts = {};
 
   function render() {
     var cur = P.current();
@@ -101,6 +105,7 @@
     if (session) {
       var h = statusHTML();
       cloud = '<span class="' + h.cls + '" id="dl-pb-status" title="Die Datenbank ist der Stand der Wahrheit — Änderungen werden automatisch übertragen.">' + esc(h.text) + '</span>'
+        + (h.conflict ? '<button class="dl-pb-btn" id="dl-pb-conflict" title="Den lokalen Stand verwerfen und den Stand vom Server laden">Serverstand laden</button>' : '')
         + '<button class="dl-pb-btn primary" id="dl-pb-save" title="Benannten Schnappschuss (Revision) des aktuellen Stands anlegen">⎘ Revision</button>';
     }
 
@@ -135,6 +140,7 @@
   var bar;
 
   function mount() {
+    seen = sectionSnapshot();
     var style = document.createElement('style');
     style.textContent = CSS;
     document.head.appendChild(style);
@@ -164,17 +170,19 @@
   function statusHTML() {
     var cur = P.current();
     if (!cur || !session) return null;
-    var status, cls = '';
-    if (syncState.status === 'saving' || cur.dirty) { status = 'speichert …'; cls = ' pending'; }
+    var status, cls = '', conflict = !!conflicts[cur.id];
+    if (conflict) { status = 'Konflikt — auf dem Server liegt ein neuerer Stand'; cls = ' dirty'; }
+    else if (syncState.status === 'saving' || cur.dirty) { status = 'speichert …'; cls = ' pending'; }
     else if (syncState.status === 'error') { status = 'nicht synchronisiert — ' + syncState.error; cls = ' dirty'; }
     else status = 'gespeichert' + (cur.remote && cur.remote.rev ? ' · Rev ' + cur.remote.rev : '') + (syncState.at ? ' · ' + fmtTime(syncState.at) : '');
-    return { text: status, cls: 'dl-pb-status' + cls };
+    return { text: status, cls: 'dl-pb-status' + cls, conflict: conflict };
   }
   /* Nur den Sync-Status aktualisieren (kein Neuaufbau) — reicht für alle
      Änderungen während der Arbeit; volle refresh() nur bei Projektwechsel. */
   function refreshStatus() {
     var st = el('dl-pb-status'), h = statusHTML();
     if (!st || !h) { refresh(); return; }
+    if (!!h.conflict !== !!el('dl-pb-conflict')) { refresh(); return; }
     st.textContent = h.text;
     st.className = h.cls;
   }
@@ -227,13 +235,25 @@
         case 'dl-pb-save':
           openSave(cur);
           break;
+        case 'dl-pb-conflict':
+          if (!window.confirm('Der lokale Stand dieses Projekts wird verworfen und durch den Stand vom Server ersetzt.\n\nVorher sichern? Auf /konto/ liegen Export und „Als Kopie öffnen".')) break;
+          loadServerState(cur).catch(function (err) { alert('Serverstand konnte nicht geladen werden: ' + err.message); });
+          break;
       }
     });
 
     window.addEventListener(P.EVENT, function (e) {
       var type = e.detail && e.detail.type;
       if (!busy) { if (type === 'section' || type === 'saved') refreshStatus(); else refresh(); }
-      if (session && e.detail && e.detail.id) scheduleSync(e.detail.id);
+      /* Nur echte lokale Änderungen anstoßen. 'saved' kommt aus markSaved()
+         unmittelbar nach jedem erfolgreichen Push — es hier mitzunehmen hieße:
+         pushen, weil gerade gepusht wurde (Endlosschleife). */
+      if (session && e.detail && e.detail.id && LOCAL_CHANGE.indexOf(type) >= 0) scheduleSync(e.detail.id);
+      /* 'external' = ein anderer Tab hat geschrieben. Weichen die Abschnitte
+         von dem ab, worauf diese Seite aufgebaut ist, hilft nur ein Neuaufbau —
+         sonst schiebt der nächste Tastendruck den alten Stand zurück. */
+      if (type === 'external') { if (sectionSnapshot() !== seen) location.reload(); }
+      else seen = sectionSnapshot();
     });
     /* Aufgeschobenen Neuaufbau nachholen, sobald das Select verlassen wird */
     bar.addEventListener('focusout', function (e) {
@@ -246,6 +266,15 @@
 
   function metaOf(p) { return { name: p.name, description: p.description, customer: p.customer, part_no: p.partNo }; }
 
+  /* Fingerabdruck der Werkzeug-Abschnitte des aktuellen Projekts — die Daten,
+     auf denen der Seitenzustand aufsetzt. Ändert er sich, ohne dass diese Seite
+     ihn geändert hat, ist der Zustand im Arbeitsspeicher veraltet. */
+  function sectionSnapshot() {
+    var cur = P.current();
+    return cur ? cur.id + '|' + JSON.stringify(P.sectionsOf(cur)) : '';
+  }
+  var seen = null;
+
   /* Einen lokalen Stand zum Server bringen: unbekannt → anlegen,
      bekannt → Arbeitsstand (+ Stammdaten) aktualisieren. keepalive für
      den letzten Versuch beim Verlassen der Seite. */
@@ -254,15 +283,24 @@
     var opts = keepalive ? { keepalive: true } : {};
     if (p.remote) {
       await api('PUT', '/api/projects/' + p.remote.id, metaOf(p), opts);
-      await api('PUT', '/api/projects/' + p.remote.id + '/draft', { data: P.sectionsOf(p) }, opts);
-      if (P.get(p.id) && P.get(p.id).updatedAt === stamp) P.markSaved(p.id, { id: p.remote.id, rev: p.remote.rev });
+      /* base_draft_at ist der Stand, auf dem dieser Push aufsetzt. Hat der
+         Server inzwischen einen anderen, antwortet er 409 statt zu überschreiben. */
+      var d = await api('PUT', '/api/projects/' + p.remote.id + '/draft',
+        { data: P.sectionsOf(p), base_draft_at: p.remote.draftAt || null }, opts);
+      var at = d && d.draft_at;
+      if (P.get(p.id) && P.get(p.id).updatedAt === stamp) P.markSaved(p.id, { id: p.remote.id, rev: p.remote.rev, draftAt: at, savedAt: d && d.updated_at });
+      else { var r = P.get(p.id); if (r && r.remote && at) r.remote.draftAt = at; }
     } else {
-      var res = await api('POST', '/api/projects', Object.assign({ data: P.sectionsOf(p) }, metaOf(p)), opts);
-      if (P.get(p.id) && P.get(p.id).updatedAt === stamp) P.markSaved(p.id, { id: res.id, rev: res.rev });
-      else { var q = P.get(p.id); if (q) { q.remote = { id: res.id, rev: res.rev, savedAt: new Date().toISOString() }; P.put(q, q.id === P.current().id); } }
+      /* Die stabile lokale id als Idempotenz-Schlüssel: geht die Antwort
+         verloren (Tab schließt, Reload), legt der nächste Versuch kein
+         zweites Projekt an, sondern bekommt dasselbe zurück. */
+      var res = await api('POST', '/api/projects', Object.assign({ id: p.id, data: P.sectionsOf(p) }, metaOf(p)), opts);
+      if (P.get(p.id) && P.get(p.id).updatedAt === stamp) P.markSaved(p.id, { id: res.id, rev: res.rev, draftAt: res.draft_at, savedAt: res.updated_at });
+      else { var q = P.get(p.id); if (q) { q.remote = { id: res.id, rev: res.rev, savedAt: res.updated_at, draftAt: res.draft_at || null }; P.put(q, q.id === P.current().id); } }
     }
   }
 
+  var LOCAL_CHANGE = ['create', 'update', 'section', 'put', 'remove'];
   var timer = null, pending = {};
   function scheduleSync(id) {
     pending[id] = true;
@@ -271,22 +309,60 @@
     if (syncState.status !== 'saving') { syncState.status = 'saving'; refreshStatus(); }
   }
 
-  async function flushSync(keepalive) {
+  /* Ein Lauf zur Zeit. Ein zweiter, paralleler Lauf würde dieselben Projekte
+     erneut aufnehmen, weil p.remote erst nach der Antwort des ersten gesetzt
+     ist — er wird hinter dem laufenden eingereiht. */
+  var inflight = null, rerun = false;
+  function flushSync(keepalive) {
+    if (inflight) { rerun = true; return inflight; }
+    inflight = doFlush(keepalive).then(function () {
+      inflight = null;
+      if (rerun) { rerun = false; return flushSync(false); }
+    }, function (err) { inflight = null; throw err; });
+    return inflight;
+  }
+
+  async function doFlush(keepalive) {
     clearTimeout(timer);
-    var ids = Object.keys(pending); pending = {};
-    var dirty = P.list().filter(function (p) { return p.dirty || ids.indexOf(p.id) >= 0 || !p.remote; });
+    pending = {};
+    /* pending stößt den Lauf an — es ist kein Grund, einen sauberen Stand zu
+       pushen. Zu senden ist, was lokal geändert oder noch nie angelegt wurde;
+       Projekte mit offenem Konflikt bleiben liegen. */
+    var dirty = P.list().filter(function (p) { return (p.dirty || !p.remote) && !conflicts[p.id]; });
     if (!session || !dirty.length) { if (syncState.status === 'saving') { syncState.status = 'ok'; refreshStatus(); } return; }
     busy = true;
     syncState.status = 'saving';
+    var failed = null, gotConflict = false;
     try {
-      for (var i = 0; i < dirty.length; i++) await push(dirty[i], keepalive);
-      syncState = { status: 'ok', at: new Date().toISOString(), error: null };
-    } catch (err) {
-      syncState = { status: 'error', at: syncState.at, error: err.message };
-      dirty.forEach(function (p) { pending[p.id] = true; });
-      timer = setTimeout(function () { flushSync(false); }, 8000);   // später erneut
+      for (var i = 0; i < dirty.length; i++) {
+        try { await push(dirty[i], keepalive); }
+        catch (err) {
+          /* 409: fremder, neuerer Stand. Ein Wiederholungsversuch würde ihn nur
+             erneut abgelehnt bekommen — das Projekt bleibt liegen und wird
+             gemeldet. Alle anderen Projekte werden trotzdem übertragen. */
+          if (err.status === 409) { conflicts[dirty[i].id] = true; gotConflict = true; continue; }
+          failed = err; pending[dirty[i].id] = true;
+          if (err.status === 401) { session = null; break; }
+        }
+      }
     } finally { busy = false; }
-    refreshStatus();
+    if (failed) {
+      syncState = { status: 'error', at: syncState.at, error: failed.message };
+      timer = setTimeout(function () { flushSync(false); }, 8000);   // später erneut
+    } else syncState = { status: 'ok', at: new Date().toISOString(), error: null };
+    if (gotConflict) refresh(); else refreshStatus();
+  }
+
+  /* Konflikt auflösen: den lokalen Stand verwerfen und den Serverstand laden. */
+  async function loadServerState(cur) {
+    if (!cur.remote) return;
+    var full = await api('GET', '/api/projects/' + cur.remote.id);
+    delete conflicts[cur.id];
+    P.put(Object.assign({ id: cur.id, name: full.name, description: full.description,
+      customer: full.customer, partNo: full.part_no, createdAt: full.created_at, updatedAt: full.updated_at,
+      remote: { id: full.id, rev: full.rev, savedAt: full.updated_at, draftAt: full.draft_at }, dirty: false },
+      full.data || {}), true);
+    location.reload();
   }
 
   function openSave(cur) {
@@ -323,36 +399,46 @@
     var byRemote = {};
     P.list().forEach(function (p) { if (p.remote) byRemote[p.remote.id] = p; });
     var curId = P.current() ? P.current().id : null, curChanged = false;
+    var before = sectionSnapshot();
     for (var i = 0; i < remote.length; i++) {
       var r = remote[i], have = byRemote[r.id];
       if (have && (have.dirty || (have.remote.savedAt && have.remote.savedAt >= r.updated_at))) continue;
       var full = await api('GET', '/api/projects/' + r.id);
       var doc = Object.assign({ id: have ? have.id : undefined, name: full.name, description: full.description,
         customer: full.customer, partNo: full.part_no, createdAt: full.created_at, updatedAt: full.updated_at,
-        remote: { id: full.id, rev: full.rev, savedAt: full.updated_at }, dirty: false }, full.data || {});
+        remote: { id: full.id, rev: full.rev, savedAt: full.updated_at, draftAt: full.draft_at }, dirty: false }, full.data || {});
       var put = P.put(doc, false);
       if (have && have.id === curId && put) curChanged = true;
     }
     /* Organisation ohne Projekt: das erste auf dem Server anlegen. */
     if (!remote.length && !P.list().length) {
       var res = await api('POST', '/api/projects', { name: 'Erstes Projekt', description: 'Angelegt beim ersten Öffnen der Werkzeuge.', data: {} });
-      P.put({ name: res.name, description: res.description, remote: { id: res.id, rev: res.rev, savedAt: res.updated_at }, dirty: false }, true);
+      P.put({ name: res.name, description: res.description, remote: { id: res.id, rev: res.rev, savedAt: res.updated_at, draftAt: res.draft_at }, dirty: false }, true);
       curChanged = true;
     }
     if (!P.current() && P.list().length) { P.select(P.list()[0].id); curChanged = true; }
-    if (curChanged) {
-      var key = 'dl-pb-reloaded-' + curId;
-      if (!sessionStorage.getItem(key)) { sessionStorage.setItem(key, '1'); location.reload(); return; }
-    }
+    /* Der localStorage trägt jetzt den fremden Stand — die laufende Seite hält
+       aber noch ihre Kopie im Speicher, und ein Tastendruck würde sie zurück
+       auf den Server schieben. Deshalb neu aufbauen, sobald sich die Abschnitte
+       des aktuellen Projekts wirklich geändert haben. Der Inhaltsvergleich
+       schließt einen Reload-Kreisel aus (danach ist lokal == Server) und
+       ersetzt die alte Sperre, die genau einmal je Sitzung griff. */
+    if (curChanged && sectionSnapshot() !== before) { location.reload(); return; }
     refresh();
   }
 
   async function initSession() {
     try {
       session = await api('GET', '/api/auth/me');
+      /* Vor jedem Lesen und jedem Push: gehört der lokale Cache diesem Konto?
+         Ein fremder Bestand wird verworfen, statt angezeigt und hochgeladen. */
+      if (session && session.org && P.bindAccount(session.org.id)) { location.reload(); return; }
     } catch (err) {
       session = null;
       if (err.status === 401) {
+        /* Abgelaufene oder fremde Sitzung: nichts von diesem Konto bleibt auf
+           dem Gerät liegen (dasselbe Muster wie orgpresets.js). */
+        P.clearAll();
         /* Die Werkzeuge arbeiten nur mit Konto — die Datenbank ist die Quelle. */
         location.replace(KONTO + '?next=' + encodeURIComponent(location.pathname + location.search));
         return;
@@ -362,7 +448,9 @@
     }
     refresh();
     if (session) {
-      try { await flushSync(false); await pull(); }
+      /* Erst holen, dann senden. Umgekehrt schiebt schon das bloße Öffnen einer
+         Werkzeugseite ihren Default-Abschnitt über den Stand einer Kollegin. */
+      try { await pull(); await flushSync(false); }
       catch (err) { console.warn('Projektabgleich fehlgeschlagen:', err.message); }
     }
   }

@@ -613,7 +613,9 @@ test('machines: jedes Preset setzt genau die Maschinen-PRESET_KEYS, plausibel', 
 /* ── 6 · Rechenlogik der Teilekosten-Seite ───────────────────── */
 
 /* Beispielwerte des Kosten-Presets (shared/examples/kosten.js) mit den
-   Dashboard-Default-Massen (12 kg Bauteil, 18,2 kg Schuss). */
+   Dashboard-Default-Massen (12 kg Bauteil, 18,2 kg Schuss).
+   mpart und mdose sind Ganzschuss-Größen: über alle Kavitäten zusammen,
+   dieselbe Bilanz wie im Dashboard (physics.js, Füllgrad φ). */
 const KOSTEN_V = {
   mpart: 12, mdose: 18.2, tz: 52, kav: 1, a: 4, oee: 78,
   pAl: 2.6, pRe: 0.35, kr: 2, eKg: 0.75, pE: 0.18,
@@ -661,11 +663,31 @@ test('teilekosten: Material-Hebel = Ableitung nach Bauteilgewicht (Schuss gekopp
 });
 
 test('teilekosten: Mehrfach-Kavität koppelt Schussgewicht je Kavität', () => {
-  const v4 = Object.assign({}, KOSTEN_V, { kav: 4, mpart: 3, mdose: 18.2 });
+  /* Vier Bauteile à 3 kg in einem 18,2-kg-Schuss — mpart ist die Summe. */
+  const v4 = Object.assign({}, KOSTEN_V, { kav: 4, mpart: 12, mdose: 18.2 });
   const d = 0.004;
-  const fd = (kosten.costAtPartMass(v4, v4.mpart + d)
-    - kosten.costAtPartMass(v4, v4.mpart - d)) / (2 * d);
+  const fd = (kosten.costAtPartMass(v4, 3 + d)
+    - kosten.costAtPartMass(v4, 3 - d)) / (2 * d);
   closeTo(kosten.computeCost(v4).leverMass.total, fd, 1e-6);
+});
+
+test('teilekosten: Bilanz ist Ganzschuss — Kreislauf ≥ 0, Ausbeute ≤ 100 %', () => {
+  /* Genau der Widerspruch aus C-10: derselbe Schuss, nur auf mehr Kavitäten
+     verteilt, darf die Stückkosten nicht um 14,5 % sinken lassen. */
+  const one = kosten.computeCost(KOSTEN_V);
+  const four = kosten.computeCost(Object.assign({}, KOSTEN_V, { kav: 4 }));
+
+  for (const [name, v, r] of [['kav 1', KOSTEN_V, one], ['kav 4', { ...KOSTEN_V, kav: 4 }, four]]) {
+    assert.ok(v.mdose - v.mpart >= 0, name + ': Kreislaufmasse wird negativ');
+    assert.ok(100 * v.mpart / v.mdose <= 100, name + ': Materialausbeute über 100 %');
+    assert.ok(Number.isFinite(r.total), name + ': keine endlichen Kosten');
+  }
+  /* Neumetall je Gutteil folgt der Kavitätenzahl, das Schussmaterial nicht. */
+  closeTo(one.matAlloy, 12 * 2.6);
+  closeTo(four.matAlloy, 3 * 2.6);
+  /* Schussbezogene Blöcke verteilen sich auf kav Gutteile, sie verschwinden nicht. */
+  closeTo(one.matLoss, four.matLoss * 4);
+  closeTo(one.energyKwh, four.energyKwh * 4);
 });
 
 test('teilekosten: 100 % Ausschuss und t_Z = 0 liefern keine endlichen Kosten', () => {

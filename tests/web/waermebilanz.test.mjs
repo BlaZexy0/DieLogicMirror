@@ -48,12 +48,25 @@ test('heatLosses: Beispiel [B] 12.4.2 — Terme mit den Konstanten der Quelle', 
   near(l.Qpl, 100 * 60 * 2 * l.Ak * 73 / 1000, 1e-9, 'Q_Pl');
   near(l.Qluft, l.Vluft * 60, 1e-9, 'Q_Luft = V·(80 − 20) kJ');
   near(l.Qbl, 40 * 0.05 * 10 * ((320 + 230) / 2 - 20) / 1000, 1e-9, 'Q_Bl mit Gravur 230 °C vor dem Gießen');
-  /* Trennstoff (12.21): 0,744·0,05·0,01·(320 − 200) = 44,6 g → (12.22) 115,8 kJ */
-  near(l.mSpray, 0.04464, 1e-5, 'm_1');
-  near(l.Qspr, 2594 * 0.04464, 0.03, 'Q_Spr');
+  /* Trennstoff (12.21): Δt ist der Abfall der besprühten FORMHAUT
+     (t_spr1 − t_spr2), nicht T_e − T_Form. Mit dem Quellenwert 50 K:
+     0,744·0,05·0,01·50 = 18,6 g → (12.22) 48,3 kJ. Die Quelle nennt für
+     dieses Beispiel 0,02 kg und 52 kJ (S. 705–708). */
+  near(l.mSpray, 0.0186, 1e-5, 'm_1');
+  near(l.mSpray, 0.02, 2e-3, 'm_1 gegen die Quellenzahl 0,02 kg');
+  near(l.Qspr, 2594 * 0.0186, 0.03, 'Q_Spr');
+  near(l.Qspr, 52, 4, 'Q_Spr gegen die Quellenzahl 52 kJ');
   assert.equal(l.QU, l.Qkon + l.Qpl + l.Qluft + l.Qbl + l.Qspr);
   /* Beispielgrößen (12.15/12.21/12.22) direkt: A_fgr 0,4 m², Δ 50 K → 0,15 kg (Quelle S. 705) */
   near(Z.heatLosses({ tz: 60, tauBl: 10, Tdie: 250, Teject: 300, Acav: 0.4, B: 0.4, H: 0.4, L: 0.2 }).mSpray, 0.1488, 1e-4, 'm_1 = 0,744·A·x0·Δt');
+  /* Δt ist eine Eingabe des Sprühregimes und geht linear ein — die
+     Entformungstemperatur darf m_1 NICHT mehr bewegen. */
+  const base = { tz: 60, tauBl: 10, Tdie: 200, Teject: 320, Acav: 0.05, B: 0.42, H: 0.45, L: 0.195 };
+  near(Z.heatLosses({ ...base, dTspray: 100 }).mSpray, 2 * l.mSpray, 1e-9, 'linear in Δt');
+  near(Z.heatLosses({ ...base, dTspray: 0 }).mSpray, 0, 1e-12, 'ohne Sprühen kein Trennstoff');
+  near(Z.heatLosses({ ...base, Teject: 500 }).mSpray, l.mSpray, 1e-12, 'unabhängig von T_e');
+  /* Unbrauchbare Angabe → dokumentierter Quellenwert, nicht NaN */
+  near(Z.heatLosses({ ...base, dTspray: -5 }).mSpray, l.mSpray, 1e-12, 'negativ → Standard 50 K');
 });
 
 test('computeHeat: Beispielprojekt (18,2 kg, 1600 t) rechnet durch und ist knapp ausgelegt', () => {

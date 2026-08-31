@@ -12,7 +12,26 @@ const require = createRequire(import.meta.url);
 const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
 
 globalThis.window = globalThis;
+/* Node kennt kein window: eine minimale EventTarget-Attrappe, damit der
+   storage-Listener aus project.js überhaupt angemeldet werden kann. */
+const bus = new EventTarget();
+globalThis.addEventListener = bus.addEventListener.bind(bus);
+globalThis.dispatchEvent = bus.dispatchEvent.bind(bus);
+
 const P = require(path.join(site, 'shared/project.js'));
+
+/* Ein zweiter, unabhängiger Modul-Zustand = ein zweiter Tab auf demselben
+   localStorage. */
+function loadProject() {
+  const f = require.resolve(path.join(site, 'shared/project.js'));
+  delete require.cache[f];
+  const M = require(f);
+  globalThis.__PROJECT__ = P;      // das Global bleibt beim Haupt-Exemplar
+  return M;
+}
+function storageEvent(key) {
+  bus.dispatchEvent(Object.assign(new Event('storage'), { key: key ?? P.STORE_KEY }));
+}
 const Z = require(path.join(site, 'tools/zyklus/zyklus-logic.js'));
 
 function memStorage(init) {
@@ -190,3 +209,79 @@ test('kaputter Speicher → leer; unbekannte currentId → erstes Projekt', () =
   assert.equal(P.current().id, 'abc123', 'unbekannte currentId → erstes Projekt');
 });
 
+
+test('zwei Tabs auf einem Speicher: keiner löscht die Arbeit des anderen', () => {
+  const s = memStorage();
+  const A = loadProject(); A.init(s);
+  const B = loadProject(); B.init(s);
+
+  A.create({ name: 'Projekt A' });
+  const idA = A.current().id;
+  A.setSection('design', { values: { part: 42 } });
+
+  /* B kennt A's Projekt noch nicht — es hat seine Kopie beim Start gelesen. */
+  B.create({ name: 'Projekt B' });
+  const idB = B.current().id;
+  B.setSection('cycle', { durs: { schuss: 7 } });
+
+  /* Ein Tastendruck in A: früher hat das B's Projekt vernichtet. */
+  A.update(idA, { customer: 'Kunde' });
+
+  const disk = JSON.parse(s.mem.get(P.STORE_KEY));
+  assert.deepEqual(Object.keys(disk.projects).sort(), [idA, idB].sort(), 'beide Projekte stehen noch');
+  assert.equal(disk.projects[idA].design.values.part, 42, 'A behält seinen Abschnitt');
+  assert.equal(disk.projects[idB].cycle.durs.schuss, 7, 'B behält seinen Abschnitt');
+  assert.equal(A.list().length, 2, 'A hat B\'s Projekt beim Schreiben übernommen');
+  assert.equal(A.current().id, idA, 'die eigene Auswahl bleibt');
+
+  /* Löschen muss weiterhin durchschlagen. */
+  A.remove(idB);
+  assert.deepEqual(Object.keys(JSON.parse(s.mem.get(P.STORE_KEY)).projects), [idA]);
+});
+
+test('storage-Ereignis: der fremde Stand wird übernommen', () => {
+  const s = memStorage();
+  const A = loadProject(); A.init(s);
+  const B = loadProject(); B.init(s);
+
+  A.create({ name: 'Von A' });
+  assert.equal(B.list().length, 0, 'B hat noch den Stand vom Start');
+  storageEvent();
+  assert.equal(B.list().length, 1, 'B hat den fremden Stand übernommen');
+  assert.equal(B.list()[0].name, 'Von A');
+  assert.equal(B.current().id, A.current().id, 'ohne eigene Auswahl gilt das erste Projekt');
+
+  /* Fremder Schlüssel geht das Projektmodul nichts an. */
+  A.update(A.current().id, { name: 'Umbenannt' });
+  storageEvent('anderer-schluessel');
+  assert.equal(B.get(A.current().id).name, 'Von A', 'fremder Schlüssel wird ignoriert');
+  storageEvent();
+  assert.equal(B.get(A.current().id).name, 'Umbenannt');
+});
+
+test('Kontobindung: ein fremdes Konto findet den Cache leer vor', () => {
+  const s = memStorage();
+  P._reset(); P.init(s);
+  assert.equal(P.bindAccount('org-anna'), false, 'erstes Konto übernimmt den Bestand');
+  P.create({ name: 'Getriebegehäuse', customer: 'ACME' });
+  P.setSection('design', { values: { part: 12 } });
+
+  /* Anderer Tab, anderes Konto — derselbe Browser, derselbe Schlüssel. */
+  P._reset(); P.init(s);
+  assert.equal(P.list().length, 1, 'ohne Bindung läge alles offen');
+  assert.equal(P.bindAccount('org-bob'), true, 'fremder Bestand wird verworfen');
+  assert.equal(P.list().length, 0);
+  assert.equal(P.current(), null);
+  assert.equal(JSON.parse(s.mem.get(P.STORE_KEY)).projects && Object.keys(JSON.parse(s.mem.get(P.STORE_KEY)).projects).length, 0,
+    'auch auf der Platte ist nichts mehr');
+
+  /* Dasselbe Konto erneut: kein Verwerfen. */
+  P.create({ name: 'Bobs Projekt' });
+  assert.equal(P.bindAccount('org-bob'), false);
+  assert.equal(P.list().length, 1);
+
+  /* Abmelden räumt auf und hebt die Bindung auf. */
+  P.clearAll();
+  assert.equal(P.list().length, 0);
+  assert.equal(P.bindAccount('org-anna'), false, 'nach clearAll gehört der leere Cache dem nächsten Konto');
+});

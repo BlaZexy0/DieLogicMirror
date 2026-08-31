@@ -100,3 +100,47 @@ for (const def of charts) {
     });
   }
 }
+
+/* ── Entartete Eingaben ────────────────────────────────────────────────────
+   Die Suite prüfte bisher ausschließlich die Defaults. Genau dort steckte
+   C-8: „Anschnittfläche" leeren → gate = 0 → NaN-Feld → turbo(NaN) wirft →
+   alle 11 Diagramme NACH window in der Registry behalten still ihr altes
+   Bild. Ein Diagramm darf auf jede Eingabe entweder zeichnen oder eine
+   Fehlermeldung liefern — werfen darf es nie. */
+const DEGENERATE = [
+  ['leer (0)', 0],
+  ['negativ', -1],
+  ['nicht endlich', NaN],
+  ['sehr groß', 1e12],
+];
+const KEYS = ['gate', 'vmax', 'diam', 'length', 'part', 'density', 'vent',
+  'injForce', 'gateMin', 'gateMax', 'Tliq', 'Tdie', 'wall'];
+
+for (const [label, bad] of DEGENERATE) {
+  for (const key of KEYS) {
+    test(`entartet: ${key} = ${label} — kein Diagramm wirft`, () => {
+      const v = Object.assign({}, values, { [key]: bad });
+      const s = computeShot(v, DEFAULT_CURVE.map(p => p.slice()));
+      for (const def of charts) {
+        let d;
+        assert.doesNotThrow(() => { d = def.calc(v, { shot: s }); },
+          `${def.id}.calc() wirft bei ${key} = ${label}`);
+        assert.ok(d, `${def.id}: calc lieferte nichts bei ${key} = ${label}`);
+        if (d.err) continue;
+        d.title = d.title || def.title;
+        assert.doesNotThrow(() => drawAny(makeCtx(), 1000, 800, d, def),
+          `${def.id}: Zeichnen wirft bei ${key} = ${label}`);
+      }
+    });
+  }
+}
+
+test('turbo(): nicht endliche Werte werfen nicht, sondern bleiben leer', async () => {
+  const { turbo } = await import(path.join(site, 'tools/auslegung/js/render/base.js'));
+  for (const t of [NaN, Infinity, -Infinity, undefined, null]) {
+    assert.doesNotThrow(() => turbo(t), `turbo(${t}) wirft`);
+  }
+  assert.equal(turbo(NaN), 'rgba(0,0,0,0)');
+  assert.match(turbo(0), /^rgb\(/);
+  assert.match(turbo(1), /^rgb\(/);
+});

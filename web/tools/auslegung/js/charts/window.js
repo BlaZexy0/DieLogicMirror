@@ -15,6 +15,12 @@ export default {
 
   calc(v, o) {
     const Ap = pistonArea(v);
+    /* Ohne Anschnittfläche hat das Feld die Breite null und jede Zelle wird
+       0·Ap/0 = NaN. inputs.js markiert die leere Eingabe nur rot, es blockiert
+       sie nicht — hier ist der Ort, an dem das auffallen muss. */
+    if (!(v.gate > 0)) return { err: 'Anschnittfläche muss > 0 mm² sein.' };
+    if (!(v.vmax > 0)) return { err: 'Kolbengeschw. max. muss > 0 sein.' };
+    if (!(Ap > 0)) return { err: 'Kolben-Ø muss > 0 sein.' };
     const q = heat(0, v.vmax, v.gate * 0.3, v.gate * 2,
       (vp, Ag) => vp * Ap / Ag,
       'Kolbengeschwindigkeit in m/s', 'Anschnittfläche in mm²', 'Anschnittgeschwindigkeit in m/s',

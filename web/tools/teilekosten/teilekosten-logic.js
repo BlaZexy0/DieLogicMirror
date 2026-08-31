@@ -9,6 +9,13 @@
 
   /* Kostenmodell je Gutteil. Eingaben (v):
        mpart  Bauteilgewicht [kg]        mdose  Schussgewicht [kg]
+              — beide für den GANZEN Schuss, also über alle Kavitäten
+              zusammen. Das ist dieselbe Bilanz wie im Dashboard, wo
+              mdose = part + runner + overflow + biscuit das Volumen ist,
+              das in die Gießkammer passen muss (physics.js, Füllgrad φ).
+              Damit gilt mpart ≤ mdose bauartbedingt: die Materialausbeute
+              kann nicht über 100 % steigen und der Kreislaufanteil nicht
+              unter null fallen.
        tz     Zykluszeit [s]             kav    Kavitäten [−]
        a      Ausschuss [%]              oee    OEE/Verfügbarkeit [%]
        pAl    Legierungspreis [€/kg]     pRe    Umschmelzkosten [€/kg]
@@ -23,10 +30,10 @@
     var good = 1 - v.a / 100;
     var pph = v.tz > 0 ? 3600 / v.tz * v.kav * (v.oee / 100) * good : NaN; // Gutteile/h
     var perShotGood = v.kav * good;                              // Gutteile je Schuss
-    var mCycle = Math.max(v.mdose - v.mpart * v.kav, 0);         // Kreislauf je Schuss (Anguss, Überlauf, Pressrest)
-    var matAlloy = v.mpart * v.pAl;                              // Neumetall im Gutteil
+    var mCycle = v.mdose - v.mpart;                              // Kreislauf je Schuss (Anguss, Überlauf, Pressrest)
+    var matAlloy = (v.kav > 0 ? v.mpart / v.kav : NaN) * v.pAl;  // Neumetall im Gutteil
     var matLoss = v.mdose * (v.kr / 100) * v.pAl / perShotGood;  // Krätzeverlust je Gutteil
-    var matRemelt = (mCycle + v.mpart * v.kav * (v.a / 100)) * v.pRe / perShotGood; // Umschmelzen Kreislauf + Ausschussteile
+    var matRemelt = (mCycle + v.mpart * (v.a / 100)) * v.pRe / perShotGood; // Umschmelzen Kreislauf + Ausschussteile
     var energyKwh = v.mdose * v.eKg / perShotGood;               // kWh je Gutteil
     var energy = energyKwh * v.pE;
     var machine = pph > 0 ? (v.pM + v.nP * v.pP) / pph : NaN;
@@ -67,12 +74,14 @@
     return computeCost(w).total;
   }
 
-  /* Stückkosten bei anderem Bauteilgewicht — Schussgewicht läuft je
-     Kavität mit (Basis der Material-Hebel-Ableitung). */
-  function costAtPartMass(v, mpart) {
+  /* Stückkosten bei anderem Gewicht EINES Bauteils — mpart und mdose sind
+     Ganzschuss-Größen, ein um Δ leichteres Bauteil senkt beide um kav·Δ
+     (Basis der Material-Hebel-Ableitung; der Hebel ist €/kg je Bauteil). */
+  function costAtPartMass(v, mpartOne) {
     var w = {}; for (var k in v) w[k] = v[k];
-    w.mdose = v.mdose + (mpart - v.mpart) * v.kav;
-    w.mpart = mpart;
+    var all = mpartOne * v.kav;
+    w.mdose = v.mdose + (all - v.mpart);
+    w.mpart = all;
     return computeCost(w).total;
   }
 

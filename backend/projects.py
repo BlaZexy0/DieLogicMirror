@@ -36,6 +36,10 @@ class ProjectIn(BaseModel):
 class ProjectCreate(ProjectIn):
     data: dict | None = None
     note: str = Field("", max_length=500)
+    # Idempotenz-Schlüssel: die stabile lokale id des Clients. Geht die Antwort
+    # verloren (Tab schließt, Reload), legt der nächste Versuch damit kein
+    # zweites Projekt an.
+    id: str | None = Field(None, pattern=r"^[A-Za-z0-9_-]{4,32}$")
 
 
 class RevisionIn(BaseModel):
@@ -45,6 +49,9 @@ class RevisionIn(BaseModel):
 
 class DraftIn(BaseModel):
     data: dict
+    # Optimistische Sperre: der Draft-Stempel, auf dem der Client arbeitet.
+    # None = kein Anspruch (älterer Client, erster Push).
+    base_draft_at: str | None = None
 
 
 def _check_data(data: dict) -> dict:
@@ -106,14 +113,27 @@ def list_projects(user: User = Depends(current_user), db: Session = Depends(get_
 
 @router.post("", status_code=201)
 def create_project(body: ProjectCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Projekt anlegen. Schickt der Client eine ``id`` mit, ist der Aufruf
+    idempotent: dieselbe id liefert dasselbe Projekt statt eines zweiten.
+    Eine id, die in einer fremden Organisation liegt, wird ignoriert (der
+    Server vergibt dann eine eigene) — sie darf nichts über fremde
+    Bestände verraten."""
+    if body.id:
+        exists = db.get(Project, body.id)
+        if exists is not None and exists.org_id == user.org_id:
+            return _project_out(exists)
+    # Erst prüfen, dann anlegen — eine abgelehnte Anfrage darf kein
+    # Geisterprojekt hinterlassen.
+    draft = _check_data(body.data) if body.data is not None else None
     p = Project(org_id=user.org_id, name=body.name.strip(), description=body.description,
                 customer=body.customer, part_no=body.part_no, created_by=user.id)
+    if body.id and db.get(Project, body.id) is None:
+        p.id = body.id
+    if draft is not None:
+        p.draft = draft
+        p.draft_at = now()
     db.add(p)
     db.commit()
-    if body.data is not None:
-        p.draft = _check_data(body.data)
-        p.draft_at = now()
-        db.commit()
     db.refresh(p)
     return _project_out(p)
 
@@ -144,9 +164,21 @@ def update_project(project_id: str, body: ProjectIn, user: User = Depends(curren
 @router.put("/{project_id}/draft")
 def save_draft(project_id: str, body: DraftIn, user: User = Depends(current_user),
                db: Session = Depends(get_db)):
-    """Arbeitsstand synchronisieren (Autosave) — keine Revision."""
+    """Arbeitsstand synchronisieren (Autosave) — keine Revision.
+
+    Der Client schickt in ``base_draft_at`` den Stempel, auf dem er arbeitet.
+    Weicht der vom Server ab, hat inzwischen jemand anders geschrieben: dann
+    wird nicht überschrieben, sondern mit 409 abgelehnt. Ein Schreibvorgang,
+    der nichts ändert, ist nie ein Konflikt — das fängt den Wiederholungs-
+    versuch nach einem verlorenen Antwort-Paket ab."""
     p = _get_project(db, user, project_id)
-    p.draft = _check_data(body.data)
+    clean = _check_data(body.data)
+    have = iso(p.draft_at)
+    if (body.base_draft_at is not None and have is not None
+            and body.base_draft_at != have and p.draft != clean):
+        raise HTTPException(status_code=409,
+                            detail="Auf dem Server liegt ein neuerer Arbeitsstand.")
+    p.draft = clean
     p.draft_at = p.updated_at = now()
     db.commit()
     return {"draft_at": iso(p.draft_at), "updated_at": iso(p.updated_at)}

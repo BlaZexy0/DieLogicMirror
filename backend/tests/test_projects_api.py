@@ -167,3 +167,63 @@ def test_demo_account_from_env():
     assert c.get("/api/auth/demo").json() == {"email": "demo@dielogic.de", "password": "demo-demo-demo"}
     r = c.post("/api/auth/login", json={"email": "demo@dielogic.de", "password": "demo-demo-demo"})
     assert r.status_code == 200 and r.json()["org"]["slug"] == "demo" and r.json()["user"]["role"] == "admin"
+
+
+def test_draft_conflict_is_refused_not_overwritten():
+    """Optimistische Sperre: wer auf einem veralteten Draft-Stempel aufsetzt,
+    bekommt 409 statt den fremden Stand zu überschreiben (C-3)."""
+    # Zwei Sitzungen desselben Kontos = zwei Tabs/Rechner auf einem Projekt.
+    admin = _client()
+    _login(admin, "owner@example.com")
+    jane = _client()
+    _login(jane, "owner@example.com")
+
+    pid = admin.post("/api/projects", json={"name": "Konflikt", "data": {"design": {"values": {"schuss": 1}}}}).json()["id"]
+    base = admin.get(f"/api/projects/{pid}").json()["draft_at"]
+
+    # Kollegin schreibt
+    r = jane.put(f"/api/projects/{pid}/draft",
+                 json={"data": {"design": {"values": {"schuss": 99}}}, "base_draft_at": base})
+    assert r.status_code == 200, r.text
+
+    # Kollege setzt noch auf dem alten Stempel auf → abgelehnt, Stand bleibt
+    r = admin.put(f"/api/projects/{pid}/draft",
+                  json={"data": {"design": {"values": {"schuss": 77}}}, "base_draft_at": base})
+    assert r.status_code == 409, r.text
+    assert admin.get(f"/api/projects/{pid}").json()["data"]["design"]["values"]["schuss"] == 99
+
+    # Ein Schreibvorgang, der nichts ändert, ist kein Konflikt (verlorene Antwort)
+    r = admin.put(f"/api/projects/{pid}/draft",
+                  json={"data": {"design": {"values": {"schuss": 99}}}, "base_draft_at": base})
+    assert r.status_code == 200, r.text
+
+    # Mit dem aktuellen Stempel geht es weiter
+    now = admin.get(f"/api/projects/{pid}").json()["draft_at"]
+    r = admin.put(f"/api/projects/{pid}/draft",
+                  json={"data": {"design": {"values": {"schuss": 77}}}, "base_draft_at": now})
+    assert r.status_code == 200, r.text
+    assert admin.get(f"/api/projects/{pid}").json()["data"]["design"]["values"]["schuss"] == 77
+
+    # Ohne Anspruch (älterer Client) bleibt es beim bisherigen Verhalten
+    assert admin.put(f"/api/projects/{pid}/draft", json={"data": {}}).status_code == 200
+
+
+def test_create_is_idempotent_per_client_id():
+    """Geht die Antwort verloren (Tab schließt, Reload), darf derselbe Versuch
+    kein zweites Projekt anlegen (C-5)."""
+    admin = _client()
+    _login(admin, "owner@example.com")
+    before = len(admin.get("/api/projects").json())
+
+    body = {"id": "p19c4f1a2b3c0123456789abcdef0", "name": "Nur einmal",
+            "data": {"design": {"values": {"part": 3}}}}
+    r1 = admin.post("/api/projects", json=body)
+    assert r1.status_code == 201, r1.text
+    assert r1.json()["id"] == body["id"]
+    r2 = admin.post("/api/projects", json=body)
+    assert r2.status_code == 201 and r2.json()["id"] == r1.json()["id"]
+    assert len(admin.get("/api/projects").json()) == before + 1
+
+    # Eine ungültige Anfrage hinterlässt kein Geisterprojekt (H-04)
+    assert admin.post("/api/projects", json={"name": "Kaputt", "data": {"cost": [1, 2]}}).status_code == 422
+    assert len(admin.get("/api/projects").json()) == before + 1

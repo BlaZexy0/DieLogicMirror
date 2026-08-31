@@ -119,6 +119,10 @@ export function marker(x, f, px, py, label, opts) {
 
 /* Farbrampe für Heatmaps; Stützstellen aus theme.heatStops. */
 export function turbo(t) {
+  /* NaN überlebt beide Klemmungen und macht k[NaN] undefined — der Wurf riss
+     bisher jede Karte nach der werfenden mit. Ein Feld ohne Wert bleibt
+     durchsichtig: sichtbar leer statt einer plausiblen Farbe. */
+  if (!Number.isFinite(t)) return 'rgba(0,0,0,0)';
   t = Math.max(0, Math.min(1, t));
   const k = theme.heatStops;
   const u = t * (k.length - 1), i = Math.min(k.length - 2, Math.floor(u)), q = u - i;

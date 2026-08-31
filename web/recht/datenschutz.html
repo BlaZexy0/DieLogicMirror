@@ -45,11 +45,21 @@
     <span class="ph">[Falls doch bestellt: Kontaktdaten angeben.]</span></p>
 
   <h2>2. Überblick: Was diese Website tut — und was nicht</h2>
-  <p>DieLogic ist eine statische Website. Die Auslegungsrechnung des Dashboards läuft vollständig
-    in Ihrem Browser; Ihre Eingabewerte (Auslegungen, Schusskurven, gewählte Presets) werden
-    <b>nicht an unsere Server übertragen</b>. Wir setzen keine Cookies zu Analyse- oder
-    Werbezwecken ein und binden keine Tracking-Dienste, keine externen Schriftarten und keine
-    Inhalte von Drittservern ein.</p>
+  <p>DieLogic hat zwei Betriebsarten, und sie unterscheiden sich datenschutzrechtlich
+    erheblich:</p>
+  <ul>
+    <li><b>Ohne Benutzerkonto</b> — Theorieseiten, Startseite, Rechtstexte: eine statische
+      Website. Es werden keine Eingaben verarbeitet und keine Cookies gesetzt.</li>
+    <li><b>Mit Benutzerkonto</b> — die Werkzeuge (Dashboard, Sprengflächen-, Zyklus- und
+      Kostenanalyse, 3D-Studio): Sie melden sich an, und Ihre Projekte werden
+      <b>auf unserem Server gespeichert</b>. Die Datenbank ist dabei der maßgebliche Stand,
+      der Browser hält nur eine Arbeitskopie. Einzelheiten in den Abschnitten 4 bis 7.</li>
+  </ul>
+  <p>Die eigentliche Auslegungsrechnung läuft in beiden Fällen in Ihrem Browser. Ein Teil der
+    Schusskurven-Simulation wird zusätzlich auf unserem Server berechnet (Abschnitt 7).</p>
+  <p>Wir setzen <b>keine</b> Cookies zu Analyse- oder Werbezwecken ein und binden keine
+    Tracking-Dienste, keine externen Schriftarten und keine Inhalte von Drittservern ein. Das
+    einzige Cookie ist das technisch erforderliche Sitzungscookie aus Abschnitt 5.</p>
 
   <h2>3. Hosting und Server-Logfiles</h2>
   <p>Beim Aufruf der Website verarbeitet der Webserver unseres Hosters
@@ -63,15 +73,59 @@
     ein Vertrag über Auftragsverarbeitung gemäß Art. 28 DSGVO geschlossen.</p>
 
   <h2>4. Lokale Speicherung im Browser (localStorage)</h2>
-  <p>Das Dashboard speichert Ihre Eingaben (Auslegungswerte, Schusskurve, gewähltes
-    Maschinen-Preset) im localStorage Ihres Browsers, damit sie bei einem erneuten Aufruf und
-    auf den Diagramm-Einzelseiten erhalten bleiben. Diese Daten verbleiben ausschließlich auf
-    Ihrem Gerät und sind für uns nicht einsehbar. Es handelt sich um eine für die gewünschte
-    Funktion technisch erforderliche Speicherung (§ 25 Abs. 2 Nr. 2 TDDDG); eine Einwilligung
-    ist hierfür nicht erforderlich. Sie können die Daten jederzeit über die Funktion
-    „Zurücksetzen" im Dashboard oder über die Browsereinstellungen löschen.</p>
+  <p>Die Werkzeuge speichern Ihre Projekte (Auslegungswerte, Schusskurve, gewählte Presets,
+    Zyklus-, Kosten- und Geometriedaten) im localStorage Ihres Browsers. Das ist eine
+    <b>Arbeitskopie</b> der auf dem Server gespeicherten Projekte (Abschnitt 6), damit die
+    Werkzeuge und die Diagramm-Einzelseiten ohne Wartezeit auf demselben Stand arbeiten.
+    Es handelt sich um eine für die gewünschte Funktion technisch erforderliche Speicherung
+    (§ 25 Abs. 2 Nr. 2 TDDDG); eine Einwilligung ist hierfür nicht erforderlich.</p>
+  <p>Beim Abmelden wird diese Arbeitskopie gelöscht. Meldet sich ein Konto einer anderen
+    Organisation an demselben Gerät an, wird sie ebenfalls verworfen. Zusätzlich können Sie sie
+    jederzeit über die Browsereinstellungen entfernen.</p>
 
-  <h2>5. Kontaktaufnahme</h2>
+  <h2>5. Benutzerkonto, Anmeldung und Sitzungscookie</h2>
+  <p>Für die Werkzeuge ist ein Benutzerkonto erforderlich. Konten entstehen ausschließlich über
+    eine Einladung durch einen Administrator Ihrer Organisation. Wir verarbeiten dabei:
+    <b>E-Mail-Adresse, Name, Rolle</b> (Administrator oder Mitglied), <b>Zugehörigkeit zu einer
+    Organisation</b> sowie einen <b>kryptografischen Hash Ihres Passworts</b> (das Passwort
+    selbst wird nicht gespeichert). Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO
+    (Vertragserfüllung bzw. Durchführung vorvertraglicher Maßnahmen).</p>
+  <p>Bei der Anmeldung setzen wir ein Sitzungscookie mit dem Namen <code>dl_session</code>. Es
+    enthält ausschließlich eine zufällige Sitzungskennung, ist <code>HttpOnly</code> gesetzt
+    (für Skripte nicht lesbar), verwendet <code>SameSite=Lax</code> und läuft nach
+    <b>30 Tagen</b> ab; beim Abmelden wird es sofort gelöscht. Es dient allein dazu, Sie
+    während der Nutzung angemeldet zu halten, und ist damit technisch erforderlich
+    (§ 25 Abs. 2 Nr. 2 TDDDG) — eine Einwilligung ist nicht erforderlich.</p>
+  <p>Einladungen zu einer Organisation werden mit E-Mail-Adresse, vorgesehener Rolle und einem
+    einmaligen Einladungstoken gespeichert, bis sie eingelöst oder zurückgezogen werden.</p>
+
+  <h2>6. Projektdaten, Arbeitsstände und Revisionen</h2>
+  <p>Angemeldete Nutzer legen <b>Projekte</b> an. Zu einem Projekt gehören Projektname,
+    Beschreibung, Kunde und Teilenummer sowie die fachlichen Eingaben aller Werkzeuge
+    (Auslegung, Geometrie, Zyklus, Kosten). Diese Daten werden während der Arbeit
+    <b>fortlaufend automatisch an unseren Server übertragen</b> und dort gespeichert.
+    Zusätzlich können Sie benannte <b>Revisionen</b> anlegen; zu jeder Revision speichern wir,
+    wer sie wann angelegt hat.</p>
+  <p>Ebenfalls gespeichert werden die <b>Stammdaten Ihrer Organisation</b> (Maschinen,
+    Legierungen, Bauteiltypen, Preise und Stundensätze), soweit ein Administrator sie hinterlegt.</p>
+  <p>Alle diese Daten sind ausschließlich für Mitglieder derselben Organisation sichtbar.
+    Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung). Personenbezug entsteht
+    dabei vor allem über die Zuordnung von Konto und Revision zu einer Person; die
+    Auslegungsdaten selbst sind technische Daten.</p>
+  <p>Wir speichern Projekte, Revisionen und Stammdaten für die Dauer des Vertragsverhältnisses.
+    Archivierte Projekte bleiben zur Nachvollziehbarkeit erhalten. Nach Beendigung des Kontos
+    löschen wir sie innerhalb von <span class="ph">[z. B. 30 Tagen]</span>, soweit keine
+    gesetzlichen Aufbewahrungspflichten entgegenstehen. Abgelaufene Anmeldesitzungen werden
+    <span class="ph">[Löschintervall angeben]</span> entfernt.</p>
+
+  <h2>7. Serverseitige Simulation</h2>
+  <p>Für die Luftdruck- und Bewegungskurve der Schusskurve übermittelt das Dashboard die dafür
+    nötigen technischen Werte (Massenbilanz, Kammermaße, Kurvenstützpunkte, Vakuumparameter)
+    an unseren Server, der die Simulation berechnet und das Ergebnis zurückliefert. Diese
+    Anfragen werden nicht dauerhaft gespeichert; sie erscheinen lediglich in den
+    Server-Logfiles nach Abschnitt 3. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.</p>
+
+  <h2>8. Kontaktaufnahme</h2>
   <p>Wenn Sie uns per E-Mail kontaktieren, verarbeiten wir Ihre Angaben (E-Mail-Adresse, Name,
     Inhalt der Anfrage) zur Bearbeitung der Anfrage. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b
     DSGVO, soweit die Anfrage auf einen Vertragsschluss gerichtet ist, im Übrigen Art. 6 Abs. 1
@@ -79,7 +133,7 @@
     gelöscht, sobald sie für die Bearbeitung nicht mehr erforderlich sind und keine gesetzlichen
     Aufbewahrungspflichten entgegenstehen.</p>
 
-  <h2>6. Bestellung kostenpflichtiger Leistungen</h2>
+  <h2>9. Bestellung kostenpflichtiger Leistungen</h2>
   <p>Wenn Sie einen kostenpflichtigen Plan (z. B. „Professional") buchen, verarbeiten wir die
     für die Vertragsabwicklung erforderlichen Daten: Name, Firmenanschrift, E-Mail-Adresse,
     Rechnungs- und Zahlungsdaten. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO
@@ -90,14 +144,14 @@
     dessen Datenschutzerklärung. Falls Rechnungsstellung per E-Mail/Überweisung: diesen Satz
     löschen.]</span></p>
 
-  <h2>7. Empfänger und Drittlandübermittlung</h2>
+  <h2>10. Empfänger und Drittlandübermittlung</h2>
   <p>Eine Übermittlung personenbezogener Daten an Dritte findet nur statt, soweit dies zur
     Vertragsabwicklung erforderlich ist (z. B. Hoster, ggf. Zahlungsdienstleister,
     Steuerberatung) oder eine gesetzliche Pflicht besteht. Eine Übermittlung in Drittländer
     außerhalb der EU/des EWR findet nicht statt. <span class="ph">[Anpassen, falls doch —
     z. B. bei einem Hoster oder Zahlungsdienstleister mit Sitz außerhalb der EU.]</span></p>
 
-  <h2>8. Ihre Rechte</h2>
+  <h2>11. Ihre Rechte</h2>
   <p>Sie haben gegenüber uns folgende Rechte hinsichtlich der Sie betreffenden
     personenbezogenen Daten:</p>
   <ul>
@@ -113,7 +167,7 @@
     (Art. 77 DSGVO), z. B. bei der für Ihren Wohnsitz oder unseren Sitz zuständigen
     Landesdatenschutzbehörde.</p>
 
-  <h2>9. Aktualität dieser Datenschutzerklärung</h2>
+  <h2>12. Aktualität dieser Datenschutzerklärung</h2>
   <p>Stand: <span class="ph">[Monat Jahr]</span>. Wir passen diese Erklärung an, sobald sich
     die Datenverarbeitung auf dieser Website ändert.</p>
 

@@ -303,6 +303,7 @@
         </div>
         <div class="zk-group"><h3>Eingaben</h3>
           <div class="zk-field"><label>Entformungstemperatur <span class="unit">°C</span></label><input type="number" step="5" data-h="Teject"></div>
+          <div class="zk-field"><label title="Abfall der besprühten Formhaut (t_spr1 − t_spr2) nach Gl. (12.21) — hängt am Sprühregime; die Zahlenbeispiele der Quelle arbeiten mit rund 50 K.">Abkühlung Formhaut beim Sprühen <span class="unit">K</span></label><input type="number" step="5" min="0" data-h="dTspray"></div>
           <div class="zk-field"><label>Form B × H × L <span class="unit">mm</span></label>
             <span><input type="number" step="10" min="0" data-die="B" style="width:58px" placeholder="B"> <input type="number" step="10" min="0" data-die="H" style="width:58px" placeholder="H"> <input type="number" step="10" min="0" data-die="L" style="width:58px" placeholder="L"></span></div>
         </div>
@@ -318,7 +319,7 @@
       <div class="eq">$$Q = G \cdot [h_{f} + c_{l} \cdot (T_{\text{liq}} - T_{\text{sol}}) + c_{m} \cdot (T_{\text{sol}} - T_{e})] \quad (12.2) \qquad c_{l} = \tfrac{1}{2}(c_{S} + c_{L}), \; c_{m} = c_{20} + \frac{T_{\text{sol}} + T_{e} - 40}{2 \cdot T_{\text{sol}} - 40} \cdot (c_{S} - c_{20}) \qquad\ \text{Überhitzung}\ G \cdot c_{L} \cdot (T_{\text{Gieß}} - T_{\text{liq}}) \to \ \text{Gießkammer}$$</div>
       <div class="eq">$$Q_{U} = Q_{\text{Kon}+\text{Str}} + Q_{\text{Pl}} + Q_{\text{Luft}} + Q_{\text{Bl}} + Q_{\text{Spr}} \quad (12.6) \qquad Q_{T} = Q - Q_{U} \quad (12.1, 5.19) \qquad P_{T} = Q_{T}/\tau _{z} \quad (5.4)$$</div>
       <div class="eq">$$Q_{\text{Kon}+\text{Str}} = 9{,}7 \cdot 2L(B+H) \cdot \tau _{z} \cdot (t_{\text{fa}} - 20) \quad (12.7, 12.9) \qquad Q_{\text{Pl}} = 100 \cdot \tau _{z} \cdot 2 \cdot B \cdot H \cdot (t_{\text{fa}} - 55) \quad (12.10) \qquad t_{\text{fa}} = 20 + 0{,}6 \cdot (T_{\text{Form}} - 20) \quad (12.3)$$</div>
-      <div class="eq">$$Q_{\text{Luft}} = B \cdot H \cdot L \cdot 60\,\text{K} \quad (12.14) \qquad Q_{\text{Bl}} = 40 \cdot A_{\text{fgr}} \cdot \tau _{\text{bl}} \cdot (\tfrac{1}{2}(T_{e} + T_{\text{Form}} + 30) - 20) \quad (12.15) \qquad m_{\text{Spr}} = 0{,}744 \cdot A_{\text{fgr}} \cdot 0{,}01\,\text{m} \cdot (T_{e} - T_{\text{Form}}) \quad (12.21) \qquad Q_{\text{Spr}} = 2594\ \text{kJ}/\text{kg}\ \cdot m_{\text{Spr}} \quad (12.22)$$</div>
+      <div class="eq">$$Q_{\text{Luft}} = B \cdot H \cdot L \cdot 60\,\text{K} \quad (12.14) \qquad Q_{\text{Bl}} = 40 \cdot A_{\text{fgr}} \cdot \tau _{\text{bl}} \cdot (\tfrac{1}{2}(T_{e} + T_{\text{Form}} + 30) - 20) \quad (12.15) \qquad m_{\text{Spr}} = 0{,}744 \cdot A_{\text{fgr}} \cdot 0{,}01\,\text{m} \cdot \Delta t_{\text{Spr}} \quad (12.21) \qquad Q_{\text{Spr}} = 2594\ \text{kJ}/\text{kg}\ \cdot m_{\text{Spr}} \quad (12.22)$$</div>
       <p>Wärmeübergangs- und Referenzwerte sind die Erfahrungswerte der Quellen (Luft 20 °C, Aufspannplatten 55 °C, Luft zwischen den offenen Hälften 80 °C, Gravur vor dem Gießen = Formtemperatur + 30 K, α 9,7 / 100 / 40 W/(m²·K)). Formabmessungen: B = H = 0,8 · Säulenabstand der Maschine, L = 0,5·B — bei Bedarf überschreiben. Quellen: Temperiersystem der Druckgießform (Kap. 5), Heizung und Kühlung der Druckgießformen mit Temperiergeräten (Kap. 12); Gleichungsnummern wie dort, Abgleich in <code>docs/heat_flow_hpd_die.md</code>.</p>
     </details>
   </div>
@@ -676,7 +677,8 @@
     src.die = D.machinePreset ? 'geschätzt aus Säulenabstand ' + D.machinePreset.name : 'kein Maschinen-Preset — Standardform';
     var die = { B: h.die.B || est.B, H: h.die.H || est.H, L: h.die.L || est.L };
     return {
-      v: { mdose: mdose, Tcast: Tcast, alloy: alloyOk ? alloy : null, Tdie: Tdie, Teject: h.Teject, Acav: Acav, die: die,
+      v: { mdose: mdose, Tcast: Tcast, alloy: alloyOk ? alloy : null, Tdie: Tdie, Teject: h.Teject,
+        dTspray: h.dTspray, Acav: Acav, die: die,
         tz: layout.total, tauBl: isFinite(st.durs.spruehen) && st.durs.spruehen > 0 ? Number(st.durs.spruehen) : 0 },
       est: est, src: src, alloyName: alloyOk ? D.alloy.name : LOGIC.ALLOY_FALLBACK.name
     };

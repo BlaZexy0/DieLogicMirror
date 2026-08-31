@@ -10,8 +10,14 @@
 
 export const $ = id => document.getElementById(id);
 
-/** Zahl in deutscher Schreibweise (Komma, Tausenderpunkt). */
+/** Zahl in deutscher Schreibweise (Komma, Tausenderpunkt) — für Anzeigen. */
 export const fmt = (v, max = 2) => v.toLocaleString('de-DE', { maximumFractionDigits: max });
+
+/** Dasselbe ohne Gruppentrenner — für Eingabefelder, deren Inhalt wieder
+    eingelesen wird. Mit Tausenderpunkt las parseNumber die eigene Ausgabe
+    falsch zurück: „1.500" wurde zu 1,5 und „1.234,5" gar nicht mehr erkannt. */
+export const fmtPlain = (v, max = 2) =>
+  v.toLocaleString('de-DE', { maximumFractionDigits: max, useGrouping: false });
 
 export const rgbCss = rgb => 'rgb(' + rgb.map(v => Math.round(v * 255)).join(',') + ')';
 
@@ -64,7 +70,9 @@ export function numberInput(id, apply) {
     const v = parseNumber(el.value);
     if (v === null) { el.classList.add('bad'); return; }
     el.classList.remove('bad');
-    el.value = fmt(apply(v));
+    /* Ohne Gruppentrenner zurückschreiben: was hier steht, liest parseNumber
+       beim nächsten „change"/Enter wieder ein (der Zuhörer hängt an beiden). */
+    el.value = fmtPlain(apply(v));
   };
   el.addEventListener('change', run);
   el.addEventListener('keydown', ev => { if (ev.key === 'Enter') run(); });

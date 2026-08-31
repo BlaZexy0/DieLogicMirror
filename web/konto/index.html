@@ -412,6 +412,11 @@
 
   $('logout').addEventListener('click', async function () {
     await api('POST', '/api/auth/logout').catch(function () {});
+    /* Der Projekt-Cache liegt in einem Schlüssel, den jedes Konto auf diesem
+       Gerät sieht — er darf das Abmelden nicht überleben (dasselbe gilt für
+       die Stammdaten weiter unten). */
+    P.clearAll();
+    try { localStorage.removeItem('dielogic-org-settings-v1'); } catch (e) { /* egal */ }
     me = null;
     start();
   });
@@ -421,14 +426,18 @@
     show('account', true);
     window.__KONTO_ME__ = me;
     window.dispatchEvent(new CustomEvent('konto:account', { detail: me }));
-    /* Lokale Projekte ohne Serverbezug in die Datenbank übernehmen */
+    /* Lokale Projekte ohne Serverbezug in die Datenbank übernehmen — aber erst,
+       nachdem der Cache diesem Konto zugeordnet ist. Ohne diese Zeile lädt jeder
+       Besuch dieser Seite die Waisen des *vorigen* Benutzers in die Organisation
+       des gerade angemeldeten hoch. */
+    if (P.bindAccount(me.org.id)) { location.reload(); return; }
     var orphans = P.list().filter(function (p) { return !p.remote; });
     for (var i = 0; i < orphans.length; i++) {
       var o = orphans[i];
       try {
-        var r = await api('POST', '/api/projects', Object.assign({ data: P.sectionsOf(o) },
+        var r = await api('POST', '/api/projects', Object.assign({ id: o.id, data: P.sectionsOf(o) },
           { name: o.name, description: o.description, customer: o.customer, part_no: o.partNo }));
-        P.markSaved(o.id, { id: r.id, rev: r.rev });
+        P.markSaved(o.id, { id: r.id, rev: r.rev, savedAt: r.updated_at, draftAt: r.draft_at });
       } catch (err) { console.warn('Übernahme fehlgeschlagen:', err.message); }
     }
     $('a-user').textContent = me.user.name || me.user.email;

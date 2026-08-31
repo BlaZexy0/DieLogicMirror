@@ -58,7 +58,7 @@ export const groups = [
   },
   {
     id: 'mass', title: 'Massenbilanz',
-    note: 'Alle Gewichte fest gewogen, je Kavität einzeln: das Angussgewicht ist ohne Pressrest — der steht im eigenen Feld. Dosiergewicht = Summe aller vier.',
+    note: 'Alle Gewichte für den ganzen Schuss, also über alle Kavitäten zusammen — die Summe der vier ist das Dosiergewicht und muss in die Gießkammer passen (Füllgrad φ). Das Angussgewicht ist ohne Pressrest; der steht im eigenen Feld.',
     fields: [
       { key: 'part',     label: 'Bauteilgewicht',   unit: 'kg', def: 12 },
       { key: 'runner',   label: 'Angussgewicht',    unit: 'kg', def: 3 },

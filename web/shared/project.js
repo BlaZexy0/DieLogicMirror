@@ -66,7 +66,10 @@
     if (typeof doc.updatedAt === 'string') p.updatedAt = doc.updatedAt;
     SECTIONS.forEach(function (s) { p[s] = isObj(doc[s]) ? clone(doc[s]) : null; });
     if (isObj(doc.remote) && typeof doc.remote.id === 'string') {
-      p.remote = { id: doc.remote.id, rev: Number(doc.remote.rev) || 0, savedAt: str(doc.remote.savedAt, 40) };
+      /* draftAt ist der Stempel der Server-Uhr, auf dem dieser Stand aufsetzt —
+         die Marke der optimistischen Sperre beim Autosave. */
+      p.remote = { id: doc.remote.id, rev: Number(doc.remote.rev) || 0,
+        savedAt: str(doc.remote.savedAt, 40), draftAt: str(doc.remote.draftAt, 40) || null };
     }
     p.dirty = !!doc.dirty;
     return p;
@@ -86,9 +89,65 @@
     catch (e) { return null; }
   }
 
-  function save() {
+  /* Alle Tabs teilen sich einen Speicherschlüssel. Ein Tab, der seine ganze
+     Kopie schreibt, löscht damit alles, was ein anderer seit dem Laden
+     geändert hat. Deshalb wird vor jedem Schreiben neu eingelesen und nur das
+     gerade geänderte Projekt aus dem Speicher darüber gelegt; fremde
+     Projekte bleiben stehen und werden zugleich hier übernommen.
+       id - das geänderte Projekt. Fehlt es im Speicher, gilt es als gelöscht
+            und fällt auch auf der Platte weg. Ohne id gewinnt die Platte
+            vollständig (Auswahl wechseln, Start). */
+  function mergeFromDisk(id) {
+    var disk = readJSON(STORE_KEY);
+    if (!isObj(disk) || !isObj(disk.projects)) return store.projects;
+    var next = {};
+    Object.keys(disk.projects).forEach(function (k) {
+      if (k === id) return;                    // unten aus dem Speicher gesetzt
+      var p = sanitize(disk.projects[k]);
+      if (!p) return;
+      p.id = k;
+      var mine = store.projects[k];
+      /* Identität wahren, solange sich nichts geändert hat - Aufrufer halten
+         Referenzen auf das Projektobjekt. */
+      next[k] = (mine && JSON.stringify(mine) === JSON.stringify(p)) ? mine : p;
+    });
+    if (id && store.projects[id]) next[id] = store.projects[id];
+    return next;
+  }
+
+  function firstId(projects) {
+    return Object.keys(projects).sort(function (a, b) {
+      return projects[a].updatedAt < projects[b].updatedAt ? 1 : -1;
+    })[0] || '';
+  }
+
+  function save(id, replaceAll) {
+    if (!store) return false;
+    if (!replaceAll) store.projects = mergeFromDisk(id);
+    if (!store.projects[store.currentId]) store.currentId = firstId(store.projects);
     try { storage.setItem(STORE_KEY, JSON.stringify(store)); return true; }
     catch (e) { return false; /* voll oder deaktiviert */ }
+  }
+
+  /* Ein anderer Tab hat geschrieben: den fremden Stand übernehmen, ohne
+     selbst zu schreiben, und die Oberfläche unterrichten. */
+  function adoptExternal() {
+    if (!store) return;
+    var before = JSON.stringify(store.projects) + '|' + store.currentId;
+    store.projects = mergeFromDisk(null);
+    if (!store.projects[store.currentId]) store.currentId = firstId(store.projects);
+    if (JSON.stringify(store.projects) + '|' + store.currentId === before) return;
+    emit('external');
+  }
+
+  var watching = false;
+  function watchStorage() {
+    if (watching || typeof root.addEventListener !== 'function') return;
+    watching = true;
+    root.addEventListener('storage', function (e) {
+      if (e && e.key != null && e.key !== STORE_KEY) return;
+      adoptExternal();
+    });
   }
 
   function emit(type, id) {
@@ -102,8 +161,9 @@
   function init(stor) {
     storage = stor || root.localStorage || { getItem: function () { return null; }, setItem: function () {}, removeItem: function () {} };
     var raw = readJSON(STORE_KEY);
-    store = { currentId: '', projects: {} };
+    store = { currentId: '', projects: {}, owner: '' };
     if (isObj(raw) && isObj(raw.projects)) {
+      if (typeof raw.owner === 'string') store.owner = raw.owner;
       Object.keys(raw.projects).forEach(function (id) {
         var p = sanitize(raw.projects[id]);
         if (p) { p.id = id; store.projects[id] = p; }
@@ -114,10 +174,45 @@
       store.currentId = Object.keys(store.projects).length ? list()[0].id : '';
       save();
     }
+    watchStorage();
     return store;
   }
 
   function ensure() { if (!store) init(); }
+
+  /* ── Kontobindung ──────────────────────────────────────────────
+     Der Cache liegt in einem Schlüssel, den jedes Konto auf diesem Gerät
+     sieht. Er gehört deshalb genau einer Organisation: meldet sich eine
+     andere an, wird er verworfen, bevor irgendetwas gelesen oder zum Server
+     geschickt wird. Sonst sieht der nächste Benutzer Namen, Kunden und alle
+     Werkzeugabschnitte des vorigen — und lädt sie in seine eigene
+     Organisation hoch. */
+  function bindAccount(orgId) {
+    ensure();
+    orgId = String(orgId || '');
+    if (!orgId) return false;
+    if (store.owner && store.owner !== orgId) {
+      store.projects = {};
+      store.currentId = '';
+      store.owner = orgId;
+      save(null, true);
+      emit('clear');
+      return true;                 // fremder Bestand verworfen
+    }
+    if (store.owner !== orgId) { store.owner = orgId; save(); }
+    return false;
+  }
+
+  /* Abmelden oder abgelaufene Sitzung: nichts von diesem Konto bleibt liegen. */
+  function clearAll() {
+    ensure();
+    store.projects = {};
+    store.currentId = '';
+    store.owner = '';
+    save(null, true);
+    emit('clear');
+    return true;
+  }
 
   /* ── Projekte ──────────────────────────────────────────────── */
 
@@ -145,7 +240,7 @@
     p.dirty = true;
     store.projects[p.id] = p;
     store.currentId = p.id;
-    save();
+    save(p.id);
     emit('create', p.id);
     return p;
   }
@@ -159,7 +254,7 @@
     if (meta.partNo != null) p.partNo = str(meta.partNo, 100);
     p.updatedAt = nowISO();
     p.dirty = true;
-    save();
+    save(id);
     emit('update', id);
     return p;
   }
@@ -175,7 +270,7 @@
     p.dirty = true;
     store.projects[p.id] = p;
     store.currentId = p.id;
-    save();
+    save(p.id);
     emit('create', p.id);
     return p;
   }
@@ -185,7 +280,7 @@
     if (!store.projects[id]) return false;
     delete store.projects[id];
     if (store.currentId === id) store.currentId = Object.keys(store.projects).length ? list()[0].id : '';
-    save();
+    save(id);
     emit('remove', id);
     return true;
   }
@@ -195,9 +290,13 @@
   function markSaved(id, remote) {
     var p = get(id);
     if (!p) return null;
-    p.remote = { id: String(remote.id), rev: Number(remote.rev) || 0, savedAt: nowISO() };
+    /* savedAt und draftAt sind Stempel der Server-Uhr — nur so lassen sie sich
+       später gegen die Zeitstempel der Projektliste vergleichen. */
+    p.remote = { id: String(remote.id), rev: Number(remote.rev) || 0,
+      savedAt: remote.savedAt ? String(remote.savedAt) : nowISO(),
+      draftAt: remote.draftAt ? String(remote.draftAt) : (p.remote ? p.remote.draftAt : null) };
     p.dirty = false;
-    save();
+    save(id);
     emit('saved', id);
     return p;
   }
@@ -209,7 +308,7 @@
     if (!p) return null;
     store.projects[p.id] = p;
     if (makeCurrent) store.currentId = p.id;
-    save();
+    save(p.id);
     emit('put', p.id);
     return p;
   }
@@ -233,7 +332,7 @@
     p[name] = next;
     p.updatedAt = nowISO();
     p.dirty = true;
-    var ok = save();
+    var ok = save(p.id);
     emit('section', p.id);
     return ok;
   }
@@ -361,6 +460,7 @@
     STORE_KEY: STORE_KEY, SECTIONS: SECTIONS, EVENT: EVENT, SCHEMA: SCHEMA,
     init: init, list: list, current: current, get: get, select: select,
     create: create, update: update, duplicate: duplicate, remove: remove, put: put, markSaved: markSaved,
+    bindAccount: bindAccount, clearAll: clearAll,
     getSection: getSection, setSection: setSection, mergeDesign: mergeDesign,
     sectionsOf: sectionsOf, derived: derived,
     exportJSON: exportJSON, importJSON: importJSON, fileName: fileName,

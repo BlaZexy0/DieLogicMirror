@@ -113,8 +113,8 @@
     <div class="tk-card">
       <h2>Prozess</h2>
       <div class="body">
-        <div class="tk-field"><label>Bauteilgewicht <span class="unit">kg</span></label><input id="i-mpart" type="number" step="0.1" min="0"></div>
-        <div class="tk-field"><label>Schussgewicht <span class="unit">kg</span></label><input id="i-mdose" type="number" step="0.1" min="0"></div>
+        <div class="tk-field"><label title="Alle Kavitäten zusammen — dieselbe Bilanz wie im Dashboard: Schussgewicht = Bauteil + Anguss + Überlauf + Pressrest.">Bauteilgewicht je Schuss <span class="unit">kg</span></label><input id="i-mpart" type="number" step="0.1" min="0"></div>
+        <div class="tk-field"><label title="Der ganze Schuss: Bauteil(e) + Anguss + Überlauf + Pressrest.">Schussgewicht <span class="unit">kg</span></label><input id="i-mdose" type="number" step="0.1" min="0"></div>
         <div class="tk-field"><label>Zykluszeit <span class="unit">s</span></label><input id="i-tz" type="number" step="0.5" min="1"></div>
         <div class="tk-field"><label>Kavitäten <span class="unit">−</span></label><input id="i-kav" type="number" step="1" min="1"></div>
         <div class="tk-field"><label>Ausschuss <span class="unit">%</span></label><input id="i-a" type="number" step="0.5" min="0" max="99"></div>
@@ -246,7 +246,7 @@
   var P = window.__PALETTE__;
   var PR = window.__PROJECT__;
   var LINKED = ['mpart', 'mdose', 'tz'];
-  var LINK_LABEL = { mpart: 'Bauteilgewicht', mdose: 'Schussgewicht', tz: 'Zykluszeit' };
+  var LINK_LABEL = { mpart: 'Bauteilgewicht je Schuss', mdose: 'Schussgewicht', tz: 'Zykluszeit' };
   var saved = PR.getSection('cost') || {};
   /* linked[k] = Feld folgt dem Projekt (Auslegung/Zyklusanalyse); eine
      Eingabe von Hand löst die Verknüpfung, bis sie wiederhergestellt wird. */
@@ -387,10 +387,12 @@
     put('k-cost', fmt(r.total, 2));
     put('k-cost-sub', 'bei ' + fmt(v.kav, 0) + ' Kavität(en), ' + fmt(v.a, 1) + ' % Ausschuss, OEE ' + fmt(v.oee, 0) + ' %');
     put('k-pph', fmt(r.pph, 1));
-    put('k-pph-sub', fmt(r.pph * 8, 0) + ' je 8-h-Schicht · ' + fmt(r.pph * v.mpart, 0) + ' kg/h Gutteile');
-    var yieldPct = v.mdose > 0 ? 100 * v.mpart * v.kav / v.mdose : NaN;
+    put('k-pph-sub', fmt(r.pph * 8, 0) + ' je 8-h-Schicht · ' + fmt(r.pph * v.mpart / v.kav, 0) + ' kg/h Gutteile');
+    /* Bauteil- und Schussgewicht sind beide Ganzschuss-Größen — die Ausbeute
+       kann damit nicht über 100 % steigen. */
+    var yieldPct = v.mdose > 0 ? 100 * v.mpart / v.mdose : NaN;
     put('k-yield', fmt(yieldPct, 1));
-    put('k-yield-sub', 'Bauteil / Schussgewicht — Rest zirkuliert als Kreislaufmaterial (siehe Diagramm „Materialausbeute")');
+    put('k-yield-sub', 'Bauteil(e) / Schussgewicht, beides je Schuss — Rest zirkuliert als Kreislaufmaterial (siehe Diagramm „Materialausbeute")');
     put('k-en', fmt(r.energyKwh, 2));
     put('k-en-sub', fmt(v.eKg, 2) + ' kWh/kg über ' + fmt(v.mdose, 1) + ' kg Schuss · ' + fmt(r.energyKwh * v.pE, 2) + ' €/Teil');
     put('k-lever', fmt(r.leverTime, 1));
@@ -435,8 +437,8 @@
     put('l-month', fmt(perPart * r.pph * H_MONTH, 0));
     put('l-year', fmt(perPart * r.pph * H_MONTH * 12, 0));
     put('l-note', 'Bezogen auf ' + fmt(r.pph * H_MONTH, 0) + ' Gutteile/Monat (≈ ' + H_MONTH
-      + ' Produktionsstunden). Neues Bauteilgewicht: ' + fmt(v.mpart - dg / 1000, 3) + ' kg, neue Stückkosten: '
-      + fmt(LOGIC.costAtPartMass(v, v.mpart - dg / 1000), 2) + ' €/Teil.');
+      + ' Produktionsstunden). Neues Bauteilgewicht je Teil: ' + fmt(v.mpart / v.kav - dg / 1000, 3) + ' kg, neue Stückkosten: '
+      + fmt(LOGIC.costAtPartMass(v, v.mpart / v.kav - dg / 1000), 2) + ' €/Teil.');
 
     putM('eq-pph', fmt(r.pph, 1) + ' Gutteile/h');
     putM('eq-mat', fmt(r.matAlloy + r.matLoss + r.matRemelt, 2) + ' €');
