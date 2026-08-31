@@ -101,12 +101,16 @@
      — der Frontend-Test prüft das. Die Legierung bringt beide Dichten mit:
      hier rechnet die Feststoffdichte die Massen, im Dashboard die
      Flüssigdichte die Schmelzevolumina. */
+  /* Die Presets liefern die Rahmenwerte, die ANALYSE die daraus gerechneten.
+     Standen die Presets hinten, konnte ein gleichnamiges Preset-Feld das
+     Analyseergebnis überschreiben — die Übernahme hätte dann etwas anderes
+     ins Dashboard getragen, als auf dem Bildschirm stand. */
   function handoffValues(o, machineFields, alloyFields) {
-    return Object.assign({
+    return Object.assign({}, machineFields, alloyFields, {
       part: o.part, runner: o.runner, overflow: o.overflow, biscuit: o.biscuit,
       area: o.area, eccX: o.eccX, eccY: o.eccY,
       safety: o.safety, psel: o.psel
-    }, machineFields, alloyFields);
+    });
   }
 
   var api = {

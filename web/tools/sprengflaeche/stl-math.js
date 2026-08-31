@@ -55,7 +55,11 @@ function meshVolume(tris) {
     const cx = tris[i + 6], cy = tris[i + 7], cz = tris[i + 8];
     v6 += ax * (by * cz - bz * cy) + ay * (bz * cx - bx * cz) + az * (bx * cy - by * cx);
   }
-  return Math.abs(v6) / 6;
+  /* SIGNIERT zurückgeben. Der Betrag verdeckte, dass ein Netz nach innen
+     zeigt oder inkonsistent gewickelt ist — beides liefert ein plausibles
+     Volumen und damit eine plausible, falsche Masse. Der Aufrufer
+     entscheidet, was er mit einem nicht-positiven Volumen macht. */
+  return v6 / 6;
 }
 
 /** Oberfläche als Summe der Dreiecksflächen. */

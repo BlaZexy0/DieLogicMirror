@@ -50,9 +50,16 @@
 
   /* Beispielzyklus — Ausgangszustand der Seite und Fallback eines Projekts
      ohne cycle-Abschnitt. */
+  /* Vorgabedauern je Phase. Die Liste steht bei MAIN_PHASES — hier nur die
+     Zahlen, damit eine neue Phase nicht an zwei Orten gepflegt werden muss
+     und ohne Eintrag nicht als undefined durchfällt. */
+  var DEFAULT_DUR = { dosieren: 8, schuss: 4, halten: 15, oeffnen: 5, entnahme: 6, spruehen: 8, schliessen: 4, neben: 2 };
+
   function defaultState() {
+    var durs = {};
+    MAIN_PHASES.forEach(function (p) { durs[p.id] = DEFAULT_DUR[p.id] != null ? DEFAULT_DUR[p.id] : 0; });
     return {
-      durs: { dosieren: 8, schuss: 4, halten: 15, oeffnen: 5, entnahme: 6, spruehen: 8, schliessen: 4, neben: 2 },
+      durs: durs,
       schieber: [{ name: 'Schieber 1', pullLag: 1, pullDur: 3, pushLag: -3, pushDur: 3 }],
       sections: {
         handling: [{ label: 'Ablage & Kühlstrecke', anchor: 'spruehen', lag: 0, dur: 6 }],
@@ -107,6 +114,10 @@
     Tplaten: 55,       // Aufspannplatten der Maschine °C (40–60)
     dTsurf: 30,        // Gravur vor dem Gießen = Formtemperatur + 30 K (200–250 bei 180–220)
     Tsurfmax: 480,     // maximale Gravurtemperatur (Kontakt) °C (470–520)
+    /* (12.13/12.14) rechnet mit der LUFT ZWISCHEN den geöffneten Hälften.
+       Verwendet wurde bisher B·H·L — das ganze Formvolumen, also ein
+       Stahlblock. Maßgeblich ist die Formfläche mal dem Öffnungsspalt. */
+    openGap: 0.30,     // Öffnungsspalt zwischen den Formhälften m
     alphaKonStr: 9.7,  // freie Konvektion 7 + Strahlung 2,7 W/(m²·K)
     alphaK: 100,       // Kontakt Form → Aufspannplatte W/(m²·K)
     alphaBl: 40,       // Ausblasen W/(m²·K) (10–20 m/s Luft)
@@ -134,7 +145,7 @@
        die      Formabmessungen B, H, L mm — null = aus dem Säulenabstand der
                 Maschine geschätzt (B = H = 0,8·Säulenabstand, L = 0,5·B) */
   function heatDefaults() {
-    return { Teject: 300, dTspray: HEAT.dTspray, die: { B: null, H: null, L: null } };
+    return { Teject: 300, dTspray: HEAT.dTspray, blowFrac: 50, die: { B: null, H: null, L: null } };
   }
 
   function sanitizeHeat(src) {
@@ -144,8 +155,11 @@
     var pos = function (x) { x = Number(x); return isFinite(x) && x > 0 ? x : null; };
     var die = src.die && typeof src.die === 'object' ? src.die : {};
     var dT = Number(src.dTspray);
+    var bfRaw = src.blowFrac;
+    var bf = (bfRaw === null || bfRaw === undefined || bfRaw === '') ? NaN : Number(bfRaw);
     return { Teject: num(src.Teject, d.Teject),
       dTspray: isFinite(dT) && dT >= 0 ? dT : d.dTspray,
+      blowFrac: isFinite(bf) && bf >= 0 && bf <= 100 ? bf : d.blowFrac,
       die: { B: pos(die.B), H: pos(die.H), L: pos(die.L) } };
   }
 
@@ -190,13 +204,19 @@
        Qkon  freie Konvektion + Strahlung der Außenflächen Afa = 2·L·(B+H)
        Qpl   Wärmeleitung in beide Aufspannplatten, Ak = B·H je Seite
        Qluft erwärmte Luft zwischen den geöffneten Hälften, Vluft = B·H·L
-       Qbl   Ausblasen der Gravur während der Blasphase
+       Qbl   Ausblasen der Gravur während der Blasphase — tauBl ist die
+             DAUER DES AUSBLASENS, nicht die ganze Phase „Sprühen &
+             Ausblasen": das Sprühen rechnet Qspr getrennt ab, sonst zählt
+             dieselbe Zeit zweimal
        Qspr  Formtrennstoff — Masse nach (12.21) aus Gravurfläche und der
              Abkühlung der besprühten Formhaut, Wärme nach (12.22)
      o: { tz s, tauBl s, Tdie, Teject °C, dTspray K, Acav m², B, H, L m } */
   function heatLosses(o) {
     var tfa = HEAT.Tair + 0.6 * (o.Tdie - 20);                        // (12.3)
-    var Afa = 2 * o.L * (o.B + o.H), Ak = o.B * o.H, Vluft = o.B * o.H * o.L;
+    var Afa = 2 * o.L * (o.B + o.H), Ak = o.B * o.H;
+    /* Luft im Öffnungsspalt, nicht das Formvolumen: der Spalt ist höchstens
+       so tief wie die Form selbst. */
+    var Vluft = o.B * o.H * Math.min(HEAT.openGap, o.L);
     var Tsurf0 = o.Tdie + HEAT.dTsurf;
     var Qkon = HEAT.alphaKonStr * Afa * o.tz * (tfa - HEAT.Tair) / 1000;                    // (12.7 + 12.9)
     var Qpl = HEAT.alphaK * o.tz * 2 * Ak * (tfa - HEAT.Tplaten) / 1000;                   // (12.10)

@@ -124,7 +124,8 @@
           name: file.name,
           tris,
           color: COLORS[colorIdx++ % COLORS.length],
-          volume: meshVolume(tris),
+          volume: Math.abs(meshVolume(tris)),
+          volumeSigned: meshVolume(tris),
           area: meshArea(tris),
           role: file.role || '',
           proj: {},
@@ -133,7 +134,18 @@
         errors.push(file.name + ': ' + e.message);
       }
     }
-    statusEl.textContent = errors.length ? 'Nicht lesbar — ' + errors.join(' · ') : '';
+    /* Ein nicht-positives signiertes Volumen heißt: die Dreiecke zeigen nach
+       innen oder das Netz ist inkonsistent gewickelt. Der Betrag lieferte in
+       beiden Fällen eine plausible Zahl — und damit eine plausible, falsche
+       Masse. Das gehört gesagt. */
+    const gewendet = models.filter(m => !(m.volumeSigned > 0)).map(m => m.name);
+    statusEl.textContent = [
+      errors.length ? 'Nicht lesbar — ' + errors.join(' · ') : '',
+      gewendet.length ? 'Achtung: ' + gewendet.join(', ')
+        + (gewendet.length === 1 ? ' hat' : ' haben')
+        + ' kein positives Volumen — die Dreiecke zeigen nach innen oder das Netz ist '
+        + 'inkonsistent gewickelt. Die Massen daraus sind nicht belastbar.' : ''
+    ].filter(Boolean).join(' · ');
     invalidateUnion();
     update();
   }
@@ -326,6 +338,20 @@
      Rechnung in stl-logic.js. */
   /* Rohwerte der Schieberangabe — sie gehören mit in den gespeicherten
      Abschnitt, sonst lässt sich die Einstellung nicht wiederherstellen. */
+  /* `|| 1.3` bzw. `|| 600` machten aus einer getippten 0 still den
+     Standardwert — die Rechnung lief mit einer Zahl weiter, die niemand
+     eingegeben hatte. Eine unbrauchbare Eingabe liefert jetzt NaN, und die
+     Seite sagt das. */
+  function numInput(id, min) {
+    const el = document.getElementById(id);
+    const x = parseFloat(el.value);
+    const ok = isFinite(x) && x >= min;
+    el.classList.toggle('bad', !ok);
+    return ok ? x : NaN;
+  }
+  function safetyInput() { return numInput('safety-input', 1); }
+  function ptargetInput() { return numInput('ptarget-input', 1); }
+
   function coreInputs() {
     return {
       areaS: Math.max(parseFloat(document.getElementById('core-area-input').value) || 0, 0),
@@ -386,9 +412,8 @@
     const coreAdd = getCoreAdd();
     const projA = cog ? cavityArea(cog.area) : 0;
     const totP = projA + coreAdd;
-    const S = Math.max(parseFloat(document.getElementById('safety-input').value) || 1.3, 1);
-    const pTarget = Math.max(parseFloat(document.getElementById('ptarget-input').value) || 600, 1);
-    const has = totP > 0 && cog && MACHINES.length > 0;
+    const S = safetyInput(), pTarget = ptargetInput();
+    const has = totP > 0 && cog && MACHINES.length > 0 && isFinite(S) && isFinite(pTarget);
     table.hidden = !has;
     empty.hidden = has;
     if (!has) { info.textContent = ''; return; }
@@ -435,8 +460,11 @@
     const cog = unionSilhouette();
     const totP = (cog ? cavityArea(cog.area) : 0) + getCoreAdd();
     if (!(totP > 0) || !cog) return;
-    const S = Math.max(parseFloat(document.getElementById('safety-input').value) || 1.3, 1);
-    const pTarget = Math.max(parseFloat(document.getElementById('ptarget-input').value) || 600, 1);
+    const S = safetyInput(), pTarget = ptargetInput();
+    if (!isFinite(S) || !isFinite(pTarget)) {
+      alert('Sicherheitsfaktor und Nachdruck müssen gültige Zahlen sein.');
+      return;
+    }
     const alloy = currentAlloy();
     const sums = LOGIC.roleSums(models, getDensity(), volumeFactor());
     const kg = (x) => Math.round(x * 1000) / 1000;

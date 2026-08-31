@@ -306,6 +306,7 @@
         <div class="zk-group"><h3>Eingaben</h3>
           <div class="zk-field"><label>Entformungstemperatur <span class="unit">°C</span></label><input type="number" step="5" data-h="Teject"></div>
           <div class="zk-field"><label title="Abfall der besprühten Formhaut (t_spr1 − t_spr2) nach Gl. (12.21) — hängt am Sprühregime; die Zahlenbeispiele der Quelle arbeiten mit rund 50 K.">Abkühlung Formhaut beim Sprühen <span class="unit">K</span></label><input type="number" step="5" min="0" data-h="dTspray"></div>
+          <div class="zk-field"><label title="Wie viel der Phase „Sprühen &amp; Ausblasen“ auf das Ausblasen entfällt. Q_Bl (12.15) rechnet nur mit dieser Zeit — das Sprühen steckt in Q_Spr, sonst zählt dieselbe Zeit zweimal.">Anteil Ausblasen an der Phase <span class="unit">%</span></label><input type="number" step="5" min="0" max="100" data-h="blowFrac"></div>
           <div class="zk-field"><label>Form B × H × L <span class="unit">mm</span></label>
             <span><input type="number" step="10" min="0" data-die="B" style="width:58px" placeholder="B"> <input type="number" step="10" min="0" data-die="H" style="width:58px" placeholder="H"> <input type="number" step="10" min="0" data-die="L" style="width:58px" placeholder="L"></span></div>
         </div>
@@ -366,6 +367,11 @@
     schliessen: { fill: P.catSlate, text: P.surface },
     neben:      { fill: P.mutedLight, text: P.dark }
   };
+  /* MAIN_STYLE ist eine zweite, handgepflegte Liste neben MAIN_PHASES. Eine
+     dort ergänzte Phase ließ die Seite abstürzen (MAIN_STYLE[id].fill auf
+     undefined). Jetzt gibt es einen Rückfall statt eines Absturzes. */
+  var STYLE_FALLBACK = { fill: P.mutedLight, text: P.dark };
+  function mainStyle(id) { return MAIN_STYLE[id] || STYLE_FALLBACK; }
   /* Balkenfarbe je Gruppe der Parallelzeilen. */
   var GROUP_STYLE = {
     kern:     { fill: P.catPurple, text: P.surface },
@@ -506,7 +512,7 @@
         if (!it || it.end <= w0 || it.start >= w1) return;
         var a = clip(it.start), b = clip(it.end);
         var x = X(a), w = Math.max(X(b) - x, 1.5);
-        var style = row.main ? MAIN_STYLE[it.id] : GROUP_STYLE[row.group];
+        var style = row.main ? mainStyle(it.id) : (GROUP_STYLE[row.group] || STYLE_FALLBACK);
         s += '<rect x="' + x.toFixed(1) + '" y="' + (y + BAR_Y) + '" width="' + w.toFixed(1) + '" height="' + BAR_H + '" rx="3" fill="' + style.fill + '"/>';
         var label = row.main
           ? escapeHtml(it.label) + ' · ' + fmt(it.dur) + ' s'
@@ -552,7 +558,7 @@
   function renderMainGrid() {
     document.getElementById('main-grid').innerHTML = LOGIC.MAIN_PHASES.map(function (p, i) {
       return '<label class="main-field">' +
-        '<span><span class="num">' + (i + 1) + '.</span><span class="track-dot" style="background:' + MAIN_STYLE[p.id].fill + '"></span>' + p.label + '</span>' +
+        '<span><span class="num">' + (i + 1) + '.</span><span class="track-dot" style="background:' + mainStyle(p.id).fill + '"></span>' + p.label + '</span>' +
         '<span class="inp"><input type="number" data-id="' + p.id + '" step="0.5" min="0" value="' + st.durs[p.id] + '" aria-label="Dauer ' + p.label + ' in Sekunden"> s</span>' +
       '</label>';
     }).join('');
@@ -673,7 +679,13 @@
     src.Tdie = D.Tdie != null ? D.sources.Tdie : 'kein Projektwert — Standard';
     var Acav;
     if (D.Acav != null) { Acav = D.Acav; src.Acav = D.sources.Acav; }
-    else if (D.area != null) { Acav = Math.round(2.5 * D.area * 100) / 100; src.Acav = '≈ 2,5 × Sprengfläche (' + D.sources.area + ')'; }
+    else if (D.area != null) {
+      /* Nicht auf zwei Nachkommastellen runden: unter rund 0,002 m²
+         Sprengfläche ergab das 0 m² Gravurfläche — und damit Q_Bl und Q_Spr
+         null, ohne einen Hinweis. */
+      Acav = 2.5 * D.area;
+      src.Acav = '≈ 2,5 × Sprengfläche (' + D.sources.area + ')';
+    }
     else { Acav = 0.6; src.Acav = 'kein Projektwert — Standard'; }
     var est = LOGIC.dieFromMachine(D.machinePreset ? D.machinePreset.fields : null);
     src.die = D.machinePreset ? 'geschätzt aus Säulenabstand ' + D.machinePreset.name : 'kein Maschinen-Preset — Standardform';
@@ -681,7 +693,12 @@
     return {
       v: { mdose: mdose, Tcast: Tcast, alloy: alloyOk ? alloy : null, Tdie: Tdie, Teject: h.Teject,
         dTspray: h.dTspray, Acav: Acav, die: die,
-        tz: layout.total, tauBl: isFinite(st.durs.spruehen) && st.durs.spruehen > 0 ? Number(st.durs.spruehen) : 0 },
+        tz: layout.total,
+        /* Nur der Ausblas-Anteil der Phase: das Sprühen rechnet Q_Spr
+           getrennt ab, die ganze Phase hier einzusetzen zählte dieselbe
+           Zeit zweimal. */
+        tauBl: isFinite(st.durs.spruehen) && st.durs.spruehen > 0
+          ? Number(st.durs.spruehen) * (h.blowFrac / 100) : 0 },
       est: est, src: src, alloyName: alloyOk ? D.alloy.name : LOGIC.ALLOY_FALLBACK.name
     };
   }
@@ -737,7 +754,7 @@
     document.getElementById('h-mdose').textContent = fmt(v.mdose, 1);
     document.getElementById('h-Tdie').textContent = fmt(v.Tdie, 0);
     document.getElementById('h-Acav').textContent = fmt(v.Acav, 2);
-    document.getElementById('h-tz').textContent = fmt(v.tz) + ' · ' + fmt(v.tauBl);
+    document.getElementById('h-tz').textContent = fmt(v.tz) + ' · ' + fmt(v.tauBl) + ' (Ausblasen)';
     document.getElementById('h-sources').innerHTML =
       'Legierung: ' + inp.src.alloy + ' · Gießtemperatur: ' + inp.src.Tcast + ' · Schussgewicht: ' + inp.src.mdose +
       ' · Formtemperatur: ' + inp.src.Tdie + ' · Gravurfläche: ' + inp.src.Acav + ' · Form: ' + inp.src.die +
