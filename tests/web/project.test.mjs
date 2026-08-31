@@ -149,7 +149,10 @@ test('derived: Massen aus der Auslegung, Zykluszeit aus der Zyklusanalyse', () =
 test('zyklus: sanitizeState repariert Lücken und erzwingt Zahlen', () => {
   const st = Z.sanitizeState({ durs: { schuss: '5', halten: -1 }, schieber: [{ name: 'S', pullDur: 'x' }, null], sections: { spray: [{ label: 'A', anchor: 'halten', lag: 0, dur: 2 }] } });
   assert.equal(st.durs.schuss, 5);
-  assert.equal(st.durs.halten, 15, 'negativ → Standard');
+  /* Vorhanden-aber-ungültig → 0, genau wie im laufenden Betrieb (cleanDur).
+     Der Default galt hier früher auch für negative Werte — und weil live
+     mit 0 gerechnet wurde, sprang die Zykluszeit beim Neuladen (H-28). */
+  assert.equal(st.durs.halten, 0, 'negativ → 0, wie live gerechnet wird');
   assert.equal(st.durs.dosieren, 8, 'fehlend → Standard');
   assert.equal(st.schieber.length, 1);
   assert.equal(st.schieber[0].pullDur, 0);

@@ -324,10 +324,17 @@
 
   /* Seitenschieber-Zuschlag A_S·tan(α) in mm² — Winkel auf [0, 89°] begrenzt,
      Rechnung in stl-logic.js. */
+  /* Rohwerte der Schieberangabe — sie gehören mit in den gespeicherten
+     Abschnitt, sonst lässt sich die Einstellung nicht wiederherstellen. */
+  function coreInputs() {
+    return {
+      areaS: Math.max(parseFloat(document.getElementById('core-area-input').value) || 0, 0),
+      deg: Math.min(Math.max(parseFloat(document.getElementById('core-angle-input').value) || 0, 0), 89)
+    };
+  }
   function getCoreAdd() {
-    const areaS = Math.max(parseFloat(document.getElementById('core-area-input').value) || 0, 0);
-    const deg = Math.min(Math.max(parseFloat(document.getElementById('core-angle-input').value) || 0, 0), 89);
-    return LOGIC.sideCoreArea(areaS, deg);
+    const c = coreInputs();
+    return LOGIC.sideCoreArea(c.areaS, c.deg);
   }
 
   function renderTable() {
@@ -447,16 +454,17 @@
     }, mc.fields, alloy ? alloy.fields : null);
     /* Geometrie-Abschnitt des Projekts: was analysiert wurde, mit Ergebnis —
        die Netze selbst bleiben in den Dateien (zu groß für den Speicher). */
+    if (!window.__PROJECT__.current()) { alert('Kein Projekt aktiv — bitte zuerst anmelden.'); return; }
     window.__PROJECT__.setSection('geometry', {
       alloy: alloy ? alloy.id : null, density: getDensity(), toolScale: onToolScale(),
-      shrink: getShrink(), shrinkFromAlloy: shrinkLinked, safety: S, psel: pTarget, coreAdd: getCoreAdd(),
+      shrink: getShrink(), shrinkFromAlloy: shrinkLinked, safety: S, psel: pTarget,
+      coreAdd: getCoreAdd(), core: coreInputs(),
       machine: mc.id, areaTotal: totP, cog: { u: cog.cu, v: cog.cv },
       files: models.map(m => ({ name: m.name, role: m.role, volume: partVolume(m.volume), area: cavityArea(m.area),
         proj: { X: cavityArea(getProjection(m, 'X').area), Y: cavityArea(getProjection(m, 'Y').area),
           Z: cavityArea(getProjection(m, 'Z').area) } })),
       analysedAt: new Date().toISOString()
     });
-    if (!window.__PROJECT__.current()) { alert('Kein Projekt aktiv — bitte zuerst anmelden.'); return; }
     window.__PROJECT__.mergeDesign(values, mc.id, alloy ? alloy.id : null);
     window.location.href = '/tools/auslegung/';
   }
@@ -609,8 +617,44 @@
     if (files.length) addFiles(files);
   }
 
+  /* ── Gespeicherten Stand zurücklesen ─────────────────────────
+     Die Seite schrieb ihren geometry-Abschnitt, las ihn aber nie zurück:
+     jeder Besuch startete mit den Beispieldateien und den Standardwerten,
+     und „Ins Dashboard übernehmen" überschrieb damit eine vorhandene,
+     mühsam eingestellte Massenbilanz. Die Netze selbst stehen nicht im
+     Abschnitt (zu groß) — die Einstellungen und die Herkunft schon. */
+  function restoreGeometry() {
+    const g = window.__PROJECT__ && window.__PROJECT__.getSection('geometry');
+    if (!g) return;
+    const setNum = (id, v) => { if (isFinite(v)) document.getElementById(id).value = v; };
+    if (g.alloy) {
+      const sel = document.getElementById('alloy-select');
+      if ([...sel.options].some(o => o.value === g.alloy)) sel.value = g.alloy;
+    }
+    if (isFinite(g.shrink)) {
+      document.getElementById('shrink-input').value = g.shrink;
+      shrinkLinked = !!g.shrinkFromAlloy;
+    }
+    if (typeof g.toolScale === 'boolean') document.getElementById('shrink-toggle').checked = g.toolScale;
+    setNum('safety-input', g.safety);
+    setNum('ptarget-input', g.psel);
+    if (g.core && isFinite(g.core.areaS)) setNum('core-area-input', g.core.areaS);
+    if (g.core && isFinite(g.core.deg)) setNum('core-angle-input', g.core.deg);
+
+    const note = document.getElementById('restored-note');
+    if (!note) return;
+    const when = g.analysedAt ? new Date(g.analysedAt) : null;
+    const files = Array.isArray(g.files) ? g.files.map(f => f.name).filter(Boolean) : [];
+    note.innerHTML = 'Einstellungen aus der letzten Analyse dieses Projekts übernommen'
+      + (when && !isNaN(when) ? ' (' + when.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) + ')' : '')
+      + (files.length ? ' — damals geladen: ' + files.map(escapeHtml).join(', ') + '. Die Netze müssen erneut geladen werden.' : '.');
+    note.classList.remove('hidden');
+  }
+
+
   fillAlloySelect();
   setShrinkFromAlloy();
+  restoreGeometry();
   renderAlloyInfo();
   update();
   loadDefaults();

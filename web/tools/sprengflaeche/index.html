@@ -222,6 +222,7 @@
     .machine-head label.check { cursor: pointer; }
     .machine-head input.linked { border-color: var(--primary); background: rgba(0,140,130,.06); }
     .machine-head input#shrink-input { width: 76px; }
+    .hidden { display: none !important; }
     .machine-head input:focus, .machine-head select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
     .machine-info {
       padding: 0.55rem 1.2rem;
@@ -308,6 +309,8 @@
     <span class="stl-hint">100 % clientseitig — kein Upload zu einem Server.</span>
   </div>
   <div class="stl-status" id="status"></div>
+  <!-- Einstellungen aus dem geometry-Abschnitt des Projekts zurückgelesen. -->
+  <div class="stl-status hidden" id="restored-note" style="border-left:3px solid var(--primary);"></div>
 
   <div class="stl-note"><strong>Konvention und Schwindung:</strong> Der Ursprung des
     STL-Koordinatensystems (<strong>0</strong>) gilt als Werkzeugmitte (Mitte des Säulenfelds) — die

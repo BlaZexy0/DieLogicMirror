@@ -70,8 +70,15 @@
     if (!src || typeof src !== 'object') return d;
     var out = { durs: {}, schieber: [], sections: {}, heat: sanitizeHeat(src.heat) };
     MAIN_PHASES.forEach(function (p) {
-      var x = src.durs ? Number(src.durs[p.id]) : NaN;
-      out.durs[p.id] = isFinite(x) && x >= 0 ? x : d.durs[p.id];
+      var raw = src.durs ? src.durs[p.id] : undefined;
+      var x = Number(raw);
+      /* Fehlender Schlüssel → Default (Lücke füllen). Vorhandener, aber
+         ungültiger Wert → 0, genau wie im laufenden Betrieb (cleanDur):
+         sonst zeigt dieselbe Eingabe vor und nach dem Neuladen zwei
+         verschiedene Zykluszeiten. */
+      out.durs[p.id] = raw === undefined || raw === null || raw === ''
+        ? d.durs[p.id]
+        : (isFinite(x) && x >= 0 ? x : 0);
     });
     var num = function (x, def) { x = Number(x); return isFinite(x) ? x : def; };
     (Array.isArray(src.schieber) ? src.schieber : d.schieber).slice(0, 50).forEach(function (s, i) {
@@ -157,9 +164,18 @@
        Qdie    = Qlat + Qsemi + Qcool — das, was die Form aufnimmt (12.2)
      o: { mdose kg, Tcast, Tliq, Tsol, Teject °C, hf kJ/kg, cp20, cpS, cpL J/(kg·K) }.
      null bei unbrauchbaren Eingaben. */
+  /* Warum die Entformungstemperatur eine Domäne braucht: Q_cool ist die
+     Abkühlung von Solidus auf T_e. Liegt T_e ÜBER Solidus, wird der Term
+     negativ — das Gussstück würde der Form Wärme entziehen, die es gar
+     nicht abgegeben hat. Gemessen mit der Beispiellegierung (Solidus
+     521 °C): T_e = 650 °C → Q_cool −2485 kJ, T_e = 900 °C → P_T −7,75 kW.
+     Entformt wird ein festes Teil, also gilt T_Umgebung < T_e < Solidus. */
+  function ejectRange(a) { return { min: HEAT.Tair, max: a.Tsol }; }
+
   function heatInput(o) {
     var ok = ['mdose', 'Tcast', 'Tliq', 'Tsol', 'Teject', 'hf', 'cp20', 'cpS', 'cpL'].every(function (k) { return isFinite(o[k]); });
     if (!ok || o.mdose <= 0 || o.Tliq <= o.Tsol || o.Tsol <= 40) return null;
+    if (!(o.Teject > HEAT.Tair && o.Teject < o.Tsol)) return null;
     var c = meanHeatCapacities(o, o.Teject);
     var Qsuper = o.mdose * o.cpL * Math.max(o.Tcast - o.Tliq, 0) / 1000;
     var Qlat = o.mdose * o.hf;
@@ -239,6 +255,7 @@
   }
 
   function cleanDur(x) { return isFinite(x) && x > 0 ? Number(x) : 0; }
+  function badDur(x) { return x != null && x !== '' && !(isFinite(Number(x)) && Number(x) >= 0); }
 
   /* Zeitplan auflösen.
      durs: { Phasen-id: Dauer [s] } für den Hauptzyklus.
@@ -253,7 +270,13 @@
     var items = [], anchors = { start: 0 }, errors = [];
     var t = 0;
     MAIN_PHASES.forEach(function (p) {
-      var d = cleanDur(durs ? durs[p.id] : 0);
+      var raw = durs ? durs[p.id] : 0;
+      /* Eine negative Dauer wurde hier still zu 0 — während sanitizeState
+         beim nächsten Laden den DEFAULT einsetzte. Dieselbe Eingabe ergab
+         so zwei verschiedene Zykluszeiten (gemessen 48 s live gegen 52 s
+         nach dem Neuladen), und die Kosten sprangen mit. */
+      if (badDur(raw)) errors.push('Ungültige Dauer bei „' + p.label + '" — als 0 s gerechnet.');
+      var d = cleanDur(raw);
       anchors[p.id] = t;
       items.push({ id: p.id, label: p.label, track: p.track, start: t, end: t + d, dur: d, main: true });
       t += d;
@@ -286,7 +309,8 @@
     };
   }
 
-  var api = { TRACKS: TRACKS, MAIN_PHASES: MAIN_PHASES, SECTION_META: SECTION_META,
+  var api = {
+    ejectRange: ejectRange, TRACKS: TRACKS, MAIN_PHASES: MAIN_PHASES, SECTION_META: SECTION_META,
     defaultState: defaultState, sanitizeState: sanitizeState,
     extrasFromState: extrasFromState, layoutCycle: layoutCycle,
     HEAT: HEAT, ALLOY_FALLBACK: ALLOY_FALLBACK,

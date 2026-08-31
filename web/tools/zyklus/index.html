@@ -179,6 +179,8 @@
       font-family: var(--mono); font-size: 0.8rem; text-align: right; flex: none;
     }
     .zk-field input:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+    /* Abgewiesene Eingabe (z. B. negative Dauer) — der letzte gültige Wert bleibt. */
+    input.bad { border-color: var(--bad) !important; background: var(--bad-bg); }
     .zk-field input.linked { border-color: var(--primary); background: rgba(0,140,130,.06); }
     .zk-field .ro { font-family: var(--mono); font-size: 0.8rem; color: var(--text); white-space: nowrap; }
     .zk-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.6rem; margin-bottom: 0.9rem; }
@@ -752,7 +754,17 @@
     if (!r.input) {
       document.getElementById('h-kpis').innerHTML = '';
       document.getElementById('h-chart').innerHTML = '';
-      document.getElementById('h-errors').textContent = 'Wärmeeintrag nicht berechenbar — Schussgewicht > 0 und Liquidus > Solidus nötig.';
+      /* Der häufigste Grund ist die Entformungstemperatur: Q_cool ist die
+         Abkühlung von Solidus auf T_e — liegt T_e darüber, kippt der Term
+         das Vorzeichen und mit ihm die ganze Bilanz. */
+      var al = v.alloy || LOGIC.ALLOY_FALLBACK;
+      var rng = LOGIC.ejectRange(al);
+      document.getElementById('h-errors').textContent =
+        (isFinite(v.Teject) && !(v.Teject > rng.min && v.Teject < rng.max))
+          ? 'Entformungstemperatur ' + fmt(v.Teject, 0) + ' °C liegt außerhalb von '
+            + fmt(rng.min, 0) + '–' + fmt(rng.max, 0) + ' °C (Umgebung bis Solidus) — '
+            + 'entformt wird ein festes Teil.'
+          : 'Wärmeeintrag nicht berechenbar — Schussgewicht > 0 und Liquidus > Solidus nötig.';
       document.getElementById('k-pt').textContent = '—';
       return;
     }
@@ -782,7 +794,15 @@
   document.getElementById('main-grid').addEventListener('input', function (e) {
     var el = e.target.closest('input[data-id]');
     if (!el) return;
-    st.durs[el.dataset.id] = parseFloat(el.value) || 0;
+    /* Negative Dauern nicht übernehmen: sie ergaben live 0 (cleanDur) und
+       nach dem Neuladen den Default (sanitizeState) — dieselbe Eingabe,
+       zwei verschiedene Zykluszeiten, und die Kosten sprangen mit. Das Feld
+       wird markiert, der letzte gültige Wert bleibt stehen. */
+    var x = parseFloat(el.value);
+    var ok = el.value === '' || (isFinite(x) && x >= 0);
+    el.classList.toggle('bad', !ok);
+    if (!ok) return;
+    st.durs[el.dataset.id] = isFinite(x) ? x : 0;
     renderChart();
   });
 

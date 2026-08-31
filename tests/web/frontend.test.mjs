@@ -738,10 +738,15 @@ test('zyklus: unbekannter Bezugspunkt und ungültige Dauer → Fehler, endliche 
   const r = zyklus.layoutCycle(Object.assign({}, ZDURS, { halten: -5 }), [
     { label: 'X', track: 'handling', anchor: 'gibtsnicht', lag: 0, dur: 2 },
   ]);
-  assert.equal(r.errors.length, 1);
+  /* Zwei Meldungen: der unbekannte Bezugspunkt UND die negative Dauer.
+     Letztere wurde vorher still zu 0 — während sanitizeState beim nächsten
+     Laden den Default einsetzte. Dieselbe Eingabe ergab so zwei
+     verschiedene Zykluszeiten (H-28). */
+  assert.equal(r.errors.length, 2, r.errors.join(' | '));
+  assert.ok(r.errors.some(e => /Ungültige Dauer/.test(e)), r.errors.join(' | '));
   assert.equal(r.items.find(i => i.label === 'X').start, 0);
   const by = Object.fromEntries(r.items.map(i => [i.id, i]));
-  assert.equal(by.halten.dur, 0);      // ungültige Dauer zählt als 0
+  assert.equal(by.halten.dur, 0);      // ungültige Dauer zählt als 0 — und wird gemeldet
   assert.equal(by.oeffnen.start, 12);  // Kette rückt nach
   r.items.forEach(i => assert.ok(Number.isFinite(i.start) && Number.isFinite(i.end)));
 });
