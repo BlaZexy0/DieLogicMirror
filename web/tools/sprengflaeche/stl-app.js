@@ -274,7 +274,10 @@
      überschrieben wird (bauteilspezifisch). */
   let shrinkLinked = true;
   function alloyShrink() { const a = currentAlloy(); return a ? num(a.fields.shrink, 0) : 0; }
-  function getShrink() { return Math.max(parseFloat(document.getElementById('shrink-input').value) || 0, 0); }
+  /* Ohne eigene Klemme: pruefeEingaben() lässt nur zu, was in der Domäne
+     liegt (0…5 %). Vorher stand hier nur die Untergrenze — 50 % Schwindmaß
+     ergaben klaglos den Volumenfaktor 3,375. */
+  function getShrink() { return parseFloat(document.getElementById('shrink-input').value); }
   function setShrinkFromAlloy() {
     document.getElementById('shrink-input').value = alloyShrink();
     shrinkLinked = true;
@@ -332,7 +335,24 @@
 
   /* Legierung/Schwindmaß wirken auf Massen (Tabelle) und Flächen (Tabelle,
      Maschinentabelle, Übernahme). */
-  function renderAll() { renderTable(); renderMachines(); renderAlloyInfo(); }
+  let letzterGueltigerStand = false;
+  /* Hüllt ein Neuzeichnen in die Prüfung — dieselbe Sperre, kleinerer Umfang. */
+  function pruefeGefolgtVon(fn) {
+    return () => {
+      const gueltig = pruefeEingaben();
+      if (!gueltig && letzterGueltigerStand) return;
+      letzterGueltigerStand = gueltig;
+      fn();
+    };
+  }
+  function renderAll() {
+    /* Erst prüfen, dann rechnen. Beim Tippen ist ein Wert kurzzeitig
+       ungültig — dann bleibt der letzte gültige Stand abgeblendet stehen. */
+    const gueltig = pruefeEingaben();
+    if (!gueltig && letzterGueltigerStand) return;
+    letzterGueltigerStand = gueltig;
+    renderTable(); renderMachines(); renderAlloyInfo();
+  }
 
   /* Seitenschieber-Zuschlag A_S·tan(α) in mm² — Winkel auf [0, 89°] begrenzt,
      Rechnung in stl-logic.js. */
@@ -342,20 +362,58 @@
      Standardwert — die Rechnung lief mit einer Zahl weiter, die niemand
      eingegeben hatte. Eine unbrauchbare Eingabe liefert jetzt NaN, und die
      Seite sagt das. */
-  function numInput(id, min) {
-    const el = document.getElementById(id);
-    const x = parseFloat(el.value);
-    const ok = isFinite(x) && x >= min;
-    el.classList.toggle('bad', !ok);
-    return ok ? x : NaN;
+  /* Die Grenzen stehen in shared/felddomaene.js, nicht im Markup und nicht
+     verstreut im Code. Vorher gab es drei verschiedene Arten, damit umzugehen:
+     numInput lieferte NaN, coreInputs klemmte mit Math.min/max, und getShrink
+     kannte nur die Untergrenze — das Schwindmaß von 50 % (HTML sagte max=5)
+     ging als Volumenfaktor 3,375 durch. */
+  const DOM = window.__DOMAENE__;
+  const FELD_ID = {
+    shrink: 'shrink-input', ptarget: 'ptarget-input', safety: 'safety-input',
+    coreArea: 'core-area-input', coreAngle: 'core-angle-input'
+  };
+
+  function setzeGrenzen() {
+    DOM.attribute('sprengflaeche', k => FELD_ID[k]);
   }
-  function safetyInput() { return numInput('safety-input', 1); }
-  function ptargetInput() { return numInput('ptarget-input', 1); }
+
+  /* Rohwerte der fünf Zahlenfelder. */
+  function domaeneWerte() {
+    const v = {};
+    for (const k in FELD_ID) {
+      const el = document.getElementById(FELD_ID[k]);
+      if (el) v[k] = parseFloat(el.value);
+    }
+    return v;
+  }
+
+  /* Prüft, markiert und meldet. Rückgabe: true = es darf gerechnet werden. */
+  function pruefeEingaben() {
+    const v = domaeneWerte();
+    const urteil = DOM.pruefe('sprengflaeche', v);
+    const schlecht = new Set(urteil.bad);
+    for (const k in FELD_ID) {
+      const el = document.getElementById(FELD_ID[k]);
+      if (el) el.classList.toggle('bad', schlecht.has(k));
+    }
+    const box = document.getElementById('input-warn');
+    if (box) {
+      box.textContent = urteil.ok ? '' : 'Unzulässige Eingaben: ' + urteil.msgs.join(' · ')
+        + ' — es wird erst wieder gerechnet, wenn sie im zulässigen Bereich liegen.';
+      box.classList.toggle('hidden', urteil.ok);
+    }
+    document.body.classList.toggle('inputs-invalid', !urteil.ok);
+    return urteil.ok;
+  }
+
+  function numInput(id) { return parseFloat(document.getElementById(id).value); }
+  function safetyInput() { return numInput('safety-input'); }
+  function ptargetInput() { return numInput('ptarget-input'); }
 
   function coreInputs() {
     return {
-      areaS: Math.max(parseFloat(document.getElementById('core-area-input').value) || 0, 0),
-      deg: Math.min(Math.max(parseFloat(document.getElementById('core-angle-input').value) || 0, 0), 89)
+      areaS: numInput('core-area-input'),
+      deg: numInput('core-angle-input')
     };
   }
   function getCoreAdd() {
@@ -552,9 +610,15 @@
       : '';
     document.getElementById('canvas-empty').hidden = models.length > 0;
     copyBtn.disabled = models.length === 0;
-    renderTable();
-    renderMachines();
-    renderAlloyInfo();
+    /* Auch hier über die Sperre: update() lief bisher an ihr vorbei, und
+       genau dieser Weg wird beim Laden eines Projekts gegangen. */
+    const gueltig = pruefeEingaben();
+    if (gueltig || !letzterGueltigerStand) {
+      letzterGueltigerStand = gueltig;
+      renderTable();
+      renderMachines();
+      renderAlloyInfo();
+    }
     draw();
   }
 
@@ -587,7 +651,7 @@
     if (!sel) return;
     const m = models[Number(sel.dataset.idx)];
     if (m) m.role = sel.value;
-    renderMachines();
+    pruefeGefolgtVon(renderMachines)();
   });
 
   document.getElementById('machine-body').addEventListener('click', (e) => {
@@ -610,10 +674,10 @@
   });
 
   copyBtn.addEventListener('click', copyProjectionImage);
-  document.getElementById('safety-input').addEventListener('input', renderMachines);
-  document.getElementById('ptarget-input').addEventListener('input', renderMachines);
-  document.getElementById('core-area-input').addEventListener('input', renderMachines);
-  document.getElementById('core-angle-input').addEventListener('input', renderMachines);
+  /* Über pruefeGefolgtVon(): sonst umgingen genau die vier Zahlenfelder die
+     Prüfung, für die sie da ist. */
+  for (const id of ['safety-input', 'ptarget-input', 'core-area-input', 'core-angle-input'])
+    document.getElementById(id).addEventListener('input', pruefeGefolgtVon(renderMachines));
   document.getElementById('alloy-select').addEventListener('change', () => {
     if (shrinkLinked) setShrinkFromAlloy();
     renderAll();
@@ -680,6 +744,7 @@
   }
 
 
+  setzeGrenzen();
   fillAlloySelect();
   setShrinkFromAlloy();
   restoreGeometry();

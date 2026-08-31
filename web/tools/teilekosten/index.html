@@ -94,6 +94,11 @@
     .hidden { display: none !important; }
     /* Eingabe außerhalb der eigenen min/max-Grenzen des Feldes. */
     .tk-field input.bad { border-color: var(--bad); background: var(--bad-bg); }
+
+  /* Eingaben außerhalb der Domäne (shared/felddomaene.js): es wird nicht
+     weitergerechnet, der letzte gültige Stand bleibt abgeblendet stehen.
+     Der Grund steht in #input-warn. */
+  body.inputs-invalid .tk-viz { opacity: .45; filter: saturate(.35); transition: opacity .15s ease; }
   </style>
 </head>
 <body>
@@ -117,34 +122,34 @@
     <div class="tk-card">
       <h2>Prozess</h2>
       <div class="body">
-        <div class="tk-field"><label title="Alle Kavitäten zusammen — dieselbe Bilanz wie im Dashboard: Schussgewicht = Bauteil + Anguss + Überlauf + Pressrest.">Bauteilgewicht je Schuss <span class="unit">kg</span></label><input id="i-mpart" type="number" step="0.1" min="0"></div>
-        <div class="tk-field"><label title="Der ganze Schuss: Bauteil(e) + Anguss + Überlauf + Pressrest.">Schussgewicht <span class="unit">kg</span></label><input id="i-mdose" type="number" step="0.1" min="0"></div>
-        <div class="tk-field"><label>Zykluszeit <span class="unit">s</span></label><input id="i-tz" type="number" step="0.5" min="1"></div>
-        <div class="tk-field"><label>Kavitäten <span class="unit">−</span></label><input id="i-kav" type="number" step="1" min="1"></div>
-        <div class="tk-field"><label>Ausschuss <span class="unit">%</span></label><input id="i-a" type="number" step="0.5" min="0" max="99"></div>
-        <div class="tk-field"><label>OEE / Verfügbarkeit <span class="unit">%</span></label><input id="i-oee" type="number" step="1" min="1" max="100"></div>
+        <div class="tk-field"><label title="Alle Kavitäten zusammen — dieselbe Bilanz wie im Dashboard: Schussgewicht = Bauteil + Anguss + Überlauf + Pressrest.">Bauteilgewicht je Schuss <span class="unit">kg</span></label><input id="i-mpart" type="number" step="0.1"></div>
+        <div class="tk-field"><label title="Der ganze Schuss: Bauteil(e) + Anguss + Überlauf + Pressrest.">Schussgewicht <span class="unit">kg</span></label><input id="i-mdose" type="number" step="0.1"></div>
+        <div class="tk-field"><label>Zykluszeit <span class="unit">s</span></label><input id="i-tz" type="number" step="0.5"></div>
+        <div class="tk-field"><label>Kavitäten <span class="unit">−</span></label><input id="i-kav" type="number" step="1"></div>
+        <div class="tk-field"><label>Ausschuss <span class="unit">%</span></label><input id="i-a" type="number" step="0.5"></div>
+        <div class="tk-field"><label>OEE / Verfügbarkeit <span class="unit">%</span></label><input id="i-oee" type="number" step="1"></div>
       </div>
     </div>
 
     <div class="tk-card">
       <h2>Material &amp; Energie</h2>
       <div class="body">
-        <div class="tk-field"><label>Legierungspreis <span class="unit">€/kg</span></label><input id="i-pAl" type="number" step="0.05" min="0"></div>
-        <div class="tk-field"><label>Umschmelzkosten Kreislauf <span class="unit">€/kg</span></label><input id="i-pRe" type="number" step="0.05" min="0"></div>
-        <div class="tk-field"><label>Schmelzverlust (Krätze) <span class="unit">%</span></label><input id="i-kr" type="number" step="0.5" min="0" max="20"></div>
-        <div class="tk-field"><label>Schmelz- &amp; Warmhalteenergie <span class="unit">kWh/kg</span></label><input id="i-eKg" type="number" step="0.05" min="0"></div>
-        <div class="tk-field"><label>Strompreis <span class="unit">€/kWh</span></label><input id="i-pE" type="number" step="0.01" min="0"></div>
+        <div class="tk-field"><label>Legierungspreis <span class="unit">€/kg</span></label><input id="i-pAl" type="number" step="0.05"></div>
+        <div class="tk-field"><label>Umschmelzkosten Kreislauf <span class="unit">€/kg</span></label><input id="i-pRe" type="number" step="0.05"></div>
+        <div class="tk-field"><label>Schmelzverlust (Krätze) <span class="unit">%</span></label><input id="i-kr" type="number" step="0.5"></div>
+        <div class="tk-field"><label>Schmelz- &amp; Warmhalteenergie <span class="unit">kWh/kg</span></label><input id="i-eKg" type="number" step="0.05"></div>
+        <div class="tk-field"><label>Strompreis <span class="unit">€/kWh</span></label><input id="i-pE" type="number" step="0.01"></div>
       </div>
     </div>
 
     <div class="tk-card">
       <h2>Maschine, Personal, Werkzeug</h2>
       <div class="body">
-        <div class="tk-field"><label>Maschinenstundensatz Zelle <span class="unit">€/h</span></label><input id="i-pM" type="number" step="5" min="0"></div>
-        <div class="tk-field"><label>Personal <span class="unit">€/h</span></label><input id="i-pP" type="number" step="1" min="0"></div>
-        <div class="tk-field"><label>Bediener je Zelle <span class="unit">−</span></label><input id="i-nP" type="number" step="0.1" min="0"></div>
-        <div class="tk-field"><label>Werkzeugkosten <span class="unit">€</span></label><input id="i-wz" type="number" step="5000" min="0"></div>
-        <div class="tk-field"><label>Standmenge <span class="unit">Schüsse</span></label><input id="i-st" type="number" step="5000" min="1"></div>
+        <div class="tk-field"><label>Maschinenstundensatz Zelle <span class="unit">€/h</span></label><input id="i-pM" type="number" step="5"></div>
+        <div class="tk-field"><label>Personal <span class="unit">€/h</span></label><input id="i-pP" type="number" step="1"></div>
+        <div class="tk-field"><label>Bediener je Zelle <span class="unit">−</span></label><input id="i-nP" type="number" step="0.1"></div>
+        <div class="tk-field"><label>Werkzeugkosten <span class="unit">€</span></label><input id="i-wz" type="number" step="5000"></div>
+        <div class="tk-field"><label>Standmenge <span class="unit">Schüsse</span></label><input id="i-st" type="number" step="5000"></div>
       </div>
     </div>
   </div>
@@ -201,7 +206,7 @@
         <tfoot id="lever-foot"></tfoot>
       </table>
       <div>
-        <div class="tk-field" style="margin-bottom:0.8rem;"><label>Eingesparte Masse je Bauteil <span class="unit">g</span></label><input id="i-dg" type="number" step="1" min="0" value="10"></div>
+        <div class="tk-field" style="margin-bottom:0.8rem;"><label>Eingesparte Masse je Bauteil <span class="unit">g</span></label><input id="i-dg" type="number" step="1" value="10"></div>
         <div class="lever-stat"><span>Ersparnis je Gutteil</span><b><span id="l-part">—</span> €</b></div>
         <div class="lever-stat"><span>je Monat</span><b><span id="l-month">—</span> €</b></div>
         <div class="lever-stat"><span>je Jahr</span><b><span id="l-year">—</span> €</b></div>
@@ -239,6 +244,7 @@
 <script src="/tools/zyklus/zyklus-logic.js"></script>
 <script src="/shared/examples/kosten.js"></script>
 <script src="/shared/orgpresets.js"></script>
+<script src="/shared/felddomaene.js"></script>
 <script src="teilekosten-logic.js"></script>
 <script>
 (function () {
@@ -325,32 +331,41 @@
      Bauteilgewicht von −12 kg lieferte −12,96 €/Teil, ein Schussgewicht von
      0 sogar plausible 30,86 €/Teil. Geklemmt wird NICHT: eine verbotene
      Eingabe wird benannt, nicht durch eine plausible ersetzt. */
+  /* Die Grenzen stehen in shared/felddomaene.js, nicht im Markup. Von dort
+     kommen auch die min/max-Attribute (setzeGrenzen) — die Prüfung kann also
+     nicht mehr von dem abweichen, was das Feld anbietet. */
+  var DOM = window.__DOMAENE__;
+
+  function setzeGrenzen() {
+    DOM.attribute('teilekosten', function (k) { return 'i-' + k; });
+  }
+
+  /* Liefert das Urteil. render() fragt es und rechnet bei Verletzung NICHT
+     weiter: vorher wurde der Rückgabewert verworfen und die Seite zeigte
+     Zahlen, die sie selbst als „nicht belastbar" bezeichnete — bei 150 %
+     Ausschuss NaN, bei 500 % OEE eine glatte falsche Zahl. */
   function checkInputs() {
-    var bad = [];
+    var werte = {};
     KEYS.concat(['dg']).forEach(function (k) {
       var el = document.getElementById('i-' + k);
-      if (!el) return;
-      var x = parseFloat(el.value);
-      var lo = el.min === '' ? -Infinity : parseFloat(el.min);
-      var hi = el.max === '' ? Infinity : parseFloat(el.max);
-      var ok = isFinite(x) && x >= lo && x <= hi;
-      el.classList.toggle('bad', !ok);
-      if (ok) return;
-      var lab = el.closest('.tk-field');
-      lab = lab && lab.querySelector('label');
-      var name = lab ? lab.textContent.replace(/\s+/g, ' ').trim() : k;
-      var range = isFinite(lo) && isFinite(hi) ? lo + '–' + hi
-        : isFinite(lo) ? '≥ ' + lo : isFinite(hi) ? '≤ ' + hi : 'Zahl';
-      bad.push(escapeHtml(name) + ' (' + range + ')');
+      if (el) werte[k] = parseFloat(el.value);
     });
+    var urteil = DOM.pruefe('teilekosten', werte);
+    var schlecht = {};
+    urteil.bad.forEach(function (k) { schlecht[k] = true; });
+    KEYS.concat(['dg']).forEach(function (k) {
+      var el = document.getElementById('i-' + k);
+      if (el) el.classList.toggle('bad', !!schlecht[k]);
+    });
+
     var box = document.getElementById('input-warn');
-    box.innerHTML = bad.length
-      ? '<strong>Unzulässige Eingaben:</strong> ' + bad.join(' · ')
-        + ' — die Zahlen unten beruhen darauf und sind nicht belastbar.'
-      : '';
-    box.classList.toggle('hidden', !bad.length);
-    return bad.length === 0;
+    box.innerHTML = urteil.ok ? ''
+      : '<strong>Unzulässige Eingaben:</strong> ' + urteil.msgs.map(escapeHtml).join(' · ')
+        + ' — es wird erst wieder gerechnet, wenn sie im zulässigen Bereich liegen.';
+    box.classList.toggle('hidden', urteil.ok);
+    return urteil.ok;
   }
+
   function put(id, html) { document.getElementById(id).innerHTML = html; }
   function putM(key, html) { document.querySelector('[data-m="' + key + '"]').innerHTML = html; }
 
@@ -419,9 +434,17 @@
     return s + '</svg>';
   }
 
+  var letzterGueltigerStand = false;
+
   function render() {
     persist();
-    checkInputs();
+    /* Erst prüfen, dann rechnen. Beim Tippen ist ein Wert kurzzeitig
+       ungültig — dann bleibt der letzte gültige Stand abgeblendet stehen,
+       statt durch NaN ersetzt zu werden. */
+    var gueltig = checkInputs();
+    document.body.classList.toggle('inputs-invalid', !gueltig);
+    if (!gueltig && letzterGueltigerStand) return;
+    letzterGueltigerStand = gueltig;
     var v = {};
     KEYS.forEach(function (k) { v[k] = val(k); });
     var r = LOGIC.computeCost(v);
@@ -490,6 +513,7 @@
     putM('eq-mlever', fmt(ml.total, 2) + ' €/kg = ' + fmt(ml.total * 0.1, 3) + ' ct/g');
   }
 
+  setzeGrenzen();
   render();
 })();
 </script>

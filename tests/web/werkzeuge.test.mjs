@@ -24,25 +24,52 @@ const zyklus = require(path.join(site, 'tools/zyklus/zyklus-logic.js'));
 
 /* ── H-26 ─────────────────────────────────────────────────────────────── */
 
-test('Kostenseite: jedes Eingabefeld wird gegen sein eigenes min/max geprüft', () => {
+test('Kostenseite: jedes Eingabefeld hat eine Grenze — und zwar in der Domäne', () => {
   const html = read('tools/teilekosten/index.html');
+  const dom = require(path.join(site, 'shared/felddomaene.js'));
 
-  /* Vorbedingung: die Grenzen stehen im Markup. */
-  const felder = [...html.matchAll(/id="i-(\w+)"([^>]*)/g)]
-    .map(m => ({ key: m[1], attrs: m[2] }))
-    .filter(f => /\bmin=|\bmax=/.test(f.attrs));
-  assert.ok(felder.length >= 15, 'Testaufbau: es sollten viele Felder Grenzen tragen, sind ' + felder.length);
+  /* Jedes Zahlenfeld der Seite muss in der Domäne stehen. Vorher standen die
+     Grenzen als min="…" im Markup — ein Hinweis an den Spinner, den getippte,
+     eingefügte oder geladene Werte umgehen. */
+  const felder = [...html.matchAll(/id="i-(\w+)"/g)].map(m => m[1]);
+  assert.ok(felder.length >= 15, 'Testaufbau: zu wenige Felder gefunden (' + felder.length + ')');
+  const bekannt = new Set(dom.FELDER.teilekosten.map(f => f.key));
+  for (const k of felder)
+    assert.ok(bekannt.has(k), `Feld „i-${k}" hat keine Grenze in shared/felddomaene.js`);
 
-  /* Und sie werden gelesen — vorher war val() nur parseFloat(…) || 0. */
+  /* Und im Markup steht keine mehr — sonst gäbe es wieder zwei Wahrheiten. */
+  assert.ok(!/id="i-\w+"[^>]*\b(min|max)=/.test(html),
+    'im Markup steht wieder eine Grenze von Hand — sie gehört in die Domäne');
+
+  /* Die Prüfung wird aufgerufen UND ihr Ergebnis abgefragt. Genau das fehlte:
+     checkInputs() lief, der Rückgabewert wurde verworfen, und die Seite zeigte
+     Zahlen, die sie selbst als „nicht belastbar" bezeichnete. */
   assert.match(html, /function checkInputs\(\)/, 'die Prüfung fehlt');
-  assert.match(html, /el\.min/, 'die min-Grenze des Feldes wird nicht gelesen');
-  assert.match(html, /el\.max/, 'die max-Grenze des Feldes wird nicht gelesen');
-  assert.match(html, /checkInputs\(\);/, 'die Prüfung wird nicht aufgerufen');
+  assert.match(html, /var gueltig = checkInputs\(\)/, 'das Urteil wird nicht abgefragt');
+  assert.match(html, /if \(!gueltig && letzterGueltigerStand\) return;/,
+    'bei ungültiger Eingabe wird trotzdem weitergerechnet');
   assert.match(html, /id="input-warn"/, 'es fehlt der Ort für die Meldung');
+});
 
-  /* Nicht geklemmt: eine verbotene Eingabe wird benannt, nicht ersetzt. */
-  assert.ok(!/Math\.max\(parseFloat\(document\.getElementById\('i-/.test(html),
-    'Eingaben dürfen nicht still auf den erlaubten Bereich geklemmt werden');
+test('Kostenseite: die Domäne fängt genau die Werte, die vorher durchkamen', () => {
+  const dom = require(path.join(site, 'shared/felddomaene.js'));
+  const basis = { mpart: 12, mdose: 18.2, tz: 60, kav: 1, a: 2, oee: 85, pAl: 2.6,
+    pRe: 1.2, kr: 5, eKg: 0.8, pE: 0.31, pM: 95, pP: 65, nP: 1, wz: 120000, st: 200000, dg: 10 };
+  assert.ok(dom.pruefe('teilekosten', basis).ok, 'die Vorgabewerte gelten als ungültig');
+
+  /* Links: was NaN lieferte. Rechts: was eine glatte, falsche Zahl lieferte —
+     der gefährlichere Fall, weil er unauffällig ist. */
+  for (const [k, x] of [['a', 150], ['oee', 0], ['kav', 0], ['tz', 0],
+    ['oee', 500], ['kr', 80]]) {
+    const u = dom.pruefe('teilekosten', Object.assign({}, basis, { [k]: x }));
+    assert.equal(u.ok, false, `${k} = ${x} kommt weiterhin durch`);
+    assert.ok(u.bad.includes(k), `${k} = ${x} wird nicht markiert`);
+  }
+
+  /* Die Paarregel, die der Rechenkern selbst als „bauartbedingt" beschreibt. */
+  const u = dom.pruefe('teilekosten', Object.assign({}, basis, { mpart: 20 }));
+  assert.equal(u.ok, false, 'ein Bauteil schwerer als der Schuss gilt als gültig');
+  assert.match(u.msgs.join(' '), /Materialausbeute wäre über 100/);
 });
 
 test('Kostenseite: verbotene Eingaben liefern weiterhin auffällige Zahlen', () => {

@@ -16,13 +16,13 @@ werden, obwohl sich der Zustand von vornherein ausschließen ließe.
 | CRITICAL | 12 | **0** |
 | HIGH | 42 | **4** |
 | Echte Fehler aus MEDIUM/LOW | ~40 | **0** |
-| Tests | 314 | **516** |
-| Testdateien | 33 | **50** |
+| Tests | 314 | **527** |
+| Testdateien | 33 | **51** |
 
 17 Commits, 6.473 eingefügte und 1.382 gelöschte Zeilen über 100 Dateien.
 CI durchgehend grün.
 
-**Test-Aufteilung heute:** 355 Web (`node --test`), 87 Backend (`pytest`),
+**Test-Aufteilung heute:** 366 Web (`node --test`), 87 Backend (`pytest`),
 74 `hpdcsim`. Jeder Fix hat eine Prüfung, die ohne ihn rot ist — das wurde
 für jeden einzelnen durch Zurücknehmen der Datei nachgewiesen.
 
@@ -298,12 +298,66 @@ eigenen Abschnitt. Sie ist ein **Abbild**, keine Quelle: die CI erzeugt sie neu
 und vergleicht — wer eine Grenze ändert und nicht regeneriert, bekommt einen
 roten Lauf.
 
-### Was noch offen ist
+### Dasselbe für Teilekosten und Sprengflächenanalyse
 
-Die 43 handgeschriebenen `min`/`max`-Attribute in den **anderen** Werkzeugen
-(Teilekosten, Zyklus, Sprengfläche, 3D-Studio) sind nicht angefasst. Die haben
-eigene Eingabemengen und eine eigene Tabelle. Das Muster steht jetzt, die
-Übertragung ist Arbeit für später.
+Die handgeschriebenen `min`/`max`-Attribute der übrigen Werkzeuge waren
+zunächst als „Arbeit für später" abgelegt. Beim Nachsehen stellte sich heraus,
+dass darin **derselbe Fehler** steckte, nicht nur Aufräumarbeit.
+
+```js
+// teilekosten/index.html — vorher
+function checkInputs() { … return bad.length === 0; }   // liefert ein Urteil
+function render() {
+  checkInputs();                        // ← Rückgabewert verworfen
+  var r = LOGIC.computeCost(v);         // und dann trotzdem gerechnet
+```
+
+Die Seite sagte es sogar selbst — *„die Zahlen unten beruhen darauf und sind
+nicht belastbar"* — und zeigte sie. Gemessen:
+
+```
+Stückkosten, wenn der Wert die HTML-Grenze verlässt
+  Ausschuss 2 %   (im Bereich)      →  49,919 €
+  Ausschuss 150 % (max=99)          →  NaN
+  OEE 0 %         (min=1)           →  NaN
+  Kavitäten 0     (min=1)           →  NaN
+  Zykluszeit 0 s  (min=1)           →  NaN
+  OEE 500 %       (max=100)         →  47,262 €   ← keine Warnung, plausible Zahl, falsch
+  Regenerat 80 %  (max=20)          →  86,134 €   ← dito
+```
+
+Die beiden letzten sind die gefährlicheren: `NaN` fällt auf, eine glatte
+falsche Zahl nicht.
+
+In der Sprengflächenanalyse gab es dieselbe Grenze in **drei** Ausprägungen:
+`numInput` lieferte `NaN`, `coreInputs` klemmte mit `Math.min/max`, und
+`getShrink` kannte nur die Untergrenze — ein Schwindmaß von 50 % (das Markup
+sagte `max="5"`) ging als Volumenfaktor **3,375** statt 1,017 durch.
+
+**Gebaut:** `web/shared/felddomaene.js` — dieselbe Struktur wie im Dashboard,
+getrennt, weil es andere Eingabemengen sind und diese Seiten klassische
+Scripts laden. 22 Felder, jedes mit Grenzen und Art, dazu die Paarregel, die
+der Rechenkern selbst als „bauartbedingt" beschreibt: `mpart ≤ mdose`.
+
+- 27 Attribute aus dem Markup entfernt — sie kommen jetzt aus der Tabelle
+- beide Seiten fragen das Urteil **vor** dem Rechnen und lassen bei
+  Verletzung den letzten gültigen Stand abgeblendet stehen
+- `docs/eingabegrenzen.md` deckt sie mit ab, aus derselben Quelle erzeugt
+
+Dabei fiel auf, dass in der Sprengflächenanalyse **vier Zahlenfelder direkt an
+`renderMachines` hingen** und damit an der Prüfung vorbeiliefen, für die sie da
+sind — ebenso `update()`, also genau der Weg, den das Laden eines Projekts
+geht. Beides ist mitgezogen; ein Test hält fest, dass `renderMachines()` nur
+noch an einer Stelle direkt gerufen wird.
+
+### Was bleiben durfte
+
+38 Attribute stehen weiter im Markup, zu Recht:
+
+| | |
+|---|---|
+| 28 Schieberegler-Wege | Bei `<input type="range">` **ist** min/max der Weg des Reglers, keine Prüfung. Betrifft 3D-Studio und zwei Theorieseiten. |
+| 10 Phasendauern im Zyklus | Aus JS ins Markup geschrieben; die Prüfung sitzt bereits in `layoutCycle`, seit die Parallelvorgänge in dieser Runde nachgezogen wurden. |
 
 ## Was bleibt
 

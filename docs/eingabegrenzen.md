@@ -188,4 +188,60 @@ kein Duplikat, sondern die einzige Stelle, die es merken kann.
 
 ---
 
-_59 Felder, davon 8 mit harter Grenze · 15 Regeln zwischen Feldern · erzeugt aus `config/fields.js`._
+# Die übrigen Werkzeuge
+
+Teilekosten und Sprengflächenanalyse haben eigene Eingabemengen und
+laden klassische Scripts. Ihre Domäne steht deshalb in einer eigenen
+Datei — `web/shared/felddomaene.js` — nach demselben Muster: eine
+Quelle, aus der die `min`/`max`-Attribute, die Sperre und dieser
+Abschnitt kommen.
+
+## Teilekosten-Kalkulation
+
+| Feld | Einheit | Zulässig | Art |
+|---|---|---|---|
+| Bauteilgewicht je Schuss `mpart` | kg | `> 0 … 1000` | plausibel |
+| Schussgewicht `mdose` | kg | `> 0 … 1000` | plausibel |
+| Zykluszeit `tz` | s | `1 … 3600` | plausibel |
+| Kavitäten `kav` | − | `1 … 200` | plausibel |
+| Ausschuss `a` | % | `0 … 99` | **hart** |
+| OEE / Verfügbarkeit `oee` | % | `1 … 100` | **hart** |
+| Legierungspreis `pAl` | €/kg | `0 … 1000` | plausibel |
+| Umschmelzkosten Kreislauf `pRe` | €/kg | `0 … 1000` | plausibel |
+| Schmelzverlust (Krätze) `kr` | % | `0 … 20` | plausibel |
+| Schmelz- & Warmhalteenergie `eKg` | kWh/kg | `0 … 20` | plausibel |
+| Strompreis `pE` | €/kWh | `0 … 10` | plausibel |
+| Maschinenstundensatz Zelle `pM` | €/h | `0 … 10000` | plausibel |
+| Personal `pP` | €/h | `0 … 1000` | plausibel |
+| Bediener je Zelle `nP` | − | `0 … 20` | plausibel |
+| Werkzeugkosten `wz` | € | `0 … 10000000` | plausibel |
+| Standmenge `st` | Schüsse | `1 … 10000000` | plausibel |
+| Eingesparte Masse je Bauteil `dg` | g | `0 … 100000` | plausibel |
+
+Harte Grenzen: `a` — bei 100 % Ausschuss gibt es kein Gutteil, auf das sich Kosten beziehen könnten · `oee` — eine Verfügbarkeit ist ein Anteil; bei 0 % entsteht kein Teil.
+
+| Bedingung | in Worten |
+|---|---|
+| `mpart` ≤ `mdose` | Bauteilgewicht kann das Schussgewicht nicht übersteigen — die Materialausbeute wäre über 100 % |
+
+## Sprengflächenanalyse
+
+| Feld | Einheit | Zulässig | Art |
+|---|---|---|---|
+| Schwindmaß s `shrink` | % | `0 … 5` | plausibel |
+| Nachdruck (metallseitig) `ptarget` | bar | `1 … 3000` | plausibel |
+| Sicherheitsfaktor S `safety` | − | `1 … 5` | **hart** |
+| Seitenschieber A_S `coreArea` | mm² | `0 … 1000000` | plausibel |
+| Sperrwinkel α `coreAngle` | ° | `0 … 89` | **hart** |
+
+Harte Grenzen: `safety` — ein Sicherheitsfaktor unter 1 ist keiner · `coreAngle` — A·tan(α) wächst bei 90° über alle Grenzen.
+
+Beide Seiten fragen das Urteil, bevor sie rechnen, und lassen bei
+Verletzung den letzten gültigen Stand abgeblendet stehen. Vorher stand
+die Kalkulation bei 150 % Ausschuss auf `NaN` und lieferte bei 500 %
+OEE eine glatte, falsche Zahl — mit einem Hinweis darunter, dass die
+Zahlen „nicht belastbar" seien.
+
+---
+
+_81 Felder, davon 12 mit harter Grenze · 16 Regeln zwischen Feldern · erzeugt aus `config/fields.js` und `shared/felddomaene.js`._

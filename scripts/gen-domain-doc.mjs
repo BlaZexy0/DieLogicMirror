@@ -18,6 +18,7 @@
 import { writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { createRequire } from 'node:module';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const { groups, PAIRS, domainFields } = await import(
@@ -139,11 +140,71 @@ zeilen.push('können auch aus gültigen Eingaben unbrauchbar werden — dort ist
 zeilen.push('kein Duplikat, sondern die einzige Stelle, die es merken kann.');
 zeilen.push('');
 
+
+/* ── Die übrigen Werkzeuge (shared/felddomaene.js) ─────────────────────── */
+const WERKZEUG_TITEL = {
+  teilekosten: 'Teilekosten-Kalkulation',
+  sprengflaeche: 'Sprengflächenanalyse',
+};
+const wz = createRequire(import.meta.url)(join(ROOT, 'web/shared/felddomaene.js'));
+
+zeilen.push('---');
+zeilen.push('');
+zeilen.push('# Die übrigen Werkzeuge');
+zeilen.push('');
+zeilen.push('Teilekosten und Sprengflächenanalyse haben eigene Eingabemengen und');
+zeilen.push('laden klassische Scripts. Ihre Domäne steht deshalb in einer eigenen');
+zeilen.push('Datei — `web/shared/felddomaene.js` — nach demselben Muster: eine');
+zeilen.push('Quelle, aus der die `min`/`max`-Attribute, die Sperre und dieser');
+zeilen.push('Abschnitt kommen.');
+zeilen.push('');
+
+for (const [key, titel] of Object.entries(WERKZEUG_TITEL)) {
+  const felder = wz.FELDER[key] || [];
+  zeilen.push('## ' + titel);
+  zeilen.push('');
+  zeilen.push('| Feld | Einheit | Zulässig | Art |');
+  zeilen.push('|---|---|---|---|');
+  for (const f of felder) {
+    const lo = f.gt !== undefined ? '> ' + num(f.gt) : f.min !== undefined ? num(f.min) : '−∞';
+    const hi = f.max !== undefined ? num(f.max) : '∞';
+    zeilen.push('| ' + f.label.replace(/\|/g, '\\|') + ' `' + f.key + '` | ' +
+      (f.unit || '—') + ' | `' + lo + ' … ' + hi + '` | ' +
+      (f.bound === HART ? '**hart**' : 'plausibel') + ' |');
+    nFelder++;
+    if (f.bound === HART) nHart++;
+  }
+  zeilen.push('');
+  const hartHier = felder.filter(f => f.bound === HART);
+  if (hartHier.length) {
+    zeilen.push('Harte Grenzen: ' + hartHier.map(f =>
+      '`' + f.key + '` — ' + (f.why || '')).join(' · ') + '.');
+    zeilen.push('');
+  }
+  const paare = wz.PAARE[key] || [];
+  if (paare.length) {
+    zeilen.push('| Bedingung | in Worten |');
+    zeilen.push('|---|---|');
+    for (const r of paare)
+      zeilen.push('| `' + r.a + '` ' + (r.op === '<' ? '<' : '≤') + ' `' + r.b + '` | ' + r.text + ' |');
+    zeilen.push('');
+  }
+}
+
+zeilen.push('Beide Seiten fragen das Urteil, bevor sie rechnen, und lassen bei');
+zeilen.push('Verletzung den letzten gültigen Stand abgeblendet stehen. Vorher stand');
+zeilen.push('die Kalkulation bei 150 % Ausschuss auf `NaN` und lieferte bei 500 %');
+zeilen.push('OEE eine glatte, falsche Zahl — mit einem Hinweis darunter, dass die');
+zeilen.push('Zahlen „nicht belastbar" seien.');
+zeilen.push('');
+
 /* --- Kennzahlen ------------------------------------------------------ */
 zeilen.push('---');
 zeilen.push('');
 zeilen.push('_' + nFelder + ' Felder, davon ' + nHart + ' mit harter Grenze · ' +
-  (PAIRS.length + 1) + ' Regeln zwischen Feldern · erzeugt aus `config/fields.js`._');
+  (PAIRS.length + 1 + Object.values(wz.PAARE).reduce((a, p) => a + p.length, 0)) +
+  ' Regeln zwischen Feldern · erzeugt aus `config/fields.js` und ' +
+  '`shared/felddomaene.js`._');
 zeilen.push('');
 
 writeFileSync(join(ROOT, 'docs/eingabegrenzen.md'), zeilen.join('\n'), 'utf8');

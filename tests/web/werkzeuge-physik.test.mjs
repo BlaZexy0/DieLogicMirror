@@ -128,7 +128,13 @@ test('eine getippte 0 wird nicht still zum Standardwert', () => {
   const app = ohneKommentare(read('tools/sprengflaeche/stl-app.js'));
   assert.ok(!/\|\| 600/.test(app), '`|| 600` machte aus 0 still 600 bar');
   assert.ok(!/\|\| 1\.3/.test(app), '`|| 1.3` machte aus 0 still den Sicherheitsfaktor 1,3');
-  assert.match(app, /function numInput\(id, min\)/);
+  /* Auch nicht still auf den erlaubten Bereich geklemmt: der frühere
+     Math.max(…, 0) beim Schwindmaß machte aus −1 stillschweigend 0, und die
+     Obergrenze aus dem Markup (5 %) las überhaupt niemand. */
+  assert.ok(!/Math\.max\(parseFloat\(document\.getElementById/.test(app),
+    'Eingaben werden still auf den erlaubten Bereich geklemmt');
+  assert.match(app, /function pruefeEingaben\(\)/, 'die Prüfung fehlt');
+  assert.match(app, /__DOMAENE__/, 'die Grenzen kommen nicht aus der Domäne');
 });
 
 /* ── handoffValues ────────────────────────────────────────────────────── */
