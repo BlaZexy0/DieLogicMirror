@@ -501,6 +501,26 @@ test('Abstandsseite: zwei Dateien, Abstand auf Knopfdruck', async () => {
   assert.equal(d5.getElementById('run-distance').textContent, 'Abstand ist aktuell');
 });
 
+test('Abstandsseite: ein fehlgeschlagenes Beispielteil meldet sich, statt die Seite zu töten', async () => {
+  const d5 = globalThis.document;
+  const echt = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: false, status: 404, arrayBuffer: async () => null });
+  try {
+    const sel = d5.getElementById('demo-select-a');
+    sel.value = sel.children[sel.children.length - 1].attrs.value;
+    sel.dispatch('change');
+    for (let i = 0; i < 40; i++) await new Promise(r => setTimeout(r, 5));
+  } finally {
+    globalThis.fetch = echt;
+  }
+  /* Vorher verdeckte der Parameter `id` den Suffix-Helfer: $('model-warn')
+     traf hier ins Leere (das Feld heißt model-warn-a), und der TypeError
+     ließ die Seite tot zurück. */
+  const warn = d5.getElementById('model-warn-a').textContent;
+  assert.match(warn, /konnte nicht geladen werden|fehlt/,
+    'die Meldung muss im Feld MIT Suffix stehen, ist: „' + warn + '"');
+});
+
 test('Abstandsseite: Skalengrenzen, Sichtbarkeit, Farbskala', async () => {
   const dist = await import('../../../web/tools/3d-studio/js/part/distanceapp.js');
   const d5 = globalThis.document;

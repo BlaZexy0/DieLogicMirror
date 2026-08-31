@@ -20,6 +20,10 @@
 import { bounds, weld, distSqPointTri } from '../mesh.js';
 
 /** Dreiecke eines Netzes in ein Würfelraster einsortieren. */
+/* Wie viel gröber als die dichteoptimale Zelle darf das Gitter höchstens
+   werden, wenn eine große Suchgrenze das nahelegt. */
+const COARSE_MAX = 3;
+
 export function buildLocator(tris, opts = {}) {
   const F = tris.length / 9;
   const b = bounds(tris);
@@ -32,8 +36,16 @@ export function buildLocator(tris, opts = {}) {
      Schalen vorbei. */
   const longest = Math.max(b.size[0], b.size[1], b.size[2]) || 1;
   const n = opts.cells || Math.max(1, Math.min(200, Math.round(Math.cbrt(F / 2))));
-  let cell = longest / n;
-  if (opts.maxDist && isFinite(opts.maxDist)) cell = Math.max(cell, opts.maxDist / 3);
+  const fine = longest / n;
+  let cell = fine;
+  if (opts.maxDist && isFinite(opts.maxDist)) {
+    /* Gröber ist gut für die Schalensuche — aber nur begrenzt. Ohne Deckel
+       riss eine große Suchgrenze das Gitter auf wenige Zellen zusammen, und
+       jede Abfrage wurde zur linearen Abtastung über alle Dreiecke:
+       gemessen an 235k Dreiecken fiel es von 1300 auf 28 Zellen und die
+       Rechnung von 91 ms auf 116 437 ms (Faktor 1282). */
+    cell = Math.min(Math.max(cell, opts.maxDist / 3), fine * COARSE_MAX);
+  }
   cell = Math.max(cell, b.diag * 1e-6);
   const dims = [0, 1, 2].map(a => Math.max(1, Math.floor(b.size[a] / cell) + 1));
 

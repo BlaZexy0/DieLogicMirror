@@ -45,13 +45,16 @@ mountViewBar(container, view);
 
 /* ── Zustand ─────────────────────────────────────────────────── */
 const side = () => ({ name: '', model: null, dist: null, stats: null });
+/* Marke für den Abbruch — kein Fehler, sondern eine Entscheidung. */
+const CANCELLED = '__abgebrochen__';
+
 const state = {
   a: side(), b: side(),
   reach: 50,
   scale: { min: 0, max: 20 },
   color: 'a',
   opacity: 1,
-  analysed: false, stale: true, running: false, ready: false,
+  analysed: false, stale: true, running: false, ready: false, cancel: false,
   ms: 0
 };
 
@@ -138,6 +141,7 @@ function showMeshFacts(key, raw, used) {
 async function runDistance() {
   if (!state.a.model || !state.b.model || state.running) return;
   state.running = true;
+  state.cancel = false;
   state.ready = false;
   updateRunButton();
   const t0 = performance.now();
@@ -152,6 +156,11 @@ async function runDistance() {
       state[from].dist = await distanceToMesh(state[from].model, loc, {
         maxDist: state.reach,
         onProgress: p => {
+          /* Der einzige Punkt, an dem die Rechnung die Kontrolle abgibt —
+             also auch der einzige, an dem sie sich abbrechen lässt. Ohne
+             das lief eine zu groß gewählte Suchgrenze minutenlang durch,
+             ohne Ausweg. */
+          if (state.cancel) throw new Error(CANCELLED);
           busy.textContent = 'Abstand ' + from.toUpperCase() + ' → ' + to.toUpperCase()
             + ' … ' + Math.round(p * 100) + ' %';
         }
@@ -164,11 +173,17 @@ async function runDistance() {
     applyColors();
     updateFacts();
   } catch (err) {
-    $('model-warn-a').textContent = 'Der Abstand konnte nicht gerechnet werden: ' + err.message;
-    console.error(err);
+    if (err.message === CANCELLED) {
+      $('model-warn-a').textContent = 'Abstandsrechnung abgebrochen — das Bild zeigt noch die vorige Rechnung.';
+      state.stale = true;
+    } else {
+      $('model-warn-a').textContent = 'Der Abstand konnte nicht gerechnet werden: ' + err.message;
+      console.error(err);
+    }
   } finally {
     busy.classList.remove('on');
     state.running = false;
+    state.cancel = false;
     state.ready = true;
     updateRunButton();
   }
@@ -182,19 +197,33 @@ function markStale() {
 
 const setRun = runControl('run-distance', 'distance-state');
 
+/* Die Rechenzeit wächst steil mit der Suchgrenze: sie legt fest, wie weit
+   die Suche für jeden Punkt mindestens absuchen muss, bevor sie „nichts in
+   Reichweite" sagen darf. Gemessen an 235k Dreiecken: 20 mm → 90 ms,
+   300 mm → 50 s. Ab dieser Schwelle wird gewarnt, bevor gerechnet wird. */
+function reachWarning() {
+  const a = state.a.model, b = state.b.model;
+  if (!a || !b) return '';
+  const diag = Math.max(a.bounds.diag, b.bounds.diag);
+  if (!(state.reach > diag * 0.25)) return '';
+  return ' Die Suchgrenze ist groß gegenüber den Teilen (' + fmt(state.reach)
+    + ' mm zu ' + fmt(diag) + ' mm Diagonale) — das kann lange dauern.';
+}
+
 function updateRunButton() {
-  if (state.running) return setRun({ label: 'rechnet …', disabled: true });
+  if (state.running) return setRun({ label: 'Abbrechen', warn: true, note: 'Rechnet … Abbrechen bricht ab und behält das vorige Bild.' });
   if (!state.a.model || !state.b.model) {
     return setRun({ label: 'Abstand berechnen', disabled: true, note: 'Es fehlt noch eine Datei.' });
   }
   if (!state.analysed) {
-    return setRun({ label: 'Abstand berechnen',
+    return setRun({ label: 'Abstand berechnen', warn: !!reachWarning(),
       note: 'Noch nicht gerechnet — ' + fmt(state.a.model.vertexCount + state.b.model.vertexCount, 0)
-        + ' Punkte gegen ' + fmt(state.a.model.faceCount + state.b.model.faceCount, 0) + ' Dreiecke.' });
+        + ' Punkte gegen ' + fmt(state.a.model.faceCount + state.b.model.faceCount, 0) + ' Dreiecke.'
+        + reachWarning() });
   }
   if (state.stale) {
     return setRun({ label: 'Abstand neu berechnen', warn: true,
-      note: 'Datei oder Suchgrenze geändert — das Bild zeigt noch die vorige Rechnung.' });
+      note: 'Datei oder Suchgrenze geändert — das Bild zeigt noch die vorige Rechnung.' + reachWarning() });
   }
   setRun({ label: 'Abstand ist aktuell', outline: true, disabled: true });
 }
@@ -264,7 +293,10 @@ numberInput('reach', v => {
   markStale();
   return state.reach;
 });
-$('run-distance').addEventListener('click', runDistance);
+$('run-distance').addEventListener('click', () => {
+  if (state.running) { state.cancel = true; return; }
+  runDistance();
+});
 
 /* Skalengrenzen färben nur um — sie rechnen nichts neu. */
 numberInput('scale-min', v => { state.scale.min = v; applyColors(); return v; });
@@ -296,13 +328,27 @@ slider('opacity', v => {
   }
 }, v => v + ' %');
 
-/* Hover: gemessener Abstand am Dreieck unter der Maus. */
+/* Hover: gemessener Abstand am Dreieck unter der Maus.
+
+   Wie auf der Bauteilseite läuft der Strahlentest ohne Beschleunigungs-
+   struktur über die ganzen Netze — hier sogar über ZWEI. Deshalb wird nur
+   die letzte Zeigerposition gemerkt und höchstens einmal je Bild
+   ausgewertet. */
 const ray = new T.Raycaster();
 status.textContent = IDLE;
+let hoverAt = null, hoverQueued = false;
+
 view.renderer.domElement.addEventListener('pointermove', ev => {
+  hoverAt = { x: ev.clientX, y: ev.clientY };
+  if (hoverQueued) return;
+  hoverQueued = true;
+  requestAnimationFrame(() => { hoverQueued = false; if (hoverAt) evalHover(hoverAt); });
+});
+
+function evalHover(at) {
   if (!state.analysed) { status.textContent = IDLE; return; }
   const r = view.renderer.domElement.getBoundingClientRect();
-  const p = new T.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  const p = new T.Vector2(((at.x - r.left) / r.width) * 2 - 1, -((at.y - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(p, view.camera);
   const hit = ray.intersectObjects([meshA, meshB].filter(m => m.visible), false)[0];
   if (!hit) { status.textContent = IDLE; return; }
@@ -314,8 +360,11 @@ view.renderer.domElement.addEventListener('pointermove', ev => {
   d /= 3;
   status.textContent = 'Datei ' + key.toUpperCase() + ' · Abstand zur Gegenseite '
     + (d >= state.reach - 1e-6 ? '≥ ' : '') + fmt(d) + ' mm';
+}
+view.renderer.domElement.addEventListener('pointerleave', () => {
+  hoverAt = null;
+  status.textContent = IDLE;
 });
-view.renderer.domElement.addEventListener('pointerleave', () => { status.textContent = IDLE; });
 
 export const __viewer = { state, view, meshA, meshB, runDistance, applyColors };
 window.__form3d = __viewer;

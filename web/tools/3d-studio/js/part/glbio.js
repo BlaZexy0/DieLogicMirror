@@ -44,10 +44,26 @@ function chunks(buffer) {
   return { json, bin };
 }
 
+/* Dieser Leser implementiert keine glTF-Erweiterung. Eine Datei, die eine
+   VERLANGT (Draco, meshopt, …), liegt komprimiert vor: die Accessoren haben
+   dann keinen bufferView, und die Norm-Regel „ohne bufferView ist alles
+   null" lieferte stillschweigend ein nullgefülltes Netz — „0 Dreiecke ·
+   0 × 0 × 0 mm · 0 cm³", ohne einen Hinweis. */
+function checkExtensions(json) {
+  const req = (json.extensionsRequired || []).filter(Boolean);
+  if (req.length) {
+    throw new Error('Diese Datei verlangt glTF-Erweiterungen, die hier nicht '
+      + 'gelesen werden (' + req.join(', ') + ') — bitte unkomprimiert exportieren.');
+  }
+}
+
 function readAccessor(json, bin, idx) {
   const acc = json.accessors[idx];
   const n = NUM[acc.type];
   const out = new Float64Array(acc.count * n);
+  /* Sparse-Accessoren tragen ihre Werte in einem eigenen Block; ohne ihn zu
+     lesen wäre das Ergebnis wieder ein stilles Nullnetz. */
+  if (acc.sparse) throw new Error('Sparse-Accessoren werden nicht gelesen — bitte unkomprimiert exportieren.');
   if (acc.bufferView === undefined) return out;          // laut Norm: alles null
   const bv = json.bufferViews[acc.bufferView];
   if (!bin) throw new Error('glTF ohne Binärblock');
@@ -102,6 +118,7 @@ const apply = (m, x, y, z) => [
 /** Alle Dreiecke einer GLB als { name, tris }-Liste (Weltkoordinaten). */
 export function readGLBMeshes(buffer) {
   const { json, bin } = chunks(buffer);
+  checkExtensions(json);
   const out = [];
   const scene = json.scenes && json.scenes[json.scene || 0];
   const roots = scene ? scene.nodes : (json.nodes || []).map((_, i) => i);

@@ -64,6 +64,98 @@ export function volume(tris) {
   return v6 / 6;
 }
 
+/** Dreiecke einheitlich ausrichten.
+
+    Eine STL aus einem CAD-Export ist oft inkonsistent gewickelt: benachbarte
+    Dreiecke teilen sich eine Kante in DERSELBEN Richtung statt gegenläufig.
+    Die Folgen sind still und schwerwiegend — die signierten Tetraeder heben
+    sich weitgehend auf („Volumen 0,0 cm³"), die Flächennormalen zeigen
+    zufällig nach innen oder außen, und die Entformbarkeitsanalyse meldet an
+    einem einwandfreien Teil die Hälfte der Oberfläche als Hinterschnitt.
+    adjacency() paart nur gegenläufige Halbkanten, weshalb dieselben Netze
+    zusätzlich als „offen" gelten.
+
+    Verfahren: Breitensuche über die ungerichtete Kantennachbarschaft. Wer
+    eine gemeinsame Kante gleichläufig durchläuft wie sein Nachbar, wird
+    umgedreht. Danach je Zusammenhangskomponente das Vorzeichen prüfen: ist
+    das Volumen einer geschlossenen Komponente negativ, zeigen ihre Normalen
+    nach innen und die ganze Komponente wird gewendet.
+
+    Rückgabe: { tris, flipped } — tris ist dieselbe Instanz, falls nichts zu
+    tun war. */
+export function orientMesh(tris, index) {
+  const F = tris.length / 9;
+  if (F < 2) return { tris, flipped: 0 };
+
+  /* Ungerichtete Kanten: je Kante alle anliegenden Halbkanten mit ihrer
+     Richtung (a < b = vorwärts). */
+  const edges = new Map();
+  for (let f = 0; f < F; f++) {
+    for (let e = 0; e < 3; e++) {
+      const a = index[f * 3 + e], b = index[f * 3 + (e + 1) % 3];
+      if (a === b) continue;
+      const key = a < b ? a * 67108864 + b : b * 67108864 + a;
+      let slot = edges.get(key);
+      if (!slot) edges.set(key, slot = []);
+      slot.push({ f, fwd: a < b });
+    }
+  }
+
+  const flip = new Uint8Array(F);      // 1 = dieses Dreieck umdrehen
+  const seen = new Uint8Array(F);
+  const comp = new Int32Array(F).fill(-1);
+  const stack = [];
+  let comps = 0, flipped = 0;
+
+  for (let s0 = 0; s0 < F; s0++) {
+    if (seen[s0]) continue;
+    const c = comps++;
+    seen[s0] = 1; comp[s0] = c; stack.push(s0);
+    while (stack.length) {
+      const f = stack.pop();
+      for (let e = 0; e < 3; e++) {
+        const a = index[f * 3 + e], b = index[f * 3 + (e + 1) % 3];
+        if (a === b) continue;
+        const key = a < b ? a * 67108864 + b : b * 67108864 + a;
+        const myFwd = (a < b) !== !!flip[f];      // Richtung NACH dem Wenden
+        for (const h of edges.get(key)) {
+          if (h.f === f || seen[h.f]) continue;
+          /* Gleichläufig heißt: falsch herum gegenüber dem Nachbarn. */
+          if (h.fwd === myFwd) { flip[h.f] = 1; flipped++; }
+          seen[h.f] = 1; comp[h.f] = c; stack.push(h.f);
+        }
+      }
+    }
+  }
+
+  /* Je Komponente das Vorzeichen des Volumens: negativ = Normalen innen. */
+  const vol = new Float64Array(comps);
+  const tri = (f, k, a) => tris[f * 9 + k * 3 + a];
+  for (let f = 0; f < F; f++) {
+    const i0 = 0, i1 = flip[f] ? 2 : 1, i2 = flip[f] ? 1 : 2;
+    const ax = tri(f, i0, 0), ay = tri(f, i0, 1), az = tri(f, i0, 2);
+    const bx = tri(f, i1, 0), by = tri(f, i1, 1), bz = tri(f, i1, 2);
+    const cx = tri(f, i2, 0), cy = tri(f, i2, 1), cz = tri(f, i2, 2);
+    vol[comp[f]] += ax * (by * cz - bz * cy) + ay * (bz * cx - bx * cz) + az * (bx * cy - by * cx);
+  }
+  for (let f = 0; f < F; f++) {
+    if (vol[comp[f]] < 0) { flip[f] ^= 1; flipped += flip[f] ? 1 : -1; }
+  }
+
+  if (!flipped) return { tris, flipped: 0 };
+  const out = new Float64Array(tris.length);
+  for (let f = 0; f < F; f++) {
+    const o = f * 9;
+    if (!flip[f]) { for (let k = 0; k < 9; k++) out[o + k] = tris[o + k]; continue; }
+    for (let a = 0; a < 3; a++) {
+      out[o + a] = tris[o + a];
+      out[o + 3 + a] = tris[o + 6 + a];
+      out[o + 6 + a] = tris[o + 3 + a];
+    }
+  }
+  return { tris: out, flipped };
+}
+
 /** Summe der Dreiecksflächen. */
 export function surface(tris) {
   let a = 0;

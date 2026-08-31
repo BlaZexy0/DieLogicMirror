@@ -70,8 +70,17 @@ export function mountPartSource({ busy, viewport, onStart, onLoad, suffix = '',
     }
     if (onStart) onStart(name);
     $(id('part-note')).textContent = note || '';
-    $(id('model-warn')).textContent = '';
-    busy.textContent = 'Netz aufbereiten …';
+    /* Die Größenwarnung stand bisher in showFacts — also NACH buildModel,
+       das bei 197k Dreiecken rund 1,5 s den Hauptthread blockiert. Sie kam
+       damit an, wenn die Arbeit längst getan war. Jetzt vorher, aus der
+       Rohzahl der Dreiecke. */
+    const raw = tris.length / 9;
+    $(id('model-warn')).textContent = raw > BIG_MESH
+      ? 'Großes Netz (' + fmt(raw, 0) + ' Dreiecke) — Aufbereitung und jede Rechnung dauern entsprechend.'
+      : '';
+    busy.textContent = raw > BIG_MESH
+      ? 'Netz aufbereiten (' + fmt(raw, 0) + ' Dreiecke) …'
+      : 'Netz aufbereiten …';
     busy.classList.add('on');
     await frame();
     try {
@@ -86,15 +95,20 @@ export function mountPartSource({ busy, viewport, onStart, onLoad, suffix = '',
     }
   }
 
-  async function pickDemo(id) {
+  /* partId, nicht id: der Parameter verdeckte sonst den Suffix-Helfer
+     `const id = name => name + suffix` — und $('model-warn') traf auf
+     abstand.html ins Leere (dort heißen die Felder model-warn-a/-b). Ein
+     fehlgeschlagenes Beispielteil warf dann einen TypeError, statt die
+     Meldung zu zeigen: die Seite blieb tot. */
+  async function pickDemo(partId) {
     busy.textContent = 'Beispielteil laden …';
     busy.classList.add('on');
     try {
-      const p = await loadDemo(id);
+      const p = await loadDemo(partId);
       await load(p.tris, p.label, p.note);
     } catch (err) {
       busy.classList.remove('on');
-      $('model-warn').textContent = err.message;
+      $(id('model-warn')).textContent = 'Beispielteil „' + partId + '" konnte nicht geladen werden: ' + err.message;
       console.error(err);
     }
   }
@@ -110,23 +124,37 @@ export function mountPartSource({ busy, viewport, onStart, onLoad, suffix = '',
   return { load, pickDemo, start };
 }
 
+/* Ab hier gilt ein Netz als groß: Aufbereitung und Rechnungen sind dann
+   spürbar, und der Anwender soll das VOR der Wartezeit erfahren. */
+const BIG_MESH = 150000;
+
 function showFacts(m, id) {
   const s = m.bounds.size;
   facts(id('model-facts'), [
     ['Dreiecke', fmt(m.faceCount, 0)
       + (m.faceCount !== m.rawFaceCount ? ' (roh ' + fmt(m.rawFaceCount, 0) + ')' : '')],
     ['Abmessungen', s.map(v => fmt(v)).join(' × ') + ' mm'],
-    ['Volumen', fmt(Math.abs(m.volume) / 1000) + ' cm³'],
+    ['Volumen', fmt(m.volume / 1000) + ' cm³'],
     ['Oberfläche', fmt(m.surface / 100) + ' cm²']
   ]);
 
-  if (m.faceCount > 250000) {
-    $(id('model-warn')).textContent = 'Sehr großes Netz (' + fmt(m.faceCount, 0)
-      + ' Dreiecke) — jede Rechnung dauert entsprechend.';
-    return;
+  /* Alle Hinweise sammeln statt beim ersten aufzuhören: die Größenwarnung
+     stand vorher mit return vor der Mannigfaltigkeitsprüfung — bei einem
+     großen UND offenen Netz erfuhr man nur das Erste. */
+  const notes = [];
+  if (m.faceCount > BIG_MESH) {
+    notes.push('Großes Netz (' + fmt(m.faceCount, 0) + ' Dreiecke) — jede Rechnung dauert entsprechend.');
+  }
+  if (m.flippedFaces) {
+    notes.push(fmt(m.flippedFaces, 0) + ' Dreiecke waren gegenläufig gewickelt und wurden ausgerichtet.');
   }
   const openFrac = openEdgeRatio(m);
-  $(id('model-warn')).textContent = openFrac > 0.005
-    ? 'Achtung: ' + (100 * openFrac).toFixed(1) + ' % der Kanten haben keinen Nachbarn — das Netz ist offen oder nicht mannigfaltig.'
-    : '';
+  if (openFrac > 0.005) {
+    notes.push('Achtung: ' + (100 * openFrac).toFixed(1)
+      + ' % der Kanten haben keinen Nachbarn — das Netz ist offen oder nicht mannigfaltig.');
+  }
+  if (m.volume <= 0 && openFrac <= 0.005) {
+    notes.push('Das Volumen ist nicht positiv — die Dreiecke zeigen nach innen oder das Netz überlappt sich.');
+  }
+  $(id('model-warn')).textContent = notes.join(' ');
 }

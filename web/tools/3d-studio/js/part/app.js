@@ -410,13 +410,29 @@ $('show-edges').addEventListener('change', e => {
   edgeLines.visible = state.showEdges;
 });
 
-/* Hover: Richtung und Entformschräge des Dreiecks unter der Maus. */
+/* Hover: Richtung und Entformschräge des Dreiecks unter der Maus.
+
+   Der Strahlentest läuft ohne Beschleunigungsstruktur über das ganze Netz —
+   gemessen 9,7 ms je Ereignis bei 197k Dreiecken, und pointermove feuert so
+   oft, wie der Zeiger Positionen meldet. Ungedrosselt frisst das den ganzen
+   Bildtakt (auf abstand.html mit zwei Netzen doppelt). Deshalb wird nur die
+   zuletzt gemeldete Position gemerkt und höchstens einmal je Bild
+   ausgewertet: für eine Anzeige unter dem Zeiger ist das genau richtig. */
 const ray = new T.Raycaster();
 status.textContent = IDLE;
+let hoverAt = null, hoverQueued = false;
+
 view.renderer.domElement.addEventListener('pointermove', ev => {
+  hoverAt = { x: ev.clientX, y: ev.clientY };
+  if (hoverQueued) return;
+  hoverQueued = true;
+  requestAnimationFrame(() => { hoverQueued = false; if (hoverAt) evalHover(hoverAt); });
+});
+
+function evalHover(at) {
   if (!state.seg) { status.textContent = IDLE; return; }
   const r = view.renderer.domElement.getBoundingClientRect();
-  const p = new T.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  const p = new T.Vector2(((at.x - r.left) / r.width) * 2 - 1, -((at.y - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(p, view.camera);
   const hit = ray.intersectObject(partMesh, false)[0];
   if (!hit) { status.textContent = IDLE; return; }
@@ -430,8 +446,11 @@ view.renderer.domElement.addEventListener('pointermove', ev => {
     + ' · ' + stageName
     + ' · Entformschräge ' + fmt(state.draft[f]) + '°'
     + ' · entformbar aus: ' + (vis.length ? vis.join(' ') : 'keiner Richtung');
+}
+view.renderer.domElement.addEventListener('pointerleave', () => {
+  hoverAt = null;
+  status.textContent = IDLE;
 });
-view.renderer.domElement.addEventListener('pointerleave', () => { status.textContent = IDLE; });
 
 /* Handle für die Browser-Konsole UND für den Verdrahtungstest
    (tests/viewer.test.mjs). */
