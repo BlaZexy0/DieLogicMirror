@@ -124,3 +124,36 @@ test('orgpresets: Serverfehler ist nicht „keine Stammdaten"', () => {
     'ein 500 ließ die Organisation still mit den Beispielwerten weiterrechnen');
   assert.match(src, /settings === undefined/, 'Fehler und „nichts hinterlegt" müssen sich unterscheiden');
 });
+
+/* ── Prozentwerte im Markup ───────────────────────────────────────────
+   Aus der gegnerischen Prüfung: die Kennzahlen schrieben bei unbrauchbaren
+   Eingaben style="width:NaN%" und style="width:-12.34%" ins Markup — der
+   Browser verwirft das stillschweigend. Statt an jeder Schreibstelle zu
+   prüfen, läuft jede Prozentangabe durch EINE Funktion. */
+
+test('jede Prozentangabe der Kennzahlen ist endlich und in [0, 100]', async () => {
+  globalThis.document = { getElementById: () => null, querySelectorAll: () => [] };
+  const { renderKpis } = await import(path.join(site, 'tools/auslegung/js/ui/kpis.js'));
+  const keys = ['pAccOp', 'pAcc', 'injForce', 'diam', 'length', 'area', 'force',
+    'psel', 'safety', 'density', 'part', 'gate', 'vmax', 'dmin', 'lmin', 'biscuit'];
+
+  for (const k of keys) {
+    for (const bad of [0, -1, NaN]) {
+      const w = Object.assign(values(), { [k]: bad });
+      const el = { innerHTML: '', closest: () => null, querySelectorAll: () => [] };
+      assert.doesNotThrow(() => renderKpis(el, w, shot({ [k]: bad }), null), `${k} = ${bad}`);
+      const schlecht = el.innerHTML.match(/(width|left|margin-left):\s*(NaN|Infinity|-[\d.]+)/g);
+      assert.equal(schlecht, null, `${k} = ${bad}: ${schlecht && schlecht.slice(0, 2)}`);
+    }
+  }
+});
+
+test('seq bleibt im angeforderten Bereich', () => {
+  /* seq(0, 10, 1.5) lieferte [0, 20] — außerhalb des Bereichs. */
+  for (const n of [0, 1, 1.5, 2, 2.9, 7, -3, NaN]) {
+    for (const x of seq(0, 10, n)) {
+      assert.ok(Number.isFinite(x) && x >= 0 && x <= 10, `seq(0,10,${n}) enthält ${x}`);
+    }
+  }
+  assert.deepEqual(seq(0, 10, 2.9), [0, 10], 'die Anzahl wird abgerundet');
+});

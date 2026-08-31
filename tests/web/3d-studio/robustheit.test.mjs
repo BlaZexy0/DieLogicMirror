@@ -106,6 +106,32 @@ test('nach innen gewendetes Netz bekommt positives Volumen', () => {
   assert.ok(Math.abs(buildModel(inner).volume - 8000) < 1e-6);
 });
 
+test('Hohlteile behalten ihren Hohlraum (Regression der ersten Fassung)', () => {
+  /* Die erste Fassung drehte JEDE geschlossene Komponente auf positives
+     Volumen — bei einem Hohlteil zählte der Hohlraum damit als Material:
+     65000 statt 63000 mm³. Im Druckguss ist das der Normalfall, nicht der
+     Sonderfall. Das Gesamtvorzeichen wird deshalb einmal für das ganze Netz
+     entschieden, die Schalen behalten ihre Beziehung zueinander. */
+  const invert = t => {
+    const o = Float64Array.from(t);
+    for (let f = 0; f < t.length / 9; f++) {
+      const i = f * 9;
+      for (let a = 0; a < 3; a++) { const x = o[i + 3 + a]; o[i + 3 + a] = o[i + 6 + a]; o[i + 6 + a] = x; }
+    }
+    return o;
+  };
+  const hohl = Float64Array.from([...S.box(40, 40, 40), ...invert(S.box(10, 10, 10))]);
+  assert.equal(volume(hohl), 63000, 'Testaufbau: 40³ minus 10³');
+
+  const r = orientMesh(hohl, weld(hohl).index);
+  assert.equal(volume(r.tris), 63000, 'der Hohlraum muss vom Volumen abgehen');
+
+  /* Auch ein komplett nach innen gewendetes Hohlteil kommt richtig heraus. */
+  const ganzInvertiert = invert(hohl);
+  const r2 = orientMesh(ganzInvertiert, weld(ganzInvertiert).index);
+  assert.equal(volume(r2.tris), 63000);
+});
+
 test('sauber gewickelte Netze bleiben unangetastet', () => {
   for (const tris of [S.box(30, 20, 10), S.sphere(15, 3)]) {
     const w = weld(tris);

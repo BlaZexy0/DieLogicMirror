@@ -305,3 +305,33 @@ def test_concurrent_revisions_all_succeed():
     assert codes == [201] * 6, codes
     revs = sorted(r["rev"] for r in admin.get(f"/api/projects/{pid}/revisions").json())
     assert revs == [1, 2, 3, 4, 5, 6], revs
+
+
+def test_draft_lock_is_atomic_under_load():
+    """Prüfen und Schreiben müssen EIN Schritt sein. Getrennt lasen mehrere
+    gleichzeitige Anfragen denselben Stempel, bestanden alle die Prüfung und
+    schrieben nacheinander — gemessen kamen von zehn Versuchen mit demselben
+    base_draft_at drei durch."""
+    import threading
+    from collections import Counter
+
+    admin = _client()
+    _login(admin, "owner@example.com")
+    pid = admin.post("/api/projects", json={"name": "Wettlauf", "data": {"design": {"v": 0}}}).json()["id"]
+    base = admin.get(f"/api/projects/{pid}").json()["draft_at"]
+
+    codes = []
+    def one(i):
+        r = admin.put(f"/api/projects/{pid}/draft",
+                      json={"data": {"design": {"v": i}}, "base_draft_at": base})
+        codes.append(r.status_code)
+
+    threads = [threading.Thread(target=one, args=(i,)) for i in range(10)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    zaehlung = Counter(codes)
+    assert zaehlung[200] == 1, f"genau einer darf durchkommen, war: {dict(zaehlung)}"
+    assert zaehlung[409] == 9, dict(zaehlung)

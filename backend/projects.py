@@ -15,7 +15,7 @@ import math
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -253,14 +253,33 @@ def save_draft(project_id: str, body: DraftIn, user: User = Depends(current_user
     versuch nach einem verlorenen Antwort-Paket ab."""
     p = _get_project(db, user, project_id)
     clean = _check_data(body.data)
-    have = iso(p.draft_at)
+    have, seen = iso(p.draft_at), p.draft_at
     if (body.base_draft_at is not None and have is not None
             and body.base_draft_at != have and p.draft != clean):
         raise HTTPException(status_code=409,
                             detail="Auf dem Server liegt ein neuerer Arbeitsstand.")
-    p.draft = clean
-    p.draft_at = p.updated_at = now()
+
+    # Prüfen und Schreiben müssen EIN Schritt sein. Getrennt lasen mehrere
+    # gleichzeitige Anfragen denselben Stempel, bestanden alle die Prüfung
+    # und schrieben nacheinander: gemessen kamen von zehn Versuchen mit
+    # demselben base_draft_at drei durch statt einem. Das bedingte UPDATE
+    # entscheidet in der Datenbank.
+    stamp = now()
+    stmt = update(Project).where(Project.id == p.id)
+    if body.base_draft_at is not None:
+        stmt = stmt.where(Project.draft_at.is_(None) if seen is None
+                          else Project.draft_at == seen)
+    res = db.execute(stmt.values(draft=clean, draft_at=stamp, updated_at=stamp))
     db.commit()
+    db.expire(p)
+
+    if res.rowcount == 0:
+        # Jemand anders war schneller. Steht dort inzwischen genau derselbe
+        # Stand, ist das kein Konflikt (verlorenes Antwort-Paket).
+        if p.draft == clean:
+            return {"draft_at": iso(p.draft_at), "updated_at": iso(p.updated_at)}
+        raise HTTPException(status_code=409,
+                            detail="Auf dem Server liegt ein neuerer Arbeitsstand.")
     return {"draft_at": iso(p.draft_at), "updated_at": iso(p.updated_at)}
 
 

@@ -77,9 +77,16 @@ export function volume(tris) {
 
     Verfahren: Breitensuche über die ungerichtete Kantennachbarschaft. Wer
     eine gemeinsame Kante gleichläufig durchläuft wie sein Nachbar, wird
-    umgedreht. Danach je Zusammenhangskomponente das Vorzeichen prüfen: ist
-    das Volumen einer geschlossenen Komponente negativ, zeigen ihre Normalen
-    nach innen und die ganze Komponente wird gewendet.
+    umgedreht. Das macht die Wicklung INNERHALB jeder Zusammenhangskomponente
+    einheitlich — der eigentliche Zweck.
+
+    Das Gesamtvorzeichen wird danach EINMAL für das ganze Netz entschieden,
+    nicht je Komponente: bei einem Hohlteil zeigt die innere Schale
+    absichtlich nach innen, damit der Hohlraum vom Volumen abgeht. Jede
+    Komponente einzeln auf positives Volumen zu drehen machte aus einem
+    korrekt modellierten 40³-Teil mit 10³-Hohlraum 65000 statt 63000 mm³ —
+    der Hohlraum zählte als Material. Die Beziehung der Schalen zueinander
+    bleibt deshalb, wie sie ist.
 
     Rückgabe: { tris, flipped } — tris ist dieselbe Instanz, falls nichts zu
     tun war. */
@@ -128,18 +135,20 @@ export function orientMesh(tris, index) {
     }
   }
 
-  /* Je Komponente das Vorzeichen des Volumens: negativ = Normalen innen. */
-  const vol = new Float64Array(comps);
+  /* Gesamtvorzeichen: ist das Volumen des ganzen Netzes negativ, zeigen die
+     Normalen nach innen und ALLES wird gewendet. Je Komponente zu
+     entscheiden zerstörte Hohlräume (siehe oben). */
+  let v6 = 0;
   const tri = (f, k, a) => tris[f * 9 + k * 3 + a];
   for (let f = 0; f < F; f++) {
     const i0 = 0, i1 = flip[f] ? 2 : 1, i2 = flip[f] ? 1 : 2;
     const ax = tri(f, i0, 0), ay = tri(f, i0, 1), az = tri(f, i0, 2);
     const bx = tri(f, i1, 0), by = tri(f, i1, 1), bz = tri(f, i1, 2);
     const cx = tri(f, i2, 0), cy = tri(f, i2, 1), cz = tri(f, i2, 2);
-    vol[comp[f]] += ax * (by * cz - bz * cy) + ay * (bz * cx - bx * cz) + az * (bx * cy - by * cx);
+    v6 += ax * (by * cz - bz * cy) + ay * (bz * cx - bx * cz) + az * (bx * cy - by * cx);
   }
-  for (let f = 0; f < F; f++) {
-    if (vol[comp[f]] < 0) { flip[f] ^= 1; flipped += flip[f] ? 1 : -1; }
+  if (v6 < 0) {
+    for (let f = 0; f < F; f++) { flip[f] ^= 1; flipped += flip[f] ? 1 : -1; }
   }
 
   if (!flipped) return { tris, flipped: 0 };

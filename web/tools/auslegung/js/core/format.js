@@ -10,6 +10,9 @@ export function fmt(x) {
    n = 1 ergab [NaN] (Division durch n − 1 = 0) — ein einzelner Wert ist der
    Anfangswert, und n < 1 hat keinen. */
 export function seq(a, b, n) {
+  /* Ganzzahlig: seq(0, 10, 1.5) lieferte [0, 20] — einen Wert AUSSERHALB
+     des angeforderten Bereichs, weil (n − 1) dann kein ganzer Schritt ist. */
+  n = Math.floor(n);
   if (!(n >= 1)) return [];
   if (n === 1) return [a];
   const r = [];

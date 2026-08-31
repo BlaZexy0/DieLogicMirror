@@ -309,6 +309,12 @@
         errors.push('Unbekannter Bezugspunkt bei „' + e.label + '" — Start am Zyklusstart.');
         base = 0;
       }
+      /* Dieselbe Regel wie für die Hauptphasen: eine unbrauchbare Dauer
+         oder ein unbrauchbarer Versatz wird gemeldet, nicht stumm zu 0. */
+      if (badDur(e.dur)) errors.push('Ungültige Dauer bei „' + e.label + '" — als 0 s gerechnet.');
+      if (e.lag != null && e.lag !== '' && !isFinite(Number(e.lag))) {
+        errors.push('Ungültiger Versatz bei „' + e.label + '" — als 0 s gerechnet.');
+      }
       var start = Math.max(base + (isFinite(e.lag) ? Number(e.lag) : 0), 0);
       var d = cleanDur(e.dur);
       items.push({ id: 'x' + i, label: e.label, track: e.track, start: start, end: start + d, dur: d, main: false });

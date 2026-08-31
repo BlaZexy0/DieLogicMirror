@@ -88,24 +88,34 @@ function panel(title, short, kvHtml, rowsFn, extraHtml = '', cls = '') {
     + '<div class="krows">' + rowsHtml + '</div></div>';
 }
 
-const clampPct = x => Math.max(0, Math.min(100, x));
+/* Jede Prozentangabe, die in ein style-Attribut geht, läuft hier durch.
+   Eine Länge in Prozent ist per Definition endlich und liegt in [0, 100] —
+   das an EINER Stelle sicherzustellen ist weniger und verlässlicher als an
+   jeder Schreibstelle einzeln zu prüfen. Vorher entstanden aus
+   Null-Spannen und unbrauchbaren Eingaben style="width:NaN%" und
+   style="width:-12.34%", die der Browser stillschweigend verwirft. */
+const clampPct = x => (isFinite(x) ? Math.max(0, Math.min(100, x)) : 0);
+const pctStr = x => clampPct(x).toFixed(2) + '%';
 
 /* Bullet: Track über [lo, hi], Zielband [bandLo, bandHi], Marker bei val.
    Nicht-endliche Anteile (z. B. hi == lo bei Null-Eingaben) → 0 %. */
 function bullet(lo, hi, bandLo, bandHi, val, lblL, lblM, lblR) {
-  const pct = x => { const p = 100 * (x - lo) / (hi - lo); return isFinite(p) ? clampPct(p) : 0; };
+  const pct = x => clampPct(100 * (x - lo) / (hi - lo));
   return '<div class="kpi-bullet">'
-    + '<span class="band" style="left:' + pct(bandLo) + '%;width:' + (pct(bandHi) - pct(bandLo)) + '%"></span>'
-    + '<span class="mark" style="left:' + pct(val) + '%"></span></div>'
+    + '<span class="band" style="left:' + pctStr(pct(bandLo)) + ';width:' + pctStr(pct(bandHi) - pct(bandLo)) + '"></span>'
+    + '<span class="mark" style="left:' + pctStr(pct(val)) + '"></span></div>'
     + '<div class="kpi-scale"><span>' + lblL + '</span><span>' + lblM + '</span><span>' + lblR + '</span></div>';
 }
 
-/* Meter: Füllung = Auslastung (Ist/Limit), Limit-Marke bei Überschreitung. */
+/* Meter: Füllung = Auslastung (Ist/Limit), Limit-Marke bei Überschreitung.
+   Ohne Auslastung (unbrauchbare Eingaben) bleibt der Balken leer — vorher
+   entstand daraus style="width:NaN%", ein ungültiger CSS-Wert. Der Text
+   daneben zeigt bereits „—". */
 function meter(util) {
-  const fill = clampPct(100 * Math.min(util, 1));
-  const lim = util > 1 ? clampPct(100 / util) : 100;
-  return '<div class="kpi-meter"><span class="fill" style="width:' + fill + '%"></span>'
-    + '<span class="limit" style="left:' + lim + '%"></span></div>';
+  const fill = pctStr(100 * Math.min(util, 1));
+  const lim = pctStr(util > 1 ? 100 / util : 100);
+  return '<div class="kpi-meter"><span class="fill" style="width:' + fill + '"></span>'
+    + '<span class="limit" style="left:' + lim + '"></span></div>';
 }
 
 /* Bewertung einer Auslastung: verletzt über 100 %, knapp ab 80 %. */
@@ -149,12 +159,12 @@ function rulerHTML(v, g) {
      liegt das Lineal exakt unter der Kolbenstirn bzw. dem Kammerende des
      Schemas. Ohne Angabe volle Breite. */
   const P0 = 100 * (g.x0 || 0), P1 = 100 * (g.x1 != null ? g.x1 : 1);
-  const x = s => (P0 + (P1 - P0) * Math.max(0, Math.min(span, s)) / span).toFixed(2) + '%';
-  const w = len => ((P1 - P0) * Math.max(0, len) / span).toFixed(2) + '%';
+  const x = s => pctStr(P0 + (P1 - P0) * Math.max(0, Math.min(span, s)) / span);
+  const w = len => pctStr((P1 - P0) * Math.max(0, len) / span);
   const vacOn = v.vacModel && v.vacModel !== 'aus' && v.vacStart >= 0;
   const sEnd = over ? span : sFill + cav;                      // Füllende
   const vacHtml = '<div class="kr-vac' + (vacOn ? '' : ' off') + '">'
-    + '<span class="vl" style="margin-left:' + P0.toFixed(2) + '%">' + (vacOn
+    + '<span class="vl" style="margin-left:' + pctStr(P0) + '">' + (vacOn
       ? 'Vakuum ab ' + fmt(Math.round(v.vacStart)) + ' mm bis Füllende ' + fmt(Math.round(sEnd)) + ' mm'
       : 'ohne Vakuum')
     + (v.sealStroke > 0 ? ' · Einfüllöffnung dicht ab ' + fmt(Math.round(v.sealStroke)) + ' mm' : '') + '</span>'
