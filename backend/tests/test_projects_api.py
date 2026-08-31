@@ -234,6 +234,12 @@ def test_create_is_idempotent_per_client_id():
     assert admin.post("/api/projects", json={"name": "Kaputt", "data": {"cost": [1, 2]}}).status_code == 422
     assert len(admin.get("/api/projects").json()) == before + 1
 
+    # Ein archiviertes Projekt darf der Idempotenz-Schlüssel nicht wiederbeleben:
+    # der Client hielte es für gespeichert, während es in keiner Liste steht (H-09).
+    assert admin.delete(f"/api/projects/{body['id']}").status_code == 204
+    r3 = admin.post("/api/projects", json=body)
+    assert r3.status_code == 409, r3.text
+
 
 def test_non_finite_numbers_are_refused_not_stored():
     """NaN/Infinity machen den Lese-Endpunkt dauerhaft zu 500 — Python nimmt

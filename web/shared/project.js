@@ -121,13 +121,29 @@
     })[0] || '';
   }
 
+  /* Voller oder abgeschalteter Speicher (Privatmodus, Quota, blockierte
+     Site-Daten) ist kein Randfall: keiner der vier Aufrufer prüfte den
+     Rückgabewert, und die Leiste meldete danach „gespeichert", während die
+     Arbeit nirgends lag. Der Fehler wird deshalb zusätzlich über den
+     Ereigniskanal gemeldet — einmal je Zustandswechsel, damit ein volles
+     localStorage nicht bei jedem Tastendruck ein Ereignis auslöst. */
+  var writeFailed = false;
   function save(id, replaceAll) {
     if (!store) return false;
     if (!replaceAll) store.projects = mergeFromDisk(id);
     if (!store.projects[store.currentId]) store.currentId = firstId(store.projects);
-    try { storage.setItem(STORE_KEY, JSON.stringify(store)); return true; }
-    catch (e) { return false; /* voll oder deaktiviert */ }
+    try {
+      storage.setItem(STORE_KEY, JSON.stringify(store));
+      if (writeFailed) { writeFailed = false; emit('storage-ok'); }
+      return true;
+    } catch (e) {
+      if (!writeFailed) { writeFailed = true; emit('storage-error'); }
+      return false;   // voll oder deaktiviert
+    }
   }
+
+  /* Für die Oberfläche: liegt der letzte Schreibversuch daneben? */
+  function storageOk() { return !writeFailed; }
 
   /* Ein anderer Tab hat geschrieben: den fremden Stand übernehmen, ohne
      selbst zu schreiben, und die Oberfläche unterrichten. */
@@ -460,7 +476,7 @@
     STORE_KEY: STORE_KEY, SECTIONS: SECTIONS, EVENT: EVENT, SCHEMA: SCHEMA,
     init: init, list: list, current: current, get: get, select: select,
     create: create, update: update, duplicate: duplicate, remove: remove, put: put, markSaved: markSaved,
-    bindAccount: bindAccount, clearAll: clearAll,
+    bindAccount: bindAccount, clearAll: clearAll, storageOk: storageOk,
     getSection: getSection, setSection: setSection, mergeDesign: mergeDesign,
     sectionsOf: sectionsOf, derived: derived,
     exportJSON: exportJSON, importJSON: importJSON, fileName: fileName,

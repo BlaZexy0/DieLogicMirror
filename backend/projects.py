@@ -196,6 +196,11 @@ def create_project(body: ProjectCreate, user: User = Depends(current_user), db: 
     if body.id:
         exists = db.get(Project, body.id)
         if exists is not None and exists.org_id == user.org_id:
+            # Ein archiviertes Projekt zurückzugeben hieße: der Client hält es
+            # für gespeichert, während es in keiner Liste mehr auftaucht.
+            if exists.archived_at is not None:
+                raise HTTPException(status_code=409,
+                                    detail="Dieses Projekt ist archiviert und kann nicht neu angelegt werden.")
             return _project_out(exists)
     # Erst prüfen, dann anlegen — eine abgelehnte Anfrage darf kein
     # Geisterprojekt hinterlassen.

@@ -16,6 +16,7 @@ globalThis.window = globalThis;
    storage-Listener aus project.js überhaupt angemeldet werden kann. */
 const bus = new EventTarget();
 globalThis.addEventListener = bus.addEventListener.bind(bus);
+globalThis.removeEventListener = bus.removeEventListener.bind(bus);
 globalThis.dispatchEvent = bus.dispatchEvent.bind(bus);
 
 const P = require(path.join(site, 'shared/project.js'));
@@ -284,4 +285,42 @@ test('Kontobindung: ein fremdes Konto findet den Cache leer vor', () => {
   P.clearAll();
   assert.equal(P.list().length, 0);
   assert.equal(P.bindAccount('org-anna'), false, 'nach clearAll gehört der leere Cache dem nächsten Konto');
+});
+
+test('voller Speicher wird gemeldet, nicht verschluckt', () => {
+  const events = [];
+  /* Der Ereigniskanal des Moduls hängt an globalThis (siehe oben) — hier
+     genügt es, mitzuhören. */
+  const on = e => events.push(e.detail && e.detail.type);
+  globalThis.addEventListener(P.EVENT, on);
+
+  let full = false;
+  const mem = new Map();
+  const s = {
+    getItem: k => mem.get(k) ?? null,
+    setItem: (k, v) => { if (full) { const e = new Error('QuotaExceeded'); e.name = 'QuotaExceededError'; throw e; } mem.set(k, v); },
+    removeItem: k => mem.delete(k), mem
+  };
+  P._reset(); P.init(s);
+  P.create({ name: 'A' });
+  assert.equal(P.storageOk(), true);
+
+  full = true;
+  events.length = 0;
+  assert.equal(P.setSection('design', { values: { part: 1 } }), false, 'save meldet den Fehlschlag');
+  assert.equal(P.storageOk(), false, 'die Oberfläche kann den Zustand abfragen');
+  assert.ok(events.includes('storage-error'), 'der Fehlschlag wird gemeldet');
+
+  /* Einmal je Zustandswechsel — nicht bei jedem Tastendruck. */
+  events.length = 0;
+  P.setSection('design', { values: { part: 2 } });
+  assert.ok(!events.includes('storage-error'), 'keine Ereignisflut');
+
+  full = false;
+  events.length = 0;
+  P.setSection('design', { values: { part: 3 } });
+  assert.equal(P.storageOk(), true);
+  assert.ok(events.includes('storage-ok'), 'Erholung wird ebenfalls gemeldet');
+
+  globalThis.removeEventListener(P.EVENT, on);
 });

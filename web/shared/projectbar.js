@@ -93,6 +93,10 @@
      fremder, neuerer Stand. Sie werden nicht weiter gepusht — der Anwender
      entscheidet, ob er den Serverstand lädt. */
   var conflicts = {};
+  /* Sitzung mitten in der Arbeit abgelaufen — kein Wiederholungsfall. */
+  var expired = false;
+  /* Einmalige Meldung, wenn ein Projekt serverseitig verschwunden ist. */
+  var orphanNote = '';
 
   function render() {
     var cur = P.current();
@@ -102,11 +106,14 @@
     }).join('');
 
     var cloud = '';
-    if (session) {
+    /* Auch nach abgelaufener Sitzung muss der Zustand sichtbar bleiben —
+       genau dann ist er am wichtigsten. */
+    if (session || expired || !P.storageOk()) {
       var h = statusHTML();
       cloud = '<span class="' + h.cls + '" id="dl-pb-status" title="Die Datenbank ist der Stand der Wahrheit — Änderungen werden automatisch übertragen.">' + esc(h.text) + '</span>'
+        + (h.expired ? '<a class="dl-pb-btn" id="dl-pb-relogin" href="' + KONTO + '?next=' + encodeURIComponent(location.pathname + location.search) + '">Neu anmelden</a>' : '')
         + (h.conflict ? '<button class="dl-pb-btn" id="dl-pb-conflict" title="Den lokalen Stand verwerfen und den Stand vom Server laden">Serverstand laden</button>' : '')
-        + '<button class="dl-pb-btn primary" id="dl-pb-save" title="Benannten Schnappschuss (Revision) des aktuellen Stands anlegen">⎘ Revision</button>';
+        + (session ? '<button class="dl-pb-btn primary" id="dl-pb-save" title="Benannten Schnappschuss (Revision) des aktuellen Stands anlegen">⎘ Revision</button>' : '');
     }
 
     return '<span class="dl-pb-label">Projekt</span>'
@@ -169,20 +176,26 @@
   }
   function statusHTML() {
     var cur = P.current();
-    if (!cur || !session) return null;
+    if (!cur || (!session && !expired && P.storageOk())) return null;
     var status, cls = '', conflict = !!conflicts[cur.id];
-    if (conflict) { status = 'Konflikt — auf dem Server liegt ein neuerer Stand'; cls = ' dirty'; }
+    /* Reihenfolge ist der ganze Befund H-10: cur.dirty stand vorn und
+       übertönte jeden Fehlerzustand — der Anwender sah „speichert …",
+       während längst gar nichts mehr gespeichert wurde. */
+    if (!P.storageOk()) { status = 'Browser-Speicher voll oder gesperrt — Änderungen gehen verloren'; cls = ' dirty'; }
+    else if (expired) { status = 'Sitzung abgelaufen — Änderungen sind nur lokal'; cls = ' dirty'; }
+    else if (conflict) { status = 'Konflikt — auf dem Server liegt ein neuerer Stand'; cls = ' dirty'; }
+    else if (orphanNote) { status = orphanNote; cls = ' dirty'; }
     else if (syncState.status === 'saving' || cur.dirty) { status = 'speichert …'; cls = ' pending'; }
     else if (syncState.status === 'error') { status = 'nicht synchronisiert — ' + syncState.error; cls = ' dirty'; }
     else status = 'gespeichert' + (cur.remote && cur.remote.rev ? ' · Rev ' + cur.remote.rev : '') + (syncState.at ? ' · ' + fmtTime(syncState.at) : '');
-    return { text: status, cls: 'dl-pb-status' + cls, conflict: conflict };
+    return { text: status, cls: 'dl-pb-status' + cls, conflict: conflict, expired: expired };
   }
   /* Nur den Sync-Status aktualisieren (kein Neuaufbau) — reicht für alle
      Änderungen während der Arbeit; volle refresh() nur bei Projektwechsel. */
   function refreshStatus() {
     var st = el('dl-pb-status'), h = statusHTML();
     if (!st || !h) { refresh(); return; }
-    if (!!h.conflict !== !!el('dl-pb-conflict')) { refresh(); return; }
+    if (!!h.conflict !== !!el('dl-pb-conflict') || !!h.expired !== !!el('dl-pb-relogin')) { refresh(); return; }
     st.textContent = h.text;
     st.className = h.cls;
   }
@@ -248,6 +261,8 @@
       /* Nur echte lokale Änderungen anstoßen. 'saved' kommt aus markSaved()
          unmittelbar nach jedem erfolgreichen Push — es hier mitzunehmen hieße:
          pushen, weil gerade gepusht wurde (Endlosschleife). */
+      if (type === 'storage-error' || type === 'storage-ok') { refresh(); return; }
+      if (LOCAL_CHANGE.indexOf(type) >= 0) orphanNote = '';   // Meldung ist einmalig
       if (session && e.detail && e.detail.id && LOCAL_CHANGE.indexOf(type) >= 0) scheduleSync(e.detail.id);
       /* 'external' = ein anderer Tab hat geschrieben. Weichen die Abschnitte
          von dem ab, worauf diese Seite aufgebaut ist, hilft nur ein Neuaufbau —
@@ -258,6 +273,14 @@
     /* Aufgeschobenen Neuaufbau nachholen, sobald das Select verlassen wird */
     bar.addEventListener('focusout', function (e) {
       if (e.target && e.target.id === 'dl-pb-select' && refreshPending) setTimeout(refresh, 0);
+    });
+    /* Der zuverlässige Zeitpunkt zum Speichern ist 'hidden': er feuert vor
+       pagehide, während die Seite noch vollständig lebt — ein gewöhnlicher
+       fetch geht hier noch durch, ohne die 64-KiB-Grenze von keepalive.
+       pagehide bleibt als letzter Versuch für den Fall, dass die Seite ohne
+       vorherigen Sichtbarkeitswechsel verschwindet. */
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') flushSync(false);
     });
     window.addEventListener('pagehide', function () { flushSync(true); });
   }
@@ -282,6 +305,19 @@
     var stamp = p.updatedAt;
     var opts = keepalive ? { keepalive: true } : {};
     if (p.remote) {
+      /* Beim Verlassen der Seite stirbt der Kontext nach dem ERSTEN Request:
+         nacheinander abzuwarten hieß, dass der Metadaten-PUT rausging und der
+         Draft-PUT — der eigentliche Arbeitsstand — nie. Hier werden deshalb
+         beide sofort abgesetzt, der Draft zuerst; auf Antworten wartet dann
+         niemand mehr. (Wichtiger ist ohnehin der visibilitychange-Pfad
+         weiter unten, der noch bei lebender Seite regulär speichert.) */
+      if (keepalive) {
+        var quiet = function () {};
+        api('PUT', '/api/projects/' + p.remote.id + '/draft',
+          { data: P.sectionsOf(p), base_draft_at: p.remote.draftAt || null }, opts).catch(quiet);
+        api('PUT', '/api/projects/' + p.remote.id, metaOf(p), opts).catch(quiet);
+        return;
+      }
       await api('PUT', '/api/projects/' + p.remote.id, metaOf(p), opts);
       /* base_draft_at ist der Stand, auf dem dieser Push aufsetzt. Hat der
          Server inzwischen einen anderen, antwortet er 409 statt zu überschreiben. */
@@ -332,7 +368,7 @@
     if (!session || !dirty.length) { if (syncState.status === 'saving') { syncState.status = 'ok'; refreshStatus(); } return; }
     busy = true;
     syncState.status = 'saving';
-    var failed = null, gotConflict = false;
+    var failed = null, gotConflict = false, structural = false;
     try {
       for (var i = 0; i < dirty.length; i++) {
         try { await push(dirty[i], keepalive); }
@@ -341,8 +377,15 @@
              erneut abgelehnt bekommen — das Projekt bleibt liegen und wird
              gemeldet. Alle anderen Projekte werden trotzdem übertragen. */
           if (err.status === 409) { conflicts[dirty[i].id] = true; gotConflict = true; continue; }
+          /* 401: die Sitzung ist abgelaufen. Wiederholen kann nichts helfen,
+             und der 8-Sekunden-Takt verschluckte den Fall bisher vollständig —
+             die Leiste zeigte weiter „speichert …". */
+          if (err.status === 401) { session = null; expired = true; break; }
+          /* 404: auf dem Server gibt es das Projekt nicht mehr (archiviert
+             oder gelöscht). Ohne Behandlung wiederholte flushSync denselben
+             404 alle 8 s und verdarb die Statusanzeige für alle Projekte. */
+          if (err.status === 404 && dirty[i].remote) { orphan(dirty[i]); structural = true; continue; }
           failed = err; pending[dirty[i].id] = true;
-          if (err.status === 401) { session = null; break; }
         }
       }
     } finally { busy = false; }
@@ -350,7 +393,19 @@
       syncState = { status: 'error', at: syncState.at, error: failed.message };
       timer = setTimeout(function () { flushSync(false); }, 8000);   // später erneut
     } else syncState = { status: 'ok', at: new Date().toISOString(), error: null };
-    if (gotConflict) refresh(); else refreshStatus();
+    if (gotConflict || structural || expired) refresh(); else refreshStatus();
+  }
+
+  /* Ein Projekt, das der Server nicht mehr kennt. Der saubere Stand wird
+     entfernt (jemand hat ihn bewusst archiviert), unübertragene Arbeit dagegen
+     als neues, eigenständiges Projekt behalten — sie stillschweigend
+     wegzuwerfen wäre schlimmer als eine überzählige Kopie. */
+  function orphan(p) {
+    if (!p.dirty) { orphanNote = '„' + p.name + '" wurde auf dem Server archiviert und hier entfernt.'; P.remove(p.id); return; }
+    var copy = P.duplicate(p.id, p.name);
+    P.remove(p.id);
+    orphanNote = '„' + p.name + '" gibt es auf dem Server nicht mehr — die ungespeicherten Änderungen liegen jetzt als neues Projekt vor.';
+    if (copy) pending[copy.id] = true;
   }
 
   /* Konflikt auflösen: den lokalen Stand verwerfen und den Serverstand laden. */
