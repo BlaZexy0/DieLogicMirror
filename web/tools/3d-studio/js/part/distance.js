@@ -175,6 +175,78 @@ export async function distanceToMesh(model, loc, opts = {}) {
   return out;
 }
 
+/** Liegt der Punkt INNERHALB des Netzes?
+
+    Der Abstand allein ist vorzeichenlos: ein Kühlkanal, der 5 mm unter der
+    Bauteiloberfläche liegt, und einer, der 5 mm INNEN im Bauteil verläuft
+    (also durchgebrochen ist), liefern denselben Wert. Für eine
+    Abstandsanalyse zwischen Gussteil und Temperierung ist genau das die
+    gefährliche Verwechslung.
+
+    Verfahren: Strahl in +x, Schnitte mit allen Dreiecken zählen — ungerade
+    Zahl heißt innen. Nur die Zellenreihe des Punktes wird abgesucht, nicht
+    das ganze Netz. Bei einem offenen oder nicht mannigfaltigen Netz ist die
+    Parität nicht aussagekräftig; dann kommt false heraus, was der
+    bisherigen Annahme entspricht. */
+export function isInside(loc, px, py, pz) {
+  const { tris, cell, dims, start, list, bounds: b } = loc;
+  if (px < b.min[0] || py < b.min[1] || pz < b.min[2]
+      || px > b.max[0] || py > b.max[1] || pz > b.max[2]) return false;
+  /* Winziger, fester Versatz quer zum Strahl. Ohne ihn trifft der Strahl
+     regelmäßig genau die Kante zwischen zwei Dreiecken einer Fläche — dort
+     zählt er ZWEI Schnitte und die Parität kippt. Der Versatz ist um
+     Größenordnungen kleiner als eine Zelle, ändert also weder Zelle noch
+     Ergebnis, nur die Entartung. */
+  const eps = (b.diag || 1) * 1e-7;
+  const ry = py + eps * 0.7314159, rz = pz + eps * 0.3178539;
+  const cj = Math.max(0, Math.min(dims[1] - 1, Math.floor((ry - b.min[1]) / cell)));
+  const ck = Math.max(0, Math.min(dims[2] - 1, Math.floor((rz - b.min[2]) / cell)));
+  const ci = Math.max(0, Math.min(dims[0] - 1, Math.floor((px - b.min[0]) / cell)));
+  const seen = new Set();
+  let hits = 0;
+  for (let i = ci; i < dims[0]; i++) {
+    const c = (ck * dims[1] + cj) * dims[0] + i;
+    for (let e = start[c]; e < start[c + 1]; e++) {
+      const t = list[e];
+      if (seen.has(t)) continue;
+      seen.add(t);
+      if (rayHitsTriX(tris, t * 9, px, ry, rz)) hits++;
+    }
+  }
+  return (hits & 1) === 1;
+}
+
+/* Schneidet der Strahl (p, +x) das Dreieck? Möller-Trumbore, auf die feste
+   Richtung (1, 0, 0) eingekürzt. */
+function rayHitsTriX(tris, o, px, py, pz) {
+  const ax = tris[o], ay = tris[o + 1], az = tris[o + 2];
+  const e1y = tris[o + 4] - ay, e1z = tris[o + 5] - az, e1x = tris[o + 3] - ax;
+  const e2y = tris[o + 7] - ay, e2z = tris[o + 8] - az, e2x = tris[o + 6] - ax;
+  /* h = d × e2 mit d = (1,0,0) */
+  const hx = 0 * e2z - 0 * e2y, hy = 0 * e2x - 1 * e2z, hz = 1 * e2y - 0 * e2x;
+  const det = e1x * hx + e1y * hy + e1z * hz;
+  if (Math.abs(det) < 1e-12) return false;
+  const inv = 1 / det;
+  const sx = px - ax, sy = py - ay, sz = pz - az;
+  const u = (sx * hx + sy * hy + sz * hz) * inv;
+  if (u < 0 || u > 1) return false;
+  const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x;
+  const v = (1 * qx + 0 * qy + 0 * qz) * inv;
+  if (v < 0 || u + v > 1) return false;
+  return (e2x * qx + e2y * qy + e2z * qz) * inv > 1e-9;
+}
+
+/** Anteil der Punkte eines Modells, die im anderen Netz liegen. */
+export function insideFraction(model, loc) {
+  const V = model.vertexCount;
+  if (!V) return 0;
+  let n = 0;
+  for (let v = 0; v < V; v++) {
+    if (isInside(loc, model.verts[v * 3], model.verts[v * 3 + 1], model.verts[v * 3 + 2])) n++;
+  }
+  return n / V;
+}
+
 /** Kennzahlen einer Abstandsverteilung, gewichtet mit der Fläche der
     anliegenden Dreiecke — sonst zählte ein dicht vernetzter Bereich
     stärker als ein grob vernetzter gleicher Größe. */

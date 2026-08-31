@@ -177,3 +177,74 @@ test('Strahlentest läuft höchstens einmal je Bild (H-25)', () => {
     assert.ok(body.includes('requestAnimationFrame'), f + ': die Drosselung auf den Bildtakt fehlt');
   }
 });
+
+/* ── Vorzeichenloser Abstand ──────────────────────────────────────────── */
+
+test('innen und außen lassen sich unterscheiden — der Abstand allein nicht', async () => {
+  const { buildLocator, closestDistance, isInside, insideFraction } =
+    await import('../../../web/tools/3d-studio/js/part/distance.js');
+  const loc = buildLocator(S.box(100, 60, 40));      // x ±50, y ±30, z ±20
+
+  /* Genau der Befund: gleicher Abstand, verschiedene Seite. */
+  assert.equal(closestDistance(loc, 49, 0, 0).toFixed(6), closestDistance(loc, 51, 0, 0).toFixed(6));
+  assert.equal(isInside(loc, 49, 0, 0), true, '1 mm unter der Fläche');
+  assert.equal(isInside(loc, 51, 0, 0), false, '1 mm darüber');
+
+  /* Mitte, Ecknähe und weit draußen. Die Mitte trifft die Diagonale der
+     Stirnfläche — ohne Versatz zählte der Strahl dort zwei Schnitte und die
+     Parität kippte. */
+  for (const [p, soll] of [[[0, 0, 0], true], [[0, 29, 0], true], [[0, 31, 0], false],
+    [[0, 0, -19], true], [[0, 0, 25], false], [[200, 0, 0], false]]) {
+    assert.equal(isInside(loc, ...p), soll, JSON.stringify(p));
+  }
+
+  const kugel = buildLocator(S.sphere(20, 3));
+  assert.equal(isInside(kugel, 0, 0, 0), true);
+  assert.equal(isInside(kugel, 30, 0, 0), false);
+
+  /* Anteil überlappender Punkte — die Seite meldet ihn. */
+  const drin = buildModel(S.box(10, 10, 10));
+  assert.ok(insideFraction(drin, loc) > 0.99, 'ein Würfel im Quader liegt ganz innen');
+  const draussen = buildModel(S.box(10, 10, 10).map((v, i) => (i % 3 === 0 ? v + 500 : v)));
+  assert.equal(insideFraction(draussen, loc), 0);
+
+  const app = src('js/part/distanceapp.js');
+  assert.match(app, /insideFraction/, 'die Seite misst die Durchdringung nicht');
+  assert.match(app, /durchdringen sich/, 'und meldet sie nicht');
+});
+
+/* ── Kamera, ASCII-STL, Lesefehler, fehlende Knoten ───────────────────── */
+
+test('camera.far deckt die Zoomgrenze ab', () => {
+  const scene = src('js/scene.js');
+  assert.match(scene, /persp\.far = Math\.max\(d, radius \* 40\)/,
+    'far war kleiner als controls.maxDistance — beim Herauszoomen verschwand das Modell');
+  /* Nachgerechnet mit der Formel der Datei. */
+  const radius = 100, d = (radius * 1.2) / Math.tan(Math.PI / 8);
+  assert.ok(Math.max(d, radius * 40) + radius * 20 > radius * 40, 'far muss maxDistance überdecken');
+});
+
+test('ASCII-STL: unlesbare Koordinaten sind ein Fehler, keine NaN', async () => {
+  const { parseSTL } = await import('../../../web/tools/3d-studio/js/part/stlio.js');
+  const enc = t => new TextEncoder().encode(t).buffer;
+  const gut = 'solid x\n' + [[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]].flatMap((_, i) => []).join('') +
+    'facet normal 0 0 1 outer loop vertex 0 0 0 vertex 1 0 0 vertex 0 1 0 endloop endfacet\n' +
+    'facet normal 0 0 1 outer loop vertex 0 0 0 vertex 0 1 0 vertex 0 0 1 endloop endfacet\n' +
+    'facet normal 0 0 1 outer loop vertex 0 0 0 vertex 0 0 1 vertex 1 0 0 endloop endfacet\n' +
+    'facet normal 0 0 1 outer loop vertex 1 0 0 vertex 0 0 1 vertex 0 1 0 endloop endfacet\nendsolid x';
+  const t = parseSTL(enc(gut));
+  assert.ok(t.length >= 36 && t.every(Number.isFinite));
+
+  const kaputt = gut.replace('vertex 1 0 0 vertex 0 1 0 endloop endfacet\nfacet normal 0 0 1 outer loop vertex 0 0 0 vertex 0 1 0',
+    'vertex 1e 0 0 vertex 0 1 0 endloop endfacet\nfacet normal 0 0 1 outer loop vertex 0 0 0 vertex 0 1 0');
+  assert.throws(() => parseSTL(enc(kaputt)), /Unlesbare Koordinate/);
+});
+
+test('Lesefehler und fehlende GLB-Knoten melden sich', () => {
+  const ps = src('js/part/partsource.js');
+  assert.match(ps, /fr\.onerror/, 'ein gescheiterter Lesevorgang blieb stumm, die Busy-Anzeige lief weiter');
+  const die = src('js/die.js');
+  assert.match(die, /if \(!movingRoot\)/,
+    'ohne den Knoten warf der Öffnen-Regler einen TypeError statt zu sagen, was fehlt');
+  assert.match(die, /if \(movingRoot\) movingRoot\.position\.z/);
+});

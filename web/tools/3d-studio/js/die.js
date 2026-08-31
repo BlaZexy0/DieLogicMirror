@@ -48,7 +48,16 @@ new GLTFLoader().load('assets/die.glb', gltf => init(gltf.scene),
 
 function init(dieScene) {
   view.scene.add(dieScene);
+  /* Die GLB muss den Knoten „movingRoot" mitbringen — daran hängt die
+     bewegliche Formhälfte. Fehlte er, warf der Öffnen-Regler beim ersten
+     Zug einen TypeError, statt zu sagen, was der Datei fehlt. */
   const movingRoot = dieScene.getObjectByName('movingRoot');
+  if (!movingRoot) {
+    status.textContent = 'Der Baugruppe fehlt der Knoten „movingRoot" — die bewegliche '
+      + 'Formhälfte lässt sich nicht öffnen. Datei neu erzeugen: node tools/build-glb.mjs';
+    const opener = document.getElementById('open');
+    if (opener) opener.disabled = true;
+  }
 
   /* Seitenleiste: eine Zeile je Registry-Baugruppe, Objekt über den Gruppennamen. */
   const items = COMPONENTS.map(c => ({ ...c, object: dieScene.getObjectByName(c.id) }))
@@ -74,7 +83,7 @@ function init(dieScene) {
 
   wireViewControls({
     onOpacity: setSteelOpacity,
-    onOpen: t => { movingRoot.position.z = t * CFG.openTravel; },
+    onOpen: t => { if (movingRoot) movingRoot.position.z = t * CFG.openTravel; },
     onClip: clip.setClip
   });
   setSteelOpacity(document.getElementById('opacity').value / 100);

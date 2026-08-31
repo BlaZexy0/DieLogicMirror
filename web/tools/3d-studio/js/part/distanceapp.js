@@ -24,7 +24,7 @@ import { mountNav } from '../ui/nav.js';
 import { mountPartSource, frame } from './partsource.js';
 import { buildModel } from './model.js';
 import { refine } from '../mesh.js';
-import { buildLocator, distanceToMesh, distanceStats } from './distance.js';
+import { buildLocator, distanceToMesh, distanceStats, insideFraction } from './distance.js';
 import {
   $, fmt, facts, segButtons, slider, numberInput, runControl, colorbar, gradient, chip
 } from '../ui/controls.js';
@@ -166,6 +166,12 @@ async function runDistance() {
         }
       });
       state[from].stats = distanceStats(state[from].model, state[from].dist);
+      /* Der Abstand ist vorzeichenlos: ein Kanal 5 mm UNTER der Oberfläche
+         und einer 5 mm INNEN im Bauteil liefern denselben Wert. Für eine
+         Abstandsanalyse Gussteil ↔ Temperierung ist das die gefährliche
+         Verwechslung — deshalb wird der Anteil innenliegender Punkte
+         mitgemessen und gemeldet. */
+      state[from].inside = insideFraction(state[from].model, loc);
     }
     state.ms = performance.now() - t0;
     state.analysed = true;
@@ -282,9 +288,23 @@ function updateFacts() {
     rows.push([key.toUpperCase() + ' → ' + (key === 'a' ? 'B' : 'A'),
       fmt(s.stats.min) + ' … ' + (cap ? '≥ ' : '') + fmt(s.stats.max) + ' mm']);
     rows.push(['Mittel ' + key.toUpperCase() + ' (flächengewichtet)', fmt(s.stats.mean) + ' mm']);
+    if (s.inside > 0.001) {
+      rows.push(['Punkte ' + key.toUpperCase() + ' im anderen Netz', fmt(100 * s.inside, 1) + ' %']);
+    }
   }
   if (rows.length) rows.push(['Rechenzeit', state.ms.toFixed(0) + ' ms']);
   facts('distance-facts', rows);
+
+  /* Der gemessene Abstand sagt nichts darüber, auf WELCHER Seite der Fläche
+     ein Punkt liegt. Überlappen sich die Netze, ist der Abstand dort kein
+     Freiraum, sondern eine Durchdringung. */
+  const drin = ['a', 'b'].filter(k => state[k].inside > 0.001);
+  $('model-warn-a').textContent = drin.length
+    ? 'Achtung: ' + drin.map(k => fmt(100 * state[k].inside, 1) + ' % der Punkte von '
+      + k.toUpperCase()).join(' und ')
+      + ' liegen INNERHALB des anderen Netzes — die Teile durchdringen sich. '
+      + 'Der gemessene Abstand ist dort kein Freiraum.'
+    : '';
 }
 
 /* ── Bedienung ───────────────────────────────────────────────── */

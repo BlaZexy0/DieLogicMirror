@@ -162,7 +162,11 @@ export function initScene(container, opts = {}) {
     const d = (orthoHalfH / Math.tan(halfFov()));
     persp.position.copy(center).addScaledVector(dir, d);
     persp.near = Math.max(radius / 500, 0.01);
-    persp.far = d + radius * 20;
+    /* far muss die Zoomgrenze abdecken: controls.maxDistance ist radius·40,
+       far war d + radius·20 — beim Herauszoomen über etwa die halbe
+       erlaubte Strecke verschwand das Modell in der Ferne (gemessen bei
+       Radius 100: far 2290, maxDistance 4000). */
+    persp.far = Math.max(d, radius * 40) + radius * 20;
     persp.updateProjectionMatrix();
     ortho.position.copy(center).addScaledVector(dir, Math.max(d, radius * 4));
     ortho.zoom = 1;

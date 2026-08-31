@@ -60,6 +60,15 @@ export function mountPartSource({ busy, viewport, onStart, onLoad, suffix = '',
           + ' konnte nicht gelesen werden: ' + err.message;
       }
     };
+    /* Ohne onerror blieb ein gescheiterter Lesevorgang (Datei entfernt,
+       Rechte, Lesefehler) völlig stumm — die Busy-Anzeige lief weiter und
+       nichts sagte, warum nichts passiert. */
+    fr.onerror = () => {
+      busy.classList.remove('on');
+      $(id('model-warn')).textContent = 'Die Datei „' + file.name + '" konnte nicht gelesen werden'
+        + (fr.error && fr.error.name ? ' (' + fr.error.name + ')' : '') + '.';
+    };
+    fr.onabort = fr.onerror;
     fr.readAsArrayBuffer(file);
   }
 

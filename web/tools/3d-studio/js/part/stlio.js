@@ -40,6 +40,14 @@ function parseAscii(text) {
   while ((m = re.exec(text)) !== null) vals.push(+m[1], +m[2], +m[3]);
   const nTri = Math.floor(vals.length / 9);
   if (!nTri) throw new Error('Keine Dreiecke in der ASCII-STL gefunden');
+  /* Der Ausdruck lässt Formen wie „1e" oder „---9" durch, die +x zu NaN
+     machen. Übernommen wurden sie stumm — ein Netz aus NaN-Koordinaten
+     rechnet danach überall weiter und liefert Unsinn statt einer Meldung. */
+  const kaputt = vals.findIndex(v => !Number.isFinite(v));
+  if (kaputt >= 0 && kaputt < nTri * 9) {
+    throw new Error('Unlesbare Koordinate in der ASCII-STL (Punkt '
+      + (Math.floor(kaputt / 3) + 1) + ') — die Datei ist beschädigt.');
+  }
   return Float64Array.from(vals.slice(0, nTri * 9));
 }
 
