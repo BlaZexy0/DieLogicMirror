@@ -11,6 +11,12 @@
  *
  * Einbindung aus app/ (eine Ebene tiefer, ohne Footer):
  *   <script src="/shared/nav.js" data-footer="none"></script>
+ *
+ * Schmale Fenster (Tablet, Handy): passen die Links nicht mehr neben Logo
+ * und „Anmelden", schaltet nav.js die Leiste auf ein Burger-Menü um. Die
+ * Grenze wird gemessen (Naturbreite der Links), nicht als Breakpoint
+ * gepflegt — sonst schiebt der nächste neue Nav-Reiter den Anmelde-Knopf
+ * wieder aus dem Bild.
  */
 
 (function () {
@@ -267,6 +273,7 @@
   color: ${C.ondark};
   font-size: 0.85rem;
   font-family: inherit;
+  font-weight: 400;
   padding: 0 0.9rem;
   line-height: 56px;
   cursor: pointer;
@@ -366,9 +373,174 @@
   text-align: center;
 }
 
+/* ── Schmale Leiste: Burger-Knopf und Klapp-Panel ───────────────────
+   Passen die Links nicht mehr neben Logo und „Anmelden", schaltet
+   nav.js die Klasse .dl-nav--compact — gemessen, nicht per fester
+   Breakpoint-Grenze, damit ein neuer Nav-Reiter die Leiste nicht
+   wieder sprengt. */
+.dl-nav-burger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  margin-left: 0.4rem;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 8px;
+  background: none;
+  color: ${C.ondark};
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dl-nav-burger:hover { color: white; border-color: rgba(255,255,255,.45); }
+.dl-nav-burger span,
+.dl-nav-burger span::before,
+.dl-nav-burger span::after {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform 0.18s, background 0.18s;
+}
+.dl-nav-burger span { position: relative; }
+.dl-nav-burger span::before,
+.dl-nav-burger span::after { content: ''; position: absolute; left: 0; }
+.dl-nav-burger span::before { top: -6px; }
+.dl-nav-burger span::after { top: 6px; }
+.dl-nav--open .dl-nav-burger span { background: transparent; }
+.dl-nav--open .dl-nav-burger span::before { transform: translateY(6px) rotate(45deg); }
+.dl-nav--open .dl-nav-burger span::after { transform: translateY(-6px) rotate(-45deg); }
+
+.dl-nav--compact .dl-nav-burger { display: inline-flex; }
+.dl-nav--compact .dl-nav-logo { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+.dl-nav--compact .dl-nav-cta { margin-left: auto; }
+.dl-nav--compact .dl-nav-links {
+  display: none;
+  position: absolute;
+  top: 56px;
+  left: 0;
+  right: 0;
+  flex-direction: column;
+  margin: 0;
+  padding: 0.25rem 0 0.6rem;
+  background: ${C.dark2};
+  border-top: 1px solid ${C.dark3};
+  box-shadow: 0 12px 28px rgba(0,20,27,.45);
+  max-height: calc(100vh - 56px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  z-index: 200;
+}
+.dl-nav--compact.dl-nav--open .dl-nav-links { display: flex; }
+.dl-nav--compact .dl-nav-links > li { width: 100%; }
+.dl-nav--compact .dl-nav-links > li > a,
+.dl-nav--compact .dl-nav-group > .dl-nav-group-label {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 46px;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  text-align: left;
+}
+.dl-nav--compact .dl-nav-links > li > a.active {
+  border-bottom: 0;
+  border-left: 3px solid ${C.primary};
+  padding-left: calc(1.25rem - 3px);
+}
+.dl-nav--compact .dl-nav-group { display: block; position: static; }
+.dl-nav--compact .dl-nav-group > .dl-nav-group-label { justify-content: space-between; }
+.dl-nav--compact .dl-nav-group > .dl-nav-group-label::after {
+  content: '';
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-left: 0.75rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.18s;
+}
+.dl-nav--compact .dl-nav-group.open > .dl-nav-group-label::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+.dl-nav--compact .dl-nav-dropdown {
+  display: none;
+  position: static;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  min-width: 0;
+  max-height: none;
+  overflow: visible;
+  padding: 0.1rem 0 0.35rem;
+  border: 0;
+  border-radius: 0;
+  background: rgba(0,0,0,.18);
+  box-shadow: none;
+}
+.dl-nav--compact .dl-nav-group.open > .dl-nav-dropdown { display: block; }
+.dl-nav--compact .dl-nav-dropdown a {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0.5rem 1.25rem 0.5rem 2.25rem;
+  font-size: 0.88rem;
+}
+.dl-nav--compact .dl-nav-dropdown a.active {
+  border-left: 3px solid ${C.primary};
+  padding-left: calc(2.25rem - 3px);
+}
+
+/* Messzustand: die Links werden kurz aus dem Fluss genommen und in die
+   breite Darstellung gezwungen — so kennt nav.js ihre Naturbreite auch
+   dann, wenn die Leiste gerade zusammengeklappt ist. */
+.dl-nav--measuring .dl-nav-links {
+  display: flex !important;
+  position: absolute !important;
+  visibility: hidden !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+  flex-direction: row !important;
+  width: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  overflow: visible !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+.dl-nav--measuring .dl-nav-group { display: inline-block !important; }
+.dl-nav--measuring .dl-nav-links > li > a,
+.dl-nav--measuring .dl-nav-group > .dl-nav-group-label {
+  display: inline-block !important;
+  width: auto !important;
+  min-height: 0 !important;
+  padding: 0 0.9rem !important;
+  font-size: 0.85rem !important;
+  line-height: 56px !important;
+}
+.dl-nav--measuring .dl-nav-group > .dl-nav-group-label::after { content: none !important; }
+.dl-nav--measuring .dl-nav-dropdown { display: none !important; }
+.dl-nav--measuring .dl-nav-cta { margin-left: 1.5rem !important; }
+.dl-nav--measuring .dl-nav-burger { display: none !important; }
+
 @media (max-width: 960px) {
-  .dl-nav { padding: 0 1rem; gap: 1rem; overflow-x: auto; }
+  .dl-nav { padding: 0 1rem; gap: 1rem; }
   .dl-footer { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .dl-nav { padding: 0 0.75rem; gap: 0.5rem; }
+  .dl-nav-version { display: none; }
 }
 `;
 
@@ -385,12 +557,14 @@
     <span class="dl-nav-logo-text">${WORDMARK}</span>
     <span class="dl-nav-version">${VERSION}</span>
   </a>
-  <ul class="dl-nav-links">
+  <ul class="dl-nav-links" id="dl-nav-links">
     ${buildNavLinks()}
   </ul>
   <div class="dl-nav-cta">
     <a href="${resolveHref('/konto/')}" id="dl-nav-account">Anmelden</a>
   </div>
+  <button type="button" class="dl-nav-burger" aria-label="Menü öffnen"
+          aria-expanded="false" aria-controls="dl-nav-links"><span></span></button>
 </nav>`;
 
     const mount = document.getElementById('nav-mount');
@@ -400,6 +574,7 @@
       document.body.insertAdjacentHTML('afterbegin', navHTML);
     }
     wireDropdowns();
+    wireCompact();
   }
 
   /* Aufklapp-Menüs klickbar (Touch) und per Tastatur nutzbar machen —
@@ -429,6 +604,96 @@
     });
   }
 
+  /* ── Schmale Leiste: messen statt raten ───────────────────────
+     Die Linkliste wächst mit jedem Werkzeug (zuletzt „3D-Studio"), und
+     ab einer gewissen Länge schob sie „Anmelden" aus dem Bild. Statt
+     eine feste Breakpoint-Grenze zu pflegen, misst nav.js die
+     Naturbreite der Links und klappt die Leiste zum Burger-Menü
+     zusammen, sobald sie neben Logo und CTA nicht mehr passt. */
+  let recompute = null;
+
+  function wireCompact() {
+    const nav = document.querySelector('.dl-nav');
+    if (!nav) return;
+    const links  = nav.querySelector('.dl-nav-links');
+    const logo   = nav.querySelector('.dl-nav-logo');
+    const cta    = nav.querySelector('.dl-nav-cta');
+    const burger = nav.querySelector('.dl-nav-burger');
+    if (!links || !logo || !cta || !burger) return;
+
+    const px = (v) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+
+    /* Breite, die die Leiste in voller Darstellung bräuchte. Gemessen
+       im Zustand .dl-nav--measuring — dort liegen die Links absolut und
+       unsichtbar in Zeilenform, unabhängig davon, ob gerade
+       zusammengeklappt ist. */
+    function fitsWide() {
+      nav.classList.add('dl-nav--measuring');
+      const navCs = getComputedStyle(nav);
+      const ctaCs = getComputedStyle(cta);
+      const gap = px(navCs.columnGap || navCs.gap);
+      const need = Math.ceil(Math.max(links.scrollWidth, links.getBoundingClientRect().width))
+        + logo.offsetWidth
+        + cta.offsetWidth + px(ctaCs.marginLeft)
+        + 2 * gap
+        + px(navCs.paddingLeft) + px(navCs.paddingRight)
+        + 8;                     /* kleine Reserve gegen Rundungsränder */
+      const room = nav.clientWidth;
+      nav.classList.remove('dl-nav--measuring');
+      return need <= room;
+    }
+
+    function setOpen(open) {
+      nav.classList.toggle('dl-nav--open', open);
+      burger.setAttribute('aria-expanded', String(open));
+      burger.setAttribute('aria-label', open ? 'Menü schließen' : 'Menü öffnen');
+    }
+
+    function update() {
+      const compact = !fitsWide();
+      nav.classList.toggle('dl-nav--compact', compact);
+      if (!compact) setOpen(false);
+    }
+    recompute = update;
+
+    burger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setOpen(!nav.classList.contains('dl-nav--open'));
+    });
+    /* Ein Klick auf einen Link schließt das Panel — bei Sprungzielen
+       (#preise) lädt die Seite sonst nicht neu und es bliebe offen. */
+    links.addEventListener('click', (e) => {
+      if (e.target && e.target.closest && e.target.closest('a')) setOpen(false);
+    });
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t && t.closest && t.closest('.dl-nav'))) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    });
+
+    let lastWidth = -1, queued = false;
+    const onResize = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        const w = Math.round(nav.clientWidth);
+        if (w === lastWidth) return;
+        lastWidth = w;
+        update();
+      });
+    };
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => update()).catch(() => {});
+    }
+    lastWidth = Math.round(nav.clientWidth);
+    update();
+  }
+
   function injectFooter() {
     document.body.insertAdjacentHTML('beforeend', buildFooter());
   }
@@ -442,8 +707,10 @@
       .then(r => (r.ok ? r.json() : null))
       .then(me => {
         const a = document.getElementById('dl-nav-account');
-        if (a && me && me.user) a.textContent = '👤 ' + (me.user.name || me.user.email);
+        if (!a) return;
+        if (me && me.user) a.textContent = '👤 ' + (me.user.name || me.user.email);
         a.title = 'Projekte & Konto';
+        if (recompute) recompute();
       })
       .catch(() => {});
   }

@@ -9,7 +9,8 @@
    4. die Konsistenz von Felddefinition und Maschinen-Presets
    5. die Rechenlogik der STL-Seite (tools/sprengflaeche/stl-logic.js)
    6. die Rechenlogik der Teilekosten-Seite (tools/teilekosten/teilekosten-logic.js)
-   7. die Zeitleisten-Logik der Zyklusanalyse (zyklus/zyklus-logic.js) */
+   7. die Zeitleisten-Logik der Zyklusanalyse (zyklus/zyklus-logic.js)
+   8. die Navigation (shared/nav.js): Diagrammliste und schmale Leiste */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -273,6 +274,23 @@ test('nav: CHARTS-Liste entspricht der Registry (Ids, Titel, Reihenfolge)', () =
   const navCharts = new Function('return [' + m[1] + ']')();
   assert.deepEqual(navCharts, charts.map(c => [c.id, c.title]),
     'nav.js CHARTS muss js/charts/registry.js entsprechen (Reihenfolge = Registry)');
+});
+
+/* Die Leiste wurde schmal zum Scrollstreifen: die Links schoben „Anmelden"
+   aus dem Bild, sichtbar blieb nur das Logo. Seitdem klappt nav.js zum
+   Burger-Menü zusammen — dieser Test hält die Bestandteile fest. */
+test('nav: schmale Leiste klappt zum Burger-Menü statt horizontal zu scrollen', () => {
+  const src = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
+  assert.ok(!/\.dl-nav\s*\{[^}]*overflow-x:\s*auto/.test(src),
+    'die Leiste darf nicht wieder horizontal scrollen — das versteckt „Anmelden"');
+  assert.match(src, /class="dl-nav-burger"[\s\S]*?aria-controls="dl-nav-links"/,
+    'Burger-Knopf fehlt oder zeigt nicht auf die Linkliste');
+  assert.match(src, /<ul class="dl-nav-links" id="dl-nav-links">/,
+    'die Linkliste braucht die id, auf die aria-controls zeigt');
+  for (const cls of ['dl-nav--compact', 'dl-nav--open', 'dl-nav--measuring']) {
+    assert.ok(src.includes('.' + cls), `CSS-Regel für .${cls} fehlt`);
+    assert.ok(src.includes("'" + cls + "'"), `nav.js schaltet ${cls} nicht`);
+  }
 });
 
 function loadAsset(name) {
