@@ -25,6 +25,14 @@ Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
   Namen/Passwort setzen. Ein zu kurzer Token oder eine fehlerhafte Adresse
   hält den Start nicht mehr auf — es steht dann eine Warnung im Server-Log. Weitere Personen lädt man auf der Konto-Seite ein
   (Link kopieren und weitergeben).
+- **Schema-Explorer:** `/docs`, `/redoc` und `/openapi.json` sind
+  standardmäßig ZU — sie listen jeden Endpunkt samt Feldern und laden zum
+  Ausprobieren ein. Zum Entwickeln `DIELOGIC_DOCS=1` setzen.
+- **Sicherheits-Header:** jede Antwort trägt CSP, `nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy` und `Permissions-Policy`;
+  über TLS zusätzlich HSTS. Die CSP erlaubt `'unsafe-inline'` für Skripte
+  und Styles, weil die Seiten ihre Logik in Inline-Blöcken tragen — alles
+  Übrige ist auf `'self'` beschränkt und wird mitgeliefert.
 - **Demo-Konto:** `DIELOGIC_DEMO_PASSWORD=<mind. 10 Zeichen>` setzen → beim
   Start entsteht die Organisation „Demo" mit Admin `demo@dielogic.de`; die
   Login-Seite zeigt dann „Als Demo anmelden" samt Zugangsdaten. Nur zum

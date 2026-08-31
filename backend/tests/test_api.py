@@ -125,3 +125,35 @@ def test_static_site_is_served():
     r = client.get("/assets/logo.svg")
     assert r.status_code == 200
     assert r.headers["cache-control"] == "public, max-age=3600"
+
+
+def test_security_headers_on_every_response():
+    """Es gab keine — kein CSP, keine Referrer-Policy, kein nosniff, kein
+    X-Frame-Options (H-34)."""
+    for url in ("/api/health", "/index.html", "/konto/"):
+        r = client.get(url)
+        assert r.status_code in (200, 404), url
+        h = r.headers
+        assert "default-src 'self'" in h.get("content-security-policy", ""), url
+        assert h.get("x-content-type-options") == "nosniff", url
+        assert h.get("x-frame-options") == "DENY", url
+        assert h.get("referrer-policy") == "strict-origin-when-cross-origin", url
+        assert "frame-ancestors 'none'" in h["content-security-policy"], url
+
+    # Die CSP muss die mitgelieferten Inline-Blöcke zulassen — sonst wäre die
+    # Seite mit einem strengen Kopf schlicht kaputt statt sicher.
+    csp = client.get("/api/health").headers["content-security-policy"]
+    assert "script-src 'self' 'unsafe-inline'" in csp
+    assert "connect-src 'self'" in csp and "object-src 'none'" in csp
+
+
+def test_api_responses_are_not_cached():
+    """Kontodaten gehören in keinen Cache."""
+    assert client.get("/api/health").headers.get("cache-control") == "no-store"
+
+
+def test_schema_explorer_is_closed_by_default():
+    """/docs listet jeden Endpunkt samt Feldern und lädt zum Ausprobieren
+    ein — in Produktion bleibt er zu, solange ihn niemand einschaltet."""
+    for url in ("/docs", "/redoc", "/openapi.json"):
+        assert client.get(url).status_code == 404, url

@@ -84,11 +84,20 @@ body {
   text-decoration: none;
 }
 
+/* Randlose Schaltfläche. --ondark ist auf dunklem Grund richtig (7,34:1),
+   auf hellem aber nicht lesbar: gemessen 1,968:1 gegen --bg und 2,14:1
+   gegen --surface — weit unter den 4,5:1 für Text. Weil .btn-ghost auf
+   BEIDEN Untergründen steht (Startseite dunkel, Konto-Seite hell), erbt die
+   Schrift jetzt die Farbe ihrer Umgebung. Der Rahmen bleibt an einem festen
+   Ton, damit die Optik der Startseite unverändert bleibt. */
 .btn-ghost {
   background: transparent;
   border: 1px solid var(--dark3);
-  color: var(--ondark);
+  color: inherit;
 }
+
+/* Ausdrücklich auf dunklem Grund — dort ist --ondark der gewollte Ton. */
+.btn-ghost-ondark { color: var(--ondark); }
 
 .btn-ghost:hover {
   border-color: var(--primary);

@@ -373,6 +373,11 @@
 
   /* ── Einladung ── */
   var token = new URLSearchParams(location.search).get('token');
+  /* Das Token sofort aus der Adresszeile nehmen: dort landet es im Verlauf,
+     in Lesezeichen und in jedem Bildschirmfoto, und bisher blieb es auch
+     nach einem Fehler stehen. Im Speicher bleibt es, bis es eingelöst ist.
+     Gegen den Referrer wirkt zusätzlich die Referrer-Policy des Servers. */
+  if (token) history.replaceState(null, '', location.pathname + location.hash);
 
   async function showInvite() {
     show('invite', true);
@@ -393,7 +398,6 @@
     try {
       await api('POST', '/api/auth/register', { token: token, name: $('r-name').value.trim(), password: $('r-pw').value });
       if (goNext()) return;
-      history.replaceState(null, '', location.pathname);
       token = null;
       start();
     } catch (err) { $('register-err').textContent = err.message; }
@@ -656,7 +660,12 @@
 
   async function loadInvites() {
     var rows = await api('GET', '/api/org/invites');
-    var base = location.origin + location.pathname.replace(/\/app\/konto\.html$/, '');
+    /* Der Einladungslink zeigt immer auf /konto/ dieser Site. Die alte
+       Zeile schnitt „/app/konto.html" ab — einen Pfad, den es seit der
+       Umbenennung site/ → web/ nicht mehr gibt. Auf der echten Seite
+       /konto/ entstand daraus „…/konto//konto/?token=…", also eine 404:
+       jede so verschickte Einladung war unbrauchbar. */
+    var base = location.origin;
     setCount('k-invites', rows.length);
     $('inv-body').innerHTML = rows.length ? rows.map(function (i) {
       var url = base + '/konto/?token=' + i.token;
@@ -703,9 +712,25 @@
   /* ── Start ── */
   /* Von einer Werkzeugseite hierher geleitet? Nach der Anmeldung zurück. */
   var NEXT = new URLSearchParams(location.search).get('next');
+
+  /* Nur Ziele auf dieser Site. Die alte Prüfung /^\/[^\/]/ ließ „/\evil.com"
+     durch: der Browser behandelt den Rückwärtsschrägstrich in einer URL wie
+     einen Schrägstrich, „/\evil.com" wird also zu „//evil.com" und landet
+     auf https://evil.com/. Statt auf verbotene Muster zu prüfen, wird das
+     Ziel aufgelöst und mit dem eigenen Ursprung verglichen — was dort nicht
+     landet, kommt nicht infrage. */
+  function safeNext(raw) {
+    if (!raw) return null;
+    var u;
+    try { u = new URL(raw, location.origin); } catch (e) { return null; }
+    if (u.origin !== location.origin) return null;
+    return u.pathname + u.search + u.hash;
+  }
   function goNext() {
-    if (NEXT && /^\/[^\/]/.test(NEXT)) { location.replace(NEXT); return true; }
-    return false;
+    var to = safeNext(NEXT);
+    if (!to || to === location.pathname + location.search) return false;
+    location.replace(to);
+    return true;
   }
 
   async function start() {
