@@ -109,9 +109,13 @@ test('pq2: eingestellter Akkumulatordruck skaliert Gießkraft, p₀, Hüllkurve 
   /* Metalldruck-Hüllkurve ebenfalls halbiert */
   const qm1 = calc(v, 'q', 'pm'), qm2 = calc(half, 'q', 'pm');
   closeTo(maskMax(qm2), maskMax(qm1) / 2, 1e-6);
-  /* fehlende/ungültige Drücke → Maximalkraft; über dem Maximum wird gekappt */
-  closeTo(injForceEff(Object.assign({}, v, { pAccOp: 0 })), v.injForce);
-  closeTo(injForceEff(Object.assign({}, v, { pAcc: 0 })), v.injForce);
+  /* Ungültige Drücke ergeben KEINE Kraft. Der Rückfall auf die Maximalkraft
+     war die am wenigsten konservative Annahme ausgerechnet dann, wenn die
+     Eingaben unbrauchbar sind — die Maschine sah größer aus, als sie ist. */
+  assert.ok(Number.isNaN(injForceEff(Object.assign({}, v, { pAccOp: 0 }))));
+  assert.ok(Number.isNaN(injForceEff(Object.assign({}, v, { pAcc: 0 }))));
+  assert.ok(Number.isNaN(injForceEff(Object.assign({}, v, { injForce: 0 }))));
+  /* Über dem Maximum wird weiterhin gekappt — das ist eine gültige Eingabe. */
   closeTo(injForceEff(Object.assign({}, v, { pAccOp: 999 })), v.injForce);
   closeTo(pqCore(Object.assign({}, v, { pAccOp: 999 })).p0, c1.p0);
   closeTo(calc(Object.assign({}, v, { pAccOp: 999 }), 'q', 'ph').y1, 1.05 * v.pAcc);

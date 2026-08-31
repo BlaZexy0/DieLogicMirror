@@ -64,7 +64,8 @@ test('curvegen: López-Modus — gültige Kurve, v1 ≤ v_krit, Hub bis Schussen
   const shot = computeShot(v, r.points);
   assert.ok(!shot.error, shot.error);
   assert.ok(shot.v1 <= shot.vcrit + 1e-6, `v1 ${shot.v1} > v_krit ${shot.vcrit}`);
-  assert.ok(shot.checks[0][0], 'v_krit-Prüfung muss bestehen: ' + shot.checks[0][1]);
+  const vcrit0 = shot.checks.find(c => c.id === 'vcrit');
+  assert.ok(vcrit0 && vcrit0.ok, 'v_krit-Prüfung muss bestehen: ' + (vcrit0 && vcrit0.text));
   // Kurvenende = Kammer − Pressrest (deckt den Gesamthub ab)
   assert.ok(shot.profile.travel >= shot.totalStroke - 1e-9, 'Kurvenhub deckt Gesamthub nicht ab');
   assert.ok(shot.profile.travel <= v.length / 1000 - shot.biscLen + 2e-3, 'Kurve läuft in den Pressrest');
@@ -80,7 +81,8 @@ test('curvegen: López — Rampe der 2. Phase beginnt nie vor „Kammer voll" (S
       const r = generateCurve(v, { mode: 'lopez' }); if (r.error) continue;
       const shot = computeShot(v, r.points); if (shot.error) continue; n++;
       assert.ok(shot.v1 <= shot.vcrit + 1e-9, `Ø${diam} L${length} m${part} a${amax}: v1 ${shot.v1} > v_krit ${shot.vcrit}`);
-      assert.ok(shot.checks[0][0], `Ø${diam} L${length} m${part} a${amax}: ` + shot.checks[0][1]);
+      const vc = shot.checks.find(c => c.id === 'vcrit');
+      assert.ok(vc && vc.ok, `Ø${diam} L${length} m${part} a${amax}: ` + (vc && vc.text));
       const aPk = Math.max(shot.profile.amax, -shot.profile.amin, 0);
       assert.ok(aPk <= amax + 1e-6, `Ø${diam} L${length} m${part}: a ${aPk} > a_max ${amax}`);
     }
@@ -252,7 +254,11 @@ test('curvegen: López — kleines a_max wird nicht überschritten (2. Phase gek
   assert.ok(!shot.error, shot.error);
   const aPk = Math.max(shot.profile.amax, -shot.profile.amin, 0);
   assert.ok(aPk <= 3 + 1e-6, 'Beschleunigung über a_max: ' + aPk);
-  assert.ok(shot.checks[2][0], 'Beschleunigungs-Prüfung muss bestehen: ' + shot.checks[2][1]);
+  /* Über die id, nicht über den Index: der Beschleunigungseintrag steht
+     nur bei a_max > 0 in der Liste — bei a_max = 0 ist checks[2] die
+     Kurvenhub-Prüfung, und der Test hätte etwas anderes geprüft. */
+  const acc = shot.checks.find(c => c.id === 'amax');
+  assert.ok(acc && acc.ok, 'Beschleunigungs-Prüfung muss bestehen: ' + (acc && acc.text));
 });
 
 /* ── Zustands-Übernahme (core/state.js) ──────────────────────── */
@@ -749,4 +755,24 @@ test('zyklus: unbekannter Bezugspunkt und ungültige Dauer → Fehler, endliche 
   assert.equal(by.halten.dur, 0);      // ungültige Dauer zählt als 0 — und wird gemeldet
   assert.equal(by.oeffnen.start, 12);  // Kette rückt nach
   r.items.forEach(i => assert.ok(Number.isFinite(i.start) && Number.isFinite(i.end)));
+});
+
+test('physics: jede Prüfung trägt eine stabile id — die Liste ist es nicht', async () => {
+  const { DEFAULT_CURVE } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
+  const v = {}; for (const f of allFields()) v[f.key] = f.def;
+  const mit = computeShot(v, DEFAULT_CURVE.map(p => p.slice()));
+  const ohne = computeShot(Object.assign({}, v, { amax: 0 }), DEFAULT_CURVE.map(p => p.slice()));
+
+  assert.ok(mit.checks.every(c => typeof c.id === 'string' && c.id));
+  assert.ok(mit.checks.some(c => c.id === 'amax'), 'mit a_max muss die Prüfung dabei sein');
+  assert.ok(!ohne.checks.some(c => c.id === 'amax'), 'ohne a_max nicht');
+
+  /* Genau das machte den Indexzugriff falsch: dieselbe Position, andere Prüfung. */
+  assert.notEqual(mit.checks[2].id, ohne.checks[2].id);
+
+  /* Die alte Form [ok, text] bleibt erhalten — shotcurve.js liest sie so. */
+  for (const c of mit.checks) {
+    assert.equal(c[0], c.ok);
+    assert.equal(c[1], c.text);
+  }
 });

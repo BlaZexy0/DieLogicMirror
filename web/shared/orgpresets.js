@@ -79,9 +79,23 @@
         if (r.status === 401 && cached) { try { localStorage.removeItem(CACHE_KEY); } catch (e) {} }
         return null;
       }
-      return fetch('/api/org/settings', { credentials: 'same-origin' }).then(function (r2) { return r2.ok ? r2.json() : null; });
+      return fetch('/api/org/settings', { credentials: 'same-origin' }).then(function (r2) {
+        /* Ein Serverfehler ist NICHT dasselbe wie „keine Stammdaten". Beides
+           auf null abzubilden ließ die Organisation still mit den
+           Beispielwerten weiterrechnen — mit Demo-Preisen und
+           Demo-Maschinen, ohne jeden Hinweis. Der Cache der letzten
+           Sitzung ist die bessere Näherung; gibt es auch den nicht, wird
+           es gemeldet. */
+        if (r2.ok) return r2.json();
+        root.__ORG_PRESETS_ERROR__ = 'Stammdaten konnten nicht geladen werden (HTTP ' + r2.status + ')'
+          + (cached ? ' — es gilt der zuletzt geladene Stand.' : ' — es gelten die Beispielwerte.');
+        return undefined;   // undefined = Fehler, null = „nichts hinterlegt"
+      });
     })
     .then(function (settings) {
+      /* undefined: der Abruf ist gescheitert — den vorhandenen Stand
+         behalten und nichts neu laden. */
+      if (settings === undefined) { announceError(); return; }
       if (settings === null) {
         if (cached && !same(cached, null)) { var k0 = 'dl-org-reload'; if (!sessionStorage.getItem(k0)) { sessionStorage.setItem(k0, '1'); location.reload(); } }
         return;
@@ -93,5 +107,22 @@
       }
       sessionStorage.removeItem('dl-org-reload');
     })
-    .catch(function () {});
+    .catch(function () {
+      root.__ORG_PRESETS_ERROR__ = 'Stammdaten konnten nicht geladen werden — es gelten '
+        + (cached ? 'die zuletzt geladenen Werte.' : 'die Beispielwerte.');
+      announceError();
+    });
+
+  /* Die Seiten lesen die Globals beim Import; ein Fehler muss sie also über
+     ein Ereignis erreichen — und in __ORG_PRESETS_ERROR__ auch die, die
+     später fragen. */
+  function announceError() {
+    if (!root.__ORG_PRESETS_ERROR__ || typeof root.dispatchEvent !== 'function'
+        || typeof root.CustomEvent !== 'function') return;
+    try {
+      root.dispatchEvent(new root.CustomEvent('dielogic:orgpresets', {
+        detail: { error: root.__ORG_PRESETS_ERROR__ }
+      }));
+    } catch (e) { /* kein DOM */ }
+  }
 })(typeof window !== 'undefined' ? window : globalThis);

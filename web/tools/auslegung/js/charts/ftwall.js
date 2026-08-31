@@ -12,6 +12,14 @@ export default {
   inputs: ['wallMin', 'wallMax', 'kfill', 'Tcast', 'Tflow', 'Tdie', 'Sfrac', 'Zconst', 'tmax', 'wall'],
 
   calc(v) {
+    /* Der Nenner ist die Temperaturspanne zwischen Fließ- und Formtemperatur.
+       Ohne Prüfung lieferte die NADCA-Formel bei Gleichheit ±Infinity (und
+       NaN bei s = 0) und das Diagramm zeichnete es. Dieselbe Formel steht an
+       vier Stellen im Repo mit drei verschiedenen Nullschutz-Varianten —
+       hier fehlte sie ganz. */
+    if (!(v.Tflow > v.Tdie)) {
+      return { err: 'Min. Fließtemperatur muss über der Formtemperatur liegen (' + fmt(v.Tflow) + ' °C ≤ ' + fmt(v.Tdie) + ' °C).' };
+    }
     const x = seq(v.wallMin, v.wallMax, 140);
     const f = s => v.kfill * s * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / (v.Tflow - v.Tdie);
     const q = line(x, [series('Empf. Füllzeit', theme.chart.series1, x, f)],

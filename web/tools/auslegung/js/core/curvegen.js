@@ -66,6 +66,12 @@ export function fillTimeMs(v0, v2, a, s0, sGate, sOver) {
   const dRamp = a > 0 ? (v2 * v2 - v0 * v0) / (2 * a) * 1000 : 0;   // Rampenweg [mm]
   const sRampEnd = s0 + dRamp;
   const tAt = s => {
+    /* Vor dem Rampenbeginn fährt der Kolben mit v0 — die 1. Phase. Ohne
+       diesen Zweig wurde die Rampe rückwärts extrapoliert, und weil
+       max(…, 0) die Wurzel abschneidet, sättigte das Ergebnis: mit dem
+       Anschnitt 50 mm vor dem Rampenbeginn kamen 51,25 statt 91,25 ms
+       heraus, und 350/300/200 mm lieferten alle denselben Wert. */
+    if (s < s0) return v0 > 0 ? (s - s0) / 1000 / v0 : 0;
     if (s <= sRampEnd && a > 0) return (Math.sqrt(Math.max(v0 * v0 + 2 * a * (s - s0) / 1000, 0)) - v0) / a;
     const tRamp = a > 0 ? (v2 - v0) / a : 0;
     return tRamp + (s - sRampEnd) / 1000 / v2;

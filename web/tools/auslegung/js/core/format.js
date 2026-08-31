@@ -6,8 +6,12 @@ export function fmt(x) {
     : Number(x).toLocaleString('de-DE', { maximumFractionDigits: 2 });
 }
 
-/* n gleichmäßig verteilte Werte von a bis b (inklusive). */
+/* n gleichmäßig verteilte Werte von a bis b (inklusive).
+   n = 1 ergab [NaN] (Division durch n − 1 = 0) — ein einzelner Wert ist der
+   Anfangswert, und n < 1 hat keinen. */
 export function seq(a, b, n) {
+  if (!(n >= 1)) return [];
+  if (n === 1) return [a];
   const r = [];
   for (let i = 0; i < n; i++) r.push(a + (b - a) * i / (n - 1));
   return r;

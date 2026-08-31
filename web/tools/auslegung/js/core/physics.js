@@ -41,8 +41,14 @@ export function intensStroke(v) {
    druck). Der eingestellte Druck ist auf das Maximum begrenzt; ohne gültige
    Drücke gilt die Maximalkraft. */
 export function hydArea(v) { return v.pAcc > 0 ? v.injForce / v.pAcc * 100 : NaN; }   // cm² (kN/bar = 100 cm²)
+/* Gießkraft im Betrieb. Ohne gültige Drücke gab es bisher die MAXIMALE
+   Kraft zurück — die am wenigsten konservative Annahme, ausgerechnet dann,
+   wenn die Eingaben unbrauchbar sind. Jetzt NaN: die Kennzahl zeigt „—"
+   und die Prüfung schlägt an, statt eine Maschine größer aussehen zu
+   lassen, als sie ist. */
 export function injForceEff(v) {
-  if (!(v.pAccOp > 0) || !(v.pAcc > 0)) return v.injForce;
+  if (!(v.injForce > 0)) return NaN;
+  if (!(v.pAccOp > 0) || !(v.pAcc > 0)) return NaN;
   return v.injForce * Math.min(v.pAccOp, v.pAcc) / v.pAcc;
 }
 /* Max. spezifischer Gießdruck der Maschine: effektive Gießkraft auf dem
@@ -215,7 +221,13 @@ export function computeShot(v, curvePoints) {
     const ev = { name: names[i][0], s: st * 1000, inP: st <= prof.travel + 1e-9 };
     if (ev.inP) {
       const q = prof.atPos(st);
-      ev.t = q.t; ev.v = q.v; ev.gv = gateR ? q.v * gateR : null;
+      ev.t = q.t; ev.v = q.v;
+      /* Erst ab „Anguss gefüllt" fließt Schmelze durch den Anschnitt. Bei
+         „Kammer voll" (i = 0) steht noch nichts im Anschnitt — dort eine
+         Geschwindigkeit auszugeben, war eine erfundene Zahl (hpdcsim meldet
+         an derselben Stelle 0: process.py setzt gate_flow nur in den
+         Regionen part/overflow/complete). */
+      ev.gv = (gateR && i > 0) ? q.v * gateR : null;
     }
     evs.push(ev);
   }
@@ -226,7 +238,11 @@ export function computeShot(v, curvePoints) {
   const totalStroke = sFill + (Vr + Vp + Vo) / A;
   const biscLen = (v.biscuit / rhoS) / A;
   const biscLiquid = L - totalStroke;
-  const intens = Math.max(0, biscLiquid - biscLen);
+  /* NICHT klemmen: ein negativer Hub bedeutet, dass die Kavität samt festem
+     Pressrest mehr Platz braucht, als die Dosierung flüssig hergibt — ein
+     unmöglicher Schuss. Ihn als 0 mm anzuzeigen ließ die Zahl harmlos
+     aussehen; das Backend antwortet auf denselben Fall inzwischen mit 422. */
+  const intens = biscLiquid - biscLen;
   let fill = null;
   if (evs[1].inP && evs[3].inP) fill = (evs[3].t - evs[1].t) * 1000;
   /* v1 = max. Kolbengeschwindigkeit bis „Kammer voll" (1. Phase);
@@ -236,16 +252,28 @@ export function computeShot(v, curvePoints) {
   const v2 = (evs[1].inP && evs[3].inP && evs[3].t > evs[1].t)
     ? (evs[3].s - evs[1].s) / 1000 / (evs[3].t - evs[1].t) : null;
 
+  /* Jede Prüfung trägt eine id: die Liste ist nicht positionsstabil —
+     der Beschleunigungseintrag, die Füllzeit und die Anschnittgeschwindig-
+     keit stehen nur unter Bedingungen darin. Wer über den Index zugreift,
+     trifft je nach Eingabe eine andere Prüfung. */
   const checks = [];
-  checks.push([v1 <= vcrit + 1e-9, '1. Phase: max. ' + fmt(v1) + ' m/s bis Kammer voll ' + (v1 <= vcrit ? '≤' : '>') + ' v_krit ' + fmt(vcrit) + ' m/s (CFD).']);
-  checks.push([prof.vmax <= v.vmax + 1e-9, 'Spitzengeschwindigkeit ' + fmt(prof.vmax) + ' m/s ' + (prof.vmax <= v.vmax ? '≤' : '>') + ' Maschinenlimit ' + fmt(v.vmax) + ' m/s.']);
+  const check = (id, ok, text) => checks.push(Object.assign([!!ok, text], { id: id, ok: !!ok, text: text }));
+  check('vcrit', v1 <= vcrit + 1e-9, '1. Phase: max. ' + fmt(v1) + ' m/s bis Kammer voll ' + (v1 <= vcrit ? '≤' : '>') + ' v_krit ' + fmt(vcrit) + ' m/s (CFD).');
+  check('vmax', prof.vmax <= v.vmax + 1e-9, 'Spitzengeschwindigkeit ' + fmt(prof.vmax) + ' m/s ' + (prof.vmax <= v.vmax ? '≤' : '>') + ' Maschinenlimit ' + fmt(v.vmax) + ' m/s.');
   const aPk = Math.max(prof.amax, -prof.amin, 0);
-  if (v.amax > 0) checks.push([aPk <= v.amax + 1e-9, 'Spitzenbeschleunigung ' + fmt(aPk) + ' m/s² ' + (aPk <= v.amax ? '≤' : '>') + ' Maschinenlimit ' + fmt(v.amax) + ' m/s².']);
-  checks.push([prof.travel >= totalStroke - 1e-9, 'Kurvenhub ' + fmt(prof.travel * 1000) + ' mm ' + (prof.travel >= totalStroke ? 'deckt' : 'deckt NICHT') + ' den Gesamthub ' + fmt(totalStroke * 1000) + ' mm ab.']);
-  checks.push([prof.travel <= L - biscLen + 2e-3, 'Kurvenende ' + fmt(prof.travel * 1000) + ' mm bleibt vor der Endlage (Kammer ' + fmt(v.length) + ' mm − Pressrest fest ' + fmt(biscLen * 1000) + ' mm).']);
-  checks.push([biscLen * 1000 >= v.biscuitMin, 'Pressrest fest ' + fmt(biscLen * 1000) + ' mm ' + (biscLen * 1000 >= v.biscuitMin ? '≥' : '<') + ' Minimum ' + fmt(v.biscuitMin) + ' mm (Hub Nachverdichtung + Schwindung ' + fmt(intens * 1000) + ' mm).']);
-  if (fill !== null) checks.push([fill <= v.tmax, 'Füllzeit ab Anschnitt ' + fmt(fill) + ' ms ' + (fill <= v.tmax ? '≤' : '>') + ' Maximum ' + fmt(v.tmax) + ' ms.']);
-  if (gateR && evs[2].inP) checks.push([evs[2].gv >= v.gateMin && evs[2].gv <= v.gateMax, 'Anschnittgeschwindigkeit bei Bauteilfüllung ' + fmt(evs[2].gv) + ' m/s im Zielband ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s.']);
+  if (v.amax > 0) check('amax', aPk <= v.amax + 1e-9, 'Spitzenbeschleunigung ' + fmt(aPk) + ' m/s² ' + (aPk <= v.amax ? '≤' : '>') + ' Maschinenlimit ' + fmt(v.amax) + ' m/s².');
+  check('travel', prof.travel >= totalStroke - 1e-9, 'Kurvenhub ' + fmt(prof.travel * 1000) + ' mm ' + (prof.travel >= totalStroke ? 'deckt' : 'deckt NICHT') + ' den Gesamthub ' + fmt(totalStroke * 1000) + ' mm ab.');
+  check('endlage', prof.travel <= L - biscLen + 2e-3, 'Kurvenende ' + fmt(prof.travel * 1000) + ' mm bleibt vor der Endlage (Kammer ' + fmt(v.length) + ' mm − Pressrest fest ' + fmt(biscLen * 1000) + ' mm).');
+  check('biscuit', biscLen * 1000 >= v.biscuitMin, 'Pressrest fest ' + fmt(biscLen * 1000) + ' mm ' + (biscLen * 1000 >= v.biscuitMin ? '≥' : '<') + ' Minimum ' + fmt(v.biscuitMin) + ' mm (Hub Nachverdichtung + Schwindung ' + fmt(intens * 1000) + ' mm).');
+  /* Eigene Prüfung: die Pressrest-Zeile oben prüft nur die feste Länge und
+     blieb deshalb grün, während der Hub negativ war — ein Schuss, bei dem
+     Kavität und Pressrest fest mehr Platz brauchen, als die Dosierung
+     flüssig hergibt. */
+  check('intens', intens >= -1e-9, 'Nachverdichtung + Schwindung ' + fmt(intens * 1000) + ' mm '
+    + (intens >= -1e-9 ? '≥ 0 — die Dosierung deckt Kavität und Pressrest.'
+      : '< 0 — Kavität und Pressrest fest brauchen mehr Platz, als die Dosierung flüssig hergibt (Feststoffdichte unter der Schmelzedichte?).'));
+  if (fill !== null) check('filltime', fill <= v.tmax, 'Füllzeit ab Anschnitt ' + fmt(fill) + ' ms ' + (fill <= v.tmax ? '≤' : '>') + ' Maximum ' + fmt(v.tmax) + ' ms.');
+  if (gateR && evs[2].inP) check('gatev', evs[2].gv >= v.gateMin && evs[2].gv <= v.gateMax, 'Anschnittgeschwindigkeit bei Bauteilfüllung ' + fmt(evs[2].gv) + ' m/s im Zielband ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s.');
 
   return {
     profile: prof, samples: prof.samples(320), events: evs,

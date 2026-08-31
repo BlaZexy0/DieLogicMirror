@@ -276,6 +276,14 @@ def sim_config_from_browser(values, curve, process=None, vacuum=None):
         },
         "process": {**DEFAULT_PROCESS, **(process or {})},
     }
+    # TODO: Es wird KEIN thermal-Block konfiguriert — deshalb ist
+    # samples.T_melt in jeder Antwort null, obwohl die Legierungsdaten
+    # (oben in _melt_config) inzwischen vollständig ankommen. Den Kanal zu
+    # füllen braucht Wärmeübergangszahlen und Wandtemperaturen
+    # (vgl. packages/hpdcsim/examples/demo.json: shell/plunger_face/
+    # die_face/downstream mit htc und wall_temperature). Das sind
+    # Modellparameter, die niemand vorgegeben hat; sie gehören entschieden,
+    # nicht geraten. Bis dahin bleibt T_melt ein leerer Kanal.
     if vent > 0:
         config["casting"]["vent_area"] = vent
     if vacuum:

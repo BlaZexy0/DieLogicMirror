@@ -59,14 +59,23 @@ export function feasibleBand(xs, lowers, uppers, yMin = -Infinity, yMax = Infini
   };
   for (const x of xs) {
     let a = yMin, ai = -1, b = yMax, bi = -1;
+    /* ±Infinity heißt vereinbarungsgemäß „hier keine Schranke" und bleibt
+       gültig. NaN heißt dagegen „diese Schranke weiß es an dieser Stelle
+       nicht" — sie wurde bisher schlicht übersprungen und das zulässige
+       Band damit WEITER gemacht, als es sein darf. An so einer Stelle gilt
+       nichts als zulässig. */
+    let unbekannt = false;
     for (let i = 0; i < lowers.length; i++) {
       const y = lowers[i](x);
+      if (Number.isNaN(y)) { unbekannt = true; break; }
       if (y > a) { a = y; ai = i; }
     }
-    for (let i = 0; i < uppers.length; i++) {
+    for (let i = 0; !unbekannt && i < uppers.length; i++) {
       const y = uppers[i](x);
+      if (Number.isNaN(y)) { unbekannt = true; break; }
       if (y < b) { b = y; bi = i; }
     }
+    if (unbekannt) { flush(); continue; }
     if (b > a + eps) {
       lo.push([x, a]); hi.push([x, b]);
       edges.push({ x, lo: a, hi: b, loIdx: ai, hiIdx: bi });

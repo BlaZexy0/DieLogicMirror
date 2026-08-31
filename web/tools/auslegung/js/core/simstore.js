@@ -31,6 +31,10 @@ async function run() {
   const kill = setTimeout(() => mine.abort(), TIMEOUT_MS);
   lastKey = key();
   sim.status = 'loading';
+  /* Veraltete Daten dürfen während des Nachladens nicht als aktuell
+     durchgehen: die Diagramme lesen sim.data synchron und hätten sonst die
+     Kurve der VORIGEN Eingabe zu den neuen Zahlen gezeichnet. */
+  sim.data = null;
   try {
     sim.data = await fetchSim(toSimPayload(state.values, state.curve), mine.signal);
     sim.error = null;
@@ -41,10 +45,15 @@ async function run() {
     sim.status = 'error';
     sim.error = e.name === 'AbortError' ? 'Zeitüberschreitung (' + TIMEOUT_MS / 1000 + ' s)'
       : (e instanceof TypeError) ? 'offline' : e.message;
+    /* Ohne das blieb lastKey auf der gescheiterten Eingabe stehen und
+       schedule() sprang nie wieder an: nach EINEM Timeout blieb die
+       Simulation für den Rest der Sitzung stumm, solange der Anwender
+       nicht zufällig etwas anderes eintippte. */
+    lastKey = '';
   } finally {
     clearTimeout(kill);
   }
-  notify();   // lastKey unverändert → schedule() löst keinen neuen Abruf aus
+  notify();   // bei Erfolg: lastKey unverändert → schedule() löst nichts aus
 }
 
 export function initSim() {
