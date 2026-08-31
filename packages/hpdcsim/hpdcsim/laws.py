@@ -45,8 +45,15 @@ class ShotPlan:
         return self.sleeve.length - self.fill_complete_stroke
 
     def fill_at_stroke(self, stroke):
-        """Sleeve fill fraction at a stroke (before the sleeve is full)."""
+        """Sleeve fill fraction at a stroke (before the sleeve is full).
+
+        At the sleeve end the remaining chamber is zero and beyond it the
+        volume turns negative: the division blew up and then returned
+        NEGATIVE fill fractions past the end. A fill fraction is bounded by
+        [0, 1] by definition - at and beyond the end the sleeve is full."""
         chamber = self.sleeve.area*(self.sleeve.length - stroke)
+        if chamber <= 0.0:
+            return 1.0
         return min(1.0, self.sleeve.melt_volume/chamber)
 
 

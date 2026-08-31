@@ -71,14 +71,19 @@ export function segHeight(phi) {
    nutzt die 0,1-Spalte (konservativ, f steigt zu kleinen φ); φ > 0,9
    läuft linear auf 0 bei φ = 1. Details: Theorie-Artikel „Kritische
    Kolbengeschwindigkeit". D in m. */
-import { VKRIT_D_MM, VKRIT_PHI, VKRIT_F } from './vkritTable.js';
+import { VKRIT_D_MM, VKRIT_PHI, VKRIT_F, VKRIT_GRAVITY } from './vkritTable.js';
 
 function tableF(Dmm, phi) {
-  const Dc = Math.max(VKRIT_D_MM[0], Math.min(VKRIT_D_MM[VKRIT_D_MM.length - 1], Dmm));
+  /* Über dem Gitter wird geklemmt. DARUNTER wurde bisher ebenfalls geklemmt —
+     und weil f mit D steigt, meldete das für kleine Durchmesser ein zu HOHES
+     v_krit: die unsichere Richtung. Stattdessen wird die Steigung der ersten
+     beiden Stützstellen fortgesetzt (tD wird negativ), was den Verlauf der
+     Daten weiterführt und konservativ ist. Python macht dasselbe. */
+  const Dc = Math.min(VKRIT_D_MM[VKRIT_D_MM.length - 1], Dmm);
   let i = 0;
   while (i < VKRIT_D_MM.length - 2 && VKRIT_D_MM[i + 1] < Dc) i++;
   const tD = (Dc - VKRIT_D_MM[i]) / (VKRIT_D_MM[i + 1] - VKRIT_D_MM[i]);
-  const row = j => VKRIT_F[i][j] * (1 - tD) + VKRIT_F[i + 1][j] * tD;
+  const row = j => Math.max(0, VKRIT_F[i][j] * (1 - tD) + VKRIT_F[i + 1][j] * tD);
   const pLo = VKRIT_PHI[0], pHi = VKRIT_PHI[VKRIT_PHI.length - 1];
   if (phi <= pLo) return row(0);
   if (phi >= pHi) return row(VKRIT_PHI.length - 1) * Math.max(0, (1 - phi) / (1 - pHi));
@@ -89,7 +94,9 @@ function tableF(Dmm, phi) {
 }
 
 export function vCrit(Dm, phi) {
-  return Math.sqrt(9.81 * Dm) * tableF(Dm * 1000, phi);
+  /* Mit derselben Konstante entnormieren, mit der die Tabelle normiert
+     wurde — sie kommt aus dem Generator (vkritTable.js). */
+  return Math.sqrt(VKRIT_GRAVITY * Dm) * tableF(Dm * 1000, phi);
 }
 
 /* Flachwassertheorie als Referenz (Deckenkriterium, DieLogic-Segment-Fit

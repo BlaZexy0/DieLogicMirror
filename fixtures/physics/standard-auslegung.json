@@ -1,99 +1,99 @@
 {
- "name": "standard-auslegung",
- "beschreibung": "Dashboard-Defaults (fields.js + DEFAULT_CURVE): 150-mm-Kolben, 700-mm-Kammer, 18,2 kg Schussgewicht bei 2700 kg/m³. Kurvenende (675 mm) liegt knapp hinter dem Füllende (674,85 mm) — prüft auch das Kappen im Backend.",
- "inputs": {
-  "values": {
-   "part": 12,
-   "runner": 3,
-   "overflow": 2,
-   "biscuit": 1.2,
-   "density": 2700,
-   "diam": 150,
-   "length": 700,
-   "gate": 1800,
-   "vent": 800,
-   "Tcast": 660,
-   "vmax": 7,
-   "amax": 60,
-   "tmax": 100,
-   "gateMin": 30,
-   "gateMax": 50,
-   "biscuitMin": 25
+  "name": "standard-auslegung",
+  "beschreibung": "Dashboard-Defaults (fields.js + DEFAULT_CURVE): 150-mm-Kolben, 700-mm-Kammer, 18,2 kg Schussgewicht bei 2700 kg/m³. Kurvenende (675 mm) liegt knapp hinter dem Füllende (674,85 mm) — prüft auch das Kappen im Backend.",
+  "inputs": {
+    "values": {
+      "part": 12,
+      "runner": 3,
+      "overflow": 2,
+      "biscuit": 1.2,
+      "density": 2700,
+      "diam": 150,
+      "length": 700,
+      "gate": 1800,
+      "vent": 800,
+      "Tcast": 660,
+      "vmax": 7,
+      "amax": 60,
+      "tmax": 100,
+      "gateMin": 30,
+      "gateMax": 50,
+      "biscuitMin": 25
+    },
+    "curve": [
+      [
+        60,
+        0.4
+      ],
+      [
+        318,
+        0.4
+      ],
+      [
+        470,
+        4
+      ],
+      [
+        675,
+        4
+      ]
+    ]
   },
-  "curve": [
-   [
-    60,
-    0.4
-   ],
-   [
-    318,
-    0.4
-   ],
-   [
-    470,
-    4
-   ],
-   [
-    675,
-    4
-   ]
-  ]
- },
- "expected": {
-  "phi": {
-   "value": 0.5449255664710162,
-   "rtol": 1e-09,
-   "note": "V_dose/(A·L) = (18,2/2700)/(π/4·0,15²·0,7)"
-  },
-  "s_fill_mm": {
-   "value": 318.5521034702886,
-   "rtol": 1e-09,
-   "note": "(1−φ)·700 mm"
-  },
-  "biscuit_mm": {
-   "value": 25.150410760200746,
-   "rtol": 1e-09,
-   "note": "(1,2/2700)/A"
-  },
-  "fill_complete_mm": {
-   "value": 674.8495892397992,
-   "rtol": 1e-09,
-   "note": "700 − Pressrestlänge"
-  },
-  "v_crit": {
-   "value": 0.5665613176869784,
-   "rtol": 0.001,
-   "note": "√(g·D)·f(D, φ) aus der OpenFOAM-CFD-Tabelle (site/assets/v_krit_sim.csv, bilinear interpoliert); Tabelle mit g = 9,81 normiert, hpdcsim rechnet g = 9,80665 — Restdifferenz < 0,1 %"
-  },
-  "v_slow_max": {
-   "value": 0.4664064678148772,
-   "rtol": 1e-09,
-   "note": "Kammer voll liegt auf der Rampe 0,4→4 m/s ab 318 mm"
-  },
-  "t_sleeve_full_s": {
-   "value": 0.9462744675641239,
-   "rtol": 1e-09,
-   "note": "Δt = 2Δs/(v₀+v₁) kumuliert bis 318,55 mm"
-  },
-  "v_sleeve_full": {
-   "value": 0.4664064678148772,
-   "rtol": 1e-09,
-   "note": "√(0,4² + 2a·0,552 mm) auf der Rampe"
-  },
-  "t_part_full_s": {
-   "value": 1.0548239685841088,
-   "rtol": 1e-09,
-   "note": "Bauteil gefüllt bei s_fill + (V_r+V_p)/A = 653,89 mm"
-  },
-  "gate_v_part_full": {
-   "value": 39.269908169872416,
-   "rtol": 1e-09,
-   "note": "4 m/s · A/(1800 mm²) = 4·π/4·150²/1800"
-  },
-  "fill_time_ms": {
-   "value": 78.04463709040765,
-   "rtol": 0.0001,
-   "note": "t(Füllende) − t(Anguss gefüllt); Backend kappt 1 µm davor"
+  "expected": {
+    "phi": {
+      "value": 0.5449255664710162,
+      "rtol": 1e-9,
+      "note": "V_dose/(A·L) = (18,2/2700)/(π/4·0,15²·0,7)"
+    },
+    "s_fill_mm": {
+      "value": 318.5521034702886,
+      "rtol": 1e-9,
+      "note": "(1−φ)·700 mm"
+    },
+    "biscuit_mm": {
+      "value": 25.150410760200746,
+      "rtol": 1e-9,
+      "note": "(1,2/2700)/A"
+    },
+    "fill_complete_mm": {
+      "value": 674.8495892397992,
+      "rtol": 1e-9,
+      "note": "700 − Pressrestlänge"
+    },
+    "v_crit": {
+      "value": 0.5666580794941226,
+      "rtol": 1e-9,
+      "note": "√(g·D)·f(D, φ) aus der OpenFOAM-CFD-Tabelle (fixtures/vkrit/v_krit_sim.csv, bilinear interpoliert). Tabelle und beide Sprachen entnormieren mit VKRIT_GRAVITY — JS und hpdcsim stimmen damit bitgenau überein."
+    },
+    "v_slow_max": {
+      "value": 0.4664064678148772,
+      "rtol": 1e-9,
+      "note": "Kammer voll liegt auf der Rampe 0,4→4 m/s ab 318 mm"
+    },
+    "t_sleeve_full_s": {
+      "value": 0.9462744675641239,
+      "rtol": 1e-9,
+      "note": "Δt = 2Δs/(v₀+v₁) kumuliert bis 318,55 mm"
+    },
+    "v_sleeve_full": {
+      "value": 0.4664064678148772,
+      "rtol": 1e-9,
+      "note": "√(0,4² + 2a·0,552 mm) auf der Rampe"
+    },
+    "t_part_full_s": {
+      "value": 1.0548239685841088,
+      "rtol": 1e-9,
+      "note": "Bauteil gefüllt bei s_fill + (V_r+V_p)/A = 653,89 mm"
+    },
+    "gate_v_part_full": {
+      "value": 39.269908169872416,
+      "rtol": 1e-9,
+      "note": "4 m/s · A/(1800 mm²) = 4·π/4·150²/1800"
+    },
+    "fill_time_ms": {
+      "value": 78.04463709040765,
+      "rtol": 0.0001,
+      "note": "t(Füllende) − t(Anguss gefüllt); Backend kappt 1 µm davor"
+    }
   }
- }
 }

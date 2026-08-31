@@ -136,10 +136,19 @@ def critical_velocity_cfd_table(section):
     sqrt(9.81*D) * f(D, phi). Edge rules: D clamped to the 60-300 mm grid;
     phi below 0.1 uses the 0.1 column (conservative, f rises toward small
     phi); phi above 0.9 ramps linearly to 0 at phi = 1.
-    Mirrors vCrit() in web/tools/auslegung/js/core/physics.js (which normalises the
-    table with g = 9.81; the residual g-difference is < 0.1 %)."""
-    from ._vkrit_table import VKRIT_D_MM, VKRIT_PHI, VKRIT_F
-    d_mm = min(max(section.diameter * 1000.0, VKRIT_D_MM[0]), VKRIT_D_MM[-1])
+    Mirrors vCrit() in web/tools/auslegung/js/core/physics.js.
+
+    Denormalised with VKRIT_GRAVITY - the constant the table was NORMALISED
+    with (generated alongside it). Using section.gravity here meant the table
+    was normalised with 9.81 and denormalised with 9.80665, so every v_crit
+    value differed from the JavaScript twin by a factor 1 + 1.708e-4. The
+    fixture even documented the gap and loosened its tolerance to hide it."""
+    from ._vkrit_table import VKRIT_D_MM, VKRIT_PHI, VKRIT_F, VKRIT_GRAVITY
+    # Above the grid the diameter is clamped. BELOW it, clamping used to
+    # report a too HIGH v_crit (f rises with D) - the unsafe direction. The
+    # slope of the first two rows is continued instead: it follows the data
+    # and errs low. Mirrors tableF() in physics.js.
+    d_mm = min(section.diameter * 1000.0, VKRIT_D_MM[-1])
     phi = section.fill_fraction
     i = 0
     while i < len(VKRIT_D_MM) - 2 and VKRIT_D_MM[i + 1] < d_mm:
@@ -147,7 +156,7 @@ def critical_velocity_cfd_table(section):
     t_d = (d_mm - VKRIT_D_MM[i]) / (VKRIT_D_MM[i + 1] - VKRIT_D_MM[i])
 
     def row(j):
-        return VKRIT_F[i][j] * (1.0 - t_d) + VKRIT_F[i + 1][j] * t_d
+        return max(0.0, VKRIT_F[i][j] * (1.0 - t_d) + VKRIT_F[i + 1][j] * t_d)
 
     p_lo, p_hi = VKRIT_PHI[0], VKRIT_PHI[-1]
     if phi <= p_lo:
@@ -160,7 +169,7 @@ def critical_velocity_cfd_table(section):
             j += 1
         t_p = (phi - VKRIT_PHI[j]) / (VKRIT_PHI[j + 1] - VKRIT_PHI[j])
         f = row(j) * (1.0 - t_p) + row(j + 1) * t_p
-    return np.sqrt(section.gravity * section.diameter) * f
+    return np.sqrt(VKRIT_GRAVITY * section.diameter) * f
 
 
 CRITICAL_VELOCITY_MODELS = {

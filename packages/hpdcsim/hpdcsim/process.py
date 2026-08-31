@@ -235,6 +235,11 @@ class ShotProcess:
             sample = self.profile.sample_at_time(min(shot_t, self.profile.end_time))
             stroke, acceleration = sample.position, sample.acceleration
             velocity = sample.velocity if phase is Phase.SHOT else 0.0
+            # Steht der Kolben, beschleunigt er auch nicht. Eine Probe mit
+            # v = 0 und a != 0 widerspricht sich und lief in jede Auswertung
+            # der Bewegung ein.
+            if phase is not Phase.SHOT:
+                acceleration = 0.0
             melt = self.sleeve.melt_volume
         return t, phase, stroke, velocity, acceleration, melt, dosing_rate
 

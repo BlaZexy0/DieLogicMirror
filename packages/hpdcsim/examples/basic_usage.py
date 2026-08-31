@@ -39,14 +39,22 @@ def main():
           f"melt {x.melt_temperature:.1f} deg, "
           f"air {x.air_pressure/1e3:.1f} kPa")
 
+    # critical_crossing() returns None when the plunger never reaches the
+    # criterion - a well designed slow shot, not an error.
     crossing = process.critical_crossing()
-    print(f"critical crossing at {crossing.stroke_mm:.1f} mm "
-          f"({crossing.plunger_velocity:.3f} m/s)")
+    if crossing is None:
+        print("critical velocity is never reached - the slow shot stays subcritical")
+    else:
+        print(f"critical crossing at {crossing.stroke_mm:.1f} mm "
+              f"({crossing.plunger_velocity:.3f} m/s)")
 
     data = process.arrays(count=300, spacing="distance")
     supercritical = data["stroke"][data["velocity_margin"] < 0.0]
-    print(f"supercritical from {supercritical[0]*1000:.0f} mm to "
-          f"{supercritical[-1]*1000:.0f} mm of the stroke")
+    if len(supercritical):
+        print(f"supercritical from {supercritical[0]*1000:.0f} mm to "
+              f"{supercritical[-1]*1000:.0f} mm of the stroke")
+    else:
+        print("no supercritical stretch")
     print(f"peak gate velocity {np.nanmax(data['gate_velocity']):.1f} m/s")
 
 

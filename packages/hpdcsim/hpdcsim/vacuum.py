@@ -39,11 +39,15 @@ def _solver_times(process, count):
     so a coarse prefix (a tenth of the points) suffices — the fine remainder
     covers the shot, where the air volume actually collapses."""
     t0, t1 = process.shot_start_time, process.total_time
+    count = max(2, int(count))
     if t0 <= 0.0 or t1 <= t0:
         return np.linspace(0.0, t1, count)
-    pre = max(2, count // 10)
-    shot = max(2, count - pre + 1)
-    return np.r_[np.linspace(0.0, t0, pre)[:-1], np.linspace(t0, t1, shot)]
+    # Die Untergrenzen von 2 auf beiden Teilstücken ergaben bei kleinen count
+    # MEHR Punkte als verlangt (count = 2 lieferte 3). Der Vorlauf bekommt
+    # daher höchstens so viele Punkte, dass die Gesamtzahl exakt stimmt.
+    pre = min(max(1, count // 10), count - 2)
+    shot = count - pre
+    return np.r_[np.linspace(0.0, t0, pre + 1)[:-1], np.linspace(t0, t1, shot)]
 
 
 def orifice_mass_flow(discharge_coefficient, area, p_up, p_down,
@@ -80,11 +84,26 @@ class VacuumModel(ABC):
             pressures[i] = p
         return times, pressures
 
+    # Beyond this compression ratio the isothermal ideal-gas law stops
+    # describing anything real: the entrapped air would be at hundreds of bar,
+    # where it dissolves into the melt, leaks through the die or heats up far
+    # from isothermally. The model has nothing to say there.
+    MAX_COMPRESSION = 1000.0
+
     @staticmethod
     def _isothermal(p_ref, v_ref, air_volume):
-        """p*V = const compression from a reference state; inf when the air
-        volume vanishes."""
+        """p*V = const compression from a reference state.
+
+        Returns inf once the air volume vanishes OR the compression leaves the
+        range where the law means anything. Without the second condition the
+        end of fill produced a huge but FINITE number - measured 541 936 346
+        mbar at complete fill - which passed every isfinite() guard downstream
+        and was plotted as if it were a result.
+        """
         if air_volume <= 0.0:
+            return np.inf
+        ratio = v_ref / air_volume
+        if not np.isfinite(ratio) or ratio > VacuumModel.MAX_COMPRESSION:
             return np.inf
         return p_ref * v_ref / air_volume
 

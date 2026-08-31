@@ -24,6 +24,7 @@ DEFAULT_PROCESS = {
     # (z. B. "segment_fit", "nogowizin" oder "garber_lopez").
     "critical_velocity_model": "cfd_table",
 }
+# Fällt zurück, wenn das Projekt keine Legierungs-Thermik mitschickt.
 DEFAULT_SPECIFIC_HEAT = 1050.0     # J/(kg K) — wie hpdcsim examples/demo.json
 DEFAULT_POUR_TEMP = 680.0          # °C, falls Tcast fehlt
 POUR_HOLE_POSITION_FRACTION = 0.2  # Eingusslage: 20 % der Kammerlänge, falls sealStroke fehlt
@@ -32,6 +33,42 @@ CLAMP_MARGIN = 1e-6                # m, Abstand zum Füllende-Hub beim Kappen
 
 class ConvertError(ValueError):
     """Fachlicher Fehler in den Eingaben (wird als 422 an den Browser gereicht)."""
+
+
+def _melt_config(values, rho):
+    """Legierungsdaten des Projekts statt eines festen Wertes.
+
+    Das Dashboard schickt die vollständige Thermik des Legierungs-Presets mit
+    (cpL, cp bei Solidus, Erstarrungswärme, Liquidus, Solidus) — sie wurden
+    hier bisher verworfen und durch 1050 J/(kg·K) ersetzt, für JEDE Legierung.
+    Über die fünf mitgelieferten Presets liegt zwischen dem kleinsten und dem
+    größten Wert Faktor 2,2; die Schmelztemperaturkurve war damit für alles
+    außer Aluminium schlicht falsch.
+
+    In der Gießkammer ist die Schmelze flüssig — maßgeblich ist deshalb die
+    Wärmekapazität bei Liquidus. Erstarrungswärme, Liquidus und Solidus gehen
+    mit, damit das Wärmemodell die Erstarrungszone kennt (thermal.py).
+    """
+    melt = {
+        "density": rho,
+        "specific_heat": _num_opt(values, "cpL", DEFAULT_SPECIFIC_HEAT),
+        "pouring_temperature": _num_opt(values, "Tcast", DEFAULT_POUR_TEMP),
+    }
+    if melt["specific_heat"] <= 0.0:
+        raise ConvertError("Wärmekapazität der Legierung muss > 0 J/(kg·K) sein.")
+
+    liq = _num_opt(values, "Tliq", 0.0)
+    sol = _num_opt(values, "Tsol", 0.0)
+    lat = _num_opt(values, "hf", 0.0) * 1000.0        # kJ/kg → J/kg
+    if liq > 0.0 and sol > 0.0:
+        if sol > liq:
+            raise ConvertError(
+                f"Solidus ({sol:.0f} °C) darf nicht über Liquidus ({liq:.0f} °C) liegen.")
+        melt["liquidus"] = liq
+        melt["solidus"] = sol
+        if lat > 0.0:
+            melt["latent_heat"] = lat
+    return melt
 
 
 def _num(values, key):
@@ -189,6 +226,19 @@ def sim_config_from_browser(values, curve, process=None, vacuum=None):
     biscuit_len = Vb / A
     fill_complete = (L - Vdose / A) + (Vr + Vp + Vo) / A
     intens = L - biscuit_len - fill_complete
+    # Der Nachverdichtungshub ist die Schwindung: flüssig dosiertes Volumen
+    # minus fester Kavität minus festem Pressrest. Er wird negativ, sobald
+    # die Feststoffdichte unter der Schmelzedichte liegt — ein physikalisch
+    # unmöglicher Schuss, den die API bisher mit 200 OK und
+    # curve_clamped: false auslieferte (gemessen −94,37 mm).
+    # Ohne Feststoffdichte fällt solidus_density auf die Schmelzedichte
+    # zurück — dann ist der Hub exakt null, bis auf Rundungsreste. Die
+    # Toleranz ist ein Mikrometer, nicht null.
+    if intens < -1e-6:
+        raise ConvertError(
+            f"Nachverdichtungshub wäre negativ ({intens * 1000:.1f} mm): die Feststoffdichte "
+            f"({rho_sol:.0f} kg/m³ nach Schwindung) liegt unter der Schmelzedichte "
+            f"({rho:.0f} kg/m³) — das Gussstück würde beim Erstarren größer.")
     positions_velocities, clamped = _clamped_curve(curve, fill_complete)
 
     gate_area = _num(values, "gate") / 1e6
@@ -213,11 +263,7 @@ def sim_config_from_browser(values, curve, process=None, vacuum=None):
             "fill_fraction": phi,
             "pour_hole_position": seal,
         },
-        "melt": {
-            "density": rho,
-            "specific_heat": DEFAULT_SPECIFIC_HEAT,
-            "pouring_temperature": _num_opt(values, "Tcast", DEFAULT_POUR_TEMP),
-        },
+        "melt": _melt_config(values, rho),
         "casting": {
             "runner": {"volume": Vr, "gate_area": gate_area},
             "part": {"volume": Vp},

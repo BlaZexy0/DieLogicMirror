@@ -3,6 +3,10 @@ Regenerate: node scripts/gen-vkrit-table.mjs
 OpenFOAM CFD table of the critical slow-shot velocity:
 VKRIT_F[i][j] = v_krit / sqrt(9.81 * D) at VKRIT_D_MM[i], VKRIT_PHI[j]."""
 
+# Die Konstante, mit der die Tabelle normiert WURDE — beide Sprachen
+# entnormieren damit, sonst weicht jeder v_krit-Wert systematisch ab.
+VKRIT_GRAVITY = 9.81
+
 VKRIT_D_MM = [60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300]
 VKRIT_PHI = [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90]
 VKRIT_F = [

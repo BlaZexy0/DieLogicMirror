@@ -62,6 +62,29 @@ class _EulerLumped(ThermalModel):
         """Cooling rate contribution in temperature units per second."""
         raise NotImplementedError
 
+    @staticmethod
+    def _mushy_factor(melt, temperature):
+        """Effective heat capacity in the freezing range.
+
+        ``latent_heat``, ``liquidus`` and ``solidus`` were validated in the
+        Melt component but never used: the melt cooled straight through the
+        freezing range as if it were liquid the whole way — for aluminium
+        the released solidification heat is roughly a third of the whole
+        enthalpy, so the temperature ran far too low.
+
+        The standard remedy is the effective heat capacity: between solidus
+        and liquidus the melt behaves as if its specific heat were
+        ``cp + L/(T_liq - T_sol)``. All cooling rates are divided by that
+        factor, which is exactly the plateau a cooling curve shows.
+        """
+        if (melt.latent_heat is None or melt.liquidus is None
+                or melt.solidus is None or melt.liquidus <= melt.solidus):
+            return 1.0
+        if not (melt.solidus <= temperature <= melt.liquidus):
+            return 1.0
+        extra = melt.latent_heat / (melt.liquidus - melt.solidus)
+        return 1.0 + extra / melt.specific_heat
+
     def solve(self, process, count=2000):
         melt = _require_melt(process)
         start = (self.initial_temperature if self.initial_temperature is not None
@@ -80,7 +103,7 @@ class _EulerLumped(ThermalModel):
                 rate += (state.dosing_flow_rate
                          * (melt.pouring_temperature - temps[i-1])
                          / state.melt_volume)
-            temps[i] = temps[i-1] + rate*dt
+            temps[i] = temps[i-1] + rate*dt / self._mushy_factor(melt, temps[i-1])
         return times, temps
 
 
