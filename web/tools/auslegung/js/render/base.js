@@ -104,7 +104,11 @@ export function axes(x, w, h, f, x0, x1, y0, y1, d) {
 
 /* Roter Betriebspunkt-Marker mit Führungslinien und Label. */
 export function marker(x, f, px, py, label, opts) {
-  if (px < f.L - 2 || px > f.L + f.pw + 2 || py < f.T - 2 || py > f.T + f.ph + 2) return;
+  /* Liegt der Betriebspunkt außerhalb des Rahmens, verschwand er bisher
+     kommentarlos — das Diagramm sah aus, als gäbe es keinen. Statt ihn zu
+     verschlucken, wird am Rand ein Pfeil in seine Richtung gesetzt. */
+  const außen = px < f.L - 2 || px > f.L + f.pw + 2 || py < f.T - 2 || py > f.T + f.ph + 2;
+  if (außen) { offMarker(x, f, px, py, label, opts); return; }
   /* opts.ref: Referenzpunkt (z. B. Schnittpunkt) — gedämpft, Ring gestrichelt */
   const ref = !!(opts && opts.ref);
   const MC = ref ? (theme.chart.iso || theme.chart.muted) : theme.chart.marker;
@@ -124,6 +128,37 @@ export function marker(x, f, px, py, label, opts) {
     x.fillStyle = 'rgba(255,255,255,.88)';
     x.fillRect(lx - 4, ly - 11, tw + 8, 15);
     x.fillStyle = MC; fillRich(x, label, lx, ly);
+  }
+  x.restore();
+}
+
+/* Betriebspunkt außerhalb des Rahmens: Pfeil am Rand in seiner Richtung,
+   mit dem Hinweis, dass er außerhalb der Skala liegt. */
+function offMarker(x, f, px, py, label, opts) {
+  const ref = !!(opts && opts.ref);
+  const MC = ref ? (theme.chart.iso || theme.chart.muted) : theme.chart.marker;
+  const cx = Math.min(Math.max(px, f.L + 8), f.L + f.pw - 8);
+  const cy = Math.min(Math.max(py, f.T + 8), f.T + f.ph - 8);
+  const dx = px - cx, dy = py - cy;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;
+  x.save();
+  x.fillStyle = MC; x.globalAlpha = ref ? 0.55 : 0.85;
+  x.beginPath();
+  x.moveTo(cx + ux * 8, cy + uy * 8);
+  x.lineTo(cx - uy * 5 - ux * 3, cy + ux * 5 - uy * 3);
+  x.lineTo(cx + uy * 5 - ux * 3, cy - ux * 5 - uy * 3);
+  x.closePath(); x.fill();
+  x.globalAlpha = 1;
+  if (label) {
+    x.font = 'bold 10.5px Arial'; x.textAlign = 'left';
+    const txt = label + ' (außerhalb)';
+    const tw = x.measureText(txt).width;
+    let lx = cx + 12, ly = cy + 4;
+    if (lx + tw + 6 > f.L + f.pw) lx = cx - tw - 12;
+    x.fillStyle = 'rgba(255,255,255,.88)';
+    x.fillRect(lx - 4, ly - 11, tw + 8, 15);
+    x.fillStyle = MC; fillRich(x, txt, lx, ly);
   }
   x.restore();
 }

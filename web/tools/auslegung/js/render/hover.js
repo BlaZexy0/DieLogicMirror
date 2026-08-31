@@ -1,7 +1,7 @@
 /* Hover-Auswertung: zeigt unter jedem Diagramm den Wert an der Mausposition. */
 
 import { frame, lineFrame } from './base.js';
-import { donutGeom } from './donut.js';
+import { donutGeom, donutTotal } from './donut.js';
 import { MAP_LABELS } from './map.js';
 import { fmt, subHTML } from '../core/format.js';
 import { theme } from '../core/theme.js';
@@ -59,14 +59,17 @@ export function showHover(card, ev) {
   if (!d || d.err) { box.textContent = HOVER_IDLE; return; }
 
   if (d.kind === 'donut') {
+    /* Dieselbe Bezugsgröße wie die Zeichnung: mit dem rohen d.total meldete
+       der Hover bei 0 „Infinity %", während der Ring gezeichnet dastand. */
+    const tot = donutTotal(d);
     const g = donutGeom(w, h), dx = px - g.cx, dy = py - g.cy, rr = Math.sqrt(dx * dx + dy * dy);
-    if (rr < g.r0 || rr > g.R) { box.textContent = HOVER_IDLE; return; }
+    if (!tot || rr < g.r0 || rr > g.R) { box.textContent = HOVER_IDLE; return; }
     const ang = (Math.atan2(dy, dx) + PI / 2 + 2 * PI) % (2 * PI);
     let acc = 0;
     for (let i = 0; i < d.segs.length; i++) {
-      acc += 2 * PI * d.segs[i].kg / d.total;
+      acc += 2 * PI * d.segs[i].kg / tot;
       if (ang <= acc) {
-        box.innerHTML = '<b>' + d.segs[i].n + ':</b> ' + fmt(d.segs[i].kg) + ' kg · ' + fmt(100 * d.segs[i].kg / d.total) + ' % vom Dosiergewicht (' + fmt(d.total) + ' kg)';
+        box.innerHTML = '<b>' + d.segs[i].n + ':</b> ' + fmt(d.segs[i].kg) + ' kg · ' + fmt(100 * d.segs[i].kg / tot) + ' % vom Dosiergewicht (' + fmt(tot) + ' kg)';
         return;
       }
     }

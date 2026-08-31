@@ -13,10 +13,20 @@ export function donutGeom(w, h) {
   return { cx, cy, R, r0: R * 0.6 };
 }
 
+/* Bezugsgröße des Rings. Bei 0 oder unbrauchbarem Wert gibt es keine
+   Anteile — die Karte zeigt dann nichts Sinnvolles, aber auch nichts
+   Falsches. */
+export function donutTotal(d) {
+  return d && isFinite(d.total) && d.total > 0 ? d.total : 0;
+}
+
 export function drawDonut(x, w, h, d) {
   heading(x, w, h, d);
   const C = theme.chart;
-  const g = donutGeom(w, h), tot = d.total || 1;
+  /* donutTotal statt `d.total || 1`: der Hover rechnete mit dem ROHEN
+     d.total weiter und meldete bei 0 „Infinity %", während die Zeichnung
+     brav einen Ring zog. Beide benutzen jetzt dieselbe Funktion. */
+  const g = donutGeom(w, h), tot = donutTotal(d);
   let a0 = -PI / 2;
   for (let i = 0; i < d.segs.length; i++) {
     const s = d.segs[i], a1 = a0 + 2 * PI * s.kg / tot;

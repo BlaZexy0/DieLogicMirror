@@ -436,7 +436,18 @@
        beim Spielen mit dem Ø sichtbar die Gerade, nicht die Achse. */
     pq2.xFull = true;
     const d = pq2.calc(values);
-    if (d.err) return;
+    if (d.err) {
+      /* Nicht stumm aussteigen: das erklärende SVG wurde unten trotzdem
+         versteckt, und übrig blieb ein leeres Canvas. Die Meldung gehört
+         gezeichnet — drawAny kann das (render/draw.js). */
+      d.title = 'PQ²-Grundbild';
+      const dprE = window.devicePixelRatio || 1;
+      canvas.width = W * dprE; canvas.height = H * dprE;
+      const xe = canvas.getContext('2d');
+      xe.setTransform(dprE, 0, 0, dprE, 0, 0);
+      drawAny(xe, W, H, d, pq2);
+      return false;
+    }
     /* simplify wie im SVG-Generator: nur die Hüllkurven-Maske behalten */
     d.limits = d.limits.filter(l => l.mask);
     /* ohne Schusskurve ist d.pt der ungedrosselte Schnittpunkt — der bleibt sichtbar */
@@ -447,13 +458,17 @@
     const x = canvas.getContext('2d');
     x.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawAny(x, W, H, d, pq2);
+    return true;
   }
 
   slider.addEventListener('input', render);
-  render();
-  document.getElementById('grundImg').hidden = true;
-  canvas.hidden = false;
-  document.getElementById('grundControls').hidden = false;
+  /* Erst umschalten, wenn das interaktive Bild wirklich steht — sonst wäre
+     die statische Erklärgrafik weg und nichts an ihrer Stelle. */
+  if (render()) {
+    document.getElementById('grundImg').hidden = true;
+    canvas.hidden = false;
+    document.getElementById('grundControls').hidden = false;
+  }
 </script>
 
 </body>
