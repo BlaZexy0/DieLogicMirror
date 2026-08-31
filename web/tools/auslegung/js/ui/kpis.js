@@ -261,7 +261,12 @@ export function renderKpis(el, v, shot, chamberEl) {
   const p1 = cavityTravel(v.runner, v);                           // Kavitäten fest (ρ_sol)
   const cav = cavityTravel(total(v), v);
   const biscLen = biscuitSolid(v);                                // Pressrest fest (Endlage)
-  const biscLiquid = travel(v.biscuit, v);
+  /* „Flüssig am Füllende" ist der Schmelzerest in der Kammer (L − Gesamthub),
+     nicht die Flüssigsäule der Pressrestmasse allein: physics.js nennt beide
+     biscLiquid, sie unterscheiden sich um Faktor ~2,4 (66,9 vs. 28,3 mm bei
+     den Defaults). Die Kammer-KPI muss dieselbe Größe zeigen wie die Prüfung
+     „Nachverdichtung + Schwindung", die darauf aufbaut. */
+  const biscLiquid = shot && !shot.error && isFinite(shot.biscLiquid) ? shot.biscLiquid * 1000 : NaN;
   const intens = intensStroke(v);                                 // Nachverdichtungshub
   const ratioLD = v.length / v.diam;
   const eta = mdos > 0 ? 100 * v.part / mdos : NaN;
@@ -328,7 +333,7 @@ export function renderKpis(el, v, shot, chamberEl) {
         bandStatus(fill, v.fillMin, v.fillMax), bandTag(fill, v.fillMin, v.fillMax),
         bullet(0, 100, v.fillMin, v.fillMax, fill,
           '0 %', 'Ziel ' + fmt(v.fillMin) + '–' + fmt(v.fillMax), '100 %'))
-      + row('Pressrest', fmt(biscLen) + ' mm', 'fest in der Endlage · flüssig am Füllende ' + fmt(biscLiquid) + ' mm · Minimum ' + fmt(v.biscuitMin) + ' mm',
+      + row('Pressrest', fmt(biscLen) + ' mm', 'fest in der Endlage · flüssig am Füllende ' + (isFinite(biscLiquid) ? fmt(biscLiquid) + ' mm' : '—') + ' · Minimum ' + fmt(v.biscuitMin) + ' mm',
         minStatus(biscLen, v.biscuitMin), minTag(biscLen, v.biscuitMin),
         bullet(0, Math.max(1.6 * v.biscuitMin, 1.15 * biscLen), v.biscuitMin, Math.max(1.6 * v.biscuitMin, 1.15 * biscLen), biscLen,
           '0 mm', 'min ' + fmt(v.biscuitMin), fmt(Math.max(1.6 * v.biscuitMin, 1.15 * biscLen)) + ' mm'));

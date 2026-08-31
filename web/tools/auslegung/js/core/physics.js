@@ -120,6 +120,10 @@ export function buildProfile(pts) {
   const arr = pts.filter(p => isFinite(p[0]) && isFinite(p[1])).map(p => [p[0] / 1000, p[1]]);
   if (!arr.length) throw 'Keine gültigen Kurvenpunkte.';
   if (arr[0][0] > 0) arr.unshift([0, 0]);
+  /* Ein einziger Punkt bei s = 0 ergibt kein Segment: travel und endTime
+     werden 0 und samples() liefert stumm NaN für s, v und a — jedes
+     Diagramm rechnet danach mit Unsinn weiter. */
+  if (arr.length < 2) throw 'Die Schusskurve braucht mindestens einen Wegpunkt bei s > 0.';
   const s = arr.map(p => p[0]), v = arr.map(p => p[1]);
   let i;
   for (i = 0; i < s.length; i++) {

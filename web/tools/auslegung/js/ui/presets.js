@@ -4,7 +4,7 @@
    ausgeblendet; eine Zusammenfassung unter dem Select zeigt die übernommenen
    Werte. Die Domänen sind in js/config/fields.js (PRESET_DOMAINS) definiert. */
 
-import { allFields, PRESET_DOMAINS, FOLLOWS } from '../config/fields.js';
+import { allFields, groups, PRESET_DOMAINS, FOLLOWS } from '../config/fields.js';
 import { state, subscribe, notify } from '../core/state.js';
 import { subHTML } from '../core/format.js';
 import { applyValues, updatePresetVisibility } from './inputs.js';
@@ -27,12 +27,30 @@ export function presetById(dom, id) {
   return presetList(dom).find(p => p.id === id) || null;
 }
 
-/* Übernommene Werte als Kurzzusammenfassung (Labels + Einheiten aus fields.js). */
-function summaryHTML(p) {
-  return Object.entries(p.fields).map(([k, val]) => {
+/* Die Felder, die ein Preset dieser Domäne setzen sollte — die Gruppe, die
+   bei gewähltem Preset ausgeblendet wird (fields.js: groups[].preset). */
+function domainKeys(dom) {
+  const g = groups.find(x => x.preset === dom.id);
+  return g ? g.fields.map(f => f.key) : [];
+}
+
+/* Übernommene Werte als Kurzzusammenfassung (Labels + Einheiten aus fields.js).
+
+   Setzt ein Preset ein Feld seiner Gruppe NICHT, bleibt stillschweigend der
+   Felddefault stehen — und der gehört zu einer anderen Legierung bzw.
+   Maschine. Ein Magnesium-Preset ohne densitySolid/shrink rechnet so mit
+   Aluminium weiter: gemessen 362 statt 541 mm Kavitätshub. Deshalb werden
+   die fehlenden Felder benannt, statt sie zu verschweigen. */
+function summaryHTML(dom, p) {
+  const set = Object.entries(p.fields).map(([k, val]) => {
     const f = FIELD_DEFS[k];
     return subHTML(f ? f.label : k) + ' <b>' + val + (f && f.unit ? '&nbsp;' + f.unit : '') + '</b>';
   }).join(' · ');
+  const missing = domainKeys(dom).filter(k => p.fields[k] == null);
+  if (!missing.length) return set;
+  const names = missing.map(k => subHTML(FIELD_DEFS[k] ? FIELD_DEFS[k].label : k)).join(', ');
+  return set + '<br><span class="preset-gap">⚠ Dieses Preset setzt ' + names
+    + ' nicht — es gilt der Standardwert. Auf der Konto-Seite ergänzen oder „manuell" wählen.</span>';
 }
 
 export function initPresetSelect(dom, sel) {
@@ -64,7 +82,7 @@ export function initPresetSelect(dom, sel) {
     sel.value = state[dom.stateKey] || '';
     const p = presetById(dom, state[dom.stateKey]);
     sum.hidden = !p;
-    sum.innerHTML = p ? summaryHTML(p) : '';
+    sum.innerHTML = p ? summaryHTML(dom, p) : '';
     updatePresetVisibility();
   };
   subscribe(sync);

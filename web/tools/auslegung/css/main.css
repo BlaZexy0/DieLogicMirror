@@ -153,6 +153,8 @@ select {
   color: var(--muted);
 }
 .group-note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+/* Preset setzt ein Feld seiner Gruppe nicht — es gilt der Standardwert. */
+.preset-gap { display: inline-block; margin-top: 4px; color: var(--warn-text, #8a5a00); font-weight: 600; }
 .adv-fields { margin-top: 8px; }
 .adv-fields summary {
   cursor: pointer;
