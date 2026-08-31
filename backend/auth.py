@@ -21,7 +21,7 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .db import AuthSession, Invite, Org, User, get_db, iso, now
@@ -54,6 +54,11 @@ def verify_password(password: str, stored: str) -> bool:
         return hmac.compare_digest(digest, bytes.fromhex(digest_hex))
     except (ValueError, TypeError):
         return False
+
+
+# Vergleichsziel für Anmeldeversuche mit unbekannter Adresse — damit der
+# Aufwand derselbe ist. Einmal beim Import erzeugt.
+DUMMY_HASH = hash_password(secrets.token_urlsafe(24))
 
 
 # ── Sitzungen ─────────────────────────────────────────────────────────
@@ -123,8 +128,15 @@ def create_invite(db: Session, org: Org, email: str, role: str = "member",
         raise ValueError("Ungültige E-Mail-Adresse.")
     if role not in ("admin", "member"):
         raise ValueError("Rolle muss admin oder member sein.")
-    if db.scalar(select(User).where(User.email == email)):
-        raise ValueError("Für diese E-Mail-Adresse gibt es bereits ein Konto.")
+    vorhanden = db.scalar(select(User).where(User.email == email))
+    if vorhanden is not None:
+        # Im EIGENEN Bestand darf der Admin den Grund erfahren. Über
+        # Mandantengrenzen hinweg bestätigte die Meldung dagegen, dass es zu
+        # einer beliebigen Adresse irgendwo ein Konto gibt — ein Org-Admin
+        # konnte damit jede E-Mail-Adresse durchprobieren.
+        if vorhanden.org_id == org.id:
+            raise ValueError("Für diese E-Mail-Adresse gibt es in dieser Organisation bereits ein Konto.")
+        raise ValueError("Diese E-Mail-Adresse kann hier nicht eingeladen werden.")
     inv = Invite(org_id=org.id, email=email, role=role, created_by=created_by,
                  expires_at=now() + timedelta(days=INVITE_DAYS))
     if token:
@@ -274,8 +286,27 @@ def get_invite(token: str, db: Session = Depends(get_db)):
 
 @router.get("/auth/demo")
 def demo():
-    """Zugangsdaten des Demo-Kontos (nur wenn DIELOGIC_DEMO_PASSWORD gesetzt)."""
-    return demo_credentials() or {}
+    """Gibt es einen Demo-Zugang? NUR das — nicht mehr das Passwort.
+
+    Der Endpunkt lieferte es unauthentifiziert im Klartext an jeden, der ihn
+    aufrief: ein gültiges Anmeldepaar, offen im Netz und in jedem
+    Suchmaschinen-Index. Wer den Demo-Zugang benutzen will, meldet sich über
+    /auth/demo/login an — das Passwort verlässt den Server nicht."""
+    d = demo_credentials()
+    return {"email": d["email"]} if d else {}
+
+
+@router.post("/auth/demo/login")
+def demo_login(request: Request, response: Response, db: Session = Depends(get_db)):
+    """Als Demo-Konto anmelden, ohne das Passwort preiszugeben."""
+    d = demo_credentials()
+    if not d:
+        raise HTTPException(status_code=404, detail="Kein Demo-Zugang eingerichtet.")
+    user = db.scalar(select(User).where(User.email == d["email"]))
+    if not user or user.disabled:
+        raise HTTPException(status_code=404, detail="Kein Demo-Zugang eingerichtet.")
+    start_session(db, user, request, response)
+    return me_out(user)
 
 
 @router.post("/auth/register")
@@ -296,8 +327,13 @@ def register(body: RegisterIn, request: Request, response: Response, db: Session
 @router.post("/auth/login")
 def login(body: LoginIn, request: Request, response: Response, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == body.email.strip().lower()))
-    # Gleiche Fehlermeldung für unbekannte Adresse und falsches Passwort.
-    if not user or user.disabled or not verify_password(body.password, user.pw_hash):
+    # Gleiche Fehlermeldung UND gleiche Laufzeit für unbekannte Adresse und
+    # falsches Passwort. Ohne den Blindvergleich lief scrypt nur für
+    # vorhandene Konten: gemessen 45,3 ms gegen 4,2 ms — ein Orakel für die
+    # Frage „hat diese Adresse hier ein Konto?", das jeder ohne Anmeldung
+    # abfragen kann.
+    ok = verify_password(body.password, user.pw_hash if user else DUMMY_HASH)
+    if not user or user.disabled or not ok:
         raise HTTPException(status_code=401, detail="E-Mail oder Passwort stimmen nicht.")
     start_session(db, user, request, response)
     return me_out(user)
@@ -403,6 +439,24 @@ def enable_member(user_id: str, user: User = Depends(admin_user), db: Session = 
     return Response(status_code=204)
 
 
+def _require_remaining_admin(db: Session, target: User) -> None:
+    """Verhindert, dass eine Organisation ihren letzten Administrator verliert.
+
+    Ohne Admin lassen sich weder Mitglieder einladen noch Stammdaten pflegen
+    noch Passwörter zurücksetzen — und es gibt keinen Weg zurück, denn dafür
+    bräuchte es einen Admin. Bisher hielt das niemand auf."""
+    if target.role != "admin":
+        return
+    rest = db.scalar(select(func.count()).select_from(User).where(
+        User.org_id == target.org_id, User.role == "admin",
+        User.disabled.is_(False), User.id != target.id))
+    if not rest:
+        raise HTTPException(
+            status_code=400,
+            detail="Das ist der letzte aktive Administrator dieser Organisation — "
+                   "erst einen weiteren ernennen.")
+
+
 @router.post("/org/members/{user_id}/disable", status_code=204)
 def disable_member(user_id: str, user: User = Depends(admin_user), db: Session = Depends(get_db)):
     target = db.get(User, user_id)
@@ -410,6 +464,7 @@ def disable_member(user_id: str, user: User = Depends(admin_user), db: Session =
         raise HTTPException(status_code=404, detail="Benutzer nicht gefunden.")
     if target.id == user.id:
         raise HTTPException(status_code=400, detail="Das eigene Konto kann nicht deaktiviert werden.")
+    _require_remaining_admin(db, target)
     target.disabled = True
     for sess in db.scalars(select(AuthSession).where(AuthSession.user_id == target.id)).all():
         db.delete(sess)

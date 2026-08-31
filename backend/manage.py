@@ -17,7 +17,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from .auth import create_invite, invite_url
 from .db import AuthSession, Org, SessionLocal, User, init_db
@@ -56,11 +56,36 @@ def cmd_invite(args):
         print("  " + invite_url(args.base_url, inv.token))
 
 
+def _guard_last_admin(db, user, was: str, force: bool = False) -> None:
+    """Eine Organisation ohne aktiven Administrator ist eine Sackgasse.
+
+    Ohne Admin lassen sich weder Mitglieder einladen noch Stammdaten pflegen
+    noch Passwörter zurücksetzen — und es gibt keinen Weg zurück, denn dafür
+    bräuchte es einen Admin. Über die HTTP-Schnittstelle ist der Fall nicht
+    erreichbar (das eigene Konto ist ohnehin gesperrt); hier auf der
+    Kommandozeile war er es. --force lässt es ausdrücklich zu.
+    """
+    if user.role != "admin" or user.disabled:
+        return
+    rest = db.scalar(select(func.count()).select_from(User).where(
+        User.org_id == user.org_id, User.role == "admin",
+        User.disabled.is_(False), User.id != user.id))
+    if rest:
+        return
+    if force:
+        print(f"WARNUNG: {user.email} ist der letzte aktive Administrator — "
+              f"die Organisation bleibt ohne Verwaltung zurück.")
+        return
+    sys.exit(f"{user.email} ist der letzte aktive Administrator dieser Organisation. "
+             f"Erst einen weiteren ernennen — oder mit --force ausdrücklich {was}.")
+
+
 def cmd_disable(args):
     with SessionLocal() as db:
         user = db.scalar(select(User).where(User.email == args.email.lower()))
         if not user:
             sys.exit("Unbekannte E-Mail-Adresse.")
+        _guard_last_admin(db, user, "deaktivieren", args.force)
         user.disabled = True
         for sess in db.scalars(select(AuthSession).where(AuthSession.user_id == user.id)).all():
             db.delete(sess)
@@ -73,6 +98,8 @@ def cmd_set_role(args):
         user = db.scalar(select(User).where(User.email == args.email.lower()))
         if not user:
             sys.exit("Unbekannte E-Mail-Adresse.")
+        if args.role != "admin":
+            _guard_last_admin(db, user, "herabstufen", args.force)
         user.role = args.role
         db.commit()
         print(f"{user.email} ist jetzt {user.role}.")
@@ -98,11 +125,15 @@ def main(argv=None):
 
     p = sub.add_parser("disable")
     p.add_argument("email")
+    p.add_argument("--force", action="store_true",
+                   help="auch den letzten aktiven Administrator deaktivieren")
     p.set_defaults(fn=cmd_disable)
 
     p = sub.add_parser("set-role")
     p.add_argument("email")
     p.add_argument("role", choices=["admin", "member"])
+    p.add_argument("--force", action="store_true",
+                   help="auch den letzten aktiven Administrator herabstufen")
     p.set_defaults(fn=cmd_set_role)
 
     args = ap.parse_args(argv)

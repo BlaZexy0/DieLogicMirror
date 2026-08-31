@@ -169,10 +169,22 @@ def test_disable_member_ends_access():
 
 
 def test_demo_account_from_env():
+    """Der Endpunkt sagt, DASS es einen Demo-Zugang gibt — nicht mehr, WIE er
+    lautet. Vorher lieferte er unauthentifiziert ein gültiges Anmeldepaar."""
     c = _client()
-    assert c.get("/api/auth/demo").json() == {"email": "demo@dielogic.de", "password": "demo-demo-demo"}
-    r = c.post("/api/auth/login", json={"email": "demo@dielogic.de", "password": "demo-demo-demo"})
-    assert r.status_code == 200 and r.json()["org"]["slug"] == "demo" and r.json()["user"]["role"] == "admin"
+    assert c.get("/api/auth/demo").json() == {"email": "demo@dielogic.de"}
+    assert "password" not in c.get("/api/auth/demo").json()
+
+    # Anmelden ohne das Passwort zu kennen — der Server macht es.
+    d = _client()
+    r = d.post("/api/auth/demo/login")
+    assert r.status_code == 200, r.text
+    assert r.json()["org"]["slug"] == "demo" and r.json()["user"]["role"] == "admin"
+    assert d.get("/api/auth/me").status_code == 200
+
+    # Das Passwort funktioniert weiterhin, wer es kennt (Env-Variable).
+    r = _client().post("/api/auth/login", json={"email": "demo@dielogic.de", "password": "demo-demo-demo"})
+    assert r.status_code == 200
 
 
 def test_draft_conflict_is_refused_not_overwritten():

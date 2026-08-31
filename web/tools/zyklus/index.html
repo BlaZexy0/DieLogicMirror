@@ -755,9 +755,15 @@
     document.getElementById('h-Tdie').textContent = fmt(v.Tdie, 0);
     document.getElementById('h-Acav').textContent = fmt(v.Acav, 2);
     document.getElementById('h-tz').textContent = fmt(v.tz) + ' · ' + fmt(v.tauBl) + ' (Ausblasen)';
+    /* Die Herkunftstexte tragen Namen aus den Org-Stammdaten (Maschinen- und
+       Legierungs-Presets) — also Daten aus der Datenbank. Unescaped in
+       innerHTML war das der einzige Weg, wie fremdes Markup auf diese Seite
+       kommt. Nur das feste <a> bleibt Markup. */
     document.getElementById('h-sources').innerHTML =
-      'Legierung: ' + inp.src.alloy + ' · Gießtemperatur: ' + inp.src.Tcast + ' · Schussgewicht: ' + inp.src.mdose +
-      ' · Formtemperatur: ' + inp.src.Tdie + ' · Gravurfläche: ' + inp.src.Acav + ' · Form: ' + inp.src.die +
+      'Legierung: ' + escapeHtml(inp.src.alloy) + ' · Gießtemperatur: ' + escapeHtml(inp.src.Tcast) +
+      ' · Schussgewicht: ' + escapeHtml(inp.src.mdose) +
+      ' · Formtemperatur: ' + escapeHtml(inp.src.Tdie) + ' · Gravurfläche: ' + escapeHtml(inp.src.Acav) +
+      ' · Form: ' + escapeHtml(inp.src.die) +
       (h.die.B || h.die.H || h.die.L ? ' (überschrieben — <a href="#" id="h-die-reset">Schätzung übernehmen</a>)' : '');
     var rl = document.getElementById('h-die-reset');
     if (rl) rl.addEventListener('click', function (e) { e.preventDefault(); h.die = { B: null, H: null, L: null }; renderChart(); });

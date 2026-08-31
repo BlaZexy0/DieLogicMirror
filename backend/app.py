@@ -10,6 +10,7 @@ import re
 from pathlib import Path, PurePosixPath
 
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .auth import bootstrap_demo, bootstrap_from_env, router as auth_router
@@ -106,6 +107,27 @@ SECURITY_HEADERS = {
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
     "Cross-Origin-Opener-Policy": "same-origin",
 }
+
+
+# Obergrenze für den Rumpf einer Anfrage. MAX_DATA_BYTES in projects.py misst
+# erst, was die Filterung überlebt hat — bis dahin ist der ganze Körper gelesen
+# und als JSON geparst. Ein einzelner Aufruf konnte damit beliebig viel
+# Speicher binden.
+MAX_BODY_BYTES = 2_000_000
+
+
+@app.middleware("http")
+async def body_limit(request: Request, call_next):
+    if request.method in ("POST", "PUT", "PATCH"):
+        declared = request.headers.get("content-length")
+        if declared is not None:
+            try:
+                if int(declared) > MAX_BODY_BYTES:
+                    return JSONResponse(status_code=413, content={
+                        "detail": f"Anfrage zu groß (max. {MAX_BODY_BYTES // 1000} kB)."})
+            except ValueError:
+                return JSONResponse(status_code=400, content={"detail": "Ungültiger Content-Length-Kopf."})
+    return await call_next(request)
 
 
 @app.middleware("http")

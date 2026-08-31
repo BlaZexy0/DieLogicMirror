@@ -140,3 +140,34 @@ test('Freigabe-Gate: Pflichtseiten mit Platzhaltern nur bei gesperrter Site', ()
       + 'Impressum, AGB, Widerruf und Datenschutz müssen VOR dem Livegang ausgefüllt sein.');
   }
 });
+
+/* ── Doppelklick und Maskierung ───────────────────────────────────────── */
+
+test('„Einladen" sperrt sich während des Requests', () => {
+  const h = konto.slice(konto.indexOf("$('invite-form').addEventListener('submit'"));
+  const body = h.slice(0, h.indexOf('\n  });'));
+  assert.match(body, /if \(inviteBusy\) return;/,
+    'ein Doppelklick erzeugte zwei gültige Tokens für dieselbe Adresse');
+  assert.match(body, /btn\.disabled = true/);
+  assert.match(body, /finally \{ inviteBusy = false/);
+});
+
+test('Werte aus der Datenbank landen maskiert im Markup', () => {
+  /* Stammdaten-Editor: Feldwerte gingen unescaped in value="…". */
+  const zeile = konto.slice(konto.indexOf('function renderList('), konto.indexOf('$(\'sd-body\').innerHTML'));
+  assert.ok(!/value="' \+ \(p\.fields\[f\.key\] \?\? ''\)/.test(zeile),
+    'Feldwerte gingen ohne esc() ins value-Attribut');
+  assert.match(zeile, /esc\(p\.fields\[f\.key\]/);
+
+  /* Zyklusseite: die Herkunftstexte tragen Preset-Namen aus den Org-Stammdaten. */
+  const zyklus = read('tools/zyklus/index.html');
+  const block = zyklus.slice(zyklus.indexOf("getElementById('h-sources').innerHTML"));
+  const ende = block.indexOf(';');
+  assert.match(block.slice(0, ende), /escapeHtml\(inp\.src\.die\)/,
+    'der Maschinen-Preset-Name kam unescaped in innerHTML');
+});
+
+test('das Demo-Passwort steht nicht mehr in der Seite', () => {
+  assert.ok(!/d\.password/.test(konto), 'die Seite zeigte das Passwort an');
+  assert.match(konto, /'\/api\/auth\/demo\/login'/, 'die Anmeldung läuft jetzt über den Server');
+});

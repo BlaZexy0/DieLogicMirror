@@ -421,10 +421,11 @@
       if (!d || !d.email) return;
       $('demo-login').hidden = false;
       $('demo-hint').hidden = false;
-      $('demo-hint').textContent = d.email + ' / ' + d.password;
+      $('demo-hint').textContent = d.email + ' — auf „Als Demo anmelden" klicken';
+      /* Über /auth/demo/login: das Passwort verlässt den Server nicht mehr. */
       $('demo-login').onclick = async function () {
         $('login-err').textContent = '';
-        try { await api('POST', '/api/auth/login', { email: d.email, password: d.password }); if (goNext()) return; start(); }
+        try { await api('POST', '/api/auth/demo/login'); if (goNext()) return; start(); }
         catch (err) { $('login-err').textContent = err.message; }
       };
     } catch (e) { /* kein Demo */ }
@@ -689,8 +690,16 @@
     else prompt('Link kopieren:', text);
   }
 
+  /* Das Formular sperrt sich während des Requests. Ohne das erzeugte ein
+     Doppelklick ZWEI gültige Einladungstokens für dieselbe Adresse — beide
+     einlösbar, beide 14 Tage gültig, und nur einer davon wird je benutzt. */
+  var inviteBusy = false;
   $('invite-form').addEventListener('submit', async function (e) {
     e.preventDefault();
+    if (inviteBusy) return;
+    inviteBusy = true;
+    var btn = $('invite-form').querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
     $('invite-err').textContent = '';
     show('invite-result', false);
     try {
@@ -701,6 +710,7 @@
       $('i-email').value = '';
       loadInvites();
     } catch (err) { $('invite-err').textContent = err.message; }
+    finally { inviteBusy = false; if (btn) btn.disabled = false; }
   });
 
   function download(name, text) {
@@ -832,7 +842,10 @@ function renderList(admin) {
   let h = '<table class="sd"><thead><tr><th>Name</th><th>id</th>' + fields.map(f => '<th>' + esc(f.label) + '<small>' + esc(f.unit || '') + '</small></th>').join('') + '<th></th></tr></thead><tbody>';
   rows.forEach((p, i) => {
     h += '<tr data-i="' + i + '"><td><input class="name" data-k="name" value="' + esc(p.name) + '"' + (admin ? '' : ' disabled') + '></td><td class="id">' + esc(p.id) + '</td>'
-      + fields.map(f => '<td><input type="number" step="any" data-k="' + f.key + '" value="' + (p.fields[f.key] ?? '') + '"' + (admin ? '' : ' disabled') + '></td>').join('')
+      /* esc auch hier: die Werte kommen aus der Datenbank, und dass sie
+         heute Zahlen sind, garantiert nur die serverseitige Prüfung. Ein
+         String mit " bräche sonst aus dem Attribut aus. */
+      + fields.map(f => '<td><input type="number" step="any" data-k="' + esc(f.key) + '" value="' + esc(p.fields[f.key] ?? '') + '"' + (admin ? '' : ' disabled') + '></td>').join('')
       + '<td>' + (admin ? '<button class="btn-link" data-del="' + i + '">entfernen</button>' : '') + '</td></tr>';
   });
   h += '</tbody></table>';
