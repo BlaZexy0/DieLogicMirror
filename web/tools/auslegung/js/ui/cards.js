@@ -79,14 +79,20 @@ export function buildCard(def, container, opts = {}) {
   return card;
 }
 
-export function renderCard(card, def, v, shot) {
+export function renderCard(card, def, v, shot, blockMsg) {
   /* Fehler-Isolation je Diagramm: die Karten werden in einer Schleife
      gerendert (main.js). Ein Wurf in calc() riss bisher alle folgenden mit —
      sie behielten still ihr altes Bild, während die Seitenleiste bereits neue
      Zahlen zeigte. Der Fehlerkanal d.err existiert (render/draw.js). */
   let d;
-  try { d = def.calc(v, { shot }) || { err: 'Kein Ergebnis.' }; }
-  catch (e) { d = { err: (e && e.message) || String(e) }; }
+  /* Gesperrt: die Eingaben liegen außerhalb der Domäne (config/fields.js).
+     Dann wird gar nicht gerechnet — calc() bekommt solche Werte nicht zu
+     sehen, statt sich einzeln dagegen wehren zu müssen. */
+  if (blockMsg) d = { err: blockMsg };
+  else {
+    try { d = def.calc(v, { shot }) || { err: 'Kein Ergebnis.' }; }
+    catch (e) { d = { err: (e && e.message) || String(e) }; }
+  }
   d.title = def.title;
   card.data = d;
   card.shot = shot;

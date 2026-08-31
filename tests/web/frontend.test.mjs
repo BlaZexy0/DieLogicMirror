@@ -39,7 +39,7 @@ const { allFields, groups, PRESET_KEYS } = await import(
 /* inputs.js/curvegen.js ziehen core/state.js mit — der braucht das Projekt-Modul
    (project.js fällt ohne localStorage auf einen Leerspeicher zurück). */
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-const { POSITIVE_KEYS, NONNEG_KEYS, NEGATIVE_OK } = await import(
+const { checkValues, checkField } = await import(
   path.join(site, 'tools/auslegung/js/ui/inputs.js'));
 const { generateCurve, fillTimeMs } = await import(path.join(site, 'tools/auslegung/js/core/curvegen.js'));
 const { computeShot, cavityVolume } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
@@ -404,10 +404,6 @@ test('handoff: alle Übernahme-Schlüssel sind Dashboard-Felder', () => {
   assert.equal(logic.handoffValues({ part: 1 }, MACHINES[0].fields).densitySolid, undefined);
 });
 
-/* Vorzeichen-Klassen der Validierung dürfen nicht von der Felddefinition
-   wegdriften: jedes numerische Feld gehört in genau eine der Klassen
-   > 0 (POSITIVE_KEYS), ≥ 0 (NONNEG_KEYS) oder vorzeichenbehaftet
-   (NEGATIVE_OK) — und jeder Klassen-Eintrag muss ein echtes Feld sein. */
 test('presets: jede Legierung hat plausible Feststoffdichte und Schwindmaß', () => {
   const require4 = createRequire(import.meta.url);
   require4(path.join(site, 'shared/examples/alloys.js'));
@@ -419,18 +415,45 @@ test('presets: jede Legierung hat plausible Feststoffdichte und Schwindmaß', ()
   }
 });
 
-test('inputs: jedes numerische Feld hat genau eine Vorzeichen-Klasse', () => {
-  const numeric = allFields().filter(f => f.type !== 'select');
-  for (const f of numeric) {
-    const n = (POSITIVE_KEYS.includes(f.key) ? 1 : 0)
-      + (NONNEG_KEYS.includes(f.key) ? 1 : 0)
-      + (NEGATIVE_OK.has(f.key) ? 1 : 0);
-    assert.equal(n, 1,
-      `Feld „${f.key}" ist in ${n} Vorzeichen-Klassen — erwartet genau 1 von POSITIVE_KEYS / NONNEG_KEYS / NEGATIVE_OK (inputs.js)`);
+/* Die Eingabedomäne steht nur noch in config/fields.js. Der Wächter dagegen
+   ist damit einfacher UND schärfer als die frühere Vorzeichen-Klassen-Prüfung:
+   nicht „in genau einer von drei Listen", sondern „hat überhaupt eine Grenze".
+   Ein neues Feld ohne Domäne fällt hier auf, nicht erst im Diagramm. */
+test('domäne: jedes numerische Feld hat eine untere und eine obere Grenze', () => {
+  for (const f of allFields()) {
+    if (f.type === 'select') continue;
+    const lo = f.gt !== undefined ? f.gt : f.min;
+    assert.ok(lo !== undefined, `Feld „${f.key}" hat keine untere Grenze (min/gt in fields.js)`);
+    assert.ok(f.max !== undefined, `Feld „${f.key}" hat keine obere Grenze (max in fields.js)`);
+    assert.ok(f.max > lo, `Feld „${f.key}": max ${f.max} liegt nicht über der unteren Grenze ${lo}`);
+    assert.ok(['hart', 'plaus'].includes(f.bound), `Feld „${f.key}": bound fehlt oder ist unbekannt`);
+    if (f.bound === 'hart') assert.ok(f.why, `Feld „${f.key}": harte Grenze ohne Begründung (why)`);
   }
-  const known = new Set(numeric.map(f => f.key));
-  for (const k of [...POSITIVE_KEYS, ...NONNEG_KEYS, ...NEGATIVE_OK])
-    assert.ok(known.has(k), `Klassen-Eintrag „${k}" ist kein Eingabefeld`);
+});
+
+/* Der Vorgabewert MUSS in der Domäne liegen — sonst wäre die Anwendung beim
+   ersten Öffnen gesperrt. Prüft zugleich die Paarregeln gegen die Defaults. */
+test('domäne: die Vorgabewerte sind gültig — die Sperre greift nie beim Start', () => {
+  const v = {};
+  for (const f of allFields()) v[f.key] = f.def;
+  const urteil = checkValues(v);
+  assert.ok(urteil.ok, 'Vorgabewerte verletzen die Domäne: ' + urteil.msgs.join(' · ') +
+    ' [' + [...urteil.bad].join(', ') + ']');
+});
+
+/* Jede Feldgrenze muss auch greifen. Ohne diesen Test könnte jemand eine
+   Grenze eintragen, die checkField gar nicht liest. */
+test('domäne: jede eingetragene Grenze weist den Wert dahinter zurück', () => {
+  for (const f of allFields()) {
+    if (f.type === 'select') continue;
+    const lo = f.gt !== undefined ? f.gt : f.min;
+    if (f.gt !== undefined) assert.ok(checkField(f, f.gt), `${f.key}: gt ${f.gt} wird nicht abgewiesen`);
+    else assert.ok(checkField(f, lo - 1), `${f.key}: unter min ${lo} wird nicht abgewiesen`);
+    assert.ok(checkField(f, f.max + 1), `${f.key}: über max ${f.max} wird nicht abgewiesen`);
+    assert.ok(checkField(f, NaN), `${f.key}: NaN wird nicht abgewiesen`);
+    assert.ok(checkField(f, Infinity), `${f.key}: Infinity wird nicht abgewiesen`);
+    assert.equal(checkField(f, f.def), null, `${f.key}: Vorgabewert ${f.def} wird abgewiesen`);
+  }
 });
 
 function memStorage(init) {

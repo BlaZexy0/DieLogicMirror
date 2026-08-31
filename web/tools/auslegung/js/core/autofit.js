@@ -14,6 +14,7 @@
    Reine Rechenlogik (idealGate/idealVent) + state-Wrapper (applyAuto). */
 
 import './curvegen.js';                        // Preparer-Reihenfolge: erst Kurve, dann Auto
+import { allFields } from '../config/fields.js';
 import { state, addPreparer } from './state.js';
 import { total, afterGate, pistonArea, computeShot, cavityVolume } from './physics.js';
 
@@ -51,6 +52,21 @@ export function idealVent(v, shot) {
 
 /* Eingeschaltete Auto-Felder im Zustand setzen. Rückgabe: Liste der
    gesetzten Schlüssel (für die UI). */
+const FELD = {};
+allFields().forEach(f => { FELD[f.key] = f; });
+
+function klemm(key, x) {
+  const f = FELD[key];
+  if (!f) return x;
+  const lo = f.gt !== undefined ? f.gt : f.min;
+  let y = x;
+  if (lo !== undefined && !(y > lo)) y = f.gt !== undefined ? nextAbove(lo) : lo;
+  if (f.max !== undefined && y > f.max) y = f.max;
+  return y;
+}
+/* Kleinster darstellbarer Wert oberhalb einer offenen Untergrenze. */
+function nextAbove(lo) { return lo === 0 ? 1e-6 : lo * (1 + 1e-9); }
+
 export function applyAuto(values) {
   const on = Object.keys(state.auto).filter(k => state.auto[k]);
   if (!on.length) return [];
@@ -58,7 +74,12 @@ export function applyAuto(values) {
   const set = [];
   for (const k of on) {
     const x = k === 'gate' ? idealGate(values, shot) : k === 'vent' ? idealVent(values, shot) : NaN;
-    if (isFinite(x)) { values[k] = x; set.push(k); }
+    /* In die Domäne klemmen: ein Auto-Wert landet im Zustand und würde die
+       Sperre in render() auslösen — die Anwendung bliebe an einem Wert
+       hängen, den der Anwender gar nicht eingetippt hat. Über 81 gültigen
+       Kombinationen tritt das nicht auf; die Klemme kostet eine Zeile und
+       macht den Fall unmöglich statt unwahrscheinlich. */
+    if (isFinite(x)) { values[k] = klemm(k, x); set.push(k); }
   }
   return set;
 }

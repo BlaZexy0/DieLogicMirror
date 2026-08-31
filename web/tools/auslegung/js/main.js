@@ -31,6 +31,8 @@ function onHighlight(def, btn) {
   highlightInputs(def.inputs, { curve: def.usesCurve });
 }
 
+let letzterGueltigerStand = false;
+
 function render() {
   const v = state.values;
   /* Generierte Kurvenmodi: Wegpunkte aus den aktuellen Eingaben neu erzeugen */
@@ -38,8 +40,25 @@ function render() {
   applyAuto(v);
   refreshAuto();
   if (state.curveGen.mode !== 'points') renderCurveTable(genErr);
+  /* Erst prüfen, dann rechnen. Liegt eine Eingabe außerhalb der Domäne, wird
+     NICHT gerechnet: die Zahlen kämen sonst in computeShot und in alle 19
+     Diagramme, die sich dann jede für sich dagegen wehren müssten. */
+  const urteil = validate(v);
+  document.body.classList.toggle('inputs-invalid', !urteil.ok);
+  if (!urteil.ok) {
+    /* Beim Tippen ist eine Eingabe kurzzeitig ungültig — dann bleibt der
+       letzte gültige Stand stehen (sichtbar abgeblendet), statt zu flackern.
+       Nur wenn es noch keinen gibt (Projekt mit ungültigen Werten geladen),
+       wird der Grund in die Karten geschrieben. */
+    if (letzterGueltigerStand) return;
+    const grund = 'Eingaben außerhalb des zulässigen Bereichs: ' +
+      (urteil.msgs[0] || 'siehe Seitenleiste') + '.';
+    charts.forEach(def => renderCard(cards[def.id], def, v, null, grund));
+    return;
+  }
+  letzterGueltigerStand = true;
+
   const shot = computeShot(v, state.curve);
-  validate(v);
   renderChamber(chamberCard, v);
   renderKpis(document.getElementById('summary'), v, shot, document.getElementById('chamber-kpis'));
   charts.forEach(def => renderCard(cards[def.id], def, v, shot));

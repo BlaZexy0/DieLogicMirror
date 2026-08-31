@@ -8,6 +8,7 @@ import { allFields, groups, PRESET_DOMAINS, FOLLOWS } from '../config/fields.js'
 import { state, subscribe, notify } from '../core/state.js';
 import { subHTML } from '../core/format.js';
 import { applyValues, updatePresetVisibility } from './inputs.js';
+import { clampToDomain } from '../core/domain.js';
 
 const FIELD_DEFS = {};
 allFields().forEach(f => { FIELD_DEFS[f.key] = f; });
@@ -74,6 +75,15 @@ export function initPresetSelect(dom, sel) {
       const fol = {};
       for (const k in FOLLOWS) if (p.fields[FOLLOWS[k]] != null) fol[k] = p.fields[FOLLOWS[k]];
       applyValues(fol);
+      /* Die aus den Preset-Grenzen GEWÄHLTEN Werte nachführen: eine kleinere
+         Maschine hat einen kleineren Kolben. Vorher blieb der alte Ø stehen
+         und die Rechnung lief auf einer Maschine, die es nicht gibt. */
+      const gezogen = clampToDomain(state.values);
+      if (gezogen.length) {
+        const zeig = {};
+        gezogen.forEach(k => { zeig[k] = state.values[k]; });
+        applyValues(zeig);
+      }
     }
     notify();
   };

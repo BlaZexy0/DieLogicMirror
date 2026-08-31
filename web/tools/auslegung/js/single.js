@@ -20,6 +20,8 @@ const def = chartsById[id] || charts[0];
 let card = null;
 let mathSec = null;
 
+let letzterGueltigerStand = false;
+
 function render() {
   const v = state.values;
   /* Generierte Kurvenmodi liefern die Kurve auch für Diagramme ohne Kurven-UI */
@@ -27,8 +29,18 @@ function render() {
   applyAuto(v);
   refreshAuto();
   if (def.usesCurve && state.curveGen.mode !== 'points') renderCurveTable(genErr);
+  /* Erst prüfen, dann rechnen — wie im Dashboard (main.js). */
+  const urteil = validate(v);
+  document.body.classList.toggle('inputs-invalid', !urteil.ok);
+  if (!urteil.ok) {
+    if (letzterGueltigerStand) return;
+    renderCard(card, def, v, null, 'Eingaben außerhalb des zulässigen Bereichs: ' +
+      (urteil.msgs[0] || 'siehe Seitenleiste') + '.');
+    return;
+  }
+  letzterGueltigerStand = true;
+
   const shot = computeShot(v, state.curve);
-  validate(v);
   renderCard(card, def, v, shot);
   if (mathSec && def.renderMath) def.renderMath(mathSec, v, shot);
 }

@@ -745,3 +745,15 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
   .fields, .chamber-grid { grid-template-columns: 1fr; }
   h1 { font-size: 22px; }
 }
+
+/* Eingaben außerhalb der Domäne (js/config/fields.js): render() rechnet dann
+   nicht weiter, der letzte gültige Stand bleibt stehen. Damit niemand ihn für
+   aktuell hält, wird er abgeblendet; die Begründung steht in der Seitenleiste
+   (#error). Siehe docs/eingabegrenzen.md. */
+body.inputs-invalid .card,
+body.inputs-invalid #summary,
+body.inputs-invalid #chamber {
+  opacity: .45;
+  filter: saturate(.35);
+  transition: opacity .15s ease;
+}

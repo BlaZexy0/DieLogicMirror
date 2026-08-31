@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from .auth import admin_user, current_user
 from .db import OrgSetting, User, get_db, iso, now
+from ._domain import check_field
 from .projects import json_safe
 
 router = APIRouter(prefix="/api/org/settings", tags=["org-settings"])
@@ -34,7 +35,19 @@ class SettingIn(BaseModel):
     data: dict | list
 
 
-def _num_fields(fields, where: str) -> dict:
+def _num_fields(fields, where: str, *, domain: bool = False) -> dict:
+    """Zahlenfelder prüfen.
+
+    domain=True zusätzlich gegen die Eingabedomäne (_domain.py, erzeugt aus
+    web/tools/auslegung/js/config/fields.js). Ohne das nahm der Endpunkt jeden
+    Schlüssel an, der wie ein Bezeichner aussah: ein vertipptes 'forcee' wurde
+    gespeichert, wirkte nie, und die Maschinenkraft blieb still auf dem
+    Vorgabewert. Ebenso ein Durchflussbeiwert von 1,8 oder ein Kolben-Ø von
+    −50 mm — Werte, mit denen das Dashboard anschließend rechnete.
+
+    Für 'kosten' bleibt domain=False: das sind Sätze und Preise, keine
+    Auslegungsfelder, und sie haben ihre eigene Liste (shared/examples/kosten.js).
+    """
     if not isinstance(fields, dict):
         raise HTTPException(status_code=422, detail=f"{where}: 'fields' muss ein Objekt sein.")
     out = {}
@@ -49,6 +62,10 @@ def _num_fields(fields, where: str) -> dict:
         if not math.isfinite(v):
             raise HTTPException(status_code=422,
                                 detail=f"{where}: Feld '{k}' ist keine gültige JSON-Zahl (NaN/Infinity).")
+        if domain:
+            grund = check_field(k, v)
+            if grund:
+                raise HTTPException(status_code=422, detail=f"{where}: Feld '{k}' {grund}.")
         out[k] = v
     return out
 
@@ -73,7 +90,8 @@ def clean_setting(key: str, data) -> dict | list:
             if not isinstance(name, str) or not name.strip() or len(name) > 120:
                 raise HTTPException(status_code=422, detail=f"{where}: Name fehlt oder zu lang.")
             ids.add(pid)
-            out.append({"id": pid, "name": name.strip(), "fields": _num_fields(item.get("fields", {}), where)})
+            out.append({"id": pid, "name": name.strip(),
+                        "fields": _num_fields(item.get("fields", {}), where, domain=True)})
         cleaned = out
     elif key == "kosten":
         if not isinstance(data, dict):

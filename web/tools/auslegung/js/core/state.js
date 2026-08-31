@@ -8,6 +8,7 @@
    Auslegung, und ein Reload verliert nichts. */
 
 import { FOLLOWS, AUTO_KEYS, allFields, DEFAULT_CURVE, PRESET_DOMAINS } from '../config/fields.js';
+import { clampToDomain } from './domain.js';
 
 if (!window.__PROJECT__) throw new Error('shared/project.js nicht geladen (window.__PROJECT__ fehlt).');
 const PROJECT = window.__PROJECT__;
@@ -44,6 +45,11 @@ function applyDefaults() {
     if (p) { state[d.stateKey] = p.id; Object.assign(state.values, p.fields); }
   }
   applyFollows();
+  /* Ein Preset setzt die Maschinengrenzen, nicht die daraus gewählten Werte.
+     Ohne das Nachführen stünde der Kolben-Ø der GRÖSSEREN Vorgabemaschine in
+     einer kleineren — gerechnet würde mit einem Querschnitt, den es nicht
+     gibt (gemessen: Faktor 4,59, Füllgrad 8522,6 %). */
+  clampToDomain(state.values);
 }
 
 /* Folge-Felder (fields.js FOLLOWS) auf den Wert ihrer Quelle setzen —

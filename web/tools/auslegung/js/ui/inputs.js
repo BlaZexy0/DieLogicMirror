@@ -4,7 +4,7 @@
 import { AUTO_KEYS, groups, PRESET_KEYS, PRESET_DOMAINS } from '../config/fields.js';
 import { state, notify } from '../core/state.js';
 import { subHTML } from '../core/format.js';
-import { pMaxMachine } from '../core/physics.js';
+import { checkValues } from '../core/domain.js';
 
 const DOMAIN_BY_ID = {};
 PRESET_DOMAINS.forEach(d => { DOMAIN_BY_ID[d.id] = d; });
@@ -18,10 +18,13 @@ function fieldHTML(f) {
     return '<div class="field" data-field="' + f.key + '">' + label +
       '<select data-k="' + f.key + '">' + opts + '</select></div>';
   }
-  /* Alle Felder außer den Außermittigkeiten (Vorzeichen = Richtung) sind
-     physikalische Beträge — min="0" hält Spinner und Browser-Validierung
-     im Positiven; validate() prüft zusätzlich hart. */
-  const min = NEGATIVE_OK.has(f.key) ? '' : ' min="0"';
+  /* Grenzen kommen aus der Felddefinition — dieselbe Quelle, aus der
+     validate() und docs/eingabegrenzen.md gespeist werden. Der Browser hält
+     damit Spinner und Pfeiltasten von vornherein im gültigen Bereich; die
+     harte Prüfung macht validate(). */
+  const lo = f.gt !== undefined ? f.gt : f.min;
+  const min = lo === undefined ? '' : ' min="' + lo + '"';
+  const max = f.max === undefined ? '' : ' max="' + f.max + '"';
   /* Auto-Schalter: Feld folgt core/autofit.js und ist dann schreibgeschützt */
   const auto = f.auto
     ? '<label class="auto-toggle" title="' + f.auto.replace(/"/g, '&quot;') + '"><input type="checkbox" data-auto="' + f.key + '"> Auto</label>'
@@ -32,7 +35,7 @@ function fieldHTML(f) {
     ? (f.unit ? label.replace(' <span class="unit">', auto + ' <span class="unit">') : label.replace('</label>', auto + '</label>'))
     : label;
   return '<div class="field" data-field="' + f.key + '">' + lab +
-    '<input data-k="' + f.key + '" type="number" step="any"' + min + ' value="' + f.def + '"></div>';
+    '<input data-k="' + f.key + '" type="number" step="any"' + min + max + ' value="' + f.def + '"></div>';
 }
 
 /* onlyKeys: optionales Set von Feldnamen — dann werden nur diese Felder
@@ -132,58 +135,16 @@ export function applyValues(fields) {
 /* Felder, die zwingend > 0 sein müssen (Divisionen, Achsen, Wurzeln,
    physikalisch zwingend positive Größen). Exportiert für den
    Konsistenz-Test: jedes numerische Feld gehört in genau eine Klasse. */
-export const POSITIVE_KEYS = ['density', 'densitySolid', 'shrink', 'diam', 'length', 'gate', 'vent', 'Cd',
-  'force', 'injForce', 'pAccOp', 'area', 'psel', 'safety', 'vmax', 'tmax', 'vAirMax', 'solK',
-  'tieX', 'tieY',
-  'dmin', 'dmax', 'lmin', 'lmax', 'part', 'Tcast', 'Tflow', 'Tdie',
-  'Tliq', 'Tsol', 'hf', 'cp20', 'cpS', 'cpL',
-  'Zconst', 'wall', 'wallMin', 'wallMax', 'kfill', 'gateTh', 'JatomMin', 'JatomMax', 'pAcc',
-  /* sealStroke/vacPump verlangt auch das Backend > 0 (convert.py) —
-     die Klassen hier müssen mit der Simulation übereinstimmen. */
-  'sealStroke', 'vacPump'];
+/* Die Eingabedomäne steht in config/fields.js und wird in core/domain.js
+   angewandt. Hier bleibt nur, was das DOM braucht: markieren und melden. */
+export { checkField, checkValues } from '../core/domain.js';
 
-/* Felder, die 0 sein dürfen, aber nicht negativ (amax = 0 heißt „kein
-   Limit"; Gewichte, Bandgrenzen und Positionen können 0 sein). Die
-   Außermittigkeiten eccX/eccY bleiben bewusst vorzeichenbehaftet. */
-export const NONNEG_KEYS = ['runner', 'overflow', 'biscuit', 'amax',
-  'fillMin', 'fillMax', 'gateMin', 'gateMax',
-  'vacStart', 'biscuitMin', 'intTime', 'Sfrac'];
-
-export const NEGATIVE_OK = new Set(['eccX', 'eccY']);
-
+/* Wie checkValues, markiert zusätzlich die Sidebar. Der Rückgabewert ist das
+   Urteil — render() rechnet nur weiter, wenn es ok ist. */
 export function validate(v) {
-  const bad = new Set();
-  const msgs = [];
-
-  /* min/max-Paare: strict = Gleichheit ebenfalls ungültig (Achsen/Divisionen). */
-  const pair = (a, b, label, strict) => {
-    if (!isFinite(v[a]) || !isFinite(v[b])) return;
-    if (strict ? v[a] >= v[b] : v[a] > v[b]) { bad.add(a); bad.add(b); msgs.push(label); }
-  };
-  pair('dmin', 'dmax', 'Kolben-Ø min ≥ max', true);
-  pair('lmin', 'lmax', 'Kammerlänge min ≥ max', true);
-  pair('wallMin', 'wallMax', 'Wandstärke min ≥ max', true);
-  pair('fillMin', 'fillMax', 'Füllgrad-Ziel min > max', false);
-  pair('gateMin', 'gateMax', 'Anschnittgeschw.-Ziel min > max', false);
-  pair('pAccOp', 'pAcc', 'Akkumulatordruck über dem Maximum der Maschine', false);
-
-  let nonpos = false;
-  for (const k of POSITIVE_KEYS) if (!(v[k] > 0)) { bad.add(k); nonpos = true; }
-  if (nonpos) msgs.push('rot markierte Felder müssen > 0 sein');
-
-  let neg = false;
-  for (const k of NONNEG_KEYS) if (!(v[k] >= 0)) { bad.add(k); neg = true; }
-  if (neg) msgs.push('rot markierte Felder dürfen nicht negativ sein');
-
-  /* Gewählte Werte gegen ihre Grenzen. */
-  if (v.diam < v.dmin || v.diam > v.dmax) bad.add('diam');
-  if (v.length < v.lmin || v.length > v.lmax) bad.add('length');
-  /* Verschluss-Hub muss in der Kammer liegen (Backend prüft dasselbe). */
-  if (v.sealStroke > v.length) bad.add('sealStroke');
-  /* Metallseitiger Nachdruck gegen den max. spezifischen Gießdruck der Maschine
-     (Gießkraft auf Ø dmin) — ersetzt das frühere pmin/pmax-Paar. */
-  const pM = pMaxMachine(v);
-  if (isFinite(pM) && v.psel > pM) bad.add('psel');
+  const res = checkValues(v);
+  const { bad } = res;
+  const msgs = res.msgs.slice();
 
   document.querySelectorAll('input[data-k]').forEach(e =>
     e.classList.toggle('invalid', bad.has(e.dataset.k)));
@@ -200,6 +161,7 @@ export function validate(v) {
 
   const err = document.getElementById('error');
   if (err) err.textContent = msgs.length ? '⚠ ' + msgs.join(' · ') : '';
+  return { ok: res.ok, bad, msgs };
 }
 
 /* Hervorhebung der Eingaben eines Diagramms. */
