@@ -237,6 +237,15 @@ select {
 
    Die engeren Abstände hängen an body.anguss, damit die vier
    Analyseseiten ihre gewohnten behalten — sie teilen sich diese Datei. */
+/* Achsen heißen X, Y, Z — auch hier. In der Ansichtsleiste stehen sie in
+   der dicktengleichen Schrift, ebenso jeder Zahlenwert daneben; nur diese
+   sechs Knöpfe standen in der Fließtextschrift, und dieselbe Beschriftung
+   in zwei Schnitten liest sich wie zwei verschiedene Dinge. Das
+   Minuszeichen (U+2212, nicht der Bindestrich) sitzt dort außerdem auf
+   gleicher Breite wie der Buchstabe, sodass „−X" und „X" bündig
+   untereinander bleiben. */
+.anguss #axis-seg button { font-family: var(--mono); letter-spacing: .01em; }
+
 .anguss aside .row, .anguss aside label.inline { padding: 3px 2px; }
 .anguss aside h2 { margin: 15px 0 6px; }
 .anguss aside .hint { margin-top: 9px; padding: 7px 9px; font-size: .755rem; line-height: 1.5; }
