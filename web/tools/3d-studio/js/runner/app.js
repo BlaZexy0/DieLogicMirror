@@ -249,9 +249,7 @@ function updateColorbar() {
 
 /* ── Auswahl ─────────────────────────────────────────────────── */
 
-/* Dieselbe Beschriftung steht im Viewport (Menü) und in der Seitenleiste
-   (Kopf des Eigenschaftsblocks) — einmal gebaut, damit sie nicht
-   auseinanderläuft. */
+/* Kopfzeile des Auswahlfeldes im Viewport: Artfarbe, Bezeichnung, id. */
 function selectionLabel(g, id) {
   const n = id && g.nodes[id];
   if (!n) return null;
@@ -280,14 +278,12 @@ function syncSelection() {
   const label = selectionLabel(g, id);
   $('pt-sel').className = 'pt-sel' + (label ? '' : ' empty');
   if (!n) {
-    $('sel-title').textContent = 'Kein Punkt gewählt';
     $('pt-sel').textContent = 'Kein Punkt gewählt';
     facts('sel-facts', []);
     updatePointMenu();
     return;
   }
   const follower = G.isFollower(g, id);
-  $('sel-title').innerHTML = label;
   $('pt-sel').innerHTML = label;
   for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) $(k).value = fmt(n.pos[i], 2);
   $('sel-w').value = fmt(n.w, 2);

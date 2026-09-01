@@ -604,6 +604,8 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Verschmelzen', async (
   const bar = d6.getElementById('viewport').querySelector('.view-bar');
   assert.equal(bar.querySelectorAll('[data-view]').length, 4);
   assert.ok(d6.getElementById('add-point'), 'das Punktmenü liegt im Viewport');
+  assert.ok(d6.getElementById('sel-block'), 'und der ganze Auswahlblock mit ihm');
+  assert.ok(d6.getElementById('pt-legend'), 'Legende der Punktarten');
 
   /* Kennzahlen und Prüfliste sind gefüllt, das Beispiel ist sauber */
   assert.match(d6.getElementById('graph-facts').innerHTML, /Anschnitte/);
@@ -616,7 +618,9 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Verschmelzen', async (
   const before = Object.keys(v.state.graph.nodes).length;
   const tail = v.state.graph.nodes[v.state.graph.rootId].children[0];
   v.editor.select(tail);
-  assert.match(d6.getElementById('sel-title').innerHTML, /Punkt/);
+  /* Was gewählt ist, steht im Menü im Viewport — nicht in der Seitenleiste. */
+  assert.match(d6.getElementById('pt-sel').innerHTML, /Punkt/);
+  assert.equal(d6.getElementById('sel-title'), null, 'die Seitenleiste hat keinen Auswahlkopf mehr');
   d6.getElementById('add-point').dispatch('click');
   assert.equal(Object.keys(v.state.graph.nodes).length, before + 1);
   assert.equal(v.state.net.edges.length, before, 'eine Kante mehr');

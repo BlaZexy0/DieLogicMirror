@@ -234,15 +234,6 @@ select {
 .triple input[type="text"]:focus { outline: none; border-color: var(--primary); }
 .triple input[type="text"].bad { border-color: var(--bad); background: var(--bad-bg); }
 
-.sel-head {
-  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
-  font-size: .84rem; font-weight: 600; color: var(--text);
-  padding: 4px 2px 7px;
-}
-.sel-head .dot { width: 11px; height: 11px; border-radius: 3px; border: 1px solid rgba(0,0,0,.2); }
-.sel-head code { font-family: var(--mono); font-size: .78rem; color: var(--muted); font-weight: 400; }
-.sel-head em { font-style: normal; font-size: .76rem; font-weight: 400; color: var(--muted); }
-
 .hidden { display: none; }
 
 /* ── Prüfliste ─────────────────────────────────────────────── */
@@ -260,15 +251,22 @@ select {
 .rule.bad { border-left-color: var(--bad); background: var(--bad-bg); }
 .rule.bad b { color: var(--bad); }
 
-/* ── Punktmenü und Legende im Viewport ─────────────────────── */
-/* Beide sitzen in einer Spalte oben links; die Legende rutscht nach,
-   wenn das Menü wächst. */
-.vp-left {
+/* ── Punktmenü im Viewport ─────────────────────────────────────
+   Der gewählte Punkt wird DORT bearbeitet, wo er liegt: Lage, Maße,
+   Arbeitsebene, Anschnitt und die Knöpfe zum Anfügen stehen alle in
+   diesem einen Feld über dem Bild. Die Seitenleiste behält, was für das
+   ganze System gilt (Pressrest, Kanalform, Prozess, Prüfung, Export) —
+   der Blick springt beim Bearbeiten eines Punktes nicht mehr hin und
+   her. Die Zeilen sind dieselben wie in der Seitenleiste, nur enger. */
+.pt-menu {
   position: absolute; left: 12px; top: 12px; z-index: 2;
-  display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+  width: 316px; max-height: calc(100% - 62px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 3px; padding: 8px 11px 10px;
+  background: rgba(255,255,255,.94); border: 1px solid var(--border-light);
+  border-radius: var(--radius);
 }
-.pt-menu, .pt-legend {
-  display: flex; flex-direction: column; gap: 4px; padding: 7px;
+.pt-legend {
+  display: flex; flex-direction: column; gap: 4px; padding: 7px 9px;
   background: rgba(255,255,255,.92); border: 1px solid var(--border-light);
   border-radius: var(--radius); min-width: 142px;
 }
@@ -277,6 +275,16 @@ select {
   color: var(--muted); padding: 0 2px 3px;
 }
 .pt-menu-title + .pt-menu-title, .pt-sel + .pt-menu-title { margin-top: 4px; }
+.pt-menu #sel-block + .pt-menu-title { margin-top: 8px; }
+
+/* Engere Fassung der Seitenleisten-Zeilen. */
+.pt-menu .row { padding: 2px 0; font-size: .8rem; gap: 8px; }
+.pt-menu .row > span:first-child { width: 86px; font-size: .79rem; }
+.pt-menu .row .val { width: 38px; font-size: .74rem; }
+.pt-menu label.inline { padding: 3px 0; font-size: .79rem; }
+.pt-menu .facts { margin-top: 7px; padding-top: 5px; }
+.pt-menu .fact { font-size: .76rem; }
+.pt-menu select { font-size: .78rem; }
 
 /* Welcher Punkt gerade gewählt ist. Das steht hier und nicht nur in der
    Seitenleiste, weil die Kamera beim Anklicken NICHT mehr springt — man
@@ -309,10 +317,22 @@ select {
 .pt-menu button:disabled { opacity: .4; cursor: default; }
 .pt-menu button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
 
-/* ── Flussschema ───────────────────────────────────────────── */
+/* ── Untere rechte Ecke: Schema, Farbskala, Legende ────────────
+   Alle drei in EINER Spalte, die am unteren Rand verankert ist und nach
+   oben wächst — sonst läge das Schema, sobald es aufgeht, genau auf der
+   Legende. Die Farbskala steht hier und nicht wie auf den übrigen Seiten
+   links unten: dort liegt das Auswahlfeld. */
+.vp-right {
+  position: absolute; right: 12px; bottom: 12px; z-index: 3;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  max-height: calc(100% - 24px); pointer-events: none;
+}
+.vp-right > * { pointer-events: auto; }
+.vp-right .colorbar { position: static; pointer-events: none; }
+
 .chart-panel {
-  position: absolute; right: 12px; bottom: 12px; z-index: 3; display: none;
-  width: min(660px, calc(100% - 24px)); max-height: 62%;
+  display: none; min-height: 0;
+  width: min(660px, calc(100vw - 400px)); max-height: 58vh;
   flex-direction: column;
   background: rgba(255,255,255,.97); border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: 0 6px 24px rgba(0,39,51,.14);

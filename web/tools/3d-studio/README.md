@@ -473,10 +473,25 @@ Bildebene — kein Pol, keine Sperre.
 
 Das Anklicken eines Punktes lässt die Kamera dabei in Ruhe. Den Drehpunkt
 auf die Auswahl zu setzen lag nahe, war beim Benutzen aber lästig: jeder
-Klick rückte das Bild. Wer gerade gewählt ist, steht stattdessen im Menü
-oben links im Viewport, darunter die Legende der Punktfarben. Ein
-Bodenraster gibt es nicht — der Anguss ist ein freistehender Körper, den
-man von allen Seiten ansieht.
+Klick rückte das Bild. Ein Bodenraster gibt es auch nicht — der Anguss ist
+ein freistehender Körper, den man von allen Seiten ansieht, auch von unten.
+
+### Wo was steht
+
+Der gewählte Punkt wird VOLLSTÄNDIG im Viewport bearbeitet: Kopfzeile mit
+Artfarbe und id, Lage, Kanalmaße, Kippung der Arbeitsebene, die
+Anschnittfelder, die Kennzahlen und die Knöpfe zum Anfügen — alles in dem
+einen Feld oben links. Vorher lag die Hälfte davon in der Seitenleiste, und
+der Blick sprang beim Bearbeiten eines Punktes zwischen zwei Orten hin und
+her.
+
+Die Seitenleiste behält, was für das GANZE System gilt: Beispiel und
+Dateien, Pressrest, Kanalform, Prozess, Prüfliste, Darstellung,
+Referenzbauteil, Verschmelzen und Export.
+
+Unten rechts stehen übereinander das Flussschema, die Farbskala und die
+Legende der Punktarten — auf den übrigen Seiten des Studios sitzt die
+Farbskala links unten, hier liegt dort das Auswahlfeld.
 
 ### Dateien
 

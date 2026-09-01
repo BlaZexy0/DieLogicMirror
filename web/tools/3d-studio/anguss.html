@@ -75,73 +75,6 @@
       <span class="val">mm</span>
     </div>
 
-    <h2>Auswahl</h2>
-    <div class="sel-head" id="sel-title">Kein Punkt gewählt</div>
-    <div id="sel-block" class="disabled">
-      <div class="row">
-        <span>Lage</span>
-        <div class="triple">
-          <input type="text" id="sel-x" inputmode="decimal" value="0" spellcheck="false" title="X">
-          <input type="text" id="sel-y" inputmode="decimal" value="0" spellcheck="false" title="Y">
-          <input type="text" id="sel-z" inputmode="decimal" value="0" spellcheck="false" title="Z">
-        </div>
-        <span class="val">mm</span>
-      </div>
-      <div class="row">
-        <span title="Breite des Kanals an der Trennebene. Mehr als der Pressrest-Durchmesser ergibt keinen Sinn.">Kanalbreite</span>
-        <input type="text" id="sel-w" inputmode="decimal" value="20" spellcheck="false">
-        <span class="val">mm</span>
-      </div>
-      <div class="row">
-        <span title="Tiefe des Kanals. Sie wächst entgegen der Ausstoßrichtung, also in die Formhälfte hinein.">Kanaltiefe</span>
-        <input type="text" id="sel-h" inputmode="decimal" value="12" spellcheck="false">
-        <span class="val">mm</span>
-      </div>
-      <div class="row">
-        <span title="Arbeitsebene um die Laufrichtung kippen — der Kanal legt sich auf die Seite.">Ebene längs</span>
-        <input type="range" id="sel-roll" min="-60" max="60" step="1" value="0">
-        <span class="val" id="sel-roll-val"></span>
-      </div>
-      <div class="row">
-        <span title="Arbeitsebene quer zur Laufrichtung kippen — daraus wird eine Stufe im Verteiler.">Ebene quer</span>
-        <input type="range" id="sel-pitch" min="-60" max="60" step="1" value="0">
-        <span class="val" id="sel-pitch-val"></span>
-      </div>
-
-      <div id="branch-block">
-        <div class="row">
-          <span title="Wie viel des Stroms in den ersten Ast gehen SOLL. Was wirklich fließt, entscheidet der Widerstand — beides steht im Flussschema nebeneinander.">Aufteilung</span>
-          <input type="range" id="sel-ratio" min="10" max="90" step="1" value="50">
-          <span class="val" id="sel-ratio-val"></span>
-        </div>
-        <label class="inline"><input type="checkbox" id="sel-mirror" checked> Beide Äste spiegelsymmetrisch halten</label>
-      </div>
-
-      <div id="gate-block">
-        <div class="row">
-          <span title="Anschnitthöhe — die dünnste Stelle des ganzen Systems.">Anschnitthöhe</span>
-          <input type="text" id="sel-gh" inputmode="decimal" value="2" spellcheck="false">
-          <span class="val">mm</span>
-        </div>
-        <div class="row">
-          <span title="Länge des Anschnitts (Steg): die Strecke mit unverändertem Querschnitt vor dem Bauteil.">Anschnittlänge</span>
-          <input type="text" id="sel-glen" inputmode="decimal" value="4" spellcheck="false">
-          <span class="val">mm</span>
-        </div>
-        <div class="row">
-          <span>Anschnittbreite</span>
-          <input type="text" id="sel-gw" inputmode="decimal" value="26" spellcheck="false">
-          <span class="val">mm</span>
-        </div>
-        <label class="inline"><input type="checkbox" id="sel-gauto" checked> Breite aus der Zielgeschwindigkeit rechnen</label>
-        <div class="row">
-          <span title="Wie der Querschnitt vom Kanal auf den Anschnitt übergeht.">Übergang</span>
-          <select id="sel-gtrans"></select>
-        </div>
-      </div>
-      <div class="facts" id="sel-facts"></div>
-    </div>
-
     <h2>Kanalform</h2>
     <div class="row">
       <span title="Entformschräge je Flanke. Ohne sie klemmt der erstarrte Anguss.">Entformschräge</span>
@@ -279,33 +212,97 @@
   </aside>
 
   <div id="viewport">
-    <div class="vp-left">
-      <div class="pt-menu" id="pt-menu">
-        <div class="pt-menu-title">Auswahl</div>
-        <div class="pt-sel" id="pt-sel">Kein Punkt gewählt</div>
-        <div class="pt-menu-title">Punkt anfügen</div>
-        <button type="button" id="add-point" title="Regulären Punkt hinter der Auswahl anfügen">+ Punkt</button>
-        <button type="button" id="add-branch" title="Verzweigung mit zwei Ästen anfügen">+ Verzweigung</button>
-        <button type="button" id="add-mirror" title="Spiegelpunkt: ein Ast wird bearbeitet, zwei entstehen">+ Spiegelpunkt</button>
-        <button type="button" id="add-gate" title="Anschnitt als Endpunkt anfügen">+ Anschnitt</button>
-        <button type="button" id="insert-point" title="Punkt zwischen Auswahl und Vorgänger einfügen">Davor einfügen</button>
-        <button type="button" id="del-node" class="danger" title="Auswahl entfernen">Löschen</button>
+    <div class="pt-menu" id="pt-menu">
+      <div class="pt-menu-title">Auswahl</div>
+      <div class="pt-sel" id="pt-sel">Kein Punkt gewählt</div>
+        <div id="sel-block" class="disabled">
+          <div class="row">
+            <span>Lage</span>
+            <div class="triple">
+              <input type="text" id="sel-x" inputmode="decimal" value="0" spellcheck="false" title="X">
+              <input type="text" id="sel-y" inputmode="decimal" value="0" spellcheck="false" title="Y">
+              <input type="text" id="sel-z" inputmode="decimal" value="0" spellcheck="false" title="Z">
+            </div>
+            <span class="val">mm</span>
+          </div>
+          <div class="row">
+            <span title="Breite des Kanals an der Trennebene. Mehr als der Pressrest-Durchmesser ergibt keinen Sinn.">Kanalbreite</span>
+            <input type="text" id="sel-w" inputmode="decimal" value="20" spellcheck="false">
+            <span class="val">mm</span>
+          </div>
+          <div class="row">
+            <span title="Tiefe des Kanals. Sie wächst entgegen der Ausstoßrichtung, also in die Formhälfte hinein.">Kanaltiefe</span>
+            <input type="text" id="sel-h" inputmode="decimal" value="12" spellcheck="false">
+            <span class="val">mm</span>
+          </div>
+          <div class="row">
+            <span title="Arbeitsebene um die Laufrichtung kippen — der Kanal legt sich auf die Seite.">Ebene längs</span>
+            <input type="range" id="sel-roll" min="-60" max="60" step="1" value="0">
+            <span class="val" id="sel-roll-val"></span>
+          </div>
+          <div class="row">
+            <span title="Arbeitsebene quer zur Laufrichtung kippen — daraus wird eine Stufe im Verteiler.">Ebene quer</span>
+            <input type="range" id="sel-pitch" min="-60" max="60" step="1" value="0">
+            <span class="val" id="sel-pitch-val"></span>
+          </div>
+
+          <div id="branch-block">
+            <div class="row">
+              <span title="Wie viel des Stroms in den ersten Ast gehen SOLL. Was wirklich fließt, entscheidet der Widerstand — beides steht im Flussschema nebeneinander.">Aufteilung</span>
+              <input type="range" id="sel-ratio" min="10" max="90" step="1" value="50">
+              <span class="val" id="sel-ratio-val"></span>
+            </div>
+            <label class="inline"><input type="checkbox" id="sel-mirror" checked> Beide Äste spiegelsymmetrisch halten</label>
+          </div>
+
+          <div id="gate-block">
+            <div class="row">
+              <span title="Anschnitthöhe — die dünnste Stelle des ganzen Systems.">Anschnitthöhe</span>
+              <input type="text" id="sel-gh" inputmode="decimal" value="2" spellcheck="false">
+              <span class="val">mm</span>
+            </div>
+            <div class="row">
+              <span title="Länge des Anschnitts (Steg): die Strecke mit unverändertem Querschnitt vor dem Bauteil.">Anschnittlänge</span>
+              <input type="text" id="sel-glen" inputmode="decimal" value="4" spellcheck="false">
+              <span class="val">mm</span>
+            </div>
+            <div class="row">
+              <span>Anschnittbreite</span>
+              <input type="text" id="sel-gw" inputmode="decimal" value="26" spellcheck="false">
+              <span class="val">mm</span>
+            </div>
+            <label class="inline"><input type="checkbox" id="sel-gauto" checked> Breite aus der Zielgeschwindigkeit rechnen</label>
+            <div class="row">
+              <span title="Wie der Querschnitt vom Kanal auf den Anschnitt übergeht.">Übergang</span>
+              <select id="sel-gtrans"></select>
+            </div>
+          </div>
+          <div class="facts" id="sel-facts"></div>
+        </div>
+      <div class="pt-menu-title">Punkt anfügen</div>
+      <button type="button" id="add-point" title="Regulären Punkt hinter der Auswahl anfügen">+ Punkt</button>
+      <button type="button" id="add-branch" title="Verzweigung mit zwei Ästen anfügen">+ Verzweigung</button>
+      <button type="button" id="add-mirror" title="Spiegelpunkt: ein Ast wird bearbeitet, zwei entstehen">+ Spiegelpunkt</button>
+      <button type="button" id="add-gate" title="Anschnitt als Endpunkt anfügen">+ Anschnitt</button>
+      <button type="button" id="insert-point" title="Punkt zwischen Auswahl und Vorgänger einfügen">Davor einfügen</button>
+      <button type="button" id="del-node" class="danger" title="Auswahl entfernen">Löschen</button>
+    </div>
+    <div class="vp-right">
+      <div class="chart-panel" id="chart-panel">
+        <div class="chart-head">Flussschema<button type="button" id="chart-close" title="schließen">×</button></div>
+        <div class="chart-body" id="chart-body"></div>
+      </div>
+      <div class="colorbar" id="colorbar">
+        <div class="cb-title" id="cb-title"></div>
+        <div class="cb-body">
+          <div class="cb-scale" id="cb-scale"></div>
+          <div class="cb-ticks" id="cb-ticks"></div>
+        </div>
+        <div class="cb-extra" id="cb-extra"></div>
       </div>
       <div class="pt-legend" id="pt-legend"></div>
     </div>
-    <div class="chart-panel" id="chart-panel">
-      <div class="chart-head">Flussschema<button type="button" id="chart-close" title="schließen">×</button></div>
-      <div class="chart-body" id="chart-body"></div>
-    </div>
     <div id="status"></div>
-    <div class="colorbar" id="colorbar">
-      <div class="cb-title" id="cb-title"></div>
-      <div class="cb-body">
-        <div class="cb-scale" id="cb-scale"></div>
-        <div class="cb-ticks" id="cb-ticks"></div>
-      </div>
-      <div class="cb-extra" id="cb-extra"></div>
-    </div>
     <div id="busy"></div>
     <div class="drop-hint">Angussdatei (JSON) oder Referenzteil (STL/GLB) hier ablegen</div>
   </div>
