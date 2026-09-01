@@ -1,5 +1,5 @@
 /* Der Angussdesigner ohne Browser: Profil, Graph, Kurve, Netz,
-   Verschmelzung, Strömung, Regeln und Auslegung.
+   Strömung, Regeln und Auslegung.
 
    Alle Module unter js/runner/ außer app.js und editor.js kommen ohne
    DOM aus — das ist Absicht und der Grund, warum hier so viel prüfbar
@@ -17,12 +17,10 @@ const G = await import(R + 'js/runner/graph.js');
 const PRE = await import(R + 'js/runner/presets.js');
 const { sampleNetwork, hermite } = await import(R + 'js/runner/curve.js');
 const { sweepRunner, biscuitMesh } = await import(R + 'js/runner/sweep.js');
-const SDF = await import(R + 'js/runner/sdf.js');
 const F = await import(R + 'js/runner/flow.js');
 const { checkRules } = await import(R + 'js/runner/rules.js');
 const { autoTaper, DEFAULT_SIZING } = await import(R + 'js/runner/sizing.js');
 const { flowChart } = await import(R + 'js/runner/chart.js');
-const { surfaceNets } = await import(R + 'js/part/surfacenets.js');
 const { volume, weld, adjacency } = await import(R + 'js/mesh.js');
 
 /* ── Profil ──────────────────────────────────────────────────── */
@@ -145,6 +143,36 @@ test('Graph: Knoten mit genau einem Kind wird überbrückt, sonst fällt der Tei
   const n0 = G.allNodes(g).length;
   G.removeNode(g, branch.id);
   assert.ok(G.allNodes(g).length < n0 - 1, 'mit zwei Kindern fällt der ganze Ast weg');
+});
+
+test('Graph: „davor einfügen" behält die Kinderliste und die Spiegelung', () => {
+  const g = PRE.demoTwoGates();
+  const b = G.allNodes(g).find(n => n.type === 'branch');
+  const lead = g.nodes[b.children[0]];
+
+  /* Direkt unter der Verzweigung: sie muss zwei Kinder behalten, sonst
+     ist sie für isMirrorBranch keine Gabelung mehr. */
+  const m = G.insertBefore(g, lead.id, 'point');
+  assert.ok(m);
+  assert.equal(b.children.length, 2, 'zwei Kinder, nicht drei');
+  assert.equal(new Set(b.children).size, 2, 'und keiner davon doppelt');
+  assert.equal(b.children[0], m.id);
+  assert.equal(g.nodes[lead.id].parent, m.id);
+  assert.equal(G.edges(g).filter(e => e.from.id === b.id).length, 2, 'zwei Kanten ab der Gabelung');
+
+  /* Die Gegenseite hat den neuen Punkt mitbekommen. */
+  const other = g.nodes[b.children[1]];
+  assert.equal(other.type, 'point');
+  assert.equal(other.children.length, 1);
+  assert.ok(Math.abs(other.pos[0] + m.pos[0]) < 1e-6, 'spiegelbildlich');
+  assert.equal(G.allNodes(g).length, 9, 'auf beiden Seiten je ein Punkt mehr');
+
+  /* Und tiefer im Ast genauso. */
+  const gate = G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id));
+  const n2 = G.allNodes(g).length;
+  const m2 = G.insertBefore(g, gate.id, 'point');
+  assert.equal(G.allNodes(g).length, n2 + 2, 'wieder auf beiden Seiten');
+  assert.equal(g.nodes[m2.parent].children.length, 1);
 });
 
 test('Graph: JSON hin und zurück ergibt denselben Graphen', () => {
@@ -310,115 +338,6 @@ test('Pressrest: Zylinder wächst ENTGEGEN der Ausstoßrichtung', () => {
     if (sign < 0) { assert.ok(Math.abs(hi) < 1e-9 && Math.abs(lo + 25) < 1e-9, axis); }
     else { assert.ok(Math.abs(lo) < 1e-9 && Math.abs(hi - 25) < 1e-9, axis); }
     assert.ok(volume(tris) > 0, axis + ': nach außen orientiert');
-  }
-});
-
-/* ── Verschmelzung ───────────────────────────────────────────── */
-
-test('Feld: Prismen sind nach Zügen sortiert, ein Zug endet an jeder Gabelung', () => {
-  const g = PRE.demoTwoGates();
-  const segs = SDF.buildSegments(g, sampleNetwork(g));
-  assert.equal(segs.groups.length, 3, 'Zulauf und zwei Äste');
-  let last = -1;
-  for (const gr of segs.groups) {
-    assert.ok(gr.start > last, 'Züge liegen zusammenhängend hintereinander');
-    last = gr.start;
-  }
-  assert.equal(segs.groups[segs.groups.length - 1].end, segs.count);
-});
-
-test('Feld: der Übergangsradius bläht einen GERADEN Kanal nicht auf', () => {
-  /* Das ist die Falle bei weichen Vereinigungen: smin(a, a, k) ist
-     a − k/4, und bei hundert überlappenden Prismen läuft der Wert davon.
-     Innerhalb eines Zuges muss deshalb scharf vereinigt werden. */
-  const g = straight(60, 20, 10);
-  const net = sampleNetwork(g);
-  const segs = SDF.buildSegments(g, net);
-  /* Beide Male DASSELBE Raster, damit der Vergleich allein am
-     Übergangsradius hängt und nicht an einer anderen Rasterlage. */
-  const soft = SDF.fieldSpec(segs, null, { cell: 0.8, blend: 3 });
-  const sharp = { ...soft, k: 0 };
-  return Promise.all([sharp, soft].map(spec =>
-    SDF.buildFieldCPU(spec, segs, null, null).then(f => volume(surfaceNets(f, 0)))
-  )).then(([a, b]) => {
-    const exact = P.area(P.section(20, 10, g.draft, g.radius)) * 60;
-    assert.ok(Math.abs(a / exact - 1) < 0.02, `scharf: ${a.toFixed(0)} gegen ${exact.toFixed(0)}`);
-    assert.ok(Math.abs(b / a - 1) < 1e-9, 'mit Übergangsradius kommt exakt dasselbe heraus');
-  });
-});
-
-test('Feld: der verschmolzene Körper ist geschlossen und passt zum Sweep', async () => {
-  const g = PRE.demoTwoGates();
-  g.step = 1.5;
-  const net = sampleNetwork(g);
-  const segs = SDF.buildSegments(g, net);
-  const spec = SDF.fieldSpec(segs, null, { cell: 1.6, blend: 2 });
-  const field = await SDF.buildFieldCPU(spec, segs, null, null);
-  const tris = surfaceNets(field, 0);
-  assert.ok(tris.length > 0);
-  assert.equal(openEdges(tris), 0, 'geschlossen — sonst taugt die STL nicht');
-  const sweep = volume(sweepRunner(net).tris);
-  const merged = volume(tris);
-  /* Der Sweep zählt die Überlappungen an den Verzweigungen doppelt, der
-     verschmolzene Körper nicht — er darf also nur wenig kleiner sein. */
-  assert.ok(merged < sweep * 1.05 && merged > sweep * 0.85,
-    `verschmolzen ${(merged / 1000).toFixed(1)} cm³ gegen Sweep ${(sweep / 1000).toFixed(1)} cm³`);
-});
-
-test('Feld: der Pressrest kommt als eigener Körper hinzu', async () => {
-  const g = straight(60, 20, 10);
-  const net = sampleNetwork(g);
-  const segs = SDF.buildSegments(g, net);
-  const spec = SDF.fieldSpec(segs, g.biscuit, { cell: 2, blend: 0 });
-  const field = await SDF.buildFieldCPU(spec, segs, g.biscuit, null);
-  const v = volume(surfaceNets(field, 0));
-  const zyl = Math.PI * 45 * 45 * 25;
-  assert.ok(v > zyl * 0.95, `${(v / 1000).toFixed(0)} cm³ — der Pressrest fehlt`);
-});
-
-test('Feld: der Feldaufbau stimmt Punkt für Punkt mit der Einzelpunkt-Fassung', async () => {
-  /* js/runner/sdf.js gibt es zweimal: einmal als Aufbau über die ganzen
-     Rasterquader (schnell) und einmal als Rechnung für EINEN Punkt
-     (fieldAt) — letztere ist die verbindliche Beschreibung, an der auch
-     der WGSL-Shader hängt und gegen die er zur Laufzeit stichprobenartig
-     geprüft wird. Laufen die beiden auseinander, prüft die Stichprobe im
-     Browser gegen das Falsche. */
-  const g = PRE.demoStep();
-  g.step = 3;
-  const segs = SDF.buildSegments(g, sampleNetwork(g));
-  const spec = SDF.fieldSpec(segs, g.biscuit, { cell: 4, blend: 3 });
-  const field = await SDF.buildFieldCPU(spec, segs, g.biscuit, null);
-  const [nx, ny, nz] = spec.dims;
-  let worst = 0, at = null;
-  for (let k = 0; k < nz; k++) {
-    for (let j = 0; j < ny; j++) {
-      for (let i = 0; i < nx; i++) {
-        const v = SDF.fieldAt(spec, segs, g.biscuit,
-          spec.origin[0] + i * spec.h, spec.origin[1] + j * spec.h, spec.origin[2] + k * spec.h);
-        const d = Math.abs(v - field.data[(k * ny + j) * nx + i]);
-        if (d > worst) { worst = d; at = [i, j, k]; }
-      }
-    }
-  }
-  assert.ok(worst < 1e-5, 'größte Abweichung ' + worst + ' bei ' + JSON.stringify(at));
-  assert.equal(SDF.verifyField(field, spec, segs, g.biscuit) < 1e-5, true, 'auch die Stichprobe');
-});
-
-test('Feld: die Abstandsfunktion des Prismas stimmt mit dem Profil überein', () => {
-  const g = straight(60, 20, 10);
-  /* Lange Prismen, damit in der Mitte wirklich das PROFIL den Abstand
-     bestimmt und nicht die Stirnfläche des Prismas: ein Prisma ist nur
-     so lang wie ein Abtastschritt, und quer dazu misst es weiter. */
-  g.step = 12;
-  const segs = SDF.buildSegments(g, sampleNetwork(g));
-  const sec = P.section(20, 10, g.draft, g.radius);
-  const o = 2 * SDF.SEG_STRIDE;
-  const mid = [segs.data[o], segs.data[o + 1], segs.data[o + 2]];
-  for (const [x, y] of [[0, 5], [9, 1], [11, 3], [0, -2], [0, 12], [4, 9.5]]) {
-    const p = [mid[0] + x, mid[1] - y, mid[2]];
-    const got = SDF.segDistance(segs.data, o, p[0], p[1], p[2]);
-    assert.ok(Math.abs(got - P.sdf2d(sec, x, y)) < 1e-6,
-      `(${x}, ${y}): ${got.toFixed(6)} gegen ${P.sdf2d(sec, x, y).toFixed(6)}`);
   }
 });
 

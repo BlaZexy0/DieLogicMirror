@@ -1,18 +1,23 @@
 /* Das Netz: den Querschnitt entlang der abgetasteten Mittellinie ziehen.
 
    Je Kante entsteht EIN geschlossener Körper — Mantel aus Vierecken
-   zwischen zwei benachbarten Schnitten, dazu Deckel an beiden Enden.
-   An Verzweigungen stoßen die Körper stumpf aufeinander und
-   durchdringen sich; das ist für die Anzeige richtig und schnell, aber
-   es ist noch KEIN dichter Körper. Den macht erst die Verschmelzung
-   (js/runner/sdf.js), und nur die kommt in die STL.
+   zwischen zwei benachbarten Schnitten, dazu Deckel an beiden Enden. An
+   Verzweigungen durchdringen sich die Körper; die Vereinigung entsteht
+   nicht durch Rechnen, sondern durch Überlappung.
 
-   Warum überhaupt zwei Wege: der Sweep zeigt den Querschnitt exakt so,
-   wie er eingegeben wurde — jede Kante, jeder Radius sitzt auf den
-   Zehntelmillimeter. Er ist in Millisekunden fertig und hängt am Regler
-   ohne Verzögerung. Die Verschmelzung rundet über ein Raster, kostet
-   entsprechend, liefert dafür einen dichten Körper mit den weichen
-   Übergängen an den Verzweigungen, die eine Schmelze auch bekommt.
+   AN DEN VERZWEIGUNGEN SIND DIE DECKEL GERUNDET. Ein flacher Deckel
+   endet dort mit einer scharfen Kante, und weil der Zulaufkanal genau in
+   der Gabelung endet, klafft zwischen den beiden Abgängen ein Keil —
+   die Stelle, an der eine Schmelze abreißt und ein Fräser nie hinkommt.
+   Der gerundete Deckel füllt genau diesen Keil: der Umriss des Profils
+   wird über einen Viertelkreis auf null zusammengezogen und dabei in
+   Laufrichtung vorgeschoben. Er hat damit die Form des Querschnitts,
+   nicht die einer Kugel — ein flacher breiter Kanal bekommt eine flache
+   breite Kuppe.
+
+   Gerundet wird NUR an Gabelungen. Am Anschnitt bleibt der Deckel eben:
+   das ist die Austrittsfläche ins Bauteil. Am Pressrest ebenfalls, dort
+   steckt der Deckel ohnehin im Zylinder.
 
    Ausgabe wie überall im Studio: Dreieckssuppe, 9 Werte je Dreieck. */
 
@@ -69,16 +74,70 @@ function shell(sections, out, cols, colorFn, edge) {
   }
 }
 
-function cap(sections, index, atEnd, out, cols, color) {
-  const r = ringPoints(sections[index]);
+const centroid = r => {
   const c = [0, 0, 0];
   for (let i = 0; i < POINTS; i++) { c[0] += r[i * 3]; c[1] += r[i * 3 + 1]; c[2] += r[i * 3 + 2]; }
-  c[0] /= POINTS; c[1] /= POINTS; c[2] /= POINTS;
-  const cc = Float64Array.from(c);
+  return Float64Array.from([c[0] / POINTS, c[1] / POINTS, c[2] / POINTS]);
+};
+
+/** Ebener Deckel: Fächer vom Schwerpunkt auf den Umriss. */
+function cap(sections, index, atEnd, out, cols, color) {
+  const r = ringPoints(sections[index]);
+  const cc = centroid(r);
   for (let i = 0; i < POINTS; i++) {
     const j = (i + 1) % POINTS;
     if (atEnd) tri(out, cc, 0, r, j, r, i);
     else tri(out, cc, 0, r, i, r, j);
+    col3(cols, color, color, color);
+  }
+}
+
+/* Ringe der Kuppe. Mehr als vier sieht man nicht, weniger knickt. */
+const DOME_RINGS = 4;
+
+/** Gerundeter Deckel: der Umriss schrumpft über einen Viertelkreis auf
+    einen Punkt und wandert dabei in Laufrichtung vor. Die Höhe ist das
+    kleinere der beiden Profilmaße — so bleibt die Kuppe im Verhältnis
+    zum Kanal und wächst einem flachen Kanal nicht davon. */
+function domeCap(sections, index, atEnd, out, cols, color) {
+  const sec = sections[index];
+  const base = ringPoints(sec);
+  const c = centroid(base);
+  const dir = atEnd ? 1 : -1;
+  const h = Math.min(sec.sec.halfTop, sec.sec.depth);
+  const ring = k => {
+    const a = Math.PI / 2 * k / DOME_RINGS;
+    const s = Math.cos(a), d = h * Math.sin(a) * dir;
+    const out2 = new Float64Array(POINTS * 3);
+    for (let i = 0; i < POINTS; i++) {
+      for (let x = 0; x < 3; x++) {
+        out2[i * 3 + x] = c[x] + (base[i * 3 + x] - c[x]) * s + sec.t[x] * d;
+      }
+    }
+    return out2;
+  };
+
+  let a = base;
+  for (let k = 1; k < DOME_RINGS; k++) {
+    const b = ring(k);
+    for (let i = 0; i < POINTS; i++) {
+      const j = (i + 1) % POINTS;
+      if (atEnd) { tri(out, a, i, b, i, b, j); tri(out, a, i, b, j, a, j); }
+      else { tri(out, a, i, b, j, b, i); tri(out, a, i, a, j, b, j); }
+      col3(cols, color, color, color);
+      col3(cols, color, color, color);
+    }
+    a = b;
+  }
+  const apex = Float64Array.from([c[0] + sec.t[0] * h * dir, c[1] + sec.t[1] * h * dir,
+    c[2] + sec.t[2] * h * dir]);
+  /* Der Fächer zur Spitze muss GEGEN den letzten Ring umlaufen, sonst
+     zeigt die gemeinsame Kante in beiden Dreiecken in dieselbe Richtung
+     und das Netz ist dort offen. */
+  for (let i = 0; i < POINTS; i++) {
+    const j = (i + 1) % POINTS;
+    if (atEnd) tri(out, apex, 0, a, j, a, i);
+    else tri(out, apex, 0, a, i, a, j);
     col3(cols, color, color, color);
   }
 }
@@ -88,6 +147,9 @@ function cap(sections, index, atEnd, out, cols, color) {
  * `colorFn(kante, schnittIndex)` liefert wahlweise eine Farbe je Schnitt
  * als [r, g, b] in 0…1; ohne sie bleibt `colors` null.
  */
+/* Eine Gabelung ist ein Knoten mit mehr als einem Abgang. */
+const isJunction = n => n.children.length > 1;
+
 export function sweepRunner(net, colorFn = null) {
   const out = [];
   const cols = colorFn ? [] : null;
@@ -95,8 +157,10 @@ export function sweepRunner(net, colorFn = null) {
     if (e.sections.length < 2) continue;
     const last = e.sections.length - 1;
     shell(e.sections, out, cols, colorFn, e);
-    cap(e.sections, 0, false, out, cols, colorFn ? colorFn(e, 0) : null);
-    cap(e.sections, last, true, out, cols, colorFn ? colorFn(e, last) : null);
+    const c0 = colorFn ? colorFn(e, 0) : null;
+    const c1 = colorFn ? colorFn(e, last) : null;
+    (isJunction(e.from) ? domeCap : cap)(e.sections, 0, false, out, cols, c0);
+    (isJunction(e.to) ? domeCap : cap)(e.sections, last, true, out, cols, c1);
   }
   return { tris: Float64Array.from(out), colors: cols ? Float32Array.from(cols) : null };
 }

@@ -129,7 +129,6 @@
       <span>Körper</span>
       <div class="seg" id="show-seg">
         <button type="button" data-value="sweep" class="active">Kanäle</button>
-        <button type="button" data-value="merged">verschmolzen</button>
         <button type="button" data-value="line">nur Linie</button>
       </div>
     </div>
@@ -144,40 +143,6 @@
     <label class="inline"><input type="checkbox" id="show-line" checked> Mittellinie und Griffe zeigen</label>
     <label class="inline"><input type="checkbox" id="chart-on"> Flussschema einblenden</label>
 
-    <h2>Verschmelzen und Export</h2>
-    <div class="row">
-      <span title="Kantenlänge einer Rasterzelle. Feiner heißt genauer und langsamer; der Speicher wächst mit der dritten Potenz.">Zellweite</span>
-      <input type="text" id="cell" inputmode="decimal" value="0.8" spellcheck="false">
-      <span class="val">mm</span>
-    </div>
-    <div class="row">
-      <span title="Übergangsradius an den Verzweigungen und am Pressrest. 0 gibt die scharfe Vereinigung.">Übergang</span>
-      <input type="text" id="blend" inputmode="decimal" value="3" spellcheck="false">
-      <span class="val">mm</span>
-    </div>
-    <div class="facts" id="merge-facts"></div>
-    <button type="button" class="btn btn-primary block-btn" id="run-merge">Körper verschmelzen</button>
-    <div class="run-note" id="merge-state"></div>
-    <button type="button" class="btn btn-outline block-btn" id="stl-save">Als STL speichern</button>
-
-    <div class="hint">
-      <b>Warum zwei Körper:</b> die Ansicht <em>Kanäle</em> zieht das
-      Trapezprofil exakt so, wie es eingegeben wurde — jede Kante, jeder
-      Radius sitzt auf den Zehntelmillimeter, und sie hängt ohne
-      Verzögerung am Regler. An den Verzweigungen stecken die Schläuche
-      dabei nur ineinander; das ist kein dichter Körper und hat keine
-      Übergänge. <em>Verschmolzen</em> rechnet dafür ein Abstandsfeld und
-      vereinigt die Kanäle weich — daraus wird ein geschlossenes Netz mit
-      den Hälsen, die eine Schmelze auch bekommt, und nur das kommt in
-      die STL.
-
-      <p style="margin-top:.7rem"><b>Warum das schnell ist:</b> für jeden
-      Rasterpunkt ist der Abstand zu jedem Kanalstück zu bestimmen —
-      Millionen Punkte, die nichts voneinander wissen. Genau dafür ist
-      eine Grafikkarte gebaut; die Rechnung läuft als WebGPU-Compute-Shader
-      und fällt ohne WebGPU auf dieselbe Formel in JavaScript zurück. Die
-      Kennzahlen sagen, welcher Weg gelaufen ist.</p>
-    </div>
     <h2>Prüfung</h2>
     <div class="rules" id="rules-list"></div>
 

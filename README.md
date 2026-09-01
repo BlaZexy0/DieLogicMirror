@@ -77,8 +77,8 @@ dielogic/
 │   │   │                    Entformschrägen), Offsetflächen (Abstandsfeld: Aufmaß, Wandstärke,
 │   │   │                    Wärmezentrum), Abstandsanalyse (kürzester Abstand zwischen zwei
 │   │   │                    Dateien) und Angussdesigner (js/runner/: Angusssystem als Graph
-│   │   │                    entwerfen — Splines, Verzweigungen, Anschnitte, Bernoulli-Verluste,
-│   │   │                    Verschmelzung zum dichten Körper per WebGPU, STL-Export).
+│   │   │                    entwerfen — Splines, Verzweigungen, Anschnitte, Trapezquerschnitte,
+│   │   │                    Bernoulli-Verluste und Füllbalance).
 │   │   │                    Bringt Three.js in vendor/ mit — die einzige
 │   │   │                    Fremdbibliothek, die nur dieses Werkzeug braucht.
 │   │   │                    Eigenes README dort; Modelle erzeugt scripts/3d-studio/.
@@ -200,9 +200,9 @@ Simulations-Requests ergänzt werden.
   `node scripts/3d-studio/build-parts.mjs` (Beispielteile).
   Der Angussdesigner braucht keine erzeugten Modelle — seine Beispiele
   entstehen im Code (`js/runner/presets.js`). Nach Änderungen an Kamera,
-  Steuerwerk oder Sichtbarkeit einmal in einem echten Browser
-  nachsehen: ohne WebGL zeichnen die Tests nichts, und ein leerer
-  Viewport bei tadellosen Kennzahlen fällt sonst niemandem auf.
+  Steuerwerk oder Sichtbarkeit einmal in einem echten Browser nachsehen:
+  ohne WebGL zeichnen die Tests nichts, und ein leerer Viewport bei
+  tadellosen Kennzahlen fällt sonst niemandem auf.
 - **Simulation:** Einheiten-Übersetzung und Defaults in
   `backend/convert.py`; im Frontend holt `web/tools/auslegung/js/core/simstore.js` das
   Ergebnis, die Schusskurve zeichnet den Luftdruck auf der zweiten Achse.

@@ -10,6 +10,10 @@
    Damit man sieht, worin man zieht, liegt unter der Auswahl ein
    durchscheinendes Quadrat — die Arbeitsebene selbst.
 
+   Gezogen wird JEDER Griff, der Pressrest eingeschlossen — er ist ein
+   Punkt wie die anderen, nur nimmt er beim Verschieben das ganze System
+   mit (js/runner/graph.js, setPos).
+
    Das Anklicken lässt die KAMERA in Ruhe. Den Drehpunkt auf die Auswahl
    zu setzen lag nahe (man dreht um das, woran man arbeitet), war beim
    Benutzen aber lästig: jeder Klick auf einen Punkt rückte das Bild,
@@ -219,7 +223,6 @@ export function createEditor(opts) {
     select(id);
     const g = getGraph();
     const node = g.nodes[id];
-    if (!node.parent) return;                                // Pressrest hängt am Ursprung
     const start = planePoint(ev, node, ev.altKey);
     if (!start) return;
     state.drag = {

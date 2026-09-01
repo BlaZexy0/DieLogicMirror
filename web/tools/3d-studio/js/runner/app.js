@@ -6,32 +6,25 @@
 
    Alles hängt am Graphen (js/runner/graph.js); nichts wird doppelt
    gehalten. Ein Zug am Griff ändert eine Koordinate, danach läuft die
-   ganze Kette neu — Abtasten und Sweep kosten bei einem üblichen System
-   wenige Millisekunden, also darf es bei jedem Mausschritt passieren.
-
-   Genau EINE Sache kostet spürbar Zeit und läuft deshalb NUR auf
-   Knopfdruck: das Verschmelzen zum dichten Körper (js/runner/sdf.js bzw.
-   js/runner/gpu.js). Dieselbe Trennung wie auf der Offsetseite — was
-   sofort geht, geht sofort; was rechnet, wartet auf Bestätigung und sagt
-   vorher, was es kosten wird. */
+   ganze Kette neu — Abtasten, Sweep, Strömung und Prüfregeln kosten bei
+   einem üblichen System zusammen wenige Millisekunden, also darf das bei
+   jedem Mausschritt passieren. Es gibt hier nichts, was auf Knopfdruck
+   wartet. */
 
 import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
 import { mountNav } from '../ui/nav.js';
 import {
-  $, fmt, fmtPlain, facts, segButtons, slider, numberInput, runControl, colorbar, gradient
+  $, fmt, fmtPlain, facts, segButtons, slider, numberInput, colorbar, gradient
 } from '../ui/controls.js';
 import { ramp } from '../part/colors.js';
-import { surfaceNets } from '../part/surfacenets.js';
-import { writeSTL, parseSTL } from '../part/stlio.js';
+import { parseSTL } from '../part/stlio.js';
 import { readGLB, isGLB } from '../part/glbio.js';
-import { volume, surface } from '../mesh.js';
+import { volume } from '../mesh.js';
 import * as G from './graph.js';
 import { sampleNetwork } from './curve.js';
 import { sweepRunner, biscuitMesh, centerlines } from './sweep.js';
-import * as SDF from './sdf.js';
-import { initGPU, buildFieldGPU } from './gpu.js';
 import * as F from './flow.js';
 import { checkRules } from './rules.js';
 import { autoTaper, DEFAULT_SIZING } from './sizing.js';
@@ -71,9 +64,6 @@ const state = {
   proc: { ...F.DEFAULT_PROCESS },
   sizing: { ...DEFAULT_SIZING },
   show: 'sweep', color: 'plain',
-  cell: 0.8, blend: 3,
-  merged: null, mergeStale: true, merging: false, mergeInfo: null,
-  gpu: null, gpuTried: false, gpuNote: 'noch nicht angefordert',
   name: 'Zwei Anschnitte', ready: false
 };
 
@@ -86,13 +76,6 @@ const runnerMat = new T.MeshStandardMaterial({
 });
 const runnerMesh = new T.Mesh(new T.BufferGeometry(), runnerMat);
 group.add(runnerMesh);
-
-const mergedMat = new T.MeshStandardMaterial({
-  color: 0x00534d, roughness: 0.4, metalness: 0.2, side: T.DoubleSide, flatShading: true
-});
-const mergedMesh = new T.Mesh(new T.BufferGeometry(), mergedMat);
-mergedMesh.visible = false;
-group.add(mergedMesh);
 
 const biscMat = new T.MeshStandardMaterial({
   color: 0x8fa3ad, roughness: 0.55, metalness: 0.25, transparent: true, opacity: 0.55,
@@ -123,11 +106,6 @@ const editor = createEditor({
   }
 });
 
-/* Der „Verschmelzen"-Knopf wird schon beim ersten rebuild() gesetzt —
-   deshalb steht sein Zustandsschalter hier oben und nicht erst bei den
-   übrigen Bedienelementen. */
-const setRun = runControl('run-merge', 'merge-state');
-
 /* ── Kette: Graph → Anzeige ──────────────────────────────────── */
 function rebuild() {
   const g = state.graph;
@@ -143,8 +121,6 @@ function rebuild() {
   updateRules();
   updateChart();
   updateColorbar();
-  updateMergeFacts();
-  setStale(true);
   updatePointMenu();
 }
 
@@ -195,8 +171,7 @@ function updateBiscuit() {
 
 function applyVisibility() {
   runnerMesh.visible = state.show === 'sweep';
-  mergedMesh.visible = state.show === 'merged' && !!state.merged;
-  biscMesh.visible = $('show-biscuit').checked && state.show !== 'merged';
+  biscMesh.visible = $('show-biscuit').checked;
   const handles = $('show-line').checked;
   lineGroup.visible = handles;
   editor.group.visible = handles;
@@ -234,7 +209,7 @@ function updateChart() {
 }
 
 function updateColorbar() {
-  if (state.color === 'plain' || state.show === 'merged') return colorbar(null);
+  if (state.color === 'plain') return colorbar(null);
   const css = t => 'rgb(' + ramp(FLOW_STOPS, t).map(v => Math.round(v * 255)).join(',') + ')';
   const aMax = Math.max(...state.net.edges.map(e => e.sections[0].area), 1);
   colorbar({
@@ -562,128 +537,13 @@ slider('ref-opacity', v => {
   refMat.needsUpdate = true;
 }, v => v + ' %');
 
-/* ── Verschmelzen ────────────────────────────────────────────── */
-function setStale(stale) {
-  state.mergeStale = stale;
-  if (state.merging) return setRun({ label: 'rechnet …', disabled: true });
-  if (!stale && state.merged) {
-    return setRun({ label: 'Körper ist aktuell', outline: true, disabled: true });
-  }
-  setRun({
-    label: state.merged ? 'Körper neu verschmelzen' : 'Körper verschmelzen',
-    warn: !!state.merged,
-    note: state.merged
-      ? 'Am Anguss wurde etwas geändert — der verschmolzene Körper zeigt noch den vorigen Stand.'
-      : 'Der dichte Körper mit den weichen Übergängen entsteht erst auf Knopfdruck; nur er lässt sich als STL speichern.'
-  });
-}
-
-function updateMergeFacts() {
-  const segs = SDF.buildSegments(state.graph, state.net);
-  const spec = SDF.fieldSpec(segs, $('show-biscuit').checked ? state.graph.biscuit : null,
-    { cell: state.cell, blend: state.blend });
-  const mb = spec.bytes / 1048576;
-  const rows = [
-    ['Prismen', fmt(segs.count, 0)],
-    ['Raster', spec.dims.join(' × ')],
-    ['Rasterpunkte', (spec.samples / 1e6).toFixed(2) + ' Mio.'],
-    ['Speicher', mb.toFixed(1) + ' MB'],
-    ['Beschleunigung', state.gpu ? 'WebGPU · ' + state.gpu.name : state.gpuNote]
-  ];
-  if (state.mergeInfo) {
-    rows.push(['Feld gerechnet', state.mergeInfo.ms.toFixed(0) + ' ms ('
-      + (state.mergeInfo.backend === 'webgpu' ? 'GPU' : 'CPU') + ')']);
-    rows.push(['Dreiecke', fmt(state.mergeInfo.faces, 0)]);
-    rows.push(['Volumen', fmt(state.mergeInfo.volume / 1000) + ' cm³']);
-  }
-  facts('merge-facts', rows);
-  $('graph-warn').textContent = mb > 600
-    ? 'Das Raster braucht ' + mb.toFixed(0) + ' MB — die Zellweite sollte gröber werden.'
-    : '';
-  return { segs, spec };
-}
-
-async function runMerge() {
-  if (state.merging) return;
-  state.merging = true;
-  setStale(state.mergeStale);
-  const t0 = performance.now();
-  busy.textContent = 'Abstandsfeld rechnen …';
-  busy.classList.add('on');
-  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-  try {
-    const { segs, spec } = updateMergeFacts();
-    const bisc = $('show-biscuit').checked ? state.graph.biscuit : null;
-    if (!state.gpuTried) {
-      state.gpuTried = true;
-      state.gpu = await initGPU();
-      state.gpuNote = state.gpu ? state.gpu.name : 'CPU (kein WebGPU)';
-    }
-    let field = null;
-    if (state.gpu) {
-      try {
-        busy.textContent = 'Abstandsfeld auf der Grafikkarte …';
-        field = await buildFieldGPU(state.gpu, spec, segs, bisc,
-          p => { busy.textContent = 'Abstandsfeld auf der Grafikkarte … ' + Math.round(p * 100) + ' %'; });
-      } catch (err) {
-        console.warn('WebGPU-Weg fehlgeschlagen, es geht auf der CPU weiter:', err);
-        state.gpu = null;
-        state.gpuNote = 'CPU (WebGPU brach ab)';
-        field = null;
-      }
-    }
-    if (!field) {
-      field = await SDF.buildFieldCPU(spec, segs, bisc,
-        p => { busy.textContent = 'Abstandsfeld rechnen … ' + Math.round(p * 100) + ' %'; });
-    }
-    busy.textContent = 'Fläche ableiten …';
-    await new Promise(r => setTimeout(r, 0));
-    const tris = surfaceNets(field, 0);
-    state.merged = tris;
-    const geo = new T.BufferGeometry();
-    geo.setAttribute('position', new T.BufferAttribute(Float32Array.from(tris), 3));
-    geo.computeVertexNormals();
-    mergedMesh.geometry.dispose();
-    mergedMesh.geometry = geo;
-    state.mergeInfo = {
-      ms: performance.now() - t0, backend: field.backend,
-      faces: tris.length / 9, volume: Math.abs(volume(tris)), area: surface(tris)
-    };
-    state.mergeStale = false;
-    state.show = 'merged';
-    segButtonSet('show-seg', 'merged');
-  } catch (err) {
-    $('graph-warn').textContent = 'Der Körper konnte nicht verschmolzen werden: ' + err.message;
-    console.error(err);
-  } finally {
-    busy.classList.remove('on');
-    state.merging = false;
-    applyVisibility();
-    updateColorbar();
-    updateMergeFacts();
-    setStale(state.mergeStale);
-  }
-}
-
+/* Der Umschalter „Kanäle / nur Linie" merkt sich seine Stellung im
+   Knopf; beim Beispielwechsel muss sie von Hand nachgezogen werden. */
 function segButtonSet(id, value) {
   for (const b of $(id).querySelectorAll('button')) {
     b.classList.toggle('active', b.dataset.value === value);
   }
 }
-
-$('run-merge').addEventListener('click', runMerge);
-numberInput('cell', v => {
-  state.cell = Math.max(0.1, Math.min(20, v));
-  updateMergeFacts();
-  setStale(true);
-  return state.cell;
-});
-numberInput('blend', v => {
-  state.blend = Math.max(0, Math.min(30, v));
-  updateMergeFacts();
-  setStale(true);
-  return state.blend;
-});
 
 /* ── Dateien ─────────────────────────────────────────────────── */
 function download(blob, name) {
@@ -695,13 +555,6 @@ function download(blob, name) {
 }
 
 const safeName = () => (state.name || 'anguss').replace(/[^\w-]+/g, '-').toLowerCase();
-
-$('stl-save').addEventListener('click', async () => {
-  if (!state.merged || state.mergeStale) await runMerge();
-  if (!state.merged || !state.merged.length) return;
-  download(new Blob([writeSTL(state.merged, 'DieLogic Angusssystem')], { type: 'model/stl' }),
-    safeName() + '.stl');
-});
 
 $('json-save').addEventListener('click', () => {
   const text = JSON.stringify(G.toJSON(state.graph), null, 1);
@@ -746,8 +599,6 @@ function loadGraphJSON(text, name) {
   const g = G.fromJSON(JSON.parse(text));
   state.graph = g;
   state.name = name.replace(/\.json$/i, '');
-  state.merged = null;
-  state.mergeInfo = null;
   $('graph-note').textContent = 'Geladen: ' + name;
   $('graph-warn').textContent = '';
   $('demo-select').selectedIndex = -1;
@@ -804,8 +655,6 @@ function pickDemo(id) {
   $('demo-select').value = d.id;
   state.graph = d.build();
   state.name = d.label;
-  state.merged = null;
-  state.mergeInfo = null;
   $('graph-note').textContent = '';
   adoptGraph();
 }
@@ -833,7 +682,7 @@ $('status').textContent = IDLE;
 pickDemo(new URLSearchParams(location.search).get('demo'));
 
 export const __viewer = {
-  state, view, editor, runMerge, rebuild, adoptGraph, pickDemo,
-  runnerMesh, mergedMesh, biscMesh, refMesh, group
+  state, view, editor, rebuild, adoptGraph, pickDemo,
+  runnerMesh, biscMesh, refMesh, group
 };
 window.__anguss = __viewer;

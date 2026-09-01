@@ -589,10 +589,11 @@ test('Abstandsseite: Skalengrenzen, Sichtbarkeit, Farbskala', async () => {
 });
 
 /* ── Angussdesigner ──────────────────────────────────────────────
-   Die Seite rechnet ohne Bestätigung: jeder Zug am Regler geht durch
-   die ganze Kette (Graph → Abtasten → Strömung → Netz). Nur das
-   Verschmelzen wartet auf den Knopf. Beides wird hier gedrückt. */
-test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Verschmelzen', async () => {
+   Die Seite rechnet ohne Bestätigung: jeder Zug am Regler geht durch die
+   ganze Kette (Graph → Abtasten → Strömung → Netz). Hier wird sie
+   angestoßen wie von Hand — Punkte anfügen, Regler ziehen, Beispiel
+   wechseln, Referenzteil laden. */
+test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async () => {
   const { doc: d6 } = buildDocument(read('anguss.html'));
   installGlobals(d6);
   globalThis.location = { search: '', href: 'http://test/anguss.html' };
@@ -688,18 +689,6 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Verschmelzen', async (
   assert.ok(d6.getElementById('chart-panel').classList.contains('on'));
   assert.match(d6.getElementById('chart-body').innerHTML, /^<svg /);
 
-  /* Verschmelzen — grob, sonst dauert es im Test zu lange. Node hat kein
-     WebGPU, es läuft also der Rückfall in js/runner/sdf.js. */
-  v.state.cell = 3;
-  v.state.blend = 2;
-  await v.runMerge();
-  assert.equal(v.state.mergeInfo.backend, 'cpu', 'ohne WebGPU rechnet die CPU');
-  assert.ok(v.state.merged.length > 900, 'es kommt ein Netz heraus');
-  assert.equal(v.state.mergeStale, false);
-  assert.match(d6.getElementById('merge-facts').innerHTML, /Prismen/);
-  assert.equal(v.state.show, 'merged', 'die Anzeige springt auf den verschmolzenen Körper');
-  assert.ok(v.mergedMesh.visible);
-
   /* Referenzbauteil: sein Volumen wird als Gussvolumen übernommen — die
      Zahl, aus der Volumenstrom, Anschnittflächen und damit jeder
      Querschnitt folgen. */
@@ -753,7 +742,8 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Verschmelzen', async (
   assert.equal(kugeln.length, knoten * 2, 'je Punkt zwei Kugeln');
   assert.equal(kugeln.filter(m => m.material.depthTest === false).length, knoten);
 
-  /* Speichern: Angussdatei und STL */
+  /* Speichern: die Angussdatei */
   d6.getElementById('json-save').dispatch('click');
-  d6.getElementById('stl-save').dispatch('click');
+  assert.equal(d6.getElementById('stl-save'), null, 'kein Export mehr');
+  assert.equal(d6.getElementById('run-merge'), null, 'und kein Verschmelzen');
 });

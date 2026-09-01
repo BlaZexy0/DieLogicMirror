@@ -264,6 +264,12 @@ export function insertBefore(g, id, type = 'point') {
   if (!n || !p) return null;
   const mid = scale(add(n.pos, p.pos), 0.5);
   const m = makeNode(g, type, p, mid);
+  /* makeNode hängt den Neuen HINTEN an; hier soll er aber an die Stelle
+     des alten Kindes. Ohne das Herausnehmen stand er zweimal in der
+     Liste — bei einer Verzweigung hatte sie danach drei Einträge, und
+     drei Kinder sind für isMirrorBranch keine Gabelung mehr: die
+     Spiegelung hörte stillschweigend auf zu arbeiten. */
+  p.children = p.children.filter(c => c !== m.id);
   p.children[p.children.indexOf(id)] = m.id;
   m.children = [id];
   n.parent = m.id;

@@ -12,7 +12,7 @@ verlassen den Browser nicht.
 | `bauteilanalyse.html` | **Bauteilanalyse** — für ein Bauteil die Zuordnung jedes Dreiecks zu Formhälfte oder Schieber |
 | `offset.html`   | **Offsetflächen** — Abstandsfeld durch Rasterisierung: Fläche gleichen Abstands, Wandstärke und Wärmezentrum (die Frage nach *innen*) |
 | `abstand.html`  | **Abstandsanalyse** — kürzester Abstand zwischen zwei Dateien, eingefärbt auf einer selbst gesetzten Skala (die Frage nach *außen*) |
-| `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen, Anschnitte; dazu Verluste, Füllbalance und ein dichter Körper als STL |
+| `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen, Anschnitte; dazu Querschnitt, Krümmung, Bernoulli-Verluste und Füllbalance |
 
 Erreichbar über den Reiter **3D-Studio** in der Navigation oder direkt
 unter `/tools/3d-studio/`.
@@ -312,8 +312,8 @@ Der Ablauf ist immer derselbe:
     Graph → Anschnittbreiten → Abtasten → Strömung → Anzeige
 
 Er kostet bei einem üblichen System wenige Millisekunden und läuft
-deshalb bei jedem Mausschritt. Nur EINE Sache wartet auf Bestätigung:
-das Verschmelzen zum dichten Körper.
+deshalb bei jedem Mausschritt. Es gibt nichts, was auf Bestätigung
+wartet.
 
 ### Knotenarten
 
@@ -349,8 +349,7 @@ von der Entformschräge verjüngt, mit verrundetem Boden. Die obere Kante
 bleibt **scharf** — dort stoßen die Formhälften aufeinander, ein Radius
 wäre ein Spalt. `js/runner/profile.js` beschreibt dieselbe Form zweimal:
 als Umriss mit fester Punktzahl (für den Sweep) und als
-Abstandsfunktion (für die Verschmelzung); die Tests prüfen sie
-gegeneinander.
+Abstandsfunktion; die Tests prüfen sie gegeneinander.
 
 Zwischen zwei Knoten wird die **Fläche** geführt, nicht Breite und Tiefe
 einzeln. Bei einem Fächeranschnitt (26 × 17 → 97 × 2,4) stünde sonst in
@@ -398,69 +397,27 @@ Entformschräge, Füllbalance, Kanal gegen Anschnitt, Materialausbeute.
 Jede Meldung nennt Ort und Zahl — eine Meldung ohne Zahl hilft niemandem.
 Alle Beispiele sind ohne Beanstandung; `runner.test.mjs` prüft das.
 
-### Zwei Körper, und warum
+### Das Netz
 
-**Kanäle** (Sweep, `js/runner/sweep.js`) zieht das Profil entlang der
-Mittellinie: je Kante ein geschlossener Schlauch, exakt so bemaßt wie
-eingegeben, in Millisekunden fertig. An den Verzweigungen stecken die
-Schläuche nur ineinander — kein dichter Körper, keine Übergänge.
+`js/runner/sweep.js` zieht das Profil entlang der Mittellinie: je Kante
+ein geschlossener Schlauch, exakt so bemaßt wie eingegeben, in
+Millisekunden fertig. An den Verzweigungen durchdringen sich die
+Schläuche — die Vereinigung entsteht nicht durch Rechnen, sondern durch
+Überlappung.
 
-**Verschmolzen** (`js/runner/sdf.js`) rechnet ein Abstandsfeld und zieht
-mit `js/part/surfacenets.js` — demselben Verfahren wie die
-Offsetflächen — die Nullfläche heraus. Jeder abgetastete Millimeter ist
-ein kurzes Prisma; die Prismen werden weich vereinigt:
+**An den Gabelungen sind die Deckel gerundet.** Ein flacher Deckel endet
+mit einer scharfen Kante, und weil der Zulaufkanal genau in der Gabelung
+aufhört, klafft zwischen den beiden Abgängen ein Keil — die Stelle, an
+der eine Schmelze abreißt und ein Fräser nie hinkommt. Der gerundete
+Deckel füllt genau diesen Keil: der Umriss des Profils wird über einen
+Viertelkreis auf null zusammengezogen und dabei in Laufrichtung
+vorgeschoben. Er hat damit die Form des QUERSCHNITTS, nicht die einer
+Kugel — ein flacher breiter Kanal bekommt eine flache breite Kuppe, und
+seine Höhe ist das kleinere der beiden Profilmaße.
 
-    smin(a, b, k) = min(a, b) − h²·k/4,   h = max(k − |a−b|, 0)/k
-
-Zwei Feinheiten entscheiden über brauchbar oder unbrauchbar:
-
-1. **Geblendet wird nur zwischen ZÜGEN** (Ketten von Kanten ohne
-   Gabelung), innerhalb eines Zuges scharf. Denn smin(a, a, k) ist
-   a − k/4, und bei hundert überlappenden Prismen eines geraden Kanals
-   läuft der Wert davon — gemessen +56 % Volumen bei k = 3 mm. Züge
-   treffen sich genau dort, wo der Übergang hingehört: an den
-   Verzweigungen und am Pressrest.
-2. **Weich vereinigt wird nur der KERN des Profils**; der Schnitt an der
-   Trennebene kommt zuletzt und scharf, mit der Ebene des nächstgelegenen
-   Kanals. Sonst zöge der Übergang den Körper über die Trennebene hinaus
-   (gemessene 1,2 mm bei 3 mm Übergang), und so ein Anguss passt in keine
-   Formhälfte. Der Hals wächst nach unten und zur Seite, nie nach oben.
-
-Nur der verschmolzene Körper ist geschlossen, und nur er kommt in die
-STL.
-
-### WebGPU
-
-Das Feld ist die einzige Stelle, die wirklich rechnet: für jeden
-Rasterpunkt der Abstand zu jedem Prisma in Reichweite. Auf der CPU sind
-das bei 0,8 mm Zellweite einige Sekunden — zu lang, um am Regler zu
-ziehen. Die Aufgabe ist die denkbar günstigste für eine Grafikkarte:
-Millionen Rasterpunkte, die nichts voneinander wissen, je Punkt dieselben
-zwei Dutzend Schritte. `js/runner/gpu.js` macht daraus einen
-Compute-Shader; ohne WebGPU (Firefox ohne Flag, Safari älter als 18,
-jeder Test unter Node) fällt alles auf `js/runner/sdf.js` zurück. Die
-Kennzahlen sagen, welcher Weg gelaufen ist.
-
-Der Shader ist eine **Handkopie** derselben Formel, und Node kann ihn
-nicht ausführen — keine Testsuite fängt ihn. Deshalb drei Vorkehrungen:
-
-- Übersetzungsfehler werden abgefragt (`getCompilationInfo`), die
-  Pipeline asynchron gebaut und Fehlerbereiche ausgewertet. WGSL meldet
-  nichts über Ausnahmen: ohne diese Abfragen bekommt man anstandslos ein
-  Feld aus lauter Nullen. Genau so ist es beim ersten Lauf im Browser
-  passiert (`meta` ist ein reserviertes Wort in WGSL).
-- Nach jeder Rechnung prüft `verifyField()` einige hundert Rasterpunkte
-  gegen `fieldAt()` — dieselbe Rechnung in JavaScript. Weicht etwas ab,
-  wird geworfen und auf der CPU weitergerechnet, statt still eine falsche
-  Geometrie zu liefern.
-- `runner.test.mjs` prüft `fieldAt()` Punkt für Punkt gegen den
-  Feldaufbau; damit hängen beide Wege an derselben Beschreibung.
-
-Alle Abkürzungen (Hüllkugeln je Zug und je Prisma) sind EXAKT: ein
-übersprungenes Prisma hätte den Wert nicht geändert. Deshalb liefern
-beide Wege dasselbe Feld — gemessen über alle Beispiele höchstens
-2·10⁻⁵ mm Unterschied (einfache gegen doppelte Genauigkeit), null
-Vorzeichenwechsel.
+Gerundet wird nur an Gabelungen. Am Anschnitt bleibt der Deckel eben:
+das ist die Austrittsfläche ins Bauteil. Am Pressrest ebenfalls, dort
+steckt er ohnehin im Zylinder.
 
 ### Freies Drehen
 
@@ -493,8 +450,8 @@ Ausstoßrichtung.
 Die Seitenleiste behält, was für das GANZE System gilt, von oben nach
 unten in der Reihenfolge, in der man es braucht: Beispiel und Dateien,
 Referenzbauteil (es liefert das Gussvolumen, also gleich nach oben),
-Kanalform, Prozess, Darstellung, Verschmelzen und Export — und ganz unten
-die Prüfliste, die das Ergebnis von allem beurteilt.
+Kanalform, Prozess, Darstellung — und ganz unten die Prüfliste, die das
+Ergebnis von allem beurteilt.
 
 Die **Kennzahlen** des Systems stehen beim Flussschema, als Streifen unter
 seinem Kopf: Punkte, Anschnitte, Lauflänge, Angussvolumen, Volumenstrom,
@@ -536,7 +493,6 @@ die Griffe, nicht das Netz.
   Fassungsnummer. Laden und Speichern über die Knöpfe oder per
   Ziehen-und-Ablegen; was für eine Datei es ist, entscheidet der Inhalt,
   nicht die Endung.
-- **STL** — der verschmolzene Körper.
 - **Referenzbauteil (STL/GLB)** — wird durchscheinend dazugestellt, damit
   die Anschnitte dorthin zeigen, wo sie hingehören. Sein **Volumen wird
   als Gussvolumen übernommen**: das ist die Zahl, aus der über die
@@ -598,9 +554,7 @@ js/runner/graph.js    DAS Datenmodell: Knoten, Arbeitsebenen, Spiegelung, JSON
 js/runner/presets.js  Beispielsysteme (durch die Auslegung gelaufen)
 js/runner/profile.js  Trapezquerschnitt — als Umriss UND als Abstandsfunktion
 js/runner/curve.js    Hermite-Bögen, Abtastung nach Bogenlänge, Querschnitts-Fahrplan
-js/runner/sweep.js    Netz: Profil entlang der Mittellinie, Pressrest
-js/runner/sdf.js      Abstandsfeld, weiche Vereinigung, Schnitt an der Trennebene
-js/runner/gpu.js      dasselbe Feld als WebGPU-Compute-Shader (+ Stichprobe)
+js/runner/sweep.js    Netz: Profil entlang der Mittellinie, gerundete Deckel, Pressrest
 js/runner/flow.js     Bernoulli-Verluste und Füllbalance
 js/runner/sizing.js   Querschnitte von den Anschnitten rückwärts abstufen
 js/runner/rules.js    gießtechnische Prüfregeln
@@ -669,7 +623,7 @@ nichts. Die Dateien liegen unter `tests/web/3d-studio/`:
 | `distance.test.mjs` | Punkt-Netz-Abstand gegen Fläche, Kante, Ecke und Innenraum, Symmetrie, Unabhängigkeit von der Rasterweite, Verfeinern |
 | `die.test.mjs` | jede Baugruppe geschlossen und richtig orientiert, **kein Bauteil steckt im Stahl eines anderen**, Kavität als Negativ mit Spalt, Kernstift, Füllkammer |
 | `imports.test.mjs` | jeder Import löst auf, jeder exportierte Name existiert, jede angesprochene HTML-id ist vorhanden |
-| `runner.test.mjs` | der Angussdesigner ohne Browser: Profil (Umriss gegen Abstandsfunktion), Graph (Spiegelung, Löschen, JSON), Kurve (Bogenlänge, monotoner Querschnitt), Sweep (Volumen = Fläche × Länge, geschlossen), Feld (Übergang bläht nicht auf, Feldaufbau gegen Einzelpunkt-Fassung), Strömung, Regeln, Auslegung, Flussschema |
+| `runner.test.mjs` | der Angussdesigner ohne Browser: Profil (Umriss gegen Abstandsfunktion), Graph (Spiegelung, Einfügen, Löschen, JSON), Kurve (Bogenlänge, monotoner Querschnitt), Sweep (Volumen = Fläche × Länge, geschlossen auch mit gerundeten Deckeln), Strömung, Regeln, Auslegung, Flussschema |
 | `viewer.test.mjs` | die Verdrahtung aller fünf Viewer — mit einem winzigen DOM aus der **echten** HTML-Seite und dem echten Three.js ohne WebGL-Renderer (`tests/stubs/`) |
 
 Der letzte Test ist der Ersatz für den Browser, den es in der
