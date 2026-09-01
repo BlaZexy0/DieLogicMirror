@@ -56,38 +56,6 @@
     </div>
     <button type="button" class="btn btn-outline block-btn" id="ref-clear">Referenz entfernen</button>
 
-    <h2>Pressrest</h2>
-    <div class="row">
-      <span title="Durchmesser des Pressrests — also der Füllkammer.">Durchmesser</span>
-      <input type="text" id="bisc-d" inputmode="decimal" value="90" spellcheck="false">
-      <span class="val">mm</span>
-    </div>
-    <div class="row">
-      <span title="Dicke des Pressrests. Sie wächst ENTGEGEN der Ausstoßrichtung, also in dieselbe Formhälfte wie die Kanaltiefe.">Dicke</span>
-      <input type="text" id="bisc-t" inputmode="decimal" value="25" spellcheck="false">
-      <span class="val">mm</span>
-    </div>
-    <div class="row">
-      <span title="Ausstoßrichtung: die Normale der Trennebene. Alle Arbeitsebenen leiten sich daraus ab.">Richtung</span>
-      <div class="seg stack" id="axis-seg">
-        <button type="button" data-value="+x">X</button>
-        <button type="button" data-value="+y" class="active">Y</button>
-        <button type="button" data-value="+z">Z</button>
-        <button type="button" data-value="-x">−X</button>
-        <button type="button" data-value="-y">−Y</button>
-        <button type="button" data-value="-z">−Z</button>
-      </div>
-    </div>
-    <div class="row">
-      <span>Ursprung</span>
-      <div class="triple">
-        <input type="text" id="bisc-x" inputmode="decimal" value="0" spellcheck="false" title="X">
-        <input type="text" id="bisc-y" inputmode="decimal" value="0" spellcheck="false" title="Y">
-        <input type="text" id="bisc-z" inputmode="decimal" value="0" spellcheck="false" title="Z">
-      </div>
-      <span class="val">mm</span>
-    </div>
-
     <h2>Kanalform</h2>
     <div class="row">
       <span title="Entformschräge je Flanke. Ohne sie klemmt der erstarrte Anguss.">Entformschräge</span>
@@ -229,6 +197,29 @@
             </div>
             <span class="val">mm</span>
           </div>
+          <div id="bisc-block">
+            <div class="row">
+              <span title="Durchmesser des Pressrests — also der Füllkammer.">Durchmesser</span>
+              <input type="text" id="bisc-d" inputmode="decimal" value="90" spellcheck="false">
+              <span class="val">mm</span>
+            </div>
+            <div class="row">
+              <span title="Dicke des Pressrests. Sie wächst ENTGEGEN der Ausstoßrichtung, also in dieselbe Formhälfte wie die Kanaltiefe.">Dicke</span>
+              <input type="text" id="bisc-t" inputmode="decimal" value="25" spellcheck="false">
+              <span class="val">mm</span>
+            </div>
+            <div class="row">
+              <span title="Ausstoßrichtung: die Normale der Trennebene. Alle Arbeitsebenen leiten sich daraus ab.">Richtung</span>
+              <div class="seg stack" id="axis-seg">
+                <button type="button" data-value="+x">X</button>
+                <button type="button" data-value="+y" class="active">Y</button>
+                <button type="button" data-value="+z">Z</button>
+                <button type="button" data-value="-x">−X</button>
+                <button type="button" data-value="-y">−Y</button>
+                <button type="button" data-value="-z">−Z</button>
+              </div>
+            </div>
+          </div>
           <div class="row">
             <span title="Breite des Kanals an der Trennebene. Mehr als der Pressrest-Durchmesser ergibt keinen Sinn.">Kanalbreite</span>
             <input type="text" id="sel-w" inputmode="decimal" value="20" spellcheck="false">
@@ -239,15 +230,17 @@
             <input type="text" id="sel-h" inputmode="decimal" value="12" spellcheck="false">
             <span class="val">mm</span>
           </div>
-          <div class="row">
-            <span title="Arbeitsebene um die Laufrichtung kippen — der Kanal legt sich auf die Seite.">Ebene längs</span>
-            <input type="range" id="sel-roll" min="-60" max="60" step="1" value="0">
-            <span class="val" id="sel-roll-val"></span>
-          </div>
-          <div class="row">
-            <span title="Arbeitsebene quer zur Laufrichtung kippen — daraus wird eine Stufe im Verteiler.">Ebene quer</span>
-            <input type="range" id="sel-pitch" min="-60" max="60" step="1" value="0">
-            <span class="val" id="sel-pitch-val"></span>
+          <div id="plane-block">
+            <div class="row">
+              <span title="Arbeitsebene um die Laufrichtung kippen — der Kanal legt sich auf die Seite.">Ebene längs</span>
+              <input type="range" id="sel-roll" min="-60" max="60" step="1" value="0">
+              <span class="val" id="sel-roll-val"></span>
+            </div>
+            <div class="row">
+              <span title="Arbeitsebene quer zur Laufrichtung kippen — daraus wird eine Stufe im Verteiler.">Ebene quer</span>
+              <input type="range" id="sel-pitch" min="-60" max="60" step="1" value="0">
+              <span class="val" id="sel-pitch-val"></span>
+            </div>
           </div>
 
           <div id="branch-block">

@@ -402,12 +402,24 @@ export function isFollower(g, id) {
 
 /* ── Bearbeiten ──────────────────────────────────────────────── */
 
-/** Knoten verschieben (Weltkoordinaten). */
+/**
+ * Knoten verschieben (Weltkoordinaten).
+ *
+ * Der Pressrest zieht das GANZE System mit. Er ist der Anker, an dem der
+ * Anguss hängt; ihn allein zu verschieben hieße, die erste Kante zu
+ * dehnen und den entworfenen Verlauf zu verlieren. Wer den Ursprung
+ * versetzt, meint die Maschine, nicht den Kanal.
+ */
 export function setPos(g, id, pos) {
   const n = g.nodes[id];
   if (!n) return;
+  if (!n.parent) {
+    const d = sub(pos, n.pos);
+    for (const m of allNodes(g)) m.pos = add(m.pos, d);
+    g.biscuit.pos = g.nodes[id].pos.slice();
+    return;
+  }
   n.pos = [pos[0], pos[1], pos[2]];
-  if (!n.parent) { g.biscuit.pos = n.pos.slice(); }
   syncFrom(g, id);
 }
 

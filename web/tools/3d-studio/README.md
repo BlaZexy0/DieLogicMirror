@@ -319,7 +319,7 @@ das Verschmelzen zum dichten Körper.
 
 | Farbe | Art | Bedeutung |
 |-------|-----|-----------|
-| grau | **Pressrest** | Ursprung. Durchmesser, Dicke und Ausstoßrichtung; die Dicke wächst ENTGEGEN der Richtung, also in dieselbe Formhälfte wie die Kanaltiefe. |
+| grau | **Pressrest** | Ursprung. Durchmesser, Dicke und Ausstoßrichtung stehen in seinem Auswahlfeld wie bei jedem anderen Punkt auch; die Dicke wächst ENTGEGEN der Richtung, also in dieselbe Formhälfte wie die Kanaltiefe. Ihn zu verschieben zieht das GANZE System mit — er ist der Anker, ihn allein zu versetzen hieße nur die erste Kante zu dehnen. |
 | türkis | **Punkt** | Stützpunkt des Laufkanals mit eigenem Querschnitt. |
 | gold | **Verzweigung** | Gabelung mit Aufteilung (50:50 …) und wahlweise erzwungener Spiegelsymmetrie. |
 | violett | **Spiegelpunkt** | dasselbe fest auf 50:50, aber nur EIN Ast wird bearbeitet — der andere entsteht. |
@@ -485,11 +485,16 @@ einen Feld oben links. Vorher lag die Hälfte davon in der Seitenleiste, und
 der Blick sprang beim Bearbeiten eines Punktes zwischen zwei Orten hin und
 her.
 
+Auch der **Pressrest** ist so ein Punkt: sein Durchmesser, seine Dicke und
+die Ausstoßrichtung erscheinen im Auswahlfeld, sobald man ihn anklickt.
+Eine Arbeitsebene zum Kippen bekommt er nicht — seine Ebene IST die
+Ausstoßrichtung.
+
 Die Seitenleiste behält, was für das GANZE System gilt, von oben nach
 unten in der Reihenfolge, in der man es braucht: Beispiel und Dateien,
 Referenzbauteil (es liefert das Gussvolumen, also gleich nach oben),
-Pressrest, Kanalform, Prozess, Darstellung, Verschmelzen und Export —
-und ganz unten die Prüfliste, die das Ergebnis von allem beurteilt.
+Kanalform, Prozess, Darstellung, Verschmelzen und Export — und ganz unten
+die Prüfliste, die das Ergebnis von allem beurteilt.
 
 Die **Kennzahlen** des Systems stehen beim Flussschema, als Streifen unter
 seinem Kopf: Punkte, Anschnitte, Lauflänge, Angussvolumen, Volumenstrom,

@@ -290,6 +290,19 @@ function syncSelection() {
   $('sel-pitch').value = String(n.tilt[1]);
   $('sel-pitch-val').textContent = fmt(n.tilt[1], 0) + '°';
 
+  /* Der Pressrest ist ein Punkt wie jeder andere — nur trägt er statt
+     einer Arbeitsebene seine eigenen Maße. Beides gleichzeitig zu zeigen
+     wäre falsch: seine Ebene IST die Ausstoßrichtung, kippen lässt sie
+     sich nicht. */
+  const isRoot = !n.parent;
+  $('bisc-block').classList.toggle('hidden', !isRoot);
+  $('plane-block').classList.toggle('hidden', isRoot);
+  if (isRoot) {
+    $('bisc-d').value = fmt(g.biscuit.d, 2);
+    $('bisc-t').value = fmt(g.biscuit.t, 2);
+    segButtonSet('axis-seg', g.biscuit.axis);
+  }
+
   const isBranch = n.type === 'branch' || n.type === 'mirror';
   $('branch-block').classList.toggle('hidden', !isBranch);
   if (isBranch) {
@@ -311,6 +324,11 @@ function syncSelection() {
 
   const na = state.net.nodeArea[id];
   const rows = [['Querschnitt', fmt(na.area, 0) + ' mm²'], ['hydr. Ø', fmt(na.dh) + ' mm']];
+  if (isRoot) {
+    const b = g.biscuit;
+    rows.unshift(['Pressrest-Volumen',
+      fmt(Math.PI * b.d * b.d / 4 * b.t / 1000) + ' cm³']);
+  }
   const inEdge = state.net.edges.find(e => e.toId === id);
   if (inEdge) {
     const l = state.flow.losses.get(id);
@@ -453,19 +471,6 @@ numberInput('bisc-t', v => {
   rebuild();
   return t;
 });
-for (const [id, axis] of [['bisc-x', 0], ['bisc-y', 1], ['bisc-z', 2]]) {
-  numberInput(id, v => {
-    const g = state.graph;
-    const shift = [0, 0, 0];
-    shift[axis] = v - g.biscuit.pos[axis];
-    /* Der Pressrest zieht das ganze System mit — sonst reißt der Anguss
-       von seinem Ursprung ab, sobald man ihn versetzt. */
-    for (const n of G.allNodes(g)) n.pos = add(n.pos, shift);
-    g.biscuit.pos[axis] = v;
-    rebuild();
-    return v;
-  });
-}
 segButtons('axis-seg', value => {
   const g = state.graph;
   const from = G.AXES[g.biscuit.axis], to = G.AXES[value];
@@ -809,12 +814,6 @@ $('demo-select').addEventListener('change', e => pickDemo(e.target.value));
 /** Nach dem Laden eines anderen Systems alle Anzeigen nachziehen. */
 function adoptGraph() {
   const g = state.graph;
-  $('bisc-d').value = fmt(g.biscuit.d, 2);
-  $('bisc-t').value = fmt(g.biscuit.t, 2);
-  $('bisc-x').value = fmt(g.biscuit.pos[0], 2);
-  $('bisc-y').value = fmt(g.biscuit.pos[1], 2);
-  $('bisc-z').value = fmt(g.biscuit.pos[2], 2);
-  segButtonSet('axis-seg', g.biscuit.axis);
   $('draft').value = String(g.draft);
   $('draft-val').textContent = fmt(g.draft) + '°';
   $('radius').value = fmt(g.radius, 2);

@@ -632,11 +632,39 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Verschmelzen', async (
   d6.getElementById('del-node').dispatch('click');
   assert.equal(Object.keys(v.state.graph.nodes).length, before);
 
+  /* Der Pressrest bringt seine eigenen Maße mit — und keine Arbeitsebene:
+     seine Ebene IST die Ausstoßrichtung. */
+  v.editor.select(v.state.graph.rootId);
+  assert.ok(!d6.getElementById('bisc-block').classList.contains('hidden'));
+  assert.ok(d6.getElementById('plane-block').classList.contains('hidden'));
+  assert.match(d6.getElementById('sel-facts').innerHTML, /Pressrest-Volumen/);
+  const dInput = d6.getElementById('bisc-d');
+  assert.equal(dInput.value, String(v.state.graph.biscuit.d), 'der Wert steht im Feld');
+  dInput.value = '120';
+  dInput.dispatch('change');
+  assert.equal(v.state.graph.biscuit.d, 120);
+
+  /* Der Pressrest zieht beim Verschieben das ganze System mit. */
+  const vorher = Object.values(v.state.graph.nodes).map(n => n.pos.slice());
+  const zx = d6.getElementById('sel-x');
+  zx.value = '40';
+  zx.dispatch('change');
+  const nachher = Object.values(v.state.graph.nodes).map(n => n.pos.slice());
+  assert.equal(v.state.graph.biscuit.pos[0], 40);
+  nachher.forEach((p, i) => {
+    assert.ok(Math.abs(p[0] - vorher[i][0] - 40) < 1e-9, 'alle Punkte um 40 mm versetzt');
+    assert.deepEqual([p[1], p[2]], [vorher[i][1], vorher[i][2]]);
+  });
+  zx.value = '0';
+  zx.dispatch('change');
+
   /* Ein Anschnitt zeigt seine eigenen Felder */
   const gate = Object.values(v.state.graph.nodes).find(n => n.type === 'gate');
   v.editor.select(gate.id);
   assert.ok(!d6.getElementById('gate-block').classList.contains('hidden'));
   assert.ok(d6.getElementById('branch-block').classList.contains('hidden'));
+  assert.ok(d6.getElementById('bisc-block').classList.contains('hidden'));
+  assert.ok(!d6.getElementById('plane-block').classList.contains('hidden'));
   assert.equal(d6.getElementById('sel-gw').disabled, true, 'automatische Breite ist gesperrt');
 
   /* Regler wirken sofort */
