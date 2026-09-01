@@ -358,5 +358,15 @@ select {
   color: var(--muted); padding: 0 2px;
 }
 .chart-head button:hover { color: var(--bad); }
+/* Kennzahlen als Streifen unter dem Kopf: sie gehören zum Schema, sollen
+   aber nicht mit ihm scrollen. */
+.chart-facts {
+  display: flex; flex-wrap: wrap; gap: 3px 20px;
+  padding: 7px 10px 8px; border-bottom: 1px solid var(--border-light);
+  background: var(--surface2);
+}
+.chart-facts .fact { display: flex; gap: 7px; font-size: .78rem; padding: 0; }
+.chart-facts:empty { display: none; }
+
 .chart-body { overflow: auto; padding: 8px 10px 12px; }
 .chart-empty { color: var(--muted); font-size: .82rem; margin: 6px 2px; }

@@ -489,6 +489,14 @@ Die Seitenleiste behält, was für das GANZE System gilt: Beispiel und
 Dateien, Pressrest, Kanalform, Prozess, Prüfliste, Darstellung,
 Referenzbauteil, Verschmelzen und Export.
 
+Die **Kennzahlen** des Systems stehen beim Flussschema, als Streifen unter
+seinem Kopf: Punkte, Anschnitte, Lauflänge, Angussvolumen, Volumenstrom,
+Druckbedarf. Dort steht nur, was das Schema nicht ohnehin zeigt —
+Anschnittfläche, Geschwindigkeit und die Aufteilung soll/ist hängen im Bild
+an den Ästen selbst. Sie daneben noch einmal als Summe zu setzen hieße
+dieselbe Sache zweimal zu sagen und dabei die interessante Hälfte
+wegzulassen: welcher Ast?
+
 Unten rechts stehen übereinander das Flussschema, die Farbskala und die
 Legende der Punktarten — auf den übrigen Seiten des Studios sitzt die
 Farbskala links unten, hier liegt dort das Auswahlfeld.
@@ -516,9 +524,15 @@ die Griffe, nicht das Netz.
   Ziehen-und-Ablegen; was für eine Datei es ist, entscheidet der Inhalt,
   nicht die Endung.
 - **STL** — der verschmolzene Körper.
-- **Referenzbauteil (STL/GLB)** — wird nur durchscheinend dazugestellt,
-  damit die Anschnitte dorthin zeigen, wo sie hingehören; es wird nicht
-  gerechnet.
+- **Referenzbauteil (STL/GLB)** — wird durchscheinend dazugestellt, damit
+  die Anschnitte dorthin zeigen, wo sie hingehören. Sein **Volumen wird
+  als Gussvolumen übernommen**: das ist die Zahl, aus der über die
+  Füllzeit der Volumenstrom folgt und daraus die Anschnittflächen und
+  damit jeder Querschnitt. Sie von Hand einzutippen, während das Bauteil
+  daneben liegt, ist eine Fehlerquelle ohne Gewinn. Überläufe sind darin
+  nicht enthalten — wer sie mitrechnen will, schlägt sie im Feld auf. Ist
+  das Netz offen oder überlappend und das Volumen damit unbrauchbar,
+  bleibt die Einstellung stehen und die Seite sagt, warum.
 
 
 ## Struktur

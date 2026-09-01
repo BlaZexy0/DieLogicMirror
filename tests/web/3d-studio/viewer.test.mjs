@@ -608,8 +608,11 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Verschmelzen', async (
   assert.ok(d6.getElementById('pt-legend'), 'Legende der Punktarten');
 
   /* Kennzahlen und Prüfliste sind gefüllt, das Beispiel ist sauber */
-  assert.match(d6.getElementById('graph-facts').innerHTML, /Anschnitte/);
-  assert.match(d6.getElementById('flow-facts').innerHTML, /Druckbedarf/);
+  /* Die Kennzahlen stehen beim Flussschema, nicht in der Seitenleiste. */
+  assert.match(d6.getElementById('chart-facts').innerHTML, /Anschnitte/);
+  assert.match(d6.getElementById('chart-facts').innerHTML, /Druckbedarf/);
+  assert.equal(d6.getElementById('graph-facts'), null);
+  assert.equal(d6.getElementById('flow-facts'), null);
   assert.ok(v.state.rules.length >= 6, 'jede Regel meldet sich');
   assert.deepEqual(v.state.rules.filter(r => r.level !== 'ok').map(r => r.title), [],
     'das Beispiel verletzt keine Regel');
@@ -668,6 +671,33 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Verschmelzen', async (
   assert.match(d6.getElementById('merge-facts').innerHTML, /Prismen/);
   assert.equal(v.state.show, 'merged', 'die Anzeige springt auf den verschmolzenen Körper');
   assert.ok(v.mergedMesh.visible);
+
+  /* Referenzbauteil: sein Volumen wird als Gussvolumen übernommen — die
+     Zahl, aus der Volumenstrom, Anschnittflächen und damit jeder
+     Querschnitt folgen. */
+  const { writeSTL: writeSTL6 } = await import('../../../web/tools/3d-studio/js/part/stlio.js');
+  const S6 = await import('../../../web/tools/3d-studio/js/solids.js');
+  const wuerfel = writeSTL6(S6.box(100, 100, 100), 'test');     // 1000 cm³
+  const volVorher = v.state.proc.volume;
+  const refIn = d6.getElementById('ref-input');
+  refIn.files = [{ name: 'bauteil.stl', arrayBuffer: () => Promise.resolve(wuerfel), byteLength: wuerfel.byteLength }];
+  refIn.dispatch('change');
+  await new Promise(r => setTimeout(r, 80));
+  assert.notEqual(v.state.proc.volume, volVorher);
+  assert.ok(Math.abs(v.state.proc.volume - 1000) < 0.2, 'Volumen ' + v.state.proc.volume + ' cm³');
+  assert.equal(d6.getElementById('vol').value, '1000', 'ohne Tausenderpunkt — sonst liest es sich falsch zurück');
+  assert.match(d6.getElementById('ref-note').textContent, /Gussvolumen übernommen/);
+  assert.ok(v.refMesh.visible);
+  /* Und die Kette hängt daran: mehr Volumen, mehr Strom. */
+  assert.ok(v.state.flow.Q > 0);
+
+  /* Ein unbrauchbares Netz ändert das Gussvolumen nicht. */
+  const flach = writeSTL6(new Float64Array(9), 'leer');
+  refIn.files = [{ name: 'flach.stl', arrayBuffer: () => Promise.resolve(flach), byteLength: flach.byteLength }];
+  refIn.dispatch('change');
+  await new Promise(r => setTimeout(r, 80));
+  assert.ok(Math.abs(v.state.proc.volume - 1000) < 0.2, 'das gute Volumen bleibt stehen');
+  assert.match(d6.getElementById('ref-note').textContent, /nicht brauchbar/);
 
   /* Achsenkreuz: es hängt an scene.onBeforeRender, das ohne WebGL
      niemand ruft — hier von Hand. Nach dem Schwenk auf X zeigt die

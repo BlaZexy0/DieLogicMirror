@@ -40,7 +40,6 @@
       <button type="button" class="btn btn-outline" id="json-save">Datei speichern</button>
     </div>
     <div class="hint" id="graph-note"></div>
-    <div class="facts" id="graph-facts"></div>
     <div class="warn-line" id="graph-warn"></div>
 
     <h2>Pressrest</h2>
@@ -137,7 +136,11 @@
       <input type="range" id="cbranch" min="10" max="120" step="5" value="50">
       <span class="val" id="cbranch-val"></span>
     </div>
-    <div class="facts" id="flow-facts"></div>
+    <div class="hint">Die Kennzahlen des Systems — Punkte, Anschnitte, Lauflänge,
+      Angussvolumen, Volumenstrom und Druckbedarf — stehen im
+      <b>Flussschema</b> (unter „Darstellung" einzuschalten). Was das Schema
+      ohnehin zeigt, steht dort nicht noch einmal: Anschnittflächen,
+      Geschwindigkeiten und die Aufteilung soll/ist hängen an den Ästen selbst.</div>
 
     <h2>Prüfung</h2>
     <div class="rules" id="rules-list"></div>
@@ -290,6 +293,7 @@
     <div class="vp-right">
       <div class="chart-panel" id="chart-panel">
         <div class="chart-head">Flussschema<button type="button" id="chart-close" title="schließen">×</button></div>
+        <div class="chart-facts" id="chart-facts"></div>
         <div class="chart-body" id="chart-body"></div>
       </div>
       <div class="colorbar" id="colorbar">

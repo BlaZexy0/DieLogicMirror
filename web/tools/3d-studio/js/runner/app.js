@@ -20,7 +20,7 @@ import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
 import { mountNav } from '../ui/nav.js';
 import {
-  $, fmt, facts, segButtons, slider, numberInput, runControl, colorbar, gradient
+  $, fmt, fmtPlain, facts, segButtons, slider, numberInput, runControl, colorbar, gradient
 } from '../ui/controls.js';
 import { ramp } from '../part/colors.js';
 import { surfaceNets } from '../part/surfacenets.js';
@@ -208,21 +208,22 @@ function applyVisibility() {
 }
 
 /* ── Kennzahlen, Regeln, Schema ──────────────────────────────── */
+/* Die Kennzahlen des ganzen Systems stehen beim Flussschema, nicht in der
+   Seitenleiste — und dort nur, was das Schema NICHT ohnehin zeigt.
+   Anschnittfläche, Geschwindigkeit und die Aufteilung soll/ist hängen im
+   Bild an den Ästen selbst; sie ein zweites Mal als Summe daneben zu
+   setzen, hieße dieselbe Sache zweimal sagen und dabei die interessante
+   Hälfte (welcher Ast?) wegzulassen. */
 function updateFacts() {
   const g = state.graph, net = state.net, fl = state.flow;
   const gates = G.allNodes(g).filter(n => n.type === 'gate');
-  facts('graph-facts', [
+  facts('chart-facts', [
     ['Punkte', fmt(G.allNodes(g).length, 0)],
     ['Anschnitte', fmt(gates.length, 0)],
     ['Lauflänge', fmt(net.length, 0) + ' mm'],
-    ['Angussvolumen', fmt(fl.runnerVolume / 1000) + ' cm³']
-  ]);
-  facts('flow-facts', [
+    ['Angussvolumen', fmt(fl.runnerVolume / 1000) + ' cm³'],
     ['Volumenstrom', fmt(fl.Q * 1e6, 0) + ' cm³/s'],
-    ['Anschnittfläche', fmt(fl.gateArea, 0) + ' mm²'],
-    ['v am Anschnitt', fmt(fl.vGateMean) + ' m/s'],
-    ['Druckbedarf', fmt(fl.dp / 1e5) + ' bar'],
-    ['Füllbalance', fmt(fl.imbalance * 100) + ' %-Punkte']
+    ['Druckbedarf', fmt(fl.dp / 1e5) + ' bar']
   ]);
 }
 
@@ -760,6 +761,12 @@ function loadGraphJSON(text, name) {
   adoptGraph();
 }
 
+/* Das Referenzteil liefert die Zahl, um die sich alles dreht: aus dem
+   Gussvolumen und der Füllzeit kommt der Volumenstrom, daraus die
+   Anschnittflächen und damit jeder Querschnitt. Sie von Hand einzutippen,
+   während das Bauteil daneben liegt, ist eine Fehlerquelle ohne Gewinn —
+   also wird sie übernommen. Überläufe sind darin NICHT enthalten; wer sie
+   mitrechnen will, schlägt sie im Feld auf. */
 function loadReference(buffer, name) {
   const tris = isGLB(buffer) ? readGLB(buffer) : parseSTL(buffer);
   const geo = new T.BufferGeometry();
@@ -768,8 +775,20 @@ function loadReference(buffer, name) {
   refMesh.geometry.dispose();
   refMesh.geometry = geo;
   refMesh.visible = true;
-  $('ref-note').textContent = name + ' · ' + fmt(tris.length / 9, 0)
-    + ' Dreiecke — nur als Bezug, es wird nicht gerechnet.';
+
+  const cm3 = Math.abs(volume(tris)) / 1000;
+  let note = name + ' · ' + fmt(tris.length / 9, 0) + ' Dreiecke';
+  if (cm3 >= 0.01 && cm3 <= 1e5) {
+    state.proc.volume = Math.round(cm3 * 10) / 10;
+    $('vol').value = fmtPlain(state.proc.volume, 1);
+    rebuild();
+    note += ' · Volumen ' + fmt(cm3) + ' cm³ — als Gussvolumen übernommen'
+      + ' (ohne Überläufe; im Feld aufschlagen).';
+  } else {
+    note += ' — das Volumen ist nicht brauchbar (offenes oder überlappendes'
+      + ' Netz); das Gussvolumen bleibt, wie es eingestellt ist.';
+  }
+  $('ref-note').textContent = note;
 }
 
 for (const ev of ['dragenter', 'dragover']) {
