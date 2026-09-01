@@ -18,7 +18,7 @@
   { "imports": { "three": "./vendor/three/three.module.js" } }
 </script>
 </head>
-<body class="viewer">
+<body class="viewer anguss">
 
 <section class="page-hero compact">
   <div class="inner">
@@ -44,9 +44,8 @@
       <span id="ref-note"></span>
       <button type="button" id="ref-clear" title="Referenzbauteil entfernen">×</button>
     </div>
-    <div class="hint">Das Bauteil wird durchscheinend dazugestellt, damit die
-      Anschnitte dorthin zeigen, wo sie hingehören — und sein Volumen wird als Gussvolumen
-      übernommen. Überläufe sind darin nicht enthalten; wer sie mitrechnen will, schlägt sie
+    <div class="hint">Liegt durchscheinend dabei, damit die Anschnitte dorthin zeigen, wo sie
+      hingehören. Sein Volumen wird das <b>Gussvolumen</b> — ohne Überläufe, die schlägt man
       unter „Prozess" auf.</div>
     <div class="row">
       <span>Deckkraft</span>
@@ -86,10 +85,9 @@
       <span class="val" id="aspect-val"></span>
     </div>
     <button type="button" class="btn btn-outline block-btn" id="auto-taper">Querschnitte abstufen</button>
-    <div class="hint">Rechnet von den Anschnitten rückwärts: jeder Anschnitt bekommt
-      A = Q·Anteil / v<sub>Ziel</sub>, der zuführende Kanal das 1,6-fache davon, und weiter
-      stromaufwärts ist jeder Kanal die Summe seiner Abgänge geteilt durch die Verjüngung.
-      Danach nimmt der Querschnitt garantiert nirgends zu.</div>
+    <div class="hint">Von den Anschnitten rückwärts: A = Q·Anteil / v<sub>Ziel</sub>, der
+      zuführende Kanal das 1,6-fache, davor je die Summe der Abgänge durch die Verjüngung.
+      Danach wächst der Querschnitt nirgends mehr.</div>
 
     <h2>Prozess</h2>
     <div class="row">
@@ -112,15 +110,13 @@
       <span class="val">m/s</span>
     </div>
     <div class="row">
-      <span title="Beiwert des Verzweigungsverlusts. 1,0 = scharfe Gabel, 0,3 = sehr sanft aufgehend.">Verzweigung c</span>
+      <span title="Beiwert des Verzweigungsverlusts. 1,0 = scharfe Gabel, 0,3 = sehr sanft aufgehend.">Verzweigungsverlust</span>
       <input type="range" id="cbranch" min="10" max="120" step="5" value="50">
       <span class="val" id="cbranch-val"></span>
     </div>
-    <div class="hint">Die Kennzahlen des Systems — Punkte, Anschnitte, Lauflänge,
-      Angussvolumen, Volumenstrom und Druckbedarf — stehen im
-      <b>Flussschema</b> (unter „Darstellung" einzuschalten). Was das Schema
-      ohnehin zeigt, steht dort nicht noch einmal: Anschnittflächen,
-      Geschwindigkeiten und die Aufteilung soll/ist hängen an den Ästen selbst.</div>
+    <div class="hint">Lauflänge, Angussvolumen, Volumenstrom und Druckbedarf stehen im
+      <b>Flussschema</b> (unter „Darstellung" einschalten) — dort, wo auch Fläche,
+      Geschwindigkeit und Aufteilung an jedem Ast hängen.</div>
 
     <h2>Darstellung</h2>
     <div class="row">
@@ -134,15 +130,19 @@
     <label class="inline"><input type="checkbox" id="show-line" checked> Mittellinie und Griffe zeigen</label>
     <label class="inline"><input type="checkbox" id="chart-on"> Flussschema einblenden</label>
 
-    <h2>Angussdatei</h2>
+    <h2>Import und Export</h2>
     <input type="file" id="json-input" accept=".json,application/json" hidden>
     <div class="btn-pair">
       <button type="button" class="btn btn-outline" id="json-btn">JSON laden</button>
       <button type="button" class="btn btn-outline" id="json-save">JSON speichern</button>
     </div>
-    <div class="hint">Gespeichert wird der Graph selbst — Punkte, Querschnitte,
-      Verzweigungen, Anschnitte —, nicht das Netz. Eine Datei lässt sich auch über dem
-      Viewport ablegen; was für eine es ist, entscheidet der Inhalt, nicht die Endung.</div>
+    <button type="button" class="btn btn-outline block-btn" id="stl-save">Als STL speichern</button>
+    <div class="hint"><b>JSON</b> ist der Graph selbst — nur damit lässt sich weiterarbeiten.
+      Dateien nimmt auch der Viewport per Ablegen entgegen; was für eine es ist, entscheidet
+      der Inhalt.<br>
+      <b>STL</b> ist, was im Viewport steht: je Kanal ein geschlossener Schlauch, dazu der
+      Pressrest, wenn er eingeblendet ist. An den Gabelungen durchdringen sie sich — ein Satz
+      sauberer Körper, kein verschmolzener; im CAD vereinigt man sie mit einem Klick.</div>
 
     <h2>Prüfung</h2>
     <div class="rules" id="rules-list"></div>
@@ -258,8 +258,12 @@
       </div>
       <div class="pt-legend" id="pt-legend"></div>
     </div>
-    <div id="status"></div>
-    <div id="busy"></div>
+    <div id="status">
+      <div><b>Punkt anklicken und ziehen:</b> Verschiebung in der Arbeitsebene</div>
+      <div><b>Bei gedrückter Alt-Taste:</b> normal zur Ebene, aus ihr heraus</div>
+      <div><b>Ziehen im Leeren:</b> frei drehen</div>
+      <div><b>Rechte Maustaste:</b> verschieben &nbsp;·&nbsp; <b>Rad:</b> zoomen</div>
+    </div>
     <div class="drop-hint">Angussdatei (JSON) oder Referenzteil (STL/GLB) hier ablegen</div>
   </div>
 </div>

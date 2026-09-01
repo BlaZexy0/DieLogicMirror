@@ -155,6 +155,10 @@ select {
   background: rgba(255,255,255,.88); border: 1px solid var(--border-light);
   border-radius: 7px; color: var(--muted); pointer-events: none; font-size: .8rem;
 }
+/* Der Angussdesigner hat vier Griffe für die Maus, nicht einen — als
+   Zeile hintereinander liest das niemand. */
+.anguss #status { font-size: .76rem; line-height: 1.55; padding: 7px 11px; }
+.anguss #status b { color: var(--text-body); font-weight: 600; }
 #busy {
   position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
   background: rgba(243,246,246,.72); z-index: 3; font-size: .9rem; color: var(--primary-deep); font-weight: 600;
@@ -224,10 +228,19 @@ select {
 .cb-ticks.bands { justify-content: space-around; }
 
 /* ══ Angussdesigner (anguss.html) ═══════════════════════════════
-   Nur, was die anderen vier Seiten nicht schon haben: zwei Knöpfe
-   nebeneinander, drei Zahlenfelder in einer Zeile, der Kopf des
-   Auswahlblocks, die Prüfliste, das Punktmenü im Viewport und das
-   Flussschema als Fenster darüber. */
+   Die Seitenleiste trägt hier NUR noch, was für das ganze System gilt —
+   der gewählte Punkt wird im Viewport bearbeitet. Sie darf deshalb enger
+   sitzen als auf den Analyseseiten: kleinere Abstände, kürzere
+   Hinweistexte. Ein Erklärkasten, der sechs Zeilen hoch ist, schiebt den
+   nächsten Regler aus dem Bild und wird beim zweiten Mal ohnehin nicht
+   mehr gelesen.
+
+   Die engeren Abstände hängen an body.anguss, damit die vier
+   Analyseseiten ihre gewohnten behalten — sie teilen sich diese Datei. */
+.anguss aside .row, .anguss aside label.inline { padding: 3px 2px; }
+.anguss aside h2 { margin: 15px 0 6px; }
+.anguss aside .hint { margin-top: 9px; padding: 7px 9px; font-size: .755rem; line-height: 1.5; }
+.anguss aside .block-btn { margin-top: 7px; }
 
 .btn-pair { display: flex; gap: 6px; margin-top: 6px; }
 .btn-pair .btn { flex: 1; justify-content: center; }

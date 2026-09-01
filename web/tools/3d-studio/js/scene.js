@@ -38,7 +38,15 @@ export function initScene(container, opts = {}) {
        dreht frei mit Quaternionen um den Zielpunkt; das braucht der
        Angussdesigner, dessen Trennebene je nach Ausstoßrichtung überall
        liegen kann (js/trackball.js). */
-    orbit = 'orbit'
+    orbit = 'orbit',
+    /* Mitgeführtes Licht. Ortsfeste Lichter setzen voraus, dass es ein
+       „oben" und eine bevorzugte Blickrichtung gibt — bei einem Bauteil
+       auf dem Raster stimmt das. Wer frei um einen freistehenden Körper
+       dreht, schaut dagegen ständig auf die abgewandte Seite, und die
+       liegt dann im Dunkeln. Ein Licht, das mit der Kamera wandert
+       (leicht nach oben und zur Seite versetzt, damit es nicht flach
+       wird), beleuchtet immer das, was man gerade ansieht. */
+    headlight = false
   } = opts;
 
   const renderer = new T.WebGLRenderer({ antialias: true });
@@ -68,13 +76,37 @@ export function initScene(container, opts = {}) {
   controls.maxZoom = 200;
   api.controls = controls;
 
-  scene.add(new T.HemisphereLight(0xffffff, 0x8fa3ad, 1.0));
-  const key = new T.DirectionalLight(0xffffff, 1.4);
+  /* Mit mitgeführtem Licht tragen die ortsfesten nur noch die Grundform;
+     sonst wäre die zugewandte Seite überstrahlt. */
+  scene.add(new T.HemisphereLight(0xffffff, headlight ? 0xc6d2d7 : 0x8fa3ad, headlight ? 0.85 : 1.0));
+  const key = new T.DirectionalLight(0xffffff, headlight ? 0.5 : 1.4);
   key.position.set(700, 1000, 900);
   scene.add(key);
-  const fill = new T.DirectionalLight(0xdfeaee, 0.5);
+  const fill = new T.DirectionalLight(0xdfeaee, headlight ? 0.22 : 0.5);
   fill.position.set(-800, 300, -700);
   scene.add(fill);
+
+  let head = null;
+  if (headlight) {
+    head = new T.DirectionalLight(0xffffff, 0.95);
+    scene.add(head);
+    scene.add(head.target);
+  }
+  /* Nur die RICHTUNG eines Richtungslichts zählt, deshalb genügen
+     Einheitsbeträge um den Zielpunkt herum. */
+  const camRight = new T.Vector3(), camUp = new T.Vector3(), toCam = new T.Vector3();
+  function aimHeadlight() {
+    if (!head) return;
+    const cam = api.camera;
+    const m = cam.matrixWorld.elements;
+    camRight.set(m[0], m[1], m[2]).normalize();
+    camUp.set(m[4], m[5], m[6]).normalize();
+    toCam.copy(cam.position).sub(controls.target).normalize();
+    head.position.copy(controls.target).add(toCam)
+      .addScaledVector(camRight, -0.4).addScaledVector(camUp, 0.5);
+    head.target.position.copy(controls.target);
+    head.target.updateMatrixWorld();
+  }
 
   let grid = null;
   if (wantGrid) {
@@ -110,6 +142,7 @@ export function initScene(container, opts = {}) {
 
   renderer.setAnimationLoop(() => {
     controls.update();
+    aimHeadlight();
     renderer.render(scene, api.camera);
   });
 

@@ -428,6 +428,16 @@ Draufsicht auf sie ist genau der Pol, an dem eine Kugelsteuerung klemmt.
 `js/trackball.js` dreht deshalb mit Quaternionen um eine Achse in der
 Bildebene — kein Pol, keine Sperre.
 
+Aus demselben Grund wandert **das Licht mit der Kamera** (Option
+`headlight` in js/scene.js). Ortsfeste Lichter setzen ein „oben" und eine
+bevorzugte Blickrichtung voraus; wer frei um einen freistehenden Körper
+dreht, schaut ständig auf die abgewandte Seite, und die lag vorher im
+Dunkeln. Das mitgeführte Licht steht leicht über und neben der Kamera,
+damit es nicht flach wird; die ortsfesten tragen nur noch die Grundform.
+Dazu haben die Materialien fast keinen Metallanteil mehr — ohne
+Umgebungskarte hat ein metallisches Material nichts zu spiegeln, es wird
+nur dunkel, wo kein Licht hinfällt.
+
 Das Anklicken eines Punktes lässt die Kamera dabei in Ruhe. Den Drehpunkt
 auf die Auswahl zu setzen lag nahe, war beim Benutzen aber lästig: jeder
 Klick rückte das Bild. Ein Bodenraster gibt es auch nicht — der Anguss ist
@@ -450,8 +460,11 @@ Ausstoßrichtung.
 Die Seitenleiste behält, was für das GANZE System gilt, von oben nach
 unten in der Reihenfolge, in der man es braucht: Beispiel und Dateien,
 Referenzbauteil (es liefert das Gussvolumen, also gleich nach oben),
-Kanalform, Prozess, Darstellung, Angussdatei — und ganz unten die
-Prüfliste, die das Ergebnis von allem beurteilt.
+Kanalform, Prozess, Darstellung, Import und Export — und ganz unten die
+Prüfliste, die das Ergebnis von allem beurteilt. Die Hinweiskästen sind
+absichtlich kurz gehalten: ein Erklärkasten von sechs Zeilen schiebt den
+nächsten Regler aus dem Bild und wird beim zweiten Mal ohnehin nicht mehr
+gelesen.
 
 Die **Kennzahlen** des Systems stehen beim Flussschema, als Streifen unter
 seinem Kopf: Punkte, Anschnitte, Lauflänge, Angussvolumen, Volumenstrom,
@@ -489,10 +502,16 @@ die Griffe, nicht das Netz.
 
 ### Dateien
 
-- **Angussdatei (JSON)** — der Graph selbst, mit Kennung und
-  Fassungsnummer. Laden und Speichern über die beiden Knöpfe am unteren
-  Ende der Seitenleiste oder per Ziehen-und-Ablegen über dem Viewport;
-  was für eine Datei es ist, entscheidet der Inhalt, nicht die Endung.
+- **JSON** — der Graph selbst, mit Kennung und Fassungsnummer. Nur damit
+  lässt sich weiterarbeiten. Laden und Speichern über die beiden Knöpfe
+  unter „Import und Export" oder per Ziehen-und-Ablegen über dem
+  Viewport; was für eine Datei es ist, entscheidet der Inhalt, nicht die
+  Endung.
+- **STL** — was im Viewport steht: je Kanal ein geschlossener Schlauch,
+  dazu der Pressrest, wenn er eingeblendet ist. An den Gabelungen
+  durchdringen sich die Schläuche — das ist ein Satz sauberer Körper,
+  kein einzelner verschmolzener. Zum Anschauen, Messen und Drucken
+  genügt das; im CAD vereinigt man sie mit einem Klick.
 - **Referenzbauteil (STL/GLB)** — wird durchscheinend dazugestellt, damit
   die Anschnitte dorthin zeigen, wo sie hingehören. Sein **Volumen wird
   als Gussvolumen übernommen**: das ist die Zahl, aus der über die

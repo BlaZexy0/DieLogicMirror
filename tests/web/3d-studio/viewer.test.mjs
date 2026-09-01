@@ -748,8 +748,8 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.equal(kugeln.length, knoten * 2, 'je Punkt zwei Kugeln');
   assert.equal(kugeln.filter(m => m.material.depthTest === false).length, knoten);
 
-  /* Speichern: die Angussdatei */
+  /* Import und Export: der Graph als JSON, die Geometrie als STL. */
   d6.getElementById('json-save').dispatch('click');
-  assert.equal(d6.getElementById('stl-save'), null, 'kein Export mehr');
-  assert.equal(d6.getElementById('run-merge'), null, 'und kein Verschmelzen');
+  d6.getElementById('stl-save').dispatch('click');
+  assert.equal(d6.getElementById('run-merge'), null, 'aber kein Verschmelzen mehr');
 });

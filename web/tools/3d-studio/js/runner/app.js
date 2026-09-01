@@ -18,9 +18,10 @@ import { mountNav } from '../ui/nav.js';
 import {
   $, fmt, fmtPlain, facts, segButtons, slider, numberInput
 } from '../ui/controls.js';
-import { parseSTL } from '../part/stlio.js';
+import { parseSTL, writeSTL } from '../part/stlio.js';
 import { readGLB, isGLB } from '../part/glbio.js';
 import { volume } from '../mesh.js';
+import { concat } from '../solids.js';
 import * as G from './graph.js';
 import { sampleNetwork } from './curve.js';
 import { sweepRunner, biscuitMesh, centerlines } from './sweep.js';
@@ -36,15 +37,12 @@ import { rotate, norm, cross, dot, sub, add } from './vec.js';
 mountNav('anguss.html');
 
 const container = $('viewport');
-const busy = $('busy');
-const IDLE = 'Punkt anklicken und ziehen · Alt: aus der Ebene heben · '
-  + 'Ziehen im Leeren: frei drehen · Rechte Maustaste: verschieben · Rad: zoomen';
 
 /* Ohne Bodenraster: der Anguss ist ein freistehender Körper, den man von
    allen Seiten ansieht — ein Raster darunter gäbe ihm ein „unten", das er
    nicht hat, und läge bei jeder schrägen Ansicht im Bild. */
 const view = initScene(container, {
-  orbit: 'trackball',
+  orbit: 'trackball', headlight: true,
   cameraStart: [230, 210, 280], target: [0, 0, 60],
   grid: false, minDistance: 3, maxDistance: 30000
 });
@@ -70,14 +68,17 @@ const state = {
 const group = new T.Group();
 view.scene.add(group);
 
+/* Fast ohne Metallanteil: ohne Umgebungskarte hat ein metallisches
+   Material nichts zu spiegeln — es wird nur dunkel, wo kein Licht
+   hinfällt. */
 const runnerMat = new T.MeshStandardMaterial({
-  color: 0x008c82, roughness: 0.45, metalness: 0.15, side: T.DoubleSide
+  color: 0x008c82, roughness: 0.52, metalness: 0.04, side: T.DoubleSide
 });
 const runnerMesh = new T.Mesh(new T.BufferGeometry(), runnerMat);
 group.add(runnerMesh);
 
 const biscMat = new T.MeshStandardMaterial({
-  color: 0x8fa3ad, roughness: 0.55, metalness: 0.25, transparent: true, opacity: 0.55,
+  color: 0x93a6b0, roughness: 0.6, metalness: 0.06, transparent: true, opacity: 0.5,
   side: T.DoubleSide, depthWrite: false
 });
 const biscMesh = new T.Mesh(new T.BufferGeometry(), biscMat);
@@ -524,6 +525,19 @@ function download(blob, name) {
 
 const safeName = () => (state.name || 'anguss').replace(/[^\w-]+/g, '-').toLowerCase();
 
+/* Die STL enthält, was im Viewport steht — die Schläuche durchdringen
+   sich an den Gabelungen. Ein einziger verschmolzener Körper wäre schöner
+   und war einmal da; er kostete ein Rasterfeld und eine Wartezeit, und
+   jedes CAD vereinigt überlappende Körper mit einem Klick. */
+$('stl-save').addEventListener('click', () => {
+  const parts = [sweepRunner(state.net)];
+  if ($('show-biscuit').checked) parts.push(biscuitMesh(state.graph.biscuit));
+  const tris = concat(parts);
+  if (!tris.length) return;
+  download(new Blob([writeSTL(tris, 'DieLogic Angusssystem')], { type: 'model/stl' }),
+    safeName() + '.stl');
+});
+
 $('json-save').addEventListener('click', () => {
   const text = JSON.stringify(G.toJSON(state.graph), null, 1);
   download(new Blob([text], { type: 'application/json' }), safeName() + '.json');
@@ -642,7 +656,6 @@ function adoptGraph() {
 }
 
 mountLegend();
-$('status').textContent = IDLE;
 /* Beispiel aus der Adresszeile (?demo=…) — wie ?part=… auf den
    Bauteilseiten; damit lässt sich ein bestimmtes System verlinken. */
 pickDemo(new URLSearchParams(location.search).get('demo'));
