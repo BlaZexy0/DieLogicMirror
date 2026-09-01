@@ -493,6 +493,22 @@ Unten rechts stehen übereinander das Flussschema, die Farbskala und die
 Legende der Punktarten — auf den übrigen Seiten des Studios sitzt die
 Farbskala links unten, hier liegt dort das Auswahlfeld.
 
+Oben rechts, unter der Ansichtsleiste, steht das **Achsenkreuz**. Es ist
+kein zweiter Renderdurchgang, sondern SVG über dem Bild: die
+Bildschirmrichtung einer Weltachse ist ihr Skalarprodukt mit den ersten
+beiden Spalten der Kameramatrix, die Tiefe das mit der dritten (daraus die
+Deckkraft — was nach hinten zeigt, wird blasser). Angehängt ist es an
+`scene.onBeforeRender`, das Three.js vor jedem Bild mit der gerade
+benutzten Kamera ruft; damit stimmt es auch in der Parallelprojektion.
+
+Die **Griffe sind immer zu sehen**, auch hinter dem Körper: jeder wird
+zweimal gezeichnet, einmal mit Tiefenprüfung und voll deckend, davor
+einmal ohne und blass. Wo der Punkt frei liegt, deckt die volle Kugel die
+blasse exakt ab; wo er hinter dem Anguss steckt, bleibt die blasse übrig —
+man sieht alle Punkte und trotzdem, welcher vorn liegt. Angeklickt werden
+konnten sie ohnehin schon durch den Körper hindurch: der Strahl trifft nur
+die Griffe, nicht das Netz.
+
 ### Dateien
 
 - **Angussdatei (JSON)** — der Graph selbst, mit Kennung und

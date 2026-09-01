@@ -18,7 +18,18 @@
 
    Die Griffe behalten ihre Größe in Bildpunkten: `onBeforeRender` skaliert
    sie vor jedem Bild aus dem Kameraabstand. Ein Griff, der mit dem Zoom
-   wächst, verdeckt sonst genau das, was man einstellen will. */
+   wächst, verdeckt sonst genau das, was man einstellen will.
+
+   Und sie sind IMMER zu sehen, auch hinter dem Körper. Jeder Griff wird
+   dafür zweimal gezeichnet: einmal mit Tiefenprüfung und voll deckend,
+   davor einmal ohne Tiefenprüfung und blass. Wo der Punkt frei liegt,
+   deckt die volle Kugel die blasse exakt ab; wo er hinter dem Anguss
+   steckt, bleibt die blasse übrig. Man sieht also alle Punkte und
+   trotzdem, welcher vorn liegt. (Anklicken ging schon immer durch den
+   Körper hindurch — der Strahl trifft nur die Griffe, nicht das Netz.)
+   Beide Durchgänge laufen als „transparent", weil Three.js nur dort die
+   Reihenfolge über renderOrder entscheidet; im deckenden Durchgang läge
+   die blasse Kugel sonst über der vollen. */
 
 import * as T from 'three';
 import * as G from './graph.js';
@@ -42,24 +53,39 @@ export function createEditor(opts) {
   view.scene.add(group);
 
   const sphere = new T.SphereGeometry(1, 18, 12);
-  const mats = {};
+  const solid = c => new T.MeshBasicMaterial({ color: c, transparent: true, opacity: 1 });
+  const ghost = (c, o) => new T.MeshBasicMaterial({
+    color: c, transparent: true, opacity: o, depthTest: false, depthWrite: false
+  });
+  const mats = {}, ghosts = {};
   for (const [type, meta] of Object.entries(G.TYPES)) {
-    mats[type] = new T.MeshBasicMaterial({ color: meta.color });
+    mats[type] = solid(meta.color);
+    ghosts[type] = ghost(meta.color, 0.34);
   }
-  const matFollow = new T.MeshBasicMaterial({ color: FOLLOWER_COLOR, transparent: true, opacity: 0.5 });
+  const matFollow = solid(FOLLOWER_COLOR);
+  matFollow.opacity = 0.6;
+  const ghostFollow = ghost(FOLLOWER_COLOR, 0.2);
 
   /* Ring um den gewählten Griff — eine flache Scheibe, die sich immer
-     zur Kamera dreht, damit sie aus jeder Richtung ein Ring bleibt. */
-  const ring = new T.Mesh(
-    new T.RingGeometry(1.35, 1.85, 32),
-    new T.MeshBasicMaterial({ color: SELECTED_RING, side: T.DoubleSide }));
-  ring.renderOrder = 4;
-  ring.visible = false;
-  ring.onBeforeRender = (renderer, scene, camera) => {
-    ring.scale.setScalar(pixelSize(camera));
-    ring.quaternion.copy(camera.quaternion);
-  };
-  group.add(ring);
+     zur Kamera dreht, damit sie aus jeder Richtung ein Ring bleibt. Auch
+     er wird zweimal gezeichnet. */
+  const ringGeo = new T.RingGeometry(1.35, 1.85, 32);
+  const ringMats = [
+    ghost(SELECTED_RING, 0.4),
+    new T.MeshBasicMaterial({ color: SELECTED_RING, transparent: true, opacity: 1, side: T.DoubleSide })
+  ];
+  ringMats[0].side = T.DoubleSide;
+  const rings = ringMats.map((m, i) => {
+    const r = new T.Mesh(ringGeo, m);
+    r.renderOrder = 5 + i;
+    r.visible = false;
+    r.onBeforeRender = (renderer, scene, camera) => {
+      r.scale.setScalar(pixelSize(camera));
+      r.quaternion.copy(camera.quaternion);
+    };
+    group.add(r);
+    return r;
+  });
 
   /* Arbeitsebene der Auswahl. */
   const planeMat = new T.MeshBasicMaterial({
@@ -87,24 +113,30 @@ export function createEditor(opts) {
       alive.add(n.id);
       let h = handles.get(n.id);
       if (!h) {
-        h = new T.Mesh(sphere, mats[n.type] || mats.point);
-        h.renderOrder = 3;
-        h.onBeforeRender = (renderer, scene, camera) => { h.scale.setScalar(pixelSize(camera)); };
-        group.add(h);
+        h = { solid: new T.Mesh(sphere), ghost: new T.Mesh(sphere) };
+        h.solid.renderOrder = 8;
+        h.ghost.renderOrder = 7;
+        for (const m of [h.ghost, h.solid]) {
+          m.onBeforeRender = (renderer, scene, camera) => { m.scale.setScalar(pixelSize(camera)); };
+          group.add(m);
+        }
         handles.set(n.id, h);
       }
       const follower = G.isFollower(g, n.id);
-      h.userData = { id: n.id, follower };
-      h.position.set(n.pos[0], n.pos[1], n.pos[2]);
-      h.material = follower ? matFollow : (mats[n.type] || mats.point);
-      h.visible = true;
+      h.solid.userData = { id: n.id, follower };
+      for (const m of [h.ghost, h.solid]) m.position.set(n.pos[0], n.pos[1], n.pos[2]);
+      h.solid.material = follower ? matFollow : (mats[n.type] || mats.point);
+      h.ghost.material = follower ? ghostFollow : (ghosts[n.type] || ghosts.point);
     }
     const sel = state.selected && g.nodes[state.selected];
-    ring.visible = !!sel;
-    if (sel) ring.position.set(sel.pos[0], sel.pos[1], sel.pos[2]);
+    for (const r of rings) {
+      r.visible = !!sel;
+      if (sel) r.position.set(sel.pos[0], sel.pos[1], sel.pos[2]);
+    }
     for (const [id, h] of handles) {
       if (alive.has(id)) continue;
-      group.remove(h);
+      group.remove(h.solid);
+      group.remove(h.ghost);
       handles.delete(id);
     }
     updatePlane();
@@ -144,7 +176,7 @@ export function createEditor(opts) {
     const r = dom.getBoundingClientRect();
     ndc.set((ev.clientX - r.left) / r.width * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, view.camera);
-    const list = [...handles.values()].filter(h => h.visible && !h.userData.follower);
+    const list = [...handles.values()].map(h => h.solid).filter(h => !h.userData.follower);
     const hits = ray.intersectObjects(list, false);
     return hits.length ? hits[0].object.userData.id : null;
   }

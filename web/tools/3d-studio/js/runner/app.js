@@ -38,6 +38,7 @@ import { autoTaper, DEFAULT_SIZING } from './sizing.js';
 import { DEMOS, demoTwoGates } from './presets.js';
 import { flowChart, SPEED_STOPS } from './chart.js';
 import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from './editor.js';
+import { mountAxes } from './axes.js';
 import { rotate, norm, cross, dot, sub, add } from './vec.js';
 
 mountNav('anguss.html');
@@ -56,6 +57,13 @@ const view = initScene(container, {
   grid: false, minDistance: 3, maxDistance: 30000
 });
 mountViewBar(container, view);
+
+/* Achsenkreuz unter der Ansichtsleiste. Three.js ruft scene.onBeforeRender
+   vor jedem Bild mit der gerade benutzten Kamera — damit stimmt es auch
+   nach dem Umschalten auf die Parallelprojektion, ohne dass die
+   Bildschleife etwas davon wissen muss. */
+const axes = mountAxes(container);
+view.scene.onBeforeRender = (renderer, scene, camera) => axes.update(camera);
 
 const state = {
   graph: demoTwoGates(),

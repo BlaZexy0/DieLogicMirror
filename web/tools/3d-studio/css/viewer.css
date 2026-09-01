@@ -181,6 +181,15 @@ select {
 .view-bar button.active { background: var(--pale); border-color: var(--primary); color: var(--primary-deep); font-weight: 700; }
 .view-bar .sep { width: 1px; background: var(--border-light); margin: 2px 2px; }
 
+/* Achsenkreuz — direkt unter der Ansichtsleiste, wo auch sonst alles
+   steht, was mit dem Blickwinkel zu tun hat. */
+.axis-gizmo {
+  position: absolute; right: 12px; top: 56px; z-index: 2;
+  padding: 2px; line-height: 0; pointer-events: none;
+  background: rgba(255,255,255,.82); border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+}
+
 @media (max-width: 900px) {
   .viewer .layout { grid-template-columns: 280px 1fr; }
 }

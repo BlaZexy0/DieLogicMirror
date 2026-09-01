@@ -669,6 +669,32 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Verschmelzen', async (
   assert.equal(v.state.show, 'merged', 'die Anzeige springt auf den verschmolzenen Körper');
   assert.ok(v.mergedMesh.visible);
 
+  /* Achsenkreuz: es hängt an scene.onBeforeRender, das ohne WebGL
+     niemand ruft — hier von Hand. Nach dem Schwenk auf X zeigt die
+     X-Achse in die Kamera und fällt auf den Mittelpunkt zusammen. */
+  const gizmo = d6.querySelector('.axis-gizmo');
+  assert.ok(gizmo, 'Achsenkreuz im Viewport');
+  /* Das winzige DOM übernimmt keinen Textinhalt — die Beschriftung wird
+     deshalb an der Markup-Zeichenkette geprüft. */
+  assert.equal(gizmo.querySelectorAll('text').length, 3);
+  for (const t of ['X', 'Y', 'Z']) assert.ok(gizmo.innerHTML.includes('>' + t + '</text>'), t);
+  bar.querySelectorAll('[data-view]').find(b => b.dataset.view === 'x').dispatch('click');
+  v.view.scene.onBeforeRender(null, null, v.view.camera);
+  const ax = gizmo.querySelectorAll('line');
+  assert.equal(ax.length, 3);
+  assert.ok(Math.hypot(+ax[0].getAttribute('x2') - 37, +ax[0].getAttribute('y2') - 37) < 0.5,
+    'X zeigt in die Kamera: ' + ax[0].getAttribute('x2') + '/' + ax[0].getAttribute('y2'));
+  assert.ok(+ax[1].getAttribute('y2') < 20, 'Y zeigt nach oben');
+  assert.ok(+ax[2].getAttribute('x2') < 20, 'Z zeigt nach links');
+
+  /* Griffe werden doppelt gezeichnet, damit sie hinter dem Körper nicht
+     verschwinden: einmal mit Tiefenprüfung, einmal blass ohne. */
+  const kugeln = v.editor.group.children.filter(
+    c => c.type === 'Mesh' && c.geometry.type === 'SphereGeometry');
+  const knoten = Object.keys(v.state.graph.nodes).length;
+  assert.equal(kugeln.length, knoten * 2, 'je Punkt zwei Kugeln');
+  assert.equal(kugeln.filter(m => m.material.depthTest === false).length, knoten);
+
   /* Speichern: Angussdatei und STL */
   d6.getElementById('json-save').dispatch('click');
   d6.getElementById('stl-save').dispatch('click');
