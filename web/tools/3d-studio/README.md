@@ -469,8 +469,14 @@ einem Raster ist das richtig, für einen Anguss hinderlich: er liegt in
 der Trennebene, die je nach Ausstoßrichtung überall liegen kann, und die
 Draufsicht auf sie ist genau der Pol, an dem eine Kugelsteuerung klemmt.
 `js/trackball.js` dreht deshalb mit Quaternionen um eine Achse in der
-Bildebene — kein Pol, keine Sperre. Gedreht wird um die aktuelle
-**Auswahl**: man dreht um den Punkt, an dem man arbeitet.
+Bildebene — kein Pol, keine Sperre.
+
+Das Anklicken eines Punktes lässt die Kamera dabei in Ruhe. Den Drehpunkt
+auf die Auswahl zu setzen lag nahe, war beim Benutzen aber lästig: jeder
+Klick rückte das Bild. Wer gerade gewählt ist, steht stattdessen im Menü
+oben links im Viewport, darunter die Legende der Punktfarben. Ein
+Bodenraster gibt es nicht — der Anguss ist ein freistehender Körper, den
+man von allen Seiten ansieht.
 
 ### Dateien
 

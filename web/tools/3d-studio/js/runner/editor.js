@@ -8,9 +8,13 @@
    Ziehen die Alt-Taste: dann läuft er auf der Ebenennormalen.
 
    Damit man sieht, worin man zieht, liegt unter der Auswahl ein
-   durchscheinendes Quadrat mit Fadenkreuz — die Arbeitsebene selbst.
-   Und weil sich beim Bearbeiten alles um den gerade angefassten Punkt
-   dreht, wandert der Drehpunkt der Kamera auf die Auswahl.
+   durchscheinendes Quadrat — die Arbeitsebene selbst.
+
+   Das Anklicken lässt die KAMERA in Ruhe. Den Drehpunkt auf die Auswahl
+   zu setzen lag nahe (man dreht um das, woran man arbeitet), war beim
+   Benutzen aber lästig: jeder Klick auf einen Punkt rückte das Bild,
+   und man verlor die Übersicht, kaum dass man sie gewonnen hatte. Wer
+   gerade ausgewählt ist, steht stattdessen im Menü im Viewport.
 
    Die Griffe behalten ihre Größe in Bildpunkten: `onBeforeRender` skaliert
    sie vor jedem Bild aus dem Kameraabstand. Ein Griff, der mit dem Zoom
@@ -20,6 +24,16 @@ import * as T from 'three';
 import * as G from './graph.js';
 
 const HANDLE_PX = 9;
+
+/* Sonderfarben der Griffe. Sie stehen hier, weil die Legende im Viewport
+   sie ebenfalls zeigt — zwei Literale liefen auseinander.
+
+   Der gewählte Punkt behält seine ARTFARBE und bekommt einen dunklen
+   Ring. Ihn stattdessen weiß einzufärben lag nahe und war unbrauchbar:
+   Weiß auf dem hellen Hintergrund des Viewports ist praktisch
+   unsichtbar, und die Artfarbe war auch noch weg. */
+export const SELECTED_RING = '#002733';
+export const FOLLOWER_COLOR = '#b8c9cf';
 
 export function createEditor(opts) {
   const { view, getGraph, onSelect, onChange, onHover } = opts;
@@ -32,12 +46,24 @@ export function createEditor(opts) {
   for (const [type, meta] of Object.entries(G.TYPES)) {
     mats[type] = new T.MeshBasicMaterial({ color: meta.color });
   }
-  const matSel = new T.MeshBasicMaterial({ color: 0xffffff });
-  const matFollow = new T.MeshBasicMaterial({ color: 0xb8c9cf, transparent: true, opacity: 0.5 });
+  const matFollow = new T.MeshBasicMaterial({ color: FOLLOWER_COLOR, transparent: true, opacity: 0.5 });
+
+  /* Ring um den gewählten Griff — eine flache Scheibe, die sich immer
+     zur Kamera dreht, damit sie aus jeder Richtung ein Ring bleibt. */
+  const ring = new T.Mesh(
+    new T.RingGeometry(1.35, 1.85, 32),
+    new T.MeshBasicMaterial({ color: SELECTED_RING, side: T.DoubleSide }));
+  ring.renderOrder = 4;
+  ring.visible = false;
+  ring.onBeforeRender = (renderer, scene, camera) => {
+    ring.scale.setScalar(pixelSize(camera));
+    ring.quaternion.copy(camera.quaternion);
+  };
+  group.add(ring);
 
   /* Arbeitsebene der Auswahl. */
   const planeMat = new T.MeshBasicMaterial({
-    color: 0x3fc2b6, transparent: true, opacity: 0.1, side: T.DoubleSide, depthWrite: false
+    color: 0x3fc2b6, transparent: true, opacity: 0.07, side: T.DoubleSide, depthWrite: false
   });
   const planeMesh = new T.Mesh(new T.PlaneGeometry(1, 1), planeMat);
   planeMesh.visible = false;
@@ -70,9 +96,12 @@ export function createEditor(opts) {
       const follower = G.isFollower(g, n.id);
       h.userData = { id: n.id, follower };
       h.position.set(n.pos[0], n.pos[1], n.pos[2]);
-      h.material = state.selected === n.id ? matSel : (follower ? matFollow : (mats[n.type] || mats.point));
+      h.material = follower ? matFollow : (mats[n.type] || mats.point);
       h.visible = true;
     }
+    const sel = state.selected && g.nodes[state.selected];
+    ring.visible = !!sel;
+    if (sel) ring.position.set(sel.pos[0], sel.pos[1], sel.pos[2]);
     for (const [id, h] of handles) {
       if (alive.has(id)) continue;
       group.remove(h);
@@ -93,7 +122,10 @@ export function createEditor(opts) {
     const n = state.selected && g.nodes[state.selected];
     if (!n) { planeMesh.visible = planeEdge.visible = false; return; }
     const nrm = G.planeNormal(g, n);
-    const size = Math.max(30, g.biscuit.d * 0.9);
+    /* So groß wie der Kanal an dieser Stelle, nicht wie der Pressrest:
+       ein 90-mm-Quadrat um einen 12 mm breiten Anschnitt ist eine
+       Fläche im Bild, die niemand braucht. */
+    const size = Math.max(24, n.w * 3);
     planeMesh.geometry.dispose();
     planeMesh.geometry = new T.PlaneGeometry(size, size);
     planeEdge.geometry.dispose();
@@ -199,9 +231,6 @@ export function createEditor(opts) {
 
   function select(id) {
     state.selected = id;
-    const g = getGraph();
-    const n = id && g.nodes[id];
-    if (n) view.controls.target.set(n.pos[0], n.pos[1], n.pos[2]);
     refresh();
     if (onSelect) onSelect(id);
   }

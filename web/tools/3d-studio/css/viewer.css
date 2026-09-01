@@ -260,17 +260,46 @@ select {
 .rule.bad { border-left-color: var(--bad); background: var(--bad-bg); }
 .rule.bad b { color: var(--bad); }
 
-/* ── Punktmenü im Viewport ─────────────────────────────────── */
-.pt-menu {
+/* ── Punktmenü und Legende im Viewport ─────────────────────── */
+/* Beide sitzen in einer Spalte oben links; die Legende rutscht nach,
+   wenn das Menü wächst. */
+.vp-left {
   position: absolute; left: 12px; top: 12px; z-index: 2;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+}
+.pt-menu, .pt-legend {
   display: flex; flex-direction: column; gap: 4px; padding: 7px;
   background: rgba(255,255,255,.92); border: 1px solid var(--border-light);
-  border-radius: var(--radius); min-width: 132px;
+  border-radius: var(--radius); min-width: 142px;
 }
 .pt-menu-title {
   font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
   color: var(--muted); padding: 0 2px 3px;
 }
+.pt-menu-title + .pt-menu-title, .pt-sel + .pt-menu-title { margin-top: 4px; }
+
+/* Welcher Punkt gerade gewählt ist. Das steht hier und nicht nur in der
+   Seitenleiste, weil die Kamera beim Anklicken NICHT mehr springt — man
+   soll ohne Blickwechsel sehen, was man gerade in der Hand hat. */
+.pt-sel {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-size: .8rem; font-weight: 600; color: var(--text); padding: 0 2px 2px;
+}
+.pt-sel.empty { font-weight: 400; color: var(--muted); }
+.pt-sel .dot { width: 11px; height: 11px; border-radius: 3px; border: 1px solid rgba(0,0,0,.2); flex-shrink: 0; }
+.pt-sel code { font-family: var(--mono); font-size: .74rem; color: var(--muted); font-weight: 400; }
+.pt-sel em { font-style: normal; font-size: .72rem; font-weight: 400; color: var(--muted); }
+
+.pt-legend .lg-row {
+  display: flex; align-items: center; gap: 7px; font-size: .76rem;
+  color: var(--text-body); padding: 1px 2px;
+}
+.pt-legend .dot {
+  width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+  border: 1px solid rgba(0,39,51,.25);
+}
+/* „gewählt": im Viewport ein Ring um den Griff, hier ein Ring um nichts. */
+.pt-legend .dot.ring { background: transparent; border-width: 2px; }
 .pt-menu button {
   text-align: left; padding: .26rem .5rem; border: 1px solid var(--border);
   background: var(--surface); border-radius: 6px; cursor: pointer;

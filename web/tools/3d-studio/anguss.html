@@ -279,14 +279,19 @@
   </aside>
 
   <div id="viewport">
-    <div class="pt-menu" id="pt-menu">
-      <div class="pt-menu-title">Punkt anfügen</div>
-      <button type="button" id="add-point" title="Regulären Punkt hinter der Auswahl anfügen">+ Punkt</button>
-      <button type="button" id="add-branch" title="Verzweigung mit zwei Ästen anfügen">+ Verzweigung</button>
-      <button type="button" id="add-mirror" title="Spiegelpunkt: ein Ast wird bearbeitet, zwei entstehen">+ Spiegelpunkt</button>
-      <button type="button" id="add-gate" title="Anschnitt als Endpunkt anfügen">+ Anschnitt</button>
-      <button type="button" id="insert-point" title="Punkt zwischen Auswahl und Vorgänger einfügen">Davor einfügen</button>
-      <button type="button" id="del-node" class="danger" title="Auswahl entfernen">Löschen</button>
+    <div class="vp-left">
+      <div class="pt-menu" id="pt-menu">
+        <div class="pt-menu-title">Auswahl</div>
+        <div class="pt-sel" id="pt-sel">Kein Punkt gewählt</div>
+        <div class="pt-menu-title">Punkt anfügen</div>
+        <button type="button" id="add-point" title="Regulären Punkt hinter der Auswahl anfügen">+ Punkt</button>
+        <button type="button" id="add-branch" title="Verzweigung mit zwei Ästen anfügen">+ Verzweigung</button>
+        <button type="button" id="add-mirror" title="Spiegelpunkt: ein Ast wird bearbeitet, zwei entstehen">+ Spiegelpunkt</button>
+        <button type="button" id="add-gate" title="Anschnitt als Endpunkt anfügen">+ Anschnitt</button>
+        <button type="button" id="insert-point" title="Punkt zwischen Auswahl und Vorgänger einfügen">Davor einfügen</button>
+        <button type="button" id="del-node" class="danger" title="Auswahl entfernen">Löschen</button>
+      </div>
+      <div class="pt-legend" id="pt-legend"></div>
     </div>
     <div class="chart-panel" id="chart-panel">
       <div class="chart-head">Flussschema<button type="button" id="chart-close" title="schließen">×</button></div>

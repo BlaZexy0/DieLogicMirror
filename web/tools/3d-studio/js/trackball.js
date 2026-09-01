@@ -13,9 +13,9 @@
    werden Kameraversatz UND Kamera-Oben gemeinsam gedreht. Es gibt keinen
    Pol, keine Sperre und keine Umkehr der Drehrichtung an den Polen.
 
-   Gedreht wird immer um `target`. Der Viewer setzt diesen Punkt auf die
-   aktuelle Auswahl — man dreht um den Punkt, an dem man arbeitet, und
-   nicht um die Mitte des Bildschirms.
+   Gedreht wird immer um `target`. Der Punkt wandert nur beim Verschieben
+   (rechte Maustaste) und beim Einpassen mit, nicht beim Auswählen eines
+   Punktes — ein Bild, das bei jedem Klick springt, hilft niemandem.
 
    Die Schnittstelle ist die der OrbitControls, soweit js/scene.js sie
    benutzt (object, target, update, minDistance/maxDistance, minZoom/

@@ -37,7 +37,7 @@ import { checkRules } from './rules.js';
 import { autoTaper, DEFAULT_SIZING } from './sizing.js';
 import { DEMOS, demoTwoGates } from './presets.js';
 import { flowChart, SPEED_STOPS } from './chart.js';
-import { createEditor } from './editor.js';
+import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from './editor.js';
 import { rotate, norm, cross, dot, sub, add } from './vec.js';
 
 mountNav('anguss.html');
@@ -47,10 +47,13 @@ const busy = $('busy');
 const IDLE = 'Punkt anklicken und ziehen · Alt: aus der Ebene heben · '
   + 'Ziehen im Leeren: frei drehen · Rechte Maustaste: verschieben · Rad: zoomen';
 
+/* Ohne Bodenraster: der Anguss ist ein freistehender Körper, den man von
+   allen Seiten ansieht — ein Raster darunter gäbe ihm ein „unten", das er
+   nicht hat, und läge bei jeder schrägen Ansicht im Bild. */
 const view = initScene(container, {
   orbit: 'trackball',
   cameraStart: [230, 210, 280], target: [0, 0, 60],
-  grid: true, gridSize: 800, gridY: -60, minDistance: 3, maxDistance: 30000
+  grid: false, minDistance: 3, maxDistance: 30000
 });
 mountViewBar(container, view);
 
@@ -245,22 +248,47 @@ function updateColorbar() {
 }
 
 /* ── Auswahl ─────────────────────────────────────────────────── */
+
+/* Dieselbe Beschriftung steht im Viewport (Menü) und in der Seitenleiste
+   (Kopf des Eigenschaftsblocks) — einmal gebaut, damit sie nicht
+   auseinanderläuft. */
+function selectionLabel(g, id) {
+  const n = id && g.nodes[id];
+  if (!n) return null;
+  const meta = G.TYPES[n.type];
+  return '<span class="dot" style="background:' + meta.color + '"></span>'
+    + meta.label + ' <code>' + id + '</code>'
+    + (G.isFollower(g, id) ? ' <em>(gespiegelt — die andere Seite bearbeiten)</em>' : '');
+}
+
+/** Die Legende der Punktfarben — aus derselben Tabelle wie die Griffe. */
+function mountLegend() {
+  const rows = Object.values(G.TYPES).map(t =>
+    '<div class="lg-row"><span class="dot" style="background:' + t.color + '"></span>' + t.label + '</div>');
+  rows.push('<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING
+    + '"></span>gewählt</div>');
+  rows.push('<div class="lg-row"><span class="dot" style="background:' + FOLLOWER_COLOR
+    + '"></span>gespiegelt (folgt)</div>');
+  $('pt-legend').innerHTML = '<div class="pt-menu-title">Punktarten</div>' + rows.join('');
+}
+
 function syncSelection() {
   const g = state.graph;
   const id = editor.selected;
   const n = id && g.nodes[id];
   $('sel-block').classList.toggle('disabled', !n);
+  const label = selectionLabel(g, id);
+  $('pt-sel').className = 'pt-sel' + (label ? '' : ' empty');
   if (!n) {
     $('sel-title').textContent = 'Kein Punkt gewählt';
+    $('pt-sel').textContent = 'Kein Punkt gewählt';
     facts('sel-facts', []);
     updatePointMenu();
     return;
   }
-  const meta = G.TYPES[n.type];
   const follower = G.isFollower(g, id);
-  $('sel-title').innerHTML = '<span class="dot" style="background:' + meta.color + '"></span>'
-    + meta.label + ' <code>' + id + '</code>'
-    + (follower ? ' <em>(gespiegelt — die andere Seite bearbeiten)</em>' : '');
+  $('sel-title').innerHTML = label;
+  $('pt-sel').innerHTML = label;
   for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) $(k).value = fmt(n.pos[i], 2);
   $('sel-w').value = fmt(n.w, 2);
   $('sel-h').value = fmt(n.h, 2);
@@ -788,6 +816,7 @@ function adoptGraph() {
   state.ready = true;
 }
 
+mountLegend();
 $('status').textContent = IDLE;
 /* Beispiel aus der Adresszeile (?demo=…) — wie ?part=… auf den
    Bauteilseiten; damit lässt sich ein bestimmtes System verlinken. */
