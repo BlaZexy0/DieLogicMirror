@@ -1,16 +1,20 @@
-/* Three.js-Grundgerüst beider Viewer: Renderer, Kameras, Licht,
-   OrbitControls, Standardansichten. Bewusst ohne Build-Schritt —
+/* Three.js-Grundgerüst aller Viewer: Renderer, Kameras, Licht,
+   Steuerwerk, Standardansichten. Bewusst ohne Build-Schritt —
    'three' wird über die Import-Map der HTML-Seiten auf vendor/three/
    aufgelöst.
 
    Zwei Kameras stehen bereit: Zentralprojektion (perspektivisch) und
    2D-Parallelprojektion (orthografisch, für maßstäbliche Risse). Beim
    Umschalten wird der Bildausschnitt umgerechnet, damit das Modell
-   gleich groß bleibt. OrbitControls bekommt die neue Kamera zugewiesen;
-   scope.object wird dort bei jedem update() gelesen. */
+   gleich groß bleibt. Das Steuerwerk bekommt die neue Kamera zugewiesen;
+   object wird dort bei jedem update() gelesen.
+
+   Zwei Steuerwerke stehen zur Wahl (Option `orbit`): die OrbitControls
+   von Three.js und der Quaternionen-Trackball aus js/trackball.js. */
 
 import * as T from 'three';
 import { OrbitControls } from '../vendor/three/OrbitControls.js';
+import { TrackballControls } from './trackball.js';
 
 /* Blickrichtung = Standort der Kamera relativ zum Ziel. Ein zweiter Klick
    auf denselben Knopf dreht das Vorzeichen um (X → −X). Die Draufsicht
@@ -28,7 +32,13 @@ export function initScene(container, opts = {}) {
     background = 0xe8eef0,
     gridSize = 3000, gridY = -470, grid: wantGrid = true,
     cameraStart = [1500, 680, -1350], target = [0, 0, 20],
-    minDistance = 60, maxDistance = 8000
+    minDistance = 60, maxDistance = 8000,
+    /* 'orbit' dreht in Azimut und Höhenwinkel um eine feste Hochachse —
+       richtig für ein Bauteil, das nie auf dem Kopf steht. 'trackball'
+       dreht frei mit Quaternionen um den Zielpunkt; das braucht der
+       Angussdesigner, dessen Trennebene je nach Ausstoßrichtung überall
+       liegen kann (js/trackball.js). */
+    orbit = 'orbit'
   } = opts;
 
   const renderer = new T.WebGLRenderer({ antialias: true });
@@ -46,7 +56,9 @@ export function initScene(container, opts = {}) {
 
   const api = { scene, renderer, camera: persp, projection: 'persp' };
 
-  const controls = new OrbitControls(persp, renderer.domElement);
+  const controls = orbit === 'trackball'
+    ? new TrackballControls(persp, renderer.domElement)
+    : new OrbitControls(persp, renderer.domElement);
   controls.target.set(...target);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
@@ -141,6 +153,10 @@ export function initScene(container, opts = {}) {
       ? Math.max(cam.position.distanceTo(controls.target), orthoHalfH * 4)
       : cam.position.distanceTo(controls.target);
     cam.position.copy(controls.target).addScaledVector(dir, d);
+    /* Beim freien Drehen steht „oben" irgendwo — vor einer
+       Standardansicht muss es zurück auf die Weltachse, sonst steht die
+       Draufsicht schief. */
+    if (controls.resetUp) controls.resetUp();
     cam.lookAt(controls.target);
     controls.update();
     return last;

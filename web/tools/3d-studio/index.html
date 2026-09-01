@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>3D-Studio · DieLogic</title>
-<meta name="description" content="Drei 3D-Werkzeuge für die Druckgießform: Formaufbau als Schnittmodell, Bauteilanalyse mit Formteilung aus der Sichtbarkeit in den sechs Hauptrichtungen, und Offsetflächen aus einem gerasterten Abstandsfeld.">
+<meta name="description" content="Fünf 3D-Werkzeuge für die Druckgießform: Formaufbau als Schnittmodell, Bauteilanalyse mit Formteilung, Offsetflächen und Abstandsanalyse aus gerasterten Abstandsfeldern — und der Angussdesigner, der Laufkanäle aus Splines entwirft.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -20,16 +20,18 @@
 <section class="page-hero">
   <div class="inner">
     <h1>3D-Studio</h1>
-    <p class="subtitle">Vier Werkzeuge am selben Bauteil: die Druckgießform als Schnittmodell mit
-      echter Kavität, die Bauteilanalyse mit Formteilung und Entformschrägen — und zwei, die
-      messen: nach innen die Wandstärke (wo erstarrt das Teil zuletzt?), nach außen den Abstand
-      zum Temperierkanal oder zum Nachbarteil. Alles rechnet im Browser; die Bauteile kommen als
-      STL oder GLB, es geht nichts an einen Server.</p>
+    <p class="subtitle">Fünf Werkzeuge am selben Bauteil: die Druckgießform als Schnittmodell mit
+      echter Kavität, die Bauteilanalyse mit Formteilung und Entformschrägen, zwei, die messen —
+      nach innen die Wandstärke (wo erstarrt das Teil zuletzt?), nach außen den Abstand zum
+      Temperierkanal — und eines, das entwirft: den Angussdesigner, der Laufkanäle als Splines
+      zieht, verzweigt und zu einem dichten Körper verschmilzt. Alles rechnet im Browser; die
+      Bauteile kommen als STL oder GLB, es geht nichts an einen Server.</p>
     <div class="hero-tags">
       <span class="hero-tag">6 Entformrichtungen</span>
       <span class="hero-tag">Schnitt mit Deckflächen</span>
       <span class="hero-tag">Wandstärke und Wärmezentrum</span>
       <span class="hero-tag">Abstand zweier Teile</span>
+      <span class="hero-tag">Angusssystem aus Splines</span>
       <span class="hero-tag">STL- und GLB-Import</span>
     </div>
   </div>
@@ -37,8 +39,8 @@
 
 <section class="tools-section" id="werkzeuge">
   <div class="tools-inner">
-    <h2 class="section-title">Vier Werkzeuge</h2>
-    <p class="section-sub">Eines zeigt die Form, eines entscheidet, wie sie geteilt wird — und zwei messen: nach innen die Wandstärke, nach außen den Abstand zum Nachbarn.</p>
+    <h2 class="section-title">Fünf Werkzeuge</h2>
+    <p class="section-sub">Eines zeigt die Form, eines entscheidet, wie sie geteilt wird, zwei messen — nach innen die Wandstärke, nach außen den Abstand zum Nachbarn — und eines entwirft das Angusssystem.</p>
 
     <div class="tool-grid">
       <div class="tool-card">
@@ -137,6 +139,35 @@
           <a href="abstand.html" class="btn btn-primary">Öffnen</a>
         </div>
       </div>
+
+      <div class="tool-card">
+        <div class="tool-card-icon" style="background:rgba(212,169,8,.16)">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d4a908" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+            <circle cx="13" cy="4" r="3" stroke="#557786"/>
+            <path d="M13 7 L13 12"/>
+            <path d="M13 12 C13 16, 6 16, 5 21" />
+            <path d="M13 12 C13 16, 20 16, 21 21" />
+            <path d="M3 21 L7 21 M19 21 L23 21" stroke="#e07b39" stroke-width="2.4"/>
+          </svg>
+        </div>
+        <h3>Angussdesigner</h3>
+        <p>Das Angusssystem wird nicht gemessen, sondern <b>entworfen</b>: vom Pressrest laufen
+          Splines mit Trapezquerschnitt über Verzweigungen zu den Anschnitten. Die Struktur
+          darunter ist ein Graph — verschieben, verzweigen, spiegeln, und alles Weitere
+          (Kurve, Querschnitt, Netz, Verluste) leitet sich daraus ab.</p>
+        <ul>
+          <li>Punkte in ihrer Arbeitsebene ziehen, frei um die Auswahl drehen (Quaternionen)</li>
+          <li>Verzweigung mit Aufteilung und Spiegelung, Anschnitt mit vier Übergangsarten</li>
+          <li>Querschnitt, Krümmung und Bernoulli-Verluste über jeden Millimeter</li>
+          <li>Füllbalance: was fließen SOLL gegen das, was der Widerstand zulässt</li>
+          <li>Verschmelzen zu einem dichten Körper mit weichen Übergängen — per WebGPU</li>
+          <li>Graph als JSON speichern und laden, Körper als STL</li>
+        </ul>
+        <div class="card-btns">
+          <a href="anguss.html" class="btn btn-primary">Öffnen</a>
+          <a href="anguss.html?demo=vier" class="btn btn-ghost">Vier Anschnitte</a>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -175,7 +206,7 @@
 <section class="note-section">
   <div class="note-box">
     <h4>Wie das 3D-Studio ins Projekt passt</h4>
-    <p>Die drei Seiten rechnen alles clientseitig und brauchen weder Backend noch Projekt —
+    <p>Die fünf Seiten rechnen alles clientseitig und brauchen weder Backend noch Projekt —
       deshalb tragen sie auch keine Projektleiste. Die Maße der Beispielform stehen gesammelt in
       <code>js/config.js</code> und lassen sich aus dem Projektabschnitt <code>design</code>
       speisen (Kolben-Ø, Kammerlänge, Bauteilmaße); das Formmodell wird danach mit

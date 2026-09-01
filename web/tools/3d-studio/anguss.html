@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Angussdesigner · 3D-Studio · DieLogic</title>
+<meta name="description" content="Angusssysteme für den Druckguss aus Splines entwerfen: Pressrest, Laufkanäle mit Trapezquerschnitt, Verzweigungen mit Spiegelung und Aufteilung, Anschnitte — dazu Querschnitt, Krümmung und eine Bernoulli-Abschätzung der Verluste über jeden Millimeter.">
+<meta name="theme-color" content="#002733">
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="stylesheet" href="/shared/shared.css">
+<link rel="stylesheet" href="css/viewer.css">
+<script src="/shared/version.js"></script>
+<script src="/shared/palette.js"></script>
+<script src="/shared/nav.js" data-footer="none"></script>
+<script type="importmap">
+  { "imports": { "three": "./vendor/three/three.module.js" } }
+</script>
+</head>
+<body class="viewer">
+
+<section class="page-hero compact">
+  <div class="inner">
+    <h1>Angussdesigner</h1>
+    <p class="subtitle">Vom Pressrest über Laufkanäle und Verzweigungen bis zum Anschnitt — als Graph entworfen, als Spline gezogen, als Trapezprofil gesweept. Querschnitt, Krümmung und Verluste über jeden Millimeter; verschmolzen zu einem dichten Körper und als STL heraus.</p>
+  </div>
+</section>
+
+<div class="layout">
+  <aside>
+    <h2>Angusssystem</h2>
+    <div class="row">
+      <span>Beispiel</span>
+      <select id="demo-select"></select>
+    </div>
+    <input type="file" id="json-input" accept=".json,application/json" hidden>
+    <div class="btn-pair">
+      <button type="button" class="btn btn-outline" id="json-btn">Datei laden</button>
+      <button type="button" class="btn btn-outline" id="json-save">Datei speichern</button>
+    </div>
+    <div class="hint" id="graph-note"></div>
+    <div class="facts" id="graph-facts"></div>
+    <div class="warn-line" id="graph-warn"></div>
+
+    <h2>Pressrest</h2>
+    <div class="row">
+      <span title="Durchmesser des Pressrests — also der Füllkammer.">Durchmesser</span>
+      <input type="text" id="bisc-d" inputmode="decimal" value="90" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="row">
+      <span title="Dicke des Pressrests. Sie wächst ENTGEGEN der Ausstoßrichtung, also in dieselbe Formhälfte wie die Kanaltiefe.">Dicke</span>
+      <input type="text" id="bisc-t" inputmode="decimal" value="25" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="row">
+      <span title="Ausstoßrichtung: die Normale der Trennebene. Alle Arbeitsebenen leiten sich daraus ab.">Richtung</span>
+      <div class="seg stack" id="axis-seg">
+        <button type="button" data-value="+x">X</button>
+        <button type="button" data-value="+y" class="active">Y</button>
+        <button type="button" data-value="+z">Z</button>
+        <button type="button" data-value="-x">−X</button>
+        <button type="button" data-value="-y">−Y</button>
+        <button type="button" data-value="-z">−Z</button>
+      </div>
+    </div>
+    <div class="row">
+      <span>Ursprung</span>
+      <div class="triple">
+        <input type="text" id="bisc-x" inputmode="decimal" value="0" spellcheck="false" title="X">
+        <input type="text" id="bisc-y" inputmode="decimal" value="0" spellcheck="false" title="Y">
+        <input type="text" id="bisc-z" inputmode="decimal" value="0" spellcheck="false" title="Z">
+      </div>
+      <span class="val">mm</span>
+    </div>
+
+    <h2>Auswahl</h2>
+    <div class="sel-head" id="sel-title">Kein Punkt gewählt</div>
+    <div id="sel-block" class="disabled">
+      <div class="row">
+        <span>Lage</span>
+        <div class="triple">
+          <input type="text" id="sel-x" inputmode="decimal" value="0" spellcheck="false" title="X">
+          <input type="text" id="sel-y" inputmode="decimal" value="0" spellcheck="false" title="Y">
+          <input type="text" id="sel-z" inputmode="decimal" value="0" spellcheck="false" title="Z">
+        </div>
+        <span class="val">mm</span>
+      </div>
+      <div class="row">
+        <span title="Breite des Kanals an der Trennebene. Mehr als der Pressrest-Durchmesser ergibt keinen Sinn.">Kanalbreite</span>
+        <input type="text" id="sel-w" inputmode="decimal" value="20" spellcheck="false">
+        <span class="val">mm</span>
+      </div>
+      <div class="row">
+        <span title="Tiefe des Kanals. Sie wächst entgegen der Ausstoßrichtung, also in die Formhälfte hinein.">Kanaltiefe</span>
+        <input type="text" id="sel-h" inputmode="decimal" value="12" spellcheck="false">
+        <span class="val">mm</span>
+      </div>
+      <div class="row">
+        <span title="Arbeitsebene um die Laufrichtung kippen — der Kanal legt sich auf die Seite.">Ebene längs</span>
+        <input type="range" id="sel-roll" min="-60" max="60" step="1" value="0">
+        <span class="val" id="sel-roll-val"></span>
+      </div>
+      <div class="row">
+        <span title="Arbeitsebene quer zur Laufrichtung kippen — daraus wird eine Stufe im Verteiler.">Ebene quer</span>
+        <input type="range" id="sel-pitch" min="-60" max="60" step="1" value="0">
+        <span class="val" id="sel-pitch-val"></span>
+      </div>
+
+      <div id="branch-block">
+        <div class="row">
+          <span title="Wie viel des Stroms in den ersten Ast gehen SOLL. Was wirklich fließt, entscheidet der Widerstand — beides steht im Flussschema nebeneinander.">Aufteilung</span>
+          <input type="range" id="sel-ratio" min="10" max="90" step="1" value="50">
+          <span class="val" id="sel-ratio-val"></span>
+        </div>
+        <label class="inline"><input type="checkbox" id="sel-mirror" checked> Beide Äste spiegelsymmetrisch halten</label>
+      </div>
+
+      <div id="gate-block">
+        <div class="row">
+          <span title="Anschnitthöhe — die dünnste Stelle des ganzen Systems.">Anschnitthöhe</span>
+          <input type="text" id="sel-gh" inputmode="decimal" value="2" spellcheck="false">
+          <span class="val">mm</span>
+        </div>
+        <div class="row">
+          <span title="Länge des Anschnitts (Steg): die Strecke mit unverändertem Querschnitt vor dem Bauteil.">Anschnittlänge</span>
+          <input type="text" id="sel-glen" inputmode="decimal" value="4" spellcheck="false">
+          <span class="val">mm</span>
+        </div>
+        <div class="row">
+          <span>Anschnittbreite</span>
+          <input type="text" id="sel-gw" inputmode="decimal" value="26" spellcheck="false">
+          <span class="val">mm</span>
+        </div>
+        <label class="inline"><input type="checkbox" id="sel-gauto" checked> Breite aus der Zielgeschwindigkeit rechnen</label>
+        <div class="row">
+          <span title="Wie der Querschnitt vom Kanal auf den Anschnitt übergeht.">Übergang</span>
+          <select id="sel-gtrans"></select>
+        </div>
+      </div>
+      <div class="facts" id="sel-facts"></div>
+    </div>
+
+    <h2>Kanalform</h2>
+    <div class="row">
+      <span title="Entformschräge je Flanke. Ohne sie klemmt der erstarrte Anguss.">Entformschräge</span>
+      <input type="range" id="draft" min="0" max="15" step="0.5" value="5">
+      <span class="val" id="draft-val"></span>
+    </div>
+    <div class="row">
+      <span title="Radius am Kanalboden. An der Trennebene bleibt die Kante scharf — dort stoßen die Formhälften aufeinander.">Bodenradius</span>
+      <input type="text" id="radius" inputmode="decimal" value="1.5" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="row">
+      <span title="Straffheit der Splines. Klein heißt eckig, groß heißt ausholend.">Splinestraffheit</span>
+      <input type="range" id="tension" min="30" max="180" step="5" value="100">
+      <span class="val" id="tension-val"></span>
+    </div>
+    <div class="row">
+      <span title="Abstand der Schnitte entlang der Mittellinie. Alles — Querschnitt, Krümmung, Verlust — wird je Schritt gerechnet.">Abtastschritt</span>
+      <input type="text" id="step" inputmode="decimal" value="1" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="row">
+      <span title="Verjüngung je Abschnitt: der Kanal ist um diesen Faktor größer als die Summe seiner Abgänge.">Verjüngung</span>
+      <input type="range" id="taper" min="70" max="100" step="1" value="90">
+      <span class="val" id="taper-val"></span>
+    </div>
+    <div class="row">
+      <span title="Tiefe geteilt durch Breite. Bewährt sind 0,5 bis 1,0.">Seitenverhältnis</span>
+      <input type="range" id="aspect" min="30" max="120" step="5" value="65">
+      <span class="val" id="aspect-val"></span>
+    </div>
+    <button type="button" class="btn btn-outline block-btn" id="auto-taper">Querschnitte abstufen</button>
+    <div class="hint">Rechnet von den Anschnitten rückwärts: jeder Anschnitt bekommt
+      A = Q·Anteil / v<sub>Ziel</sub>, der zuführende Kanal das 1,6-fache davon, und weiter
+      stromaufwärts ist jeder Kanal die Summe seiner Abgänge geteilt durch die Verjüngung.
+      Danach nimmt der Querschnitt garantiert nirgends zu.</div>
+
+    <h2>Prozess</h2>
+    <div class="row">
+      <span>Legierung</span>
+      <select id="alloy"></select>
+    </div>
+    <div class="row">
+      <span title="Gussvolumen einschließlich Überläufen — das, was durch die Anschnitte muss.">Gussvolumen</span>
+      <input type="text" id="vol" inputmode="decimal" value="420" spellcheck="false">
+      <span class="val">cm³</span>
+    </div>
+    <div class="row">
+      <span>Füllzeit</span>
+      <input type="text" id="tfill" inputmode="decimal" value="45" spellcheck="false">
+      <span class="val">ms</span>
+    </div>
+    <div class="row">
+      <span title="Zielgeschwindigkeit am Anschnitt. Sie legt die Anschnittflächen fest.">Anschnitt v<sub>Ziel</sub></span>
+      <input type="text" id="vgate" inputmode="decimal" value="40" spellcheck="false">
+      <span class="val">m/s</span>
+    </div>
+    <div class="row">
+      <span title="Beiwert des Verzweigungsverlusts. 1,0 = scharfe Gabel, 0,3 = sehr sanft aufgehend.">Verzweigung c</span>
+      <input type="range" id="cbranch" min="10" max="120" step="5" value="50">
+      <span class="val" id="cbranch-val"></span>
+    </div>
+    <div class="facts" id="flow-facts"></div>
+
+    <h2>Prüfung</h2>
+    <div class="rules" id="rules-list"></div>
+
+    <h2>Darstellung</h2>
+    <div class="row">
+      <span>Körper</span>
+      <div class="seg" id="show-seg">
+        <button type="button" data-value="sweep" class="active">Kanäle</button>
+        <button type="button" data-value="merged">verschmolzen</button>
+        <button type="button" data-value="line">nur Linie</button>
+      </div>
+    </div>
+    <div class="row">
+      <span>Einfärbung</span>
+      <div class="seg" id="color-seg">
+        <button type="button" data-value="plain" class="active">einfarbig</button>
+        <button type="button" data-value="speed">Geschwindigkeit</button>
+        <button type="button" data-value="area">Querschnitt</button>
+      </div>
+    </div>
+    <label class="inline"><input type="checkbox" id="show-biscuit" checked> Pressrest zeigen</label>
+    <label class="inline"><input type="checkbox" id="show-line" checked> Mittellinie und Griffe zeigen</label>
+    <label class="inline"><input type="checkbox" id="chart-on"> Flussschema einblenden</label>
+
+    <h2>Referenzbauteil</h2>
+    <input type="file" id="ref-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" hidden>
+    <button type="button" class="btn btn-outline block-btn" id="ref-btn">+ STL oder GLB laden</button>
+    <div class="hint" id="ref-note">Das Bauteil dient nur als Bezug: es wird nicht gerechnet, sondern
+      durchscheinend dazugestellt, damit die Anschnitte dorthin zeigen, wo sie hingehören.</div>
+    <div class="row">
+      <span>Deckkraft</span>
+      <input type="range" id="ref-opacity" min="5" max="100" value="30">
+      <span class="val" id="ref-opacity-val"></span>
+    </div>
+    <button type="button" class="btn btn-outline block-btn" id="ref-clear">Referenz entfernen</button>
+
+    <h2>Verschmelzen und Export</h2>
+    <div class="row">
+      <span title="Kantenlänge einer Rasterzelle. Feiner heißt genauer und langsamer; der Speicher wächst mit der dritten Potenz.">Zellweite</span>
+      <input type="text" id="cell" inputmode="decimal" value="0.8" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="row">
+      <span title="Übergangsradius an den Verzweigungen und am Pressrest. 0 gibt die scharfe Vereinigung.">Übergang</span>
+      <input type="text" id="blend" inputmode="decimal" value="3" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="facts" id="merge-facts"></div>
+    <button type="button" class="btn btn-primary block-btn" id="run-merge">Körper verschmelzen</button>
+    <div class="run-note" id="merge-state"></div>
+    <button type="button" class="btn btn-outline block-btn" id="stl-save">Als STL speichern</button>
+
+    <div class="hint">
+      <b>Warum zwei Körper:</b> die Ansicht <em>Kanäle</em> zieht das
+      Trapezprofil exakt so, wie es eingegeben wurde — jede Kante, jeder
+      Radius sitzt auf den Zehntelmillimeter, und sie hängt ohne
+      Verzögerung am Regler. An den Verzweigungen stecken die Schläuche
+      dabei nur ineinander; das ist kein dichter Körper und hat keine
+      Übergänge. <em>Verschmolzen</em> rechnet dafür ein Abstandsfeld und
+      vereinigt die Kanäle weich — daraus wird ein geschlossenes Netz mit
+      den Hälsen, die eine Schmelze auch bekommt, und nur das kommt in
+      die STL.
+
+      <p style="margin-top:.7rem"><b>Warum das schnell ist:</b> für jeden
+      Rasterpunkt ist der Abstand zu jedem Kanalstück zu bestimmen —
+      Millionen Punkte, die nichts voneinander wissen. Genau dafür ist
+      eine Grafikkarte gebaut; die Rechnung läuft als WebGPU-Compute-Shader
+      und fällt ohne WebGPU auf dieselbe Formel in JavaScript zurück. Die
+      Kennzahlen sagen, welcher Weg gelaufen ist.</p>
+    </div>
+  </aside>
+
+  <div id="viewport">
+    <div class="pt-menu" id="pt-menu">
+      <div class="pt-menu-title">Punkt anfügen</div>
+      <button type="button" id="add-point" title="Regulären Punkt hinter der Auswahl anfügen">+ Punkt</button>
+      <button type="button" id="add-branch" title="Verzweigung mit zwei Ästen anfügen">+ Verzweigung</button>
+      <button type="button" id="add-mirror" title="Spiegelpunkt: ein Ast wird bearbeitet, zwei entstehen">+ Spiegelpunkt</button>
+      <button type="button" id="add-gate" title="Anschnitt als Endpunkt anfügen">+ Anschnitt</button>
+      <button type="button" id="insert-point" title="Punkt zwischen Auswahl und Vorgänger einfügen">Davor einfügen</button>
+      <button type="button" id="del-node" class="danger" title="Auswahl entfernen">Löschen</button>
+    </div>
+    <div class="chart-panel" id="chart-panel">
+      <div class="chart-head">Flussschema<button type="button" id="chart-close" title="schließen">×</button></div>
+      <div class="chart-body" id="chart-body"></div>
+    </div>
+    <div id="status"></div>
+    <div class="colorbar" id="colorbar">
+      <div class="cb-title" id="cb-title"></div>
+      <div class="cb-body">
+        <div class="cb-scale" id="cb-scale"></div>
+        <div class="cb-ticks" id="cb-ticks"></div>
+      </div>
+      <div class="cb-extra" id="cb-extra"></div>
+    </div>
+    <div id="busy"></div>
+    <div class="drop-hint">Angussdatei (JSON) oder Referenzteil (STL/GLB) hier ablegen</div>
+  </div>
+</div>
+
+<script type="module" src="js/runner/app.js"></script>
+</body>
+</html>

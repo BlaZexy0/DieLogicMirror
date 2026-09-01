@@ -72,11 +72,14 @@ dielogic/
 │   │   ├── sprengflaeche/   STL-Analyse: stl-math.js (Netz-Kennwerte, getestet),
 │   │   │                    stl-logic.js (Massenbilanz/Maschinentabelle, getestet), stl-app.js
 │   │   ├── teilekosten/     Teilekosten-Kalkulation (Abschnitt cost, verknüpfte Felder)
-│   │   ├── 3d-studio/       vier 3D-Werkzeuge unter EINEM Nav-Reiter: Formaufbau (Schnittmodell
+│   │   ├── 3d-studio/       fünf 3D-Werkzeuge unter EINEM Nav-Reiter: Formaufbau (Schnittmodell
 │   │   │                    der Druckgießform), Bauteilanalyse (Formteilung, Hinterschnitte,
 │   │   │                    Entformschrägen), Offsetflächen (Abstandsfeld: Aufmaß, Wandstärke,
-│   │   │                    Wärmezentrum) und Abstandsanalyse (kürzester Abstand zwischen zwei
-│   │   │                    Dateien). Bringt Three.js in vendor/ mit — die einzige
+│   │   │                    Wärmezentrum), Abstandsanalyse (kürzester Abstand zwischen zwei
+│   │   │                    Dateien) und Angussdesigner (js/runner/: Angusssystem als Graph
+│   │   │                    entwerfen — Splines, Verzweigungen, Anschnitte, Bernoulli-Verluste,
+│   │   │                    Verschmelzung zum dichten Körper per WebGPU, STL-Export).
+│   │   │                    Bringt Three.js in vendor/ mit — die einzige
 │   │   │                    Fremdbibliothek, die nur dieses Werkzeug braucht.
 │   │   │                    Eigenes README dort; Modelle erzeugt scripts/3d-studio/.
 │   │   └── zyklus/          Zyklusanalyse (Abschnitt cycle): Zeitleiste + Wärmebilanz je Zyklus
@@ -147,7 +150,7 @@ node --import ./tests/web/3d-studio/stubs/register.mjs \
      --test tests/web/*.test.mjs tests/web/3d-studio/*.test.mjs
                                                 # Frontend, Physik-Fixtures, Grenzen, Render-Rauchtest
                                                 # und das 3D-Studio (Geometrie, CSG, Formteilung,
-                                                # Abstandsfeld, Verdrahtung beider Viewer)
+                                                # Abstandsfeld, Angussdesigner, Verdrahtung aller Viewer)
 node scripts/gen-theory-svgs.mjs                # statische SVGs der Theorie-Artikel neu erzeugen
                                                 # (web/assets/theorie/ — nach Änderungen an Charts/Defaults)
 node scripts/gen-vkrit-table.mjs                # v_krit-CFD-Tabelle (JS + Python) aus
@@ -195,6 +198,11 @@ Simulations-Requests ergänzt werden.
   Änderungen an der Geometrie die Modelle neu erzeugen:
   `node scripts/3d-studio/build-glb.mjs` (Formmodell) und
   `node scripts/3d-studio/build-parts.mjs` (Beispielteile).
+  Der Angussdesigner braucht keine erzeugten Modelle — seine Beispiele
+  entstehen im Code (`js/runner/presets.js`). Nach Änderungen an Kamera,
+  Steuerwerk oder Sichtbarkeit einmal in einem echten Browser
+  nachsehen: ohne WebGL zeichnen die Tests nichts, und ein leerer
+  Viewport bei tadellosen Kennzahlen fällt sonst niemandem auf.
 - **Simulation:** Einheiten-Übersetzung und Defaults in
   `backend/convert.py`; im Frontend holt `web/tools/auslegung/js/core/simstore.js` das
   Ergebnis, die Schusskurve zeichnet den Luftdruck auf der zweiten Achse.

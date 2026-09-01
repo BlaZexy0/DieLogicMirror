@@ -105,7 +105,8 @@ test('alle Imports der JS-Module lösen auf', () => {
 test('alle Imports der HTML-Seiten lösen auf', () => {
   const problems = [];
   const htmls = [];
-  for (const f of ['index.html', 'form.html', 'bauteilanalyse.html', 'offset.html', 'abstand.html']) htmls.push(join(ROOT, f));
+  for (const f of ['index.html', 'form.html', 'bauteilanalyse.html', 'offset.html',
+    'abstand.html', 'anguss.html']) htmls.push(join(ROOT, f));
   for (const f of htmls) {
     assert.ok(existsSync(f), 'fehlt: ' + f);
     const src = readFileSync(f, 'utf8');
@@ -135,12 +136,13 @@ test('alle Imports der HTML-Seiten lösen auf', () => {
   assert.deepEqual(problems, []);
 });
 
-test('jede id, die app.js/die.js anspricht, steht im HTML', () => {
+test('jede id, die ein Viewer-Modul anspricht, steht im HTML', () => {
   const pairs = [
     ['bauteilanalyse.html', [join('js', 'part', 'app.js'), join('js', 'part', 'partsource.js')]],
     ['offset.html', [join('js', 'part', 'offsetapp.js'), join('js', 'part', 'partsource.js')]],
     ['abstand.html', [join('js', 'part', 'distanceapp.js')]],
-    ['form.html', [join('js', 'die.js'), join('js', 'ui', 'sidebar.js')]]
+    ['form.html', [join('js', 'die.js'), join('js', 'ui', 'sidebar.js')]],
+    ['anguss.html', [join('js', 'runner', 'app.js')]]
   ];
   const problems = [];
   for (const [html, jsList] of pairs) {

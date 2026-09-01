@@ -1,16 +1,18 @@
 # 3D-Studio
 
-Vier Werkzeuge rund um das Bauteil in 3D, unter einem Navigationsreiter.
-Alles rechnet clientseitig — kein Backend, kein Projekt, keine Anmeldung;
-die Bauteile kommen als STL oder GLB und verlassen den Browser nicht.
+Fünf Werkzeuge rund um Bauteil und Form in 3D, unter einem
+Navigationsreiter. Alles rechnet clientseitig — kein Backend, kein
+Projekt, keine Anmeldung; die Bauteile kommen als STL oder GLB und
+verlassen den Browser nicht.
 
 | Seite           | Inhalt |
 |-----------------|--------|
-| `index.html`    | Übersicht: die vier Werkzeuge als Karten, dazu die drei Schritte der Formteilung |
+| `index.html`    | Übersicht: die Werkzeuge als Karten, dazu die drei Schritte der Formteilung |
 | `form.html`     | **Formaufbau** — eine beispielhafte Kaltkammer-Druckgießform als Schnittmodell |
 | `bauteilanalyse.html` | **Bauteilanalyse** — für ein Bauteil die Zuordnung jedes Dreiecks zu Formhälfte oder Schieber |
 | `offset.html`   | **Offsetflächen** — Abstandsfeld durch Rasterisierung: Fläche gleichen Abstands, Wandstärke und Wärmezentrum (die Frage nach *innen*) |
 | `abstand.html`  | **Abstandsanalyse** — kürzester Abstand zwischen zwei Dateien, eingefärbt auf einer selbst gesetzten Skala (die Frage nach *außen*) |
+| `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen, Anschnitte; dazu Verluste, Füllbalance und ein dichter Körper als STL |
 
 Erreichbar über den Reiter **3D-Studio** in der Navigation oder direkt
 unter `/tools/3d-studio/`.
@@ -18,6 +20,9 @@ unter `/tools/3d-studio/`.
 Three.js liegt lokal in `vendor/` (MIT, LICENSE dort) — es ist die
 einzige Fremdbibliothek des Studios und wird von keiner anderen Seite der
 Website gebraucht, deshalb steht sie hier und nicht in `/shared/vendor/`.
+
+Vier der fünf Seiten *messen* an vorhandener Geometrie; der
+Angussdesigner ist der einzige, der welche *erzeugt*.
 
 ## Formaufbau (`form.html`)
 
@@ -288,16 +293,208 @@ den Kantenmitten, die Punkte bleiben exakt auf der Fläche.
 über einem Quader meldet ohne Verfeinerung über 50 mm, mit Verfeinerung
 die richtigen 10 mm.
 
+## Angussdesigner (`anguss.html`)
+
+Die einzige Seite des Studios, die Geometrie **erzeugt** statt sie zu
+messen. Entworfen wird das Angusssystem: vom Pressrest laufen Kanäle mit
+Trapezquerschnitt über Verzweigungen zu den Anschnitten.
+
+### Der Graph ist die Quelle, alles andere ist abgeleitet
+
+Gespeichert wird ein Baum aus Knoten (`js/runner/graph.js`) — Lage,
+Querschnitt, Arbeitsebene, Verzweigungsverhältnis, Anschnittmaße. Kurve,
+Netz, Verluste und Prüfregeln entstehen daraus bei jeder Änderung neu.
+Ein Spline mit Stützpunkten UND ein Netz nebeneinander liefen
+unweigerlich auseinander, sobald man eine Verzweigung verschiebt.
+
+Der Ablauf ist immer derselbe:
+
+    Graph → Anschnittbreiten → Abtasten → Strömung → Anzeige
+
+Er kostet bei einem üblichen System wenige Millisekunden und läuft
+deshalb bei jedem Mausschritt. Nur EINE Sache wartet auf Bestätigung:
+das Verschmelzen zum dichten Körper.
+
+### Knotenarten
+
+| Farbe | Art | Bedeutung |
+|-------|-----|-----------|
+| grau | **Pressrest** | Ursprung. Durchmesser, Dicke und Ausstoßrichtung; die Dicke wächst ENTGEGEN der Richtung, also in dieselbe Formhälfte wie die Kanaltiefe. |
+| türkis | **Punkt** | Stützpunkt des Laufkanals mit eigenem Querschnitt. |
+| gold | **Verzweigung** | Gabelung mit Aufteilung (50:50 …) und wahlweise erzwungener Spiegelsymmetrie. |
+| violett | **Spiegelpunkt** | dasselbe fest auf 50:50, aber nur EIN Ast wird bearbeitet — der andere entsteht. |
+| orange | **Anschnitt** | Endpunkt mit Höhe, Länge, Breite und der Art des Übergangs. |
+
+### Arbeitsebene
+
+Jeder Knoten hat eine Ebene, in der er sich verschieben lässt;
+voreingestellt ist die des Vorgängers, beim Pressrest die Trennebene.
+Zwei Kippungen, und sie tun Unterschiedliches:
+
+- **längs** dreht die Normale um die Laufrichtung — der Kanal legt sich
+  auf die Seite, das Profil kippt mit.
+- **quer** stellt die Ebene schräg. Wer den Punkt jetzt zieht, hebt ihn
+  aus der Trennebene heraus: das ist die Rampe im Verteiler. Für das
+  Profil wird die Normale an jedem Schnitt wieder senkrecht zur
+  Laufrichtung gestellt.
+
+Gezogen wird mit der Maus IN der Ebene (der Mausstrahl wird mit ihr
+geschnitten, nicht mit dem Bildschirm) — mit gedrückter **Alt**-Taste
+stattdessen entlang der Normalen.
+
+### Querschnitt
+
+Das Profil ist ein Trapez: an der Trennebene am breitesten, nach unten
+von der Entformschräge verjüngt, mit verrundetem Boden. Die obere Kante
+bleibt **scharf** — dort stoßen die Formhälften aufeinander, ein Radius
+wäre ein Spalt. `js/runner/profile.js` beschreibt dieselbe Form zweimal:
+als Umriss mit fester Punktzahl (für den Sweep) und als
+Abstandsfunktion (für die Verschmelzung); die Tests prüfen sie
+gegeneinander.
+
+Zwischen zwei Knoten wird die **Fläche** geführt, nicht Breite und Tiefe
+einzeln. Bei einem Fächeranschnitt (26 × 17 → 97 × 2,4) stünde sonst in
+der Mitte 35 × 6,8 — und das sind 238 mm² gegenüber 374 am Anfang und
+233 am Ende: der Querschnitt wüchse mittendrin, obwohl beide Enden
+stimmen.
+
+**Querschnitte abstufen** rechnet von den Anschnitten rückwärts:
+A = Q·Anteil / v_Ziel am Anschnitt, das `runnerRatio`-fache davon im
+zuführenden Kanal, und weiter stromaufwärts jeweils die Summe der
+Abgänge geteilt durch die Verjüngung. Danach nimmt der Querschnitt
+garantiert nirgends zu. An einer Verzweigung startet jeder Ast mit
+seinem ANTEIL am Zulaufquerschnitt (beide Maße mit der Wurzel des
+Anteils skaliert) — ohne das wüchse der Querschnitt an jeder Gabelung
+auf das Doppelte.
+
+### Strömung und Füllbalance
+
+`js/runner/flow.js` rechnet über jeden abgetasteten Millimeter:
+
+    Reibung      λ · (ds/d_h) · ρ/2 · v²      λ aus Re (laminar / Blasius)
+    Krümmung     ζ₉₀ · dθ/(π/2) · ρ/2 · v²    ζ₉₀ = 0,21/√(R/d_h)
+    Querschnitt  Verengung 0,04·(1−A₂/A₁), Erweiterung (1−A₁/A₂)²
+    Verzweigung  c · ρ/2 · |v₂·t₂ − v₁·t₁|²   (Borda-Carnot, vektoriell)
+    Anschnitt    ζ nach Übergangsart
+    dazu         ρ/2 · (v² − v₀²)             die reine Beschleunigung
+
+Eine Füllsimulation ist das nicht und will es nicht sein — es ist die
+Rohrhydraulik, die jeder Gießer überschlägt, nur über die wirklich
+entworfene Mittellinie statt über eine gedachte Ersatzlänge.
+
+Die eigentliche Aussage ist die **Füllbalance**: die Aufteilungen an den
+Verzweigungen sind eine ABSICHT, was wirklich fließt, entscheidet der
+Widerstand. Bei gleichem Druck am Pressrest teilt sich der Strom so auf,
+dass jeder Weg denselben Druckverlust hat (Widerstände quadratisch,
+1/√R addiert sich). Soll und Ist stehen im Flussschema nebeneinander;
+weichen sie stark ab, füllt ein Anschnitt vor.
+
+### Prüfregeln
+
+`js/runner/rules.js` prüft die Lehrbuchregeln über die WIRKLICHE
+Geometrie: Querschnitt nimmt ab, Summe der Abgänge, Anschnitt- und
+Kanalgeschwindigkeit, Seitenverhältnis, Krümmungsradius ≥ 2·d_h,
+Entformschräge, Füllbalance, Kanal gegen Anschnitt, Materialausbeute.
+Jede Meldung nennt Ort und Zahl — eine Meldung ohne Zahl hilft niemandem.
+Alle Beispiele sind ohne Beanstandung; `runner.test.mjs` prüft das.
+
+### Zwei Körper, und warum
+
+**Kanäle** (Sweep, `js/runner/sweep.js`) zieht das Profil entlang der
+Mittellinie: je Kante ein geschlossener Schlauch, exakt so bemaßt wie
+eingegeben, in Millisekunden fertig. An den Verzweigungen stecken die
+Schläuche nur ineinander — kein dichter Körper, keine Übergänge.
+
+**Verschmolzen** (`js/runner/sdf.js`) rechnet ein Abstandsfeld und zieht
+mit `js/part/surfacenets.js` — demselben Verfahren wie die
+Offsetflächen — die Nullfläche heraus. Jeder abgetastete Millimeter ist
+ein kurzes Prisma; die Prismen werden weich vereinigt:
+
+    smin(a, b, k) = min(a, b) − h²·k/4,   h = max(k − |a−b|, 0)/k
+
+Zwei Feinheiten entscheiden über brauchbar oder unbrauchbar:
+
+1. **Geblendet wird nur zwischen ZÜGEN** (Ketten von Kanten ohne
+   Gabelung), innerhalb eines Zuges scharf. Denn smin(a, a, k) ist
+   a − k/4, und bei hundert überlappenden Prismen eines geraden Kanals
+   läuft der Wert davon — gemessen +56 % Volumen bei k = 3 mm. Züge
+   treffen sich genau dort, wo der Übergang hingehört: an den
+   Verzweigungen und am Pressrest.
+2. **Weich vereinigt wird nur der KERN des Profils**; der Schnitt an der
+   Trennebene kommt zuletzt und scharf, mit der Ebene des nächstgelegenen
+   Kanals. Sonst zöge der Übergang den Körper über die Trennebene hinaus
+   (gemessene 1,2 mm bei 3 mm Übergang), und so ein Anguss passt in keine
+   Formhälfte. Der Hals wächst nach unten und zur Seite, nie nach oben.
+
+Nur der verschmolzene Körper ist geschlossen, und nur er kommt in die
+STL.
+
+### WebGPU
+
+Das Feld ist die einzige Stelle, die wirklich rechnet: für jeden
+Rasterpunkt der Abstand zu jedem Prisma in Reichweite. Auf der CPU sind
+das bei 0,8 mm Zellweite einige Sekunden — zu lang, um am Regler zu
+ziehen. Die Aufgabe ist die denkbar günstigste für eine Grafikkarte:
+Millionen Rasterpunkte, die nichts voneinander wissen, je Punkt dieselben
+zwei Dutzend Schritte. `js/runner/gpu.js` macht daraus einen
+Compute-Shader; ohne WebGPU (Firefox ohne Flag, Safari älter als 18,
+jeder Test unter Node) fällt alles auf `js/runner/sdf.js` zurück. Die
+Kennzahlen sagen, welcher Weg gelaufen ist.
+
+Der Shader ist eine **Handkopie** derselben Formel, und Node kann ihn
+nicht ausführen — keine Testsuite fängt ihn. Deshalb drei Vorkehrungen:
+
+- Übersetzungsfehler werden abgefragt (`getCompilationInfo`), die
+  Pipeline asynchron gebaut und Fehlerbereiche ausgewertet. WGSL meldet
+  nichts über Ausnahmen: ohne diese Abfragen bekommt man anstandslos ein
+  Feld aus lauter Nullen. Genau so ist es beim ersten Lauf im Browser
+  passiert (`meta` ist ein reserviertes Wort in WGSL).
+- Nach jeder Rechnung prüft `verifyField()` einige hundert Rasterpunkte
+  gegen `fieldAt()` — dieselbe Rechnung in JavaScript. Weicht etwas ab,
+  wird geworfen und auf der CPU weitergerechnet, statt still eine falsche
+  Geometrie zu liefern.
+- `runner.test.mjs` prüft `fieldAt()` Punkt für Punkt gegen den
+  Feldaufbau; damit hängen beide Wege an derselben Beschreibung.
+
+Alle Abkürzungen (Hüllkugeln je Zug und je Prisma) sind EXAKT: ein
+übersprungenes Prisma hätte den Wert nicht geändert. Deshalb liefern
+beide Wege dasselbe Feld — gemessen über alle Beispiele höchstens
+2·10⁻⁵ mm Unterschied (einfache gegen doppelte Genauigkeit), null
+Vorzeichenwechsel.
+
+### Freies Drehen
+
+Die OrbitControls drehen um eine feste Hochachse. Für ein Bauteil auf
+einem Raster ist das richtig, für einen Anguss hinderlich: er liegt in
+der Trennebene, die je nach Ausstoßrichtung überall liegen kann, und die
+Draufsicht auf sie ist genau der Pol, an dem eine Kugelsteuerung klemmt.
+`js/trackball.js` dreht deshalb mit Quaternionen um eine Achse in der
+Bildebene — kein Pol, keine Sperre. Gedreht wird um die aktuelle
+**Auswahl**: man dreht um den Punkt, an dem man arbeitet.
+
+### Dateien
+
+- **Angussdatei (JSON)** — der Graph selbst, mit Kennung und
+  Fassungsnummer. Laden und Speichern über die Knöpfe oder per
+  Ziehen-und-Ablegen; was für eine Datei es ist, entscheidet der Inhalt,
+  nicht die Endung.
+- **STL** — der verschmolzene Körper.
+- **Referenzbauteil (STL/GLB)** — wird nur durchscheinend dazugestellt,
+  damit die Anschnitte dorthin zeigen, wo sie hingehören; es wird nicht
+  gerechnet.
+
+
 ## Struktur
 
 ```
-index.html            Übersicht (Karten der vier Werkzeuge)
+index.html            Übersicht (Karten der Werkzeuge)
 form.html             Viewer 1: Formaufbau
 bauteilanalyse.html   Viewer 2: Bauteilanalyse
 offset.html           Viewer 3: Offsetflächen
 abstand.html          Viewer 4: Abstandsanalyse
+anguss.html           Viewer 5: Angussdesigner
 css/site.css          Übersichtsseite und Karten
-css/viewer.css        Seitenleiste und Viewport der vier Viewer
+css/viewer.css        Seitenleiste und Viewport aller Viewer
 assets/die.glb        DAS Formmodell — binäres glTF, vom Viewer geladen
 assets/parts/*.glb    die Beispielteile — ebenfalls fertiges glTF
 
@@ -309,6 +506,7 @@ js/registry.js        Baugruppen-Metadaten (id, Label, Seite, Farbe)
 js/diegeom.js         Geometrie der Form inkl. aller Negative — die Quelle des Modells
 js/components.js      Three.js-Adapter: Suppen → benannte Gruppen mit Materialien
 js/scene.js           Renderer, Kameras (Zentral + Parallel), Licht, Ansichten
+js/trackball.js       Quaternionen-Trackball: freies Drehen um einen Punkt
 js/clipcaps.js        Schnittebene mit geschlossenen Schnittflächen (Stencil)
 js/die.js             Einstieg Formaufbau-Viewer
 js/ui/nav.js          Kopfleiste — hält sich heraus, sobald /shared/nav.js da ist
@@ -331,6 +529,20 @@ js/part/colors.js     Farben der Analyse (aus der DieLogic-Palette)
 js/part/app.js        Einstieg Bauteilanalyse-Viewer
 js/part/offsetapp.js  Einstieg Offsetflächen-Viewer
 js/part/distanceapp.js Einstieg Abstandsanalyse-Viewer
+js/runner/vec.js      kleine Vektorrechnung (ohne Three.js, unter Node lauffähig)
+js/runner/graph.js    DAS Datenmodell: Knoten, Arbeitsebenen, Spiegelung, JSON
+js/runner/presets.js  Beispielsysteme (durch die Auslegung gelaufen)
+js/runner/profile.js  Trapezquerschnitt — als Umriss UND als Abstandsfunktion
+js/runner/curve.js    Hermite-Bögen, Abtastung nach Bogenlänge, Querschnitts-Fahrplan
+js/runner/sweep.js    Netz: Profil entlang der Mittellinie, Pressrest
+js/runner/sdf.js      Abstandsfeld, weiche Vereinigung, Schnitt an der Trennebene
+js/runner/gpu.js      dasselbe Feld als WebGPU-Compute-Shader (+ Stichprobe)
+js/runner/flow.js     Bernoulli-Verluste und Füllbalance
+js/runner/sizing.js   Querschnitte von den Anschnitten rückwärts abstufen
+js/runner/rules.js    gießtechnische Prüfregeln
+js/runner/chart.js    Flussschema als SVG
+js/runner/editor.js   Griffe im Viewport: auswählen, in der Ebene ziehen
+js/runner/app.js      Einstieg Angussdesigner
 vendor/three/         three.module.js 0.160, OrbitControls, GLTFLoader/-Exporter, LICENSE (MIT)
 vendor/utils/         BufferGeometryUtils, TextureUtils (von den Loadern gebraucht)
 ```
@@ -393,11 +605,22 @@ nichts. Die Dateien liegen unter `tests/web/3d-studio/`:
 | `distance.test.mjs` | Punkt-Netz-Abstand gegen Fläche, Kante, Ecke und Innenraum, Symmetrie, Unabhängigkeit von der Rasterweite, Verfeinern |
 | `die.test.mjs` | jede Baugruppe geschlossen und richtig orientiert, **kein Bauteil steckt im Stahl eines anderen**, Kavität als Negativ mit Spalt, Kernstift, Füllkammer |
 | `imports.test.mjs` | jeder Import löst auf, jeder exportierte Name existiert, jede angesprochene HTML-id ist vorhanden |
-| `viewer.test.mjs` | die Verdrahtung aller vier Viewer — mit einem winzigen DOM aus der **echten** HTML-Seite und dem echten Three.js ohne WebGL-Renderer (`tests/stubs/`) |
+| `runner.test.mjs` | der Angussdesigner ohne Browser: Profil (Umriss gegen Abstandsfunktion), Graph (Spiegelung, Löschen, JSON), Kurve (Bogenlänge, monotoner Querschnitt), Sweep (Volumen = Fläche × Länge, geschlossen), Feld (Übergang bläht nicht auf, Feldaufbau gegen Einzelpunkt-Fassung), Strömung, Regeln, Auslegung, Flussschema |
+| `viewer.test.mjs` | die Verdrahtung aller fünf Viewer — mit einem winzigen DOM aus der **echten** HTML-Seite und dem echten Three.js ohne WebGL-Renderer (`tests/stubs/`) |
 
 Der letzte Test ist der Ersatz für den Browser, den es in der
 Kommandozeile nicht gibt: er klickt Knöpfe, zieht Regler und prüft, dass
 Kamera, Farben, Legende und Kennzahlen wirklich reagieren.
+
+**Was er NICHT ersetzt, ist das Bild.** Ohne WebGL wird nichts
+gezeichnet, und dabei bleibt genau eine Klasse Fehler unsichtbar: die
+Kamera schaut in die falsche Richtung, das Modell liegt außerhalb des
+Sichtkegels, alle Kennzahlen stimmen — und der Viewport ist leer. Genau
+das ist beim Angussdesigner passiert (der Trackball richtete die Kamera
+nach `fitTo()` nicht neu aus). Nach Änderungen an Kamera, Steuerwerk
+oder Sichtbarkeit lohnt deshalb ein Blick in einen echten Browser;
+`renderer.info.render.triangles` sagt in einem Satz, ob überhaupt etwas
+gezeichnet wurde.
 
 ## Anbindung an das Projekt
 
@@ -405,6 +628,12 @@ Die vier Seiten rechnen rein clientseitig und tragen deshalb keine
 Projektleiste — ohne Konto funktionieren sie vollständig. Naheliegende
 Verknüpfungen, die noch nicht verdrahtet sind:
 
+- Der Angussdesigner rechnet mit Gussvolumen, Füllzeit und
+  Zielgeschwindigkeit am Anschnitt — dieselben Größen, die das
+  [Auslegungs-Dashboard](/tools/auslegung/) führt. Sie von dort zu
+  übernehmen und den errechneten Druckbedarf als Formwiderstand ins
+  PQ²-Diagramm zurückzugeben, wäre die naheliegendste Verbindung im
+  ganzen Studio.
 - `js/config.js` aus dem Projektabschnitt `design` speisen (Kolben-Ø ↔
   `sleeve.d`, Kammerlänge ↔ `sleeve.len`, Bauteil-/Anguss-Maße aus der
   Massenbilanz) und die GLB pro Projekt erzeugen — oder direkt eine

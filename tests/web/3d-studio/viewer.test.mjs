@@ -587,3 +587,85 @@ test('Abstandsseite: Skalengrenzen, Sichtbarkeit, Farbskala', async () => {
   assert.equal(s.stale, true, 'die Suchgrenze verlangt eine neue Rechnung');
   assert.ok(d5.getElementById('distance-state').textContent.includes('Suchgrenze'));
 });
+
+/* ── Angussdesigner ──────────────────────────────────────────────
+   Die Seite rechnet ohne Bestätigung: jeder Zug am Regler geht durch
+   die ganze Kette (Graph → Abtasten → Strömung → Netz). Nur das
+   Verschmelzen wartet auf den Knopf. Beides wird hier gedrückt. */
+test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Verschmelzen', async () => {
+  const { doc: d6 } = buildDocument(read('anguss.html'));
+  installGlobals(d6);
+  globalThis.location = { search: '', href: 'http://test/anguss.html' };
+  const mod = await import('../../../web/tools/3d-studio/js/runner/app.js');
+  const v = mod.__viewer;
+  assert.ok(v.state.ready, 'das Beispiel steht');
+
+  /* Ansichtsleiste und Punktmenü */
+  const bar = d6.getElementById('viewport').querySelector('.view-bar');
+  assert.equal(bar.querySelectorAll('[data-view]').length, 4);
+  assert.ok(d6.getElementById('add-point'), 'das Punktmenü liegt im Viewport');
+
+  /* Kennzahlen und Prüfliste sind gefüllt, das Beispiel ist sauber */
+  assert.match(d6.getElementById('graph-facts').innerHTML, /Anschnitte/);
+  assert.match(d6.getElementById('flow-facts').innerHTML, /Druckbedarf/);
+  assert.ok(v.state.rules.length >= 6, 'jede Regel meldet sich');
+  assert.deepEqual(v.state.rules.filter(r => r.level !== 'ok').map(r => r.title), [],
+    'das Beispiel verletzt keine Regel');
+
+  /* Ein Punkt hängt sich an — und das Netz wächst mit */
+  const before = Object.keys(v.state.graph.nodes).length;
+  const tail = v.state.graph.nodes[v.state.graph.rootId].children[0];
+  v.editor.select(tail);
+  assert.match(d6.getElementById('sel-title').innerHTML, /Punkt/);
+  d6.getElementById('add-point').dispatch('click');
+  assert.equal(Object.keys(v.state.graph.nodes).length, before + 1);
+  assert.equal(v.state.net.edges.length, before, 'eine Kante mehr');
+
+  /* … und verschwindet wieder */
+  d6.getElementById('del-node').dispatch('click');
+  assert.equal(Object.keys(v.state.graph.nodes).length, before);
+
+  /* Ein Anschnitt zeigt seine eigenen Felder */
+  const gate = Object.values(v.state.graph.nodes).find(n => n.type === 'gate');
+  v.editor.select(gate.id);
+  assert.ok(!d6.getElementById('gate-block').classList.contains('hidden'));
+  assert.ok(d6.getElementById('branch-block').classList.contains('hidden'));
+  assert.equal(d6.getElementById('sel-gw').disabled, true, 'automatische Breite ist gesperrt');
+
+  /* Regler wirken sofort */
+  const draft = d6.getElementById('draft');
+  const areaBefore = v.state.net.edges[0].sections[0].area;
+  draft.value = '12';
+  draft.dispatch('input');
+  assert.equal(v.state.graph.draft, 12);
+  assert.ok(v.state.net.edges[0].sections[0].area < areaBefore, 'mehr Schräge, weniger Fläche');
+
+  /* Ein anderes Beispiel */
+  const sel6 = d6.getElementById('demo-select');
+  sel6.value = 'vier';
+  sel6.dispatch('change');
+  assert.equal(Object.values(v.state.graph.nodes).filter(n => n.type === 'gate').length, 4);
+
+  /* Flussschema */
+  const chart = d6.getElementById('chart-on');
+  chart.checked = true;
+  chart.dispatch('change');
+  assert.ok(d6.getElementById('chart-panel').classList.contains('on'));
+  assert.match(d6.getElementById('chart-body').innerHTML, /^<svg /);
+
+  /* Verschmelzen — grob, sonst dauert es im Test zu lange. Node hat kein
+     WebGPU, es läuft also der Rückfall in js/runner/sdf.js. */
+  v.state.cell = 3;
+  v.state.blend = 2;
+  await v.runMerge();
+  assert.equal(v.state.mergeInfo.backend, 'cpu', 'ohne WebGPU rechnet die CPU');
+  assert.ok(v.state.merged.length > 900, 'es kommt ein Netz heraus');
+  assert.equal(v.state.mergeStale, false);
+  assert.match(d6.getElementById('merge-facts').innerHTML, /Prismen/);
+  assert.equal(v.state.show, 'merged', 'die Anzeige springt auf den verschmolzenen Körper');
+  assert.ok(v.mergedMesh.visible);
+
+  /* Speichern: Angussdatei und STL */
+  d6.getElementById('json-save').dispatch('click');
+  d6.getElementById('stl-save').dispatch('click');
+});
