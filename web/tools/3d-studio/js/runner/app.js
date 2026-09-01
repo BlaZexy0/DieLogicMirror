@@ -16,9 +16,8 @@ import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
 import { mountNav } from '../ui/nav.js';
 import {
-  $, fmt, fmtPlain, facts, segButtons, slider, numberInput, colorbar, gradient
+  $, fmt, fmtPlain, facts, segButtons, slider, numberInput
 } from '../ui/controls.js';
-import { ramp } from '../part/colors.js';
 import { parseSTL } from '../part/stlio.js';
 import { readGLB, isGLB } from '../part/glbio.js';
 import { volume } from '../mesh.js';
@@ -29,7 +28,7 @@ import * as F from './flow.js';
 import { checkRules } from './rules.js';
 import { autoTaper, DEFAULT_SIZING } from './sizing.js';
 import { DEMOS, demoTwoGates } from './presets.js';
-import { flowChart, FLOW_STOPS } from './chart.js';
+import { flowChart } from './chart.js';
 import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from './editor.js';
 import { mountAxes } from './axes.js';
 import { rotate, norm, cross, dot, sub, add } from './vec.js';
@@ -63,7 +62,7 @@ const state = {
   net: null, flow: null, rules: [],
   proc: { ...F.DEFAULT_PROCESS },
   sizing: { ...DEFAULT_SIZING },
-  show: 'sweep', color: 'plain',
+  show: 'sweep',
   name: 'Zwei Anschnitte', ready: false
 };
 
@@ -120,31 +119,16 @@ function rebuild() {
   updateFacts();
   updateRules();
   updateChart();
-  updateColorbar();
   updatePointMenu();
 }
 
-/* Farbe je Schnitt. Nach dem QUERSCHNITT — eng ist rot, weit ist ruhig
-   blau; es ist dieselbe Skala wie im Flussschema, dort für die
-   Geschwindigkeit. Die beiden sagen ohnehin fast dasselbe (v = Q/A), und
-   den Strom liest man im Schema Ast für Ast genauer ab, als eine
-   Einfärbung ihn je zeigen könnte. */
-function colorFn() {
-  if (state.color === 'plain') return null;
-  const aMax = Math.max(...state.net.edges.map(e => e.sections[0].area), 1);
-  return (e, i) => ramp(FLOW_STOPS, 1 - e.sections[i].area / aMax);
-}
-
 function updateRunner() {
-  const { tris, colors } = sweepRunner(state.net, colorFn());
   const geo = new T.BufferGeometry();
-  geo.setAttribute('position', new T.BufferAttribute(Float32Array.from(tris), 3));
-  if (colors) geo.setAttribute('color', new T.BufferAttribute(colors, 3));
+  geo.setAttribute('position',
+    new T.BufferAttribute(Float32Array.from(sweepRunner(state.net)), 3));
   geo.computeVertexNormals();
   runnerMesh.geometry.dispose();
   runnerMesh.geometry = geo;
-  runnerMat.vertexColors = !!colors;
-  runnerMat.needsUpdate = true;
   applyVisibility();
 }
 
@@ -206,17 +190,6 @@ function updateRules() {
 function updateChart() {
   if (!$('chart-on').checked) return;
   $('chart-body').innerHTML = flowChart(state.graph, state.net, state.flow, { width: 620 });
-}
-
-function updateColorbar() {
-  if (state.color === 'plain') return colorbar(null);
-  const css = t => 'rgb(' + ramp(FLOW_STOPS, t).map(v => Math.round(v * 255)).join(',') + ')';
-  const aMax = Math.max(...state.net.edges.map(e => e.sections[0].area), 1);
-  colorbar({
-    title: 'Querschnitt',
-    stops: gradient(css),
-    ticks: [0, 0.25, 0.5, 0.75, 1].map(t => fmt(aMax * t, 0) + ' mm²')
-  });
 }
 
 /* ── Auswahl ─────────────────────────────────────────────────── */
@@ -513,12 +486,7 @@ numberInput('vgate', v => {
 slider('cbranch', v => { state.proc.cBranch = v / 100; rebuild(); }, v => fmt(v / 100, 2));
 
 /* ── Darstellung ─────────────────────────────────────────────── */
-segButtons('show-seg', v => {
-  state.show = v;
-  applyVisibility();
-  updateColorbar();
-});
-segButtons('color-seg', v => { state.color = v; updateRunner(); updateColorbar(); });
+segButtons('show-seg', v => { state.show = v; applyVisibility(); });
 for (const id of ['show-biscuit', 'show-line']) {
   $(id).addEventListener('change', applyVisibility);
 }
@@ -569,7 +537,8 @@ $('ref-clear').addEventListener('click', () => {
   refMesh.visible = false;
   refMesh.geometry.dispose();
   refMesh.geometry = new T.BufferGeometry();
-  $('ref-note').textContent = 'Kein Referenzbauteil geladen.';
+  $('ref-file').classList.add('hidden');
+  $('ref-input').value = '';
 });
 
 /* Was für eine Datei das ist, entscheidet der INHALT, nicht die Endung:
@@ -621,18 +590,15 @@ function loadReference(buffer, name) {
   refMesh.visible = true;
 
   const cm3 = Math.abs(volume(tris)) / 1000;
-  let note = name + ' · ' + fmt(tris.length / 9, 0) + ' Dreiecke';
   if (cm3 >= 0.01 && cm3 <= 1e5) {
     state.proc.volume = Math.round(cm3 * 10) / 10;
     $('vol').value = fmtPlain(state.proc.volume, 1);
     rebuild();
-    note += ' · Volumen ' + fmt(cm3) + ' cm³ — als Gussvolumen übernommen'
-      + ' (ohne Überläufe; im Feld aufschlagen).';
+    $('ref-note').textContent = name + ' · ' + fmt(cm3) + ' cm³';
   } else {
-    note += ' — das Volumen ist nicht brauchbar (offenes oder überlappendes'
-      + ' Netz); das Gussvolumen bleibt, wie es eingestellt ist.';
+    $('ref-note').textContent = name + ' · Volumen unbrauchbar (offenes Netz)';
   }
-  $('ref-note').textContent = note;
+  $('ref-file').classList.remove('hidden');
 }
 
 for (const ev of ['dragenter', 'dragover']) {

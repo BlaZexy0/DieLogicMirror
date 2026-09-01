@@ -314,20 +314,12 @@ const openEdges = tris => {
 test('Sweep: konstanter Querschnitt ergibt genau Fläche × Länge', () => {
   const g = straight(100, 20, 10);
   const net = sampleNetwork(g);
-  const { tris } = sweepRunner(net);
+  const tris = sweepRunner(net);
   const a = P.area(P.section(20, 10, g.draft, g.radius));
   assert.ok(Math.abs(volume(tris) - a * 100) < 1e-6 * a * 100,
     `Volumen ${volume(tris).toFixed(3)} gegen ${(a * 100).toFixed(3)}`);
   assert.ok(volume(tris) > 0, 'die Normalen zeigen nach außen');
   assert.equal(openEdges(tris), 0, 'jeder Schlauch ist für sich geschlossen');
-});
-
-test('Sweep: Farben laufen Punkt für Punkt mit', () => {
-  const net = sampleNetwork(straight(40));
-  const { tris, colors } = sweepRunner(net, () => [0.25, 0.5, 0.75]);
-  assert.equal(colors.length, tris.length);
-  assert.ok(Array.from(colors.slice(0, 9)).every((v, i) => Math.abs(v - [0.25, 0.5, 0.75][i % 3]) < 1e-6));
-  assert.equal(sweepRunner(net).colors, null, 'ohne Farbfunktion keine Farben');
 });
 
 test('Pressrest: Zylinder wächst ENTGEGEN der Ausstoßrichtung', () => {

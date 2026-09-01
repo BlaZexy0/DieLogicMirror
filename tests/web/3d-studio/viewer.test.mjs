@@ -703,7 +703,8 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.notEqual(v.state.proc.volume, volVorher);
   assert.ok(Math.abs(v.state.proc.volume - 1000) < 0.2, 'Volumen ' + v.state.proc.volume + ' cm³');
   assert.equal(d6.getElementById('vol').value, '1000', 'ohne Tausenderpunkt — sonst liest es sich falsch zurück');
-  assert.match(d6.getElementById('ref-note').textContent, /Gussvolumen übernommen/);
+  assert.match(d6.getElementById('ref-note').textContent, /bauteil\.stl · 1\.000 cm³/);
+  assert.ok(!d6.getElementById('ref-file').classList.contains('hidden'));
   assert.ok(v.refMesh.visible);
   /* Und die Kette hängt daran: mehr Volumen, mehr Strom. */
   assert.ok(v.state.flow.Q > 0);
@@ -714,7 +715,12 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   refIn.dispatch('change');
   await new Promise(r => setTimeout(r, 80));
   assert.ok(Math.abs(v.state.proc.volume - 1000) < 0.2, 'das gute Volumen bleibt stehen');
-  assert.match(d6.getElementById('ref-note').textContent, /nicht brauchbar/);
+  assert.match(d6.getElementById('ref-note').textContent, /unbrauchbar/);
+
+  /* Das × nimmt es wieder weg. */
+  d6.getElementById('ref-clear').dispatch('click');
+  assert.ok(d6.getElementById('ref-file').classList.contains('hidden'));
+  assert.ok(!v.refMesh.visible);
 
   /* Achsenkreuz: es hängt an scene.onBeforeRender, das ohne WebGL
      niemand ruft — hier von Hand. Nach dem Schwenk auf X zeigt die

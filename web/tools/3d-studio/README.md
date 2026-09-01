@@ -450,8 +450,8 @@ Ausstoßrichtung.
 Die Seitenleiste behält, was für das GANZE System gilt, von oben nach
 unten in der Reihenfolge, in der man es braucht: Beispiel und Dateien,
 Referenzbauteil (es liefert das Gussvolumen, also gleich nach oben),
-Kanalform, Prozess, Darstellung — und ganz unten die Prüfliste, die das
-Ergebnis von allem beurteilt.
+Kanalform, Prozess, Darstellung, Angussdatei — und ganz unten die
+Prüfliste, die das Ergebnis von allem beurteilt.
 
 Die **Kennzahlen** des Systems stehen beim Flussschema, als Streifen unter
 seinem Kopf: Punkte, Anschnitte, Lauflänge, Angussvolumen, Volumenstrom,
@@ -461,11 +461,11 @@ an den Ästen selbst. Sie daneben noch einmal als Summe zu setzen hieße
 dieselbe Sache zweimal zu sagen und dabei die interessante Hälfte
 wegzulassen: welcher Ast?
 
-Aus demselben Grund färbt der Körper im Viewport nur noch wahlweise nach
-dem **Querschnitt** ein. Eine Einfärbung nach der Geschwindigkeit gab es
-auch — sie sagt aber fast dasselbe (v = Q/A), und das Schema liest den
-Strom Ast für Ast mit Zahlen ab, wo die Einfärbung nur einen Farbton
-liefert.
+Aus demselben Grund ist der Körper im Viewport einfarbig. Es gab
+Einfärbungen nach Geschwindigkeit und nach Querschnitt; beide sagen
+dasselbe (v = Q/A) und beide sagen es ungenauer als das Schema, das
+neben jeden Ast die Zahl schreibt. Ein Farbton, den man an einer Skala
+ablesen muss, ist kein Ersatz für „207 mm² · 22,5 m/s".
 
 Unten rechts stehen übereinander das Flussschema, die Farbskala und die
 Legende der Punktarten — auf den übrigen Seiten des Studios sitzt die
@@ -490,9 +490,9 @@ die Griffe, nicht das Netz.
 ### Dateien
 
 - **Angussdatei (JSON)** — der Graph selbst, mit Kennung und
-  Fassungsnummer. Laden und Speichern über die Knöpfe oder per
-  Ziehen-und-Ablegen; was für eine Datei es ist, entscheidet der Inhalt,
-  nicht die Endung.
+  Fassungsnummer. Laden und Speichern über die beiden Knöpfe am unteren
+  Ende der Seitenleiste oder per Ziehen-und-Ablegen über dem Viewport;
+  was für eine Datei es ist, entscheidet der Inhalt, nicht die Endung.
 - **Referenzbauteil (STL/GLB)** — wird durchscheinend dazugestellt, damit
   die Anschnitte dorthin zeigen, wo sie hingehören. Sein **Volumen wird
   als Gussvolumen übernommen**: das ist die Zahl, aus der über die
@@ -501,7 +501,10 @@ die Griffe, nicht das Netz.
   daneben liegt, ist eine Fehlerquelle ohne Gewinn. Überläufe sind darin
   nicht enthalten — wer sie mitrechnen will, schlägt sie im Feld auf. Ist
   das Netz offen oder überlappend und das Volumen damit unbrauchbar,
-  bleibt die Einstellung stehen und die Seite sagt, warum.
+  bleibt die Einstellung stehen und die Seite sagt, warum. Die geladene
+  Datei steht mit Namen und Volumen in einer Zeile, mit einem × zum
+  Wegnehmen — die Zahl der Dreiecke interessiert hier niemanden, das ist
+  die Frage der Bauteilanalyse.
 
 
 ## Struktur

@@ -232,6 +232,22 @@ select {
 .btn-pair { display: flex; gap: 6px; margin-top: 6px; }
 .btn-pair .btn { flex: 1; justify-content: center; }
 
+/* Die geladene Datei mit einem × zum Wegnehmen — ein eigener Knopf
+   „entfernen" darunter kostete eine Zeile und sagte nicht, WAS er
+   entfernt. */
+.loaded-file {
+  display: flex; align-items: center; gap: 8px; margin-top: 7px;
+  padding: 5px 6px 5px 9px; font-size: .79rem; color: var(--text-body);
+  background: var(--surface2); border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+}
+.loaded-file span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.loaded-file button {
+  border: none; background: none; cursor: pointer; padding: 0 3px;
+  font-size: 1.05rem; line-height: 1; color: var(--muted);
+}
+.loaded-file button:hover { color: var(--bad); }
+
 /* Drei Koordinaten in einer Zeile — X, Y, Z gehören zusammen und sollen
    nicht drei Zeilen Seitenleiste kosten. */
 .triple { display: flex; gap: 4px; flex: 1; min-width: 0; }

@@ -44,33 +44,20 @@ const tri = (out, a, ai, b, bi, c, ci) => {
     c[ci * 3], c[ci * 3 + 1], c[ci * 3 + 2]);
 };
 
-/* Farben laufen in derselben Reihenfolge mit wie die Punkte — je Dreieck
-   drei Farben. Sie ZUSAMMEN mit den Punkten zu schreiben ist der einzige
-   Weg, der nicht auseinanderlaufen kann; zwei getrennte Durchläufe wären
-   ein Fehler, der beim ersten geänderten Dreieck unsichtbar zuschlägt. */
-const col3 = (out, a, b, c) => {
-  if (!out) return;
-  out.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
-};
-
 /* Der Umriss läuft im Profil gegen den Uhrzeigersinn; mit v = −n zeigt
    seine Flächennormale entgegen der Laufrichtung. Damit die Mantelnormalen
    nach AUSSEN zeigen, muss das Viereck andersherum umlaufen als der Ring —
    die Deckel entsprechend (Anfang mit dem Ring, Ende dagegen). */
-function shell(sections, out, cols, colorFn, edge) {
+function shell(sections, out) {
   let a = ringPoints(sections[0]);
-  let ca = colorFn ? colorFn(edge, 0) : null;
   for (let k = 1; k < sections.length; k++) {
     const b = ringPoints(sections[k]);
-    const cb = colorFn ? colorFn(edge, k) : null;
     for (let i = 0; i < POINTS; i++) {
       const j = (i + 1) % POINTS;
       tri(out, a, i, b, i, b, j);
-      col3(cols, ca, cb, cb);
       tri(out, a, i, b, j, a, j);
-      col3(cols, ca, cb, ca);
     }
-    a = b; ca = cb;
+    a = b;
   }
 }
 
@@ -81,14 +68,13 @@ const centroid = r => {
 };
 
 /** Ebener Deckel: Fächer vom Schwerpunkt auf den Umriss. */
-function cap(sections, index, atEnd, out, cols, color) {
+function cap(sections, index, atEnd, out) {
   const r = ringPoints(sections[index]);
   const cc = centroid(r);
   for (let i = 0; i < POINTS; i++) {
     const j = (i + 1) % POINTS;
     if (atEnd) tri(out, cc, 0, r, j, r, i);
     else tri(out, cc, 0, r, i, r, j);
-    col3(cols, color, color, color);
   }
 }
 
@@ -99,7 +85,7 @@ const DOME_RINGS = 4;
     einen Punkt und wandert dabei in Laufrichtung vor. Die Höhe ist das
     kleinere der beiden Profilmaße — so bleibt die Kuppe im Verhältnis
     zum Kanal und wächst einem flachen Kanal nicht davon. */
-function domeCap(sections, index, atEnd, out, cols, color) {
+function domeCap(sections, index, atEnd, out) {
   const sec = sections[index];
   const base = ringPoints(sec);
   const c = centroid(base);
@@ -124,8 +110,6 @@ function domeCap(sections, index, atEnd, out, cols, color) {
       const j = (i + 1) % POINTS;
       if (atEnd) { tri(out, a, i, b, i, b, j); tri(out, a, i, b, j, a, j); }
       else { tri(out, a, i, b, j, b, i); tri(out, a, i, a, j, b, j); }
-      col3(cols, color, color, color);
-      col3(cols, color, color, color);
     }
     a = b;
   }
@@ -138,31 +122,23 @@ function domeCap(sections, index, atEnd, out, cols, color) {
     const j = (i + 1) % POINTS;
     if (atEnd) tri(out, apex, 0, a, j, a, i);
     else tri(out, apex, 0, a, i, a, j);
-    col3(cols, color, color, color);
   }
 }
 
-/**
- * Alle Kanäle als Dreieckssuppe (ohne Pressrest).
- * `colorFn(kante, schnittIndex)` liefert wahlweise eine Farbe je Schnitt
- * als [r, g, b] in 0…1; ohne sie bleibt `colors` null.
- */
 /* Eine Gabelung ist ein Knoten mit mehr als einem Abgang. */
 const isJunction = n => n.children.length > 1;
 
-export function sweepRunner(net, colorFn = null) {
+/** Alle Kanäle als Dreieckssuppe (ohne Pressrest). */
+export function sweepRunner(net) {
   const out = [];
-  const cols = colorFn ? [] : null;
   for (const e of net.edges) {
     if (e.sections.length < 2) continue;
     const last = e.sections.length - 1;
-    shell(e.sections, out, cols, colorFn, e);
-    const c0 = colorFn ? colorFn(e, 0) : null;
-    const c1 = colorFn ? colorFn(e, last) : null;
-    (isJunction(e.from) ? domeCap : cap)(e.sections, 0, false, out, cols, c0);
-    (isJunction(e.to) ? domeCap : cap)(e.sections, last, true, out, cols, c1);
+    shell(e.sections, out);
+    (isJunction(e.from) ? domeCap : cap)(e.sections, 0, false, out);
+    (isJunction(e.to) ? domeCap : cap)(e.sections, last, true, out);
   }
-  return { tris: Float64Array.from(out), colors: cols ? Float32Array.from(cols) : null };
+  return Float64Array.from(out);
 }
 
 /** Der Pressrest: Zylinder, dessen Dicke ENTGEGEN der Ausstoßrichtung
