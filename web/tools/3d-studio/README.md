@@ -485,9 +485,11 @@ einen Feld oben links. Vorher lag die Hälfte davon in der Seitenleiste, und
 der Blick sprang beim Bearbeiten eines Punktes zwischen zwei Orten hin und
 her.
 
-Die Seitenleiste behält, was für das GANZE System gilt: Beispiel und
-Dateien, Pressrest, Kanalform, Prozess, Prüfliste, Darstellung,
-Referenzbauteil, Verschmelzen und Export.
+Die Seitenleiste behält, was für das GANZE System gilt, von oben nach
+unten in der Reihenfolge, in der man es braucht: Beispiel und Dateien,
+Referenzbauteil (es liefert das Gussvolumen, also gleich nach oben),
+Pressrest, Kanalform, Prozess, Darstellung, Verschmelzen und Export —
+und ganz unten die Prüfliste, die das Ergebnis von allem beurteilt.
 
 Die **Kennzahlen** des Systems stehen beim Flussschema, als Streifen unter
 seinem Kopf: Punkte, Anschnitte, Lauflänge, Angussvolumen, Volumenstrom,
@@ -496,6 +498,12 @@ Anschnittfläche, Geschwindigkeit und die Aufteilung soll/ist hängen im Bild
 an den Ästen selbst. Sie daneben noch einmal als Summe zu setzen hieße
 dieselbe Sache zweimal zu sagen und dabei die interessante Hälfte
 wegzulassen: welcher Ast?
+
+Aus demselben Grund färbt der Körper im Viewport nur noch wahlweise nach
+dem **Querschnitt** ein. Eine Einfärbung nach der Geschwindigkeit gab es
+auch — sie sagt aber fast dasselbe (v = Q/A), und das Schema liest den
+Strom Ast für Ast mit Zahlen ab, wo die Einfärbung nur einen Farbton
+liefert.
 
 Unten rechts stehen übereinander das Flussschema, die Farbskala und die
 Legende der Punktarten — auf den übrigen Seiten des Studios sitzt die

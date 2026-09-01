@@ -36,7 +36,7 @@ import * as F from './flow.js';
 import { checkRules } from './rules.js';
 import { autoTaper, DEFAULT_SIZING } from './sizing.js';
 import { DEMOS, demoTwoGates } from './presets.js';
-import { flowChart, SPEED_STOPS } from './chart.js';
+import { flowChart, FLOW_STOPS } from './chart.js';
 import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from './editor.js';
 import { mountAxes } from './axes.js';
 import { rotate, norm, cross, dot, sub, add } from './vec.js';
@@ -148,19 +148,15 @@ function rebuild() {
   updatePointMenu();
 }
 
-/* Farbe je Schnitt — dieselbe Skala wie im Flussschema. */
+/* Farbe je Schnitt. Nach dem QUERSCHNITT — eng ist rot, weit ist ruhig
+   blau; es ist dieselbe Skala wie im Flussschema, dort für die
+   Geschwindigkeit. Die beiden sagen ohnehin fast dasselbe (v = Q/A), und
+   den Strom liest man im Schema Ast für Ast genauer ab, als eine
+   Einfärbung ihn je zeigen könnte. */
 function colorFn() {
   if (state.color === 'plain') return null;
-  if (state.color === 'speed') {
-    const vMax = Math.max(...state.flow.gates.map(r => r.v), 1);
-    return (e, i) => {
-      const l = state.flow.losses.get(e.toId);
-      const q = l ? l.Q : 0;
-      return ramp(SPEED_STOPS, (q / (e.sections[i].area * 1e-6)) / vMax);
-    };
-  }
   const aMax = Math.max(...state.net.edges.map(e => e.sections[0].area), 1);
-  return (e, i) => ramp(SPEED_STOPS, 1 - e.sections[i].area / aMax);
+  return (e, i) => ramp(FLOW_STOPS, 1 - e.sections[i].area / aMax);
 }
 
 function updateRunner() {
@@ -239,15 +235,7 @@ function updateChart() {
 
 function updateColorbar() {
   if (state.color === 'plain' || state.show === 'merged') return colorbar(null);
-  const css = t => 'rgb(' + ramp(SPEED_STOPS, t).map(v => Math.round(v * 255)).join(',') + ')';
-  if (state.color === 'speed') {
-    const vMax = Math.max(...state.flow.gates.map(r => r.v), 1);
-    return colorbar({
-      title: 'Geschwindigkeit',
-      stops: gradient(css),
-      ticks: [1, 0.75, 0.5, 0.25, 0].map(t => fmt(vMax * t, 0) + ' m/s')
-    });
-  }
+  const css = t => 'rgb(' + ramp(FLOW_STOPS, t).map(v => Math.round(v * 255)).join(',') + ')';
   const aMax = Math.max(...state.net.edges.map(e => e.sections[0].area), 1);
   colorbar({
     title: 'Querschnitt',

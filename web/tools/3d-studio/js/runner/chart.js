@@ -19,11 +19,14 @@
 import * as G from './graph.js';
 import { ramp } from '../part/colors.js';
 
-/* Geschwindigkeit: ruhig (Hausfarbe) → schnell (Gold) → zu schnell (Rot). */
+/* Die gemeinsame Skala des Werkzeugs: ruhig und weit (Hausblau) → schnell
+   und eng (Rot). Das Schema färbt damit die Geschwindigkeit, der Viewport
+   den Querschnitt — beides ist dieselbe Aussage von zwei Seiten (v = Q/A),
+   und zwei verschiedene Farbverläufe dafür wären eine Falle. */
 const V_STOPS = ['#2e6da4', '#3fc2b6', '#d4a908', '#b42318'];
 const css = rgb => 'rgb(' + rgb.map(v => Math.round(v * 255)).join(',') + ')';
 export const speedColor = (v, vMax) => css(ramp(V_STOPS, v / Math.max(vMax, 1e-6)));
-export const SPEED_STOPS = V_STOPS;
+export const FLOW_STOPS = V_STOPS;
 
 const fmt = (v, n = 1) => v.toLocaleString('de-DE', { maximumFractionDigits: n });
 
