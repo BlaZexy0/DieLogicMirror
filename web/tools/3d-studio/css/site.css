@@ -65,6 +65,9 @@
   width: 46px; height: 46px; border-radius: 11px; margin-bottom: 1.1rem;
   display: flex; align-items: center; justify-content: center; background: rgba(0,140,130,.15);
 }
+/* Wozu die Karte gehört — Verstehen, Analysieren, Entwerfen — als kleine
+   Zeile über dem Namen; dieselben drei Worte wie im Weg durch das Studio. */
+.tool-tag { font-size: .68rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--primary-light); margin-bottom: .3rem; }
 .tool-card h3 { color: #fff; font-size: 1.12rem; font-weight: 700; margin-bottom: .5rem; }
 .tool-card p { font-size: .86rem; color: var(--ondark); line-height: 1.62; margin-bottom: .8rem; }
 .tool-card ul { list-style: none; margin: 0 0 1.1rem; }
@@ -73,6 +76,10 @@
 }
 .tool-card li::before { content: '·'; position: absolute; left: .35rem; color: var(--primary-light); font-weight: 700; }
 .tool-card .card-btns { display: flex; gap: .5rem; margin-top: auto; flex-wrap: wrap; }
+/* Der zweite Knopf einer Karte (ein Beispiel) ist auf dem dunklen Grund
+   sonst dunkel auf dunkel — hier hell umrandet. */
+.tool-card .btn-ghost { color: var(--ondark); border: 1px solid rgba(255,255,255,.28); background: transparent; }
+.tool-card .btn-ghost:hover { color: #fff; border-color: var(--primary-light); background: rgba(0,140,130,.16); }
 
 /* ── Schritte ──────────────────────────────────────────────── */
 .how-section { padding: 4.5rem 2rem; background: var(--bg); }
@@ -87,6 +94,8 @@
 .step-num { font-size: .7rem; font-weight: 700; color: var(--primary); letter-spacing: .08em; text-transform: uppercase; margin-bottom: .4rem; }
 .step h3 { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .5rem; }
 .step p { font-size: .86rem; color: var(--muted); line-height: 1.65; }
+.step p a { color: var(--primary-deep); font-weight: 600; text-decoration: none; border-bottom: 1px solid rgba(0,140,130,.35); }
+.step p a:hover { color: var(--primary); border-bottom-color: var(--primary); }
 
 /* ── Hinweiskasten + Fußzeile ──────────────────────────────── */
 .note-section { padding: 0 2rem 4rem; background: var(--bg); }

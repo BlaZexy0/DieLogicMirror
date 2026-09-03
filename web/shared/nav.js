@@ -62,6 +62,7 @@
       { label: 'Offsetflächen', href: '/tools/3d-studio/offset.html' },
       { label: 'Abstandsanalyse', href: '/tools/3d-studio/abstand.html' },
       { label: 'Angussdesigner', href: '/tools/3d-studio/anguss.html' },
+      { label: 'Luftbohnen', href: '/tools/3d-studio/luft.html' },
     ] },
     { label: 'Theorie', children: [
       { label: 'Das PQ²-Diagramm', href: '/theorie/pq2.html' },
