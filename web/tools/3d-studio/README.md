@@ -339,7 +339,16 @@ wartet — aber drei Dinge sorgen dafür, dass es sich auch so anfühlt:
 | türkis | **Punkt** | Stützpunkt des Laufkanals mit eigenem Querschnitt. |
 | gold | **Verzweigung** | Gabelung mit Aufteilung (50:50 …) und wahlweise erzwungener Spiegelsymmetrie. |
 | violett | **Spiegelpunkt** | dasselbe fest auf 50:50, aber nur EIN Ast wird bearbeitet — der andere entsteht. |
-| orange | **Anschnitt** | Endpunkt mit Höhe, Länge, Breite und der Art des Übergangs. Seine Mündung lässt sich ans Referenzbauteil binden (siehe unten). |
+| orange | **Anschnitt** | Endpunkt mit Höhe, Tiefe (in Fließrichtung), Breite und der Art des Übergangs. Seine Mündung lässt sich ans Referenzbauteil binden (siehe unten). |
+
+Die **Anschnitthöhe** — die dünnste Stelle des ganzen Systems — steht
+einmal unter „Kanalform" als Vorgabe und gilt für jeden Anschnitt, dem
+im Auswahlfeld keine eigene Höhe gegeben wurde (`gate.hAuto`); ein
+eigener Wert nimmt ihn aus der Vorgabe heraus, der Wert steht dann
+kräftig statt blass im Feld. Sie zehnmal einzutippen war Arbeit ohne
+Gewinn. Die **Anschnitttiefe** ist die Strecke in Fließrichtung mit
+unverändertem Querschnitt (der Steg); sie hieß „Anschnittlänge", und
+das ließ sich als Breite lesen.
 
 ### Mündung ans Bauteil
 
@@ -370,15 +379,14 @@ neuen Klick auf den Pfeil — einen Knopf zum Lösen gibt es nicht, weil es
 nichts zu lösen gibt, was man nicht durch Neusetzen besser täte. Ohne
 geladenes Bauteil sagt der Klick auf den Pfeil, was fehlt.
 
-**In der Trennebene.** Ein Anschnitt liegt in der Trennebene (genauer: in
-seiner Arbeitsebene) und kann nur in ihr ins Bauteil münden. Trifft der
-Klick eine aufrechte Wand — Normale höchstens 30° aus der Ebene —, wird
-der Treffer deshalb in die Ebene gelegt: die Richtung verliert ihren Anteil
-aus der Ebene heraus (die Entformschräge der Bauteilwand kippt den
-Anschnitt nicht aus der Trennebene), und der Ort rückt dorthin, wo die
-Wand die Ebene schneidet, nicht dorthin, wo man 40 mm darüber hingeklickt
-hat: erst auf die Ebene projiziert, dann per Strahl in der Ebene auf die
-Wand. Ein Treffer auf einer Fläche, die in der Ebene liegt (Deckfläche),
+**Der Ort ist der geklickte Punkt** — auch in der Höhe. Liegt er über
+oder unter der Arbeitsebene, wird die Kante davor zur Rampe; so setzt man
+die Tiefe eines Anschnitts am Bauteil, nicht am Regler. (Ihn in die Ebene
+zu legen lag nahe und war falsch: dann ließ sich die Tiefe gar nicht mehr
+setzen.) Nur die **Richtung** wird in die Arbeitsebene gelegt, wenn die
+Wand aufrecht steht — Normale höchstens 30° aus der Ebene —, denn die
+Entformschräge der Bauteilwand soll den Anschnitt nicht um zwei Grad
+kippen. Ein Treffer auf einer Fläche, die in der Ebene liegt (Deckfläche),
 bleibt roh; die Prüfliste meldet dann **„Mündung aus der Trennebene"** mit
 dem Winkel — so ein Anschnitt ist in einer zweiteiligen Form nicht zu
 bauen. Die Kennzahlen sagen es ebenfalls („−Y · gebunden, 90° aus der
@@ -431,7 +439,7 @@ als Umriss mit fester Punktzahl (für den Sweep) und als
 Abstandsfunktion; die Tests prüfen sie gegeneinander.
 
 Vor einem Anschnitt zerfällt die Kante in Laufkanal, Übergang und
-Anschnittlänge; welcher Anteil auf den Übergang entfällt, sagt seine Art.
+Anschnitttiefe; welcher Anteil auf den Übergang entfällt, sagt seine Art.
 Nimmt er die ganze Länge ein („über die ganze Länge", Fächer), gibt es
 keinen Laufkanalabschnitt mehr — dann führt der Übergang unmittelbar vom
 Zulaufquerschnitt zum Anschnitt. Vorher begann die Kante in diesem Fall
@@ -584,7 +592,10 @@ gelesen.
 Das **Flussschema** öffnet der große Knopf rechts unten im Viewport und
 füllt dann den ganzen Viewport — ein Kasten in der Ecke zeigte ein System
 mit sechs Anschnitten als Briefmarke; jetzt wächst das SVG mit der Fläche,
-Schrift eingeschlossen. Esc oder das × schließen es. Die **Kennzahlen**
+Schrift eingeschlossen. Esc oder das × schließen es. Die Bänder sind
+geschwungen (kubische Bögen mit waagerechten Tangenten an den Knoten):
+jeder Ast verlässt seine Gabelung sanft, wie die Schmelze es tut, und die
+Bänder liegen an den Knoten bündig übereinander. Die **Kennzahlen**
 des Systems stehen dort als Streifen unter dem Kopf: Punkte, Anschnitte,
 Lauflänge, Angussvolumen, Volumenstrom, Druckbedarf, Ankunft der Schmelze
 (erster bis letzter Anschnitt). Dort steht nur, was das Schema nicht
@@ -593,6 +604,10 @@ Anschnittfläche, Geschwindigkeit und die Aufteilung soll/ist hängen im Bild
 an den Ästen selbst. Sie daneben noch einmal als Summe zu setzen hieße
 dieselbe Sache zweimal zu sagen und dabei die interessante Hälfte
 wegzulassen: welcher Ast?
+
+Der Pressrest ist deckend wie die Kanäle — durchscheinend sah er aus wie
+etwas, das noch nicht entschieden ist. Das Achsenkreuz oben rechts hat
+keinen Kasten: es ist eine Marke im Bild, kein Bedienfeld.
 
 Aus demselben Grund ist der Körper im Viewport einfarbig. Es gab
 Einfärbungen nach Geschwindigkeit und nach Querschnitt; beide sagen

@@ -104,18 +104,46 @@ export function flowChart(g, net, flow, opts = {}) {
     const t1 = thick(a.area) / 2, t2 = thick(b.area) / 2;
     const l = flow.losses.get(e.toId) || { vIn: 0, vOut: 0 };
     const col = speedColor((l.vIn + l.vOut) / 2, vMax);
-    parts.push('<path d="M' + x1 + ' ' + (y1 - t1) + ' L' + x2 + ' ' + (y2 - t2)
-      + ' L' + x2 + ' ' + (y2 + t2) + ' L' + x1 + ' ' + (y1 + t1) + ' Z" fill="' + col
-      + '" fill-opacity=".85" stroke="' + col + '" stroke-width=".8"/>');
+    /* Geschwungen statt gerade: beide Kanten des Bandes sind kubische
+       Bögen mit waagerechten Tangenten an den Knoten — so verlässt jeder
+       Ast seine Gabelung sanft, wie die Schmelze es tut, und die Bänder
+       liegen an den Knoten bündig übereinander. Die Mitte des Bogens
+       liegt genau auf der halben Strecke, die Beschriftung darf also
+       bleiben, wo sie war. */
+    const cx = (x1 + x2) / 2;
+    const bez = (ya, yb) => 'C' + cx + ' ' + ya + ' ' + cx + ' ' + yb + ' ';
+    parts.push('<path d="M' + x1 + ' ' + (y1 - t1) + ' ' + bez(y1 - t1, y2 - t2) + x2 + ' ' + (y2 - t2)
+      + ' L' + x2 + ' ' + (y2 + t2) + ' ' + bez(y2 + t2, y1 + t1) + x1 + ' ' + (y1 + t1)
+      + ' Z" fill="' + col + '" fill-opacity=".85" stroke="' + col + '" stroke-width=".8" stroke-linejoin="round"/>');
     /* Die Kante ZUM Anschnitt bekommt keine eigene Beschriftung: Fläche
        und Geschwindigkeit stehen rechts neben dem Anschnitt, und die
        kurzen Anschnittwege liegen sonst übereinander. */
     if (e.to.type === 'gate') continue;
-    const mx = (x1 + x2) / 2;
-    const my = (y1 + y2) / 2 - Math.max(t1, t2) - 5;
+    /* Die Beschriftung sitzt über dem Band — bei einem Ast, der die
+       Zeile wechselt, nicht in der steilen Mitte des Bogens (dort deckte
+       das Band sie zu), sondern dort, wo der Bogen wieder flach in den
+       nächsten Knoten einläuft (B(¾) des kubischen Bogens), rechtsbündig
+       davor: links davon steigt das Band noch, rechts davon beginnt die
+       Beschriftung des nächsten Abschnitts. Ein Ast nach unten wird UNTER
+       seinem Band beschriftet — über ihm liegt der Ast nach oben. */
+    const branching = Math.abs(y2 - y1) > Math.max(t1, t2);
     const label = fmt(b.area, 0) + ' mm² · ' + fmt(l.vOut) + ' m/s';
-    if (Math.abs(x2 - x1) > 34 && fits(mx, my, label.length * 6.1)) {
-      parts.push('<text class="cl" x="' + mx + '" y="' + my + '" text-anchor="middle">' + label + '</text>');
+    const lw = label.length * 6.1;
+    let mx, my, anchor;
+    if (branching) {
+      const xq = 0.015625 * x1 + 0.5625 * cx + 0.421875 * x2;
+      const yq = 0.15625 * y1 + 0.84375 * y2;
+      anchor = 'end';
+      mx = xq - 6;
+      my = y2 > y1 ? yq + Math.max(t1, t2) + 12 : yq - Math.max(t1, t2) - 5;
+    } else {
+      anchor = 'middle';
+      mx = (x1 + x2) / 2;
+      my = (y1 + y2) / 2 - Math.max(t1, t2) - 5;
+    }
+    const centre = anchor === 'end' ? mx - lw / 2 : mx;
+    if (Math.abs(x2 - x1) > 34 && fits(centre, my, lw)) {
+      parts.push('<text class="cl" x="' + mx + '" y="' + my + '" text-anchor="' + anchor + '">' + label + '</text>');
     }
   }
 
@@ -149,7 +177,7 @@ export function flowChart(g, net, flow, opts = {}) {
     parts.push('<text class="cn" x="' + (x + 10) + '" y="' + (y - 2) + '">'
       + fmt(r.area, 0) + ' mm² · ' + fmt(r.v) + ' m/s</text>');
     parts.push('<text class="cl" x="' + (x + 10) + '" y="' + (y + 11) + '" fill="' + col + '">'
-      + 'soll ' + fmt(r.soll * 100, 0) + ' % · ist ' + fmt(r.ist * 100, 0) + ' %</text>');
+      + 'Soll ' + fmt(r.soll * 100, 0) + ' % · Ist ' + fmt(r.ist * 100, 0) + ' %</text>');
     if (Number.isFinite(r.tArrive)) {
       const tc = lateBad && r.tArrive >= flow.tLast - 1e-9 ? '#b42318' : '#557786';
       parts.push('<text class="cl" x="' + (x + 10) + '" y="' + (y + 24) + '" fill="' + tc + '">'

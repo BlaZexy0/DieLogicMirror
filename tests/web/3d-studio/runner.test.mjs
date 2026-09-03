@@ -355,6 +355,31 @@ test('Regeln: eine Mündung aus der Trennebene heraus wird benannt', () => {
   assert.equal(G.aimTilt(g, g.nodes[lead.parent]), 0, 'ohne Bindung: 0');
 });
 
+test('Graph: die Anschnitthöhe des Systems gilt für alle ohne eigene', () => {
+  const g = PRE.demoFourGates();
+  const gates = G.allNodes(g).filter(n => n.type === 'gate');
+  assert.equal(g.gateH, 2.2);
+  assert.ok(gates.every(n => n.gate.hAuto === false && n.gate.h === 1.8), 'die zweite Ebene hat eigene Höhen');
+  const neu = G.addChild(g, G.allNodes(g).find(n => n.type === 'point').id, 'gate');
+  assert.equal(neu.gate.h, 2.2, 'ein neuer Anschnitt nimmt die Vorgabe');
+  assert.equal(neu.gate.hAuto, true);
+  G.setGateHeight(g, 1.5);
+  assert.equal(neu.gate.h, 1.5, 'und folgt ihr');
+  assert.ok(gates.every(n => n.gate.h === 1.8), 'eigene Höhen bleiben');
+  /* Hin und zurück: Vorgabe und Zugehörigkeit überleben die Datei. */
+  const back = G.fromJSON(JSON.parse(JSON.stringify(G.toJSON(g))));
+  assert.equal(back.gateH, 1.5);
+  assert.equal(back.nodes[neu.id].gate.hAuto, true);
+  assert.equal(back.nodes[gates[0].id].gate.hAuto, false);
+  /* Eine Datei ohne Vorgabe: was auf 2 steht, folgt der Vorgabe 2. */
+  const alt = JSON.parse(JSON.stringify(G.toJSON(g)));
+  delete alt.gateH;
+  for (const n of alt.nodes) if (n.gate) { delete n.gate.hAuto; n.gate.h = n.id === neu.id ? 2 : 1.8; }
+  const old = G.fromJSON(alt);
+  assert.equal(old.nodes[neu.id].gate.hAuto, true);
+  assert.equal(old.nodes[gates[0].id].gate.hAuto, false);
+});
+
 test('Graph: JSON hin und zurück behält die gebundene Mündung', () => {
   const g = PRE.demoTwoGates();
   const lead = G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id));
@@ -665,7 +690,7 @@ test('Flussschema: SVG mit einem Knoten je Punkt und den Anschnitten beschriftet
   const svg = flowChart(g, net, F.analyseFlow(g, net, proc()), { width: 600 });
   assert.match(svg, /^<svg /);
   assert.equal((svg.match(/<circle /g) || []).length, G.allNodes(g).length);
-  assert.equal((svg.match(/soll /g) || []).length, 4, 'je Anschnitt eine Soll/Ist-Zeile');
+  assert.equal((svg.match(/Soll /g) || []).length, 4, 'je Anschnitt eine Soll/Ist-Zeile');
   assert.match(svg, /Pressrest/);
   assert.match(flowChart(g, net, { gates: [], losses: new Map() }, {}), /chart-empty/);
 });

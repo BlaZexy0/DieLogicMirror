@@ -84,9 +84,10 @@ const runnerMat = new T.MeshStandardMaterial({
 const runnerMesh = new T.Mesh(new T.BufferGeometry(), runnerMat);
 group.add(runnerMesh);
 
+/* Deckend: der Pressrest ist ein Körper wie die Kanäle, kein Hinweis.
+   Durchscheinend sah er aus wie etwas, das noch nicht entschieden ist. */
 const biscMat = new T.MeshStandardMaterial({
-  color: 0x93a6b0, roughness: 0.6, metalness: 0.06, transparent: true, opacity: 0.5,
-  side: T.DoubleSide, depthWrite: false
+  color: 0x93a6b0, roughness: 0.6, metalness: 0.06, side: T.DoubleSide
 });
 const biscMesh = new T.Mesh(new T.BufferGeometry(), biscMat);
 group.add(biscMesh);
@@ -403,6 +404,10 @@ function syncSelection() {
   $('gate-block').classList.toggle('hidden', !isGate);
   if (isGate) {
     $('sel-gh').value = fmt(n.gate.h, 2);
+    $('sel-gh').title = n.gate.hAuto
+      ? 'Folgt der Anschnitthöhe unter „Kanalform" — ein eigener Wert löst ihn davon.'
+      : 'Eigene Höhe dieses Anschnitts; die Vorgabe unter „Kanalform" gilt hier nicht mehr.';
+    $('sel-gh').classList.toggle('inherited', !!n.gate.hAuto);
     $('sel-glen').value = fmt(n.gate.len, 2);
     $('sel-gw').value = fmt(n.gate.w, 2);
     $('sel-gauto').checked = !!n.gate.auto;
@@ -430,7 +435,7 @@ function syncSelection() {
     const r = state.flow.gates.find(x => x.id === id);
     if (r) {
       rows.push(['Anschnittfläche', fmt(r.area, 0) + ' mm²']);
-      rows.push(['Anteil soll/ist', fmt(r.soll * 100, 0) + ' / ' + fmt(r.ist * 100, 0) + ' %']);
+      rows.push(['Anteil Soll/Ist', fmt(r.soll * 100, 0) + ' / ' + fmt(r.ist * 100, 0) + ' %']);
       rows.push(['Ankunft', fmt(r.tArrive * 1000) + ' ms']);
     }
     /* Wohin der Anschnitt mündet — und ob das ans Bauteil gebunden ist
@@ -510,7 +515,10 @@ $('sel-gtrans').innerHTML = Object.entries(G.TRANSITIONS)
 $('sel-gtrans').addEventListener('change', e => editNode(n => { n.gate.transition = e.target.value; }));
 numberInput('sel-gh', v => {
   const h = Math.max(0.3, Math.min(30, v));
-  editNode(n => { n.gate.h = h; });
+  /* Ein eigener Wert nimmt den Anschnitt aus der Vorgabe heraus — es sei
+     denn, er ist genau die Vorgabe. */
+  editNode(n => { n.gate.h = h; n.gate.hAuto = Math.abs(h - state.graph.gateH) < 1e-9; });
+  syncSelection();
   return h;
 });
 numberInput('sel-glen', v => {
@@ -593,6 +601,13 @@ segButtons('axis-seg', value => {
 
 /* ── Kanalform ───────────────────────────────────────────────── */
 slider('draft', v => { state.graph.draft = v; rebuild(); }, v => fmt(v) + '°');
+numberInput('gate-h', v => {
+  const h = Math.max(0.3, Math.min(30, v));
+  G.setGateHeight(state.graph, h);
+  rebuild();
+  syncSelection();
+  return h;
+});
 numberInput('radius', v => {
   const r = Math.max(0, Math.min(20, v));
   state.graph.radius = r;
@@ -800,6 +815,7 @@ function adoptGraph() {
   $('tension').value = String(Math.round(g.tension * 100));
   $('tension-val').textContent = fmt(g.tension, 2);
   $('step').value = fmt(g.step, 2);
+  $('gate-h').value = fmt(g.gateH, 2);
   rebuild();
   editor.select(g.rootId);
   view.fitTo(group);

@@ -674,6 +674,27 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.ok(!d6.getElementById('aim-banner').classList.contains('hidden'));
   assert.match(d6.getElementById('aim-text').textContent, /Referenzbauteil laden/);
 
+  /* Die Anschnitthöhe unter „Kanalform" gilt für jeden Anschnitt ohne
+     eigene; ein eigener Wert im Auswahlfeld löst ihn davon. */
+  const gh = d6.getElementById('gate-h');
+  assert.equal(gh.value, '2,2', 'die Vorgabe steht im Feld');
+  gh.value = '1,6';
+  gh.dispatch('change');
+  assert.equal(v.state.graph.gateH, 1.6);
+  assert.equal(gate.gate.h, 1.6, 'der gewählte Anschnitt folgt der Vorgabe');
+  assert.equal(d6.getElementById('sel-gh').value, '1,6');
+  const own = d6.getElementById('sel-gh');
+  own.value = '3';
+  own.dispatch('change');
+  assert.equal(gate.gate.h, 3);
+  assert.equal(gate.gate.hAuto, false, 'eigener Wert: aus der Vorgabe heraus');
+  gh.value = '2';
+  gh.dispatch('change');
+  assert.equal(gate.gate.h, 3, 'die Vorgabe lässt ihn in Ruhe');
+  own.value = '2';
+  own.dispatch('change');
+  assert.equal(gate.gate.hAuto, true, 'genau die Vorgabe: wieder dabei');
+
   /* Regler wirken sofort */
   const draft = d6.getElementById('draft');
   const areaBefore = v.state.net.edges[0].sections[0].area;
@@ -695,6 +716,8 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.ok(v.state.chartOpen);
   assert.match(d6.getElementById('chart-body').innerHTML, /^<svg /);
   assert.match(d6.getElementById('chart-body').innerHTML, /Ankunft [\d,]+ ms/, 'die Ankunft der Schmelze steht am Anschnitt');
+  assert.match(d6.getElementById('chart-body').innerHTML, /Soll \d+ % · Ist \d+ %/, 'Soll und Ist groß');
+  assert.match(d6.getElementById('chart-body').innerHTML, /<path d="M[^"]* C[^"]*"/, 'die Bänder sind Bögen, keine Geraden');
   assert.match(d6.getElementById('chart-facts').innerHTML, /Ankunft/);
   d6.getElementById('chart-close').dispatch('click');
   assert.ok(!d6.getElementById('chart-panel').classList.contains('on'), 'das × schließt es');
@@ -800,9 +823,9 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.ok(marke && Math.abs(marke[1] - 50) < 1e-6, 'die Marke sitzt auf der Deckfläche: ' + marke);
 
   /* Erst die Wand: von +X her auf die Seitenfläche, 40 mm ÜBER der
-     Trennebene angeklickt. Der Anschnitt liegt in der Trennebene und
-     kann nur in ihr münden — also rückt er dorthin, wo die Wand die
-     Ebene schneidet, und mündet waagerecht. */
+     Trennebene angeklickt. Der Anschnitt kommt GENAU dorthin — auch in
+     der Höhe; die Kante davor wird zur Rampe. Nur seine Richtung bleibt
+     waagerecht: die Schräge der Wand kippt ihn nicht. */
   v.view.camera.position.set(400, 40, 0);
   v.view.camera.up.set(0, 1, 0);
   v.view.camera.lookAt(0, 40, 0);
@@ -811,8 +834,8 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.ok(!v.editor.aiming, 'der Treffer schaltet ihn ab');
   assert.ok(banner.classList.contains('hidden'), 'und der Hinweis ist weg');
   let gs = v.state.graph.nodes[g2.id];
-  assert.ok(Math.abs(gs.pos[0] - 50) < 1e-6 && Math.abs(gs.pos[1]) < 1e-6 && Math.abs(gs.pos[2]) < 1e-6,
-    'der Anschnitt sitzt an der Wand IN der Trennebene, nicht 40 mm darüber: ' + gs.pos);
+  assert.ok(Math.abs(gs.pos[0] - 50) < 1e-6 && Math.abs(gs.pos[1] - 40) < 1e-6 && Math.abs(gs.pos[2]) < 1e-6,
+    'der Anschnitt sitzt am geklickten Punkt, 40 mm über der Trennebene: ' + gs.pos);
   assert.ok(gs.aim[0] < -0.999 && Math.abs(gs.aim[1]) < 1e-9, 'und mündet waagerecht nach innen: ' + gs.aim);
   assert.match(d6.getElementById('sel-facts').innerHTML, /Mündung.*−X · gebunden/, 'die Kennzahlen sagen es');
   assert.match(d6.getElementById('sel-facts').innerHTML, /Ankunft.*ms/, 'und wann die Schmelze da ist');

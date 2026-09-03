@@ -189,11 +189,11 @@ select {
 
 /* Achsenkreuz — direkt unter der Ansichtsleiste, wo auch sonst alles
    steht, was mit dem Blickwinkel zu tun hat. */
+/* Ohne Kasten: das Achsenkreuz ist eine Marke im Bild, kein Bedienfeld,
+   und ein weißes Rechteck in der Ecke sah nach einem aus. */
 .axis-gizmo {
   position: absolute; right: 12px; top: 56px; z-index: 2;
   padding: 2px; line-height: 0; pointer-events: none;
-  background: rgba(255,255,255,.82); border: 1px solid var(--border-light);
-  border-radius: var(--radius);
 }
 
 @media (max-width: 900px) {
@@ -425,7 +425,9 @@ select {
   padding: 7px 10px 8px; border-bottom: 1px solid var(--border-light);
   background: var(--surface2);
 }
-.chart-facts .fact { display: flex; gap: 7px; font-size: .78rem; padding: 0; }
+/* Grundlinie statt Oberkante: die Werte stehen in der dicktengleichen
+   Schrift, und die sitzt sonst sichtbar höher als die Bezeichnung. */
+.chart-facts .fact { display: flex; align-items: baseline; gap: 7px; font-size: .78rem; padding: 0; }
 .chart-facts:empty { display: none; }
 
 .chart-body { overflow: auto; padding: 10px 14px 12px; }
@@ -435,6 +437,9 @@ select {
    zufällig liegt. Gebunden wird er über seinen Pfeil im Viewport; im
    Auswahlfeld steht nur, dass er es ist. */
 .pt-sel em.pinned { color: var(--primary-deep); font-weight: 600; }
+/* Eine Anschnitthöhe aus der Vorgabe steht blasser im Feld als eine
+   eigene — man sieht, was man geerbt hat und was man selbst gesetzt hat. */
+.pt-menu input.inherited { color: var(--muted); }
 
 /* Der Hinweis oben im Viewport, solange der Zielmodus scharf ist (oder
    der Pfeil ohne Bauteil geklickt wurde): zwischen Auswahlfeld und

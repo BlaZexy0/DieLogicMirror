@@ -283,11 +283,6 @@ export function createEditor(opts) {
      Trennebene kippen. Was steiler steht, ist eine Fläche IN der Ebene
      (Deckfläche): dort gibt es nichts zu projizieren. */
   const WALL_SIN = Math.sin(30 * Math.PI / 180);
-  /* Wie weit der Suchstrahl in der Ebene neben dem projizierten Punkt
-     nach der Wand sucht, mm. Eine Wand mit 3° Schräge über 50 mm Höhe
-     weicht 2,6 mm ab; Rippen dichter als das würden ohnehin denselben
-     Anschnitt bekommen. */
-  const PROBE = 25;
   const nmat = new T.Matrix3();
 
   function firstHit(mesh, caster) {
@@ -314,15 +309,16 @@ export function createEditor(opts) {
    * die nach innen gerichtete Flächennormale, denn dorthin soll der
    * Anschnitt münden. Ohne Bauteil oder daneben: null.
    *
-   * Mit `plane` (Ursprung und Normale der Arbeitsebene des Anschnitts)
-   * wird ein Treffer an einer aufrechten Wand IN DIESE EBENE gelegt: die
-   * Richtung verliert ihren Anteil aus der Ebene heraus, denn ein
-   * Anschnitt liegt in der Trennebene und kann nur in ihr münden; der
-   * Ort rückt auf die Ebene und dann per Strahl in der Ebene exakt auf
-   * die Wand — dorthin, wo die Wand die Ebene schneidet, nicht dorthin,
-   * wo man 40 mm darüber hingeklickt hat. Ein Treffer auf einer Fläche,
-   * die in der Ebene liegt, bleibt roh (`wall: false`); dass so ein
-   * Anschnitt nicht zu bauen ist, sagt die Prüfliste.
+   * Der Ort ist der GETROFFENE Punkt, auch wenn er über oder unter der
+   * Arbeitsebene liegt: der Anschnitt kommt dorthin, wo man hingeklickt
+   * hat, und die Kante davor wird zur Rampe. (Ihn in die Ebene zu legen
+   * lag nahe und war falsch — dann ließ sich die Tiefe des Anschnitts
+   * gar nicht mehr setzen.) Nur die RICHTUNG wird mit `plane` (Normale
+   * der Arbeitsebene) in die Ebene gelegt, wenn die Wand aufrecht steht:
+   * die Entformschräge der Bauteilwand soll den Anschnitt nicht um zwei
+   * Grad kippen. Ein Treffer auf einer Fläche, die in der Ebene liegt,
+   * bleibt roh (`wall: false`); dass so ein Anschnitt nicht zu bauen ist,
+   * sagt die Prüfliste.
    */
   function pickRef(ev, plane) {
     const mesh = getRefMesh && getRefMesh();
@@ -331,23 +327,13 @@ export function createEditor(opts) {
     const h = firstHit(mesh, ray);
     if (!h) return null;
     const n = inwardNormal(mesh, h, ray.ray.direction);
-    const point = h.point.clone();
-    const raw = { point: point.toArray(), dir: n.toArray(), wall: false };
-    if (!plane || !plane.normal) return raw;
+    const point = h.point.toArray();
+    if (!plane || !plane.normal) return { point, dir: n.toArray(), wall: false };
     const nn = new T.Vector3(plane.normal[0], plane.normal[1], plane.normal[2]).normalize();
     const off = n.dot(nn);
-    if (Math.abs(off) > WALL_SIN || nn.lengthSq() < 0.5) return raw;
+    if (Math.abs(off) > WALL_SIN || nn.lengthSq() < 0.5) return { point, dir: n.toArray(), wall: false };
     const dir = n.clone().addScaledVector(nn, -off).normalize();
-    const o = new T.Vector3(plane.origin[0], plane.origin[1], plane.origin[2]);
-    point.addScaledVector(nn, -point.clone().sub(o).dot(nn));
-    const probe = new T.Raycaster(point.clone().addScaledVector(dir, -PROBE), dir, 0, 2 * PROBE);
-    let best = null;
-    for (const x of probe.intersectObject(mesh, false)) {
-      const d = x.point.distanceTo(point);
-      if (d <= PROBE && (!best || d < best.d)) best = { d, p: x.point };
-    }
-    if (best) point.copy(best.p);
-    return { point: point.toArray(), dir: dir.toArray(), wall: true };
+    return { point, dir: dir.toArray(), wall: true };
   }
 
   /* Die Vorschaumarke: ein Ring in der Austrittsfläche (senkrecht zur

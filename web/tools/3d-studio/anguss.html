@@ -65,6 +65,11 @@
       <span class="val">mm</span>
     </div>
     <div class="row">
+      <span title="Höhe aller Anschnitte — die dünnste Stelle des ganzen Systems. Gilt für jeden Anschnitt, dem im Auswahlfeld keine eigene Höhe gegeben wurde.">Anschnitthöhe</span>
+      <input type="text" id="gate-h" inputmode="decimal" value="2" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="row">
       <span title="Straffheit der Splines. Klein heißt eckig, groß heißt ausholend.">Splinestraffheit</span>
       <input type="range" id="tension" min="30" max="180" step="5" value="100">
       <span class="val" id="tension-val"></span>
@@ -219,12 +224,12 @@
 
           <div id="gate-block">
             <div class="row">
-              <span title="Anschnitthöhe — die dünnste Stelle des ganzen Systems.">Anschnitthöhe</span>
+              <span title="Anschnitthöhe dieses Anschnitts. Ohne eigenen Wert gilt die Vorgabe unter „Kanalform".">Anschnitthöhe</span>
               <input type="text" id="sel-gh" inputmode="decimal" value="2" spellcheck="false">
               <span class="val">mm</span>
             </div>
             <div class="row">
-              <span title="Länge des Anschnitts (Steg): die Strecke mit unverändertem Querschnitt vor dem Bauteil.">Anschnittlänge</span>
+              <span title="Tiefe des Anschnitts in Fließrichtung (Steg): die Strecke mit unverändertem Querschnitt vor dem Bauteil. Nicht die Breite — die steht darunter.">Anschnitttiefe</span>
               <input type="text" id="sel-glen" inputmode="decimal" value="4" spellcheck="false">
               <span class="val">mm</span>
             </div>

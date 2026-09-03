@@ -75,7 +75,8 @@ const DEF = {
   draft: 5,          // Entformschräge der Kanäle, Grad
   radius: 1.5,       // Eckenradius am Kanalboden, mm
   tension: 1.0,      // Straffheit der Splines
-  step: 1.0          // Abtastschritt entlang der Mittellinie, mm
+  step: 1.0,         // Abtastschritt entlang der Mittellinie, mm
+  gateH: 2.0         // Anschnitthöhe, mm — Vorgabe für alle Anschnitte ohne eigene
 };
 
 export function emptyGraph() {
@@ -83,6 +84,7 @@ export function emptyGraph() {
     format: FORMAT, version: FORMAT_VERSION,
     biscuit: { pos: [0, 0, 0], axis: '+y', d: 90, t: 25 },
     draft: DEF.draft, radius: DEF.radius, tension: DEF.tension, step: DEF.step,
+    gateH: DEF.gateH,
     nodes: {}, rootId: null, seq: 0
   };
 }
@@ -213,7 +215,7 @@ export function makeNode(g, type, parent, pos) {
     n.mirror = true;              // bei 'branch' abschaltbar, bei 'mirror' fest
   }
   if (type === 'gate') {
-    n.gate = { h: 2.0, len: 4, w: 20, auto: true, transition: 'ende' };
+    n.gate = { h: g.gateH || DEF.gateH, hAuto: true, len: 4, w: 20, auto: true, transition: 'ende' };
   }
   g.nodes[n.id] = n;
   if (parent) parent.children.push(n.id);
@@ -483,6 +485,19 @@ export function aimTilt(g, n) {
   return Math.asin(Math.min(1, c)) * 180 / Math.PI;
 }
 
+/** Die Anschnitthöhe des Systems: Vorgabe für jeden Anschnitt, der keine
+    eigene hat (`gate.hAuto`). Die Höhe ist die dünnste Stelle des ganzen
+    Systems und in aller Regel für alle Anschnitte dieselbe — sie
+    zehnmal einzutippen ist Arbeit ohne Gewinn. Wer einem Anschnitt eine
+    eigene Höhe gibt, nimmt ihn aus der Vorgabe heraus. */
+export function setGateHeight(g, h) {
+  g.gateH = h;
+  for (const n of allNodes(g)) {
+    if (n.type === 'gate' && n.gate && n.gate.hAuto) n.gate.h = h;
+  }
+  return g;
+}
+
 /** Bindung lösen — die Richtung folgt wieder der Sehne vom Vorgänger. */
 export function clearAim(g, id) {
   const n = g.nodes[id];
@@ -517,6 +532,7 @@ export function toJSON(g) {
     format: FORMAT, version: FORMAT_VERSION,
     biscuit: { ...g.biscuit, pos: g.biscuit.pos.slice() },
     draft: g.draft, radius: g.radius, tension: g.tension, step: g.step,
+    gateH: g.gateH,
     rootId: g.rootId, nodes
   };
 }
@@ -527,7 +543,7 @@ export function fromJSON(obj) {
   const g = emptyGraph();
   Object.assign(g.biscuit, obj.biscuit || {});
   if (!AXES[g.biscuit.axis]) g.biscuit.axis = '+y';
-  for (const k of ['draft', 'radius', 'tension', 'step']) if (Number.isFinite(obj[k])) g[k] = obj[k];
+  for (const k of ['draft', 'radius', 'tension', 'step', 'gateH']) if (Number.isFinite(obj[k])) g[k] = obj[k];
   const list = Array.isArray(obj.nodes) ? obj.nodes : [];
   if (!list.length) throw new Error('Die Datei enthält keine Knoten.');
   for (const n of list) {
@@ -539,7 +555,13 @@ export function fromJSON(obj) {
     };
     if (n.ratio !== undefined) g.nodes[n.id].ratio = clamp(Number(n.ratio) || 0.5, 0.05, 0.95);
     if (n.mirror !== undefined) g.nodes[n.id].mirror = !!n.mirror;
-    if (n.gate) g.nodes[n.id].gate = { h: 2, len: 4, w: 20, auto: true, transition: 'ende', ...n.gate };
+    if (n.gate) {
+      const gate = { h: g.gateH, len: 4, w: 20, auto: true, transition: 'ende', ...n.gate };
+      /* Ältere Dateien kennen die Vorgabe nicht: was auf der Vorgabe
+         steht, folgt ihr; was davon abweicht, ist eine eigene Höhe. */
+      if (gate.hAuto === undefined) gate.hAuto = Math.abs(gate.h - g.gateH) < 1e-9;
+      g.nodes[n.id].gate = gate;
+    }
     if (Array.isArray(n.aim) && len(n.aim.map(Number))) g.nodes[n.id].aim = norm(n.aim.map(Number));
     if (n.follower) g.nodes[n.id].follower = true;
     const num = +String(n.id).replace(/\D/g, '');

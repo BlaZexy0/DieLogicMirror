@@ -28,6 +28,14 @@ const GATE = { h: 2.2, len: 4, w: 26, auto: true, transition: 'ende' };
 /* Nach dem Aufbau einmal durch die Auslegung: Anschnittbreiten aus der
    Zielgeschwindigkeit, danach alle Querschnitte von hinten nach vorn. */
 function finish(g) {
+  /* Die Vorgabe der Anschnitthöhe ist die der Beispiele; ein Anschnitt
+     mit abweichender Höhe (der Fächer, die zweite Ebene) hat eine eigene. */
+  g.gateH = GATE.h;
+  for (const n of G.allNodes(g)) {
+    if (n.type === 'gate' && n.gate && n.gate.hAuto === undefined) {
+      n.gate.hAuto = Math.abs(n.gate.h - g.gateH) < 1e-9;
+    }
+  }
   G.normalizeMirrors(g);
   F.applyAutoGates(g, F.DEFAULT_PROCESS);
   autoTaper(g, F.DEFAULT_PROCESS, DEFAULT_SIZING);
