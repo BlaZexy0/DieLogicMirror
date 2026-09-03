@@ -14,7 +14,8 @@ const LINKS = [
   { href: 'bauteilanalyse.html', label: 'Bauteilanalyse' },
   { href: 'offset.html', label: 'Offsetflächen' },
   { href: 'abstand.html', label: 'Abstandsanalyse' },
-  { href: 'anguss.html', label: 'Angussdesigner' }
+  { href: 'anguss.html', label: 'Angussdesigner' },
+  { href: 'luft.html', label: 'Luftbohnen' }
 ];
 
 const H_GLYPH = '<svg viewBox="0 0 100 100" aria-hidden="true" style="height:.78em;vertical-align:-.02em;margin:0 .06em">'

@@ -951,3 +951,120 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   d6.getElementById('stl-save').dispatch('click');
   assert.equal(d6.getElementById('run-merge'), null, 'aber kein Verschmelzen mehr');
 });
+
+/* ── Luftbohnen-Designer ─────────────────────────────────────── */
+test('Luftbohnen: setzen, ziehen, drehen, neu setzen, Datei', async () => {
+  const { doc: d7 } = buildDocument(read('luft.html'));
+  installGlobals(d7);
+  globalThis.location = { search: '', href: 'http://test/luft.html' };
+  const mod = await import('../../../web/tools/3d-studio/js/vents/app.js');
+  const v = mod.__viewer;
+  for (let i = 0; i < 600 && !v.state.ready; i++) await new Promise(r => setTimeout(r, 25));
+  assert.ok(v.state.ready && v.state.model, 'das Beispielteil steht');
+  assert.ok(v.refMesh.visible);
+  assert.equal(v.state.plan.items && Object.keys(v.state.plan.items).length, 0, 'ohne Plan keine Elemente');
+  assert.match(d7.getElementById('rules-list').innerHTML, /Noch keine Luftbohne/);
+  assert.ok(v.view.axes, 'das Achsenkreuz hängt an der Szene');
+
+  /* Setzen: Art wählen, dann aufs Bauteil klicken. Die Kamera schaut von
+     +X waagerecht auf die Bauteilmitte — der Strahl trifft eine Wand,
+     die Bohne wächst nach außen (+X) in der Trennebene (y fest). */
+  const T3 = await import('three');
+  const b = v.state.model.bounds;
+  const c = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
+  const cam = v.view.camera;
+  const look = () => { cam.up.set(0, 1, 0); cam.lookAt(c[0], c[1], c[2]); cam.updateMatrixWorld(true); v.view.scene.updateMatrixWorld(true); };
+  cam.position.set(b.max[0] + 400, c[1], c[2]);
+  look();
+  const canvas = v.view.renderer.domElement;
+  const zeiger = (t, x, y, extra = {}) => canvas.dispatch(t,
+    { button: 0, clientX: x, clientY: y, stopPropagation() {}, preventDefault() {}, ...extra });
+  const klick = (x, y) => { zeiger('pointerdown', x, y); zeiger('pointerup', x, y); };
+  const px = p => { const q = new T3.Vector3(...p).project(cam); return [(q.x + 1) / 2 * 800, (1 - q.y) / 2 * 600]; };
+
+  d7.getElementById('add-bohne').dispatch('click');
+  assert.ok(v.handles.aiming, 'der Zielmodus ist scharf');
+  assert.ok(!d7.getElementById('aim-banner').classList.contains('hidden'));
+  klick(400, 300);
+  assert.ok(!v.handles.aiming, 'der Treffer setzt die Bohne');
+  const items = Object.values(v.state.plan.items);
+  assert.equal(items.length, 1);
+  const it = items[0];
+  assert.equal(it.type, 'bohne');
+  assert.ok(it.pos[0] > c[0], 'auf der +X-Seite des Bauteils: ' + it.pos);
+  assert.ok(it.dir[0] > 0.9 && Math.abs(it.dir[1]) < 1e-9, 'sie wächst nach außen, in der Trennebene: ' + it.dir);
+  assert.equal(v.handles.selected, it.id, 'und ist gewählt');
+  assert.match(d7.getElementById('pt-sel').innerHTML, /Überlaufbohne/);
+  const param = k => d7.getElementById('sel-params').querySelector('#p-' + k);
+  assert.ok(param('wellD'), 'die Maße der Art stehen im Feld');
+  assert.match(d7.getElementById('plan-facts').innerHTML, /Überlaufvolumen/);
+  assert.ok(v.group.children.some(m => m.visible && m.geometry && m.geometry.attributes.position
+    && m.geometry.attributes.position.count > 0 && m !== v.refMesh), 'ein Körper steht im Viewport');
+
+  /* Ziehen: von oben in der Trennebene — y bleibt, x und z wandern. */
+  cam.position.set(it.pos[0], it.pos[1] + 400, it.pos[2]);
+  cam.up.set(0, 0, -1); cam.lookAt(it.pos[0], it.pos[1], it.pos[2]); cam.updateMatrixWorld(true); v.view.scene.updateMatrixWorld(true);
+  const p0 = it.pos.slice();
+  zeiger('pointerdown', 400, 300);
+  assert.ok(v.handles.dragging, 'der Zug beginnt am Punkt');
+  zeiger('pointermove', 470, 300);
+  await new Promise(r => setTimeout(r, 30));
+  zeiger('pointerup', 470, 300);
+  assert.ok(Math.hypot(it.pos[0] - p0[0], it.pos[2] - p0[2]) > 5, 'der Punkt wandert: ' + p0 + ' → ' + it.pos);
+  assert.ok(Math.abs(it.pos[1] - p0[1]) < 1e-9, 'aber nicht aus der Trennebene');
+
+  /* Drehen um die Ausstoßachse: die Richtung schwenkt, der Punkt bleibt. */
+  const d0 = it.dir.slice();
+  const rot = d7.getElementById('sel-rot');
+  rot.value = '90';
+  rot.dispatch('input');
+  assert.equal(it.rot, 90);
+  const G7 = await import('../../../web/tools/3d-studio/js/vents/model.js');
+  const f = G7.frameOf(v.state.plan, it);
+  assert.ok(Math.abs(f.d[0] * d0[0] + f.d[1] * d0[1] + f.d[2] * d0[2]) < 1e-9, 'um 90° gedreht: ' + f.d);
+  assert.match(d7.getElementById('sel-rot-val').textContent, /90/);
+
+  /* Neu setzen: der Pfeil schaltet den Zielmodus scharf, der Klick aufs
+     Bauteil versetzt das Element samt Richtung. */
+  cam.position.set(b.max[0] + 400, c[1], c[2] + 20);
+  cam.up.set(0, 1, 0); cam.lookAt(c[0], c[1], c[2] + 20); cam.updateMatrixWorld(true);
+  v.rebuild();
+  v.view.scene.updateMatrixWorld(true);
+  const tip = v.handles.arrowTip(it.id);
+  assert.ok(tip, 'die Bohne trägt einen Pfeil');
+  v.handles.aimFor(it.id);
+  assert.ok(v.handles.aiming, 'der Pfeil zielt');
+  assert.match(d7.getElementById('aim-text').textContent, /neue Stelle/);
+  klick(400, 300);
+  assert.ok(!v.handles.aiming);
+  assert.ok(Math.abs(it.pos[2] - (c[2] + 20)) < 1e-6, 'versetzt: ' + it.pos);
+  assert.equal(it.rot, 90, 'die Drehung bleibt');
+
+  /* Art wechseln, Maß ändern, Prüfliste. */
+  const typeSel = d7.getElementById('sel-type');
+  typeSel.value = 'entlueftet';
+  typeSel.dispatch('change');
+  assert.equal(it.type, 'entlueftet');
+  const vh = param('ventH');
+  assert.ok(vh, 'der Kanal hat eine Höhe');
+  vh.value = '0,4';
+  vh.dispatch('change');
+  assert.equal(it.p.ventH, 0.4);
+  assert.match(d7.getElementById('rules-list').innerHTML, /kanal zu hoch/i);
+
+  /* Datei hin und zurück, dann löschen. */
+  const json = JSON.parse(JSON.stringify(G7.toJSON(v.state.plan)));
+  v.loadPlan(G7.fromJSON(json));
+  assert.equal(Object.keys(v.state.plan.items).length, 1);
+  v.handles.select(it.id);
+  d7.getElementById('del-item').dispatch('click');
+  assert.equal(Object.keys(v.state.plan.items).length, 0, 'gelöscht');
+  assert.equal(v.handles.selected, null);
+
+  /* Ohne Bauteil: der Klick auf eine Art sagt, was fehlt. */
+  v.refMesh.visible = false;
+  d7.getElementById('add-schlitz').dispatch('click');
+  assert.ok(!v.handles.aiming);
+  assert.match(d7.getElementById('aim-text').textContent, /Bauteil laden/);
+  v.refMesh.visible = true;
+});

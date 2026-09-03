@@ -65,7 +65,10 @@ function parseNumber(txt) {
     (geklemmt o. ä.), unlesbare Eingaben werden rot markiert und der
     letzte gültige Wert bleibt stehen. */
 export function numberInput(id, apply) {
-  const el = $(id);
+  /* Auch ein Element statt einer id — für Felder, die eine Seite je
+     Auswahl neu aufbaut und die deshalb nicht über das Dokument gesucht
+     werden sollen. */
+  const el = typeof id === 'string' ? $(id) : id;
   const run = () => {
     const v = parseNumber(el.value);
     if (v === null) { el.classList.add('bad'); return; }

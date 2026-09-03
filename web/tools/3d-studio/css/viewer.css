@@ -159,8 +159,8 @@ select {
    Zeile hintereinander liest das niemand. */
 /* Eine Zeile, nicht vier: die Hinweise sind Erinnerung, kein Handbuch,
    und vier Zeilen Kasten lagen jeder Ansicht von unten im Bild. */
-.anguss #status { font-size: .72rem; line-height: 1.4; padding: 5px 10px; max-width: calc(100% - 200px); }
-.anguss #status b { color: var(--text-body); font-weight: 600; }
+.designer #status { font-size: .72rem; line-height: 1.4; padding: 5px 10px; max-width: calc(100% - 200px); }
+.designer #status b { color: var(--text-body); font-weight: 600; }
 #busy {
   position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
   background: rgba(243,246,246,.72); z-index: 3; font-size: .9rem; color: var(--primary-deep); font-weight: 600;
@@ -237,7 +237,7 @@ select {
    nächsten Regler aus dem Bild und wird beim zweiten Mal ohnehin nicht
    mehr gelesen.
 
-   Die engeren Abstände hängen an body.anguss, damit die vier
+   Die engeren Abstände hängen an body.designer, damit die vier
    Analyseseiten ihre gewohnten behalten — sie teilen sich diese Datei. */
 /* Achsen heißen X, Y, Z — auch hier. In der Ansichtsleiste stehen sie in
    der dicktengleichen Schrift, ebenso jeder Zahlenwert daneben; nur diese
@@ -246,12 +246,12 @@ select {
    Minuszeichen (U+2212, nicht der Bindestrich) sitzt dort außerdem auf
    gleicher Breite wie der Buchstabe, sodass „−X" und „X" bündig
    untereinander bleiben. */
-.anguss #axis-seg button { font-family: var(--mono); letter-spacing: .01em; }
+.designer #axis-seg button { font-family: var(--mono); letter-spacing: .01em; }
 
-.anguss aside .row, .anguss aside label.inline { padding: 3px 2px; }
-.anguss aside h2 { margin: 15px 0 6px; }
-.anguss aside .hint { margin-top: 9px; padding: 7px 9px; font-size: .755rem; line-height: 1.5; }
-.anguss aside .block-btn { margin-top: 7px; }
+.designer aside .row, .designer aside label.inline { padding: 3px 2px; }
+.designer aside h2 { margin: 15px 0 6px; }
+.designer aside .hint { margin-top: 9px; padding: 7px 9px; font-size: .755rem; line-height: 1.5; }
+.designer aside .block-btn { margin-top: 7px; }
 
 .btn-pair { display: flex; gap: 6px; margin-top: 6px; }
 .btn-pair .btn { flex: 1; justify-content: center; }
@@ -367,6 +367,12 @@ select {
 }
 .pt-menu button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-deep); background: var(--pale); }
 .pt-menu button:disabled { opacity: .4; cursor: default; }
+/* Die Art als Farbpunkt vor dem Namen — dieselbe Farbe wie Griff, Pfeil
+   und Körper im Viewport. */
+.pt-menu button .dot {
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  margin-right: 7px; vertical-align: -1px; border: 1px solid rgba(0,39,51,.25);
+}
 .pt-menu button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
 
 /* ── Untere rechte Ecke: Schema, Farbskala, Legende ────────────
@@ -466,4 +472,4 @@ select {
 /* Das Auswahlfeld darf nicht bis in die Bedienhinweise unten hineinragen —
    mit Anschnittfeldern und gebundener Mündung ist es lang genug, dass es
    auf einem 900 px hohen Fenster genau das tat. Dann scrollt es eben. */
-.anguss .pt-menu { max-height: calc(100% - 118px); }
+.designer .pt-menu { max-height: calc(100% - 118px); }

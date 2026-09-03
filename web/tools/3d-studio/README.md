@@ -542,7 +542,14 @@ bei jedem Mausschritt eines Zuges neu, und ein Array, das
 Hälfte der Zeit: 10,0 → 3,1 ms bei vierfacher Kuppenauflösung, die ganze
 Kette von Abtasten bis Sweep 16,9 → 10,7 ms.
 
-### Freies Drehen
+### Freies Drehen — in allen Viewern
+
+Seit dem Angussdesigner ist sein Viewport der Maßstab für alle Seiten des
+Studios: der Quaternionen-Trackball, das mitgeführte Licht, das
+Achsenkreuz unter der Ansichtsleiste und das Zeichnen auf Abruf sind die
+Voreinstellungen von `initScene` (js/scene.js). Der Formaufbau und die
+drei Bauteilseiten bekommen sie ohne eigenes Zutun; wer die alte
+Azimut-Höhenwinkel-Steuerung will, verlangt `orbit: 'orbit'`.
 
 Die OrbitControls drehen um eine feste Hochachse. Für ein Bauteil auf
 einem Raster ist das richtig, für einen Anguss hinderlich: er liegt in
@@ -663,6 +670,66 @@ die Griffe, nicht das Netz.
   Knopf gesperrt.
 
 
+## Luftbohnen (`luft.html`)
+
+Die zweite Seite, die Geometrie **erzeugt**: Überläufe und Entlüftungen
+am Bauteil. Eine Druckgießform füllt sich in Millisekunden, und die Luft
+der Kavität muss in derselben Zeit hinaus — dort, wo die Schmelze
+zuletzt ankommt, sitzen Überlaufbohnen: Taschen in der Trennebene, über
+einen dünnen Steg mit dem Bauteil verbunden. Sie nehmen die erste, kalte
+und oxidhaltige Front auf; die Entlüftung dahinter führt die Luft zum
+Formrand oder ins Waschbrett (Chill-Vent), in dessen Wellen die Schmelze
+erstarrt, bevor sie hinaus kann.
+
+### Setzen, ziehen, drehen, neu setzen
+
+Das Bauteil (Beispielteil oder eigene STL/GLB, dieselbe Quelle wie in der
+Bauteilanalyse) liegt durchscheinend im Viewport. **Eine Art wählen und
+auf das Bauteil klicken:** dort sitzt das Element — Ort ist der
+getroffene Punkt, Richtung die nach außen gerichtete Wandnormale in der
+Trennebene, dorthin wächst die Bohne. Der Zielmodus ist derselbe wie beim
+Angussdesigner: Hinweis oben im Viewport, Marke unter dem Zeiger,
+Fehlklick benannt, Esc bricht ab. Danach:
+
+- **den Punkt ziehen** verschiebt in der Trennebene (mit Alt in der
+  Tiefe, entlang der Ausstoßachse);
+- **den Pfeil anklicken** setzt das Element an eine andere Stelle des
+  Bauteils, samt neuer Richtung — die Drehung bleibt;
+- **Drehung** im Auswahlfeld schwenkt es um die Ausstoßachse am Punkt;
+- jedes **Maß** der Art steht im Auswahlfeld; die Art lässt sich
+  wechseln, Maße, die beide Arten haben, bleiben dabei.
+
+Vier Arten: **Überlaufbohne** (Steg und Tasche), **Überlauf mit
+Entlüftung** (dazu ein flacher Kanal), **Waschbrett** (Steg und
+Zickzack-Kanal, dessen Spalt senkrecht zur Welle überall gleich misst)
+und **Entlüftungsschlitz** (nur der flache Kanal). Alle Körper sind
+geschlossene Prismen (js/vents/geom.js; die Deckel per Ohrenabschneiden,
+damit auch das nicht konvexe Zickzack-Band dicht ist), ihre Tiefe wächst
+entgegen der Ausstoßrichtung — in dieselbe Formhälfte wie die Kanäle des
+Angussdesigners.
+
+### Zahlen und Prüfung
+
+Die Seitenleiste nennt Elemente, **Überlaufvolumen** (das gehört zum
+Schussgewicht — im Angussdesigner schlägt man es unter „Prozess" auf das
+Gussvolumen auf) und den Entlüftungsquerschnitt; das Auswahlfeld das
+Volumen, den Steg- und Kanalquerschnitt und die Richtung des Elements.
+Die Prüfliste sagt, was jeder Gießer im Kopf hat: Entlüftungskanäle über
+0,15 bis 0,2 mm laufen aus (ab 0,2 mm prüfen, ab 0,3 mm ändern), ein Steg
+über 1,5 mm bricht nicht sauber ab, einer unter 0,5 mm friert ein, ein
+Waschbrett braucht Weg und einen Spalt von 0,3 bis 0,6 mm, eine Bohne
+unter einem halben Kubikzentimeter fasst nichts.
+
+### Dateien
+
+- **JSON** — der Plan: Achse, je Element Art, Ort, Richtung, Drehung,
+  Maße (`dielogic-luft`, Fassung 1).
+- **STL** — die Körper aller Elemente.
+
+Die Griffe (`js/handles.js`) sind dieselben wie im Angussdesigner: was
+ein Griff ist, sagt jede Seite selbst (Ort, Farbe, Richtung, Ebene), wie
+er gezeichnet, gezogen und gezielt wird, steht einmal.
+
 ## Struktur
 
 ```
@@ -672,6 +739,7 @@ bauteilanalyse.html   Viewer 2: Bauteilanalyse
 offset.html           Viewer 3: Offsetflächen
 abstand.html          Viewer 4: Abstandsanalyse
 anguss.html           Viewer 5: Angussdesigner
+luft.html             Viewer 6: Luftbohnen (Überläufe und Entlüftungen)
 css/site.css          Übersichtsseite und Karten
 css/viewer.css        Seitenleiste und Viewport aller Viewer
 assets/die.glb        DAS Formmodell — binäres glTF, vom Viewer geladen
@@ -684,8 +752,13 @@ js/config.js          alle Maße der Beispielform (mm) an einer Stelle
 js/registry.js        Baugruppen-Metadaten (id, Label, Seite, Farbe)
 js/diegeom.js         Geometrie der Form inkl. aller Negative — die Quelle des Modells
 js/components.js      Three.js-Adapter: Suppen → benannte Gruppen mit Materialien
-js/scene.js           Renderer, Kameras (Zentral + Parallel), Licht, Ansichten
+js/scene.js           Renderer, Kameras (Zentral + Parallel), Licht, Ansichten, Zeichnen auf Abruf, Achsenkreuz
 js/trackball.js       Quaternionen-Trackball: freies Drehen um einen Punkt
+js/handles.js         Griffe im Viewport: auswählen, in der Ebene ziehen, Pfeile, Zielmodus aufs Bauteil
+js/ui/axes.js         das Achsenkreuz (SVG über dem Bild)
+js/vents/model.js     der Luftbohnen-Plan: Arten, Maße, Dreibein, Datei, Prüfregeln
+js/vents/geom.js      Prismen aus dem Plan: Steg, Bohne, Kanal, Waschbrett
+js/vents/app.js       Einstieg Luftbohnen-Designer
 js/clipcaps.js        Schnittebene mit geschlossenen Schnittflächen (Stencil)
 js/die.js             Einstieg Formaufbau-Viewer
 js/ui/nav.js          Kopfleiste — hält sich heraus, sobald /shared/nav.js da ist

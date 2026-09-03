@@ -15,6 +15,7 @@
 import * as T from 'three';
 import { OrbitControls } from '../vendor/three/OrbitControls.js';
 import { TrackballControls } from './trackball.js';
+import { mountAxes } from './ui/axes.js';
 
 /* Blickrichtung = Standort der Kamera relativ zum Ziel. Ein zweiter Klick
    auf denselben Knopf dreht das Vorzeichen um (X → −X). Die Draufsicht
@@ -33,29 +34,31 @@ export function initScene(container, opts = {}) {
     gridSize = 3000, gridY = -470, grid: wantGrid = true,
     cameraStart = [1500, 680, -1350], target = [0, 0, 20],
     minDistance = 60, maxDistance = 8000,
-    /* 'orbit' dreht in Azimut und Höhenwinkel um eine feste Hochachse —
-       richtig für ein Bauteil, das nie auf dem Kopf steht. 'trackball'
-       dreht frei mit Quaternionen um den Zielpunkt; das braucht der
-       Angussdesigner, dessen Trennebene je nach Ausstoßrichtung überall
-       liegen kann (js/trackball.js). */
-    orbit = 'orbit',
+    /* 'trackball' dreht frei mit Quaternionen um den Zielpunkt
+       (js/trackball.js) — das ist seit dem Angussdesigner der Griff aller
+       Viewer: kein Pol, keine Sperre, von unten ansehen geht. 'orbit'
+       (Azimut und Höhenwinkel um eine feste Hochachse) bleibt wählbar. */
+    orbit = 'trackball',
     /* Mitgeführtes Licht. Ortsfeste Lichter setzen voraus, dass es ein
-       „oben" und eine bevorzugte Blickrichtung gibt — bei einem Bauteil
-       auf dem Raster stimmt das. Wer frei um einen freistehenden Körper
-       dreht, schaut dagegen ständig auf die abgewandte Seite, und die
+       „oben" und eine bevorzugte Blickrichtung gibt. Wer frei um einen
+       Körper dreht, schaut ständig auf die abgewandte Seite, und die
        liegt dann im Dunkeln. Ein Licht, das mit der Kamera wandert
        (leicht nach oben und zur Seite versetzt, damit es nicht flach
        wird), beleuchtet immer das, was man gerade ansieht. */
-    headlight = false,
+    headlight = true,
     /* Nur zeichnen, wenn sich etwas geändert hat. Eine Schleife, die
        sechzigmal je Sekunde ein durchscheinendes Bauteil mit einer
        Million Dreiecken zeichnet, macht die ganze Seite zäh — auch die
        Felder in der Seitenleiste, die damit gar nichts zu tun haben.
-       Zeigergeräte, Rad, Größenänderung und die Ansichtsfunktionen
-       melden sich selbst; die Seite ruft api.invalidate() nach jeder
-       Änderung an der Szene. Als Netz darunter wird ohnehin viermal je
-       Sekunde gezeichnet, damit eine vergessene Meldung nichts einfriert. */
-    renderOnDemand = false
+       Zeigergeräte, Rad, Größenänderung, Regler und die Ansichtsfunktionen
+       melden sich selbst; nach jeder Meldung wird eine Sekunde lang
+       jedes Bild gezeichnet (Ergebnisse aus Workern kommen kurz danach),
+       die Seite ruft api.invalidate() nach jeder eigenen Änderung, und
+       als Netz darunter wird viermal je Sekunde gezeichnet, damit eine
+       vergessene Meldung nichts einfriert. */
+    renderOnDemand = true,
+    /* Das Achsenkreuz unter der Ansichtsleiste (js/ui/axes.js). */
+    axes = true
   } = opts;
 
   const renderer = new T.WebGLRenderer({ antialias: true });
@@ -71,8 +74,9 @@ export function initScene(container, opts = {}) {
   const ortho = new T.OrthographicCamera(-1, 1, 1, -1, -40000, 40000);
   ortho.position.copy(persp.position);
 
-  let dirty = true, lastFrame = 0;
-  const api = { scene, renderer, camera: persp, projection: 'persp', invalidate: () => { dirty = true; } };
+  let dirty = true, lastFrame = 0, warmUntil = 0;
+  const invalidate = () => { dirty = true; warmUntil = performance.now() + 1000; };
+  const api = { scene, renderer, camera: persp, projection: 'persp', invalidate };
 
   const controls = orbit === 'trackball'
     ? new TrackballControls(persp, renderer.domElement)
@@ -152,14 +156,23 @@ export function initScene(container, opts = {}) {
 
   if (renderOnDemand) {
     const el = renderer.domElement;
-    el.addEventListener('pointerdown', api.invalidate);
-    el.addEventListener('pointerup', api.invalidate);
+    el.addEventListener('pointerdown', invalidate);
+    el.addEventListener('pointerup', invalidate);
     el.addEventListener('pointermove', e => { if (e.buttons) dirty = true; });
-    el.addEventListener('wheel', api.invalidate, { passive: true });
+    el.addEventListener('wheel', invalidate, { passive: true });
+    /* Regler und Schalter der Seitenleiste ändern fast immer das Bild —
+       so muss nicht jeder einzelne Zuhörer daran denken. */
+    for (const ev of ['input', 'change', 'click', 'keydown']) document.addEventListener(ev, invalidate, true);
+  }
+
+  let axesGizmo = null;
+  if (axes && container.appendChild) {
+    axesGizmo = mountAxes(container);
+    scene.onBeforeRender = (renderer, scene, camera) => axesGizmo.update(camera);
   }
 
   renderer.setAnimationLoop(now => {
-    if (renderOnDemand && !dirty && now - lastFrame < 250) return;
+    if (renderOnDemand && !dirty && now > warmUntil && now - lastFrame < 250) return;
     dirty = false;
     lastFrame = now;
     controls.update();
@@ -259,5 +272,5 @@ export function initScene(container, opts = {}) {
 
   /* Der Schnitt (inkl. geschlossener Schnittflächen) lebt in clipcaps.js —
      hier bleibt nur localClippingEnabled gesetzt. */
-  return Object.assign(api, { setView, setProjection, fitTo });
+  return Object.assign(api, { setView, setProjection, fitTo, axes: axesGizmo });
 }

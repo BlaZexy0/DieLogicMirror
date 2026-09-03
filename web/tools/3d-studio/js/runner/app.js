@@ -31,7 +31,6 @@ import { autoTaper, DEFAULT_SIZING } from './sizing.js';
 import { DEMOS, demoTwoGates } from './presets.js';
 import { flowChart } from './chart.js';
 import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from './editor.js';
-import { mountAxes } from './axes.js';
 import { rotate, norm, cross, dot, sub, add } from './vec.js';
 
 mountNav('anguss.html');
@@ -42,19 +41,10 @@ const container = $('viewport');
    allen Seiten ansieht — ein Raster darunter gäbe ihm ein „unten", das er
    nicht hat, und läge bei jeder schrägen Ansicht im Bild. */
 const view = initScene(container, {
-  orbit: 'trackball', headlight: true,
   cameraStart: [230, 210, 280], target: [0, 0, 60],
-  grid: false, minDistance: 3, maxDistance: 30000,
-  renderOnDemand: true
+  grid: false, minDistance: 3, maxDistance: 30000
 });
 mountViewBar(container, view);
-
-/* Achsenkreuz unter der Ansichtsleiste. Three.js ruft scene.onBeforeRender
-   vor jedem Bild mit der gerade benutzten Kamera — damit stimmt es auch
-   nach dem Umschalten auf die Parallelprojektion, ohne dass die
-   Bildschleife etwas davon wissen muss. */
-const axes = mountAxes(container);
-view.scene.onBeforeRender = (renderer, scene, camera) => axes.update(camera);
 
 const state = {
   graph: demoTwoGates(),
