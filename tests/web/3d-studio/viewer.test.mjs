@@ -963,12 +963,15 @@ test('Luftbohnen: setzen, ziehen, drehen, neu setzen, Datei', async () => {
   assert.ok(v.state.ready && v.state.model, 'das Beispielteil steht');
   assert.ok(v.refMesh.visible);
   assert.equal(v.state.plan.items && Object.keys(v.state.plan.items).length, 0, 'ohne Plan keine Elemente');
-  assert.match(d7.getElementById('rules-list').innerHTML, /Noch keine Luftbohne/);
+  assert.equal(d7.getElementById('rules-list'), null, 'keine Prüfliste in diesem Werkzeug');
+  assert.equal(d7.getElementById('axis-seg'), null, 'und keine Trennebene');
+  assert.match(d7.getElementById('plan-facts').innerHTML, /Bauteil/, 'das Bauteilvolumen steht da');
   assert.ok(v.view.axes, 'das Achsenkreuz hängt an der Szene');
+  assert.equal(d7.getElementById('ref-opacity').value, '100', 'das Bauteil ist deckend');
 
   /* Setzen: Art wählen, dann aufs Bauteil klicken. Die Kamera schaut von
      +X waagerecht auf die Bauteilmitte — der Strahl trifft eine Wand,
-     die Bohne wächst nach außen (+X) in der Trennebene (y fest). */
+     die Bohne wächst entlang deren Normale nach außen (+X). */
   const T3 = await import('three');
   const b = v.state.model.bounds;
   const c = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
@@ -992,36 +995,43 @@ test('Luftbohnen: setzen, ziehen, drehen, neu setzen, Datei', async () => {
   const it = items[0];
   assert.equal(it.type, 'bohne');
   assert.ok(it.pos[0] > c[0], 'auf der +X-Seite des Bauteils: ' + it.pos);
-  assert.ok(it.dir[0] > 0.9 && Math.abs(it.dir[1]) < 1e-9, 'sie wächst nach außen, in der Trennebene: ' + it.dir);
+  assert.ok(it.dir[0] > 0.9, 'sie wächst nach außen, entlang der Wandnormalen: ' + it.dir);
   assert.equal(v.handles.selected, it.id, 'und ist gewählt');
   assert.match(d7.getElementById('pt-sel').innerHTML, /Überlaufbohne/);
   const param = k => d7.getElementById('sel-params').querySelector('#p-' + k);
   assert.ok(param('wellD'), 'die Maße der Art stehen im Feld');
-  assert.match(d7.getElementById('plan-facts').innerHTML, /Überlaufvolumen/);
+  assert.match(d7.getElementById('plan-facts').innerHTML, /Luftbohnen.*Gesamt/s, 'Bauteil, Luftbohnen, Gesamt');
   assert.ok(v.group.children.some(m => m.visible && m.geometry && m.geometry.attributes.position
     && m.geometry.attributes.position.count > 0 && m !== v.refMesh), 'ein Körper steht im Viewport');
 
-  /* Ziehen: von oben in der Trennebene — y bleibt, x und z wandern. */
-  cam.position.set(it.pos[0], it.pos[1] + 400, it.pos[2]);
-  cam.up.set(0, 0, -1); cam.lookAt(it.pos[0], it.pos[1], it.pos[2]); cam.updateMatrixWorld(true); v.view.scene.updateMatrixWorld(true);
+  /* Ziehen: in der Tangentialebene der Wand. Schräg von oben auf den
+     Punkt geschaut — genau entlang der Normalen läge der Pfeil vor der
+     Kugel und der Klick träfe ihn; so liegt er daneben. Der Punkt
+     rutscht auf der Wand entlang (y, z), nicht von ihr weg (x). */
+  cam.position.set(it.pos[0] + 300, it.pos[1] + 300, it.pos[2]);
+  cam.up.set(0, 1, 0); cam.lookAt(it.pos[0], it.pos[1], it.pos[2]); cam.updateMatrixWorld(true);
+  v.view.scene.updateMatrixWorld(true);
   const p0 = it.pos.slice();
-  zeiger('pointerdown', 400, 300);
+  const [hx, hy] = px(it.pos);
+  zeiger('pointerdown', hx, hy);
   assert.ok(v.handles.dragging, 'der Zug beginnt am Punkt');
-  zeiger('pointermove', 470, 300);
+  zeiger('pointermove', hx + 70, hy);
   await new Promise(r => setTimeout(r, 30));
-  zeiger('pointerup', 470, 300);
-  assert.ok(Math.hypot(it.pos[0] - p0[0], it.pos[2] - p0[2]) > 5, 'der Punkt wandert: ' + p0 + ' → ' + it.pos);
-  assert.ok(Math.abs(it.pos[1] - p0[1]) < 1e-9, 'aber nicht aus der Trennebene');
+  zeiger('pointerup', hx + 70, hy);
+  assert.ok(Math.hypot(it.pos[1] - p0[1], it.pos[2] - p0[2]) > 5, 'der Punkt wandert auf der Wand: ' + p0 + ' → ' + it.pos);
+  assert.ok(Math.abs(it.pos[0] - p0[0]) < 1e-6, 'aber nicht von ihr weg');
 
-  /* Drehen um die Ausstoßachse: die Richtung schwenkt, der Punkt bleibt. */
+  /* Drehen um die eigene Achse: die Achse bleibt, „oben" schwenkt. */
+  const G7 = await import('../../../web/tools/3d-studio/js/vents/model.js');
+  const n0 = G7.frameOf(it).n.slice();
   const d0 = it.dir.slice();
   const rot = d7.getElementById('sel-rot');
   rot.value = '90';
   rot.dispatch('input');
   assert.equal(it.rot, 90);
-  const G7 = await import('../../../web/tools/3d-studio/js/vents/model.js');
-  const f = G7.frameOf(v.state.plan, it);
-  assert.ok(Math.abs(f.d[0] * d0[0] + f.d[1] * d0[1] + f.d[2] * d0[2]) < 1e-9, 'um 90° gedreht: ' + f.d);
+  const f = G7.frameOf(it);
+  assert.deepEqual(f.d, d0, 'die Achse bleibt die Wandnormale');
+  assert.ok(Math.abs(f.n[0] * n0[0] + f.n[1] * n0[1] + f.n[2] * n0[2]) < 1e-9, 'oben um 90° gedreht: ' + f.n);
   assert.match(d7.getElementById('sel-rot-val').textContent, /90/);
 
   /* Neu setzen: der Pfeil schaltet den Zielmodus scharf, der Klick aufs
@@ -1040,17 +1050,19 @@ test('Luftbohnen: setzen, ziehen, drehen, neu setzen, Datei', async () => {
   assert.ok(Math.abs(it.pos[2] - (c[2] + 20)) < 1e-6, 'versetzt: ' + it.pos);
   assert.equal(it.rot, 90, 'die Drehung bleibt');
 
-  /* Art wechseln, Maß ändern, Prüfliste. */
+  /* Art wechseln, Maß ändern — das Volumen zieht nach. */
   const typeSel = d7.getElementById('sel-type');
   typeSel.value = 'entlueftet';
   typeSel.dispatch('change');
   assert.equal(it.type, 'entlueftet');
   const vh = param('ventH');
   assert.ok(vh, 'der Kanal hat eine Höhe');
+  const before = d7.getElementById('plan-facts').innerHTML;
   vh.value = '0,4';
   vh.dispatch('change');
   assert.equal(it.p.ventH, 0.4);
-  assert.match(d7.getElementById('rules-list').innerHTML, /kanal zu hoch/i);
+  assert.notEqual(d7.getElementById('plan-facts').innerHTML, before, 'mehr Kanal, mehr Volumen');
+  assert.ok(param('draft') && param('wellR'), 'Schräge und Radius stehen im Feld');
 
   /* Datei hin und zurück, dann löschen. */
   const json = JSON.parse(JSON.stringify(G7.toJSON(v.state.plan)));

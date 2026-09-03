@@ -546,10 +546,13 @@ Kette von Abtasten bis Sweep 16,9 → 10,7 ms.
 
 Seit dem Angussdesigner ist sein Viewport der Maßstab für alle Seiten des
 Studios: der Quaternionen-Trackball, das mitgeführte Licht, das
-Achsenkreuz unter der Ansichtsleiste und das Zeichnen auf Abruf sind die
-Voreinstellungen von `initScene` (js/scene.js). Der Formaufbau und die
-drei Bauteilseiten bekommen sie ohne eigenes Zutun; wer die alte
-Azimut-Höhenwinkel-Steuerung will, verlangt `orbit: 'orbit'`.
+Achsenkreuz unter der Ansichtsleiste, das Zeichnen auf Abruf und KEIN
+Bodenraster sind die Voreinstellungen von `initScene` (js/scene.js) — ein
+Körper, den man frei von allen Seiten ansieht, hat kein „unten", und das
+Raster lag bei jeder schrägen Ansicht im Bild. Der Formaufbau und die drei
+Bauteilseiten bekommen das ohne eigenes Zutun; wer die alte
+Azimut-Höhenwinkel-Steuerung oder das Raster will, verlangt
+`orbit: 'orbit'` bzw. `grid: true`.
 
 Die OrbitControls drehen um eine feste Hochachse. Für ein Bauteil auf
 einem Raster ist das richtig, für einen Anguss hinderlich: er liegt in
@@ -675,55 +678,68 @@ die Griffe, nicht das Netz.
 Die zweite Seite, die Geometrie **erzeugt**: Überläufe und Entlüftungen
 am Bauteil. Eine Druckgießform füllt sich in Millisekunden, und die Luft
 der Kavität muss in derselben Zeit hinaus — dort, wo die Schmelze
-zuletzt ankommt, sitzen Überlaufbohnen: Taschen in der Trennebene, über
-einen dünnen Steg mit dem Bauteil verbunden. Sie nehmen die erste, kalte
-und oxidhaltige Front auf; die Entlüftung dahinter führt die Luft zum
-Formrand oder ins Waschbrett (Chill-Vent), in dessen Wellen die Schmelze
-erstarrt, bevor sie hinaus kann.
+zuletzt ankommt, sitzen Überlaufbohnen: Taschen, über einen dünnen Steg
+mit dem Bauteil verbunden. Sie nehmen die erste, kalte und oxidhaltige
+Front auf; die Entlüftung dahinter führt die Luft zum Formrand oder ins
+Waschbrett (Chill-Vent), in dessen Wellen die Schmelze erstarrt, bevor
+sie hinaus kann.
 
 ### Setzen, ziehen, drehen, neu setzen
 
 Das Bauteil (Beispielteil oder eigene STL/GLB, dieselbe Quelle wie in der
-Bauteilanalyse) liegt durchscheinend im Viewport. **Eine Art wählen und
-auf das Bauteil klicken:** dort sitzt das Element — Ort ist der
-getroffene Punkt, Richtung die nach außen gerichtete Wandnormale in der
-Trennebene, dorthin wächst die Bohne. Der Zielmodus ist derselbe wie beim
-Angussdesigner: Hinweis oben im Viewport, Marke unter dem Zeiger,
-Fehlklick benannt, Esc bricht ab. Danach:
+Bauteilanalyse) steht deckend im Viewport — hier wird auf die Wand
+geklickt, und die soll aussehen wie eine Wand; der Regler „Deckkraft"
+macht sie durchscheinend. **Eine Art wählen und auf das Bauteil
+klicken:** dort sitzt das Element. Ort ist der getroffene Punkt, Achse
+die nach außen gerichtete Flächennormale — dorthin wachsen Steg, Bohne
+und Kanal, und der Pfeil im Viewport zeigt sie. Eine Trennebene braucht
+das Werkzeug nicht: die Wand sagt, wie das Element steht. Was um die
+Achse herum „oben" ist, kommt von der Weltachse, die am wenigsten mit
+ihr zusammenfällt (so kippt nichts um, und Nachbarn auf derselben Wand
+liegen gleich), und lässt sich mit der **Drehung** im Auswahlfeld um die
+Achse schwenken — das ist das Drehen um den Punkt. Der Zielmodus ist
+derselbe wie beim Angussdesigner: Hinweis oben im Viewport, Marke unter
+dem Zeiger, Fehlklick benannt, Esc bricht ab. Danach:
 
-- **den Punkt ziehen** verschiebt in der Trennebene (mit Alt in der
-  Tiefe, entlang der Ausstoßachse);
+- **den Punkt ziehen** verschiebt in der Tangentialebene der Wand — der
+  Punkt rutscht auf ihr entlang; mit Alt von ihr weg;
 - **den Pfeil anklicken** setzt das Element an eine andere Stelle des
-  Bauteils, samt neuer Richtung — die Drehung bleibt;
-- **Drehung** im Auswahlfeld schwenkt es um die Ausstoßachse am Punkt;
+  Bauteils, samt neuer Achse — die Drehung bleibt;
 - jedes **Maß** der Art steht im Auswahlfeld; die Art lässt sich
   wechseln, Maße, die beide Arten haben, bleiben dabei.
 
 Vier Arten: **Überlaufbohne** (Steg und Tasche), **Überlauf mit
 Entlüftung** (dazu ein flacher Kanal), **Waschbrett** (Steg und
 Zickzack-Kanal, dessen Spalt senkrecht zur Welle überall gleich misst)
-und **Entlüftungsschlitz** (nur der flache Kanal). Alle Körper sind
-geschlossene Prismen (js/vents/geom.js; die Deckel per Ohrenabschneiden,
-damit auch das nicht konvexe Zickzack-Band dicht ist), ihre Tiefe wächst
-entgegen der Ausstoßrichtung — in dieselbe Formhälfte wie die Kanäle des
-Angussdesigners.
+und **Entlüftungsschlitz** (nur der flache Kanal).
 
-### Zahlen und Prüfung
+### Die Bohne
 
-Die Seitenleiste nennt Elemente, **Überlaufvolumen** (das gehört zum
-Schussgewicht — im Angussdesigner schlägt man es unter „Prozess" auf das
-Gussvolumen auf) und den Entlüftungsquerschnitt; das Auswahlfeld das
-Volumen, den Steg- und Kanalquerschnitt und die Richtung des Elements.
-Die Prüfliste sagt, was jeder Gießer im Kopf hat: Entlüftungskanäle über
-0,15 bis 0,2 mm laufen aus (ab 0,2 mm prüfen, ab 0,3 mm ändern), ein Steg
-über 1,5 mm bricht nicht sauber ab, einer unter 0,5 mm friert ein, ein
-Waschbrett braucht Weg und einen Spalt von 0,3 bis 0,6 mm, eine Bohne
-unter einem halben Kubikzentimeter fasst nichts.
+Die Tasche ist ein **D**: flach zum Steg hin, rund am fernen Ende. An
+einer rundum runden Bohne berührte der Steg sie nur in einer Linie — da
+käme keine Schmelze hinein; an der flachen Seite sitzt er mit ganzer
+Stirnfläche, und die flache Seite ist immer mindestens so breit wie er.
+Die Wände haben **Entformschräge**, der Boden einen **Radius** (beide
+Maße am Element, Vorgabe 5° und 1,5 mm): die Bohne entsteht als Loft aus
+demselben Umriss, Ring für Ring nach innen versetzt, unten über einen
+Viertelkreis in den Boden. Weil die Wand mit der Schräge zurückweicht,
+reicht der Steg ein Stück in die Bohne hinein — ein Steg, der genau an
+der Oberkante endete, hinge darunter in der Luft; das Stück wird beim
+Volumen wieder herausgerechnet. Alle Körper sind geschlossen (Deckel per
+Ohrenabschneiden, damit auch das nicht konvexe Zickzack-Band dicht ist);
+Steg, Kanal und Bohne liegen mit ihrer offenen Seite in der lokalen
+Oberseite und wachsen von dort in die Tiefe.
 
-### Dateien
+### Zahlen und Dateien
 
-- **JSON** — der Plan: Achse, je Element Art, Ort, Richtung, Drehung,
-  Maße (`dielogic-luft`, Fassung 1).
+Die Seitenleiste nennt, worum es geht: Elemente, das **Volumen des
+Bauteils**, das der **Luftbohnen** und die **Summe** — das ist das
+Gussvolumen, das der Angussdesigner unter „Prozess" braucht. Eine
+Prüfliste gibt es hier nicht; das Auswahlfeld nennt Volumen, Steg- und
+Kanalquerschnitt und die Achse des Elements.
+
+- **JSON** — der Plan: je Element Art, Ort, Achse, Drehung, Maße
+  (`dielogic-luft`, Fassung 2).
 - **STL** — die Körper aller Elemente.
 
 Die Griffe (`js/handles.js`) sind dieselben wie im Angussdesigner: was

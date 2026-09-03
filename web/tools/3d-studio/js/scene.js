@@ -31,7 +31,10 @@ const VIEWS = {
 export function initScene(container, opts = {}) {
   const {
     background = 0xe8eef0,
-    gridSize = 3000, gridY = -470, grid: wantGrid = true,
+    /* Kein Bodenraster: ein Körper, den man frei von allen Seiten ansieht,
+       hat kein „unten" — das Raster lag bei jeder schrägen Ansicht im Bild
+       und von unten davor. Wer es will, verlangt grid: true. */
+    gridSize = 3000, gridY = -470, grid: wantGrid = false,
     cameraStart = [1500, 680, -1350], target = [0, 0, 20],
     minDistance = 60, maxDistance = 8000,
     /* 'trackball' dreht frei mit Quaternionen um den Zielpunkt

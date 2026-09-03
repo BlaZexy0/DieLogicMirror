@@ -18,20 +18,26 @@ const openEdges = tris => {
   for (let i = 0; i < nbr.length; i++) if (nbr[i] < 0) open++;
   return open;
 };
+const polyArea = poly => {
+  let a = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i], q = poly[(i + 1) % poly.length];
+    a += p[0] * q[1] - q[0] * p[1];
+  }
+  return Math.abs(a) / 2;
+};
 
-test('Plan: Elemente entstehen mit Richtung in der Trennebene und ihrer Art', () => {
+test('Plan: Elemente sitzen auf der Wand und richten sich nach ihrer Normalen', () => {
   const plan = M.emptyPlan();
-  /* Die nach innen gerichtete Normale einer Wand, leicht aus der Ebene
-     gekippt — die Bohne wächst nach AUSSEN, in der Ebene. */
-  const it = M.addItem(plan, 'bohne', [10, 3, 20], [-0.96, 0.28, 0]);
+  const it = M.addItem(plan, 'bohne', [10, 3, 20], [-0.6, 0.8, 0]);
   assert.equal(it.type, 'bohne');
   assert.deepEqual(it.pos, [10, 3, 20]);
-  assert.ok(Math.abs(it.dir[1]) < 1e-12, 'kein Anteil auf der Ausstoßachse');
-  assert.ok(Math.abs(Math.hypot(...it.dir) - 1) < 1e-12, 'normiert');
+  assert.ok(Math.abs(it.dir[0] + 0.6) < 1e-12 && Math.abs(it.dir[1] - 0.8) < 1e-12, 'die Achse ist die Normale, wie sie kommt');
   assert.equal(it.p.wellD, 6, 'Vorgabe der Art');
-  /* Senkrecht getroffen (Deckfläche): irgendeine Richtung in der Ebene. */
-  const top = M.addItem(plan, 'schlitz', [0, 0, 0], [0, -1, 0]);
-  assert.ok(Math.abs(top.dir[1]) < 1e-12 && Math.hypot(...top.dir) > 0.999);
+  assert.equal(it.p.draft, 5, 'mit Entformschräge');
+  assert.equal(it.p.wellR, 1.5, 'und Bodenradius');
+  const nix = M.addItem(plan, 'schlitz', [0, 0, 0], [0, 0, 0]);
+  assert.deepEqual(nix.dir, [1, 0, 0], 'ohne Richtung: irgendeine, nicht der Nullvektor');
   /* Art wechseln behält, was beide Arten haben. */
   it.p.stegW = 15;
   M.setType(plan, it.id, 'entlueftet');
@@ -41,20 +47,45 @@ test('Plan: Elemente entstehen mit Richtung in der Trennebene und ihrer Art', ()
   assert.equal(it.p.stegW, undefined, 'ein Schlitz hat keinen Steg');
 });
 
-test('Dreibein: rechtshändig, Drehung um die Ausstoßachse', () => {
+test('Dreibein: rechtshändig, stetig, Drehung um die Achse selbst', () => {
   const plan = M.emptyPlan();
   const it = M.addItem(plan, 'bohne', [0, 0, 0], [1, 0, 0]);
-  let f = M.frameOf(plan, it);
-  assert.deepEqual(f.n, [0, 1, 0]);
-  assert.ok(Math.abs(f.d[0] - 1) < 1e-12);
-  /* r = n × d = (0,1,0) × (1,0,0) = (0,0,−1): x=d, y=r, z=n rechtshändig. */
-  assert.ok(Math.abs(f.r[2] + 1) < 1e-12, 'quer: ' + f.r);
+  let f = M.frameOf(it);
+  assert.deepEqual(f.d, [1, 0, 0]);
+  const dotp = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const crs = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  assert.ok(Math.abs(dotp(f.d, f.r)) < 1e-12 && Math.abs(dotp(f.d, f.n)) < 1e-12 && Math.abs(dotp(f.r, f.n)) < 1e-12, 'orthogonal');
+  const z = crs(f.d, f.r);
+  assert.ok(Math.hypot(z[0] - f.n[0], z[1] - f.n[1], z[2] - f.n[2]) < 1e-12, 'x × y = z: rechtshändig');
+  /* Ohne Trennebene sagt die Welt, was oben ist: für eine Wand, die nach
+     +X zeigt, ist es +Y. */
+  assert.ok(f.n[1] > 0.999, 'oben ist +Y: ' + f.n);
+  /* Die Drehung dreht um d — d selbst bleibt, r und n schwenken. */
+  const r0 = f.r.slice();
   M.setRot(plan, it.id, 90);
-  f = M.frameOf(plan, it);
-  assert.ok(Math.abs(f.d[2] + 1) < 1e-9 || Math.abs(f.d[2] - 1) < 1e-9, 'um 90° gedreht liegt d auf z: ' + f.d);
-  assert.ok(Math.abs(M.toWorld(f, 1, 0, 0)[1]) < 1e-12, 'in der Ebene');
+  f = M.frameOf(it);
+  assert.deepEqual(f.d, [1, 0, 0]);
+  assert.ok(Math.abs(dotp(f.r, r0)) < 1e-9, 'quer um 90° gedreht: ' + f.r);
+  assert.ok(Math.abs(M.toWorld(f, 1, 0, 0)[0] - 1) < 1e-12, 'längs bleibt längs');
   M.setRot(plan, it.id, 500);
   assert.equal(it.rot, 180, 'begrenzt');
+  /* Eine Wand, die nach oben zeigt: das Dreibein kippt nicht um. */
+  const top = M.addItem(plan, 'bohne', [0, 0, 0], [0, 1, 0]);
+  const g = M.frameOf(top);
+  assert.ok(Math.abs(dotp(g.d, g.r)) < 1e-12 && Math.hypot(...g.r) > 0.999 && Math.hypot(...g.n) > 0.999);
+});
+
+test('Umriss der Bohne: ein D, flach zum Steg, Punktzahl unabhängig vom Versatz', () => {
+  const a = GEO.wellOutline(3, 22, 14, 2, 0);
+  const b = GEO.wellOutline(3, 22, 14, 2, 0.5);
+  assert.equal(a.length, b.length, 'Ringe passen zueinander');
+  assert.ok(polyArea(b) < polyArea(a), 'nach innen versetzt ist kleiner');
+  /* Flach bei x = 3 über die Breite des Stegs: kein Punkt liegt davor. */
+  assert.ok(a.every(p => p[0] >= 3 - 1e-9), 'nichts vor der flachen Seite');
+  const flat = a.filter(p => Math.abs(p[0] - 3) < 1e-9);
+  assert.ok(flat.length >= 2 && Math.max(...flat.map(p => p[1])) - Math.min(...flat.map(p => p[1])) >= 10 - 1e-9,
+    'die flache Seite ist mindestens so breit wie der Steg (10 mm)');
+  assert.ok(Math.max(...a.map(p => p[0])) <= 3 + 22 + 1e-9, 'und endet bei Steg + Länge');
 });
 
 test('Körper: dicht, nach außen gewickelt, Volumen wie gerechnet', () => {
@@ -62,23 +93,34 @@ test('Körper: dicht, nach außen gewickelt, Volumen wie gerechnet', () => {
   for (const type of Object.keys(M.TYPES)) {
     const it = M.addItem(plan, type, [5, -2, 7], [0.6, 0, 0.8]);
     M.setRot(plan, it.id, 35);
-    const parts = GEO.buildItem(plan, it);
+    const parts = GEO.buildItem(it);
     assert.ok(parts.length >= 1, type + ' hat Körper');
     for (const tris of parts) {
       assert.ok(volume(tris) > 0, type + ': Volumen positiv (Wicklung nach außen)');
       assert.equal(openEdges(tris), 0, type + ': jeder Körper ist geschlossen');
     }
     const p = it.p;
-    const exact = {
-      schlitz: p.ventW * p.ventH * p.ventL,
-      bohne: p.stegW * p.stegH * p.stegL + p.wellD * ((p.wellL - p.wellW) * p.wellW + Math.PI * p.wellW * p.wellW / 4),
-      entlueftet: p.stegW * p.stegH * p.stegL + p.wellD * ((p.wellL - p.wellW) * p.wellW + Math.PI * p.wellW * p.wellW / 4)
-        + p.ventW * p.ventH * p.ventL,
-      waschbrett: p.stegW * p.stegH * p.stegL + p.ventW * p.ventH * p.waves * Math.hypot(p.waveL, 2 * p.amp)
-    }[type];
-    const v = GEO.volumeOf(plan, it);
-    const tol = type === 'bohne' || type === 'entlueftet' ? 0.02 : 1e-6;     // Halbkreise als Sehnen
-    assert.ok(Math.abs(v - exact) / exact < tol, type + ': ' + v.toFixed(1) + ' gegen ' + exact.toFixed(1) + ' mm³');
+    if (type === 'schlitz') {
+      assert.ok(Math.abs(GEO.volumeOf(it) - p.ventW * p.ventH * p.ventL) < 1e-6);
+    }
+    if (type === 'waschbrett') {
+      const exact = p.stegW * p.stegH * p.stegL + p.ventW * p.ventH * p.waves * Math.hypot(p.waveL, 2 * p.amp);
+      assert.ok(Math.abs(GEO.volumeOf(it) - exact) / exact < 1e-6, 'Waschbrett ' + GEO.volumeOf(it) + ' gegen ' + exact);
+    }
+    if (type === 'bohne') {
+      /* Ohne Schräge und Radius ist die Bohne ein Prisma: Umriss × Tiefe. */
+      const withBoth = GEO.volumeOf(it);
+      p.draft = 0; p.wellR = 0;
+      const prismV = GEO.volumeOf(it);
+      const rn = Math.max(0.3, Math.min(2, (p.wellW - p.stegW) / 2, p.wellW / 4));
+      const expect = p.stegW * p.stegH * p.stegL + polyArea(GEO.wellOutline(p.stegL, p.wellL, p.wellW, rn, 0)) * p.wellD;
+      assert.ok(Math.abs(prismV - expect) / expect < 1e-6, 'Prisma: ' + prismV + ' gegen ' + expect);
+      assert.ok(withBoth < prismV, 'Schräge und Radius nehmen Volumen weg: ' + withBoth + ' < ' + prismV);
+      p.draft = 5;
+      const drafted = GEO.volumeOf(it);
+      assert.ok(drafted < prismV && drafted > withBoth, 'die Schräge allein liegt dazwischen');
+      for (const tris of GEO.buildItem(it)) assert.equal(openEdges(tris), 0, 'auch mit Schräge dicht');
+    }
   }
   const all = GEO.buildAll(plan);
   assert.ok(all.length > 0 && all.length % 9 === 0);
@@ -86,39 +128,30 @@ test('Körper: dicht, nach außen gewickelt, Volumen wie gerechnet', () => {
   assert.deepEqual(Object.keys(byType).sort(), Object.keys(M.TYPES).sort());
 });
 
+test('Steg und Bohne berühren sich mit ganzer Stirnfläche', () => {
+  const plan = M.emptyPlan();
+  const it = M.addItem(plan, 'bohne', [0, 0, 0], [1, 0, 0]);
+  const [steg, bohne] = GEO.buildItem(it);
+  /* Der Steg endet HINTER der flachen Seite der Bohne (x = stegL) — er
+     ragt hinein, statt vor der zurückweichenden Wand in der Luft zu hängen. */
+  let stegMaxX = -Infinity, bohneMinX = Infinity;
+  for (let i = 0; i < steg.length; i += 3) stegMaxX = Math.max(stegMaxX, steg[i]);
+  for (let i = 0; i < bohne.length; i += 3) bohneMinX = Math.min(bohneMinX, bohne[i]);
+  assert.ok(stegMaxX > it.p.stegL + 0.1, 'der Steg reicht in die Bohne: ' + stegMaxX);
+  assert.ok(Math.abs(bohneMinX - it.p.stegL) < 1e-9, 'die Bohne beginnt am Stegende: ' + bohneMinX);
+});
+
 test('Datei: hin und zurück ergibt denselben Plan', () => {
   const plan = M.emptyPlan();
-  plan.axis = '-z';
-  const a = M.addItem(plan, 'waschbrett', [1, 2, 3], [0, 1, 0]);
+  const a = M.addItem(plan, 'waschbrett', [1, 2, 3], [0, 0.6, 0.8]);
   M.setRot(plan, a.id, -40);
   a.p.waves = 9;
   M.addItem(plan, 'bohne', [-5, 0, 0], [0, 1, 0]);
   const back = M.fromJSON(JSON.parse(JSON.stringify(M.toJSON(plan))));
-  assert.equal(back.axis, '-z');
   assert.equal(M.allItems(back).length, 2);
   assert.equal(back.items[a.id].rot, -40);
   assert.equal(back.items[a.id].p.waves, 9);
-  assert.ok(Math.abs(back.items[a.id].dir[2]) < 1e-9, 'die Richtung liegt in der Ebene zur Achse');
+  assert.ok(Math.abs(back.items[a.id].dir[1] - 0.6) < 1e-6, 'die Achse bleibt, wie sie war');
   assert.equal(back.seq, 2, 'neue Elemente zählen weiter');
   assert.throws(() => M.fromJSON({ format: 'x' }), /Luftbohnen-Datei/);
-});
-
-test('Prüfung: zu hohe Kanäle, dicke und dünne Stege werden benannt', () => {
-  const plan = M.emptyPlan();
-  assert.equal(M.checkPlan(plan)[0].level, 'note');
-  const a = M.addItem(plan, 'entlueftet', [0, 0, 0], [1, 0, 0]);
-  assert.ok(M.checkPlan(plan).every(r => r.level === 'ok'), 'die Vorgaben sind sauber');
-  a.p.ventH = 0.35;
-  let r = M.checkPlan(plan).find(x => /kanal zu hoch/i.test(x.title));
-  assert.ok(r && r.level === 'bad');
-  assert.match(r.text, /0,35 mm/);
-  a.p.ventH = 0.15;
-  a.p.stegH = 2;
-  r = M.checkPlan(plan).find(x => /Steg dick/.test(x.title));
-  assert.ok(r && r.level === 'warn');
-  a.p.stegH = 0.3;
-  assert.ok(M.checkPlan(plan).find(x => /Steg dünn/.test(x.title)));
-  const w = M.addItem(plan, 'waschbrett', [0, 0, 0], [1, 0, 0]);
-  w.p.waves = 2;
-  assert.ok(M.checkPlan(plan).find(x => /Waschbrett kurz/.test(x.title)));
 });

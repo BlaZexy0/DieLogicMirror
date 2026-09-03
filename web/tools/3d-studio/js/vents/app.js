@@ -1,11 +1,11 @@
 /* Luftbohnen-Designer (luft.html) — Einstieg und Verdrahtung.
 
-   Das Bauteil liegt durchscheinend im Viewport. Wer eine Art wählt und
-   auf das Bauteil klickt, setzt dort ein Element: Ort ist der getroffene
-   Punkt, Richtung die nach außen gerichtete Wandnormale in der
-   Trennebene — dorthin wächst die Bohne. Danach: am Punkt ziehen (in
-   der Trennebene, mit Alt in der Tiefe), am Pfeil neu setzen, im
-   Auswahlfeld drehen und bemaßen.
+   Wer eine Art wählt und auf das Bauteil klickt, setzt dort ein Element:
+   Ort ist der getroffene Punkt, Achse die nach außen gerichtete
+   Flächennormale — dorthin wachsen Steg, Bohne und Kanal. Danach: am
+   Punkt ziehen (in der Tangentialebene, also auf der Wand entlang; mit
+   Alt von ihr weg), am Pfeil neu setzen, im Auswahlfeld um die Achse
+   drehen und bemaßen.
 
    Der Plan (js/vents/model.js) ist die Quelle; Körper (js/vents/geom.js),
    Kennzahlen und Prüfliste entstehen daraus bei jeder Änderung neu. Die
@@ -16,7 +16,7 @@ import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
 import { mountNav } from '../ui/nav.js';
-import { $, fmt, facts, segButtons, slider, numberInput } from '../ui/controls.js';
+import { $, fmt, facts, slider, numberInput } from '../ui/controls.js';
 import { mountPartSource } from '../part/partsource.js';
 import { writeSTL } from '../part/stlio.js';
 import { createHandles, SELECTED_RING } from '../handles.js';
@@ -38,9 +38,11 @@ const state = { plan: M.emptyPlan(), model: null, name: '', ready: false };
 const group = new T.Group();
 view.scene.add(group);
 
+/* Deckend: hier wird auf die Wand geklickt, und die soll aussehen wie
+   eine Wand. Der Regler „Deckkraft" macht sie durchscheinend, wenn man
+   hinter sie sehen will. */
 const refMat = new T.MeshStandardMaterial({
-  color: 0xb5c0c4, roughness: 0.7, metalness: 0.05,
-  transparent: true, opacity: 0.35, depthWrite: false, side: T.DoubleSide
+  color: 0xb5c0c4, roughness: 0.7, metalness: 0.05, side: T.DoubleSide
 });
 const refMesh = new T.Mesh(new T.BufferGeometry(), refMat);
 refMesh.visible = false;
@@ -63,12 +65,14 @@ const handles = createHandles({
   markColor: M.TYPES.bohne.color,
   items: () => M.allItems(state.plan).map(it => ({
     id: it.id, pos: it.pos, color: M.TYPES[it.type].color,
-    dir: M.frameOf(state.plan, it).d,
+    dir: it.dir,
     planeSize: Math.max(24, (it.p.wellW || it.p.ventW || 12) * 2)
   })),
+  /* Gezogen wird in der Tangentialebene der Wand: der Punkt rutscht auf
+     ihr entlang. Mit Alt entlang der Normalen, von der Wand weg. */
   plane: id => {
     const it = state.plan.items[id];
-    return it ? { origin: it.pos, normal: M.normalOf(state.plan) } : null;
+    return it ? { origin: it.pos, normal: it.dir } : null;
   },
   move: (id, pos) => M.setPos(state.plan, id, pos),
   onSelect: () => { cancelAim(); syncSelection(); },
@@ -102,28 +106,23 @@ function rebuild(mode) {
   handles.refresh();
   if (mode === 'drag') { view.invalidate(); return; }
   updateFacts();
-  updateRules();
   updateMenu();
   view.invalidate();
 }
 
+/* Die Zahlen, um die es geht: was das Bauteil wiegt und was die
+   Luftbohnen dazulegen — zusammen ist das, was durch die Anschnitte muss. */
 function updateFacts() {
   const items = M.allItems(state.plan);
-  let overflow = 0, ventArea = 0;
-  for (const it of items) {
-    overflow += volumeOf(state.plan, it);
-    if (it.p.ventW && it.p.ventH) ventArea += it.p.ventW * it.p.ventH;
-  }
+  let added = 0;
+  for (const it of items) added += volumeOf(it);
+  const part = state.model ? state.model.volume : 0;
   facts('plan-facts', [
     ['Elemente', fmt(items.length, 0)],
-    ['Überlaufvolumen', fmt(overflow / 1000) + ' cm³'],
-    ['Entlüftungsquerschnitt', fmt(ventArea) + ' mm²']
+    ['Bauteil', fmt(part / 1000) + ' cm³'],
+    ['Luftbohnen', fmt(added / 1000) + ' cm³'],
+    ['Gesamt', fmt((part + added) / 1000) + ' cm³']
   ]);
-}
-
-function updateRules() {
-  $('rules-list').innerHTML = M.checkPlan(state.plan).map(r =>
-    '<div class="rule ' + r.level + '"><b>' + r.title + '</b><span>' + r.text + '</span></div>').join('');
 }
 
 /* ── Auswahl ─────────────────────────────────────────────────── */
@@ -155,7 +154,7 @@ function syncSelection() {
     const m = M.PARAM_META[k] || { label: k };
     return '<div class="row"><span>' + m.label + '</span>'
       + '<input type="text" id="p-' + k + '" inputmode="decimal" spellcheck="false" value="' + fmt(it.p[k], 2) + '">'
-      + '<span class="val">' + (m.step === 1 ? '' : 'mm') + '</span></div>';
+      + '<span class="val">' + (m.unit === undefined ? 'mm' : m.unit) + '</span></div>';
   }).join('');
   for (const k of keys) {
     const m = M.PARAM_META[k] || { min: 0, max: 1e6 };
@@ -177,11 +176,10 @@ function syncSelection() {
 }
 
 function syncFacts(it) {
-  const rows = [['Volumen', fmt(volumeOf(state.plan, it) / 1000, 2) + ' cm³']];
+  const rows = [['Volumen', fmt(volumeOf(it) / 1000, 2) + ' cm³']];
   if (it.p.stegW) rows.push(['Stegquerschnitt', fmt(it.p.stegW * it.p.stegH) + ' mm²']);
   if (it.p.ventW) rows.push(['Kanalquerschnitt', fmt(it.p.ventW * it.p.ventH, 2) + ' mm²']);
-  const f = M.frameOf(state.plan, it);
-  rows.push(['Richtung', dirText(f.d)]);
+  rows.push(['Achse', dirText(it.dir)]);
   facts('sel-facts', rows);
 }
 
@@ -253,7 +251,8 @@ function cancelAim() {
   handles.cancelAim();
   aimArmed(false);
 }
-const planeOf = () => ({ origin: [0, 0, 0], normal: M.normalOf(state.plan) });
+/* Der Strahl liefert die nach INNEN gerichtete Normale; das Element
+   wächst nach außen. */
 const outward = d => [-d[0], -d[1], -d[2]];
 
 function noPart() {
@@ -269,7 +268,6 @@ function startPlace(type) {
   handles.select(null);
   aimArmed(true, M.TYPES[type].label + ': die Stelle am Bauteil anklicken, wo sie sitzen soll. Ziehen dreht die Ansicht, Esc bricht ab.');
   handles.armAim({
-    plane: planeOf,
     onHit: hit => {
       aimArmed(false);
       const it = M.addItem(state.plan, type, hit.point, outward(hit.dir));
@@ -287,7 +285,6 @@ function startMove(id) {
   if (!refMesh.visible) { noPart(); return; }
   aimArmed(true, M.TYPES[it.type].label + ' ' + id + ': die neue Stelle am Bauteil anklicken. Esc bricht ab.');
   handles.armAim({
-    plane: planeOf,
     onHit: hit => {
       aimArmed(false);
       M.placeAt(state.plan, id, hit.point, outward(hit.dir));
@@ -308,14 +305,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-/* ── Trennebene und Bauteil ──────────────────────────────────── */
-segButtons('axis-seg', value => {
-  if (!M.AXES[value]) return;
-  state.plan.axis = value;
-  rebuild();
-  syncSelection();
-});
-
+/* ── Bauteil ─────────────────────────────────────────────────── */
 slider('ref-opacity', v => {
   refMat.opacity = v / 100;
   refMat.transparent = v < 100;
@@ -377,7 +367,6 @@ $('json-input').addEventListener('change', e => {
 
 function loadPlan(plan) {
   state.plan = plan;
-  for (const b of $('axis-seg').querySelectorAll('button')) b.classList.toggle('active', b.dataset.value === plan.axis);
   handles.select(null);
   rebuild();
 }

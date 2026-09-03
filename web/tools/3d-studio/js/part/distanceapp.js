@@ -39,7 +39,7 @@ const IDLE = 'Ziehen: drehen · Rechte Maustaste: verschieben · Rad: zoomen';
 
 const view = initScene(container, {
   cameraStart: [320, 240, 320], target: [0, 0, 0],
-  grid: true, gridSize: 600, gridY: -100, minDistance: 5, maxDistance: 20000
+  minDistance: 5, maxDistance: 20000
 });
 mountViewBar(container, view);
 

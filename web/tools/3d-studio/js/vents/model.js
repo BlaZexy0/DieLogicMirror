@@ -3,40 +3,35 @@
    Eine Druckgießform füllt sich in Millisekunden; die Luft in der
    Kavität muss in derselben Zeit hinaus. Dafür sitzen am Ende des
    Fließwegs — dort, wo die Schmelze zuletzt ankommt — Überlaufbohnen:
-   Taschen in der Trennebene, über einen dünnen Steg mit dem Bauteil
-   verbunden. Sie nehmen die erste, kalte und oxidhaltige Front auf, und
-   von ihnen führen flache Entlüftungskanäle die Luft weiter zum
-   Formrand oder in ein Waschbrett (Chill-Vent), in dessen Wellen die
-   Schmelze erstarrt, bevor sie hinaus kann.
+   Taschen, über einen dünnen Steg mit dem Bauteil verbunden. Sie nehmen
+   die erste, kalte und oxidhaltige Front auf, und von ihnen führen
+   flache Entlüftungskanäle die Luft weiter zum Formrand oder in ein
+   Waschbrett (Chill-Vent), in dessen Wellen die Schmelze erstarrt, bevor
+   sie hinaus kann.
 
-   Der Plan ist eine Liste solcher Elemente. Jedes hat einen Ort auf der
-   Bauteilwand, eine Richtung (vom Bauteil weg, in der Trennebene), eine
-   Drehung um die Ausstoßachse und seine Maße. Was daraus an Geometrie
-   wird, rechnet js/vents/geom.js; dieses Modul kennt kein Three.js und
-   läuft in den Tests unter Node. */
+   Der Plan ist eine Liste solcher Elemente. Jedes sitzt auf der
+   Bauteiloberfläche und richtet sich nach ihr: seine Achse ist die nach
+   außen gerichtete Flächennormale — dorthin wachsen Steg, Bohne und
+   Kanal. Was um diese Achse herum „oben" ist, sagt die Drehung. Was
+   daraus an Geometrie wird, rechnet js/vents/geom.js; dieses Modul kennt
+   kein Three.js und läuft in den Tests unter Node. */
 
-import { add, sub, cross, norm, dot, rotate, addScaled, rad } from '../runner/vec.js';
+import { add, cross, norm, dot, rotate, rad } from '../runner/vec.js';
 
 export const FORMAT = 'dielogic-luft';
-export const FORMAT_VERSION = 1;
-
-export const AXES = {
-  '+x': [1, 0, 0], '-x': [-1, 0, 0],
-  '+y': [0, 1, 0], '-y': [0, -1, 0],
-  '+z': [0, 0, 1], '-z': [0, 0, -1]
-};
+export const FORMAT_VERSION = 2;
 
 /** Die Arten — Farbe für Griff, Pfeil und Körper; Vorgaben in mm. */
 export const TYPES = {
   bohne: {
     label: 'Überlaufbohne', color: '#e07b39',
     hint: 'Tasche am Ende des Fließwegs: sammelt die erste, kalte und oxidhaltige Schmelze.',
-    params: { stegW: 10, stegH: 1.0, stegL: 3, wellW: 14, wellL: 22, wellD: 6 }
+    params: { stegW: 10, stegH: 1.0, stegL: 3, wellW: 14, wellL: 22, wellD: 6, draft: 5, wellR: 1.5 }
   },
   entlueftet: {
     label: 'Überlauf mit Entlüftung', color: '#2e6da4',
     hint: 'Bohne mit flachem Entlüftungskanal, der die Luft weiter zum Formrand führt.',
-    params: { stegW: 10, stegH: 1.0, stegL: 3, wellW: 14, wellL: 22, wellD: 6, ventW: 12, ventH: 0.15, ventL: 30 }
+    params: { stegW: 10, stegH: 1.0, stegL: 3, wellW: 14, wellL: 22, wellD: 6, draft: 5, wellR: 1.5, ventW: 12, ventH: 0.15, ventL: 30 }
   },
   waschbrett: {
     label: 'Waschbrett (Chill-Vent)', color: '#9a77e8',
@@ -52,46 +47,41 @@ export const TYPES = {
 
 /** Bezeichnung, Grenzen und Einheit je Maß — für die Felder im Auswahlfeld. */
 export const PARAM_META = {
-  stegW: { label: 'Stegbreite', min: 1, max: 200 },
-  stegH: { label: 'Steghöhe', min: 0.2, max: 5 },
-  stegL: { label: 'Stegtiefe', min: 0.5, max: 30 },
-  wellW: { label: 'Bohnenbreite', min: 3, max: 120 },
-  wellL: { label: 'Bohnenlänge', min: 3, max: 200 },
-  wellD: { label: 'Bohnentiefe', min: 0.5, max: 40 },
-  ventW: { label: 'Kanalbreite', min: 1, max: 300 },
-  ventH: { label: 'Kanalhöhe', min: 0.05, max: 3 },
-  ventL: { label: 'Kanallänge', min: 1, max: 400 },
-  waves: { label: 'Wellen', min: 1, max: 30, step: 1 },
-  amp: { label: 'Wellenhöhe', min: 0.5, max: 20 },
-  waveL: { label: 'Wellenlänge', min: 1, max: 60 }
+  stegW: { label: 'Stegbreite', min: 1, max: 200, unit: 'mm' },
+  stegH: { label: 'Steghöhe', min: 0.2, max: 5, unit: 'mm' },
+  stegL: { label: 'Stegtiefe', min: 0.5, max: 30, unit: 'mm' },
+  wellW: { label: 'Bohnenbreite', min: 3, max: 120, unit: 'mm' },
+  wellL: { label: 'Bohnenlänge', min: 3, max: 200, unit: 'mm' },
+  wellD: { label: 'Bohnentiefe', min: 0.5, max: 40, unit: 'mm' },
+  draft: { label: 'Entformschräge', min: 0, max: 20, unit: '°' },
+  wellR: { label: 'Bodenradius', min: 0, max: 20, unit: 'mm' },
+  ventW: { label: 'Kanalbreite', min: 1, max: 300, unit: 'mm' },
+  ventH: { label: 'Kanalhöhe', min: 0.05, max: 3, unit: 'mm' },
+  ventL: { label: 'Kanallänge', min: 1, max: 400, unit: 'mm' },
+  waves: { label: 'Wellen', min: 1, max: 30, step: 1, unit: '' },
+  amp: { label: 'Wellenhöhe', min: 0.5, max: 20, unit: 'mm' },
+  waveL: { label: 'Wellenlänge', min: 1, max: 60, unit: 'mm' }
 };
 
 export function emptyPlan() {
-  return { format: FORMAT, version: FORMAT_VERSION, axis: '+y', items: {}, seq: 0 };
+  return { format: FORMAT, version: FORMAT_VERSION, items: {}, seq: 0 };
 }
 
 export const allItems = plan => Object.values(plan.items);
-export const normalOf = plan => AXES[plan.axis] || AXES['+y'];
 
-/** Richtung in die Trennebene legen und normieren; ist nichts übrig
-    (senkrecht getroffen), irgendeine Richtung in der Ebene. */
-export function inPlane(plan, dir) {
-  const n = normalOf(plan);
-  let d = norm(addScaled(dir, n, -dot(dir, n)));
-  if (!(d[0] || d[1] || d[2])) {
-    const h = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
-    d = norm(cross(n, h));
-  }
-  return d;
-}
+const unit = d => {
+  const u = norm(d);
+  return (u[0] || u[1] || u[2]) ? u : [1, 0, 0];
+};
 
-/** Element anlegen: `dir` zeigt vom Bauteil WEG (dorthin wächst die
-    Bohne); wer die nach innen gerichtete Normale hat, negiert sie. */
+/** Element anlegen: `dir` ist die nach AUSSEN gerichtete Flächennormale
+    am Ort — dorthin wächst das Element. Wer die nach innen gerichtete
+    hat, negiert sie. */
 export function addItem(plan, type, pos, dir) {
   const t = TYPES[type] ? type : 'bohne';
   const it = {
     id: 'l' + (++plan.seq), type: t,
-    pos: pos.slice(0, 3), dir: inPlane(plan, dir), rot: 0,
+    pos: pos.slice(0, 3), dir: unit(dir), rot: 0,
     p: { ...TYPES[t].params }
   };
   plan.items[it.id] = it;
@@ -121,7 +111,7 @@ export function placeAt(plan, id, pos, dir) {
   const it = plan.items[id];
   if (!it) return;
   it.pos = pos.slice(0, 3);
-  it.dir = inPlane(plan, dir);
+  it.dir = unit(dir);
 }
 
 export function setRot(plan, id, deg) {
@@ -129,16 +119,27 @@ export function setRot(plan, id, deg) {
   if (it) it.rot = Math.max(-180, Math.min(180, Number(deg) || 0));
 }
 
-/** Das lokale Dreibein eines Elements: d in Fließrichtung (vom Bauteil
-    weg, um `rot` gedreht), n die Ausstoßachse, r = n × d quer — ein
-    rechtshändiges System (x = d, y = r, z = n). */
-export function frameOf(plan, item) {
-  const n = normalOf(plan);
-  const d = norm(rotate(inPlane(plan, item.dir), n, rad(item.rot || 0)));
-  return { o: item.pos, d, n, r: norm(cross(n, d)) };
+/**
+ * Das lokale Dreibein eines Elements: d die Achse (Flächennormale nach
+ * außen), r quer (Breite), n „oben" (dorthin liegt die offene Seite von
+ * Steg und Bohne, die Tiefe wächst nach −n). Um d gedreht mit `rot`.
+ * Rechtshändig: x = d, y = r, z = n.
+ *
+ * Woher „oben" ohne Trennebene kommt: von der Weltachse, die am wenigsten
+ * mit d zusammenfällt — so gibt es keine Stelle, an der das Dreibein
+ * umkippt, und zwei benachbarte Elemente auf derselben Wand liegen gleich.
+ */
+export function frameOf(item) {
+  const d = unit(item.dir);
+  const ref = Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [0, 0, 1];
+  let r = norm(cross(ref, d));
+  let n = norm(cross(d, r));
+  const a = rad(item.rot || 0);
+  if (a) { r = rotate(r, d, a); n = rotate(n, d, a); }
+  return { o: item.pos, d, r, n };
 }
 
-/** Lokale Koordinaten (x längs, y quer, z auf der Achse) → Welt. */
+/** Lokale Koordinaten (x längs der Achse, y quer, z „oben") → Welt. */
 export const toWorld = (f, x, y, z) => add(f.o, add(add([f.d[0] * x, f.d[1] * x, f.d[2] * x],
   [f.r[0] * y, f.r[1] * y, f.r[2] * y]), [f.n[0] * z, f.n[1] * z, f.n[2] * z]));
 
@@ -146,7 +147,7 @@ export const toWorld = (f, x, y, z) => add(f.o, add(add([f.d[0] * x, f.d[1] * x,
 
 export function toJSON(plan) {
   return {
-    format: FORMAT, version: FORMAT_VERSION, axis: plan.axis,
+    format: FORMAT, version: FORMAT_VERSION,
     items: allItems(plan).map(it => ({
       id: it.id, type: it.type,
       pos: it.pos.map(v => +v.toFixed(4)), dir: it.dir.map(v => +v.toFixed(6)),
@@ -159,12 +160,11 @@ export function fromJSON(obj) {
   if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Luftbohnen-Datei (Kennung „' + FORMAT + '" fehlt).');
   if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
   const plan = emptyPlan();
-  if (AXES[obj.axis]) plan.axis = obj.axis;
   for (const raw of Array.isArray(obj.items) ? obj.items : []) {
     const type = TYPES[raw.type] ? raw.type : 'bohne';
     const it = {
       id: String(raw.id || ('l' + (plan.seq + 1))), type,
-      pos: (raw.pos || [0, 0, 0]).map(Number), dir: inPlane(plan, (raw.dir || [1, 0, 0]).map(Number)),
+      pos: (raw.pos || [0, 0, 0]).map(Number), dir: unit((raw.dir || [1, 0, 0]).map(Number)),
       rot: Number(raw.rot) || 0,
       p: { ...TYPES[type].params }
     };
@@ -176,81 +176,4 @@ export function fromJSON(obj) {
   return plan;
 }
 
-/* ── Prüfregeln ──────────────────────────────────────────────── */
-
-const fmt = (v, n = 2) => v.toLocaleString('de-DE', { maximumFractionDigits: n });
-
-/** Was jeder Gießer über Überläufe und Entlüftungen im Kopf hat — als
-    Liste mit Stufe, Titel und Satz, jeder Satz mit Ort und Zahl. */
-export function checkPlan(plan) {
-  const out = [];
-  const add = (level, title, text) => out.push({ level, title, text });
-  const items = allItems(plan);
-  if (!items.length) {
-    add('note', 'Noch keine Luftbohne',
-      'Eine Art wählen und die Stelle am Bauteil anklicken, an der die Schmelze zuletzt ankommt.');
-    return out;
-  }
-  const label = it => TYPES[it.type].label + ' ' + it.id;
-
-  /* 1. Entlüftungskanäle: zu hoch, und die Schmelze läuft hinaus. Für
-     Aluminium 0,10 bis 0,15 mm, Magnesium bis 0,2, Zink deutlich darunter. */
-  let vent = null;
-  for (const it of items) {
-    if (it.p.ventH === undefined || it.type === 'waschbrett') continue;
-    if (!vent || it.p.ventH > vent.p.ventH) vent = it;
-  }
-  if (vent && vent.p.ventH > 0.2) {
-    add(vent.p.ventH > 0.3 ? 'bad' : 'warn', 'Entlüftungskanal zu hoch',
-      label(vent) + ' hat ' + fmt(vent.p.ventH) + ' mm Kanalhöhe. Über 0,15 bis 0,2 mm läuft die '
-      + 'Schmelze in den Kanal und aus der Form; die Luft muss durch einen Spalt, den sie nicht füllt.');
-  } else if (vent) {
-    add('ok', 'Entlüftungskanäle flach genug',
-      'Höchste Kanalhöhe ' + fmt(vent.p.ventH) + ' mm — die Luft kommt hinaus, die Schmelze nicht.');
-  }
-
-  /* 2. Waschbrett: der Spalt darf größer sein, die Wellen kühlen — aber
-     nicht beliebig. */
-  for (const it of items) {
-    if (it.type !== 'waschbrett') continue;
-    if (it.p.ventH > 0.7) {
-      add('warn', 'Waschbrett-Spalt weit',
-        label(it) + ' hat ' + fmt(it.p.ventH) + ' mm Spalt. Üblich sind 0,3 bis 0,6 mm — darüber '
-        + 'erstarrt die Schmelze nicht mehr in den Wellen, bevor sie hindurch ist.');
-    }
-    if (it.p.waves * it.p.waveL < 25) {
-      add('warn', 'Waschbrett kurz',
-        label(it) + ' ist nur ' + fmt(it.p.waves * it.p.waveL, 0) + ' mm lang. Die Schmelze braucht '
-        + 'Weg, um in den Wellen zu erstarren; unter etwa 25 mm hält das Brett nicht dicht.');
-    }
-  }
-
-  /* 3. Der Steg ist die Sollbruchstelle — und der Engpass für die Front. */
-  for (const it of items) {
-    if (it.p.stegH === undefined) continue;
-    if (it.p.stegH > 1.5) {
-      add('warn', 'Steg dick',
-        label(it) + ': ' + fmt(it.p.stegH) + ' mm Steghöhe. Über 1,5 mm bricht die Bohne beim '
-        + 'Putzen nicht mehr sauber ab und reißt das Bauteil an.');
-    } else if (it.p.stegH < 0.5) {
-      add('warn', 'Steg dünn',
-        label(it) + ': ' + fmt(it.p.stegH) + ' mm Steghöhe. Unter 0,5 mm friert der Steg ein, '
-        + 'bevor die Bohne voll ist — sie sammelt dann nichts.');
-    }
-  }
-
-  /* 4. Die Bohne muss etwas fassen: zu flach oder zu klein bringt nichts. */
-  for (const it of items) {
-    if (it.p.wellD === undefined) continue;
-    const v = it.p.wellW * it.p.wellL * it.p.wellD;
-    if (v < 300) {
-      add('warn', 'Bohne klein',
-        label(it) + ' fasst nur rund ' + fmt(v / 1000, 2) + ' cm³. Eine Überlaufbohne soll die kalte '
-        + 'Front aufnehmen — unter einem halben Kubikzentimeter ist sie voll, bevor die Front durch ist.');
-    }
-  }
-  if (out.every(r => r.level === 'ok')) {
-    add('ok', 'Stege und Bohnen im üblichen Maß', items.length + ' Element(e), nichts zu beanstanden.');
-  }
-  return out;
-}
+export { dot };

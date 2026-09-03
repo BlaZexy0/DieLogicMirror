@@ -23,7 +23,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Luftbohnen</h1>
-    <p class="subtitle">Überläufe und Entlüftungen am Bauteil: eine Stelle anklicken, und dort sitzt die Bohne mit ihrem Steg — in der Trennebene, vom Bauteil weg. Am Punkt ziehen, am Pfeil neu setzen, um die Ausstoßachse drehen. Vier Arten, jedes Maß am Element, das Volumen fürs Schussgewicht.</p>
+    <p class="subtitle">Überläufe und Entlüftungen am Bauteil: eine Stelle anklicken, und dort sitzt die Bohne mit ihrem Steg — auf der Wand, entlang ihrer Normalen nach außen. Am Punkt ziehen, am Pfeil neu setzen, um die Achse drehen. Vier Arten, jedes Maß am Element, das Volumen fürs Schussgewicht.</p>
   </div>
 </section>
 
@@ -41,30 +41,15 @@
     <div class="warn-line" id="model-warn"></div>
     <div class="row">
       <span>Deckkraft</span>
-      <input type="range" id="ref-opacity" min="5" max="100" value="35">
+      <input type="range" id="ref-opacity" min="5" max="100" value="100">
       <span class="val" id="ref-opacity-val"></span>
     </div>
 
-    <h2>Trennebene</h2>
-    <div class="row">
-      <span title="Ausstoßrichtung: die Normale der Trennebene. Bohnen und Kanäle liegen in der Trennebene und wachsen entgegen der Ausstoßrichtung in die Form hinein.">Richtung</span>
-      <div class="seg stack" id="axis-seg">
-        <button type="button" data-value="+x">X</button>
-        <button type="button" data-value="+y" class="active">Y</button>
-        <button type="button" data-value="+z">Z</button>
-        <button type="button" data-value="-x">−X</button>
-        <button type="button" data-value="-y">−Y</button>
-        <button type="button" data-value="-z">−Z</button>
-      </div>
-    </div>
-    <div class="hint">Wo die Schmelze zuletzt ankommt, muss die Luft hinaus: dort sitzen die
-      Überläufe. Sie nehmen die erste, kalte Front auf; die Entlüftung dahinter führt die Luft
-      zum Formrand oder ins Waschbrett.</div>
-
-    <h2>Luftbohnen</h2>
+    <h2>Volumen</h2>
     <div class="facts" id="plan-facts"></div>
-    <div class="hint">Das <b>Überlaufvolumen</b> gehört zum Schussgewicht — im Angussdesigner
-      schlägt man es unter „Prozess" auf das Gussvolumen auf.</div>
+    <div class="hint">Wo die Schmelze zuletzt ankommt, muss die Luft hinaus: dort sitzen die
+      Überläufe. Was sie fassen, gehört zum Schussgewicht — <b>Gesamt</b> ist das Gussvolumen,
+      das der Angussdesigner unter „Prozess" braucht.</div>
 
     <h2>Import und Export</h2>
     <input type="file" id="json-input" accept=".json,application/json" hidden>
@@ -74,10 +59,7 @@
     </div>
     <button type="button" class="btn btn-outline block-btn" id="stl-save">Als STL speichern</button>
     <div class="hint"><b>JSON</b> ist der Plan selbst — Orte, Richtungen, Maße. <b>STL</b> sind
-      die Körper: je Element Steg, Bohne und Kanal als geschlossene Prismen.</div>
-
-    <h2>Prüfung</h2>
-    <div class="rules" id="rules-list"></div>
+      die Körper: je Element Steg, Bohne und Kanal als geschlossene Körper.</div>
   </aside>
 
   <div id="viewport">
@@ -99,7 +81,7 @@
           <span class="val">mm</span>
         </div>
         <div class="row">
-          <span title="Drehung um die Ausstoßachse am Punkt — die Bohne schwenkt um ihren Steg.">Drehung</span>
+          <span title="Drehung um die Achse des Elements (die Wandnormale) — was an der Bohne oben ist, wandert um den Steg herum.">Drehung</span>
           <input type="range" id="sel-rot" min="-180" max="180" step="1" value="0">
           <span class="val" id="sel-rot-val"></span>
         </div>
@@ -117,8 +99,8 @@
       <div class="pt-legend" id="pt-legend"></div>
     </div>
     <div id="status">
-      <b>Art</b> wählen, dann aufs Bauteil klicken &nbsp;·&nbsp; <b>Punkt</b> ziehen: in der Trennebene &nbsp;·&nbsp;
-      <b>Alt</b>: in der Tiefe &nbsp;·&nbsp; <b>Pfeil</b>: neu setzen &nbsp;·&nbsp;
+      <b>Art</b> wählen, dann aufs Bauteil klicken &nbsp;·&nbsp; <b>Punkt</b> ziehen: auf der Wand &nbsp;·&nbsp;
+      <b>Alt</b>: von der Wand weg &nbsp;·&nbsp; <b>Pfeil</b>: neu setzen &nbsp;·&nbsp;
       <b>Leer</b>: drehen &nbsp;·&nbsp; <b>rechts</b>: verschieben &nbsp;·&nbsp; <b>Rad</b>: zoomen
     </div>
     <div class="drop-hint">STL oder GLB hier ablegen</div>

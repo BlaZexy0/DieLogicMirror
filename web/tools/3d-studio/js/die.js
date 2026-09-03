@@ -34,7 +34,7 @@ status.textContent = 'Modell lädt …';
    bewegliche Hälfte vom Betrachter weg und gibt die Kavität frei. */
 const view = initScene(container, {
   cameraStart: [1500, 680, -1350], target: [0, 0, 20],
-  gridY: -470, gridSize: 3000, minDistance: 250, maxDistance: 8000
+  minDistance: 250, maxDistance: 8000
 });
 mountViewBar(container, view);
 
