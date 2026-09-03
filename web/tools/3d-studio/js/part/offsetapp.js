@@ -22,7 +22,7 @@ import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
 import { mountNav } from '../ui/nav.js';
 import { mountPartSource, frame } from './partsource.js';
-import { buildField, fieldSize } from './field.js';
+import { buildField, fieldSize, fieldExtrema, thickMaxima } from './field.js';
 import { surfaceNets } from './surfacenets.js';
 import { writeSTL } from './stlio.js';
 import { volume, surface } from '../mesh.js';
@@ -49,6 +49,10 @@ const state = {
   res: 96, band: 10, delta: 2,
   show: 'both', opacity: 0.35,
   slice: { on: false, axis: 2, pos: 50, scale: 'innen' },
+  /* Wärmezentren: die dicksten Stellen als Kugeln (Kugelprobe) oder
+     Kreise, ab einem Anteil der größten Wandstärke. */
+  hot: { on: false, shape: 'kugeln', min: 75 },
+  stats: null, maxima: [], hotField: null,
   stale: true, running: false, ready: false,
   ms: 0
 };
@@ -74,6 +78,23 @@ const sliceMesh = new T.Mesh(new T.PlaneGeometry(1, 1), sliceMat);
 sliceMesh.visible = false;
 group.add(sliceMesh);
 
+/* Die Marken der dicksten Stellen. Eine Kugel hat genau den Radius des
+   Feldwerts — sie ist die Kugelprobe selbst, ihr Durchmesser die
+   Wandstärke. Ein Kreis ist dieselbe Kugel als Umriss, immer zur Kamera
+   gedreht und ohne Tiefenprüfung, damit er auch im deckenden Bauteil zu
+   sehen ist. */
+const hotGroup = new T.Group();
+hotGroup.visible = false;
+group.add(hotGroup);
+const hotSphereGeo = new T.SphereGeometry(1, 24, 16);
+const hotRingGeo = new T.RingGeometry(0.86, 1, 48);
+const hotSphereMat = new T.MeshStandardMaterial({
+  color: 0xb42318, roughness: 0.5, metalness: 0.05, transparent: true, opacity: 0.6, depthWrite: false
+});
+const hotRingMat = new T.MeshBasicMaterial({
+  color: 0xb42318, transparent: true, opacity: 0.92, side: T.DoubleSide, depthTest: false, depthWrite: false
+});
+
 /* ── Bauteil laden ───────────────────────────────────────────── */
 const source = mountPartSource({
   busy, viewport: container,
@@ -82,6 +103,8 @@ const source = mountPartSource({
     state.model = model;
     state.field = null;
     state.offsetTris = null;
+    state.stats = null;
+    state.maxima = [];
     state.stale = true;
     /* Bandbreite an die Bauteilgröße anpassen, solange der Nutzer sie
        nicht selbst gesetzt hat. */
@@ -123,6 +146,7 @@ async function runField() {
     });
     state.ms = performance.now() - t0;
     state.stale = false;
+    state.stats = fieldExtrema(state.field);
     extract();
   } catch (err) {
     $('model-warn').textContent = 'Das Feld konnte nicht gerechnet werden: ' + err.message;
@@ -176,6 +200,44 @@ function extract() {
   updateOffsetFacts();
   updateSlice();
   updateColorbar();
+  updateHotspots();
+}
+
+/* ── Wärmezentren ────────────────────────────────────────────── */
+function updateHotspots() {
+  for (const c of hotGroup.children.slice()) hotGroup.remove(c);
+  const on = state.hot.on && !!state.field && !!state.stats;
+  hotGroup.visible = on;
+  if (!on) { facts('hot-facts', []); view.invalidate(); return; }
+  if (state.hotField !== state.field || state.hotMin !== state.hot.min) {
+    state.maxima = thickMaxima(state.field, { minFrac: state.hot.min / 100 });
+    state.hotField = state.field;
+    state.hotMin = state.hot.min;
+  }
+  const rings = state.hot.shape === 'kreise';
+  for (const m of state.maxima) {
+    const mesh = new T.Mesh(rings ? hotRingGeo : hotSphereGeo, rings ? hotRingMat : hotSphereMat);
+    mesh.position.set(m.x, m.y, m.z);
+    mesh.scale.setScalar(m.r);
+    mesh.renderOrder = 4;
+    if (rings) mesh.onBeforeRender = (renderer, scene, camera) => { mesh.quaternion.copy(camera.quaternion); };
+    hotGroup.add(mesh);
+  }
+  const st = state.stats;
+  const rows = [
+    ['Stellen', fmt(state.maxima.length, 0)],
+    ['größte Wandstärke', (st.clipped ? '≥ ' : '') + fmt(2 * st.maxIn) + ' mm']
+  ];
+  if (state.maxima[0]) {
+    const m = state.maxima[0];
+    rows.push(['dickste bei', [m.x, m.y, m.z].map(v => fmt(v, 0)).join(' / ') + ' mm']);
+  }
+  facts('hot-facts', rows);
+  $('hot-note').textContent = st.clipped
+    ? 'Im Kern steht das Feld auf der Bandbreite — das Bauteil ist dort dicker als ' + fmt(2 * st.band || 2 * state.field.band)
+      + ' mm. Bandbreite erhöhen und das Feld neu rechnen, dann sind auch diese Stellen zu sehen.'
+    : '';
+  view.invalidate();
 }
 
 function applyVisibility() {
@@ -243,18 +305,26 @@ const OUTSIDE_SCALE = [0.87, 0.9, 0.91];
    sattem Blau bis sattem Rot — sonst lag alles jenseits des Bandes als
    schwarze Fläche im Bild. */
 const turbo = t => C.turbo(0.08 + 0.84 * Math.max(0, Math.min(1, t)));
-function sliceRgb(v, band, mode) {
-  if (mode === 'innen') return v >= 0 ? OUTSIDE_SCALE : turbo(-v / band);
-  if (mode === 'aussen') return v <= 0 ? OUTSIDE_SCALE : turbo(v / band);
-  return turbo((band - v) / (2 * band));
+/* Die Enden der Skala sind die GRÖSSTEN Werte, die im Feld vorkommen —
+   nicht die Bandbreite. Ein Band von 13 mm bei 6 mm dicksten Wänden
+   ließ die halbe Skala ungenutzt, und alles Dicke sah gleich grün aus. */
+const scaleEnds = () => {
+  const st = state.stats || { maxIn: state.field ? state.field.band : 1, maxOut: state.field ? state.field.band : 1 };
+  return { inn: Math.max(st.maxIn, 1e-6), out: Math.max(st.maxOut, 1e-6) };
+};
+function sliceRgb(v, mode, ends) {
+  if (mode === 'innen') return v >= 0 ? OUTSIDE_SCALE : turbo(-v / ends.inn);
+  if (mode === 'aussen') return v <= 0 ? OUTSIDE_SCALE : turbo(v / ends.out);
+  return turbo((ends.out - v) / (ends.inn + ends.out));
 }
-const sliceCss = (v, band, mode) => 'rgb(' + sliceRgb(v, band, mode).map(x => Math.round(x * 255)).join(',') + ')';
+const sliceCss = (v, mode, ends) => 'rgb(' + sliceRgb(v, mode, ends).map(x => Math.round(x * 255)).join(',') + ')';
 
-function sliceColor(v, band, h, delta, mode, out, o) {
-  const rgb = sliceRgb(v, band, mode);
+/* Nur die Bauteilkontur liegt als Linie darüber. Die Offsetfläche hat
+   hier nichts zu suchen: der Schnitt zeigt das Feld, nicht die Wahl. */
+function sliceColor(v, h, mode, ends, out, o) {
+  const rgb = sliceRgb(v, mode, ends);
   let r = rgb[0], g = rgb[1], b = rgb[2];
-  if (Math.abs(v - delta) < h * 0.6) { r = 1; g = 1; b = 1; }              // Offsetlinie: weiß
-  else if (Math.abs(v) < h * 0.6) { r = 0.08; g = 0.13; b = 0.16; }        // Bauteilkontur: dunkel
+  if (Math.abs(v) < h * 0.6) { r = 0.08; g = 0.13; b = 0.16; }
   out[o] = r * 255; out[o + 1] = g * 255; out[o + 2] = b * 255; out[o + 3] = 255;
 }
 
@@ -273,11 +343,12 @@ function updateSlice() {
   const w = f.dims[ua], hgt = f.dims[va];
   const px = new Uint8Array(w * hgt * 4);
   const at = (i, j, kk) => f.data[(kk * ny + j) * nx + i];
+  const ends = scaleEnds();
   for (let vv = 0; vv < hgt; vv++) {
     for (let uu = 0; uu < w; uu++) {
       const idx = [0, 0, 0];
       idx[a] = k; idx[ua] = uu; idx[va] = vv;
-      sliceColor(at(idx[0], idx[1], idx[2]), f.band, f.h, state.delta, state.slice.scale, px, (vv * w + uu) * 4);
+      sliceColor(at(idx[0], idx[1], idx[2]), f.h, state.slice.scale, ends, px, (vv * w + uu) * 4);
     }
   }
   const tex = new T.DataTexture(px, w, hgt, T.RGBAFormat);
@@ -307,28 +378,30 @@ function updateSlice() {
    Oberfläche, oben das Ende des Bandes. */
 function updateColorbar() {
   if (!state.field || !state.slice.on) return colorbar(null);
-  const band = state.field.band;
   const mode = state.slice.scale;
-  const extra = chip('#ffffff') + 'Offset ' + fmt(state.delta) + ' mm · ' + chip('#14212a') + 'Bauteilkontur';
+  const ends = scaleEnds();
+  const clipped = state.stats && state.stats.clipped;
+  const extra = chip('#14212a') + 'Bauteilkontur';
   if (mode === 'innen') {
     colorbar({
-      title: 'Wandstärke',
-      stops: gradient(t => sliceCss(-band * t, band, mode)),
-      ticks: [2 * band, 1.5 * band, band, 0.5 * band, 0].map(v => fmt(v) + ' mm'),
+      title: 'Wandstärke' + (clipped ? ' (≥ Band)' : ''),
+      stops: gradient(t => sliceCss(-ends.inn * t, mode, ends)),
+      ticks: [1, 0.75, 0.5, 0.25, 0].map(q => fmt(2 * ends.inn * q) + ' mm'),
       extra
     });
   } else if (mode === 'aussen') {
     colorbar({
       title: 'Abstand nach außen',
-      stops: gradient(t => sliceCss(band * t, band, mode)),
-      ticks: [band, 0.75 * band, 0.5 * band, 0.25 * band, 0].map(v => fmt(v) + ' mm'),
+      stops: gradient(t => sliceCss(ends.out * t, mode, ends)),
+      ticks: [1, 0.75, 0.5, 0.25, 0].map(q => fmt(ends.out * q) + ' mm'),
       extra
     });
   } else {
+    const span = ends.inn + ends.out;
     colorbar({
       title: 'Abstand zur Oberfläche',
-      stops: gradient(t => sliceCss(band - 2 * band * t, band, mode)),
-      ticks: [-band, -band / 2, 0, band / 2, band].map(v => fmt(v) + ' mm'),
+      stops: gradient(t => sliceCss(ends.out - span * t, mode, ends)),
+      ticks: [0, 0.25, 0.5, 0.75, 1].map(q => fmt(-ends.inn + span * q) + ' mm'),
       extra: extra + ' · innen negativ'
     });
   }
@@ -396,12 +469,20 @@ $('slice-on').addEventListener('change', e => {
 });
 segButtons('slice-seg', v => { state.slice.axis = +v; updateSlice(); });
 segButtons('slice-scale-seg', v => { state.slice.scale = v; updateSlice(); updateColorbar(); });
+
+$('hot-on').addEventListener('change', e => {
+  state.hot.on = e.target.checked;
+  $('hot-block').classList.toggle('disabled', !state.hot.on);
+  updateHotspots();
+});
+segButtons('hot-seg', v => { state.hot.shape = v; updateHotspots(); });
+slider('hot-min', v => { state.hot.min = v; updateHotspots(); }, v => v + ' %');
 slider('slice-pos', v => { state.slice.pos = v; updateSlice(); }, () => '');
 slider('opacity', v => { state.opacity = v / 100; applyVisibility(); }, v => v + ' %');
 
 status.textContent = IDLE;
 
-export const __viewer = { state, view, partMesh, offsetMesh, sliceMesh, runField, extract };
+export const __viewer = { state, view, partMesh, offsetMesh, sliceMesh, hotGroup, runField, extract };
 window.__form3d = __viewer;
 
 source.start();

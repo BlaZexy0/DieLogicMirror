@@ -253,11 +253,32 @@ Bereich, den man wählt — **innen** (dann ist es die Wandstärke: an der
 Oberfläche blau, dick rot, die Skala nennt das Doppelte des Feldwerts),
 **außen** (der Abstand vom Bauteil) oder **beides** (innen rot über Grün
 an der Oberfläche nach Blau außen). Was nicht zum Bereich gehört, bleibt
-hellgrau, so hebt sich der Querschnitt ab. Darüber liegen die Höhenlinien
-der Bauteilfläche (dunkel) und der aktuellen Offsetfläche (weiß). Im
-Schnitt steht **nur das Bauteil, durchscheinend** — die Offsetfläche
-legte sich sonst über die Schnittebene. Das Bild wird bewusst ungeglättet
-dargestellt — man soll das Raster sehen, aus dem die Fläche entsteht.
+hellgrau, so hebt sich der Querschnitt ab. Die Skala reicht bis zum
+**größten Wert, der im Feld vorkommt**, nicht bis zur Bandbreite — ein
+Band von 13 mm bei 6 mm dicksten Wänden ließ sonst die halbe Skala
+ungenutzt, und alles Dicke sah gleich grün aus (steht der Kern auf −band,
+sagt der Titel „≥ Band"). Darüber liegt nur die Höhenlinie der
+Bauteilfläche; das gewählte Aufmaß hat im Schnitt nichts zu suchen, er
+zeigt das Feld, nicht die Wahl. Im Schnitt steht **nur das Bauteil,
+durchscheinend** — die Offsetfläche legte sich sonst über die
+Schnittebene. Das Bild wird bewusst ungeglättet dargestellt — man soll
+das Raster sehen, aus dem die Fläche entsteht.
+
+### Wärmezentren markieren
+
+„Dickste Stellen markieren" sucht im Feld die Rasterpunkte, deren
+Betrag innen keinen größeren Nachbarn hat (`thickMaxima` in
+`js/part/field.js`): die Mitten der größten Kugeln, die dort ins Bauteil
+passen. Jede wird als **Kugel** mit genau diesem Radius gezeichnet — das
+ist die Kugelprobe selbst, ihr Durchmesser die Wandstärke — oder als
+**Kreis** gleichen Radius, zur Kamera gedreht und ohne Tiefenprüfung,
+damit er auch im deckenden Bauteil zu sehen ist. Der Regler „ab" lässt
+nur Stellen ab einem Anteil der größten Wandstärke zu, und eine Stelle,
+die in der Kugel einer stärkeren liegt, fällt weg — sonst säumten
+Dutzende Punkte jeden Grat. Ein Kern, der auf −band steht, bekommt keine
+Marke, sondern den Hinweis, das Band zu erhöhen: dort weiß das Feld
+nichts über die Dicke. Die Kennzahlen nennen die Zahl der Stellen, die
+größte Wandstärke und den Ort der dicksten.
 
 ## Abstandsanalyse (`abstand.html`)
 

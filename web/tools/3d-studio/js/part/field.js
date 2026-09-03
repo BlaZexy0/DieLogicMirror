@@ -232,3 +232,75 @@ export function sampleField(f, x, y, z) {
   const c11 = lerp(at(i, j + 1, k + 1), at(i + 1, j + 1, k + 1), tx);
   return lerp(lerp(c00, c10, ty), lerp(c01, c11, ty), tz);
 }
+
+/* ── Was das Feld über die Wandstärke sagt ───────────────────── */
+
+/** Größter Betrag innen und außen — die Enden der Farbskala. `clipped`
+    heißt: im Kern steht das Feld auf −band, das Bauteil ist dicker als
+    das Band erfasst; dann ist maxIn nur eine untere Schranke. */
+export function fieldExtrema(f) {
+  let maxIn = 0, maxOut = 0, clipped = 0;
+  const lim = f.band - 1e-6;
+  for (let i = 0; i < f.data.length; i++) {
+    const v = f.data[i];
+    if (v < 0) { if (-v > maxIn) maxIn = -v; if (-v >= lim) clipped++; }
+    else if (v > maxOut) maxOut = v;
+  }
+  return { maxIn, maxOut, clipped };
+}
+
+/**
+ * Die dicksten Stellen: Rasterpunkte, deren Abstand zur Oberfläche
+ * (innen, als Betrag) keinen größeren Nachbarn hat — die Mitte der
+ * größten Kugel, die dort ins Bauteil passt. Von ihnen bleiben die,
+ * die mindestens `minFrac` des größten Betrags erreichen und nicht in
+ * der Nähe einer stärkeren liegen — näher als das 1,6-fache von deren
+ * Radius (sonst säumen Dutzende Punkte jeden Grat, und eine Platte
+ * gleicher Dicke wäre mit Kugeln gepflastert; ihre Mittelfläche IST
+ * überall gleich dick, ein paar Marken sagen das auch). Abgeschnittene Kerne (Wert auf −band) zählen nicht: dort weiß
+ * das Feld nichts über die Dicke.
+ *   → [{ x, y, z, r }] mit r = Feldbetrag = halbe Wandstärke, nach r fallend
+ */
+export function thickMaxima(f, opts = {}) {
+  const { minFrac = 0.6, limit = 200 } = opts;
+  const [nx, ny, nz] = f.dims;
+  const d = f.data;
+  const lim = f.band - 1e-6;
+  let maxIn = 0;
+  for (let i = 0; i < d.length; i++) if (d[i] < 0 && -d[i] > maxIn) maxIn = -d[i];
+  const floor = Math.max(1e-6, maxIn * Math.max(0, Math.min(1, minFrac)));
+  const found = [];
+  for (let k = 1; k < nz - 1; k++) {
+    for (let j = 1; j < ny - 1; j++) {
+      for (let i = 1; i < nx - 1; i++) {
+        const v = -d[(k * ny + j) * nx + i];
+        if (v < floor || v >= lim) continue;
+        let top = true;
+        for (let dk = -1; dk <= 1 && top; dk++) {
+          for (let dj = -1; dj <= 1 && top; dj++) {
+            for (let di = -1; di <= 1; di++) {
+              if (!di && !dj && !dk) continue;
+              if (-d[((k + dk) * ny + j + dj) * nx + i + di] > v) { top = false; break; }
+            }
+          }
+        }
+        if (top) found.push({ x: f.origin[0] + i * f.h, y: f.origin[1] + j * f.h, z: f.origin[2] + k * f.h, r: v });
+      }
+    }
+  }
+  found.sort((a, b) => b.r - a.r);
+  const out = [];
+  for (const m of found) {
+    let inside = false;
+    for (const o of out) {
+      const dd = Math.hypot(m.x - o.x, m.y - o.y, m.z - o.z);
+      /* Etwas mehr als die Kugel: ein Grat liegt selten genau auf einer
+         Rasterlinie, und zwei Zeilen gleicher Werte lieferten sonst
+         Marken im Abstand von knapp über r. */
+      if (dd < Math.max(o.r * 1.6 + f.h, f.h * 1.5)) { inside = true; break; }
+    }
+    if (!inside) out.push(m);
+    if (out.length >= limit) break;
+  }
+  return out;
+}

@@ -16,7 +16,7 @@ import * as S from '../../../web/tools/3d-studio/js/solids.js';
 import { subtract, union } from '../../../web/tools/3d-studio/js/csg.js';
 import { volume, surface, weld, adjacency } from '../../../web/tools/3d-studio/js/mesh.js';
 import { buildModel } from '../../../web/tools/3d-studio/js/part/model.js';
-import { buildField, fieldSize, sampleField, fieldVolume } from '../../../web/tools/3d-studio/js/part/field.js';
+import { buildField, fieldSize, sampleField, fieldVolume, fieldExtrema, thickMaxima } from '../../../web/tools/3d-studio/js/part/field.js';
 import { surfaceNets } from '../../../web/tools/3d-studio/js/part/surfacenets.js';
 
 const rel = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol * Math.abs(b),
@@ -123,4 +123,40 @@ test('fieldVolume schätzt das Volumen aus den Rasterpunkten', async () => {
   const f = await buildField(m, { res: 120, band: 8 });
   rel(fieldVolume(f, 0), 100 * 60 * 40, 0.02, 'Volumen aus dem Feld');
   rel(fieldVolume(f, 4), boxOffsetVolume(100, 60, 40, 4), 0.03, 'mit Aufmaß');
+});
+
+test('Wärmezentren: die dicksten Stellen eines Quaders liegen auf seiner Mittellinie', async () => {
+  /* 100 × 60 × 40: die größte Kugel hat den Radius 20 (halbe kleinste
+     Kante) und passt überall auf der Strecke x ∈ [−30, 30] der Mittellinie. */
+  const m = buildModel(S.box(100, 60, 40));
+  const f = await buildField(m, { res: 80, band: 24 });
+  const st = fieldExtrema(f);
+  rel(st.maxIn, 20, 0.05, 'größter Betrag innen = halbe kleinste Kante');
+  assert.equal(st.clipped, 0, 'nichts abgeschnitten — das Band ist größer als die halbe Dicke');
+  assert.ok(st.maxOut > 20, 'außen reicht das Feld bis ans Band');
+  const hot = thickMaxima(f, { minFrac: 0.6 });
+  assert.ok(hot.length >= 1 && hot.length <= 6, 'wenige Marken auf dem Grat: ' + hot.length);
+  /* Die Kugel mit Radius 20 berührt immer beide z-Flächen und passt
+     überall auf der Mittelfläche |x| ≤ 30, |y| ≤ 10 — dort ist der Quader
+     gleich dick, und genau dort dürfen die Marken liegen. */
+  for (const h of hot) {
+    rel(h.r, 20, 0.06, 'Radius der Kugelprobe');
+    assert.ok(Math.abs(h.z) < f.h + 1e-9, 'in der Mittelebene: ' + [h.x, h.y, h.z]);
+    assert.ok(Math.abs(h.y) <= 10 + f.h && Math.abs(h.x) <= 30 + f.h, 'auf der Mittelfläche des Quaders: ' + [h.x, h.y, h.z]);
+  }
+  assert.ok(hot.every((h, i) => i === 0 || h.r <= hot[i - 1].r), 'nach Radius fallend');
+  for (let i = 0; i < hot.length; i++) {
+    for (let j = i + 1; j < hot.length; j++) {
+      const d = Math.hypot(hot[i].x - hot[j].x, hot[i].y - hot[j].y, hot[i].z - hot[j].z);
+      assert.ok(d >= hot[i].r * 1.6 + f.h - 1e-9, 'keine Marke dicht bei einer stärkeren');
+    }
+  }
+
+  /* Ein zu kleines Band schneidet den Kern ab: dann weiß das Feld nichts
+     über die Dicke, und es gibt keine Marken — aber die Auskunft, warum. */
+  const f10 = await buildField(m, { res: 80, band: 10 });
+  const st10 = fieldExtrema(f10);
+  assert.ok(st10.clipped > 0, 'Kern auf −band');
+  rel(st10.maxIn, 10, 0.01, 'maxIn ist dann nur das Band');
+  assert.equal(thickMaxima(f10, { minFrac: 0.6 }).length, 0, 'keine Marke auf einem abgeschnittenen Kern');
 });

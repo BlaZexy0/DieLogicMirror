@@ -103,7 +103,29 @@
         </div>
       </div>
       <div class="hint">Im Schnitt steht nur das Bauteil, durchscheinend — die Offsetfläche
-        verdeckte die Schnittebene sonst.</div>
+        verdeckte die Schnittebene sonst. Die Skala reicht bis zum größten Wert im Feld.</div>
+    </div>
+
+    <h2>Wärmezentren</h2>
+    <label class="inline"><input type="checkbox" id="hot-on"> Dickste Stellen markieren</label>
+    <div id="hot-block" class="disabled">
+      <div class="row">
+        <span>Form</span>
+        <div class="seg" id="hot-seg">
+          <button type="button" data-value="kugeln" class="active">Kugeln</button>
+          <button type="button" data-value="kreise">Kreise</button>
+        </div>
+      </div>
+      <div class="row">
+        <span title="Nur Stellen, die mindestens diesen Anteil der größten Wandstärke erreichen.">ab</span>
+        <input type="range" id="hot-min" min="20" max="100" step="5" value="75">
+        <span class="val" id="hot-min-val"></span>
+      </div>
+      <div class="facts" id="hot-facts"></div>
+      <div class="warn-line" id="hot-note"></div>
+      <div class="hint">Jede Marke ist die größte Kugel, die an dieser Stelle ins Bauteil passt —
+        ihr Durchmesser ist die Wandstärke. Dort erstarrt das Teil zuletzt; bis dorthin muss
+        der Nachdruck reichen.</div>
     </div>
 
     <h2>Darstellung</h2>

@@ -365,6 +365,8 @@ test('Formaufbau-Viewer verdrahtet Baugruppen, Regler und Schnitt', async () => 
   assert.equal(d2.getElementById('clip-pos-val').textContent, '40 %');
 });
 
+const fmtDe = v => v.toLocaleString('de-DE', { maximumFractionDigits: 2 });
+
 /* ── Wandstärkenanalyse ────────────────────────────────────── */
 test('Wandstärkenanalyse: Feld auf Knopfdruck, Fläche daraus abgeleitet', async () => {
   const { doc: d4 } = buildDocument(read('wandstaerke.html'));
@@ -466,9 +468,14 @@ test('Wandstärkenanalyse: Feldschnitt und Farbskala', async () => {
     && off.__viewer.partMesh.material.opacity <= 0.45, 'das Bauteil durchscheinend');
   /* Die Skala: voreingestellt innen = Wandstärke, in Turbo. */
   assert.equal(s.slice.scale, 'innen');
-  assert.equal(d4.getElementById('cb-title').textContent, 'Wandstärke');
-  assert.ok(d4.getElementById('cb-ticks').innerHTML.includes(String(2 * s.field.band).replace('.', ',')), 'oben die doppelte Bandbreite');
-  assert.ok(d4.getElementById('cb-extra').innerHTML.includes('Offset'), 'Höhenlinie benannt');
+  assert.match(d4.getElementById('cb-title').textContent, /^Wandstärke/);
+  /* Die Skala endet beim größten Wert im Feld, nicht am Band. */
+  const F4 = await import('../../../web/tools/3d-studio/js/part/field.js');
+  const st = F4.fieldExtrema(s.field);
+  assert.ok(s.stats && Math.abs(s.stats.maxIn - st.maxIn) < 1e-9, 'die Enden sind gerechnet');
+  assert.ok(d4.getElementById('cb-ticks').innerHTML.includes(fmtDe(2 * st.maxIn)), 'oben die größte Wandstärke: ' + d4.getElementById('cb-ticks').innerHTML);
+  assert.ok(!d4.getElementById('cb-extra').innerHTML.includes('Offset'), 'das Aufmaß steht nicht im Schnitt');
+  assert.ok(d4.getElementById('cb-extra').innerHTML.includes('Bauteilkontur'));
   const scaleSeg = d4.getElementById('slice-scale-seg').querySelectorAll('button');
   scaleSeg.find(b => b.dataset.value === 'beides').dispatch('click');
   assert.equal(s.slice.scale, 'beides');
@@ -498,6 +505,32 @@ test('Wandstärkenanalyse: Feldschnitt und Farbskala', async () => {
   assert.equal(off.__viewer.sliceMesh.visible, false);
   assert.ok(!bar.classList.contains('on'));
   assert.equal(off.__viewer.offsetMesh.visible, true, 'ohne Schnitt ist die Offsetfläche wieder da');
+
+  /* Wärmezentren: Kugeln mit dem Radius des Feldwerts, wahlweise Kreise. */
+  const hot = d4.getElementById('hot-on');
+  assert.equal(off.__viewer.hotGroup.visible, false);
+  hot.checked = true;
+  hot.dispatch('change');
+  assert.equal(off.__viewer.hotGroup.visible, true);
+  assert.equal(off.__viewer.hotGroup.children.length, s.maxima.length, 'je Stelle eine Marke');
+  assert.match(d4.getElementById('hot-facts').innerHTML, /Stellen/);
+  assert.match(d4.getElementById('hot-facts').innerHTML, /größte Wandstärke/);
+  if (s.maxima.length) {
+    const m0 = off.__viewer.hotGroup.children[0];
+    assert.ok(Math.abs(m0.scale.x - s.maxima[0].r) < 1e-9, 'Kugelradius = Feldwert');
+    assert.equal(m0.geometry.type, 'SphereGeometry');
+    d4.getElementById('hot-seg').querySelectorAll('button').find(b => b.dataset.value === 'kreise').dispatch('click');
+    assert.equal(off.__viewer.hotGroup.children[0].geometry.type, 'RingGeometry', 'als Kreise');
+  } else {
+    assert.match(d4.getElementById('hot-note').textContent, /Bandbreite/, 'abgeschnittener Kern wird benannt');
+  }
+  const hm = d4.getElementById('hot-min');
+  hm.value = '100'; hm.dispatch('input');
+  assert.equal(s.hot.min, 100);
+  assert.ok(s.maxima.length <= 1 || s.maxima.every(m => m.r >= s.stats.maxIn - 1e-9), 'bei 100 % nur die dickste');
+  hot.checked = false;
+  hot.dispatch('change');
+  assert.equal(off.__viewer.hotGroup.visible, false);
 });
 
 /* ── Abstandsanalyse ─────────────────────────────────────────── */
