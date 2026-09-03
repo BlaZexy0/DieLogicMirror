@@ -12,7 +12,7 @@ const LINKS = [
   { href: 'index.html', label: 'Übersicht' },
   { href: 'form.html', label: 'Formaufbau' },
   { href: 'bauteilanalyse.html', label: 'Bauteilanalyse' },
-  { href: 'offset.html', label: 'Offsetflächen' },
+  { href: 'wandstaerke.html', label: 'Wandstärkenanalyse' },
   { href: 'abstand.html', label: 'Abstandsanalyse' },
   { href: 'anguss.html', label: 'Angussdesigner' },
   { href: 'ueberlauf.html', label: 'Überlaufdesigner' }

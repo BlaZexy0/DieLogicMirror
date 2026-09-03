@@ -365,11 +365,11 @@ test('Formaufbau-Viewer verdrahtet Baugruppen, Regler und Schnitt', async () => 
   assert.equal(d2.getElementById('clip-pos-val').textContent, '40 %');
 });
 
-/* ── Offsetflächen-Viewer ────────────────────────────────────── */
-test('Offsetseite: Feld auf Knopfdruck, Fläche daraus abgeleitet', async () => {
-  const { doc: d4 } = buildDocument(read('offset.html'));
+/* ── Wandstärkenanalyse ────────────────────────────────────── */
+test('Wandstärkenanalyse: Feld auf Knopfdruck, Fläche daraus abgeleitet', async () => {
+  const { doc: d4 } = buildDocument(read('wandstaerke.html'));
   installGlobals(d4);
-  globalThis.location = { search: '?part=cover', href: 'http://test/offset.html' };
+  globalThis.location = { search: '?part=cover', href: 'http://test/wandstaerke.html' };
   const off = await import('../../../web/tools/3d-studio/js/part/offsetapp.js');
   await ready(off);
   const s = off.__viewer.state;
@@ -407,11 +407,25 @@ test('Offsetseite: Feld auf Knopfdruck, Fläche daraus abgeleitet', async () => 
   assert.equal(s.field, fieldRef, 'dasselbe Feld — nur neu abgeleitet');
   assert.equal(s.stale, false);
   assert.notEqual(s.offsetTris.length, before, 'andere Fläche');
+  assert.equal(d4.getElementById('delta-slider').value, '1.5', 'der Regler folgt dem Feld');
+
+  /* Der Regler: −20 bis 40, das Feld folgt, abgeleitet wird je Bild. */
+  const sl = d4.getElementById('delta-slider');
+  assert.equal(sl.getAttribute('min'), '-20');
+  assert.equal(sl.getAttribute('max'), '40');
+  const beforeSlider = s.offsetTris.length;
+  sl.value = '-4';
+  sl.dispatch('input');
+  assert.equal(s.delta, -4, 'der Regler setzt das Aufmaß');
+  assert.equal(d4.getElementById('delta').value, '-4', 'das Feld zeigt es');
+  await new Promise(r => setTimeout(r, 30));
+  assert.notEqual(s.offsetTris.length, beforeSlider, 'und die Fläche ist neu abgeleitet');
 
   /* Außerhalb der Bandbreite: der Wert bleibt stehen, das Band wird
      mitgezogen und ein neues Feld verlangt. */
   d.value = '99'; d.dispatch('change');
   assert.equal(s.delta, 99, 'der Wunsch bleibt erhalten');
+  assert.equal(d4.getElementById('delta-slider').value, '40', 'der Regler bleibt an seinem Ende');
   assert.ok(s.band > 99, 'Bandbreite zieht mit: ' + s.band);
   assert.equal(s.stale, true, 'Feld muss größer werden');
   assert.ok(d4.getElementById('field-state').textContent.includes('Bandbreite'));
@@ -432,7 +446,7 @@ test('Offsetseite: Feld auf Knopfdruck, Fläche daraus abgeleitet', async () => 
   assert.ok(off.__viewer.partMesh.visible && off.__viewer.offsetMesh.visible);
 });
 
-test('Offsetseite: Feldschnitt und Farbskala', async () => {
+test('Wandstärkenanalyse: Feldschnitt und Farbskala', async () => {
   const off = await import('../../../web/tools/3d-studio/js/part/offsetapp.js');
   const d4 = globalThis.document;
   const s = off.__viewer.state;
@@ -446,8 +460,27 @@ test('Offsetseite: Feldschnitt und Farbskala', async () => {
   assert.ok(off.__viewer.sliceMesh.visible, 'Schnittebene sichtbar');
   assert.ok(off.__viewer.sliceMesh.material.map, 'Rasterbild erzeugt');
   assert.ok(bar.classList.contains('on'), 'Skala eingeblendet');
-  assert.equal(d4.getElementById('cb-title').textContent, 'Abstand zur Oberfläche');
+  /* Im Schnitt nur das Bauteil, durchscheinend — keine Offsetfläche. */
+  assert.equal(off.__viewer.offsetMesh.visible, false, 'die Offsetfläche verdeckte den Schnitt');
+  assert.ok(off.__viewer.partMesh.visible && off.__viewer.partMesh.material.transparent
+    && off.__viewer.partMesh.material.opacity <= 0.45, 'das Bauteil durchscheinend');
+  /* Die Skala: voreingestellt innen = Wandstärke, in Turbo. */
+  assert.equal(s.slice.scale, 'innen');
+  assert.equal(d4.getElementById('cb-title').textContent, 'Wandstärke');
+  assert.ok(d4.getElementById('cb-ticks').innerHTML.includes(String(2 * s.field.band).replace('.', ',')), 'oben die doppelte Bandbreite');
   assert.ok(d4.getElementById('cb-extra').innerHTML.includes('Offset'), 'Höhenlinie benannt');
+  const scaleSeg = d4.getElementById('slice-scale-seg').querySelectorAll('button');
+  scaleSeg.find(b => b.dataset.value === 'beides').dispatch('click');
+  assert.equal(s.slice.scale, 'beides');
+  assert.equal(d4.getElementById('cb-title').textContent, 'Abstand zur Oberfläche');
+  assert.ok(d4.getElementById('cb-extra').innerHTML.includes('innen negativ'));
+  scaleSeg.find(b => b.dataset.value === 'aussen').dispatch('click');
+  assert.equal(d4.getElementById('cb-title').textContent, 'Abstand nach außen');
+  scaleSeg.find(b => b.dataset.value === 'innen').dispatch('click');
+  const C4 = await import('../../../web/tools/3d-studio/js/part/colors.js');
+  const lo = C4.turbo(0.15), hi = C4.turbo(0.85), mid = C4.turbo(0.5);
+  assert.ok(lo[2] > 0.9 && lo[2] > lo[0] && hi[0] > 0.8 && hi[0] > hi[2] && mid[1] > mid[0] && mid[1] > mid[2],
+    'Turbo: blau → grün → rot');
 
   /* Achse und Position wirken sofort. */
   for (const ax of ['0', '1', '2']) {
@@ -464,6 +497,7 @@ test('Offsetseite: Feldschnitt und Farbskala', async () => {
   on.dispatch('change');
   assert.equal(off.__viewer.sliceMesh.visible, false);
   assert.ok(!bar.classList.contains('on'));
+  assert.equal(off.__viewer.offsetMesh.visible, true, 'ohne Schnitt ist die Offsetfläche wieder da');
 });
 
 /* ── Abstandsanalyse ─────────────────────────────────────────── */

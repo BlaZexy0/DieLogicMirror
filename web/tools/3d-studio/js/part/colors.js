@@ -65,3 +65,18 @@ export const DIST_RAMP = DIST_STOPS;
 
 /** Farbe für die Anzahl entformbarer Richtungen. */
 export const COUNT_COLORS = ['#b42318', '#008c82', '#3fc2b6', '#8cbee6', '#b8ddd2', '#d7e3e6', '#e8eef0'];
+
+/* Turbo (Google, 2019) als Polynom fünften Grades nach Mikhail Popov —
+   die Standardskala für Felder: dunkelblau über Grün und Gelb nach
+   Dunkelrot, in der Helligkeit fast monoton und ohne die Streifen des
+   alten Regenbogens. t von 0 bis 1. */
+export function turbo(t) {
+  const x = Math.max(0, Math.min(1, t));
+  const x2 = x * x, x3 = x2 * x, x4 = x3 * x, x5 = x4 * x;
+  const c = v => Math.max(0, Math.min(1, v));
+  return [
+    c(0.13572138 + 4.61539260 * x - 42.66032258 * x2 + 132.13108234 * x3 - 152.94239396 * x4 + 59.28637943 * x5),
+    c(0.09140261 + 2.19418839 * x + 4.84296658 * x2 - 14.18503333 * x3 + 4.27729857 * x4 + 2.82956604 * x5),
+    c(0.10667330 + 12.64194608 * x - 60.58204836 * x2 + 110.36276771 * x3 - 89.90310912 * x4 + 27.34824973 * x5)
+  ];
+}

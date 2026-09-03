@@ -16,8 +16,8 @@
 
    Gezeichnet wird EIN Netz mit Punktfarben; die Darstellungsart tauscht
    nur das Farb-Attribut aus. Trennlinie und Netzkanten sind eigene
-   Linien-Objekte. Die Offsetflächen haben eine eigene Seite
-   (offset.html) — sie rechnen über ein Rasterfeld, nicht über dieses
+   Linien-Objekte. Die Wandstärkenanalyse hat eine eigene Seite
+   (wandstaerke.html) — sie rechnen über ein Rasterfeld, nicht über dieses
    Netz. */
 
 import * as T from 'three';

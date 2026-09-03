@@ -10,7 +10,7 @@ verlassen den Browser nicht.
 | `index.html`    | Übersicht: die Werkzeuge als Karten, dazu die drei Schritte der Formteilung |
 | `form.html`     | **Formaufbau** — eine beispielhafte Kaltkammer-Druckgießform als Schnittmodell |
 | `bauteilanalyse.html` | **Bauteilanalyse** — für ein Bauteil die Zuordnung jedes Dreiecks zu Formhälfte oder Schieber |
-| `offset.html`   | **Offsetflächen** — Abstandsfeld durch Rasterisierung: Fläche gleichen Abstands, Wandstärke und Wärmezentrum (die Frage nach *innen*) |
+| `wandstaerke.html` | **Wandstärkenanalyse** — Abstandsfeld durch Rasterisierung: Wandstärke und Wärmezentrum, Fläche gleichen Abstands (die Frage nach *innen*) |
 | `abstand.html`  | **Abstandsanalyse** — kürzester Abstand zwischen zwei Dateien, eingefärbt auf einer selbst gesetzten Skala (die Frage nach *außen*) |
 | `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen, Anschnitte; dazu Querschnitt, Krümmung, Bernoulli-Verluste und Füllbalance |
 
@@ -165,7 +165,7 @@ links unten im Viewport eine **Farbskala** mit den Zahlenwerten. Bei den
 Regionen bleibt sie aus: dort gibt es keine Reihenfolge, eine Skala wäre
 irreführend.
 
-## Offsetflächen (`offset.html`)
+## Wandstärkenanalyse (`wandstaerke.html`)
 
 Eine Offsetfläche dadurch zu bauen, dass man jeden Punkt des Netzes
 entlang seiner Normale nach außen schiebt, geht nur bei kleinen Beträgen
@@ -207,11 +207,13 @@ zwischen den vier angrenzenden Zellpunkten. Gegenüber Marching Cubes
 braucht das keine 256-Zeilen-Tabelle, liefert gleichmäßigere Dreiecke und
 ist geschlossen und mannigfaltig.
 
-Das **Aufmaß** wird als Zahl eingetippt und mit der Eingabetaste
-bestätigt (`+10`, `-10`, `−10`, `1,5` und `1.5` gelten alle). Solange es
-in der Bandbreite liegt, kostet ein anderer Wert nur das Ableiten —
-Millisekunden, kein neues Feld. Verlangt es mehr, zieht die Bandbreite
-automatisch mit und die Seite bittet um ein neues Feld.
+Das **Aufmaß** hat einen Regler von −20 bis +40 mm und daneben ein Feld
+für die Zahl (`+10`, `-10`, `−10`, `1,5` und `1.5` gelten alle; auch
+jenseits des Reglers, der bleibt dann an seinem Ende stehen). Beide
+zeigen denselben Wert. Solange er in der Bandbreite liegt, kostet ein
+anderer Wert nur das Ableiten — Millisekunden, kein neues Feld; am
+Regler wird höchstens einmal je Bild abgeleitet. Verlangt es mehr, zieht
+die Bandbreite automatisch mit und die Seite bittet um ein neues Feld.
 
 Was dabei herauskommt, ist geometrisch richtig statt nur verschoben:
 an konvexen Kanten entsteht ein Radius in Höhe des Aufmaßes, enge Spalte
@@ -231,11 +233,11 @@ reichen.
 
 Zwei Wege, das abzulesen:
 
-- **Untermaß −s eintippen** — alles, was dünner als 2·s ist, verschwindet;
+- **Untermaß −s am Regler** — alles, was dünner als 2·s ist, verschwindet;
   stehen bleiben genau die Kerne, die dicker sind. Der Betrag, bei dem
   der Körper zerfällt, ist die halbe größte Wandstärke.
-- **Feldschnitt einschalten** — die tiefroten Bereiche sind die dicken
-  Stellen, die Farbskala nennt den Wert in mm.
+- **Feldschnitt einschalten** — mit der Skala „innen" sind die roten
+  Bereiche die dicken Stellen, die Farbskala nennt die Wandstärke in mm.
 
 Der Erstarrungsmodul V/A ist damit nicht identisch; die Kugelprobe ist
 sein üblicher Stellvertreter und für Wände exakt gleich (bei einer Platte
@@ -245,15 +247,21 @@ d/2, der Modul d/4).
 ### Das Feld ansehen
 
 Ein **Feldschnitt** zeigt das Feld selbst als Rasterbild: Achse und
-Position wählbar, gefärbt nach Abstand (innen warm, außen kühl, an der
-Oberfläche weiß), mit den Höhenlinien der Bauteilfläche und der aktuellen
-Offsetfläche. Die Farbskala links unten nennt die Werte. Das Bild wird
-bewusst ungeglättet dargestellt — man soll das Raster sehen, aus dem die
-Fläche entsteht.
+Position wählbar, gefärbt in der **Turbo-Skala** (dunkelblau über Grün
+und Gelb nach Rot; `js/part/colors.js`, das Polynom nach Popov) über den
+Bereich, den man wählt — **innen** (dann ist es die Wandstärke: an der
+Oberfläche blau, dick rot, die Skala nennt das Doppelte des Feldwerts),
+**außen** (der Abstand vom Bauteil) oder **beides** (innen rot über Grün
+an der Oberfläche nach Blau außen). Was nicht zum Bereich gehört, bleibt
+hellgrau, so hebt sich der Querschnitt ab. Darüber liegen die Höhenlinien
+der Bauteilfläche (dunkel) und der aktuellen Offsetfläche (weiß). Im
+Schnitt steht **nur das Bauteil, durchscheinend** — die Offsetfläche
+legte sich sonst über die Schnittebene. Das Bild wird bewusst ungeglättet
+dargestellt — man soll das Raster sehen, aus dem die Fläche entsteht.
 
 ## Abstandsanalyse (`abstand.html`)
 
-Die Offsetflächen beantworten die Frage nach innen. Nach außen steht die
+Die Wandstärkenanalyse beantwortet die Frage nach innen. Nach außen steht die
 andere, und die braucht **zwei Körper**: wie weit ist die
 Bauteiloberfläche vom Temperierkanal entfernt, vom Auswerferstift, vom
 Nachbarteil? Zu nah heißt Durchbruchgefahr und eine Stelle, die zu
@@ -758,7 +766,7 @@ er gezeichnet, gezogen und gezielt wird, steht einmal.
 index.html            Übersicht (Karten der Werkzeuge)
 form.html             Viewer 1: Formaufbau
 bauteilanalyse.html   Viewer 2: Bauteilanalyse
-offset.html           Viewer 3: Offsetflächen
+wandstaerke.html      Viewer 3: Wandstärkenanalyse
 abstand.html          Viewer 4: Abstandsanalyse
 anguss.html           Viewer 5: Angussdesigner
 ueberlauf.html        Viewer 6: Überlaufdesigner (Überläufe und Entlüftungen)
@@ -801,7 +809,7 @@ js/part/glbio.js      GLB lesen ohne Three.js (Beispielteile und Uploads)
 js/part/stlio.js      STL lesen und schreiben
 js/part/colors.js     Farben der Analyse (aus der DieLogic-Palette)
 js/part/app.js        Einstieg Bauteilanalyse-Viewer
-js/part/offsetapp.js  Einstieg Offsetflächen-Viewer
+js/part/offsetapp.js  Einstieg Wandstärkenanalyse
 js/part/distanceapp.js Einstieg Abstandsanalyse-Viewer
 js/runner/vec.js      kleine Vektorrechnung (ohne Three.js, unter Node lauffähig)
 js/runner/graph.js    DAS Datenmodell: Knoten, Arbeitsebenen, Spiegelung, JSON
@@ -914,7 +922,7 @@ Verknüpfungen, die noch nicht verdrahtet sind:
   [Sprengflächenanalyse](/tools/sprengflaeche/) (9 Werte je Dreieck): die
   STL aus dem Abschnitt `geometry` ließe sich unmittelbar übernehmen und
   die Entformschrägen-Bilanz dorthin zurückschreiben.
-- Das Schwindmaß der Legierung ließe sich auf der Offsetseite als zweiter
+- Das Schwindmaß der Legierung ließe sich in der Wandstärkenanalyse als zweiter
   Anteil neben dem Aufmaß führen — eine Skalierung des Bauteils vor dem
   Rastern genügt.
 

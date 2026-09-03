@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Offsetflächen · 3D-Studio · DieLogic</title>
+<title>Wandstärkenanalyse · 3D-Studio · DieLogic</title>
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -21,8 +21,8 @@
 
 <section class="page-hero compact">
   <div class="inner">
-    <h1>Offsetflächen</h1>
-    <p class="subtitle">Abstandsfeld durch Rasterisierung — daraus die Fläche gleichen Abstands und die Wandstärke. Aufmaß, Untermaß und Schnitte durch das Feld, ohne Selbstdurchdringung.</p>
+    <h1>Wandstärkenanalyse</h1>
+    <p class="subtitle">Abstandsfeld durch Rasterisierung — daraus die Wandstärke, das Wärmezentrum und die Fläche gleichen Abstands. Aufmaß und Untermaß am Regler, Schnitte durch das Feld mit Turbo-Skala, ohne Selbstdurchdringung.</p>
   </div>
 </section>
 
@@ -57,10 +57,15 @@
 
     <h2>Offsetfläche</h2>
     <div class="row">
-      <span title="Abstand zur Bauteiloberfläche. Plus vergrößert (Aufmaß), minus verkleinert (Untermaß).">Aufmaß</span>
+      <span title="Abstand zur Bauteiloberfläche. Plus vergrößert (Aufmaß), minus verkleinert (Untermaß) — ein Untermaß von −s lässt nur stehen, was dicker als 2·s ist.">Aufmaß</span>
       <input type="text" id="delta" inputmode="decimal" value="2" spellcheck="false"
-             title="Wert eingeben und mit Eingabetaste bestätigen — z. B. +10 oder −10">
+             title="Zahl eingeben und mit Eingabetaste bestätigen — auch jenseits des Reglers, z. B. 60">
       <span class="val">mm</span>
+    </div>
+    <div class="row">
+      <span></span>
+      <input type="range" id="delta-slider" min="-20" max="40" step="0.5" value="2"
+             title="−20 bis +40 mm; die Zahl darüber zeigt den Wert und nimmt auch mehr">
     </div>
     <div class="row">
       <span>Anzeige</span>
@@ -89,6 +94,16 @@
         <input type="range" id="slice-pos" min="0" max="100" step="1" value="50">
         <span class="val" id="slice-pos-val"></span>
       </div>
+      <div class="row">
+        <span title="Welcher Teil des Feldes gefärbt wird: innen ist die Wandstärke (dick = rot), außen der Abstand vom Bauteil, beides der ganze Wertebereich.">Skala</span>
+        <div class="seg" id="slice-scale-seg">
+          <button type="button" data-value="innen" class="active">innen</button>
+          <button type="button" data-value="aussen">außen</button>
+          <button type="button" data-value="beides">beides</button>
+        </div>
+      </div>
+      <div class="hint">Im Schnitt steht nur das Bauteil, durchscheinend — die Offsetfläche
+        verdeckte die Schnittebene sonst.</div>
     </div>
 
     <h2>Darstellung</h2>
@@ -123,10 +138,11 @@
       Speiser reichen.</p>
 
       <p style="margin-top:.5rem">Zwei Wege, das abzulesen: ein
-      <b>Untermaß</b> von −s eintippen — alles, was dünner als 2·s ist,
+      <b>Untermaß</b> von −s am Regler — alles, was dünner als 2·s ist,
       verschwindet, stehen bleiben genau die dicken Kerne. Oder den
-      <b>Feldschnitt</b> einschalten: die tiefroten Bereiche sind die
-      dicken Stellen, die Farbskala nennt den Wert in mm. (Der
+      <b>Feldschnitt</b> einschalten: mit der Skala „innen" sind die roten
+      Bereiche die dicken Stellen, die Farbskala nennt die Wandstärke in
+      mm. (Der
       Erstarrungsmodul V/A ist damit nicht identisch — die Kugelprobe ist
       sein üblicher Stellvertreter und für Wände exakt gleich.)</p>
     </div>

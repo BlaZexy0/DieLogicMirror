@@ -1,6 +1,6 @@
 /* Abstand zwischen zwei Netzen.
 
-   Wozu: die Offsetflächen beantworten die Frage nach INNEN — wie dick
+   Wozu: die Wandstärkenanalyse beantwortet die Frage nach INNEN — wie dick
    ist das Bauteil, wo erstarrt es zuletzt. Nach AUSSEN steht die andere
    Frage: wie weit ist die Bauteiloberfläche vom Temperierkanal entfernt,
    vom Auswerferstift, vom Nachbarteil? Dafür braucht es zwei Körper,

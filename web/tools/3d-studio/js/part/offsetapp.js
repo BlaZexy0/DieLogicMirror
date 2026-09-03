@@ -1,4 +1,4 @@
-/* Offsetflächen-Viewer (offset.html).
+/* Wandstärkenanalyse (wandstaerke.html).
 
    Zwei getrennte Schritte, und nur der erste kostet Zeit:
 
@@ -12,9 +12,10 @@
       liegt, geht das ohne Neurechnung: eintippen, Eingabetaste, fertig.
 
    Zusätzlich lässt sich das Feld selbst ansehen — ein Schnitt als
-   Rasterbild, gefärbt nach Abstand, mit der Höhenlinie des aktuellen
-   Aufmaßes. Das ist die ehrlichste Darstellung dessen, woraus die Fläche
-   entsteht. */
+   Rasterbild in der Turbo-Skala, wahlweise nur innen (dann zeigt es die
+   Wandstärke), nur außen oder beides, mit der Höhenlinie des aktuellen
+   Aufmaßes. Im Schnitt steht nur das Bauteil, durchscheinend — die
+   Offsetfläche verdeckte ihn sonst. */
 
 import * as T from 'three';
 import { initScene } from '../scene.js';
@@ -26,11 +27,11 @@ import { surfaceNets } from './surfacenets.js';
 import { writeSTL } from './stlio.js';
 import { volume, surface } from '../mesh.js';
 import {
-  $, fmt, facts, segButtons, slider, numberInput, runControl, colorbar, gradient, chip
+  $, fmt, fmtPlain, facts, segButtons, slider, numberInput, runControl, colorbar, gradient, chip
 } from '../ui/controls.js';
 import * as C from './colors.js';
 
-mountNav('offset.html');
+mountNav('wandstaerke.html');
 
 const container = $('viewport');
 const status = $('status');
@@ -47,7 +48,7 @@ const state = {
   name: '', model: null, field: null, offsetTris: null,
   res: 96, band: 10, delta: 2,
   show: 'both', opacity: 0.35,
-  slice: { on: false, axis: 2, pos: 50 },
+  slice: { on: false, axis: 2, pos: 50, scale: 'innen' },
   stale: true, running: false, ready: false,
   ms: 0
 };
@@ -178,14 +179,20 @@ function extract() {
 }
 
 function applyVisibility() {
-  partMesh.visible = state.show !== 'offset';
-  offsetMesh.visible = state.show !== 'part' && !!(state.offsetTris && state.offsetTris.length);
+  /* Im Schnitt nur das Bauteil, und zwar durchscheinend: die
+     Offsetfläche legte sich sonst über die Schnittebene, und das
+     Bauteil deckend davor verdeckte sie ebenso. */
+  const slice = state.slice.on && !!state.field;
+  partMesh.visible = slice || state.show !== 'offset';
+  offsetMesh.visible = !slice && state.show !== 'part' && !!(state.offsetTris && state.offsetTris.length);
   /* Allein dargestellt darf das Bauteil deckend sein. */
-  const solo = state.show === 'part';
-  partMat.opacity = solo ? 1 : state.opacity;
-  partMat.transparent = !solo && state.opacity < 0.999;
-  partMat.depthWrite = solo || state.opacity >= 0.999;
+  const solo = !slice && state.show === 'part';
+  const opacity = slice ? Math.min(state.opacity, 0.45) : state.opacity;
+  partMat.opacity = solo ? 1 : opacity;
+  partMat.transparent = !solo && opacity < 0.999;
+  partMat.depthWrite = solo || opacity >= 0.999;
   partMat.needsUpdate = true;
+  view.invalidate();
 }
 
 /* ── Kennzahlen ──────────────────────────────────────────────── */
@@ -224,20 +231,30 @@ function updateOffsetFacts() {
 }
 
 /* ── Feldschnitt als Rasterbild ──────────────────────────────── */
-/* Farbverlauf: innen warm, außen kühl, an der Bauteiloberfläche weiß.
-   Zwei Höhenlinien liegen darüber — die Bauteilfläche (Abstand 0) und
-   die aktuelle Offsetfläche. */
-function sliceRgb(v, band) {
-  const t = Math.max(-1, Math.min(1, v / band));
-  return t < 0 ? C.mix('#b42318', '#ffffff', 1 + t) : C.mix('#ffffff', '#00534d', t);
+/* Die Turbo-Skala über den gewählten Bereich:
+     innen   |v| von 0 (Oberfläche, blau) bis band (dick, rot) — die Wandstärke;
+     außen   v von 0 (blau) bis band (rot);
+     beides  von −band (innen, rot) über 0 (grün) bis +band (außen, blau).
+   Was nicht zum Bereich gehört, bleibt hellgrau — so hebt sich der
+   Querschnitt des Bauteils ab. Zwei Höhenlinien liegen darüber: die
+   Bauteilfläche (Abstand 0) und die aktuelle Offsetfläche. */
+const OUTSIDE_SCALE = [0.87, 0.9, 0.91];
+/* Turbo läuft an beiden Enden ins Dunkle; benutzt wird das Stück von
+   sattem Blau bis sattem Rot — sonst lag alles jenseits des Bandes als
+   schwarze Fläche im Bild. */
+const turbo = t => C.turbo(0.08 + 0.84 * Math.max(0, Math.min(1, t)));
+function sliceRgb(v, band, mode) {
+  if (mode === 'innen') return v >= 0 ? OUTSIDE_SCALE : turbo(-v / band);
+  if (mode === 'aussen') return v <= 0 ? OUTSIDE_SCALE : turbo(v / band);
+  return turbo((band - v) / (2 * band));
 }
-const sliceCss = (v, band) => 'rgb(' + sliceRgb(v, band).map(x => Math.round(x * 255)).join(',') + ')';
+const sliceCss = (v, band, mode) => 'rgb(' + sliceRgb(v, band, mode).map(x => Math.round(x * 255)).join(',') + ')';
 
-function sliceColor(v, band, h, delta, out, o) {
-  const rgb = sliceRgb(v, band);
+function sliceColor(v, band, h, delta, mode, out, o) {
+  const rgb = sliceRgb(v, band, mode);
   let r = rgb[0], g = rgb[1], b = rgb[2];
-  if (Math.abs(v - delta) < h * 0.6) { r = 0.05; g = 0.16; b = 0.2; }      // Offsetlinie
-  else if (Math.abs(v) < h * 0.6) { r = 0.35; g = 0.42; b = 0.45; }        // Bauteilkontur
+  if (Math.abs(v - delta) < h * 0.6) { r = 1; g = 1; b = 1; }              // Offsetlinie: weiß
+  else if (Math.abs(v) < h * 0.6) { r = 0.08; g = 0.13; b = 0.16; }        // Bauteilkontur: dunkel
   out[o] = r * 255; out[o + 1] = g * 255; out[o + 2] = b * 255; out[o + 3] = 255;
 }
 
@@ -260,7 +277,7 @@ function updateSlice() {
     for (let uu = 0; uu < w; uu++) {
       const idx = [0, 0, 0];
       idx[a] = k; idx[ua] = uu; idx[va] = vv;
-      sliceColor(at(idx[0], idx[1], idx[2]), f.band, f.h, state.delta, px, (vv * w + uu) * 4);
+      sliceColor(at(idx[0], idx[1], idx[2]), f.band, f.h, state.delta, state.slice.scale, px, (vv * w + uu) * 4);
     }
   }
   const tex = new T.DataTexture(px, w, hgt, T.RGBAFormat);
@@ -280,18 +297,41 @@ function updateSlice() {
   if (a === 0) sliceMesh.rotation.y = -Math.PI / 2;
   else if (a === 1) sliceMesh.rotation.x = Math.PI / 2;
   sliceMesh.visible = true;
+  view.invalidate();
 }
 
 /* ── Farbskala ───────────────────────────────────────────────── */
+/* Innen zeigt die Skala die WANDSTÄRKE (das Doppelte des Feldwerts —
+   der Betrag ist der Radius der größten Kugel, die dort hineinpasst),
+   außen und beides den Abstand zur Oberfläche. Unten steht jeweils die
+   Oberfläche, oben das Ende des Bandes. */
 function updateColorbar() {
   if (!state.field || !state.slice.on) return colorbar(null);
   const band = state.field.band;
-  colorbar({
-    title: 'Abstand zur Oberfläche',
-    stops: gradient(t => sliceCss(-band + 2 * band * t, band)),
-    ticks: [band, band / 2, 0, -band / 2, -band].map(v => fmt(v)),
-    extra: chip('#0d2933') + 'Offset ' + fmt(state.delta) + ' mm'
-  });
+  const mode = state.slice.scale;
+  const extra = chip('#ffffff') + 'Offset ' + fmt(state.delta) + ' mm · ' + chip('#14212a') + 'Bauteilkontur';
+  if (mode === 'innen') {
+    colorbar({
+      title: 'Wandstärke',
+      stops: gradient(t => sliceCss(-band * t, band, mode)),
+      ticks: [2 * band, 1.5 * band, band, 0.5 * band, 0].map(v => fmt(v) + ' mm'),
+      extra
+    });
+  } else if (mode === 'aussen') {
+    colorbar({
+      title: 'Abstand nach außen',
+      stops: gradient(t => sliceCss(band * t, band, mode)),
+      ticks: [band, 0.75 * band, 0.5 * band, 0.25 * band, 0].map(v => fmt(v) + ' mm'),
+      extra
+    });
+  } else {
+    colorbar({
+      title: 'Abstand zur Oberfläche',
+      stops: gradient(t => sliceCss(band - 2 * band * t, band, mode)),
+      ticks: [-band, -band / 2, 0, band / 2, band].map(v => fmt(v) + ' mm'),
+      extra: extra + ' · innen negativ'
+    });
+  }
 }
 
 /* ── Bedienung ───────────────────────────────────────────────── */
@@ -307,22 +347,34 @@ numberInput('band', v => {
 });
 $('run-field').addEventListener('click', runField);
 
-/* Verlangt das Aufmaß mehr, als das Feld speichert, wird die Bandbreite
-   gleich mitgezogen — dann genügt ein Klick auf „Feld neu berechnen",
-   statt zwei Felder von Hand aufeinander abzustimmen. */
-numberInput('delta', v => {
+/* Das Aufmaß: ein Regler von −20 bis +40 mm für die Hand und ein Feld
+   für die Zahl — beide zeigen denselben Wert. Verlangt das Aufmaß mehr,
+   als das Feld speichert, wird die Bandbreite gleich mitgezogen; dann
+   genügt ein Klick auf „Feld neu berechnen". Am Regler wird höchstens
+   einmal je Bild abgeleitet: das Ableiten kostet Millisekunden, aber ein
+   Regler meldet sich öfter, als Bilder gezeichnet werden. */
+let extractRaf = 0;
+function setDelta(v, live) {
   state.delta = Math.max(-1e4, Math.min(1e4, v));
+  $('delta').value = fmtPlain(state.delta);
+  $('delta-slider').value = String(Math.max(-20, Math.min(40, state.delta)));
   if (state.field && Math.abs(state.delta) > state.field.band) {
     state.band = round1(Math.abs(state.delta) * 1.15 + 1);
     state.bandTouched = true;
     $('band').value = fmt(state.band);
     markStale();
   } else if (state.field) {
-    extract();
+    if (live) {
+      if (!extractRaf) extractRaf = requestAnimationFrame(() => { extractRaf = 0; extract(); });
+    } else extract();
   }
   updateColorbar();
   return state.delta;
-});
+}
+numberInput('delta', v => setDelta(v, false));
+/* Von Hand verdrahtet statt über slider(): der Regler hat kein eigenes
+   Wertfeld — die Zahl steht im Eingabefeld daneben. */
+$('delta-slider').addEventListener('input', e => setDelta(+e.target.value, true));
 segButtons('show-seg', v => { state.show = v; applyVisibility(); });
 
 $('offset-export').addEventListener('click', () => {
@@ -340,8 +392,10 @@ $('slice-on').addEventListener('change', e => {
   $('slice-block').classList.toggle('disabled', !state.slice.on);
   updateSlice();
   updateColorbar();
+  applyVisibility();
 });
 segButtons('slice-seg', v => { state.slice.axis = +v; updateSlice(); });
+segButtons('slice-scale-seg', v => { state.slice.scale = v; updateSlice(); updateColorbar(); });
 slider('slice-pos', v => { state.slice.pos = v; updateSlice(); }, () => '');
 slider('opacity', v => { state.opacity = v / 100; applyVisibility(); }, v => v + ' %');
 
