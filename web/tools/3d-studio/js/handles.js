@@ -1,6 +1,6 @@
 /* Griffe im Viewport — auswählen, ziehen, zielen. Gemeinsam für alle
    Werkzeuge, die Punkte auf oder an einem Bauteil setzen: der
-   Angussdesigner (Knoten des Angussgraphen) und der Luftbohnen-Designer
+   Angussdesigner (Knoten des Angussgraphen) und der Überlaufdesigner
    (Überläufe und Entlüftungen).
 
    Was ein Griff IST, weiß dieses Modul nicht. Es bekommt eine Liste von

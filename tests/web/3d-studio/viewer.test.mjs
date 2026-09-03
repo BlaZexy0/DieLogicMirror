@@ -952,11 +952,11 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.equal(d6.getElementById('run-merge'), null, 'aber kein Verschmelzen mehr');
 });
 
-/* ── Luftbohnen-Designer ─────────────────────────────────────── */
-test('Luftbohnen: setzen, ziehen, drehen, neu setzen, Datei', async () => {
-  const { doc: d7 } = buildDocument(read('luft.html'));
+/* ── Überlaufdesigner ─────────────────────────────────────── */
+test('Überlaufdesigner: setzen, ziehen, drehen, neu setzen, Datei', async () => {
+  const { doc: d7 } = buildDocument(read('ueberlauf.html'));
   installGlobals(d7);
-  globalThis.location = { search: '', href: 'http://test/luft.html' };
+  globalThis.location = { search: '', href: 'http://test/ueberlauf.html' };
   const mod = await import('../../../web/tools/3d-studio/js/vents/app.js');
   const v = mod.__viewer;
   for (let i = 0; i < 600 && !v.state.ready; i++) await new Promise(r => setTimeout(r, 25));
@@ -1000,7 +1000,7 @@ test('Luftbohnen: setzen, ziehen, drehen, neu setzen, Datei', async () => {
   assert.match(d7.getElementById('pt-sel').innerHTML, /Überlaufbohne/);
   const param = k => d7.getElementById('sel-params').querySelector('#p-' + k);
   assert.ok(param('wellD'), 'die Maße der Art stehen im Feld');
-  assert.match(d7.getElementById('plan-facts').innerHTML, /Luftbohnen.*Gesamt/s, 'Bauteil, Luftbohnen, Gesamt');
+  assert.match(d7.getElementById('plan-facts').innerHTML, /Überläufe.*Gesamt/s, 'Bauteil, Überläufe, Gesamt');
   assert.ok(v.group.children.some(m => m.visible && m.geometry && m.geometry.attributes.position
     && m.geometry.attributes.position.count > 0 && m !== v.refMesh), 'ein Körper steht im Viewport');
 
@@ -1021,17 +1021,19 @@ test('Luftbohnen: setzen, ziehen, drehen, neu setzen, Datei', async () => {
   assert.ok(Math.hypot(it.pos[1] - p0[1], it.pos[2] - p0[2]) > 5, 'der Punkt wandert auf der Wand: ' + p0 + ' → ' + it.pos);
   assert.ok(Math.abs(it.pos[0] - p0[0]) < 1e-6, 'aber nicht von ihr weg');
 
-  /* Drehen um die eigene Achse: die Achse bleibt, „oben" schwenkt. */
+  /* Drehen um die Normale: oben bleibt die Wandnormale, die Längsrichtung
+     schwenkt in der Wand. */
   const G7 = await import('../../../web/tools/3d-studio/js/vents/model.js');
-  const n0 = G7.frameOf(it).n.slice();
-  const d0 = it.dir.slice();
+  const d0 = G7.frameOf(it).d.slice();
+  const n0 = it.dir.slice();
   const rot = d7.getElementById('sel-rot');
   rot.value = '90';
   rot.dispatch('input');
   assert.equal(it.rot, 90);
   const f = G7.frameOf(it);
-  assert.deepEqual(f.d, d0, 'die Achse bleibt die Wandnormale');
-  assert.ok(Math.abs(f.n[0] * n0[0] + f.n[1] * n0[1] + f.n[2] * n0[2]) < 1e-9, 'oben um 90° gedreht: ' + f.n);
+  assert.deepEqual(f.n, n0, 'oben bleibt die Wandnormale');
+  assert.ok(Math.abs(f.d[0] * d0[0] + f.d[1] * d0[1] + f.d[2] * d0[2]) < 1e-9, 'längs um 90° gedreht: ' + f.d);
+  assert.ok(Math.abs(f.d[0] * n0[0] + f.d[1] * n0[1] + f.d[2] * n0[2]) < 1e-9, 'und noch in der Wand');
   assert.match(d7.getElementById('sel-rot-val').textContent, /90/);
 
   /* Neu setzen: der Pfeil schaltet den Zielmodus scharf, der Klick aufs

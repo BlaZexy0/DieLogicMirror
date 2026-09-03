@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>3D-Studio · DieLogic</title>
-<meta name="description" content="Sechs 3D-Werkzeuge für die Druckgießform, alle im Browser: die Form als Schnittmodell, die Formteilung eines Bauteils, Wandstärke und Abstand aus Abstandsfeldern, der Angussdesigner für Laufkanäle und Anschnitte und der Luftbohnen-Designer für Überläufe und Entlüftungen.">
+<meta name="description" content="Sechs 3D-Werkzeuge für die Druckgießform, alle im Browser: die Form als Schnittmodell, die Formteilung eines Bauteils, Wandstärke und Abstand aus Abstandsfeldern, der Angussdesigner für Laufkanäle und Anschnitte und der Überlaufdesigner für Überläufe und Entlüftungen.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -59,7 +59,7 @@
       <div class="step">
         <div class="step-num">Entwerfen</div>
         <h3>Was zum Bauteil dazukommt</h3>
-        <p>Die <a href="luft.html">Luftbohnen</a> setzen Überläufe und Entlüftungen an die
+        <p>Der <a href="ueberlauf.html">Überlaufdesigner</a> setzt Überläufe und Entlüftungen an die
           Wand; der <a href="anguss.html">Angussdesigner</a> zieht Laufkanäle vom Pressrest
           bis zum Anschnitt. Bauteil plus Überläufe ist das Gussvolumen, das er dafür braucht.</p>
       </div>
@@ -201,17 +201,17 @@
           </svg>
         </div>
         <div class="tool-tag">Entwerfen</div>
-        <h3>Luftbohnen</h3>
+        <h3>Überlaufdesigner</h3>
         <p>Überläufe und Entlüftungen am Bauteil: eine Stelle anklicken, und dort sitzt die Bohne
           mit ihrem Steg — auf der Wand, entlang ihrer Normalen nach außen. Am Punkt ziehen, am
           Pfeil neu setzen, um die Achse drehen.</p>
         <ul>
           <li>Überlaufbohne, Überlauf mit Entlüftung, Waschbrett (Chill-Vent), Entlüftungsschlitz</li>
           <li>Bohne mit Entformschräge und Bodenradius, jedes Maß am Element</li>
-          <li>Bauteil plus Luftbohnen: das Gussvolumen für den Angussdesigner</li>
+          <li>Bauteil plus Überläufe: das Gussvolumen für den Angussdesigner</li>
         </ul>
         <div class="card-btns">
-          <a href="luft.html" class="btn btn-primary">Öffnen</a>
+          <a href="ueberlauf.html" class="btn btn-primary">Öffnen</a>
         </div>
       </div>
     </div>
@@ -224,10 +224,10 @@
     <p>Dasselbe Bauteil geht durch alle Werkzeuge: Beispielteile aus <code>assets/parts/</code> oder
       eine eigene STL/GLB, erkannt am Dateikopf, nicht an der Endung. Alles rechnet im Browser —
       die Seiten brauchen weder Backend noch Projekt und tragen deshalb keine Projektleiste. Was
-      ein Werkzeug ausrechnet, nimmt das nächste: das Volumen von Bauteil und Luftbohnen ist das
+      ein Werkzeug ausrechnet, nimmt das nächste: das Volumen von Bauteil und Überläufe ist das
       Gussvolumen des Angussdesigners, dessen Druckbedarf gehört als Formwiderstand ins
       PQ²-Diagramm der <a href="/tools/auslegung/">Auslegung</a>, und die Körper aus
-      Angussdesigner und Luftbohnen lassen sich als STL wieder in die Abstandsanalyse laden. Die
+      Angussdesigner und Überläufe lassen sich als STL wieder in die Abstandsanalyse laden. Die
       Maße der Beispielform stehen gesammelt in <code>js/config.js</code>.</p>
   </div>
 </section>

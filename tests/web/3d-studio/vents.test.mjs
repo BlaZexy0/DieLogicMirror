@@ -1,4 +1,4 @@
-/* Der Luftbohnen-Designer ohne Browser: Plan, Dreibein, Körper, Datei.
+/* Der Überlaufdesigner ohne Browser: Plan, Dreibein, Körper, Datei.
 
      node --import ./tests/web/3d-studio/stubs/register.mjs \
           --test tests/web/3d-studio/vents.test.mjs                     */
@@ -47,32 +47,32 @@ test('Plan: Elemente sitzen auf der Wand und richten sich nach ihrer Normalen', 
   assert.equal(it.p.stegW, undefined, 'ein Schlitz hat keinen Steg');
 });
 
-test('Dreibein: rechtshändig, stetig, Drehung um die Achse selbst', () => {
+test('Dreibein: die Normale ist oben, das Element liegt in der Wand, Drehung um die Normale', () => {
   const plan = M.emptyPlan();
   const it = M.addItem(plan, 'bohne', [0, 0, 0], [1, 0, 0]);
   let f = M.frameOf(it);
-  assert.deepEqual(f.d, [1, 0, 0]);
   const dotp = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   const crs = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  assert.deepEqual(f.n, [1, 0, 0], 'oben ist die Wandnormale');
+  assert.ok(Math.abs(f.d[0]) < 1e-12, 'längs liegt IN der Wand: ' + f.d);
   assert.ok(Math.abs(dotp(f.d, f.r)) < 1e-12 && Math.abs(dotp(f.d, f.n)) < 1e-12 && Math.abs(dotp(f.r, f.n)) < 1e-12, 'orthogonal');
   const z = crs(f.d, f.r);
   assert.ok(Math.hypot(z[0] - f.n[0], z[1] - f.n[1], z[2] - f.n[2]) < 1e-12, 'x × y = z: rechtshändig');
-  /* Ohne Trennebene sagt die Welt, was oben ist: für eine Wand, die nach
-     +X zeigt, ist es +Y. */
-  assert.ok(f.n[1] > 0.999, 'oben ist +Y: ' + f.n);
-  /* Die Drehung dreht um d — d selbst bleibt, r und n schwenken. */
-  const r0 = f.r.slice();
+  /* Die Drehung dreht um n — n bleibt, d und r schwenken in der Wand. */
+  const d0 = f.d.slice();
   M.setRot(plan, it.id, 90);
   f = M.frameOf(it);
-  assert.deepEqual(f.d, [1, 0, 0]);
-  assert.ok(Math.abs(dotp(f.r, r0)) < 1e-9, 'quer um 90° gedreht: ' + f.r);
-  assert.ok(Math.abs(M.toWorld(f, 1, 0, 0)[0] - 1) < 1e-12, 'längs bleibt längs');
+  assert.deepEqual(f.n, [1, 0, 0]);
+  assert.ok(Math.abs(dotp(f.d, d0)) < 1e-9 && Math.abs(f.d[0]) < 1e-12, 'längs um 90° gedreht, noch in der Wand: ' + f.d);
+  assert.ok(Math.abs(M.toWorld(f, 0, 0, 1)[0] - 1) < 1e-12, 'oben bleibt oben');
   M.setRot(plan, it.id, 500);
   assert.equal(it.rot, 180, 'begrenzt');
-  /* Eine Wand, die nach oben zeigt: das Dreibein kippt nicht um. */
-  const top = M.addItem(plan, 'bohne', [0, 0, 0], [0, 1, 0]);
-  const g = M.frameOf(top);
-  assert.ok(Math.abs(dotp(g.d, g.r)) < 1e-12 && Math.hypot(...g.r) > 0.999 && Math.hypot(...g.n) > 0.999);
+  /* Eine Wand, die nach +X zeigt, und eine, die nach oben zeigt: das
+     Dreibein kippt nirgends um. */
+  for (const dir of [[0, 1, 0], [0, 0, 1], [0.577, 0.577, 0.577]]) {
+    const g = M.frameOf(M.addItem(plan, 'bohne', [0, 0, 0], dir));
+    assert.ok(Math.abs(dotp(g.d, g.n)) < 1e-9 && Math.hypot(...g.d) > 0.999 && Math.hypot(...g.r) > 0.999, 'Wand ' + dir);
+  }
 });
 
 test('Umriss der Bohne: ein D, flach zum Steg, Punktzahl unabhängig vom Versatz', () => {
@@ -104,8 +104,13 @@ test('Körper: dicht, nach außen gewickelt, Volumen wie gerechnet', () => {
       assert.ok(Math.abs(GEO.volumeOf(it) - p.ventW * p.ventH * p.ventL) < 1e-6);
     }
     if (type === 'waschbrett') {
-      const exact = p.stegW * p.stegH * p.stegL + p.ventW * p.ventH * p.waves * Math.hypot(p.waveL, 2 * p.amp);
+      assert.equal(parts.length, 3, 'Steg, Sammelkanal, Band');
+      /* Das Band beginnt 0,2 mm im Sammelkanal — das Stück zählt nur einmal. */
+      const bandPerLen = p.ventW * p.ventH * Math.hypot(p.waveL, 2 * p.amp) / p.waveL;
+      const exact = p.stegW * p.stegH * p.stegL + p.ventW * p.poolH * p.poolL
+        + bandPerLen * (p.waves * p.waveL - 0.2);
       assert.ok(Math.abs(GEO.volumeOf(it) - exact) / exact < 1e-6, 'Waschbrett ' + GEO.volumeOf(it) + ' gegen ' + exact);
+      assert.ok(p.poolH > p.ventH, 'der Sammelkanal ist dicker als der Spalt');
     }
     if (type === 'bohne') {
       /* Ohne Schräge und Radius ist die Bohne ein Prisma: Umriss × Tiefe. */
@@ -128,17 +133,21 @@ test('Körper: dicht, nach außen gewickelt, Volumen wie gerechnet', () => {
   assert.deepEqual(Object.keys(byType).sort(), Object.keys(M.TYPES).sort());
 });
 
-test('Steg und Bohne berühren sich mit ganzer Stirnfläche', () => {
+test('Steg und Bohne berühren sich mit ganzer Stirnfläche — in der Wandebene', () => {
   const plan = M.emptyPlan();
   const it = M.addItem(plan, 'bohne', [0, 0, 0], [1, 0, 0]);
+  const f = M.frameOf(it);
   const [steg, bohne] = GEO.buildItem(it);
-  /* Der Steg endet HINTER der flachen Seite der Bohne (x = stegL) — er
-     ragt hinein, statt vor der zurückweichenden Wand in der Luft zu hängen. */
-  let stegMaxX = -Infinity, bohneMinX = Infinity;
-  for (let i = 0; i < steg.length; i += 3) stegMaxX = Math.max(stegMaxX, steg[i]);
-  for (let i = 0; i < bohne.length; i += 3) bohneMinX = Math.min(bohneMinX, bohne[i]);
-  assert.ok(stegMaxX > it.p.stegL + 0.1, 'der Steg reicht in die Bohne: ' + stegMaxX);
-  assert.ok(Math.abs(bohneMinX - it.p.stegL) < 1e-9, 'die Bohne beginnt am Stegende: ' + bohneMinX);
+  /* Entlang der Längsrichtung d (in der Wand): der Steg endet HINTER der
+     flachen Seite der Bohne (x = stegL) — er ragt hinein, statt vor der
+     zurückweichenden Wand in der Luft zu hängen. Entlang der Normalen n
+     ragt nichts nach außen: das Element liegt in der Wand, die Tiefe
+     wächst nach innen. */
+  const along = (tris, v) => { let lo = Infinity, hi = -Infinity; for (let i = 0; i < tris.length; i += 3) { const s = tris[i] * v[0] + tris[i + 1] * v[1] + tris[i + 2] * v[2]; lo = Math.min(lo, s); hi = Math.max(hi, s); } return [lo, hi]; };
+  assert.ok(along(steg, f.d)[1] > it.p.stegL + 0.1, 'der Steg reicht in die Bohne');
+  assert.ok(Math.abs(along(bohne, f.d)[0] - it.p.stegL) < 1e-9, 'die Bohne beginnt am Stegende');
+  assert.ok(along(bohne, f.n)[1] < 1e-9 && along(bohne, f.n)[0] < -it.p.wellD + 1e-6, 'die Bohne liegt unter der Wandfläche: ' + along(bohne, f.n));
+  assert.ok(along(steg, f.n)[1] < 1e-9, 'der Steg auch');
 });
 
 test('Datei: hin und zurück ergibt denselben Plan', () => {
@@ -153,5 +162,5 @@ test('Datei: hin und zurück ergibt denselben Plan', () => {
   assert.equal(back.items[a.id].p.waves, 9);
   assert.ok(Math.abs(back.items[a.id].dir[1] - 0.6) < 1e-6, 'die Achse bleibt, wie sie war');
   assert.equal(back.seq, 2, 'neue Elemente zählen weiter');
-  assert.throws(() => M.fromJSON({ format: 'x' }), /Luftbohnen-Datei/);
+  assert.throws(() => M.fromJSON({ format: 'x' }), /Überlaufdatei/);
 });

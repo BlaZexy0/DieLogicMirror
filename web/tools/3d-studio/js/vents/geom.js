@@ -1,11 +1,12 @@
-/* Aus dem Luftbohnen-Plan werden Körper: Dreieckssuppen wie überall im
+/* Aus dem Überlaufplan werden Körper: Dreieckssuppen wie überall im
    Studio (9 Werte je Dreieck), je Element ein oder mehrere geschlossene
    Körper.
 
-   Alles wird in LOKALEN Koordinaten gebaut — x längs der Achse vom
-   Bauteil weg, y quer, z „oben" — und am Ende mit dem Dreibein des
-   Elements in die Welt gesetzt. Steg, Kanal und Bohne liegen mit ihrer
-   offenen Seite bei z = 0 und wachsen nach −z in die Tiefe.
+   Alles wird in LOKALEN Koordinaten gebaut — x längs in der Wandebene,
+   y quer, z „oben" entlang der Flächennormalen — und am Ende mit dem
+   Dreibein des Elements in die Welt gesetzt. Steg, Kanal und Bohne
+   liegen mit ihrer offenen Seite bei z = 0 und wachsen nach −z in die
+   Tiefe.
 
    Die Bohne ist die eigentliche Form: ein D — flach zum Steg hin, damit
    der Steg mit ganzer Stirnfläche an ihr sitzt (an einer runden Bohne
@@ -183,7 +184,12 @@ export function buildItem(item) {
     parts.push(wellBody(p.stegL, p, flat));
   }
   if (t === 'waschbrett') {
-    parts.push(prism(rect(0, p.stegL, p.stegW), -p.stegH, 0, flat));
+    /* Steg, dann der Sammelkanal: kurz und dicker als der Spalt, so
+       breit wie das Brett. Hier beruhigt sich die Front, bevor sie in
+       die Wellen läuft — ohne ihn schösse sie aus dem 1-mm-Steg direkt
+       in den halben Millimeter Spalt. */
+    parts.push(prism(rect(0, p.stegL + 0.2, p.stegW), -p.stegH, 0, flat));
+    parts.push(prism(rect(p.stegL, p.stegL + p.poolL, p.ventW), -p.poolH, 0, flat));
   }
   if (t === 'entlueftet') {
     const x0 = p.stegL + p.wellL;
@@ -202,8 +208,9 @@ export function buildItem(item) {
     const half = p.waveL / 2;
     const drop = p.ventH * Math.hypot(half, p.amp) / half;
     const top = [], bottom = [];
+    const x0 = p.stegL + p.poolL - 0.2;                       // ein Stück in den Sammelkanal hinein
     for (let k = 0; k <= 2 * n; k++) {
-      const x = p.stegL + k * half;
+      const x = x0 + k * half;
       const z = k % 2 ? -p.amp : 0;
       top.push([x, z]);
       bottom.push([x, z - drop]);
@@ -244,6 +251,12 @@ export function volumeOf(item) {
   if (item.type === 'bohne' || item.type === 'entlueftet') {
     v -= p.stegW * p.stegH * (p.wellD * Math.tan((p.draft || 0) * Math.PI / 180) + 0.2);
     if (item.type === 'entlueftet') v -= p.ventW * p.ventH * 0.2;
+  }
+  if (item.type === 'waschbrett') {
+    const half = p.waveL / 2;
+    const drop = p.ventH * Math.hypot(half, p.amp) / half;     // lotrechte Dicke des Bandes
+    v -= p.stegW * p.stegH * 0.2;                              // Steg im Sammelkanal
+    v -= p.ventW * Math.min(drop, p.poolH) * 0.2;              // Band im Sammelkanal
   }
   return v;
 }

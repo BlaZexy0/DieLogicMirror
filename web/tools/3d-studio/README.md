@@ -673,7 +673,7 @@ die Griffe, nicht das Netz.
   Knopf gesperrt.
 
 
-## Luftbohnen (`luft.html`)
+## Überlaufdesigner (`ueberlauf.html`)
 
 Die zweite Seite, die Geometrie **erzeugt**: Überläufe und Entlüftungen
 am Bauteil. Eine Druckgießform füllt sich in Millisekunden, und die Luft
@@ -690,14 +690,18 @@ Das Bauteil (Beispielteil oder eigene STL/GLB, dieselbe Quelle wie in der
 Bauteilanalyse) steht deckend im Viewport — hier wird auf die Wand
 geklickt, und die soll aussehen wie eine Wand; der Regler „Deckkraft"
 macht sie durchscheinend. **Eine Art wählen und auf das Bauteil
-klicken:** dort sitzt das Element. Ort ist der getroffene Punkt, Achse
-die nach außen gerichtete Flächennormale — dorthin wachsen Steg, Bohne
-und Kanal, und der Pfeil im Viewport zeigt sie. Eine Trennebene braucht
-das Werkzeug nicht: die Wand sagt, wie das Element steht. Was um die
-Achse herum „oben" ist, kommt von der Weltachse, die am wenigsten mit
-ihr zusammenfällt (so kippt nichts um, und Nachbarn auf derselben Wand
-liegen gleich), und lässt sich mit der **Drehung** im Auswahlfeld um die
-Achse schwenken — das ist das Drehen um den Punkt. Der Zielmodus ist
+klicken:** dort sitzt das Element. Ort ist der getroffene Punkt, die nach
+außen gerichtete Flächennormale seine Hochachse — der Pfeil im Viewport
+zeigt sie. Das Element selbst **liegt in der Wandebene**: Steg, Bohne und
+Kanal haben ihre offene Seite an der Wandfläche und wachsen von dort in
+die Tiefe, ihre Länge weist in der Ebene. (Entlang der Normalen von der
+Wand abstehen wäre ein Turm, kein Überlauf — die Bohne liegt in der
+Trennebene, und die ist hier die Wand.) Eine Trennebene braucht das
+Werkzeug deshalb nicht. Wohin die Länge in der Ebene weist, kommt von der
+Weltachse, die am wenigsten mit der Normalen zusammenfällt, in die Ebene
+gelegt (so kippt nichts um, und Nachbarn auf derselben Wand liegen
+gleich), und lässt sich mit der **Drehung** im Auswahlfeld um die
+Normale schwenken — das ist das Drehen um den Punkt. Der Zielmodus ist
 derselbe wie beim Angussdesigner: Hinweis oben im Viewport, Marke unter
 dem Zeiger, Fehlklick benannt, Esc bricht ab. Danach:
 
@@ -709,9 +713,10 @@ dem Zeiger, Fehlklick benannt, Esc bricht ab. Danach:
   wechseln, Maße, die beide Arten haben, bleiben dabei.
 
 Vier Arten: **Überlaufbohne** (Steg und Tasche), **Überlauf mit
-Entlüftung** (dazu ein flacher Kanal), **Waschbrett** (Steg und
-Zickzack-Kanal, dessen Spalt senkrecht zur Welle überall gleich misst)
-und **Entlüftungsschlitz** (nur der flache Kanal).
+Entlüftung** (dazu ein flacher Kanal), **Waschbrett** (Steg, dann ein
+kurzer, dickerer **Sammelkanal**, in dem sich die Front beruhigt, bevor
+sie in den Zickzack-Kanal läuft, dessen Spalt senkrecht zur Welle überall
+gleich misst) und **Entlüftungsschlitz** (nur der flache Kanal).
 
 ### Die Bohne
 
@@ -725,15 +730,16 @@ demselben Umriss, Ring für Ring nach innen versetzt, unten über einen
 Viertelkreis in den Boden. Weil die Wand mit der Schräge zurückweicht,
 reicht der Steg ein Stück in die Bohne hinein — ein Steg, der genau an
 der Oberkante endete, hinge darunter in der Luft; das Stück wird beim
-Volumen wieder herausgerechnet. Alle Körper sind geschlossen (Deckel per
-Ohrenabschneiden, damit auch das nicht konvexe Zickzack-Band dicht ist);
-Steg, Kanal und Bohne liegen mit ihrer offenen Seite in der lokalen
-Oberseite und wachsen von dort in die Tiefe.
+Volumen wieder herausgerechnet — ebenso das Stück Steg und Band, das in
+den Sammelkanal des Waschbretts ragt. Alle Körper sind geschlossen
+(Deckel per Ohrenabschneiden, damit auch das nicht konvexe Zickzack-Band
+dicht ist); Steg, Kanal und Bohne liegen mit ihrer offenen Seite an der
+Wandfläche und wachsen von dort in die Tiefe.
 
 ### Zahlen und Dateien
 
 Die Seitenleiste nennt, worum es geht: Elemente, das **Volumen des
-Bauteils**, das der **Luftbohnen** und die **Summe** — das ist das
+Bauteils**, das der **Überläufe** und die **Summe** — das ist das
 Gussvolumen, das der Angussdesigner unter „Prozess" braucht. Eine
 Prüfliste gibt es hier nicht; das Auswahlfeld nennt Volumen, Steg- und
 Kanalquerschnitt und die Achse des Elements.
@@ -755,7 +761,7 @@ bauteilanalyse.html   Viewer 2: Bauteilanalyse
 offset.html           Viewer 3: Offsetflächen
 abstand.html          Viewer 4: Abstandsanalyse
 anguss.html           Viewer 5: Angussdesigner
-luft.html             Viewer 6: Luftbohnen (Überläufe und Entlüftungen)
+ueberlauf.html        Viewer 6: Überlaufdesigner (Überläufe und Entlüftungen)
 css/site.css          Übersichtsseite und Karten
 css/viewer.css        Seitenleiste und Viewport aller Viewer
 assets/die.glb        DAS Formmodell — binäres glTF, vom Viewer geladen
@@ -772,9 +778,9 @@ js/scene.js           Renderer, Kameras (Zentral + Parallel), Licht, Ansichten, 
 js/trackball.js       Quaternionen-Trackball: freies Drehen um einen Punkt
 js/handles.js         Griffe im Viewport: auswählen, in der Ebene ziehen, Pfeile, Zielmodus aufs Bauteil
 js/ui/axes.js         das Achsenkreuz (SVG über dem Bild)
-js/vents/model.js     der Luftbohnen-Plan: Arten, Maße, Dreibein, Datei, Prüfregeln
+js/vents/model.js     der Überlaufplan: Arten, Maße, Dreibein, Datei, Prüfregeln
 js/vents/geom.js      Prismen aus dem Plan: Steg, Bohne, Kanal, Waschbrett
-js/vents/app.js       Einstieg Luftbohnen-Designer
+js/vents/app.js       Einstieg Überlaufdesigner
 js/clipcaps.js        Schnittebene mit geschlossenen Schnittflächen (Stencil)
 js/die.js             Einstieg Formaufbau-Viewer
 js/ui/nav.js          Kopfleiste — hält sich heraus, sobald /shared/nav.js da ist

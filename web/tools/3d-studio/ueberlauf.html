@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Luftbohnen · 3D-Studio · DieLogic</title>
+<title>Überlaufdesigner · 3D-Studio · DieLogic</title>
 <meta name="description" content="Überläufe und Entlüftungen für den Druckguss am Bauteil setzen: Überlaufbohne, Überlauf mit Entlüftung, Waschbrett (Chill-Vent) und Entlüftungsschlitz — mit Steg, Maßen, Drehung und dem Volumen fürs Schussgewicht.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
@@ -18,11 +18,11 @@
   { "imports": { "three": "./vendor/three/three.module.js" } }
 </script>
 </head>
-<body class="viewer designer luft">
+<body class="viewer designer ueberlauf">
 
 <section class="page-hero compact">
   <div class="inner">
-    <h1>Luftbohnen</h1>
+    <h1>Überlaufdesigner</h1>
     <p class="subtitle">Überläufe und Entlüftungen am Bauteil: eine Stelle anklicken, und dort sitzt die Bohne mit ihrem Steg — auf der Wand, entlang ihrer Normalen nach außen. Am Punkt ziehen, am Pfeil neu setzen, um die Achse drehen. Vier Arten, jedes Maß am Element, das Volumen fürs Schussgewicht.</p>
   </div>
 </section>
@@ -65,7 +65,7 @@
   <div id="viewport">
     <div class="pt-menu" id="pt-menu">
       <div class="pt-menu-title">Auswahl</div>
-      <div class="pt-sel" id="pt-sel">Keine Luftbohne gewählt</div>
+      <div class="pt-sel" id="pt-sel">Kein Überlauf gewählt</div>
       <div id="sel-block" class="disabled">
         <div class="row">
           <span>Art</span>
@@ -88,7 +88,7 @@
         <div id="sel-params"></div>
         <div class="facts" id="sel-facts"></div>
       </div>
-      <div class="pt-menu-title">Luftbohne setzen</div>
+      <div class="pt-menu-title">Überlauf setzen</div>
       <button type="button" id="add-bohne" title="Tasche am Ende des Fließwegs: sammelt die erste, kalte und oxidhaltige Schmelze."><span class="dot" style="background:#e07b39"></span>Überlaufbohne</button>
       <button type="button" id="add-entlueftet" title="Bohne mit flachem Entlüftungskanal, der die Luft weiter zum Formrand führt."><span class="dot" style="background:#2e6da4"></span>Überlauf mit Entlüftung</button>
       <button type="button" id="add-waschbrett" title="Gewellter Kanal: die Schmelze erstarrt in den Wellen, die Luft kommt hindurch."><span class="dot" style="background:#9a77e8"></span>Waschbrett (Chill-Vent)</button>

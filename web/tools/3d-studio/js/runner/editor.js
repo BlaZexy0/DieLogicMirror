@@ -6,7 +6,7 @@
    einer Spiegelung ist (dann blass und nicht anfassbar), und dass ein
    Anschnitt einen Pfeil in seiner Mündungsrichtung trägt. Wie Griffe
    gezeichnet, gezogen und gezielt werden, weiß es nicht — das ist für
-   den Luftbohnen-Designer dasselbe und steht deshalb einmal in
+   den Überlaufdesigner dasselbe und steht deshalb einmal in
    js/handles.js.
 
    Das Ziehen: der Pressrest eingeschlossen — er ist ein Punkt wie die

@@ -1,4 +1,4 @@
-/* Luftbohnen-Designer (luft.html) — Einstieg und Verdrahtung.
+/* Überlaufdesigner (ueberlauf.html) — Einstieg und Verdrahtung.
 
    Wer eine Art wählt und auf das Bauteil klickt, setzt dort ein Element:
    Ort ist der getroffene Punkt, Achse die nach außen gerichtete
@@ -23,7 +23,7 @@ import { createHandles, SELECTED_RING } from '../handles.js';
 import * as M from './model.js';
 import { buildByType, buildAll, volumeOf } from './geom.js';
 
-mountNav('luft.html');
+mountNav('ueberlauf.html');
 
 const container = $('viewport');
 const view = initScene(container, {
@@ -111,7 +111,7 @@ function rebuild(mode) {
 }
 
 /* Die Zahlen, um die es geht: was das Bauteil wiegt und was die
-   Luftbohnen dazulegen — zusammen ist das, was durch die Anschnitte muss. */
+   Überläufe dazulegen — zusammen ist das, was durch die Anschnitte muss. */
 function updateFacts() {
   const items = M.allItems(state.plan);
   let added = 0;
@@ -120,7 +120,7 @@ function updateFacts() {
   facts('plan-facts', [
     ['Elemente', fmt(items.length, 0)],
     ['Bauteil', fmt(part / 1000) + ' cm³'],
-    ['Luftbohnen', fmt(added / 1000) + ' cm³'],
+    ['Überläufe', fmt(added / 1000) + ' cm³'],
     ['Gesamt', fmt((part + added) / 1000) + ' cm³']
   ]);
 }
@@ -133,7 +133,7 @@ function syncSelection() {
   $('sel-block').classList.toggle('disabled', !it);
   $('pt-sel').className = 'pt-sel' + (it ? '' : ' empty');
   if (!it) {
-    $('pt-sel').textContent = 'Keine Luftbohne gewählt';
+    $('pt-sel').textContent = 'Kein Überlauf gewählt';
     $('sel-params').innerHTML = '';
     facts('sel-facts', []);
     updateMenu();
@@ -256,12 +256,12 @@ function cancelAim() {
 const outward = d => [-d[0], -d[1], -d[2]];
 
 function noPart() {
-  aimArmed(true, 'Zuerst ein Bauteil laden — dann setzt der Klick die Luftbohne dorthin.');
+  aimArmed(true, 'Zuerst ein Bauteil laden — dann setzt der Klick den Überlauf dorthin.');
   clearTimeout(missTimer);
   missTimer = setTimeout(() => { if (!handles.aiming) aimArmed(false); }, 3200);
 }
 
-/** Eine neue Luftbohne der Art `type`: der nächste Klick aufs Bauteil setzt sie. */
+/** Ein neuer Überlauf der Art `type`: der nächste Klick aufs Bauteil setzt sie. */
 function startPlace(type) {
   if (!M.TYPES[type]) return;
   if (!refMesh.visible) { noPart(); return; }
@@ -339,12 +339,12 @@ function download(blob, name) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
-const safeName = () => ((state.name || 'luftbohnen') + '-luftbohnen').replace(/[^\w-]+/g, '-').toLowerCase();
+const safeName = () => ((state.name || 'ueberlaeufe') + '-ueberlaeufe').replace(/[^\w-]+/g, '-').toLowerCase();
 
 $('stl-save').addEventListener('click', () => {
   const tris = buildAll(state.plan);
   if (!tris.length) return;
-  download(new Blob([writeSTL(tris, 'DieLogic Luftbohnen')], { type: 'model/stl' }), safeName() + '.stl');
+  download(new Blob([writeSTL(tris, 'DieLogic Überläufe')], { type: 'model/stl' }), safeName() + '.stl');
 });
 $('json-save').addEventListener('click', () => {
   download(new Blob([JSON.stringify(M.toJSON(state.plan), null, 1)], { type: 'application/json' }), safeName() + '.json');
@@ -381,4 +381,4 @@ syncSelection();
 source.start().then(() => { state.ready = true; });
 
 export const __viewer = { state, view, handles, rebuild, startPlace, startMove, loadPlan, refMesh, group, source };
-window.__luft = __viewer;
+window.__ueberlauf = __viewer;

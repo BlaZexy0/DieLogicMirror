@@ -1,4 +1,4 @@
-/* Der Luftbohnen-Plan: Überläufe und Entlüftungen am Bauteil.
+/* Der Überlaufplan: Überläufe und Entlüftungen am Bauteil.
 
    Eine Druckgießform füllt sich in Millisekunden; die Luft in der
    Kavität muss in derselben Zeit hinaus. Dafür sitzen am Ende des
@@ -10,11 +10,12 @@
    sie hinaus kann.
 
    Der Plan ist eine Liste solcher Elemente. Jedes sitzt auf der
-   Bauteiloberfläche und richtet sich nach ihr: seine Achse ist die nach
-   außen gerichtete Flächennormale — dorthin wachsen Steg, Bohne und
-   Kanal. Was um diese Achse herum „oben" ist, sagt die Drehung. Was
-   daraus an Geometrie wird, rechnet js/vents/geom.js; dieses Modul kennt
-   kein Three.js und läuft in den Tests unter Node. */
+   Bauteiloberfläche und richtet sich nach ihr: die nach außen gerichtete
+   Flächennormale ist seine HOCHACHSE — die offene Seite von Steg, Bohne
+   und Kanal zeigt dorthin, die Tiefe wächst entgegen. Das Element selbst
+   liegt IN der Wandebene; wohin es in ihr weist, sagt die Drehung um die
+   Normale. Was daraus an Geometrie wird, rechnet js/vents/geom.js;
+   dieses Modul kennt kein Three.js und läuft in den Tests unter Node. */
 
 import { add, cross, norm, dot, rotate, rad } from '../runner/vec.js';
 
@@ -36,7 +37,7 @@ export const TYPES = {
   waschbrett: {
     label: 'Waschbrett (Chill-Vent)', color: '#9a77e8',
     hint: 'Gewellter Kanal: die Schmelze erstarrt in den Wellen, die Luft kommt hindurch.',
-    params: { stegW: 30, stegH: 0.8, stegL: 3, ventW: 40, ventH: 0.5, waves: 7, amp: 3, waveL: 6 }
+    params: { stegW: 30, stegH: 0.8, stegL: 3, poolL: 10, poolH: 2.5, ventW: 40, ventH: 0.5, waves: 7, amp: 3, waveL: 6 }
   },
   schlitz: {
     label: 'Entlüftungsschlitz', color: '#4c9f70',
@@ -55,6 +56,8 @@ export const PARAM_META = {
   wellD: { label: 'Bohnentiefe', min: 0.5, max: 40, unit: 'mm' },
   draft: { label: 'Entformschräge', min: 0, max: 20, unit: '°' },
   wellR: { label: 'Bodenradius', min: 0, max: 20, unit: 'mm' },
+  poolL: { label: 'Sammler-Länge', min: 1, max: 60, unit: 'mm' },
+  poolH: { label: 'Sammler-Höhe', min: 0.3, max: 15, unit: 'mm' },
   ventW: { label: 'Kanalbreite', min: 1, max: 300, unit: 'mm' },
   ventH: { label: 'Kanalhöhe', min: 0.05, max: 3, unit: 'mm' },
   ventL: { label: 'Kanallänge', min: 1, max: 400, unit: 'mm' },
@@ -75,7 +78,7 @@ const unit = d => {
 };
 
 /** Element anlegen: `dir` ist die nach AUSSEN gerichtete Flächennormale
-    am Ort — dorthin wächst das Element. Wer die nach innen gerichtete
+    am Ort — die Hochachse des Elements. Wer die nach innen gerichtete
     hat, negiert sie. */
 export function addItem(plan, type, pos, dir) {
   const t = TYPES[type] ? type : 'bohne';
@@ -120,22 +123,25 @@ export function setRot(plan, id, deg) {
 }
 
 /**
- * Das lokale Dreibein eines Elements: d die Achse (Flächennormale nach
- * außen), r quer (Breite), n „oben" (dorthin liegt die offene Seite von
- * Steg und Bohne, die Tiefe wächst nach −n). Um d gedreht mit `rot`.
- * Rechtshändig: x = d, y = r, z = n.
+ * Das lokale Dreibein eines Elements: n „oben" ist die Flächennormale
+ * nach außen (dorthin liegt die offene Seite von Steg und Bohne, die
+ * Tiefe wächst nach −n), d die Längsrichtung IN der Wandebene, r quer.
+ * Um n gedreht mit `rot`. Rechtshändig: x = d, y = r, z = n.
  *
- * Woher „oben" ohne Trennebene kommt: von der Weltachse, die am wenigsten
- * mit d zusammenfällt — so gibt es keine Stelle, an der das Dreibein
- * umkippt, und zwei benachbarte Elemente auf derselben Wand liegen gleich.
+ * Woher die Längsrichtung ohne Trennebene kommt: von der Weltachse, die
+ * am wenigsten mit n zusammenfällt, in die Ebene gelegt — so gibt es
+ * keine Stelle, an der das Dreibein umkippt, und zwei benachbarte
+ * Elemente auf derselben Wand liegen gleich. Ein Element, das entlang
+ * der Normalen von der Wand abstünde, wäre ein Turm, kein Überlauf: die
+ * Bohne liegt in der Trennebene, und die ist hier die Wand.
  */
 export function frameOf(item) {
-  const d = unit(item.dir);
-  const ref = Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [0, 0, 1];
-  let r = norm(cross(ref, d));
-  let n = norm(cross(d, r));
+  const n = unit(item.dir);
+  const ref = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1];
+  let d = norm(cross(cross(n, ref), n));                      // ref in die Ebene gelegt
   const a = rad(item.rot || 0);
-  if (a) { r = rotate(r, d, a); n = rotate(n, d, a); }
+  if (a) d = rotate(d, n, a);
+  const r = norm(cross(n, d));
   return { o: item.pos, d, r, n };
 }
 
@@ -157,7 +163,7 @@ export function toJSON(plan) {
 }
 
 export function fromJSON(obj) {
-  if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Luftbohnen-Datei (Kennung „' + FORMAT + '" fehlt).');
+  if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Überlaufdatei (Kennung „' + FORMAT + '" fehlt).');
   if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
   const plan = emptyPlan();
   for (const raw of Array.isArray(obj.items) ? obj.items : []) {
