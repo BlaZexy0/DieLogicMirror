@@ -396,6 +396,10 @@ export function createEditor(opts) {
     select(id);
     const g = getGraph();
     const node = g.nodes[id];
+    /* Ein ans Bauteil gebundener Anschnitt lässt sich anklicken, aber
+       nicht ziehen: er sitzt dort, wo er hingesetzt wurde. Wer ihn
+       verschieben will, löst die Bindung im Auswahlfeld. */
+    if (node.aim) return;
     const start = planePoint(ev, node, ev.altKey);
     if (!start) return;
     state.drag = {
@@ -426,7 +430,8 @@ export function createEditor(opts) {
     const id = pick(ev);
     if (id !== state.hover) {
       state.hover = id;
-      dom.style.cursor = id ? 'grab' : '';
+      const n = id && getGraph().nodes[id];
+      dom.style.cursor = !id ? '' : (n && n.aim ? 'pointer' : 'grab');   // gebunden: wählbar, nicht greifbar
       if (onHover) onHover(id);
     }
   }

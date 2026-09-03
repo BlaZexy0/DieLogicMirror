@@ -727,6 +727,7 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
     const at = { x: (pr.x + 1) / 2 * 800, y: (1 - pr.y) / 2 * 600 };
     const ev = { button: 0, clientX: at.x, clientY: at.y, stopPropagation() {}, preventDefault() {} };
     v.editor.select(null);
+    v.view.scene.updateMatrixWorld(true);             // sonst tut das der Renderer vor jedem Bild
     cv.dispatch('pointerdown', ev);
     cv.dispatch('pointerup', ev);
     assert.equal(v.editor.selected, v.state.graph.rootId, 'der Klick auf den Griff wählt den Pressrest');
@@ -797,7 +798,7 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.ok(Math.abs(gs.pos[0] - 50) < 1e-6 && Math.abs(gs.pos[1]) < 1e-6 && Math.abs(gs.pos[2]) < 1e-6,
     'der Anschnitt sitzt an der Wand IN der Trennebene, nicht 40 mm darüber: ' + gs.pos);
   assert.ok(gs.aim[0] < -0.999 && Math.abs(gs.aim[1]) < 1e-9, 'und mündet waagerecht nach innen: ' + gs.aim);
-  assert.match(d6.getElementById('gate-aim-note').textContent, /−X · in der Ebene/);
+  assert.match(d6.getElementById('gate-aim-note').innerHTML, /Mündung −X, in der Ebene/);
   assert.ok(!v.state.rules.find(r => /Trennebene/.test(r.title)), 'in der Ebene: keine Beanstandung');
   assert.equal(d6.getElementById('sel-x').value, '50', 'die Lage steht im Feld');
 
@@ -815,10 +816,27 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.ok(Math.hypot(gs.pos[0], gs.pos[2]) < 1e-6, 'mittig getroffen');
   assert.ok(gs.aim[1] < -0.999, 'und mündet nach innen, also −Y: ' + gs.aim);
   assert.ok(!d6.getElementById('gate-aim-state').classList.contains('hidden'));
-  assert.match(d6.getElementById('gate-aim-note').textContent, /−Y · 90° aus der Ebene/);
+  assert.match(d6.getElementById('gate-aim-note').innerHTML, /Mündung −Y, 90° aus der Ebene/);
   const quer = v.state.rules.find(r => /Mündung aus der Trennebene/.test(r.title));
   assert.ok(quer && quer.level === 'bad', 'die Prüfliste beanstandet es: ' + JSON.stringify(quer));
   assert.match(quer.text, /90°/);
+
+  /* Gebunden heißt: das Auswahlfeld sagt es, die Lage-Felder sind
+     gesperrt, und der Griff lässt sich anklicken, aber nicht ziehen. */
+  assert.match(d6.getElementById('pt-sel').innerHTML, /ans Bauteil gebunden/, 'die Kopfzeile sagt es');
+  assert.match(d6.getElementById('gate-aim-note').innerHTML, /Ans Bauteil gebunden/, 'der Zustand steht im Feld');
+  assert.equal(d6.getElementById('sel-x').disabled, true, 'die Lage kommt vom Bauteil');
+  assert.match(read('anguss.html'), /id="gate-aim-clear"[^>]*>Lösen</, 'der Knopf heißt, was er tut');
+  const gateAt = () => v.state.graph.nodes[g2.id].pos.slice();
+  const vorZug = gateAt();
+  v.editor.select(null);
+  v.view.scene.updateMatrixWorld(true);               // die Griffe stehen erst nach dem Abgleich am Ort
+  zeiger('pointerdown', 400, 300);                    // der Anschnitt liegt in der Bildmitte
+  assert.equal(v.editor.selected, g2.id, 'anklicken geht');
+  assert.ok(!v.editor.dragging, 'ziehen nicht');
+  zeiger('pointermove', 460, 300);
+  zeiger('pointerup', 460, 300);
+  assert.deepEqual(gateAt(), vorZug, 'ein gebundener Anschnitt bleibt, wo er ist');
 
   /* Jetzt hält die Richtung: der Punkt davor darf wandern, die letzte
      Tangente des Anschnitts bleibt, wo sie ist. Vorher drehte sie mit. */
@@ -842,6 +860,23 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.ok(Math.hypot(t2[0] - t0[0], t2[1] - t0[1], t2[2] - t0[2]) > 1e-3,
     'ohne Bindung zeigt sie wieder zum Vorgänger');
   assert.ok(!v.state.rules.find(r => /Trennebene/.test(r.title)), 'und die Beanstandung mit ihr');
+  assert.equal(d6.getElementById('sel-x').disabled, false, 'die Lage-Felder sind wieder frei');
+  assert.doesNotMatch(d6.getElementById('pt-sel').innerHTML, /gebunden/);
+
+  /* … und der Griff lässt sich wieder ziehen. */
+  v.view.camera.position.set(0, 400, 0);
+  v.view.camera.up.set(0, 0, -1);
+  v.view.camera.lookAt(0, 0, 0);
+  v.view.camera.updateMatrixWorld(true);
+  const frei0 = v.state.graph.nodes[g2.id].pos.slice();
+  v.view.scene.updateMatrixWorld(true);
+  zeiger('pointerdown', 400, 300);
+  assert.equal(v.editor.selected, g2.id);
+  assert.ok(v.editor.dragging, 'gelöst: der Zug beginnt');
+  zeiger('pointermove', 460, 300);
+  zeiger('pointerup', 460, 300);
+  const frei1 = v.state.graph.nodes[g2.id].pos;
+  assert.ok(Math.hypot(frei1[0] - frei0[0], frei1[2] - frei0[2]) > 5, 'und der Anschnitt wandert: ' + frei0 + ' → ' + frei1);
 
   /* Ein unbrauchbares Netz ändert das Gussvolumen nicht. */
   const flach = writeSTL6(new Float64Array(9), 'leer');

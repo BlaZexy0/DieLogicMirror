@@ -230,6 +230,30 @@ test('Graph: die ans Bauteil gebundene Mündung wird mitgespiegelt', () => {
   assert.ok(Math.hypot(...t().map((v, i) => v - t0[i])) > 1e-3, 'danach folgt sie wieder der Sehne');
 });
 
+test('Kurve: ein Übergang über die ganze Länge beginnt mit dem Zulaufquerschnitt', () => {
+  /* „Über die ganze Länge" und „Fächer" haben keinen Laufkanalabschnitt
+     vor dem Übergang. Die Kante begann dann mit dem Kanalmaß des
+     Anschnittknotens statt mit dem des Zulaufs — am Knoten sprang der
+     Querschnitt von 414 auf 374 mm². Der Übergang muss dort anfangen,
+     wo die Kante davor aufhört. */
+  for (const trans of ['faecher', 'kegel', 'ende', 'stufe']) {
+    const g = PRE.demoFan();
+    const gate = G.allNodes(g).find(n => n.type === 'gate');
+    gate.gate.transition = trans;
+    const net = sampleNetwork(g);
+    const e = net.edges.find(x => x.toId === gate.id);
+    const inE = net.edges.find(x => x.toId === e.fromId);
+    const ende = inE.sections[inE.sections.length - 1].area;
+    const start = e.sections[0].area;
+    assert.ok(Math.abs(start - ende) / ende < 0.005,
+      trans + ': Kante beginnt mit ' + start.toFixed(1) + ' statt ' + ende.toFixed(1) + ' mm²');
+    /* … und nimmt danach nirgends zu. */
+    for (let i = 1; i < e.sections.length; i++) {
+      assert.ok(e.sections[i].area <= e.sections[i - 1].area * 1.001, trans + ': wächst bei ' + e.sections[i].s);
+    }
+  }
+});
+
 test('Regeln: eine Mündung aus der Trennebene heraus wird benannt', () => {
   const g = PRE.demoTwoGates();
   const lead = G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id));

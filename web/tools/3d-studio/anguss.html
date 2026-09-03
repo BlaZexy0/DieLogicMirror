@@ -241,9 +241,10 @@
             </div>
             <button type="button" id="gate-aim" class="aim-btn"
               title="Eine Stelle auf dem Referenzbauteil anklicken: der Anschnitt rückt dorthin und mündet senkrecht in die Wand. Diese Richtung bleibt dann fest, auch wenn der Punkt davor wandert.">Mündung ans Bauteil setzen</button>
-            <div class="loaded-file hidden" id="gate-aim-state">
-              <span id="gate-aim-note">Richtung ans Bauteil gebunden</span>
-              <button type="button" id="gate-aim-clear" title="Bindung lösen — die Richtung folgt wieder dem Punkt davor">×</button>
+            <div class="pin-state hidden" id="gate-aim-state">
+              <span id="gate-aim-note">Ans Bauteil gebunden</span>
+              <button type="button" id="gate-aim-clear"
+                title="Bindung lösen: der Anschnitt lässt sich wieder frei verschieben, seine Richtung folgt dann dem Punkt davor">Lösen</button>
             </div>
           </div>
           <div class="facts" id="sel-facts"></div>

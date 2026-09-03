@@ -342,8 +342,14 @@ Bauteil legt beides auf einmal fest:
   liegt damit auf der Bauteilwand, und
 - seine **Richtung wird festgehalten**: senkrecht in die Wand hinein.
 
-Diese Richtung bleibt danach stehen, was auch immer mit dem Punkt davor
-geschieht. Das × neben „Mündung: …" löst die Bindung wieder.
+Ein gebundener Anschnitt ist **festgesetzt**: Lage und Richtung stehen,
+was auch immer mit dem Punkt davor geschieht. Das Auswahlfeld sagt es beim
+Anklicken in der Kopfzeile („ans Bauteil gebunden") und in einer eigenen
+Zeile mit Mündungsrichtung; die Lage-Felder sind gesperrt, und der Griff
+lässt sich anklicken, aber nicht ziehen — man setzt ihn mit dem Knopf an
+eine andere Stelle des Bauteils. **„Lösen"** hebt die Bindung auf: der
+Anschnitt lässt sich wieder frei verschieben, seine Richtung folgt dann
+wie zuvor der Sehne zum Punkt davor.
 
 **In der Trennebene.** Ein Anschnitt liegt in der Trennebene (genauer: in
 seiner Arbeitsebene) und kann nur in ihr ins Bauteil münden. Trifft der
@@ -405,6 +411,14 @@ bleibt **scharf** — dort stoßen die Formhälften aufeinander, ein Radius
 wäre ein Spalt. `js/runner/profile.js` beschreibt dieselbe Form zweimal:
 als Umriss mit fester Punktzahl (für den Sweep) und als
 Abstandsfunktion; die Tests prüfen sie gegeneinander.
+
+Vor einem Anschnitt zerfällt die Kante in Laufkanal, Übergang und
+Anschnittlänge; welcher Anteil auf den Übergang entfällt, sagt seine Art.
+Nimmt er die ganze Länge ein („über die ganze Länge", Fächer), gibt es
+keinen Laufkanalabschnitt mehr — dann führt der Übergang unmittelbar vom
+Zulaufquerschnitt zum Anschnitt. Vorher begann die Kante in diesem Fall
+mit dem Kanalmaß des Anschnittknotens, und am Knoten sprang der
+Querschnitt (414 → 374 mm² im Fächerbeispiel).
 
 Zwischen zwei Knoten wird die **Fläche** geführt, nicht Breite und Tiefe
 einzeln. Bei einem Fächeranschnitt (26 × 17 → 97 × 2,4) stünde sonst in

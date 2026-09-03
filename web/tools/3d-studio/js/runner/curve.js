@@ -133,10 +133,17 @@ function schedule(g, from, to, L) {
   const runEnd = Math.max(0, L - land - trans);
   const gw = Math.max(0.4, to.gate.w), gh = Math.max(0.2, to.gate.h);
   const runRamp = ramp2(g, a.w, a.h, to.w, to.h);
-  const transRamp = ramp2(g, to.w, to.h, gw, gh);
+  /* Nimmt der Übergang die ganze Länge („über die ganze Länge", Fächer),
+     gibt es keinen Laufkanalabschnitt, in dem das Kanalmaß des
+     Anschnittknotens liegen könnte. Dann führt der Übergang direkt vom
+     Zulauf zum Anschnitt. Vorher begann die Kante mit diesem kleineren
+     Knotenmaß — ein Sprung am Knoten: 414 mm² am Ende der Kante davor,
+     374 am Anfang dieser. */
+  const t0 = runEnd > 1e-9 ? { w: to.w, h: to.h } : a;
+  const transRamp = ramp2(g, t0.w, t0.h, gw, gh);
   return u => {
     const s = u * L;
-    if (s <= runEnd) return runRamp(runEnd > 1e-9 ? s / runEnd : 1);
+    if (runEnd > 1e-9 && s <= runEnd) return runRamp(s / runEnd);
     if (s <= runEnd + trans) {
       const d = transRamp(trans > 1e-9 ? (s - runEnd) / trans : 1);
       return { w: d.w, h: d.h, trans: true };

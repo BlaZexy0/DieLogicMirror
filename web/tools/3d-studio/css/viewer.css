@@ -422,8 +422,19 @@ select {
   border-color: var(--primary-deep); color: #fff; background: var(--primary);
   box-shadow: 0 0 0 3px rgba(0, 140, 130, .28);
 }
-.anguss #gate-aim-state { margin-top: 6px; }
-.anguss #gate-aim-state span { color: var(--primary); }
+/* Gebunden ist ein Zustand, den man beim Anklicken sofort sehen muss:
+   der Punkt lässt sich nicht ziehen, und das soll nicht wie ein Fehler
+   aussehen, sondern wie eine Auskunft — mit dem Knopf, der es aufhebt. */
+.anguss .pin-state {
+  display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 5px 6px 5px 9px;
+  background: var(--pale); border: 1px solid var(--border-light); border-radius: 6px;
+  font-size: .75rem; line-height: 1.4; color: var(--primary-deep);
+}
+.anguss .pin-state.hidden { display: none; }
+.anguss .pin-state span { flex: 1; }
+.anguss .pin-state b { font-weight: 600; }
+.anguss .pin-state button { flex-shrink: 0; padding: .2rem .5rem; }
+.pt-sel em.pinned { color: var(--primary-deep); font-weight: 600; }
 
 /* Der Hinweis oben im Viewport, solange der Zielmodus scharf ist:
    zwischen Auswahlfeld und Achsenkreuz, unter der Ansichtsleiste. Der

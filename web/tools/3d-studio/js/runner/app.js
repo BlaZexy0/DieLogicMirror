@@ -217,7 +217,8 @@ function selectionLabel(g, id) {
   const meta = G.TYPES[n.type];
   return '<span class="dot" style="background:' + meta.color + '"></span>'
     + meta.label + ' <code>' + id + '</code>'
-    + (G.isFollower(g, id) ? ' <em>(gespiegelt — die andere Seite bearbeiten)</em>' : '');
+    + (G.isFollower(g, id) ? ' <em>(gespiegelt — die andere Seite bearbeiten)</em>'
+      : n.aim ? ' <em class="pinned">ans Bauteil gebunden</em>' : '');
 }
 
 /** Die Legende der Punktfarben — aus derselben Tabelle wie die Griffe. */
@@ -329,8 +330,14 @@ function syncSelection() {
   const follower = G.isFollower(g, id);
   $('pt-sel').innerHTML = label;
   /* Ein Zehntel: „−137,25" passt nicht in ein Drittel der Zeile, und auf
-     den Hundertstelmillimeter setzt niemand einen Kanalpunkt. */
-  for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) $(k).value = fmt(n.pos[i], 1);
+     den Hundertstelmillimeter setzt niemand einen Kanalpunkt. Gebunden
+     heißt: die Lage kommt vom Bauteil, nicht aus dem Feld. */
+  const pinned = !!n.aim;
+  for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) {
+    $(k).value = fmt(n.pos[i], 1);
+    $(k).disabled = pinned;
+    $(k).title = pinned ? 'Ans Bauteil gebunden — zum Verschieben die Bindung lösen' : 'XYZ'[i];
+  }
   $('sel-w').value = fmt(n.w, 2);
   $('sel-h').value = fmt(n.h, 2);
   $('sel-roll').value = String(n.tilt[0]);
@@ -377,8 +384,9 @@ function syncSelection() {
     $('gate-aim-state').classList.toggle('hidden', !n.aim);
     if (n.aim) {
       const tilt = G.aimTilt(g, n);
-      $('gate-aim-note').textContent = 'Mündung: ' + dirText(n.aim)
-        + (tilt < 1 ? ' · in der Ebene' : ' · ' + fmt(tilt, 0) + '° aus der Ebene');
+      $('gate-aim-note').innerHTML = '<b>Ans Bauteil gebunden</b> — Mündung ' + dirText(n.aim)
+        + (tilt < 1 ? ', in der Ebene' : ', ' + fmt(tilt, 0) + '° aus der Ebene')
+        + '. Lage und Richtung stehen fest.';
     }
   } else cancelAim();
 
@@ -436,6 +444,7 @@ for (const [id, axis] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) {
   numberInput(id, v => {
     const n = sel();
     if (!n) return v;
+    if (n.aim) return n.pos[axis];              // gebunden: das Feld ist gesperrt, zur Sicherheit auch hier
     const p = n.pos.slice();
     p[axis] = v;
     G.setPos(state.graph, n.id, p);
