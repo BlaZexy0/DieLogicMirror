@@ -38,24 +38,57 @@ export function ringPoints(sec, out = new Float64Array(POINTS * 3)) {
   return out;
 }
 
-const tri = (out, a, ai, b, bi, c, ci) => {
-  out.push(a[ai * 3], a[ai * 3 + 1], a[ai * 3 + 2],
-    b[bi * 3], b[bi * 3 + 1], b[bi * 3 + 2],
-    c[ci * 3], c[ci * 3 + 1], c[ci * 3 + 2]);
+/* Eine Gabelung ist ein Knoten mit mehr als einem Abgang. */
+const isJunction = n => n.children.length > 1;
+
+/* Ringe der Kuppe, also Schritte über den Viertelkreis. Die Zahl richtet
+   sich am Umriss aus, damit die Kuppe nicht die schwächste Stelle des
+   Netzes ist: dessen Bodenverrundung wird mit fünf Sehnen über etwa 85°
+   angenähert, das sind rund 0,017 mm Sehnenfehler. Sechzehn Ringe (5,6°)
+   treffen denselben Wert. Vier waren es anfangs — 22,5° je Schritt und
+   0,26 mm Fehler auf einer 13,7 mm hohen Kuppe, deren Umriss damit aus
+   vier geraden Stücken bestand und genau so aussah. */
+const DOME_RINGS = 16;
+
+/* Geschrieben wird in ein VORAB BEMESSENES Feld, nicht in ein wachsendes
+   Array. Die Zahl der Dreiecke steht vorher fest (triCount), und der
+   Sweep läuft bei jedem Mausschritt eines Zuges neu — ein Array, das
+   340.000 Mal wächst und am Ende noch einmal kopiert wird, ist dort die
+   Hälfte der Rechenzeit. */
+const tri = (w, a, ai, b, bi, c, ci) => {
+  const t = w.a;
+  let o = w.k;
+  t[o] = a[ai * 3]; t[o + 1] = a[ai * 3 + 1]; t[o + 2] = a[ai * 3 + 2];
+  t[o + 3] = b[bi * 3]; t[o + 4] = b[bi * 3 + 1]; t[o + 5] = b[bi * 3 + 2];
+  t[o + 6] = c[ci * 3]; t[o + 7] = c[ci * 3 + 1]; t[o + 8] = c[ci * 3 + 2];
+  w.k = o + 9;
 };
+
+/* Deckel: eben POINTS Dreiecke, gerundet (DOME_RINGS−1) Ringe plus Fächer. */
+const capTris = round => (round ? (DOME_RINGS - 1) * POINTS * 2 + POINTS : POINTS);
+
+function triCount(net) {
+  let n = 0;
+  for (const e of net.edges) {
+    if (e.sections.length < 2) continue;
+    n += (e.sections.length - 1) * POINTS * 2
+      + capTris(isJunction(e.from)) + capTris(isJunction(e.to));
+  }
+  return n;
+}
 
 /* Der Umriss läuft im Profil gegen den Uhrzeigersinn; mit v = −n zeigt
    seine Flächennormale entgegen der Laufrichtung. Damit die Mantelnormalen
    nach AUSSEN zeigen, muss das Viereck andersherum umlaufen als der Ring —
    die Deckel entsprechend (Anfang mit dem Ring, Ende dagegen). */
-function shell(sections, out) {
+function shell(sections, w) {
   let a = ringPoints(sections[0]);
   for (let k = 1; k < sections.length; k++) {
     const b = ringPoints(sections[k]);
     for (let i = 0; i < POINTS; i++) {
       const j = (i + 1) % POINTS;
-      tri(out, a, i, b, i, b, j);
-      tri(out, a, i, b, j, a, j);
+      tri(w, a, i, b, i, b, j);
+      tri(w, a, i, b, j, a, j);
     }
     a = b;
   }
@@ -68,24 +101,22 @@ const centroid = r => {
 };
 
 /** Ebener Deckel: Fächer vom Schwerpunkt auf den Umriss. */
-function cap(sections, index, atEnd, out) {
+function cap(sections, index, atEnd, w) {
   const r = ringPoints(sections[index]);
   const cc = centroid(r);
   for (let i = 0; i < POINTS; i++) {
     const j = (i + 1) % POINTS;
-    if (atEnd) tri(out, cc, 0, r, j, r, i);
-    else tri(out, cc, 0, r, i, r, j);
+    if (atEnd) tri(w, cc, 0, r, j, r, i);
+    else tri(w, cc, 0, r, i, r, j);
   }
 }
 
-/* Ringe der Kuppe. Mehr als vier sieht man nicht, weniger knickt. */
-const DOME_RINGS = 4;
 
 /** Gerundeter Deckel: der Umriss schrumpft über einen Viertelkreis auf
     einen Punkt und wandert dabei in Laufrichtung vor. Die Höhe ist das
     kleinere der beiden Profilmaße — so bleibt die Kuppe im Verhältnis
     zum Kanal und wächst einem flachen Kanal nicht davon. */
-function domeCap(sections, index, atEnd, out) {
+function domeCap(sections, index, atEnd, w) {
   const sec = sections[index];
   const base = ringPoints(sec);
   const c = centroid(base);
@@ -108,8 +139,8 @@ function domeCap(sections, index, atEnd, out) {
     const b = ring(k);
     for (let i = 0; i < POINTS; i++) {
       const j = (i + 1) % POINTS;
-      if (atEnd) { tri(out, a, i, b, i, b, j); tri(out, a, i, b, j, a, j); }
-      else { tri(out, a, i, b, j, b, i); tri(out, a, i, a, j, b, j); }
+      if (atEnd) { tri(w, a, i, b, i, b, j); tri(w, a, i, b, j, a, j); }
+      else { tri(w, a, i, b, j, b, i); tri(w, a, i, a, j, b, j); }
     }
     a = b;
   }
@@ -120,25 +151,22 @@ function domeCap(sections, index, atEnd, out) {
      und das Netz ist dort offen. */
   for (let i = 0; i < POINTS; i++) {
     const j = (i + 1) % POINTS;
-    if (atEnd) tri(out, apex, 0, a, j, a, i);
-    else tri(out, apex, 0, a, i, a, j);
+    if (atEnd) tri(w, apex, 0, a, j, a, i);
+    else tri(w, apex, 0, a, i, a, j);
   }
 }
 
-/* Eine Gabelung ist ein Knoten mit mehr als einem Abgang. */
-const isJunction = n => n.children.length > 1;
-
 /** Alle Kanäle als Dreieckssuppe (ohne Pressrest). */
 export function sweepRunner(net) {
-  const out = [];
+  const w = { a: new Float64Array(triCount(net) * 9), k: 0 };
   for (const e of net.edges) {
     if (e.sections.length < 2) continue;
     const last = e.sections.length - 1;
-    shell(e.sections, out);
-    (isJunction(e.from) ? domeCap : cap)(e.sections, 0, false, out);
-    (isJunction(e.to) ? domeCap : cap)(e.sections, last, true, out);
+    shell(e.sections, w);
+    (isJunction(e.from) ? domeCap : cap)(e.sections, 0, false, w);
+    (isJunction(e.to) ? domeCap : cap)(e.sections, last, true, w);
   }
-  return Float64Array.from(out);
+  return w.a;
 }
 
 /** Der Pressrest: Zylinder, dessen Dicke ENTGEGEN der Ausstoßrichtung

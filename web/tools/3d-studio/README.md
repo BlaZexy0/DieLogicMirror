@@ -419,6 +419,22 @@ Gerundet wird nur an Gabelungen. Am Anschnitt bleibt der Deckel eben:
 das ist die Austrittsfläche ins Bauteil. Am Pressrest ebenfalls, dort
 steckt er ohnehin im Zylinder.
 
+Die **Auflösung der Kuppe** richtet sich am Umriss aus, damit sie nicht
+die schwächste Stelle des Netzes ist: dessen Bodenverrundung wird mit
+fünf Sehnen über etwa 85° angenähert, also mit rund 0,017 mm
+Sehnenfehler. Sechzehn Ringe über den Viertelkreis (5,6° je Schritt)
+treffen denselben Wert. Vier Ringe waren es anfangs — 22,5° je Schritt,
+0,26 mm Fehler auf einer 13,7 mm hohen Kuppe, deren Umriss damit aus
+vier geraden Stücken bestand und genau so aussah.
+
+Bezahlt wird das nicht mit Rechenzeit, sondern mit einer Zeile weniger
+Bequemlichkeit: die Dreiecke gehen in ein **vorab bemessenes** Feld statt
+in ein wachsendes Array (`triCount` weiß die Zahl vorher). Der Sweep läuft
+bei jedem Mausschritt eines Zuges neu, und ein Array, das
+340.000-mal wächst und am Ende noch einmal kopiert wird, war dabei die
+Hälfte der Zeit: 10,0 → 3,1 ms bei vierfacher Kuppenauflösung, die ganze
+Kette von Abtasten bis Sweep 16,9 → 10,7 ms.
+
 ### Freies Drehen
 
 Die OrbitControls drehen um eine feste Hochachse. Für ein Bauteil auf
