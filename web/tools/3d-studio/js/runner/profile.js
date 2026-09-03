@@ -145,19 +145,50 @@ export const hydraulic = sec => 4 * area(sec) / Math.max(perimeter(sec), 1e-9);
 /* Wer den Umriss von außen verändert (das tut niemand — aber Tests
    könnten), muss sec._outline löschen; section() legt ihn nie an. */
 
+/** Fläche des Trapezes OHNE Verrundung — und was die zwei verrundeten
+    Bodenecken davon wegnehmen. Eine Ecke mit Innenwinkel φ verliert
+    durch einen Radius r genau r²·(cot(φ/2) − (π − φ)/2); hier ist
+    φ = 90° + Schrägenwinkel. Das ist die exakte Fläche der Form — der
+    Umriss mit seinen fünf Sehnen je Bogen liegt um Bruchteile eines
+    Prozents darunter, und DER zählt, weil das Netz aus ihm entsteht. */
+function trapezoid(sec) { return (sec.width + sec.bottom) / 2 * sec.depth; }
+function cornerDeficit(sec) {
+  const phi = Math.PI / 2 + Math.atan(sec.tanA);
+  return 2 * sec.r * sec.r * (1 / Math.tan(phi / 2) - (Math.PI - phi) / 2);
+}
+
 /** Die Umkehrung: Breite und Tiefe zu einer Zielfläche bei gegebenem
-    Seitenverhältnis h/w. Die Fläche wächst fast quadratisch mit der
-    Breite (nur der Eckenradius skaliert nicht mit), deshalb ist der
-    Schätzwert nach zwei, drei Schritten auf Rundungsgenauigkeit. */
+    Seitenverhältnis h/w.
+
+    Die Fläche ist a·w² minus dem Eckenabzug, und der hängt nur vom
+    Radius ab — solange der nicht an der Tiefe klemmt. Damit ist w in
+    geschlossener Form da; zwei Durchgänge fangen den Fall ab, dass der
+    Radius bei kleinen Maßen mitwächst. Zum Schluss EIN Schritt am
+    Umriss selbst, weil dessen Sehnenfläche das Maß aller Dinge ist.
+    Vorher lief die Suche fünfmal über den Umriss — bei sechshundert
+    Schnitten je Mauszug war das der größte Posten der Abtastung. */
 export function dimsForArea(target, aspect, draftDeg, radius) {
   const q = clamp(aspect, 0.02, 4);
-  let w = Math.sqrt(Math.max(target, 0.2) / q);
-  for (let i = 0; i < 5; i++) {
-    const a = area(section(w, q * w, draftDeg, radius));
+  const tgt = Math.max(target, 0.2);
+  let w = Math.sqrt(tgt / q);
+  for (let i = 0; i < 2; i++) {
+    const sec = section(w, q * w, draftDeg, radius);
+    const a = trapezoid(sec) / (sec.width * sec.width);
+    w = Math.sqrt((tgt + cornerDeficit(sec)) / Math.max(a, 1e-9));
+  }
+  /* Der Schritt am Umriss rechnet mit derselben Struktur: Fläche plus
+     Eckenabzug wächst quadratisch mit w. So ist ein Schritt auf 1e-9
+     genau; mit dem nackten Verhältnis √(Ziel/Fläche) blieb ein Fehler
+     von 1e-6, und die Volumenprobe des Sweeps (Fläche × Länge auf 1e-6)
+     merkte ihn. */
+  for (let i = 0; i < 2; i++) {
+    const sec = section(w, q * w, draftDeg, radius);
+    const a = area(sec);
     if (!(a > 0)) break;
-    const f = Math.sqrt(target / a);
+    const D = cornerDeficit(sec);
+    const f = Math.sqrt((tgt + D) / (a + D));
     w *= f;
-    if (Math.abs(f - 1) < 1e-5) break;
+    if (Math.abs(f - 1) < 1e-7) break;
   }
   return { w: Math.max(0.4, w), h: Math.max(0.2, q * w) };
 }

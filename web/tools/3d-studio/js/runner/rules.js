@@ -234,6 +234,30 @@ export function checkRules(g, net, flow, proc) {
       + 'eine Stelle an der Bauteilwand wählen, nicht auf einer Fläche in der Ebene.');
   }
 
+  /* ── 13. Ankunft der Schmelze ──
+     Was die Balance über den Strom sagt, sagt die Laufzeit über die
+     Reihenfolge: welcher Anschnitt zuerst bedient wird und wie lange die
+     anderen warten. Ein Anschnitt, der spät dran ist, sieht Schmelze,
+     die schon Wärme an den Kanal verloren hat — bei kurzer Füllzeit ist
+     die Spanne dazwischen kein Detail. */
+  if (flow.gates.length > 1 && Number.isFinite(flow.tLast)) {
+    const spread = (flow.tLast - flow.tFirst) * 1000;                      // ms
+    const rel = spread / Math.max(proc.fillTime, 1e-6);
+    const late = flow.gates.reduce((a, b) => (b.tArrive > a.tArrive ? b : a));
+    const early = flow.gates.reduce((a, b) => (b.tArrive < a.tArrive ? b : a));
+    if (rel > 0.15) {
+      add(rel > 0.3 ? 'bad' : 'warn', 'Anschnitte werden nacheinander erreicht',
+        label(g, early.id) + ' bekommt die Schmelze nach ' + fmt(early.tArrive * 1000) + ' ms, '
+        + label(g, late.id) + ' erst nach ' + fmt(late.tArrive * 1000) + ' ms — die Spanne von '
+        + fmt(spread) + ' ms ist ' + fmt(rel * 100, 0) + ' % der Füllzeit. Der frühe Anschnitt füllt vor; '
+        + 'den Weg zum späten kürzen oder dessen Kanal öffnen.');
+    } else {
+      add('ok', 'Schmelze kommt gleichzeitig an',
+        'Alle Anschnitte werden innerhalb von ' + fmt(spread) + ' ms erreicht (erster nach '
+        + fmt(early.tArrive * 1000) + ' ms, letzter nach ' + fmt(late.tArrive * 1000) + ' ms).');
+    }
+  }
+
   return out;
 }
 

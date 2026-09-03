@@ -65,7 +65,7 @@ function edgeLoss(edge, Q, mat, cBranch, inState) {
   const { rho, nu } = mat;
   const secs = edge.sections;
   const out = { friction: 0, bend: 0, area: 0, branch: 0, gate: 0, dyn: 0,
-    vIn: 0, vOut: 0, vMax: 0, aMin: Infinity, aMax: 0 };
+    vIn: 0, vOut: 0, vMax: 0, aMin: Infinity, aMax: 0, time: 0 };
   if (secs.length < 2) return out;
 
   const vAt = i => Q / (secs[i].area * 1e-6);
@@ -91,6 +91,10 @@ function edgeLoss(edge, Q, mat, cBranch, inState) {
 
     const re = vm * dh / nu;
     out.friction += lambdaOf(re) * (ds / Math.max(dh, 1e-6)) * rho / 2 * vm * vm;
+    /* Laufzeit der Front durch diesen Schritt: die Schmelze füllt den
+       Kanal mit dem Strom, der in diesem Ast fließt — je enger, desto
+       schneller ist sie durch. */
+    if (vm > 1e-9) out.time += ds / vm;
 
     const kappa = (a.kappa + b.kappa) / 2;
     if (kappa > 1e-9) {
@@ -203,6 +207,19 @@ export function analyseFlow(g, net, proc) {
     if (move < 1e-5) break;
   }
 
+  /* Wann die Front wo ankommt: vom Pressrest aus Kante für Kante
+     aufsummiert. Das ist die Ankunft bei dem Strom der Füllphase, also
+     Gussvolumen durch Füllzeit — keine Simulation der Kolbenbewegung,
+     aber genau die Zahl, an der man abliest, welcher Anschnitt zuerst
+     bedient wird und wie weit die anderen hinterherhinken. */
+  const arrival = { [g.rootId]: 0 };
+  G.walk(g, n => {
+    for (const c of n.children) {
+      const l = losses.get(c);
+      if (l) arrival[c] = (arrival[n.id] || 0) + l.time;
+    }
+  });
+
   /* Ergebnis je Anschnitt: den Weg vom Pressrest aufsummieren. */
   const gateRows = gates.map(n => {
     const path = G.pathTo(g, n.id).slice(1);
@@ -224,14 +241,19 @@ export function analyseFlow(g, net, proc) {
       v: (Q * (share[n.id] || 0)) / (gArea * 1e-6),
       vSoll: (Q * (shareSoll[n.id] || 0)) / (gArea * 1e-6),
       dp: loss + dyn, loss, dyn, parts,
+      tArrive: arrival[n.id] || 0,
       zeta: (loss + dyn) / Math.max(mat.rho / 2 * Math.pow((Q * (share[n.id] || 0)) / (gArea * 1e-6), 2), 1e-9)
     };
   });
 
   const dpList = gateRows.map(r => r.dp);
   const totalArea = gateRows.reduce((a, r) => a + r.area, 0);
+  const tList = gateRows.map(r => r.tArrive);
   return {
-    Q, mat, share, shareSoll, losses,
+    Q, mat, share, shareSoll, losses, arrival,
+    fillTime: proc.fillTime,
+    tFirst: tList.length ? Math.min(...tList) : 0,
+    tLast: tList.length ? Math.max(...tList) : 0,
     gates: gateRows,
     gateArea: totalArea,
     /* Wie weit weicht die tatsächliche Aufteilung von der gewollten ab? */

@@ -312,8 +312,24 @@ Der Ablauf ist immer derselbe:
     Graph → Anschnittbreiten → Abtasten → Strömung → Anzeige
 
 Er kostet bei einem üblichen System wenige Millisekunden und läuft
-deshalb bei jedem Mausschritt. Es gibt nichts, was auf Bestätigung
-wartet.
+deshalb bei jedem Zug am Griff. Es gibt nichts, was auf Bestätigung
+wartet — aber drei Dinge sorgen dafür, dass es sich auch so anfühlt:
+
+- Ein Zug wird **höchstens einmal je Bild** angewandt. Eine Maus meldet
+  sich hundert- bis tausendmal je Sekunde; jede Meldung ließ früher die
+  ganze Kette laufen, die Meldungen stauten sich, und der Griff hing dem
+  Zeiger hinterher. Jetzt zählt der letzte Zeigerort vor dem nächsten
+  Bild, und während des Zuges laufen nur Abtasten, Sweep und Griffe —
+  Regeln, Kennzahlen und Schema kommen beim Loslassen.
+- **Gezeichnet wird auf Abruf** (`renderOnDemand` in `js/scene.js`): nur
+  wenn sich Kamera oder Szene geändert haben, sonst viermal je Sekunde
+  als Netz. Eine Schleife, die sechzigmal je Sekunde ein durchscheinendes
+  Bauteil mit einer Million Dreiecken zeichnet, machte die ganze Seite
+  zäh, auch die Felder in der Seitenleiste.
+- Die Umkehrung „Maße zu einer Fläche" (`dimsForArea`) kommt aus der
+  exakten Trapezfläche samt Eckenabzug in geschlossener Form und macht
+  nur noch einen Schritt am Umriss statt fünf — sie lief für jeden
+  abgetasteten Schnitt und war der größte Posten der Abtastung.
 
 ### Knotenarten
 
@@ -330,26 +346,29 @@ wartet.
 Ein Anschnitt zeigt dorthin, wo das Bauteil ist — bei jedem anderen Punkt
 folgt die Richtung der Sehne zum Vorgänger, und beim Anschnitt ist genau
 das falsch: wer den Punkt davor verschiebt, um das System auszubalancieren,
-dreht damit die Mündung mit. Der Knopf **„Mündung ans Bauteil setzen"** im
-Auswahlfeld schaltet deshalb einen Zielmodus scharf. Der ist unübersehbar:
-der Knopf füllt sich, oben im Viewport steht, was zu tun ist, und unter dem
-Zeiger wandert eine Marke über das Bauteil — ein Ring in der
-Austrittsfläche, ein Strich in Mündungsrichtung —, die zeigt, wo der
-Anschnitt landen würde, bevor man klickt. Der nächste Klick auf das
-Bauteil legt beides auf einmal fest:
+dreht damit die Mündung mit.
+
+Jeder führende Anschnitt trägt deshalb im Viewport einen **Pfeil** in
+seiner Mündungsrichtung — dorthin tritt die Schmelze ins Bauteil. Der
+Pfeil ist zugleich der Griff für die Bindung: **den Punkt anklicken
+zieht ihn, den Pfeil anklicken schaltet den Zielmodus scharf.** Oben im
+Viewport steht dann, was zu tun ist, und unter dem Zeiger wandert eine
+Marke über das Bauteil — ein Ring in der Austrittsfläche, ein Strich in
+Mündungsrichtung —, die zeigt, wo der Anschnitt landen würde, bevor man
+klickt. Der nächste Klick auf das Bauteil legt beides auf einmal fest:
 
 - der Anschnitt **rückt an die getroffene Stelle** — seine Austrittsfläche
   liegt damit auf der Bauteilwand, und
 - seine **Richtung wird festgehalten**: senkrecht in die Wand hinein.
 
-Ein gebundener Anschnitt ist **festgesetzt**: Lage und Richtung stehen,
-was auch immer mit dem Punkt davor geschieht. Das Auswahlfeld sagt es beim
-Anklicken in der Kopfzeile („ans Bauteil gebunden") und in einer eigenen
-Zeile mit Mündungsrichtung; die Lage-Felder sind gesperrt, und der Griff
-lässt sich anklicken, aber nicht ziehen — man setzt ihn mit dem Knopf an
-eine andere Stelle des Bauteils. **„Lösen"** hebt die Bindung auf: der
-Anschnitt lässt sich wieder frei verschieben, seine Richtung folgt dann
-wie zuvor der Sehne zum Punkt davor.
+Gebunden ist die RICHTUNG, nicht der Punkt: der Anschnitt lässt sich
+weiter ziehen, seine Mündung zeigt danach noch dorthin, wohin sie gesetzt
+wurde. Das Auswahlfeld sagt es in der Kopfzeile („ans Bauteil gebunden")
+und in der Zeile „Mündung" der Kennzahlen; ohne Bindung steht dort
+„folgt dem Kanal". Eine andere Stelle bekommt der Anschnitt mit einem
+neuen Klick auf den Pfeil — einen Knopf zum Lösen gibt es nicht, weil es
+nichts zu lösen gibt, was man nicht durch Neusetzen besser täte. Ohne
+geladenes Bauteil sagt der Klick auf den Pfeil, was fehlt.
 
 **In der Trennebene.** Ein Anschnitt liegt in der Trennebene (genauer: in
 seiner Arbeitsebene) und kann nur in ihr ins Bauteil münden. Trifft der
@@ -362,8 +381,8 @@ hat: erst auf die Ebene projiziert, dann per Strahl in der Ebene auf die
 Wand. Ein Treffer auf einer Fläche, die in der Ebene liegt (Deckfläche),
 bleibt roh; die Prüfliste meldet dann **„Mündung aus der Trennebene"** mit
 dem Winkel — so ein Anschnitt ist in einer zweiteiligen Form nicht zu
-bauen. Das Auswahlfeld sagt es ebenfalls („Mündung: −Y · 90° aus der
-Ebene" gegenüber „−X · in der Ebene").
+bauen. Die Kennzahlen sagen es ebenfalls („−Y · gebunden, 90° aus der
+Ebene").
 
 Die Normale wird nicht aus dem Wickelsinn der STL gelesen — bei
 importierten Netzen ist der unzuverlässig —, sondern so gedreht, dass sie
@@ -375,10 +394,9 @@ nicht.
 
 Ein Klick DANEBEN bricht den Modus nicht ab, sondern wird kurz als
 Fehlschuss benannt; Ziehen dreht wie sonst die Ansicht — man muss die
-Stelle erst suchen dürfen. Ein zweiter Druck auf den Knopf schaltet NICHT
-ab: ein Umschalter, der beim Doppeldruck stillschweigend wieder aus ist,
-sieht von außen aus wie ein Knopf, der nichts tut. Abgebrochen wird mit
-Esc, mit „Abbrechen" im Hinweis oder durch Auswahl eines anderen Punktes.
+Stelle erst suchen dürfen. Ein zweiter Klick auf den Pfeil schaltet NICHT
+ab. Abgebrochen wird mit Esc, mit „Abbrechen" im Hinweis oder durch
+Auswahl eines anderen Punktes.
 
 Bei einem gespiegelten Ast wird die Bindung mitgespiegelt: Lage an der
 Spiegelebene, Richtung ebenso. Weil eine gebundene Richtung stärker ist
@@ -457,13 +475,24 @@ dass jeder Weg denselben Druckverlust hat (Widerstände quadratisch,
 1/√R addiert sich). Soll und Ist stehen im Flussschema nebeneinander;
 weichen sie stark ab, füllt ein Anschnitt vor.
 
+Dazu die **Ankunft der Schmelze**: je Kante die Laufzeit der Front,
+Schritt für Schritt Weg durch Geschwindigkeit bei dem Strom, der in
+diesem Ast fließt; vom Pressrest aus aufsummiert ergibt das für jeden
+Anschnitt, wann die Schmelze dort ist. Das ist die Ankunft bei dem Strom
+der Füllphase (Gussvolumen durch Füllzeit), keine Simulation der
+Kolbenbewegung — aber genau die Zahl, an der man abliest, welcher
+Anschnitt zuerst bedient wird und wie weit die anderen hinterherhinken.
+Das Schema schreibt sie an jeden Anschnitt, die Kennzahlen nennen die
+Spanne, und ab 15 % der Füllzeit meldet sich die Prüfliste.
+
 ### Prüfregeln
 
 `js/runner/rules.js` prüft die Lehrbuchregeln über die WIRKLICHE
 Geometrie: Querschnitt nimmt ab, Summe der Abgänge, Anschnitt- und
 Kanalgeschwindigkeit, Seitenverhältnis, Krümmungsradius ≥ 2·d_h,
 Entformschräge, Füllbalance, Kanal gegen Anschnitt, Materialausbeute,
-Mündung gegen die Anströmung, Mündung aus der Trennebene.
+Mündung gegen die Anströmung, Mündung aus der Trennebene, Ankunft der
+Schmelze an den Anschnitten.
 Jede Meldung nennt Ort und Zahl — eine Meldung ohne Zahl hilft niemandem.
 Alle Beispiele sind ohne Beanstandung; `runner.test.mjs` prüft das.
 
@@ -552,9 +581,14 @@ absichtlich kurz gehalten: ein Erklärkasten von sechs Zeilen schiebt den
 nächsten Regler aus dem Bild und wird beim zweiten Mal ohnehin nicht mehr
 gelesen.
 
-Die **Kennzahlen** des Systems stehen beim Flussschema, als Streifen unter
-seinem Kopf: Punkte, Anschnitte, Lauflänge, Angussvolumen, Volumenstrom,
-Druckbedarf. Dort steht nur, was das Schema nicht ohnehin zeigt —
+Das **Flussschema** öffnet der große Knopf rechts unten im Viewport und
+füllt dann den ganzen Viewport — ein Kasten in der Ecke zeigte ein System
+mit sechs Anschnitten als Briefmarke; jetzt wächst das SVG mit der Fläche,
+Schrift eingeschlossen. Esc oder das × schließen es. Die **Kennzahlen**
+des Systems stehen dort als Streifen unter dem Kopf: Punkte, Anschnitte,
+Lauflänge, Angussvolumen, Volumenstrom, Druckbedarf, Ankunft der Schmelze
+(erster bis letzter Anschnitt). Dort steht nur, was das Schema nicht
+ohnehin zeigt —
 Anschnittfläche, Geschwindigkeit und die Aufteilung soll/ist hängen im Bild
 an den Ästen selbst. Sie daneben noch einmal als Summe zu setzen hieße
 dieselbe Sache zweimal zu sagen und dabei die interessante Hälfte
@@ -566,9 +600,9 @@ dasselbe (v = Q/A) und beide sagen es ungenauer als das Schema, das
 neben jeden Ast die Zahl schreibt. Ein Farbton, den man an einer Skala
 ablesen muss, ist kein Ersatz für „207 mm² · 22,5 m/s".
 
-Unten rechts stehen übereinander das Flussschema, die Farbskala und die
-Legende der Punktarten — auf den übrigen Seiten des Studios sitzt die
-Farbskala links unten, hier liegt dort das Auswahlfeld.
+Unten rechts stehen übereinander der Knopf zum Flussschema und die
+Legende der Punktarten; die Bedienhinweise unten links sind eine Zeile,
+keine vier — sie sind Erinnerung, kein Handbuch.
 
 Oben rechts, unter der Ansichtsleiste, steht das **Achsenkreuz**. Es ist
 kein zweiter Renderdurchgang, sondern SVG über dem Bild: die

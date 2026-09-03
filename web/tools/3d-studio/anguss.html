@@ -114,9 +114,9 @@
       <input type="range" id="cbranch" min="10" max="120" step="5" value="50">
       <span class="val" id="cbranch-val"></span>
     </div>
-    <div class="hint">Lauflänge, Angussvolumen, Volumenstrom und Druckbedarf stehen im
-      <b>Flussschema</b> (unter „Darstellung" einschalten) — dort, wo auch Fläche,
-      Geschwindigkeit und Aufteilung an jedem Ast hängen.</div>
+    <div class="hint">Lauflänge, Angussvolumen, Volumenstrom, Druckbedarf und die Ankunft der
+      Schmelze stehen im <b>Flussschema</b> (Knopf rechts unten im Viewport) — dort, wo auch
+      Fläche, Geschwindigkeit und Aufteilung an jedem Ast hängen.</div>
 
     <h2>Darstellung</h2>
     <div class="row">
@@ -128,7 +128,6 @@
     </div>
     <label class="inline"><input type="checkbox" id="show-biscuit" checked> Pressrest zeigen</label>
     <label class="inline"><input type="checkbox" id="show-line" checked> Mittellinie und Griffe zeigen</label>
-    <label class="inline"><input type="checkbox" id="chart-on"> Flussschema einblenden</label>
 
     <h2>Import und Export</h2>
     <input type="file" id="json-input" accept=".json,application/json" hidden>
@@ -239,13 +238,6 @@
               <span title="Wie der Querschnitt vom Kanal auf den Anschnitt übergeht.">Übergang</span>
               <select id="sel-gtrans"></select>
             </div>
-            <button type="button" id="gate-aim" class="aim-btn"
-              title="Eine Stelle auf dem Referenzbauteil anklicken: der Anschnitt rückt dorthin und mündet senkrecht in die Wand. Diese Richtung bleibt dann fest, auch wenn der Punkt davor wandert.">Mündung ans Bauteil setzen</button>
-            <div class="pin-state hidden" id="gate-aim-state">
-              <span id="gate-aim-note">Ans Bauteil gebunden</span>
-              <button type="button" id="gate-aim-clear"
-                title="Bindung lösen: der Anschnitt lässt sich wieder frei verschieben, seine Richtung folgt dann dem Punkt davor">Lösen</button>
-            </div>
           </div>
           <div class="facts" id="sel-facts"></div>
         </div>
@@ -258,18 +250,19 @@
       <button type="button" id="del-node" class="danger" title="Auswahl entfernen">Löschen</button>
     </div>
     <div class="vp-right">
-      <div class="chart-panel" id="chart-panel">
-        <div class="chart-head">Flussschema<button type="button" id="chart-close" title="schließen">×</button></div>
-        <div class="chart-facts" id="chart-facts"></div>
-        <div class="chart-body" id="chart-body"></div>
-      </div>
+      <button type="button" class="chart-btn" id="chart-btn"
+        title="Der Angussbaum als Schema: Querschnitte, Geschwindigkeiten, Soll gegen Ist und die Ankunft der Schmelze an jedem Anschnitt">Flussschema</button>
       <div class="pt-legend" id="pt-legend"></div>
     </div>
+    <div class="chart-panel" id="chart-panel">
+      <div class="chart-head">Flussschema<button type="button" id="chart-close" title="schließen (Esc)">×</button></div>
+      <div class="chart-facts" id="chart-facts"></div>
+      <div class="chart-body" id="chart-body"></div>
+    </div>
     <div id="status">
-      <div><b>Punkt anklicken und ziehen:</b> Verschiebung in der Arbeitsebene</div>
-      <div><b>Bei gedrückter Alt-Taste:</b> normal zur Ebene, aus ihr heraus</div>
-      <div><b>Ziehen im Leeren:</b> frei drehen</div>
-      <div><b>Rechte Maustaste:</b> verschieben &nbsp;·&nbsp; <b>Rad:</b> zoomen</div>
+      <b>Punkt</b> ziehen: in der Arbeitsebene &nbsp;·&nbsp; <b>Alt</b>: aus ihr heraus &nbsp;·&nbsp;
+      <b>Pfeil</b> am Anschnitt: Mündung ans Bauteil &nbsp;·&nbsp;
+      <b>Leer</b>: drehen &nbsp;·&nbsp; <b>rechts</b>: verschieben &nbsp;·&nbsp; <b>Rad</b>: zoomen
     </div>
     <div class="drop-hint">Angussdatei (JSON) oder Referenzteil (STL/GLB) hier ablegen</div>
     <div class="aim-banner hidden" id="aim-banner">

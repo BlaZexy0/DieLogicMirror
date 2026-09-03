@@ -44,7 +44,8 @@ const container = $('viewport');
 const view = initScene(container, {
   orbit: 'trackball', headlight: true,
   cameraStart: [230, 210, 280], target: [0, 0, 60],
-  grid: false, minDistance: 3, maxDistance: 30000
+  grid: false, minDistance: 3, maxDistance: 30000,
+  renderOnDemand: true
 });
 mountViewBar(container, view);
 
@@ -61,7 +62,8 @@ const state = {
   proc: { ...F.DEFAULT_PROCESS },
   sizing: { ...DEFAULT_SIZING },
   show: 'sweep',
-  name: 'Zwei Anschnitte', ready: false
+  name: 'Zwei Anschnitte', ready: false,
+  chartOpen: false
 };
 
 /* ── Szene ───────────────────────────────────────────────────── */
@@ -105,28 +107,42 @@ const editor = createEditor({
   view,
   getGraph: () => state.graph,
   getRefMesh: () => refMesh,
+  /* Der Pfeil am Anschnitt zeigt die WIRKLICHE Mündungsrichtung: die
+     letzte Tangente der abgetasteten Kante, ob gebunden oder aus der
+     Sehne. */
+  getGateDir: id => {
+    const e = state.net && state.net.edges.find(x => x.toId === id);
+    return e && e.sections.length ? e.sections[e.sections.length - 1].t : null;
+  },
+  onAim: id => startAim(id),
   onSelect: () => { cancelAim(); syncSelection(); },
   onChange: (what) => {
+    if (what === 'drag') { rebuild('drag'); return; }
     rebuild();
     if (what === 'drop') syncSelection();
   }
 });
 
 /* ── Kette: Graph → Anzeige ──────────────────────────────────── */
-function rebuild() {
+/* Während eines Zuges zählt, was man sieht: Netz, Linien, Griffe. Regeln,
+   Kennzahlen und Schema kommen beim Loslassen — sie gehören zum
+   Ergebnis, nicht zur Bewegung. */
+function rebuild(mode) {
   const g = state.graph;
   F.applyAutoGates(g, state.proc);
   state.net = sampleNetwork(g);
   state.flow = F.analyseFlow(g, state.net, state.proc);
-  state.rules = checkRules(g, state.net, state.flow, state.proc);
   updateRunner();
   updateLines();
   updateBiscuit();
   editor.refresh();
+  if (mode === 'drag') { view.invalidate(); return; }
+  state.rules = checkRules(g, state.net, state.flow, state.proc);
   updateFacts();
   updateRules();
   updateChart();
   updatePointMenu();
+  view.invalidate();
 }
 
 /* Während eines Zuges ändert sich die GRÖSSE des Netzes nicht — nur die
@@ -160,8 +176,15 @@ function updateLines() {
   }
 }
 
+/* Der Pressrest ändert sich nur, wenn seine Maße sich ändern — nicht bei
+   jedem Zug an einem Kanalpunkt. */
+let biscuitKey = '';
 function updateBiscuit() {
-  const tris = biscuitMesh(state.graph.biscuit);
+  const b = state.graph.biscuit;
+  const key = [b.pos.join(','), b.axis, b.d, b.t].join('|');
+  if (key === biscuitKey) return;
+  biscuitKey = key;
+  const tris = biscuitMesh(b);
   const geo = new T.BufferGeometry();
   geo.setAttribute('position', new T.BufferAttribute(Float32Array.from(tris), 3));
   geo.computeVertexNormals();
@@ -176,6 +199,7 @@ function applyVisibility() {
   lineGroup.visible = handles;
   editor.group.visible = handles;
   editor.setEnabled(handles);
+  view.invalidate();
 }
 
 /* ── Kennzahlen, Regeln, Schema ──────────────────────────────── */
@@ -188,14 +212,21 @@ function applyVisibility() {
 function updateFacts() {
   const g = state.graph, net = state.net, fl = state.flow;
   const gates = G.allNodes(g).filter(n => n.type === 'gate');
-  facts('chart-facts', [
+  const rows = [
     ['Punkte', fmt(G.allNodes(g).length, 0)],
     ['Anschnitte', fmt(gates.length, 0)],
     ['Lauflänge', fmt(net.length, 0) + ' mm'],
     ['Angussvolumen', fmt(fl.runnerVolume / 1000) + ' cm³'],
     ['Volumenstrom', fmt(fl.Q * 1e6, 0) + ' cm³/s'],
     ['Druckbedarf', fmt(fl.dp / 1e5) + ' bar']
-  ]);
+  ];
+  /* Wann die Schmelze wo ist: erster und letzter Anschnitt. */
+  if (gates.length) {
+    rows.push(['Ankunft', gates.length > 1
+      ? fmt(fl.tFirst * 1000) + ' – ' + fmt(fl.tLast * 1000) + ' ms'
+      : fmt(fl.tFirst * 1000) + ' ms']);
+  }
+  facts('chart-facts', rows);
 }
 
 function updateRules() {
@@ -203,9 +234,18 @@ function updateRules() {
     '<div class="rule ' + r.level + '"><b>' + r.title + '</b><span>' + r.text + '</span></div>').join('');
 }
 
+/* Das Schema füllt den ganzen Viewport; gezeichnet wird es nur, solange
+   es offen ist — und in Bildschirmbreite, damit die Schrift mitwächst. */
 function updateChart() {
-  if (!$('chart-on').checked) return;
-  $('chart-body').innerHTML = flowChart(state.graph, state.net, state.flow, { width: 620 });
+  if (!state.chartOpen) return;
+  $('chart-body').innerHTML = flowChart(state.graph, state.net, state.flow, { width: 900 });
+}
+
+function openChart(on) {
+  state.chartOpen = on;
+  $('chart-panel').classList.toggle('on', on);
+  $('chart-btn').classList.toggle('active', on);
+  if (on) { cancelAim(); updateChart(); }
 }
 
 /* ── Auswahl ─────────────────────────────────────────────────── */
@@ -238,12 +278,10 @@ function mountLegend() {
    des Systems passiert das ständig. Wer stattdessen die Stelle am
    Bauteil anklickt, legt beides auf einmal fest: den Ort der Mündung
    und die Richtung, in der die Schmelze das Bauteil betritt. */
-/* Der scharfe Zustand muss unübersehbar sein: der Knopf füllt sich, und
-   oben im Viewport steht, was zu tun ist. Ein Zielmodus, den man nicht
-   sieht, ist einer, in dem man rätselt, warum der Klick nichts tut. */
+/* Der scharfe Zustand muss unübersehbar sein: oben im Viewport steht,
+   was zu tun ist. Ein Zielmodus, den man nicht sieht, ist einer, in dem
+   man rätselt, warum der Klick nichts tut. */
 function aimArmed(on) {
-  $('gate-aim').classList.toggle('armed', on);
-  $('gate-aim').textContent = on ? 'Stelle am Bauteil anklicken …' : 'Mündung ans Bauteil setzen';
   $('aim-banner').classList.toggle('hidden', !on);
   aimBanner(false);
 }
@@ -251,12 +289,12 @@ function aimArmed(on) {
 /* Ein Klick daneben bekommt eine Antwort — kurz, dann steht wieder die
    Anweisung. Schweigen sähe aus wie ein Modus, der nicht funktioniert. */
 let missTimer = 0;
-function aimBanner(miss) {
+function aimBanner(miss, text) {
   clearTimeout(missTimer);
   $('aim-banner').classList.toggle('miss', miss);
-  $('aim-text').textContent = miss
+  $('aim-text').textContent = text || (miss
     ? 'Daneben — die Stelle muss auf dem Bauteil liegen.'
-    : 'Mündung ans Bauteil: eine Stelle auf dem Bauteil anklicken. Ziehen dreht die Ansicht, Esc bricht ab.';
+    : 'Mündung ans Bauteil: eine Stelle auf dem Bauteil anklicken. Ziehen dreht die Ansicht, Esc bricht ab.');
   if (miss) missTimer = setTimeout(() => { if (editor.aiming) aimBanner(false); }, 1600);
 }
 
@@ -264,16 +302,20 @@ function cancelAim() {
   if (editor.cancelAim()) aimArmed(false);
 }
 
-$('gate-aim').addEventListener('click', () => {
-  const id = editor.selected;
+/* Der Klick auf den Pfeil eines Anschnitts. Ohne Referenzbauteil gibt es
+   nichts zu treffen — dann sagt der Hinweis das, statt zu schweigen. */
+function startAim(id) {
   const n = id && state.graph.nodes[id];
-  /* Nur ein führender Anschnitt darf gebunden werden — der Knopf steht
-     zwar nur in dessen Block, aber die Auswahl kann sich zwischen Klick
-     und Treffer nicht mehr ändern, wenn sie hier festgehalten wird. */
-  if (!n || n.type !== 'gate' || G.isFollower(state.graph, id) || !refMesh.visible) return;
-  /* Schon scharf: bleibt scharf. Kein Umschalter — abgebrochen wird mit
-     Esc, mit „Abbrechen" im Hinweis oder durch eine andere Auswahl. */
-  if (editor.aiming) { aimBanner(false); return; }
+  if (!n || n.type !== 'gate' || G.isFollower(state.graph, id)) return;
+  if (!refMesh.visible) {
+    aimArmed(true);
+    aimBanner(false, 'Zuerst ein Referenzbauteil laden (STL oder GLB) — dann zeigt der Klick auf den Pfeil, wo der Anschnitt münden soll.');
+    clearTimeout(missTimer);
+    missTimer = setTimeout(() => { if (!editor.aiming) aimArmed(false); }, 3200);
+    return;
+  }
+  /* Schon scharf für diesen Anschnitt: bleibt scharf. Abgebrochen wird
+     mit Esc, mit „Abbrechen" im Hinweis oder durch eine andere Auswahl. */
   aimArmed(true);
   editor.armAim({
     /* Die Arbeitsebene des Anschnitts, jedes Mal frisch: ein Treffer an
@@ -290,18 +332,15 @@ $('gate-aim').addEventListener('click', () => {
     },
     onMiss: () => aimBanner(true)
   });
-});
-$('aim-cancel').addEventListener('click', () => cancelAim());
+}
+$('aim-cancel').addEventListener('click', () => { cancelAim(); aimArmed(false); });
 
-$('gate-aim-clear').addEventListener('click', () => {
-  const id = editor.selected;
-  if (!id || G.isFollower(state.graph, id)) return;
-  G.clearAim(state.graph, id);
-  rebuild();
-  syncSelection();
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (state.chartOpen) openChart(false);
+  cancelAim();
+  aimArmed(false);
 });
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape') cancelAim(); });
 
 /* Die gebundene Richtung als Text — drei Dezimalzahlen sagen niemandem
    etwas, die nächstliegende Achse schon. */
@@ -330,14 +369,8 @@ function syncSelection() {
   const follower = G.isFollower(g, id);
   $('pt-sel').innerHTML = label;
   /* Ein Zehntel: „−137,25" passt nicht in ein Drittel der Zeile, und auf
-     den Hundertstelmillimeter setzt niemand einen Kanalpunkt. Gebunden
-     heißt: die Lage kommt vom Bauteil, nicht aus dem Feld. */
-  const pinned = !!n.aim;
-  for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) {
-    $(k).value = fmt(n.pos[i], 1);
-    $(k).disabled = pinned;
-    $(k).title = pinned ? 'Ans Bauteil gebunden — zum Verschieben die Bindung lösen' : 'XYZ'[i];
-  }
+     den Hundertstelmillimeter setzt niemand einen Kanalpunkt. */
+  for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) $(k).value = fmt(n.pos[i], 1);
   $('sel-w').value = fmt(n.w, 2);
   $('sel-h').value = fmt(n.h, 2);
   $('sel-roll').value = String(n.tilt[0]);
@@ -375,20 +408,7 @@ function syncSelection() {
     $('sel-gauto').checked = !!n.gate.auto;
     $('sel-gw').disabled = !!n.gate.auto;
     $('sel-gtrans').value = n.gate.transition;
-    $('gate-aim').disabled = !refMesh.visible || follower;
-    $('gate-aim').title = follower
-      ? 'Diese Seite wird nachgezogen — den Anschnitt der anderen Seite binden.'
-      : refMesh.visible
-        ? 'Eine Stelle auf dem Referenzbauteil anklicken: der Anschnitt rückt dorthin und mündet senkrecht in die Wand. Diese Richtung bleibt dann fest, auch wenn der Punkt davor wandert.'
-        : 'Dafür muss zuerst ein Referenzbauteil geladen sein.';
-    $('gate-aim-state').classList.toggle('hidden', !n.aim);
-    if (n.aim) {
-      const tilt = G.aimTilt(g, n);
-      $('gate-aim-note').innerHTML = '<b>Ans Bauteil gebunden</b> — Mündung ' + dirText(n.aim)
-        + (tilt < 1 ? ', in der Ebene' : ', ' + fmt(tilt, 0) + '° aus der Ebene')
-        + '. Lage und Richtung stehen fest.';
-    }
-  } else cancelAim();
+  } else { cancelAim(); aimArmed(false); }
 
   const na = state.net.nodeArea[id];
   const rows = [['Querschnitt', fmt(na.area, 0) + ' mm²'], ['hydr. Ø', fmt(na.dh) + ' mm']];
@@ -411,6 +431,17 @@ function syncSelection() {
     if (r) {
       rows.push(['Anschnittfläche', fmt(r.area, 0) + ' mm²']);
       rows.push(['Anteil soll/ist', fmt(r.soll * 100, 0) + ' / ' + fmt(r.ist * 100, 0) + ' %']);
+      rows.push(['Ankunft', fmt(r.tArrive * 1000) + ' ms']);
+    }
+    /* Wohin der Anschnitt mündet — und ob das ans Bauteil gebunden ist
+       oder dem Punkt davor folgt. Der Pfeil im Viewport zeigt dasselbe. */
+    const e = state.net.edges.find(x => x.toId === id);
+    const t = e && e.sections.length ? e.sections[e.sections.length - 1].t : null;
+    if (t) {
+      const tilt = G.aimTilt(g, n);
+      rows.push(['Mündung', dirText(t) + (n.aim
+        ? ' · gebunden' + (tilt >= 1 ? ', ' + fmt(tilt, 0) + '° aus der Ebene' : '')
+        : ' · folgt dem Kanal')]);
     }
   }
   facts('sel-facts', rows);
@@ -444,7 +475,6 @@ for (const [id, axis] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) {
   numberInput(id, v => {
     const n = sel();
     if (!n) return v;
-    if (n.aim) return n.pos[axis];              // gebunden: das Feld ist gesperrt, zur Sicherheit auch hier
     const p = n.pos.slice();
     p[axis] = v;
     G.setPos(state.graph, n.id, p);
@@ -611,19 +641,14 @@ segButtons('show-seg', v => { state.show = v; applyVisibility(); });
 for (const id of ['show-biscuit', 'show-line']) {
   $(id).addEventListener('change', applyVisibility);
 }
-$('chart-on').addEventListener('change', e => {
-  $('chart-panel').classList.toggle('on', e.target.checked);
-  updateChart();
-});
-$('chart-close').addEventListener('click', () => {
-  $('chart-on').checked = false;
-  $('chart-panel').classList.remove('on');
-});
+$('chart-btn').addEventListener('click', () => openChart(!state.chartOpen));
+$('chart-close').addEventListener('click', () => openChart(false));
 slider('ref-opacity', v => {
   refMat.opacity = v / 100;
   refMat.transparent = v < 100;
   refMat.depthWrite = v >= 100;
   refMat.needsUpdate = true;
+  view.invalidate();
 }, v => v + ' %');
 
 /* Der Umschalter „Kanäle / nur Linie" merkt sich seine Stellung im
@@ -669,7 +694,9 @@ $('ref-btn').addEventListener('click', () => $('ref-input').click());
 $('ref-input').addEventListener('change', e => { if (e.target.files[0]) readAny(e.target.files[0]); });
 $('ref-clear').addEventListener('click', () => {
   cancelAim();
+  aimArmed(false);
   refMesh.visible = false;
+  view.invalidate();
   refMesh.geometry.dispose();
   refMesh.geometry = new T.BufferGeometry();
   $('ref-file').classList.add('hidden');
@@ -735,7 +762,8 @@ function loadReference(buffer, name) {
     $('ref-note').textContent = name + ' · Volumen unbrauchbar (offenes Netz)';
   }
   $('ref-file').classList.remove('hidden');
-  syncSelection();                       // der Zielknopf braucht das Bauteil
+  syncSelection();
+  view.invalidate();
 }
 
 for (const ev of ['dragenter', 'dragover']) {
@@ -784,7 +812,7 @@ mountLegend();
 pickDemo(new URLSearchParams(location.search).get('demo'));
 
 export const __viewer = {
-  state, view, editor, rebuild, adoptGraph, pickDemo,
+  state, view, editor, rebuild, adoptGraph, pickDemo, openChart, startAim,
   runnerMesh, biscMesh, refMesh, group
 };
 window.__anguss = __viewer;

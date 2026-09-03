@@ -230,6 +230,75 @@ test('Graph: die ans Bauteil gebundene Mündung wird mitgespiegelt', () => {
   assert.ok(Math.hypot(...t().map((v, i) => v - t0[i])) > 1e-3, 'danach folgt sie wieder der Sehne');
 });
 
+test('Profil: dimsForArea trifft die Zielfläche in geschlossener Form', () => {
+  /* Der Schätzwert kommt aus der exakten Trapezfläche samt Eckenabzug,
+     ein einziger Schritt am Umriss richtet ihn auf dessen Sehnenfläche
+     aus. Vorher suchte die Funktion fünfmal über den Umriss. */
+  let worst = 0;
+  for (const target of [0.5, 2, 8, 30, 90, 250, 600, 1500]) {
+    for (const q of [0.05, 0.3, 0.65, 1, 2.5]) {
+      for (const draft of [0, 5, 12]) {
+        for (const r of [0, 1.5, 4]) {
+          const d = P.dimsForArea(target, q, draft, r);
+          if (d.w <= 0.4 || d.h <= 0.2) continue;             // an der Klemmgrenze
+          const a = P.area(P.section(d.w, d.h, draft, r));
+          worst = Math.max(worst, Math.abs(a - target) / target);
+          assert.ok(Math.abs(d.h / d.w - q) < 1e-9, 'Seitenverhältnis bleibt');
+        }
+      }
+    }
+  }
+  assert.ok(worst < 2e-4, 'schlechtester Relativfehler ' + worst);
+});
+
+test('Strömung: die Ankunft der Schmelze wächst entlang des Weges', () => {
+  const proc = { ...F.DEFAULT_PROCESS };
+  const g = PRE.demoTwoGates();
+  F.applyAutoGates(g, proc);
+  const net = sampleNetwork(g);
+  const flow = F.analyseFlow(g, net, proc);
+  const [a, b] = flow.gates;
+  assert.ok(a.tArrive > 0 && Number.isFinite(a.tArrive));
+  assert.ok(Math.abs(a.tArrive - b.tArrive) < 1e-9, 'symmetrisch: beide gleichzeitig');
+  assert.ok(flow.tFirst === flow.tLast);
+  /* Jede Kante kostet Zeit — stromabwärts wird es nur später. */
+  for (const n of G.allNodes(g)) {
+    if (!n.parent) continue;
+    assert.ok(flow.arrival[n.id] > flow.arrival[n.parent] + 1e-9, n.id + ' kommt nach ' + n.parent);
+  }
+  /* Die Zeit ist Weg durch Geschwindigkeit: Kante für Kante nachgerechnet. */
+  const e = net.edges.find(x => x.toId === a.id);
+  const l = flow.losses.get(a.id);
+  let t = 0;
+  for (let i = 0; i < e.sections.length - 1; i++) {
+    const s0 = e.sections[i], s1 = e.sections[i + 1];
+    const vm = (l.Q / (s0.area * 1e-6) + l.Q / (s1.area * 1e-6)) / 2;
+    t += (s1.s - s0.s) * 1e-3 / vm;
+  }
+  assert.ok(Math.abs(t - l.time) < 1e-12, 'Kantenlaufzeit ' + l.time + ' gegen ' + t);
+  /* Schema und Prüfliste tragen die Zahl. */
+  assert.match(flowChart(g, net, flow), /Ankunft [\d,]+ ms/);
+  const ok = checkRules(g, net, flow, proc).find(r => /gleichzeitig an/.test(r.title));
+  assert.ok(ok && ok.level === 'ok', 'symmetrisch: nichts zu beanstanden');
+
+  /* Einen Anschnitt weit wegziehen: er kommt später dran, und ab 15 %
+     der Füllzeit sagt es die Prüfliste. */
+  const lead = flow.gates.find(r => !G.isFollower(g, r.id));
+  const vor = g.nodes[g.nodes[lead.id].parent];
+  g.nodes[vor.id].mirror = false;
+  const br = g.nodes[vor.parent];
+  if (br.mirror !== undefined) br.mirror = false;
+  G.setPos(g, lead.id, [lead.node.pos[0] - 500, lead.node.pos[1], lead.node.pos[2] + 400]);
+  F.applyAutoGates(g, proc);
+  const net2 = sampleNetwork(g);
+  const flow2 = F.analyseFlow(g, net2, proc);
+  const far = flow2.gates.find(r => r.id === lead.id), near = flow2.gates.find(r => r.id !== lead.id);
+  assert.ok(far.tArrive > near.tArrive + 1e-3, 'der weite Anschnitt kommt später: ' + far.tArrive + ' > ' + near.tArrive);
+  const late = checkRules(g, net2, flow2, proc).find(r => /nacheinander erreicht/.test(r.title));
+  assert.ok(late, 'die Prüfliste benennt es');
+  assert.match(late.text, /ms/);
+});
+
 test('Kurve: ein Übergang über die ganze Länge beginnt mit dem Zulaufquerschnitt', () => {
   /* „Über die ganze Länge" und „Fächer" haben keinen Laufkanalabschnitt
      vor dem Übergang. Die Kante begann dann mit dem Kanalmaß des

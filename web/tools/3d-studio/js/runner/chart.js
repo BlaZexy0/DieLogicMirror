@@ -61,7 +61,7 @@ export function flowChart(g, net, flow, opts = {}) {
     }
   });
   const maxDist = Math.max(...Object.values(dist), 1);
-  const H = padT + padB + rows * 58;
+  const H = padT + padB + rows * 66;
   const X = d => padL + (W - padL - padR) * (d / maxDist);
   const Y = r => padT + (r + 0.5) * (H - padT - padB) / rows;
 
@@ -87,6 +87,7 @@ export function flowChart(g, net, flow, opts = {}) {
     const x = X(dist[r.id] || 0) + 10, y = Y(row[r.id]);
     placed.push({ x: x + 55, y: y - 2, w: 110 });
     placed.push({ x: x + 55, y: y + 11, w: 110 });
+    placed.push({ x: x + 55, y: y + 24, w: 110 });
   }
 
   const parts = [];
@@ -135,7 +136,12 @@ export function flowChart(g, net, flow, opts = {}) {
     }
   }
 
-  /* Anschnitte rechts beschriften */
+  /* Anschnitte rechts beschriften: Fläche und Geschwindigkeit, Soll
+     gegen Ist, und wann die Schmelze dort ankommt. Der späteste
+     Anschnitt wird rot, sobald die Spanne mehr als 15 % der Füllzeit
+     ausmacht — dieselbe Schwelle wie in der Prüfliste. */
+  const tSpan = (flow.tLast - flow.tFirst) * 1000;
+  const lateBad = gates.length > 1 && flow.fillTime > 0 && tSpan / flow.fillTime > 0.15;
   for (const r of gates) {
     const x = X(dist[r.id] || 0), y = Y(row[r.id]);
     const dev = r.ist - r.soll;
@@ -144,6 +150,11 @@ export function flowChart(g, net, flow, opts = {}) {
       + fmt(r.area, 0) + ' mm² · ' + fmt(r.v) + ' m/s</text>');
     parts.push('<text class="cl" x="' + (x + 10) + '" y="' + (y + 11) + '" fill="' + col + '">'
       + 'soll ' + fmt(r.soll * 100, 0) + ' % · ist ' + fmt(r.ist * 100, 0) + ' %</text>');
+    if (Number.isFinite(r.tArrive)) {
+      const tc = lateBad && r.tArrive >= flow.tLast - 1e-9 ? '#b42318' : '#557786';
+      parts.push('<text class="cl" x="' + (x + 10) + '" y="' + (y + 24) + '" fill="' + tc + '">'
+        + 'Ankunft ' + fmt(r.tArrive * 1000) + ' ms</text>');
+    }
   }
 
   /* Maßstab unten */

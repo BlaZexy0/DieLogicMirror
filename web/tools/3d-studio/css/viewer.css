@@ -157,7 +157,9 @@ select {
 }
 /* Der Angussdesigner hat vier Griffe für die Maus, nicht einen — als
    Zeile hintereinander liest das niemand. */
-.anguss #status { font-size: .76rem; line-height: 1.55; padding: 7px 11px; }
+/* Eine Zeile, nicht vier: die Hinweise sind Erinnerung, kein Handbuch,
+   und vier Zeilen Kasten lagen jeder Ansicht von unten im Bild. */
+.anguss #status { font-size: .72rem; line-height: 1.4; padding: 5px 10px; max-width: calc(100% - 200px); }
 .anguss #status b { color: var(--text-body); font-weight: 600; }
 #busy {
   position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
@@ -380,14 +382,31 @@ select {
 .vp-right > * { pointer-events: auto; }
 .vp-right .colorbar { position: static; pointer-events: none; }
 
+/* Das Schema füllt den Viewport. Ein Kasten in der Ecke zeigte ein
+   Sechs-Anschnitte-System als Briefmarke; hier wächst das SVG mit der
+   Fläche, Schrift eingeschlossen. Drüber liegt nur noch die Ansichtsleiste
+   nicht — die braucht man ohne Bild ohnehin nicht. */
 .chart-panel {
-  display: none; min-height: 0;
-  width: min(660px, calc(100vw - 400px)); max-height: 58vh;
-  flex-direction: column;
-  background: rgba(255,255,255,.97); border: 1px solid var(--border);
+  position: absolute; inset: 12px; z-index: 6;
+  display: none; min-height: 0; flex-direction: column;
+  background: #fff; border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: 0 6px 24px rgba(0,39,51,.14);
 }
 .chart-panel.on { display: flex; }
+.chart-body { flex: 1; display: flex; align-items: flex-start; justify-content: center; }
+.chart-body svg { width: 100%; height: 100%; max-height: 100%; }
+.chart-head { font-size: .86rem; }
+.chart-head button { font-size: 1.4rem; }
+
+/* Der Knopf zum Schema: groß genug, dass man ihn sucht und findet. */
+.chart-btn {
+  padding: .55rem 1.2rem; border: 1px solid var(--primary-deep); border-radius: 8px;
+  background: var(--primary); color: #fff; cursor: pointer;
+  font-family: var(--sans); font-size: .92rem; font-weight: 600; letter-spacing: .01em;
+  box-shadow: 0 2px 8px rgba(0,39,51,.18);
+}
+.chart-btn:hover { background: var(--primary2); }
+.chart-btn.active { background: var(--primary-deep); }
 .chart-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 7px 10px; border-bottom: 1px solid var(--border-light);
@@ -409,36 +428,18 @@ select {
 .chart-facts .fact { display: flex; gap: 7px; font-size: .78rem; padding: 0; }
 .chart-facts:empty { display: none; }
 
-.chart-body { overflow: auto; padding: 8px 10px 12px; }
+.chart-body { overflow: auto; padding: 10px 14px 12px; }
 .chart-empty { color: var(--muted); font-size: .82rem; margin: 6px 2px; }
 
 /* Der Anschnitt zeigt ins Bauteil, nicht dorthin, wo der Punkt davor
-   zufällig liegt. Der Knopf schaltet dafür einen Zielmodus scharf; im
-   scharfen Zustand ist er kein Knopf mehr, sondern eine Anweisung, und
-   sieht auch so aus: gefüllt, nicht bloß umrandet — ein blasser Rahmen
-   ging im Feld unter, und man wusste nicht, ob der Modus an ist. */
-.anguss .aim-btn { width: 100%; margin-top: 7px; }
-.anguss .pt-menu .aim-btn.armed, .anguss .pt-menu .aim-btn.armed:hover {
-  border-color: var(--primary-deep); color: #fff; background: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 140, 130, .28);
-}
-/* Gebunden ist ein Zustand, den man beim Anklicken sofort sehen muss:
-   der Punkt lässt sich nicht ziehen, und das soll nicht wie ein Fehler
-   aussehen, sondern wie eine Auskunft — mit dem Knopf, der es aufhebt. */
-.anguss .pin-state {
-  display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 5px 6px 5px 9px;
-  background: var(--pale); border: 1px solid var(--border-light); border-radius: 6px;
-  font-size: .75rem; line-height: 1.4; color: var(--primary-deep);
-}
-.anguss .pin-state.hidden { display: none; }
-.anguss .pin-state span { flex: 1; }
-.anguss .pin-state b { font-weight: 600; }
-.anguss .pin-state button { flex-shrink: 0; padding: .2rem .5rem; }
+   zufällig liegt. Gebunden wird er über seinen Pfeil im Viewport; im
+   Auswahlfeld steht nur, dass er es ist. */
 .pt-sel em.pinned { color: var(--primary-deep); font-weight: 600; }
 
-/* Der Hinweis oben im Viewport, solange der Zielmodus scharf ist:
-   zwischen Auswahlfeld und Achsenkreuz, unter der Ansichtsleiste. Der
-   Rahmen fängt keine Klicks, nur die Pille selbst (für „Abbrechen"). */
+/* Der Hinweis oben im Viewport, solange der Zielmodus scharf ist (oder
+   der Pfeil ohne Bauteil geklickt wurde): zwischen Auswahlfeld und
+   Achsenkreuz, unter der Ansichtsleiste. Der Rahmen fängt keine Klicks,
+   nur die Pille selbst (für „Abbrechen"). */
 .aim-banner {
   position: absolute; left: 340px; right: 110px; top: 56px; z-index: 4;
   display: flex; justify-content: center; pointer-events: none;

@@ -51,7 +51,8 @@ export const SELECTED_RING = '#002733';
 export const FOLLOWER_COLOR = '#b8c9cf';
 
 export function createEditor(opts) {
-  const { view, getGraph, onSelect, onChange, onHover, getRefMesh } = opts;
+  const { view, getGraph, onSelect, onChange, onHover, getRefMesh, getGateDir, onAim } = opts;
+  const redraw = () => { if (view.invalidate) view.invalidate(); };
   const dom = view.renderer.domElement;
   const group = new T.Group();
   view.scene.add(group);
@@ -105,6 +106,57 @@ export function createEditor(opts) {
   group.add(planeEdge);
 
   const handles = new Map();
+
+  /* ── Richtungspfeile der Anschnitte ──────────────────────────
+     Jeder führende Anschnitt trägt einen Pfeil in seiner Mündungsrichtung:
+     dorthin tritt die Schmelze ins Bauteil. Der Pfeil ist zugleich der
+     Griff für die Bindung ans Bauteil — ihn anklicken schaltet den
+     Zielmodus scharf, den Punkt anklicken zieht wie gewohnt. Ein Knopf im
+     Auswahlfeld täte dasselbe an einem anderen Ort; hier hängt es an der
+     Sache, um die es geht. Maße in Griff-Einheiten (eine Einheit sind
+     HANDLE_PX Bildpunkte, wie bei den Kugeln); der Pfeil beginnt außerhalb
+     der Kugel, damit beide getrennt zu treffen sind. */
+  const ARROW = { gap: 1.5, len: 3.4, tipLen: 1.5, r: 0.2, tipR: 0.62, hitR: 0.95 };
+  const along = geo => geo.rotateX(Math.PI / 2);                   // +Y → +Z
+  const arrowGeo = {
+    shaft: along(new T.CylinderGeometry(ARROW.r, ARROW.r, ARROW.len, 10)).translate(0, 0, ARROW.gap + ARROW.len / 2),
+    tip: along(new T.ConeGeometry(ARROW.tipR, ARROW.tipLen, 14)).translate(0, 0, ARROW.gap + ARROW.len + ARROW.tipLen / 2),
+    hit: along(new T.CylinderGeometry(ARROW.hitR, ARROW.hitR, ARROW.len + ARROW.tipLen + 0.4, 8))
+      .translate(0, 0, ARROW.gap + (ARROW.len + ARROW.tipLen) / 2)
+  };
+  const gateColor = (G.TYPES.gate || {}).color || '#e07b39';
+  const arrowMat = ghost(gateColor, 0.95);
+  const arrowHot = ghost('#9c4a12', 1);
+  const arrows = new Map();
+  const ZAXIS = new T.Vector3(0, 0, 1);
+  function ensureArrow(id) {
+    let a = arrows.get(id);
+    if (a) return a;
+    const grp = new T.Group();
+    const shaft = new T.Mesh(arrowGeo.shaft, arrowMat);
+    const tip = new T.Mesh(arrowGeo.tip, arrowMat);
+    const hit = new T.Mesh(arrowGeo.hit);
+    hit.visible = false;                                    // nur für den Strahl
+    hit.userData = { id, arrow: true };
+    shaft.renderOrder = tip.renderOrder = 6;
+    shaft.onBeforeRender = (renderer, scene, camera) => { grp.scale.setScalar(pixelSize(camera)); };
+    grp.add(shaft, tip, hit);
+    group.add(grp);
+    a = { grp, shaft, tip, hit };
+    arrows.set(id, a);
+    return a;
+  }
+  function heatArrow(id) {
+    for (const [k, a] of arrows) a.shaft.material = a.tip.material = (k === id ? arrowHot : arrowMat);
+  }
+  /** Weltpunkt der Pfeilspitze — für Tests und wer sonst hinzielen will. */
+  function arrowTip(id) {
+    const a = arrows.get(id);
+    if (!a) return null;
+    const p = new T.Vector3(0, 0, ARROW.gap + ARROW.len + ARROW.tipLen * 0.5);
+    return a.grp.localToWorld(p).toArray();
+  }
+
   const ray = new T.Raycaster();
   const ndc = new T.Vector2();
   const state = {
@@ -136,6 +188,19 @@ export function createEditor(opts) {
       for (const m of [h.ghost, h.solid]) m.position.set(n.pos[0], n.pos[1], n.pos[2]);
       h.solid.material = follower ? matFollow : (mats[n.type] || mats.point);
       h.ghost.material = follower ? ghostFollow : (ghosts[n.type] || ghosts.point);
+      if (n.type === 'gate' && !follower) {
+        const a = ensureArrow(n.id);
+        a.grp.position.set(n.pos[0], n.pos[1], n.pos[2]);
+        const d = (getGateDir && getGateDir(n.id)) || G.chordDir(g, n);
+        const v = new T.Vector3(d[0], d[1], d[2]);
+        if (v.lengthSq() > 1e-12) a.grp.quaternion.setFromUnitVectors(ZAXIS, v.normalize());
+      }
+    }
+    for (const [id, a] of arrows) {
+      const n = g.nodes[id];
+      if (n && n.type === 'gate' && !G.isFollower(g, id)) continue;
+      group.remove(a.grp);
+      arrows.delete(id);
     }
     const sel = state.selected && g.nodes[state.selected];
     for (const r of rings) {
@@ -149,6 +214,11 @@ export function createEditor(opts) {
       handles.delete(id);
     }
     updatePlane();
+    /* Der Strahl liest Weltmatrizen; die schreibt sonst erst der
+       Renderer vor dem nächsten Bild — und mit Zeichnen auf Abruf
+       kommt das nicht mehr sechzigmal je Sekunde. */
+    group.updateMatrixWorld(true);
+    redraw();
   }
 
   const pixelSize = camera => {
@@ -167,10 +237,13 @@ export function createEditor(opts) {
        ein 90-mm-Quadrat um einen 12 mm breiten Anschnitt ist eine
        Fläche im Bild, die niemand braucht. */
     const size = Math.max(24, n.w * 3);
-    planeMesh.geometry.dispose();
-    planeMesh.geometry = new T.PlaneGeometry(size, size);
-    planeEdge.geometry.dispose();
-    planeEdge.geometry = new T.EdgesGeometry(planeMesh.geometry);
+    if (Math.abs(size - planeMesh.userData.size) > 1e-9) {
+      planeMesh.geometry.dispose();
+      planeMesh.geometry = new T.PlaneGeometry(size, size);
+      planeEdge.geometry.dispose();
+      planeEdge.geometry = new T.EdgesGeometry(planeMesh.geometry);
+      planeMesh.userData.size = size;
+    }
     const q = new T.Quaternion().setFromUnitVectors(
       new T.Vector3(0, 0, 1), new T.Vector3(nrm[0], nrm[1], nrm[2]));
     for (const m of [planeMesh, planeEdge]) {
@@ -187,11 +260,15 @@ export function createEditor(opts) {
     ray.setFromCamera(ndc, view.camera);
   }
 
+  /* Was unter dem Zeiger liegt: { id } für eine Kugel, { id, arrow } für
+     einen Pfeil — das Nächste gewinnt. */
   function pick(ev) {
     castFrom(ev);
-    const list = [...handles.values()].map(h => h.solid).filter(h => !h.userData.follower);
+    const list = [];
+    for (const h of handles.values()) if (!h.solid.userData.follower) list.push(h.solid);
+    for (const a of arrows.values()) list.push(a.hit);
     const hits = ray.intersectObjects(list, false);
-    return hits.length ? hits[0].object.userData.id : null;
+    return hits.length ? hits[0].object.userData : null;
   }
 
   /* ── Mündung ans Bauteil ──────────────────────────────────────
@@ -298,11 +375,11 @@ export function createEditor(opts) {
   group.add(aimMark);
 
   function showAimMark(hit) {
-    if (!hit) { aimMark.visible = false; return; }
+    if (!hit) { if (aimMark.visible) { aimMark.visible = false; redraw(); } return; }
     aimMark.position.set(hit.point[0], hit.point[1], hit.point[2]);
-    aimMark.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1),
-      new T.Vector3(hit.dir[0], hit.dir[1], hit.dir[2]));
+    aimMark.quaternion.setFromUnitVectors(ZAXIS, new T.Vector3(hit.dir[0], hit.dir[1], hit.dir[2]));
     aimMark.visible = true;
+    redraw();
   }
 
   const raf = typeof requestAnimationFrame === 'function'
@@ -389,22 +466,22 @@ export function createEditor(opts) {
       return;
     }
     if (!state.enabled || ev.button !== 0 || ev.shiftKey) return;
-    const id = pick(ev);
-    if (!id) return;
+    const hit = pick(ev);
+    if (!hit) return;
     ev.stopPropagation();
     ev.preventDefault();
+    const id = hit.id;
     select(id);
+    /* Der Pfeil: nicht ziehen, sondern zielen. */
+    if (hit.arrow) { if (onAim) onAim(id); return; }
     const g = getGraph();
     const node = g.nodes[id];
-    /* Ein ans Bauteil gebundener Anschnitt lässt sich anklicken, aber
-       nicht ziehen: er sitzt dort, wo er hingesetzt wurde. Wer ihn
-       verschieben will, löst die Bindung im Auswahlfeld. */
-    if (node.aim) return;
     const start = planePoint(ev, node, ev.altKey);
     if (!start) return;
     state.drag = {
       id, alt: ev.altKey,
-      grab: start.clone().sub(new T.Vector3(...node.pos))
+      grab: start.clone().sub(new T.Vector3(...node.pos)),
+      last: null, raf: 0
     };
     view.controls.enabled = false;
     /* Kann bei einem bereits wieder losgelassenen Zeiger werfen — dann
@@ -412,27 +489,44 @@ export function createEditor(opts) {
     try { dom.setPointerCapture(ev.pointerId); } catch { /* s. o. */ }
   }
 
+  /* Ein Zug wird höchstens einmal je Bild angewandt. Eine Maus meldet
+     sich hundert- bis tausendmal je Sekunde, und jede Meldung ließ die
+     ganze Kette laufen — Abtasten, Sweep, Strömung, Regeln, rund 15 ms.
+     Die Meldungen stauten sich, und der Griff hing dem Zeiger hinterher.
+     Jetzt zählt nur der letzte Zeigerort vor dem nächsten Bild. */
+  function applyDrag() {
+    const d = state.drag;
+    if (!d) return;
+    d.raf = 0;
+    if (!d.last) return;
+    const g = getGraph();
+    const node = g.nodes[d.id];
+    if (!node) return;
+    const p = planePoint(d.last, node, d.alt);
+    d.last = null;
+    if (!p) return;
+    const target = p.clone().sub(d.grab);
+    if (d.alt) G.setPos(g, node.id, [target.x, target.y, target.z]);
+    else G.moveInPlane(g, node.id, [target.x, target.y, target.z]);
+    onChange('drag');
+  }
+
   function onMove(ev) {
     if (state.aim) { aimHover(ev); return; }
     if (state.drag) {
-      const g = getGraph();
-      const node = g.nodes[state.drag.id];
-      if (!node) return;
-      const p = planePoint(ev, node, state.drag.alt);
-      if (!p) return;
-      const target = p.clone().sub(state.drag.grab);
-      if (state.drag.alt) G.setPos(g, node.id, [target.x, target.y, target.z]);
-      else G.moveInPlane(g, node.id, [target.x, target.y, target.z]);
-      onChange('drag');
+      state.drag.last = { clientX: ev.clientX, clientY: ev.clientY };
+      if (!state.drag.raf) state.drag.raf = raf(applyDrag);
       return;
     }
     if (!state.enabled) return;
-    const id = pick(ev);
-    if (id !== state.hover) {
-      state.hover = id;
-      const n = id && getGraph().nodes[id];
-      dom.style.cursor = !id ? '' : (n && n.aim ? 'pointer' : 'grab');   // gebunden: wählbar, nicht greifbar
-      if (onHover) onHover(id);
+    const hit = pick(ev);
+    const key = hit ? hit.id + (hit.arrow ? ':pfeil' : '') : null;
+    if (key !== state.hover) {
+      state.hover = key;
+      dom.style.cursor = !hit ? '' : (hit.arrow ? 'crosshair' : 'grab');
+      heatArrow(hit && hit.arrow ? hit.id : null);
+      redraw();
+      if (onHover) onHover(hit ? hit.id : null);
     }
   }
 
@@ -449,6 +543,8 @@ export function createEditor(opts) {
       return;
     }
     if (!state.drag) return;
+    /* Den letzten Zeigerort nicht verschenken. */
+    if (state.drag.last) applyDrag();
     const id = state.drag.id;
     state.drag = null;
     view.controls.enabled = true;
@@ -462,13 +558,19 @@ export function createEditor(opts) {
     if (onSelect) onSelect(id);
   }
 
+  /** Was der Klick auf den Pfeil tut — auch ohne Pfeil aufrufbar. */
+  function aimFor(id) {
+    select(id);
+    if (onAim) onAim(id);
+  }
+
   dom.addEventListener('pointerdown', onDown, true);
   dom.addEventListener('pointermove', onMove);
   dom.addEventListener('pointerup', onUp);
   dom.addEventListener('pointercancel', onUp);
 
   return {
-    refresh, select, group, armAim, cancelAim, pickRef,
+    refresh, select, group, armAim, cancelAim, pickRef, aimFor, arrowTip,
     get aiming() { return !!state.aim; },
     get aimMark() { return aimMark.visible ? aimMark.position.toArray() : null; },
     get selected() { return state.selected; },

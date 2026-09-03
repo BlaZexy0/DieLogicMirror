@@ -46,7 +46,16 @@ export function initScene(container, opts = {}) {
        liegt dann im Dunkeln. Ein Licht, das mit der Kamera wandert
        (leicht nach oben und zur Seite versetzt, damit es nicht flach
        wird), beleuchtet immer das, was man gerade ansieht. */
-    headlight = false
+    headlight = false,
+    /* Nur zeichnen, wenn sich etwas geändert hat. Eine Schleife, die
+       sechzigmal je Sekunde ein durchscheinendes Bauteil mit einer
+       Million Dreiecken zeichnet, macht die ganze Seite zäh — auch die
+       Felder in der Seitenleiste, die damit gar nichts zu tun haben.
+       Zeigergeräte, Rad, Größenänderung und die Ansichtsfunktionen
+       melden sich selbst; die Seite ruft api.invalidate() nach jeder
+       Änderung an der Szene. Als Netz darunter wird ohnehin viermal je
+       Sekunde gezeichnet, damit eine vergessene Meldung nichts einfriert. */
+    renderOnDemand = false
   } = opts;
 
   const renderer = new T.WebGLRenderer({ antialias: true });
@@ -62,7 +71,8 @@ export function initScene(container, opts = {}) {
   const ortho = new T.OrthographicCamera(-1, 1, 1, -1, -40000, 40000);
   ortho.position.copy(persp.position);
 
-  const api = { scene, renderer, camera: persp, projection: 'persp' };
+  let dirty = true, lastFrame = 0;
+  const api = { scene, renderer, camera: persp, projection: 'persp', invalidate: () => { dirty = true; } };
 
   const controls = orbit === 'trackball'
     ? new TrackballControls(persp, renderer.domElement)
@@ -137,10 +147,21 @@ export function initScene(container, opts = {}) {
     persp.updateProjectionMatrix();
     applyOrthoFrustum();
   }
-  new ResizeObserver(resize).observe(container);
+  new ResizeObserver(() => { resize(); dirty = true; }).observe(container);
   resize();
 
-  renderer.setAnimationLoop(() => {
+  if (renderOnDemand) {
+    const el = renderer.domElement;
+    el.addEventListener('pointerdown', api.invalidate);
+    el.addEventListener('pointerup', api.invalidate);
+    el.addEventListener('pointermove', e => { if (e.buttons) dirty = true; });
+    el.addEventListener('wheel', api.invalidate, { passive: true });
+  }
+
+  renderer.setAnimationLoop(now => {
+    if (renderOnDemand && !dirty && now - lastFrame < 250) return;
+    dirty = false;
+    lastFrame = now;
     controls.update();
     aimHeadlight();
     renderer.render(scene, api.camera);
@@ -171,6 +192,7 @@ export function initScene(container, opts = {}) {
     api.projection = kind;
     controls.object = api.camera;
     controls.update();
+    dirty = true;
     return kind;
   }
 
@@ -192,6 +214,7 @@ export function initScene(container, opts = {}) {
     if (controls.resetUp) controls.resetUp();
     cam.lookAt(controls.target);
     controls.update();
+    dirty = true;
     return last;
   }
 
@@ -222,6 +245,7 @@ export function initScene(container, opts = {}) {
     applyOrthoFrustum();
     controls.minDistance = radius / 20;
     controls.maxDistance = radius * 40;
+    dirty = true;
     if (grid) {
       /* Das Raster mitwachsen lassen — sonst liegt es bei einem großen
          Bauteil als Briefmarke darunter und bei einem kleinen bis zum
