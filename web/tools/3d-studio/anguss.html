@@ -154,7 +154,7 @@
       <div class="pt-menu-title">Auswahl</div>
       <div class="pt-sel" id="pt-sel">Kein Punkt gewählt</div>
         <div id="sel-block" class="disabled">
-          <div class="row">
+          <div class="row pos">
             <span>Lage</span>
             <div class="triple">
               <input type="text" id="sel-x" inputmode="decimal" value="0" spellcheck="false" title="X">
@@ -239,6 +239,12 @@
               <span title="Wie der Querschnitt vom Kanal auf den Anschnitt übergeht.">Übergang</span>
               <select id="sel-gtrans"></select>
             </div>
+            <button type="button" id="gate-aim" class="aim-btn"
+              title="Eine Stelle auf dem Referenzbauteil anklicken: der Anschnitt rückt dorthin und mündet senkrecht in die Wand. Diese Richtung bleibt dann fest, auch wenn der Punkt davor wandert.">Mündung ans Bauteil setzen</button>
+            <div class="loaded-file hidden" id="gate-aim-state">
+              <span id="gate-aim-note">Richtung ans Bauteil gebunden</span>
+              <button type="button" id="gate-aim-clear" title="Bindung lösen — die Richtung folgt wieder dem Punkt davor">×</button>
+            </div>
           </div>
           <div class="facts" id="sel-facts"></div>
         </div>
@@ -265,6 +271,12 @@
       <div><b>Rechte Maustaste:</b> verschieben &nbsp;·&nbsp; <b>Rad:</b> zoomen</div>
     </div>
     <div class="drop-hint">Angussdatei (JSON) oder Referenzteil (STL/GLB) hier ablegen</div>
+    <div class="aim-banner hidden" id="aim-banner">
+      <div class="aim-pill">
+        <span id="aim-text">Mündung ans Bauteil: eine Stelle auf dem Bauteil anklicken. Ziehen dreht die Ansicht, Esc bricht ab.</span>
+        <button type="button" id="aim-cancel">Abbrechen</button>
+      </div>
+    </div>
   </div>
 </div>
 

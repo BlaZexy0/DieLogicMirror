@@ -71,8 +71,13 @@ view.scene.add(group);
 /* Fast ohne Metallanteil: ohne Umgebungskarte hat ein metallisches
    Material nichts zu spiegeln — es wird nur dunkel, wo kein Licht
    hinfällt. */
+/* flatShading lässt den Shader die Flächennormale selbst ableiten. Bei
+   einer Dreieckssuppe ohne geteilte Ecken lieferte computeVertexNormals
+   ohnehin nur die Flächennormale — nur eben als 2,2 MB großes Attribut,
+   das bei jedem Mauszug neu gerechnet und hochgeladen wurde. */
 const runnerMat = new T.MeshStandardMaterial({
-  color: 0x008c82, roughness: 0.52, metalness: 0.04, side: T.DoubleSide
+  color: 0x008c82, roughness: 0.52, metalness: 0.04, side: T.DoubleSide,
+  flatShading: true
 });
 const runnerMesh = new T.Mesh(new T.BufferGeometry(), runnerMat);
 group.add(runnerMesh);
@@ -99,7 +104,8 @@ group.add(refMesh);
 const editor = createEditor({
   view,
   getGraph: () => state.graph,
-  onSelect: () => syncSelection(),
+  getRefMesh: () => refMesh,
+  onSelect: () => { cancelAim(); syncSelection(); },
   onChange: (what) => {
     rebuild();
     if (what === 'drop') syncSelection();
@@ -123,13 +129,22 @@ function rebuild() {
   updatePointMenu();
 }
 
+/* Während eines Zuges ändert sich die GRÖSSE des Netzes nicht — nur die
+   Werte. Dann wird in den vorhandenen Puffer geschrieben statt Geometrie,
+   Attribut und Hüllkugel jedes Mal neu anzulegen. */
 function updateRunner() {
-  const geo = new T.BufferGeometry();
-  geo.setAttribute('position',
-    new T.BufferAttribute(Float32Array.from(sweepRunner(state.net)), 3));
-  geo.computeVertexNormals();
-  runnerMesh.geometry.dispose();
-  runnerMesh.geometry = geo;
+  const tris = sweepRunner(state.net);
+  const attr = runnerMesh.geometry.getAttribute('position');
+  if (attr && attr.array.length === tris.length) {
+    attr.array.set(tris);
+    attr.needsUpdate = true;
+    runnerMesh.geometry.boundingSphere = null;   // sonst friert das Culling den alten Ort ein
+  } else {
+    const geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.BufferAttribute(new Float32Array(tris), 3));
+    runnerMesh.geometry.dispose();
+    runnerMesh.geometry = geo;
+  }
   applyVisibility();
 }
 
@@ -216,6 +231,88 @@ function mountLegend() {
   $('pt-legend').innerHTML = '<div class="pt-menu-title">Punktarten</div>' + rows.join('');
 }
 
+/* ── Mündung ans Bauteil ─────────────────────────────────────
+   Ein Anschnitt, dessen Richtung aus der Sehne zum Vorgänger kommt,
+   dreht sich mit, sobald der Vorgänger wandert — beim Ausbalancieren
+   des Systems passiert das ständig. Wer stattdessen die Stelle am
+   Bauteil anklickt, legt beides auf einmal fest: den Ort der Mündung
+   und die Richtung, in der die Schmelze das Bauteil betritt. */
+/* Der scharfe Zustand muss unübersehbar sein: der Knopf füllt sich, und
+   oben im Viewport steht, was zu tun ist. Ein Zielmodus, den man nicht
+   sieht, ist einer, in dem man rätselt, warum der Klick nichts tut. */
+function aimArmed(on) {
+  $('gate-aim').classList.toggle('armed', on);
+  $('gate-aim').textContent = on ? 'Stelle am Bauteil anklicken …' : 'Mündung ans Bauteil setzen';
+  $('aim-banner').classList.toggle('hidden', !on);
+  aimBanner(false);
+}
+
+/* Ein Klick daneben bekommt eine Antwort — kurz, dann steht wieder die
+   Anweisung. Schweigen sähe aus wie ein Modus, der nicht funktioniert. */
+let missTimer = 0;
+function aimBanner(miss) {
+  clearTimeout(missTimer);
+  $('aim-banner').classList.toggle('miss', miss);
+  $('aim-text').textContent = miss
+    ? 'Daneben — die Stelle muss auf dem Bauteil liegen.'
+    : 'Mündung ans Bauteil: eine Stelle auf dem Bauteil anklicken. Ziehen dreht die Ansicht, Esc bricht ab.';
+  if (miss) missTimer = setTimeout(() => { if (editor.aiming) aimBanner(false); }, 1600);
+}
+
+function cancelAim() {
+  if (editor.cancelAim()) aimArmed(false);
+}
+
+$('gate-aim').addEventListener('click', () => {
+  const id = editor.selected;
+  const n = id && state.graph.nodes[id];
+  /* Nur ein führender Anschnitt darf gebunden werden — der Knopf steht
+     zwar nur in dessen Block, aber die Auswahl kann sich zwischen Klick
+     und Treffer nicht mehr ändern, wenn sie hier festgehalten wird. */
+  if (!n || n.type !== 'gate' || G.isFollower(state.graph, id) || !refMesh.visible) return;
+  /* Schon scharf: bleibt scharf. Kein Umschalter — abgebrochen wird mit
+     Esc, mit „Abbrechen" im Hinweis oder durch eine andere Auswahl. */
+  if (editor.aiming) { aimBanner(false); return; }
+  aimArmed(true);
+  editor.armAim({
+    /* Die Arbeitsebene des Anschnitts, jedes Mal frisch: ein Treffer an
+       einer aufrechten Wand wird in sie gelegt (js/runner/editor.js). */
+    plane: () => {
+      const gn = state.graph.nodes[id];
+      return gn ? { origin: gn.pos, normal: G.planeNormal(state.graph, gn) } : null;
+    },
+    onHit: hit => {
+      aimArmed(false);
+      G.aimAt(state.graph, id, hit.point, hit.dir);
+      rebuild();
+      syncSelection();
+    },
+    onMiss: () => aimBanner(true)
+  });
+});
+$('aim-cancel').addEventListener('click', () => cancelAim());
+
+$('gate-aim-clear').addEventListener('click', () => {
+  const id = editor.selected;
+  if (!id || G.isFollower(state.graph, id)) return;
+  G.clearAim(state.graph, id);
+  rebuild();
+  syncSelection();
+});
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cancelAim(); });
+
+/* Die gebundene Richtung als Text — drei Dezimalzahlen sagen niemandem
+   etwas, die nächstliegende Achse schon. */
+function dirText(d) {
+  const ax = ['X', 'Y', 'Z'];
+  let best = 0;
+  for (let i = 1; i < 3; i++) if (Math.abs(d[i]) > Math.abs(d[best])) best = i;
+  const near = Math.abs(d[best]);
+  const name = (d[best] < 0 ? '−' : '+') + ax[best];
+  return near > 0.985 ? name : 'schräg, überwiegend ' + name;
+}
+
 function syncSelection() {
   const g = state.graph;
   const id = editor.selected;
@@ -231,7 +328,9 @@ function syncSelection() {
   }
   const follower = G.isFollower(g, id);
   $('pt-sel').innerHTML = label;
-  for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) $(k).value = fmt(n.pos[i], 2);
+  /* Ein Zehntel: „−137,25" passt nicht in ein Drittel der Zeile, und auf
+     den Hundertstelmillimeter setzt niemand einen Kanalpunkt. */
+  for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) $(k).value = fmt(n.pos[i], 1);
   $('sel-w').value = fmt(n.w, 2);
   $('sel-h').value = fmt(n.h, 2);
   $('sel-roll').value = String(n.tilt[0]);
@@ -269,7 +368,19 @@ function syncSelection() {
     $('sel-gauto').checked = !!n.gate.auto;
     $('sel-gw').disabled = !!n.gate.auto;
     $('sel-gtrans').value = n.gate.transition;
-  }
+    $('gate-aim').disabled = !refMesh.visible || follower;
+    $('gate-aim').title = follower
+      ? 'Diese Seite wird nachgezogen — den Anschnitt der anderen Seite binden.'
+      : refMesh.visible
+        ? 'Eine Stelle auf dem Referenzbauteil anklicken: der Anschnitt rückt dorthin und mündet senkrecht in die Wand. Diese Richtung bleibt dann fest, auch wenn der Punkt davor wandert.'
+        : 'Dafür muss zuerst ein Referenzbauteil geladen sein.';
+    $('gate-aim-state').classList.toggle('hidden', !n.aim);
+    if (n.aim) {
+      const tilt = G.aimTilt(g, n);
+      $('gate-aim-note').textContent = 'Mündung: ' + dirText(n.aim)
+        + (tilt < 1 ? ' · in der Ebene' : ' · ' + fmt(tilt, 0) + '° aus der Ebene');
+    }
+  } else cancelAim();
 
   const na = state.net.nodeArea[id];
   const rows = [['Querschnitt', fmt(na.area, 0) + ' mm²'], ['hydr. Ø', fmt(na.dh) + ' mm']];
@@ -548,11 +659,13 @@ $('json-input').addEventListener('change', e => { if (e.target.files[0]) readAny
 $('ref-btn').addEventListener('click', () => $('ref-input').click());
 $('ref-input').addEventListener('change', e => { if (e.target.files[0]) readAny(e.target.files[0]); });
 $('ref-clear').addEventListener('click', () => {
+  cancelAim();
   refMesh.visible = false;
   refMesh.geometry.dispose();
   refMesh.geometry = new T.BufferGeometry();
   $('ref-file').classList.add('hidden');
   $('ref-input').value = '';
+  syncSelection();
 });
 
 /* Was für eine Datei das ist, entscheidet der INHALT, nicht die Endung:
@@ -613,6 +726,7 @@ function loadReference(buffer, name) {
     $('ref-note').textContent = name + ' · Volumen unbrauchbar (offenes Netz)';
   }
   $('ref-file').classList.remove('hidden');
+  syncSelection();                       // der Zielknopf braucht das Bauteil
 }
 
 for (const ev of ['dragenter', 'dragover']) {

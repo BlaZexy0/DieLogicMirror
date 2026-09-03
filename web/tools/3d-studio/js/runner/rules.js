@@ -14,6 +14,7 @@
 
 import * as G from './graph.js';
 import { ALLOYS } from './flow.js';
+import { sub, norm, len, dot } from './vec.js';
 
 /* Fenster der Anschnittgeschwindigkeit je Werkstoff, m/s. */
 const V_GATE = { al: [20, 60], mg: [30, 100], zn: [20, 50] };
@@ -193,6 +194,45 @@ export function checkRules(g, net, flow, proc) {
   add(yieldPct < 55 ? 'warn' : 'ok', 'Materialausbeute ' + fmt(yieldPct, 0) + ' %',
     'Der Anguss wiegt ' + fmt(flow.runnerVolume / 1000) + ' cm³ gegenüber ' + fmt(proc.volume, 0)
     + ' cm³ Gussvolumen. Jeder Kubikzentimeter Anguss wird eingeschmolzen und nochmal bezahlt.');
+
+  /* ── 11. Gebundene Mündung gegen die Anströmung ──
+     Eine ans Bauteil gebundene Richtung ist stärker als die Sehne: die
+     Kurve kommt in JEDEM Fall so an, notfalls mit einer Schleife. Steht
+     die Mündung quer zu der Richtung, aus der der Kanal kommt, sieht man
+     das erst an der Geometrie — hier steht es als Satz. */
+  let hook = null;
+  for (const n of G.allNodes(g)) {
+    if (n.type !== 'gate' || !n.aim || !n.parent) continue;
+    const chord = norm(sub(n.pos, g.nodes[n.parent].pos));
+    if (!len(chord)) continue;
+    const c = dot(norm(n.aim), chord);
+    if (!hook || c < hook.c) hook = { c, id: n.id };
+  }
+  if (hook && hook.c < 0.5) {
+    const deg = Math.acos(Math.max(-1, Math.min(1, hook.c))) * 180 / Math.PI;
+    add(hook.c < 0 ? 'bad' : 'warn', 'Mündung quer zur Anströmung',
+      label(g, hook.id) + ' mündet ' + fmt(deg, 0) + '° gegen die Richtung, aus der '
+      + 'der Kanal kommt' + (hook.c < 0 ? ' — der Kanal muss dafür eine Schleife schlagen. ' : '. ')
+      + 'Den Punkt davor auf die Zuströmseite legen oder eine andere Stelle am Bauteil wählen.');
+  }
+
+  /* ── 12. Gebundene Mündung aus der Trennebene heraus ──
+     Der Anschnitt liegt in der Trennebene (genauer: in seiner
+     Arbeitsebene) und kann nur in ihr ins Bauteil münden. Wer auf die
+     Deckfläche des Bauteils klickt, bekommt eine Richtung senkrecht zur
+     Ebene — die Geometrie zeigt das, gebaut werden kann es nicht. */
+  let lift = null;
+  for (const n of G.allNodes(g)) {
+    if (n.type !== 'gate' || !n.aim) continue;
+    const deg = G.aimTilt(g, n);
+    if (!lift || deg > lift.deg) lift = { deg, id: n.id };
+  }
+  if (lift && lift.deg > 30) {
+    add(lift.deg > 60 ? 'bad' : 'warn', 'Mündung aus der Trennebene',
+      label(g, lift.id) + ' mündet ' + fmt(lift.deg, 0) + '° aus seiner Arbeitsebene heraus. '
+      + 'Der Anschnitt liegt in der Trennebene und kann nur in ihr ins Bauteil münden — '
+      + 'eine Stelle an der Bauteilwand wählen, nicht auf einer Fläche in der Ebene.');
+  }
 
   return out;
 }

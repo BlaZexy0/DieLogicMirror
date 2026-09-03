@@ -323,7 +323,62 @@ wartet.
 | türkis | **Punkt** | Stützpunkt des Laufkanals mit eigenem Querschnitt. |
 | gold | **Verzweigung** | Gabelung mit Aufteilung (50:50 …) und wahlweise erzwungener Spiegelsymmetrie. |
 | violett | **Spiegelpunkt** | dasselbe fest auf 50:50, aber nur EIN Ast wird bearbeitet — der andere entsteht. |
-| orange | **Anschnitt** | Endpunkt mit Höhe, Länge, Breite und der Art des Übergangs. |
+| orange | **Anschnitt** | Endpunkt mit Höhe, Länge, Breite und der Art des Übergangs. Seine Mündung lässt sich ans Referenzbauteil binden (siehe unten). |
+
+### Mündung ans Bauteil
+
+Ein Anschnitt zeigt dorthin, wo das Bauteil ist — bei jedem anderen Punkt
+folgt die Richtung der Sehne zum Vorgänger, und beim Anschnitt ist genau
+das falsch: wer den Punkt davor verschiebt, um das System auszubalancieren,
+dreht damit die Mündung mit. Der Knopf **„Mündung ans Bauteil setzen"** im
+Auswahlfeld schaltet deshalb einen Zielmodus scharf. Der ist unübersehbar:
+der Knopf füllt sich, oben im Viewport steht, was zu tun ist, und unter dem
+Zeiger wandert eine Marke über das Bauteil — ein Ring in der
+Austrittsfläche, ein Strich in Mündungsrichtung —, die zeigt, wo der
+Anschnitt landen würde, bevor man klickt. Der nächste Klick auf das
+Bauteil legt beides auf einmal fest:
+
+- der Anschnitt **rückt an die getroffene Stelle** — seine Austrittsfläche
+  liegt damit auf der Bauteilwand, und
+- seine **Richtung wird festgehalten**: senkrecht in die Wand hinein.
+
+Diese Richtung bleibt danach stehen, was auch immer mit dem Punkt davor
+geschieht. Das × neben „Mündung: …" löst die Bindung wieder.
+
+**In der Trennebene.** Ein Anschnitt liegt in der Trennebene (genauer: in
+seiner Arbeitsebene) und kann nur in ihr ins Bauteil münden. Trifft der
+Klick eine aufrechte Wand — Normale höchstens 30° aus der Ebene —, wird
+der Treffer deshalb in die Ebene gelegt: die Richtung verliert ihren Anteil
+aus der Ebene heraus (die Entformschräge der Bauteilwand kippt den
+Anschnitt nicht aus der Trennebene), und der Ort rückt dorthin, wo die
+Wand die Ebene schneidet, nicht dorthin, wo man 40 mm darüber hingeklickt
+hat: erst auf die Ebene projiziert, dann per Strahl in der Ebene auf die
+Wand. Ein Treffer auf einer Fläche, die in der Ebene liegt (Deckfläche),
+bleibt roh; die Prüfliste meldet dann **„Mündung aus der Trennebene"** mit
+dem Winkel — so ein Anschnitt ist in einer zweiteiligen Form nicht zu
+bauen. Das Auswahlfeld sagt es ebenfalls („Mündung: −Y · 90° aus der
+Ebene" gegenüber „−X · in der Ebene").
+
+Die Normale wird nicht aus dem Wickelsinn der STL gelesen — bei
+importierten Netzen ist der unzuverlässig —, sondern so gedreht, dass sie
+vom Betrachter weg zeigt: getroffen wurde die sichtbare Seite, also führt
+der Blickstrahl an dieser Stelle ins Material. Der Strahl selbst ist
+billig (50 ms für eine halbe Million Dreiecke); die Vorschau läuft
+höchstens einmal je Bild und setzt bei riesigen Netzen aus, der Klick
+nicht.
+
+Ein Klick DANEBEN bricht den Modus nicht ab, sondern wird kurz als
+Fehlschuss benannt; Ziehen dreht wie sonst die Ansicht — man muss die
+Stelle erst suchen dürfen. Ein zweiter Druck auf den Knopf schaltet NICHT
+ab: ein Umschalter, der beim Doppeldruck stillschweigend wieder aus ist,
+sieht von außen aus wie ein Knopf, der nichts tut. Abgebrochen wird mit
+Esc, mit „Abbrechen" im Hinweis oder durch Auswahl eines anderen Punktes.
+
+Bei einem gespiegelten Ast wird die Bindung mitgespiegelt: Lage an der
+Spiegelebene, Richtung ebenso. Weil eine gebundene Richtung stärker ist
+als die Sehne — die Kurve kommt so an, notfalls mit einer Schleife —,
+meldet die Prüfliste, wenn die Mündung mehr als 60° gegen die Richtung
+steht, aus der der Kanal kommt.
 
 ### Arbeitsebene
 
@@ -393,7 +448,8 @@ weichen sie stark ab, füllt ein Anschnitt vor.
 `js/runner/rules.js` prüft die Lehrbuchregeln über die WIRKLICHE
 Geometrie: Querschnitt nimmt ab, Summe der Abgänge, Anschnitt- und
 Kanalgeschwindigkeit, Seitenverhältnis, Krümmungsradius ≥ 2·d_h,
-Entformschräge, Füllbalance, Kanal gegen Anschnitt, Materialausbeute.
+Entformschräge, Füllbalance, Kanal gegen Anschnitt, Materialausbeute,
+Mündung gegen die Anströmung, Mündung aus der Trennebene.
 Jede Meldung nennt Ort und Zahl — eine Meldung ohne Zahl hilft niemandem.
 Alle Beispiele sind ohne Beanstandung; `runner.test.mjs` prüft das.
 
@@ -539,7 +595,9 @@ die Griffe, nicht das Netz.
   bleibt die Einstellung stehen und die Seite sagt, warum. Die geladene
   Datei steht mit Namen und Volumen in einer Zeile, mit einem × zum
   Wegnehmen — die Zahl der Dreiecke interessiert hier niemanden, das ist
-  die Frage der Bauteilanalyse.
+  die Frage der Bauteilanalyse. Es ist außerdem das Ziel für die
+  **Mündung ans Bauteil** (siehe oben): ohne geladenes Bauteil ist der
+  Knopf gesperrt.
 
 
 ## Struktur

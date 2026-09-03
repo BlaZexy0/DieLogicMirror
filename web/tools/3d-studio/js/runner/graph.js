@@ -31,7 +31,7 @@
 
 import {
   add, sub, scale, addScaled, dot, cross, norm, len, rotate,
-  mirrorPoint, rad, clamp
+  mirrorPoint, mirrorDir, rad, clamp
 } from './vec.js';
 
 export const FORMAT = 'dielogic-anguss';
@@ -52,6 +52,16 @@ export const TYPES = {
   mirror: { label: 'Spiegelpunkt', color: '#9a77e8' },
   gate:   { label: 'Anschnitt', color: '#e07b39' }
 };
+
+/**
+ * Ein Anschnitt kann seine Richtung ans Bauteil binden: `aim` ist der
+ * Einheitsvektor, in dem er MÜNDEN soll — hineingesetzt, indem man einen
+ * Punkt auf dem Referenzbauteil anklickt (dann ist es dessen nach innen
+ * gerichtete Flächennormale). Ohne `aim` folgt die Richtung wie bei jedem
+ * anderen Punkt der Sehne vom Vorgänger, und genau das ist beim Anschnitt
+ * falsch: er zeigt ins Bauteil, nicht dorthin, wo zufällig der Punkt
+ * davor liegt. Wer den Vorgänger verschiebt, drehte den Anschnitt mit.
+ */
 
 /** Übergang vom Laufkanal in den Anschnitt. */
 export const TRANSITIONS = {
@@ -370,6 +380,9 @@ export function syncMirror(g, branch, leadChildId) {
        Vorzeichen, die Querneigung bleibt (Herleitung im README). */
     d.tilt = [-(s.tilt ? s.tilt[0] : 0), s.tilt ? s.tilt[1] : 0];
     d.w = s.w; d.h = s.h;
+    /* Die gebundene Richtung wird an derselben Ebene gespiegelt wie die
+       Lage — sonst zeigte die Gegenseite am Bauteil vorbei. */
+    if (s.aim) d.aim = mirrorDir(s.aim, normal); else delete d.aim;
     if (s.ratio !== undefined) d.ratio = s.ratio;
     if (s.mirror !== undefined) d.mirror = s.mirror;
     if (s.gate) d.gate = { ...s.gate };
@@ -394,13 +407,20 @@ function dropSubtree(g, id) {
   delete g.nodes[id];
 }
 
-/** Ist der Knoten nur die nachgezogene Gegenseite eines Spiegelpunktes?
-    Solche Knoten bekommen keinen Griff — man bearbeitet die andere Seite. */
+/** Ist der Knoten nur die nachgezogene Gegenseite einer Spiegelung?
+    Solche Knoten bekommen keinen Griff — man bearbeitet die andere Seite.
+
+    Gespiegelt wird an ZWEI Knotenarten: am Spiegelpunkt und an der
+    Verzweigung mit gesetztem Spiegel-Häkchen. Hier stand lange nur der
+    Spiegelpunkt — die Gegenseite einer spiegelnden VERZWEIGUNG galt
+    damit als führend: ihre Griffe fingen Klicks ab, und wer den
+    Zwilling anfasste, dessen Änderung wurde beim Nachziehen von der
+    echten Seite wieder überschrieben. */
 export function isFollower(g, id) {
   let n = g.nodes[id];
   while (n && n.parent) {
     const p = g.nodes[n.parent];
-    if (p.type === 'mirror' && n.follower) return true;
+    if (isMirrorBranch(p) && n.follower) return true;
     n = p;
   }
   return false;
@@ -438,6 +458,39 @@ export function moveInPlane(g, id, target) {
   setPos(g, id, addScaled(target, nn, -dot(sub(target, n.pos), nn)));
 }
 
+/** Anschnitt an einen Punkt des Bauteils setzen: dorthin rücken UND die
+    Mündungsrichtung festhalten. Beides gehört zusammen — ein Anschnitt,
+    der am richtigen Ort in die falsche Richtung zeigt, ist keiner. */
+export function aimAt(g, id, point, dir) {
+  const n = g.nodes[id];
+  if (!n || n.type !== 'gate') return;
+  const d = norm(dir);
+  if (!len(d)) return;
+  n.aim = d;
+  /* Auf den Hundertstelmillimeter: ein Strahl trifft auf 1e-13 genau,
+     und so stünde es dann im Feld und in der Datei. */
+  n.pos = [point[0], point[1], point[2]].map(v => Math.round(v * 100) / 100);
+  syncFrom(g, id);
+}
+
+/** Wie weit die gebundene Mündung aus der Arbeitsebene des Anschnitts
+    herauszeigt, in Grad — 0 heißt: sie liegt in der Ebene. Ein Anschnitt
+    liegt in der Trennebene und kann nur in ihr ins Bauteil münden; was
+    steiler steht, ist in einer zweiteiligen Form nicht zu bauen. */
+export function aimTilt(g, n) {
+  if (!n || !n.aim) return 0;
+  const c = Math.abs(dot(norm(n.aim), planeNormal(g, n)));
+  return Math.asin(Math.min(1, c)) * 180 / Math.PI;
+}
+
+/** Bindung lösen — die Richtung folgt wieder der Sehne vom Vorgänger. */
+export function clearAim(g, id) {
+  const n = g.nodes[id];
+  if (!n || !n.aim) return;
+  delete n.aim;
+  syncFrom(g, id);
+}
+
 export function setField(g, id, key, value) {
   const n = g.nodes[id];
   if (!n) return;
@@ -456,6 +509,7 @@ export function toJSON(g) {
     if (n.ratio !== undefined) o.ratio = n.ratio;
     if (n.mirror !== undefined) o.mirror = n.mirror;
     if (n.gate) o.gate = { ...n.gate };
+    if (n.aim) o.aim = n.aim.map(v => +v.toFixed(6));
     if (n.follower) o.follower = true;
     return o;
   });
@@ -486,6 +540,7 @@ export function fromJSON(obj) {
     if (n.ratio !== undefined) g.nodes[n.id].ratio = clamp(Number(n.ratio) || 0.5, 0.05, 0.95);
     if (n.mirror !== undefined) g.nodes[n.id].mirror = !!n.mirror;
     if (n.gate) g.nodes[n.id].gate = { h: 2, len: 4, w: 20, auto: true, transition: 'ende', ...n.gate };
+    if (Array.isArray(n.aim) && len(n.aim.map(Number))) g.nodes[n.id].aim = norm(n.aim.map(Number));
     if (n.follower) g.nodes[n.id].follower = true;
     const num = +String(n.id).replace(/\D/g, '');
     if (Number.isFinite(num)) g.seq = Math.max(g.seq, num);

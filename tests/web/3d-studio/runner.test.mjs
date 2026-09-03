@@ -175,6 +175,123 @@ test('Graph: „davor einfügen" behält die Kinderliste und die Spiegelung', ()
   assert.equal(g.nodes[m2.parent].children.length, 1);
 });
 
+test('Graph: auch die Gegenseite einer spiegelnden VERZWEIGUNG ist Folger', () => {
+  /* Der Vier-Anschnitte-Fall spiegelt zweimal über branch-Knoten mit
+     Spiegel-Häkchen — nicht über einen Spiegelpunkt. isFollower kannte
+     lange nur den Spiegelpunkt: die ganze Gegenseite galt als führend,
+     ihre Griffe fingen Klicks ab (der Zwillingsanschnitt liegt 8 mm
+     neben dem echten), und Änderungen daran wurden vom Nachziehen der
+     echten Seite kommentarlos überschrieben. */
+  const g = PRE.demoFourGates();
+  const alle = G.allNodes(g);
+  const gates = alle.filter(n => n.type === 'gate');
+  assert.equal(gates.length, 4);
+  const fuehrend = gates.filter(n => !G.isFollower(g, n.id));
+  assert.equal(fuehrend.length, 1, 'genau EIN Anschnitt ist anfassbar — alles andere entsteht');
+  assert.equal(alle.filter(n => G.isFollower(g, n.id)).length, 5,
+    'Zwilling unter b2 plus die komplette Gegenseite von b1');
+
+  /* Und aimAt bindet nur Anschnitte — wer aus Versehen einen Punkt
+     erwischt, bekommt keinen stillen Umbau. */
+  const punkt = alle.find(n => n.type === 'point');
+  G.aimAt(g, punkt.id, [0, 0, 500], [0, 0, 1]);
+  assert.equal(punkt.aim, undefined);
+  assert.notDeepEqual(punkt.pos, [0, 0, 500]);
+});
+
+test('Graph: die ans Bauteil gebundene Mündung wird mitgespiegelt', () => {
+  const g = PRE.demoTwoGates();
+  const gates = G.allNodes(g).filter(n => n.type === 'gate');
+  const lead = gates.find(n => !G.isFollower(g, n.id) && n.pos[0] < 0);
+  const follow = gates.find(n => n !== lead);
+  G.aimAt(g, lead.id, [-40, 0, 120], [-0.6, 0, 0.8]);
+
+  const l = g.nodes[lead.id], f = g.nodes[follow.id];
+  assert.deepEqual(l.pos, [-40, 0, 120], 'der Anschnitt rückt an die getroffene Stelle');
+  assert.ok(Math.abs(l.aim[0] + 0.6) < 1e-9 && Math.abs(l.aim[2] - 0.8) < 1e-9, 'Richtung normiert');
+  assert.ok(Math.abs(f.pos[0] - 40) < 1e-9, 'die Gegenseite rückt spiegelbildlich mit');
+  assert.ok(Math.abs(f.aim[0] - 0.6) < 1e-9 && Math.abs(f.aim[2] - 0.8) < 1e-9,
+    'und ihre Mündung ist an derselben Ebene gespiegelt: ' + f.aim);
+
+  /* Die Sehne dreht sie nicht mehr: der Vorgänger darf wandern. */
+  const vor = g.nodes[l.parent];
+  const t = () => {
+    const net = sampleNetwork(g);
+    const e = net.edges.find(x => x.toId === lead.id);
+    return e.sections[e.sections.length - 1].t;
+  };
+  const t0 = t().slice();
+  G.setPos(g, vor.id, [vor.pos[0] - 25, vor.pos[1], vor.pos[2] - 20]);
+  assert.ok(Math.hypot(...t().map((v, i) => v - t0[i])) < 1e-9, 'die Mündungsrichtung steht fest');
+
+  G.clearAim(g, lead.id);
+  assert.equal(g.nodes[lead.id].aim, undefined);
+  assert.equal(g.nodes[follow.id].aim, undefined, 'das Lösen geht ebenfalls mit');
+  assert.ok(Math.hypot(...t().map((v, i) => v - t0[i])) > 1e-3, 'danach folgt sie wieder der Sehne');
+});
+
+test('Regeln: eine Mündung aus der Trennebene heraus wird benannt', () => {
+  const g = PRE.demoTwoGates();
+  const lead = G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id));
+  const proc = { alloy: 'al', volume: 400, vGate: 40, fill: 40 };
+  const pruefe = () => {
+    const net = sampleNetwork(g);
+    return checkRules(g, net, F.analyseFlow(g, net, proc), proc).find(x => /Mündung aus der Trennebene/.test(x.title));
+  };
+
+  /* Senkrecht in die Ebene hinein — der Klick auf die Deckfläche. In einer
+     zweiteiligen Form ist das nicht zu bauen. */
+  G.aimAt(g, lead.id, [-40.123456, 0, 120.987654], [0, -1, 0]);
+  assert.deepEqual(g.nodes[lead.id].pos, [-40.12, 0, 120.99], 'auf den Hundertstelmillimeter gerundet');
+  assert.ok(Math.abs(G.aimTilt(g, g.nodes[lead.id]) - 90) < 1e-9, 'Winkel aus der Ebene: 90°');
+  let hit = pruefe();
+  assert.ok(hit, 'die Regel meldet sich');
+  assert.equal(hit.level, 'bad');
+  assert.match(hit.text, /90°/, 'mit dem Winkel: ' + hit.text);
+
+  /* 45°: denkbar (eine Schräge), aber zu prüfen. */
+  G.aimAt(g, lead.id, g.nodes[lead.id].pos, [-1, -1, 0]);
+  hit = pruefe();
+  assert.equal(hit && hit.level, 'warn');
+  assert.match(hit.text, /45°/);
+
+  /* In der Ebene: nichts zu sagen. */
+  G.aimAt(g, lead.id, g.nodes[lead.id].pos, [-1, 0, 0]);
+  assert.equal(G.aimTilt(g, g.nodes[lead.id]), 0);
+  assert.equal(pruefe(), undefined, 'kein Fehlalarm');
+  assert.equal(G.aimTilt(g, g.nodes[lead.parent]), 0, 'ohne Bindung: 0');
+});
+
+test('Graph: JSON hin und zurück behält die gebundene Mündung', () => {
+  const g = PRE.demoTwoGates();
+  const lead = G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id));
+  G.aimAt(g, lead.id, [-40, 0, 120], [0, 0, 3]);          // unnormiert hinein
+  const back = G.fromJSON(JSON.parse(JSON.stringify(G.toJSON(g))));
+  assert.deepEqual(back.nodes[lead.id].aim, [0, 0, 1], 'als Einheitsvektor zurück');
+});
+
+test('Regeln: eine Mündung gegen die Anströmung wird benannt', () => {
+  const g = PRE.demoTwoGates();
+  const lead = G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id));
+  const vor = g.nodes[lead.parent];
+  const zurueck = [vor.pos[0] - lead.pos[0], 0, vor.pos[2] - lead.pos[2]];
+  G.aimAt(g, lead.id, lead.pos, zurueck);                 // mündet zum Vorgänger zurück
+  const proc = { alloy: 'al', volume: 400, vGate: 40, fill: 40 };
+  const net = sampleNetwork(g);
+  const r = checkRules(g, net, F.analyseFlow(g, net, proc), proc);
+  const hit = r.find(x => /Mündung quer/.test(x.title));
+  assert.ok(hit, 'die Regel meldet sich');
+  assert.equal(hit.level, 'bad');
+  assert.match(hit.text, /1[0-9]{2}°|9[0-9]°/, 'mit dem Winkel: ' + hit.text);
+
+  /* Und sie schweigt, solange die Mündung grob in Laufrichtung zeigt. */
+  const vor2 = g.nodes[lead.parent];
+  G.aimAt(g, lead.id, lead.pos, [lead.pos[0] - vor2.pos[0], 0, lead.pos[2] - vor2.pos[2]]);
+  const net2 = sampleNetwork(g);
+  const r2 = checkRules(g, net2, F.analyseFlow(g, net2, proc), proc);
+  assert.ok(!r2.find(x => /Mündung quer/.test(x.title)), 'kein Fehlalarm');
+});
+
 test('Graph: JSON hin und zurück ergibt denselben Graphen', () => {
   for (const d of PRE.DEMOS) {
     const g = d.build();

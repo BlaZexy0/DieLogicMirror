@@ -667,6 +667,8 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.ok(d6.getElementById('bisc-block').classList.contains('hidden'));
   assert.ok(!d6.getElementById('plane-block').classList.contains('hidden'));
   assert.equal(d6.getElementById('sel-gw').disabled, true, 'automatische Breite ist gesperrt');
+  assert.equal(d6.getElementById('gate-aim').disabled, true, 'ohne Bauteil kein Ziel');
+  assert.match(d6.getElementById('gate-aim').title, /Referenzbauteil geladen/);
 
   /* Regler wirken sofort */
   const draft = d6.getElementById('draft');
@@ -708,6 +710,138 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.ok(v.refMesh.visible);
   /* Und die Kette hängt daran: mehr Volumen, mehr Strom. */
   assert.ok(v.state.flow.Q > 0);
+
+  /* Ein Griff wird mit dem ZEIGER angeklickt — durch dieselben Ereignisse
+     wie in der Seite. Hier hängt die ganze Bedienung dran; wer nur
+     editor.select() prüft, merkt nicht, wenn der Strahl auf die Griffe
+     kaputt ist. */
+  {
+    const T3 = await import('three');
+    const rootPos = v.state.graph.nodes[v.state.graph.rootId].pos;
+    v.view.camera.position.set(0, 400, 0);
+    v.view.camera.up.set(0, 0, -1);
+    v.view.camera.lookAt(0, 0, 0);
+    v.view.camera.updateMatrixWorld(true);
+    const pr = new T3.Vector3(...rootPos).project(v.view.camera);
+    const cv = v.view.renderer.domElement;
+    const at = { x: (pr.x + 1) / 2 * 800, y: (1 - pr.y) / 2 * 600 };
+    const ev = { button: 0, clientX: at.x, clientY: at.y, stopPropagation() {}, preventDefault() {} };
+    v.editor.select(null);
+    cv.dispatch('pointerdown', ev);
+    cv.dispatch('pointerup', ev);
+    assert.equal(v.editor.selected, v.state.graph.rootId, 'der Klick auf den Griff wählt den Pressrest');
+    assert.match(d6.getElementById('pt-sel').innerHTML, /Pressrest/);
+  }
+
+  /* Mündung ans Bauteil: eine Stelle am Referenzteil anklicken setzt den
+     Anschnitt dorthin UND hält seine Richtung fest. Der Klick läuft hier
+     durch dieselbe Kette wie in der Seite — Knopf, Zielmodus, Strahl auf
+     das Netz —, nur wird die Kamera von Hand gestellt, damit der Strahl
+     durch die Bildmitte die gewünschte Fläche des Würfels trifft. */
+  const g2 = Object.values(v.state.graph.nodes).find(n => n.type === 'gate');
+  v.editor.select(g2.id);
+  const aimBtn = d6.getElementById('gate-aim');
+  const banner = d6.getElementById('aim-banner');
+  assert.equal(aimBtn.disabled, false, 'mit Bauteil ist der Knopf frei');
+  assert.ok(d6.getElementById('gate-aim-state').classList.contains('hidden'), 'noch nichts gebunden');
+  assert.ok(banner.classList.contains('hidden'), 'ohne Zielmodus kein Hinweis im Viewport');
+  aimBtn.dispatch('click');
+  assert.ok(v.editor.aiming, 'der Zielmodus ist scharf');
+  assert.ok(aimBtn.classList.contains('armed'), 'und der Knopf zeigt es');
+  assert.ok(!banner.classList.contains('hidden'), 'der Viewport sagt, was zu tun ist');
+  assert.match(d6.getElementById('aim-text').textContent, /Esc/, 'und wie man ihn wieder los wird');
+
+  /* Ein zweiter Druck schaltet NICHT ab: ein Umschalter, der beim
+     Doppeldruck wieder aus ist, sieht aus wie ein Knopf, der nichts tut. */
+  aimBtn.dispatch('click');
+  assert.ok(v.editor.aiming, 'ein zweiter Druck lässt den Modus scharf');
+
+  v.view.camera.position.set(0, 400, 0);
+  v.view.camera.up.set(0, 0, -1);
+  v.view.camera.lookAt(0, 0, 0);
+  v.view.camera.updateMatrixWorld(true);
+  const canvas = v.view.renderer.domElement;
+  const zeiger = (t, x, y) => canvas.dispatch(t,
+    { button: 0, clientX: x, clientY: y, stopPropagation() {}, preventDefault() {} });
+  const klick = (x, y) => { zeiger('pointerdown', x, y); zeiger('pointerup', x, y); };
+
+  /* Daneben: kein Treffer, kein Abbruch — aber eine Antwort. */
+  klick(2, 2);
+  assert.ok(v.editor.aiming, 'ein Fehlklick lässt den Modus stehen');
+  assert.ok(banner.classList.contains('miss'), 'und wird als Fehlschuss benannt');
+  assert.match(d6.getElementById('aim-text').textContent, /Daneben/);
+
+  /* Auf dem Bauteil GEZOGEN heißt gedreht, nicht gebunden. */
+  zeiger('pointerdown', 400, 300);
+  zeiger('pointerup', 460, 340);
+  assert.ok(v.editor.aiming, 'ein Zug über das Bauteil bindet nichts');
+
+  /* Die Vorschau: unter dem Zeiger steht die Marke auf dem Bauteil. */
+  zeiger('pointermove', 400, 300);
+  await new Promise(r => setTimeout(r, 30));
+  const marke = v.editor.aimMark;
+  assert.ok(marke && Math.abs(marke[1] - 50) < 1e-6, 'die Marke sitzt auf der Deckfläche: ' + marke);
+
+  /* Erst die Wand: von +X her auf die Seitenfläche, 40 mm ÜBER der
+     Trennebene angeklickt. Der Anschnitt liegt in der Trennebene und
+     kann nur in ihr münden — also rückt er dorthin, wo die Wand die
+     Ebene schneidet, und mündet waagerecht. */
+  v.view.camera.position.set(400, 40, 0);
+  v.view.camera.up.set(0, 1, 0);
+  v.view.camera.lookAt(0, 40, 0);
+  v.view.camera.updateMatrixWorld(true);
+  klick(400, 300);
+  assert.ok(!v.editor.aiming, 'der Treffer schaltet ihn ab');
+  assert.ok(banner.classList.contains('hidden'), 'und der Hinweis ist weg');
+  let gs = v.state.graph.nodes[g2.id];
+  assert.ok(Math.abs(gs.pos[0] - 50) < 1e-6 && Math.abs(gs.pos[1]) < 1e-6 && Math.abs(gs.pos[2]) < 1e-6,
+    'der Anschnitt sitzt an der Wand IN der Trennebene, nicht 40 mm darüber: ' + gs.pos);
+  assert.ok(gs.aim[0] < -0.999 && Math.abs(gs.aim[1]) < 1e-9, 'und mündet waagerecht nach innen: ' + gs.aim);
+  assert.match(d6.getElementById('gate-aim-note').textContent, /−X · in der Ebene/);
+  assert.ok(!v.state.rules.find(r => /Trennebene/.test(r.title)), 'in der Ebene: keine Beanstandung');
+  assert.equal(d6.getElementById('sel-x').value, '50', 'die Lage steht im Feld');
+
+  /* Dann die Deckfläche von oben: die Normale steht senkrecht zur
+     Ebene, da gibt es nichts zu projizieren — der Treffer bleibt roh,
+     und die Prüfliste sagt, dass so ein Anschnitt nicht zu bauen ist. */
+  aimBtn.dispatch('click');
+  v.view.camera.position.set(0, 400, 0);
+  v.view.camera.up.set(0, 0, -1);
+  v.view.camera.lookAt(0, 0, 0);
+  v.view.camera.updateMatrixWorld(true);
+  klick(400, 300);
+  gs = v.state.graph.nodes[g2.id];
+  assert.ok(Math.abs(gs.pos[1] - 50) < 1e-6, 'der Anschnitt sitzt auf der Deckfläche: ' + gs.pos[1]);
+  assert.ok(Math.hypot(gs.pos[0], gs.pos[2]) < 1e-6, 'mittig getroffen');
+  assert.ok(gs.aim[1] < -0.999, 'und mündet nach innen, also −Y: ' + gs.aim);
+  assert.ok(!d6.getElementById('gate-aim-state').classList.contains('hidden'));
+  assert.match(d6.getElementById('gate-aim-note').textContent, /−Y · 90° aus der Ebene/);
+  const quer = v.state.rules.find(r => /Mündung aus der Trennebene/.test(r.title));
+  assert.ok(quer && quer.level === 'bad', 'die Prüfliste beanstandet es: ' + JSON.stringify(quer));
+  assert.match(quer.text, /90°/);
+
+  /* Jetzt hält die Richtung: der Punkt davor darf wandern, die letzte
+     Tangente des Anschnitts bleibt, wo sie ist. Vorher drehte sie mit. */
+  const tangente = () => {
+    const e = v.state.net.edges.find(x => x.toId === g2.id);
+    return e.sections[e.sections.length - 1].t;
+  };
+  const t0 = tangente().slice();
+  const G6 = await import('../../../web/tools/3d-studio/js/runner/graph.js');
+  const vor = v.state.graph.nodes[gs.parent];
+  G6.setPos(v.state.graph, vor.id, [vor.pos[0] + 30, vor.pos[1], vor.pos[2] + 25]);
+  v.rebuild();
+  const t1 = tangente();
+  assert.ok(Math.hypot(t1[0] - t0[0], t1[1] - t0[1], t1[2] - t0[2]) < 1e-9,
+    'die Mündungsrichtung bleibt: ' + t0 + ' → ' + t1);
+
+  /* Und das × löst die Bindung wieder — dann folgt sie wie zuvor der Sehne. */
+  d6.getElementById('gate-aim-clear').dispatch('click');
+  assert.ok(!v.state.graph.nodes[g2.id].aim, 'die Bindung ist weg');
+  const t2 = tangente();
+  assert.ok(Math.hypot(t2[0] - t0[0], t2[1] - t0[1], t2[2] - t0[2]) > 1e-3,
+    'ohne Bindung zeigt sie wieder zum Vorgänger');
+  assert.ok(!v.state.rules.find(r => /Trennebene/.test(r.title)), 'und die Beanstandung mit ihr');
 
   /* Ein unbrauchbares Netz ändert das Gussvolumen nicht. */
   const flach = writeSTL6(new Float64Array(9), 'leer');

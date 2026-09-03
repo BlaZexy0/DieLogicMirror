@@ -327,6 +327,9 @@ select {
 /* Engere Fassung der Seitenleisten-Zeilen. */
 .pt-menu .row { padding: 2px 0; font-size: .8rem; gap: 8px; }
 .pt-menu .row > span:first-child { width: 86px; font-size: .79rem; }
+/* „Lage" ist kurz, die drei Felder dahinter sind es nicht: „−137,3"
+   passte in ein Drittel der Restbreite nicht hinein und wurde beschnitten. */
+.pt-menu .row.pos > span:first-child { width: 44px; }
 .pt-menu .row .val { width: 38px; font-size: .74rem; }
 .pt-menu label.inline { padding: 3px 0; font-size: .79rem; }
 .pt-menu .facts { margin-top: 7px; padding-top: 5px; }
@@ -408,3 +411,42 @@ select {
 
 .chart-body { overflow: auto; padding: 8px 10px 12px; }
 .chart-empty { color: var(--muted); font-size: .82rem; margin: 6px 2px; }
+
+/* Der Anschnitt zeigt ins Bauteil, nicht dorthin, wo der Punkt davor
+   zufällig liegt. Der Knopf schaltet dafür einen Zielmodus scharf; im
+   scharfen Zustand ist er kein Knopf mehr, sondern eine Anweisung, und
+   sieht auch so aus: gefüllt, nicht bloß umrandet — ein blasser Rahmen
+   ging im Feld unter, und man wusste nicht, ob der Modus an ist. */
+.anguss .aim-btn { width: 100%; margin-top: 7px; }
+.anguss .pt-menu .aim-btn.armed, .anguss .pt-menu .aim-btn.armed:hover {
+  border-color: var(--primary-deep); color: #fff; background: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 140, 130, .28);
+}
+.anguss #gate-aim-state { margin-top: 6px; }
+.anguss #gate-aim-state span { color: var(--primary); }
+
+/* Der Hinweis oben im Viewport, solange der Zielmodus scharf ist:
+   zwischen Auswahlfeld und Achsenkreuz, unter der Ansichtsleiste. Der
+   Rahmen fängt keine Klicks, nur die Pille selbst (für „Abbrechen"). */
+.aim-banner {
+  position: absolute; left: 340px; right: 110px; top: 56px; z-index: 4;
+  display: flex; justify-content: center; pointer-events: none;
+}
+.aim-banner.hidden { display: none; }      /* steht hinter .hidden und gewänne sonst */
+.aim-banner .aim-pill {
+  display: flex; align-items: center; gap: 12px; padding: 7px 8px 7px 13px;
+  background: var(--primary); color: #fff; border-radius: 8px; font-size: .8rem;
+  box-shadow: 0 2px 10px rgba(0, 39, 51, .28); pointer-events: auto; max-width: 100%;
+}
+.aim-banner.miss .aim-pill { background: var(--bad); }
+.aim-banner button {
+  padding: .22rem .55rem; border: 1px solid rgba(255,255,255,.55); border-radius: 6px;
+  background: rgba(255,255,255,.14); color: #fff; cursor: pointer;
+  font-family: var(--sans); font-size: .76rem; white-space: nowrap;
+}
+.aim-banner button:hover { background: rgba(255,255,255,.28); }
+
+/* Das Auswahlfeld darf nicht bis in die Bedienhinweise unten hineinragen —
+   mit Anschnittfeldern und gebundener Mündung ist es lang genug, dass es
+   auf einem 900 px hohen Fenster genau das tat. Dann scrollt es eben. */
+.anguss .pt-menu { max-height: calc(100% - 118px); }

@@ -73,6 +73,12 @@ export function section(w, h, draftDeg, radius) {
 
 /** Umriss als flaches Feld [x0,y0, x1,y1, …] mit POINTS Punkten. */
 export function outline(sec) {
+  /* Der Umriss hängt nur von den Maßen des Schnitts ab, und die stehen
+     nach section() fest — er wird darum am Schnitt selbst gemerkt. Ohne
+     das rechnete jeder Abtastschritt ihn dreimal (Fläche, Umfang übers
+     hydraulische Maß) und der Sweep ein viertes Mal: zusammen war das
+     der größte Einzelposten der ganzen Kette bei jedem Mauszug. */
+  if (sec._outline) return sec._outline;
   const { halfTop, depth, r, cb, cosA, sinA } = sec;
   const out = new Float64Array(POINTS * 2);
   let k = 0;
@@ -107,6 +113,7 @@ export function outline(sec) {
   for (let i = 0; i < N_TOP; i++) {                         // Trennebene links → rechts
     push(-halfTop + 2 * halfTop * (i / N_TOP), 0);
   }
+  sec._outline = out;
   return out;
 }
 
@@ -134,6 +141,9 @@ export function perimeter(sec) {
 
 /** Hydraulischer Durchmesser 4A/U — Bezugslänge aller Verlustbeiwerte. */
 export const hydraulic = sec => 4 * area(sec) / Math.max(perimeter(sec), 1e-9);
+
+/* Wer den Umriss von außen verändert (das tut niemand — aber Tests
+   könnten), muss sec._outline löschen; section() legt ihn nie an. */
 
 /** Die Umkehrung: Breite und Tiefe zu einer Zielfläche bei gegebenem
     Seitenverhältnis h/w. Die Fläche wächst fast quadratisch mit der

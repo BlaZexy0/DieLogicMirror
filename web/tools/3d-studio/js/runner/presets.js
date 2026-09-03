@@ -53,7 +53,11 @@ export function demoFourGates() {
   const b1 = mk(g, p1, 'branch', [0, 0, 108]);
   const m = mk(g, b1, 'point', [-52, 0, 170]);
   const b2 = mk(g, m, 'branch', [-92, 0, 212]);
-  mk(g, b2, 'gate', [-128, 0, 244], { gate: { ...GATE, h: 1.8 } });
+  /* Deutlich seitlich der Zulaufrichtung: der gespiegelte Zwilling landet
+     auf der ANDEREN Seite davon. Mit dem alten, fast geraden Abgang lagen
+     beide Anschnitte 8 mm auseinander — zwei Kanäle, die sich fast ganz
+     durchdrangen und wie einer aussahen. */
+  mk(g, b2, 'gate', [-137, 0, 230], { gate: { ...GATE, h: 1.8 } });
   return finish(g);
 }
 

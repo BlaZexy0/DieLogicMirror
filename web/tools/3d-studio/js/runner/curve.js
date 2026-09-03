@@ -44,6 +44,9 @@ function outDir(g, n, child) {
 
 function inDir(g, child, parent) {
   const chord = norm(sub(child.pos, parent.pos));
+  /* Ein an das Bauteil gebundener Anschnitt mündet in SEINER Richtung,
+     ganz gleich, wo der Punkt davor liegt. */
+  if (child.aim && len(child.aim)) return norm(child.aim);
   const kids = G.childrenOf(g, child.id);
   if (!kids.length) return chord;                       // Anschnitt: gerade hinein
   if (kids.length === 1) {
@@ -64,22 +67,24 @@ export function hermite(g, from, to) {
   const m0 = scale(outDir(g, from, to), k);
   const m1 = scale(inDir(g, to, from), k);
   const P0 = from.pos, P1 = to.pos;
+  /* Ausgeschrieben statt über [0,1,2].map: die Kurve wird je Mauszug
+     einige tausend Mal ausgewertet, und drei Closures samt Hilfsfeld je
+     Aufruf waren der teuerste Posten der ganzen Abtastung. */
+  const mix = (a, b, c, d) => [
+    a * P0[0] + b * m0[0] + c * P1[0] + d * m1[0],
+    a * P0[1] + b * m0[1] + c * P1[1] + d * m1[1],
+    a * P0[2] + b * m0[2] + c * P1[2] + d * m1[2]
+  ];
   return {
     at: t => {
       const t2 = t * t, t3 = t2 * t;
-      const h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t;
-      const h01 = -2 * t3 + 3 * t2, h11 = t3 - t2;
-      return [0, 1, 2].map(i => h00 * P0[i] + h10 * m0[i] + h01 * P1[i] + h11 * m1[i]);
+      return mix(2 * t3 - 3 * t2 + 1, t3 - 2 * t2 + t, -2 * t3 + 3 * t2, t3 - t2);
     },
     d1: t => {
       const t2 = t * t;
-      const a = 6 * t2 - 6 * t, b = 3 * t2 - 4 * t + 1, c = -6 * t2 + 6 * t, d = 3 * t2 - 2 * t;
-      return [0, 1, 2].map(i => a * P0[i] + b * m0[i] + c * P1[i] + d * m1[i]);
+      return mix(6 * t2 - 6 * t, 3 * t2 - 4 * t + 1, -6 * t2 + 6 * t, 3 * t2 - 2 * t);
     },
-    d2: t => {
-      const a = 12 * t - 6, b = 6 * t - 4, c = -12 * t + 6, d = 6 * t - 2;
-      return [0, 1, 2].map(i => a * P0[i] + b * m0[i] + c * P1[i] + d * m1[i]);
-    }
+    d2: t => mix(12 * t - 6, 6 * t - 4, -12 * t + 6, 6 * t - 2)
   };
 }
 

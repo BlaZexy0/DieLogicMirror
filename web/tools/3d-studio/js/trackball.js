@@ -87,7 +87,9 @@ export class TrackballControls {
     }
     this._mode = (e.button === 0 && !e.shiftKey) ? ROTATE : PAN;
     this._last = { x: e.clientX, y: e.clientY };
-    if (this.domElement.setPointerCapture) this.domElement.setPointerCapture(e.pointerId);
+    /* Ein nicht mehr aktiver Zeiger lässt den Fang werfen — dann dreht
+       die Ansicht eben ohne Fang weiter, statt gar nicht. */
+    try { this.domElement.setPointerCapture(e.pointerId); } catch { /* s. o. */ }
   }
 
   _move(e) {
