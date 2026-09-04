@@ -191,10 +191,19 @@ negativ). Zwei Durchgänge:
    (Punkt-Dreieck nach Ericson) in die Rasterpunkte seiner um `band`
    aufgeweiteten Bounding-Box ein. Eine untere Schranke über die Box
    spart den teuren Test fast überall. Außerhalb des Bandes bleibt der
-   Wert bei ±band stehen — das hält Speicher und Rechenzeit im Rahmen.
+   Wert nach außen bei +band stehen — das hält Speicher und Rechenzeit
+   im Rahmen.
+3. **Der Kern** — nach innen gibt es keine solche Grenze: der Abstand
+   kann nie größer werden als die halbe Dicke, und genau dieses Maximum
+   ist die Zahl, um die es bei der Wandstärke geht. Zellen jenseits des
+   Bandes bekommen deshalb ihren Abstand aus einer exakten euklidischen
+   Distanztransformation der Innen/Außen-Maske (Felzenszwalb &
+   Huttenlocher, trennbar, O(N)) — auf eine halbe Zelle genau; nahe der
+   Oberfläche bleibt der exakt gestempelte Wert. Das Feld ist innen
+   immer vollständig, ein abgeschnittener Kern kommt nicht mehr vor.
 
-**Auflösung** (Zellen entlang der längsten Kante) und **Bandbreite**
-stehen als Regler daneben; was sie kosten werden — Zellgröße,
+**Auflösung** (Zellen entlang der längsten Kante) und **Bandbreite
+außen** stehen als Regler daneben; was sie kosten werden — Zellgröße,
 Rasterabmessungen, Punktzahl, Speicher — steht *vor* dem Rechnen in den
 Kennzahlen. Gerechnet wird erst auf „Feld berechnen".
 
@@ -207,10 +216,13 @@ zwischen den vier angrenzenden Zellpunkten. Gegenüber Marching Cubes
 braucht das keine 256-Zeilen-Tabelle, liefert gleichmäßigere Dreiecke und
 ist geschlossen und mannigfaltig.
 
-Das **Aufmaß** hat einen Regler von −20 bis +40 mm und daneben ein Feld
-für die Zahl (`+10`, `-10`, `−10`, `1,5` und `1.5` gelten alle; auch
-jenseits des Reglers, der bleibt dann an seinem Ende stehen). Beide
-zeigen denselben Wert. Solange er in der Bandbreite liegt, kostet ein
+Das **Aufmaß** hat einen Regler und daneben ein Feld für die Zahl
+(`+10`, `-10`, `−10`, `1,5` und `1.5` gelten alle; nach oben auch
+jenseits des Reglers, der bleibt dann an seinem Ende stehen). Nach innen
+endet der Regler an der **dicksten Stelle** — tiefer gibt es nichts
+mehr, was eine Fläche gleichen Abstands haben könnte; auch die Zahl
+wird dort festgehalten. Nach oben reicht er bis +40 mm. Beide zeigen
+denselben Wert. Solange er in der Bandbreite liegt, kostet ein
 anderer Wert nur das Ableiten — Millisekunden, kein neues Feld; am
 Regler wird höchstens einmal je Bild abgeleitet. Verlangt es mehr, zieht
 die Bandbreite automatisch mit und die Seite bittet um ein neues Feld.
@@ -275,10 +287,11 @@ ist die Kugelprobe selbst, ihr Durchmesser die Wandstärke — oder als
 damit er auch im deckenden Bauteil zu sehen ist. Der Regler „ab" lässt
 nur Stellen ab einem Anteil der größten Wandstärke zu, und eine Stelle,
 die in der Kugel einer stärkeren liegt, fällt weg — sonst säumten
-Dutzende Punkte jeden Grat. Ein Kern, der auf −band steht, bekommt keine
-Marke, sondern den Hinweis, das Band zu erhöhen: dort weiß das Feld
-nichts über die Dicke. Die Kennzahlen nennen die Zahl der Stellen, die
-größte Wandstärke und den Ort der dicksten.
+Dutzende Punkte jeden Grat. Damit die Marken zu sehen sind, schaltet
+„Frei sichtbar" (voreingestellt an) das Bauteil durchscheinend und die
+Offsetfläche aus — sonst lagen sie im deckenden Bauteil oder hinter der
+Fläche. Die Kennzahlen nennen die Zahl der Stellen, die größte
+Wandstärke und den Ort der dicksten.
 
 ## Abstandsanalyse (`abstand.html`)
 

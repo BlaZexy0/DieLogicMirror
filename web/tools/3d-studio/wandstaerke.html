@@ -35,7 +35,6 @@
     </div>
     <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" hidden>
     <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ Eigene STL/GLB laden</button>
-    <div class="hint" id="part-note"></div>
     <div class="facts" id="model-facts"></div>
     <div class="warn-line" id="model-warn"></div>
 
@@ -46,7 +45,7 @@
       <span class="val" id="res-val"></span>
     </div>
     <div class="row">
-      <span title="Wie weit um das Bauteil herum der Abstand gespeichert wird. Aufmaße bis zu diesem Betrag lassen sich danach ohne Neurechnung abgreifen.">Bandbreite ±</span>
+      <span title="Wie weit über das Bauteil hinaus der Abstand gespeichert wird; Aufmaße bis zu diesem Betrag lassen sich danach ohne Neurechnung abgreifen. Nach innen ist das Feld immer vollständig — die dickste Stelle liegt darin.">Bandbreite außen</span>
       <input type="text" id="band" inputmode="decimal" value="10" spellcheck="false"
              title="Wert eingeben und mit Eingabetaste bestätigen">
       <span class="val">mm</span>
@@ -65,14 +64,14 @@
     <div class="row">
       <span></span>
       <input type="range" id="delta-slider" min="-20" max="40" step="0.5" value="2"
-             title="−20 bis +40 mm; die Zahl darüber zeigt den Wert und nimmt auch mehr">
+             title="Von der dicksten Stelle (weiter nach innen gibt es nichts) bis +40 mm; die Zahl darüber nimmt auch mehr">
     </div>
     <div class="row">
       <span>Anzeige</span>
       <div class="seg" id="show-seg">
         <button type="button" data-value="both" class="active">beide</button>
-        <button type="button" data-value="offset">nur Offset</button>
-        <button type="button" data-value="part">nur Bauteil</button>
+        <button type="button" data-value="offset">Offset</button>
+        <button type="button" data-value="part">Bauteil</button>
       </div>
     </div>
     <div class="facts" id="offset-facts"></div>
@@ -109,6 +108,7 @@
     <h2>Wärmezentren</h2>
     <label class="inline"><input type="checkbox" id="hot-on"> Dickste Stellen markieren</label>
     <div id="hot-block" class="disabled">
+      <label class="inline" title="Sonst liegen die Marken im deckenden Bauteil oder hinter der Offsetfläche."><input type="checkbox" id="hot-clear" checked> Frei sichtbar: Bauteil durchscheinend, ohne Offsetfläche</label>
       <div class="row">
         <span>Form</span>
         <div class="seg" id="hot-seg">
@@ -161,7 +161,8 @@
 
       <p style="margin-top:.5rem">Zwei Wege, das abzulesen: ein
       <b>Untermaß</b> von −s am Regler — alles, was dünner als 2·s ist,
-      verschwindet, stehen bleiben genau die dicken Kerne. Oder den
+      verschwindet, stehen bleiben genau die dicken Kerne; der Regler endet
+      an der dicksten Stelle, tiefer gibt es nichts mehr. Oder den
       <b>Feldschnitt</b> einschalten: mit der Skala „innen" sind die roten
       Bereiche die dicken Stellen, die Farbskala nennt die Wandstärke in
       mm. (Der

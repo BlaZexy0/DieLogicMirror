@@ -200,10 +200,83 @@ export async function buildField(model, opts = {}) {
   for (let t = 0; t < F; t += chunk) {
     stampDistances(model, f, data, t, Math.min(F, t + chunk));
     if (onProgress) {
-      onProgress(0.1 + 0.9 * Math.min(1, (t + chunk) / F), 'Abstände');
+      onProgress(0.1 + 0.85 * Math.min(1, (t + chunk) / F), 'Abstände');
       await tick();
     }
   }
+  if (onProgress) { onProgress(0.96, 'Kern'); await tick(); }
+  fillInterior(f);
+  return f;
+}
+
+/* ── Der Kern: innen ist das Feld immer vollständig ───────────
+   Das Band begrenzt, wie weit NACH AUSSEN der Abstand gespeichert wird —
+   dort wächst er unbegrenzt, und irgendwo muss Schluss sein. Nach innen
+   gibt es diese Grenze nicht: der Abstand kann nie größer werden als die
+   halbe Dicke des Bauteils, und genau dieses Maximum ist die Zahl, um die
+   es bei der Wandstärke geht. Ein Kern, der auf −band abgeschnitten war,
+   sagte darüber nichts.
+
+   Deshalb bekommen die Zellen jenseits des Bandes ihren Abstand aus
+   einer exakten euklidischen Distanztransformation der Innen/Außen-Maske
+   (Felzenszwalb & Huttenlocher, trennbar, O(N)): die Entfernung zur
+   nächsten Außenzelle. Sie irrt um höchstens eine halbe Zelle — für die
+   Skala und die dicksten Stellen mehr als genug —, und nahe der
+   Oberfläche, wo es auf Zehntel ankommt, bleibt der exakt gestempelte
+   Wert stehen. */
+
+/* 1D-Transformation der quadrierten Abstände entlang einer Zeile mit
+   Schrittweite `stride`. `f` ist die Zeile (in tmp kopiert), `d` das
+   Ergebnis. v, z sind Arbeitsfelder der Länge n bzw. n + 1. */
+function dt1d(f, n, d, v, z) {
+  let k = 0;
+  v[0] = 0; z[0] = -Infinity; z[1] = Infinity;
+  for (let q = 1; q < n; q++) {
+    let s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+    while (s <= z[k]) {
+      k--;
+      s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+    }
+    k++;
+    v[k] = q; z[k] = s; z[k + 1] = Infinity;
+  }
+  k = 0;
+  for (let q = 0; q < n; q++) {
+    while (z[k + 1] < q) k++;
+    const dq = q - v[k];
+    d[q] = dq * dq + f[v[k]];
+  }
+}
+
+export function fillInterior(f) {
+  const [nx, ny, nz] = f.dims;
+  const data = f.data;
+  const N = nx * ny * nz;
+  const BIG = 1e12;
+  const sq = new Float64Array(N);
+  for (let i = 0; i < N; i++) sq[i] = data[i] < 0 ? BIG : 0;
+  const nMax = Math.max(nx, ny, nz);
+  const line = new Float64Array(nMax), out = new Float64Array(nMax);
+  const v = new Int32Array(nMax), z = new Float64Array(nMax + 1);
+  const pass = (n, count, at) => {
+    for (let c = 0; c < count; c++) {
+      for (let q = 0; q < n; q++) line[q] = sq[at(c, q)];
+      dt1d(line, n, out, v, z);
+      for (let q = 0; q < n; q++) sq[at(c, q)] = out[q];
+    }
+  };
+  pass(nx, ny * nz, (c, q) => c * nx + q);                                          // entlang x
+  pass(ny, nx * nz, (c, q) => { const k = (c / nx) | 0, i = c - k * nx; return (k * ny + q) * nx + i; }); // y
+  pass(nz, nx * ny, (c, q) => q * nx * ny + c);                                     // z
+  const lim = f.band - 1e-6;
+  for (let i = 0; i < N; i++) {
+    const val = data[i];
+    if (val <= -lim) {
+      const d = Math.sqrt(sq[i]) * f.h;
+      if (d > f.band) data[i] = -d;
+    }
+  }
+  f.fullInside = true;
   return f;
 }
 
@@ -240,7 +313,7 @@ export function sampleField(f, x, y, z) {
     das Band erfasst; dann ist maxIn nur eine untere Schranke. */
 export function fieldExtrema(f) {
   let maxIn = 0, maxOut = 0, clipped = 0;
-  const lim = f.band - 1e-6;
+  const lim = f.fullInside ? Infinity : f.band - 1e-6;
   for (let i = 0; i < f.data.length; i++) {
     const v = f.data[i];
     if (v < 0) { if (-v > maxIn) maxIn = -v; if (-v >= lim) clipped++; }
@@ -265,7 +338,7 @@ export function thickMaxima(f, opts = {}) {
   const { minFrac = 0.6, limit = 200 } = opts;
   const [nx, ny, nz] = f.dims;
   const d = f.data;
-  const lim = f.band - 1e-6;
+  const lim = f.fullInside ? Infinity : f.band - 1e-6;
   let maxIn = 0;
   for (let i = 0; i < d.length; i++) if (d[i] < 0 && -d[i] > maxIn) maxIn = -d[i];
   const floor = Math.max(1e-6, maxIn * Math.max(0, Math.min(1, minFrac)));

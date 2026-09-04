@@ -152,11 +152,21 @@ test('Wärmezentren: die dicksten Stellen eines Quaders liegen auf seiner Mittel
     }
   }
 
-  /* Ein zu kleines Band schneidet den Kern ab: dann weiß das Feld nichts
-     über die Dicke, und es gibt keine Marken — aber die Auskunft, warum. */
+  /* Das Band gilt nur nach außen: auch mit 10 mm Band kennt das Feld den
+     Kern des 40 mm dicken Quaders — die Distanztransformation füllt ihn,
+     auf eine halbe Zelle genau. Es gibt keinen abgeschnittenen Kern mehr. */
   const f10 = await buildField(m, { res: 80, band: 10 });
   const st10 = fieldExtrema(f10);
-  assert.ok(st10.clipped > 0, 'Kern auf −band');
-  rel(st10.maxIn, 10, 0.01, 'maxIn ist dann nur das Band');
-  assert.equal(thickMaxima(f10, { minFrac: 0.6 }).length, 0, 'keine Marke auf einem abgeschnittenen Kern');
+  assert.equal(st10.clipped, 0, 'nichts abgeschnitten');
+  assert.ok(Math.abs(st10.maxIn - 20) <= f10.h, 'maxIn bleibt die halbe Dicke: ' + st10.maxIn);
+  assert.ok(Math.abs(sampleField(f10, 0, 0, 0) + 20) <= f10.h, 'in der Mitte −20 auf eine Zelle genau');
+  rel(sampleField(f10, 55, 0, 0), 5, 0.01, 'nahe der Fläche weiter exakt');
+  const hot10 = thickMaxima(f10, { minFrac: 0.6 });
+  assert.ok(hot10.length >= 1, 'die dickste Stelle ist da');
+  assert.ok(Math.abs(hot10[0].r - 20) <= f10.h, 'mit dem richtigen Radius');
+  /* Und ein Untermaß jenseits des Bandes liefert noch eine Fläche: bei
+     −12 bleibt ein Kern von 76 × 36 × 16. */
+  const inner = surfaceNets(f10, -12);
+  assert.ok(inner.length > 0, 'Fläche bei −12 trotz Band 10');
+  rel(volume(inner), 76 * 36 * 16, 0.12, 'Kernvolumen (Distanztransformation auf Zellen genau)');
 });

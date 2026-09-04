@@ -78,7 +78,9 @@ export function mountPartSource({ busy, viewport, onStart, onLoad, suffix = '',
       return;
     }
     if (onStart) onStart(name);
-    $(id('part-note')).textContent = note || '';
+    /* Nicht jede Seite will die Beschreibung des Beispielteils sehen. */
+    const pn = $(id('part-note'));
+    if (pn) pn.textContent = note || '';
     /* Die Größenwarnung stand bisher in showFacts — also NACH buildModel,
        das bei 197k Dreiecken rund 1,5 s den Hauptthread blockiert. Sie kam
        damit an, wenn die Arbeit längst getan war. Jetzt vorher, aus der

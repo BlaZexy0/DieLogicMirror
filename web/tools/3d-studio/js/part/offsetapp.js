@@ -51,7 +51,7 @@ const state = {
   slice: { on: false, axis: 2, pos: 50, scale: 'innen' },
   /* Wärmezentren: die dicksten Stellen als Kugeln (Kugelprobe) oder
      Kreise, ab einem Anteil der größten Wandstärke. */
-  hot: { on: false, shape: 'kugeln', min: 75 },
+  hot: { on: false, shape: 'kugeln', min: 75, clear: true },
   stats: null, maxima: [], hotField: null,
   stale: true, running: false, ready: false,
   ms: 0
@@ -147,6 +147,12 @@ async function runField() {
     state.ms = performance.now() - t0;
     state.stale = false;
     state.stats = fieldExtrema(state.field);
+    /* Nach innen endet die Skala am Maximum: tiefer als die dickste
+       Stelle gibt es keine Fläche mehr, also auch keinen Reglerweg. */
+    $('delta-slider').min = String(-Math.ceil(state.stats.maxIn * 2) / 2);
+    if (state.delta < -state.stats.maxIn) state.delta = -Math.floor(state.stats.maxIn * 2) / 2;
+    $('delta').value = fmtPlain(state.delta);
+    $('delta-slider').value = String(Math.max(+$('delta-slider').min, Math.min(40, state.delta)));
     extract();
   } catch (err) {
     $('model-warn').textContent = 'Das Feld konnte nicht gerechnet werden: ' + err.message;
@@ -177,9 +183,9 @@ function updateRunButton() {
   }
   if (state.stale) {
     return setRun({ label: 'Feld neu berechnen', warn: true,
-      note: Math.abs(state.delta) > state.field.band
-        ? 'Das Aufmaß liegt außerhalb der gerechneten Bandbreite (± '
-          + fmt(state.field.band) + ' mm) — das Feld muss größer werden.'
+      note: state.delta > state.field.band
+        ? 'Das Aufmaß liegt außerhalb der gerechneten Bandbreite (bis +'
+          + fmt(state.field.band) + ' mm) — das Feld muss nach außen größer werden.'
         : 'Rastereinstellungen geändert — das Bild zeigt noch das vorige Feld.' });
   }
   setRun({ label: 'Feld ist aktuell', outline: true, disabled: true });
@@ -234,17 +240,18 @@ function updateHotspots() {
   }
   facts('hot-facts', rows);
   $('hot-note').textContent = st.clipped
-    ? 'Im Kern steht das Feld auf der Bandbreite — das Bauteil ist dort dicker als ' + fmt(2 * st.band || 2 * state.field.band)
+    ? 'Im Kern steht das Feld auf der Bandbreite — das Bauteil ist dort dicker als ' + fmt(2 * state.field.band)
       + ' mm. Bandbreite erhöhen und das Feld neu rechnen, dann sind auch diese Stellen zu sehen.'
     : '';
   view.invalidate();
 }
 
 function applyVisibility() {
-  /* Im Schnitt nur das Bauteil, und zwar durchscheinend: die
-     Offsetfläche legte sich sonst über die Schnittebene, und das
-     Bauteil deckend davor verdeckte sie ebenso. */
-  const slice = state.slice.on && !!state.field;
+  /* Im Schnitt — und bei markierten Wärmezentren, wenn man es so will —
+     nur das Bauteil, und zwar durchscheinend: die Offsetfläche legte
+     sich sonst über Schnittebene und Marken, und das Bauteil deckend
+     davor verdeckte sie ebenso. */
+  const slice = (state.slice.on || (state.hot.on && state.hot.clear)) && !!state.field;
   partMesh.visible = slice || state.show !== 'offset';
   offsetMesh.visible = !slice && state.show !== 'part' && !!(state.offsetTris && state.offsetTris.length);
   /* Allein dargestellt darf das Bauteil deckend sein. */
@@ -427,11 +434,14 @@ $('run-field').addEventListener('click', runField);
    einmal je Bild abgeleitet: das Ableiten kostet Millisekunden, aber ein
    Regler meldet sich öfter, als Bilder gezeichnet werden. */
 let extractRaf = 0;
+/* Tiefer als die dickste Stelle geht es nicht: dort ist nichts mehr,
+   was eine Fläche gleichen Abstands haben könnte. */
+const minDelta = () => (state.stats ? -state.stats.maxIn : -1e4);
 function setDelta(v, live) {
-  state.delta = Math.max(-1e4, Math.min(1e4, v));
+  state.delta = Math.max(minDelta(), Math.min(1e4, v));
   $('delta').value = fmtPlain(state.delta);
-  $('delta-slider').value = String(Math.max(-20, Math.min(40, state.delta)));
-  if (state.field && Math.abs(state.delta) > state.field.band) {
+  $('delta-slider').value = String(Math.max(+$('delta-slider').min, Math.min(40, state.delta)));
+  if (state.field && state.delta > state.field.band) {
     state.band = round1(Math.abs(state.delta) * 1.15 + 1);
     state.bandTouched = true;
     $('band').value = fmt(state.band);
@@ -474,7 +484,9 @@ $('hot-on').addEventListener('change', e => {
   state.hot.on = e.target.checked;
   $('hot-block').classList.toggle('disabled', !state.hot.on);
   updateHotspots();
+  applyVisibility();
 });
+$('hot-clear').addEventListener('change', e => { state.hot.clear = e.target.checked; applyVisibility(); });
 segButtons('hot-seg', v => { state.hot.shape = v; updateHotspots(); });
 slider('hot-min', v => { state.hot.min = v; updateHotspots(); }, v => v + ' %');
 slider('slice-pos', v => { state.slice.pos = v; updateSlice(); }, () => '');

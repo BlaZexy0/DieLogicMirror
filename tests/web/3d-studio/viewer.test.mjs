@@ -423,8 +423,17 @@ test('Wandstärkenanalyse: Feld auf Knopfdruck, Fläche daraus abgeleitet', asyn
   await new Promise(r => setTimeout(r, 30));
   assert.notEqual(s.offsetTris.length, beforeSlider, 'und die Fläche ist neu abgeleitet');
 
-  /* Außerhalb der Bandbreite: der Wert bleibt stehen, das Band wird
-     mitgezogen und ein neues Feld verlangt. */
+  /* Nach innen endet der Regler an der dicksten Stelle — tiefer gibt es
+     keine Fläche mehr; die Zahl wird dort ebenfalls festgehalten. */
+  assert.ok(s.stats && s.stats.maxIn > 0, 'die dickste Stelle ist bekannt');
+  assert.ok(Math.abs(+d4.getElementById('delta-slider').getAttribute('min') + Math.ceil(s.stats.maxIn * 2) / 2) < 1e-9
+    || Math.abs(+d4.getElementById('delta-slider').min + Math.ceil(s.stats.maxIn * 2) / 2) < 1e-9, 'Reglerende = −Maximum innen');
+  d.value = '-99'; d.dispatch('change');
+  assert.ok(Math.abs(s.delta + s.stats.maxIn) < 1e-9, 'tiefer als das Maximum geht es nicht: ' + s.delta);
+  assert.equal(s.stale, false, 'und dafür braucht es kein neues Feld');
+
+  /* Außerhalb der Bandbreite nach außen: der Wert bleibt stehen, das
+     Band wird mitgezogen und ein neues Feld verlangt. */
   d.value = '99'; d.dispatch('change');
   assert.equal(s.delta, 99, 'der Wunsch bleibt erhalten');
   assert.equal(d4.getElementById('delta-slider').value, '40', 'der Regler bleibt an seinem Ende');
@@ -513,6 +522,15 @@ test('Wandstärkenanalyse: Feldschnitt und Farbskala', async () => {
   hot.dispatch('change');
   assert.equal(off.__viewer.hotGroup.visible, true);
   assert.equal(off.__viewer.hotGroup.children.length, s.maxima.length, 'je Stelle eine Marke');
+  assert.ok(s.maxima.length >= 1, 'ein vollständiger Kern hat dickste Stellen');
+  /* Frei sichtbar: Offsetfläche weg, Bauteil durchscheinend — abschaltbar. */
+  assert.equal(off.__viewer.offsetMesh.visible, false, 'die Offsetfläche verdeckte die Marken');
+  assert.ok(off.__viewer.partMesh.material.transparent && off.__viewer.partMesh.material.opacity <= 0.45);
+  const clear = d4.getElementById('hot-clear');
+  clear.checked = false; clear.dispatch('change');
+  assert.equal(off.__viewer.offsetMesh.visible, true, 'ohne den Haken bleibt alles, wie es war');
+  clear.checked = true; clear.dispatch('change');
+  assert.equal(off.__viewer.offsetMesh.visible, false);
   assert.match(d4.getElementById('hot-facts').innerHTML, /Stellen/);
   assert.match(d4.getElementById('hot-facts').innerHTML, /größte Wandstärke/);
   if (s.maxima.length) {
@@ -531,6 +549,8 @@ test('Wandstärkenanalyse: Feldschnitt und Farbskala', async () => {
   hot.checked = false;
   hot.dispatch('change');
   assert.equal(off.__viewer.hotGroup.visible, false);
+  assert.equal(off.__viewer.offsetMesh.visible, true, 'die Offsetfläche kommt zurück');
+  assert.equal(d4.getElementById('part-note'), null, 'kein Beispieltext unter dem Laden-Knopf');
 });
 
 /* ── Abstandsanalyse ─────────────────────────────────────────── */
