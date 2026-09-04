@@ -12,7 +12,11 @@
    - Ein Griff wird IN SEINER ARBEITSEBENE gezogen — der Mausstrahl wird
      mit der Ebene geschnitten, nicht mit dem Bildschirm. Mit Alt läuft
      er stattdessen auf der Ebenennormalen. Unter der Auswahl liegt ein
-     durchscheinendes Quadrat: die Ebene selbst.
+     durchscheinendes Quadrat: die Ebene selbst. Hat ein Ding KEINE Ebene
+     (plane liefert null), rutscht es in der Bildebene durch die Kamera —
+     und bekommt, wenn es `gizmo` verlangt, drei Achsenpfeile X/Y/Z, an
+     denen es sich je Achse ziehen lässt: der Mausstrahl wird dafür auf
+     die Achse gelotet (nächster Punkt zweier Geraden).
    - Ein Ding mit Richtung trägt einen PFEIL. Den Pfeil anklicken heißt
      zielen (onAim), nicht ziehen.
    - Der ZIELMODUS: der nächste Klick auf das Referenzbauteil liefert Ort
@@ -48,9 +52,11 @@ const ZAXIS = new T.Vector3(0, 0, 1);
 
 /**
  * @param opts.view        Szene aus js/scene.js (renderer, camera, scene, controls, invalidate)
- * @param opts.items       () → [{ id, pos:[3], color, ghost?, dir?:[3], planeSize? }]
+ * @param opts.items       () → [{ id, pos:[3], color, ghost?, dir?:[3], planeSize?, gizmo? }]
  *                         ghost: blass und nicht anfassbar (die nachgezogene Gegenseite)
- * @param opts.plane       id → { origin:[3], normal:[3] } | null — Arbeitsebene des Dings
+ *                         gizmo: als Auswahl drei Achsenpfeile zum Ziehen je Achse
+ * @param opts.plane       id → { origin:[3], normal:[3] } | null — Arbeitsebene des Dings;
+ *                         null heißt frei: Ziehen in der Bildebene, Pfeile je Achse
  * @param opts.move        (id, pos:[3], alt:boolean) → void — beim Ziehen
  * @param opts.getRefMesh  () → Mesh | null — das Referenzbauteil für den Zielmodus
  * @param opts.onSelect    id | null
@@ -126,6 +132,31 @@ export function createHandles(opts) {
     if (!arrowMats.has(key)) arrowMats.set(key, ghost(hot ? '#9c4a12' : color, hot ? 1 : 0.95));
     return arrowMats.get(key);
   };
+
+  /* Die drei Achsenpfeile der Auswahl (X rot, Y grün, Z blau), immer
+     obenauf; sie beginnen wie die Richtungspfeile außerhalb der Kugel. */
+  const AXIS_COLORS = ['#b42318', '#4c9f70', '#2e6da4'];
+  const AXIS_DIRS = [new T.Vector3(1, 0, 0), new T.Vector3(0, 1, 0), new T.Vector3(0, 0, 1)];
+  const gizmo = new T.Group();
+  gizmo.visible = false;
+  const gizmoAxes = AXIS_DIRS.map((axis, i) => {
+    const grp = new T.Group();
+    const mat = ghost(AXIS_COLORS[i], 0.95);
+    const hot = ghost(AXIS_COLORS[i], 1);
+    const shaft = new T.Mesh(arrowGeo.shaft, mat);
+    const tip = new T.Mesh(arrowGeo.tip, mat);
+    const hit = new T.Mesh(arrowGeo.hit);
+    hit.visible = false;
+    hit.userData = { gizmo: i };
+    shaft.renderOrder = tip.renderOrder = 10;
+    grp.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), axis);
+    grp.add(shaft, tip, hit);
+    gizmo.add(grp);
+    return { grp, shaft, tip, hit, mat, hot };
+  });
+  gizmoAxes[0].shaft.onBeforeRender = (renderer, scene, camera) => { gizmo.scale.setScalar(pixelSize(camera)); };
+  group.add(gizmo);
+  let gizmoFor = null;
 
   const handles = new Map();
   const arrows = new Map();
@@ -213,6 +244,12 @@ export function createHandles(opts) {
       r.visible = !!sel;
       if (sel) r.position.set(sel.pos[0], sel.pos[1], sel.pos[2]);
     }
+    gizmoFor = sel && sel.gizmo ? sel.id : null;
+    gizmo.visible = !!gizmoFor;
+    if (gizmoFor) {
+      gizmo.position.set(sel.pos[0], sel.pos[1], sel.pos[2]);
+      for (const g of gizmoAxes) g.hit.userData.id = sel.id;
+    }
     updatePlane(sel);
     /* Der Strahl liest Weltmatrizen; die schreibt sonst erst der Renderer
        vor dem nächsten Bild — und mit Zeichnen auf Abruf kommt das nicht
@@ -252,23 +289,60 @@ export function createHandles(opts) {
      einen Pfeil — das Nächste gewinnt. */
   function pick(ev) {
     castFrom(ev);
+    /* Die Kugel schlägt jeden Pfeil: alle Pfeile beginnen außerhalb der
+       Kugel, wer also die Kugel trifft, meint den Punkt — auch wenn ein
+       Pfeil, der zur Kamera zeigt, im Bild davor liegt. */
+    const spheres = [];
+    for (const h of handles.values()) if (!h.solid.userData.ghost) spheres.push(h.solid);
+    const hitS = ray.intersectObjects(spheres, false);
+    if (hitS.length) return hitS[0].object.userData;
     const list = [];
-    for (const h of handles.values()) if (!h.solid.userData.ghost) list.push(h.solid);
+    /* Ein Achsenpfeil, der fast in Blickrichtung steht, ließe sich nicht
+       ziehen (die Achse ist nicht zu loten) — er bleibt außen vor. */
+    if (gizmo.visible) {
+      for (const g of gizmoAxes) {
+        if (Math.abs(AXIS_DIRS[g.hit.userData.gizmo].dot(ray.ray.direction)) < 0.985) list.push(g.hit);
+      }
+    }
     for (const a of arrows.values()) list.push(a.hit);
     const hits = ray.intersectObjects(list, false);
     return hits.length ? hits[0].object.userData : null;
   }
 
+  /* Die Ebene, in der ein Ding gezogen wird: seine Arbeitsebene — oder,
+     wenn es keine hat, die Bildebene durch seinen Ort. */
+  function dragPlane(id) {
+    const pl = plane(id);
+    if (pl) return pl;
+    const it = items().find(x => x.id === id);
+    if (!it) return null;
+    const n = new T.Vector3();
+    view.camera.getWorldDirection(n);
+    return { origin: it.pos, normal: [n.x, n.y, n.z], free: true };
+  }
+
+  /* Parameter des Punktes auf der Achse (p + s·a), der dem Mausstrahl am
+     nächsten kommt — null, wenn die Achse fast in Blickrichtung liegt. */
+  function axisParam(ev, p, a) {
+    castFrom(ev);
+    const o = ray.ray.origin, d = ray.ray.direction;
+    const w0 = new T.Vector3(p[0], p[1], p[2]).sub(o);
+    const b = a.dot(d), dd = a.dot(w0), e = d.dot(w0);
+    const denom = 1 - b * b;
+    if (denom < 1e-4) return null;
+    return (b * e - dd) / denom;
+  }
+
   /* Schnittpunkt des Mausstrahls mit der Arbeitsebene des Dings (oder,
      mit Alt, mit der Ebene senkrecht dazu durch den Blick). */
   function planePoint(ev, id, alt) {
-    const pl = plane(id);
+    const pl = dragPlane(id);
     if (!pl) return null;
     castFrom(ev);
     const axis = new T.Vector3(pl.normal[0], pl.normal[1], pl.normal[2]).normalize();
     const p0 = new T.Vector3(pl.origin[0], pl.origin[1], pl.origin[2]);
     let planeN = axis;
-    if (alt) {
+    if (alt && !pl.free) {
       const toCam = view.camera.position.clone().sub(p0);
       planeN = new T.Vector3().crossVectors(axis, new T.Vector3().crossVectors(toCam, axis));
       if (planeN.lengthSq() < 1e-9) return null;
@@ -401,12 +475,23 @@ export function createHandles(opts) {
     if (!hit) return;
     ev.stopPropagation();
     ev.preventDefault();
-    select(hit.id);
+    if (hit.id !== state.selected) select(hit.id);
     if (hit.arrow) { if (onAim) onAim(hit.id); return; }
-    const start = planePoint(ev, hit.id, ev.altKey);
-    if (!start) return;
     const it = items().find(x => x.id === hit.id);
     if (!it) return;
+    /* Ein Achsenpfeil: ziehen entlang genau dieser Achse. */
+    if (hit.gizmo !== undefined) {
+      const a = AXIS_DIRS[hit.gizmo];
+      const s0 = axisParam(ev, it.pos, a);
+      if (s0 === null) return;
+      state.drag = { id: hit.id, axis: a, s0, start: it.pos.slice(), last: null, raf: 0 };
+      for (const g of gizmoAxes) g.shaft.material = g.tip.material = (g.hit.userData.gizmo === hit.gizmo ? g.hot : g.mat);
+      view.controls.enabled = false;
+      try { dom.setPointerCapture(ev.pointerId); } catch { /* Zeiger schon wieder los — dann ohne Fang */ }
+      return;
+    }
+    const start = planePoint(ev, hit.id, ev.altKey);
+    if (!start) return;
     state.drag = {
       id: hit.id, alt: ev.altKey,
       grab: start.clone().sub(new T.Vector3(it.pos[0], it.pos[1], it.pos[2])),
@@ -421,6 +506,15 @@ export function createHandles(opts) {
     if (!d) return;
     d.raf = 0;
     if (!d.last) return;
+    if (d.axis) {
+      const s = axisParam(d.last, d.start, d.axis);
+      d.last = null;
+      if (s === null) return;
+      const k = s - d.s0;
+      move(d.id, [d.start[0] + d.axis.x * k, d.start[1] + d.axis.y * k, d.start[2] + d.axis.z * k], false);
+      onChange('drag', d.id);
+      return;
+    }
     const p = planePoint(d.last, d.id, d.alt);
     d.last = null;
     if (!p) return;
@@ -438,11 +532,12 @@ export function createHandles(opts) {
     }
     if (!state.enabled) return;
     const hit = pick(ev);
-    const key = hit ? hit.id + (hit.arrow ? ':pfeil' : '') : null;
+    const key = hit ? hit.id + (hit.arrow ? ':pfeil' : hit.gizmo !== undefined ? ':g' + hit.gizmo : '') : null;
     if (key !== state.hover) {
       state.hover = key;
       dom.style.cursor = !hit ? '' : (hit.arrow ? 'crosshair' : 'grab');
       heatArrow(hit && hit.arrow ? hit.id : null);
+      for (const g of gizmoAxes) g.shaft.material = g.tip.material = (hit && hit.gizmo === g.hit.userData.gizmo ? g.hot : g.mat);
       redraw();
       if (onHover) onHover(hit ? hit.id : null);
     }
@@ -464,6 +559,7 @@ export function createHandles(opts) {
     if (state.drag.last) applyDrag();                       // den letzten Zeigerort nicht verschenken
     const id = state.drag.id;
     state.drag = null;
+    for (const g of gizmoAxes) g.shaft.material = g.tip.material = g.mat;
     view.controls.enabled = true;
     if (dom.hasPointerCapture && dom.hasPointerCapture(ev.pointerId)) dom.releasePointerCapture(ev.pointerId);
     onChange('drop', id);
@@ -487,6 +583,12 @@ export function createHandles(opts) {
     if (!a) return null;
     return a.grp.localToWorld(new T.Vector3(0, 0, ARROW.gap + ARROW.len + ARROW.tipLen * 0.5)).toArray();
   }
+  /** Weltpunkt der Spitze eines Achsenpfeils (0 = X, 1 = Y, 2 = Z) der Auswahl. */
+  function gizmoTip(axis) {
+    if (!gizmo.visible) return null;
+    gizmo.updateMatrixWorld(true);
+    return gizmoAxes[axis].grp.localToWorld(new T.Vector3(0, 0, ARROW.gap + ARROW.len + ARROW.tipLen * 0.5)).toArray();
+  }
 
   dom.addEventListener('pointerdown', onDown, true);
   dom.addEventListener('pointermove', onMove);
@@ -494,7 +596,7 @@ export function createHandles(opts) {
   dom.addEventListener('pointercancel', onUp);
 
   return {
-    refresh, select, group, armAim, cancelAim, pickRef, aimFor, arrowTip,
+    refresh, select, group, armAim, cancelAim, pickRef, aimFor, arrowTip, gizmoTip,
     get aiming() { return !!state.aim; },
     get aimMark() { return aimMark.visible ? aimMark.position.toArray() : null; },
     get selected() { return state.selected; },

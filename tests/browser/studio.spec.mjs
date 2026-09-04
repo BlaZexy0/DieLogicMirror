@@ -11,7 +11,8 @@ const PAGES = [
   ['wandstaerke.html', () => window.__form3d?.state?.ready],
   ['abstand.html', null],
   ['anguss.html', () => window.__anguss?.state?.ready],
-  ['ueberlauf.html', () => window.__ueberlauf?.state?.ready]
+  ['ueberlauf.html', () => window.__ueberlauf?.state?.ready],
+  ['temperier.html', () => window.__temperier?.state?.ready]
 ];
 
 for (const [page, readyFn] of PAGES) {

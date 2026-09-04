@@ -20,17 +20,19 @@
 <section class="page-hero">
   <div class="inner">
     <h1>3D-Studio</h1>
-    <p class="subtitle">Sechs Werkzeuge um ein Bauteil herum, alle im Browser. Eines zeigt, wie eine
+    <p class="subtitle">Sieben Werkzeuge um ein Bauteil herum, alle im Browser. Eines zeigt, wie eine
       Druckgießform aufgebaut ist. Drei beantworten Fragen an das Bauteil: wo die Form geteilt
-      wird, wie dick die Wände sind, wie weit die Nachbarn entfernt liegen. Zwei entwerfen, was
-      zum Bauteil dazukommt: das Angusssystem und die Überläufe mit ihren Entlüftungen. Bauteile
-      kommen als STL oder GLB, es geht nichts an einen Server.</p>
+      wird, wie dick die Wände sind, wie weit die Nachbarn entfernt liegen. Drei entwerfen, was
+      um das Bauteil herum in die Form kommt: das Angusssystem, die Überläufe mit ihren
+      Entlüftungen und die Temperierkanäle. Bauteile kommen als STL oder GLB, es geht nichts an
+      einen Server.</p>
     <div class="hero-tags">
       <span class="hero-tag">Schnittmodell der Form</span>
       <span class="hero-tag">Formteilung in 6 Richtungen</span>
       <span class="hero-tag">Wandstärke und Abstand</span>
       <span class="hero-tag">Angusssystem als Graph</span>
       <span class="hero-tag">Überläufe am Bauteil</span>
+      <span class="hero-tag">Kühlstiche im Abstand</span>
       <span class="hero-tag">STL und GLB</span>
     </div>
   </div>
@@ -58,10 +60,12 @@
       </div>
       <div class="step">
         <div class="step-num">Entwerfen</div>
-        <h3>Was zum Bauteil dazukommt</h3>
+        <h3>Was um das Bauteil herum entsteht</h3>
         <p>Der <a href="ueberlauf.html">Überlaufdesigner</a> setzt Überläufe und Entlüftungen an die
           Wand; der <a href="anguss.html">Angussdesigner</a> zieht Laufkanäle vom Pressrest
-          bis zum Anschnitt. Bauteil plus Überläufe ist das Gussvolumen, das er dafür braucht.</p>
+          bis zum Anschnitt (Bauteil plus Überläufe ist sein Gussvolumen); der
+          <a href="temperier.html">Temperierkanal-Designer</a> legt Kühlstiche und Kanäle auf die
+          Abstandsfläche im gewählten Abstand zur Kavität.</p>
       </div>
     </div>
   </div>
@@ -69,7 +73,7 @@
 
 <section class="tools-section" id="werkzeuge">
   <div class="tools-inner">
-    <h2 class="section-title">Sechs Werkzeuge</h2>
+    <h2 class="section-title">Sieben Werkzeuge</h2>
     <p class="section-sub">Jedes für sich benutzbar, jedes mit demselben Viewport: frei drehen, Achsenkreuz, Ansichten X/Y/Z/Iso, Zentral- oder Parallelprojektion.</p>
 
     <div class="tool-grid">
@@ -212,6 +216,30 @@
         </ul>
         <div class="card-btns">
           <a href="ueberlauf.html" class="btn btn-primary">Öffnen</a>
+        </div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card-icon" style="background:rgba(46,109,164,.16)">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#2e6da4" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+            <rect x="6" y="9" width="14" height="10" rx="2"/>
+            <path d="M3 4 H23" stroke-dasharray="2 2"/>
+            <path d="M13 4 V9" stroke="#e07b39"/>
+            <path d="M8 22 V25 M18 22 V25"/>
+          </svg>
+        </div>
+        <div class="tool-tag">Entwerfen</div>
+        <h3>Temperierkanal-Designer</h3>
+        <p>Kühlstiche und Kanäle um das Bauteil, gesetzt auf der Abstandsfläche im gewählten
+          Abstand zur Kavität. Ein Klick für einen Kühlstich mit Bohrerspitze, zwei für einen
+          Kanal; die Enden bewegt man frei mit Achsenpfeilen.</p>
+        <ul>
+          <li>Richtung des Stichs: Flächennormale, Blickrichtung oder X/Y/Z</li>
+          <li>Wandabstand jeder Bohrung aus dem Abstandsfeld, unter dem Soll markiert</li>
+          <li>Plan als JSON, Bohrungen als STL</li>
+        </ul>
+        <div class="card-btns">
+          <a href="temperier.html" class="btn btn-primary">Öffnen</a>
         </div>
       </div>
     </div>

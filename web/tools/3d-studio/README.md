@@ -798,6 +798,51 @@ Die Griffe (`js/handles.js`) sind dieselben wie im Angussdesigner: was
 ein Griff ist, sagt jede Seite selbst (Ort, Farbe, Richtung, Ebene), wie
 er gezeichnet, gezogen und gezielt wird, steht einmal.
 
+## Temperierkanal-Designer (`temperier.html`)
+
+Die dritte Seite, die Geometrie erzeugt: Kühlstiche und Kanäle um das
+Bauteil. Was bei der Temperierung zählt, ist der Abstand zur Kavität — zu
+nah heißt Durchbruchgefahr und Risse, zu weit heißt, die Kühlung greift
+nicht. Deshalb werden die Elemente auf der **Abstandsfläche** gesetzt:
+der Fläche gleichen Abstands (voreingestellt 20 mm), die aus demselben
+Rasterfeld kommt wie die Wandstärkenanalyse (`js/part/field.js`,
+`js/part/surfacenets.js`) und beim Laden des Bauteils gerechnet wird;
+der Regler „Abstand" leitet sie neu ab, nur ein Abstand jenseits des
+Bandes kostet ein neues Feld. Sie liegt durchscheinend um das Bauteil und
+ist das Ziel des Zielmodus.
+
+### Kühlstiche und Kanäle
+
+- **Kühlstich** — ein Klick auf die Abstandsfläche. Die Spitze sitzt am
+  Punkt (dort hat sie genau den Abstand der Fläche), der Stich läuft um
+  seine **Länge** vom Bauteil weg, mit seinem **Durchmesser**; die
+  Spitze ist eine Halbkugel wie das Ende eines Bohrers. Die **Richtung**
+  wählt man vorher: die Flächennormale (senkrecht zur Abstandsfläche,
+  nach außen), der Blick (auf die Kamera zu — so, wie man gerade schaut)
+  oder X, Y, Z, jeweils mit dem Vorzeichen, das vom Bauteil weg zeigt.
+  Der Pfeil am Stich setzt ihn an eine andere Stelle.
+- **Kanal** — zwei Klicks, ein Ende hier, das andere dort; ein gerader
+  Zylinder mit ebenen Enden und seinem Durchmesser.
+
+Danach werden die Enden **frei im Raum** bewegt. Eine Arbeitsebene gibt
+es hier nicht, deshalb trägt das gewählte Ende drei **Achsenpfeile**
+(X rot, Y grün, Z blau; `js/handles.js`): am Pfeil gezogen, bewegt sich
+der Punkt genau entlang dieser Achse — der Mausstrahl wird dafür auf die
+Achse gelotet (nächster Punkt zweier Geraden). Am Punkt selbst gezogen,
+rutscht er in der Bildebene durch die Kamera. „Beide Enden bewegen"
+nimmt beim Kanal das andere Ende mit demselben Versatz mit: der Kanal
+behält Länge und Richtung.
+
+### Zahlen und Dateien
+
+Das Auswahlfeld nennt Länge, Volumen und den **Wandabstand**: den
+kleinsten Abstand der Bohrungswand zur Kavität, aus dem Feld entlang der
+Achse abgetastet, minus Radius — liegt er unter dem gewählten Abstand,
+steht ein ⚠ davor. Die Übersicht zählt Stiche und Kanäle, die
+Gesamtlänge und den kleinsten Wandabstand. Dateien: **JSON** ist der Plan
+(`dielogic-temperier`, Fassung 1, mit dem Abstand), **STL** sind die
+Bohrungen als Körper.
+
 ## Struktur
 
 ```
@@ -808,6 +853,7 @@ wandstaerke.html      Viewer 3: Wandstärkenanalyse
 abstand.html          Viewer 4: Abstandsanalyse
 anguss.html           Viewer 5: Angussdesigner
 ueberlauf.html        Viewer 6: Überlaufdesigner (Überläufe und Entlüftungen)
+temperier.html        Viewer 7: Temperierkanal-Designer (Kühlstiche und Kanäle)
 css/site.css          Übersichtsseite und Karten
 css/viewer.css        Seitenleiste und Viewport aller Viewer
 assets/die.glb        DAS Formmodell — binäres glTF, vom Viewer geladen
@@ -827,6 +873,9 @@ js/ui/axes.js         das Achsenkreuz (SVG über dem Bild)
 js/vents/model.js     der Überlaufplan: Arten, Maße, Dreibein, Datei, Prüfregeln
 js/vents/geom.js      Prismen aus dem Plan: Steg, Bohne, Kanal, Waschbrett
 js/vents/app.js       Einstieg Überlaufdesigner
+js/cooling/model.js   der Temperierplan: Kühlstiche, Kanäle, Richtungen, Datei
+js/cooling/geom.js    Rotationskörper: Stich mit Halbkugelspitze, Kanal; Wandabstand aus dem Feld
+js/cooling/app.js     Einstieg Temperierkanal-Designer
 js/clipcaps.js        Schnittebene mit geschlossenen Schnittflächen (Stencil)
 js/die.js             Einstieg Formaufbau-Viewer
 js/ui/nav.js          Kopfleiste — hält sich heraus, sobald /shared/nav.js da ist

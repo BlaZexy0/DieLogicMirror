@@ -63,6 +63,7 @@
       { label: 'Abstandsanalyse', href: '/tools/3d-studio/abstand.html' },
       { label: 'Angussdesigner', href: '/tools/3d-studio/anguss.html' },
       { label: 'Überlaufdesigner', href: '/tools/3d-studio/ueberlauf.html' },
+      { label: 'Temperierkanäle', href: '/tools/3d-studio/temperier.html' },
     ] },
     { label: 'Theorie', children: [
       { label: 'Das PQ²-Diagramm', href: '/theorie/pq2.html' },

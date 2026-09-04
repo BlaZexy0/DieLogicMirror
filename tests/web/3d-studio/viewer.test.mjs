@@ -1174,3 +1174,134 @@ test('Überlaufdesigner: setzen, ziehen, drehen, neu setzen, Datei', async () =>
   assert.match(d7.getElementById('aim-text').textContent, /Bauteil laden/);
   v.refMesh.visible = true;
 });
+
+/* ── Temperierkanal-Designer ─────────────────────────────────── */
+test('Temperierkanal-Designer: Abstandsfläche, Kühlstich, Kanal, Achsenpfeile, Datei', async () => {
+  const { doc: d8 } = buildDocument(read('temperier.html'));
+  installGlobals(d8);
+  globalThis.location = { search: '', href: 'http://test/temperier.html' };
+  const mod = await import('../../../web/tools/3d-studio/js/cooling/app.js');
+  const v = mod.__viewer;
+  for (let i = 0; i < 1200 && !v.state.ready; i++) await new Promise(r => setTimeout(r, 25));
+  assert.ok(v.state.ready && v.state.model, 'das Beispielteil steht');
+  assert.ok(v.state.field && v.state.shellDist === 20, 'die Abstandsfläche im Abstand 20 mm ist gerechnet');
+  assert.ok(v.shellMesh.visible && v.shellMesh.geometry.attributes.position.count > 0, 'und steht im Viewport');
+  assert.match(d8.getElementById('shell-note').textContent, /20 mm/);
+  assert.equal(d8.getElementById('add-stich').disabled, false, 'setzen ist frei');
+
+  /* Kamera von +X waagerecht auf die Bauteilmitte: der Strahl durch die
+     Bildmitte trifft die Abstandsfläche vor der +X-Wand. */
+  const T3 = await import('three');
+  const b = v.state.model.bounds;
+  const c = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
+  const cam = v.view.camera;
+  const look = (pos, at) => { cam.position.set(...pos); cam.up.set(0, 1, 0); cam.lookAt(...at); cam.updateMatrixWorld(true); v.view.scene.updateMatrixWorld(true); };
+  look([b.max[0] + 400, c[1], c[2]], c);
+  const canvas = v.view.renderer.domElement;
+  const zeiger = (t, x, y) => canvas.dispatch(t, { button: 0, clientX: x, clientY: y, stopPropagation() {}, preventDefault() {} });
+  const klick = (x, y) => { zeiger('pointerdown', x, y); zeiger('pointerup', x, y); };
+  const px = p => { const q = new T3.Vector3(...p).project(cam); return [(q.x + 1) / 2 * 800, (1 - q.y) / 2 * 600]; };
+
+  /* Kühlstich, Richtung Normale: Spitze auf der Fläche, Stich nach +X. */
+  d8.getElementById('add-stich').dispatch('click');
+  assert.ok(v.handles.aiming);
+  klick(400, 300);
+  assert.ok(!v.handles.aiming);
+  const items = () => Object.values(v.state.plan.items);
+  assert.equal(items().length, 1);
+  const s1 = items()[0];
+  assert.equal(s1.type, 'stich');
+  assert.ok(s1.p[0] > b.max[0] + 15 && s1.p[0] < b.max[0] + 25, 'die Spitze sitzt rund 20 mm vor der Wand: ' + s1.p);
+  assert.ok(s1.dir[0] > 0.95, 'und der Stich läuft nach außen (+X): ' + s1.dir);
+  assert.equal(s1.d, 8); assert.equal(s1.len, 60);
+  assert.match(d8.getElementById('pt-sel').innerHTML, /Kühlstich/);
+  assert.match(d8.getElementById('sel-facts').innerHTML, /Wandabstand/, 'der Wandabstand steht im Feld');
+
+  /* Richtung Z: der Stich läuft entlang Z, mit dem Vorzeichen vom Bauteil weg. */
+  d8.getElementById('dir-seg').querySelectorAll('button').find(x => x.dataset.value === 'z').dispatch('click');
+  assert.equal(v.state.dirMode, 'z');
+  d8.getElementById('add-stich').dispatch('click');
+  klick(400, 300);
+  const s2 = items()[1];
+  assert.ok(Math.abs(Math.abs(s2.dir[2]) - 1) < 1e-9 && Math.abs(s2.dir[0]) < 1e-9, 'entlang Z: ' + s2.dir);
+  /* Richtung Blick: auf die Kamera zu, hier also +X. */
+  d8.getElementById('dir-seg').querySelectorAll('button').find(x => x.dataset.value === 'blick').dispatch('click');
+  d8.getElementById('add-stich').dispatch('click');
+  klick(400, 300);
+  assert.ok(items()[2].dir[0] > 0.99, 'zur Kamera: ' + items()[2].dir);
+
+  /* Kanal mit zwei Klicks. */
+  d8.getElementById('add-kanal').dispatch('click');
+  assert.match(d8.getElementById('aim-text').textContent, /erste Ende/);
+  klick(400, 300);
+  assert.ok(v.handles.aiming, 'nach dem ersten Punkt bleibt der Modus scharf');
+  assert.match(d8.getElementById('aim-text').textContent, /andere Ende/);
+  klick(400, 240);
+  assert.ok(!v.handles.aiming);
+  const k = items().find(i => i.type === 'kanal');
+  assert.ok(k, 'der Kanal ist da');
+  assert.ok(Math.hypot(k.b[0] - k.a[0], k.b[1] - k.a[1], k.b[2] - k.a[2]) > 5, 'mit zwei verschiedenen Enden');
+  assert.equal(v.handles.selected, k.id + ':b', 'das zweite Ende ist gewählt');
+  assert.match(d8.getElementById('pt-sel').innerHTML, /Ende B/);
+  assert.equal(k.d, 10);
+
+  /* Achsenpfeile: das gewählte Ende hat drei; am Y-Pfeil ziehen bewegt nur y. */
+  v.view.scene.updateMatrixWorld(true);
+  const tipY = v.handles.gizmoTip(1);
+  assert.ok(tipY, 'die Achsenpfeile stehen am gewählten Ende');
+  const [tx, ty] = px(tipY);
+  const b0 = k.b.slice(), a0 = k.a.slice();
+  zeiger('pointerdown', tx, ty);
+  assert.ok(v.handles.dragging, 'der Zug am Achsenpfeil beginnt');
+  zeiger('pointermove', tx, ty - 40);
+  await new Promise(r => setTimeout(r, 30));
+  zeiger('pointerup', tx, ty - 40);
+  assert.ok(Math.abs(k.b[1] - b0[1]) > 3, 'y hat sich geändert: ' + b0 + ' → ' + k.b);
+  assert.ok(Math.abs(k.b[0] - b0[0]) < 1e-9 && Math.abs(k.b[2] - b0[2]) < 1e-9, 'x und z nicht');
+  assert.deepEqual(k.a, a0, 'das andere Ende blieb');
+
+  /* Beide Enden bewegen: derselbe Versatz am anderen Ende. */
+  const both = d8.getElementById('sel-both');
+  both.checked = true; both.dispatch('change');
+  assert.equal(v.state.both, true);
+  const b1 = k.b.slice(), a1 = k.a.slice();
+  v.view.scene.updateMatrixWorld(true);
+  const [tx2, ty2] = px(v.handles.gizmoTip(1));
+  zeiger('pointerdown', tx2, ty2);
+  zeiger('pointermove', tx2, ty2 - 30);
+  await new Promise(r => setTimeout(r, 30));
+  zeiger('pointerup', tx2, ty2 - 30);
+  const dy = k.b[1] - b1[1];
+  assert.ok(Math.abs(dy) > 2, 'bewegt');
+  assert.ok(Math.abs((k.a[1] - a1[1]) - dy) < 1e-9, 'das andere Ende ging mit: ' + (k.a[1] - a1[1]) + ' gegen ' + dy);
+
+  /* Ohne Pfeil rutscht der Punkt in der Bildebene: der Versatz steht
+     senkrecht auf der Blickrichtung. Die Kamera schaut schräg, damit
+     kein Achsenpfeil vor dem Punkt liegt. */
+  both.checked = false; both.dispatch('change');
+  look([b.max[0] + 400, c[1] + 250, c[2] + 150], c);
+  v.rebuild();
+  v.view.scene.updateMatrixWorld(true);
+  const vd = new T3.Vector3(); cam.getWorldDirection(vd);
+  const [bx, by] = px(k.b);
+  const b2 = k.b.slice();
+  zeiger('pointerdown', bx, by);
+  assert.ok(v.handles.dragging);
+  zeiger('pointermove', bx + 40, by);
+  await new Promise(r => setTimeout(r, 30));
+  zeiger('pointerup', bx + 40, by);
+  const delta = [k.b[0] - b2[0], k.b[1] - b2[1], k.b[2] - b2[2]];
+  assert.ok(Math.hypot(...delta) > 3, 'der Punkt wandert: ' + delta);
+  assert.ok(Math.abs(delta[0] * vd.x + delta[1] * vd.y + delta[2] * vd.z) < 1e-6, 'in der Bildebene, quer zum Blick');
+
+  /* Kennzahlen, Datei, Löschen. */
+  assert.match(d8.getElementById('plan-facts').innerHTML, /Kühlstiche.*Kanäle.*Gesamtlänge/s);
+  const G8 = await import('../../../web/tools/3d-studio/js/cooling/model.js');
+  const json = JSON.parse(JSON.stringify(G8.toJSON(v.state.plan)));
+  assert.equal(json.items.length, 4);
+  v.loadPlan(G8.fromJSON(json));
+  assert.equal(Object.keys(v.state.plan.items).length, 4);
+  v.handles.select(items()[0].id);
+  d8.getElementById('del-item').dispatch('click');
+  assert.equal(items().length, 3, 'gelöscht');
+});

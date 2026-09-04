@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Temperierkanal-Designer · 3D-Studio · DieLogic</title>
+<meta name="description" content="Kühlstiche und Temperierkanäle um ein Druckguss-Bauteil setzen: auf der Abstandsfläche im gewählten Abstand, Kühlstiche mit Bohrerspitze in wählbarer Richtung, Kanäle zwischen zwei Punkten — Enden frei bewegen, Wandabstand aus dem Feld.">
+<meta name="theme-color" content="#002733">
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="stylesheet" href="/shared/shared.css">
+<link rel="stylesheet" href="css/viewer.css">
+<script src="/shared/version.js"></script>
+<script src="/shared/palette.js"></script>
+<script src="/shared/nav.js" data-footer="none"></script>
+<script type="importmap">
+  { "imports": { "three": "./vendor/three/three.module.js" } }
+</script>
+</head>
+<body class="viewer designer temperier">
+
+<section class="page-hero compact">
+  <div class="inner">
+    <h1>Temperierkanal-Designer</h1>
+    <p class="subtitle">Kühlstiche und Kanäle um das Bauteil: gesetzt auf der Abstandsfläche im gewählten Abstand zur Kavität. Ein Klick für einen Kühlstich mit Bohrerspitze, zwei für einen Kanal; danach die Enden frei bewegen — mit Achsenpfeilen, wahlweise beide zugleich.</p>
+  </div>
+</section>
+
+<div class="layout">
+  <aside>
+    <h2>Bauteil</h2>
+    <div class="row">
+      <span>Beispielteil</span>
+      <select id="demo-select"></select>
+    </div>
+    <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" hidden>
+    <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ Eigene STL/GLB laden</button>
+    <div class="facts" id="model-facts"></div>
+    <div class="warn-line" id="model-warn"></div>
+    <div class="row">
+      <span>Deckkraft</span>
+      <input type="range" id="ref-opacity" min="5" max="100" value="100">
+      <span class="val" id="ref-opacity-val"></span>
+    </div>
+
+    <h2>Abstandsfläche</h2>
+    <div class="row">
+      <span title="Abstand der Fläche zur Kavität — dort sitzen die Spitzen der Kühlstiche und die Achsen der Kanäle.">Abstand</span>
+      <input type="range" id="dist" min="5" max="60" step="1" value="20">
+      <span class="val" id="dist-val"></span>
+    </div>
+    <div class="row">
+      <span title="Zellen des Abstandsfelds entlang der längsten Kante. Feiner heißt glatter und langsamer.">Auflösung</span>
+      <input type="range" id="res" min="32" max="128" step="8" value="64">
+      <span class="val" id="res-val"></span>
+    </div>
+    <label class="inline"><input type="checkbox" id="shell-on" checked> Abstandsfläche zeigen</label>
+    <div class="hint" id="shell-note">Noch keine Fläche — sie entsteht beim Laden des Bauteils.</div>
+
+    <h2>Kühlstiche</h2>
+    <div class="row">
+      <span title="Wohin der Stich von der Spitze aus läuft.">Richtung</span>
+      <div class="seg" id="dir-seg">
+        <button type="button" data-value="normal" class="active" title="senkrecht zur Abstandsfläche, vom Bauteil weg">Normale</button>
+        <button type="button" data-value="blick" title="auf die Kamera zu">Blick</button>
+        <button type="button" data-value="x" title="entlang X, vom Bauteil weg">X</button>
+        <button type="button" data-value="y" title="entlang Y">Y</button>
+        <button type="button" data-value="z" title="entlang Z">Z</button>
+      </div>
+    </div>
+    <div class="row">
+      <span>Durchmesser</span>
+      <input type="text" id="def-d" inputmode="decimal" value="8" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="row">
+      <span>Länge</span>
+      <input type="text" id="def-len" inputmode="decimal" value="60" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+
+    <h2>Kanäle</h2>
+    <div class="row">
+      <span>Durchmesser</span>
+      <input type="text" id="def-kd" inputmode="decimal" value="10" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="hint">Zwei Klicks auf die Abstandsfläche, ein Ende hier, das andere dort. Danach an den
+      Achsenpfeilen ziehen — oder am Punkt, dann rutscht er in der Bildebene.</div>
+
+    <h2>Übersicht</h2>
+    <div class="facts" id="plan-facts"></div>
+    <div class="hint">Der <b>Wandabstand</b> ist der kleinste Abstand der Bohrungswand zur Kavität, aus dem
+      Feld entlang der Achse abgetastet. Unter dem gewählten Abstand steht er mit ⚠.</div>
+
+    <h2>Import und Export</h2>
+    <input type="file" id="json-input" accept=".json,application/json" hidden>
+    <div class="btn-pair">
+      <button type="button" class="btn btn-outline" id="json-btn">JSON laden</button>
+      <button type="button" class="btn btn-outline" id="json-save">JSON speichern</button>
+    </div>
+    <button type="button" class="btn btn-outline block-btn" id="stl-save">Als STL speichern</button>
+  </aside>
+
+  <div id="viewport">
+    <div class="pt-menu" id="pt-menu">
+      <div class="pt-menu-title">Auswahl</div>
+      <div class="pt-sel" id="pt-sel">Kein Element gewählt</div>
+      <div id="sel-block" class="disabled">
+        <div class="row">
+          <span>Durchmesser</span>
+          <input type="text" id="sel-d" inputmode="decimal" value="8" spellcheck="false">
+          <span class="val">mm</span>
+        </div>
+        <div class="row" id="sel-len-row">
+          <span>Länge</span>
+          <input type="text" id="sel-len" inputmode="decimal" value="60" spellcheck="false">
+          <span class="val">mm</span>
+        </div>
+        <div class="row" id="sel-dir-row">
+          <span>Richtung</span>
+          <span class="val" id="sel-dir" style="width:auto;flex:1;text-align:right">—</span>
+        </div>
+        <div class="row pos">
+          <span>Lage</span>
+          <div class="triple">
+            <input type="text" id="sel-x" inputmode="decimal" value="0" spellcheck="false" title="X">
+            <input type="text" id="sel-y" inputmode="decimal" value="0" spellcheck="false" title="Y">
+            <input type="text" id="sel-z" inputmode="decimal" value="0" spellcheck="false" title="Z">
+          </div>
+          <span class="val">mm</span>
+        </div>
+        <label class="inline" id="sel-both-row"><input type="checkbox" id="sel-both"> Beide Enden bewegen</label>
+        <div class="facts" id="sel-facts"></div>
+      </div>
+      <div class="pt-menu-title">Setzen</div>
+      <button type="button" id="add-stich" disabled title="Ein Klick auf die Abstandsfläche: dort sitzt die Spitze."><span class="dot" style="background:#e07b39"></span>Kühlstich</button>
+      <button type="button" id="add-kanal" disabled title="Zwei Klicks auf die Abstandsfläche: die beiden Enden."><span class="dot" style="background:#2e6da4"></span>Kanal (2 Punkte)</button>
+      <button type="button" id="del-item" class="danger" title="Auswahl entfernen (Entf)">Löschen</button>
+    </div>
+    <div class="vp-right">
+      <div class="pt-legend" id="pt-legend"></div>
+    </div>
+    <div id="status">
+      <b>Setzen</b>: Art wählen, dann auf die Abstandsfläche klicken &nbsp;·&nbsp; <b>Punkt</b> ziehen: in der Bildebene &nbsp;·&nbsp;
+      <b>Achsenpfeil</b>: je Achse &nbsp;·&nbsp; <b>Pfeil</b> am Kühlstich: neu setzen &nbsp;·&nbsp;
+      <b>Leer</b>: drehen &nbsp;·&nbsp; <b>rechts</b>: verschieben &nbsp;·&nbsp; <b>Rad</b>: zoomen
+    </div>
+    <div class="drop-hint">STL oder GLB hier ablegen</div>
+    <div class="aim-banner hidden" id="aim-banner">
+      <div class="aim-pill">
+        <span id="aim-text"></span>
+        <button type="button" id="aim-cancel">Abbrechen</button>
+      </div>
+    </div>
+    <div id="busy"></div>
+  </div>
+</div>
+
+<script type="module" src="js/cooling/app.js"></script>
+</body>
+</html>

@@ -15,7 +15,8 @@ const LINKS = [
   { href: 'wandstaerke.html', label: 'Wandstärkenanalyse' },
   { href: 'abstand.html', label: 'Abstandsanalyse' },
   { href: 'anguss.html', label: 'Angussdesigner' },
-  { href: 'ueberlauf.html', label: 'Überlaufdesigner' }
+  { href: 'ueberlauf.html', label: 'Überlaufdesigner' },
+  { href: 'temperier.html', label: 'Temperierkanäle' }
 ];
 
 const H_GLYPH = '<svg viewBox="0 0 100 100" aria-hidden="true" style="height:.78em;vertical-align:-.02em;margin:0 .06em">'
