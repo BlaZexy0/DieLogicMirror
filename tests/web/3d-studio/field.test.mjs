@@ -13,7 +13,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as S from '../../../web/tools/3d-studio/js/solids.js';
-import { subtract, union } from '../../../web/tools/3d-studio/js/csg.js';
+import { union } from '../../../web/tools/3d-studio/js/csg.js';
 import { volume, surface, weld, adjacency } from '../../../web/tools/3d-studio/js/mesh.js';
 import { buildModel } from '../../../web/tools/3d-studio/js/part/model.js';
 import { buildField, fieldSize, sampleField, fieldVolume, fieldExtrema, thickMaxima } from '../../../web/tools/3d-studio/js/part/field.js';

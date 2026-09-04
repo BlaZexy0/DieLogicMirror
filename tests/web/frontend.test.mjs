@@ -275,7 +275,7 @@ test('state: applyData verwirft ungültige Kurvenpunkte statt NaN zu übernehmen
 
 test('nav: CHARTS-Liste entspricht der Registry (Ids, Titel, Reihenfolge)', () => {
   const src = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
-  const m = src.match(/const CHARTS = \[([\s\S]*?)\n  \];/);
+  const m = src.match(/const CHARTS = \[([\s\S]*?)\n {2}\];/);
   assert.ok(m, 'CHARTS-Array in nav.js nicht gefunden');
   const navCharts = new Function('return [' + m[1] + ']')();
   assert.deepEqual(navCharts, charts.map(c => [c.id, c.title]),

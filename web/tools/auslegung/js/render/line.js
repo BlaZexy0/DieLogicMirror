@@ -1,7 +1,7 @@
 /* Liniendiagramme: Serien, Grenzen (d.limits — Ausschlussflächen, Ziel-
    bänder, Referenzlinien), Ereignismarker, Betriebspunkt. */
 
-import { lineFrame, heading, axes, marker, text, fillRich, LEGEND_ROW, LEGEND_MAX_ROWS, LEGEND_TOP } from './base.js';
+import { lineFrame, heading, axes, marker, fillRich, LEGEND_ROW, LEGEND_MAX_ROWS, LEGEND_TOP } from './base.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { drawLimits, legendItems, drawLegendSwatch } from './limits.js';

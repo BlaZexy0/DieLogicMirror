@@ -9,7 +9,7 @@ import { subtract, union } from '../../../web/tools/3d-studio/js/csg.js';
 import { volume, surface, bounds, cleanMesh } from '../../../web/tools/3d-studio/js/mesh.js';
 import { buildModel, openEdgeRatio } from '../../../web/tools/3d-studio/js/part/model.js';
 import { computeVisibility, DIRS } from '../../../web/tools/3d-studio/js/part/visibility.js';
-import { segment, candidates, UNDERCUT, STAGE } from '../../../web/tools/3d-studio/js/part/segment.js';
+import { segment, STAGE } from '../../../web/tools/3d-studio/js/part/segment.js';
 import { draftAngles, draftStats, dirNames } from '../../../web/tools/3d-studio/js/part/draft.js';
 import { parseSTL, writeSTL } from '../../../web/tools/3d-studio/js/part/stlio.js';
 import { DEMO_PARTS } from '../../../web/tools/3d-studio/js/part/demoparts.js';

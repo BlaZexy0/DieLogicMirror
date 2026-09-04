@@ -24,12 +24,6 @@ function rootTokens(css) {
   for (const [, k, v] of m[1].matchAll(/--([a-z0-9-]+):\s*(#[0-9a-f]{6})/g)) out[k] = v;
   return out;
 }
-function constBlock(js, name) {
-  const m = js.match(new RegExp(name + ' = \\{([^}]*)\\}'));
-  const out = {};
-  for (const [, k, v] of m[1].matchAll(/(\w+): '(#[0-9a-f]{6})'/g)) out[k] = v;
-  return out;
-}
 const cssKey = k => k.replace(/[A-Z]/g, c => '-' + c.toLowerCase());
 
 test('palette: Werte sind 6-stellige Kleinbuchstaben-Hex, keine Dubletten bis auf text = dark', () => {

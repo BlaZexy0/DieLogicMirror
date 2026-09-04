@@ -1,0 +1,19 @@
+{
+  "name": "dielogic",
+  "private": true,
+  "version": "0.10.0",
+  "description": "DieLogic — Werkzeuge für die Druckgießform: Website, Backend, 3D-Studio",
+  "scripts": {
+    "test": "node tests/web/syntax-check.mjs && node --import ./tests/web/3d-studio/stubs/register.mjs --test tests/web/*.test.mjs tests/web/3d-studio/*.test.mjs",
+    "lint": "eslint",
+    "check": "npm run lint && npm test",
+    "browser": "playwright test --config tests/browser/playwright.config.mjs",
+    "browser:update": "playwright test --config tests/browser/playwright.config.mjs --update-snapshots"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.1",
+    "eslint": "^10.10.0",
+    "globals": "^17.12.0"
+  }
+}

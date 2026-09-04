@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as S from '../../../web/tools/3d-studio/js/solids.js';
 import { subtract, union, intersect } from '../../../web/tools/3d-studio/js/csg.js';
-import { volume, surface, bounds, weld, adjacency, cleanMesh, repairTJunctions, smoothNormals } from '../../../web/tools/3d-studio/js/mesh.js';
+import { volume, surface, bounds, weld, adjacency, cleanMesh, smoothNormals } from '../../../web/tools/3d-studio/js/mesh.js';
 
 /* Vergleich mit RELATIVER Toleranz — Volumen liegen hier im
    Millionenbereich, absolute Schranken wären dort sinnlos. */

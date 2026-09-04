@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { buildParts, buildCastPart, _internals as X } from '../../../web/tools/3d-studio/js/diegeom.js';
 import { CFG } from '../../../web/tools/3d-studio/js/config.js';
 import { COMPONENTS } from '../../../web/tools/3d-studio/js/registry.js';
-import { intersect, subtract } from '../../../web/tools/3d-studio/js/csg.js';
+import { intersect } from '../../../web/tools/3d-studio/js/csg.js';
 import { volume, bounds, weld, adjacency, cleanMesh } from '../../../web/tools/3d-studio/js/mesh.js';
 
 const parts = buildParts();

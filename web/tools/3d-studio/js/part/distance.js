@@ -17,7 +17,7 @@
 
    Kein Three.js — damit unter Node testbar. */
 
-import { bounds, weld, distSqPointTri } from '../mesh.js';
+import { bounds, distSqPointTri } from '../mesh.js';
 
 /** Dreiecke eines Netzes in ein Würfelraster einsortieren. */
 /* Wie viel gröber als die dichteoptimale Zelle darf das Gitter höchstens

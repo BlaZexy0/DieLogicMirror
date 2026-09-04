@@ -142,6 +142,23 @@ Hinweis in der Schusskurve — alle 19 Diagramme rechnen unabhängig davon im Br
 
 ## Tests
 
+Kurz, über `package.json` (einmal `npm install` für ESLint und Playwright):
+
+```bash
+npm test          # Syntaxcheck + alle Node-Tests (wie unten)
+npm run lint      # ESLint: no-undef, ungenutzte Variablen … (eslint.config.mjs)
+npm run check     # beides
+npm run browser   # Playwright: jede Seite des 3D-Studios im kopflosen Chromium
+                  # (tests/browser/, startet selbst einen statischen Server auf 8130)
+```
+
+Der Linter fängt, was der Syntaxcheck nicht sieht — etwa den Aufruf einer
+beim Umbau gelöschten Funktion, den die Node-Tests nie erreichen. Die
+Browser-Tests prüfen, was nur der Browser weiß: WebGL, Zeigerereignisse,
+Ereignisreihenfolge. Hinweis: `package.json` trägt absichtlich kein
+`"type": "module"` — die klassischen Skripte unter `web/shared` und
+`web/tools/*` werden in den Tests als CommonJS geladen.
+
 Wie in CI (`.github/workflows/ci.yml`):
 
 ```bash

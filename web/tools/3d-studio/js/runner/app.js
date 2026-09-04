@@ -357,7 +357,6 @@ function syncSelection() {
     updatePointMenu();
     return;
   }
-  const follower = G.isFollower(g, id);
   $('pt-sel').innerHTML = label;
   /* Ein Zehntel: „−137,25" passt nicht in ein Drittel der Zeile, und auf
      den Hundertstelmillimeter setzt niemand einen Kanalpunkt. */

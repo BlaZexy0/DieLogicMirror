@@ -43,10 +43,10 @@ async function ready(mod, name = null, tries = 600) {
 }
 
 /* ── Formteilungs-Viewer ─────────────────────────────────────── */
-let app, doc, byId;
+let app, doc;
 
 before(async () => {
-  ({ doc, byId } = buildDocument(read('bauteilanalyse.html')));
+  ({ doc } = buildDocument(read('bauteilanalyse.html')));
   installGlobals(doc);
   app = await import('../../../web/tools/3d-studio/js/part/app.js');
   await ready(app);

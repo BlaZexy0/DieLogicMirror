@@ -231,7 +231,6 @@ export function analyseFlow(g, net, proc) {
       loss += l.loss; dyn += l.dyn;
       for (const k of Object.keys(parts)) parts[k] += l[k];
     }
-    const l = losses.get(n.id) || {};
     const gArea = (net.nodeArea[n.id + ':gate'] || {}).area || 1;
     return {
       id: n.id, node: n,

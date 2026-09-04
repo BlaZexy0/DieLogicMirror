@@ -92,7 +92,7 @@ export default {
     const c = pqCore(v);
     if (!c) return { err: 'Anschnittfläche, Cd, v_max und Gießkraft müssen > 0 sein.' };
     const C = theme.chart;
-    const { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, pEnv, QtLo, QtHi, tVent } = c;
+    const { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, tVent } = c;
     const tb = this.tab, yb = this.tab2 || 'pm';
 
     const tfOp = Vag / Qs * 1000;

@@ -4,7 +4,6 @@ import { frame, lineFrame } from './base.js';
 import { donutGeom, donutTotal } from './donut.js';
 import { MAP_LABELS } from './map.js';
 import { fmt, subHTML } from '../core/format.js';
-import { theme } from '../core/theme.js';
 import { vCrit } from '../core/physics.js';
 import { violates } from '../core/limits.js';
 
