@@ -26,7 +26,7 @@ import { buildModel } from './model.js';
 import { refine } from '../mesh.js';
 import { buildLocator, distanceToMesh, distanceStats, insideFraction } from './distance.js';
 import {
-  $, fmt, facts, segButtons, slider, numberInput, runControl, colorbar, gradient, chip
+  $, fmt, facts, segButtons, slider, numberInput, runControl, colorbar, gradient
 } from '../ui/controls.js';
 import * as C from './colors.js';
 
@@ -176,6 +176,11 @@ async function runDistance() {
     state.ms = performance.now() - t0;
     state.analysed = true;
     state.stale = false;
+    /* Die Skala reicht nach jeder Rechnung von der kleinsten zur größten
+       gemessenen Entfernung — eine Skala 0 bis 20 bei Messwerten von 8
+       bis 45 zeigte die Hälfte des Bildes in einer Farbe. Von Hand
+       lässt sie sich danach weiter einengen. */
+    scaleFromStats();
     applyColors();
     updateFacts();
   } catch (err) {
@@ -252,7 +257,7 @@ function applyColors() {
       const { index, faceCount } = s.model;
       for (let f = 0; f < faceCount; f++) {
         for (let e = 0; e < 3; e++) {
-          const rgb = C.distanceColor(s.dist[index[f * 3 + e]], min, max);
+          const rgb = distRgb(s.dist[index[f * 3 + e]], min, max);
           arr[f * 9 + e * 3] = rgb[0];
           arr[f * 9 + e * 3 + 1] = rgb[1];
           arr[f * 9 + e * 3 + 2] = rgb[2];
@@ -264,6 +269,15 @@ function applyColors() {
   updateColorbar();
 }
 
+/* Turbo, wie in der Wandstärkenanalyse: nah ist rot (kritisch), fern
+   blau; benutzt wird das Stück von sattem Blau bis sattem Rot, die
+   dunklen Enden bleiben weg. */
+const turbo = t => C.turbo(0.08 + 0.84 * Math.max(0, Math.min(1, t)));
+function distRgb(v, min, max) {
+  const u = max > min ? (v - min) / (max - min) : 0;
+  return turbo(1 - u);
+}
+
 function updateColorbar() {
   const anyColored = state.analysed
     && ((state.color !== 'b' && meshA.visible) || (state.color !== 'a' && meshB.visible));
@@ -271,10 +285,10 @@ function updateColorbar() {
   const { min, max } = state.scale;
   colorbar({
     title: 'Abstand A ↔ B',
-    stops: gradient(t => rgbOf(C.ramp(C.DIST_RAMP, t))),
+    stops: gradient(t => rgbOf(turbo(1 - t))),
     ticks: [max, min + 0.75 * (max - min), min + 0.5 * (max - min), min + 0.25 * (max - min), min]
       .map((v, i) => (i === 0 ? '≥ ' : i === 4 ? '≤ ' : '') + fmt(v)),
-    extra: chip('#e5f3f2') + 'mm'
+    extra: 'mm · nah rot, fern blau'
   });
 }
 const rgbOf = rgb => 'rgb(' + rgb.map(v => Math.round(v * 255)).join(',') + ')';
@@ -322,17 +336,19 @@ $('run-distance').addEventListener('click', () => {
 numberInput('scale-min', v => { state.scale.min = v; applyColors(); return v; });
 numberInput('scale-max', v => { state.scale.max = v; applyColors(); return v; });
 
-$('scale-auto').addEventListener('click', () => {
+/** Grenzen aus den Messwerten beider Seiten: kleinster bis größter Abstand. */
+function scaleFromStats() {
   const all = ['a', 'b'].map(k => state[k].stats).filter(Boolean);
-  if (!all.length) return;
+  if (!all.length) return false;
   const lo = Math.min(...all.map(s => s.min));
   const hi = Math.max(...all.map(s => s.max));
-  state.scale.min = Math.round(lo * 10) / 10;
-  state.scale.max = Math.round(hi * 10) / 10;
+  state.scale.min = Math.floor(lo * 10) / 10;
+  state.scale.max = Math.max(state.scale.min + 0.1, Math.ceil(hi * 10) / 10);
   $('scale-min').value = fmt(state.scale.min);
   $('scale-max').value = fmt(state.scale.max);
-  applyColors();
-});
+  return true;
+}
+$('scale-auto').addEventListener('click', () => { if (scaleFromStats()) applyColors(); });
 
 segButtons('color-seg', v => { state.color = v; applyColors(); });
 for (const key of ['a', 'b']) {

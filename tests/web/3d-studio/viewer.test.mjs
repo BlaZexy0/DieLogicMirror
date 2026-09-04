@@ -589,6 +589,11 @@ test('Abstandsseite: zwei Dateien, Abstand auf Knopfdruck', async () => {
   assert.ok(Math.abs(s.a.stats.min - s.b.stats.min) < 0.5,
     'kleinster Abstand von beiden Seiten gleich: ' + s.a.stats.min.toFixed(2) + ' / ' + s.b.stats.min.toFixed(2));
   assert.ok(s.a.stats.min > 0, 'die Körper berühren sich nicht');
+  /* Die Skala stellt sich auf die Messwerte: kleinster bis größter Abstand. */
+  const lo = Math.min(s.a.stats.min, s.b.stats.min), hi = Math.max(s.a.stats.max, s.b.stats.max);
+  assert.ok(Math.abs(s.scale.min - lo) <= 0.1 + 1e-9 && Math.abs(s.scale.max - hi) <= 0.1 + 1e-9,
+    'Grenzen aus den Messwerten: ' + s.scale.min + ' … ' + s.scale.max + ' gegen ' + lo.toFixed(2) + ' … ' + hi.toFixed(2));
+  assert.equal(globalThis.document.getElementById('scale-min').value, String(s.scale.min).replace('.', ','));
   assert.ok(d5.getElementById('distance-facts').innerHTML.includes('mm'), 'Kennzahlen');
   assert.equal(d5.getElementById('run-distance').textContent, 'Abstand ist aktuell');
 });

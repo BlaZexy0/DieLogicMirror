@@ -319,13 +319,15 @@ einfärben lassen.
 - **Suchgrenze.** Weiter als bis dorthin wird nicht gesucht; alles
   darüber wird als „≥ Grenze" ausgewiesen. Das begrenzt die Rechenzeit
   und ist ehrlicher, als eine Zahl zu nennen, die niemanden interessiert.
-- **Farbskala mit eigenen Grenzen.** Minimum und Maximum werden
-  eingetippt — erst „interessant ist der Bereich zwischen 8 und 20 mm"
-  macht aus der Karte eine Aussage. Ein Knopf übernimmt die Grenzen aus
-  den Messwerten. Die Grenzen färben nur um; nur die Suchgrenze verlangt
-  eine neue Rechnung. Der Verlauf wird über vier Stützstellen monoton
-  heller, damit die Reihenfolge auch im Graudruck stimmt — anders als bei
-  einem Regenbogenverlauf.
+- **Farbskala aus den Messwerten.** Nach jeder Rechnung reicht die
+  Skala von der kleinsten zur größten gemessenen Entfernung beider
+  Seiten — eine Skala 0 bis 20 bei Messwerten von 8 bis 45 zeigte die
+  Hälfte des Bildes in einer Farbe. Danach lassen sich Minimum und
+  Maximum von Hand einengen: erst „interessant ist der Bereich zwischen
+  8 und 20 mm" macht aus der Karte eine Aussage; der Knopf holt die
+  Messwerte zurück. Die Grenzen färben nur um; nur die Suchgrenze
+  verlangt eine neue Rechnung. Der Verlauf ist die Turbo-Skala wie in
+  der Wandstärkenanalyse, nah rot (kritisch), fern blau.
 - **Beide Teile** lassen sich einzeln aus- und einblenden, und wahlweise
   wird A, B oder beides eingefärbt; das jeweils andere bleibt einfarbig,
   damit nicht zwei Skalen um dieselbe Aufmerksamkeit konkurrieren.
