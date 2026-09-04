@@ -222,7 +222,11 @@ jenseits des Reglers, der bleibt dann an seinem Ende stehen). Nach innen
 endet der Regler an der **dicksten Stelle** — tiefer gibt es nichts
 mehr, was eine Fläche gleichen Abstands haben könnte; auch die Zahl
 wird dort festgehalten. Nach oben reicht er bis +40 mm. Beide zeigen
-denselben Wert. Solange er in der Bandbreite liegt, kostet ein
+denselben Wert. Nach dem Rechnen steht als **Vorgabe ein Untermaß von
+der halben größten Tiefe**: stehen bleibt, was dicker ist als die halbe
+größte Wandstärke — die Kerne, um die es geht. Ein selbst gesetztes
+Aufmaß überlebt ein neues Feld; ein neues Bauteil bekommt wieder die
+Vorgabe. Solange er in der Bandbreite liegt, kostet ein
 anderer Wert nur das Ableiten — Millisekunden, kein neues Feld; am
 Regler wird höchstens einmal je Bild abgeleitet. Verlangt es mehr, zieht
 die Bandbreite automatisch mit und die Seite bittet um ein neues Feld.

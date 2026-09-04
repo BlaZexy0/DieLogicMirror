@@ -106,6 +106,7 @@ const source = mountPartSource({
     state.stats = null;
     state.maxima = [];
     state.stale = true;
+    state.deltaTouched = false;               // ein neues Teil bekommt wieder die Vorgabe
     /* Bandbreite an die Bauteilgröße anpassen, solange der Nutzer sie
        nicht selbst gesetzt hat. */
     if (!state.bandTouched) {
@@ -150,6 +151,10 @@ async function runField() {
     /* Nach innen endet die Skala am Maximum: tiefer als die dickste
        Stelle gibt es keine Fläche mehr, also auch keinen Reglerweg. */
     $('delta-slider').min = String(-Math.ceil(state.stats.maxIn * 2) / 2);
+    /* Vorgabe: ein Untermaß von der halben größten Tiefe — stehen bleibt,
+       was dicker ist als die halbe größte Wandstärke: die Kerne, um die es
+       geht. Wer das Aufmaß selbst gesetzt hat, behält es. */
+    if (!state.deltaTouched) state.delta = -Math.round(state.stats.maxIn) / 2;
     if (state.delta < -state.stats.maxIn) state.delta = -Math.floor(state.stats.maxIn * 2) / 2;
     $('delta').value = fmtPlain(state.delta);
     $('delta-slider').value = String(Math.max(+$('delta-slider').min, Math.min(40, state.delta)));
@@ -438,6 +443,7 @@ let extractRaf = 0;
    was eine Fläche gleichen Abstands haben könnte. */
 const minDelta = () => (state.stats ? -state.stats.maxIn : -1e4);
 function setDelta(v, live) {
+  state.deltaTouched = true;
   state.delta = Math.max(minDelta(), Math.min(1e4, v));
   $('delta').value = fmtPlain(state.delta);
   $('delta-slider').value = String(Math.max(+$('delta-slider').min, Math.min(40, state.delta)));

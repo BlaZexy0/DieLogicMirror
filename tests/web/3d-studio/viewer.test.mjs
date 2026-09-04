@@ -395,6 +395,10 @@ test('Wandstärkenanalyse: Feld auf Knopfdruck, Fläche daraus abgeleitet', asyn
   assert.equal(s.stale, false);
   assert.equal(d4.getElementById('run-field').textContent, 'Feld ist aktuell');
   assert.ok(s.offsetTris && s.offsetTris.length > 0, 'Fläche sofort mit abgeleitet');
+  /* Die Vorgabe nach dem Rechnen: ein Untermaß von der halben größten
+     Tiefe — die Fläche zeigt die Kerne. */
+  assert.ok(Math.abs(s.delta + Math.round(s.stats.maxIn) / 2) < 1e-9, 'Vorgabe −maxIn/2: ' + s.delta + ' bei maxIn ' + s.stats.maxIn);
+  assert.equal(d4.getElementById('delta').value, fmtDe(s.delta).replace(/\./g, ''), 'das Feld zeigt sie');
   assert.ok(d4.getElementById('offset-facts').innerHTML.includes('cm³'), 'Kennwerte');
 
   /* Aufmaß ändern: nur ableiten, kein neues Feld. */
@@ -445,6 +449,7 @@ test('Wandstärkenanalyse: Feld auf Knopfdruck, Fläche daraus abgeleitet', asyn
   d4.getElementById('run-field').dispatch('click');
   for (let i = 0; i < 800 && s.stale; i++) await new Promise(r => setTimeout(r, 25));
   assert.equal(s.stale, false, 'nach dem Neurechnen wieder aktuell');
+  assert.equal(s.delta, 2, 'ein selbst gesetztes Aufmaß überlebt das neue Feld');
 
   /* Anzeige-Umschalter. */
   const seg = d4.getElementById('show-seg').querySelectorAll('button');
