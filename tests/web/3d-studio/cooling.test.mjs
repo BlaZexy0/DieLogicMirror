@@ -96,3 +96,51 @@ test('Datei: hin und zurück ergibt denselben Plan', () => {
   assert.equal(back.seq, 2);
   assert.throws(() => M.fromJSON({ format: 'x' }), /Temperierdatei/);
 });
+
+test('Automatik: N Bohrungen decken das Bauteil gleichmäßig ab', async () => {
+  const S = await import(R + 'js/solids.js');
+  const { buildModel } = await import(R + 'js/part/model.js');
+  const { buildField } = await import(R + 'js/part/field.js');
+  const { surfaceNets } = await import(R + 'js/part/surfacenets.js');
+  const A = await import(R + 'js/cooling/auto.js');
+  /* Eine Platte 200 × 100 × 20: die Masse liegt in der Mittelebene, die
+     Abstandsfläche 15 mm außen. */
+  const m = buildModel(S.box(200, 100, 20));
+  const f = await buildField(m, { res: 64, band: 25 });
+  const shell = surfaceNets(f, 15);
+  assert.ok(shell.length > 0);
+
+  const cells = A.interiorCells(f);
+  assert.ok(cells.length > 100 && cells.every(c => c.w > 0), 'innen liegende Zellen mit Gewicht');
+  const cands = A.shellCandidates(shell);
+  assert.ok(cands.length > 100);
+  for (const c of cands.slice(0, 50)) {
+    const n = A.outwardNormal(f, c);
+    assert.ok(Math.abs(Math.hypot(...n) - 1) < 1e-9, 'Normale normiert');
+    /* Vom Bauteil weg: der Kandidat liegt außen, die Normale zeigt weiter hinaus. */
+    const dot = n[0] * c[0] + n[1] * c[1] + n[2] * c[2];
+    assert.ok(dot > 0, 'zeigt vom Ursprung weg: ' + c + ' → ' + n);
+  }
+
+  const one = A.planCooling(f, shell, { count: 1 });
+  assert.equal(one.sites.length, 1);
+  const six = A.planCooling(f, shell, { count: 6, minSpacing: 20 });
+  assert.equal(six.sites.length, 6, 'sechs Bohrungen');
+  /* Alle auf der Abstandsfläche … */
+  const { sampleField } = await import(R + 'js/part/field.js');
+  for (const s of six.sites) {
+    assert.ok(Math.abs(sampleField(f, ...s.p) - 15) < f.h, 'auf der 15-mm-Fläche: ' + sampleField(f, ...s.p));
+  }
+  /* … mit Abstand zueinander … */
+  for (let i = 0; i < 6; i++) for (let j = i + 1; j < 6; j++) {
+    const d = Math.hypot(...six.sites[i].p.map((v, k) => v - six.sites[j].p[k]));
+    assert.ok(d >= 20 - 1e-9, 'Bohrungen halten Abstand: ' + d);
+  }
+  /* … über die Länge der Platte verteilt, nicht in einer Ecke … */
+  const xs = six.sites.map(s => s.p[0]);
+  assert.ok(Math.max(...xs) - Math.min(...xs) > 100, 'über die Länge verteilt: ' + xs.map(v => v.toFixed(0)));
+  /* … und mehr Bohrungen heißt kleinere Abstände im Bauteil. */
+  assert.ok(six.stats.mean < one.stats.mean && six.stats.max < one.stats.max,
+    'sechs decken besser als eine: ' + six.stats.mean.toFixed(1) + ' < ' + one.stats.mean.toFixed(1));
+  assert.ok(six.stats.max < 60, 'keine Zelle weiter als 60 mm von einer Bohrung: ' + six.stats.max);
+});

@@ -29,6 +29,7 @@ import { writeSTL } from '../part/stlio.js';
 import { createHandles, SELECTED_RING } from '../handles.js';
 import * as M from './model.js';
 import { buildByType, buildAll, volumeOf, wallClearance } from './geom.js';
+import { planCooling } from './auto.js';
 
 mountNav('temperier.html');
 
@@ -44,6 +45,7 @@ const state = {
   plan: M.emptyPlan(), model: null, name: '', field: null, shellDist: null,
   res: 64, dirMode: 'normal', both: false, showShell: true,
   defaults: { d: 8, len: 60, kd: 10 },
+  auto: { count: 8, spacing: 25, replace: true, stats: null },
   pending: null, computing: false, ready: false
 };
 
@@ -219,7 +221,8 @@ function syncSelection() {
   const meta = M.TYPES[it.type];
   $('pt-sel').innerHTML = '<span class="dot" style="background:' + meta.color + '"></span>'
     + meta.label + ' <code>' + it.id + '</code>'
-    + (it.type === 'kanal' ? ' <em>Ende ' + end.toUpperCase() + '</em>' : '');
+    + (it.type === 'kanal' ? ' <em>Ende ' + end.toUpperCase() + '</em>' : '')
+    + (it.auto ? ' <em>automatisch</em>' : '');
   $('sel-d').value = fmt(it.d, 2);
   $('sel-len-row').classList.toggle('hidden', it.type !== 'stich');
   $('sel-dir-row').classList.toggle('hidden', it.type !== 'stich');
@@ -381,6 +384,40 @@ function startMove(id) {
 
 $('add-stich').addEventListener('click', () => startPlace('stich'));
 $('add-kanal').addEventListener('click', () => startPlace('kanal'));
+
+/* ── Automatik ───────────────────────────────────────────────── */
+/* N Kühlstiche auf der Abstandsfläche, so verteilt, dass jede Stelle im
+   Bauteil — dicke eher als dünne — eine Bohrung in der Nähe hat
+   (js/cooling/auto.js). Die Richtung folgt der Wahl unter „Kühlstiche";
+   bei „Normale" ist es der Feldgradient an der Stelle. */
+function runAuto() {
+  if (!state.shellDist || !state.field) { noShell(); return; }
+  cancelAim();
+  const shell = shellMesh.geometry.attributes.position ? shellMesh.geometry.attributes.position.array : null;
+  if (!shell || !shell.length) return;
+  if (state.auto.replace) M.removeAuto(state.plan);
+  const spacing = Math.max(state.auto.spacing, state.defaults.d * 1.5);
+  const plan = planCooling(state.field, shell, { count: state.auto.count, minSpacing: spacing });
+  for (const site of plan.sites) {
+    const dir = M.directionFor(state.dirMode, site.n, toCamera(site.p));
+    M.addStich(state.plan, site.p, dir, { d: state.defaults.d, len: state.defaults.len, auto: true });
+  }
+  state.auto.stats = plan.stats;
+  handles.select(null);
+  rebuild();
+  facts('auto-facts', [
+    ['gesetzt', fmt(plan.sites.length, 0) + ' Kühlstiche'],
+    ['mittlerer Abstand', fmt(plan.stats.mean) + ' mm'],
+    ['größter Abstand', fmt(plan.stats.max) + ' mm']
+  ]);
+  $('auto-note').textContent = plan.sites.length < state.auto.count
+    ? 'Nur ' + plan.sites.length + ' Stellen halten den Mindestabstand — Abstand kleiner wählen oder weniger Bohrungen.'
+    : '';
+}
+$('auto-run').addEventListener('click', runAuto);
+slider('auto-count', v => { state.auto.count = v; }, v => v + '');
+slider('auto-spacing', v => { state.auto.spacing = v; }, v => v + ' mm');
+$('auto-replace').addEventListener('change', e => { state.auto.replace = e.target.checked; });
 $('aim-cancel').addEventListener('click', cancelAim);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { cancelAim(); return; }
@@ -478,5 +515,5 @@ rebuild();
 syncSelection();
 source.start();
 
-export const __viewer = { state, view, handles, rebuild, startPlace, startMove, computeShell, loadPlan, partMesh, shellMesh, group, source };
+export const __viewer = { state, view, handles, rebuild, startPlace, startMove, computeShell, loadPlan, runAuto, partMesh, shellMesh, group, source };
 window.__temperier = __viewer;

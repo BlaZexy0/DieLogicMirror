@@ -80,6 +80,26 @@
       <span class="val">mm</span>
     </div>
 
+    <h2>Automatisch</h2>
+    <div class="row">
+      <span title="Wie viele Kühlstiche gesetzt werden.">Anzahl</span>
+      <input type="range" id="auto-count" min="1" max="40" step="1" value="8">
+      <span class="val" id="auto-count-val"></span>
+    </div>
+    <div class="row">
+      <span title="Näher kommen sich zwei Bohrungen nicht.">Mindestabstand</span>
+      <input type="range" id="auto-spacing" min="10" max="80" step="5" value="25">
+      <span class="val" id="auto-spacing-val"></span>
+    </div>
+    <label class="inline"><input type="checkbox" id="auto-replace" checked> Vorherige automatische ersetzen</label>
+    <button type="button" class="btn btn-primary block-btn" id="auto-run">Kühlstiche automatisch setzen</button>
+    <div class="facts" id="auto-facts"></div>
+    <div class="warn-line" id="auto-note"></div>
+    <div class="hint">Jede Stelle im Bauteil soll eine Bohrung in der Nähe haben, dicke Stellen
+      zuerst: die Zellen des Bauteils zählen mit ihrer Wandstärke, die Bohrungen wandern auf der
+      Abstandsfläche so, dass die gewichteten Abstände im Bauteil gleichmäßig klein werden.
+      Richtung und Maße kommen von den Kühlstich-Vorgaben oben; von Hand gesetzte Stiche bleiben.</div>
+
     <h2>Kanäle</h2>
     <div class="row">
       <span>Durchmesser</span>

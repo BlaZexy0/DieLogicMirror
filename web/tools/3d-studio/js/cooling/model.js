@@ -76,8 +76,16 @@ export function addStich(plan, p, dir, params = {}) {
     p: p.slice(0, 3), dir: unit(dir),
     d: params.d ?? TYPES.stich.params.d, len: params.len ?? TYPES.stich.params.len
   };
+  /* Automatisch gesetzte Stiche merken sich das — der nächste Lauf der
+     Automatik räumt sie weg, von Hand gesetzte bleiben. */
+  if (params.auto) it.auto = true;
   plan.items[it.id] = it;
   return it;
+}
+
+/** Alle automatisch gesetzten Stiche entfernen. */
+export function removeAuto(plan) {
+  for (const it of allItems(plan)) if (it.auto) delete plan.items[it.id];
 }
 
 export function addKanal(plan, a, b, params = {}) {
@@ -133,7 +141,7 @@ export function toJSON(plan) {
   return {
     format: FORMAT, version: FORMAT_VERSION, dist: plan.dist,
     items: allItems(plan).map(it => (it.type === 'stich'
-      ? { id: it.id, type: 'stich', p: it.p.map(r4), dir: it.dir.map(v => +v.toFixed(6)), d: it.d, len: it.len }
+      ? { id: it.id, type: 'stich', p: it.p.map(r4), dir: it.dir.map(v => +v.toFixed(6)), d: it.d, len: it.len, ...(it.auto ? { auto: true } : {}) }
       : { id: it.id, type: 'kanal', a: it.a.map(r4), b: it.b.map(r4), d: it.d }))
   };
 }
@@ -152,6 +160,7 @@ export function fromJSON(obj) {
     } else {
       plan.items[id] = { id, type: 'stich', p: n(raw.p), dir: unit(n(raw.dir)),
         d: Number(raw.d) || TYPES.stich.params.d, len: Number(raw.len) || TYPES.stich.params.len };
+      if (raw.auto) plan.items[id].auto = true;
     }
     if (Number.isFinite(num)) plan.seq = Math.max(plan.seq, num);
   }

@@ -1294,6 +1294,36 @@ test('Temperierkanal-Designer: Abstandsfläche, Kühlstich, Kanal, Achsenpfeile,
   assert.ok(Math.hypot(...delta) > 3, 'der Punkt wandert: ' + delta);
   assert.ok(Math.abs(delta[0] * vd.x + delta[1] * vd.y + delta[2] * vd.z) < 1e-6, 'in der Bildebene, quer zum Blick');
 
+  /* Automatik: N Kühlstiche auf der Fläche, mit Abstand zueinander; ein
+     zweiter Lauf ersetzt die automatischen, die von Hand gesetzten bleiben. */
+  const manualBefore = items().filter(i => !i.auto).length;
+  const cnt = d8.getElementById('auto-count');
+  cnt.value = '5'; cnt.dispatch('input');
+  assert.equal(v.state.auto.count, 5);
+  d8.getElementById('auto-run').dispatch('click');
+  const autos = () => items().filter(i => i.auto);
+  assert.equal(autos().length, 5, 'fünf automatische Kühlstiche');
+  assert.equal(items().filter(i => !i.auto).length, manualBefore, 'die von Hand gesetzten bleiben');
+  const F8 = await import('../../../web/tools/3d-studio/js/part/field.js');
+  for (const a of autos()) {
+    assert.ok(Math.abs(F8.sampleField(v.state.field, ...a.p) - 20) < v.state.field.h * 1.5, 'auf der Abstandsfläche: ' + F8.sampleField(v.state.field, ...a.p));
+    assert.ok(Math.abs(Math.hypot(...a.dir) - 1) < 1e-9);
+    assert.equal(a.d, 8); assert.equal(a.len, 60);
+  }
+  assert.match(d8.getElementById('auto-facts').innerHTML, /mittlerer Abstand/);
+  assert.match(d8.getElementById('pt-sel').textContent || d8.getElementById('pt-sel').innerHTML, /Kein Element/);
+  cnt.value = '3'; cnt.dispatch('input');
+  d8.getElementById('auto-run').dispatch('click');
+  assert.equal(autos().length, 3, 'der zweite Lauf ersetzt die automatischen');
+  const rep = d8.getElementById('auto-replace');
+  rep.checked = false; rep.dispatch('change');
+  d8.getElementById('auto-run').dispatch('click');
+  assert.equal(autos().length, 6, 'ohne Ersetzen kommen sie dazu');
+  v.handles.select(autos()[0].id);
+  assert.match(d8.getElementById('pt-sel').innerHTML, /automatisch/, 'das Auswahlfeld sagt es');
+  for (const a of autos()) { delete v.state.plan.items[a.id]; }
+  v.rebuild();
+
   /* Kennzahlen, Datei, Löschen. */
   assert.match(d8.getElementById('plan-facts').innerHTML, /Kühlstiche.*Kanäle.*Gesamtlänge/s);
   const G8 = await import('../../../web/tools/3d-studio/js/cooling/model.js');

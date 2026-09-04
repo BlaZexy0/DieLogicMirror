@@ -833,6 +833,32 @@ rutscht er in der Bildebene durch die Kamera. „Beide Enden bewegen"
 nimmt beim Kanal das andere Ende mit demselben Versatz mit: der Kanal
 behält Länge und Richtung.
 
+### Automatisch setzen
+
+„Kühlstiche automatisch setzen" (`js/cooling/auto.js`) löst eine
+Überdeckungsaufgabe: wo müssen N Bohrungen auf der Abstandsfläche
+sitzen, damit jede Stelle im Bauteil eine Bohrung in der Nähe hat — und
+dicke Stellen eher als dünne, denn dort steckt die Wärme. Die Zellen des
+Bauteils sind die Masse, jede mit ihrer halben Wandstärke |v| aus dem
+Feld als Gewicht; die Kandidaten sind Punkte der Abstandsfläche. Gesucht
+sind N Kandidaten, die die gewichtete Summe der Abstandsquadrate jeder
+Zelle zu ihrer nächsten Bohrung klein machen — das Abstandsfeld, das die
+Bohrungen im Bauteil erzeugen, soll überall gleichmäßig klein sein.
+
+Zwei Schritte, beides Lehrbuch: ein **gieriger Start** (k-center — die
+Zelle mit dem größten gewichteten Abstand zur nächsten gesetzten Bohrung
+bestimmt die nächste, so bekommt jede Ecke zuerst eine, bevor irgendwo
+eine zweite steht) und ein **Verfeinern** wie k-means auf der Fläche
+(jede Zelle gehört zur nächsten Bohrung, jede Bohrung rückt an den
+Kandidaten, der dem gewichteten Schwerpunkt ihrer Zellen am nächsten
+liegt, bis nichts mehr wandert). Kandidaten näher als der
+**Mindestabstand** an einer gesetzten Bohrung scheiden aus. Die Richtung
+folgt der Wahl unter „Kühlstiche"; bei „Normale" ist es der Feldgradient
+an der Stelle. Die Kennzahlen nennen den gewichteten mittleren und den
+größten Abstand einer Bauteilzelle zur nächsten Bohrung. Automatisch
+gesetzte Stiche sind als solche markiert; der nächste Lauf ersetzt sie
+(abschaltbar), von Hand gesetzte bleiben.
+
 ### Zahlen und Dateien
 
 Das Auswahlfeld nennt Länge, Volumen und den **Wandabstand**: den
@@ -875,6 +901,7 @@ js/vents/geom.js      Prismen aus dem Plan: Steg, Bohne, Kanal, Waschbrett
 js/vents/app.js       Einstieg Überlaufdesigner
 js/cooling/model.js   der Temperierplan: Kühlstiche, Kanäle, Richtungen, Datei
 js/cooling/geom.js    Rotationskörper: Stich mit Halbkugelspitze, Kanal; Wandabstand aus dem Feld
+js/cooling/auto.js    Kühlstiche automatisch: gewichtete Überdeckung des Bauteils (k-center + k-means)
 js/cooling/app.js     Einstieg Temperierkanal-Designer
 js/clipcaps.js        Schnittebene mit geschlossenen Schnittflächen (Stencil)
 js/die.js             Einstieg Formaufbau-Viewer
