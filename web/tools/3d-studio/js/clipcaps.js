@@ -11,7 +11,8 @@
 
    Die Zwillings-Meshes hängen als Geschwister neben den Original-Meshes:
    Sichtbarkeits-Schalter der Sidebar und der „Form öffnen"-Versatz wirken
-   dadurch automatisch auch auf die Schnittflächen. */
+   dadurch automatisch auch auf die Schnittflächen. Sie tragen
+   userData.stencilTwin, damit Export und Neuaufbau sie erkennen. */
 
 import * as T from 'three';
 
@@ -32,27 +33,11 @@ const CAP_SIZE = 4200;
 const OFF_CONSTANT = 1e9;
 
 export function initClipCaps(scene, dieScene) {
-  const EXTENT = extentOf(dieScene);
   const plane = new T.Plane(new T.Vector3(-1, 0, 0), OFF_CONSTANT);
-
-  /* Alle Modell-Materialien und die Klassen in stabiler Reihenfolge,
-     Stahl zuerst. */
-  const materials = new Set();
-  const classOrder = [];
-  const classColor = new Map();
-  dieScene.traverse(o => {
-    if (!o.isMesh) return;
-    materials.add(o.material);
-    const n = o.material.name || 'steel';
-    if (!classColor.has(n)) {
-      classColor.set(n, n === 'steel' ? new T.Color(STEEL_CAP) : o.material.color.clone());
-      classOrder.push(n);
-    }
-  });
-  classOrder.sort((a, b) => (a === 'steel' ? -1 : b === 'steel' ? 1 : 0));
-  const orderOf = Object.fromEntries(classOrder.map((n, i) => [n, i]));
-
-  for (const m of materials) m.clippingPlanes = [plane];
+  let EXTENT = extentOf(dieScene);
+  let twins = [];
+  let caps = [];
+  let last = { on: false, axis: 'x', pos: 0, flip: false };
 
   /* Stencil-Zwillinge: zwei geteilte Materialien, renderOrder je Klasse. */
   function stencilMat(side, op) {
@@ -69,46 +54,75 @@ export function initClipCaps(scene, dieScene) {
   const backMat = stencilMat(T.BackSide, T.IncrementWrapStencilOp);
   const frontMat = stencilMat(T.FrontSide, T.DecrementWrapStencilOp);
 
-  const twins = [];
-  const sources = [];
-  dieScene.traverse(o => { if (o.isMesh) sources.push(o); });
-  for (const src of sources) {
-    const order = 10 + 2 * orderOf[src.material.name || 'steel'];
-    for (const m of [backMat, frontMat]) {
-      const t = new T.Mesh(src.geometry, m);
-      t.position.copy(src.position);
-      t.quaternion.copy(src.quaternion);
-      t.scale.copy(src.scale);
-      t.renderOrder = order;
-      t.visible = false;
-      src.parent.add(t);
-      twins.push(t);
+  /* Zwillinge und Deckflächen für das aktuelle Modell aufbauen. Wird nach
+     jeder Änderung an den Teilen (Laden, Entfernen, Verschieben) und beim
+     Wechsel des Modells neu gerufen — die alten Zwillinge kommen weg. */
+  function build() {
+    for (const t of twins) t.removeFromParent();
+    for (const c of caps) { c.removeFromParent(); c.geometry.dispose(); c.material.dispose(); }
+    twins = [];
+    caps = [];
+
+    /* Alle Modell-Materialien und die Klassen in stabiler Reihenfolge,
+       Stahl zuerst. */
+    const materials = new Set();
+    const classOrder = [];
+    const classColor = new Map();
+    const sources = [];
+    dieScene.traverse(o => {
+      if (!o.isMesh || o.userData.stencilTwin) return;
+      sources.push(o);
+      materials.add(o.material);
+      const n = o.material.name || 'steel';
+      if (!classColor.has(n)) {
+        classColor.set(n, n === 'steel' ? new T.Color(STEEL_CAP) : o.material.color.clone());
+        classOrder.push(n);
+      }
+    });
+    classOrder.sort((a, b) => (a === 'steel' ? -1 : b === 'steel' ? 1 : 0));
+    const orderOf = Object.fromEntries(classOrder.map((n, i) => [n, i]));
+
+    for (const m of materials) m.clippingPlanes = [plane];
+
+    for (const src of sources) {
+      const order = 10 + 2 * orderOf[src.material.name || 'steel'];
+      for (const m of [backMat, frontMat]) {
+        const t = new T.Mesh(src.geometry, m);
+        t.position.copy(src.position);
+        t.quaternion.copy(src.quaternion);
+        t.scale.copy(src.scale);
+        t.renderOrder = order;
+        t.visible = false;
+        t.userData.stencilTwin = true;
+        src.parent.add(t);
+        twins.push(t);
+      }
+    }
+
+    /* Deckflächen: eine Ebene je Klasse; Inhalt (Gussteil, Temperierung …)
+       minimal vor der Stahl-Deckfläche, damit er auf dem Schnitt sichtbar ist. */
+    for (const name of classOrder) {
+      const m = new T.MeshStandardMaterial({
+        color: classColor.get(name), roughness: 0.6, metalness: 0.2, side: T.DoubleSide
+      });
+      m.stencilWrite = true;
+      m.stencilRef = 0;
+      m.stencilFunc = T.NotEqualStencilFunc;
+      m.stencilFail = T.ReplaceStencilOp;
+      m.stencilZFail = T.ReplaceStencilOp;
+      m.stencilZPass = T.ReplaceStencilOp;
+      const cap = new T.Mesh(new T.PlaneGeometry(CAP_SIZE, CAP_SIZE), m);
+      cap.renderOrder = 11 + 2 * orderOf[name];
+      cap.onAfterRender = renderer => renderer.clearStencil();
+      cap.visible = false;
+      cap.userData.capOffset = name === 'steel' ? 0.05 : 0.6;
+      scene.add(cap);
+      caps.push(cap);
     }
   }
 
-  /* Deckflächen: eine Ebene je Klasse; Inhalt (Gussteil, Temperierung …)
-     minimal vor der Stahl-Deckfläche, damit er auf dem Schnitt sichtbar ist. */
-  const caps = [];
-  for (const name of classOrder) {
-    const m = new T.MeshStandardMaterial({
-      color: classColor.get(name), roughness: 0.6, metalness: 0.2, side: T.DoubleSide
-    });
-    m.stencilWrite = true;
-    m.stencilRef = 0;
-    m.stencilFunc = T.NotEqualStencilFunc;
-    m.stencilFail = T.ReplaceStencilOp;
-    m.stencilZFail = T.ReplaceStencilOp;
-    m.stencilZPass = T.ReplaceStencilOp;
-    const cap = new T.Mesh(new T.PlaneGeometry(CAP_SIZE, CAP_SIZE), m);
-    cap.renderOrder = 11 + 2 * orderOf[name];
-    cap.onAfterRender = renderer => renderer.clearStencil();
-    cap.visible = false;
-    cap.userData.capOffset = name === 'steel' ? 0.05 : 0.6;
-    scene.add(cap);
-    caps.push(cap);
-  }
-
   function setClip({ on, axis, pos, flip }) {
+    last = { on, axis, pos, flip };
     if (!on) {
       plane.constant = OFF_CONSTANT;
       twins.forEach(t => { t.visible = false; });
@@ -129,5 +143,14 @@ export function initClipCaps(scene, dieScene) {
     }
   }
 
-  return { setClip };
+  /** Nach Änderungen am Modell (oder mit einem anderen Modell) neu aufbauen. */
+  function refresh(newDieScene) {
+    if (newDieScene) dieScene = newDieScene;
+    EXTENT = extentOf(dieScene);
+    build();
+    setClip(last);
+  }
+
+  build();
+  return { setClip, refresh };
 }

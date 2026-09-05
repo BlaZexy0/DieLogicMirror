@@ -26,7 +26,24 @@ Angussdesigner ist der einzige, der welche *erzeugt*.
 
 ## Formaufbau (`form.html`)
 
-Die Beispielform ist die Form der **Ölwanne** (Beispielteil der
+Der Formaufbau ist ein Werkzeug für **eigene Formen**: STL-Dateien laden
+und in Gruppen einsortieren — Feste Seite, Temperierung fest, Bewegliche
+Seite, Temperierung beweglich, Schieber, Gussteil, dazu beliebige eigene
+Gruppen —, Teile umbenennen, verschieben und entfernen, und das Ganze als
+**eine GLB-Datei** speichern, die der Viewer wieder lädt. Jede Gruppe hat
+eine Seite (fest bleibt stehen, beweglich fährt beim Öffnen mit), eine
+Werkstoffklasse für neu geladene Teile (Stahl, Gussteil, Anguss,
+Temperierung …; sie steuert Transparenz und Schnittfarbe) und kann ein
+Schieber sein, der beim Öffnen zusätzlich in der Trennebene herausfährt.
+Die Gruppen und die Zuordnung der Teile stehen als glTF-`extras` am
+Wurzelknoten (`userData.formaufbau`, Schema `dielogic-formaufbau`); eine
+GLB ohne diese Metadaten — die ausgelieferte Beispielform oder eine fremd
+erzeugte Datei mit den Namen aus `js/registry.js` — wird in die
+Standardgruppen einsortiert. Erwartet werden die Knoten `die`,
+`fixedRoot` und `movingRoot`, darunter je Teil ein benannter Knoten mit
+seinen Meshes (`js/assembly.js`).
+
+Voreingestellt geladen wird die Form der **Ölwanne** (Beispielteil der
 Bauteilseiten, aus `openscad_parts`): feste Hälfte mit Kavitätseinsatz
 (Wannenaußenseite, Flanschtasche, Nuten der Außenrippen, Kernstift für
 den Ablasspilot), Füllkammer bis an die Trennebene — ganz im Einsatz,
@@ -48,11 +65,16 @@ dem Sumpf), an Pressrest, Anguss und Auswerferstiften vorbeigeführt.
 
 Bedienung:
 
-- Baugruppen gruppiert nach **Feste Seite · Bewegliche Seite · Gussteil**,
-  je Gruppe eine **Glühbirne** im Kopf: leuchtet sie, ist mindestens eine
-  Baugruppe sichtbar; ein Klick schaltet die ganze Gruppe um. Die
-  Temperierung steht je Hälfte als eigene **Untergruppe** mit den beiden
-  Kreisen (links/rechts) und eigener Glühbirne.
+- **Gruppen** mit je einer **Glühbirne** im Kopf: leuchtet sie, ist
+  mindestens ein Teil sichtbar; ein Klick schaltet die ganze Gruppe um.
+  Daneben ✎ (umbenennen), + (STL-Dateien in diese Gruppe laden) und ×
+  (eine leere Gruppe entfernen). Je Teil: Schalter, Farbe, Name (✎),
+  Gruppenauswahl zum Verschieben und ×. „Gruppe anlegen" fragt Name,
+  Seite, Werkstoffklasse und Schieber-Richtung samt Weg.
+- **Dateien**: „STL laden in" (Zielgruppe wählbar, mehrere Dateien auf
+  einmal, auch per Ziehen-und-Ablegen auf den Viewport), „GLB laden"
+  ersetzt die ganze Baugruppe, „Als GLB speichern" schreibt sie mit allen
+  Metadaten. Eine abgelegte GLB wird ebenfalls als Baugruppe geladen.
 - **Stahl-Transparenz** und **Form öffnen**.
 - **Schnittebene** (Achse, Position, Seite) — der Schnitt zeigt die Körper
   *geschlossen*: Stencil-Capping zeichnet je Werkstoffklasse (Stahl,

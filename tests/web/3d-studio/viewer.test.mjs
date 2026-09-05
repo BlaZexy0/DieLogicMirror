@@ -307,11 +307,12 @@ test('Angussseite: das Beispiel „Ölwanne" bringt sein Referenzteil mit', asyn
 });
 
 /* ── Formaufbau-Viewer ───────────────────────────────────────── */
-test('Formaufbau-Viewer verdrahtet Baugruppen, Regler und Schnitt', async () => {
+
+/* Ein Ersatzmodell mit den Registry-Namen — wie die ausgelieferte GLB
+   ohne Metadaten; der Viewer sortiert es in die Standardgruppen ein. */
+async function legacyDie() {
   const T = await import('three');
   const { COMPONENTS } = await import('../../../web/tools/3d-studio/js/registry.js');
-
-  /* Ein Ersatzmodell mit denselben Namen wie die GLB. */
   const root = new T.Group(); root.name = 'die';
   const fixedRoot = new T.Group(); fixedRoot.name = 'fixedRoot';
   const movingRoot = new T.Group(); movingRoot.name = 'movingRoot';
@@ -325,54 +326,71 @@ test('Formaufbau-Viewer verdrahtet Baugruppen, Regler und Schnitt', async () => 
     g.add(mesh);
     (c.side === 'fix' ? fixedRoot : movingRoot).add(g);
   }
+  return { root, fixedRoot, movingRoot, COMPONENTS };
+}
+
+const readGlbJson = buf => {
+  const dv = new DataView(buf);
+  assert.equal(dv.getUint32(0, true), 0x46546c67, 'GLB-Kennung');
+  const len = dv.getUint32(12, true);
+  return JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 20, len)));
+};
+
+test('Formaufbau-Viewer verdrahtet Gruppen, Regler und Schnitt', async () => {
+  const { root, movingRoot, COMPONENTS } = await legacyDie();
   globalThis.__TEST_GLTF = root;
+  const { DEFAULT_GROUPS } = await import('../../../web/tools/3d-studio/js/assembly.js');
 
   const { doc: d2 } = buildDocument(read('form.html'));
   installGlobals(d2);
-  await import('../../../web/tools/3d-studio/js/die.js');
+  const mod = await import('../../../web/tools/3d-studio/js/die.js');
   await new Promise(r => setTimeout(r, 30));
+  const v = mod.__viewer;
+  assert.ok(v.state.ready, 'das Modell steht');
 
   const list = d2.getElementById('components');
   const rows = list.querySelectorAll('[data-comp]');
-  assert.equal(rows.length, COMPONENTS.length, 'eine Zeile je Baugruppe');
+  assert.equal(rows.length, COMPONENTS.length, 'eine Zeile je Teil');
 
-  /* Glühbirnen: eine je Gruppe plus eine je Untergruppe. */
+  /* Standardgruppen, auch die leere für Schieber; je eine Glühbirne. */
+  const heads = list.querySelectorAll('.group-head');
+  assert.equal(heads.length, DEFAULT_GROUPS.length, 'alle Standardgruppen, auch leere');
   const bulbs = list.querySelectorAll('.bulb-btn');
-  const subs = new Set(COMPONENTS.filter(c => c.sub).map(c => c.side + '/' + c.sub));
-  assert.equal(bulbs.length, 3 + subs.size, 'Glühbirne je Gruppe und Untergruppe');
+  assert.equal(bulbs.length, DEFAULT_GROUPS.length);
   assert.ok(bulbs.every(b => b.classList.contains('on')), 'anfangs leuchten alle');
-  assert.equal(list.querySelectorAll('.sub-head').length, subs.size, 'Untergruppen-Überschriften');
+  assert.equal(list.querySelectorAll('.comp-empty').length, 1, 'die leere Schiebergruppe sagt es');
+  assert.equal(d2.getElementById('stl-target').value, 'fix', 'Zielgruppe für STL steht auf der ersten Gruppe');
 
-  /* Untergruppe: schaltet nur die Temperierkreise. */
+  /* Temperierung fest: eigene Gruppe, schaltet nur die Kreise. */
   const coolIds = COMPONENTS.filter(c => c.sub === 'Temperierung' && c.side === 'fix').map(c => c.id);
   assert.equal(coolIds.length, 2, 'zwei Kreise je Hälfte');
-  const subBulb = list.querySelectorAll('.sub-head')[0].querySelector('.bulb-btn');
-  subBulb.dispatch('click');
+  const coolHead = heads.find(h => h.getAttribute('data-group') === 'coolFix');
+  const coolBulb = coolHead.querySelector('.bulb-btn');
+  coolBulb.dispatch('click');
   for (const id of coolIds) assert.equal(root.getObjectByName(id).visible, false, id + ' aus');
   assert.equal(root.getObjectByName('fixHalf').visible, true, 'der Rest bleibt sichtbar');
-  assert.ok(!subBulb.classList.contains('on'), 'Birne aus');
-  subBulb.dispatch('click');
+  assert.ok(!coolBulb.classList.contains('on'), 'Birne aus');
+  coolBulb.dispatch('click');
   for (const id of coolIds) assert.equal(root.getObjectByName(id).visible, true);
-  assert.ok(subBulb.classList.contains('on'), 'Birne wieder an');
+  assert.ok(coolBulb.classList.contains('on'), 'Birne wieder an');
 
-  /* Gruppenbirne: schaltet die ganze Seite, Untergruppe eingeschlossen. */
-  const groupBulb = list.querySelectorAll('.group-head')[0].querySelector('.bulb-btn');
-  groupBulb.dispatch('click');
-  for (const c of COMPONENTS.filter(c => c.side === 'fix')) {
+  /* Gruppenbirne der festen Seite: nur deren Teile. */
+  const fixBulb = heads.find(h => h.getAttribute('data-group') === 'fix').querySelector('.bulb-btn');
+  fixBulb.dispatch('click');
+  for (const c of COMPONENTS.filter(c => c.side === 'fix' && !c.sub)) {
     assert.equal(root.getObjectByName(c.id).visible, false, c.id + ' aus');
   }
-  assert.ok(!subBulb.classList.contains('on'), 'Untergruppen-Birne folgt');
-  groupBulb.dispatch('click');
-  assert.ok(groupBulb.classList.contains('on') && subBulb.classList.contains('on'));
+  assert.equal(root.getObjectByName('coolFixL').visible, true, 'die Temperierung ist eine eigene Gruppe');
+  fixBulb.dispatch('click');
+  assert.ok(fixBulb.classList.contains('on'));
   assert.equal(root.getObjectByName('movHalf').visible, true, 'die andere Seite ist unberührt');
 
   const first = rows[0];
-  const compId = first.dataset.comp;
-  const obj = root.getObjectByName(compId);
+  const obj = root.getObjectByName(first.getAttribute('data-comp'));
   assert.ok(obj.visible, 'anfangs sichtbar');
   first.checked = false;
   first.dispatch('change');
-  assert.equal(obj.visible, false, 'Schalter blendet die Baugruppe aus');
+  assert.equal(obj.visible, false, 'Schalter blendet das Teil aus');
   first.checked = true;
   first.dispatch('change');
   assert.equal(obj.visible, true);
@@ -387,7 +405,7 @@ test('Formaufbau-Viewer verdrahtet Baugruppen, Regler und Schnitt', async () => 
   op.value = '60';
   op.dispatch('input');
   const steel = [];
-  root.traverse(o => { if (o.isMesh && o.material.name === 'steel') steel.push(o.material); });
+  root.traverse(o => { if (o.isMesh && o.material.name === 'steel' && !o.userData.stencilTwin) steel.push(o.material); });
   assert.ok(steel.length > 0 && Math.abs(steel[0].opacity - 0.6) < 1e-9, 'Stahl-Transparenz wirkt');
   assert.equal(steel[0].transparent, true);
 
@@ -403,6 +421,169 @@ test('Formaufbau-Viewer verdrahtet Baugruppen, Regler und Schnitt', async () => 
   pos.value = '40';
   pos.dispatch('input');
   assert.equal(d2.getElementById('clip-pos-val').textContent, '40 %');
+});
+
+test('Formaufbau: STL laden, umbenennen, verschieben, entfernen, Gruppen anlegen', async () => {
+  const { root, fixedRoot, movingRoot, COMPONENTS } = await legacyDie();
+  globalThis.__TEST_GLTF = root;
+  const { doc: d } = buildDocument(read('form.html'));
+  installGlobals(d);
+  const mod = await import('../../../web/tools/3d-studio/js/die.js?variante=bearbeiten');
+  await new Promise(r => setTimeout(r, 30));
+  const v = mod.__viewer;
+  const asm = v.asm;
+  const list = d.getElementById('components');
+  const rowOf = id => list.querySelectorAll('[data-item]').find(r => r.getAttribute('data-item') === id);
+
+  /* Zwei STL in die Schiebergruppe: neue Zeilen, Knoten unter movingRoot, Stahl. */
+  const { writeSTL } = await import('../../../web/tools/3d-studio/js/part/stlio.js');
+  const S = await import('../../../web/tools/3d-studio/js/solids.js');
+  const file = (name, tris) => { const b = writeSTL(tris, name); return { name, arrayBuffer: () => Promise.resolve(b), byteLength: b.byteLength }; };
+  const input = d.getElementById('stl-input');
+  d.getElementById('stl-target').value = 'slider';
+  input.files = [file('Schieber links.stl', S.box(40, 30, 20)), file('Schieber rechts.stl', S.box(40, 30, 20))];
+  input.dispatch('change');
+  await v.pending;
+  assert.equal(asm.items.length, COMPONENTS.length + 2, 'zwei Teile mehr');
+  const links = asm.items.find(i => i.label === 'Schieber links');
+  assert.ok(links, 'die Datei heißt ohne Endung');
+  assert.equal(links.group, 'slider');
+  assert.equal(links.object.parent, movingRoot, 'Schieber hängen an der beweglichen Seite');
+  assert.equal(links.object.children[0].material.name, 'steel', 'Werkstoffklasse der Gruppe');
+  assert.ok(links.object.children[0].geometry.getAttribute('normal'), 'mit Normalen');
+  assert.ok(rowOf(links.id), 'eine Zeile dafür');
+  assert.equal(list.querySelectorAll('.comp-empty').length, 0, 'die Schiebergruppe ist nicht mehr leer');
+
+  /* Öffnen: die Schieber fahren zusätzlich in +x heraus. */
+  const open = d.getElementById('open');
+  open.value = '100'; open.dispatch('input');
+  assert.ok(links.object.position.x > 100, 'Schieber fährt in der Trennebene: x = ' + links.object.position.x);
+  assert.equal(root.getObjectByName('movHalf').position.x, 0, 'die Hälfte selbst nicht');
+  open.value = '0'; open.dispatch('input');
+  assert.equal(links.object.position.x, 0);
+
+  /* Umbenennen an Ort und Stelle. */
+  rowOf(links.id).querySelector('[data-act="rename"]').dispatch('click');
+  const edit = rowOf(links.id).querySelector('.inline-edit');
+  assert.ok(edit, 'ein Eingabefeld erscheint');
+  edit.value = 'Schieber −X';
+  edit.dispatch('change');
+  assert.equal(links.label, 'Schieber −X');
+  assert.equal(rowOf(links.id).querySelector('.name').textContent, 'Schieber −X');
+  assert.equal(asm.labelOf(links.id), 'Schieber −X', 'der Hover kennt den neuen Namen');
+
+  /* Verschieben ins Gussteil: andere Werkstoffklasse; in die feste Seite: anderer Elternknoten. */
+  let move = rowOf(links.id).querySelector('[data-act="move"]');
+  move.value = 'cast'; move.dispatch('change');
+  assert.equal(links.group, 'cast');
+  assert.equal(links.object.children[0].material.name, 'castPart', 'Klasse folgt der Gruppe');
+  move = rowOf(links.id).querySelector('[data-act="move"]');
+  move.value = 'fix'; move.dispatch('change');
+  assert.equal(links.object.parent, fixedRoot, 'jetzt an der festen Seite');
+  assert.equal(links.object.children[0].material.name, 'steel');
+
+  /* Entfernen. */
+  const rechts = asm.items.find(i => i.label === 'Schieber rechts');
+  rowOf(rechts.id).querySelector('[data-act="remove"]').dispatch('click');
+  assert.ok(!asm.items.some(i => i.id === rechts.id), 'weg aus der Baugruppe');
+  assert.equal(rechts.object.parent, null, 'weg aus der Szene');
+  assert.ok(!rowOf(rechts.id), 'weg aus der Leiste');
+
+  /* Gruppe anlegen: Schieber nach −Y mit 80 mm Weg. */
+  d.getElementById('group-new').dispatch('click');
+  assert.ok(!d.getElementById('group-form').classList.contains('hidden'));
+  d.getElementById('group-title').value = 'Schieber −Y';
+  d.getElementById('group-side').value = 'mov';
+  d.getElementById('group-mat').value = 'steel';
+  d.getElementById('group-slide').value = '-y';
+  d.getElementById('group-travel').value = '80';
+  d.getElementById('group-add').dispatch('click');
+  const g = asm.groups.find(x => x.title === 'Schieber −Y');
+  assert.ok(g, 'die Gruppe ist da');
+  assert.deepEqual(g.slide, { axis: 'y', sign: -1, travel: 80 });
+  assert.ok(d.getElementById('group-form').classList.contains('hidden'), 'das Formular schließt sich');
+  const heads = () => list.querySelectorAll('.group-head');
+  assert.ok(heads().some(h => h.getAttribute('data-group') === g.key), 'mit Kopf in der Leiste');
+  assert.ok(d.getElementById('stl-target').innerHTML.includes(g.key), 'und als Ziel für STL');
+
+  /* Ohne Namen keine Gruppe. */
+  d.getElementById('group-new').dispatch('click');
+  d.getElementById('group-title').value = '  ';
+  d.getElementById('group-add').dispatch('click');
+  assert.match(d.getElementById('file-warn').textContent, /Namen/);
+  d.getElementById('group-cancel').dispatch('click');
+
+  /* Gruppe umbenennen, leere Gruppe entfernen, volle nicht. */
+  const head = heads().find(h => h.getAttribute('data-group') === g.key);
+  head.querySelector('[data-act="rename-group"]').dispatch('click');
+  const ge = head.querySelector('.inline-edit');
+  ge.value = 'Schieber unten'; ge.dispatch('change');
+  assert.equal(g.title, 'Schieber unten');
+  assert.equal(heads().find(h => h.getAttribute('data-group') === 'fix').querySelector('[data-act="remove-group"]').disabled, true,
+    'eine volle Gruppe lässt sich nicht entfernen');
+  heads().find(h => h.getAttribute('data-group') === g.key).querySelector('[data-act="remove-group"]').dispatch('click');
+  assert.ok(!asm.groups.some(x => x.key === g.key), 'die leere Gruppe ist weg');
+});
+
+test('Formaufbau: als GLB speichern und daraus wieder laden', async () => {
+  const { root, COMPONENTS } = await legacyDie();
+  globalThis.__TEST_GLTF = root;
+  const { doc: d } = buildDocument(read('form.html'));
+  installGlobals(d);
+  const mod = await import('../../../web/tools/3d-studio/js/die.js?variante=speichern');
+  await new Promise(r => setTimeout(r, 30));
+  const v = mod.__viewer;
+  const asm = v.asm;
+
+  /* Etwas ändern, damit der Roundtrip etwas zu bewahren hat. */
+  assert.ok(asm.renameItem('fixHalf', 'Feste Hälfte 900 × 1000'));
+  const g = asm.addGroup({ title: 'Schieber +Y', side: 'mov', mat: 'steel', slide: { axis: 'y', sign: 1, travel: 60 } });
+  const S = await import('../../../web/tools/3d-studio/js/solids.js');
+  const neu = asm.addItem({ group: g.key, label: 'Kern oben', tris: S.box(20, 20, 20) });
+  v.sidebar.render();
+
+  d.getElementById('glb-name').value = 'meine-form';
+  d.getElementById('glb-save').dispatch('click');
+  const buf = await v.pending;
+  assert.ok(buf && buf.byteLength > 1000, 'eine GLB entsteht: ' + (buf && buf.byteLength));
+  assert.match(d.getElementById('file-note').textContent, /meine-form\.glb/);
+
+  const json = readGlbJson(buf);
+  const names = new Set(json.nodes.map(n => n.name));
+  for (const n of ['die', 'fixedRoot', 'movingRoot', 'fixHalf', 'castPart', neu.id]) assert.ok(names.has(n), 'Knoten ' + n);
+  const die = json.nodes.find(n => n.name === 'die');
+  const meta = die.extras && die.extras.formaufbau;
+  assert.ok(meta, 'Metadaten am Wurzelknoten');
+  assert.equal(meta.format, 'dielogic-formaufbau');
+  assert.ok(meta.groups.some(x => x.key === g.key && x.slide && x.slide.travel === 60), 'Gruppe samt Schieberweg');
+  assert.ok(meta.items.some(i => i.id === 'fixHalf' && i.label === 'Feste Hälfte 900 × 1000'), 'neuer Name');
+  assert.ok(meta.items.some(i => i.id === neu.id && i.group === g.key), 'neues Teil in seiner Gruppe');
+  const mats = new Set(json.materials.map(m => m.name));
+  for (const m of ['steel', 'castPart']) assert.ok(mats.has(m), 'Material ' + m);
+  assert.ok(json.nodes.filter(n => n.extras && n.extras.compId).length >= COMPONENTS.length + 1, 'compId in den extras');
+  assert.ok(!json.nodes.some(n => n.extras && n.extras.stencilTwin), 'keine Stencil-Zwillinge in der Datei');
+
+  /* Wieder laden: der Exportbaum steht für das, was der GLTFLoader aus der
+     Datei machen würde (Namen und userData überleben den Roundtrip). */
+  const T = await import('three');
+  const wrapper = new T.Group();
+  wrapper.add(asm.toExportRoot());
+  globalThis.__TEST_GLTF = wrapper;
+  const glbIn = d.getElementById('glb-input');
+  glbIn.files = [{ name: 'meine-form.glb', arrayBuffer: () => Promise.resolve(buf) }];
+  glbIn.dispatch('change');
+  await v.pending;
+  const asm2 = v.asm;
+  assert.notEqual(asm2, asm, 'eine neue Baugruppe');
+  assert.equal(asm2.items.length, asm.items.length);
+  assert.equal(asm2.labelOf('fixHalf'), 'Feste Hälfte 900 × 1000', 'Name überlebt');
+  const g2 = asm2.groups.find(x => x.key === g.key);
+  assert.ok(g2 && g2.slide && g2.slide.travel === 60, 'Gruppe und Schieberweg überleben');
+  assert.equal(asm2.itemOf(neu.id).group, g.key);
+  assert.match(d.getElementById('file-source').textContent, /meine-form\.glb/);
+  const open = d.getElementById('open');
+  open.value = '100'; open.dispatch('input');
+  assert.ok(asm2.itemOf(neu.id).object.position.y > 50, 'der geladene Schieber fährt in +y');
 });
 
 const fmtDe = v => v.toLocaleString('de-DE', { maximumFractionDigits: 2 });

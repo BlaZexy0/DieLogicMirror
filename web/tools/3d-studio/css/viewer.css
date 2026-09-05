@@ -77,6 +77,40 @@ aside h2:first-child { margin-top: 4px; }
 .comp-row:hover { background: var(--surface2); }
 .comp-row .dot { width: 11px; height: 11px; border-radius: 3px; border: 1px solid rgba(0,0,0,.2); flex-shrink: 0; }
 
+/* Bearbeitbare Baugruppe: Werkzeuge im Gruppenkopf und je Zeile. */
+.group-head .side-tag { font-size: .64rem; color: var(--muted-light); margin: 0 auto 0 6px; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.group-head .head-tools { display: flex; gap: 4px; align-items: center; margin-left: 6px; }
+.row-btn {
+  border: 1px solid var(--border); background: var(--surface2); border-radius: 5px;
+  padding: 0 5px; min-width: 20px; line-height: 1.35; font-size: .78rem; cursor: pointer;
+  color: var(--muted); font-family: var(--sans);
+}
+.row-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-deep); background: var(--pale); }
+.row-btn.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
+.row-btn:disabled { opacity: .35; cursor: default; }
+.comp-row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.comp-row .row-move {
+  max-width: 96px; font-size: .7rem; padding: 1px 2px; border: 1px solid var(--border);
+  border-radius: 5px; background: var(--surface); color: var(--muted); font-family: var(--sans);
+}
+.comp-row .row-btn { visibility: hidden; }
+.comp-row:hover .row-btn { visibility: visible; }
+.inline-edit {
+  width: 100%; min-width: 0; font: inherit; padding: 1px 4px;
+  border: 1px solid var(--primary); border-radius: 4px; background: var(--surface);
+}
+.comp-empty { font-size: .73rem; color: var(--muted-light); font-style: italic; padding: 2px 2px 4px 24px; }
+#group-form {
+  margin-top: 8px; padding: 8px 9px; background: var(--surface2);
+  border: 1px solid var(--border-light); border-radius: var(--radius);
+}
+#group-form .row > span:first-child { width: 100px; }
+#group-form input[type="text"], #group-form select, aside select#stl-target, aside input#glb-name {
+  flex: 1; min-width: 0; font: inherit; font-size: .8rem; padding: .22rem .3rem;
+  border: 1px solid var(--border); border-radius: 5px; background: var(--surface);
+}
+.hidden-empty:has(span:empty) { display: none; }
+
 /* ── Regler, Schalter, Segmente ────────────────────────────── */
 .row { display: flex; align-items: center; gap: 10px; padding: 4px 2px; font-size: .84rem; }
 .row > span:first-child { width: 116px; flex-shrink: 0; color: var(--text-body); }

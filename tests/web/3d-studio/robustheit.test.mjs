@@ -269,8 +269,12 @@ test('ASCII-STL: unlesbare Koordinaten sind ein Fehler, keine NaN', async () => 
 test('Lesefehler und fehlende GLB-Knoten melden sich', () => {
   const ps = src('js/part/partsource.js');
   assert.match(ps, /fr\.onerror/, 'ein gescheiterter Lesevorgang blieb stumm, die Busy-Anzeige lief weiter');
+  /* Ohne die Knoten warf der Öffnen-Regler einen TypeError statt zu
+     sagen, was fehlt: die Baugruppe prüft sie beim Aufbau, der Viewer
+     fängt den Fehler und schreibt ihn in die Statuszeile. */
+  const asm = src('js/assembly.js');
+  assert.match(asm, /if \(!fixedRoot \|\| !movingRoot\) throw new Error/);
   const die = src('js/die.js');
-  assert.match(die, /if \(!movingRoot\)/,
-    'ohne den Knoten warf der Öffnen-Regler einen TypeError statt zu sagen, was fehlt');
-  assert.match(die, /if \(movingRoot\) movingRoot\.position\.z/);
+  assert.match(die, /catch \(err\) \{\s*status\.textContent = err\.message/);
+  assert.match(die, /if \(asm\) \{ asm\.setOpen\(t\)/, 'der Regler wartet, bis eine Baugruppe steht');
 });

@@ -15,23 +15,14 @@ import * as T from 'three';
 import { COMPONENTS, BY_ID } from './registry.js';
 import { buildParts } from './diegeom.js';
 import { smoothNormals, indexTriangles, cleanMesh } from './mesh.js';
+import { makeMaterial } from './materials.js';
 
 const col = id => parseInt(BY_ID[id].color.slice(1), 16);
 
 /* Eine Materialinstanz je (Name, Farbe) — die Sidebar-Farbe der Baugruppe
-   für alles Gegossene, ein gemeinsames Grau für Stahl. */
-function materialFor(name, compId) {
-  const spec = {
-    steel:    { color: col(compId), roughness: 0.55, metalness: 0.35 },
-    plunger:  { color: 0xb8722d,    roughness: 0.5,  metalness: 0.5 },
-    pins:     { color: 0x4a565c,    roughness: 0.5,  metalness: 0.5 },
-    coolFix:  { color: col(compId), roughness: 0.35, metalness: 0.3 },
-    coolMov:  { color: col(compId), roughness: 0.35, metalness: 0.3 }
-  }[name] || { color: col(compId), roughness: 0.55, metalness: 0.25 };
-  const m = new T.MeshStandardMaterial(spec);
-  m.name = name;
-  return m;
-}
+   für alles Gegossene, ein gemeinsames Grau für Stahl; die Tabelle der
+   Klassen steht in js/materials.js. */
+const materialFor = (name, compId) => makeMaterial(name, col(compId));
 
 /** Dreieckssuppe → indizierte BufferGeometry mit weichen Normalen
     über den Knickwinkel (crease: darüber bleibt die Kante hart). */

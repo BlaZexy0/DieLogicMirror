@@ -222,11 +222,13 @@ export function installGlobals(doc) {
       arrayBuffer: async () => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
     };
   };
+  /* onload für die Viewer, onloadend für den GLTFExporter (binärer Block). */
   globalThis.FileReader = class {
     readAsArrayBuffer(blob) {
       Promise.resolve(blob.arrayBuffer ? blob.arrayBuffer() : blob).then(buf => {
         this.result = buf;
         this.onload && this.onload();
+        this.onloadend && this.onloadend();
       });
     }
   };

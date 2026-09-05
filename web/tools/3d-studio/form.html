@@ -22,14 +22,44 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Formaufbau</h1>
-    <p class="subtitle">Beispielhafte Kaltkammer-Druckgießform: beide Hälften mit Einsätzen, Kavität als echtes Negativ, Gießsystem, Temperierung, Auswerferpaket, Führung und Vakuumblock.</p>
+    <p class="subtitle">Eine Druckgießform aus STL-Dateien zusammenstellen: Teile in Gruppen (feste und bewegliche Seite, Temperierung, Schieber, Gussteil) einsortieren und als eine GLB speichern. Voreingestellt: die Ölwannen-Form.</p>
   </div>
 </section>
 
 <div class="layout">
   <aside>
-    <h2>Baugruppen</h2>
+    <h2>Gruppen und Teile</h2>
     <div id="components"></div>
+    <button type="button" class="btn btn-outline block-btn" id="group-new">+ Gruppe anlegen</button>
+    <div id="group-form" class="hidden">
+      <div class="row"><span>Name</span><input type="text" id="group-title" placeholder="z. B. Schieber −X"></div>
+      <div class="row"><span>Seite</span>
+        <select id="group-side">
+          <option value="fix">feste Hälfte (bleibt stehen)</option>
+          <option value="mov" selected>bewegliche Hälfte (fährt mit)</option>
+        </select></div>
+      <div class="row"><span>Werkstoffklasse</span><select id="group-mat"></select></div>
+      <div class="row"><span>Schieber</span><select id="group-slide"></select></div>
+      <div class="row"><span>Schieberweg</span><input type="text" id="group-travel" value="120"><span class="val">mm</span></div>
+      <div class="btn-pair">
+        <button type="button" class="btn btn-primary" id="group-add">Anlegen</button>
+        <button type="button" class="btn btn-outline" id="group-cancel">Abbrechen</button>
+      </div>
+    </div>
+
+    <h2>Dateien</h2>
+    <div class="row"><span>STL laden in</span><select id="stl-target"></select></div>
+    <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" multiple hidden>
+    <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ STL-Dateien laden</button>
+    <input type="file" id="glb-input" accept=".glb,model/gltf-binary" hidden>
+    <div class="row"><span>Dateiname</span><input type="text" id="glb-name" value="formaufbau"><span class="val">.glb</span></div>
+    <div class="btn-pair">
+      <button type="button" class="btn btn-outline" id="glb-btn">GLB laden</button>
+      <button type="button" class="btn btn-primary" id="glb-save">Als GLB speichern</button>
+    </div>
+    <div class="hint" id="file-note"></div>
+    <div class="hint hidden-empty">Geladen: <span id="file-source"></span></div>
+    <div class="warn-line" id="file-warn"></div>
 
     <h2>Darstellung</h2>
     <div class="row">
@@ -64,15 +94,12 @@
 
     <div class="hint">
       Der Schnitt zeigt die Körper <b>geschlossen</b>: je Werkstoffklasse
-      (Stahl, Gussteil, Anguss, Temperierung, Kolben, Stifte) zeichnet ein
-      Stencil-Durchgang eine massive Schnittfläche in Klassenfarbe.
-      Kavität, Kammerbohrung, Angusskegel, Auswerfer- und Rückdrückstifte,
-      Führungssäulen und -buchsen sind als echte Negative aus dem Stahl
-      geschnitten — mit <code>fit</code>-Spalt aus <code>js/config.js</code>.
-      Die Temperierkanäle bilden Bohrung und Inhalt zugleich ab und sind
-      deshalb bewusst nicht ausgeschnitten.
-      Das Modell kommt als Standard-glTF aus <code>assets/die.glb</code>
-      (neu erzeugen: in <code>openscad_parts</code> <code>./render_die.sh --studio</code>).
+      (Stahl, Gussteil, Anguss, Überläufe, Temperierung, Kolben, Stifte) zeichnet ein
+      Stencil-Durchgang eine massive Schnittfläche in Klassenfarbe. Die Klasse eines
+      geladenen Teils kommt aus seiner Gruppe; beim Verschieben wechselt sie mit.
+      Gruppen, Seiten und Schieberwege werden als glTF-<code>extras</code> mit in die
+      GLB geschrieben; eine GLB ohne diese Angaben wird über die Namen aus
+      <code>js/registry.js</code> einsortiert.
     </div>
   </aside>
 
