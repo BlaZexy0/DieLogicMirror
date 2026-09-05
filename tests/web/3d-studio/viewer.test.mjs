@@ -1340,3 +1340,118 @@ test('Temperierkanal-Designer: Abstandsfläche, Kühlstich, Kanal, Achsenpfeile,
   d8.getElementById('del-item').dispatch('click');
   assert.equal(items().length, 3, 'gelöscht');
 });
+
+/* ── Füllabschätzung ─────────────────────────────────────────── */
+test('Füllabschätzung: Raster, Anschnitt per Klick, Füllgrad, Füllkörper, letzte Stellen, Datei', async () => {
+  const { doc: d9 } = buildDocument(read('fuellung.html'));
+  installGlobals(d9);
+  globalThis.location = { search: '', href: 'http://test/fuellung.html' };
+  const mod = await import('../../../web/tools/3d-studio/js/fill/app.js');
+  const v = mod.__viewer;
+  for (let i = 0; i < 1200 && !v.state.ready; i++) await new Promise(r => setTimeout(r, 25));
+  assert.ok(v.state.ready && v.state.model, 'das Beispielteil steht');
+  assert.ok(v.state.field && v.state.field.fullInside, 'das Raster ist gerechnet');
+  assert.match(d9.getElementById('grid-note').textContent, /Zellen im Bauteil/);
+  assert.equal(d9.getElementById('add-inlet').disabled, false, 'setzen ist frei');
+  assert.equal(v.state.result, null, 'ohne Anschnitt keine Füllung');
+  assert.match(d9.getElementById('run-note').textContent, /Noch kein Anschnitt/);
+
+  /* Kamera von +X auf die Mitte: der Klick durch die Bildmitte trifft die +X-Wand. */
+  const b = v.state.model.bounds;
+  const c = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
+  const cam = v.view.camera;
+  cam.position.set(b.max[0] + 400, c[1], c[2]); cam.up.set(0, 1, 0); cam.lookAt(...c);
+  cam.updateMatrixWorld(true); v.view.scene.updateMatrixWorld(true);
+  const canvas = v.view.renderer.domElement;
+  const zeiger = (t, x, y) => canvas.dispatch(t, { button: 0, clientX: x, clientY: y, stopPropagation() {}, preventDefault() {} });
+  const klick = (x, y) => { zeiger('pointerdown', x, y); zeiger('pointerup', x, y); };
+  const items = () => Object.values(v.state.plan.items);
+  const settled = async () => { for (let i = 0; i < 400 && (v.state.computing || v.state.stale || v.state.queued); i++) await new Promise(r => setTimeout(r, 25)); };
+
+  d9.getElementById('add-inlet').dispatch('click');
+  assert.ok(v.handles.aiming, 'der Zielmodus ist scharf');
+  assert.match(d9.getElementById('aim-text').textContent, /Anschnitt/);
+  klick(400, 300);
+  assert.ok(!v.handles.aiming);
+  assert.equal(items().length, 1);
+  const a1 = items()[0];
+  assert.ok(Math.abs(a1.pos[0] - b.max[0]) < 1e-6, 'auf der +X-Wand: ' + a1.pos);
+  assert.ok(a1.n[0] > 0.99, 'Normale nach außen: ' + a1.n);
+  assert.equal(a1.w, 30); assert.equal(a1.h, 2);
+  assert.equal(v.handles.selected, a1.id, 'der neue Anschnitt ist gewählt');
+  assert.match(d9.getElementById('sel-facts').innerHTML, /Fläche/);
+
+  /* Die Füllung rechnet von selbst nach. */
+  await settled();
+  const r = v.state.result;
+  assert.ok(r && !v.state.stale, 'gerechnet');
+  assert.equal(r.stats.inlets.length, 1);
+  assert.ok(r.stats.maxPath > 150, 'der Fließweg geht durch das Teil: ' + r.stats.maxPath);
+  assert.match(d9.getElementById('run-note').textContent, /Gerechnet in/);
+  assert.match(d9.getElementById('result-facts').innerHTML, /Fließweg \/ Wanddicke/);
+  assert.match(d9.getElementById('inlet-facts').innerHTML, /100 % Volumen/);
+  assert.ok(d9.getElementById('colorbar').className.includes('on'), 'die Skala steht');
+  assert.ok(v.partMesh.geometry.getAttribute('color'), 'das Bauteil trägt Farben');
+  assert.ok(v.spotGroup.children.length >= 1 && v.spotGroup.children.length <= 5, 'letzte Stellen: ' + v.spotGroup.children.length);
+  assert.ok(v.state.spots.list[0].frac > 0.9, 'die erste liegt ganz am Ende');
+  /* Die zuletzt gefüllte Stelle liegt am anderen Ende, nicht am Anschnitt. */
+  assert.ok(v.state.spots.list[0].x < c[0], 'am −X-Ende: ' + v.state.spots.list[0].x);
+
+  /* Füllkörper bei 50 %: ein Körper, kleiner als das Teil, das Bauteil durchscheinend. */
+  d9.getElementById('show-seg').querySelectorAll('button').find(x => x.dataset.value === 'koerper').dispatch('click');
+  assert.equal(v.state.show, 'koerper');
+  const q = d9.getElementById('q');
+  q.value = '50'; q.dispatch('input');
+  assert.equal(v.state.q, 0.5);
+  assert.ok(v.bodyMesh.visible && v.bodyMesh.geometry.getAttribute('position').count > 100, 'der Füllkörper steht');
+  assert.ok(v.partMesh.material.transparent, 'das Bauteil ist durchscheinend');
+  const posB = v.bodyMesh.geometry.getAttribute('position').array;
+  let minX = Infinity;
+  for (let i = 0; i < posB.length; i += 3) minX = Math.min(minX, posB[i]);
+  assert.ok(minX > b.min[0] + 20, 'bei 50 % reicht die Schmelze noch nicht bis zum −X-Ende: ' + minX);
+  q.value = '100'; q.dispatch('input');
+  d9.getElementById('show-seg').querySelectorAll('button').find(x => x.dataset.value === 'farbe').dispatch('click');
+  assert.ok(!v.bodyMesh.visible);
+
+  /* Zweiter Anschnitt mit festem Anteil: Anteile und Volumen im Feld. */
+  const a2 = (await import('../../../web/tools/3d-studio/js/fill/model.js')).addInlet(v.state.plan, [b.min[0], c[1], c[2]], [-1, 0, 0], { w: 10, h: 2 });
+  v.rebuild();
+  v.state.stale = true; await v.compute();
+  await settled();
+  assert.equal(v.state.result.stats.inlets.length, 2);
+  const cells = v.state.result.stats.inlets.map(i => i.cells);
+  assert.ok(cells[0] > cells[1], 'der breite Anschnitt füllt mehr: ' + cells);
+  v.handles.select(a2.id);
+  const share = d9.getElementById('sel-share');
+  assert.equal(share.value, '', 'Anteil leer = aus der Fläche');
+  share.value = '70'; share.dispatch('change');
+  assert.equal(a2.share, 70);
+  await settled();
+  const cells2 = v.state.result.stats.inlets.map(i => i.cells);
+  assert.ok(cells2[1] > cells[1], 'mit 70 % Strom füllt der kleine mehr als vorher: ' + cells + ' → ' + cells2);
+
+  /* α = 0: reine Geometrie, rechnet nach. */
+  const al = d9.getElementById('alpha');
+  al.value = '0'; al.dispatch('input');
+  await settled();
+  assert.equal(v.state.result.stats.alpha, 0);
+
+  /* Datei: hin und zurück. */
+  const M = await import('../../../web/tools/3d-studio/js/fill/model.js');
+  const json = M.toJSON(v.state.plan);
+  assert.equal(json.format, 'dielogic-fuellung');
+  assert.equal(json.items.length, 2);
+  v.loadPlan(M.fromJSON(JSON.parse(JSON.stringify(json))));
+  await settled();
+  assert.equal(items().length, 2);
+  assert.equal(v.state.plan.items[a2.id].share, 70);
+  assert.ok(v.state.result && !v.state.stale, 'nach dem Laden gerechnet');
+
+  /* Löschen über den Knopf. */
+  v.handles.select(a1.id);
+  assert.equal(d9.getElementById('del-item').disabled, false);
+  d9.getElementById('del-item').dispatch('click');
+  assert.equal(items().length, 1);
+  await settled();
+  assert.equal(v.state.result.stats.inlets.length, 1);
+});

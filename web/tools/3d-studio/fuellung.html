@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Füllabschätzung · 3D-Studio · DieLogic</title>
+<meta name="description" content="Wie füllt sich das Druckgussteil? Rechteckige Anschnitte auf die Wand setzen, das Bauteil wird gerastert und die Schmelzefront läuft durch die Zellen: Füllgrad je Stelle, Füllkörper bei jedem Füllgrad, zuletzt gefüllte Stellen für die Überläufe — in Zehntelsekunden, ohne Strömungsrechnung.">
+<meta name="theme-color" content="#002733">
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="stylesheet" href="/shared/shared.css">
+<link rel="stylesheet" href="css/viewer.css">
+<script src="/shared/version.js"></script>
+<script src="/shared/palette.js"></script>
+<script src="/shared/nav.js" data-footer="none"></script>
+<script type="importmap">
+  { "imports": { "three": "./vendor/three/three.module.js" } }
+</script>
+</head>
+<body class="viewer designer fuellung">
+
+<section class="page-hero compact">
+  <div class="inner">
+    <h1>Füllabschätzung</h1>
+    <p class="subtitle">In welcher Reihenfolge füllt sich die Kavität? Das Bauteil wird gerastert, rechteckige Anschnitte kommen auf die Wand, und von dort läuft die Schmelzefront durch die Zellen — dünne Wände bremsen, große Anschnitte kommen weiter. Heraus kommt der Füllgrad an jeder Stelle, der Füllkörper zu jedem Zeitpunkt und die Stellen, die zuletzt voll werden. Keine Strömungsrechnung: eine Abschätzung in Zehntelsekunden.</p>
+  </div>
+</section>
+
+<div class="layout">
+  <aside>
+    <h2>Bauteil</h2>
+    <div class="row">
+      <span>Beispielteil</span>
+      <select id="demo-select"></select>
+    </div>
+    <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" hidden>
+    <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ Eigene STL/GLB laden</button>
+    <div class="facts" id="model-facts"></div>
+    <div class="warn-line" id="model-warn"></div>
+    <div class="row">
+      <span>Deckkraft</span>
+      <input type="range" id="ref-opacity" min="5" max="100" value="100">
+      <span class="val" id="ref-opacity-val"></span>
+    </div>
+
+    <h2>Raster</h2>
+    <div class="row">
+      <span title="Zellen entlang der längsten Kante des Bauteils. Feiner löst dünne Wände auf und dauert länger.">Auflösung</span>
+      <input type="range" id="res" min="32" max="128" step="8" value="64">
+      <span class="val" id="res-val"></span>
+    </div>
+    <button type="button" class="btn btn-outline block-btn" id="regrid" disabled>Neu rastern</button>
+    <div class="hint" id="grid-note">Das Raster entsteht beim Laden des Bauteils.</div>
+    <div class="warn-line" id="res-note"></div>
+
+    <h2>Anschnitte</h2>
+    <div class="row">
+      <span>Breite</span>
+      <input type="text" id="def-w" inputmode="decimal" value="30" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="row">
+      <span>Höhe</span>
+      <input type="text" id="def-h" inputmode="decimal" value="2" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="hint">Vorgaben für neue Anschnitte; jeder lässt sich danach im Auswahlfeld bemaßen,
+      drehen und mit einem festen Anteil am Strom versehen. Ohne Angabe teilt sich der Strom
+      nach der Anschnittfläche auf.</div>
+
+    <h2>Füllung</h2>
+    <div class="row">
+      <span title="Dünnwand-Bremse: die Front läuft mit (Wanddicke / mittlere Dicke)^α. 0 ist reine Geometrie, 0,5 die übliche Wahl, 1 bremst dünne Wände stark.">Dünnwand-Bremse α</span>
+      <input type="range" id="alpha" min="0" max="1" step="0.1" value="0.5">
+      <span class="val" id="alpha-val"></span>
+    </div>
+    <div class="row">
+      <span title="Nur für die Umrechnung des Füllgrads in Millisekunden — die Rechnung selbst kennt keine Zeit.">Füllzeit</span>
+      <input type="text" id="fill-time" inputmode="decimal" value="45" spellcheck="false">
+      <span class="val">ms</span>
+    </div>
+    <button type="button" class="btn btn-outline block-btn" id="run" disabled>Füllung neu rechnen</button>
+    <div class="run-note" id="run-note"></div>
+    <div class="facts" id="result-facts"></div>
+    <div class="facts" id="inlet-facts"></div>
+    <div class="hint">Der <b>Füllgrad</b> einer Stelle ist der Anteil des Volumens, der voll ist, wenn
+      die Front sie erreicht — mit der Füllzeit auch als Zeit. <b>Fließweg / Wanddicke</b> ist die
+      klassische Kennzahl der Füllbarkeit; über etwa 300 : 1 wird es eng. Ein Anschnitt mit ⚠
+      trifft kaum eine Rasterzelle — feiner rastern oder höher machen.</div>
+
+    <h2>Darstellung</h2>
+    <div class="seg" id="show-seg">
+      <button type="button" data-value="farbe" class="active" title="Bauteil nach Füllgrad gefärbt; was über dem Regler liegt, bleibt grau">Füllgrad</button>
+      <button type="button" data-value="koerper" title="Die Schmelze beim gewählten Füllgrad als Körper, das Bauteil durchscheinend">Füllkörper</button>
+      <button type="button" data-value="grau" title="Nur das Bauteil und die Anschnitte">Bauteil</button>
+    </div>
+    <div class="row disabled" id="q-row">
+      <span title="Bis zu welchem Füllgrad gezeigt wird — die Front wandert mit dem Regler.">Füllgrad</span>
+      <input type="range" id="q" min="0" max="100" step="1" value="100">
+      <span class="val" id="q-val"></span>
+    </div>
+    <label class="inline"><input type="checkbox" id="spots-on" checked> Zuletzt gefüllte Stellen markieren</label>
+    <div class="row">
+      <span>Anzahl</span>
+      <input type="range" id="spots-count" min="1" max="20" step="1" value="5">
+      <span class="val" id="spots-count-val"></span>
+    </div>
+    <div class="hint">Wo die Front zuletzt ankommt, sammelt sich die Luft: dort gehören die Überläufe
+      hin — der <a href="ueberlauf.html">Überlaufdesigner</a> setzt sie.</div>
+
+    <h2>Import und Export</h2>
+    <input type="file" id="json-input" accept=".json,application/json" hidden>
+    <div class="btn-pair">
+      <button type="button" class="btn btn-outline" id="json-btn">JSON laden</button>
+      <button type="button" class="btn btn-outline" id="json-save">JSON speichern</button>
+    </div>
+    <button type="button" class="btn btn-outline block-btn" id="stl-save">Füllkörper als STL speichern</button>
+    <div class="hint"><b>JSON</b> ist der Plan — Anschnitte, α, Füllzeit. <b>STL</b> ist der
+      Füllkörper beim eingestellten Füllgrad.</div>
+  </aside>
+
+  <div id="viewport">
+    <div class="pt-menu" id="pt-menu">
+      <div class="pt-menu-title">Auswahl</div>
+      <div class="pt-sel" id="pt-sel">Kein Anschnitt gewählt</div>
+      <div id="sel-block" class="disabled">
+        <div class="row">
+          <span>Breite</span>
+          <input type="text" id="sel-w" inputmode="decimal" value="30" spellcheck="false">
+          <span class="val">mm</span>
+        </div>
+        <div class="row">
+          <span>Höhe</span>
+          <input type="text" id="sel-h" inputmode="decimal" value="2" spellcheck="false">
+          <span class="val">mm</span>
+        </div>
+        <div class="row">
+          <span title="Anteil am Schmelzestrom. Leer: aus der Fläche.">Anteil</span>
+          <input type="text" id="sel-share" inputmode="decimal" value="" placeholder="auto" spellcheck="false">
+          <span class="val">%</span>
+        </div>
+        <div class="row pos">
+          <span>Lage</span>
+          <div class="triple">
+            <input type="text" id="sel-x" inputmode="decimal" value="0" spellcheck="false" title="X">
+            <input type="text" id="sel-y" inputmode="decimal" value="0" spellcheck="false" title="Y">
+            <input type="text" id="sel-z" inputmode="decimal" value="0" spellcheck="false" title="Z">
+          </div>
+          <span class="val">mm</span>
+        </div>
+        <div class="row">
+          <span title="Drehung des Rechtecks in der Wand, um die Normale.">Drehung</span>
+          <input type="range" id="sel-rot" min="-180" max="180" step="1" value="0">
+          <span class="val" id="sel-rot-val"></span>
+        </div>
+        <div class="facts" id="sel-facts"></div>
+      </div>
+      <div class="pt-menu-title">Anschnitt</div>
+      <button type="button" id="add-inlet" title="Die Stelle am Bauteil anklicken, an der die Schmelze eintritt."><span class="dot" style="background:#e07b39"></span>Anschnitt setzen</button>
+      <button type="button" id="del-item" class="danger" title="Auswahl entfernen (Entf)">Löschen</button>
+    </div>
+    <div class="vp-right">
+      <div class="pt-legend" id="pt-legend"></div>
+    </div>
+    <div id="status">
+      <b>Anschnitt setzen</b>, dann aufs Bauteil klicken &nbsp;·&nbsp; <b>Punkt</b> ziehen: auf der Wand &nbsp;·&nbsp;
+      <b>Pfeil</b>: neu setzen &nbsp;·&nbsp; <b>Leer</b>: drehen &nbsp;·&nbsp; <b>rechts</b>: verschieben &nbsp;·&nbsp; <b>Rad</b>: zoomen
+    </div>
+    <div class="drop-hint">STL oder GLB hier ablegen</div>
+    <div class="aim-banner hidden" id="aim-banner">
+      <div class="aim-pill">
+        <span id="aim-text"></span>
+        <button type="button" id="aim-cancel">Abbrechen</button>
+      </div>
+    </div>
+    <div class="colorbar" id="colorbar">
+      <div class="cb-title" id="cb-title"></div>
+      <div class="cb-body">
+        <div class="cb-scale" id="cb-scale"></div>
+        <div class="cb-ticks" id="cb-ticks"></div>
+      </div>
+      <div class="cb-extra" id="cb-extra"></div>
+    </div>
+    <div id="busy"></div>
+  </div>
+</div>
+
+<script type="module" src="js/fill/app.js"></script>
+</body>
+</html>

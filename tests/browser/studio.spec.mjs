@@ -12,7 +12,8 @@ const PAGES = [
   ['abstand.html', null],
   ['anguss.html', () => window.__anguss?.state?.ready],
   ['ueberlauf.html', () => window.__ueberlauf?.state?.ready],
-  ['temperier.html', () => window.__temperier?.state?.ready]
+  ['temperier.html', () => window.__temperier?.state?.ready],
+  ['fuellung.html', () => window.__fuellung?.state?.ready]
 ];
 
 for (const [page, readyFn] of PAGES) {

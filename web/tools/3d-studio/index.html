@@ -20,9 +20,10 @@
 <section class="page-hero">
   <div class="inner">
     <h1>3D-Studio</h1>
-    <p class="subtitle">Sieben Werkzeuge um ein Bauteil herum, alle im Browser. Eines zeigt, wie eine
-      Druckgießform aufgebaut ist. Drei beantworten Fragen an das Bauteil: wo die Form geteilt
-      wird, wie dick die Wände sind, wie weit die Nachbarn entfernt liegen. Drei entwerfen, was
+    <p class="subtitle">Acht Werkzeuge um ein Bauteil herum, alle im Browser. Eines zeigt, wie eine
+      Druckgießform aufgebaut ist. Vier beantworten Fragen an das Bauteil: wo die Form geteilt
+      wird, wie dick die Wände sind, wie weit die Nachbarn entfernt liegen, in welcher
+      Reihenfolge es sich füllt. Drei entwerfen, was
       um das Bauteil herum in die Form kommt: das Angusssystem, die Überläufe mit ihren
       Entlüftungen und die Temperierkanäle. Bauteile kommen als STL oder GLB, es geht nichts an
       einen Server.</p>
@@ -56,7 +57,9 @@
         <p>Die <a href="bauteilanalyse.html">Bauteilanalyse</a> teilt es auf Formhälften und
           Schieber, die <a href="wandstaerke.html">Wandstärkenanalyse</a> misst nach innen (Wandstärke,
           Wärmezentrum), die <a href="abstand.html">Abstandsanalyse</a> nach außen (zum
-          Temperierkanal, zum Nachbarteil).</p>
+          Temperierkanal, zum Nachbarteil); die <a href="fuellung.html">Füllabschätzung</a> lässt
+          die Schmelzefront von den Anschnitten durch das gerasterte Bauteil laufen und zeigt,
+          was zuletzt voll wird.</p>
       </div>
       <div class="step">
         <div class="step-num">Entwerfen</div>
@@ -73,7 +76,7 @@
 
 <section class="tools-section" id="werkzeuge">
   <div class="tools-inner">
-    <h2 class="section-title">Sieben Werkzeuge</h2>
+    <h2 class="section-title">Acht Werkzeuge</h2>
     <p class="section-sub">Jedes für sich benutzbar, jedes mit demselben Viewport: frei drehen, Achsenkreuz, Ansichten X/Y/Z/Iso, Zentral- oder Parallelprojektion.</p>
 
     <div class="tool-grid">
@@ -241,6 +244,32 @@
         </ul>
         <div class="card-btns">
           <a href="temperier.html" class="btn btn-primary">Öffnen</a>
+        </div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card-icon" style="background:rgba(212,169,8,.16)">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#b8860b" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+            <path d="M3 6 H23 V20 H3 Z"/>
+            <path d="M3 6 L3 20" stroke="#e07b39" stroke-width="3"/>
+            <path d="M7 6 V20" stroke-dasharray="1.5 2"/>
+            <path d="M12 6 C11 10 13 12 12 20" />
+            <path d="M17 6 C16 11 18 15 17 20" stroke="#b42318"/>
+          </svg>
+        </div>
+        <div class="tool-tag">Analysieren</div>
+        <h3>Füllabschätzung</h3>
+        <p>Rechteckige Anschnitte auf die Wand setzen; das Bauteil wird gerastert, und die
+          Schmelzefront läuft von dort durch die Zellen — dünne Wände bremsen, große Anschnitte
+          kommen weiter. Keine Strömungsrechnung, eine Abschätzung in Zehntelsekunden.</p>
+        <ul>
+          <li>Füllgrad an jeder Stelle, als Farbe und als Zeit</li>
+          <li>Füllkörper zu jedem Füllgrad — die Front wandert mit dem Regler</li>
+          <li>Zuletzt gefüllte Stellen: dort gehören die Überläufe hin</li>
+          <li>Fließweg / Wanddicke, Anteil jedes Anschnitts am Volumen, Füllkörper als STL</li>
+        </ul>
+        <div class="card-btns">
+          <a href="fuellung.html" class="btn btn-primary">Öffnen</a>
         </div>
       </div>
     </div>

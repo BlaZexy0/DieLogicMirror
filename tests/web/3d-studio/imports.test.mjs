@@ -106,7 +106,7 @@ test('alle Imports der HTML-Seiten lösen auf', () => {
   const problems = [];
   const htmls = [];
   for (const f of ['index.html', 'form.html', 'bauteilanalyse.html', 'wandstaerke.html',
-    'abstand.html', 'anguss.html', 'ueberlauf.html', 'temperier.html']) htmls.push(join(ROOT, f));
+    'abstand.html', 'anguss.html', 'ueberlauf.html', 'temperier.html', 'fuellung.html']) htmls.push(join(ROOT, f));
   for (const f of htmls) {
     assert.ok(existsSync(f), 'fehlt: ' + f);
     const src = readFileSync(f, 'utf8');

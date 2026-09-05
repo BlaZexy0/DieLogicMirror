@@ -871,6 +871,79 @@ Gesamtlänge und den kleinsten Wandabstand. Dateien: **JSON** ist der Plan
 (`dielogic-temperier`, Fassung 1, mit dem Abstand), **STL** sind die
 Bohrungen als Körper.
 
+## Füllabschätzung (`fuellung.html`)
+
+Die vierte Frage an das Bauteil: **in welcher Reihenfolge füllt es sich?**
+Eine Füllsimulation braucht ein Volumennetz und Minuten; diese Seite
+braucht eine Sekunde und beantwortet den Teil der Frage, der von der
+Geometrie abhängt — wo die Front zuerst hinkommt, wo zuletzt, und wie
+sich mehrere Anschnitte das Volumen teilen. Trägheit, Strahlbildung,
+Gegendruck der Luft und Erstarrung während der Füllung sind nicht drin;
+das steht auch auf der Seite.
+
+### Raster und Anschnitte
+
+Beim Laden wird das Bauteil gerastert — dasselbe Abstandsfeld wie in der
+Wandstärkenanalyse (`js/part/field.js`), mit schmalem Band nach außen
+und vollständigem Kern nach innen. Die **Auflösung** (32 bis 128 Zellen
+entlang der längsten Kante, voreingestellt 64) bestimmt, wie dünne Wände
+noch aufgelöst werden; „Neu rastern" übernimmt eine Änderung.
+
+**Anschnitte** sind Rechtecke auf der Wand (`js/fill/model.js`): Klick auf
+„Anschnitt setzen", dann auf das Bauteil — Ort ist der getroffene Punkt,
+die Hochachse die nach außen gerichtete Flächennormale, das Rechteck
+liegt in der Wandebene mit **Breite** quer und **Höhe** längs, gedreht um
+die Normale. Ziehen am Punkt verschiebt in der Wandebene, der Pfeil setzt
+neu — dieselben Griffe wie im Anguss- und Überlaufdesigner
+(`js/handles.js`). Jeder Anschnitt hat einen **Anteil** am Schmelzestrom:
+ohne Angabe nach seiner Fläche, sonst die eingetragene Zahl (der Rest
+verteilt sich nach Fläche auf die übrigen).
+
+### Die Rechnung
+
+`js/fill/solve.js` lässt die Front von den Startzellen der Anschnitte
+(den Innenzellen unter dem Rechteck) durch die Innenzellen laufen: ein
+Dijkstra über die 26er-Nachbarschaft mit euklidischen Kantenlängen. Zwei
+Dinge machen daraus mehr als eine Geodäte:
+
+- **Dünnwand-Bremse α.** In einer Zelle läuft die Front mit
+  (Dicke / Bezugsdicke)^α; „Dicke" ist der doppelte Wandabstand aus dem
+  Feld, Bezug der Mittelwert darüber. α = 0 ist reine Geometrie; 0,5
+  (voreingestellt) ist, was man in Füllbildern sieht — die Schmelze nimmt
+  erst die dicken Wege und holt dünne Rippen später nach; 1 bremst stark.
+- **Anteile.** Die Front aus einem Anschnitt läuft mit seinem Anteil,
+  bezogen auf den Mittelwert, schneller oder langsamer. Wer eine Zelle
+  zuerst erreicht, füllt sie — die Quelle wandert im Dijkstra mit.
+
+Aus den Ankunftszeiten wird der **Füllgrad**: nach Ankunft sortiert ist
+jede Zelle bei dem Anteil des Volumens voll, der vor ihr kam. Das ist die
+Zahl, die man abliest („diese Ecke füllt bei 92 %") und die mit der
+**Füllzeit** zur Zeit in Millisekunden wird — die Rechnung selbst kennt
+keine Zeit. Dazu der **Fließweg** (die Weglänge der Front bis zur
+entferntesten Zelle) und **Fließweg / Wanddicke** mit der Wanddicke
+2 V/A des Bauteils; über etwa 300 : 1 steht ein ⚠. Je Anschnitt steht,
+welchen Anteil des Volumens er tatsächlich füllt — die Naht zwischen zwei
+Anschnitten liegt dort, wo beide Fronten zugleich ankommen. Nach dem
+ersten Anschnitt rechnet jede Änderung am Plan von selbst nach.
+
+### Drei Ansichten
+
+- **Füllgrad** — das Bauteil nach Füllgrad gefärbt (Turbo: früh blau,
+  spät rot; der Wert an der Oberfläche kommt aus den Innenzellen daneben).
+  Was über dem Regler **Füllgrad** liegt, bleibt grau: so wandert die
+  Front mit dem Regler über die Oberfläche.
+- **Füllkörper** — die Schmelze beim eingestellten Füllgrad als Fläche
+  aus dem Raster gezogen (`js/part/surfacenets.js` auf dem Feld
+  max(Abstand, (Füllgrad − q)·Band)), das Bauteil durchscheinend. Der
+  Körper lässt sich als STL speichern.
+- **Zuletzt gefüllte Stellen** — die Innenzellen, deren Füllgrad keinen
+  größeren Nachbarn hat, als rote Kugeln (Anzahl einstellbar). Dort
+  sammelt sich die Luft; dort gehören die Überläufe hin, die der
+  Überlaufdesigner setzt.
+
+Dateien: **JSON** ist der Plan (`dielogic-fuellung`, Fassung 1: Anschnitte
+mit Ort, Normale, Drehung, Maßen und Anteil, dazu α und Füllzeit).
+
 ## Struktur
 
 ```
@@ -882,6 +955,7 @@ abstand.html          Viewer 4: Abstandsanalyse
 anguss.html           Viewer 5: Angussdesigner
 ueberlauf.html        Viewer 6: Überlaufdesigner (Überläufe und Entlüftungen)
 temperier.html        Viewer 7: Temperierkanal-Designer (Kühlstiche und Kanäle)
+fuellung.html         Viewer 8: Füllabschätzung (Frontausbreitung von Anschnitten)
 css/site.css          Übersichtsseite und Karten
 css/viewer.css        Seitenleiste und Viewport aller Viewer
 assets/die.glb        DAS Formmodell — binäres glTF, vom Viewer geladen
@@ -905,6 +979,10 @@ js/cooling/model.js   der Temperierplan: Kühlstiche, Kanäle, Richtungen, Datei
 js/cooling/geom.js    Rotationskörper: Stich mit Halbkugelspitze, Kanal; Wandabstand aus dem Feld
 js/cooling/auto.js    Kühlstiche automatisch: gewichtete Überdeckung des Bauteils (k-center + k-means)
 js/cooling/app.js     Einstieg Temperierkanal-Designer
+js/fill/model.js      der Füllplan: rechteckige Anschnitte, Dreibein, Anteile, Datei
+js/fill/solve.js      Frontausbreitung (Dijkstra, Dünnwand-Bremse, Anteile), Füllgrad, Füllkörper, letzte Stellen
+js/fill/geom.js       Anschnitte als flache Quader für die Anzeige
+js/fill/app.js        Einstieg Füllabschätzung
 js/clipcaps.js        Schnittebene mit geschlossenen Schnittflächen (Stencil)
 js/die.js             Einstieg Formaufbau-Viewer
 js/ui/nav.js          Kopfleiste — hält sich heraus, sobald /shared/nav.js da ist
@@ -1002,7 +1080,8 @@ nichts. Die Dateien liegen unter `tests/web/3d-studio/`:
 | `die.test.mjs` | jede Baugruppe geschlossen und richtig orientiert, **kein Bauteil steckt im Stahl eines anderen**, Kavität als Negativ mit Spalt, Kernstift, Füllkammer |
 | `imports.test.mjs` | jeder Import löst auf, jeder exportierte Name existiert, jede angesprochene HTML-id ist vorhanden |
 | `runner.test.mjs` | der Angussdesigner ohne Browser: Profil (Umriss gegen Abstandsfunktion), Graph (Spiegelung, Einfügen, Löschen, JSON), Kurve (Bogenlänge, monotoner Querschnitt), Sweep (Volumen = Fläche × Länge, geschlossen auch mit gerundeten Deckeln), Strömung, Regeln, Auslegung, Flussschema |
-| `viewer.test.mjs` | die Verdrahtung aller fünf Viewer — mit einem winzigen DOM aus der **echten** HTML-Seite und dem echten Three.js ohne WebGL-Renderer (`tests/stubs/`) |
+| `fill.test.mjs` | die Füllabschätzung ohne Browser: Plan und Anteile, Startzellen unter dem Rechteck, Frontausbreitung (Ankunft wächst mit dem Weg, Füllgrad als Volumenrang, der größere Anschnitt kommt weiter, die Dünnwand-Bremse verzögert eine Rippe), Füllkörper bei 100 % und 50 %, letzte Stellen |
+| `viewer.test.mjs` | die Verdrahtung aller Viewer — mit einem winzigen DOM aus der **echten** HTML-Seite und dem echten Three.js ohne WebGL-Renderer (`tests/stubs/`) |
 
 Der letzte Test ist der Ersatz für den Browser, den es in der
 Kommandozeile nicht gibt: er klickt Knöpfe, zieht Regler und prüft, dass
