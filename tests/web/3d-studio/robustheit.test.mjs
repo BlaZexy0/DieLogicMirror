@@ -56,7 +56,7 @@ test('komprimiertes GLB wird abgelehnt statt als Nullnetz gelesen (H-21)', () =>
 });
 
 test('ein unkomprimiertes Beispielteil liest sich weiterhin', () => {
-  const b = readFileSync(resolve(ROOT, 'assets/parts/bracket.glb'));
+  const b = readFileSync(resolve(ROOT, 'assets/parts/gearbox_cover.glb'));
   const tris = readGLB(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength));
   assert.ok(tris.length / 9 > 1000, 'Dreiecke fehlen');
   assert.ok(tris.some(v => v !== 0), 'alle Koordinaten null — genau der stille Fehler aus H-21');

@@ -328,7 +328,7 @@ const source = mountPartSource({
     view.fitTo(refMesh);
     rebuild();
   },
-  start: 'bracket'
+  start: 'gearbox_cover'
 });
 
 /* ── Dateien ─────────────────────────────────────────────────── */

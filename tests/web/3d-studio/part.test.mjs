@@ -27,7 +27,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 
 function demoTris(id) {
   const p = DEMO_PARTS.find(d => d.id === id) || DEMO_PARTS[0];
   const file = resolve(ROOT, p.file);
-  assert.ok(existsSync(file), p.file + ' fehlt — „node tools/build-parts.mjs"');
+  assert.ok(existsSync(file), p.file + ' fehlt — „node scripts/3d-studio/build-parts.mjs"'
+    + (p.source ? ' bzw. Export aus ' + p.source : ''));
   const buf = readFileSync(file);
   return readGLB(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
 }
@@ -121,7 +122,7 @@ test('Jedes Dreieck bekommt am Ende eine Marke', async () => {
 });
 
 test('Stufen bauen aufeinander auf', async () => {
-  const { seg, model } = await analyse(demoTris('bracket'));
+  const { seg, model } = await analyse(demoTris('gearbox_cover'));
   let seed = 0, island = 0, grown = 0;
   for (let f = 0; f < model.faceCount; f++) {
     if (seg.stage[f] === STAGE.SEED) seed++;
@@ -140,15 +141,25 @@ test('Stufen bauen aufeinander auf', async () => {
   assert.ok(boundary > 0, 'es gibt eine Trennlinie');
 });
 
-test('Beispielteil „Halter" braucht Schieber, „Gehäusedeckel" nicht', async () => {
-  const cover = await analyse(demoTris('cover'));
-  const slidersCover = [0, 1, 2, 3].reduce((s, i) => s + cover.seg.areaByLabel[i], 0);
-  assert.ok(slidersCover / cover.model.totalArea < 0.01, 'Deckel kommt ohne Schieber aus');
-  assert.ok(cover.seg.areaByLabel[6] / cover.model.totalArea < 0.005, 'Deckel hat keine Hinterschnitte');
+test('Beispielteil „Getriebedeckel" braucht Schieber, „Kühlkörper" nicht', async () => {
+  const sink = await analyse(demoTris('heat_sink'));
+  const slidersSink = [0, 1, 2, 3].reduce((s, i) => s + sink.seg.areaByLabel[i], 0);
+  assert.ok(slidersSink / sink.model.totalArea < 0.01, 'Kühlkörper kommt ohne Schieber aus');
+  assert.ok(sink.seg.areaByLabel[6] / sink.model.totalArea < 0.005, 'Kühlkörper hat keine Hinterschnitte');
 
-  const br = await analyse(demoTris('bracket'));
-  const slidersBr = [0, 1, 2, 3].reduce((s, i) => s + br.seg.areaByLabel[i], 0);
-  assert.ok(slidersBr / br.model.totalArea > 0.2, 'Halter braucht deutlich Schieberfläche');
+  /* Zwei Dome mit Bohrung quer zur Entformrichtung — die Bohrungen und
+     die Domflanken sieht keine der beiden Hälften. Gemessen an der
+     Gesamtfläche des Deckels ist das wenig, aber eindeutig. */
+  const gc = await analyse(demoTris('gearbox_cover'));
+  const slidersGc = [0, 1, 2, 3].reduce((s, i) => s + gc.seg.areaByLabel[i], 0);
+  assert.ok(slidersGc / gc.model.totalArea > 0.005, 'Getriebedeckel braucht Schieberfläche');
+  assert.ok(slidersGc / gc.model.totalArea > 10 * slidersSink / sink.model.totalArea,
+    'deutlich mehr als der Kühlkörper');
+  /* Unter dem Flansch, über den beiden Domen, bleibt ein Streifen
+     Flanschunterseite, den keine Hälfte sieht und der zum Schieber
+     parallel liegt — für das Werkzeug rund 1 % Hinterschnitt; in der
+     Praxis bildet ihn der Schieber mit. */
+  assert.ok(gc.seg.areaByLabel[6] / gc.model.totalArea < 0.02, 'sonst keine Hinterschnitte');
 });
 
 test('Entformschräge: Werte und Kennzahlen', async () => {
@@ -179,6 +190,14 @@ test('STL: Hin- und Rückweg', async () => {
 test('Die ausgelieferten Beispielteile passen zur Quelle', async () => {
   for (const p of DEMO_PARTS) {
     const shipped = demoTris(p.id);
+    if (p.source) {
+      /* Aus openscad_parts exportiert — hier gibt es keine prozedurale
+         Quelle; geprüft wird, dass ein geschlossenes, echtes Netz ankommt. */
+      assert.ok(shipped.length / 9 > 1000, p.id + ': Dreiecke fehlen');
+      assert.ok(volume(shipped) > 0, p.id + ': positives Volumen');
+      near(openEdgeRatio(buildModel(shipped)), 0, 1e-9, p.id + ': geschlossen');
+      continue;
+    }
     const src = cleanMesh(buildDemoGeometry(p.id)).tris;
     assert.equal(shipped.length, src.length, p.id + ': gleiche Dreieckszahl');
     near(volume(shipped), volume(src), 1e-5, p.id + ': Volumen');

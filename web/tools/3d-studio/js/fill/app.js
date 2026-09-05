@@ -509,7 +509,7 @@ const source = mountPartSource({
     await computeField();
     syncSelection();
   },
-  start: 'bracket'
+  start: 'gearbox_cover'
 });
 
 /* ── Dateien ─────────────────────────────────────────────────── */

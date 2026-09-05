@@ -211,15 +211,16 @@ test('Farbskala erscheint nur bei geordneten Größen', () => {
 
 test('Beispielteile lassen sich wechseln', async () => {
   const sel = doc.getElementById('demo-select');
-  sel.value = 'undercut';
+  sel.value = 'oil_pan';
   sel.dispatch('change');
-  await ready(app, 'Teil mit Hinterschnitt');
+  await ready(app, 'Ölwanne');
   const s = app.__viewer.state;
-  assert.ok(s.name.includes('Hinterschnitt'), 'Teil gewechselt: ' + s.name);
+  assert.ok(s.name.includes('Ölwanne'), 'Teil gewechselt: ' + s.name);
   assert.equal(s.analysed, false, 'ein neues Teil startet ohne Analyse');
   assert.ok(doc.getElementById('legend').innerHTML.includes('Analyse starten'), 'Hinweis in der Legende');
   await analyse(doc, app);
-  assert.ok(s.seg.areaByLabel[6] > 0, 'dieses Teil hat Hinterschnitte');
+  const halves = s.seg.areaByLabel[4] + s.seg.areaByLabel[5];
+  assert.ok(halves > 0.95 * s.model.totalArea, 'dieses Teil bilden die beiden Hälften fast ganz');
 });
 
 test('STL laden: Datei, Ziehen-und-Ablegen, kaputte Datei', async () => {
@@ -257,13 +258,13 @@ test('STL laden: Datei, Ziehen-und-Ablegen, kaputte Datei', async () => {
 test('?part=… wählt das Beispielteil aus der Adresszeile', async () => {
   const { doc: d3 } = buildDocument(read('bauteilanalyse.html'));
   installGlobals(d3);
-  globalThis.location = { search: '?part=bracket', href: 'http://test/bauteilanalyse.html?part=bracket' };
+  globalThis.location = { search: '?part=heat_sink', href: 'http://test/bauteilanalyse.html?part=heat_sink' };
   const app2 = await import('../../../web/tools/3d-studio/js/part/app.js?variante=adresszeile');
   await ready(app2);
-  assert.ok(app2.__viewer.state.name.includes('Halter'), 'Halter geladen: ' + app2.__viewer.state.name);
+  assert.ok(app2.__viewer.state.name.includes('Kühlkörper'), 'Kühlkörper geladen: ' + app2.__viewer.state.name);
   await analyse(d3, app2);
   assert.ok(app2.__viewer.state.seg, 'Analyse auf Knopfdruck gelaufen');
-  assert.equal(d3.getElementById('demo-select').value, 'bracket');
+  assert.equal(d3.getElementById('demo-select').value, 'heat_sink');
 });
 
 /* ── Formaufbau-Viewer ───────────────────────────────────────── */
@@ -1116,7 +1117,10 @@ test('Überlaufdesigner: setzen, ziehen, drehen, neu setzen, Datei', async () =>
   await new Promise(r => setTimeout(r, 30));
   zeiger('pointerup', hx + 70, hy);
   assert.ok(Math.hypot(it.pos[1] - p0[1], it.pos[2] - p0[2]) > 5, 'der Punkt wandert auf der Wand: ' + p0 + ' → ' + it.pos);
-  assert.ok(Math.abs(it.pos[0] - p0[0]) < 1e-6, 'aber nicht von ihr weg');
+  /* Die Wand hat 1,5° Schräge: in x nur, was die Schräge zum Weg in z
+     vorgibt — plus ein Zehntel für die Facetten der Wandfläche. */
+  assert.ok(Math.abs(it.pos[0] - p0[0]) <= Math.abs(it.pos[2] - p0[2]) * Math.tan(1.5 * Math.PI / 180) + 0.1,
+    'aber nicht von ihr weg: ' + p0 + ' → ' + it.pos);
 
   /* Drehen um die Normale: oben bleibt die Wandnormale, die Längsrichtung
      schwenkt in der Wand. */
@@ -1216,7 +1220,11 @@ test('Temperierkanal-Designer: Abstandsfläche, Kühlstich, Kanal, Achsenpfeile,
   assert.equal(items().length, 1);
   const s1 = items()[0];
   assert.equal(s1.type, 'stich');
-  assert.ok(s1.p[0] > b.max[0] + 15 && s1.p[0] < b.max[0] + 25, 'die Spitze sitzt rund 20 mm vor der Wand: ' + s1.p);
+  /* Die +X-Wand des Getriebedeckels steht mit 1,5° Schräge unter dem
+     Flansch, der bis b.max reicht — gemessen wird gegen die Wand auf
+     Höhe der Bauteilmitte. */
+  const wallX = 190 + c[2] * Math.tan(1.5 * Math.PI / 180);
+  assert.ok(s1.p[0] > wallX + 15 && s1.p[0] < wallX + 25, 'die Spitze sitzt rund 20 mm vor der Wand: ' + s1.p);
   assert.ok(s1.dir[0] > 0.95, 'und der Stich läuft nach außen (+X): ' + s1.dir);
   assert.equal(s1.d, 8); assert.equal(s1.len, 60);
   assert.match(d8.getElementById('pt-sel').innerHTML, /Kühlstich/);
@@ -1375,7 +1383,11 @@ test('Füllabschätzung: Raster, Anschnitt per Klick, Füllgrad, Füllkörper, l
   assert.ok(!v.handles.aiming);
   assert.equal(items().length, 1);
   const a1 = items()[0];
-  assert.ok(Math.abs(a1.pos[0] - b.max[0]) < 1e-6, 'auf der +X-Wand: ' + a1.pos);
+  /* Die +X-Wand des Getriebedeckels steht mit 1,5° Schräge unter dem
+     Flansch, der bis b.max reicht — gemessen wird gegen die Wand auf
+     Höhe der Bauteilmitte. */
+  const wallX = 190 + c[2] * Math.tan(1.5 * Math.PI / 180);
+  assert.ok(Math.abs(a1.pos[0] - wallX) < 0.5, 'auf der +X-Wand: ' + a1.pos);
   assert.ok(a1.n[0] > 0.99, 'Normale nach außen: ' + a1.n);
   assert.equal(a1.w, 30); assert.equal(a1.h, 2);
   assert.equal(v.handles.selected, a1.id, 'der neue Anschnitt ist gewählt');
@@ -1414,7 +1426,7 @@ test('Füllabschätzung: Raster, Anschnitt per Klick, Füllgrad, Füllkörper, l
   assert.ok(!v.bodyMesh.visible);
 
   /* Zweiter Anschnitt mit festem Anteil: Anteile und Volumen im Feld. */
-  const a2 = (await import('../../../web/tools/3d-studio/js/fill/model.js')).addInlet(v.state.plan, [b.min[0], c[1], c[2]], [-1, 0, 0], { w: 10, h: 2 });
+  const a2 = (await import('../../../web/tools/3d-studio/js/fill/model.js')).addInlet(v.state.plan, [-wallX, c[1], c[2]], [-1, 0, 0], { w: 10, h: 2 });
   v.rebuild();
   v.state.stale = true; await v.compute();
   await settled();

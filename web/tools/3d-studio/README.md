@@ -1047,7 +1047,14 @@ node scripts/3d-studio/build-glb.mjs     # assets/die.glb    ← js/diegeom.js, 
 node scripts/3d-studio/build-parts.mjs   # assets/parts/*.glb ← js/part/demogeom.js
 ```
 
-Die Beispielteile werden dabei schon aufgeräumt (entartete Dreiecke weg,
+Die vier Druckgussteile (Getriebedeckel, Ölwanne, Kühlkörper, U-Profil)
+kommen nicht aus `demogeom.js`, sondern aus dem Schwesterprojekt
+`openscad_parts` (parametrische OpenSCAD-Quellen): dort `./render.sh`,
+dann `build/glb/*.glb` nach `assets/parts/` kopieren. `build-parts.mjs`
+überspringt sie (Feld `source` in `demoparts.js`). Gussteil und
+Temperierkreise der Beispielform entstehen weiterhin prozedural.
+
+Die prozeduralen Beispielteile werden dabei schon aufgeräumt (entartete Dreiecke weg,
 T-Stöße zu) und indiziert, ohne Normalen — die rechnet der Viewer neu,
 und die Analyse arbeitet allein mit den Punkten. Vorher entstanden sie
 bei jedem Seitenaufruf neu; das kostete pro Teil bis zu einer halben

@@ -2,6 +2,10 @@
       node scripts/3d-studio/build-parts.mjs
    (aus dem Repo-Root; schreibt nach web/tools/3d-studio/assets/parts/)
 
+   Beispielteile mit `source` (die Druckgussteile aus openscad_parts)
+   werden hier nicht gebaut, sondern dort mit ./render.sh exportiert und
+   nach assets/parts/ kopiert.
+
    Die Bauteil-Seiten laden die Beispielteile als fertige GLB, damit sie
    die Geometrie-Werkstatt (CSG) nicht mitschleppen müssen. Geschrieben
    wird nur, was gebraucht wird: verschweißte Punkte, Indizes, keine
@@ -19,6 +23,10 @@ const outDir = new URL('../../web/tools/3d-studio/assets/parts/', import.meta.ur
 mkdirSync(outDir, { recursive: true });
 
 for (const p of DEMO_PARTS) {
+  if (p.source) {
+    console.log(p.id.padEnd(10) + '  übersprungen — kommt fertig aus ' + p.source);
+    continue;
+  }
   const t0 = Date.now();
   /* Schon hier aufräumen: die ausgelieferte Datei ist dann frei von
      T-Stößen und entarteten Dreiecken, der Viewer hat weniger zu tun. */
