@@ -33,8 +33,8 @@ status.textContent = 'Modell lädt …';
 /* Blick von der festen Seite (−z): beim „Form öffnen" fährt die
    bewegliche Hälfte vom Betrachter weg und gibt die Kavität frei. */
 const view = initScene(container, {
-  cameraStart: [1500, 680, -1350], target: [0, 0, 20],
-  minDistance: 250, maxDistance: 8000
+  cameraStart: [2000, 900, -1900], target: [0, 0, 20],
+  minDistance: 250, maxDistance: 10000
 });
 mountViewBar(container, view);
 

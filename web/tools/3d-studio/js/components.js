@@ -56,7 +56,13 @@ function toGeometry(raw, crease = 32) {
    Baugruppen-Gruppen heißen wie ihre Registry-id; compId steht zusätzlich
    in userData und überlebt als glTF-extras den Roundtrip. */
 export function buildDie(log) {
-  const parts = buildParts(log);
+  return buildDieFromPieces(buildParts(log));
+}
+
+/** Dasselbe für fertige Stücke — { compId: [{ tris, mat }] } — etwa aus
+    STL-Dateien (scripts/3d-studio/build-die-stl.mjs). So bekommt eine
+    extern modellierte Form dieselben Namen, Normalen und Materialien. */
+export function buildDieFromPieces(parts) {
   const root = new T.Group();
   root.name = 'die';
   const fixedRoot = new T.Group(); fixedRoot.name = 'fixedRoot';

@@ -105,7 +105,7 @@ function mount(key, suffix, startId) {
     }
   });
 }
-const sourceA = mount('a', '-a', 'cast');
+const sourceA = mount('a', '-a', 'oil_pan');
 const sourceB = mount('b', '-b', 'coolmov');
 
 function buildGeometry(key) {

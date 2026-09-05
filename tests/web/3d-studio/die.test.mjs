@@ -159,7 +159,7 @@ function readGlbJson(path) {
   return JSON.parse(buf.toString('utf8', 20, 20 + jsonLen));
 }
 
-test('assets/die.glb enthält alle Namen, über die der Viewer sucht', { skip: !existsSync(GLB) && 'die.glb fehlt — node tools/build-glb.mjs' }, () => {
+test('assets/die.glb enthält alle Namen, über die der Viewer sucht', { skip: !existsSync(GLB) && 'die.glb fehlt — in openscad_parts ./render_die.sh --studio' }, () => {
   const g = readGlbJson(GLB);
   const names = new Set(g.nodes.map(n => n.name));
   for (const n of ['die', 'fixedRoot', 'movingRoot']) assert.ok(names.has(n), 'Knoten fehlt: ' + n);

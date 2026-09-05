@@ -15,10 +15,14 @@
 
 import * as T from 'three';
 
-/* Halber Weg der Schnittebene je Achse — etwas größer als das Modell
-   (x ±350, y ±410, z −650 … 485), damit die Ebene an beiden Enden ganz
-   herausfährt. */
-const EXTENT = { x: 400, y: 460, z: 700 };
+/* Halber Weg der Schnittebene je Achse: aus dem Kasten des geladenen
+   Modells, ein Zehntel größer, damit die Ebene an beiden Enden ganz
+   herausfährt — die Form darf beliebig groß sein. */
+function extentOf(object) {
+  const box = new T.Box3().setFromObject(object);
+  const half = axis => Math.max(Math.abs(box.min[axis]), Math.abs(box.max[axis]), 1) * 1.1;
+  return { x: half('x'), y: half('y'), z: half('z') };
+}
 const STEEL_CAP = 0x8e9ba2;
 const CAP_SIZE = 4200;
 
@@ -28,6 +32,7 @@ const CAP_SIZE = 4200;
 const OFF_CONSTANT = 1e9;
 
 export function initClipCaps(scene, dieScene) {
+  const EXTENT = extentOf(dieScene);
   const plane = new T.Plane(new T.Vector3(-1, 0, 0), OFF_CONSTANT);
 
   /* Alle Modell-Materialien und die Klassen in stabiler Reihenfolge,

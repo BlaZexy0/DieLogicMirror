@@ -608,7 +608,7 @@ test('Abstandsseite: zwei Dateien, Abstand auf Knopfdruck', async () => {
   const s = dist.__viewer.state;
 
   assert.ok(s.a.model && s.b.model, 'beide Dateien geladen');
-  assert.ok(s.a.name.includes('Gussteil'), 'A ist das Gussteil: ' + s.a.name);
+  assert.ok(s.a.name.includes('Ölwanne'), 'A ist die Ölwanne, das Gussteil der Form: ' + s.a.name);
   assert.ok(s.b.name.includes('Temperierung'), 'B ist die Temperierung: ' + s.b.name);
   assert.equal(s.analysed, false, 'ohne Bestätigung wird nicht gerechnet');
   assert.ok(d5.getElementById('model-facts-a').innerHTML.includes('cm²'), 'Kennzahlen A');

@@ -20,7 +20,7 @@ export const COMPONENTS = [
   { id: 'fixInsert',    label: 'Formeinsatz fest',          side: 'fix',  color: '#7d8a91' },
   { id: 'sleeve',       label: 'Füllkammer + Gießkolben',   side: 'fix',  color: '#8b979e' },
   { id: 'guidePillars', label: 'Führungssäulen',            side: 'fix',  color: '#8d9aa1' },
-  { id: 'ventBlockFix', label: 'Vakuumblock (feste Hälfte)', side: 'fix', color: '#7f8c93' },
+  { id: 'ventBlockFix', label: 'Entlüftung (feste Hälfte)',   side: 'fix',  color: '#7f8c93' },
   { id: 'coolFixL',     label: 'Kreis links',   side: 'fix', sub: 'Temperierung', color: '#c0392b' },
   { id: 'coolFixR',     label: 'Kreis rechts',  side: 'fix', sub: 'Temperierung', color: '#e07055' },
 
@@ -29,7 +29,7 @@ export const COMPONENTS = [
   { id: 'ejBox',        label: 'Auswerferkasten + Aufspannplatte', side: 'mov', color: '#94a1a8' },
   { id: 'ejector',      label: 'Auswerferpaket (Platten + Stifte)', side: 'mov', color: '#6f7c83' },
   { id: 'guideBushings', label: 'Führungsbuchsen',          side: 'mov',  color: '#77848b' },
-  { id: 'ventBlockMov', label: 'Vakuumblock (bewegl. Hälfte)', side: 'mov', color: '#7f8c93' },
+  { id: 'ventBlockMov', label: 'Entlüftung (bewegl. Hälfte)', side: 'mov',  color: '#7f8c93' },
   { id: 'coolMovL',     label: 'Kreis links',   side: 'mov', sub: 'Temperierung', color: '#2e6da4' },
   { id: 'coolMovR',     label: 'Kreis rechts',  side: 'mov', sub: 'Temperierung', color: '#5a95c9' },
 

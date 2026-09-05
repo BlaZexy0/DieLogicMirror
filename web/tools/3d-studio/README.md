@@ -26,12 +26,25 @@ Angussdesigner ist der einzige, der welche *erzeugt*.
 
 ## Formaufbau (`form.html`)
 
-Die Beispielform: feste und bewegliche Hälfte mit Einsätzen, Kavität
-(Bauteil mit Dom, Kernloch und Flansch), Gießsystem (Pressrest,
-Angusskegel, Anguss, Anschnitt), Überläufe und Entlüftungskanal,
-Temperierkreise beider Hälften, Füllkammer mit Gießloch und Gießkolben,
-Auswerferkasten mit Platten, Auswerfer- und Rückdrückstiften, Führung
-und geteilter Vakuumblock.
+Die Beispielform ist die Form der **Ölwanne** (Beispielteil der
+Bauteilseiten, aus `openscad_parts`): feste Hälfte mit Kavitätseinsatz
+(Wannenaußenseite, Flanschtasche, Nuten der Außenrippen, Kernstift für
+den Ablasspilot), Füllkammer bis an die Trennebene — ganz im Einsatz,
+mit Bund am Formrücken, Gießloch und Gießkolben —, Pressrest in der
+Kammermündung, Anguss (Schräge, gerundeter
+Grund) und Fächeranschnitt in der Ebene des Flansches an der unteren
+Flanschkante;
+bewegliche Hälfte mit Kerneinsatz (Wanneninneres mit Schlitzen für
+Schwallbleche und Rippen, Kernstifte für die Flanschbohrungen),
+Auswerferkasten mit Platten, 14 Auswerfer- und 4 Rückdrückstiften,
+Führungssäulen und -buchsen; an der oberen Flanschkante fünf Überläufe
+als gezogene Taschen mit eigenem dünnem Anschnitt, deren
+Entlüftungsstiche in einem Sammelkanal und einer schmalen Entlüftungslinie
+zu einer runden, geteilten Vakuumentlüftung in den Einsätzen führen,
+von der allein die Anschlussbohrung durch die feste Hälfte zum
+Formrücken geht;
+je Hälfte zwei Temperierkreise (fest: unter dem flachen Boden und unter
+dem Sumpf), an Pressrest, Anguss und Auswerferstiften vorbeigeführt.
 
 Bedienung:
 
@@ -1043,9 +1056,19 @@ Viewer rechnen beim Laden keine Geometrie mehr. Nach Änderungen an der
 jeweiligen Quelle, aus dem Repo-Root:
 
 ```
-node scripts/3d-studio/build-glb.mjs     # assets/die.glb    ← js/diegeom.js, js/config.js
-node scripts/3d-studio/build-parts.mjs   # assets/parts/*.glb ← js/part/demogeom.js
+(in openscad_parts) ./render_die.sh --studio      # assets/die.glb ← dies/oil_pan_die.scad
+node scripts/3d-studio/build-die-stl.mjs <manifest> # dasselbe von Hand, aus den STL-Stücken
+node scripts/3d-studio/build-glb.mjs <ziel.glb>    # die ältere prozedurale Form aus js/diegeom.js
+node scripts/3d-studio/build-parts.mjs             # assets/parts/*.glb ← js/part/demogeom.js
 ```
+
+Die Ölwannen-Form kommt als Satz von STL-Stücken aus `openscad_parts`
+(`dies/oil_pan_die.json` nennt je Stück Baugruppe und Material);
+`build-die-stl.mjs` setzt sie über denselben Adapter zusammen wie das
+prozedurale Modell (`js/components.js`), damit Namen, Normalen und
+Materialien identisch sind. `js/diegeom.js` und `js/config.js` beschreiben
+weiterhin die ältere prozedurale Beispielform; `CFG.openTravel` gilt
+für beide.
 
 Die vier Druckgussteile (Getriebedeckel, Ölwanne, Kühlkörper, U-Profil)
 kommen nicht aus `demogeom.js`, sondern aus dem Schwesterprojekt
