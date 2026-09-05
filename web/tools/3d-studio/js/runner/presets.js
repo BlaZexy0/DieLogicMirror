@@ -91,9 +91,34 @@ export function demoStep() {
   return finish(g);
 }
 
+/** Ölwanne aus openscad_parts: vier Anschnitte an der langen Flanschkante
+    (z = 470, dorthin schiebt `ref` das Referenzteil), je zwei aus einer
+    zweiten Verzweigung, senkrecht auf die Kante zu. Die Bögen bleiben
+    flach — unter 2 × dh löst sich die Strömung ab (Regel „Zu enger
+    Bogen") — und die zweite Verzweigung wird mit lotrechtem Zulauf
+    angefahren, damit ihr Zwilling auf derselben Höhe landet. */
+export function demoOilPan() {
+  const g = G.emptyGraph();
+  G.setBiscuit(g, { pos: [0, 0, 0], axis: '+y', d: 100, t: 28 });
+  const p1 = mk(g, G.root(g), 'point', [0, 0, 60]);
+  const b1 = mk(g, p1, 'branch', [0, 0, 110]);
+  const m1 = mk(g, b1, 'point', [-70, 0, 190]);
+  const m2 = mk(g, m1, 'point', [-100, 0, 260]);
+  const b2 = mk(g, m2, 'branch', [-100, 0, 320]);
+  const q = mk(g, b2, 'point', [-150, 0, 410]);
+  mk(g, q, 'gate', [-150, 0, 470], { gate: { ...GATE } });
+  return finish(g);
+}
+
+/* `ref`: ein Beispiel darf ein Referenzteil mitbringen. Die Datei ist
+   eine GLB aus assets/parts/ (Trennebene des Teils bei z = 0, Entformung
+   +z); rotX dreht sie in die Lage des Angussdesigners (Trennebene y = 0,
+   Kavität nach +y), translate schiebt sie an die Anschnitte. */
 export const DEMOS = [
   { id: 'zwei', label: 'Zwei Anschnitte (symmetrisch)', build: demoTwoGates },
   { id: 'vier', label: 'Vier Anschnitte (zwei Ebenen)', build: demoFourGates },
   { id: 'faecher', label: 'Ein Fächeranschnitt', build: demoFan },
-  { id: 'stufe', label: 'Verteiler mit Stufe und Spiegelpunkt', build: demoStep }
+  { id: 'stufe', label: 'Verteiler mit Stufe und Spiegelpunkt', build: demoStep },
+  { id: 'oelwanne', label: 'Ölwanne: vier Anschnitte am Flansch', build: demoOilPan,
+    ref: { file: 'assets/parts/oil_pan.glb', name: 'Ölwanne', rotX: 90, translate: [0, 0, 637] } }
 ];

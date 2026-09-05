@@ -267,6 +267,45 @@ test('?part=… wählt das Beispielteil aus der Adresszeile', async () => {
   assert.equal(d3.getElementById('demo-select').value, 'heat_sink');
 });
 
+test('Angussseite: das Beispiel „Ölwanne" bringt sein Referenzteil mit', async () => {
+  const { doc: d } = buildDocument(read('anguss.html'));
+  installGlobals(d);
+  globalThis.location = { search: '?demo=oelwanne', href: 'http://test/anguss.html?demo=oelwanne' };
+  const mod = await import('../../../web/tools/3d-studio/js/runner/app.js?variante=oelwanne');
+  const v = mod.__viewer;
+  assert.ok(v.state.ready, 'das Beispiel steht');
+  assert.equal(d.getElementById('demo-select').value, 'oelwanne');
+  assert.ok(v.state.refPending, 'das Referenzteil ist unterwegs');
+  await v.state.refPending;
+  assert.ok(v.refMesh.visible, 'die Ölwanne steht im Viewport');
+  assert.match(d.getElementById('ref-note').textContent, /Ölwanne · [\d.,]+ cm³/);
+  assert.ok(v.state.proc.volume > 500 && v.state.proc.volume < 5000,
+    'ihr Volumen ist das Gussvolumen: ' + v.state.proc.volume + ' cm³');
+
+  /* Lage: Flanschfläche in der Trennebene y = 0, Wanne nach +y, die lange
+     Flanschkante an den vier Mündungen — auf der geraden Kante, nicht im
+     Eckradius. */
+  v.refMesh.geometry.computeBoundingBox();
+  const bb = v.refMesh.geometry.boundingBox;
+  assert.ok(Math.abs(bb.min.y) < 1e-3 && bb.max.y > 120, 'Trennebene y = 0, Wanne nach +y: ' + bb.min.y + ' … ' + bb.max.y);
+  const gates = Object.values(v.state.graph.nodes).filter(n => n.type === 'gate');
+  assert.equal(gates.length, 4);
+  for (const g of gates) {
+    assert.ok(Math.abs(g.pos[2] - bb.min.z) < 0.5, 'Mündung an der Flanschkante: ' + g.pos + ' / ' + bb.min.z);
+    assert.ok(Math.abs(g.pos[0]) < 165, 'auf der geraden Kante: ' + g.pos);
+  }
+  assert.deepEqual(v.state.rules.filter(r => r.level !== 'ok').map(r => r.title), [],
+    'das Beispiel verletzt keine Regel');
+
+  /* Ein anderes Beispiel lässt das Referenzteil stehen, × räumt es weg. */
+  const sel = d.getElementById('demo-select');
+  sel.value = 'zwei';
+  sel.dispatch('change');
+  assert.ok(v.refMesh.visible, 'der Wechsel nimmt das Teil nicht weg');
+  d.getElementById('ref-clear').dispatch('click');
+  assert.ok(!v.refMesh.visible);
+});
+
 /* ── Formaufbau-Viewer ───────────────────────────────────────── */
 test('Formaufbau-Viewer verdrahtet Baugruppen, Regler und Schnitt', async () => {
   const T = await import('three');

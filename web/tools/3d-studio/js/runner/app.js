@@ -53,7 +53,8 @@ const state = {
   sizing: { ...DEFAULT_SIZING },
   show: 'sweep',
   name: 'Zwei Anschnitte', ready: false,
-  chartOpen: false
+  chartOpen: false,
+  refPending: null          // Versprechen, solange ein Beispiel sein Referenzteil holt
 };
 
 /* ── Szene ───────────────────────────────────────────────────── */
@@ -748,7 +749,10 @@ function loadGraphJSON(text, name) {
    also wird sie übernommen. Überläufe sind darin NICHT enthalten; wer sie
    mitrechnen will, schlägt sie im Feld auf. */
 function loadReference(buffer, name) {
-  const tris = isGLB(buffer) ? readGLB(buffer) : parseSTL(buffer);
+  adoptReference(isGLB(buffer) ? readGLB(buffer) : parseSTL(buffer), name);
+}
+
+function adoptReference(tris, name) {
   const geo = new T.BufferGeometry();
   geo.setAttribute('position', new T.BufferAttribute(Float32Array.from(tris), 3));
   geo.computeVertexNormals();
@@ -785,6 +789,45 @@ container.addEventListener('drop', e => {
 $('demo-select').innerHTML = DEMOS
   .map(d => '<option value="' + d.id + '">' + d.label + '</option>').join('');
 
+/* Ein Referenzteil aus assets/ in die Lage des Beispiels bringen: Drehung
+   um x (Grad), dann Versatz. Die Beispielteile liegen mit der Trennebene
+   bei z = 0; hier liegt sie bei y = 0. */
+function placeTris(tris, ref) {
+  const out = Float64Array.from(tris);
+  const a = (ref.rotX || 0) * Math.PI / 180;
+  const c = Math.round(Math.cos(a) * 1e12) / 1e12, s = Math.round(Math.sin(a) * 1e12) / 1e12;
+  const t = ref.translate || [0, 0, 0];
+  for (let i = 0; i < out.length; i += 3) {
+    const y = out[i + 1], z = out[i + 2];
+    out[i] += t[0];
+    out[i + 1] = y * c - z * s + t[1];
+    out[i + 2] = y * s + z * c + t[2];
+  }
+  return out;
+}
+
+/* Das Referenzteil eines Beispiels kommt asynchron aus assets/parts/ —
+   so wie die Bauteilseiten ihre Beispielteile holen. Bis dahin steht
+   der Name in der Dateizeile; state.refPending hält das Versprechen. */
+function loadDemoReference(ref) {
+  $('ref-note').textContent = ref.name + ' … wird geladen';
+  $('ref-file').classList.remove('hidden');
+  state.refPending = fetch(ref.file).then(async res => {
+    if (!res.ok) throw new Error(ref.file + ' fehlt');
+    adoptReference(placeTris(readGLB(await res.arrayBuffer()), ref), ref.name);
+    /* Mit dem Gussvolumen des Teils werden die Anschnitte breiter — die
+       Kanäle ziehen nach, wie beim Knopf „Auslegung". */
+    autoTaper(state.graph, state.proc, state.sizing);
+    rebuild();
+    syncSelection();
+    view.fitTo(group);
+  }).catch(err => {
+    $('ref-note').textContent = ref.name + ' konnte nicht geladen werden: ' + err.message;
+    console.error(err);
+  });
+  return state.refPending;
+}
+
 function pickDemo(id) {
   const d = DEMOS.find(x => x.id === id) || DEMOS[0];
   $('demo-select').value = d.id;
@@ -792,6 +835,8 @@ function pickDemo(id) {
   state.name = d.label;
   $('graph-note').textContent = '';
   adoptGraph();
+  /* Ein Beispiel ohne Referenzteil lässt ein geladenes stehen. */
+  if (d.ref) loadDemoReference(d.ref);
 }
 $('demo-select').addEventListener('change', e => pickDemo(e.target.value));
 
