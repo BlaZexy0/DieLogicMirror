@@ -9,11 +9,14 @@ import os
 import re
 from pathlib import Path, PurePosixPath
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
+from urllib.parse import quote
 
-from .auth import bootstrap_demo, bootstrap_from_env, router as auth_router
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
+
+from .auth import bootstrap_demo, bootstrap_from_env, optional_user, router as auth_router
 from .db import SessionLocal, init_db
 from .orgsettings import router as orgsettings_router
 from .projects import router as projects_router
@@ -127,6 +130,41 @@ async def body_limit(request: Request, call_next):
                         "detail": f"Anfrage zu groß (max. {MAX_BODY_BYTES // 1000} kB)."})
             except ValueError:
                 return JSONResponse(status_code=400, content={"detail": "Ungültiger Content-Length-Kopf."})
+    return await call_next(request)
+
+
+# Die Werkzeugseiten (Dashboard, Sprengfläche, Teilekosten, Zyklus, 3D-Studio)
+# gibt es nur mit Konto. Bisher prüfte das erst die Projektleiste im Browser:
+# die Seite kam vollständig an, baute sich auf und sprang dann zur Anmeldung —
+# das 3D-Studio fragte gar nicht. Jetzt entscheidet der Server vor der
+# Auslieferung: ohne Sitzung geht das HTML nicht raus, sondern ein 302 auf die
+# Konto-Seite, mit ?next= zurück ans Ziel (die Konto-Seite prüft, dass es auf
+# dieser Site liegt). Gemeint sind nur die Seiten selbst (Verzeichnis oder
+# .html); Skripte, Styles und Modelle darunter bleiben frei — die Konto- und
+# die Theorieseiten laden Module aus /tools/auslegung/js/.
+#
+# Registriert VOR cache_headers: Starlette legt jede neue Middleware außen
+# herum, so läuft die Umleitung noch durch cache_headers und trägt
+# Cache-Control und die Sicherheits-Header wie jede andere Antwort.
+LOGIN_ONLY = ("/tools/",)
+PAGE_SUFFIXES = {"", ".html", ".htm"}
+
+
+def needs_login(path: str) -> bool:
+    return path.startswith(LOGIN_ONLY) and PurePosixPath(path).suffix.lower() in PAGE_SUFFIXES
+
+
+def _has_session(request: Request) -> bool:
+    with SessionLocal() as db:
+        return optional_user(request, db) is not None
+
+
+@app.middleware("http")
+async def login_gate(request: Request, call_next):
+    if request.method in ("GET", "HEAD") and needs_login(request.url.path):
+        if not await run_in_threadpool(_has_session, request):
+            target = request.url.path + ("?" + request.url.query if request.url.query else "")
+            return RedirectResponse("/konto/?next=" + quote(target, safe=""), status_code=302)
     return await call_next(request)
 
 

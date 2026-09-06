@@ -2,8 +2,10 @@
 
 Fünf Werkzeuge rund um Bauteil und Form in 3D, unter einem
 Navigationsreiter. Alles rechnet clientseitig — kein Backend, kein
-Projekt, keine Anmeldung; die Bauteile kommen als STL oder GLB und
-verlassen den Browser nicht.
+Projekt; die Bauteile kommen als STL oder GLB und verlassen den Browser
+nicht. Ein Konto braucht es trotzdem: wie jede Seite unter `/tools/`
+liefert das Backend sie nur mit Sitzung aus (`login_gate` in
+`backend/app.py`), sonst geht es zur Anmeldung und danach zurück.
 
 | Seite           | Inhalt |
 |-----------------|--------|
@@ -1179,8 +1181,8 @@ gezeichnet wurde.
 
 ## Anbindung an das Projekt
 
-Die vier Seiten rechnen rein clientseitig und tragen deshalb keine
-Projektleiste — ohne Konto funktionieren sie vollständig. Naheliegende
+Die Seiten rechnen rein clientseitig und tragen deshalb keine
+Projektleiste — sie lesen und schreiben kein Projekt. Naheliegende
 Verknüpfungen, die noch nicht verdrahtet sind:
 
 - Der Angussdesigner rechnet mit Gussvolumen, Füllzeit und

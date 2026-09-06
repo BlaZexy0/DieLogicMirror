@@ -21,16 +21,19 @@ einem Abschnitt je Werkzeug:
 | `cost`     | Teilekosten                      | — (bezieht Massen aus `design`, t_Z aus `cycle`)    |
 
 Das **3D-Studio** steht daneben: es rechnet rein clientseitig auf einem
-Bauteil (STL oder GLB) und braucht weder Projekt noch Anmeldung — deshalb
-trägt es keine Projektleiste. Die Anbindung wäre naheliegend (Maße aus
+Bauteil (STL oder GLB) und braucht kein Projekt — deshalb trägt es keine
+Projektleiste; ein Konto braucht es wie jedes andere Werkzeug. Die Anbindung wäre naheliegend (Maße aus
 `design`, STL aus `geometry`, Entformschrägen zurück nach `geometry`), ist
 aber noch nicht verdrahtet.
 
 `web/shared/project.js` hält den Browser-Cache der Projekte und mit
 `derived()` die Querbezüge; `projectbar.js` ist die Projektleiste auf jeder
 Werkzeugseite (wechseln, anlegen, bearbeiten, Revision) und synchronisiert
-mit dem Server. Die Werkzeuge setzen ein Konto voraus — ohne Anmeldung
-leitet die Leiste zur Konto-Seite um.
+mit dem Server. Alle Werkzeugseiten (`/tools/…`, auch das 3D-Studio) setzen
+ein Konto voraus: das Backend liefert sie ohne Sitzung gar nicht erst aus,
+sondern leitet auf die Konto-Seite um und danach zurück (`login_gate` in
+`backend/app.py`). Läuft eine Sitzung auf der Seite ab, führt die Leiste
+zurück zur Anmeldung.
 Mit Konto ist die **Datenbank der Stand der Wahrheit**: jede Änderung wird
 automatisch als Arbeitsstand synchronisiert (der Browser ist nur Cache),
 lokale Projekte werden beim Anmelden übernommen, und „Revision" legt einen

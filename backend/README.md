@@ -3,6 +3,10 @@
 FastAPI-Backend: liefert die statische Website (`../web/`) aus und stellt
 unter `/api/…` Konten (nur auf Einladung), die Projektablage mit Revisionen
 und die serverseitige Simulation mit [`hpdcsim`](../packages/hpdcsim) bereit.
+Die Werkzeugseiten unter `/tools/` (Verzeichnisse und `.html`, nicht die
+Skripte und Modelle darunter) gibt es nur mit Sitzung: ohne
+`dl_session`-Cookie antwortet `login_gate` mit 302 auf `/konto/?next=…`,
+das HTML verlässt den Server nicht.
 Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
 
 ## Datenbank & Konten
@@ -115,7 +119,7 @@ andere rechnet weiter im Browser.
 
 | Datei | Inhalt |
 |---|---|
-| `app.py` | FastAPI-App: API-Router + statische Website |
+| `app.py` | FastAPI-App: API-Router, Anmeldeschranke für `/tools/…` (`login_gate`), Cache-/Sicherheits-Header, statische Website |
 | `sim.py` | dünne HTTP-Schicht (`/api/sim/shot`, Pydantic-Validierung) |
 | `core.py` | löst den hpdcsim-Prozess, tastet die Schussphase ab, JSON-tauglich (NaN/Inf → null) |
 | `convert.py` | Einheiten-Übersetzung Browser ↔ SI, Füllgrad, Kurven-Kappung am Füllende-Hub — ohne Web-Abhängigkeiten testbar |
