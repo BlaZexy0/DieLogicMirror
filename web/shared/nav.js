@@ -47,14 +47,24 @@
     ['yield',     'Materialausbeute'],
   ];
 
+  /* Zwei Gruppen von Werkzeugen, zwei Aufklappmenüs: „Auslegung"
+     (Dashboard, Diagramme, Sprengfläche, Teilekosten, Zyklus) und
+     „3D-Studio". Die fünf Auslegungs-Reiter standen lange einzeln in der
+     Leiste; mit dem Studio daneben war das eine Reihe von neun, in der
+     man die zwei Hälften nicht mehr sah. „Auslegung" hat Spalten, weil
+     die 19 Diagramme sonst nicht in ein Menü passen. */
   const NAV_LINKS = [
-    { label: 'Dashboard', href: '/tools/auslegung/' },
-    { label: 'Diagramme', children: CHARTS.map(([id, title]) => (
-      { label: title, href: '/tools/auslegung/chart.html?id=' + id }
-    )) },
-    { label: 'Sprengflächenanalyse', href: '/tools/sprengflaeche/' },
-    { label: 'Teilekosten', href: '/tools/teilekosten/' },
-    { label: 'Zyklusanalyse', href: '/tools/zyklus/' },
+    { label: 'Auslegung', columns: [
+      { title: 'Werkzeuge', items: [
+        { label: 'Dashboard', href: '/tools/auslegung/' },
+        { label: 'Sprengflächenanalyse', href: '/tools/sprengflaeche/' },
+        { label: 'Teilekosten', href: '/tools/teilekosten/' },
+        { label: 'Zyklusanalyse', href: '/tools/zyklus/' },
+      ] },
+      { title: 'Diagramme', wide: true, items: CHARTS.map(([id, title]) => (
+        { label: title, href: '/tools/auslegung/chart.html?id=' + id }
+      )) },
+    ] },
     { label: '3D-Studio', children: [
       { label: 'Übersicht', href: '/tools/3d-studio/' },
       { label: 'Formaufbau', href: '/tools/3d-studio/form.html' },
@@ -118,20 +128,36 @@
   const WORDMARK = `Die${H_GLYPH}<span style="color:${C.primaryLight}">Logic</span>`;
 
   /* ── Nav-Links bauen ──────────────────────────────────────── */
+  const linkHtml = child => {
+    const href = resolveHref(child.href);
+    const active = isActive(child.href) ? ' active' : '';
+    return `<a href="${href}" class="${active}">${child.label}</a>`;
+  };
+
   function buildNavLinks() {
     return NAV_LINKS.map(item => {
-      if (item.children) {
-        const dropdownItems = item.children.map(child => {
-          const href = resolveHref(child.href);
-          const active = isActive(child.href) ? ' active' : '';
-          return `<a href="${href}" class="${active}">${child.label}</a>`;
-        }).join('\n          ');
-
+      if (item.children || item.columns) {
+        /* Die Gruppe trägt den Reiter-Strich, wenn eine ihrer Seiten die
+           aktuelle ist — wie ein einzelner Reiter, der das selbst wäre. */
+        const all = item.children || item.columns.flatMap(c => c.items);
+        const activeGroup = all.some(c => isActive(c.href)) ? ' active' : '';
+        let dropdown;
+        if (item.columns) {
+          const cols = item.columns.map(col => `<div class="dl-nav-col${col.wide ? ' dl-nav-col--two' : ''}">
+            <div class="dl-nav-col-title">${col.title}</div>
+            ${col.items.map(linkHtml).join('\n            ')}
+          </div>`).join('\n          ');
+          dropdown = `<div class="dl-nav-dropdown dl-nav-dropdown--cols">
+          ${cols}
+        </div>`;
+        } else {
+          dropdown = `<div class="dl-nav-dropdown">
+          ${item.children.map(linkHtml).join('\n          ')}
+        </div>`;
+        }
         return `<li class="dl-nav-group">
-        <button type="button" class="dl-nav-group-label" aria-haspopup="true" aria-expanded="false">${item.label}</button>
-        <div class="dl-nav-dropdown">
-          ${dropdownItems}
-        </div>
+        <button type="button" class="dl-nav-group-label${activeGroup}" aria-haspopup="true" aria-expanded="false">${item.label}</button>
+        ${dropdown}
       </li>`;
       }
       const href = resolveHref(item.href);
@@ -153,7 +179,7 @@
   </div>
 
   <div class="dl-footer-col">
-    <h4>Werkzeuge</h4>
+    <h4>Auslegung</h4>
     <ul>
       <li><a href="${r('/tools/auslegung/')}">Dashboard</a></li>
       <li><a href="${r('/tools/auslegung/chart.html?id=shotcurve')}">Schusskurve</a></li>
@@ -166,8 +192,9 @@
   </div>
 
   <div class="dl-footer-col">
-    <h4>Wissen</h4>
+    <h4>3D-Studio und Wissen</h4>
     <ul>
+      <li><a href="${r('/tools/3d-studio/')}">3D-Studio: alle Werkzeuge</a></li>
       <li><a href="${r('/index.html#diagramme')}">Alle 19 Diagramme</a></li>
       <li><a href="${r('/theorie/pq2.html')}">Theorie: PQ²-Diagramm</a></li>
       <li><a href="${r('/theorie/kritische-geschwindigkeit.html')}">Theorie: Kritische Geschwindigkeit</a></li>
@@ -537,6 +564,43 @@
 .dl-nav--measuring .dl-nav-dropdown { display: none !important; }
 .dl-nav--measuring .dl-nav-cta { margin-left: 1.5rem !important; }
 .dl-nav--measuring .dl-nav-burger { display: none !important; }
+
+/* ── Menü mit Spalten („Auslegung"): Werkzeuge links, die Diagramme
+   rechts in zwei Spalten. Es hängt mit der rechten Kante am Reiter,
+   weil es breiter ist als der Platz rechts davon. ─────────────── */
+.dl-nav-group > .dl-nav-group-label.active {
+  color: white;
+  border-bottom: 2px solid ${C.primary};
+}
+.dl-nav-dropdown--cols {
+  display: flex;
+  align-items: flex-start;
+  left: auto;
+  right: 0;
+  min-width: 0;
+  max-height: none;
+  overflow: visible;
+  padding: 0.5rem 0.4rem 0.6rem;
+}
+.dl-nav-col { padding: 0 0.3rem; min-width: 200px; }
+.dl-nav-col + .dl-nav-col { border-left: 1px solid ${C.dark3}; }
+.dl-nav-col-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: ${C.ondark2};
+  padding: 0.3rem 1rem 0.4rem;
+  column-span: all;
+}
+.dl-nav-col--two { column-count: 2; column-gap: 0; }
+.dl-nav-col--two a { break-inside: avoid; }
+.dl-nav--compact .dl-nav-dropdown--cols { display: none; padding: 0.1rem 0 0.35rem; }
+.dl-nav--compact .dl-nav-group.open > .dl-nav-dropdown--cols { display: block; }
+.dl-nav--compact .dl-nav-col { padding: 0; min-width: 0; column-count: 1; }
+.dl-nav--compact .dl-nav-col + .dl-nav-col { border-left: 0; margin-top: 0.25rem; }
+.dl-nav--compact .dl-nav-col-title { padding: 0.45rem 1.25rem 0.2rem 2.25rem; }
+.dl-nav--compact .dl-nav-group > .dl-nav-group-label.active { border-bottom: 0; }
 
 @media (max-width: 960px) {
   .dl-nav { padding: 0 1rem; gap: 1rem; }

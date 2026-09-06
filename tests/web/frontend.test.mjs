@@ -285,6 +285,23 @@ test('nav: CHARTS-Liste entspricht der Registry (Ids, Titel, Reihenfolge)', () =
 /* Die Leiste wurde schmal zum Scrollstreifen: die Links schoben „Anmelden"
    aus dem Bild, sichtbar blieb nur das Logo. Seitdem klappt nav.js zum
    Burger-Menü zusammen — dieser Test hält die Bestandteile fest. */
+test('nav: Auslegung ist ein Untermenü wie das 3D-Studio, mit den fünf Reitern und den Diagrammen', () => {
+  const src = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
+  const m = src.match(/const NAV_LINKS = \[([\s\S]*?)\n  \];/);
+  assert.ok(m, 'NAV_LINKS in nav.js nicht gefunden');
+  const body = m[1];
+  const top = [...body.matchAll(/^    \{ label: '([^']+)'/gm)].map(x => x[1]);
+  assert.deepEqual(top, ['Auslegung', '3D-Studio', 'Theorie', 'Preise', 'Über uns', 'Kontakt'],
+    'oben stehen nur noch Gruppen und die Seiten des Auftritts');
+  const auslegung = body.slice(body.indexOf("label: 'Auslegung'"), body.indexOf("label: '3D-Studio'"));
+  for (const l of ['Dashboard', 'Sprengflächenanalyse', 'Teilekosten', 'Zyklusanalyse']) {
+    assert.ok(auslegung.includes("label: '" + l + "'"), l + ' gehört zur Auslegung');
+  }
+  assert.ok(/title: 'Diagramme'[\s\S]*CHARTS\.map/.test(auslegung), 'die Diagramme stehen als Spalte in der Auslegung');
+  assert.match(src, /dl-nav-dropdown--cols/, 'das Spaltenmenü hat seinen Stil');
+  assert.match(src, /dl-nav-group-label\$\{activeGroup\}/, 'die Gruppe trägt den Reiter-Strich der aktiven Seite');
+});
+
 test('nav: schmale Leiste klappt zum Burger-Menü statt horizontal zu scrollen', () => {
   const src = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
   assert.ok(!/\.dl-nav\s*\{[^}]*overflow-x:\s*auto/.test(src),
