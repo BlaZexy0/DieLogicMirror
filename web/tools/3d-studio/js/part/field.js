@@ -43,12 +43,16 @@
 
 import { distSqPointTri } from '../mesh.js';
 
-/** Rastermaße vorab abschätzen (für die Anzeige, bevor gerechnet wird). */
-export function fieldSize(model, res, band) {
+/** Rastermaße vorab abschätzen (für die Anzeige, bevor gerechnet wird).
+    Die Zellkante kommt aus `res` (Zellen entlang der längsten Kante) oder
+    direkt aus `extra.h` in mm. Der Rand um das Bauteil ist `extra.pad`
+    (mm), sonst Band plus drei Zellen — so viel braucht die Offsetfläche;
+    wer nur das Innere will, kommt mit zwei Zellen aus. */
+export function fieldSize(model, res, band, extra = {}) {
   const b = model.bounds;
   const longest = Math.max(b.size[0], b.size[1], b.size[2]) || 1;
-  const h = longest / Math.max(8, res);
-  const pad = band + 3 * h;
+  const h = extra.h > 0 ? extra.h : longest / Math.max(8, res);
+  const pad = extra.pad >= 0 ? extra.pad : band + 3 * h;
   const dims = [0, 1, 2].map(a => Math.max(2, Math.ceil((b.size[a] + 2 * pad) / h) + 1));
   const origin = [0, 1, 2].map(a => b.min[a] - pad);
   const samples = dims[0] * dims[1] * dims[2];
@@ -187,8 +191,8 @@ function stampDistances(model, f, data, from, to) {
     Kontrolle abgegeben, damit der Fortschritt in der Oberfläche ankommt;
     ohne Rückruf läuft alles am Stück durch (so rufen die Tests es auf). */
 export async function buildField(model, opts = {}) {
-  const { res = 96, band = 10, onProgress = null } = opts;
-  const f = fieldSize(model, res, band);
+  const { res = 96, h = 0, pad = -1, band = 10, onProgress = null } = opts;
+  const f = fieldSize(model, res, band, { h, pad });
   const data = new Float32Array(f.samples).fill(band);
   f.data = data;
 

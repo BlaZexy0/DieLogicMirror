@@ -23,8 +23,11 @@ export const PARAM_META = {
   share: { label: 'Anteil', min: 1, max: 100, unit: '%' }
 };
 
+/* Keine Füllzeit im Plan: die Rechnung kennt keine Zeit, und eine
+   Umrechnung des Füllgrads in Millisekunden sagte nichts, was der
+   Füllgrad nicht schon sagt. Ältere Dateien dürfen sie noch tragen. */
 export function emptyPlan() {
-  return { format: FORMAT, version: FORMAT_VERSION, items: {}, seq: 0, fillTime: 45, alpha: 0.5 };
+  return { format: FORMAT, version: FORMAT_VERSION, items: {}, seq: 0, alpha: 0.5 };
 }
 
 export const allItems = plan => Object.values(plan.items);
@@ -102,7 +105,7 @@ export function corners(item) {
 export function toJSON(plan) {
   const r4 = v => +v.toFixed(4);
   return {
-    format: FORMAT, version: FORMAT_VERSION, fillTime: plan.fillTime, alpha: plan.alpha,
+    format: FORMAT, version: FORMAT_VERSION, alpha: plan.alpha,
     items: allItems(plan).map(it => ({
       id: it.id, pos: it.pos.map(r4), n: it.n.map(v => +v.toFixed(6)), rot: it.rot || 0,
       w: it.w, h: it.h, ...(it.share !== null && it.share !== undefined ? { share: it.share } : {})
@@ -114,7 +117,6 @@ export function fromJSON(obj) {
   if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Fülldatei (Kennung „' + FORMAT + '" fehlt).');
   if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
   const plan = emptyPlan();
-  if (Number.isFinite(obj.fillTime)) plan.fillTime = Math.max(1, Math.min(5000, Number(obj.fillTime)));
   if (Number.isFinite(obj.alpha)) plan.alpha = Math.max(0, Math.min(2, Number(obj.alpha)));
   for (const raw of Array.isArray(obj.items) ? obj.items : []) {
     const id = raw.id ? String(raw.id) : 'a' + (plan.seq + 1);

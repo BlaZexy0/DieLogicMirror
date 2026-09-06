@@ -1344,11 +1344,71 @@ test('Überlaufdesigner: setzen, ziehen, drehen, neu setzen, Datei', async () =>
   assert.equal(it.p.ventH, 0.4);
   assert.notEqual(d7.getElementById('plan-facts').innerHTML, before, 'mehr Kanal, mehr Volumen');
   assert.ok(param('draft') && param('wellR'), 'Schräge und Radius stehen im Feld');
+  assert.ok(!param('ventL'), 'der Kanal hat keine Länge als Maß');
+
+  /* Der Entlüftungskanal: eine zweite Kugel am Ende der Bohne, dahinter
+     je Punkt eine — die Punkte werden in der Wandebene gezogen. */
+  const griff = id => v.handles.group.children.find(m => m.userData && m.userData.id === id);
+  assert.ok(griff(it.id + ':v0'), 'die Kugel am Bohnenende');
+  assert.ok(griff(it.id + ':v1'), 'und der erste Kanalpunkt');
+  assert.ok(!v.handles.arrowTip(it.id + ':v1'), 'ein Kanalpunkt hat keinen Pfeil');
+  assert.ok(!d7.getElementById('vent-block').classList.contains('hidden'), 'das Kanalfeld ist da');
+  d7.getElementById('vent-add').dispatch('click');
+  assert.equal(it.vent.length, 2, '+ Punkt hängt einen an');
+  assert.equal(v.handles.selected, it.id + ':v2', 'und wählt ihn');
+  assert.match(d7.getElementById('pt-sel').innerHTML, /Kanalpunkt 2/);
+  assert.match(d7.getElementById('vent-note').textContent, /2 Punkte/);
+  const w1 = G7.ventWorld(it);
+  assert.ok(Math.hypot(w1.exit[0] - griff(it.id + ':v0').position.x, w1.exit[1] - griff(it.id + ':v0').position.y,
+    w1.exit[2] - griff(it.id + ':v0').position.z) < 1e-9, 'die Kugel sitzt am Bohnenende');
+  /* Ziehen: schräg auf den Punkt geschaut, der Zeiger wandert — der Punkt
+     rutscht in der Wandebene des Elements, nicht von ihr weg. */
+  const q0 = w1.points[1].slice();
+  const e0 = it.pos.slice();
+  cam.position.set(q0[0] + 300, q0[1] + 300, q0[2]);
+  cam.up.set(0, 1, 0); cam.lookAt(q0[0], q0[1], q0[2]); cam.updateMatrixWorld(true);
+  v.rebuild();
+  v.view.scene.updateMatrixWorld(true);
+  const [qx, qy] = px(q0);
+  zeiger('pointerdown', qx, qy);
+  assert.ok(v.handles.dragging, 'der Zug beginnt am Kanalpunkt');
+  zeiger('pointermove', qx + 60, qy - 25);
+  await new Promise(r => setTimeout(r, 30));
+  zeiger('pointerup', qx + 60, qy - 25);
+  const q1 = G7.ventWorld(it).points[1];
+  assert.ok(Math.hypot(q1[0] - q0[0], q1[1] - q0[1], q1[2] - q0[2]) > 5, 'der Punkt wandert: ' + q0 + ' → ' + q1);
+  const n1 = it.dir;
+  assert.ok(Math.abs((q1[0] - it.pos[0]) * n1[0] + (q1[1] - it.pos[1]) * n1[1] + (q1[2] - it.pos[2]) * n1[2]) < 1e-6,
+    'aber in der Wandebene des Elements');
+  assert.deepEqual(it.pos, e0, 'das Element selbst blieb, wo es war');
+  /* Das Lagefeld zeigt den Punkt und setzt ihn — in die Ebene gelotet. */
+  assert.equal(d7.getElementById('sel-x').value, q1[0].toFixed(1).replace('.', ','));
+  const sy = d7.getElementById('sel-y');
+  sy.value = String(Math.round(q1[1] + 30));
+  sy.dispatch('change');
+  const q2 = G7.ventWorld(it).points[1];
+  assert.ok(Math.abs(q2[1] - Math.round(q1[1] + 30)) < 0.5, 'nach y versetzt: ' + q2);
+  assert.ok(Math.abs((q2[0] - it.pos[0]) * n1[0] + (q2[1] - it.pos[1]) * n1[1] + (q2[2] - it.pos[2]) * n1[2]) < 1e-6, 'und noch in der Ebene');
+  /* Entf löscht den gewählten Punkt, nicht das Element; der letzte bleibt. */
+  d7.dispatch('keydown', { key: 'Delete', target: canvas });
+  assert.equal(it.vent.length, 1, 'ein Punkt weniger');
+  assert.ok(v.state.plan.items[it.id], 'das Element steht noch');
+  assert.equal(v.handles.selected, it.id + ':v1');
+  assert.ok(d7.getElementById('vent-del').disabled, 'der letzte Punkt lässt sich nicht entfernen');
+  assert.ok(d7.getElementById('del-item').disabled, 'auch der Löschknopf ist aus');
+  d7.dispatch('keydown', { key: 'Delete', target: canvas });
+  assert.equal(it.vent.length, 1, 'er bleibt');
+  assert.ok(v.state.plan.items[it.id], 'und das Element auch — Entf auf dem letzten Punkt löscht nicht die Bohne');
+  d7.getElementById('vent-add').dispatch('click');
+  d7.getElementById('vent-del').dispatch('click');
+  assert.equal(it.vent.length, 1, '− Punkt nimmt ihn wieder weg');
 
   /* Datei hin und zurück, dann löschen. */
   const json = JSON.parse(JSON.stringify(G7.toJSON(v.state.plan)));
+  assert.equal(json.items[0].vent.length, 1, 'der Kanal steht in der Datei');
   v.loadPlan(G7.fromJSON(json));
   assert.equal(Object.keys(v.state.plan.items).length, 1);
+  assert.ok(griff(it.id + ':v0') && griff(it.id + ':v1'), 'Kugeln nach dem Laden');
   v.handles.select(it.id);
   d7.getElementById('del-item').dispatch('click');
   assert.equal(Object.keys(v.state.plan.items).length, 0, 'gelöscht');
@@ -1375,6 +1435,14 @@ test('Temperierkanal-Designer: Abstandsfläche, Kühlstich, Kanal, Achsenpfeile,
   assert.ok(v.shellMesh.visible && v.shellMesh.geometry.attributes.position.count > 0, 'und steht im Viewport');
   assert.match(d8.getElementById('shell-note').textContent, /20 mm/);
   assert.equal(d8.getElementById('add-stich').disabled, false, 'setzen ist frei');
+  /* Durchscheinend oder deckend — ein Häkchen schaltet das Material um. */
+  assert.ok(v.shellMesh.material.transparent && v.shellMesh.material.opacity < 0.5 && !v.shellMesh.material.depthWrite, 'voreingestellt durchscheinend');
+  const clear = d8.getElementById('shell-clear');
+  clear.checked = false; clear.dispatch('change');
+  assert.ok(!v.shellMesh.material.transparent && v.shellMesh.material.opacity === 1 && v.shellMesh.material.depthWrite, 'deckend: undurchsichtig und in die Tiefe schreibend');
+  assert.ok(v.shellMesh.visible, 'und noch zu sehen');
+  clear.checked = true; clear.dispatch('change');
+  assert.ok(v.shellMesh.material.transparent && v.shellMesh.material.opacity < 0.5, 'und wieder durchscheinend');
 
   /* Kamera von +X waagerecht auf die Bauteilmitte: der Strahl durch die
      Bildmitte trifft die Abstandsfläche vor der +X-Wand. */
@@ -1538,6 +1606,18 @@ test('Füllabschätzung: Raster, Anschnitt per Klick, Füllgrad, Füllkörper, l
   assert.ok(v.state.ready && v.state.model, 'das Beispielteil steht');
   assert.ok(v.state.field && v.state.field.fullInside, 'das Raster ist gerechnet');
   assert.match(d9.getElementById('grid-note').textContent, /Zellen im Bauteil/);
+  /* Die Kante kommt vom Teil: halbe Wanddicke 2V/A, auf halbe Millimeter
+     gerundet — und das Raster liegt eng um das Teil, zwei Zellen Rand. */
+  const mm = v.state.model;
+  const wall = 2 * mm.volume / mm.totalArea;
+  assert.equal(v.state.h, Math.round(wall / 2 * 2) / 2, 'Kante = halbe Wanddicke: ' + v.state.h + ' bei 2V/A = ' + wall.toFixed(2));
+  assert.equal(v.state.field.h, v.state.h);
+  assert.equal(d9.getElementById('cell-h').value, String(v.state.h).replace('.', ','));
+  for (let a = 0; a < 3; a++) {
+    const need = Math.ceil(mm.bounds.size[a] / v.state.field.h);
+    assert.ok(v.state.field.dims[a] <= need + 6 && v.state.field.dims[a] >= need + 4, 'Achse ' + a + ': ' + v.state.field.dims[a] + ' Zellen für ' + need + ' im Teil');
+  }
+  assert.equal(d9.getElementById('fill-time'), null, 'keine Füllzeit — die Rechnung kennt keine Zeit');
   assert.equal(d9.getElementById('add-inlet').disabled, false, 'setzen ist frei');
   assert.equal(v.state.result, null, 'ohne Anschnitt keine Füllung');
   assert.match(d9.getElementById('run-note').textContent, /Noch kein Anschnitt/);
@@ -1581,6 +1661,7 @@ test('Füllabschätzung: Raster, Anschnitt per Klick, Füllgrad, Füllkörper, l
   assert.match(d9.getElementById('result-facts').innerHTML, /Fließweg \/ Wanddicke/);
   assert.match(d9.getElementById('inlet-facts').innerHTML, /100 % Volumen/);
   assert.ok(d9.getElementById('colorbar').className.includes('on'), 'die Skala steht');
+  assert.ok(!/ms/.test(d9.getElementById('colorbar').innerHTML), 'und trägt Prozent, keine Millisekunden');
   assert.ok(v.partMesh.geometry.getAttribute('color'), 'das Bauteil trägt Farben');
   assert.ok(v.spotGroup.children.length >= 1 && v.spotGroup.children.length <= 5, 'letzte Stellen: ' + v.spotGroup.children.length);
   assert.ok(v.state.spots.list[0].frac > 0.9, 'die erste liegt ganz am Ende');
@@ -1644,4 +1725,24 @@ test('Füllabschätzung: Raster, Anschnitt per Klick, Füllgrad, Füllkörper, l
   assert.equal(items().length, 1);
   await settled();
   assert.equal(v.state.result.stats.inlets.length, 1);
+
+  /* Eine gröbere Kante eintippen: „Neu rastern" wird frei, übernimmt sie,
+     und die Füllung rechnet auf dem neuen Raster nach. Über 128 Zellen
+     entlang der längsten Kante sind erlaubt — die Grenze ist der Speicher. */
+  const ch = d9.getElementById('cell-h');
+  ch.value = String(v.state.h * 2).replace('.', ',');
+  ch.dispatch('change');
+  assert.equal(v.state.h, 2 * v.state.field.h);
+  assert.equal(d9.getElementById('regrid').disabled, false, 'Neu rastern ist frei');
+  assert.match(d9.getElementById('res-note').textContent, /Neu rastern/);
+  const cellsFine = v.state.field.data.length;
+  await v.computeField();
+  await settled();
+  assert.equal(v.state.field.h, v.state.h, 'das Raster hat die neue Kante');
+  assert.ok(v.state.field.data.length < cellsFine / 4, 'und ist viel kleiner: ' + v.state.field.data.length + ' statt ' + cellsFine);
+  assert.equal(d9.getElementById('regrid').disabled, true);
+  assert.ok(v.state.result && !v.state.stale, 'nachgerechnet');
+  ch.value = '0,5';
+  ch.dispatch('change');
+  assert.equal(v.state.h, 0.5, 'unter 128 Zellen gibt es keine Schranke: 0,5 mm heißt ' + Math.ceil(mm.bounds.size[0] / 0.5) + ' Zellen');
 });

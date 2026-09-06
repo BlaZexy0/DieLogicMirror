@@ -18,9 +18,10 @@
 
    Aus den Ankunftszeiten wird der FÜLLGRAD: sortiert nach Ankunft ist
    jede Zelle bei dem Anteil des Volumens gefüllt, der vor ihr kam. Der
-   ist die Zahl, die man abliest — „diese Ecke füllt bei 92 %" — und
-   mit der Füllzeit die Ankunft in Millisekunden. Die zuletzt gefüllten
-   Stellen sind die Kandidaten für Lufteinschlüsse und Überläufe.
+   ist die Zahl, die man abliest — „diese Ecke füllt bei 92 %". Eine
+   Zeit steht nicht dran: die Rechnung kennt keine, und eine Füllzeit
+   änderte an der Reihenfolge nichts. Die zuletzt gefüllten Stellen sind
+   die Kandidaten für Lufteinschlüsse und Überläufe.
 
    Was hier NICHT drin ist: Trägheit, Strahlbildung, Gegendruck der Luft,
    Erstarrung während der Füllung. Eine Füllsimulation braucht ein
@@ -111,7 +112,7 @@ export function seedCells(field, item) {
  * Die Füllung rechnen.
  *   field   Rasterfeld mit vollständigem Kern (js/part/field.js)
  *   plan    Füllplan mit Anschnitten
- *   opts    alpha (Dünnwand-Bremse), fillTime (ms), onProgress(p)
+ *   opts    alpha (Dünnwand-Bremse), onProgress(p)
  * → { arrival: Float32Array (Zeiteinheit, außen Infinity), frac: Float32Array (Füllgrad 0..1,
  *     außen NaN), source: Int16Array (Anschnitt je Zelle, −1 außen), path: Float32Array
  *     (Fließweg in mm), cells, stats: { maxPath, refThickness, wallThickness, flowRatio, unreached,

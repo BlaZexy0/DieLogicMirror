@@ -18,7 +18,7 @@
    Prismen und Lofts bekommen ihre Deckel per Ohrenabschneiden — auch
    das Zickzack-Band des Waschbretts ist damit dicht. */
 
-import { frameOf, toWorld, TYPES, allItems } from './model.js';
+import { frameOf, toWorld, TYPES, allItems, ventExitX, ventPoints } from './model.js';
 import { volume } from '../mesh.js';
 
 /* ── Polygone ────────────────────────────────────────────────── */
@@ -134,6 +134,63 @@ export function wellOutline(x0, L, W, rn, s, seg = 10, cseg = 4) {
   return pts;
 }
 
+/**
+ * Der Entlüftungskanal als Umriss um den Punktezug: Breite W, Gehrung an
+ * den Knicken (bei sehr spitzen Knicken abgeschrägt), am Anfang so weit
+ * in die Bohne hinein, dass er ihr rundes Ende über seine ganze Breite
+ * trifft — am Scheitel allein berührte er sie nur in einem Punkt.
+ * Liefert das Polygon (gegen den Uhrzeigersinn) und das Stück `pen`, das
+ * in der Bohne liegt.
+ */
+export function ventOutline(item) {
+  const p = item.p;
+  const W = p.ventW, w = W / 2;
+  const x0 = ventExitX(item);
+  const pts = [[x0, 0]].concat(ventPoints(item).map(q => [x0 + q[0], q[1]]));
+  /* Doppelte Punkte fallen weg — ein Stück ohne Länge hat keine Richtung. */
+  const path = [pts[0]];
+  for (const q of pts.slice(1)) if (Math.hypot(q[0] - path[path.length - 1][0], q[1] - path[path.length - 1][1]) > 1e-6) path.push(q);
+  if (path.length < 2) path.push([x0 + 1, 0]);
+  const u0 = [path[1][0] - path[0][0], path[1][1] - path[0][1]];
+  const l0 = Math.hypot(u0[0], u0[1]);
+  u0[0] /= l0; u0[1] /= l0;
+  /* Rundes Ende der Bohne: Radius R = halbe Breite; die Sehne der Kanalbreite
+     liegt R − √(R² − w²) hinter dem Scheitel. */
+  const R = p.wellW / 2;
+  const pen = (w < R ? R - Math.sqrt(R * R - w * w) : R) + 0.2;
+  path[0] = [path[0][0] - u0[0] * pen, path[0][1] - u0[1] * pen];
+
+  const n = path.length;
+  const dirs = [], nrms = [];
+  for (let i = 0; i < n - 1; i++) {
+    const dx = path[i + 1][0] - path[i][0], dy = path[i + 1][1] - path[i][1];
+    const l = Math.hypot(dx, dy);
+    dirs.push([dx / l, dy / l]);
+    nrms.push([-dy / l, dx / l]);
+  }
+  const side = sgn => {
+    const out = [];
+    const off = (i, k) => [path[i][0] + nrms[k][0] * w * sgn, path[i][1] + nrms[k][1] * w * sgn];
+    out.push(off(0, 0));
+    for (let i = 1; i < n - 1; i++) {
+      const a = nrms[i - 1], b = nrms[i];
+      const m = [a[0] + b[0], a[1] + b[1]];
+      const ml = Math.hypot(m[0], m[1]);
+      const cos = ml > 1e-9 ? (m[0] / ml) * b[0] + (m[1] / ml) * b[1] : 0;
+      if (cos > 0.35) {                                       // Gehrung
+        const k = w * sgn / cos;
+        out.push([path[i][0] + m[0] / ml * k, path[i][1] + m[1] / ml * k]);
+      } else {                                                // zu spitz: abgeschrägt
+        out.push(off(i, i - 1), off(i, i));
+      }
+    }
+    out.push(off(n - 1, n - 2));
+    return out;
+  };
+  const poly = side(1).concat(side(-1).reverse());
+  return { poly, pen, path };
+}
+
 /** Die Bohne als Loft: Wand mit Entformschräge, Boden mit Radius. */
 function wellBody(x0, p, map) {
   const D = p.wellD;
@@ -192,8 +249,7 @@ export function buildItem(item) {
     parts.push(prism(rect(p.stegL, p.stegL + p.poolL, p.ventW), -p.poolH, 0, flat));
   }
   if (t === 'entlueftet') {
-    const x0 = p.stegL + p.wellL;
-    parts.push(prism(rect(x0 - 0.2, x0 + p.ventL, p.ventW), -p.ventH, 0, flat));
+    parts.push(prism(ventOutline(item).poly, -p.ventH, 0, flat));
   }
   if (t === 'schlitz') {
     parts.push(prism(rect(0, p.ventL, p.ventW), -p.ventH, 0, flat));
@@ -250,7 +306,7 @@ export function volumeOf(item) {
   const p = item.p;
   if (item.type === 'bohne' || item.type === 'entlueftet') {
     v -= p.stegW * p.stegH * (p.wellD * Math.tan((p.draft || 0) * Math.PI / 180) + 0.2);
-    if (item.type === 'entlueftet') v -= p.ventW * p.ventH * 0.2;
+    if (item.type === 'entlueftet') v -= p.ventW * p.ventH * ventOutline(item).pen;   // das Stück in der Bohne
   }
   if (item.type === 'waschbrett') {
     const half = p.waveL / 2;

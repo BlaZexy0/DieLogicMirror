@@ -212,7 +212,11 @@ export function makeNode(g, type, parent, pos) {
   };
   if (type === 'branch' || type === 'mirror') {
     n.ratio = 0.5;
-    n.mirror = true;              // bei 'branch' abschaltbar, bei 'mirror' fest
+    /* Nur der Spiegelpunkt spiegelt von sich aus. Eine Verzweigung hat
+       zwei eigenständige Äste; das Spiegel-Häkchen schaltet die
+       Kopplung zu. Lange spiegelte auch sie von Anfang an — dann gab es
+       zwei Knotenarten, die dasselbe taten. */
+    n.mirror = type === 'mirror';
   }
   if (type === 'gate') {
     n.gate = { h: g.gateH || DEF.gateH, hAuto: true, len: 4, w: 20, auto: true, transition: 'ende' };
@@ -261,7 +265,9 @@ export function addChild(g, parentId, type = 'point') {
     const a1 = makeNode(g, 'gate', b, suggestPos(g, b, 30));
     const a2 = makeNode(g, 'gate', b, suggestPos(g, b, -30));
     a1.w = a2.w = b.w * 0.55; a1.h = a2.h = b.h * 0.8;
-    syncMirror(g, b, a1.id);
+    /* Beide Äste entstehen symmetrisch; gekoppelt bleiben sie nur, wenn
+       der Knoten spiegelt. Sonst ist jeder für sich anfassbar. */
+    if (b.mirror) syncMirror(g, b, a1.id);
     return b;
   }
   const n = makeNode(g, type, p, suggestPos(g, p));

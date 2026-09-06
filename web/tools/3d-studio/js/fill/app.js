@@ -13,8 +13,9 @@
    diesem Füllgrad als Fläche aus dem Raster gezogen — und die zuletzt
    gefüllten Stellen als Kugeln: dort gehören Überläufe hin.
 
-   Die Rechnung dauert Zehntelsekunden; nach dem ersten Lauf läuft sie
-   bei jeder Änderung am Plan von selbst nach. */
+   Die Rechnung dauert Sekunden (je feiner die Zellkante, desto länger);
+   nach dem ersten Lauf läuft sie bei jeder Änderung am Plan von selbst
+   nach. */
 
 import * as T from 'three';
 import { initScene } from '../scene.js';
@@ -22,7 +23,7 @@ import { mountViewBar } from '../ui/viewbar.js';
 import { mountNav } from '../ui/nav.js';
 import { $, fmt, facts, segButtons, slider, numberInput, colorbar, gradient, rgbCss } from '../ui/controls.js';
 import { mountPartSource, frame } from '../part/partsource.js';
-import { buildField } from '../part/field.js';
+import { buildField, fieldSize } from '../part/field.js';
 import { surfaceNets } from '../part/surfacenets.js';
 import { writeSTL } from '../part/stlio.js';
 import { turbo } from '../part/colors.js';
@@ -42,8 +43,8 @@ const view = initScene(container, {
 mountViewBar(container, view);
 
 const state = {
-  plan: M.emptyPlan(), model: null, name: '', field: null, fieldRes: 0,
-  res: 64, result: null, surf: null, stale: true, computing: false, queued: false,
+  plan: M.emptyPlan(), model: null, name: '', field: null, fieldH: 0,
+  h: 3, hAuto: true, result: null, surf: null, stale: true, computing: false, queued: false,
   show: 'farbe', q: 1, spots: { on: true, count: 5, list: [] },
   defaults: { w: 30, h: 2 }, ms: 0, opacity: 1, ready: false
 };
@@ -129,30 +130,64 @@ function rebuild(mode) {
 }
 
 /* ── Raster ──────────────────────────────────────────────────── */
+/* Wie fein gerastert wird, sagt die ZELLKANTE in mm — nicht eine
+   Zellenzahl entlang der längsten Kante. Der Anwender kennt die
+   Wanddicke seines Teils, und die muss das Raster auflösen: mindestens
+   zwei Zellen über die Dicke, also die halbe Wanddicke als Kante. Genau
+   das ist der Vorschlag beim Laden (Wanddicke 2V/A des Bauteils). Nach
+   oben begrenzt nur der Speicher: mehr als MAX_SAMPLES Rasterpunkte gibt
+   es nicht — dann wird die Kante angehoben, und die Zeile sagt es.
+
+   Das Raster liegt ENG um das Bauteil, zwei Zellen Rand. Das Feld der
+   Wandstärkenanalyse trägt außen ein breites Band für die Offsetfläche;
+   hier zählt nur das Innere, und ein Rand von fünf, sechs Zellen an
+   allen Seiten hätte bei einem flachen Teil mehr Luft als Metall
+   gerastert. */
+const MAX_SAMPLES = 16e6;
+const H_MIN = 0.25, H_MAX = 50;
+export function suggestH(m) {
+  const wall = m.volume > 0 && m.totalArea > 0 ? 2 * m.volume / m.totalArea : 0;
+  const longest = Math.max(m.bounds.size[0], m.bounds.size[1], m.bounds.size[2]) || 1;
+  const h = Math.max(H_MIN, Math.min(H_MAX, wall > 0 ? wall / 2 : longest / 64));
+  /* Auf eine glatte Zahl: halbe Millimeter ab 1 mm, darunter Zehntel. */
+  return h >= 1 ? Math.round(h * 2) / 2 : Math.round(h * 10) / 10;
+}
+const gridFor = (m, h) => {
+  const band = Math.max(2.5 * h, 1.5);
+  return { h, band, pad: 2 * h, size: fieldSize(m, 0, band, { h, pad: 2 * h }) };
+};
+
 async function computeField() {
   if (!state.model) return;
   const m = state.model;
-  const longest = Math.max(m.bounds.max[0] - m.bounds.min[0], m.bounds.max[1] - m.bounds.min[1], m.bounds.max[2] - m.bounds.min[2]);
-  const h = longest / state.res;
+  let h = state.h;
+  let g = gridFor(m, h);
+  let lifted = false;
+  while (g.size.samples > MAX_SAMPLES) { h = Math.round(h * 110) / 100; g = gridFor(m, h); lifted = true; }
+  if (lifted) { state.h = h; $('cell-h').value = fmt(h, 2); }
+  $('res-note').textContent = lifted
+    ? 'Feiner geht hier nicht: ' + fmt(MAX_SAMPLES / 1e6, 0) + ' Mio. Rasterpunkte sind die Grenze — die Kante steht auf ' + fmt(h, 2) + ' mm.'
+    : '';
   busy.textContent = 'Bauteil rastern …';
   busy.classList.add('on');
   await frame();
   try {
     state.field = await buildField(m, {
-      res: state.res, band: Math.max(2.5 * h, 1.5),
+      h, band: g.band, pad: g.pad,
       onProgress: (p, what) => { busy.textContent = 'Raster · ' + what + ' … ' + Math.round(p * 100) + ' %'; }
     });
-    state.fieldRes = state.res;
+    state.fieldH = h;
     let cells = 0;
     for (let i = 0; i < state.field.data.length; i++) if (state.field.data[i] < 0) cells++;
-    $('grid-note').textContent = 'Zellgröße ' + fmt(state.field.h, 2) + ' mm · ' + fmt(cells, 0) + ' Zellen im Bauteil ('
-      + state.field.dims.join(' × ') + ')';
+    $('grid-note').textContent = 'Kante ' + fmt(state.field.h, 2) + ' mm · ' + fmt(cells, 0) + ' Zellen im Bauteil · Raster '
+      + state.field.dims.join(' × ') + ' = ' + fmt(state.field.data.length / 1e6, 2) + ' Mio. Punkte';
   } catch (err) {
     $('model-warn').textContent = 'Das Raster konnte nicht gerechnet werden: ' + err.message;
     console.error(err);
   } finally {
     busy.classList.remove('on');
   }
+  $('regrid').disabled = true;
   state.result = null;
   state.surf = null;
   state.stale = true;
@@ -275,7 +310,7 @@ function applyVisibility() {
   colorbar(has && state.show !== 'grau' ? {
     title: 'Füllgrad',
     stops: gradient(t => rgbCss(turbo(t))),
-    ticks: [100, 75, 50, 25, 0].map(v => v + ' %' + (state.plan.fillTime ? ' · ' + fmt(v / 100 * state.plan.fillTime, 0) + ' ms' : ''))
+    ticks: [100, 75, 50, 25, 0].map(v => v + ' %')
   } : null);
   view.invalidate();
 }
@@ -298,7 +333,8 @@ function updateFacts() {
     facts('inlet-facts', []);
     return;
   }
-  $('run-note').textContent = (state.stale ? 'Rechnet nach …' : 'Gerechnet in ' + fmt(state.ms, 0) + ' ms · α = ' + fmt(r.stats.alpha, 1))
+  const dauer = state.ms >= 1000 ? fmt(state.ms / 1000, 1) + ' s' : fmt(state.ms, 0) + ' ms';
+  $('run-note').textContent = (state.stale ? 'Rechnet nach …' : 'Gerechnet in ' + dauer + ' · α = ' + fmt(r.stats.alpha, 1))
     + (r.stats.unreached ? ' · ⚠ ' + fmt(r.stats.unreached, 0) + ' Zellen nicht erreicht (abgetrennter Bereich?)' : '');
   $('run-note').className = 'run-note' + (state.stale || r.stats.unreached ? ' stale' : '');
   rows.push(['längster Fließweg', fmt(r.stats.maxPath, 0) + ' mm']);
@@ -475,16 +511,18 @@ document.addEventListener('keydown', e => {
 
 /* ── Regler ──────────────────────────────────────────────────── */
 slider('ref-opacity', v => { state.opacity = v / 100; applyVisibility(); }, v => v + ' %');
-slider('res', v => {
-  state.res = v;
-  $('res-note').textContent = state.model && state.fieldRes && state.fieldRes !== v ? 'Neu rastern übernimmt die Auflösung.' : '';
-  $('regrid').disabled = !state.model || state.fieldRes === v;
-}, v => v + ' Zellen');
-$('regrid').addEventListener('click', () => computeField().then(() => { $('regrid').disabled = true; $('res-note').textContent = ''; }));
+numberInput('cell-h', v => {
+  state.h = Math.max(H_MIN, Math.min(H_MAX, v));
+  state.hAuto = false;
+  const changed = !!state.model && state.fieldH > 0 && Math.abs(state.fieldH - state.h) > 1e-9;
+  $('res-note').textContent = changed ? 'Neu rastern übernimmt die Kantenlänge.' : '';
+  $('regrid').disabled = !changed;
+  return state.h;
+});
+$('regrid').addEventListener('click', () => computeField());
 numberInput('def-w', v => { state.defaults.w = clampParam('w', v); return state.defaults.w; });
 numberInput('def-h', v => { state.defaults.h = clampParam('h', v); return state.defaults.h; });
 slider('alpha', v => { state.plan.alpha = v; planChanged(); }, v => fmt(v, 1));
-numberInput('fill-time', v => { state.plan.fillTime = Math.max(1, Math.min(5000, v)); applyVisibility(); return state.plan.fillTime; });
 $('run').addEventListener('click', compute);
 segButtons('show-seg', v => { state.show = v; updateBody(); applyVisibility(); });
 slider('q', v => { state.q = v / 100; paintPart(); updateBody(); view.invalidate(); }, v => v + ' %');
@@ -506,6 +544,8 @@ const source = mountPartSource({
     state.result = null; state.surf = null; state.stale = true;
     view.fitTo(partMesh);
     rebuild();
+    /* Solange der Anwender keine Kante gesetzt hat, kommt sie vom Teil. */
+    if (state.hAuto) { state.h = suggestH(model); $('cell-h').value = fmt(state.h, 2); }
     await computeField();
     syncSelection();
   },
@@ -553,7 +593,6 @@ function loadPlan(plan) {
   handles.select(null);
   $('alpha').value = String(plan.alpha);
   $('alpha-val').textContent = fmt(plan.alpha, 1);
-  $('fill-time').value = String(plan.fillTime);
   rebuild();
   syncSelection();
   planChanged();

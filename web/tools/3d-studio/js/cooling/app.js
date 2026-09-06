@@ -43,7 +43,7 @@ mountViewBar(container, view);
 
 const state = {
   plan: M.emptyPlan(), model: null, name: '', field: null, shellDist: null,
-  res: 64, dirMode: 'normal', both: false, showShell: true,
+  res: 64, dirMode: 'normal', both: false, showShell: true, shellClear: true,
   defaults: { d: 8, len: 60, kd: 10 },
   auto: { count: 8, spacing: 25, replace: true, stats: null },
   pending: null, computing: false, ready: false
@@ -58,13 +58,23 @@ const partMesh = new T.Mesh(new T.BufferGeometry(), partMat);
 partMesh.visible = false;
 group.add(partMesh);
 
-/* Die Abstandsfläche: durchscheinend, damit man das Bauteil darin sieht,
-   und nicht in die Tiefe schreibend, damit die Elemente auf ihr nicht
-   flackern. Sie ist das Ziel des Zielmodus. */
+/* Die Abstandsfläche: voreingestellt durchscheinend, damit man das
+   Bauteil darin sieht, und dann nicht in die Tiefe schreibend, damit
+   die Elemente auf ihr nicht flackern. Sie ist das Ziel des Zielmodus.
+   Auf Wunsch deckend („Durchscheinend" abwählen): dann zeigt sie ihre
+   Form — Taschen, Rippenschatten, wo die Fläche eng wird — und die
+   Stiche und Kanäle davor, ohne dass das Bauteil durchscheint. */
+const SHELL_OPACITY = 0.22;
 const shellMat = new T.MeshStandardMaterial({
-  color: 0x3fc2b6, roughness: 0.6, metalness: 0.02, transparent: true, opacity: 0.22,
+  color: 0x3fc2b6, roughness: 0.6, metalness: 0.02, transparent: true, opacity: SHELL_OPACITY,
   depthWrite: false, side: T.DoubleSide, flatShading: true
 });
+function shellClear(on) {
+  shellMat.transparent = on;
+  shellMat.opacity = on ? SHELL_OPACITY : 1;
+  shellMat.depthWrite = !on;
+  shellMat.needsUpdate = true;
+}
 const shellMesh = new T.Mesh(new T.BufferGeometry(), shellMat);
 shellMesh.visible = false;
 group.add(shellMesh);
@@ -439,6 +449,7 @@ slider('dist', v => {
 }, v => v + ' mm');
 slider('res', v => { state.res = v; state.field = null; clearTimeout(distTimer); distTimer = setTimeout(computeShell, 250); }, v => v + ' Zellen');
 $('shell-on').addEventListener('change', e => { state.showShell = e.target.checked; applyVisibility(); });
+$('shell-clear').addEventListener('change', e => { state.shellClear = e.target.checked; shellClear(state.shellClear); view.invalidate(); });
 slider('ref-opacity', v => {
   partMat.opacity = v / 100;
   partMat.transparent = v < 100;

@@ -121,6 +121,34 @@ test('Graph: eine Verzweigung mit Spiegelung legt die Gegenseite an und zieht si
   assert.ok(Math.abs(after.pos[2] - g.nodes[lead.id].pos[2]) < 1e-6);
 });
 
+test('Graph: eine neue Verzweigung spiegelt nicht von sich aus, ein Spiegelpunkt schon', () => {
+  const g = PRE.demoFan();
+  const p = G.allNodes(g).find(n => n.type === 'point');
+  const b = G.addChild(g, p.id, 'branch');
+  assert.equal(b.type, 'branch');
+  assert.equal(b.mirror, false, 'zwei eigenständige Äste — das Häkchen koppelt sie erst');
+  assert.equal(b.children.length, 2, 'aber gleich zwei Anschnitte');
+  const [a1, a2] = b.children.map(id => g.nodes[id]);
+  assert.ok(!G.isFollower(g, a1.id) && !G.isFollower(g, a2.id), 'beide anfassbar');
+  assert.ok(!a1.follower && !a2.follower);
+  const before = a2.pos.slice();
+  G.setPos(g, a1.id, [a1.pos[0] + 25, a1.pos[1], a1.pos[2] + 10]);
+  assert.deepEqual(a2.pos, before, 'der eine Ast zieht den anderen nicht mit');
+  /* Häkchen setzen: ab jetzt folgt die zweite Seite. */
+  G.setField(g, b.id, 'mirror', true);
+  const after = g.nodes[b.children.find(id => G.isFollower(g, id))];
+  assert.ok(after, 'mit Häkchen gibt es einen Folger');
+  const { origin, normal } = G.mirrorPlaneOf(g, b);
+  const lead = g.nodes[b.children.find(id => !G.isFollower(g, id))];
+  const dl = (lead.pos[0] - origin[0]) * normal[0] + (lead.pos[1] - origin[1]) * normal[1] + (lead.pos[2] - origin[2]) * normal[2];
+  const df = (after.pos[0] - origin[0]) * normal[0] + (after.pos[1] - origin[1]) * normal[1] + (after.pos[2] - origin[2]) * normal[2];
+  assert.ok(Math.abs(dl + df) < 1e-6, 'spiegelbildlich zur Spiegelebene');
+
+  const m = G.addChild(g, G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id)).parent, 'mirror');
+  assert.equal(m.mirror, true, 'der Spiegelpunkt spiegelt immer');
+  assert.equal(m.children.filter(id => G.isFollower(g, id)).length, 1, 'eine Seite entsteht aus der anderen');
+});
+
 test('Graph: Spiegelung abschalten löst die Kopplung', () => {
   const g = PRE.demoTwoGates();
   const b = G.allNodes(g).find(n => n.type === 'branch');

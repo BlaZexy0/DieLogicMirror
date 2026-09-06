@@ -76,9 +76,20 @@ const runnerMesh = new T.Mesh(new T.BufferGeometry(), runnerMat);
 group.add(runnerMesh);
 
 /* Deckend: der Pressrest ist ein Körper wie die Kanäle, kein Hinweis.
-   Durchscheinend sah er aus wie etwas, das noch nicht entschieden ist. */
+   Durchscheinend sah er aus wie etwas, das noch nicht entschieden ist.
+
+   Der erste Kanal beginnt in der Mitte des Pressrests und läuft durch
+   ihn hindurch — beide Körper liegen mit der Oberseite in der Trennebene,
+   ihre Deckflächen sind dort deckungsgleich. Zwei Flächen in derselben
+   Tiefe kann der Tiefenpuffer nicht ordnen: das gab ein Flimmern aus
+   Streifen beider Farben auf dem Pressrest. polygonOffset zieht den
+   Pressrest um einen Tiefenschritt vor — wo beide Flächen zusammenfallen,
+   gewinnt er, und die Kanaloberseite verschwindet unter seiner Scheibe,
+   wie im Metall auch. Die Körper selbst bleiben, wie sie sind: die
+   Vereinigung entsteht wie an den Verzweigungen durch Überlappung. */
 const biscMat = new T.MeshStandardMaterial({
-  color: 0x93a6b0, roughness: 0.6, metalness: 0.06, side: T.DoubleSide
+  color: 0x93a6b0, roughness: 0.6, metalness: 0.06, side: T.DoubleSide,
+  polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
 });
 const biscMesh = new T.Mesh(new T.BufferGeometry(), biscMat);
 group.add(biscMesh);

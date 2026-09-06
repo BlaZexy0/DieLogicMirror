@@ -193,7 +193,16 @@ export function buildDocument(html) {
     createElement: tag => new El(tag),
     querySelector: sel => body.descendants().find(e => matchOne(e, sel)) || null,
     querySelectorAll: sel => body.descendants().filter(e => matchOne(e, sel)),
-    addEventListener() {}
+    /* Tastendrücke landen auf dem Dokument (Entf, Esc) — dieselbe
+       kleine Ereignismaschine wie an den Elementen. */
+    listeners: {},
+    addEventListener(type, fn) { (doc.listeners[type] ||= []).push(fn); },
+    removeEventListener(type, fn) { doc.listeners[type] = (doc.listeners[type] || []).filter(f => f !== fn); },
+    dispatch(type, extra = {}) {
+      const ev = { type, target: body, preventDefault() {}, stopPropagation() {}, ...extra };
+      for (const fn of [...(doc.listeners[type] || [])]) fn(ev);
+      return ev;
+    }
   };
   return { doc, byId, El };
 }

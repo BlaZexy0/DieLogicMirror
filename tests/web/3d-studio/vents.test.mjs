@@ -33,18 +33,88 @@ test('Plan: Elemente sitzen auf der Wand und richten sich nach ihrer Normalen', 
   assert.equal(it.type, 'bohne');
   assert.deepEqual(it.pos, [10, 3, 20]);
   assert.ok(Math.abs(it.dir[0] + 0.6) < 1e-12 && Math.abs(it.dir[1] - 0.8) < 1e-12, 'die Achse ist die Normale, wie sie kommt');
-  assert.equal(it.p.wellD, 6, 'Vorgabe der Art');
+  assert.equal(it.p.wellD, 10, 'Vorgabe der Art — für Teile der 1200-bis-1600-t-Klasse');
   assert.equal(it.p.draft, 5, 'mit Entformschräge');
-  assert.equal(it.p.wellR, 1.5, 'und Bodenradius');
+  assert.equal(it.p.wellR, 2.5, 'und Bodenradius');
+  assert.ok(it.p.wellW >= it.p.stegW + 2, 'die flache Seite der Bohne ist breiter als der Steg');
   const nix = M.addItem(plan, 'schlitz', [0, 0, 0], [0, 0, 0]);
   assert.deepEqual(nix.dir, [1, 0, 0], 'ohne Richtung: irgendeine, nicht der Nullvektor');
   /* Art wechseln behält, was beide Arten haben. */
   it.p.stegW = 15;
   M.setType(plan, it.id, 'entlueftet');
   assert.equal(it.p.stegW, 15);
-  assert.equal(it.p.ventL, 30, 'neue Maße aus der Vorgabe');
+  assert.equal(it.p.ventW, 25, 'neue Maße aus der Vorgabe');
+  assert.ok(it.p.ventW < it.p.wellW, 'der Kanal ist schmaler als die Bohne, die er trifft');
+  assert.equal(it.p.ventL, undefined, 'der Kanal hat keine Länge als Maß — er ist ein Punktezug');
+  assert.deepEqual(it.vent, [[M.VENT_STEP, 0]], 'und beginnt mit einem Punkt hinter der Bohne');
   M.setType(plan, it.id, 'schlitz');
   assert.equal(it.p.stegW, undefined, 'ein Schlitz hat keinen Steg');
+  assert.equal(it.p.ventL, 50, 'der Schlitz hat seine Länge');
+});
+
+test('Entlüftungskanal: Punkte bleiben in der Wandebene, der Kanal trifft die Bohne über seine Breite', () => {
+  const plan = M.emptyPlan();
+  const it = M.addItem(plan, 'entlueftet', [5, -2, 7], [0.6, 0, 0.8]);
+  M.setRot(plan, it.id, 35);
+  const f = M.frameOf(it);
+  const dotp = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const x0 = it.p.stegL + it.p.wellL;
+  let w = M.ventWorld(it);
+  assert.ok(Math.hypot(...sub(w.exit, M.toWorld(f, x0, 0, 0))) < 1e-12, 'die zweite Kugel sitzt am Ende der Bohne');
+  assert.equal(w.points.length, 1);
+  const S = M.VENT_STEP;
+  assert.ok(Math.hypot(...sub(w.points[0], M.toWorld(f, x0 + S, 0, 0))) < 1e-12, 'der erste Punkt liegt einen Schritt dahinter, in der Ebene');
+
+  /* Anhängen: in der Richtung des letzten Stücks weiter. */
+  assert.equal(M.addVentPoint(plan, it.id), 2);
+  assert.deepEqual(it.vent, [[S, 0], [2 * S, 0]]);
+  /* Setzen aus einem Weltpunkt, der 7 mm ÜBER der Wand liegt: der Punkt
+     wird in die Ebene gelotet — der Kanal bleibt in ihr. */
+  const off = M.toWorld(f, x0 + S + 20, 20, 7);
+  assert.ok(M.setVentPoint(plan, it.id, 2, off));
+  assert.ok(Math.abs(it.vent[1][0] - (S + 20)) < 1e-9 && Math.abs(it.vent[1][1] - 20) < 1e-9, 'lokal [S + 20, 20]: ' + it.vent[1]);
+  w = M.ventWorld(it);
+  assert.ok(Math.abs(dotp(sub(w.points[1], it.pos), f.n)) < 1e-9, 'in der Wandebene, nicht darüber');
+  assert.ok(!M.setVentPoint(plan, it.id, 0, off) && !M.setVentPoint(plan, it.id, 3, off), 'Bohnenende und Nichtvorhandenes lassen sich nicht setzen');
+  /* Drehen und Versetzen nehmen den Kanal mit — er ist in der Ebene definiert. */
+  M.setRot(plan, it.id, -20);
+  M.setPos(plan, it.id, [40, 1, -3]);
+  const f2 = M.frameOf(it);
+  w = M.ventWorld(it);
+  assert.ok(Math.hypot(...sub(w.points[1], M.toWorld(f2, x0 + S + 20, 20, 0))) < 1e-9, 'der Punkt folgt dem Dreibein');
+
+  /* Körper: Steg, Bohne, Kanal — alle dicht; der Kanal beginnt IN der Bohne. */
+  const parts = GEO.buildItem(it);
+  assert.equal(parts.length, 3);
+  for (const tris of parts) { assert.ok(volume(tris) > 0); assert.equal(openEdges(tris), 0); }
+  const kanal = parts[2];
+  const along = (tris, v) => { let lo = Infinity, hi = -Infinity; for (let i = 0; i < tris.length; i += 3) { const s = (tris[i] - it.pos[0]) * v[0] + (tris[i + 1] - it.pos[1]) * v[1] + (tris[i + 2] - it.pos[2]) * v[2]; lo = Math.min(lo, s); hi = Math.max(hi, s); } return [lo, hi]; };
+  const { pen, poly } = GEO.ventOutline(it);
+  const R = it.p.wellW / 2, hw = it.p.ventW / 2;
+  assert.ok(Math.abs(pen - (R - Math.sqrt(R * R - hw * hw) + 0.2)) < 1e-12, 'so tief hinein, dass die Sehne der Kanalbreite in der Bohne liegt');
+  assert.ok(Math.abs(along(kanal, f2.d)[0] - (x0 - pen)) < 1e-9, 'der Kanal beginnt ' + pen.toFixed(2) + ' mm vor dem Scheitel der Bohne');
+  const corner = poly.filter(q => Math.abs(q[0] - (x0 - pen)) < 1e-9);
+  assert.equal(corner.length, 2, 'zwei Ecken am Anfang');
+  for (const q of corner) assert.ok(Math.hypot(q[0] - (x0 - R), q[1]) < R, 'beide Ecken liegen im runden Ende der Bohne: ' + q);
+  assert.ok(along(kanal, f2.n)[1] < 1e-9 && along(kanal, f2.n)[0] > -it.p.ventH - 1e-9, 'flach unter der Wandfläche');
+  /* Volumen: Breite × Höhe × (Weg + das Stück in der Bohne); die Gehrung am
+     Knick gibt außen dazu, was sie innen nimmt. */
+  const len = S + Math.hypot(20, 20);
+  assert.ok(Math.abs(volume(kanal) - it.p.ventW * it.p.ventH * (len + pen)) < 1e-6, 'Kanal ' + volume(kanal));
+  const p = it.p;
+  const stegBohne = GEO.volumeOf(M.addItem(plan, 'bohne', it.pos, it.dir));
+  assert.ok(Math.abs(GEO.volumeOf(it) - stegBohne - p.ventW * p.ventH * len) < 1e-6, 'gezählt wird nur, was hinter der Bohne liegt');
+
+  /* Sehr spitzer Knick: abgeschrägt statt endloser Gehrung, trotzdem dicht. */
+  it.vent = [[40, 0], [0, 4]];
+  for (const tris of GEO.buildItem(it)) assert.equal(openEdges(tris), 0);
+  assert.ok(volume(GEO.buildItem(it)[2]) > 0);
+
+  /* Entfernen: der letzte Punkt bleibt. */
+  assert.ok(M.removeVentPoint(plan, it.id, 1));
+  assert.deepEqual(it.vent, [[0, 4]]);
+  assert.ok(!M.removeVentPoint(plan, it.id, 1), 'ohne Punkt hätte der Kanal kein Ende');
 });
 
 test('Dreibein: die Normale ist oben, das Element liegt in der Wand, Drehung um die Normale', () => {
@@ -163,4 +233,15 @@ test('Datei: hin und zurück ergibt denselben Plan', () => {
   assert.ok(Math.abs(back.items[a.id].dir[1] - 0.6) < 1e-6, 'die Achse bleibt, wie sie war');
   assert.equal(back.seq, 2, 'neue Elemente zählen weiter');
   assert.throws(() => M.fromJSON({ format: 'x' }), /Überlaufdatei/);
+
+  /* Der Kanal geht mit — und eine Datei der Fassung 2, die nur eine
+     Kanallänge kannte, wird zu einem Punkt in Längsrichtung. */
+  const e = M.addItem(plan, 'entlueftet', [0, 0, 0], [0, 0, 1]);
+  e.vent = [[25, 0], [25, 40.5]];
+  const back2 = M.fromJSON(JSON.parse(JSON.stringify(M.toJSON(plan))));
+  assert.deepEqual(back2.items[e.id].vent, [[25, 0], [25, 40.5]]);
+  assert.equal(M.toJSON(plan).version, 3);
+  const alt = M.fromJSON({ format: M.FORMAT, version: 2, items: [{ id: 'l1', type: 'entlueftet', pos: [0, 0, 0], dir: [1, 0, 0], p: { ventL: 45 } }] });
+  assert.deepEqual(alt.items.l1.vent, [[45, 0]], 'alte Kanallänge → ein Punkt');
+  assert.equal(alt.items.l1.p.ventL, undefined);
 });

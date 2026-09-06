@@ -7,6 +7,11 @@
    Alt von ihr weg), am Pfeil neu setzen, im Auswahlfeld um die Achse
    drehen und bemaßen.
 
+   Der Überlauf mit Entlüftung trägt eine zweite Kugel am Ende der
+   Bohne und dahinter je Kanalpunkt eine weitere: die Griffe heißen
+   „<id>:v0" (Bohnenende, fest) und „<id>:v1" … (Kanalpunkte, ziehbar in
+   der Wandebene des Elements). „+ Punkt" hängt einen an.
+
    Der Plan (js/vents/model.js) ist die Quelle; Körper (js/vents/geom.js),
    Kennzahlen und Prüfliste entstehen daraus bei jeder Änderung neu. Die
    Griffe im Viewport sind dieselben wie im Angussdesigner
@@ -59,22 +64,49 @@ for (const [type, meta] of Object.entries(M.TYPES)) {
 }
 
 /* ── Griffe ──────────────────────────────────────────────────── */
+/* Griff-Kennung zerlegen: „l3" ist das Element, „l3:v2" sein zweiter
+   Kanalpunkt, „l3:v0" das Bohnenende. */
+const splitId = id => {
+  const m = /^(.+?):v(\d+)$/.exec(id || '');
+  return m ? { base: m[1], k: +m[2] } : { base: id, k: null };
+};
+const VENT_POINT_COLOR = '#6f9bc9';
+
+function handleItems() {
+  const out = [];
+  for (const it of M.allItems(state.plan)) {
+    const color = M.TYPES[it.type].color;
+    out.push({ id: it.id, pos: it.pos, color, dir: it.dir, planeSize: Math.max(24, (it.p.wellW || it.p.ventW || 12) * 2) });
+    if (it.type !== 'entlueftet') continue;
+    const vw = M.ventWorld(it);
+    out.push({ id: it.id + ':v0', pos: vw.exit, color, planeSize: Math.max(24, it.p.ventW * 2) });
+    vw.points.forEach((pos, i) => out.push({ id: it.id + ':v' + (i + 1), pos, color: VENT_POINT_COLOR, planeSize: Math.max(24, it.p.ventW * 2) }));
+  }
+  return out;
+}
+
 const handles = createHandles({
   view,
   getRefMesh: () => refMesh,
   markColor: M.TYPES.bohne.color,
-  items: () => M.allItems(state.plan).map(it => ({
-    id: it.id, pos: it.pos, color: M.TYPES[it.type].color,
-    dir: it.dir,
-    planeSize: Math.max(24, (it.p.wellW || it.p.ventW || 12) * 2)
-  })),
+  items: handleItems,
   /* Gezogen wird in der Tangentialebene der Wand: der Punkt rutscht auf
-     ihr entlang. Mit Alt entlang der Normalen, von der Wand weg. */
+     ihr entlang. Mit Alt entlang der Normalen, von der Wand weg. Die
+     Kanalpunkte liegen in derselben Ebene wie ihr Element. */
   plane: id => {
-    const it = state.plan.items[id];
-    return it ? { origin: it.pos, normal: it.dir } : null;
+    const { base, k } = splitId(id);
+    const it = state.plan.items[base];
+    if (!it) return null;
+    if (k === null) return { origin: it.pos, normal: it.dir };
+    const vw = M.ventWorld(it);
+    return { origin: k === 0 ? vw.exit : vw.points[k - 1], normal: it.dir };
   },
-  move: (id, pos) => M.setPos(state.plan, id, pos),
+  move: (id, pos) => {
+    const { base, k } = splitId(id);
+    if (k === null) M.setPos(state.plan, base, pos);
+    else if (k > 0) M.setVentPoint(state.plan, base, k, pos);
+    /* k = 0, das Bohnenende, sitzt fest an der Bohne. */
+  },
   onSelect: () => { cancelAim(); syncSelection(); },
   onChange: what => {
     if (what === 'drag') { rebuild('drag'); return; }
@@ -126,7 +158,8 @@ function updateFacts() {
 }
 
 /* ── Auswahl ─────────────────────────────────────────────────── */
-const sel = () => (handles.selected ? state.plan.items[handles.selected] : null);
+const selPart = () => splitId(handles.selected);
+const sel = () => (handles.selected ? state.plan.items[selPart().base] : null);
 
 function syncSelection() {
   const it = sel();
@@ -135,15 +168,21 @@ function syncSelection() {
   if (!it) {
     $('pt-sel').textContent = 'Kein Überlauf gewählt';
     $('sel-params').innerHTML = '';
+    syncVent(null, null);
     facts('sel-facts', []);
     updateMenu();
     return;
   }
   const meta = M.TYPES[it.type];
+  const part = selPart();
+  const sub = part.k === null ? '' : part.k === 0 ? ' · Bohnenende' : ' · Kanalpunkt ' + part.k;
   $('pt-sel').innerHTML = '<span class="dot" style="background:' + meta.color + '"></span>'
-    + meta.label + ' <code>' + it.id + '</code>';
+    + meta.label + ' <code>' + it.id + '</code>' + sub;
   $('sel-type').value = it.type;
-  for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) $(k).value = fmt(it.pos[i], 1);
+  /* Lage: das Element — oder, bei einem Kanalpunkt, der Punkt selbst. */
+  const shown = part.k === null ? it.pos : part.k === 0 ? M.ventWorld(it).exit : M.ventWorld(it).points[part.k - 1];
+  for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) $(k).value = fmt(shown[i], 1);
+  syncVent(it, part);
   $('sel-rot').value = String(it.rot || 0);
   $('sel-rot-val').textContent = fmt(it.rot || 0, 0) + '°';
 
@@ -175,6 +214,20 @@ function syncSelection() {
   updateMenu();
 }
 
+/* Der Kanal: Punkte anhängen und entfernen — nur beim Überlauf mit Entlüftung. */
+function syncVent(it, part) {
+  const on = !!it && it.type === 'entlueftet';
+  $('vent-block').classList.toggle('hidden', !on);
+  if (!on) return;
+  const pts = M.ventPoints(it);
+  let len = 0;
+  let prev = [0, 0];
+  for (const q of pts) { len += Math.hypot(q[0] - prev[0], q[1] - prev[1]); prev = q; }
+  $('vent-note').textContent = pts.length + (pts.length === 1 ? ' Punkt' : ' Punkte') + ' · ' + fmt(len) + ' mm in der Wandebene'
+    + (part && part.k > 0 ? ' · Punkt ' + part.k + ' gewählt' : '');
+  $('vent-del').disabled = !(part && part.k > 0 && pts.length > 1);
+}
+
 function syncFacts(it) {
   const rows = [['Volumen', fmt(volumeOf(it) / 1000, 2) + ' cm³']];
   if (it.p.stegW) rows.push(['Stegquerschnitt', fmt(it.p.stegW * it.p.stegH) + ' mm²']);
@@ -193,7 +246,10 @@ function dirText(d) {
 
 function updateMenu() {
   const it = sel();
-  $('del-item').disabled = !it;
+  const part = selPart();
+  const canDel = !!it && (part.k === null || (part.k > 0 && M.ventPoints(it).length > 1));
+  $('del-item').disabled = !canDel;
+  $('del-item').textContent = it && part.k !== null ? 'Punkt löschen' : 'Löschen';
 }
 
 $('sel-type').innerHTML = Object.entries(M.TYPES)
@@ -203,19 +259,40 @@ $('sel-type').addEventListener('change', e => {
   if (!it) return;
   M.setType(state.plan, it.id, e.target.value);
   rebuild();
-  syncSelection();
+  handles.select(it.id);
 });
 for (const [id, axis] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) {
   numberInput(id, v => {
     const it = sel();
     if (!it) return v;
-    const p = it.pos.slice();
+    const part = selPart();
+    if (part.k === 0) return v;                                // das Bohnenende sitzt fest
+    const base = part.k === null ? it.pos : M.ventWorld(it).points[part.k - 1];
+    const p = base.slice();
     p[axis] = v;
-    M.setPos(state.plan, it.id, p);
+    if (part.k === null) M.setPos(state.plan, it.id, p);
+    else M.setVentPoint(state.plan, it.id, part.k, p);        // in die Ebene gelotet
     rebuild();
+    syncSelection();
     return v;
   });
 }
+
+$('vent-add').addEventListener('click', () => {
+  const it = sel();
+  if (!it || it.type !== 'entlueftet') return;
+  const n = M.addVentPoint(state.plan, it.id);
+  rebuild();
+  handles.select(it.id + ':v' + n);
+});
+$('vent-del').addEventListener('click', () => {
+  const it = sel();
+  const part = selPart();
+  if (!it || !(part.k > 0)) return;
+  if (!M.removeVentPoint(state.plan, it.id, part.k)) return;
+  rebuild();
+  handles.select(it.id + ':v' + Math.min(part.k, M.ventPoints(it).length));
+});
 slider('sel-rot', v => {
   const it = sel();
   if (!it) return;
@@ -225,9 +302,19 @@ slider('sel-rot', v => {
 }, v => fmt(v, 0) + '°');
 
 $('del-item').addEventListener('click', removeSelected);
+/* Löschen trifft, was gewählt ist: einen Kanalpunkt (solange einer
+   bleibt — der letzte und das Bohnenende sind nicht zu entfernen), oder
+   das ganze Element, wenn das Element selbst gewählt ist. */
 function removeSelected() {
   const it = sel();
   if (!it) return;
+  const part = selPart();
+  if (part.k !== null) {
+    if (!(part.k > 0) || !M.removeVentPoint(state.plan, it.id, part.k)) return;
+    rebuild();
+    handles.select(it.id + ':v' + Math.min(part.k, M.ventPoints(it).length));
+    return;
+  }
   M.removeItem(state.plan, it.id);
   handles.select(null);
   rebuild();
@@ -374,6 +461,7 @@ function loadPlan(plan) {
 /* ── Legende ─────────────────────────────────────────────────── */
 $('pt-legend').innerHTML = '<div class="pt-menu-title">Arten</div>'
   + Object.values(M.TYPES).map(t => '<div class="lg-row"><span class="dot" style="background:' + t.color + '"></span>' + t.label + '</div>').join('')
+  + '<div class="lg-row"><span class="dot" style="background:' + VENT_POINT_COLOR + '"></span>Kanalpunkt (in der Wandebene)</div>'
   + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>';
 
 rebuild();

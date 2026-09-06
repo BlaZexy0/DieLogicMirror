@@ -170,3 +170,23 @@ test('Wärmezentren: die dicksten Stellen eines Quaders liegen auf seiner Mittel
   assert.ok(inner.length > 0, 'Fläche bei −12 trotz Band 10');
   rel(volume(inner), 76 * 36 * 16, 0.12, 'Kernvolumen (Distanztransformation auf Zellen genau)');
 });
+
+test('Feld: Kante in mm und eigener Rand — für die Füllabschätzung eng um das Teil', async () => {
+  const m = buildModel(S.box(100, 40, 20));
+  const est = fieldSize(m, 0, 4, { h: 2, pad: 4 });
+  assert.equal(est.h, 2, 'die Kante gilt, nicht die Zellenzahl');
+  assert.deepEqual(est.dims, [55, 25, 15], '(100 + 8) / 2 + 1 usw.');
+  assert.deepEqual(est.origin, [-54, -24, -14]);
+  const f = await buildField(m, { h: 2, pad: 4, band: 4 });
+  assert.equal(f.h, 2);
+  assert.deepEqual(f.dims, est.dims);
+  let inside = 0;
+  for (let i = 0; i < f.data.length; i++) if (f.data[i] < 0) inside++;
+  /* Rasterpunkte im Kasten: je Achse zwischen (Kante/h − 1) und (Kante/h + 1),
+     je nachdem, wie die Punkte auf der Oberfläche zählen. */
+  assert.ok(inside >= 49 * 19 * 9 && inside <= 51 * 21 * 11, 'das Innere stimmt: ' + inside + ' Zellen');
+  /* Ohne pad wie bisher: Band plus drei Zellen Rand. */
+  const alt = fieldSize(m, 50, 4);
+  assert.equal(alt.h, 2);
+  assert.deepEqual(alt.dims, [61, 31, 21], "Band 4 + 3 · 2 mm = 10 mm Rand je Seite");
+});

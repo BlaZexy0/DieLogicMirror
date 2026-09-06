@@ -11,7 +11,9 @@
    Beschrieben wird deshalb nur die GESTALT — wo die Punkte liegen, wie
    verzweigt wird, wie hoch der Anschnitt ist. Alle Breiten und Tiefen
    rechnet `autoTaper` aus den Anschnitten rückwärts; bei gespiegelten
-   Verzweigungen genügt eine Seite, die andere entsteht von selbst. */
+   Verzweigungen genügt eine Seite, die andere entsteht von selbst — die
+   Beispiele setzen das Spiegel-Häkchen deshalb ausdrücklich, eine neue
+   Verzweigung im Werkzeug spiegelt von sich aus nicht. */
 
 import * as G from './graph.js';
 import * as F from './flow.js';
@@ -24,6 +26,7 @@ const mk = (g, parent, type, pos, extra) => {
 };
 
 const GATE = { h: 2.2, len: 4, w: 26, auto: true, transition: 'ende' };
+const MIRRORED = { mirror: true };
 
 /* Nach dem Aufbau einmal durch die Auslegung: Anschnittbreiten aus der
    Zielgeschwindigkeit, danach alle Querschnitte von hinten nach vorn. */
@@ -47,7 +50,7 @@ export function demoTwoGates() {
   const g = G.emptyGraph();
   G.setBiscuit(g, { pos: [0, 0, 0], axis: '+y', d: 90, t: 25 });
   const p1 = mk(g, G.root(g), 'point', [0, 0, 62]);
-  const b = mk(g, p1, 'branch', [0, 0, 118]);
+  const b = mk(g, p1, 'branch', [0, 0, 118], MIRRORED);
   const l = mk(g, b, 'point', [-50, 0, 180]);
   mk(g, l, 'gate', [-84, 0, 214], { gate: { ...GATE } });
   return finish(g);
@@ -58,9 +61,9 @@ export function demoFourGates() {
   const g = G.emptyGraph();
   G.setBiscuit(g, { pos: [0, 0, 0], axis: '+y', d: 100, t: 28 });
   const p1 = mk(g, G.root(g), 'point', [0, 0, 55]);
-  const b1 = mk(g, p1, 'branch', [0, 0, 108]);
+  const b1 = mk(g, p1, 'branch', [0, 0, 108], MIRRORED);
   const m = mk(g, b1, 'point', [-52, 0, 170]);
-  const b2 = mk(g, m, 'branch', [-92, 0, 212]);
+  const b2 = mk(g, m, 'branch', [-92, 0, 212], MIRRORED);
   /* Deutlich seitlich der Zulaufrichtung: der gespiegelte Zwilling landet
      auf der ANDEREN Seite davon. Mit dem alten, fast geraden Abgang lagen
      beide Anschnitte 8 mm auseinander — zwei Kanäle, die sich fast ganz
@@ -101,10 +104,10 @@ export function demoOilPan() {
   const g = G.emptyGraph();
   G.setBiscuit(g, { pos: [0, 0, 0], axis: '+y', d: 100, t: 28 });
   const p1 = mk(g, G.root(g), 'point', [0, 0, 60]);
-  const b1 = mk(g, p1, 'branch', [0, 0, 110]);
+  const b1 = mk(g, p1, 'branch', [0, 0, 110], MIRRORED);
   const m1 = mk(g, b1, 'point', [-70, 0, 190]);
   const m2 = mk(g, m1, 'point', [-100, 0, 260]);
-  const b2 = mk(g, m2, 'branch', [-100, 0, 320]);
+  const b2 = mk(g, m2, 'branch', [-100, 0, 320], MIRRORED);
   const q = mk(g, b2, 'point', [-150, 0, 410]);
   mk(g, q, 'gate', [-150, 0, 470], { gate: { ...GATE } });
   return finish(g);

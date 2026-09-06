@@ -408,6 +408,11 @@ select {
   margin-right: 7px; vertical-align: -1px; border: 1px solid rgba(0,39,51,.25);
 }
 .pt-menu button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
+/* Der Entlüftungskanal im Auswahlfeld: eine Zeile Stand, zwei Knöpfe. */
+.pt-menu #vent-block .pt-menu-title { margin-top: 6px; }
+.pt-menu .pt-note { font-size: .74rem; color: var(--muted); padding: 0 2px 2px; }
+.pt-menu .btn-pair { margin-top: 3px; }
+.pt-menu .btn-pair button { flex: 1; text-align: center; }
 
 /* ── Untere rechte Ecke: Schema, Farbskala, Legende ────────────
    Alle drei in EINER Spalte, die am unteren Rand verankert ist und nach

@@ -401,7 +401,7 @@ wartet — aber drei Dinge sorgen dafür, dass es sich auch so anfühlt:
 |-------|-----|-----------|
 | grau | **Pressrest** | Ursprung. Durchmesser, Dicke und Ausstoßrichtung stehen in seinem Auswahlfeld wie bei jedem anderen Punkt auch; die Dicke wächst ENTGEGEN der Richtung, also in dieselbe Formhälfte wie die Kanaltiefe. Ihn zu verschieben zieht das GANZE System mit — er ist der Anker, ihn allein zu versetzen hieße nur die erste Kante zu dehnen. |
 | türkis | **Punkt** | Stützpunkt des Laufkanals mit eigenem Querschnitt. |
-| gold | **Verzweigung** | Gabelung mit Aufteilung (50:50 …) und wahlweise erzwungener Spiegelsymmetrie. |
+| gold | **Verzweigung** | Gabelung mit Aufteilung (50:50 …), beide Äste eigenständig; das Häkchen „spiegelsymmetrisch halten" koppelt sie. |
 | violett | **Spiegelpunkt** | dasselbe fest auf 50:50, aber nur EIN Ast wird bearbeitet — der andere entsteht. |
 | orange | **Anschnitt** | Endpunkt mit Höhe, Tiefe (in Fließrichtung), Breite und der Art des Übergangs. Seine Mündung lässt sich ans Referenzbauteil binden (siehe unten). |
 
@@ -777,10 +777,43 @@ dem Zeiger, Fehlklick benannt, Esc bricht ab. Danach:
   wechseln, Maße, die beide Arten haben, bleiben dabei.
 
 Vier Arten: **Überlaufbohne** (Steg und Tasche), **Überlauf mit
-Entlüftung** (dazu ein flacher Kanal), **Waschbrett** (Steg, dann ein
-kurzer, dickerer **Sammelkanal**, in dem sich die Front beruhigt, bevor
-sie in den Zickzack-Kanal läuft, dessen Spalt senkrecht zur Welle überall
+Entlüftung** (dazu ein flacher Kanal, der ab dem Ende der Bohne
+gezogen wird — siehe unten), **Waschbrett** (Steg, dann ein kurzer,
+dickerer **Sammelkanal**, in dem sich die Front beruhigt, bevor sie in
+den Zickzack-Kanal läuft, dessen Spalt senkrecht zur Welle überall
 gleich misst) und **Entlüftungsschlitz** (nur der flache Kanal).
+
+Die **Vorgaben** der Maße passen zu den Beispielteilen — Aluminiumteile
+der 1200-bis-1600-t-Klasse mit 4 mm Wand: Bohnen 28 mm breit, 40 mm
+lang, 10 mm tief, an einem 20 mm breiten und 1,2 mm dicken Steg;
+Entlüftungskanäle 25 mm breit; das Waschbrett 80 mm breit. Nur die
+**Kanalhöhe** (0,15 mm) hängt nicht am Teil, sondern an der Legierung:
+so dünn, dass Aluminium darin erstarrt, bevor es hinaus kann. Für
+kleinere Teile werden die Maße im Auswahlfeld kleiner gesetzt.
+
+### Der Entlüftungskanal
+
+Der Überlauf mit Entlüftung trägt eine **zweite Kugel am Ende der
+Bohne**. Von dort aus wird der Kanal gezogen: hinter der Kugel sitzt je
+Kanalpunkt eine weitere, hellere Kugel, und die rechteckigen Kanalstücke
+laufen von Punkt zu Punkt — mit Gehrung an den Knicken, immer in der
+Breite und Höhe, die im Auswahlfeld stehen. **+ Punkt** hängt einen
+Punkt an (in der Richtung des letzten Stücks weiter), **− Punkt** oder
+Entf nimmt den gewählten wieder weg; der letzte bleibt, sonst hätte der
+Kanal kein Ende. Die Kugel am Bohnenende sitzt fest: sie gehört zur
+Bohne und wandert mit ihr.
+
+Die Punkte **bleiben in der Wandebene** des Elements — der Ebene durch
+den Ort des Überlaufs, senkrecht zu seiner Achse. Sie sind in den
+Koordinaten dieser Ebene gespeichert (längs und quer, gemessen vom
+Bohnenende), nicht als Weltpunkte: was man zieht oder ins Lagefeld
+tippt, wird in die Ebene gelotet, und wer die Bohne dreht oder versetzt,
+nimmt den ganzen Kanal mit. Ein Kanal, der die Ebene verließe, wäre kein
+Entlüftungskanal in der Trennebene mehr, sondern ein Schlitz in die Form
+hinein. Damit der Kanal die Bohne nicht nur in einem Punkt berührt — am
+Scheitel des runden Endes wäre das so —, beginnt er so weit in ihr, dass
+das runde Ende seine ganze Breite trifft; dieses Stück zählt beim
+Volumen nicht mit.
 
 ### Die Bohne
 
@@ -789,7 +822,7 @@ einer rundum runden Bohne berührte der Steg sie nur in einer Linie — da
 käme keine Schmelze hinein; an der flachen Seite sitzt er mit ganzer
 Stirnfläche, und die flache Seite ist immer mindestens so breit wie er.
 Die Wände haben **Entformschräge**, der Boden einen **Radius** (beide
-Maße am Element, Vorgabe 5° und 1,5 mm): die Bohne entsteht als Loft aus
+Maße am Element, Vorgabe 5° und 2,5 mm): die Bohne entsteht als Loft aus
 demselben Umriss, Ring für Ring nach innen versetzt, unten über einen
 Viertelkreis in den Boden. Weil die Wand mit der Schräge zurückweicht,
 reicht der Steg ein Stück in die Bohne hinein — ein Steg, der genau an
@@ -808,8 +841,10 @@ Gussvolumen, das der Angussdesigner unter „Prozess" braucht. Eine
 Prüfliste gibt es hier nicht; das Auswahlfeld nennt Volumen, Steg- und
 Kanalquerschnitt und die Achse des Elements.
 
-- **JSON** — der Plan: je Element Art, Ort, Achse, Drehung, Maße
-  (`dielogic-luft`, Fassung 2).
+- **JSON** — der Plan: je Element Art, Ort, Achse, Drehung, Maße, beim
+  Überlauf mit Entlüftung dazu die Kanalpunkte in der Wandebene
+  (`dielogic-luft`, Fassung 3; eine Datei der Fassung 2 mit bloßer
+  Kanallänge wird zu einem Punkt in Längsrichtung).
 - **STL** — die Körper aller Elemente.
 
 Die Griffe (`js/handles.js`) sind dieselben wie im Angussdesigner: was
@@ -827,7 +862,10 @@ Rasterfeld kommt wie die Wandstärkenanalyse (`js/part/field.js`,
 `js/part/surfacenets.js`) und beim Laden des Bauteils gerechnet wird;
 der Regler „Abstand" leitet sie neu ab, nur ein Abstand jenseits des
 Bandes kostet ein neues Feld. Sie liegt durchscheinend um das Bauteil und
-ist das Ziel des Zielmodus.
+ist das Ziel des Zielmodus; das Häkchen „Durchscheinend" macht sie
+deckend — dann zeigt sie ihre Form, wo sie eng wird und wo sie Rippen
+nachzeichnet, und die Stiche und Kanäle davor, ohne dass das Bauteil
+durchscheint. „Abstandsfläche zeigen" blendet sie ganz aus.
 
 ### Kühlstiche und Kanäle
 
@@ -901,9 +939,17 @@ das steht auch auf der Seite.
 
 Beim Laden wird das Bauteil gerastert — dasselbe Abstandsfeld wie in der
 Wandstärkenanalyse (`js/part/field.js`), mit schmalem Band nach außen
-und vollständigem Kern nach innen. Die **Auflösung** (32 bis 128 Zellen
-entlang der längsten Kante, voreingestellt 64) bestimmt, wie dünne Wände
-noch aufgelöst werden; „Neu rastern" übernimmt eine Änderung.
+und vollständigem Kern nach innen. Wie fein, sagt die **Kantenlänge**
+der Zellen in Millimetern — nicht eine Zellenzahl: der Anwender kennt
+die Wanddicke seines Teils, und die muss das Raster auflösen, mit
+mindestens zwei Zellen über die Dicke. Beim Laden wird deshalb die halbe
+Wanddicke 2 V/A des Bauteils vorgeschlagen; eine eigene Kante gilt, bis
+man sie ändert, „Neu rastern" übernimmt sie. Nach unten ist nur der
+Speicher die Grenze (16 Mio. Rasterpunkte; darüber hebt die Seite die
+Kante an und sagt es). Das Raster liegt eng um das Bauteil, zwei Zellen
+Rand — die Wandstärkenanalyse braucht außen ein breites Band für die
+Offsetfläche, hier zählt nur das Innere, und bei einem flachen Teil
+wäre ein breiter Rand mehr Luft als Metall.
 
 **Anschnitte** sind Rechtecke auf der Wand (`js/fill/model.js`): Klick auf
 „Anschnitt setzen", dann auf das Bauteil — Ort ist der getroffene Punkt,
@@ -933,9 +979,10 @@ Dinge machen daraus mehr als eine Geodäte:
 
 Aus den Ankunftszeiten wird der **Füllgrad**: nach Ankunft sortiert ist
 jede Zelle bei dem Anteil des Volumens voll, der vor ihr kam. Das ist die
-Zahl, die man abliest („diese Ecke füllt bei 92 %") und die mit der
-**Füllzeit** zur Zeit in Millisekunden wird — die Rechnung selbst kennt
-keine Zeit. Dazu der **Fließweg** (die Weglänge der Front bis zur
+Zahl, die man abliest („diese Ecke füllt bei 92 %") — eine Reihenfolge,
+keine Zeit. Die Rechnung kennt keine, und eine Füllzeit, die den
+Füllgrad in Millisekunden umrechnete, änderte an der Reihenfolge nichts;
+darum steht keine dran. Dazu der **Fließweg** (die Weglänge der Front bis zur
 entferntesten Zelle) und **Fließweg / Wanddicke** mit der Wanddicke
 2 V/A des Bauteils; über etwa 300 : 1 steht ein ⚠. Je Anschnitt steht,
 welchen Anteil des Volumens er tatsächlich füllt — die Naht zwischen zwei
@@ -958,7 +1005,7 @@ ersten Anschnitt rechnet jede Änderung am Plan von selbst nach.
   Überlaufdesigner setzt.
 
 Dateien: **JSON** ist der Plan (`dielogic-fuellung`, Fassung 1: Anschnitte
-mit Ort, Normale, Drehung, Maßen und Anteil, dazu α und Füllzeit).
+mit Ort, Normale, Drehung, Maßen und Anteil, dazu α).
 
 ## Struktur
 
