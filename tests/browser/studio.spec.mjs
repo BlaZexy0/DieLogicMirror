@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
 
 const PAGES = [
   ['form.html', null],
-  ['bauteilanalyse.html', () => window.__form3d?.state?.model],
+  ['entformungsanalyse.html', () => window.__form3d?.state?.model],
   ['wandstaerke.html', () => window.__form3d?.state?.ready],
   ['abstand.html', null],
   ['anguss.html', () => window.__anguss?.state?.ready],

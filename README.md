@@ -73,7 +73,7 @@ dielogic/
 │   │   │                    stl-logic.js (Massenbilanz/Maschinentabelle, getestet), stl-app.js
 │   │   ├── teilekosten/     Teilekosten-Kalkulation (Abschnitt cost, verknüpfte Felder)
 │   │   ├── 3d-studio/       fünf 3D-Werkzeuge unter EINEM Nav-Reiter: Formaufbau (Schnittmodell
-│   │   │                    der Druckgießform), Bauteilanalyse (Formteilung, Hinterschnitte,
+│   │   │                    der Druckgießform), Entformungsanalyse (Formteilung, Hinterschnitte,
 │   │   │                    Entformschrägen), Offsetflächen (Abstandsfeld: Aufmaß, Wandstärke,
 │   │   │                    Wärmezentrum), Abstandsanalyse (kürzester Abstand zwischen zwei
 │   │   │                    Dateien) und Angussdesigner (js/runner/: Angusssystem als Graph

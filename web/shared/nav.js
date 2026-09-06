@@ -58,7 +58,7 @@
     { label: '3D-Studio', children: [
       { label: 'Übersicht', href: '/tools/3d-studio/' },
       { label: 'Formaufbau', href: '/tools/3d-studio/form.html' },
-      { label: 'Bauteilanalyse', href: '/tools/3d-studio/bauteilanalyse.html' },
+      { label: 'Entformungsanalyse', href: '/tools/3d-studio/entformungsanalyse.html' },
       { label: 'Wandstärkenanalyse', href: '/tools/3d-studio/wandstaerke.html' },
       { label: 'Abstandsanalyse', href: '/tools/3d-studio/abstand.html' },
       { label: 'Angussdesigner', href: '/tools/3d-studio/anguss.html' },

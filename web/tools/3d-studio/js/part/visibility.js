@@ -75,6 +75,12 @@ function computeDirection(model, dirIndex, out, samples, cells) {
   const ua = nextAxis(ax), va = nextAxis(ua);
   const bins = buildBins(tris, F, ua, va, b.min, b.max, cells);
   const eps = b.diag * 1e-6;
+  /* Die Abtastpunkte liegen um einen Hauch VOR der Fläche (entlang ihrer
+     Normale). Genau auf der Fläche träfe ein streifender Strahl die Kante
+     eines Nachbarn, der in derselben Ebene endet — die Unterseite eines
+     Tellers galt so als verdeckt vom Tellerrand, eine Querbohrung als
+     verdeckt vom Rand ihrer eigenen Mündung. */
+  const lift = b.diag * 1e-5;
   const bary = samples >= 7 ? BARY7 : BARY4;
   const K = bary.length;
 
@@ -88,12 +94,13 @@ function computeDirection(model, dirIndex, out, samples, cells) {
     if (nd < -1e-9) { out.frac[f * 6 + dirIndex] = 0; continue; }
 
     const i = f * 9;
+    const nx = normals[f * 3] * lift, ny = normals[f * 3 + 1] * lift, nz = normals[f * 3 + 2] * lift;
     let free = 0;
     for (let s = 0; s < K; s++) {
       const [w0, w1, w2] = bary[s];
-      const px = tris[i] * w0 + tris[i + 3] * w1 + tris[i + 6] * w2;
-      const py = tris[i + 1] * w0 + tris[i + 4] * w1 + tris[i + 7] * w2;
-      const pz = tris[i + 2] * w0 + tris[i + 5] * w1 + tris[i + 8] * w2;
+      const px = tris[i] * w0 + tris[i + 3] * w1 + tris[i + 6] * w2 + nx;
+      const py = tris[i + 1] * w0 + tris[i + 4] * w1 + tris[i + 7] * w2 + ny;
+      const pz = tris[i + 2] * w0 + tris[i + 5] * w1 + tris[i + 8] * w2 + nz;
       const pu = ua === 0 ? px : ua === 1 ? py : pz;
       const pv = va === 0 ? px : va === 1 ? py : pz;
       const cx = Math.min(bins.cu - 1, Math.max(0, Math.floor((pu - bins.minU) * bins.du)));
@@ -129,15 +136,68 @@ function computeDirection(model, dirIndex, out, samples, cells) {
   }
 }
 
+const cellsFor = F => Math.min(384, Math.max(8, Math.round(Math.sqrt(F / 3))));
+
+/** Eine Richtung allein — für den Worker (js/part/visibility-worker.js). */
+export function computeOneDirection(model, dirIndex, samples) {
+  const out = { dot: new Float32Array(model.faceCount * 6), frac: new Float32Array(model.faceCount * 6) };
+  computeDirection(model, dirIndex, out, samples, cellsFor(model.faceCount));
+  return out;
+}
+
+/* Die sechs Richtungen sind unabhängig — im Browser rechnen sie
+   parallel in Web-Workern (einer je Richtung, so viele wie Kerne da sind).
+   Ohne Worker (Node, die Tests) läuft alles im selben Faden. */
+function parallelVisibility(model, samples, onProgress) {
+  const F = model.faceCount;
+  const out = { dot: new Float32Array(F * 6), frac: new Float32Array(F * 6), samples };
+  const slim = { tris: model.tris, normals: model.normals, faceCount: F, bounds: model.bounds };
+  const url = new URL('./visibility-worker.js', import.meta.url);
+  const n = Math.max(1, Math.min(6, (globalThis.navigator && navigator.hardwareConcurrency) || 2));
+  const queue = [0, 1, 2, 3, 4, 5];
+  let done = 0;
+  return new Promise((resolve, reject) => {
+    const workers = [];
+    const finish = () => { for (const w of workers) w.terminate(); };
+    const feed = w => {
+      if (!queue.length) { w.terminate(); return; }
+      w.postMessage({ model: slim, dir: queue.shift(), samples });
+    };
+    for (let i = 0; i < n; i++) {
+      const w = new Worker(url, { type: 'module' });
+      workers.push(w);
+      w.onmessage = e => {
+        const { dir, dot, frac } = e.data;
+        for (let f = 0; f < F; f++) {
+          out.dot[f * 6 + dir] = dot[f * 6 + dir];
+          out.frac[f * 6 + dir] = frac[f * 6 + dir];
+        }
+        done++;
+        if (onProgress) onProgress(done / 6, DIRS[dir].label);
+        if (done === 6) { finish(); resolve(out); } else feed(w);
+      };
+      w.onerror = err => { finish(); reject(err.error || new Error(err.message || 'Worker-Fehler')); };
+      feed(w);
+    }
+  });
+}
+
 /** Sichtbarkeit aller sechs Richtungen. Ist onProgress gesetzt, wird
     zwischen den Richtungen die Kontrolle abgegeben, damit der Fortschritt
     in der Oberfläche ankommt; ohne Rückruf läuft alles am Stück durch
     (so rufen die Tests es auf). */
 export async function computeVisibility(model, opts = {}) {
   const { samples = 4, onProgress = null } = opts;
+  if (typeof Worker !== 'undefined' && opts.parallel !== false) {
+    try {
+      return await parallelVisibility(model, samples, onProgress);
+    } catch (err) {
+      console.warn('Sichtbarkeit: Worker nicht verfügbar, rechne im Hauptfaden —', err.message);
+    }
+  }
   const F = model.faceCount;
   const out = { dot: new Float32Array(F * 6), frac: new Float32Array(F * 6), samples };
-  const cells = Math.min(384, Math.max(8, Math.round(Math.sqrt(F / 3))));
+  const cells = cellsFor(F);
   for (let d = 0; d < 6; d++) {
     computeDirection(model, d, out, samples, cells);
     if (onProgress) {

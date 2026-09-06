@@ -20,14 +20,12 @@ import { buildDocument, installGlobals } from './stubs/dom.mjs';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'web', 'tools', '3d-studio');
 const read = f => readFileSync(resolve(ROOT, f), 'utf8');
 
-/* Warten, bis die laufende Analyse fertig ist — sonst räumt der nächste
-   Test das DOM unter ihr weg. */
-/* Rechnen läuft nur auf Knopfdruck — der Test drückt ihn wie ein Mensch. */
+/* Warten, bis die laufende Analyse fertig ist — sie startet von selbst
+   beim Laden; sonst räumt der nächste Test das DOM unter ihr weg. */
 async function analyse(d, mod, tries = 800) {
-  d.getElementById('run-analysis').dispatch('click');
   for (let i = 0; i < tries; i++) {
     const s = mod.__viewer.state;
-    if (!s.running && s.analysed && !s.stale) return;
+    if (!s.running && s.analysed && s.ready) return;
     await new Promise(r => setTimeout(r, 25));
   }
   throw new Error('Analyse wurde nicht fertig');
@@ -46,12 +44,11 @@ async function ready(mod, name = null, tries = 600) {
 let app, doc;
 
 before(async () => {
-  ({ doc } = buildDocument(read('bauteilanalyse.html')));
+  ({ doc } = buildDocument(read('entformungsanalyse.html')));
   installGlobals(doc);
   app = await import('../../../web/tools/3d-studio/js/part/app.js');
   await ready(app);
   assert.ok(app.__viewer.state.model, 'Beispielteil wurde geladen');
-  assert.equal(app.__viewer.state.analysed, false, 'ohne Bestätigung wird nicht gerechnet');
   await analyse(doc, app);
 });
 
@@ -110,58 +107,29 @@ test('Analyse läuft und die Legende füllt sich', () => {
   const legend = doc.getElementById('legend');
   assert.ok(legend.innerHTML.includes('%'), 'Legende zeigt Flächenanteile');
   assert.ok(doc.getElementById('model-facts').innerHTML.includes('cm³'), 'Kennzahlen des Bauteils');
-  assert.ok(doc.getElementById('seg-facts').innerHTML.includes('Saat'), 'Stufen-Kennzahlen');
+  assert.ok(doc.getElementById('seg-facts').innerHTML.includes('Schieber'), 'Bilanz Hälften / Schieber / Hinterschnitt');
+  assert.ok(doc.getElementById('analysis-state').textContent.includes('automatisch'), 'die Formöffnung wurde gewählt');
   assert.ok(+doc.getElementById('parting-count').textContent.replace(/\D/g, '') > 0, 'Trennlinie gefunden');
 });
 
-test('Stufenschalter blendet spätere Stufen aus', () => {
-  const seg = doc.getElementById('stage-seg');
-  const colorAt = f => {
-    const c = app.__viewer.partMesh.geometry.getAttribute('color').array;
-    return [c[f * 9], c[f * 9 + 1], c[f * 9 + 2]].map(v => +v.toFixed(3)).join(',');
-  };
+test('Formöffnung: automatisch gewählt, fest wählbar, sofort neu gerechnet', () => {
   const s = app.__viewer.state;
-  const grown = [...s.seg.stage].findIndex(v => v === 3);
-  assert.ok(grown >= 0, 'es gibt ausgebreitete Dreiecke');
-  const full = colorAt(grown);
-  seg.querySelectorAll('button').find(b => b.dataset.value === '1').dispatch('click');
-  assert.equal(s.stageMax, 1);
-  assert.notEqual(colorAt(grown), full, 'in Stufe 1 ist das Dreieck noch grau');
-  seg.querySelectorAll('button').find(b => b.dataset.value === '3').dispatch('click');
-  assert.equal(colorAt(grown), full, 'in Stufe 3 wieder eingefärbt');
-});
-
-test('Regler warten auf Bestätigung, dann rechnen sie neu', async () => {
-  const s = app.__viewer.state;
-  const btn = doc.getElementById('run-analysis');
-  const note = doc.getElementById('analysis-state');
-  assert.equal(btn.textContent, 'Analyse ist aktuell');
-  assert.equal(btn.disabled, true, 'ohne Änderung gibt es nichts zu rechnen');
-
+  assert.equal(s.axis, 'auto');
+  assert.equal(s.seg.auto, true);
+  assert.equal(s.seg.mainAxis, 2, 'der Getriebedeckel entformt in Z');
+  const ax = doc.getElementById('axis-seg').querySelectorAll('button');
   const before = [...s.seg.areaByLabel];
-  const el = doc.getElementById('min-draft');
-  el.value = '3.5';
-  el.dispatch('input');
-  assert.equal(s.opts.minDraftDeg, 3.5);
-  assert.equal(doc.getElementById('min-draft-val').textContent, '3,5 °');
-  assert.equal(s.stale, true, 'als veraltet markiert');
-  assert.deepEqual([...s.seg.areaByLabel], before, 'noch NICHT neu gerechnet');
-  assert.equal(btn.textContent, 'Analyse aktualisieren');
-  assert.ok(note.textContent.includes('geändert'), 'Hinweis erscheint');
-
-  await analyse(doc, app);
-  assert.notDeepEqual([...s.seg.areaByLabel], before, 'nach dem Bestätigen ist es neu');
-  assert.equal(btn.textContent, 'Analyse ist aktuell');
-
-  el.value = '0.5'; el.dispatch('input');
-  const pen = doc.getElementById('slider-pen');
-  pen.value = '1.2'; pen.dispatch('input');
-  await analyse(doc, app);
-  assert.equal(s.opts.minDraftDeg, 0.5);
-  assert.equal(s.opts.sliderPenalty, 1.2, 'zurück auf die Standardwerte');
+  ax.find(b => b.dataset.value === '0').dispatch('click');
+  assert.equal(s.axis, 0);
+  assert.equal(s.seg.mainAxis, 0, 'fest auf X');
+  assert.equal(s.seg.auto, false);
+  assert.notDeepEqual([...s.seg.areaByLabel], before, 'ohne Bestätigung sofort neu gerechnet');
+  assert.ok(doc.getElementById('analysis-state').textContent.includes('X'), 'die Achse steht im Hinweis');
+  ax.find(b => b.dataset.value === 'auto').dispatch('click');
+  assert.deepEqual([...s.seg.areaByLabel], before, 'Auto findet wieder Z');
 });
 
-test('Einfärbungen und Formöffnungsrichtung schalten um', async () => {
+test('Einfärbungen schalten um', async () => {
   const s = app.__viewer.state;
   const modes = doc.getElementById('mode-seg').querySelectorAll('button');
   const draftBlock = doc.getElementById('draft-block');
@@ -173,15 +141,8 @@ test('Einfärbungen und Formöffnungsrichtung schalten um', async () => {
       'Grenzwert-Block ist nur bei „Schräge" bedienbar');
   }
   modes.find(b => b.dataset.value === 'regions').dispatch('click');
-
-  const ax = doc.getElementById('axis-seg').querySelectorAll('button');
-  ax.find(b => b.dataset.value === '0').dispatch('click');
-  assert.equal(s.opts.mainAxis, 0);
-  assert.equal(s.stale, true, 'auch die Formöffnung wartet auf Bestätigung');
-  await analyse(doc, app);
   assert.ok(doc.getElementById('legend').innerHTML.includes('Schieber'), 'Rollen benannt');
-  ax.find(b => b.dataset.value === '2').dispatch('click');
-  await analyse(doc, app);
+  assert.ok(doc.getElementById('legend').innerHTML.includes('Feste Seite'), 'Hälften benannt');
 });
 
 test('Farbskala erscheint nur bei geordneten Größen', () => {
@@ -201,10 +162,6 @@ test('Farbskala erscheint nur bei geordneten Größen', () => {
   assert.ok(doc.getElementById('cb-ticks').innerHTML.includes('6'), 'Skala reicht bis 3× Grenzwert');
   lim.value = '1.5'; lim.dispatch('input');
 
-  modes.find(b => b.dataset.value === 'count').dispatch('click');
-  assert.ok(bar.classList.contains('on'), 'bei der Sichtbarkeit sichtbar');
-  assert.ok(doc.getElementById('cb-ticks').className.includes('bands'), 'abgestufte Skala');
-
   modes.find(b => b.dataset.value === 'regions').dispatch('click');
   assert.ok(!bar.classList.contains('on'), 'bei den Regionen aus — dort gibt es keine Reihenfolge');
 });
@@ -216,9 +173,8 @@ test('Beispielteile lassen sich wechseln', async () => {
   await ready(app, 'Ölwanne');
   const s = app.__viewer.state;
   assert.ok(s.name.includes('Ölwanne'), 'Teil gewechselt: ' + s.name);
-  assert.equal(s.analysed, false, 'ein neues Teil startet ohne Analyse');
-  assert.ok(doc.getElementById('legend').innerHTML.includes('Analyse starten'), 'Hinweis in der Legende');
   await analyse(doc, app);
+  assert.equal(s.seg.mainAxis, 2);
   const halves = s.seg.areaByLabel[4] + s.seg.areaByLabel[5];
   assert.ok(halves > 0.95 * s.model.totalArea, 'dieses Teil bilden die beiden Hälften fast ganz');
 });
@@ -235,7 +191,9 @@ test('STL laden: Datei, Ziehen-und-Ablegen, kaputte Datei', async () => {
   await ready(app, 'pruefwuerfel.stl');
   assert.equal(app.__viewer.state.model.faceCount, 12, 'Quader aus zwölf Dreiecken');
   await analyse(doc, app);
-  assert.equal(app.__viewer.state.seg.counts.seed, 12, 'jede Seite eindeutig');
+  const c = app.__viewer.state.seg.counts;
+  assert.equal(c.half + c.weak + c.slider, 12, 'jede Seite zugeordnet');
+  assert.equal(c.slider, 0, 'ein Quader braucht keinen Schieber');
 
   /* Ziehen-und-Ablegen über dem Viewport. */
   const vp = doc.getElementById('viewport');
@@ -256,14 +214,14 @@ test('STL laden: Datei, Ziehen-und-Ablegen, kaputte Datei', async () => {
 });
 
 test('?part=… wählt das Beispielteil aus der Adresszeile', async () => {
-  const { doc: d3 } = buildDocument(read('bauteilanalyse.html'));
+  const { doc: d3 } = buildDocument(read('entformungsanalyse.html'));
   installGlobals(d3);
-  globalThis.location = { search: '?part=heat_sink', href: 'http://test/bauteilanalyse.html?part=heat_sink' };
+  globalThis.location = { search: '?part=heat_sink', href: 'http://test/entformungsanalyse.html?part=heat_sink' };
   const app2 = await import('../../../web/tools/3d-studio/js/part/app.js?variante=adresszeile');
   await ready(app2);
   assert.ok(app2.__viewer.state.name.includes('Kühlkörper'), 'Kühlkörper geladen: ' + app2.__viewer.state.name);
   await analyse(d3, app2);
-  assert.ok(app2.__viewer.state.seg, 'Analyse auf Knopfdruck gelaufen');
+  assert.ok(app2.__viewer.state.seg, 'Analyse von selbst gelaufen');
   assert.equal(d3.getElementById('demo-select').value, 'heat_sink');
 });
 

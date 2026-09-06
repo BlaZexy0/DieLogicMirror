@@ -105,7 +105,7 @@ test('alle Imports der JS-Module lösen auf', () => {
 test('alle Imports der HTML-Seiten lösen auf', () => {
   const problems = [];
   const htmls = [];
-  for (const f of ['index.html', 'form.html', 'bauteilanalyse.html', 'wandstaerke.html',
+  for (const f of ['index.html', 'form.html', 'entformungsanalyse.html', 'wandstaerke.html',
     'abstand.html', 'anguss.html', 'ueberlauf.html', 'temperier.html', 'fuellung.html']) htmls.push(join(ROOT, f));
   for (const f of htmls) {
     assert.ok(existsSync(f), 'fehlt: ' + f);
@@ -138,7 +138,7 @@ test('alle Imports der HTML-Seiten lösen auf', () => {
 
 test('jede id, die ein Viewer-Modul anspricht, steht im HTML', () => {
   const pairs = [
-    ['bauteilanalyse.html', [join('js', 'part', 'app.js'), join('js', 'part', 'partsource.js')]],
+    ['entformungsanalyse.html', [join('js', 'part', 'app.js'), join('js', 'part', 'partsource.js')]],
     ['wandstaerke.html', [join('js', 'part', 'offsetapp.js'), join('js', 'part', 'partsource.js')]],
     ['abstand.html', [join('js', 'part', 'distanceapp.js')]],
     ['form.html', [join('js', 'die.js'), join('js', 'ui', 'sidebar.js')]],

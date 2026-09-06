@@ -11,7 +11,7 @@
 const LINKS = [
   { href: 'index.html', label: 'Übersicht' },
   { href: 'form.html', label: 'Formaufbau' },
-  { href: 'bauteilanalyse.html', label: 'Bauteilanalyse' },
+  { href: 'entformungsanalyse.html', label: 'Entformungsanalyse' },
   { href: 'wandstaerke.html', label: 'Wandstärkenanalyse' },
   { href: 'abstand.html', label: 'Abstandsanalyse' },
   { href: 'anguss.html', label: 'Angussdesigner' },

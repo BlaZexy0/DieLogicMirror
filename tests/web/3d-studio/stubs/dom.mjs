@@ -205,7 +205,7 @@ export function installGlobals(doc) {
   globalThis.requestAnimationFrame = fn => setTimeout(() => fn(performance.now()), 0);
   globalThis.cancelAnimationFrame = id => clearTimeout(id);
   globalThis.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
-  globalThis.location = { search: '', href: 'http://test/bauteilanalyse.html' };
+  globalThis.location = { search: '', href: 'http://test/entformungsanalyse.html' };
   if (!globalThis.URL.createObjectURL) {
     globalThis.URL.createObjectURL = () => 'blob:test';
     globalThis.URL.revokeObjectURL = () => {};

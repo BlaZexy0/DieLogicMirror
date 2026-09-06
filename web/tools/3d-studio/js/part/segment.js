@@ -1,299 +1,211 @@
-/* Formteilung: jedem Dreieck die Formhälfte bzw. den Schieber zuordnen,
-   der es abbildet — ohne dass Hälften oder Schieber im Modell vorhanden
-   sein müssen. Der Ablauf ist der klassische Dreischritt:
+/* Entformungsanalyse: jedem Dreieck die Formhälfte oder den Schieber
+   zuordnen, der es abbildet — ohne dass Hälften oder Schieber im Modell
+   vorhanden sein müssen, und ohne Regler.
 
-   1. SAAT      Dreiecke, die aus GENAU EINER der sechs Richtungen
-                entformbar sind, sind eindeutig — sie werden festgesetzt.
-                Dreiecke, die aus KEINER Richtung entformbar sind, sind
-                Hinterschnitte und bleiben es (rot).
-   2. INSELN    Zwei Sorten Restflecken werden aufgeräumt: Löcher, die
-                komplett von einer einzigen Region umschlossen sind,
-                schlagen dieser Region zu; winzige Splitter einer Region
-                mitten in einer anderen werden aufgelöst.
-   3. AUSBREITEN  Von der Saat aus wachsen die Regionen über die noch
-                mehrdeutigen Dreiecke, bis sie aneinanderstoßen — die
-                Stoßkante IST die Trennlinie. Gewachsen wird nur dorthin,
-                wo die Richtung überhaupt entformbar ist; unter mehreren
-                Möglichkeiten gewinnt die billigste (Dijkstra):
-                gut anliegende Flächen sind billig, scharfe Knicke teuer,
-                Schieber teurer als die Hauptrichtung. Dadurch legt sich
-                die Trennlinie von selbst auf scharfe Kanten.
+   Die Zuordnung folgt festen Regeln je Dreieck, nicht einer Optimierung
+   über das Netz — damit hängt das Ergebnis an der Geometrie, nicht an
+   der Zerlegung in Dreiecke (eine große ebene Wand aus neun Dreiecken
+   zählt genauso wie dieselbe Wand aus neuntausend):
 
-                Der Schieber-Aufschlag zählt JE DREIECK, nicht einmalig
-                beim Start. Das ist der Unterschied zwischen „ein Schieber
-                kostet etwas" und „ein Schieber kostet, was er abdeckt":
-                eine lange, flach anliegende Wand (etwa ein Flansch mit
-                2° Schräge) wäre sonst für den Schieber, der sie mit 90°
-                sieht, immer billiger als für die Formhälfte, die sie
-                völlig korrekt mit 2° entformt. Steht der Aufschlag über
-                dem größtmöglichen Anliegen-Aufschlag (1,0), bekommen die
-                Schieber genau das, was KEINE Hauptrichtung entformen
-                kann — und der Regler in der Seitenleiste macht das
-                Verhältnis nachvollziehbar. */
+   1. HÄLFTE     Sieht eine der beiden Formhälften (±Formöffnung) das
+                 Dreieck frei und mit mindestens MIN_DRAFT_DEG Schräge,
+                 gehört es ihr. Sehen es beide, gewinnt die mit der
+                 größeren Schräge.
+   2. SENKRECHT  Sieht eine Hälfte das Dreieck frei, aber nur streifend
+                 (unter MIN_DRAFT_DEG — eine Wand ohne Schräge), gehört es
+                 den Hälften und nicht einem Schieber: ein Schieber ist nur
+                 dort gerechtfertigt, wo keine Hälfte hinkommt. Solche
+                 Flächen folgen als zusammenhängender Fleck der Mehrheit
+                 ihrer Nachbarn (Kantenlänge), damit die Trennlinie nicht
+                 über die Wand zackt; bei Gleichstand der beweglichen
+                 Hälfte. Die Schrägen-Ansicht zeigt sie rot (0°).
+   3. SCHIEBER   Was keine Hälfte sieht, bekommt der Schieber, der es
+                 frei sieht — der mit der frontalsten Sicht. Eine Fläche
+                 PARALLEL zur Schieberrichtung (0°) ist erlaubt: eine
+                 Querbohrung wird von einem Kern ohne Schräge gebildet.
+                 Sehen zwei Schieber eine Fläche gleich gut, nimmt sie der
+                 von der näheren Seite.
+   4. HINTERSCHNITT  Was keine Richtung frei sieht.
+   5. LÖCHER     Ein Fleck, der ganz von EINER anderen Region umschlossen
+                 ist und den diese Richtung ebenfalls sieht, schlägt ihr
+                 zu — sonst blieben an Kanten und Verrundungen Splitter
+                 zwischen zwei Schiebern stehen.
+
+   Die Formöffnungsrichtung wird, wenn nicht vorgegeben, automatisch
+   gewählt: die Achse mit der kleinsten Fläche aus Schiebern und
+   Hinterschnitten (Hinterschnitt zählt doppelt); bei Gleichstand die mit
+   der kleinsten Fläche senkrechter Wände — ein Quader mit Querbohrung
+   öffnet so längs der Bohrung (Kerne statt Schieber), ein in Y gezogener
+   Quader öffnet in Y. Die Sichtbarkeit
+   (js/part/visibility.js) hängt nur am Netz; alles hier kostet danach
+   Millisekunden. */
 
 import { DIRS } from './visibility.js';
 
-const NONE = -1;
 export const UNDERCUT = -2;
-export const STAGE = { OPEN: 0, SEED: 1, ISLAND: 2, GROWN: 3, REST: 4 };
+export const MIN_DRAFT_DEG = 0.5;     // darunter sieht eine Hälfte eine Fläche nur streifend
+const NONE = -1;
+const MIN_DOT = Math.sin(MIN_DRAFT_DEG * Math.PI / 180);
 
-export const DEFAULTS = {
-  mainAxis: 2,          // Formöffnungsrichtung (0 = X, 1 = Y, 2 = Z)
-  minDraftDeg: 0.5,     // darunter gilt eine Fläche nicht als entformbar
-  visMin: 1,            // geforderter Anteil unverdeckter Abtastpunkte
-  sliderPenalty: 1.2,   // Aufschlag JE DREIECK für Schieberrichtungen
-  alignWeight: 1.0,     // Aufschlag für flach anliegende Flächen
-  edgeWeight: 1.5,      // Aufschlag für das Überschreiten scharfer Kanten
-  stepCost: 0.05,       // Grundpreis je Dreieck (hält die Fronten gleichmäßig)
-  islandMaxFrac: 0.02   // Splitter bis zu diesem Flächenanteil auflösen
-};
-
-/* ── kleiner binärer Heap für die Ausbreitung ────────────────── */
-function makeHeap(cap) {
-  let n = 0;
-  let cost = new Float64Array(cap), face = new Int32Array(cap), dir = new Int8Array(cap);
-  function grow() {
-    const c = new Float64Array(cost.length * 2); c.set(cost); cost = c;
-    const f = new Int32Array(face.length * 2); f.set(face); face = f;
-    const d = new Int8Array(dir.length * 2); d.set(dir); dir = d;
-  }
-  return {
-    get size() { return n; },
-    push(c, f, d) {
-      if (n === cost.length) grow();
-      let i = n++;
-      cost[i] = c; face[i] = f; dir[i] = d;
-      while (i > 0) {
-        const p = (i - 1) >> 1;
-        if (cost[p] <= cost[i]) break;
-        [cost[p], cost[i]] = [cost[i], cost[p]];
-        [face[p], face[i]] = [face[i], face[p]];
-        [dir[p], dir[i]] = [dir[i], dir[p]];
-        i = p;
-      }
-    },
-    pop() {
-      const out = { cost: cost[0], face: face[0], dir: dir[0] };
-      n--;
-      if (n > 0) {
-        cost[0] = cost[n]; face[0] = face[n]; dir[0] = dir[n];
-        let i = 0;
-        for (;;) {
-          const l = 2 * i + 1, r = l + 1;
-          let m = i;
-          if (l < n && cost[l] < cost[m]) m = l;
-          if (r < n && cost[r] < cost[m]) m = r;
-          if (m === i) break;
-          [cost[m], cost[i]] = [cost[i], cost[m]];
-          [face[m], face[i]] = [face[i], face[m]];
-          [dir[m], dir[i]] = [dir[i], dir[m]];
-          i = m;
-        }
-      }
-      return out;
-    }
-  };
-}
-
-/* ── Zusammenhangskomponenten über die Kantennachbarschaft ─────
-   components(): Flecken gleicher Zugehörigkeit (Prädikat).
-   labelComponents(): Flecken GLEICHER Region — dafür läuft die Suche nur
-   über Nachbarn mit derselben Marke. */
-function components(F, nbr, belongs) {
-  const comp = new Int32Array(F).fill(-1);
-  const list = [];
-  const stack = [];
-  for (let f = 0; f < F; f++) {
-    if (comp[f] >= 0 || !belongs(f)) continue;
-    const id = list.length, members = [];
-    comp[f] = id; stack.push(f);
-    while (stack.length) {
-      const c = stack.pop();
-      members.push(c);
-      for (let e = 0; e < 3; e++) {
-        const w = nbr[c * 3 + e];
-        if (w < 0 || comp[w] >= 0 || !belongs(w)) continue;
-        comp[w] = id; stack.push(w);
-      }
-    }
-    list.push(members);
-  }
-  return { comp, list };
-}
-
-function labelComponents(F, nbr, label) {
-  const seen = new Uint8Array(F);
-  const list = [];
-  const stack = [];
-  for (let f = 0; f < F; f++) {
-    if (seen[f] || label[f] < 0) continue;
-    const mine = label[f], members = [];
-    seen[f] = 1; stack.push(f);
-    while (stack.length) {
-      const c = stack.pop();
-      members.push(c);
-      for (let e = 0; e < 3; e++) {
-        const w = nbr[c * 3 + e];
-        if (w < 0 || seen[w] || label[w] !== mine) continue;
-        seen[w] = 1; stack.push(w);
-      }
-    }
-    list.push(members);
-  }
-  return list;
-}
-
-/** Bitmaske der entformbaren Richtungen je Dreieck. */
-export function candidates(model, vis, opts = {}) {
-  const o = { ...DEFAULTS, ...opts };
+/** Bitmaske der Richtungen, die ein Dreieck frei sehen (Normale nicht
+    abgewandt, alle Abtastpunkte unverdeckt). */
+export function candidates(model, vis) {
   const F = model.faceCount;
-  const minDot = Math.sin(o.minDraftDeg * Math.PI / 180);
   const cand = new Uint8Array(F);
   for (let f = 0; f < F; f++) {
     let m = 0;
     for (let d = 0; d < 6; d++) {
-      if (vis.dot[f * 6 + d] > minDot - 1e-9 && vis.frac[f * 6 + d] >= o.visMin - 1e-9) m |= 1 << d;
+      if (vis.dot[f * 6 + d] > -1e-9 && vis.frac[f * 6 + d] >= 1 - 1e-9) m |= 1 << d;
     }
     cand[f] = m;
   }
   return cand;
 }
 
-export function segment(model, vis, opts = {}) {
-  const o = { ...DEFAULTS, ...opts };
-  const F = model.faceCount;
-  const { nbr, normals, areas } = model;
-  const cand = candidates(model, vis, o);
+/* Schwerpunkt-Koordinate eines Dreiecks entlang einer Achse. */
+function centroid(tris, f, axis) {
+  const i = f * 9 + axis;
+  return (tris[i] + tris[i + 3] + tris[i + 6]) / 3;
+}
 
-  const label = new Int8Array(F).fill(NONE);
-  const stage = new Uint8Array(F);
-  const bits = n => { let c = 0; while (n) { c += n & 1; n >>= 1; } return c; };
-
-  /* ── 1 · Saat ─────────────────────────────────────────────── */
-  let seedCount = 0, undercutCount = 0;
+/* Zusammenhängende Flecken: Dreiecke, die same(a, b) verbindet. */
+function patches(F, nbr, same, only = null) {
+  const seen = new Uint8Array(F);
+  const out = [];
+  const stack = [];
   for (let f = 0; f < F; f++) {
-    const m = cand[f];
-    if (m === 0) { label[f] = UNDERCUT; stage[f] = STAGE.SEED; undercutCount++; continue; }
-    if (bits(m) === 1) {
-      label[f] = 31 - Math.clz32(m);
-      stage[f] = STAGE.SEED;
-      seedCount++;
+    if (seen[f] || (only && !only(f))) continue;
+    const members = [];
+    seen[f] = 1; stack.push(f);
+    while (stack.length) {
+      const c = stack.pop();
+      members.push(c);
+      for (let e = 0; e < 3; e++) {
+        const w = nbr[c * 3 + e];
+        if (w < 0 || seen[w] || (only && !only(w)) || !same(c, w)) continue;
+        seen[w] = 1; stack.push(w);
+      }
     }
+    out.push(members);
+  }
+  return out;
+}
+
+/* Länge der Kante e (0..2) von Dreieck f. */
+function edgeLength(model, f, e) {
+  const { index, verts } = model;
+  const a = index[f * 3 + e] * 3, b = index[f * 3 + (e + 1) % 3] * 3;
+  const dx = verts[a] - verts[b], dy = verts[a + 1] - verts[b + 1], dz = verts[a + 2] - verts[b + 2];
+  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+function assign(model, vis, cand, mainAxis) {
+  const F = model.faceCount;
+  const { nbr, areas, tris, bounds } = model;
+  const label = new Int8Array(F).fill(NONE);
+  const weak = new Uint8Array(F);
+  const mid = [(bounds.min[0] + bounds.max[0]) / 2, (bounds.min[1] + bounds.max[1]) / 2, (bounds.min[2] + bounds.max[2]) / 2];
+  const counts = { half: 0, slider: 0, undercut: 0, weak: 0, holes: 0 };
+
+  const movingHalf = DIRS.findIndex(d => d.axis === mainAxis && d.sign > 0);
+
+  /* 1, 3, 4: je Dreieck; senkrechte Flächen (2) werden vorgemerkt. */
+  for (let f = 0; f < F; f++) {
+    let bestHalf = -1, dotHalf = -Infinity, bestSlider = -1, dotSlider = -Infinity;
+    for (let d = 0; d < 6; d++) {
+      if (!(cand[f] & (1 << d))) continue;
+      const dot = vis.dot[f * 6 + d];
+      if (DIRS[d].axis === mainAxis) {
+        if (dot > dotHalf) { dotHalf = dot; bestHalf = d; }
+      } else if (dot > dotSlider + 1e-9) {
+        dotSlider = dot; bestSlider = d;
+      } else if (Math.abs(dot - dotSlider) <= 1e-9 && bestSlider >= 0) {
+        /* Gleichstand (etwa 0° an beiden Enden einer Querbohrung): der
+           Schieber von der näheren Seite. */
+        const c = centroid(tris, f, DIRS[d].axis) - mid[DIRS[d].axis];
+        const cb = centroid(tris, f, DIRS[bestSlider].axis) - mid[DIRS[bestSlider].axis];
+        if (c * DIRS[d].sign > cb * DIRS[bestSlider].sign) bestSlider = d;
+      }
+    }
+    if (bestHalf >= 0 && dotHalf >= MIN_DOT) { label[f] = bestHalf; counts.half++; }
+    else if (bestHalf >= 0) { label[f] = bestHalf; weak[f] = 1; counts.weak++; }
+    else if (bestSlider >= 0) { label[f] = bestSlider; counts.slider++; }
+    else { label[f] = UNDERCUT; counts.undercut++; }
   }
 
-  /* ── 2 · Inseln ───────────────────────────────────────────── */
-  let islandCount = 0;
-
-  /* (a) Löcher: unentschiedene Flecken, die nur EINE Region berühren. */
-  const holes = components(F, nbr, f => label[f] === NONE);
-  for (const members of holes.list) {
-    let only = -1, ok = true;
+  /* 2: senkrechte Flächen folgen als Fleck der Mehrheit ihrer Nachbarn,
+     gewichtet mit der gemeinsamen Kantenlänge. Ein Fleck, dessen Rand nur
+     Hinterschnitt oder gar nichts berührt, behält seine Hälfte. */
+  for (const members of patches(F, nbr, () => true, f => weak[f] === 1)) {
+    const votes = new Float64Array(6);
+    let any = false;
     for (const f of members) {
       for (let e = 0; e < 3; e++) {
         const w = nbr[f * 3 + e];
-        if (w < 0 || label[w] === NONE) continue;
-        if (label[w] === UNDERCUT) { ok = false; break; }
-        if (only < 0) only = label[w];
-        else if (only !== label[w]) { ok = false; break; }
+        if (w < 0 || weak[w] || label[w] < 0) continue;
+        votes[label[w]] += edgeLength(model, f, e); any = true;
       }
-      if (!ok) break;
     }
-    if (!ok || only < 0) continue;
-    if (members.some(f => !(cand[f] & (1 << only)))) continue;
-    for (const f of members) { label[f] = only; stage[f] = STAGE.ISLAND; islandCount++; }
+    if (!any) continue;
+    let best = -1;
+    for (let d = 0; d < 6; d++) {
+      if (votes[d] > (best < 0 ? 0 : votes[best]) + 1e-9) best = d;
+      else if (best >= 0 && Math.abs(votes[d] - votes[best]) <= 1e-9 && d === movingHalf) best = d;
+    }
+    if (best < 0) continue;
+    for (const f of members) label[f] = best;
   }
 
-  /* (b) Splitter: winzige Regionsstücke mitten in einer anderen Region. */
-  const limit = model.totalArea * o.islandMaxFrac;
-  const patches = labelComponents(F, nbr, label);
-  for (const members of patches) {
-    const mine = label[members[0]];
-    let area = 0;
-    for (const f of members) area += areas[f];
-    if (area > limit) continue;
-    let other = -1, ok = true;
-    for (const f of members) {
-      for (let e = 0; e < 3; e++) {
-        const w = nbr[f * 3 + e];
-        if (w < 0 || label[w] === NONE || label[w] === mine) continue;
-        if (label[w] === UNDERCUT) { ok = false; break; }
-        if (other < 0) other = label[w];
-        else if (other !== label[w]) { ok = false; break; }
+  /* 5: Löcher. Ein Fleck mit genau einer fremden Nachbarmarke, die alle
+     seine Dreiecke frei sieht, geht an diese Marke. Wiederholt, weil ein
+     gefülltes Loch ein weiteres frei machen kann. */
+  for (let round = 0; round < 4; round++) {
+    let changed = 0;
+    for (const members of patches(F, nbr, (a, b) => label[a] === label[b])) {
+      const mine = label[members[0]];
+      if (mine === UNDERCUT) continue;
+      let other = -1, ok = true;
+      for (const f of members) {
+        for (let e = 0; e < 3 && ok; e++) {
+          const w = nbr[f * 3 + e];
+          if (w < 0 || label[w] === mine) continue;
+          if (label[w] === UNDERCUT) { ok = false; break; }
+          if (other < 0) other = label[w];
+          else if (other !== label[w]) ok = false;
+        }
+        if (!ok) break;
       }
-      if (!ok) break;
+      if (!ok || other < 0) continue;
+      const strong = DIRS[other].axis === mainAxis;
+      if (members.some(f => !(cand[f] & (1 << other)) || (strong && vis.dot[f * 6 + other] < MIN_DOT))) continue;
+      for (const f of members) label[f] = other;
+      counts.holes += members.length;
+      changed++;
     }
-    if (!ok || other < 0) continue;
-    if (members.some(f => !(cand[f] & (1 << other)))) continue;
-    for (const f of members) { label[f] = other; stage[f] = STAGE.ISLAND; islandCount++; }
+    if (!changed) break;
   }
 
-  /* ── 3 · Ausbreiten bis zur Trennlinie ────────────────────── */
-  const bias = new Float64Array(6);
-  for (let d = 0; d < 6; d++) bias[d] = DIRS[d].axis === o.mainAxis ? 0 : o.sliderPenalty;
-
-  const stepCost = (from, to, d) => {
-    const align = 1 - vis.dot[to * 6 + d];
-    const crease = 1 - (normals[from * 3] * normals[to * 3]
-      + normals[from * 3 + 1] * normals[to * 3 + 1]
-      + normals[from * 3 + 2] * normals[to * 3 + 2]);
-    return o.alignWeight * align + o.edgeWeight * crease / 2 + o.stepCost + bias[d];
-  };
-
-  const heap = makeHeap(Math.max(1024, F));
-  const dist = new Float64Array(F).fill(Infinity);
-
-  const pushFrom = (f, d, cost) => {
-    for (let e = 0; e < 3; e++) {
-      const w = nbr[f * 3 + e];
-      if (w < 0 || label[w] !== NONE || !(cand[w] & (1 << d))) continue;
-      heap.push(cost + stepCost(f, w, d), w, d);
-    }
-  };
-
-  let grownCount = 0;
-  function drain() {
-    while (heap.size) {
-      const { cost, face, dir } = heap.pop();
-      if (label[face] !== NONE) continue;
-      label[face] = dir; stage[face] = STAGE.GROWN; dist[face] = cost; grownCount++;
-      pushFrom(face, dir, cost);
-    }
-  }
-
-  for (let f = 0; f < F; f++) if (label[f] >= 0) pushFrom(f, label[f], 0);
-  drain();
-
-  /* ── 4 · Rest: entformbar, aber von keiner Saat erreichbar ──
-     Kommt vor, wenn ein ganzer Flecken nur aus mehrdeutigen Dreiecken
-     besteht (z. B. der Mantel eines quer liegenden Zapfens: KEIN Dreieck
-     darauf ist eindeutig). Statt jedes Dreieck für sich zu entscheiden,
-     wird das jeweils am besten passende zur neuen Saat gemacht und von
-     dort erneut ausgebreitet — so bleiben die Regionen zusammenhängend. */
-  let restCount = 0;
-  for (;;) {
-    let bestF = -1, bestD = -1, bestVal = -Infinity;
-    for (let f = 0; f < F; f++) {
-      if (label[f] !== NONE) continue;
-      for (let d = 0; d < 6; d++) {
-        if (!(cand[f] & (1 << d))) continue;
-        const val = vis.dot[f * 6 + d] - bias[d];
-        if (val > bestVal) { bestVal = val; bestF = f; bestD = d; }
-      }
-      if (cand[f] === 0) { label[f] = UNDERCUT; stage[f] = STAGE.REST; undercutCount++; }
-    }
-    if (bestF < 0) break;
-    label[bestF] = bestD; stage[bestF] = STAGE.REST; restCount++;
-    pushFrom(bestF, bestD, 0);
-    drain();
-  }
-
-  /* ── Kennzahlen + Trennlinie ──────────────────────────────── */
   const areaByLabel = new Float64Array(7);        // 0..5 Richtungen, 6 = Hinterschnitt
   for (let f = 0; f < F; f++) areaByLabel[label[f] === UNDERCUT ? 6 : label[f]] += areas[f];
+  let sliderArea = 0, weakArea = 0;
+  for (let d = 0; d < 6; d++) if (DIRS[d].axis !== mainAxis) sliderArea += areaByLabel[d];
+  for (let f = 0; f < F; f++) if (weak[f]) weakArea += areas[f];
+  return { label, weak, areaByLabel, counts, mainAxis, weakArea, score: sliderArea + 2 * areaByLabel[6] };
+}
 
-  return {
-    label, stage, cand, dist, options: o,
-    areaByLabel,
-    counts: { seed: seedCount, island: islandCount, grown: grownCount, rest: restCount, undercut: undercutCount }
-  };
+/** Zuordnung. opts.mainAxis: 0, 1, 2 oder 'auto' (Vorgabe). */
+export function segment(model, vis, opts = {}) {
+  const cand = candidates(model, vis);
+  const want = opts.mainAxis;
+  const fixed = want === 0 || want === 1 || want === 2;
+  let best = null;
+  const scores = [];
+  const better = (a, b) => a.score < b.score - 1e-9
+    || (Math.abs(a.score - b.score) <= 1e-9 && a.weakArea < b.weakArea - 1e-9);
+  for (const axis of fixed ? [want] : [2, 1, 0]) {
+    const r = assign(model, vis, cand, axis);
+    scores[axis] = r.score;
+    if (!best || better(r, best)) best = r;
+  }
+  return { ...best, cand, auto: !fixed, scores };
 }

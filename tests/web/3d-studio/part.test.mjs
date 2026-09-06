@@ -9,7 +9,7 @@ import { subtract, union } from '../../../web/tools/3d-studio/js/csg.js';
 import { volume, surface, bounds, cleanMesh } from '../../../web/tools/3d-studio/js/mesh.js';
 import { buildModel, openEdgeRatio } from '../../../web/tools/3d-studio/js/part/model.js';
 import { computeVisibility, DIRS } from '../../../web/tools/3d-studio/js/part/visibility.js';
-import { segment, STAGE } from '../../../web/tools/3d-studio/js/part/segment.js';
+import { segment } from '../../../web/tools/3d-studio/js/part/segment.js';
 import { draftAngles, draftStats, dirNames } from '../../../web/tools/3d-studio/js/part/draft.js';
 import { parseSTL, writeSTL } from '../../../web/tools/3d-studio/js/part/stlio.js';
 import { DEMO_PARTS } from '../../../web/tools/3d-studio/js/part/demoparts.js';
@@ -45,11 +45,13 @@ const analyse = async (tris, opts) => {
   return { model, vis, seg };
 };
 
-test('Würfel: jede Fläche ist aus genau einer Richtung entformbar', async () => {
+test('Würfel: senkrechte Wände bleiben bei den Hälften, kein Schieber', async () => {
   const { model, seg } = await analyse(S.box(100, 100, 100));
-  assert.equal(seg.counts.seed, 12, 'alle zwölf Dreiecke sind Saat');
+  assert.equal(seg.counts.half, 4, 'Deckel und Boden an die Hälften');
+  assert.equal(seg.counts.weak, 8, 'die senkrechten Seiten sieht eine Hälfte streifend');
+  assert.equal(seg.counts.slider, 0, 'ohne Schräge, aber ohne Schieber — ein Schieber lohnt nur, wo keine Hälfte hinkommt');
   assert.equal(seg.counts.undercut, 0);
-  for (let i = 0; i < 6; i++) near(seg.areaByLabel[i], 10000, 1e-6, DIRS[i].label);
+  near(seg.areaByLabel[4] + seg.areaByLabel[5], 60000, 1e-6, 'alles bei den Hälften');
   assert.equal(model.faceCount, 12);
 });
 
@@ -65,49 +67,75 @@ test('Gedrafteter Quader: alles fällt auf die beiden Hälften', async () => {
   assert.ok(seg.areaByLabel[4] / A > 0.49 && seg.areaByLabel[5] / A > 0.49, 'je Hälfte rund 50 %');
   assert.equal(seg.counts.undercut, 0, 'kein Hinterschnitt');
   for (const slider of [0, 1, 2, 3]) assert.equal(seg.areaByLabel[slider], 0, 'kein Schieber nötig');
-  assert.ok(seg.counts.grown > 0, 'die Flanken sind gewachsen, nicht Saat');
+  assert.equal(seg.mainAxis, 2, 'die Formöffnung wird von selbst gefunden');
 });
 
-test('Pilzkopf: die Unterseite des Tellers ist ein Hinterschnitt', async () => {
+test('Pilzkopf: Tellerunterseite und Schaft brauchen Schieber, kein Hinterschnitt', async () => {
   const shaft = 12, disc = 25;
   const part = union(union(S.box(100, 100, 60), S.place(S.cyl(shaft, 0, 30, 32), 'z', 0, 0, 30)),
     S.place(S.cyl(disc, 0, 10, 32), 'z', 0, 0, 60));
   const { seg, model } = await analyse(part);
-  /* Erwartet: Ringfläche unter dem Teller + der komplette Schaftmantel. */
+  /* Die Ringfläche unter dem Teller liegt parallel zu den Schiebern und
+     der Schaftmantel steht zu ihnen frontal — beides bilden Schieber
+     von der Seite, nichts bleibt Hinterschnitt. */
   const ring = Math.PI * (disc * disc - shaft * shaft);
   const shaftWall = 2 * Math.PI * shaft * 30;
-  const got = seg.areaByLabel[6];
-  assert.ok(got > 0.85 * (ring + shaftWall) && got < 1.15 * (ring + shaftWall),
-    'Hinterschnittfläche ≈ Ring + Schaft: ' + got.toFixed(0) + ' vs ' + (ring + shaftWall).toFixed(0));
+  const sliders = [0, 1, 2, 3].reduce((a, i) => a + seg.areaByLabel[i], 0);
+  assert.equal(seg.areaByLabel[6], 0, 'kein Hinterschnitt');
+  /* Mindestens Ring und Schaft; dazu kommt der Deckel des Sockels, den
+     der Teller teilweise verdeckt — er besteht aus zwei großen Dreiecken,
+     und ein Dreieck wird als Ganzes beurteilt. */
+  assert.ok(sliders >= ring + shaftWall, 'Schieber bekommen Ring und Schaft: ' + sliders.toFixed(0));
   assert.ok(openEdgeRatio(model) < 0.001, 'Netz ist geschlossen');
 });
 
-test('Querbohrung ohne Schräge erreicht keine der sechs Richtungen', async () => {
+test('Querbohrung ohne Schräge: quer zur Öffnung ein Kern von der Seite, längs dazu keiner', async () => {
   const r = 20, len = 100;
   const part = subtract(S.box(len, 100, 100), S.place(S.cyl(r, -60, 60, 32), 'x', 0, 0, 0));
-  const { seg } = await analyse(part);
+  const { seg, model, vis } = await analyse(part, { mainAxis: 2 });
   const wall = 2 * Math.PI * r * len;
-  assert.ok(Math.abs(seg.areaByLabel[6] - wall) < 0.05 * wall,
-    'Bohrungswand ist Hinterschnitt: ' + seg.areaByLabel[6].toFixed(0) + ' vs ' + wall.toFixed(0));
+  const xSliders = seg.areaByLabel[0] + seg.areaByLabel[1];
+  assert.equal(seg.areaByLabel[6], 0, 'kein Hinterschnitt');
+  /* Öffnung in Z: die Bohrungswand (0° zu X) kommt von ±X, je zur Hälfte
+     von der näheren Seite; die senkrechten Außenwände des Quaders bleiben
+     bei den Hälften. */
+  near(xSliders, wall, 0.05, 'Bohrungswand an ±X');
+  assert.ok(Math.abs(seg.areaByLabel[0] - seg.areaByLabel[1]) < 0.05 * wall,
+    'halb-halb: ' + seg.areaByLabel[0].toFixed(0) + ' / ' + seg.areaByLabel[1].toFixed(0));
+  /* Ohne Vorgabe öffnet die Form längs der Bohrung: dann bohren die
+     Hälften mit Kernen, und kein Schieber ist nötig. */
+  const auto = segment(model, vis);
+  assert.equal(auto.mainAxis, 0, 'Auto öffnet in X');
+  assert.equal(auto.counts.slider, 0, 'kein Schieber');
 });
 
-test('Mindestschräge verschiebt die Grenze zwischen Hälfte und Schieber', async () => {
+test('Hohlraum hinter einer Öffnung: nur Hinterschnitt', async () => {
+  /* Ein geschlossener Kasten mit Innenraum und einer kleinen Öffnung im
+     Deckel: keine Richtung sieht die Innenwände frei. */
+  const part = subtract(subtract(S.box(100, 100, 60), S.box(80, 80, 40)),
+    S.place(S.cyl(8, 0, 40, 24), 'z', 0, 0, 20));
+  const { seg } = await analyse(part);
+  const inner = 4 * 80 * 40 + 80 * 80 + (80 * 80 - Math.PI * 64);   // Wände, Boden, Decke ohne Loch
+  assert.ok(seg.areaByLabel[6] > 0.9 * inner && seg.areaByLabel[6] < 1.1 * inner,
+    'Innenraum ist Hinterschnitt: ' + seg.areaByLabel[6].toFixed(0) + ' vs ' + inner.toFixed(0));
+});
+
+test('Formöffnung folgt der Geometrie: ein in Y gezogener Quader öffnet in Y', async () => {
   const t = Math.tan(2 * Math.PI / 180);
-  const box = S.rectLoft([
+  const box = S.place(S.rectLoft([
     { z: -30, w: 100 - 60 * t, h: 60 - 60 * t },
     { z: 0, w: 100, h: 60 },
     { z: 30, w: 100 - 60 * t, h: 60 - 60 * t }
-  ]);
-  const model = buildModel(box);
-  const vis = await computeVisibility(model, { samples: 7 });
-  const lax = segment(model, vis, { minDraftDeg: 0.5 });
-  const strict = segment(model, vis, { minDraftDeg: 3 });
-  const sliders = r => [0, 1, 2, 3].reduce((s, i) => s + r.areaByLabel[i], 0);
-  assert.equal(lax.counts.undercut, 0, 'bei 0,5° reicht die 2°-Schräge');
-  assert.equal(sliders(lax), 0, 'bei 0,5° kommt alles ohne Schieber aus');
-  /* Bei geforderten 3° reicht die 2°-Flanke der Hauptrichtung nicht mehr —
-     sie fällt an die Schieber, die sie mit fast 90° bilden. */
-  assert.ok(sliders(strict) > 0.2 * model.totalArea, 'bei 3° übernehmen die Schieber die Flanken');
+  ]), 'y', 0, 0, 0);
+  const { seg, model } = await analyse(box);
+  const sliders = r => [0, 1, 2, 3, 4, 5].filter(d => DIRS[d].axis !== r.mainAxis).reduce((a, d) => a + r.areaByLabel[d], 0);
+  assert.equal(seg.mainAxis, 1, 'Auto wählt Y');
+  assert.equal(sliders(seg), 0, 'und dann braucht es keinen Schieber');
+  /* Fest auf Z stehen die Flanken senkrecht (0°): sie bleiben bei den
+     Hälften, aber ohne Schräge — genau das gibt Y den Vorzug. */
+  const forced = segment(model, await computeVisibility(model, { samples: 7 }), { mainAxis: 2 });
+  assert.equal(sliders(forced), 0, 'auch fest auf Z kein Schieber');
+  assert.ok(forced.weakArea > 0.5 * model.totalArea, 'aber die Flanken ohne Schräge: ' + forced.weakArea.toFixed(0));
 });
 
 test('Jedes Dreieck bekommt am Ende eine Marke', async () => {
@@ -121,24 +149,17 @@ test('Jedes Dreieck bekommt am Ende eine Marke', async () => {
   }
 });
 
-test('Stufen bauen aufeinander auf', async () => {
-  const { seg, model } = await analyse(demoTris('gearbox_cover'));
-  let seed = 0, island = 0, grown = 0;
-  for (let f = 0; f < model.faceCount; f++) {
-    if (seg.stage[f] === STAGE.SEED) seed++;
-    else if (seg.stage[f] === STAGE.ISLAND) island++;
-    else if (seg.stage[f] === STAGE.GROWN) grown++;
+test('Beispielteile: nur der Getriebedeckel braucht Schieber, keins hat Hinterschnitte', async () => {
+  const want = { u_channel_ribbed: 0, heat_sink: 0, oil_pan: 0, gearbox_cover: 1 };
+  for (const [id, needs] of Object.entries(want)) {
+    const { seg, model } = await analyse(demoTris(id));
+    const A = model.totalArea;
+    const sliders = [0, 1, 2, 3].reduce((a, i) => a + seg.areaByLabel[i], 0) / A;
+    assert.equal(seg.mainAxis, 2, id + ': Formöffnung Z');
+    if (needs) assert.ok(sliders > 0.005, id + ': braucht Schieber: ' + (100 * sliders).toFixed(2) + ' %');
+    else assert.ok(sliders < 0.002, id + ': kommt ohne Schieber aus: ' + (100 * sliders).toFixed(2) + ' %');
+    assert.ok(seg.areaByLabel[6] / A < 0.002, id + ': keine Hinterschnitte: ' + (100 * seg.areaByLabel[6] / A).toFixed(2) + ' %');
   }
-  assert.ok(seed > 0 && grown > 0, 'es gibt Saat und Ausbreitung');
-  assert.equal(seed + island + grown + seg.counts.rest, model.faceCount, 'jede Stufe ist gezählt');
-  let boundary = 0;
-  for (let f = 0; f < model.faceCount; f++) {
-    for (let e = 0; e < 3; e++) {
-      const w = model.nbr[f * 3 + e];
-      if (w > f && seg.label[w] !== seg.label[f]) boundary++;
-    }
-  }
-  assert.ok(boundary > 0, 'es gibt eine Trennlinie');
 });
 
 test('Beispielteil „Getriebedeckel" braucht Schieber, „Kühlkörper" nicht', async () => {
@@ -156,10 +177,9 @@ test('Beispielteil „Getriebedeckel" braucht Schieber, „Kühlkörper" nicht',
   assert.ok(slidersGc / gc.model.totalArea > 10 * slidersSink / sink.model.totalArea,
     'deutlich mehr als der Kühlkörper');
   /* Unter dem Flansch, über den beiden Domen, bleibt ein Streifen
-     Flanschunterseite, den keine Hälfte sieht und der zum Schieber
-     parallel liegt — für das Werkzeug rund 1 % Hinterschnitt; in der
-     Praxis bildet ihn der Schieber mit. */
-  assert.ok(gc.seg.areaByLabel[6] / gc.model.totalArea < 0.02, 'sonst keine Hinterschnitte');
+     Flanschunterseite, den keine Hälfte sieht — er liegt parallel zum
+     Schieber, und der bildet ihn mit. */
+  assert.ok(gc.seg.areaByLabel[6] / gc.model.totalArea < 0.002, 'keine Hinterschnitte');
 });
 
 test('Entformschräge: Werte und Kennzahlen', async () => {

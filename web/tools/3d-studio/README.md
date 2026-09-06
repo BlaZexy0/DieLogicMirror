@@ -9,7 +9,7 @@ verlassen den Browser nicht.
 |-----------------|--------|
 | `index.html`    | Übersicht: die Werkzeuge als Karten, dazu die drei Schritte der Formteilung |
 | `form.html`     | **Formaufbau** — eine beispielhafte Kaltkammer-Druckgießform als Schnittmodell |
-| `bauteilanalyse.html` | **Bauteilanalyse** — für ein Bauteil die Zuordnung jedes Dreiecks zu Formhälfte oder Schieber |
+| `entformungsanalyse.html` | **Entformungsanalyse** — für ein Bauteil die Zuordnung jedes Dreiecks zu Formhälfte oder Schieber |
 | `wandstaerke.html` | **Wandstärkenanalyse** — Abstandsfeld durch Rasterisierung: Wandstärke und Wärmezentrum, Fläche gleichen Abstands (die Frage nach *innen*) |
 | `abstand.html`  | **Abstandsanalyse** — kürzester Abstand zwischen zwei Dateien, eingefärbt auf einer selbst gesetzten Skala (die Frage nach *außen*) |
 | `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen, Anschnitte; dazu Querschnitt, Krümmung, Bernoulli-Verluste und Füllbalance |
@@ -108,7 +108,7 @@ Die Stahlteile sind keine Quader mehr, die sich mit den Einbauteilen
 
 Die Kavität hat ihren größten Querschnitt an der Trennebene und verjüngt
 sich mit `CFG.part.draft` in beide Hälften — das Gussteil ist also
-tatsächlich entformbar (im Teilungs-Viewer als Beispielteil nachprüfbar).
+tatsächlich entformbar (in der Entformungsanalyse als Beispielteil nachprüfbar).
 
 **Bewusst nicht ausgeschnitten** sind die Temperierkanäle: das Rohrmodell
 *ist* die Bohrung samt Inhalt. Im Schnitt zeichnet die Klassen-Deckfläche
@@ -116,89 +116,70 @@ den Kanalquerschnitt korrekt, und bei transparentem Stahl sieht man die
 Kreise wie in einer CAD-Ansicht. `tests/die.test.mjs` prüft alle anderen
 Paarungen auf gemeinsames Volumen — es muss null sein.
 
-## Bauteilanalyse (`bauteilanalyse.html`)
+## Entformungsanalyse (`entformungsanalyse.html`)
 
-Für ein Bauteil (Beispielteil, das Gussteil der Beispielform oder eine
-eigene **STL oder GLB** per Knopf/Drag-and-drop) wird berechnet, **welche
-Formhälfte oder welcher Schieber jedes Dreieck abbildet** — ohne dass
-Hälften oder Schieber im Modell vorhanden sein müssen. Welches Format
-eine hochgeladene Datei hat, entscheidet der Dateikopf, nicht die
+Für ein Bauteil (Beispielteil oder eine eigene **STL oder GLB** per
+Knopf/Drag-and-drop) wird berechnet, **welche Formhälfte oder welcher
+Schieber jedes Dreieck abbildet** — ohne dass Hälften oder Schieber im
+Modell vorhanden sein müssen, ohne Regler, sofort beim Laden. Welches
+Format eine hochgeladene Datei hat, entscheidet der Dateikopf, nicht die
 Endung.
 
 ### Der Weg dahin
 
 1. **Sichtbarkeit** (`js/part/visibility.js`) — für jede der sechs
    Hauptrichtungen ±X ±Y ±Z wird je Dreieck geprüft: zeigt die Normale
-   dorthin (`n·d > 0`), und ist der Weg frei? Der zweite Teil ist die
+   dorthin (`n·d ≥ 0`), und ist der Weg frei? Der zweite Teil ist die
    eigentliche Arbeit, denn er entscheidet über Hinterschnitte. Weil die
    Richtungen achsparallel sind, bleibt ein Strahl in *einer* Zelle eines
    Rasters über die beiden Querachsen — es genügt, die Dreiecke einmal je
    Richtung einzusortieren und pro Abtastpunkt nur die Dreiecke seiner
-   Zelle zu prüfen.
-2. **Saat** (`js/part/segment.js`) — Dreiecke, die aus *genau einer*
-   Richtung entformbar sind, sind eindeutig und werden festgesetzt.
-   Dreiecke, die aus *keiner* Richtung entformbar sind, sind
-   Hinterschnitte (rot) und bleiben es.
-3. **Inseln** — zwei Sorten Restflecken werden aufgeräumt: Löcher, die
-   komplett von einer einzigen Region umschlossen sind, schlagen dieser
-   Region zu; winzige Splitter einer Region mitten in einer anderen
-   werden aufgelöst.
-4. **Ausbreiten bis zur Trennlinie** — von der Saat aus wachsen die
-   Regionen über die mehrdeutigen Dreiecke (Dijkstra): gut anliegende
-   Flächen sind billig, scharfe Knicke teuer, Schieber teurer als die
-   Hauptrichtung (Aufschlag je Dreieck, siehe „Schieber-Kosten"). Dadurch
-   legt sich die Trennlinie von selbst auf scharfe Kanten, und Schieber
-   bekommen nur, was sie bekommen müssen. Wo zwei
-   Regionen aufeinandertreffen, liegt die **Trennlinie**. Flecken, die nur
-   aus mehrdeutigen Dreiecken bestehen (etwa der Mantel eines quer
-   liegenden Zapfens), bekommen eine Nachsaat und wachsen von dort.
-5. **Entformschrägen** (`js/part/draft.js`) — `α = arcsin(n · d)` gegen die
+   Zelle zu prüfen. Das ist der teure Teil; er hängt nur am Netz. Im
+   Browser rechnen die sechs Richtungen parallel in Web-Workern
+   (`js/part/visibility-worker.js`), unter Node im selben Faden. Die
+   Abtastpunkte liegen um einen Hauch vor der Fläche: genau auf ihr träfe
+   ein streifender Strahl die Kante eines Nachbarn, der in derselben Ebene
+   endet, und eine Querbohrung gälte als verdeckt vom Rand ihrer eigenen
+   Mündung.
+2. **Zuordnung nach festen Regeln** (`js/part/segment.js`), je Dreieck:
+   - **Hälfte** — sieht eine der beiden Formhälften das Dreieck frei und
+     mit mindestens 0,5° Schräge, gehört es ihr (bei beiden: der mit der
+     größeren Schräge).
+   - **Schieber** — sonst bekommt es der Schieber, der es frei sieht, der
+     mit der frontalsten Sicht. Eine Fläche *parallel* zur Schieberrichtung
+     (0°) ist erlaubt: eine Querbohrung wird von einem Kern ohne Schräge
+     gebildet. Bei Gleichstand nimmt sie der Schieber von der näheren Seite.
+   - **Hinterschnitt** — was keine Richtung frei sieht (rot).
+   - **Nachbarn** — eine senkrechte Wand, die nur eine Hälfte streifend
+     sieht und kein Schieber erreicht, folgt der Mehrheit ihrer Nachbarn.
+   - **Löcher** — ein Fleck, der ganz von *einer* anderen Region umschlossen
+     ist und den diese Richtung ebenfalls sieht, schlägt ihr zu.
+
+   Die Regeln gelten **je Dreieck**, nicht als Optimierung über das Netz.
+   Der Vorgänger wuchs Regionen mit Kosten je Dreieck über das Netz — und
+   eine große ebene Wand aus neun Dreiecken war dann für einen Schieber
+   billiger zu erreichen als für die Hälfte, die erst vierzig kleine
+   Verrundungsdreiecke überqueren musste. Das Ergebnis hing an der
+   Zerlegung, nicht an der Geometrie; das U-Profil bekam so 26 % Schieber.
+3. **Formöffnung** — wenn nicht vorgegeben (Auto), die Achse mit der
+   kleinsten Fläche aus Schiebern und Hinterschnitten (Hinterschnitt
+   zählt doppelt). Die drei Zuordnungen kosten zusammen Millisekunden;
+   X/Y/Z lassen sich zum Vergleich auch fest wählen.
+4. **Entformschrägen** (`js/part/draft.js`) — `α = arcsin(n · d)` gegen die
    *zugewiesene* Richtung; eine Schieberfläche wird also gegen den
    Schieber bewertet, nicht gegen die Formöffnungsrichtung.
 
-Die Stufen 2–4 lassen sich in der Seitenleiste einzeln anzeigen.
-
-**Gerechnet wird auf Bestätigung.** Ein geladenes Bauteil erscheint
-zunächst grau; „Analyse starten" rechnet Sichtbarkeit und Zuordnung.
-Jede Änderung an den Teilungs-Reglern lässt das bisherige Bild stehen und
-meldet „Einstellungen geändert" — erst der Knopf rechnet neu. Reine
-Darstellungsschalter (Einfärbung, Stufe, Grenzwert, Deckkraft, Offset)
-wirken dagegen sofort, sie rechnen die Analyse nicht neu. Die
-Sichtbarkeit hängt nur am Netz und wird je Bauteil nur einmal gerechnet;
-ein Aktualisieren kostet danach Millisekunden.
-
-### Regler
-
-- **Formöffnung** X/Y/Z — legt fest, welche zwei Richtungen die
-  Formhälften sind und welche vier die Schieber.
-- **Mindestschräge** — darunter gilt eine Fläche nicht als entformbar.
-  Bei 0° zählen auch senkrechte Wände (0° Schräge) als entformbar; steht
-  sie höher als die tatsächliche Schräge, wandern Flächen zu den
-  Schiebern oder werden zu Hinterschnitten. Ein direkter Test der
-  Konstruktion.
-- **Schieber-Kosten** — Aufschlag **je Dreieck** für Schieberrichtungen,
-  nicht einmalig beim Start. Das ist der Unterschied zwischen „ein
-  Schieber kostet etwas" und „ein Schieber kostet, was er abdeckt": eine
-  lange, flach anliegende Wand (etwa ein Flansch mit 2° Schräge) wäre
-  sonst für den Schieber, der sie mit 90° sieht, immer billiger als für
-  die Formhälfte, die sie völlig korrekt mit 2° entformt. Voreingestellt
-  ist 1,2 — über 1,0 bekommen die Schieber genau das, was **keine**
-  Hauptrichtung entformen kann. Herunterdrehen zeigt, was sie sich sonst
-  noch nehmen würden.
-- **Kantenschärfe** — wie teuer das Überschreiten scharfer Kanten ist;
-  höher heißt: die Trennlinie sucht die Kanten.
+Wo zwei Regionen aufeinandertreffen, liegt die **Trennlinie**.
 
 ### Einfärbungen
 
-**Regionen** (sechs Farben + Rot für Hinterschnitte + Grau für „Stufe noch
-nicht erreicht"), **Schräge** (Farbverlauf um einen Grenzwert, Hinterschnitte
-dunkelrot), **Sichtbarkeit** (aus wie vielen Richtungen ist das Dreieck
-entformbar?) und **Grau**. Die Legende nennt je Eintrag den Flächenanteil.
-
-Bei den beiden geordneten Größen — Schräge und Sichtbarkeit — steht
-links unten im Viewport eine **Farbskala** mit den Zahlenwerten. Bei den
-Regionen bleibt sie aus: dort gibt es keine Reihenfolge, eine Skala wäre
-irreführend.
+**Regionen** (sechs Farben + Rot für Hinterschnitte), **Schräge**
+(Farbverlauf um einen Grenzwert, Hinterschnitte dunkelrot) und **Grau**.
+Die Legende nennt je Eintrag den Flächenanteil, die Kennzahlen die
+Bilanz Hälften / Schieber / Hinterschnitt, die gewählte Formöffnung und
+die Rechenzeit. Bei der Schräge steht links unten im Viewport eine
+**Farbskala** mit den Zahlenwerten; bei den Regionen bleibt sie aus, dort
+gibt es keine Reihenfolge.
 
 ## Wandstärkenanalyse (`wandstaerke.html`)
 
@@ -751,7 +732,7 @@ die Griffe, nicht das Netz.
   bleibt die Einstellung stehen und die Seite sagt, warum. Die geladene
   Datei steht mit Namen und Volumen in einer Zeile, mit einem × zum
   Wegnehmen — die Zahl der Dreiecke interessiert hier niemanden, das ist
-  die Frage der Bauteilanalyse. Es ist außerdem das Ziel für die
+  die Frage der Entformungsanalyse. Es ist außerdem das Ziel für die
   **Mündung ans Bauteil** (siehe oben): ohne geladenes Bauteil ist der
   Knopf gesperrt.
 
@@ -770,7 +751,7 @@ sie hinaus kann.
 ### Setzen, ziehen, drehen, neu setzen
 
 Das Bauteil (Beispielteil oder eigene STL/GLB, dieselbe Quelle wie in der
-Bauteilanalyse) steht deckend im Viewport — hier wird auf die Wand
+Entformungsanalyse) steht deckend im Viewport — hier wird auf die Wand
 geklickt, und die soll aussehen wie eine Wand; der Regler „Deckkraft"
 macht sie durchscheinend. **Eine Art wählen und auf das Bauteil
 klicken:** dort sitzt das Element. Ort ist der getroffene Punkt, die nach
@@ -984,7 +965,7 @@ mit Ort, Normale, Drehung, Maßen und Anteil, dazu α und Füllzeit).
 ```
 index.html            Übersicht (Karten der Werkzeuge)
 form.html             Viewer 1: Formaufbau
-bauteilanalyse.html   Viewer 2: Bauteilanalyse
+entformungsanalyse.html   Viewer 2: Entformungsanalyse
 wandstaerke.html      Viewer 3: Wandstärkenanalyse
 abstand.html          Viewer 4: Abstandsanalyse
 anguss.html           Viewer 5: Angussdesigner
@@ -1037,7 +1018,7 @@ js/part/demogeom.js   QUELLE der Beispielteile (prozedural; nur für den Export)
 js/part/glbio.js      GLB lesen ohne Three.js (Beispielteile und Uploads)
 js/part/stlio.js      STL lesen und schreiben
 js/part/colors.js     Farben der Analyse (aus der DieLogic-Palette)
-js/part/app.js        Einstieg Bauteilanalyse-Viewer
+js/part/app.js        Einstieg Entformungsanalyse
 js/part/offsetapp.js  Einstieg Wandstärkenanalyse
 js/part/distanceapp.js Einstieg Abstandsanalyse-Viewer
 js/runner/vec.js      kleine Vektorrechnung (ohne Three.js, unter Node lauffähig)
@@ -1165,7 +1146,7 @@ Verknüpfungen, die noch nicht verdrahtet sind:
   `sleeve.d`, Kammerlänge ↔ `sleeve.len`, Bauteil-/Anguss-Maße aus der
   Massenbilanz) und die GLB pro Projekt erzeugen — oder direkt eine
   CAD-GLB mit den vereinbarten Namen hinterlegen.
-- Die Bauteilanalyse liest dasselbe Dreiecksformat wie die
+- Die Entformungsanalyse liest dasselbe Dreiecksformat wie die
   [Sprengflächenanalyse](/tools/sprengflaeche/) (9 Werte je Dreieck): die
   STL aus dem Abschnitt `geometry` ließe sich unmittelbar übernehmen und
   die Entformschrägen-Bilanz dorthin zurückschreiben.
