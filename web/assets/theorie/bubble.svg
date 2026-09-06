@@ -2,30 +2,33 @@
 <text x="440.00" y="22.00" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#002733" text-anchor="middle">Luftblase unter Nachdruck</text>
 <text x="440.00" y="42.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">T<tspan font-size="8.6" dy="3.08">liq</tspan><tspan dy="-3.08"> 593 °C · T</tspan><tspan font-size="8.6" dy="3.08">Form</tspan><tspan dy="-3.08"> 200 °C · max. Nachdruck (Ø 150) 735,65 bar</tspan></text>
 <path d="M40.00 55.00L840.00 55.00" fill="none" stroke="#ccd4d6" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 92.00L75.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 92.00L830.00 92.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="75.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">1,01</text>
-<text x="68.00" y="96.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">11,87</text>
-<path d="M226.00 92.00L226.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 174.00L830.00 174.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="226.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">147,94</text>
-<text x="68.00" y="178.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">9,5</text>
-<path d="M377.00 92.00L377.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 256.00L830.00 256.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="377.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">294,87</text>
-<text x="68.00" y="260.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">7,12</text>
-<path d="M528.00 92.00L528.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 338.00L830.00 338.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="528.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">441,8</text>
-<text x="68.00" y="342.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">4,75</text>
-<path d="M679.00 92.00L679.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 420.00L830.00 420.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="679.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">588,72</text>
-<text x="68.00" y="424.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">2,37</text>
-<path d="M830.00 92.00L830.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<path d="M75.00 92.00h755.00v410.00h-755.00Z" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<path d="M176.73 92.00L176.73 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="176.73" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">100</text>
+<path d="M279.50 92.00L279.50 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="279.50" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">200</text>
+<path d="M382.27 92.00L382.27 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="382.27" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">300</text>
+<path d="M485.05 92.00L485.05 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="485.05" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">400</text>
+<path d="M587.82 92.00L587.82 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="587.82" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">500</text>
+<path d="M690.59 92.00L690.59 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="690.59" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">600</text>
+<path d="M793.36 92.00L793.36 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="793.36" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">700</text>
 <path d="M75.00 502.00L830.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="830.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">735,65</text>
 <text x="68.00" y="506.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">0</text>
+<path d="M75.00 432.94L830.00 432.94" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="436.94" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">2</text>
+<path d="M75.00 363.89L830.00 363.89" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="367.89" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">4</text>
+<path d="M75.00 294.83L830.00 294.83" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="298.83" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">6</text>
+<path d="M75.00 225.77L830.00 225.77" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="229.77" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">8</text>
+<path d="M75.00 156.72L830.00 156.72" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="160.72" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">10</text>
 <text x="452.50" y="549.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">Nachdruck p<tspan font-size="8.6" dy="3.08">N</tspan><tspan dy="-3.08"> in bar</tspan></text>
 <text x="0.00" y="0.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle" transform="translate(14.00 297.00) rotate(-90.00)">Blasen-Ø-Verhältnis D<tspan font-size="8.6" dy="3.08">vor</tspan><tspan dy="-3.08">/D</tspan><tspan font-size="8.6" dy="3.08">nach</tspan></text>
 <g clip-path="url(#clip0)">

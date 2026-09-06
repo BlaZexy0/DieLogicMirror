@@ -87,16 +87,36 @@ export function heading(x, w, h, d) {
   x.beginPath(); x.moveTo(40, 55); x.lineTo(w - 40, 55); x.stroke();
 }
 
+/* Achsenteilung auf glatte Werte: Schritt 1, 2 oder 5 je Zehnerpotenz, so
+   gewählt, dass etwa n Striche in den Bereich fallen. Vorher wurde der
+   Bereich in fünf gleiche Teile geteilt — die Beschriftung stand dann auf
+   Werten wie 2.145,64 bar oder 30,05 l/s, die niemand liest. */
+export function ticks(lo, hi, n = 5) {
+  if (!(hi > lo)) return [lo];
+  const raw = (hi - lo) / n;
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const m = raw / p;
+  const step = (m < 1.5 ? 1 : m < 3 ? 2 : m < 7 ? 5 : 10) * p;
+  const out = [];
+  const k0 = Math.ceil(lo / step - 1e-9), k1 = Math.floor(hi / step + 1e-9);
+  for (let k = k0; k <= k1; k++) out.push(k === 0 ? 0 : +(k * step).toPrecision(12));
+  return out;
+}
+
 export function axes(x, w, h, f, x0, x1, y0, y1, d) {
-  for (let i = 0; i <= 5; i++) {
-    const X = f.L + i * f.pw / 5, Y = f.T + i * f.ph / 5;
-    x.strokeStyle = theme.chart.grid;
-    x.beginPath(); x.moveTo(X, f.T); x.lineTo(X, h - f.B); x.stroke();
-    x.beginPath(); x.moveTo(f.L, Y); x.lineTo(w - f.R, Y); x.stroke();
-    /* Winzige Float-Reste (z. B. −1e-13 statt 0) nicht als „-0" anzeigen */
-    const tx = x0 + i * (x1 - x0) / 5, ty = y1 - i * (y1 - y0) / 5;
-    text(x, fmt(Math.abs(tx) < Math.abs(x1 - x0) * 1e-9 ? 0 : tx), X, h - f.B + 18);
-    text(x, fmt(Math.abs(ty) < Math.abs(y1 - y0) * 1e-9 ? 0 : ty), f.L - 7, Y + 4, 'right');
+  x.strokeStyle = theme.chart.grid;
+  /* Rahmen des Zeichenfelds — vorher kamen seine Kanten von den Gitter-
+     linien an den Enden der Fünfteilung. */
+  x.beginPath(); x.rect(f.L, f.T, f.pw, f.ph); x.stroke();
+  const X = a => f.L + (a - x0) / ((x1 - x0) || 1) * f.pw;
+  const Y = a => f.T + (y1 - a) / ((y1 - y0) || 1) * f.ph;
+  for (const t of ticks(x0, x1)) {
+    x.beginPath(); x.moveTo(X(t), f.T); x.lineTo(X(t), h - f.B); x.stroke();
+    text(x, fmt(t), X(t), h - f.B + 18);
+  }
+  for (const t of ticks(y0, y1)) {
+    x.beginPath(); x.moveTo(f.L, Y(t)); x.lineTo(w - f.R, Y(t)); x.stroke();
+    text(x, fmt(t), f.L - 7, Y(t) + 4, 'right');
   }
   text(x, d.xl, f.L + f.pw / 2, h - 11);
   x.save(); x.translate(14, f.T + f.ph / 2); x.rotate(-PI / 2); text(x, d.yl, 0, 0); x.restore();

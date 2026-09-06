@@ -2,30 +2,23 @@
 <text x="440.00" y="22.00" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#002733" text-anchor="middle">PQ²-Diagramm (Arbeitspunkt)</text>
 <text x="440.00" y="42.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">Statisch 735,65 bar · Q<tspan font-size="8.6" dy="3.08">dry</tspan><tspan dy="-3.08"> 150,21 l/s · Cd=0,5 · Hüllkurve a = 4,25 MW (Ø 90–150) · P</tspan><tspan font-size="8.6" dy="3.08">acc</tspan><tspan dy="-3.08"> 190 bar</tspan></text>
 <path d="M40.00 55.00L840.00 55.00" fill="none" stroke="#ccd4d6" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 105.00L75.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 105.00L830.00 105.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="75.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">0,02</text>
-<text x="68.00" y="109.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">2.145,64</text>
-<path d="M226.00 105.00L226.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 184.40L830.00 184.40" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="226.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">30,05</text>
-<text x="68.00" y="188.40" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">1.716,52</text>
-<path d="M377.00 105.00L377.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 263.80L830.00 263.80" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="377.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">60,09</text>
-<text x="68.00" y="267.80" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">1.287,39</text>
-<path d="M528.00 105.00L528.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 343.20L830.00 343.20" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="528.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">90,13</text>
-<text x="68.00" y="347.20" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">858,26</text>
-<path d="M679.00 105.00L679.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 422.60L830.00 422.60" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="679.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">120,17</text>
-<text x="68.00" y="426.60" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">429,13</text>
-<path d="M830.00 105.00L830.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<path d="M75.00 105.00h755.00v397.00h-755.00Z" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<path d="M326.27 105.00L326.27 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="326.27" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">50</text>
+<path d="M577.61 105.00L577.61 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="577.61" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">100</text>
+<path d="M828.96 105.00L828.96 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="828.96" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">150</text>
 <path d="M75.00 502.00L830.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="830.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">150,21</text>
 <text x="68.00" y="506.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">0</text>
+<path d="M75.00 409.49L830.00 409.49" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="413.49" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">500</text>
+<path d="M75.00 316.97L830.00 316.97" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="320.97" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">1.000</text>
+<path d="M75.00 224.46L830.00 224.46" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="228.46" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">1.500</text>
+<path d="M75.00 131.95L830.00 131.95" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="135.95" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">2.000</text>
 <text x="452.50" y="549.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">Durchfluss Q in l/s</text>
 <text x="0.00" y="0.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle" transform="translate(14.00 303.50) rotate(-90.00)">Metalldruck in bar</text>
 <g clip-path="url(#clip0)">

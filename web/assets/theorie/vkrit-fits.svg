@@ -2,30 +2,23 @@
 <text x="440.00" y="22.00" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#002733" text-anchor="middle">Die Fits im Vergleich — exakte Lösung, Nogowizin, Segment-Fit und CFD</text>
 <text x="440.00" y="42.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">f = v<tspan font-size="8.6" dy="3.08">krit</tspan><tspan dy="-3.08">/√(g·D) · Nogowizin: ≈2 % für φ = 0,2–0,75, am Rand bis 28 % · Segment-Fit (DieLogic-Theorie): ≤ 0,25 % überall · CFD ab φ ≈ 0,3 unter allen Flachwasser-Kurven</tspan></text>
 <path d="M40.00 55.00L840.00 55.00" fill="none" stroke="#ccd4d6" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 105.00L75.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 105.00L830.00 105.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="75.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">10</text>
-<text x="68.00" y="109.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">1,7</text>
-<path d="M226.00 105.00L226.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 184.40L830.00 184.40" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="226.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">26</text>
-<text x="68.00" y="188.40" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">1,36</text>
-<path d="M377.00 105.00L377.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 263.80L830.00 263.80" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="377.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">42</text>
-<text x="68.00" y="267.80" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">1,02</text>
-<path d="M528.00 105.00L528.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 343.20L830.00 343.20" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="528.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">58</text>
-<text x="68.00" y="347.20" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">0,68</text>
-<path d="M679.00 105.00L679.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 422.60L830.00 422.60" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="679.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">74</text>
-<text x="68.00" y="426.60" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">0,34</text>
-<path d="M830.00 105.00L830.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<path d="M75.00 105.00h755.00v397.00h-755.00Z" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<path d="M169.38 105.00L169.38 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="169.38" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">20</text>
+<path d="M358.13 105.00L358.13 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="358.13" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">40</text>
+<path d="M546.88 105.00L546.88 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="546.88" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">60</text>
+<path d="M735.63 105.00L735.63 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="735.63" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">80</text>
 <path d="M75.00 502.00L830.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="830.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">90</text>
 <text x="68.00" y="506.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">0</text>
+<path d="M75.00 384.97L830.00 384.97" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="388.97" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">0,5</text>
+<path d="M75.00 267.95L830.00 267.95" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="271.95" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">1</text>
+<path d="M75.00 150.92L830.00 150.92" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="154.92" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">1,5</text>
 <text x="452.50" y="549.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">Füllgrad φ in %</text>
 <text x="0.00" y="0.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle" transform="translate(14.00 303.50) rotate(-90.00)">v<tspan font-size="8.6" dy="3.08">krit</tspan><tspan dy="-3.08"> / √(g·D)</tspan></text>
 <g clip-path="url(#clip0)">

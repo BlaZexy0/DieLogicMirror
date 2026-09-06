@@ -2,30 +2,27 @@
 <text x="440.00" y="22.00" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#002733" text-anchor="middle">Entlüftungsgeschwindigkeit</text>
 <text x="440.00" y="42.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">Ø 150 mm · Entlüftung 800 mm²</text>
 <path d="M40.00 55.00L840.00 55.00" fill="none" stroke="#ccd4d6" stroke-width="1" stroke-linejoin="round"/>
+<path d="M75.00 92.00h755.00v410.00h-755.00Z" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
 <path d="M75.00 92.00L75.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 92.00L830.00 92.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
 <text x="75.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">0</text>
-<text x="68.00" y="96.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">202,78</text>
-<path d="M226.00 92.00L226.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 174.00L830.00 174.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="226.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">1,7</text>
-<text x="68.00" y="178.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">162,22</text>
-<path d="M377.00 92.00L377.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 256.00L830.00 256.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="377.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">3,4</text>
-<text x="68.00" y="260.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">121,67</text>
-<path d="M528.00 92.00L528.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 338.00L830.00 338.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="528.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">5,1</text>
-<text x="68.00" y="342.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">81,11</text>
-<path d="M679.00 92.00L679.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 420.00L830.00 420.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="679.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">6,8</text>
-<text x="68.00" y="424.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">40,56</text>
-<path d="M830.00 92.00L830.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<path d="M252.65 92.00L252.65 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="252.65" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">2</text>
+<path d="M430.29 92.00L430.29 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="430.29" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">4</text>
+<path d="M607.94 92.00L607.94 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="607.94" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">6</text>
+<path d="M785.59 92.00L785.59 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="785.59" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">8</text>
 <path d="M75.00 502.00L830.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="830.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">8,5</text>
 <text x="68.00" y="506.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">0</text>
+<path d="M75.00 400.91L830.00 400.91" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="404.91" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">50</text>
+<path d="M75.00 299.81L830.00 299.81" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="303.81" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">100</text>
+<path d="M75.00 198.72L830.00 198.72" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="202.72" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">150</text>
+<path d="M75.00 97.62L830.00 97.62" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="68.00" y="101.62" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">200</text>
 <text x="452.50" y="549.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">Kolbengeschwindigkeit in m/s</text>
 <text x="0.00" y="0.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle" transform="translate(14.00 297.00) rotate(-90.00)">Entlüftungsgeschwindigkeit in m/s</text>
 <g clip-path="url(#clip0)">

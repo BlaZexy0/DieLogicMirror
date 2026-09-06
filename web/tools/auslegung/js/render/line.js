@@ -1,7 +1,7 @@
 /* Liniendiagramme: Serien, Grenzen (d.limits — Ausschlussflächen, Ziel-
    bänder, Referenzlinien), Ereignismarker, Betriebspunkt. */
 
-import { lineFrame, heading, axes, marker, fillRich, LEGEND_ROW, LEGEND_MAX_ROWS, LEGEND_TOP } from './base.js';
+import { lineFrame, heading, axes, ticks, marker, fillRich, LEGEND_ROW, LEGEND_MAX_ROWS, LEGEND_TOP } from './base.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 import { drawLimits, legendItems, drawLegendSwatch } from './limits.js';
@@ -78,14 +78,14 @@ export function drawLine(x, w, h, d) {
     x.strokeStyle = rc; x.globalAlpha = 0.6;
     x.beginPath(); x.moveTo(f.L + f.pw, f.T); x.lineTo(f.L + f.pw, f.T + f.ph); x.stroke();
     x.globalAlpha = 1;
-    for (let i = 0; i <= 5; i++) {
-      const yy = f.T + i * f.ph / 5;
+    for (const t of ticks(r0, r1)) {
       /* Beschriftung in Textfarbe: die Serienfarben erreichen auf Weiß nur
          1,98–4,14:1 (series4 sogar 2,22:1) und verfehlen damit den
          WCAG-Textkontrast. Die Zuordnung trägt die farbige Achse selbst
-         und der gestrichelte Kurvenzug. */
+         und der gestrichelte Kurvenzug. Eigene glatte Teilung der rechten
+         Skala; ihre Striche fallen nicht auf das Gitter der linken. */
       x.fillStyle = C.text; x.textAlign = 'left'; x.font = '11px Arial';
-      fillRich(x, fmt(r1 - i * (r1 - r0) / 5), f.L + f.pw + 7, yy + 4);
+      fillRich(x, fmt(t), f.L + f.pw + 7, YR(t) + 4);
     }
     if (d.rl) {
       x.save();

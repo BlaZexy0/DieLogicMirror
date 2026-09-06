@@ -80,6 +80,21 @@ test('pq2.html: bei einem Rechenfehler bleibt die Erklärgrafik stehen', () => {
   assert.match(block, /drawAny/, 'die Fehlermeldung gehört gezeichnet');
 });
 
+test('pq2.html: die Druckkette zeigt den Verlauf von Druck und Geschwindigkeit', () => {
+  /* Das erste Bild des Artikels war nur ein Schema der Bauteile; die
+     Bildunterschrift versprach einen Druckniveau-Verlauf, den es nicht
+     gab. Jetzt steht er unter dem Schema — über demselben Weg. */
+  const svg = read('assets/theorie/pq2-druckkette.svg');
+  assert.match(svg, /statischer Druck p/, 'Legende: Druck');
+  assert.match(svg, /Geschwindigkeit v/, 'Legende: Geschwindigkeit');
+  assert.match(svg, /Übersetzung A/, 'die Druckübersetzung am Kolbenpaar ist benannt');
+  for (const s of ['Druckspeicher', 'Antriebszylinder', 'Füllkammer', 'Anschnitt', 'Kavität']) {
+    assert.ok(svg.includes(s), 'Station ' + s);
+  }
+  const html = read('theorie/pq2.html');
+  assert.match(html, /Verlauf unten/, 'die Bildunterschrift erklärt den Verlauf');
+});
+
 /* ── Icons ────────────────────────────────────────────────────────────── */
 
 test('Icons kommen aus einem Sprite im Dokument, nicht aus externen Dateien', () => {
