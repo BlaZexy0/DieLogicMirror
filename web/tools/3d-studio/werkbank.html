@@ -265,8 +265,9 @@
       <button type="button" class="btn btn-outline block-btn" id="an-from-design" title="Legierung nach der Dichte, Füllzeit aus der Schusskurve, Zielgeschwindigkeit aus der Mitte des Zielbands — alles aus Schritt 6.">Prozess aus der Auslegung</button>
       <div class="hint">Lauflänge, Angussvolumen, Volumenstrom, Druckbedarf und die Ankunft der Schmelze
         stehen im <b>Flussschema</b> (Knopf rechts unten im Viewport). Mit der Schusskurve zählt
-        die Ankunft ab „Kammer voll": der Anguss füllt sich in der Rampe der zweiten Phase, nicht
-        mit dem mittleren Strom.</div>
+        die Ankunft ab Kolbenstart: erst die langsame erste Phase bis „Kammer voll", dann füllt
+        sich der Anguss in der Rampe der zweiten Phase — nicht mit dem mittleren Strom. Die
+        Füllung (Schritt 3) lässt jeden Anschnitt zu seiner Zeit öffnen.</div>
 
       <h2>Darstellung</h2>
       <div class="row">
@@ -321,10 +322,13 @@
       <button type="button" class="btn btn-outline block-btn" id="fu-run" disabled>Füllung neu rechnen</button>
       <div class="run-note" id="fu-run-note"></div>
       <div class="facts" id="fu-result-facts"></div>
+      <div class="warn-line" id="fu-time-note"></div>
       <div class="hint">Der <b>Füllgrad</b> einer Stelle ist der Anteil des Volumens, der voll ist, wenn die
-        Front sie erreicht — eine Reihenfolge, keine Zeit. Wo die Front zuletzt ankommt, sammelt
-        sich die Luft: dort gehören die Überläufe hin. Die zuletzt gefüllten Stellen bleiben im
-        nächsten Schritt als Marken stehen.</div>
+        Front sie erreicht. Die <b>Zeit</b> dazu kommt von der DieLogic-Schusskurve der Auslegung:
+        jeder Anschnitt öffnet, wenn ihn die Schmelze im Anguss erreicht (Schritt 2), und bis
+        dahin füllen nur die früheren — mit ihrem Anteil am Kolbenstrom. Wo die Front zuletzt
+        ankommt, sammelt sich die Luft: dort gehören die Überläufe hin; die zuletzt gefüllten
+        Stellen bleiben im nächsten Schritt als Marken stehen.</div>
 
       <h2>Darstellung</h2>
       <div class="seg" id="fu-show-seg">

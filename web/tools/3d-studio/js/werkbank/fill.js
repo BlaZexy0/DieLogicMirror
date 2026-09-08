@@ -18,8 +18,10 @@ import { writeSTL } from '../part/stlio.js';
 import { turbo } from '../part/colors.js';
 import * as M from '../fill/model.js';
 import { buildAll } from '../fill/geom.js';
-import { solveFill, fracToSurface, sampleFrac, fillBodyField, lastSpots } from '../fill/solve.js';
+import { fracToSurface, sampleFrac, fillBodyField, lastSpots } from '../fill/solve.js';
 import { cross, dot, norm, addScaled } from '../runner/vec.js';
+import { solveFillOffset } from './fillsolve.js';
+import { fillClock, openingFractions, unitsForFraction } from './filltime.js';
 import { setTris, download, safeName } from './common.js';
 
 const SUBTITLE = 'Füllung: die Schmelzefront läuft von den Anschnitten des Angusses durch das gerasterte Bauteil — Füllgrad, Füllkörper, die letzten Stellen.';
@@ -30,6 +32,9 @@ export function createFillStage(ctx) {
   const { view, busy } = ctx;
   const state = {
     plan: M.emptyPlan(), result: null, surf: null, field: null,
+    /* Die Uhr: die Schusskurve unter dem Anguss (curve) und, nach der
+       Rechnung, Zeiten ab Kolbenstart je Füllgrad und Anschnitt (timing). */
+    curve: null, timing: null,
     stale: true, computing: false, queued: false, active: false,
     show: 'farbe', q: 1, spots: { on: true, count: 5, list: [] }, ms: 0, alpha: 0.5
   };
@@ -63,6 +68,7 @@ export function createFillStage(ctx) {
       delete plan.items[it.id];
       it.id = m.id;
       it.bound = m.bound;
+      it.tArrive = m.tArrive;
       plan.items[m.id] = it;
       it.share = Math.round(m.share * 1000) / 10;
       /* Die Höhe des Anschnitts steht in der Ausstoßrichtung, die Breite
@@ -80,11 +86,13 @@ export function createFillStage(ctx) {
 
   function rebuild() {
     state.plan = planFromRunner();
+    state.curve = ctx.stages.anguss ? ctx.stages.anguss.curve() : null;
     setTris(inletMesh, buildAll(state.plan));
     inletMesh.visible = inletMesh.geometry.getAttribute('position')?.count > 0;
     updateInletFacts();
     state.stale = true;
     state.result = null;
+    state.timing = null;
     state.surf = null;
     updateResult();
     view.invalidate();
@@ -94,12 +102,19 @@ export function createFillStage(ctx) {
     const items = M.allItems(state.plan);
     const sh = M.shares(state.plan);
     const r = state.result;
-    const rows = items.map(it => [
-      '<code>' + it.id + '</code> ' + fmt(it.w, 0) + ' × ' + fmt(it.h, 1) + ' mm · ' + fmt(100 * (sh[it.id] || 0), 0) + ' %',
-      (it.bound ? '' : '⚠ frei ') + (r && !state.stale
+    const tm = state.timing && !state.stale ? state.timing : null;
+    const rows = items.map(it => {
+      let right = (it.bound ? '' : '⚠ frei ') + (r && !state.stale
         ? (() => { const inf = r.stats.inlets.find(x => x.id === it.id); return inf ? fmt(100 * inf.cells / Math.max(1, r.cells), 0) + ' % Vol.' + (inf.seeds <= 1 ? ' ⚠' : '') : '—'; })()
-        : '')
-    ]);
+        : '');
+      if (tm) {
+        const t = tm.tOpen[it.id];
+        right += Number.isFinite(t)
+          ? ' · öffnet bei ' + fmt(t * 1000, 0) + ' ms' + (tm.qOpen[it.id] > 0.005 ? ' (' + fmt(100 * tm.qOpen[it.id], 0) + ' % voll)' : '')
+          : ' · Kurve endet vorher';
+      }
+      return ['<code>' + it.id + '</code> ' + fmt(it.w, 0) + ' × ' + fmt(it.h, 1) + ' mm · ' + fmt(100 * (sh[it.id] || 0), 0) + ' %', right];
+    });
     facts('fu-inlet-facts', rows);
     facts('fu-menu-facts', rows);
     $('fu-pt-sel').textContent = items.length ? items.length + (items.length === 1 ? ' Anschnitt' : ' Anschnitte') + ' aus dem Anguss' : 'Noch kein Anschnitt';
@@ -122,11 +137,38 @@ export function createFillStage(ctx) {
       const t0 = performance.now();
       const m = ctx.part.model;
       const wall = m.totalArea > 0 ? 2 * m.volume / m.totalArea : null;
-      const res = await solveFill(field, state.plan, {
-        alpha: state.plan.alpha, wallThickness: wall,
-        onProgress: p => { busy.textContent = 'Füllung … ' + Math.round(p * 100) + ' %'; busy.classList.add('on'); }
-      });
+      const onProgress = p => { busy.textContent = 'Füllung … ' + Math.round(p * 100) + ' %'; busy.classList.add('on'); };
+      let res = await solveFillOffset(field, state.plan, { alpha: state.plan.alpha, wallThickness: wall, onProgress });
+      /* Mit Uhr: jeder Anschnitt öffnet zu seiner Zeit. Aus dem ersten Lauf
+         kommt, welcher Füllgrad welcher Ankunftseinheit entspricht; daraus
+         der Vorsprung der früheren Anschnitte, und ein zweiter Lauf damit. */
+      let timing = null;
+      const cv = state.curve;
+      if (cv && cv.onCurve && cv.timeline && !cv.timeline.error) {
+        const sh = M.shares(state.plan);
+        const clock = fillClock(cv.timeline, items.map(it => ({ id: it.id, tArrive: it.tArrive, share: sh[it.id] || 0 })));
+        if (clock) {
+          const vol = res.stats.volume * 1e-9;
+          const qOpen = openingFractions(clock, vol);
+          const units = unitsForFraction(res.arrival);
+          const offsets = {};
+          let any = false;
+          for (const it of items) { offsets[it.id] = units(qOpen[it.id]); if (offsets[it.id] > 0) any = true; }
+          if (any) {
+            busy.textContent = 'Füllung mit Vorsprung …';
+            res = await solveFillOffset(field, state.plan, { alpha: state.plan.alpha, wallThickness: wall, onProgress, offsets });
+          }
+          const tEnd = clock.timeAtVolume(vol);
+          timing = {
+            clock, vol, qOpen, offsets, tFirst: clock.tFirst, tEnd,
+            tOpen: Object.fromEntries(clock.gates.map(g => [g.id, g.t])),
+            tFull: cv.timeline.tFull, shotFill: cv.timeline.shot.fill,
+            timeAt: q => clock.timeAtVolume(Math.max(0, Math.min(1, q)) * vol)
+          };
+        }
+      }
       state.result = res;
+      state.timing = timing;
       state.surf = fracToSurface(field, res.frac);
       state.stale = false;
       state.ms = performance.now() - t0;
@@ -212,11 +254,14 @@ export function createFillStage(ctx) {
     inletMesh.visible = state.active && !!inletMesh.geometry.getAttribute('position') && inletMesh.geometry.getAttribute('position').count > 0;
     $('fu-q-row').classList.toggle('disabled', !state.result);
     if (state.active) {
+      const tm = state.timing;
       colorbar(state.result && state.show !== 'grau' ? {
         title: 'Füllgrad',
         stops: gradient(t => rgbCss(turbo(t))),
-        ticks: [100, 75, 50, 25, 0].map(v => v + ' %')
+        ticks: [100, 75, 50, 25, 0].map(v => v + ' %'),
+        extra: tm ? fmt(tm.tFirst * 1000, 0) + ' – ' + (tm.tEnd === null ? '?' : fmt(tm.tEnd * 1000, 0)) + ' ms ab Kolbenstart' : ''
       } : null);
+      $('fu-q-val').textContent = qLabel(+$('fu-q').value);
     }
     view.invalidate();
   }
@@ -226,13 +271,15 @@ export function createFillStage(ctx) {
     const items = M.allItems(state.plan);
     const note = $('fu-run-note');
     $('fu-run').disabled = !items.length || state.computing || !ctx.part.model;
-    if (!items.length) { note.textContent = ''; note.className = 'run-note'; facts('fu-result-facts', []); return; }
+    if (!items.length) { note.textContent = ''; note.className = 'run-note'; facts('fu-result-facts', []); $('fu-time-note').textContent = ''; return; }
     if (!r) {
       note.textContent = state.computing ? 'Rechnet …' : 'Der Plan ist noch nicht gerechnet.';
       note.className = 'run-note stale';
       facts('fu-result-facts', []);
+      $('fu-time-note').textContent = '';
       return;
     }
+    const tm = state.timing;
     const dauer = state.ms >= 1000 ? fmt(state.ms / 1000, 1) + ' s' : fmt(state.ms, 0) + ' ms';
     note.textContent = (state.stale ? 'Der Anguss hat sich geändert — rechnet nach …' : 'Gerechnet in ' + dauer + ' · α = ' + fmt(r.stats.alpha, 1))
       + (r.stats.unreached ? ' · ⚠ ' + fmt(r.stats.unreached, 0) + ' Zellen nicht erreicht' : '');
@@ -243,11 +290,26 @@ export function createFillStage(ctx) {
       ['Fließweg / Wanddicke', fmt(r.stats.flowRatio, 0) + ' : 1' + (r.stats.flowRatio > 300 ? ' ⚠' : '')],
       ['Volumen im Raster', fmt(r.stats.volume / 1000, 1) + ' cm³']
     ];
+    if (tm) {
+      const opens = tm.clock.gates.filter(g => g.open).map(g => g.t);
+      rows.push(['Anschnitte öffnen', (opens.length > 1 && Math.max(...opens) - Math.min(...opens) > 5e-4
+        ? fmt(tm.tFirst * 1000, 0) + ' – ' + fmt(Math.max(...opens) * 1000, 0) : fmt(tm.tFirst * 1000, 0)) + ' ms ab Kolbenstart']);
+      rows.push(['Bauteil voll', tm.tEnd === null ? 'die Kurve endet vorher' : 'bei ' + fmt(tm.tEnd * 1000, 0) + ' ms']);
+      if (tm.tEnd !== null) rows.push(['Füllzeit Bauteil', fmt((tm.tEnd - tm.tFirst) * 1000, 0) + ' ms']);
+      if (Number.isFinite(tm.shotFill)) rows.push(['Füllzeit Auslegung', fmt(tm.shotFill, 0) + ' ms (Anguss → Überlauf gefüllt)']);
+    }
     if (state.spots.list.length) {
       const s = state.spots.list[0];
-      rows.push(['letzte Stelle', fmt(100 * s.frac, 0) + ' % · ' + s.x.toFixed(0) + ' / ' + s.y.toFixed(0) + ' / ' + s.z.toFixed(0)]);
+      const at = tm && tm.tEnd !== null ? tm.timeAt(s.frac) : null;
+      rows.push(['letzte Stelle', fmt(100 * s.frac, 0) + ' %' + (at !== null && at !== undefined ? ' · ' + fmt(at * 1000, 0) + ' ms' : '')
+        + ' · ' + s.x.toFixed(0) + ' / ' + s.y.toFixed(0) + ' / ' + s.z.toFixed(0)]);
     }
     facts('fu-result-facts', rows);
+    const tnote = $('fu-time-note');
+    if (!state.curve || !state.curve.onCurve) tnote.textContent = 'Ohne Schusskurve keine Zeiten — im Schritt Anguss „Ankunft nach der DieLogic-Schusskurve" anhaken.';
+    else if (state.curve.timeline && state.curve.timeline.error) tnote.textContent = 'Keine DieLogic-Kurve (' + state.curve.timeline.error + ') — die Füllung läuft ohne Uhr.';
+    else if (tm && tm.tEnd === null) tnote.textContent = 'Die Schusskurve endet, bevor das Bauteil voll ist — Kurvenhub in der Auslegung prüfen.';
+    else tnote.textContent = '';
     $('fu-grid-note').textContent = state.field
       ? 'Zellkante ' + fmt(state.field.h, 2) + ' mm · Raster ' + state.field.dims.join(' × ') + ' (das Abstandsfeld des Bauteils, Zellkante im Schritt Bauteil).'
       : 'Das Raster ist das Abstandsfeld des Bauteils (Zellkante im Schritt Bauteil).';
@@ -257,7 +319,14 @@ export function createFillStage(ctx) {
   slider('fu-alpha', v => { state.alpha = v; state.plan.alpha = v; if (state.active && state.result) { state.stale = true; compute(); } }, v => fmt(v, 1));
   $('fu-run').addEventListener('click', compute);
   segButtons('fu-show-seg', v => { state.show = v; paintPart(); updateBody(); applyVisibility(); });
-  slider('fu-q', v => { state.q = v / 100; paintPart(); updateBody(); applyVisibility(); }, v => v + ' %');
+  /* Der Regler nennt zum Füllgrad die Zeit ab Kolbenstart, wenn es eine gibt. */
+  function qLabel(v) {
+    const tm = state.timing;
+    if (!tm || state.stale) return v + ' %';
+    const t = tm.timeAt(v / 100);
+    return v + ' %' + (t === null || t === undefined ? '' : ' · ' + fmt(t * 1000, 0) + ' ms');
+  }
+  slider('fu-q', v => { state.q = v / 100; paintPart(); updateBody(); applyVisibility(); }, qLabel);
   $('fu-spots-on').addEventListener('change', e => { state.spots.on = e.target.checked; updateSpots(); updateFacts(); applyVisibility(); ctx.emit('fill', state); });
   slider('fu-spots-count', v => { state.spots.count = v; updateSpots(); updateFacts(); applyVisibility(); ctx.emit('fill', state); }, v => String(v));
   slider('fu-ref-opacity', () => applyVisibility(), v => v + ' %');

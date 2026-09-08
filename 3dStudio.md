@@ -73,7 +73,11 @@ assembles (Formaufbau).
   times onto the DieLogic shot curve (arrival × Q = volume past the
   biscuit → plunger travel after "Kammer voll" → time from the profile;
   curve generated for the model's masses with the design state's machine
-  and alloy). `design.js` runs the real Auslegung modules
+  and alloy; times absolute from piston start). `filltime.js` gives the
+  fill estimate the same clock (cavity inflow = piston flow × open gate
+  shares, so fill fraction ↔ time and each later gate's head start), and
+  `fillsolve.js` is the fill solver with per-inlet start offsets (two
+  passes: map fraction to solver units, then re-solve with offsets). `design.js` runs the real Auslegung modules
   (`state.js` on `window.__PROJECT__`, `ui/inputs.js`, `ui/kpis.js`,
   `charts/registry.js`) in an overlay over the viewport.
 

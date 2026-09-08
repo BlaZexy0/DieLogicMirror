@@ -109,13 +109,16 @@ test('Anguss: die Ankunft steht nach der DieLogic-Schusskurve — ab Kammer voll
     /* Die Substitution: Ankunft bei konstantem Strom mal Strom ist das
        Volumen am Pressrest, und das hat auf der Kurve seine eigene Zeit. */
     const V = konst.tArrive * r.state.flow.Q;
-    assert.ok(Math.abs(g.tArrive - tl.timeForVolume(V)) < 1e-9, 'Kurvenzeit zum Volumen ' + V);
+    assert.ok(Math.abs(g.tArrive - (tl.tFull + tl.timeForVolume(V))) < 1e-9, 'Kurvenzeit ab Kolbenstart zum Volumen ' + V);
+    assert.ok(g.tArrive > tl.tFull, 'nach Kammer voll');
     assert.ok(Math.abs(g.tArrive - konst.tArrive) > 1e-4, 'die Kurve gibt eine andere Zeit als der mittlere Strom (Prozess 45 ms, Kurve '
       + tl.shot.fill.toFixed(0) + ' ms)');
   }
   assert.ok(Math.abs(shown.tRunner - shown.tLast) < 1e-12);
   const facts = doc.getElementById('an-chart-facts').innerHTML;
-  assert.ok(facts.includes('ab Kammer voll') && facts.includes('DieLogic-Kurve'), 'die Kennzahlen nennen die Kurve');
+  assert.ok(facts.includes('ab Kolbenstart') && facts.includes('DieLogic-Kurve'), 'die Kennzahlen nennen die Kurve');
+  const mouths = r.gateMouths();
+  assert.ok(mouths.every(m => Number.isFinite(m.tArrive) && m.tArrive > tl.tFull), 'die Mündungen tragen die Ankunft für die Füllung');
   assert.ok(doc.getElementById('an-shot-facts').innerHTML.includes('Kammer voll'), 'die Seitenleiste zeigt die Kurve');
   /* Die Prüfregel der Spanne misst an der Füllzeit der Kurve. */
   assert.equal(shown.fillTime, tl.shot.fill);
@@ -181,6 +184,57 @@ test('Füllung: das gemeinsame Feld wird gerechnet und die Front läuft', async 
   assert.ok(r.stats.maxPath > 100, 'Fließweg gemessen');
   assert.ok(f.state.spots.list.length > 0, 'zuletzt gefüllte Stellen gefunden');
   assert.ok(doc.getElementById('fu-result-facts').innerHTML.includes('Fließweg'));
+});
+
+test('Füllung: die Uhr läuft ab Kolbenstart, und ein späterer Anschnitt startet mit Vorsprung der früheren', async () => {
+  const f = W.stages.fuellung;
+  const tm = f.state.timing;
+  assert.ok(tm, 'Zeiten aus der Schusskurve');
+  const opens = Object.values(tm.tOpen);
+  assert.ok(Math.abs(tm.tFirst - Math.min(...opens)) < 1e-12, 'die Uhr beginnt mit dem ersten Anschnitt');
+  assert.ok(tm.tFirst > tm.tFull, 'nach Kammer voll');
+  assert.ok(tm.tEnd !== null && tm.tEnd > tm.tFirst, 'das Bauteil wird voll: ' + tm.tEnd);
+  assert.ok(Math.abs(tm.timeAt(0) - tm.tFirst) < 1e-12 && Math.abs(tm.timeAt(1) - tm.tEnd) < 1e-9, 'Füllgrad ↔ Zeit');
+  assert.ok(tm.timeAt(0.5) > tm.tFirst && tm.timeAt(0.5) < tm.tEnd);
+  assert.ok(Number.isFinite(tm.shotFill) && tm.shotFill > 0, 'die Füllzeit der Auslegung steht dabei');
+  const html = doc.getElementById('fu-result-facts').innerHTML;
+  assert.ok(html.includes('Kolbenstart') && html.includes('Füllzeit Auslegung'), 'die Kennzahlen nennen die Uhr');
+  assert.ok(doc.getElementById('fu-inlet-facts').innerHTML.includes('öffnet bei'));
+  assert.equal(doc.getElementById('fu-time-note').textContent, '');
+  /* Zwei symmetrische Anschnitte öffnen zugleich: kein Vorsprung. */
+  assert.ok(Object.values(tm.offsets).every(o => o === 0), 'symmetrisch: ' + JSON.stringify(tm.offsets));
+  /* Ungleich aufgeteilt (70 : 30): der Ast mit dem kleineren Anteil füllt
+     sich langsamer, sein Anschnitt öffnet später — mit Vorsprung des anderen. */
+  const r = W.stages.anguss;
+  const br = Object.values(r.state.graph.nodes).find(n => n.type === 'branch');
+  br.ratio = 0.7;
+  r.rebuild();
+  await until(() => f.state.result && !f.state.stale && !f.state.computing && f.state.timing
+    && Object.values(f.state.timing.offsets).some(o => o > 0), 4000, 'Füllung mit ungleicher Aufteilung');
+  const t2 = f.state.timing;
+  const ids = Object.keys(t2.tOpen);
+  assert.equal(ids.length, 2);
+  const late = ids.filter(id => t2.tOpen[id] > t2.tFirst + 1e-6);
+  assert.equal(late.length, 1, 'genau ein Anschnitt öffnet später: ' + JSON.stringify(t2.tOpen));
+  for (const id of late) {
+    assert.ok(t2.qOpen[id] > 0 && t2.offsets[id] > 0, id + ' startet mit Vorsprung des anderen');
+    const inf = f.state.result.stats.inlets.find(i => i.id === id);
+    assert.equal(inf.offset, t2.offsets[id], 'der Vorsprung steht in der Rechnung');
+    const early = f.state.result.stats.inlets.find(i => i.id !== id);
+    assert.ok(early.cells > inf.cells, 'der frühere Anschnitt füllt mehr: ' + early.cells + ' > ' + inf.cells);
+  }
+  assert.ok(doc.getElementById('fu-inlet-facts').innerHTML.includes('% voll)'), 'die Seitenleiste nennt den Vorsprung');
+  br.ratio = 0.5;
+  r.rebuild();
+  /* Ohne Kurve: keine Uhr, ein Hinweis. */
+  const cb = doc.getElementById('an-shot-time');
+  cb.checked = false; cb.dispatch('change');
+  await until(() => f.state.result && !f.state.stale && !f.state.computing, 4000, 'Füllung ohne Kurve');
+  assert.equal(f.state.timing, null);
+  assert.ok(doc.getElementById('fu-time-note').textContent.includes('Ohne Schusskurve'));
+  cb.checked = true; cb.dispatch('change');
+  W.stages.anguss.propose(2, false);
+  await until(() => f.state.result && !f.state.stale && !f.state.computing && f.state.timing, 4000, 'Füllung wieder mit zwei');
 });
 
 test('Überläufe: ein Element am Bauteil vergrößert das Gussvolumen des Angusses', () => {
@@ -273,7 +327,9 @@ test('Werkbank-Datei: alle Pläne hin und zurück', async () => {
   W.stages.anguss.propose(1, false);
   assert.equal(Object.keys(W.stages.ueberlauf.state.plan.items).length, 0);
   await W.loadWerkbank(JSON.parse(text));
-  assert.equal(Object.values(W.stages.anguss.state.graph.nodes).filter(n => n.type === 'gate').length, 2, 'der Anguss ist zurück');
+  const typesNow = Object.values(W.stages.anguss.state.graph.nodes).map(n => n.type + (n.parent ? '' : '*'));
+  assert.equal(Object.values(W.stages.anguss.state.graph.nodes).filter(n => n.type === 'gate').length, 2,
+    'der Anguss ist zurück: ' + typesNow.join(',') + ' aus ' + Object.values(json.anguss.nodes || {}).map(n => n.type).join(','));
   assert.equal(Object.keys(W.stages.ueberlauf.state.plan.items).length, 1, 'die Überläufe sind zurück');
   assert.ok(Object.keys(W.stages.temperier.state.plan.items).length >= 4, 'die Temperierung ist zurück');
   /* Eine fremde Kennung wird abgewiesen, eine Plandatei geht an ihren Schritt. */

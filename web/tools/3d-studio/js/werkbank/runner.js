@@ -216,7 +216,7 @@ export function createRunnerStage(ctx) {
         + (Number.isFinite(tl.tN) ? ' (NADCA ' + fmt(tl.tN, 0) + ' ms)' : '')]
     ];
     if (fl && fl.onCurve) {
-      rows.push(['Anguss voll', fl.tRunner !== null ? 'nach ' + fmt(fl.tRunner * 1000) + ' ms'
+      rows.push(['Anguss voll', fl.tRunner !== null ? 'bei ' + fmt(fl.tRunner * 1000, 0) + ' ms ab Kolbenstart'
         : 'die Kurve endet vorher (' + fl.unreached.join(', ') + ')']);
     }
     if (Number.isFinite(sh.fill) && Math.abs(sh.fill - state.proc.fillTime) > 0.5) {
@@ -241,7 +241,7 @@ export function createRunnerStage(ctx) {
     if (gates.length && Number.isFinite(fl.tFirst)) {
       rows.push(['Ankunft', (gates.length > 1
         ? fmt(fl.tFirst * 1000) + ' – ' + fmt(fl.tLast * 1000) + ' ms'
-        : fmt(fl.tFirst * 1000) + ' ms') + (fl.onCurve ? ' ab Kammer voll' : ' bei konstantem Strom')]);
+        : fmt(fl.tFirst * 1000) + ' ms') + (fl.onCurve ? ' ab Kolbenstart' : ' bei konstantem Strom')]);
     }
     if (fl.onCurve && state.timeline) {
       rows.push(['Schusskurve', 'DieLogic-Kurve · Kammer voll bei ' + fmt(state.timeline.tFull * 1000, 0) + ' ms · v₂ '
@@ -443,7 +443,7 @@ export function createRunnerStage(ctx) {
         rows.push(['Anschnittfläche', fmt(r.area, 0) + ' mm²']);
         rows.push(['Anteil Soll/Ist', fmt(r.soll * 100, 0) + ' / ' + fmt(r.ist * 100, 0) + ' %']);
         rows.push(['Ankunft', Number.isFinite(r.tArrive)
-          ? fmt(r.tArrive * 1000) + ' ms' + (fl.onCurve ? ' ab Kammer voll' : '')
+          ? fmt(r.tArrive * 1000) + ' ms' + (fl.onCurve ? ' ab Kolbenstart' : '')
           : 'die Kurve endet vorher']);
       }
       const e = state.net.edges.find(x => x.toId === id);
@@ -766,16 +766,27 @@ export function createRunnerStage(ctx) {
   function gateMouths() {
     const g = state.graph, net = state.net, fl = state.flow;
     if (!net || !fl) return [];
+    const shown = state.flowShown || fl;
     const out = [];
     for (const n of G.allNodes(g)) {
       if (n.type !== 'gate') continue;
       const e = net.edges.find(x => x.toId === n.id);
       const t = e && e.sections.length ? e.sections[e.sections.length - 1].t : G.chordDir(g, n);
       const r = fl.gates.find(x => x.id === n.id);
+      const rs = shown.gates.find(x => x.id === n.id);
       out.push({ id: n.id, pos: n.pos.slice(), dir: t.slice(), w: n.gate.w, h: n.gate.h,
-        share: r ? r.ist : 1 / Math.max(1, fl.gates.length), bound: !!n.aim || G.isFollower(g, n.id) });
+        share: r ? r.ist : 1 / Math.max(1, fl.gates.length), bound: !!n.aim || G.isFollower(g, n.id),
+        /* Ankunft ab Kolbenstart auf der Schusskurve — NaN, wenn die Kurve
+           vorher endet; ohne Kurve gibt es keine Zeit. */
+        tArrive: shown.onCurve && rs ? rs.tArrive : NaN });
     }
     return out;
+  }
+
+  /** Die Schusskurve unter diesem Anguss — für die Uhr der Füllung. */
+  function curve() {
+    const on = !!(state.flowShown && state.flowShown.onCurve);
+    return { onCurve: on, timeline: on ? state.timeline : null };
   }
 
   /** Gussvolumen in mm³ — Anguss und Pressrest, für die Auslegung. */
@@ -823,7 +834,7 @@ export function createRunnerStage(ctx) {
       applyVisibility();
       ctx.part.applyOpacity(ctx.part.opacity);
     },
-    propose, rebuild, loadJSON, adoptGraph, gateMouths, volumes, startAim, openChart,
+    propose, rebuild, loadJSON, adoptGraph, gateMouths, curve, volumes, startAim, openChart,
     toJSON: () => (state.graph.rootId ? G.toJSON(state.graph) : null),
     procJSON: () => ({ ...state.proc, sizing: { ...state.sizing }, volAuto: state.volAuto, onCurve: state.onCurve }),
     setProc(p) {

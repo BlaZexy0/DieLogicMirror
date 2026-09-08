@@ -69,14 +69,18 @@ export function shotTimeline(values, volumesMm3 = {}) {
  * Die Ankunftszeiten einer Strömungsrechnung auf die Zeitachse legen.
  *   flow      Ergebnis von analyseFlow (arrival in s bei konstantem Q in m³/s)
  *   timeline  aus shotTimeline
- * → { arrival: {id → s ab „Kammer voll" | null}, gates: [{…r, tArrive}],
+ * → { arrival: {id → s ab Kolbenstart | null}, gates: [{…r, tArrive}],
  *     tFirst, tLast, unreached: [ids], tRunner } — tRunner ist die Zeit,
  *   zu der der letzte Anschnitt erreicht ist (der Anguss ist voll).
+ *   Alle Zeiten ab Kolbenstart (timeline.tFull + Zeit ab „Kammer voll").
  */
 export function shotArrivals(flow, timeline) {
+  /* Ab Kolbenstart, nicht ab „Kammer voll": die Zeit der Kurve. */
+  const t0 = Number.isFinite(timeline.tFull) ? timeline.tFull : 0;
   const arrival = {};
   for (const [id, t] of Object.entries(flow.arrival || {})) {
-    arrival[id] = timeline.timeForVolume(t * flow.Q);
+    const rel = timeline.timeForVolume(t * flow.Q);
+    arrival[id] = rel === null || rel === undefined ? null : rel + t0;
   }
   const unreached = [];
   const gates = flow.gates.map(r => {

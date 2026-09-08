@@ -1247,8 +1247,21 @@ Was zwischen den Schritten wandert:
   Volumen des Modells. Die Ankunft bei konstantem Strom ist ein Volumen,
   das den Pressrest passiert hat; auf der Kurve ist das ein Kolbenweg
   hinter „Kammer voll", und das Profil kennt die Zeit dazu. Die Zeiten
-  zählen ab „Kammer voll"; das Häkchen „Ankunft nach der
+  zählen ab Kolbenstart; das Häkchen „Ankunft nach der
   DieLogic-Schusskurve" schaltet auf den konstanten Strom zurück.
+- **Anguss + Auslegung → Füllung:** die Füllabschätzung bekommt dieselbe
+  Uhr (`js/werkbank/filltime.js`): ab dem ersten Anschnitt strömt der
+  Kolbenstrom in die Kavität, aber nur der Anteil der schon offenen
+  Anschnitte — die übrigen Äste füllen noch den Anguss. Daraus folgt zu
+  jedem Füllgrad eine Zeit ab Kolbenstart (Regler, Farbskala, letzte
+  Stellen) und zu jedem später öffnenden Anschnitt der **Vorsprung**, den
+  die früheren bis dahin haben. Die Frontausbreitung läuft dann zweimal
+  (`js/werkbank/fillsolve.js`, die Rechnung aus `js/fill/solve.js` mit
+  Startversatz je Anschnitt): einmal ohne Versatz, um Füllgrad und
+  Ankunftseinheit aufeinander abzubilden, dann mit dem Vorsprung an den
+  Startzellen der späteren Anschnitte. Die Kennzahlen nennen Öffnen der
+  Anschnitte, „Bauteil voll", die Füllzeit des Bauteils und daneben die
+  Füllzeit der Auslegung (Anguss → Überlauf gefüllt auf derselben Kurve).
 - **Modell → Auslegung:** Bauteil-, Anguss-, Überlauf- und Pressrestgewicht
   (Volumen × Dichte bei Solidus), Anschnittfläche und -dicke, Wandstärke
   (2V/A, dickste Stelle) und die Sprengfläche (Projektion aller Kavitäten

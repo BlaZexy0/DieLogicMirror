@@ -57,20 +57,22 @@ test('shotArrivals: die Substitution Zeit × Strom → Volumen → Kurvenzeit', 
   /* Eine Kurve, die das Volumen mit dem Strom Qc herausschiebt — dann
      müssen genau die Zeiten des konstanten Stroms herauskommen. */
   const Qc = 0.02;
-  const tl = { timeForVolume: V => V / Qc, shot: { fill: 60 } };
+  const tl = { tFull: 1.5, timeForVolume: V => V / Qc, shot: { fill: 60 } };
   const flow = {
     Q: Qc, fillTime: 45,
     arrival: { k1: 0, k2: 0.004, k5: 0.011, k7: 0.011 },
     gates: [{ id: 'k5', tArrive: 0.011 }, { id: 'k7', tArrive: 0.011 }]
   };
   const a = shotArrivals(flow, tl);
-  assert.ok(Math.abs(a.arrival.k2 - 0.004) < 1e-12);
-  assert.ok(Math.abs(a.gates[0].tArrive - 0.011) < 1e-12);
+  /* Ab Kolbenstart: „Kammer voll" bei 1,5 s kommt dazu. */
+  assert.ok(Math.abs(a.arrival.k2 - 1.504) < 1e-12);
+  assert.ok(Math.abs(a.gates[0].tArrive - 1.511) < 1e-12);
   assert.equal(a.unreached.length, 0);
-  assert.equal(a.tRunner, 0.011);
-  /* Halbe Strömung auf der Kurve: doppelte Zeiten. */
+  assert.ok(Math.abs(a.tRunner - 1.511) < 1e-12);
+  assert.ok(Math.abs(a.tLast - a.tFirst) < 1e-12, 'die Spanne hängt nicht am Nullpunkt');
+  /* Halbe Strömung auf der Kurve: doppelte Zeiten ab Kammer voll. */
   const slow = shotArrivals(flow, { timeForVolume: V => V / (Qc / 2) });
-  assert.ok(Math.abs(slow.gates[1].tArrive - 0.022) < 1e-12);
+  assert.ok(Math.abs(slow.gates[1].tArrive - 0.022) < 1e-12, 'ohne tFull ab Kammer voll');
   /* Endet die Kurve vorher, ist der Anschnitt „nicht erreicht" und das Schema zeigt keine Zeit. */
   const cut = shotArrivals(flow, { timeForVolume: V => (V > 1e-4 ? null : V / Qc) });
   assert.deepEqual(cut.unreached, ['k5', 'k7']);
