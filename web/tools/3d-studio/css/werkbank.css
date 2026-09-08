@@ -1,0 +1,114 @@
+/* Werkbank (werkbank.html): Schrittleiste, Schrittfeld, ein Viewport —
+   und darüber, im letzten Schritt, das Auslegungs-Dashboard.
+
+   Die Seite lädt DREI Stilblätter der Nachbarn: viewer.css (Seitenleiste,
+   Regler, Auswahlfeld, Viewport) für die 3D-Schritte, main.css der
+   Auslegung für Karten, Kennzahlen und Eingabefelder des Dashboards, und
+   diese Datei für das, was nur hier vorkommt. main.css setzt ein paar
+   Dinge global (input, select, body-Schrift), die hier zurückgenommen
+   werden, wo sie den Viewer-Reglern in die Quere kämen. */
+
+body.werkbank { font-family: var(--sans); font-size: 14px; }
+
+/* ── Raster: Schrittleiste · Schrittfeld · Viewport ─────────── */
+.wb-layout {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: 82px 340px minmax(0, 1fr);
+}
+@media (max-width: 1100px) {
+  .wb-layout { grid-template-columns: 72px 290px minmax(0, 1fr); }
+}
+
+/* ── Schrittleiste ───────────────────────────────────────────── */
+.wb-rail {
+  display: flex; flex-direction: column; gap: 2px; padding: 8px 0 0;
+  background: var(--dark); border-right: 1px solid var(--dark3); overflow-y: auto;
+}
+.wb-step {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 11px 4px 9px; border: 0; border-left: 3px solid transparent; background: none;
+  color: var(--ondark); cursor: pointer; text-align: center;
+  font-family: var(--sans); font-size: .64rem; font-weight: 600; line-height: 1.1; letter-spacing: .02em;
+  transition: background .15s, color .15s;
+}
+.wb-step svg { width: 24px; height: 24px; flex-shrink: 0; }
+.wb-step span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-step:hover { color: #fff; background: rgba(255,255,255,.06); }
+.wb-step.active { color: #fff; background: rgba(0,140,130,.22); border-left-color: var(--primary-light); }
+.wb-step .wb-num {
+  position: absolute; top: 4px; left: 6px;
+  font-family: var(--mono); font-size: .58rem; font-weight: 600; color: var(--ondark2);
+}
+.wb-step.active .wb-num { color: var(--primary-light); }
+/* Der Punkt sagt, ob der Schritt schon etwas hat: Ergebnis (grün), rechnet (gold). */
+.wb-step .wb-dot {
+  position: absolute; top: 7px; right: 8px; width: 7px; height: 7px; border-radius: 50%;
+  background: transparent; transition: background .2s;
+}
+.wb-step.done .wb-dot { background: var(--primary-light); }
+.wb-step.busy .wb-dot { background: var(--gold); }
+.wb-rail-foot {
+  margin-top: auto; display: flex; flex-direction: column; gap: 4px;
+  padding: 8px 6px 8px; border-top: 1px solid var(--dark3);
+}
+.wb-rail-foot button {
+  border: 1px solid var(--dark3); background: rgba(255,255,255,.05); color: var(--ondark);
+  border-radius: 6px; padding: .35rem .2rem; cursor: pointer;
+  font-family: var(--sans); font-size: .64rem; font-weight: 600;
+}
+.wb-rail-foot button:hover { color: #fff; border-color: var(--primary-light); }
+
+/* ── Schrittfeld: die Seitenleiste des aktiven Schritts ──────── */
+.wb-stage.hidden { display: none; }
+.wb-stage > h2:first-child { margin-top: 4px; }
+
+/* ── Viewport-Aufsätze, die nur ein Schritt zeigt ────────────── */
+.pt-menu.wb-off, .chart-btn.wb-off, .chart-panel.wb-off { display: none; }
+.designer #an-axis-seg button { font-family: var(--mono); letter-spacing: .01em; }
+
+/* ── Das Dashboard über dem Viewport ─────────────────────────── */
+.wb-dash {
+  position: absolute; inset: 0; z-index: 5; overflow: auto;
+  background: var(--bg); padding: 14px 18px 32px;
+}
+.wb-dash.hidden { display: none; }
+.wb-dash h2 { font-size: 1.05rem; margin: 20px 0 4px; color: var(--text); }
+.wb-dash .sub { margin: 0 0 12px; color: var(--muted); font-size: .84rem; }
+.wb-dash .summary { margin: 14px 0 22px; }
+
+/* Übernahmetabelle: Häkchen · Größe · Wert · Einheit, darunter die Quelle. */
+.au-transfer { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 2px 8px; align-items: center; margin-top: 4px; }
+.au-transfer input[type="checkbox"] { accent-color: var(--primary); margin: 0; }
+.au-transfer .k { font-size: .82rem; color: var(--text-body); }
+.au-transfer .v { font-family: var(--mono); font-size: .8rem; color: var(--text); text-align: right; white-space: nowrap; }
+.au-transfer .v.na { color: var(--muted-light); }
+.au-transfer .u { font-size: .74rem; color: var(--muted); }
+.au-transfer small { grid-column: 2 / 5; font-size: .7rem; color: var(--muted-light); line-height: 1.3; margin: -1px 0 4px; }
+.au-transfer .k.changed, .au-transfer .v.changed { color: var(--primary-deep); }
+
+/* Preset-Auswahlen und Eingabefelder des Dashboards im schmalen Feld. */
+.au-fields .field { margin-bottom: 8px; }
+#stage-auslegung .field select, #stage-auslegung .field input { width: 100%; padding: 7px; font: inherit; }
+#stage-auslegung .groups { display: block; }
+#stage-auslegung .group, #stage-auslegung .group.wide { margin-bottom: 11px; }
+#stage-auslegung .fields, #stage-auslegung .chamber-grid { grid-template-columns: 1fr; }
+#stage-auslegung .group-note { display: block; }
+#stage-auslegung .ctab { width: 100%; border-collapse: collapse; font-size: .8rem; }
+#stage-auslegung .ctab th { text-align: left; font-weight: 600; color: var(--muted); padding: 2px 4px; }
+#stage-auslegung .ctab td { padding: 2px 4px; }
+#stage-auslegung .ctab input { padding: 4px 6px; }
+#stage-auslegung .row-add { margin-top: 6px; }
+
+/* ── main.css zurücknehmen, wo es die Viewer-Regler träfe ────── */
+.werkbank input[type="range"], .werkbank input[type="checkbox"], .werkbank input[type="radio"], .werkbank input[type="file"] {
+  width: auto; padding: 0; border: 0; border-radius: 0; background: none;
+}
+.werkbank .row input[type="range"] { flex: 1; }
+.werkbank .wb-stage:not(#stage-auslegung) input[type="text"] { width: auto; }
+.werkbank .pt-menu input[type="text"] { width: auto; }
+.werkbank .wb-stage:not(#stage-auslegung) select, .werkbank .pt-menu select {
+  width: auto; padding: .3rem .4rem; font-size: .82rem;
+}
+.werkbank .pt-menu .btn-pair button, .werkbank .pt-menu > button { width: auto; }
+.werkbank aside h2 { margin: 20px 0 8px; }
+.werkbank .designer aside h2 { margin: 15px 0 6px; }

@@ -67,6 +67,7 @@
     ] },
     { label: '3D-Studio', children: [
       { label: 'Übersicht', href: '/tools/3d-studio/' },
+      { label: 'Werkbank', href: '/tools/3d-studio/werkbank.html' },
       { label: 'Formaufbau', href: '/tools/3d-studio/form.html' },
       { label: 'Entformungsanalyse', href: '/tools/3d-studio/entformungsanalyse.html' },
       { label: 'Wandstärkenanalyse', href: '/tools/3d-studio/wandstaerke.html' },

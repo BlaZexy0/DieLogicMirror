@@ -27,6 +27,7 @@ rules.
 | `anguss.html` | Angussdesigner | The runner system as a graph: biscuit, spline runners with drafted trapezoid section, branches (optionally mirrored), mirror points, gates with transition types. Cross section, curvature, Bernoulli style losses per millimetre, fill balance, flow chart, rule check, automatic sizing from the gates backwards. | JSON (`dielogic-anguss`), STL |
 | `ueberlauf.html` | Überlaufdesigner | Overflows and vents on the part: overflow bean, bean with vent channel (drawn as points in the wall plane from a sphere at the bean end), chill vent, plain vent slot. Volumes for the shot weight. | JSON (`dielogic-luft`), STL |
 | `temperier.html` | Temperierkanal-Designer | Cooling drills and channels placed on the offset surface at a chosen distance from the cavity, ends movable with axis arrows, automatic placement of drills. | JSON (`dielogic-temperier`), STL |
+| `werkbank.html` | Werkbank | All of the above as six stages in one rail around one part: part analysis (parting + wall thickness), runner (proposed from the part, gates bound to its wall), fill estimate (inlets are the runner's gates), overflows (with the fill's last spots as marks), cooling, and the Auslegung dashboard fed with masses, gate area, wall thickness and projected area from the model. Existing tools are untouched; the stages reuse their modules. | JSON (`dielogic-werkbank`) plus every per-tool file |
 
 Four tools measure existing geometry (Entformung, Wandstärke, Abstand,
 Füllung), three create geometry (Anguss, Überlauf, Temperier), one
@@ -57,6 +58,20 @@ assembles (Formaufbau).
 - Each designer keeps one source of truth (a graph or a plan in
   `model.js`/`graph.js`); geometry (`geom.js`/`sweep.js`), numbers and
   rule checks are derived from it on every change and never stored.
+- `js/werkbank/`: the combined page. `app.js` owns the scene, the part
+  (one mesh, one colour attribute the active stage paints), the shared
+  distance field (`ctx.field.ensure({band})`, cell = half wall
+  thickness, band sized for the cooling distance, computed once for wall
+  thickness, fill and cooling) and the events between stages (`part`,
+  `field`, `runner`, `vents`, `fill`, `cooling`). Each stage module
+  (`part.js`, `runner.js`, `fill.js`, `vents.js`, `cooling.js`,
+  `design.js`) is a port of the matching tool page with prefixed ids
+  (`bt-`, `an-`, `fu-`, `ue-`, `te-`, `au-`) and `enter()/leave()`.
+  `propose.js` builds the runner proposal from the part's bounds (no
+  Three.js), `measure.js` the projected area by rasterising the union of
+  all cavities. `design.js` runs the real Auslegung modules
+  (`state.js` on `window.__PROJECT__`, `ui/inputs.js`, `ui/kpis.js`,
+  `charts/registry.js`) in an overlay over the viewport.
 
 ## Fixtures
 
@@ -77,6 +92,12 @@ assembles (Formaufbau).
   thickness grows towards −y. A reference part from the part frame is
   rotated about x by 90° and shifted to the gates (see `ref` in
   `js/runner/presets.js`).
+- **Werkbank**: everything in the part frame. The runner proposal uses
+  biscuit axis `-z` — channels and biscuit grow into +z, the moving
+  half, as grooves; the biscuit sits before the part's edge at y = min,
+  the gates on that edge in the parting plane, bound to the wall by a
+  ray in +y (`js/werkbank/propose.js`, `gateRays`). Loading an
+  Angussdesigner JSON keeps its axis; the page says so.
 
 ### Example parts (`assets/parts/`, listed in `js/part/demoparts.js`)
 
@@ -132,6 +153,7 @@ follows this contract loads back into the Formaufbau editor.
 | `dielogic-fuellung` | 1 | Füllabschätzung | gates with position, normal, rotation, width, height, optional share; α (older files may carry a fill time, ignored) |
 | `dielogic-temperier` | 1 | Temperierkanal | offset distance; drills with tip, direction, diameter, length and an `auto` flag; channels with both ends and diameter |
 | `dielogic-formaufbau` | 1 | Formaufbau | inside the GLB extras, see above |
+| `dielogic-werkbank` | 1 | Werkbank | part reference (demo id, name — no geometry), the runner graph (`anguss`) with process values (`prozess`), the fill settings (`fuellung`: α, spot count), the overflow plan (`luft`) and the cooling plan (`temperier`), each in its own format above |
 
 Every loader checks the format key and refuses newer versions with a
 clear message. Inputs are STL (ASCII or binary) and GLB (glTF 2.0
@@ -156,8 +178,11 @@ GLB above.
 ### Tests and checks
 
 - `npm test` runs a syntax check and the Node test suite
-  (`tests/web/*.test.mjs`, `tests/web/3d-studio/*.test.mjs`), currently
-  434 tests. Unit tests cover the geometry and the models; the viewer
+  (`tests/web/*.test.mjs`, `tests/web/3d-studio/*.test.mjs`).
+  `werkbank.test.mjs` drives the combined page through the DOM stub and
+  needs the dashboard's classic scripts (`shared/project.js`, presets,
+  theme) loaded first, like `tests/web/dashboard-kern.test.mjs`; it does
+  not enter the Auslegung stage (canvas), but measures and applies. Unit tests cover the geometry and the models; the viewer
   tests load the real pages through a small DOM stub and drive them
   like a user (clicks in the canvas, drags, inputs, file round trips).
 - The stubs (`tests/web/3d-studio/stubs/`): `dom.mjs` parses the page's
@@ -193,6 +218,13 @@ GLB above.
   share the compact page header with one line of subtitle.
 
 ## Open points
+
+- The Werkbank's Auslegung stage shares the design section of the
+  current project through `shared/project.js` (localStorage cache), but
+  carries no project bar: values typed there are pushed to the server
+  the next time a page with the project bar (the dashboard) is open.
+  Teilekosten and Zyklusanalyse are not stages yet; the projected area
+  (Sprengfläche) covers what the Sprengflächenanalyse would compute.
 
 - The tool table at the top of `web/tools/3d-studio/README.md` still
   lists six pages; the per tool sections below it are current.

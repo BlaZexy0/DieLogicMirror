@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werkbank · 3D-Studio · DieLogic</title>
+<meta name="description" content="Ein Bauteil, alle Schritte: Entformung und Wandstärke analysieren, das Angusssystem ans Bauteil legen, die Füllung abschätzen, Überläufe und Temperierkanäle setzen — und die Zahlen daraus direkt in die gießtechnische Auslegung übernehmen.">
+<meta name="theme-color" content="#002733">
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="stylesheet" href="/shared/shared.css">
+<link rel="stylesheet" href="/tools/auslegung/css/main.css">
+<link rel="stylesheet" href="css/viewer.css">
+<link rel="stylesheet" href="css/werkbank.css">
+<script src="/shared/version.js"></script>
+<script src="/shared/palette.js"></script>
+<script src="/shared/nav.js" data-footer="none"></script>
+<script src="/shared/theme.js"></script>
+<script src="/shared/examples/machines.js"></script>
+<script src="/shared/examples/alloys.js"></script>
+<script src="/shared/examples/parts.js"></script>
+<script src="/shared/orgpresets.js"></script>
+<script src="/shared/project.js"></script>
+<script src="/shared/clampmodel.js"></script>
+<script type="importmap">
+  { "imports": { "three": "./vendor/three/three.module.js" } }
+</script>
+</head>
+<body class="viewer designer werkbank">
+
+<section class="page-hero compact">
+  <div class="inner">
+    <h1>Werkbank</h1>
+    <p class="subtitle" id="wb-subtitle">Ein Bauteil, alle Schritte: Analyse, Anguss, Füllung, Überläufe, Temperierung, Auslegung — in einem Viewport.</p>
+  </div>
+</section>
+
+<div class="wb-layout">
+  <nav class="wb-rail" id="wb-rail" aria-label="Arbeitsschritte">
+    <button type="button" class="wb-step active" data-stage="bauteil" title="Bauteil laden, Entformung und Wandstärke">
+      <span class="wb-num">1</span><i class="wb-dot"></i>
+      <svg viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+        <path d="M13 2 L23 8 L13 14 L3 8 Z"/><path d="M3 8 L3 18 L13 24 L23 18 L23 8"/><path d="M13 14 L13 24"/>
+      </svg><span>Bauteil</span>
+    </button>
+    <button type="button" class="wb-step" data-stage="anguss" title="Angusssystem: Pressrest, Laufkanäle, Anschnitte">
+      <span class="wb-num">2</span><i class="wb-dot"></i>
+      <svg viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+        <circle cx="5" cy="13" r="3"/><path d="M8 13 H13 C16 13 16 7 19 7 H23"/><path d="M13 13 C16 13 16 19 19 19 H23"/><path d="M22 5 V9 M22 17 V21"/>
+      </svg><span>Anguss</span>
+    </button>
+    <button type="button" class="wb-step" data-stage="fuellung" title="Füllabschätzung von den Anschnitten aus">
+      <span class="wb-num">3</span><i class="wb-dot"></i>
+      <svg viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M3 6 H23 V20 H3 Z"/><path d="M3 6 L3 20" stroke-width="3"/><path d="M7 6 V20" stroke-dasharray="1.5 2"/><path d="M12 6 C11 10 13 12 12 20"/><path d="M17 6 C16 11 18 15 17 20"/>
+      </svg><span>Füllung</span>
+    </button>
+    <button type="button" class="wb-step" data-stage="ueberlauf" title="Überläufe und Entlüftungen am Bauteil">
+      <span class="wb-num">4</span><i class="wb-dot"></i>
+      <svg viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M3 8 L11 8 L11 18 L3 18 Z"/><path d="M11 13 H14"/><path d="M14 10 H20 a3 3 0 0 1 0 6 H14 Z"/><path d="M23 13 H25"/>
+      </svg><span>Überläufe</span>
+    </button>
+    <button type="button" class="wb-step" data-stage="temperier" title="Kühlstiche und Kanäle auf der Abstandsfläche">
+      <span class="wb-num">5</span><i class="wb-dot"></i>
+      <svg viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+        <rect x="6" y="9" width="14" height="10" rx="2"/><path d="M3 4 H23" stroke-dasharray="2 2"/><path d="M13 4 V9"/><path d="M8 22 V25 M18 22 V25"/>
+      </svg><span>Temperierung</span>
+    </button>
+    <button type="button" class="wb-step" data-stage="auslegung" title="Gießtechnische Auslegung: Kennzahlen und Diagramme mit den Zahlen aus dem Modell">
+      <span class="wb-num">6</span><i class="wb-dot"></i>
+      <svg viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M3 22 H23"/><path d="M3 22 V4"/><path d="M6 18 C10 6 14 6 22 8"/><path d="M6 12 L11 10 L15 14 L22 13"/>
+      </svg><span>Auslegung</span>
+    </button>
+    <div class="wb-rail-foot">
+      <input type="file" id="wb-file" accept=".json,.stl,.glb,application/json,model/stl,model/gltf-binary,application/sla" hidden>
+      <button type="button" id="wb-open" title="Werkbank-Datei, Anguss-, Überlauf- oder Temperier-JSON, oder ein Bauteil (STL/GLB) laden">Laden</button>
+      <button type="button" id="wb-save" title="Alle Pläne dieser Werkbank in einer JSON-Datei speichern">Speichern</button>
+    </div>
+  </nav>
+
+  <aside class="wb-panel" id="wb-panel">
+
+    <!-- ── 1 Bauteil ─────────────────────────────────────────── -->
+    <section class="wb-stage" id="stage-bauteil">
+      <h2>Bauteil</h2>
+      <div class="row">
+        <span>Beispielteil</span>
+        <select id="demo-select"></select>
+      </div>
+      <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" hidden>
+      <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ Eigene STL/GLB laden</button>
+      <div class="hint" id="part-note"></div>
+      <div class="facts" id="model-facts"></div>
+      <div class="warn-line" id="model-warn"></div>
+
+      <h2>Entformung</h2>
+      <div class="row">
+        <span>Formöffnung</span>
+        <div class="seg" id="bt-axis-seg">
+          <button type="button" data-value="auto" class="active" title="Die Achse mit der kleinsten Schieber- und Hinterschnittfläche">Auto</button>
+          <button type="button" data-value="0">X</button>
+          <button type="button" data-value="1">Y</button>
+          <button type="button" data-value="2">Z</button>
+        </div>
+      </div>
+      <div class="run-note" id="bt-analysis-state"></div>
+      <div class="legend" id="bt-legend"></div>
+      <div class="facts" id="bt-seg-facts"></div>
+      <div class="row">
+        <span>Einfärbung</span>
+        <div class="seg" id="bt-mode-seg">
+          <button type="button" data-value="regions" class="active">Regionen</button>
+          <button type="button" data-value="draft">Schräge</button>
+          <button type="button" data-value="plain">Grau</button>
+        </div>
+      </div>
+      <div id="bt-draft-block" class="disabled">
+        <div class="row">
+          <span>Grenzwert</span>
+          <input type="range" id="bt-draft-limit" min="0.5" max="5" step="0.1" value="1.5">
+          <span class="val" id="bt-draft-limit-val"></span>
+        </div>
+        <div class="facts" id="bt-draft-facts"></div>
+      </div>
+      <label class="inline"><input type="checkbox" id="bt-show-parting" checked> Trennlinie zeigen (<span id="bt-parting-count">0</span> Kanten)</label>
+      <div class="hint">Die Werkbank rechnet im Bauteilsystem: Trennebene z = 0, die Form öffnet nach +z.
+        Die Entformungsanalyse prüft trotzdem alle drei Achsen und sagt, welche die
+        kleinste Schieber- und Hinterschnittfläche hat — weicht sie von Z ab, liegt das
+        Teil für die übrigen Schritte falsch herum.</div>
+
+      <h2>Wandstärke</h2>
+      <div class="row">
+        <span title="Kantenlänge der Rasterzellen des Abstandsfelds. Es dient hier der Wandstärke, im Schritt Füllung der Front und im Schritt Temperierung der Abstandsfläche. Halbe Wanddicke ist ein guter Wert; beim Laden wird sie aus dem Bauteil vorgeschlagen.">Zellkante</span>
+        <input type="text" id="bt-cell-h" inputmode="decimal" value="3" spellcheck="false">
+        <span class="val">mm</span>
+      </div>
+      <button type="button" class="btn btn-primary block-btn" id="bt-run-field">Feld berechnen</button>
+      <div class="run-note" id="bt-field-state"></div>
+      <div class="facts" id="bt-field-facts"></div>
+      <label class="inline"><input type="checkbox" id="bt-hot-on"> Wärmezentren markieren</label>
+      <div id="bt-hot-block" class="disabled">
+        <div class="row">
+          <span title="Nur Stellen, die mindestens diesen Anteil der größten Wandstärke erreichen.">ab</span>
+          <input type="range" id="bt-hot-min" min="20" max="100" step="5" value="75">
+          <span class="val" id="bt-hot-min-val"></span>
+        </div>
+        <div class="facts" id="bt-hot-facts"></div>
+      </div>
+      <label class="inline"><input type="checkbox" id="bt-slice-on"> Schnitt durch das Feld zeigen</label>
+      <div id="bt-slice-block" class="disabled">
+        <div class="row">
+          <span>Achse</span>
+          <div class="seg" id="bt-slice-seg">
+            <button type="button" data-value="0">X</button>
+            <button type="button" data-value="1">Y</button>
+            <button type="button" data-value="2" class="active">Z</button>
+          </div>
+        </div>
+        <div class="row">
+          <span>Position</span>
+          <input type="range" id="bt-slice-pos" min="0" max="100" step="1" value="50">
+          <span class="val" id="bt-slice-pos-val"></span>
+        </div>
+      </div>
+      <div class="hint">Jede Marke ist die größte Kugel, die an dieser Stelle ins Bauteil passt — ihr
+        Durchmesser ist die Wandstärke. Dort erstarrt das Teil zuletzt; bis dorthin muss der
+        Nachdruck reichen. Im Schnitt ist innen die Wandstärke gefärbt (dick = rot).</div>
+
+      <h2>Darstellung</h2>
+      <div class="row">
+        <span>Deckkraft</span>
+        <input type="range" id="bt-opacity" min="15" max="100" value="100">
+        <span class="val" id="bt-opacity-val"></span>
+      </div>
+    </section>
+
+    <!-- ── 2 Anguss ──────────────────────────────────────────── -->
+    <section class="wb-stage hidden" id="stage-anguss">
+      <h2>Angusssystem</h2>
+      <div class="row">
+        <span>Vorschlag</span>
+        <select id="an-propose">
+          <option value="2">zwei Anschnitte</option>
+          <option value="1">ein Fächeranschnitt</option>
+          <option value="4">vier Anschnitte</option>
+        </select>
+      </div>
+      <button type="button" class="btn btn-outline block-btn" id="an-propose-btn">Anguss ans Bauteil legen</button>
+      <div class="hint">Der Vorschlag setzt den Pressrest vor die Kante bei −Y, zieht die Kanäle in der
+        Trennebene und bindet die Anschnitte an die Wand. Danach: Punkte ziehen, im Auswahlfeld
+        bemaßen, den Pfeil eines Anschnitts anklicken und die Mündung neu ans Bauteil setzen.
+        Ein neues Bauteil bekommt einen neuen Vorschlag.</div>
+      <div class="warn-line" id="an-warn"></div>
+
+      <h2>Kanalform</h2>
+      <div class="row">
+        <span title="Entformschräge je Flanke. Ohne sie klemmt der erstarrte Anguss.">Entformschräge</span>
+        <input type="range" id="an-draft" min="0" max="15" step="0.5" value="5">
+        <span class="val" id="an-draft-val"></span>
+      </div>
+      <div class="row">
+        <span title="Radius am Kanalboden. An der Trennebene bleibt die Kante scharf.">Bodenradius</span>
+        <input type="text" id="an-radius" inputmode="decimal" value="1.5" spellcheck="false">
+        <span class="val">mm</span>
+      </div>
+      <div class="row">
+        <span title="Höhe aller Anschnitte — die dünnste Stelle des ganzen Systems. Gilt für jeden Anschnitt ohne eigene Höhe.">Anschnitthöhe</span>
+        <input type="text" id="an-gate-h" inputmode="decimal" value="2.2" spellcheck="false">
+        <span class="val">mm</span>
+      </div>
+      <div class="row">
+        <span title="Straffheit der Splines. Klein heißt eckig, groß heißt ausholend.">Splinestraffheit</span>
+        <input type="range" id="an-tension" min="30" max="180" step="5" value="100">
+        <span class="val" id="an-tension-val"></span>
+      </div>
+      <div class="row">
+        <span title="Abstand der Schnitte entlang der Mittellinie.">Abtastschritt</span>
+        <input type="text" id="an-step" inputmode="decimal" value="1" spellcheck="false">
+        <span class="val">mm</span>
+      </div>
+      <div class="row">
+        <span title="Verjüngung je Abschnitt: der Kanal ist um diesen Faktor größer als die Summe seiner Abgänge.">Verjüngung</span>
+        <input type="range" id="an-taper" min="70" max="100" step="1" value="90">
+        <span class="val" id="an-taper-val"></span>
+      </div>
+      <div class="row">
+        <span title="Tiefe geteilt durch Breite. Bewährt sind 0,5 bis 1,0.">Seitenverhältnis</span>
+        <input type="range" id="an-aspect" min="30" max="120" step="5" value="65">
+        <span class="val" id="an-aspect-val"></span>
+      </div>
+      <button type="button" class="btn btn-outline block-btn" id="an-auto-taper">Querschnitte abstufen</button>
+
+      <h2>Prozess</h2>
+      <div class="row">
+        <span>Legierung</span>
+        <select id="an-alloy"></select>
+      </div>
+      <div class="row">
+        <span title="Gussvolumen einschließlich Überläufen — das, was durch die Anschnitte muss.">Gussvolumen</span>
+        <input type="text" id="an-vol" inputmode="decimal" value="420" spellcheck="false">
+        <span class="val">cm³</span>
+      </div>
+      <label class="inline" title="Bauteil plus die Überläufe aus Schritt 4 — sobald sich dort etwas ändert, zieht das Volumen nach."><input type="checkbox" id="an-vol-auto" checked> aus Bauteil und Überläufen</label>
+      <div class="row">
+        <span>Füllzeit</span>
+        <input type="text" id="an-tfill" inputmode="decimal" value="45" spellcheck="false">
+        <span class="val">ms</span>
+      </div>
+      <div class="row">
+        <span title="Zielgeschwindigkeit am Anschnitt. Sie legt die Anschnittflächen fest.">Anschnitt v<sub>Ziel</sub></span>
+        <input type="text" id="an-vgate" inputmode="decimal" value="40" spellcheck="false">
+        <span class="val">m/s</span>
+      </div>
+      <div class="row">
+        <span title="Beiwert des Verzweigungsverlusts. 1,0 = scharfe Gabel, 0,3 = sehr sanft aufgehend.">Verzweigungsverlust</span>
+        <input type="range" id="an-cbranch" min="10" max="120" step="5" value="50">
+        <span class="val" id="an-cbranch-val"></span>
+      </div>
+      <button type="button" class="btn btn-outline block-btn" id="an-from-design" title="Legierung nach der Dichte, Füllzeit aus der Schusskurve, Zielgeschwindigkeit aus der Mitte des Zielbands — alles aus Schritt 6.">Prozess aus der Auslegung</button>
+      <div class="hint">Lauflänge, Angussvolumen, Volumenstrom, Druckbedarf und die Ankunft der Schmelze
+        stehen im <b>Flussschema</b> (Knopf rechts unten im Viewport).</div>
+
+      <h2>Darstellung</h2>
+      <div class="row">
+        <span>Körper</span>
+        <div class="seg" id="an-show-seg">
+          <button type="button" data-value="sweep" class="active">Kanäle</button>
+          <button type="button" data-value="line">nur Linie</button>
+        </div>
+      </div>
+      <label class="inline"><input type="checkbox" id="an-show-biscuit" checked> Pressrest zeigen</label>
+      <label class="inline"><input type="checkbox" id="an-show-line" checked> Mittellinie und Griffe zeigen</label>
+      <div class="row">
+        <span>Deckkraft Bauteil</span>
+        <input type="range" id="an-ref-opacity" min="5" max="100" value="45">
+        <span class="val" id="an-ref-opacity-val"></span>
+      </div>
+
+      <h2>Import und Export</h2>
+      <input type="file" id="an-json-input" accept=".json,application/json" hidden>
+      <div class="btn-pair">
+        <button type="button" class="btn btn-outline" id="an-json-btn">JSON laden</button>
+        <button type="button" class="btn btn-outline" id="an-json-save">JSON speichern</button>
+      </div>
+      <button type="button" class="btn btn-outline block-btn" id="an-stl-save">Als STL speichern</button>
+      <div class="hint"><b>JSON</b> ist der Graph (dieselbe Datei wie im Angussdesigner — dort liegt die
+        Trennebene bei y = 0, hier bei z = 0; die Datei trägt die Achse mit). <b>STL</b> sind
+        die Kanäle als Schläuche plus Pressrest.</div>
+
+      <h2>Prüfung</h2>
+      <div class="rules" id="an-rules"></div>
+    </section>
+
+    <!-- ── 3 Füllung ─────────────────────────────────────────── -->
+    <section class="wb-stage hidden" id="stage-fuellung">
+      <h2>Anschnitte</h2>
+      <div class="facts" id="fu-inlet-facts"></div>
+      <div class="warn-line" id="fu-inlet-warn"></div>
+      <div class="hint">Die Anschnitte kommen aus dem Angusssystem: Ort und Richtung der Mündung,
+        Breite und Höhe, der Anteil am Strom aus der Strömungsrechnung. Ein Anschnitt mit ⚠
+        trifft kaum eine Rasterzelle — im Schritt Anguss den Pfeil des Anschnitts anklicken und
+        die Mündung ans Bauteil setzen.</div>
+
+      <h2>Raster</h2>
+      <div class="hint" id="fu-grid-note">Das Raster ist das Abstandsfeld des Bauteils (Zellkante im Schritt Bauteil).</div>
+
+      <h2>Füllung</h2>
+      <div class="row">
+        <span title="Dünnwand-Bremse: die Front läuft mit (Wanddicke / mittlere Dicke)^α. 0 ist reine Geometrie, 0,5 die übliche Wahl.">Dünnwand-Bremse α</span>
+        <input type="range" id="fu-alpha" min="0" max="1" step="0.1" value="0.5">
+        <span class="val" id="fu-alpha-val"></span>
+      </div>
+      <button type="button" class="btn btn-outline block-btn" id="fu-run" disabled>Füllung neu rechnen</button>
+      <div class="run-note" id="fu-run-note"></div>
+      <div class="facts" id="fu-result-facts"></div>
+      <div class="hint">Der <b>Füllgrad</b> einer Stelle ist der Anteil des Volumens, der voll ist, wenn die
+        Front sie erreicht — eine Reihenfolge, keine Zeit. Wo die Front zuletzt ankommt, sammelt
+        sich die Luft: dort gehören die Überläufe hin. Die zuletzt gefüllten Stellen bleiben im
+        nächsten Schritt als Marken stehen.</div>
+
+      <h2>Darstellung</h2>
+      <div class="seg" id="fu-show-seg">
+        <button type="button" data-value="farbe" class="active" title="Bauteil nach Füllgrad gefärbt">Füllgrad</button>
+        <button type="button" data-value="koerper" title="Die Schmelze beim gewählten Füllgrad als Körper">Füllkörper</button>
+        <button type="button" data-value="grau" title="Nur das Bauteil und die Anschnitte">Bauteil</button>
+      </div>
+      <div class="row disabled" id="fu-q-row">
+        <span title="Bis zu welchem Füllgrad gezeigt wird — die Front wandert mit dem Regler.">Füllgrad</span>
+        <input type="range" id="fu-q" min="0" max="100" step="1" value="100">
+        <span class="val" id="fu-q-val"></span>
+      </div>
+      <label class="inline"><input type="checkbox" id="fu-spots-on" checked> Zuletzt gefüllte Stellen markieren</label>
+      <div class="row">
+        <span>Anzahl</span>
+        <input type="range" id="fu-spots-count" min="1" max="20" step="1" value="5">
+        <span class="val" id="fu-spots-count-val"></span>
+      </div>
+      <div class="row">
+        <span>Deckkraft Bauteil</span>
+        <input type="range" id="fu-ref-opacity" min="5" max="100" value="100">
+        <span class="val" id="fu-ref-opacity-val"></span>
+      </div>
+
+      <h2>Export</h2>
+      <button type="button" class="btn btn-outline block-btn" id="fu-stl-save">Füllkörper als STL speichern</button>
+    </section>
+
+    <!-- ── 4 Überläufe ───────────────────────────────────────── -->
+    <section class="wb-stage hidden" id="stage-ueberlauf">
+      <h2>Volumen</h2>
+      <div class="facts" id="ue-plan-facts"></div>
+      <div class="hint">Wo die Schmelze zuletzt ankommt, muss die Luft hinaus: dort sitzen die Überläufe.
+        Was sie fassen, gehört zum Schussgewicht — <b>Gesamt</b> ist das Gussvolumen, das der
+        Anguss unter „Prozess" bekommt und die Auslegung als Überlaufgewicht.</div>
+      <label class="inline" title="Die zuletzt gefüllten Stellen aus Schritt 3 — die Kandidaten für Überläufe."><input type="checkbox" id="ue-show-spots" checked> Zuletzt gefüllte Stellen zeigen</label>
+      <div class="warn-line" id="ue-spots-note"></div>
+
+      <h2>Darstellung</h2>
+      <div class="row">
+        <span>Deckkraft Bauteil</span>
+        <input type="range" id="ue-ref-opacity" min="5" max="100" value="100">
+        <span class="val" id="ue-ref-opacity-val"></span>
+      </div>
+
+      <h2>Import und Export</h2>
+      <input type="file" id="ue-json-input" accept=".json,application/json" hidden>
+      <div class="btn-pair">
+        <button type="button" class="btn btn-outline" id="ue-json-btn">JSON laden</button>
+        <button type="button" class="btn btn-outline" id="ue-json-save">JSON speichern</button>
+      </div>
+      <button type="button" class="btn btn-outline block-btn" id="ue-stl-save">Als STL speichern</button>
+      <div class="hint"><b>JSON</b> ist der Plan selbst — Orte, Richtungen, Maße (dieselbe Datei wie im
+        Überlaufdesigner). <b>STL</b> sind die Körper: je Element Steg, Bohne und Kanal.</div>
+    </section>
+
+    <!-- ── 5 Temperierung ────────────────────────────────────── -->
+    <section class="wb-stage hidden" id="stage-temperier">
+      <h2>Abstandsfläche</h2>
+      <div class="row">
+        <span title="Abstand der Fläche zur Kavität — dort sitzen die Spitzen der Kühlstiche und die Achsen der Kanäle.">Abstand</span>
+        <input type="range" id="te-dist" min="5" max="60" step="1" value="20">
+        <span class="val" id="te-dist-val"></span>
+      </div>
+      <label class="inline"><input type="checkbox" id="te-shell-on" checked> Abstandsfläche zeigen</label>
+      <label class="inline" title="Durchscheinend sieht man das Bauteil in der Fläche; deckend zeigt ihre Form."><input type="checkbox" id="te-shell-clear" checked> Durchscheinend</label>
+      <div class="hint" id="te-shell-note">Noch keine Fläche — sie entsteht aus dem Abstandsfeld des Bauteils.</div>
+
+      <h2>Kühlstiche</h2>
+      <div class="row">
+        <span title="Wohin der Stich von der Spitze aus läuft.">Richtung</span>
+        <div class="seg" id="te-dir-seg">
+          <button type="button" data-value="normal" class="active" title="senkrecht zur Abstandsfläche, vom Bauteil weg">Normale</button>
+          <button type="button" data-value="blick" title="auf die Kamera zu">Blick</button>
+          <button type="button" data-value="x" title="entlang X, vom Bauteil weg">X</button>
+          <button type="button" data-value="y" title="entlang Y">Y</button>
+          <button type="button" data-value="z" title="entlang Z">Z</button>
+        </div>
+      </div>
+      <div class="row">
+        <span>Durchmesser</span>
+        <input type="text" id="te-def-d" inputmode="decimal" value="8" spellcheck="false">
+        <span class="val">mm</span>
+      </div>
+      <div class="row">
+        <span>Länge</span>
+        <input type="text" id="te-def-len" inputmode="decimal" value="60" spellcheck="false">
+        <span class="val">mm</span>
+      </div>
+
+      <h2>Automatisch</h2>
+      <div class="row">
+        <span title="Wie viele Kühlstiche gesetzt werden.">Anzahl</span>
+        <input type="range" id="te-auto-count" min="1" max="40" step="1" value="8">
+        <span class="val" id="te-auto-count-val"></span>
+      </div>
+      <div class="row">
+        <span title="Näher kommen sich zwei Bohrungen nicht.">Mindestabstand</span>
+        <input type="range" id="te-auto-spacing" min="10" max="80" step="5" value="25">
+        <span class="val" id="te-auto-spacing-val"></span>
+      </div>
+      <label class="inline"><input type="checkbox" id="te-auto-replace" checked> Vorherige automatische ersetzen</label>
+      <button type="button" class="btn btn-primary block-btn" id="te-auto-run">Kühlstiche automatisch setzen</button>
+      <div class="facts" id="te-auto-facts"></div>
+      <div class="warn-line" id="te-auto-note"></div>
+      <div class="hint">Jede Stelle im Bauteil soll eine Bohrung in der Nähe haben, dicke Stellen zuerst.
+        Richtung und Maße kommen von den Vorgaben oben; von Hand gesetzte Stiche bleiben.</div>
+
+      <h2>Kanäle</h2>
+      <div class="row">
+        <span>Durchmesser</span>
+        <input type="text" id="te-def-kd" inputmode="decimal" value="10" spellcheck="false">
+        <span class="val">mm</span>
+      </div>
+
+      <h2>Übersicht</h2>
+      <div class="facts" id="te-plan-facts"></div>
+      <div class="hint">Der <b>Wandabstand</b> ist der kleinste Abstand der Bohrungswand zur Kavität, aus dem
+        Feld entlang der Achse abgetastet. Unter dem gewählten Abstand steht er mit ⚠.</div>
+
+      <h2>Darstellung</h2>
+      <div class="row">
+        <span>Deckkraft Bauteil</span>
+        <input type="range" id="te-ref-opacity" min="5" max="100" value="100">
+        <span class="val" id="te-ref-opacity-val"></span>
+      </div>
+
+      <h2>Import und Export</h2>
+      <input type="file" id="te-json-input" accept=".json,application/json" hidden>
+      <div class="btn-pair">
+        <button type="button" class="btn btn-outline" id="te-json-btn">JSON laden</button>
+        <button type="button" class="btn btn-outline" id="te-json-save">JSON speichern</button>
+      </div>
+      <button type="button" class="btn btn-outline block-btn" id="te-stl-save">Als STL speichern</button>
+    </section>
+
+    <!-- ── 6 Auslegung ───────────────────────────────────────── -->
+    <section class="wb-stage hidden" id="stage-auslegung">
+      <h2>Aus dem 3D-Modell</h2>
+      <div class="au-transfer" id="au-transfer"></div>
+      <label class="inline" title="Sobald sich Bauteil, Anguss oder Überläufe ändern, werden die angehakten Werte neu übernommen."><input type="checkbox" id="au-auto"> automatisch nachführen</label>
+      <button type="button" class="btn btn-primary block-btn" id="au-apply">In die Auslegung übernehmen</button>
+      <div class="hint">Massen aus Volumen × Dichte bei Solidus (Dichte fest, um das Schwindmaß
+        verkleinert — so rechnet auch das Dashboard die Kavität). Die Sprengfläche ist die
+        Projektion von Bauteil, Anguss, Pressrest und Überläufen auf die Trennebene, als Vereinigung
+        gerastert. Die Eingaben unten sind der Auslegungsabschnitt des aktuellen Projekts —
+        dieselben wie im Dashboard.</div>
+      <div class="warn-line" id="au-warn"></div>
+
+      <h2>Presets</h2>
+      <div class="au-fields">
+        <div class="field"><label>Maschine</label><select id="machineSel"><option value="">— manuell —</option></select></div>
+        <div class="field"><label>Legierung</label><select id="alloySel"><option value="">— manuell —</option></select></div>
+        <div class="field"><label>Bauteiltyp</label><select id="partSel"><option value="">— manuell —</option></select></div>
+      </div>
+
+      <h2>Schusskurve</h2>
+      <div class="group" id="curve-group">
+        <p class="curve-note">Wegpunkte als Weg s [mm] / Kolbengeschwindigkeit v [m/s].</p>
+        <table class="ctab">
+          <thead><tr><th style="width:40%">s [mm]</th><th style="width:44%">v [m/s]</th><th></th></tr></thead>
+          <tbody id="curveBody"></tbody>
+        </table>
+        <button type="button" id="addPoint" class="row-add">+ Punkt hinzufügen</button>
+      </div>
+
+      <h2>Eingaben</h2>
+      <div id="groups" class="groups"></div>
+      <div class="hint">🔴 Roter Marker = aktueller Betriebspunkt in jedem Diagramm. Rot umrandete Felder
+        liegen außerhalb ihrer Grenzen. <span id="error"></span></div>
+    </section>
+
+  </aside>
+
+  <div id="viewport">
+    <!-- Auswahlfeld des Angusssystems -->
+    <div class="pt-menu wb-off" id="an-menu">
+      <div class="pt-menu-title">Auswahl</div>
+      <div class="pt-sel" id="an-pt-sel">Kein Punkt gewählt</div>
+      <div id="an-sel-block" class="disabled">
+        <div class="row pos">
+          <span>Lage</span>
+          <div class="triple">
+            <input type="text" id="an-sel-x" inputmode="decimal" value="0" spellcheck="false" title="X">
+            <input type="text" id="an-sel-y" inputmode="decimal" value="0" spellcheck="false" title="Y">
+            <input type="text" id="an-sel-z" inputmode="decimal" value="0" spellcheck="false" title="Z">
+          </div>
+          <span class="val">mm</span>
+        </div>
+        <div id="an-bisc-block">
+          <div class="row">
+            <span title="Durchmesser des Pressrests — also der Füllkammer.">Durchmesser</span>
+            <input type="text" id="an-bisc-d" inputmode="decimal" value="90" spellcheck="false">
+            <span class="val">mm</span>
+          </div>
+          <div class="row">
+            <span title="Dicke des Pressrests. Sie wächst ENTGEGEN der Ausstoßrichtung.">Dicke</span>
+            <input type="text" id="an-bisc-t" inputmode="decimal" value="25" spellcheck="false">
+            <span class="val">mm</span>
+          </div>
+          <div class="row">
+            <span title="Ausstoßrichtung: die Normale der Trennebene. −Z heißt: die Kanäle liegen als Nuten in der beweglichen Hälfte (z > 0).">Richtung</span>
+            <div class="seg stack" id="an-axis-seg">
+              <button type="button" data-value="+x">X</button>
+              <button type="button" data-value="+y">Y</button>
+              <button type="button" data-value="+z">Z</button>
+              <button type="button" data-value="-x">−X</button>
+              <button type="button" data-value="-y">−Y</button>
+              <button type="button" data-value="-z" class="active">−Z</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <span title="Breite des Kanals an der Trennebene.">Kanalbreite</span>
+          <input type="text" id="an-sel-w" inputmode="decimal" value="20" spellcheck="false">
+          <span class="val">mm</span>
+        </div>
+        <div class="row">
+          <span title="Tiefe des Kanals. Sie wächst entgegen der Ausstoßrichtung.">Kanaltiefe</span>
+          <input type="text" id="an-sel-h" inputmode="decimal" value="12" spellcheck="false">
+          <span class="val">mm</span>
+        </div>
+        <div id="an-plane-block">
+          <div class="row">
+            <span title="Arbeitsebene um die Laufrichtung kippen.">Ebene längs</span>
+            <input type="range" id="an-sel-roll" min="-60" max="60" step="1" value="0">
+            <span class="val" id="an-sel-roll-val"></span>
+          </div>
+          <div class="row">
+            <span title="Arbeitsebene quer zur Laufrichtung kippen — eine Stufe im Verteiler.">Ebene quer</span>
+            <input type="range" id="an-sel-pitch" min="-60" max="60" step="1" value="0">
+            <span class="val" id="an-sel-pitch-val"></span>
+          </div>
+        </div>
+        <div id="an-branch-block">
+          <div class="row">
+            <span title="Wie viel des Stroms in den ersten Ast gehen SOLL.">Aufteilung</span>
+            <input type="range" id="an-sel-ratio" min="10" max="90" step="1" value="50">
+            <span class="val" id="an-sel-ratio-val"></span>
+          </div>
+          <label class="inline"><input type="checkbox" id="an-sel-mirror"> Beide Äste spiegelsymmetrisch halten</label>
+        </div>
+        <div id="an-gate-block">
+          <div class="row">
+            <span title="Anschnitthöhe dieses Anschnitts. Ohne eigenen Wert gilt die Vorgabe unter „Kanalform".">Anschnitthöhe</span>
+            <input type="text" id="an-sel-gh" inputmode="decimal" value="2.2" spellcheck="false">
+            <span class="val">mm</span>
+          </div>
+          <div class="row">
+            <span title="Tiefe des Anschnitts in Fließrichtung (Steg).">Anschnitttiefe</span>
+            <input type="text" id="an-sel-glen" inputmode="decimal" value="4" spellcheck="false">
+            <span class="val">mm</span>
+          </div>
+          <div class="row">
+            <span>Anschnittbreite</span>
+            <input type="text" id="an-sel-gw" inputmode="decimal" value="26" spellcheck="false">
+            <span class="val">mm</span>
+          </div>
+          <label class="inline"><input type="checkbox" id="an-sel-gauto" checked> Breite aus der Zielgeschwindigkeit rechnen</label>
+          <div class="row">
+            <span title="Wie der Querschnitt vom Kanal auf den Anschnitt übergeht.">Übergang</span>
+            <select id="an-sel-gtrans"></select>
+          </div>
+        </div>
+        <div class="facts" id="an-sel-facts"></div>
+      </div>
+      <div class="pt-menu-title">Punkt anfügen</div>
+      <button type="button" id="an-add-point" title="Regulären Punkt hinter der Auswahl anfügen">+ Punkt</button>
+      <button type="button" id="an-add-branch" title="Verzweigung mit zwei eigenständigen Ästen anfügen">+ Verzweigung</button>
+      <button type="button" id="an-add-mirror" title="Spiegelpunkt: ein Ast wird bearbeitet, zwei entstehen">+ Spiegelpunkt</button>
+      <button type="button" id="an-add-gate" title="Anschnitt als Endpunkt anfügen">+ Anschnitt</button>
+      <button type="button" id="an-insert-point" title="Punkt zwischen Auswahl und Vorgänger einfügen">Davor einfügen</button>
+      <button type="button" id="an-del-node" class="danger" title="Auswahl entfernen">Löschen</button>
+    </div>
+
+    <!-- Auswahlfeld der Füllung: nur Auskunft -->
+    <div class="pt-menu wb-off" id="fu-menu">
+      <div class="pt-menu-title">Anschnitte aus dem Anguss</div>
+      <div class="pt-sel empty" id="fu-pt-sel">Noch kein Anschnitt</div>
+      <div class="facts" id="fu-menu-facts"></div>
+    </div>
+
+    <!-- Auswahlfeld der Überläufe -->
+    <div class="pt-menu wb-off" id="ue-menu">
+      <div class="pt-menu-title">Auswahl</div>
+      <div class="pt-sel" id="ue-pt-sel">Kein Überlauf gewählt</div>
+      <div id="ue-sel-block" class="disabled">
+        <div class="row">
+          <span>Art</span>
+          <select id="ue-sel-type"></select>
+        </div>
+        <div class="row pos">
+          <span>Lage</span>
+          <div class="triple">
+            <input type="text" id="ue-sel-x" inputmode="decimal" value="0" spellcheck="false" title="X">
+            <input type="text" id="ue-sel-y" inputmode="decimal" value="0" spellcheck="false" title="Y">
+            <input type="text" id="ue-sel-z" inputmode="decimal" value="0" spellcheck="false" title="Z">
+          </div>
+          <span class="val">mm</span>
+        </div>
+        <div class="row">
+          <span title="Drehung um die Achse des Elements (die Wandnormale).">Drehung</span>
+          <input type="range" id="ue-sel-rot" min="-180" max="180" step="1" value="0">
+          <span class="val" id="ue-sel-rot-val"></span>
+        </div>
+        <div id="ue-sel-params"></div>
+        <div id="ue-vent-block" class="hidden">
+          <div class="pt-menu-title">Entlüftungskanal</div>
+          <div class="pt-note" id="ue-vent-note"></div>
+          <div class="btn-pair">
+            <button type="button" id="ue-vent-add" title="Einen Punkt anhängen">+ Punkt</button>
+            <button type="button" id="ue-vent-del" title="Den gewählten Punkt entfernen (der letzte bleibt)">− Punkt</button>
+          </div>
+        </div>
+        <div class="facts" id="ue-sel-facts"></div>
+      </div>
+      <div class="pt-menu-title">Überlauf setzen</div>
+      <button type="button" id="ue-add-bohne" title="Tasche am Ende des Fließwegs: sammelt die erste, kalte und oxidhaltige Schmelze."><span class="dot" style="background:#e07b39"></span>Überlaufbohne</button>
+      <button type="button" id="ue-add-entlueftet" title="Bohne mit flachem Entlüftungskanal."><span class="dot" style="background:#2e6da4"></span>Überlauf mit Entlüftung</button>
+      <button type="button" id="ue-add-waschbrett" title="Gewellter Kanal: die Schmelze erstarrt in den Wellen, die Luft kommt hindurch."><span class="dot" style="background:#9a77e8"></span>Waschbrett (Chill-Vent)</button>
+      <button type="button" id="ue-add-schlitz" title="Nur der flache Kanal, ohne Bohne."><span class="dot" style="background:#4c9f70"></span>Entlüftungsschlitz</button>
+      <button type="button" id="ue-del-item" class="danger" title="Auswahl entfernen (Entf)">Löschen</button>
+    </div>
+
+    <!-- Auswahlfeld der Temperierung -->
+    <div class="pt-menu wb-off" id="te-menu">
+      <div class="pt-menu-title">Auswahl</div>
+      <div class="pt-sel" id="te-pt-sel">Kein Element gewählt</div>
+      <div id="te-sel-block" class="disabled">
+        <div class="row">
+          <span>Durchmesser</span>
+          <input type="text" id="te-sel-d" inputmode="decimal" value="8" spellcheck="false">
+          <span class="val">mm</span>
+        </div>
+        <div class="row" id="te-sel-len-row">
+          <span>Länge</span>
+          <input type="text" id="te-sel-len" inputmode="decimal" value="60" spellcheck="false">
+          <span class="val">mm</span>
+        </div>
+        <div class="row" id="te-sel-dir-row">
+          <span>Richtung</span>
+          <span class="val" id="te-sel-dir" style="width:auto;flex:1;text-align:right">—</span>
+        </div>
+        <div class="row pos">
+          <span>Lage</span>
+          <div class="triple">
+            <input type="text" id="te-sel-x" inputmode="decimal" value="0" spellcheck="false" title="X">
+            <input type="text" id="te-sel-y" inputmode="decimal" value="0" spellcheck="false" title="Y">
+            <input type="text" id="te-sel-z" inputmode="decimal" value="0" spellcheck="false" title="Z">
+          </div>
+          <span class="val">mm</span>
+        </div>
+        <label class="inline" id="te-sel-both-row"><input type="checkbox" id="te-sel-both"> Beide Enden bewegen</label>
+        <div class="facts" id="te-sel-facts"></div>
+      </div>
+      <div class="pt-menu-title">Setzen</div>
+      <button type="button" id="te-add-stich" disabled title="Ein Klick auf die Abstandsfläche: dort sitzt die Spitze."><span class="dot" style="background:#e07b39"></span>Kühlstich</button>
+      <button type="button" id="te-add-kanal" disabled title="Zwei Klicks auf die Abstandsfläche: die beiden Enden."><span class="dot" style="background:#2e6da4"></span>Kanal (2 Punkte)</button>
+      <button type="button" id="te-del-item" class="danger" title="Auswahl entfernen (Entf)">Löschen</button>
+    </div>
+
+    <div class="vp-right">
+      <button type="button" class="chart-btn wb-off" id="an-chart-btn"
+        title="Der Angussbaum als Schema: Querschnitte, Geschwindigkeiten, Soll gegen Ist und die Ankunft der Schmelze an jedem Anschnitt">Flussschema</button>
+      <div class="colorbar" id="colorbar">
+        <div class="cb-title" id="cb-title"></div>
+        <div class="cb-body">
+          <div class="cb-scale" id="cb-scale"></div>
+          <div class="cb-ticks" id="cb-ticks"></div>
+        </div>
+        <div class="cb-extra" id="cb-extra"></div>
+      </div>
+      <div class="pt-legend" id="pt-legend"></div>
+    </div>
+    <div class="chart-panel" id="an-chart-panel">
+      <div class="chart-head">Flussschema<button type="button" id="an-chart-close" title="schließen (Esc)">×</button></div>
+      <div class="chart-facts" id="an-chart-facts"></div>
+      <div class="chart-body" id="an-chart-body"></div>
+    </div>
+    <div id="status"></div>
+    <div class="drop-hint">Bauteil (STL/GLB), Plan (JSON) oder Werkbank-Datei hier ablegen</div>
+    <div class="aim-banner hidden" id="aim-banner">
+      <div class="aim-pill">
+        <span id="aim-text"></span>
+        <button type="button" id="aim-cancel">Abbrechen</button>
+      </div>
+    </div>
+    <div id="busy"></div>
+
+    <!-- Die Auslegung liegt über dem Viewport, solange ihr Schritt aktiv ist -->
+    <div class="wb-dash hidden" id="au-dash">
+      <div id="checkbar"></div>
+      <div id="chamber"></div>
+      <div id="summary" class="summary"></div>
+      <h2>Auslegungsdiagramme</h2>
+      <p class="sub">Schusskurve · PQ² · (φ, λ)-Auslegungsfenster · Diagramme der gießtechnischen Auslegung · 🎯 hebt die Eingaben eines Diagramms hervor · ↗ öffnet die Einzelseite</p>
+      <section id="charts" class="charts"></section>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/werkbank/app.js"></script>
+</body>
+</html>

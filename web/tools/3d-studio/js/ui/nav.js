@@ -10,6 +10,7 @@
 
 const LINKS = [
   { href: 'index.html', label: 'Übersicht' },
+  { href: 'werkbank.html', label: 'Werkbank' },
   { href: 'form.html', label: 'Formaufbau' },
   { href: 'entformungsanalyse.html', label: 'Entformungsanalyse' },
   { href: 'wandstaerke.html', label: 'Wandstärkenanalyse' },

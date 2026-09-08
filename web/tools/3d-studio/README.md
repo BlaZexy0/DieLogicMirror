@@ -10,6 +10,7 @@ liefert das Backend sie nur mit Sitzung aus (`login_gate` in
 | Seite           | Inhalt |
 |-----------------|--------|
 | `index.html`    | Übersicht: die Werkzeuge als Karten, dazu die drei Schritte der Formteilung |
+| `werkbank.html` | **Werkbank** — alle Werkzeuge als sechs Schritte an einem Bauteil in einem Viewport: Bauteil (Entformung, Wandstärke), Anguss (Vorschlag aus dem Bauteil), Füllung (von den Anschnitten des Angusses), Überläufe, Temperierung, Auslegung (das Dashboard mit Massen, Anschnitt und Sprengfläche aus dem Modell); Code in `js/werkbank/` |
 | `form.html`     | **Formaufbau** — eine beispielhafte Kaltkammer-Druckgießform als Schnittmodell |
 | `entformungsanalyse.html` | **Entformungsanalyse** — für ein Bauteil die Zuordnung jedes Dreiecks zu Formhälfte oder Schieber |
 | `wandstaerke.html` | **Wandstärkenanalyse** — Abstandsfeld durch Rasterisierung: Wandstärke und Wärmezentrum, Fläche gleichen Abstands (die Frage nach *innen*) |
@@ -1209,3 +1210,46 @@ Entstanden als eigenständiges Projekt `form3d` neben dem Repo und im
 August 2026 hierher übernommen, samt Generatoren und Tests. Der
 eigenständige Stand existiert nicht mehr; dieser Ordner ist die einzige
 Quelle.
+
+## Werkbank (`werkbank.html`)
+
+Die Werkbank reiht die Werkzeuge als **Schritte** an einem Bauteil auf —
+links eine schmale Leiste (1 Bauteil · 2 Anguss · 3 Füllung · 4 Überläufe ·
+5 Temperierung · 6 Auslegung), daneben das Feld des aktiven Schritts, rechts
+ein Viewport für alles. Die Einzelseiten bleiben, wie sie sind; die
+Schritte sind Portierungen davon (`js/werkbank/`) über denselben
+Rechenmodulen. Rahmen ist das Bauteilsystem der Analyseseiten (Trennebene
+z = 0, die Form öffnet nach +z).
+
+Was zwischen den Schritten wandert:
+
+- **Bauteil → Anguss:** beim Laden liegt ein Vorschlag vor dem Bauteil
+  (`js/werkbank/propose.js`): Pressrest vor der Kante bei −Y, Kanäle in der
+  Trennebene als Nut in der beweglichen Hälfte (Achse −z), ein, zwei oder
+  vier Anschnitte an der Kante, mit einem Strahl an die Wand gebunden. Das
+  Gussvolumen des Angusses ist Bauteil plus Überläufe.
+- **Anguss → Füllung:** die Anschnitte der Füllabschätzung *sind* die
+  Mündungen des Angussgraphen — Ort, Richtung, Breite, Höhe, Ist-Anteil aus
+  der Strömungsrechnung; niemand setzt sie von Hand.
+- **Füllung → Überläufe:** die zuletzt gefüllten Stellen bleiben als Marken
+  stehen, während man die Überläufe setzt.
+- **Ein Abstandsfeld für drei Schritte:** Wandstärke (Wärmezentren,
+  Feldschnitt), Füllung (Raster) und Temperierung (Abstandsfläche) rechnen
+  auf demselben Feld (`ctx.field` in `js/werkbank/app.js`; Zellkante = halbe
+  Wanddicke, Band nach außen für den Temperierabstand).
+- **Modell → Auslegung:** Bauteil-, Anguss-, Überlauf- und Pressrestgewicht
+  (Volumen × Dichte bei Solidus), Anschnittfläche und -dicke, Wandstärke
+  (2V/A, dickste Stelle) und die Sprengfläche (Projektion aller Kavitäten
+  auf die Trennebene, als Vereinigung gerastert — `js/werkbank/measure.js`)
+  stehen zur Übernahme in den Auslegungszustand; „automatisch nachführen"
+  hält sie aktuell. Der Schritt selbst ist das echte Dashboard (dieselben
+  Module wie `/tools/auslegung/`) über dem Viewport. Zurück geht die
+  Legierung (nach Dichte), die Füllzeit der Schusskurve und die
+  Zielgeschwindigkeit ins „Prozess"-Feld des Angusses.
+
+Dateien: jeder Schritt lädt und speichert seine gewohnte JSON (Anguss,
+Überläufe, Temperierung); „Speichern" in der Leiste schreibt alles zusammen
+als `dielogic-werkbank` (das Bauteil als Verweis auf das Beispielteil, nicht
+als Netz). Ablegen auf dem Viewport nimmt Bauteile (STL/GLB), Plandateien
+und Werkbank-Dateien entgegen — was es ist, sagt der Inhalt.
+`?schritt=anguss` öffnet die Seite in einem bestimmten Schritt.

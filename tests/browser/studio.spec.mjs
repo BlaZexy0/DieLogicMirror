@@ -13,7 +13,8 @@ const PAGES = [
   ['anguss.html', () => window.__anguss?.state?.ready],
   ['ueberlauf.html', () => window.__ueberlauf?.state?.ready],
   ['temperier.html', () => window.__temperier?.state?.ready],
-  ['fuellung.html', () => window.__fuellung?.state?.ready]
+  ['fuellung.html', () => window.__fuellung?.state?.ready],
+  ['werkbank.html', () => window.__werkbank?.ctx?.ready]
 ];
 
 for (const [page, readyFn] of PAGES) {
@@ -69,4 +70,42 @@ test('Überlaufdesigner: eine Bohne landet auf der Wand', async ({ page }) => {
   expect(it.type).toBe('bohne');
   expect(it.dir[0]).toBeGreaterThan(0.9);
   await expect(page.locator('#plan-facts')).toContainText('Gesamt');
+});
+
+test('Werkbank: alle sechs Schritte kommen ohne Fehler hoch und hängen zusammen', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+  page.on('console', m => {
+    if (m.type() !== 'error' || /\/api\//.test(m.location().url || '')) return;
+    errors.push('console: ' + m.text() + ' @ ' + (m.location().url || ''));
+  });
+  await page.goto('/tools/3d-studio/werkbank.html');
+  await page.waitForFunction(() => window.__werkbank?.ctx?.ready, null, { timeout: 60_000 });
+  /* Anguss: der Vorschlag hat zwei Anschnitte an der Wand. */
+  await page.click('[data-stage="anguss"]');
+  await expect(page.locator('#an-menu')).toBeVisible();
+  const gates = await page.evaluate(() => Object.values(window.__werkbank.stages.anguss.state.graph.nodes).filter(n => n.type === 'gate' && n.aim).length);
+  expect(gates).toBe(2);
+  /* Füllung: rechnet auf dem gemeinsamen Feld mit genau diesen Anschnitten. */
+  await page.click('[data-stage="fuellung"]');
+  await page.waitForFunction(() => { const s = window.__werkbank.stages.fuellung.state; return s.result && !s.stale && !s.computing; }, null, { timeout: 90_000 });
+  expect(await page.evaluate(() => Object.keys(window.__werkbank.stages.fuellung.state.plan.items).length)).toBe(2);
+  await expect(page.locator('#colorbar')).toHaveClass(/on/);
+  /* Überläufe und Temperierung: Auswahlfelder da, Abstandsfläche aus demselben Feld. */
+  await page.click('[data-stage="ueberlauf"]');
+  await expect(page.locator('#ue-menu')).toBeVisible();
+  await page.click('[data-stage="temperier"]');
+  await page.waitForFunction(() => { const s = window.__werkbank.stages.temperier.state; return s.shellDist === 20 && !s.computing; }, null, { timeout: 90_000 });
+  await expect(page.locator('#te-add-stich')).toBeEnabled();
+  /* Auslegung: das Dashboard liegt über dem Viewport, die Übernahme hat Werte. */
+  await page.click('[data-stage="auslegung"]');
+  await expect(page.locator('#au-dash')).toBeVisible();
+  await expect(page.locator('#charts .card')).not.toHaveCount(0);
+  await expect(page.locator('#checkbar')).toContainText('Prüfungen');
+  const vals = await page.evaluate(() => window.__werkbank.stages.auslegung.measure());
+  expect(vals.part).toBeGreaterThan(3);
+  expect(vals.gate).toBeGreaterThan(100);
+  expect(vals.area).toBeGreaterThan(0.1);
+  await page.waitForTimeout(500);
+  expect(errors, errors.join('\n')).toEqual([]);
 });
