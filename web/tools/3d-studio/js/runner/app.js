@@ -32,6 +32,8 @@ import { DEMOS, demoTwoGates } from './presets.js';
 import { flowChart } from './chart.js';
 import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from './editor.js';
 import { rotate, norm, cross, dot, sub, add } from './vec.js';
+import { shotTimeline, flowOnCurve } from './shottime.js';
+import { state as design } from '../../../auslegung/js/core/state.js';
 
 mountNav('anguss.html');
 
@@ -52,6 +54,10 @@ const state = {
   proc: { ...F.DEFAULT_PROCESS },
   sizing: { ...DEFAULT_SIZING },
   show: 'sweep',
+  /* Ankunft nach der DieLogic-Schusskurve (js/runner/shottime.js): timeline
+     ist die Kurve der Auslegung für dieses System, flowShown die Strömung
+     mit ihren Zeiten — oder die mit konstantem Strom, wenn aus. */
+  onCurve: true, timeline: null, flowShown: null,
   name: 'Zwei Anschnitte', ready: false,
   chartOpen: false,
   refPending: null          // Versprechen, solange ein Beispiel sein Referenzteil holt
@@ -140,12 +146,62 @@ function rebuild(mode) {
   updateBiscuit();
   editor.refresh();
   if (mode === 'drag') { view.invalidate(); return; }
-  state.rules = checkRules(g, state.net, state.flow, state.proc);
+  updateTimeline();
+  state.rules = checkRules(g, state.net, state.flowShown, shownProc());
   updateFacts();
   updateRules();
   updateChart();
   updatePointMenu();
   view.invalidate();
+}
+
+/* ── Die Schusskurve unter dem Anguss ────────────────────────
+   Die Kurve der Auslegung — Maschine, Kammer, Legierung, Thermik aus dem
+   aktuellen Projekt — mit den Volumen von hier: das Gussvolumen (Bauteil
+   samt Überläufen, wie unter „Prozess" eingetragen), dieser Anguss,
+   dieser Pressrest. */
+function modelVolumes() {
+  const b = state.graph.biscuit;
+  return {
+    part: state.proc.volume * 1000, overflow: 0,
+    runner: state.flow ? state.flow.runnerVolume : NaN,
+    biscuit: Math.PI * b.d * b.d / 4 * b.t
+  };
+}
+function updateTimeline() {
+  state.timeline = null;
+  state.flowShown = state.flow;
+  if (!state.onCurve || !state.flow) return;
+  const tl = shotTimeline(design.values, modelVolumes());
+  if (tl.error) { state.timeline = { error: tl.error }; return; }
+  state.timeline = tl;
+  state.flowShown = flowOnCurve(state.flow, tl);
+}
+/* Die Prüfregel der Spanne misst an der Füllzeit — auf der Kurve an ihrer eigenen. */
+const shownProc = () => (state.flowShown && state.flowShown.onCurve
+  ? { ...state.proc, fillTime: state.flowShown.fillTime } : state.proc);
+
+function updateShotFacts() {
+  const tl = state.timeline, fl = state.flowShown;
+  const warn = $('shot-warn');
+  $('shot-adopt').disabled = !(tl && !tl.error && Number.isFinite(tl.shot.fill) && tl.shot.fill > 0);
+  if (!state.onCurve || !tl) { facts('shot-facts', []); warn.textContent = ''; return; }
+  if (tl.error) { facts('shot-facts', []); warn.textContent = 'Keine DieLogic-Kurve: ' + tl.error + ' Die Ankunft steht mit konstantem Strom.'; return; }
+  const sh = tl.shot;
+  const rows = [
+    ['Kammer voll', 'bei ' + fmt(tl.tFull * 1000, 0) + ' ms · Kolben ' + fmt(sh.events[0].v, 2) + ' m/s'],
+    ['2. Phase', 'v₂ ' + fmt(tl.v2) + ' m/s' + (Number.isFinite(sh.fill) ? ' · Füllzeit ' + fmt(sh.fill, 0) + ' ms' : '')
+      + (Number.isFinite(tl.tN) ? ' (NADCA ' + fmt(tl.tN, 0) + ' ms)' : '')]
+  ];
+  if (fl && fl.onCurve) {
+    rows.push(['Anguss voll', fl.tRunner !== null ? 'bei ' + fmt(fl.tRunner * 1000, 0) + ' ms ab Kolbenstart'
+      : 'die Kurve endet vorher (' + fl.unreached.join(', ') + ')']);
+  }
+  if (Number.isFinite(sh.fill) && Math.abs(sh.fill - state.proc.fillTime) > 0.5) {
+    rows.push(['Prozess', 'Füllzeit ' + fmt(state.proc.fillTime, 0) + ' ms — die Kurve braucht ' + fmt(sh.fill, 0) + ' ms']);
+  }
+  facts('shot-facts', rows);
+  warn.textContent = tl.warn || '';
 }
 
 /* Während eines Zuges ändert sich die GRÖSSE des Netzes nicht — nur die
@@ -213,7 +269,7 @@ function applyVisibility() {
    setzen, hieße dieselbe Sache zweimal sagen und dabei die interessante
    Hälfte (welcher Ast?) wegzulassen. */
 function updateFacts() {
-  const g = state.graph, net = state.net, fl = state.flow;
+  const g = state.graph, net = state.net, fl = state.flowShown || state.flow;
   const gates = G.allNodes(g).filter(n => n.type === 'gate');
   const rows = [
     ['Punkte', fmt(G.allNodes(g).length, 0)],
@@ -223,13 +279,19 @@ function updateFacts() {
     ['Volumenstrom', fmt(fl.Q * 1e6, 0) + ' cm³/s'],
     ['Druckbedarf', fmt(fl.dp / 1e5) + ' bar']
   ];
-  /* Wann die Schmelze wo ist: erster und letzter Anschnitt. */
-  if (gates.length) {
-    rows.push(['Ankunft', gates.length > 1
+  /* Wann die Schmelze wo ist: erster und letzter Anschnitt — auf der
+     Schusskurve ab Kolbenstart, sonst ab Eintritt in den Anguss. */
+  if (gates.length && Number.isFinite(fl.tFirst)) {
+    rows.push(['Ankunft', (gates.length > 1
       ? fmt(fl.tFirst * 1000) + ' – ' + fmt(fl.tLast * 1000) + ' ms'
-      : fmt(fl.tFirst * 1000) + ' ms']);
+      : fmt(fl.tFirst * 1000) + ' ms') + (fl.onCurve ? ' ab Kolbenstart' : ' bei konstantem Strom')]);
+  }
+  if (fl.onCurve && state.timeline) {
+    rows.push(['Schusskurve', 'DieLogic-Kurve · Kammer voll bei ' + fmt(state.timeline.tFull * 1000, 0) + ' ms · v₂ '
+      + fmt(state.timeline.v2) + ' m/s' + (fl.unreached.length ? ' · endet vor ' + fl.unreached.join(', ') : '')]);
   }
   facts('chart-facts', rows);
+  updateShotFacts();
 }
 
 function updateRules() {
@@ -241,7 +303,7 @@ function updateRules() {
    es offen ist — und in Bildschirmbreite, damit die Schrift mitwächst. */
 function updateChart() {
   if (!state.chartOpen) return;
-  $('chart-body').innerHTML = flowChart(state.graph, state.net, state.flow, { width: 900 });
+  $('chart-body').innerHTML = flowChart(state.graph, state.net, state.flowShown || state.flow, { width: 900 });
 }
 
 function openChart(on) {
@@ -433,11 +495,14 @@ function syncSelection() {
     }
   }
   if (isGate) {
-    const r = state.flow.gates.find(x => x.id === id);
+    const fl = state.flowShown || state.flow;
+    const r = fl.gates.find(x => x.id === id);
     if (r) {
       rows.push(['Anschnittfläche', fmt(r.area, 0) + ' mm²']);
       rows.push(['Anteil Soll/Ist', fmt(r.soll * 100, 0) + ' / ' + fmt(r.ist * 100, 0) + ' %']);
-      rows.push(['Ankunft', fmt(r.tArrive * 1000) + ' ms']);
+      rows.push(['Ankunft', Number.isFinite(r.tArrive)
+        ? fmt(r.tArrive * 1000) + ' ms' + (fl.onCurve ? ' ab Kolbenstart' : '')
+        : 'die Kurve endet vorher']);
     }
     /* Wohin der Anschnitt mündet — und ob das ans Bauteil gebunden ist
        oder dem Punkt davor folgt. Der Pfeil im Viewport zeigt dasselbe. */
@@ -651,6 +716,21 @@ numberInput('vgate', v => {
   return state.proc.vGate;
 });
 slider('cbranch', v => { state.proc.cBranch = v / 100; rebuild(); }, v => fmt(v / 100, 2));
+$('shot-time').addEventListener('change', e => {
+  state.onCurve = e.target.checked;
+  rebuild();
+  syncSelection();
+});
+/* Die Füllzeit, die die Kurve braucht, als Füllzeit des Prozesses — dann
+   rechnen Strom und Zeiten mit derselben Zahl. */
+$('shot-adopt').addEventListener('click', () => {
+  const tl = state.timeline;
+  if (!tl || tl.error || !(tl.shot.fill > 0)) return;
+  state.proc.fillTime = Math.round(tl.shot.fill * 10) / 10;
+  $('tfill').value = fmtPlain(state.proc.fillTime, 1);
+  rebuild();
+  syncSelection();
+});
 
 /* ── Darstellung ─────────────────────────────────────────────── */
 segButtons('show-seg', v => { state.show = v; applyVisibility(); });

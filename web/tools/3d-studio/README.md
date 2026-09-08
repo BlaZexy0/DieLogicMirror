@@ -761,6 +761,25 @@ die Griffe, nicht das Netz.
   Knopf gesperrt.
 
 
+### Ankunft nach der Schusskurve
+
+Die Ankunft der Schmelze an jedem Anschnitt — im Flussschema, im
+Auswahlfeld und in der Prüfregel der Spanne — steht nach der
+**DieLogic-Schusskurve** der Auslegung (`js/runner/shottime.js`), nicht
+nach einem konstanten Strom: die Kurve (López-Anfahrt bis v_krit, Plateau
+bis „Kammer voll", Rampe mit a_max auf das v₂ der NADCA-Füllzeit) wird
+für dieses System erzeugt — Maschine, Kammer, Legierung und Thermik aus
+dem aktuellen Projekt (`shared/project.js`, der Auslegungsabschnitt),
+Gussvolumen, Anguss und Pressrest von hier. Die Ankunft bei konstantem
+Strom ist ein Volumen, das den Pressrest passiert hat; auf der Kurve ist
+das ein Kolbenweg hinter „Kammer voll", und das Profil kennt die Zeit
+dazu. Die Zeiten zählen ab Kolbenstart. Die Seitenleiste nennt „Kammer
+voll", v₂ und die Füllzeit der Kurve gegen die des Prozesses;
+„Füllzeit der Kurve übernehmen" setzt sie als Füllzeit des Prozesses. Das
+Häkchen „Ankunft nach der DieLogic-Schusskurve" schaltet auf den
+konstanten Strom zurück. Ohne Projekt gelten die Vorgabewerte der
+Auslegung (HCC-1600, AlSi9Cu3).
+
 ## Überlaufdesigner (`ueberlauf.html`)
 
 Die zweite Seite, die Geometrie **erzeugt**: Überläufe und Entlüftungen
@@ -1261,7 +1280,7 @@ Was zwischen den Schritten wandert:
 - **Auslegung → Anguss:** die Ankunft der Schmelze an jedem Anschnitt (im
   Flussschema, im Auswahlfeld und in der Prüfregel der Spanne) steht nach der
   **DieLogic-Schusskurve** statt nach einem konstanten Strom
-  (`js/werkbank/shottime.js`): die Kurve der Auslegung (López-Anfahrt bis
+  (`js/runner/shottime.js`, dasselbe Modul wie im Angussdesigner): die Kurve der Auslegung (López-Anfahrt bis
   v_krit, Plateau bis „Kammer voll", Rampe mit a_max auf das v₂ der
   NADCA-Füllzeit) wird für dieses Modell erzeugt — Maschine, Kammer,
   Legierung und Thermik aus dem Auslegungszustand, die Massen aus den

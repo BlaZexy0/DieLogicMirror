@@ -148,7 +148,9 @@ export function createFillStage(ctx) {
         const sh = M.shares(state.plan);
         const clock = fillClock(cv.timeline, items.map(it => ({ id: it.id, tArrive: it.tArrive, share: sh[it.id] || 0 })));
         if (clock) {
-          const vol = res.stats.volume * 1e-9;
+          /* Das wahre Volumen des Bauteils, nicht das des Rasters: die Kurve
+             füllt das Bauteil, der Füllgrad der Rechnung ist ein Anteil davon. */
+          const vol = Math.abs(m.volume) * 1e-9;
           const qOpen = openingFractions(clock, vol);
           const units = unitsForFraction(res.arrival);
           const offsets = {};

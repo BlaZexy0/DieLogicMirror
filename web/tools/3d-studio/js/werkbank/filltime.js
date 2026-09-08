@@ -3,7 +3,7 @@
    Die Füllabschätzung kennt keine Zeit: sie ordnet die Zellen nach der
    Ankunft der Front und nennt den FÜLLGRAD, bei dem jede voll wird.
    Die Schusskurve kennt die Zeit — und der Anguss, wann jeder Anschnitt
-   erreicht ist (js/werkbank/shottime.js). Beides zusammen gibt der
+   erreicht ist (js/runner/shottime.js). Beides zusammen gibt der
    Füllung eine Uhr:
 
    Ab dem ersten Anschnitt strömt Schmelze in die Kavität — aber nur der
@@ -78,8 +78,10 @@ export function fillClock(timeline, gates, opts = {}) {
     tFirst, tCurveEnd: tEnd, gates: open.concat(closed), maxVolume,
     /** Zustrom in die Kavität bis t, m³. */
     volumeAtTime: t => (t <= tFirst ? 0 : lerpIn(T, V, t)),
-    /** Zeit ab Kolbenstart, zu der V (m³) in der Kavität ist — null, wenn die Kurve vorher endet. */
-    timeAtVolume: v => (v <= 0 ? tFirst : v > maxVolume + 1e-15 ? null : lerpIn(V, T, v))
+    /** Zeit ab Kolbenstart, zu der V (m³) in der Kavität ist — null, wenn
+        die Kurve vorher endet. Die DieLogic-Kurve endet genau am Füllende;
+        was die Integration davon um Promille verfehlt, zählt als erreicht. */
+    timeAtVolume: v => (v <= 0 ? tFirst : v > maxVolume * 1.005 ? null : v >= maxVolume ? tEnd : lerpIn(V, T, v))
   };
 }
 

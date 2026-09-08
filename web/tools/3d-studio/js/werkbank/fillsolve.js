@@ -4,7 +4,7 @@
    26er-Nachbarschaft, Dünnwand-Bremse, Tempo je Anschnitt aus seinem
    Anteil), um eines erweitert: jeder Anschnitt darf später starten. Die
    Werkbank weiß aus dem Anguss und der Schusskurve, wann die Schmelze
-   welchen Anschnitt erreicht (js/werkbank/shottime.js), und aus der
+   welchen Anschnitt erreicht (js/runner/shottime.js), und aus der
    Uhr der Füllung (js/werkbank/filltime.js), wie viel die früheren bis
    dahin gefüllt haben — dieser Vorsprung wird in den Einheiten der
    Rechnung an den Startzellen des späteren Anschnitts angesetzt.

@@ -15,10 +15,23 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { buildDocument, installGlobals } from './stubs/dom.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'web', 'tools', '3d-studio');
 const read = f => readFileSync(resolve(ROOT, f), 'utf8');
+
+/* Der Angussdesigner holt sich die Schusskurve der Auslegung — die
+   klassischen Skripte des Projekts müssen vor ihm da sein (wie auf der
+   Seite im <head>). */
+const require = createRequire(import.meta.url);
+function loadDesignScripts() {
+  globalThis.window = globalThis;
+  if (!globalThis.localStorage) globalThis.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+  for (const f of ['shared/examples/machines.js', 'shared/examples/alloys.js', 'shared/examples/parts.js', 'shared/project.js']) {
+    require(resolve(ROOT, '..', '..', f));
+  }
+}
 
 /* Warten, bis die laufende Analyse fertig ist — sie startet von selbst
    beim Laden; sonst räumt der nächste Test das DOM unter ihr weg. */
@@ -291,6 +304,7 @@ test('?part=… wählt das Beispielteil aus der Adresszeile', async () => {
 test('Angussseite: das Beispiel „Ölwanne" bringt sein Referenzteil mit', async () => {
   const { doc: d } = buildDocument(read('anguss.html'));
   installGlobals(d);
+  loadDesignScripts();
   globalThis.location = { search: '?demo=oelwanne', href: 'http://test/anguss.html?demo=oelwanne' };
   const mod = await import('../../../web/tools/3d-studio/js/runner/app.js?variante=oelwanne');
   const v = mod.__viewer;
@@ -935,10 +949,40 @@ test('Abstandsseite: Skalengrenzen, Sichtbarkeit, Farbskala', async () => {
 test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async () => {
   const { doc: d6 } = buildDocument(read('anguss.html'));
   installGlobals(d6);
+  loadDesignScripts();
   globalThis.location = { search: '', href: 'http://test/anguss.html' };
   const mod = await import('../../../web/tools/3d-studio/js/runner/app.js');
   const v = mod.__viewer;
   assert.ok(v.state.ready, 'das Beispiel steht');
+
+  /* Die Ankunft steht nach der DieLogic-Schusskurve der Auslegung — ab
+     Kolbenstart, die Substitution über das Volumen am Pressrest. */
+  assert.ok(v.state.onCurve && v.state.timeline && !v.state.timeline.error, 'Kurve: ' + (v.state.timeline && v.state.timeline.error));
+  assert.ok(v.state.flowShown.onCurve && v.state.flowShown !== v.state.flow);
+  for (const g of v.state.flowShown.gates) {
+    const konst = v.state.flow.gates.find(x => x.id === g.id);
+    const V = konst.tArrive * v.state.flow.Q;
+    assert.ok(Math.abs(g.tArrive - (v.state.timeline.tFull + v.state.timeline.timeForVolume(V))) < 1e-9, 'Kurvenzeit zu ' + g.id);
+    assert.ok(g.tArrive > v.state.timeline.tFull, 'nach Kammer voll');
+  }
+  assert.ok(d6.getElementById('chart-facts').innerHTML.includes('ab Kolbenstart'), 'die Kennzahlen nennen die Kurve');
+  assert.ok(d6.getElementById('shot-facts').innerHTML.includes('Kammer voll'), 'die Seitenleiste zeigt die Kurve');
+  assert.equal(d6.getElementById('shot-adopt').disabled, false);
+  const tfillBefore = v.state.proc.fillTime;
+  d6.getElementById('shot-adopt').dispatch('click');
+  assert.ok(Math.abs(v.state.proc.fillTime - Math.round(v.state.timeline.shot.fill * 10) / 10) < 1e-9, 'die Füllzeit der Kurve ist übernommen: ' + tfillBefore + ' → ' + v.state.proc.fillTime);
+  /* Zurück auf die Füllzeit des Beispiels — die Prüfliste unten erwartet es so. */
+  d6.getElementById('tfill').value = String(tfillBefore);
+  d6.getElementById('tfill').dispatch('change');
+  assert.equal(v.state.proc.fillTime, tfillBefore);
+  const cbShot = d6.getElementById('shot-time');
+  cbShot.checked = false;
+  cbShot.dispatch('change');
+  assert.equal(v.state.flowShown, v.state.flow, 'aus: konstanter Strom');
+  assert.ok(d6.getElementById('chart-facts').innerHTML.includes('konstantem Strom'));
+  cbShot.checked = true;
+  cbShot.dispatch('change');
+  assert.ok(v.state.flowShown.onCurve);
 
   /* Ansichtsleiste und Punktmenü */
   const bar = d6.getElementById('viewport').querySelector('.view-bar');
@@ -1054,7 +1098,7 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.ok(d6.getElementById('chart-panel').classList.contains('on'), 'der Knopf öffnet das Schema');
   assert.ok(v.state.chartOpen);
   assert.match(d6.getElementById('chart-body').innerHTML, /^<svg /);
-  assert.match(d6.getElementById('chart-body').innerHTML, /Ankunft [\d,]+ ms/, 'die Ankunft der Schmelze steht am Anschnitt');
+  assert.match(d6.getElementById('chart-body').innerHTML, /Ankunft [\d.,]+ ms/, 'die Ankunft der Schmelze steht am Anschnitt');
   assert.match(d6.getElementById('chart-body').innerHTML, /Soll \d+ % · Ist \d+ %/, 'Soll und Ist groß');
   assert.match(d6.getElementById('chart-body').innerHTML, /<path d="M[^"]* C[^"]*"/, 'die Bänder sind Bögen, keine Geraden');
   assert.match(d6.getElementById('chart-facts').innerHTML, /Ankunft/);

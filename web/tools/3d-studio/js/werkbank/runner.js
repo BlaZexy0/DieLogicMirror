@@ -28,7 +28,7 @@ import { flowChart } from '../runner/chart.js';
 import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from '../runner/editor.js';
 import { rotate, norm, cross, dot, sub, add } from '../runner/vec.js';
 import { proposeRunner, gateRays } from './propose.js';
-import { shotTimeline, flowOnCurve } from './shottime.js';
+import { shotTimeline, flowOnCurve } from '../runner/shottime.js';
 import { download, safeName, dirText } from './common.js';
 
 const SUBTITLE = 'Anguss: Pressrest, Laufkanäle und Anschnitte als Graph — vorgeschlagen aus dem Bauteil, gebunden an seine Wand.';
@@ -42,7 +42,7 @@ export function createRunnerStage(ctx) {
     proc: { ...F.DEFAULT_PROCESS },
     sizing: { ...DEFAULT_SIZING },
     show: 'sweep', volAuto: true, gatesWanted: 2,
-    /* Ankunft nach der DieLogic-Schusskurve (js/werkbank/shottime.js):
+    /* Ankunft nach der DieLogic-Schusskurve (js/runner/shottime.js):
        timeline ist die Kurve für dieses Modell, flowShown die Strömung
        mit ihren Zeiten — oder die mit konstantem Strom, wenn aus. */
     onCurve: true, timeline: null, flowShown: null,

@@ -22,7 +22,9 @@
    Rampe mit a_max auf das v₂, das die NADCA-Füllzeit trifft. Sie wird
    hier für das Modell erzeugt — Maschine, Kammer, Legierung und Thermik
    aus dem Auslegungszustand, die Massen aus den Volumen des Modells —,
-   unabhängig davon, welche Kurve das Dashboard gerade zeigt.
+   unabhängig davon, welche Kurve das Dashboard gerade zeigt. Der
+   Angussdesigner (js/runner/app.js) und der Anguss-Schritt der Werkbank
+   (js/werkbank/runner.js) benutzen es gleich.
    Kein DOM: die Tests rechnen es unter Node nach. */
 
 import { generateCurve } from '../../../auslegung/js/core/curvegen.js';
@@ -31,8 +33,8 @@ import { computeShot, pistonArea, rhoSolidus } from '../../../auslegung/js/core/
 /**
  * Die Zeitachse des Schusses für ein Modell.
  *   values      Auslegungszustand (state.values des Dashboards)
- *   volumesMm3  { part, runner, overflow, biscuit } in mm³ aus dem Modell;
- *               was fehlt, bleibt bei der Auslegung
+ *   volumesMm3  { part, runner, overflow, biscuit } in mm³ aus dem Modell
+ *               (0 zählt); was fehlt, bleibt bei der Auslegung
  * → { error } oder { v, points, warn, shot, A, tFull, timeForVolume(V) }
  *   mit A in m², tFull der Kurvenzeit von „Kammer voll" in s und
  *   timeForVolume(V in m³) der Zeit ab „Kammer voll", zu der V den
@@ -43,7 +45,9 @@ export function shotTimeline(values, volumesMm3 = {}) {
   const rho = rhoSolidus(v);
   for (const k of ['part', 'runner', 'overflow', 'biscuit']) {
     const mm3 = volumesMm3[k];
-    if (Number.isFinite(mm3) && mm3 > 0) v[k] = mm3 * 1e-9 * rho;
+    /* Null ist ein Wert: ein Modell ohne Überläufe hat keine — nicht die
+       zwei Kilogramm der Auslegungsvorgabe. */
+    if (Number.isFinite(mm3) && mm3 >= 0) v[k] = mm3 * 1e-9 * rho;
   }
   const gen = generateCurve(v, { mode: 'lopez' });
   if (gen.error) return { error: gen.error };

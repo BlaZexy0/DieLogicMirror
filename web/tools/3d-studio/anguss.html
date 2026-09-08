@@ -14,6 +14,12 @@
 <script src="/shared/version.js"></script>
 <script src="/shared/palette.js"></script>
 <script src="/shared/nav.js" data-footer="none"></script>
+<!-- Die Auslegung liefert die Schusskurve unter dem Anguss: Maschine,
+     Kammer und Legierung aus dem aktuellen Projekt (shared/project.js). -->
+<script src="/shared/examples/machines.js"></script>
+<script src="/shared/examples/alloys.js"></script>
+<script src="/shared/examples/parts.js"></script>
+<script src="/shared/project.js"></script>
 <script type="importmap">
   { "imports": { "three": "./vendor/three/three.module.js" } }
 </script>
@@ -119,9 +125,15 @@
       <input type="range" id="cbranch" min="10" max="120" step="5" value="50">
       <span class="val" id="cbranch-val"></span>
     </div>
+    <label class="inline" title="Die Ankunft der Schmelze an jedem Anschnitt nach der DieLogic-Schusskurve der Auslegung (López-Anfahrt bis v_krit, Plateau bis Kammer voll, Rampe auf das v₂ der NADCA-Füllzeit) — erzeugt mit Maschine, Kammer und Legierung des aktuellen Projekts und den Volumen von hier. Ohne Häkchen: ein konstanter Strom aus Gussvolumen und Füllzeit."><input type="checkbox" id="shot-time" checked> Ankunft nach der DieLogic-Schusskurve</label>
+    <div class="facts" id="shot-facts"></div>
+    <div class="warn-line" id="shot-warn"></div>
+    <button type="button" class="btn btn-outline block-btn" id="shot-adopt" title="Die Füllzeit ab Anschnitt, die die Kurve braucht, als Füllzeit des Prozesses übernehmen — dann passen Ströme und Zeiten zusammen.">Füllzeit der Kurve übernehmen</button>
     <div class="hint">Lauflänge, Angussvolumen, Volumenstrom, Druckbedarf und die Ankunft der
       Schmelze stehen im <b>Flussschema</b> (Knopf rechts unten im Viewport) — dort, wo auch
-      Fläche, Geschwindigkeit und Aufteilung an jedem Ast hängen.</div>
+      Fläche, Geschwindigkeit und Aufteilung an jedem Ast hängen. Mit der Schusskurve zählt die
+      Ankunft ab Kolbenstart: erst die langsame erste Phase bis „Kammer voll", dann füllt sich
+      der Anguss in der Rampe der zweiten Phase.</div>
 
     <h2>Darstellung</h2>
     <div class="row">

@@ -24,7 +24,7 @@ rules.
 | `wandstaerke.html` | Wandstärkenanalyse | Signed distance field by rasterisation: wall thickness, thermal centre, equidistant (offset) surfaces, field sections. | offset surface as STL |
 | `abstand.html` | Abstandsanalyse | Shortest distance from every point of one file to another file, coloured on a user set scale. | colours, facts |
 | `fuellung.html` | Füllabschätzung | Fill order of the cavity: rectangular gates on the wall, a front runs through the raster cells (Dijkstra, thin walls brake, bigger gates reach further). Fill grade per location, fill body at any grade, last filled spots. | JSON plan (`dielogic-fuellung`), fill body STL |
-| `anguss.html` | Angussdesigner | The runner system as a graph: biscuit, spline runners with drafted trapezoid section, branches (optionally mirrored), mirror points, gates with transition types. Cross section, curvature, Bernoulli style losses per millimetre, fill balance, flow chart, rule check, automatic sizing from the gates backwards. | JSON (`dielogic-anguss`), STL |
+| `anguss.html` | Angussdesigner | The runner system as a graph: biscuit, spline runners with drafted trapezoid section, branches (optionally mirrored), mirror points, gates with transition types. Cross section, curvature, Bernoulli style losses per millimetre, fill balance, flow chart, rule check, automatic sizing from the gates backwards. Arrival times on the DieLogic shot curve of the current project (`js/runner/shottime.js`; the page loads `shared/project.js` and the example presets for that). | JSON (`dielogic-anguss`), STL |
 | `ueberlauf.html` | Überlaufdesigner | Overflows and vents on the part: overflow bean, bean with vent channel (drawn as points in the wall plane from a sphere at the bean end), chill vent, plain vent slot. Volumes for the shot weight. | JSON (`dielogic-luft`), STL |
 | `temperier.html` | Temperierkanal-Designer | Cooling drills and channels placed on the offset surface at a chosen distance from the cavity, ends movable with axis arrows, automatic placement of drills. | JSON (`dielogic-temperier`), STL |
 | `werkbank.html` | Werkbank | All of the above as six stages in one rail around one part: part analysis (parting + wall thickness), runner (proposed from the part, gates bound to its wall), fill estimate (inlets are the runner's gates), overflows (with the fill's last spots as marks), cooling, and the Auslegung dashboard fed with masses, gate area, wall thickness and projected area from the model. Existing tools are untouched; the stages reuse their modules. | JSON (`dielogic-werkbank`) plus every per-tool file |
@@ -74,7 +74,7 @@ assembles (Formaufbau).
   (`bt-`, `an-`, `fu-`, `ue-`, `te-`, `au-`) and `enter()/leave()`.
   `propose.js` builds the runner proposal from the part's bounds (no
   Three.js), `measure.js` the projected area by rasterising the union of
-  all cavities, `shottime.js` maps the runner's constant-flow arrival
+  all cavities, `js/runner/shottime.js` (shared with the Angussdesigner) maps the runner's constant-flow arrival
   times onto the DieLogic shot curve (arrival × Q = volume past the
   biscuit → plunger travel after "Kammer voll" → time from the profile;
   curve generated for the model's masses with the design state's machine

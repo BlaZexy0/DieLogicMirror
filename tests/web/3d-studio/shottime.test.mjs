@@ -1,4 +1,4 @@
-/* Ankunft nach der Schusskurve (js/werkbank/shottime.js) — reine Rechnung.
+/* Ankunft nach der Schusskurve (js/runner/shottime.js) — reine Rechnung.
 
    Die Umrechnung ist eine Substitution: Ankunftszeit bei konstantem
    Strom mal Strom ist das Volumen, das den Pressrest passiert hat; auf
@@ -23,7 +23,7 @@ for (const f of ['shared/palette.js', 'shared/theme.js', 'shared/examples/machin
 
 const { allFields } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
 const { pistonArea, rhoSolidus } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
-const { shotTimeline, shotArrivals, flowOnCurve } = await import(path.join(site, 'tools/3d-studio/js/werkbank/shottime.js'));
+const { shotTimeline, shotArrivals, flowOnCurve } = await import(path.join(site, 'tools/3d-studio/js/runner/shottime.js'));
 
 const defaults = () => { const v = {}; for (const f of allFields()) v[f.key] = f.def; return v; };
 /* Der Getriebedeckel mit einem Anguss der Werkbank, in mm³. */
