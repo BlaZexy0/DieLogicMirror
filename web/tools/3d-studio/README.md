@@ -184,6 +184,27 @@ die Rechenzeit. Bei der Schräge steht links unten im Viewport eine
 **Farbskala** mit den Zahlenwerten; bei den Regionen bleibt sie aus, dort
 gibt es keine Reihenfolge.
 
+### Formansicht
+
+Ein Häkchen unter „Formansicht" macht aus den Regionen **Formteile**: die
+Flächen jeder Hälfte und jedes Schiebers werden zu einem eigenen Stück und
+fahren um den eingestellten **Abstand** entlang ihrer Entformrichtung
+heraus — die Form geht auf wie beim Öffnen, das Bauteil bleibt
+durchscheinend (oder gar nicht) dazwischen stehen, Hinterschnitte bleiben
+rot an ihrem Ort. Entlang der Trennlinie trägt jedes Stück einen **Rand**,
+um den gewählten Betrag in die Form hinein gezogen: die Trennfläche in
+Andeutung, damit das Stück nicht wie Papier aussieht, sondern wie der
+Einsatz, aus dem das Bauteil gerade gezogen wurde. Der Schalter **Blick**
+stellt die Kamera von der Trennebene aus in die bewegliche bzw. feste
+Hälfte — so sieht man die Kavität von innen, von der Seite, auf der das
+Bauteil war; was jenseits der Trennebene liegt (die Gegenhälfte, deren
+Schieber, das Bauteil), ist dabei weggeschnitten, sonst stünde es beim
+Blick von außen davor. „Alle" zeigt wieder alles. Die Stücke baut
+`js/part/dieview.js` (Dreiecke je Region, Trennkanten,
+Rand; ohne Three.js), gezeichnet und verschoben werden sie in
+`js/part/dieviewer.js`; die Werkbank hat dieselbe Formansicht im Schritt
+Bauteil.
+
 ## Wandstärkenanalyse (`wandstaerke.html`)
 
 Eine Offsetfläche dadurch zu bauen, dass man jeden Punkt des Netzes

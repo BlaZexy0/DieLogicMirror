@@ -27,6 +27,7 @@ import { segment, UNDERCUT } from './segment.js';
 import { draftAngles, draftStats, dirNames } from './draft.js';
 import { $, fmt, rgbCss, facts, segButtons, slider, colorbar, gradient, chip } from '../ui/controls.js';
 import * as C from './colors.js';
+import { createDieView } from './dieviewer.js';
 
 mountNav('entformungsanalyse.html');
 
@@ -50,6 +51,8 @@ const state = {
   showParting: true,
   showEdges: false,
   opacity: 1,
+  /* Formansicht: die Regionen als Formteile auseinandergezogen (js/part/dieviewer.js). */
+  die: { on: false, dist: 60, skirt: 8, part: true, look: 'frei', distTouched: false },
   analysed: false,    // Sichtbarkeit + Zuordnung liegen vor
   running: false,
   ready: false,       // false, solange geladen oder gerechnet wird
@@ -75,6 +78,8 @@ const edgeLines = new T.LineSegments(new T.BufferGeometry(),
 edgeLines.visible = false;
 group.add(edgeLines);
 
+const dieView = createDieView(view);
+
 /* ── Bauteil laden: danach sofort rechnen ────────────────────── */
 const source = mountPartSource({
   busy, viewport: container,
@@ -87,6 +92,17 @@ const source = mountPartSource({
     state.analysed = false;
     buildGeometry();
     clearAnalysis();
+    dieView.build(null, null);
+    /* Der Abstand der Formteile folgt der Bauteilgröße, solange niemand
+       ihn gesetzt hat. */
+    const longest = Math.max(...model.bounds.size);
+    $('die-dist').max = String(Math.max(50, Math.round(longest * 1.2)));
+    if (!state.die.distTouched) {
+      state.die.dist = Math.max(10, Math.round(longest * 0.25));
+      $('die-dist').value = String(state.die.dist);
+      $('die-dist-val').textContent = fmt(state.die.dist, 0) + ' mm';
+      dieView.setDistance(state.die.dist);
+    }
     view.fitTo(partMesh);
     state.ready = true;
     runAnalysis();
@@ -176,6 +192,51 @@ function recompute() {
   updateLegend();
   updateColorbar();
   updateFacts();
+  updateDieView();
+}
+
+/* ── Formansicht ─────────────────────────────────────────────── */
+function updateDieView() {
+  if (!state.die.on || !state.seg) { dieView.lookFree(); dieView.show(false); applyOpacity(); return; }
+  dieView.build(state.model, state.seg, { skirt: state.die.skirt });
+  dieView.setDistance(state.die.dist);
+  dieView.show(true);
+  applyLook();
+}
+
+/* Der Blick: alle Stücke frei, oder von der Trennebene in eine Hälfte
+   (die andere Seite weggeschnitten, das Bauteil aus dem Bild). */
+function applyLook() {
+  const look = state.die.look;
+  if (look === 'frei' || !state.die.on || !state.seg) dieView.lookFree();
+  else if (!dieView.lookInto(halfLabel(look === 'mov' ? 1 : -1))) { state.die.look = 'frei'; segButtonSet('die-look-seg', 'frei'); dieView.lookFree(); }
+  applyOpacity();
+}
+
+function segButtonSet(id, value) {
+  for (const b of $(id).querySelectorAll('button')) b.classList.toggle('active', b.dataset.value === value);
+}
+
+/* Das Bauteil: deckend wie eingestellt — in der Formansicht durchscheinend
+   zwischen den Formteilen, beim Blick in eine Hälfte oder ohne Häkchen weg. */
+function applyOpacity() {
+  const ghost = state.die.on && state.seg;
+  const o = ghost ? (state.die.part && state.die.look === 'frei' ? Math.min(state.opacity, 0.18) : 0) : state.opacity;
+  partMesh.visible = o > 0;
+  partMat.opacity = o;
+  partMat.transparent = o < 0.999;
+  partMat.depthWrite = o >= 0.999;
+  partMat.needsUpdate = true;
+  /* Die Linien gehören zum Bauteil: ohne Bauteil hingen sie in der Luft. */
+  partingLines.visible = o > 0 && state.showParting && partingLines.geometry.getAttribute('position')?.count > 0;
+  edgeLines.visible = o > 0 && state.showEdges;
+  view.invalidate();
+}
+
+/** Das Formteil der Hälfte: +Achse ist die bewegliche, −Achse die feste Seite. */
+function halfLabel(sign) {
+  if (!state.seg) return -1;
+  return DIRS.findIndex(d => d.axis === state.seg.mainAxis && d.sign === sign);
 }
 
 /* ── Farben ──────────────────────────────────────────────────── */
@@ -300,13 +361,26 @@ slider('draft-limit', v => {
   state.draftLimit = v;
   if (state.seg) { updateColors(); updateLegend(); updateColorbar(); updateFacts(); }
 }, v => fmt(v) + ' °');
-slider('opacity', v => {
-  state.opacity = v / 100;
-  partMat.opacity = state.opacity;
-  partMat.transparent = state.opacity < 0.999;
-  partMat.depthWrite = state.opacity >= 0.999;
-  partMat.needsUpdate = true;
-}, v => v + ' %');
+slider('opacity', v => { state.opacity = v / 100; applyOpacity(); }, v => v + ' %');
+
+$('die-on').addEventListener('change', e => {
+  state.die.on = e.target.checked;
+  $('die-block').classList.toggle('disabled', !state.die.on);
+  updateDieView();
+});
+slider('die-dist', v => {
+  state.die.dist = v;
+  if (v !== +$('die-dist').defaultValue) state.die.distTouched = true;
+  dieView.setDistance(v);
+}, v => fmt(v, 0) + ' mm');
+let skirtTimer = 0;
+slider('die-skirt', v => {
+  state.die.skirt = v;
+  clearTimeout(skirtTimer);
+  if (state.die.on && state.seg) skirtTimer = setTimeout(updateDieView, 120);
+}, v => fmt(v, 0) + ' mm');
+$('die-part').addEventListener('change', e => { state.die.part = e.target.checked; applyOpacity(); });
+segButtons('die-look-seg', v => { state.die.look = v; applyLook(); });
 
 $('show-parting').addEventListener('change', e => {
   state.showParting = e.target.checked;
@@ -359,7 +433,7 @@ view.renderer.domElement.addEventListener('pointerleave', () => {
 
 /* Handle für die Browser-Konsole UND für den Verdrahtungstest
    (tests/viewer.test.mjs). */
-export const __viewer = { state, view, partMesh, partingLines, edgeLines, recompute, runAnalysis };
+export const __viewer = { state, view, partMesh, partingLines, edgeLines, dieView, recompute, runAnalysis };
 window.__form3d = __viewer;
 
 source.start();

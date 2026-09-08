@@ -244,3 +244,39 @@ test('Der GLB-Leser kommt mit Index, Rohliste und Knotenversatz zurecht', async 
   assert.equal(meshes[0].name, DEMO_PARTS[0].id, 'Knoten trägt die id');
   assert.throws(() => readGLB(new Uint8Array(40).buffer), /glTF/);
 });
+
+/* ── Formansicht: die Regionen als Formteile ─────────────────── */
+import { diePieces, dirVector } from '../../../web/tools/3d-studio/js/part/dieview.js';
+
+test('Formansicht: jedes Dreieck in genau einem Stück, Rand aus den Trennkanten, Richtung je Stück', async () => {
+  const m = buildModel(S.box(60, 40, 30));
+  const vis = await computeVisibility(m);
+  const seg = segment(m, vis, { mainAxis: 2 });
+  const pieces = diePieces(m, seg, { skirt: 5 });
+  assert.ok(pieces.length >= 2, 'mindestens zwei Hälften: ' + pieces.length);
+  assert.equal(pieces.reduce((a, p) => a + p.faces, 0), m.faceCount, 'alle Dreiecke verteilt');
+  assert.equal(pieces.reduce((a, p) => a + p.tris.length, 0), m.faceCount * 9);
+  const totalArea = pieces.reduce((a, p) => a + p.area, 0);
+  assert.ok(Math.abs(totalArea - m.totalArea) < 1e-6 * m.totalArea, 'Flächen summieren sich');
+  for (const p of pieces) {
+    assert.deepEqual(p.dir, dirVector(p.label), 'Richtung des Stücks ' + p.label);
+    const nEdges = p.edges.length / 6;
+    assert.ok(nEdges > 0, 'jedes Stück hat eine Trennlinie');
+    assert.equal(p.skirt.length, nEdges * 18, 'zwei Dreiecke je Trennkante');
+    /* Der Rand liegt genau um den Rand-Betrag in der Entformrichtung hinter der Kante. */
+    const ax = p.skirt[0], ay = p.skirt[1], az = p.skirt[2];
+    const cx = p.skirt[15], cy = p.skirt[16], cz = p.skirt[17];
+    assert.ok(Math.abs((cx - ax) - p.dir[0] * 5) < 1e-6 && Math.abs((cy - ay) - p.dir[1] * 5) < 1e-6 && Math.abs((cz - az) - p.dir[2] * 5) < 1e-6);
+    /* Die Mitte des Stücks liegt auf seiner Seite des Kastens. */
+    const ax2 = p.dir.findIndex(v => v !== 0);
+    assert.ok(p.center[ax2] * p.dir[ax2] > 0, 'Mitte auf der Seite der Richtung: ' + p.center);
+  }
+  /* Beide Hälften teilen sich dieselbe Trennlinie: gleich viele Kanten. */
+  const halves = pieces.filter(p => p.label === 4 || p.label === 5);
+  assert.equal(halves.length, 2, '+Z und −Z');
+  assert.equal(halves[0].edges.length, halves[1].edges.length, 'die Trennlinie ist dieselbe');
+  /* Ohne Rand kein Rand; die Dreiecke bleiben. */
+  const bare = diePieces(m, seg, { skirt: 0 });
+  assert.ok(bare.every(p => p.skirt.length === 0));
+  assert.equal(bare.reduce((a, p) => a + p.faces, 0), m.faceCount);
+});

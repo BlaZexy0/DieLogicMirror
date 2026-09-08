@@ -73,6 +73,25 @@ test('Bauteil: die Entformung läuft beim Laden und findet Z', () => {
   assert.ok(doc.getElementById('bt-analysis-state').textContent.includes('automatisch'));
 });
 
+test('Bauteil: die Formansicht zieht die Regionen auseinander und verschwindet beim Schrittwechsel', () => {
+  const st = W.stages.bauteil;
+  const dv = st.dieView;
+  const on = doc.getElementById('bt-die-on');
+  on.checked = true;
+  on.dispatch('change');
+  assert.equal(dv.group.visible, true);
+  assert.ok(dv.pieces.length >= 2);
+  assert.ok(W.ctx.part.mesh.material.opacity < 0.2, 'Bauteil durchscheinend dazwischen');
+  W.activate('anguss');
+  assert.equal(dv.group.visible, false, 'im nächsten Schritt weg');
+  assert.equal(W.ctx.part.mesh.visible, true);
+  W.activate('bauteil');
+  assert.equal(dv.group.visible, true, 'und beim Zurückkommen wieder da');
+  on.checked = false;
+  on.dispatch('change');
+  assert.equal(dv.group.visible, false);
+});
+
 test('Anguss: der Vorschlag liegt vor der Kante bei −Y, Achse −Z, Anschnitte an der Wand', () => {
   const r = W.stages.anguss;
   const g = r.state.graph;

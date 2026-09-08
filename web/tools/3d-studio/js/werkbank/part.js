@@ -19,6 +19,7 @@ import { thickMaxima } from '../part/field.js';
 import { $, fmt, fmtPlain, rgbCss, facts, segButtons, slider, numberInput, colorbar, gradient, chip } from '../ui/controls.js';
 import * as C from '../part/colors.js';
 import { frame } from '../part/partsource.js';
+import { createDieView } from '../part/dieviewer.js';
 
 const IDLE = 'Ziehen: drehen · Rechte Maustaste: verschieben · Rad: zoomen';
 const SUBTITLE = 'Bauteil: Formteilung nach festen Regeln, Wandstärke und Wärmezentren aus dem Abstandsfeld.';
@@ -30,6 +31,7 @@ export function createPartStage(ctx) {
     axis: 'auto', mode: 'regions', draftLimit: 1.5, showParting: true,
     hot: { on: false, min: 75, list: [] },
     slice: { on: false, axis: 2, pos: 50 },
+    die: { on: false, dist: 60, skirt: 8, part: true, look: 'frei', distTouched: false },
     analysed: false, running: false, visMs: 0, segMs: 0,
     active: false
   };
@@ -52,6 +54,9 @@ export function createPartStage(ctx) {
   const sliceMesh = new T.Mesh(new T.PlaneGeometry(1, 1), sliceMat);
   sliceMesh.visible = false;
   group.add(sliceMesh);
+
+  /* Die Formansicht: die Regionen als Formteile (js/part/dieviewer.js). */
+  const dieView = createDieView(view);
 
   /* ── Entformung ───────────────────────────────────────────── */
   async function runAnalysis() {
@@ -108,7 +113,27 @@ export function createPartStage(ctx) {
     updateLegend();
     updateColorbar();
     updateFacts();
+    updateDieView();
     ctx.emit('analysis', state.seg);
+  }
+
+  function updateDieView() {
+    if (!state.active || !state.die.on || !state.seg) { dieView.lookFree(); dieView.show(false); applyOpacity(); return; }
+    dieView.build(ctx.part.model, state.seg, { skirt: state.die.skirt });
+    dieView.setDistance(state.die.dist);
+    dieView.show(true);
+    applyLook();
+  }
+  const halfLabel = sign => (state.seg ? DIRS.findIndex(d => d.axis === state.seg.mainAxis && d.sign === sign) : -1);
+  function applyLook() {
+    const look = state.die.look;
+    if (look === 'frei' || !state.active || !state.die.on || !state.seg) dieView.lookFree();
+    else if (!dieView.lookInto(halfLabel(look === 'mov' ? 1 : -1))) {
+      state.die.look = 'frei';
+      for (const b of $('bt-die-look-seg').querySelectorAll('button')) b.classList.toggle('active', b.dataset.value === 'frei');
+      dieView.lookFree();
+    }
+    applyOpacity();
   }
 
   function paintPlain() {
@@ -342,10 +367,16 @@ export function createPartStage(ctx) {
     });
   }
 
-  /* Im Schnitt und bei Wärmezentren muss man ins Bauteil sehen. */
+  /* Im Schnitt und bei Wärmezentren muss man ins Bauteil sehen; in der
+     Formansicht steht es durchscheinend zwischen den Formteilen — oder gar nicht. */
   function applyOpacity() {
+    const die = state.active && state.die.on && !!state.seg;
     const clear = state.active && ((state.slice.on || state.hot.on) && !!ctx.field.data);
-    ctx.part.applyOpacity(clear ? Math.min(ctx.part.opacity, 0.45) : ctx.part.opacity);
+    const o = die ? (state.die.part && state.die.look === 'frei' ? Math.min(ctx.part.opacity, 0.18) : 0)
+      : clear ? Math.min(ctx.part.opacity, 0.45) : ctx.part.opacity;
+    ctx.part.mesh.visible = o > 0;
+    ctx.part.applyOpacity(Math.max(o, 0.001));
+    partingLines.visible = o > 0 && state.active && state.showParting && partingLines.geometry.getAttribute('position')?.count > 0;
   }
 
   /* ── Bedienung ────────────────────────────────────────────── */
@@ -365,6 +396,24 @@ export function createPartStage(ctx) {
     view.invalidate();
   });
   slider('bt-opacity', v => { ctx.part.setOpacity(v / 100); applyOpacity(); }, v => v + ' %');
+  $('bt-die-on').addEventListener('change', e => {
+    state.die.on = e.target.checked;
+    $('bt-die-block').classList.toggle('disabled', !state.die.on);
+    updateDieView();
+  });
+  slider('bt-die-dist', v => {
+    state.die.dist = v;
+    if (v !== +$('bt-die-dist').defaultValue) state.die.distTouched = true;
+    dieView.setDistance(v);
+  }, v => fmt(v, 0) + ' mm');
+  let skirtTimer = 0;
+  slider('bt-die-skirt', v => {
+    state.die.skirt = v;
+    clearTimeout(skirtTimer);
+    if (state.die.on && state.seg) skirtTimer = setTimeout(updateDieView, 120);
+  }, v => fmt(v, 0) + ' mm');
+  $('bt-die-part').addEventListener('change', e => { state.die.part = e.target.checked; applyOpacity(); });
+  segButtons('bt-die-look-seg', v => { state.die.look = v; applyLook(); });
 
   numberInput('bt-cell-h', v => ctx.field.setCell(v));
   $('bt-run-field').addEventListener('click', () => ctx.field.ensure({ force: true }));
@@ -415,6 +464,15 @@ export function createPartStage(ctx) {
   /* ── Ereignisse der Werkbank ──────────────────────────────── */
   ctx.on('part', () => {
     clearAnalysis();
+    dieView.build(null, null);
+    const longest = Math.max(...ctx.part.model.bounds.size);
+    $('bt-die-dist').max = String(Math.max(50, Math.round(longest * 1.2)));
+    if (!state.die.distTouched) {
+      state.die.dist = Math.max(10, Math.round(longest * 0.25));
+      $('bt-die-dist').value = String(state.die.dist);
+      $('bt-die-dist-val').textContent = fmt(state.die.dist, 0) + ' mm';
+      dieView.setDistance(state.die.dist);
+    }
     state.hot.list = [];
     $('bt-cell-h').value = fmtPlain(ctx.field.h, 2);
     updateFieldFacts();
@@ -444,7 +502,7 @@ export function createPartStage(ctx) {
       updateSlice();
       updateColorbar();
       updateFieldFacts();
-      applyOpacity();
+      updateDieView();
       view.invalidate();
     },
     leave() {
@@ -452,11 +510,14 @@ export function createPartStage(ctx) {
       partingLines.visible = false;
       hotGroup.visible = false;
       sliceMesh.visible = false;
+      dieView.lookFree();
+      dieView.show(false);
       colorbar(null);
       ctx.part.usePlain();
+      ctx.part.mesh.visible = !!ctx.part.model;
       ctx.part.applyOpacity(ctx.part.opacity);
       view.invalidate();
     },
-    recompute, runAnalysis
+    recompute, runAnalysis, dieView
   };
 }

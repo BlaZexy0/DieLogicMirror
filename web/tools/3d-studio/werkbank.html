@@ -126,6 +126,28 @@
         <div class="facts" id="bt-draft-facts"></div>
       </div>
       <label class="inline"><input type="checkbox" id="bt-show-parting" checked> Trennlinie zeigen (<span id="bt-parting-count">0</span> Kanten)</label>
+      <label class="inline" title="Jede Region wird zum Formteil: die Flächen einer Hälfte oder eines Schiebers rücken entlang ihrer Entformrichtung auseinander, wie beim Öffnen der Form."><input type="checkbox" id="bt-die-on"> Formansicht: Flächen an den Trennlinien auseinanderziehen</label>
+      <div id="bt-die-block" class="disabled">
+        <div class="row">
+          <span title="Wie weit jedes Formteil entlang seiner Entformrichtung herausfährt.">Abstand</span>
+          <input type="range" id="bt-die-dist" min="0" max="300" step="1" value="60">
+          <span class="val" id="bt-die-dist-val"></span>
+        </div>
+        <div class="row">
+          <span title="Ein Rand entlang der Trennlinie, in die Form hinein gezogen — die Trennfläche in Andeutung.">Rand</span>
+          <input type="range" id="bt-die-skirt" min="0" max="40" step="1" value="8">
+          <span class="val" id="bt-die-skirt-val"></span>
+        </div>
+        <label class="inline"><input type="checkbox" id="bt-die-part" checked> Bauteil durchscheinend dazwischen</label>
+        <div class="row">
+        <span title="Von der Trennebene aus in eine Hälfte sehen — die Seite, auf der das Bauteil war. Was jenseits der Trennebene liegt, wird dabei weggeschnitten.">Blick</span>
+        <div class="seg" id="bt-die-look-seg">
+          <button type="button" data-value="frei" class="active" title="Alle Formteile, frei drehbar">Alle</button>
+          <button type="button" data-value="mov" title="In die Kavität der beweglichen Hälfte">Bewegliche</button>
+          <button type="button" data-value="fix" title="In die Kavität der festen Hälfte">Feste</button>
+        </div>
+      </div>
+      </div>
       <div class="hint">Die Werkbank rechnet im Bauteilsystem: Trennebene z = 0, die Form öffnet nach +z.
         Die Entformungsanalyse prüft trotzdem alle drei Achsen und sagt, welche die
         kleinste Schieber- und Hinterschnittfläche hat — weicht sie von Z ab, liegt das

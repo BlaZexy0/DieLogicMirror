@@ -129,6 +129,69 @@ test('Formöffnung: automatisch gewählt, fest wählbar, sofort neu gerechnet', 
   assert.deepEqual([...s.seg.areaByLabel], before, 'Auto findet wieder Z');
 });
 
+test('Formansicht: die Regionen fahren als Formteile auseinander, der Blick in die Hälften stellt die Kamera', () => {
+  const s = app.__viewer.state;
+  const dv = app.__viewer.dieView;
+  assert.equal(dv.group.visible, false, 'aus, solange nicht angehakt');
+  const on = doc.getElementById('die-on');
+  on.checked = true;
+  on.dispatch('change');
+  assert.equal(s.die.on, true);
+  assert.equal(doc.getElementById('die-block').classList.contains('disabled'), false);
+  assert.equal(dv.group.visible, true, 'die Formteile stehen im Viewport');
+  const pieces = dv.pieces;
+  assert.ok(pieces.length >= 2, 'mindestens die beiden Hälften: ' + pieces.length);
+  assert.equal(pieces.reduce((a, p) => a + p.faces, 0), s.model.faceCount, 'alle Dreiecke verteilt');
+  assert.ok(pieces.every(p => p.skirt.length > 0 || p.dir.every(v => v === 0)), 'jedes gerichtete Stück hat einen Rand');
+  assert.ok(app.__viewer.partMesh.material.opacity < 0.2, 'das Bauteil steht durchscheinend dazwischen');
+  /* Der Abstand schiebt jedes Stück entlang seiner Richtung. */
+  const dist = doc.getElementById('die-dist');
+  dist.value = '80';
+  dist.dispatch('input');
+  assert.equal(s.die.dist, 80);
+  for (const h of dv.group.children) {
+    const p = h.userData.piece;
+    assert.ok(Math.abs(h.position.x - p.dir[0] * 80) < 1e-9 && Math.abs(h.position.z - p.dir[2] * 80) < 1e-9, 'Stück ' + p.label + ' verschoben');
+  }
+  /* Der Blick in die bewegliche Hälfte: Kamera vor der +Z-Fläche, Blick
+     entlang +Z, die feste Seite an der Ebene dazwischen weggeschnitten,
+     das Bauteil aus dem Bild. */
+  const cam = app.__viewer.view.camera;
+  const look = v => doc.getElementById('die-look-seg').querySelectorAll('button').find(b => b.dataset.value === v).dispatch('click');
+  look('mov');
+  assert.equal(s.die.look, 'mov');
+  const target = app.__viewer.view.controls.target;
+  assert.ok(cam.position.z < target.z, 'Kamera auf der Trennebenenseite der beweglichen Hälfte');
+  assert.equal(dv.looking, 4, 'gesehen wird +Z');
+  const mov = dv.group.children.find(h => h.userData.piece.label === 4);
+  const fix = dv.group.children.find(h => h.userData.piece.label === 5);
+  const plane = mov.children[0].material.clippingPlanes[0];
+  assert.ok(plane && plane.normal.z > 0.99, 'Schnittebene mit Normale +Z');
+  const zMovMin = mov.userData.piece.span[0] + mov.position.z, zFixMax = fix.userData.piece.span[1] + fix.position.z;
+  const zPlane = -plane.constant;
+  assert.ok(zPlane < zMovMin && zPlane > zFixMax, 'die Ebene liegt zwischen den Hälften: ' + zFixMax + ' < ' + zPlane + ' < ' + zMovMin);
+  assert.equal(app.__viewer.partMesh.visible, false, 'das Bauteil ist aus dem Bild');
+  assert.equal(app.__viewer.partingLines.visible, false, 'und seine Trennlinie mit ihm');
+  look('fix');
+  assert.ok(cam.position.z > app.__viewer.view.controls.target.z, 'und umgekehrt für die feste Hälfte');
+  assert.ok(fix.children[0].material.clippingPlanes[0].normal.z < -0.99);
+  look('frei');
+  assert.equal(dv.looking, null);
+  assert.equal(mov.children[0].material.clippingPlanes, null, 'ohne Blick keine Schnittebene');
+  assert.equal(app.__viewer.partMesh.visible, true);
+  assert.equal(app.__viewer.partingLines.visible, true, 'die Trennlinie ist wieder da');
+  /* Ohne Bauteil dazwischen ist es unsichtbar; aus stellt alles zurück. */
+  const part = doc.getElementById('die-part');
+  part.checked = false;
+  part.dispatch('change');
+  assert.equal(app.__viewer.partMesh.visible, false);
+  on.checked = false;
+  on.dispatch('change');
+  assert.equal(dv.group.visible, false);
+  assert.equal(app.__viewer.partMesh.visible, true);
+  assert.equal(app.__viewer.partMesh.material.opacity, s.opacity, 'Deckkraft wieder wie eingestellt');
+});
+
 test('Einfärbungen schalten um', async () => {
   const s = app.__viewer.state;
   const modes = doc.getElementById('mode-seg').querySelectorAll('button');

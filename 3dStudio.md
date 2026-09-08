@@ -47,7 +47,12 @@ assembles (Formaufbau).
   field and the surface extraction, used by Wandstärke, Füllung and
   Temperier. `js/part/segment.js`, `visibility.js`,
   `visibility-worker.js`: the parting analysis (six directions in Web
-  Workers).
+  Workers). `js/part/dieview.js` turns its regions into die pieces
+  (triangles per direction, seam edges, a skirt extruded from the seam
+  into the die), `js/part/dieviewer.js` shows them pulled apart along
+  their opening directions and looks into a half from the parting
+  plane, clipping the other side — the "Formansicht" of the
+  Entformungsanalyse and of the Werkbank's part stage.
 - `js/assembly.js`, `js/components.js`, `js/materials.js`, `js/die.js`,
   `js/clipcaps.js`: the die assembly, its registry, materials and the
   cross section caps.
