@@ -185,7 +185,7 @@ export function createDesignStage(ctx) {
       const chartsEl = $('charts');
       charts.forEach(def => { cards[def.id] = buildCard(def, chartsEl, { link: true, onHighlight }); });
       initSim();
-      subscribe(() => { state.dirty = true; if (state.active) render(); refreshTransfer(); });
+      subscribe(() => { state.dirty = true; if (state.active) render(); refreshTransfer(); ctx.emit('design'); });
       refreshTransfer();
     } catch (err) {
       $('au-warn').textContent = 'Die Auslegung konnte nicht aufgebaut werden: ' + err.message;

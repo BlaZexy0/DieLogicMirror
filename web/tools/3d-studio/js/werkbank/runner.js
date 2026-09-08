@@ -28,6 +28,7 @@ import { flowChart } from '../runner/chart.js';
 import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from '../runner/editor.js';
 import { rotate, norm, cross, dot, sub, add } from '../runner/vec.js';
 import { proposeRunner, gateRays } from './propose.js';
+import { shotTimeline, flowOnCurve } from './shottime.js';
 import { download, safeName, dirText } from './common.js';
 
 const SUBTITLE = 'Anguss: Pressrest, Laufkanäle und Anschnitte als Graph — vorgeschlagen aus dem Bauteil, gebunden an seine Wand.';
@@ -41,6 +42,10 @@ export function createRunnerStage(ctx) {
     proc: { ...F.DEFAULT_PROCESS },
     sizing: { ...DEFAULT_SIZING },
     show: 'sweep', volAuto: true, gatesWanted: 2,
+    /* Ankunft nach der DieLogic-Schusskurve (js/werkbank/shottime.js):
+       timeline ist die Kurve für dieses Modell, flowShown die Strömung
+       mit ihren Zeiten — oder die mit konstantem Strom, wenn aus. */
+    onCurve: true, timeline: null, flowShown: null,
     chartOpen: false, active: false, ready: false, name: ''
   };
 
@@ -93,7 +98,8 @@ export function createRunnerStage(ctx) {
     updateBiscuit();
     editor.refresh();
     if (mode === 'drag') { view.invalidate(); return; }
-    state.rules = checkRules(g, state.net, state.flow, state.proc);
+    updateTimeline();
+    state.rules = checkRules(g, state.net, state.flowShown, shownProc());
     updateFacts();
     updateRules();
     updateChart();
@@ -104,7 +110,9 @@ export function createRunnerStage(ctx) {
   }
 
   function setEmpty() {
-    state.net = null; state.flow = null; state.rules = [];
+    state.net = null; state.flow = null; state.flowShown = null; state.timeline = null; state.rules = [];
+    facts('an-shot-facts', []);
+    $('an-shot-warn').textContent = '';
     runnerMesh.visible = biscMesh.visible = false;
     for (const child of lineGroup.children.slice()) { child.geometry.dispose(); lineGroup.remove(child); }
     editor.refresh();
@@ -165,9 +173,62 @@ export function createRunnerStage(ctx) {
     view.invalidate();
   }
 
+  /* ── Die Schusskurve unter dem Anguss ─────────────────────── */
+  /* Die Massen für die Kurve kommen aus dem Modell: Bauteil, dieser
+     Anguss, die Überläufe, dieser Pressrest. Maschine, Kammer, Legierung
+     und Thermik aus dem Auslegungszustand. */
+  function modelVolumes() {
+    const b = state.graph.biscuit;
+    return {
+      part: ctx.part.model ? Math.abs(ctx.part.model.volume) : NaN,
+      runner: state.flow ? state.flow.runnerVolume : NaN,
+      overflow: ctx.stages.ueberlauf ? ctx.stages.ueberlauf.volume() : NaN,
+      biscuit: state.graph.rootId ? Math.PI * b.d * b.d / 4 * b.t : NaN
+    };
+  }
+  function updateTimeline() {
+    state.timeline = null;
+    state.flowShown = state.flow;
+    if (!state.onCurve || !state.flow) return;
+    const d = ctx.stages.auslegung;
+    const values = d && d.values();
+    if (!values) return;
+    const tl = shotTimeline(values, modelVolumes());
+    if (tl.error) { state.timeline = { error: tl.error }; return; }
+    state.timeline = tl;
+    state.flowShown = flowOnCurve(state.flow, tl);
+  }
+  /* Der Prozess für die Prüfregeln: die Spanne der Ankunft wird an der
+     Füllzeit gemessen — auf der Kurve an ihrer eigenen. */
+  const shownProc = () => (state.flowShown && state.flowShown.onCurve
+    ? { ...state.proc, fillTime: state.flowShown.fillTime } : state.proc);
+
+  function updateShotFacts() {
+    const tl = state.timeline, fl = state.flowShown;
+    const warn = $('an-shot-warn');
+    if (!state.onCurve) { facts('an-shot-facts', []); warn.textContent = ''; return; }
+    if (!tl) { facts('an-shot-facts', []); warn.textContent = 'Ohne Bauteil und Anguss gibt es keine Kurve.'; return; }
+    if (tl.error) { facts('an-shot-facts', []); warn.textContent = 'Keine DieLogic-Kurve: ' + tl.error + ' Die Ankunft steht mit konstantem Strom.'; return; }
+    const sh = tl.shot;
+    const rows = [
+      ['Kammer voll', 'bei ' + fmt(tl.tFull * 1000, 0) + ' ms · Kolben ' + fmt(sh.events[0].v, 2) + ' m/s'],
+      ['2. Phase', 'v₂ ' + fmt(tl.v2) + ' m/s' + (Number.isFinite(sh.fill) ? ' · Füllzeit ' + fmt(sh.fill, 0) + ' ms' : '')
+        + (Number.isFinite(tl.tN) ? ' (NADCA ' + fmt(tl.tN, 0) + ' ms)' : '')]
+    ];
+    if (fl && fl.onCurve) {
+      rows.push(['Anguss voll', fl.tRunner !== null ? 'nach ' + fmt(fl.tRunner * 1000) + ' ms'
+        : 'die Kurve endet vorher (' + fl.unreached.join(', ') + ')']);
+    }
+    if (Number.isFinite(sh.fill) && Math.abs(sh.fill - state.proc.fillTime) > 0.5) {
+      rows.push(['Prozess', 'Füllzeit ' + fmt(state.proc.fillTime, 0) + ' ms — die Kurve braucht ' + fmt(sh.fill, 0) + ' ms']);
+    }
+    facts('an-shot-facts', rows);
+    warn.textContent = tl.warn || '';
+  }
+
   /* ── Kennzahlen, Regeln, Schema ───────────────────────────── */
   function updateFacts() {
-    const g = state.graph, net = state.net, fl = state.flow;
+    const g = state.graph, net = state.net, fl = state.flowShown || state.flow;
     const gates = G.allNodes(g).filter(n => n.type === 'gate');
     const rows = [
       ['Punkte', fmt(G.allNodes(g).length, 0)],
@@ -177,12 +238,17 @@ export function createRunnerStage(ctx) {
       ['Volumenstrom', fmt(fl.Q * 1e6, 0) + ' cm³/s'],
       ['Druckbedarf', fmt(fl.dp / 1e5) + ' bar']
     ];
-    if (gates.length) {
-      rows.push(['Ankunft', gates.length > 1
+    if (gates.length && Number.isFinite(fl.tFirst)) {
+      rows.push(['Ankunft', (gates.length > 1
         ? fmt(fl.tFirst * 1000) + ' – ' + fmt(fl.tLast * 1000) + ' ms'
-        : fmt(fl.tFirst * 1000) + ' ms']);
+        : fmt(fl.tFirst * 1000) + ' ms') + (fl.onCurve ? ' ab Kammer voll' : ' bei konstantem Strom')]);
+    }
+    if (fl.onCurve && state.timeline) {
+      rows.push(['Schusskurve', 'DieLogic-Kurve · Kammer voll bei ' + fmt(state.timeline.tFull * 1000, 0) + ' ms · v₂ '
+        + fmt(state.timeline.v2) + ' m/s' + (fl.unreached.length ? ' · endet vor ' + fl.unreached.join(', ') : '')]);
     }
     facts('an-chart-facts', rows);
+    updateShotFacts();
   }
 
   function updateRules() {
@@ -192,7 +258,7 @@ export function createRunnerStage(ctx) {
 
   function updateChart() {
     if (!state.chartOpen || !state.net) return;
-    $('an-chart-body').innerHTML = flowChart(state.graph, state.net, state.flow, { width: 900 });
+    $('an-chart-body').innerHTML = flowChart(state.graph, state.net, state.flowShown || state.flow, { width: 900 });
   }
 
   function openChart(on) {
@@ -371,11 +437,14 @@ export function createRunnerStage(ctx) {
       }
     }
     if (isGate) {
-      const r = state.flow.gates.find(x => x.id === id);
+      const fl = state.flowShown || state.flow;
+      const r = fl.gates.find(x => x.id === id);
       if (r) {
         rows.push(['Anschnittfläche', fmt(r.area, 0) + ' mm²']);
         rows.push(['Anteil Soll/Ist', fmt(r.soll * 100, 0) + ' / ' + fmt(r.ist * 100, 0) + ' %']);
-        rows.push(['Ankunft', fmt(r.tArrive * 1000) + ' ms']);
+        rows.push(['Ankunft', Number.isFinite(r.tArrive)
+          ? fmt(r.tArrive * 1000) + ' ms' + (fl.onCurve ? ' ab Kammer voll' : '')
+          : 'die Kurve endet vorher']);
       }
       const e = state.net.edges.find(x => x.toId === id);
       const t = e && e.sections.length ? e.sections[e.sections.length - 1].t : null;
@@ -582,6 +651,10 @@ export function createRunnerStage(ctx) {
     return state.proc.vGate;
   });
   slider('an-cbranch', v => { state.proc.cBranch = v / 100; rebuild(); }, v => fmt(v / 100, 2));
+  $('an-shot-time').addEventListener('change', e => {
+    state.onCurve = e.target.checked;
+    if (state.graph.rootId) { rebuild(); syncSelection(); }
+  });
 
   /* Das Gussvolumen aus Bauteil und Überläufen — ohne Tippen. */
   function castVolumeCm3() {
@@ -612,8 +685,11 @@ export function createRunnerStage(ctx) {
     }
     state.proc.alloy = best;
     $('an-alloy').value = best;
-    if (d.shot && !d.shot.error && Number.isFinite(d.shot.fill) && d.shot.fill > 0) {
-      state.proc.fillTime = Math.round(d.shot.fill * 10) / 10;
+    /* Die Füllzeit: von der DieLogic-Kurve dieses Modells, sonst von der
+       Kurve des Dashboards. */
+    const shot = state.timeline && !state.timeline.error ? state.timeline.shot : d.shot;
+    if (shot && !shot.error && Number.isFinite(shot.fill) && shot.fill > 0) {
+      state.proc.fillTime = Math.round(shot.fill * 10) / 10;
       $('an-tfill').value = fmtPlain(state.proc.fillTime, 1);
     }
     if (Number.isFinite(d.values.gateMin) && Number.isFinite(d.values.gateMax)) {
@@ -720,7 +796,10 @@ export function createRunnerStage(ctx) {
 
   /* ── Ereignisse ───────────────────────────────────────────── */
   ctx.on('part', () => { propose(state.gatesWanted, true); });
-  ctx.on('vents', () => syncVolume(true));
+  ctx.on('vents', () => { syncVolume(true); if (state.graph.rootId && state.onCurve) rebuild(); });
+  /* Maschine, Kammer oder Legierung im Auslegungsschritt geändert: die
+     Kurve unter dem Anguss ist eine andere. */
+  ctx.on('design', () => { if (state.graph.rootId && state.onCurve) { rebuild(); syncSelection(); } });
 
   return {
     id: 'anguss', state, group, editor,
@@ -746,12 +825,13 @@ export function createRunnerStage(ctx) {
     },
     propose, rebuild, loadJSON, adoptGraph, gateMouths, volumes, startAim, openChart,
     toJSON: () => (state.graph.rootId ? G.toJSON(state.graph) : null),
-    procJSON: () => ({ ...state.proc, sizing: { ...state.sizing }, volAuto: state.volAuto }),
+    procJSON: () => ({ ...state.proc, sizing: { ...state.sizing }, volAuto: state.volAuto, onCurve: state.onCurve }),
     setProc(p) {
       if (!p) return;
       for (const k of ['alloy', 'volume', 'fillTime', 'cBranch', 'vGate']) if (p[k] !== undefined) state.proc[k] = p[k];
       if (p.sizing) Object.assign(state.sizing, p.sizing);
       if (p.volAuto !== undefined) { state.volAuto = !!p.volAuto; $('an-vol-auto').checked = state.volAuto; }
+      if (p.onCurve !== undefined) { state.onCurve = !!p.onCurve; $('an-shot-time').checked = state.onCurve; }
       $('an-alloy').value = state.proc.alloy;
       $('an-vol').value = fmtPlain(state.proc.volume, 1);
       $('an-tfill').value = fmtPlain(state.proc.fillTime, 1);

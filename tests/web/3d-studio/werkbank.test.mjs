@@ -95,6 +95,43 @@ test('Anguss: der Vorschlag liegt vor der Kante bei −Y, Achse −Z, Anschnitte
   assert.ok(doc.getElementById('an-rules').innerHTML.includes('rule'), 'Prüfliste in der Seitenleiste');
 });
 
+test('Anguss: die Ankunft steht nach der DieLogic-Schusskurve — ab Kammer voll, aus dem Volumen am Pressrest', () => {
+  const r = W.stages.anguss;
+  assert.ok(r.state.onCurve && doc.getElementById('an-shot-time').checked, 'voreingestellt an');
+  const tl = r.state.timeline;
+  assert.ok(tl && !tl.error, 'Kurve für dieses Modell: ' + (tl && tl.error));
+  const shown = r.state.flowShown;
+  assert.ok(shown.onCurve && shown !== r.state.flow, 'das gezeigte Ergebnis trägt die Kurvenzeiten');
+  assert.equal(shown.unreached.length, 0, 'jeder Anschnitt wird erreicht');
+  for (const g of shown.gates) {
+    const konst = r.state.flow.gates.find(x => x.id === g.id);
+    assert.ok(Number.isFinite(g.tArrive) && g.tArrive > 0, 'Ankunft ' + g.id);
+    /* Die Substitution: Ankunft bei konstantem Strom mal Strom ist das
+       Volumen am Pressrest, und das hat auf der Kurve seine eigene Zeit. */
+    const V = konst.tArrive * r.state.flow.Q;
+    assert.ok(Math.abs(g.tArrive - tl.timeForVolume(V)) < 1e-9, 'Kurvenzeit zum Volumen ' + V);
+    assert.ok(Math.abs(g.tArrive - konst.tArrive) > 1e-4, 'die Kurve gibt eine andere Zeit als der mittlere Strom (Prozess 45 ms, Kurve '
+      + tl.shot.fill.toFixed(0) + ' ms)');
+  }
+  assert.ok(Math.abs(shown.tRunner - shown.tLast) < 1e-12);
+  const facts = doc.getElementById('an-chart-facts').innerHTML;
+  assert.ok(facts.includes('ab Kammer voll') && facts.includes('DieLogic-Kurve'), 'die Kennzahlen nennen die Kurve');
+  assert.ok(doc.getElementById('an-shot-facts').innerHTML.includes('Kammer voll'), 'die Seitenleiste zeigt die Kurve');
+  /* Die Prüfregel der Spanne misst an der Füllzeit der Kurve. */
+  assert.equal(shown.fillTime, tl.shot.fill);
+  /* Aus: konstanter Strom, wie im Angussdesigner. */
+  const cb = doc.getElementById('an-shot-time');
+  cb.checked = false;
+  cb.dispatch('change');
+  assert.equal(r.state.onCurve, false);
+  assert.equal(r.state.flowShown, r.state.flow);
+  assert.ok(doc.getElementById('an-chart-facts').innerHTML.includes('konstantem Strom'));
+  assert.equal(doc.getElementById('an-shot-facts').innerHTML, '');
+  cb.checked = true;
+  cb.dispatch('change');
+  assert.ok(r.state.flowShown.onCurve);
+});
+
 test('Anguss: ein Fächer und vier Anschnitte lassen sich vorschlagen, dann wieder zwei', () => {
   const r = W.stages.anguss;
   r.propose(1, false);
@@ -223,6 +260,7 @@ test('Anguss: Prozess aus der Auslegung — Legierung nach Dichte, Zielgeschwind
 test('Werkbank-Datei: alle Pläne hin und zurück', async () => {
   const json = W.toJSON();
   assert.equal(json.format, 'dielogic-werkbank');
+  assert.equal(json.prozess.onCurve, true, 'die Kurvenwahl steht in der Datei');
   assert.equal(json.part.demo, 'gearbox_cover');
   assert.equal(json.anguss.format, 'dielogic-anguss');
   assert.equal(json.luft.items.length, 1);

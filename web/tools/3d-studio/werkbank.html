@@ -259,9 +259,14 @@
         <input type="range" id="an-cbranch" min="10" max="120" step="5" value="50">
         <span class="val" id="an-cbranch-val"></span>
       </div>
+      <label class="inline" title="Die Ankunft der Schmelze an jedem Anschnitt nach der DieLogic-Schusskurve (López-Anfahrt bis v_krit, Plateau bis Kammer voll, Rampe auf das v₂ der NADCA-Füllzeit) — erzeugt für dieses Modell mit Maschine, Kammer und Legierung aus Schritt 6. Ohne Häkchen: ein konstanter Strom aus Gussvolumen und Füllzeit."><input type="checkbox" id="an-shot-time" checked> Ankunft nach der DieLogic-Schusskurve</label>
+      <div class="facts" id="an-shot-facts"></div>
+      <div class="warn-line" id="an-shot-warn"></div>
       <button type="button" class="btn btn-outline block-btn" id="an-from-design" title="Legierung nach der Dichte, Füllzeit aus der Schusskurve, Zielgeschwindigkeit aus der Mitte des Zielbands — alles aus Schritt 6.">Prozess aus der Auslegung</button>
       <div class="hint">Lauflänge, Angussvolumen, Volumenstrom, Druckbedarf und die Ankunft der Schmelze
-        stehen im <b>Flussschema</b> (Knopf rechts unten im Viewport).</div>
+        stehen im <b>Flussschema</b> (Knopf rechts unten im Viewport). Mit der Schusskurve zählt
+        die Ankunft ab „Kammer voll": der Anguss füllt sich in der Rampe der zweiten Phase, nicht
+        mit dem mittleren Strom.</div>
 
       <h2>Darstellung</h2>
       <div class="row">

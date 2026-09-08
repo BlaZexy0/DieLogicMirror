@@ -1237,6 +1237,18 @@ Was zwischen den Schritten wandert:
   Feldschnitt), Füllung (Raster) und Temperierung (Abstandsfläche) rechnen
   auf demselben Feld (`ctx.field` in `js/werkbank/app.js`; Zellkante = halbe
   Wanddicke, Band nach außen für den Temperierabstand).
+- **Auslegung → Anguss:** die Ankunft der Schmelze an jedem Anschnitt (im
+  Flussschema, im Auswahlfeld und in der Prüfregel der Spanne) steht nach der
+  **DieLogic-Schusskurve** statt nach einem konstanten Strom
+  (`js/werkbank/shottime.js`): die Kurve der Auslegung (López-Anfahrt bis
+  v_krit, Plateau bis „Kammer voll", Rampe mit a_max auf das v₂ der
+  NADCA-Füllzeit) wird für dieses Modell erzeugt — Maschine, Kammer,
+  Legierung und Thermik aus dem Auslegungszustand, die Massen aus den
+  Volumen des Modells. Die Ankunft bei konstantem Strom ist ein Volumen,
+  das den Pressrest passiert hat; auf der Kurve ist das ein Kolbenweg
+  hinter „Kammer voll", und das Profil kennt die Zeit dazu. Die Zeiten
+  zählen ab „Kammer voll"; das Häkchen „Ankunft nach der
+  DieLogic-Schusskurve" schaltet auf den konstanten Strom zurück.
 - **Modell → Auslegung:** Bauteil-, Anguss-, Überlauf- und Pressrestgewicht
   (Volumen × Dichte bei Solidus), Anschnittfläche und -dicke, Wandstärke
   (2V/A, dickste Stelle) und die Sprengfläche (Projektion aller Kavitäten

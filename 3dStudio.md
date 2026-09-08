@@ -69,7 +69,11 @@ assembles (Formaufbau).
   (`bt-`, `an-`, `fu-`, `ue-`, `te-`, `au-`) and `enter()/leave()`.
   `propose.js` builds the runner proposal from the part's bounds (no
   Three.js), `measure.js` the projected area by rasterising the union of
-  all cavities. `design.js` runs the real Auslegung modules
+  all cavities, `shottime.js` maps the runner's constant-flow arrival
+  times onto the DieLogic shot curve (arrival × Q = volume past the
+  biscuit → plunger travel after "Kammer voll" → time from the profile;
+  curve generated for the model's masses with the design state's machine
+  and alloy). `design.js` runs the real Auslegung modules
   (`state.js` on `window.__PROJECT__`, `ui/inputs.js`, `ui/kpis.js`,
   `charts/registry.js`) in an overlay over the viewport.
 
