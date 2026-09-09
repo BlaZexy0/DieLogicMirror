@@ -59,9 +59,6 @@ export function projectedAreaXY(soups, cell = 1) {
   return count * h * h;
 }
 
-/** Volumen eines Zylinders (Pressrest) in mm³. */
-export const cylinderVolume = (d, t) => Math.PI * d * d / 4 * t;
-
 /** Masse in kg aus einem Kavitätsvolumen in mm³ und einer Dichte in kg/m³. */
 export const massOf = (mm3, rho) => (Number.isFinite(mm3) && Number.isFinite(rho) && rho > 0 ? mm3 * 1e-9 * rho : NaN);
 

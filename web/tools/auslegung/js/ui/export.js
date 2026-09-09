@@ -1,9 +1,6 @@
-/* Export/Import: PNG in Zwischenablage, Schusskurven-CSV, Auslegung als JSON. */
+/* Export: PNG in die Zwischenablage, Schusskurven-CSV. */
 
 import { drawAny } from '../render/draw.js';
-import { state, notify, applyData } from '../core/state.js';
-import { applyValues } from './inputs.js';
-import { renderCurveTable } from './curveTable.js';
 
 const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 
@@ -58,37 +55,4 @@ export function exportShotCSV(shot) {
       + (e.inP && e.gv !== null ? e.gv.toFixed(3) : '') + '\n';
   });
   download(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'DieLogic_Schusskurve.csv');
-}
-
-/* Komplette Auslegung (Werte + Kurve + Kurvenmodus + Presets) als
-   JSON-Datei — dieselben Felder wie der design-Abschnitt des Projekts. */
-export function saveStateJSON() {
-  const data = { values: state.values, curve: state.curve, curveGen: state.curveGen,
-    machine: state.machine, alloy: state.alloy, part: state.part };
-  download(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'DieLogic_Auslegung.json');
-  const sb = document.getElementById('saveBtn');
-  if (sb) {
-    const old = sb.textContent;
-    sb.textContent = 'Gespeichert ✓';
-    setTimeout(() => { sb.textContent = old; }, 1600);
-  }
-}
-
-/* JSON-Auslegung laden: über applyData — dieselbe geprüfte Übernahme wie
-   Share-Link und localStorage (Datei ist nicht vertrauenswürdig). Danach
-   DOM-Felder und Kurventabelle nachziehen; die Preset-Selects
-   synchronisiert notify() über ihre Subscriber. */
-export function loadStateJSON(file) {
-  const r = new FileReader();
-  r.onload = () => {
-    try {
-      applyData(JSON.parse(r.result));
-      applyValues(state.values);
-      renderCurveTable();
-      notify();
-    } catch (e) {
-      alert('Datei konnte nicht gelesen werden: ' + e.message);
-    }
-  };
-  r.readAsText(file);
 }

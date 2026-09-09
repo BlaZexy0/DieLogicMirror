@@ -14,7 +14,6 @@
 import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
-import { mountNav } from '../ui/nav.js';
 import {
   $, fmt, fmtPlain, facts, segButtons, slider, numberInput
 } from '../ui/controls.js';
@@ -34,8 +33,6 @@ import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from './editor.js';
 import { rotate, norm, cross, dot, sub, add } from './vec.js';
 import { shotTimeline, flowOnCurve } from './shottime.js';
 import { state as design } from '../../../auslegung/js/core/state.js';
-
-mountNav('anguss.html');
 
 const container = $('viewport');
 

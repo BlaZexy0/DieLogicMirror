@@ -20,15 +20,12 @@
 import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
-import { mountNav } from '../ui/nav.js';
 import { $, fmt, facts, slider, numberInput } from '../ui/controls.js';
 import { mountPartSource } from '../part/partsource.js';
 import { writeSTL } from '../part/stlio.js';
 import { createHandles, SELECTED_RING } from '../handles.js';
 import * as M from './model.js';
 import { buildByType, buildAll, volumeOf } from './geom.js';
-
-mountNav('ueberlauf.html');
 
 const container = $('viewport');
 const view = initScene(container, {

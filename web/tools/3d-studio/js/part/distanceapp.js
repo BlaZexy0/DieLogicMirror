@@ -20,7 +20,6 @@
 import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
-import { mountNav } from '../ui/nav.js';
 import { mountPartSource, frame } from './partsource.js';
 import { buildModel } from './model.js';
 import { refine } from '../mesh.js';
@@ -29,8 +28,6 @@ import {
   $, fmt, facts, segButtons, slider, numberInput, runControl, colorbar, gradient
 } from '../ui/controls.js';
 import * as C from './colors.js';
-
-mountNav('abstand.html');
 
 const container = $('viewport');
 const status = $('status');

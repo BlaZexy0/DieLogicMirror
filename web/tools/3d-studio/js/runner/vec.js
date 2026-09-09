@@ -21,11 +21,6 @@ export const cross = (a, b) => [
 ];
 export const len = a => Math.hypot(a[0], a[1], a[2]);
 export const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-export const lerp = (a, b, t) => [
-  a[0] + (b[0] - a[0]) * t,
-  a[1] + (b[1] - a[1]) * t,
-  a[2] + (b[2] - a[2]) * t
-];
 
 /** Normieren. Ein Nullvektor bleibt ein Nullvektor — der Aufrufer prüft. */
 export function norm(a) {
@@ -33,14 +28,6 @@ export function norm(a) {
   return l > 1e-12 ? [a[0] / l, a[1] / l, a[2] / l] : [0, 0, 0];
 }
 
-/** Irgendein Vektor senkrecht auf a (stabil auch für achsparallele a). */
-export function perp(a) {
-  const h = Math.abs(a[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
-  return norm(cross(a, h));
-}
-
-/** Anteil von a senkrecht zu n (n normiert vorausgesetzt). */
-export const reject = (a, n) => addScaled(a, n, -dot(a, n));
 
 /** Drehung um eine Achse (Rodrigues), Winkel im Bogenmaß. */
 export function rotate(v, axis, ang) {
@@ -62,6 +49,5 @@ export const mirrorPoint = (p, o, n) => addScaled(p, n, -2 * dot(sub(p, o), n));
 /** Richtung an derselben Ebene spiegeln (ohne Verschiebung). */
 export const mirrorDir = (d, n) => addScaled(d, n, -2 * dot(d, n));
 
-export const deg = r => r * 180 / Math.PI;
 export const rad = d => d * Math.PI / 180;
 export const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);

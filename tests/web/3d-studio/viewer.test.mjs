@@ -65,10 +65,7 @@ before(async () => {
   await analyse(doc, app);
 });
 
-test('Kopfleiste, Ansichtsleiste und Viewport sind aufgebaut', () => {
-  const nav = doc.body.children.find(c => c.className.includes('f3-nav'));
-  assert.ok(nav, 'Kopfleiste eingehängt');
-  assert.ok(nav.querySelectorAll('a').length >= 3, 'Navigationslinks');
+test('Ansichtsleiste und Viewport sind aufgebaut', () => {
   const bar = doc.getElementById('viewport').querySelector('.view-bar');
   assert.ok(bar, 'Ansichtsleiste im Viewport');
   assert.equal(bar.querySelectorAll('[data-view]').length, 4, 'X · Y · Z · Iso');

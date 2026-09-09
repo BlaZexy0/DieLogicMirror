@@ -9,4 +9,3 @@ data/
 # Node (ESLint, Playwright)
 node_modules/
 tests/browser/.results/
-tests/browser/report/

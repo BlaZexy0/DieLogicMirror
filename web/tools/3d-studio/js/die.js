@@ -22,11 +22,8 @@ import { MATERIAL_CLASSES } from './materials.js';
 import { mountAssemblySidebar } from './ui/assembly-sidebar.js';
 import { wireViewControls } from './ui/sidebar.js';
 import { mountViewBar } from './ui/viewbar.js';
-import { mountNav } from './ui/nav.js';
 import { parseSTL } from './part/stlio.js';
 import { isGLB } from './part/glbio.js';
-
-mountNav('form.html');
 
 const $ = id => document.getElementById(id);
 

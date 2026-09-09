@@ -23,7 +23,6 @@
 import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
-import { mountNav } from '../ui/nav.js';
 import { $, fmt } from '../ui/controls.js';
 import { mountPartSource, frame } from '../part/partsource.js';
 import { buildField, fieldSize, fieldExtrema } from '../part/field.js';
@@ -43,8 +42,6 @@ import { createDesignStage } from './design.js';
 
 export const FORMAT = 'dielogic-werkbank';
 export const FORMAT_VERSION = 1;
-
-mountNav('werkbank.html');
 
 const container = $('viewport');
 const busy = $('busy');

@@ -95,7 +95,7 @@ dielogic/
 │   │                    kontakt, ueber-uns, impressum (§ 5 DDG), datenschutz (DSGVO),
 │   │                    agb, widerruf (+ Musterformular)
 │   ├── assets/          logo.svg, icon-*.png (aus logo.svg gerendert), site.webmanifest,
-│   │                    team-mockup.svg, palette.svg/.png (generiert), theorie/*.svg (generiert)
+│   │                    team-mockup.svg, palette.svg (generiert), theorie/*.svg (generiert)
 │   │                    icons/*.svg: Piktogramme der Startseite (Schritte, Werkzeuge) —
 │   │                    per <use href="…svg#icon"> eingebunden, Farben var(--…, Fallback)
 │   └── examples/        Beispiel-STLs für die Sprengflächenanalyse (auch von Tests genutzt)
@@ -216,8 +216,8 @@ Simulations-Requests ergänzt werden.
   (`CHARTS`) und im Katalog auf `web/index.html` verlinken.
 - **3D-Studio:** eigenes README unter `web/tools/3d-studio/`. Nach
   Änderungen an der Geometrie die Modelle neu erzeugen:
-  `node scripts/3d-studio/build-glb.mjs` (Formmodell) und
-  `node scripts/3d-studio/build-parts.mjs` (Beispielteile).
+  `node scripts/3d-studio/build-glb.mjs` (Formmodell); die Beispielteile
+  kommen fertig aus dem Schwesterprojekt openscad_parts.
   Der Angussdesigner braucht keine erzeugten Modelle — seine Beispiele
   entstehen im Code (`js/runner/presets.js`). Nach Änderungen an Kamera,
   Steuerwerk oder Sichtbarkeit einmal in einem echten Browser nachsehen:

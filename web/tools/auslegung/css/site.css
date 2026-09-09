@@ -11,10 +11,10 @@ header { background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
 header .header-title { min-width: 0; margin-right: 16px; }
 header h1 { font-size: 1.35rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 header .header-sub { color: var(--ondark); font-size: 0.85rem; line-height: 1.4; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.save-btn, .back-link, .nav-select { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); color: var(--ondark); font-weight: 600; }
-.save-btn:hover, .back-link:hover { background: rgba(255,255,255,.16); color: var(--surface); }
+.back-link, .nav-select { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); color: var(--ondark); font-weight: 600; }
+.back-link:hover { background: rgba(255,255,255,.16); color: var(--surface); }
 header .header-actions { flex-wrap: nowrap; }
-header .header-actions .save-btn, header .header-actions .back-link { padding: 8px 12px; font-size: 13px; }
+header .header-actions .back-link { padding: 8px 12px; font-size: 13px; }
 
 .layout {
   /* Nav (56) + Projektleiste (44) sind im Fluss und schieben das Layout;

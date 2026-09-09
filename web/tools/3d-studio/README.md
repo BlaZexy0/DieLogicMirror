@@ -1091,7 +1091,6 @@ js/fill/geom.js       Anschnitte als flache Quader für die Anzeige
 js/fill/app.js        Einstieg Füllabschätzung
 js/clipcaps.js        Schnittebene mit geschlossenen Schnittflächen (Stencil)
 js/die.js             Einstieg Formaufbau-Viewer
-js/ui/nav.js          Kopfleiste — hält sich heraus, sobald /shared/nav.js da ist
 js/ui/sidebar.js      Baugruppen-Schalter und Regler des Formaufbaus
 js/ui/viewbar.js      Ansichtsleiste (X/Y/Z/Iso mit Vorzeichen, Projektion)
 js/ui/controls.js     Regler, Schalter, Zahleneingabe, Kennzahlen, Farbskala
@@ -1104,7 +1103,6 @@ js/part/surfacenets.js Fläche gleichen Abstands aus dem Feld
 js/part/distance.js   exakter Abstand zwischen zwei Netzen (Rastersuche in Schalen)
 js/part/partsource.js Abschnitt „Bauteil" — Beispielteile, STL/GLB, Kennzahlen
 js/part/demoparts.js  Beispielteile: Beschreibung + Laden der GLB
-js/part/demogeom.js   QUELLE der Beispielteile (prozedural; nur für den Export)
 js/part/glbio.js      GLB lesen ohne Three.js (Beispielteile und Uploads)
 js/part/stlio.js      STL lesen und schreiben
 js/part/colors.js     Farben der Analyse (aus der DieLogic-Palette)
@@ -1130,7 +1128,7 @@ vendor/utils/         BufferGeometryUtils, TextureUtils (von den Loadern gebrauc
 Außerhalb von `web/`, weil nicht ausgeliefert:
 
 ```
-scripts/3d-studio/    Generatoren der Modelle (build-glb, build-parts)
+scripts/3d-studio/    Generatoren der Formmodelle (build-glb, build-die-stl)
 tests/web/3d-studio/  Tests, laufen mit den übrigen Frontend-Tests
 ```
 
@@ -1152,7 +1150,6 @@ jeweiligen Quelle, aus dem Repo-Root:
 (in openscad_parts) ./render_die.sh --studio      # assets/die.glb ← dies/oil_pan_die.scad
 node scripts/3d-studio/build-die-stl.mjs <manifest> # dasselbe von Hand, aus den STL-Stücken
 node scripts/3d-studio/build-glb.mjs <ziel.glb>    # die ältere prozedurale Form aus js/diegeom.js
-node scripts/3d-studio/build-parts.mjs             # assets/parts/*.glb ← js/part/demogeom.js
 ```
 
 Die Ölwannen-Form kommt als Satz von STL-Stücken aus `openscad_parts`
@@ -1164,20 +1161,12 @@ weiterhin die ältere prozedurale Beispielform; `CFG.openTravel` gilt
 für beide.
 
 Die vier Druckgussteile (Getriebedeckel, Ölwanne, Kühlkörper, U-Profil)
-kommen nicht aus `demogeom.js`, sondern aus dem Schwesterprojekt
-`openscad_parts` (parametrische OpenSCAD-Quellen): dort `./render.sh`,
-dann `build/glb/*.glb` nach `assets/parts/` kopieren. `build-parts.mjs`
-überspringt sie (Feld `source` in `demoparts.js`). Gussteil und
-Temperierkreise der Beispielform entstehen weiterhin prozedural.
+kommen aus dem Schwesterprojekt `openscad_parts` (parametrische
+OpenSCAD-Quellen): dort `./render.sh --studio`, dann `build/glb/*.glb`
+nach `assets/parts/` kopieren; `source` in `demoparts.js` nennt die Quelle.
+Einen prozeduralen Generator für Beispielteile gibt es nicht mehr.
 
-Die prozeduralen Beispielteile werden dabei schon aufgeräumt (entartete Dreiecke weg,
-T-Stöße zu) und indiziert, ohne Normalen — die rechnet der Viewer neu,
-und die Analyse arbeitet allein mit den Punkten. Vorher entstanden sie
-bei jedem Seitenaufruf neu; das kostete pro Teil bis zu einer halben
-Sekunde und zog `js/csg.js`, `js/solids.js` und `js/diegeom.js` in
-Seiten, die damit nichts zu tun haben.
-
-Beides läuft ohne Browser: `scripts/3d-studio/three-resolver.mjs` löst
+Die Generatoren laufen ohne Browser: `scripts/3d-studio/three-resolver.mjs` löst
 den nackten Import `three` auf `vendor/` auf, und `glb-node.mjs` ergänzt
 den FileReader, den der GLTFExporter erwartet.
 

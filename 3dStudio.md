@@ -182,9 +182,8 @@ GLB above.
   and runs `scripts/3d-studio/build-die-stl.mjs`, which uses the same
   `buildDieFromPieces` as the editor so names, extras and materials
   match; also refreshes `coolfix.glb` and `coolmov.glb`.
-- `scripts/3d-studio/build-parts.mjs` rebuilds procedural demo parts;
-  entries with a `source` field in `demoparts.js` are skipped because
-  they come from OpenSCAD.
+- There is no procedural part generator any more: every entry in
+  `demoparts.js` carries a `source` in `openscad_parts`.
 - The OpenSCAD snap cannot read or write `/tmp`; all intermediate files
   live under `openscad_parts/build/`.
 

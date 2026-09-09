@@ -6,19 +6,15 @@
    zog die ganze Geometrie-Werkstatt (js/csg.js, js/solids.js,
    js/diegeom.js) in Seiten hinein, die damit nichts zu tun haben.
    Jetzt kommt ein Bauteil so an, wie eine hochgeladene Datei auch
-   ankäme — und dieselbe Datei prüfen die Tests.
-
-   Neu erzeugen nach Änderungen an js/part/demogeom.js:
-     node scripts/3d-studio/build-parts.mjs
-   Die Teile mit `source` stammen aus openscad_parts (siehe unten). */
+   ankäme — und dieselbe Datei prüfen die Tests. Alle Teile stammen aus
+   dem Schwesterprojekt openscad_parts (`source` nennt die Quelle). */
 
 import { readGLB } from './glbio.js';
 
 export const DEMO_PARTS = [
   /* Die vier Druckgussteile kommen aus dem Schwesterprojekt openscad_parts
-     (parametrische OpenSCAD-Quellen, dort ./render.sh → build/glb/). Sie
-     werden NICHT von scripts/3d-studio/build-parts.mjs erzeugt — `source`
-     nennt die Quelle, die Datei wird von Hand hierher kopiert. */
+     (parametrische OpenSCAD-Quellen, dort ./render.sh --studio → build/glb/,
+     von dort nach assets/parts/ kopiert); `source` nennt die Quelle. */
   { id: 'gearbox_cover', label: 'Getriebedeckel mit Schiebern', file: 'assets/parts/gearbox_cover.glb',
     source: 'openscad_parts/parts/gearbox_cover.scad',
     note: 'Sensor- und Steckerdom quer zur Entformrichtung: Flächen, die nur +X bzw. −Y bilden können — zwei Schieber. Dichtdom, Rippen, blinde Kernpilote (1300-t-Klasse).' },
@@ -49,8 +45,7 @@ export async function loadDemo(id) {
   const p = DEMO_PARTS.find(d => d.id === id) || DEMO_PARTS[0];
   const res = await fetch(p.file);
   if (!res.ok) {
-    throw new Error(p.file + ' fehlt — neu erzeugen mit „node scripts/3d-studio/build-parts.mjs"'
-      + (p.source ? ' bzw. aus ' + p.source + ' exportieren' : ''));
+    throw new Error(p.file + ' fehlt — aus ' + p.source + ' exportieren (openscad_parts: ./render.sh --studio)');
   }
   return { ...p, tris: readGLB(await res.arrayBuffer()) };
 }

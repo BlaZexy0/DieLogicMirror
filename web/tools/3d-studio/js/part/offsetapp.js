@@ -20,7 +20,6 @@
 import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
-import { mountNav } from '../ui/nav.js';
 import { mountPartSource, frame } from './partsource.js';
 import { buildField, fieldSize, fieldExtrema, thickMaxima } from './field.js';
 import { surfaceNets } from './surfacenets.js';
@@ -30,8 +29,6 @@ import {
   $, fmt, fmtPlain, facts, segButtons, slider, numberInput, runControl, colorbar, gradient, chip
 } from '../ui/controls.js';
 import * as C from './colors.js';
-
-mountNav('wandstaerke.html');
 
 const container = $('viewport');
 const status = $('status');

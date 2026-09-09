@@ -6,14 +6,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as S from '../../../web/tools/3d-studio/js/solids.js';
 import { subtract, union } from '../../../web/tools/3d-studio/js/csg.js';
-import { volume, surface, bounds, cleanMesh } from '../../../web/tools/3d-studio/js/mesh.js';
+import { volume } from '../../../web/tools/3d-studio/js/mesh.js';
 import { buildModel, openEdgeRatio } from '../../../web/tools/3d-studio/js/part/model.js';
 import { computeVisibility, DIRS } from '../../../web/tools/3d-studio/js/part/visibility.js';
 import { segment } from '../../../web/tools/3d-studio/js/part/segment.js';
 import { draftAngles, draftStats, dirNames } from '../../../web/tools/3d-studio/js/part/draft.js';
 import { parseSTL, writeSTL } from '../../../web/tools/3d-studio/js/part/stlio.js';
 import { DEMO_PARTS } from '../../../web/tools/3d-studio/js/part/demoparts.js';
-import { buildDemoGeometry } from '../../../web/tools/3d-studio/js/part/demogeom.js';
 import { readGLB } from '../../../web/tools/3d-studio/js/part/glbio.js';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -207,26 +206,13 @@ test('STL: Hin- und Rückweg', async () => {
   assert.throws(() => parseSTL(new Uint8Array(10).buffer));
 });
 
-test('Die ausgelieferten Beispielteile passen zur Quelle', async () => {
+test('Die ausgelieferten Beispielteile sind echte, geschlossene Netze aus openscad_parts', async () => {
   for (const p of DEMO_PARTS) {
+    assert.ok(p.source, p.id + ': nennt seine OpenSCAD-Quelle');
     const shipped = demoTris(p.id);
-    if (p.source) {
-      /* Aus openscad_parts exportiert — hier gibt es keine prozedurale
-         Quelle; geprüft wird, dass ein geschlossenes, echtes Netz ankommt. */
-      assert.ok(shipped.length / 9 > 1000, p.id + ': Dreiecke fehlen');
-      assert.ok(volume(shipped) > 0, p.id + ': positives Volumen');
-      near(openEdgeRatio(buildModel(shipped)), 0, 1e-9, p.id + ': geschlossen');
-      continue;
-    }
-    const src = cleanMesh(buildDemoGeometry(p.id)).tris;
-    assert.equal(shipped.length, src.length, p.id + ': gleiche Dreieckszahl');
-    near(volume(shipped), volume(src), 1e-5, p.id + ': Volumen');
-    near(surface(shipped), surface(src), 1e-5, p.id + ': Oberfläche');
-    const a = bounds(shipped), b = bounds(src);
-    for (let k = 0; k < 3; k++) {
-      near(a.min[k], b.min[k], 1e-5, p.id + ': min');
-      near(a.max[k], b.max[k], 1e-5, p.id + ': max');
-    }
+    assert.ok(shipped.length / 9 > 1000, p.id + ': Dreiecke fehlen');
+    assert.ok(volume(shipped) > 0, p.id + ': positives Volumen');
+    near(openEdgeRatio(buildModel(shipped)), 0, 1e-9, p.id + ': geschlossen');
   }
 });
 

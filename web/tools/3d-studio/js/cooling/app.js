@@ -20,7 +20,6 @@
 import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
-import { mountNav } from '../ui/nav.js';
 import { $, fmt, facts, segButtons, slider, numberInput } from '../ui/controls.js';
 import { mountPartSource, frame } from '../part/partsource.js';
 import { buildField, sampleField } from '../part/field.js';
@@ -30,8 +29,6 @@ import { createHandles, SELECTED_RING } from '../handles.js';
 import * as M from './model.js';
 import { buildByType, buildAll, volumeOf, wallClearance } from './geom.js';
 import { planCooling } from './auto.js';
-
-mountNav('temperier.html');
 
 const container = $('viewport');
 const busy = $('busy');

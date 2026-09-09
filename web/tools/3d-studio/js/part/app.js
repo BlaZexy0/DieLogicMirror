@@ -20,7 +20,6 @@
 import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
-import { mountNav } from '../ui/nav.js';
 import { mountPartSource, frame } from './partsource.js';
 import { computeVisibility, DIRS } from './visibility.js';
 import { segment, UNDERCUT } from './segment.js';
@@ -28,8 +27,6 @@ import { draftAngles, draftStats, dirNames } from './draft.js';
 import { $, fmt, rgbCss, facts, segButtons, slider, colorbar, gradient, chip } from '../ui/controls.js';
 import * as C from './colors.js';
 import { createDieView } from './dieviewer.js';
-
-mountNav('entformungsanalyse.html');
 
 const container = $('viewport');
 const status = $('status');

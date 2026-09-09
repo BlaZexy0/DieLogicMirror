@@ -142,12 +142,3 @@ export function persist() {
     });
   } catch (e) { /* localStorage voll oder deaktiviert — Zustand lebt dann nur in der Seite */ }
 }
-
-/* Alles auf die Defaults zurücksetzen (und persistieren). */
-export function resetState() {
-  applyDefaults();
-  state.curve = DEFAULT_CURVE.map(p => p.slice());
-  state.curveGen = Object.assign({}, DEFAULT_CURVEGEN);
-  for (const k in state.auto) state.auto[k] = false;
-  persist();
-}

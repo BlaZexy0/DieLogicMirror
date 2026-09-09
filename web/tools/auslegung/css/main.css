@@ -29,7 +29,7 @@ header {
 }
 h1 { margin: 0; font-size: 28px; }
 header .header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.save-btn, .back-link {
+.back-link {
   background: rgba(255,255,255,.14);
   border: 1px solid rgba(255,255,255,.45);
   color: var(--surface);
@@ -41,7 +41,7 @@ header .header-actions { display: flex; align-items: center; gap: 10px; flex-shr
   white-space: nowrap;
   text-decoration: none;
 }
-.save-btn:hover, .back-link:hover { background: rgba(255,255,255,.26); }
+.back-link:hover { background: rgba(255,255,255,.26); }
 .nav-select {
   padding: 10px;
   border-radius: 8px;

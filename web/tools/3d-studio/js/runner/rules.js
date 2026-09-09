@@ -282,5 +282,3 @@ function areaBeforeGate(net, id) {
   }
   return e.sections[e.sections.length - 1].area;
 }
-
-export const LEVELS = { ok: 'in Ordnung', note: 'Hinweis', warn: 'prüfen', bad: 'ändern' };

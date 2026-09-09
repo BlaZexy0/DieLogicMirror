@@ -51,13 +51,6 @@ export function dirText(d) {
 /** Der Strahl liefert die nach INNEN gerichtete Normale; Elemente wachsen nach außen. */
 export const outward = d => [-d[0], -d[1], -d[2]];
 
-export const readText = file => new Promise((res, rej) => {
-  const fr = new FileReader();
-  fr.onload = () => res(fr.result);
-  fr.onerror = () => rej(new Error('Die Datei „' + file.name + '" konnte nicht gelesen werden.'));
-  fr.readAsText(file);
-});
-
 export const readBuffer = file => new Promise((res, rej) => {
   const fr = new FileReader();
   fr.onload = () => res(fr.result);

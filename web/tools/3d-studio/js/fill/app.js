@@ -20,7 +20,6 @@
 import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
-import { mountNav } from '../ui/nav.js';
 import { $, fmt, facts, segButtons, slider, numberInput, colorbar, gradient, rgbCss } from '../ui/controls.js';
 import { mountPartSource, frame } from '../part/partsource.js';
 import { buildField, fieldSize } from '../part/field.js';
@@ -31,8 +30,6 @@ import { createHandles, SELECTED_RING } from '../handles.js';
 import * as M from './model.js';
 import { buildAll } from './geom.js';
 import { solveFill, fracToSurface, sampleFrac, fillBodyField, lastSpots } from './solve.js';
-
-mountNav('fuellung.html');
 
 const container = $('viewport');
 const busy = $('busy');
