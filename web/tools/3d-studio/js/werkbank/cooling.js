@@ -14,7 +14,7 @@ import { createHandles, SELECTED_RING } from '../handles.js';
 import * as M from '../cooling/model.js';
 import { buildByType, buildAll, volumeOf, wallClearance } from '../cooling/geom.js';
 import { planCooling } from '../cooling/auto.js';
-import { setTris, download, safeName, dirText } from './common.js';
+import { setTris, download, safeName, dirText } from '../ui/common.js';
 
 const SUBTITLE = 'Temperierung: Kühlstiche und Kanäle auf der Abstandsfläche zur Kavität — die Enden frei bewegen, der Wandabstand aus dem Feld.';
 const STATUS = '<b>Setzen</b>: Art wählen, dann auf die Abstandsfläche klicken &nbsp;·&nbsp; <b>Punkt</b> ziehen: in der Bildebene &nbsp;·&nbsp; '

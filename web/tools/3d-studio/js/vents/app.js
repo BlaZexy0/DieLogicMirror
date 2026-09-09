@@ -26,6 +26,7 @@ import { writeSTL } from '../part/stlio.js';
 import { createHandles, SELECTED_RING } from '../handles.js';
 import * as M from './model.js';
 import { buildByType, buildAll, volumeOf } from './geom.js';
+import { setTris, download, safeName, dirText, outward, createAimUI } from '../ui/common.js';
 
 const container = $('viewport');
 const view = initScene(container, {
@@ -114,20 +115,6 @@ const handles = createHandles({
 });
 
 /* ── Kette: Plan → Anzeige ───────────────────────────────────── */
-function setTris(mesh, tris) {
-  const attr = mesh.geometry.getAttribute('position');
-  if (attr && attr.array.length === tris.length) {
-    attr.array.set(tris);
-    attr.needsUpdate = true;
-    mesh.geometry.boundingSphere = null;
-  } else {
-    const geo = new T.BufferGeometry();
-    geo.setAttribute('position', new T.BufferAttribute(new Float32Array(tris), 3));
-    mesh.geometry.dispose();
-    mesh.geometry = geo;
-  }
-  mesh.visible = tris.length > 0;
-}
 
 function rebuild(mode) {
   const by = buildByType(state.plan);
@@ -233,13 +220,6 @@ function syncFacts(it) {
   facts('sel-facts', rows);
 }
 
-function dirText(d) {
-  const ax = ['X', 'Y', 'Z'];
-  let best = 0;
-  for (let i = 1; i < 3; i++) if (Math.abs(d[i]) > Math.abs(d[best])) best = i;
-  const name = (d[best] < 0 ? '−' : '+') + ax[best];
-  return Math.abs(d[best]) > 0.985 ? name : 'schräg, überwiegend ' + name;
-}
 
 function updateMenu() {
   const it = sel();
@@ -318,47 +298,30 @@ function removeSelected() {
 }
 
 /* ── Zielmodus: setzen und neu setzen ────────────────────────── */
-function aimArmed(on, text) {
-  $('aim-banner').classList.toggle('hidden', !on);
-  $('aim-banner').classList.remove('miss');
-  if (text) $('aim-text').textContent = text;
-}
-let missTimer = 0;
-function miss() {
-  clearTimeout(missTimer);
-  const keep = $('aim-text').textContent;
-  $('aim-banner').classList.add('miss');
-  $('aim-text').textContent = 'Daneben — die Stelle muss auf dem Bauteil liegen.';
-  missTimer = setTimeout(() => { if (handles.aiming) { $('aim-banner').classList.remove('miss'); $('aim-text').textContent = keep; } }, 1600);
-}
+const aim = createAimUI();
 function cancelAim() {
   handles.cancelAim();
-  aimArmed(false);
+  aim.hide();
 }
 /* Der Strahl liefert die nach INNEN gerichtete Normale; das Element
    wächst nach außen. */
-const outward = d => [-d[0], -d[1], -d[2]];
 
-function noPart() {
-  aimArmed(true, 'Zuerst ein Bauteil laden — dann setzt der Klick den Überlauf dorthin.');
-  clearTimeout(missTimer);
-  missTimer = setTimeout(() => { if (!handles.aiming) aimArmed(false); }, 3200);
-}
 
 /** Ein neuer Überlauf der Art `type`: der nächste Klick aufs Bauteil setzt sie. */
 function startPlace(type) {
   if (!M.TYPES[type]) return;
-  if (!refMesh.visible) { noPart(); return; }
+  if (!refMesh.visible) { aim.note('Zuerst ein Bauteil laden — dann setzt der Klick den Überlauf dorthin.'); return; }
   handles.select(null);
-  aimArmed(true, M.TYPES[type].label + ': die Stelle am Bauteil anklicken, wo sie sitzen soll. Ziehen dreht die Ansicht, Esc bricht ab.');
+  aim.show(true, M.TYPES[type].label + ': die Stelle am Bauteil anklicken, wo sie sitzen soll. Ziehen dreht die Ansicht, Esc bricht ab.');
+  aim.onCancel = cancelAim;
   handles.armAim({
     onHit: hit => {
-      aimArmed(false);
+      aim.hide();
       const it = M.addItem(state.plan, type, hit.point, outward(hit.dir));
       rebuild();
       handles.select(it.id);
     },
-    onMiss: miss
+    onMiss: () => aim.miss(null, () => handles.aiming)
   });
 }
 
@@ -366,21 +329,21 @@ function startPlace(type) {
 function startMove(id) {
   const it = state.plan.items[id];
   if (!it) return;
-  if (!refMesh.visible) { noPart(); return; }
-  aimArmed(true, M.TYPES[it.type].label + ' ' + id + ': die neue Stelle am Bauteil anklicken. Esc bricht ab.');
+  if (!refMesh.visible) { aim.note('Zuerst ein Bauteil laden — dann setzt der Klick den Überlauf dorthin.'); return; }
+  aim.show(true, M.TYPES[it.type].label + ' ' + id + ': die neue Stelle am Bauteil anklicken. Esc bricht ab.');
+  aim.onCancel = cancelAim;
   handles.armAim({
     onHit: hit => {
-      aimArmed(false);
+      aim.hide();
       M.placeAt(state.plan, id, hit.point, outward(hit.dir));
       rebuild();
       syncSelection();
     },
-    onMiss: miss
+    onMiss: () => aim.miss(null, () => handles.aiming)
   });
 }
 
 for (const type of Object.keys(M.TYPES)) $('add-' + type).addEventListener('click', () => startPlace(type));
-$('aim-cancel').addEventListener('click', cancelAim);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { cancelAim(); return; }
   const tag = (e.target && e.target.tagName) || '';
@@ -416,22 +379,15 @@ const source = mountPartSource({
 });
 
 /* ── Dateien ─────────────────────────────────────────────────── */
-function download(blob, name) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-}
-const safeName = () => ((state.name || 'ueberlaeufe') + '-ueberlaeufe').replace(/[^\w-]+/g, '-').toLowerCase();
+const fileName = () => safeName((state.name || 'ueberlaeufe') + '-ueberlaeufe');
 
 $('stl-save').addEventListener('click', () => {
   const tris = buildAll(state.plan);
   if (!tris.length) return;
-  download(new Blob([writeSTL(tris, 'DieLogic Überläufe')], { type: 'model/stl' }), safeName() + '.stl');
+  download(new Blob([writeSTL(tris, 'DieLogic Überläufe')], { type: 'model/stl' }), fileName() + '.stl');
 });
 $('json-save').addEventListener('click', () => {
-  download(new Blob([JSON.stringify(M.toJSON(state.plan), null, 1)], { type: 'application/json' }), safeName() + '.json');
+  download(new Blob([JSON.stringify(M.toJSON(state.plan), null, 1)], { type: 'application/json' }), fileName() + '.json');
 });
 $('json-btn').addEventListener('click', () => $('json-input').click());
 $('json-input').addEventListener('change', e => {

@@ -24,7 +24,7 @@ import { mountPartSource, frame } from './partsource.js';
 import { computeVisibility, DIRS } from './visibility.js';
 import { segment, UNDERCUT } from './segment.js';
 import { draftAngles, draftStats, dirNames } from './draft.js';
-import { $, fmt, rgbCss, facts, segButtons, slider, colorbar, gradient, chip } from '../ui/controls.js';
+import { $, fmt, rgbCss, facts, segButtons, segButtonSet, slider, colorbar, gradient, chip } from '../ui/controls.js';
 import * as C from './colors.js';
 import { createDieView } from './dieviewer.js';
 
@@ -208,10 +208,6 @@ function applyLook() {
   if (look === 'frei' || !state.die.on || !state.seg) dieView.lookFree();
   else if (!dieView.lookInto(halfLabel(look === 'mov' ? 1 : -1))) { state.die.look = 'frei'; segButtonSet('die-look-seg', 'frei'); dieView.lookFree(); }
   applyOpacity();
-}
-
-function segButtonSet(id, value) {
-  for (const b of $(id).querySelectorAll('button')) b.classList.toggle('active', b.dataset.value === value);
 }
 
 /* Das Bauteil: deckend wie eingestellt — in der Formansicht durchscheinend

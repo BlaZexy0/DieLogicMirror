@@ -1,5 +1,5 @@
 /* Die Uhr der Füllung (js/werkbank/filltime.js) und die Frontausbreitung
-   mit Vorsprung (js/werkbank/fillsolve.js) — ohne Browser.
+   mit Vorsprung (Option offsets von js/fill/solve.js) — ohne Browser.
 
      node --import ./tests/web/3d-studio/stubs/register.mjs \
           --test tests/web/3d-studio/filltime.test.mjs */
@@ -11,7 +11,6 @@ import { buildModel } from '../../../web/tools/3d-studio/js/part/model.js';
 import { buildField } from '../../../web/tools/3d-studio/js/part/field.js';
 import * as M from '../../../web/tools/3d-studio/js/fill/model.js';
 import { solveFill } from '../../../web/tools/3d-studio/js/fill/solve.js';
-import { solveFillOffset } from '../../../web/tools/3d-studio/js/werkbank/fillsolve.js';
 import { fillClock, openingFractions, unitsForFraction } from '../../../web/tools/3d-studio/js/werkbank/filltime.js';
 
 /* Eine Kurve mit konstanter Kolbengeschwindigkeit: Zustrom = A·v·offene Anteile. */
@@ -52,23 +51,23 @@ test('unitsForFraction: der Füllgrad einer Ankunftsliste als Einheit', () => {
   assert.equal(units(0.5), 3);
 });
 
-test('solveFillOffset: ohne Vorsprung dasselbe wie solveFill; mit Vorsprung füllt der spätere Anschnitt weniger', async () => {
+test('solveFill mit offsets: ohne Vorsprung wie ohne die Option; mit Vorsprung füllt der spätere Anschnitt weniger', async () => {
   const m = buildModel(S.box(160, 40, 12));
   const f = await buildField(m, { res: 64, band: 6 });
   const plan = M.emptyPlan();
   const a = M.addInlet(plan, [-80, 0, 0], [-1, 0, 0], { w: 30, h: 8 });
   const b = M.addInlet(plan, [80, 0, 0], [1, 0, 0], { w: 30, h: 8 });
   const ref = await solveFill(f, plan, { alpha: 0 });
-  const same = await solveFillOffset(f, plan, { alpha: 0 });
+  const same = await solveFill(f, plan, { alpha: 0, offsets: {} });
   assert.equal(same.cells, ref.cells);
   assert.deepEqual(same.stats.inlets.map(i => i.cells), ref.stats.inlets.map(i => i.cells), 'ohne Vorsprung dieselbe Naht');
-  assert.equal(same.stats.offsets, null);
+  assert.deepEqual(same.stats.offsets, {});
   let diff = 0;
   for (let i = 0; i < ref.frac.length; i++) if (!(Number.isNaN(ref.frac[i]) && Number.isNaN(same.frac[i])) && ref.frac[i] !== same.frac[i]) diff++;
   assert.equal(diff, 0, 'derselbe Füllgrad je Zelle');
   /* b startet, wenn a schon 40 % geschafft hat. */
   const units = unitsForFraction(ref.arrival);
-  const off = await solveFillOffset(f, plan, { alpha: 0, offsets: { [b.id]: units(0.4) } });
+  const off = await solveFill(f, plan, { alpha: 0, offsets: { [b.id]: units(0.4) } });
   const cellsA = off.stats.inlets.find(i => i.id === a.id).cells;
   const cellsB = off.stats.inlets.find(i => i.id === b.id).cells;
   const refA = ref.stats.inlets.find(i => i.id === a.id).cells;

@@ -1285,8 +1285,8 @@ Was zwischen den Schritten wandert:
   jedem Füllgrad eine Zeit ab Kolbenstart (Regler, Farbskala, letzte
   Stellen) und zu jedem später öffnenden Anschnitt der **Vorsprung**, den
   die früheren bis dahin haben. Die Frontausbreitung läuft dann zweimal
-  (`js/werkbank/fillsolve.js`, die Rechnung aus `js/fill/solve.js` mit
-  Startversatz je Anschnitt): einmal ohne Versatz, um Füllgrad und
+  (`js/fill/solve.js` mit der Option `offsets`, dem Startversatz je
+  Anschnitt): einmal ohne Versatz, um Füllgrad und
   Ankunftseinheit aufeinander abzubilden, dann mit dem Vorsprung an den
   Startzellen der späteren Anschnitte. Die Kennzahlen nennen Öffnen der
   Anschnitte, „Bauteil voll", die Füllzeit des Bauteils und daneben die

@@ -22,7 +22,7 @@ import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
 import { $, fmt, facts, segButtons, slider, numberInput, colorbar, gradient, rgbCss } from '../ui/controls.js';
 import { mountPartSource, frame } from '../part/partsource.js';
-import { buildField, fieldSize } from '../part/field.js';
+import { buildField, fieldSize, suggestCell, CELL_RANGE } from '../part/field.js';
 import { surfaceNets } from '../part/surfacenets.js';
 import { writeSTL } from '../part/stlio.js';
 import { turbo } from '../part/colors.js';
@@ -30,6 +30,7 @@ import { createHandles, SELECTED_RING } from '../handles.js';
 import * as M from './model.js';
 import { buildAll } from './geom.js';
 import { solveFill, fracToSurface, sampleFrac, fillBodyField, lastSpots } from './solve.js';
+import { setTris, download, safeName, dirText, outward, createAimUI } from '../ui/common.js';
 
 const container = $('viewport');
 const busy = $('busy');
@@ -101,22 +102,6 @@ const handles = createHandles({
 });
 
 /* ── Kette: Plan → Anzeige ───────────────────────────────────── */
-function setTris(mesh, tris, smooth) {
-  const attr = mesh.geometry.getAttribute('position');
-  if (attr && attr.array.length === tris.length) {
-    attr.array.set(tris);
-    attr.needsUpdate = true;
-    mesh.geometry.boundingSphere = null;
-    if (smooth) mesh.geometry.computeVertexNormals();
-  } else {
-    const geo = new T.BufferGeometry();
-    geo.setAttribute('position', new T.BufferAttribute(new Float32Array(tris), 3));
-    if (smooth) geo.computeVertexNormals();
-    mesh.geometry.dispose();
-    mesh.geometry = geo;
-  }
-  mesh.visible = tris.length > 0;
-}
 
 function rebuild(mode) {
   setTris(inletMesh, buildAll(state.plan));
@@ -141,14 +126,6 @@ function rebuild(mode) {
    allen Seiten hätte bei einem flachen Teil mehr Luft als Metall
    gerastert. */
 const MAX_SAMPLES = 16e6;
-const H_MIN = 0.25, H_MAX = 50;
-export function suggestH(m) {
-  const wall = m.volume > 0 && m.totalArea > 0 ? 2 * m.volume / m.totalArea : 0;
-  const longest = Math.max(m.bounds.size[0], m.bounds.size[1], m.bounds.size[2]) || 1;
-  const h = Math.max(H_MIN, Math.min(H_MAX, wall > 0 ? wall / 2 : longest / 64));
-  /* Auf eine glatte Zahl: halbe Millimeter ab 1 mm, darunter Zehntel. */
-  return h >= 1 ? Math.round(h * 2) / 2 : Math.round(h * 10) / 10;
-}
 const gridFor = (m, h) => {
   const band = Math.max(2.5 * h, 1.5);
   return { h, band, pad: 2 * h, size: fieldSize(m, 0, band, { h, pad: 2 * h }) };
@@ -381,13 +358,6 @@ function syncSelection() {
   updateMenu();
 }
 
-function dirText(d) {
-  const ax = ['X', 'Y', 'Z'];
-  let best = 0;
-  for (let i = 1; i < 3; i++) if (Math.abs(d[i]) > Math.abs(d[best])) best = i;
-  const name = (d[best] < 0 ? '−' : '+') + ax[best];
-  return Math.abs(d[best]) > 0.985 ? name : 'schräg, überwiegend ' + name;
-}
 
 function updateMenu() {
   $('del-item').disabled = !sel();
@@ -437,67 +407,50 @@ function removeSelected() {
 }
 
 /* ── Zielmodus: setzen und neu setzen ────────────────────────── */
-function aimArmed(on, text) {
-  $('aim-banner').classList.toggle('hidden', !on);
-  $('aim-banner').classList.remove('miss');
-  if (text) $('aim-text').textContent = text;
-}
-let missTimer = 0;
-function miss() {
-  clearTimeout(missTimer);
-  const keep = $('aim-text').textContent;
-  $('aim-banner').classList.add('miss');
-  $('aim-text').textContent = 'Daneben — die Stelle muss auf dem Bauteil liegen.';
-  missTimer = setTimeout(() => { if (handles.aiming) { $('aim-banner').classList.remove('miss'); $('aim-text').textContent = keep; } }, 1600);
-}
+const aim = createAimUI();
 function cancelAim() {
   handles.cancelAim();
-  aimArmed(false);
+  aim.hide();
 }
 /* Der Strahl liefert die nach INNEN gerichtete Normale. */
-const outward = d => [-d[0], -d[1], -d[2]];
 
-function noPart() {
-  aimArmed(true, 'Zuerst ein Bauteil laden — dann setzt der Klick den Anschnitt dorthin.');
-  clearTimeout(missTimer);
-  missTimer = setTimeout(() => { if (!handles.aiming) aimArmed(false); }, 3200);
-}
 
 function startPlace() {
-  if (!partMesh.visible) { noPart(); return; }
+  if (!partMesh.visible) { aim.note('Zuerst ein Bauteil laden — dann setzt der Klick den Anschnitt dorthin.'); return; }
   handles.select(null);
-  aimArmed(true, 'Anschnitt: die Stelle am Bauteil anklicken, wo die Schmelze eintritt. Ziehen dreht die Ansicht, Esc bricht ab.');
+  aim.show(true, 'Anschnitt: die Stelle am Bauteil anklicken, wo die Schmelze eintritt. Ziehen dreht die Ansicht, Esc bricht ab.');
+  aim.onCancel = cancelAim;
   handles.armAim({
     onHit: hit => {
-      aimArmed(false);
+      aim.hide();
       const it = M.addInlet(state.plan, hit.point, outward(hit.dir), { w: state.defaults.w, h: state.defaults.h });
       rebuild();
       handles.select(it.id);
       planChanged();
     },
-    onMiss: miss
+    onMiss: () => aim.miss(null, () => handles.aiming)
   });
 }
 
 function startMove(id) {
   const it = state.plan.items[id];
   if (!it) return;
-  if (!partMesh.visible) { noPart(); return; }
-  aimArmed(true, 'Anschnitt ' + id + ': die neue Stelle am Bauteil anklicken. Esc bricht ab.');
+  if (!partMesh.visible) { aim.note('Zuerst ein Bauteil laden — dann setzt der Klick den Anschnitt dorthin.'); return; }
+  aim.show(true, 'Anschnitt ' + id + ': die neue Stelle am Bauteil anklicken. Esc bricht ab.');
+  aim.onCancel = cancelAim;
   handles.armAim({
     onHit: hit => {
-      aimArmed(false);
+      aim.hide();
       M.placeAt(state.plan, id, hit.point, outward(hit.dir));
       rebuild();
       syncSelection();
       planChanged();
     },
-    onMiss: miss
+    onMiss: () => aim.miss(null, () => handles.aiming)
   });
 }
 
 $('add-inlet').addEventListener('click', startPlace);
-$('aim-cancel').addEventListener('click', cancelAim);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { cancelAim(); return; }
   const tag = (e.target && e.target.tagName) || '';
@@ -509,7 +462,7 @@ document.addEventListener('keydown', e => {
 /* ── Regler ──────────────────────────────────────────────────── */
 slider('ref-opacity', v => { state.opacity = v / 100; applyVisibility(); }, v => v + ' %');
 numberInput('cell-h', v => {
-  state.h = Math.max(H_MIN, Math.min(H_MAX, v));
+  state.h = Math.max(CELL_RANGE[0], Math.min(CELL_RANGE[1], v));
   state.hAuto = false;
   const changed = !!state.model && state.fieldH > 0 && Math.abs(state.fieldH - state.h) > 1e-9;
   $('res-note').textContent = changed ? 'Neu rastern übernimmt die Kantenlänge.' : '';
@@ -542,7 +495,7 @@ const source = mountPartSource({
     view.fitTo(partMesh);
     rebuild();
     /* Solange der Anwender keine Kante gesetzt hat, kommt sie vom Teil. */
-    if (state.hAuto) { state.h = suggestH(model); $('cell-h').value = fmt(state.h, 2); }
+    if (state.hAuto) { state.h = suggestCell(model); $('cell-h').value = fmt(state.h, 2); }
     await computeField();
     syncSelection();
   },
@@ -550,24 +503,17 @@ const source = mountPartSource({
 });
 
 /* ── Dateien ─────────────────────────────────────────────────── */
-function download(blob, name) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-}
-const safeName = () => ((state.name || 'bauteil') + '-fuellung').replace(/[^\w-]+/g, '-').toLowerCase();
+const fileName = () => safeName((state.name || 'bauteil') + '-fuellung');
 
 $('stl-save').addEventListener('click', () => {
   if (!state.result) return;
   const tris = surfaceNets(fillBodyField(state.field, state.result.frac, state.q), 0);
   if (!tris.length) return;
   download(new Blob([writeSTL(tris, 'DieLogic Füllkörper ' + Math.round(100 * state.q) + ' %')], { type: 'model/stl' }),
-    safeName() + '-' + Math.round(100 * state.q) + '.stl');
+    fileName() + '-' + Math.round(100 * state.q) + '.stl');
 });
 $('json-save').addEventListener('click', () => {
-  download(new Blob([JSON.stringify(M.toJSON(state.plan), null, 1)], { type: 'application/json' }), safeName() + '.json');
+  download(new Blob([JSON.stringify(M.toJSON(state.plan), null, 1)], { type: 'application/json' }), fileName() + '.json');
 });
 $('json-btn').addEventListener('click', () => $('json-input').click());
 $('json-input').addEventListener('change', e => {

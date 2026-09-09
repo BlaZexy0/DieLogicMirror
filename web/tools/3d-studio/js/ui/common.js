@@ -1,10 +1,9 @@
-/* Kleine Helfer, die jeder Schritt der Werkbank braucht: Dreiecke in ein
-   Mesh schreiben, Dateien herunterladen, eine Richtung als Text, und die
-   Zielmodus-Anzeige oben im Viewport, die sich alle Schritte teilen.
-
-   Die Schritte sind Portierungen der Werkzeugseiten (js/runner/app.js,
-   js/vents/app.js, js/fill/app.js, js/cooling/app.js); was dort je Seite
-   einmal stand, steht hier einmal für alle. */
+/* Kleine Helfer, die die Entwurfswerkzeuge und die Werkbank gleich
+   brauchen: Dreiecke in ein Mesh schreiben, Dateien herunterladen, eine
+   Richtung als Text, Dateien lesen und am Kopf erkennen — und die
+   Zielmodus-Anzeige oben im Viewport (aim-banner, aim-text, aim-cancel),
+   die jede Seite mit Griffen zeigt. Was hier steht, stand vorher in vier
+   Seiten je einmal. */
 
 import * as T from 'three';
 import { $ } from '../ui/controls.js';

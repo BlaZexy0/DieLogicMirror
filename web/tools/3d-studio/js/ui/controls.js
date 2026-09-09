@@ -39,6 +39,12 @@ export function segButtons(id, onPick) {
   });
 }
 
+/** Den aktiven Knopf eines segmentierten Schalters von außen setzen —
+    z. B. nach dem Laden einer Datei, ohne den Rückruf auszulösen. */
+export function segButtonSet(id, value) {
+  for (const b of $(id).querySelectorAll('button')) b.classList.toggle('active', b.dataset.value === value);
+}
+
 /** Regler; die Wertanzeige daneben heißt <id>-val. */
 export function slider(id, onChange, format) {
   const el = $(id), out = $(id + '-val');

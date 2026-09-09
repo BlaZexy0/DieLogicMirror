@@ -15,7 +15,7 @@ import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
 import {
-  $, fmt, fmtPlain, facts, segButtons, slider, numberInput
+  $, fmt, fmtPlain, facts, segButtons, segButtonSet, slider, numberInput
 } from '../ui/controls.js';
 import { parseSTL, writeSTL } from '../part/stlio.js';
 import { readGLB, isGLB } from '../part/glbio.js';
@@ -33,6 +33,7 @@ import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from './editor.js';
 import { rotate, norm, cross, dot, sub, add } from './vec.js';
 import { shotTimeline, flowOnCurve } from './shottime.js';
 import { state as design } from '../../../auslegung/js/core/state.js';
+import { download, safeName, dirText, readBuffer, looksLikeJSON, createAimUI } from '../ui/common.js';
 
 const container = $('viewport');
 
@@ -343,25 +344,9 @@ function mountLegend() {
 /* Der scharfe Zustand muss unübersehbar sein: oben im Viewport steht,
    was zu tun ist. Ein Zielmodus, den man nicht sieht, ist einer, in dem
    man rätselt, warum der Klick nichts tut. */
-function aimArmed(on) {
-  $('aim-banner').classList.toggle('hidden', !on);
-  aimBanner(false);
-}
-
-/* Ein Klick daneben bekommt eine Antwort — kurz, dann steht wieder die
-   Anweisung. Schweigen sähe aus wie ein Modus, der nicht funktioniert. */
-let missTimer = 0;
-function aimBanner(miss, text) {
-  clearTimeout(missTimer);
-  $('aim-banner').classList.toggle('miss', miss);
-  $('aim-text').textContent = text || (miss
-    ? 'Daneben — die Stelle muss auf dem Bauteil liegen.'
-    : 'Mündung ans Bauteil: eine Stelle auf dem Bauteil anklicken. Ziehen dreht die Ansicht, Esc bricht ab.');
-  if (miss) missTimer = setTimeout(() => { if (editor.aiming) aimBanner(false); }, 1600);
-}
-
+const aim = createAimUI();
 function cancelAim() {
-  if (editor.cancelAim()) aimArmed(false);
+  if (editor.cancelAim()) aim.hide();
 }
 
 /* Der Klick auf den Pfeil eines Anschnitts. Ohne Referenzbauteil gibt es
@@ -370,15 +355,13 @@ function startAim(id) {
   const n = id && state.graph.nodes[id];
   if (!n || n.type !== 'gate' || G.isFollower(state.graph, id)) return;
   if (!refMesh.visible) {
-    aimArmed(true);
-    aimBanner(false, 'Zuerst ein Referenzbauteil laden (STL oder GLB) — dann zeigt der Klick auf den Pfeil, wo der Anschnitt münden soll.');
-    clearTimeout(missTimer);
-    missTimer = setTimeout(() => { if (!editor.aiming) aimArmed(false); }, 3200);
+    aim.note('Zuerst ein Referenzbauteil laden (STL oder GLB) — dann zeigt der Klick auf den Pfeil, wo der Anschnitt münden soll.');
     return;
   }
   /* Schon scharf für diesen Anschnitt: bleibt scharf. Abgebrochen wird
      mit Esc, mit „Abbrechen" im Hinweis oder durch eine andere Auswahl. */
-  aimArmed(true);
+  aim.show(true, 'Mündung ans Bauteil: eine Stelle auf dem Bauteil anklicken. Ziehen dreht die Ansicht, Esc bricht ab.');
+  aim.onCancel = cancelAim;
   editor.armAim({
     /* Die Arbeitsebene des Anschnitts, jedes Mal frisch: ein Treffer an
        einer aufrechten Wand wird in sie gelegt (js/runner/editor.js). */
@@ -387,33 +370,24 @@ function startAim(id) {
       return gn ? { origin: gn.pos, normal: G.planeNormal(state.graph, gn) } : null;
     },
     onHit: hit => {
-      aimArmed(false);
+      aim.hide();
       G.aimAt(state.graph, id, hit.point, hit.dir);
       rebuild();
       syncSelection();
     },
-    onMiss: () => aimBanner(true)
+    onMiss: () => aim.miss('Daneben — die Stelle muss auf dem Bauteil liegen.', () => editor.aiming)
   });
 }
-$('aim-cancel').addEventListener('click', () => { cancelAim(); aimArmed(false); });
 
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if (state.chartOpen) openChart(false);
   cancelAim();
-  aimArmed(false);
+  aim.hide();
 });
 
 /* Die gebundene Richtung als Text — drei Dezimalzahlen sagen niemandem
    etwas, die nächstliegende Achse schon. */
-function dirText(d) {
-  const ax = ['X', 'Y', 'Z'];
-  let best = 0;
-  for (let i = 1; i < 3; i++) if (Math.abs(d[i]) > Math.abs(d[best])) best = i;
-  const near = Math.abs(d[best]);
-  const name = (d[best] < 0 ? '−' : '+') + ax[best];
-  return near > 0.985 ? name : 'schräg, überwiegend ' + name;
-}
 
 function syncSelection() {
   const g = state.graph;
@@ -473,7 +447,7 @@ function syncSelection() {
     $('sel-gauto').checked = !!n.gate.auto;
     $('sel-gw').disabled = !!n.gate.auto;
     $('sel-gtrans').value = n.gate.transition;
-  } else { cancelAim(); aimArmed(false); }
+  } else { cancelAim(); aim.hide(); }
 
   const na = state.net.nodeArea[id];
   const rows = [['Querschnitt', fmt(na.area, 0) + ' mm²'], ['hydr. Ø', fmt(na.dh) + ' mm']];
@@ -746,22 +720,10 @@ slider('ref-opacity', v => {
 
 /* Der Umschalter „Kanäle / nur Linie" merkt sich seine Stellung im
    Knopf; beim Beispielwechsel muss sie von Hand nachgezogen werden. */
-function segButtonSet(id, value) {
-  for (const b of $(id).querySelectorAll('button')) {
-    b.classList.toggle('active', b.dataset.value === value);
-  }
-}
 
 /* ── Dateien ─────────────────────────────────────────────────── */
-function download(blob, name) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-}
 
-const safeName = () => (state.name || 'anguss').replace(/[^\w-]+/g, '-').toLowerCase();
+const fileName = () => safeName(state.name || 'anguss');
 
 /* Die STL enthält, was im Viewport steht — die Schläuche durchdringen
    sich an den Gabelungen. Ein einziger verschmolzener Körper wäre schöner
@@ -773,12 +735,12 @@ $('stl-save').addEventListener('click', () => {
   const tris = concat(parts);
   if (!tris.length) return;
   download(new Blob([writeSTL(tris, 'DieLogic Angusssystem')], { type: 'model/stl' }),
-    safeName() + '.stl');
+    fileName() + '.stl');
 });
 
 $('json-save').addEventListener('click', () => {
   const text = JSON.stringify(G.toJSON(state.graph), null, 1);
-  download(new Blob([text], { type: 'application/json' }), safeName() + '.json');
+  download(new Blob([text], { type: 'application/json' }), fileName() + '.json');
 });
 
 $('json-btn').addEventListener('click', () => $('json-input').click());
@@ -787,7 +749,7 @@ $('ref-btn').addEventListener('click', () => $('ref-input').click());
 $('ref-input').addEventListener('change', e => { if (e.target.files[0]) readAny(e.target.files[0]); });
 $('ref-clear').addEventListener('click', () => {
   cancelAim();
-  aimArmed(false);
+  aim.hide();
   refMesh.visible = false;
   view.invalidate();
   refMesh.geometry.dispose();
@@ -800,24 +762,15 @@ $('ref-clear').addEventListener('click', () => {
 /* Was für eine Datei das ist, entscheidet der INHALT, nicht die Endung:
    eine geschweifte Klammer heißt Angussdatei, alles andere ist
    Geometrie. */
-function readAny(file) {
-  const fr = new FileReader();
-  fr.onload = () => {
-    try {
-      const head = new Uint8Array(fr.result, 0, Math.min(64, fr.result.byteLength));
-      let i = 0;
-      while (i < head.length && head[i] <= 32) i++;
-      if (head[i] === 0x7b) loadGraphJSON(new TextDecoder().decode(fr.result), file.name);
-      else loadReference(fr.result, file.name);
-    } catch (err) {
-      $('graph-warn').textContent = 'Die Datei „' + file.name + '" konnte nicht gelesen werden: ' + err.message;
-      console.error(err);
-    }
-  };
-  fr.onerror = () => {
-    $('graph-warn').textContent = 'Die Datei „' + file.name + '" konnte nicht gelesen werden.';
-  };
-  fr.readAsArrayBuffer(file);
+async function readAny(file) {
+  try {
+    const buf = await readBuffer(file);
+    if (looksLikeJSON(buf)) loadGraphJSON(new TextDecoder().decode(buf), file.name);
+    else loadReference(buf, file.name);
+  } catch (err) {
+    $('graph-warn').textContent = 'Die Datei „' + file.name + '" konnte nicht gelesen werden: ' + err.message;
+    console.error(err);
+  }
 }
 
 function loadGraphJSON(text, name) {

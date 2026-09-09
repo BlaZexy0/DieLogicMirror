@@ -29,6 +29,7 @@ import { createHandles, SELECTED_RING } from '../handles.js';
 import * as M from './model.js';
 import { buildByType, buildAll, volumeOf, wallClearance } from './geom.js';
 import { planCooling } from './auto.js';
+import { setTris, download, safeName, dirText, createAimUI } from '../ui/common.js';
 
 const container = $('viewport');
 const busy = $('busy');
@@ -119,26 +120,10 @@ const handles = createHandles({
 });
 
 /* ── Kette: Plan → Anzeige ───────────────────────────────────── */
-function setTris(mesh, tris) {
-  const attr = mesh.geometry.getAttribute('position');
-  if (attr && attr.array.length === tris.length) {
-    attr.array.set(tris);
-    attr.needsUpdate = true;
-    mesh.geometry.boundingSphere = null;
-    mesh.geometry.computeVertexNormals();
-  } else {
-    const geo = new T.BufferGeometry();
-    geo.setAttribute('position', new T.BufferAttribute(new Float32Array(tris), 3));
-    geo.computeVertexNormals();
-    mesh.geometry.dispose();
-    mesh.geometry = geo;
-  }
-  mesh.visible = tris.length > 0;
-}
 
 function rebuild(mode) {
   const by = buildByType(state.plan);
-  for (const type of Object.keys(meshes)) setTris(meshes[type], by[type] || []);
+  for (const type of Object.keys(meshes)) setTris(meshes[type], by[type] || [], true);
   handles.refresh();
   if (mode === 'drag') { view.invalidate(); return; }
   updateFacts();
@@ -184,7 +169,7 @@ async function computeShell() {
       state.fieldRes = state.res;
     }
     const tris = surfaceNets(state.field, dist);
-    setTris(shellMesh, tris);
+    setTris(shellMesh, tris, true);
     state.shellDist = dist;
     $('shell-note').textContent = 'Fläche im Abstand ' + fmt(dist) + ' mm · ' + fmt(tris.length / 9, 0)
       + ' Dreiecke · Zellgröße ' + fmt(state.field.h) + ' mm';
@@ -251,13 +236,6 @@ function syncSelection() {
   updateMenu();
 }
 
-function dirText(d) {
-  const ax = ['X', 'Y', 'Z'];
-  let best = 0;
-  for (let i = 1; i < 3; i++) if (Math.abs(d[i]) > Math.abs(d[best])) best = i;
-  const name = (d[best] < 0 ? '−' : '+') + ax[best];
-  return Math.abs(d[best]) > 0.985 ? name : 'schräg, überwiegend ' + name;
-}
 
 function updateMenu() {
   $('del-item').disabled = !sel();
@@ -302,24 +280,15 @@ function removeSelected() {
 }
 
 /* ── Zielmodus: setzen und neu setzen ────────────────────────── */
-function aimArmed(on, text) {
-  $('aim-banner').classList.toggle('hidden', !on);
-  $('aim-banner').classList.remove('miss');
-  if (text) $('aim-text').textContent = text;
-}
-let missTimer = 0;
-function miss() {
-  clearTimeout(missTimer);
-  const keep = $('aim-text').textContent;
-  $('aim-banner').classList.add('miss');
-  $('aim-text').textContent = 'Daneben — die Stelle muss auf der Abstandsfläche liegen.';
-  missTimer = setTimeout(() => { if (handles.aiming) { $('aim-banner').classList.remove('miss'); $('aim-text').textContent = keep; } }, 1600);
-}
+const aim = createAimUI();
+const MISS = 'Daneben — die Stelle muss auf der Abstandsfläche liegen.';
+const stillAiming = () => handles.aiming;
 function cancelAim() {
   handles.cancelAim();
   state.pending = null;
-  aimArmed(false);
+  aim.hide();
 }
+const noShell = () => aim.note('Zuerst ein Bauteil laden — die Abstandsfläche entsteht daraus, und auf ihr wird gesetzt.');
 const toCamera = point => {
   const c = view.camera.position;
   return [c.x - point[0], c.y - point[1], c.z - point[2]];
@@ -328,47 +297,43 @@ const toCamera = point => {
    zum Bauteil hin; der Stich läuft nach außen. */
 const dirAt = hit => M.directionFor(state.dirMode, [-hit.dir[0], -hit.dir[1], -hit.dir[2]], toCamera(hit.point));
 
-function noShell() {
-  aimArmed(true, 'Zuerst ein Bauteil laden — die Abstandsfläche entsteht daraus, und auf ihr wird gesetzt.');
-  clearTimeout(missTimer);
-  missTimer = setTimeout(() => { if (!handles.aiming) aimArmed(false); }, 3200);
-}
 
 function startPlace(type) {
   if (!state.shellDist) { noShell(); return; }
   handles.select(null);
   state.pending = null;
+  aim.onCancel = cancelAim;
   if (type === 'stich') {
-    aimArmed(true, 'Kühlstich: die Stelle auf der Abstandsfläche anklicken — dort sitzt die Spitze, der Stich läuft '
+    aim.show(true, 'Kühlstich: die Stelle auf der Abstandsfläche anklicken — dort sitzt die Spitze, der Stich läuft '
       + M.DIRECTIONS[state.dirMode].hint + '. Esc bricht ab.');
     handles.armAim({
       onHit: hit => {
-        aimArmed(false);
+        aim.hide();
         const it = M.addStich(state.plan, hit.point, dirAt(hit), { d: state.defaults.d, len: state.defaults.len });
         rebuild();
         handles.select(it.id);
       },
-      onMiss: miss
+      onMiss: () => aim.miss(MISS, stillAiming)
     });
     return;
   }
-  aimArmed(true, 'Kanal: das erste Ende auf der Abstandsfläche anklicken. Esc bricht ab.');
+  aim.show(true, 'Kanal: das erste Ende auf der Abstandsfläche anklicken. Esc bricht ab.');
   handles.armAim({
     onHit: hit => {
       state.pending = hit.point.slice();
-      aimArmed(true, 'Kanal: jetzt das andere Ende anklicken. Esc bricht ab.');
+      aim.show(true, 'Kanal: jetzt das andere Ende anklicken. Esc bricht ab.');
       handles.armAim({
         onHit: hit2 => {
-          aimArmed(false);
+          aim.hide();
           const it = M.addKanal(state.plan, state.pending, hit2.point, { d: state.defaults.kd });
           state.pending = null;
           rebuild();
           handles.select(it.id + ':b');
         },
-        onMiss: miss
+        onMiss: () => aim.miss(MISS, stillAiming)
       });
     },
-    onMiss: miss
+    onMiss: () => aim.miss(MISS, stillAiming)
   });
 }
 
@@ -377,15 +342,16 @@ function startMove(id) {
   const it = state.plan.items[splitId(id)[0]];
   if (!it || it.type !== 'stich') return;
   if (!state.shellDist) { noShell(); return; }
-  aimArmed(true, 'Kühlstich ' + it.id + ': die neue Stelle auf der Abstandsfläche anklicken. Esc bricht ab.');
+  aim.show(true, 'Kühlstich ' + it.id + ': die neue Stelle auf der Abstandsfläche anklicken. Esc bricht ab.');
+  aim.onCancel = cancelAim;
   handles.armAim({
     onHit: hit => {
-      aimArmed(false);
+      aim.hide();
       M.placeStich(state.plan, it.id, hit.point, dirAt(hit));
       rebuild();
       syncSelection();
     },
-    onMiss: miss
+    onMiss: () => aim.miss(MISS, stillAiming)
   });
 }
 
@@ -425,7 +391,6 @@ $('auto-run').addEventListener('click', runAuto);
 slider('auto-count', v => { state.auto.count = v; }, v => v + '');
 slider('auto-spacing', v => { state.auto.spacing = v; }, v => v + ' mm');
 $('auto-replace').addEventListener('change', e => { state.auto.replace = e.target.checked; });
-$('aim-cancel').addEventListener('click', cancelAim);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { cancelAim(); return; }
   const tag = (e.target && e.target.tagName) || '';
@@ -476,21 +441,14 @@ const source = mountPartSource({
 });
 
 /* ── Dateien ─────────────────────────────────────────────────── */
-function download(blob, name) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-}
-const safeName = () => ((state.name || 'bauteil') + '-temperierung').replace(/[^\w-]+/g, '-').toLowerCase();
+const fileName = () => safeName((state.name || 'bauteil') + '-temperierung');
 $('stl-save').addEventListener('click', () => {
   const tris = buildAll(state.plan);
   if (!tris.length) return;
-  download(new Blob([writeSTL(tris, 'DieLogic Temperierung')], { type: 'model/stl' }), safeName() + '.stl');
+  download(new Blob([writeSTL(tris, 'DieLogic Temperierung')], { type: 'model/stl' }), fileName() + '.stl');
 });
 $('json-save').addEventListener('click', () => {
-  download(new Blob([JSON.stringify(M.toJSON(state.plan), null, 1)], { type: 'application/json' }), safeName() + '.json');
+  download(new Blob([JSON.stringify(M.toJSON(state.plan), null, 1)], { type: 'application/json' }), fileName() + '.json');
 });
 $('json-btn').addEventListener('click', () => $('json-input').click());
 $('json-input').addEventListener('change', e => {

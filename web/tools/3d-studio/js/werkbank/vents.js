@@ -16,7 +16,7 @@ import { writeSTL } from '../part/stlio.js';
 import { createHandles, SELECTED_RING } from '../handles.js';
 import * as M from '../vents/model.js';
 import { buildByType, buildAll, volumeOf } from '../vents/geom.js';
-import { setTris, download, safeName, dirText, outward } from './common.js';
+import { setTris, download, safeName, dirText, outward } from '../ui/common.js';
 
 const SUBTITLE = 'Überläufe: vier Arten aufs Bauteil setzen — dort, wo die Füllung zuletzt ankommt; ihr Volumen gehört zum Schussgewicht.';
 const STATUS = '<b>Art</b> wählen, dann aufs Bauteil klicken &nbsp;·&nbsp; <b>Punkt</b> ziehen: auf der Wand &nbsp;·&nbsp; '

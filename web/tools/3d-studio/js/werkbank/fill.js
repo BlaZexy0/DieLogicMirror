@@ -18,11 +18,10 @@ import { writeSTL } from '../part/stlio.js';
 import { turbo } from '../part/colors.js';
 import * as M from '../fill/model.js';
 import { buildAll } from '../fill/geom.js';
-import { fracToSurface, sampleFrac, fillBodyField, lastSpots } from '../fill/solve.js';
+import { solveFill, fracToSurface, sampleFrac, fillBodyField, lastSpots } from '../fill/solve.js';
 import { cross, dot, norm, addScaled } from '../runner/vec.js';
-import { solveFillOffset } from './fillsolve.js';
 import { fillClock, openingFractions, unitsForFraction } from './filltime.js';
-import { setTris, download, safeName } from './common.js';
+import { setTris, download, safeName } from '../ui/common.js';
 
 const SUBTITLE = 'Füllung: die Schmelzefront läuft von den Anschnitten des Angusses durch das gerasterte Bauteil — Füllgrad, Füllkörper, die letzten Stellen.';
 const IDLE = 'Ziehen: drehen · Rechte Maustaste: verschieben · Rad: zoomen';
@@ -138,10 +137,11 @@ export function createFillStage(ctx) {
       const m = ctx.part.model;
       const wall = m.totalArea > 0 ? 2 * m.volume / m.totalArea : null;
       const onProgress = p => { busy.textContent = 'Füllung … ' + Math.round(p * 100) + ' %'; busy.classList.add('on'); };
-      let res = await solveFillOffset(field, state.plan, { alpha: state.plan.alpha, wallThickness: wall, onProgress });
+      let res = await solveFill(field, state.plan, { alpha: state.plan.alpha, wallThickness: wall, onProgress });
       /* Mit Uhr: jeder Anschnitt öffnet zu seiner Zeit. Aus dem ersten Lauf
          kommt, welcher Füllgrad welcher Ankunftseinheit entspricht; daraus
-         der Vorsprung der früheren Anschnitte, und ein zweiter Lauf damit. */
+         der Vorsprung der früheren Anschnitte, und ein zweiter Lauf damit
+         (Option offsets von js/fill/solve.js). */
       let timing = null;
       const cv = state.curve;
       if (cv && cv.onCurve && cv.timeline && !cv.timeline.error) {
@@ -158,7 +158,7 @@ export function createFillStage(ctx) {
           for (const it of items) { offsets[it.id] = units(qOpen[it.id]); if (offsets[it.id] > 0) any = true; }
           if (any) {
             busy.textContent = 'Füllung mit Vorsprung …';
-            res = await solveFillOffset(field, state.plan, { alpha: state.plan.alpha, wallThickness: wall, onProgress, offsets });
+            res = await solveFill(field, state.plan, { alpha: state.plan.alpha, wallThickness: wall, onProgress, offsets });
           }
           const tEnd = clock.timeAtVolume(vol);
           timing = {

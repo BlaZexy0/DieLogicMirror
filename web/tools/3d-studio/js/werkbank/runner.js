@@ -15,7 +15,7 @@
    Fläche, Volumen und Pressrest in die Auslegung (Schritt 6). */
 
 import * as T from 'three';
-import { $, fmt, fmtPlain, facts, segButtons, slider, numberInput } from '../ui/controls.js';
+import { $, fmt, fmtPlain, facts, segButtons, segButtonSet, slider, numberInput } from '../ui/controls.js';
 import { writeSTL } from '../part/stlio.js';
 import { concat } from '../solids.js';
 import * as G from '../runner/graph.js';
@@ -29,7 +29,7 @@ import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from '../runner/editor.js
 import { rotate, norm, cross, dot, sub, add } from '../runner/vec.js';
 import { proposeRunner, gateRays } from './propose.js';
 import { shotTimeline, flowOnCurve } from '../runner/shottime.js';
-import { download, safeName, dirText } from './common.js';
+import { download, safeName, dirText } from '../ui/common.js';
 
 const SUBTITLE = 'Anguss: Pressrest, Laufkanäle und Anschnitte als Graph — vorgeschlagen aus dem Bauteil, gebunden an seine Wand.';
 const STATUS = '<b>Punkt</b> ziehen: in der Arbeitsebene &nbsp;·&nbsp; <b>Alt</b>: aus ihr heraus &nbsp;·&nbsp; '
@@ -706,10 +706,6 @@ export function createRunnerStage(ctx) {
   $('an-chart-btn').addEventListener('click', () => openChart(!state.chartOpen));
   $('an-chart-close').addEventListener('click', () => openChart(false));
   slider('an-ref-opacity', v => { if (state.active) ctx.part.applyOpacity(v / 100); }, v => v + ' %');
-
-  function segButtonSet(id, value) {
-    for (const b of $(id).querySelectorAll('button')) b.classList.toggle('active', b.dataset.value === value);
-  }
 
   /* ── Vorschlag ────────────────────────────────────────────── */
   $('an-propose').addEventListener('change', e => { state.gatesWanted = +e.target.value || 2; });

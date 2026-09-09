@@ -112,7 +112,9 @@ export function seedCells(field, item) {
  * Die Füllung rechnen.
  *   field   Rasterfeld mit vollständigem Kern (js/part/field.js)
  *   plan    Füllplan mit Anschnitten
- *   opts    alpha (Dünnwand-Bremse), onProgress(p)
+ *   opts    alpha (Dünnwand-Bremse), onProgress(p), offsets { id → Einheiten }:
+ *           Vorsprung, mit dem die Startzellen eines Anschnitts beginnen —
+ *           die Werkbank lässt so spätere Anschnitte später öffnen
  * → { arrival: Float32Array (Zeiteinheit, außen Infinity), frac: Float32Array (Füllgrad 0..1,
  *     außen NaN), source: Int16Array (Anschnitt je Zelle, −1 außen), path: Float32Array
  *     (Fließweg in mm), cells, stats: { maxPath, refThickness, wallThickness, flowRatio, unreached,
@@ -120,7 +122,7 @@ export function seedCells(field, item) {
  *   opts.wallThickness: Wanddicke fürs Verhältnis Fließweg/Wanddicke (sonst 2·Bezugsdicke)
  */
 export async function solveFill(field, plan, opts = {}) {
-  const { alpha = plan.alpha ?? 0.5, onProgress = null, wallThickness = null } = opts;
+  const { alpha = plan.alpha ?? 0.5, onProgress = null, wallThickness = null, offsets = null } = opts;
   const [nx, ny, nz] = field.dims;
   const N = nx * ny * nz;
   const d = field.data, h = field.h;
@@ -152,9 +154,10 @@ export async function solveFill(field, plan, opts = {}) {
   const meanShare = items.length ? 1 / items.length : 1;
   const mult = items.map(it => Math.min(4, Math.max(0.25, (sh[it.id] ?? meanShare) / meanShare)));
   const seeds = items.map(it => seedCells(field, it));
+  const start = items.map(it => (offsets && Number.isFinite(offsets[it.id]) ? Math.max(0, offsets[it.id]) : 0));
   seeds.forEach((list, s) => {
     for (const idx of list) {
-      if (arrival[idx] > 0) { arrival[idx] = 0; path[idx] = 0; source[idx] = s; heap.push(idx); }
+      if (arrival[idx] > start[s]) { arrival[idx] = start[s]; path[idx] = 0; source[idx] = s; heap.push(idx); }
     }
   });
 
@@ -192,7 +195,7 @@ export async function solveFill(field, plan, opts = {}) {
   const unreached = cells - order.length;
 
   let maxPath = 0;
-  const perInlet = items.map(it => ({ id: it.id, cells: 0, seeds: 0 }));
+  const perInlet = items.map((it, s) => ({ id: it.id, cells: 0, seeds: 0, offset: start[s] }));
   seeds.forEach((list, s) => { perInlet[s].seeds = list.length; });
   for (const i of order) {
     if (path[i] > maxPath) maxPath = path[i];
@@ -206,7 +209,8 @@ export async function solveFill(field, plan, opts = {}) {
     arrival, frac, source, path, cells,
     stats: {
       maxPath, refThickness, wallThickness: wall, flowRatio: wall > 0 ? maxPath / wall : 0,
-      unreached, volume: cells * cellVol, inlets: perInlet, alpha
+      unreached, volume: cells * cellVol, inlets: perInlet, alpha,
+      offsets: offsets ? { ...offsets } : null
     }
   };
 }

@@ -40,6 +40,8 @@ assembles (Formaufbau).
   projection, fit to object.
 - `js/part/partsource.js`: the part loader shared by all part tools
   (example part select, own STL/GLB, facts, busy indicator).
+- `js/ui/common.js`: what every page with handles shares — meshes from
+  triangle soups, downloads, file sniffing, the aim banner controller.
 - `js/handles.js`: draggable spheres, direction arrows and the aim mode
   ("click on the part to place") shared by Anguss, Überlauf, Füllung and
   Temperier. Dragging happens in a plane the page defines per handle.
@@ -81,7 +83,7 @@ assembles (Formaufbau).
   and alloy; times absolute from piston start). `filltime.js` gives the
   fill estimate the same clock (cavity inflow = piston flow × open gate
   shares, so fill fraction ↔ time and each later gate's head start), and
-  `fillsolve.js` is the fill solver with per-inlet start offsets (two
+  `fill/solve.js` takes per-inlet start offsets (`offsets` option; two
   passes: map fraction to solver units, then re-solve with offsets). `design.js` runs the real Auslegung modules
   (`state.js` on `window.__PROJECT__`, `ui/inputs.js`, `ui/kpis.js`,
   `charts/registry.js`) in an overlay over the viewport.

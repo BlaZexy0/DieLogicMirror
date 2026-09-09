@@ -43,6 +43,20 @@
 
 import { distSqPointTri } from '../mesh.js';
 
+/** Erlaubte Zellkanten in mm — feiner frisst Speicher, gröber sieht keine Wand. */
+export const CELL_RANGE = [0.25, 50];
+
+/** Vorschlag für die Zellkante aus dem Bauteil: die halbe Wanddicke
+    (2V/A), damit eine Wand mindestens zwei Zellen über ihre Dicke hat;
+    ohne brauchbare Wanddicke ein 64stel der längsten Kante. Auf glatte
+    Werte gerundet — halbe Millimeter ab 1 mm, darunter Zehntel. */
+export function suggestCell(m) {
+  const wall = m.volume > 0 && m.totalArea > 0 ? 2 * m.volume / m.totalArea : 0;
+  const longest = Math.max(m.bounds.size[0], m.bounds.size[1], m.bounds.size[2]) || 1;
+  const h = Math.max(CELL_RANGE[0], Math.min(CELL_RANGE[1], wall > 0 ? wall / 2 : longest / 64));
+  return h >= 1 ? Math.round(h * 2) / 2 : Math.round(h * 10) / 10;
+}
+
 /** Rastermaße vorab abschätzen (für die Anzeige, bevor gerechnet wird).
     Die Zellkante kommt aus `res` (Zellen entlang der längsten Kante) oder
     direkt aus `extra.h` in mm. Der Rand um das Bauteil ist `extra.pad`

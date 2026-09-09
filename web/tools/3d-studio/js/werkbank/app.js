@@ -25,14 +25,14 @@ import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
 import { $, fmt } from '../ui/controls.js';
 import { mountPartSource, frame } from '../part/partsource.js';
-import { buildField, fieldSize, fieldExtrema } from '../part/field.js';
+import { buildField, fieldSize, fieldExtrema, suggestCell, CELL_RANGE } from '../part/field.js';
 import { parseSTL } from '../part/stlio.js';
 import { readGLB, isGLB } from '../part/glbio.js';
 import { FORMAT as FORMAT_ANGUSS } from '../runner/graph.js';
 import { FORMAT as FORMAT_LUFT } from '../vents/model.js';
 import { FORMAT as FORMAT_TEMPERIER } from '../cooling/model.js';
 import { FORMAT as FORMAT_FUELLUNG } from '../fill/model.js';
-import { createAimUI, readBuffer, looksLikeJSON, download, safeName } from './common.js';
+import { createAimUI, readBuffer, looksLikeJSON, download, safeName } from '../ui/common.js';
 import { createPartStage } from './part.js';
 import { createRunnerStage } from './runner.js';
 import { createFillStage } from './fill.js';
@@ -83,17 +83,10 @@ const part = {
    braucht — die Abstandsfläche der Temperierung. Nach innen ist das
    Feld immer vollständig. */
 const MAX_SAMPLES = 16e6;
-const H_MIN = 0.25, H_MAX = 50;
-function suggestH(m) {
-  const wall = m.volume > 0 && m.totalArea > 0 ? 2 * m.volume / m.totalArea : 0;
-  const longest = Math.max(m.bounds.size[0], m.bounds.size[1], m.bounds.size[2]) || 1;
-  const h = Math.max(H_MIN, Math.min(H_MAX, wall > 0 ? wall / 2 : longest / 64));
-  return h >= 1 ? Math.round(h * 2) / 2 : Math.round(h * 10) / 10;
-}
 const field = {
   data: null, stats: null, h: 3, hAuto: true, bandWanted: 12, stale: false, promise: null, ms: 0,
   setCell(v) {
-    field.h = Math.max(H_MIN, Math.min(H_MAX, v));
+    field.h = Math.max(CELL_RANGE[0], Math.min(CELL_RANGE[1], v));
     field.hAuto = false;
     if (field.data && Math.abs(field.data.h - field.h) > 1e-9) { field.stale = true; ctx.emit('field'); }
     return field.h;
@@ -222,7 +215,7 @@ const source = mountPartSource({
     partMesh.visible = true;
     partMesh.material = plainMat;
     field.data = null; field.stats = null; field.stale = false; field.promise = null;
-    if (field.hAuto) field.h = suggestH(model);
+    if (field.hAuto) field.h = suggestCell(model);
     view.fitTo(partMesh, 1.35);
     ctx.emit('part', model);
     ctx.ready = true;
