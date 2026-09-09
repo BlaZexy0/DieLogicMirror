@@ -1,5 +1,5 @@
-/* Gemeinsames Gerüst beider Viewer: Kopfleiste, Seitenleiste, Viewport.
-   Farben und Buttons kommen aus css/tokens.css (DieLogic-Kopie). */
+/* Gemeinsames Gerüst aller Werkzeugseiten des Studios: Seitenleiste,
+   Viewport, Auswahlfeld. Farben und Buttons kommen aus /shared/shared.css. */
 
 html, body { height: 100%; }
 

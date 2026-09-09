@@ -75,13 +75,12 @@ dielogic/
 │   │   ├── sprengflaeche/   STL-Analyse: stl-math.js (Netz-Kennwerte, getestet),
 │   │   │                    stl-logic.js (Massenbilanz/Maschinentabelle, getestet), stl-app.js
 │   │   ├── teilekosten/     Teilekosten-Kalkulation (Abschnitt cost, verknüpfte Felder)
-│   │   ├── 3d-studio/       fünf 3D-Werkzeuge unter EINEM Nav-Reiter: Formaufbau (Schnittmodell
-│   │   │                    der Druckgießform), Entformungsanalyse (Formteilung, Hinterschnitte,
-│   │   │                    Entformschrägen), Offsetflächen (Abstandsfeld: Aufmaß, Wandstärke,
-│   │   │                    Wärmezentrum), Abstandsanalyse (kürzester Abstand zwischen zwei
-│   │   │                    Dateien) und Angussdesigner (js/runner/: Angusssystem als Graph
-│   │   │                    entwerfen — Splines, Verzweigungen, Anschnitte, Trapezquerschnitte,
-│   │   │                    Bernoulli-Verluste und Füllbalance).
+│   │   ├── 3d-studio/       acht 3D-Werkzeuge unter EINEM Nav-Reiter — Formaufbau (Schnittmodell
+│   │   │                    der Druckgießform), Entformungsanalyse, Wandstärkenanalyse
+│   │   │                    (Abstandsfeld), Abstandsanalyse, Füllabschätzung, Angussdesigner
+│   │   │                    (js/runner/), Überlaufdesigner, Temperierkanal-Designer — und die
+│   │   │                    Werkbank (js/werkbank/), die sie als sechs Schritte an einem Bauteil
+│   │   │                    aneinanderreiht, mit der Auslegung als letztem Schritt.
 │   │   │                    Bringt Three.js in vendor/ mit — die einzige
 │   │   │                    Fremdbibliothek, die nur dieses Werkzeug braucht.
 │   │   │                    Eigenes README dort; Modelle erzeugt scripts/3d-studio/.

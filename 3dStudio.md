@@ -240,8 +240,6 @@ GLB above.
   Teilekosten and Zyklusanalyse are not stages yet; the projected area
   (Sprengfläche) covers what the Sprengflächenanalyse would compute.
 
-- The tool table at the top of `web/tools/3d-studio/README.md` still
-  lists six pages; the per tool sections below it are current.
 - The fill estimate allocates its working arrays for the whole raster,
   not only the interior cells; at very fine cell edges this is the
   memory limit the page enforces.

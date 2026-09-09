@@ -1,7 +1,8 @@
 # 3D-Studio
 
-Fünf Werkzeuge rund um Bauteil und Form in 3D, unter einem
-Navigationsreiter. Alles rechnet clientseitig — kein Backend, kein
+Acht Werkzeuge rund um Bauteil und Form in 3D, unter einem
+Navigationsreiter — und die Werkbank, die sie als sechs Schritte an
+einem Bauteil aneinanderreiht. Alles rechnet clientseitig — kein Backend, kein
 Projekt; die Bauteile kommen als STL oder GLB und verlassen den Browser
 nicht. Ein Konto braucht es trotzdem: wie jede Seite unter `/tools/`
 liefert das Backend sie nur mit Sitzung aus (`login_gate` in
@@ -15,7 +16,10 @@ liefert das Backend sie nur mit Sitzung aus (`login_gate` in
 | `entformungsanalyse.html` | **Entformungsanalyse** — für ein Bauteil die Zuordnung jedes Dreiecks zu Formhälfte oder Schieber |
 | `wandstaerke.html` | **Wandstärkenanalyse** — Abstandsfeld durch Rasterisierung: Wandstärke und Wärmezentrum, Fläche gleichen Abstands (die Frage nach *innen*) |
 | `abstand.html`  | **Abstandsanalyse** — kürzester Abstand zwischen zwei Dateien, eingefärbt auf einer selbst gesetzten Skala (die Frage nach *außen*) |
-| `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen, Anschnitte; dazu Querschnitt, Krümmung, Bernoulli-Verluste und Füllbalance |
+| `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen, Anschnitte; dazu Querschnitt, Krümmung, Bernoulli-Verluste und Füllbalance, Ankunft nach der Schusskurve |
+| `ueberlauf.html` | **Überlaufdesigner** — Überläufe und Entlüftungen aufs Bauteil setzen: Bohne, Bohne mit Entlüftungskanal, Waschbrett (Chill-Vent), Entlüftungsschlitz; das Volumen fürs Schussgewicht |
+| `temperier.html` | **Temperierkanal-Designer** — Kühlstiche und Kanäle auf der Abstandsfläche im gewählten Abstand zur Kavität, Automatik für die Stiche, Wandabstand aus dem Feld |
+| `fuellung.html` | **Füllabschätzung** — die Schmelzefront von rechteckigen Anschnitten durch das gerasterte Bauteil: Füllgrad, Füllkörper, zuletzt gefüllte Stellen |
 
 Erreichbar über den Reiter **3D-Studio** in der Navigation oder direkt
 unter `/tools/3d-studio/`.
@@ -24,8 +28,10 @@ Three.js liegt lokal in `vendor/` (MIT, LICENSE dort) — es ist die
 einzige Fremdbibliothek des Studios und wird von keiner anderen Seite der
 Website gebraucht, deshalb steht sie hier und nicht in `/shared/vendor/`.
 
-Vier der fünf Seiten *messen* an vorhandener Geometrie; der
-Angussdesigner ist der einzige, der welche *erzeugt*.
+Vier Werkzeuge *messen* an vorhandener Geometrie (Entformung,
+Wandstärke, Abstand, Füllung), drei *erzeugen* welche (Anguss, Überläufe,
+Temperierung), eines baut die Form zusammen — und die Werkbank hängt sie
+aneinander.
 
 ## Formaufbau (`form.html`)
 

@@ -1,5 +1,5 @@
 /* Farben der Formteilungs-Analyse — aus der DieLogic-Palette
-   (css/tokens.css), damit die Legende zum Rest der Website passt.
+   (/shared/palette.js), damit die Legende zum Rest der Website passt.
 
    Die sechs Richtungen brauchen Farben, die sich nebeneinander sicher
    unterscheiden lassen: die beiden Hälften bekommen die Hausfarbe Teal
