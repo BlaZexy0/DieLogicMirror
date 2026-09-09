@@ -287,10 +287,10 @@ test('nav: CHARTS-Liste entspricht der Registry (Ids, Titel, Reihenfolge)', () =
    Burger-Menü zusammen — dieser Test hält die Bestandteile fest. */
 test('nav: Auslegung ist ein Untermenü wie das 3D-Studio, mit den fünf Reitern und den Diagrammen', () => {
   const src = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
-  const m = src.match(/const NAV_LINKS = \[([\s\S]*?)\n  \];/);
+  const m = src.match(/const NAV_LINKS = \[([\s\S]*?)\n {2}\];/);
   assert.ok(m, 'NAV_LINKS in nav.js nicht gefunden');
   const body = m[1];
-  const top = [...body.matchAll(/^    \{ label: '([^']+)'/gm)].map(x => x[1]);
+  const top = [...body.matchAll(/^ {4}\{ label: '([^']+)'/gm)].map(x => x[1]);
   assert.deepEqual(top, ['Auslegung', '3D-Studio', 'Theorie', 'Preise', 'Über uns', 'Kontakt'],
     'oben stehen nur noch Gruppen und die Seiten des Auftritts');
   const auslegung = body.slice(body.indexOf("label: 'Auslegung'"), body.indexOf("label: '3D-Studio'"));
