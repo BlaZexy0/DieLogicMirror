@@ -50,7 +50,7 @@ Model sections select an implementation via `"type"`:
 | section | types |
 |---|---|
 | `motion` | `two_stage` (a1,v1,a2,v2 — s_u/s_end default to the volume-derived strokes), `profile` (explicit positions/velocities) |
-| `vacuum.model` | `sealed`, `ideal` (pump_pressure), `pumped` (pump_speed, ultimate_pressure), `conductance` (pump_pressure, discharge_coefficient) |
+| `vacuum.model` | `sealed`, `ideal` (pump_pressure), `pumped` (pump_speed, ultimate_pressure), `conductance` (pump_pressure, discharge_coefficient), `tank` (tank_volume, tank_pressure, pump_speed, ultimate_pressure, discharge_coefficient) |
 | `thermal` | `constant`, `lumped` (htc, wall_temperature), `multi_surface` (surfaces: name → htc/wall_temperature) |
 | `process.critical_velocity_model` | `garber_lopez` (default), `nogowizin`, `segment_fit` |
 
@@ -83,12 +83,31 @@ Custom implementations plug into the same JSON via
   (pressure-free by construction, so models cannot recurse). Solutions are
   cached on the process. Provided models (all isothermal at ambient T):
   - `NoVacuum` — ambient until the pour hole seals, then p·V = const.
-  - `IdealVacuum` — clamps to the pump pressure while the valve is active.
+  - `IdealVacuum` — instantaneous: clamps to the pump pressure while the
+    valve is active; no opening area enters.
   - `PumpedVacuum` — finite volumetric pump speed, dq/dt = −S·q/V.
-  - `ConductanceVacuum` — compressible orifice flows (choked/subsonic)
-    through the vacuum valve (`VacuumSystem.valve_area`), chill vents
-    (`CastingSystem.vent_area`, outflow only) and the pour hole
-    (`ShotSleeve.pour_hole_area`; treated as an ideal vent when unset).
+  - `ConductanceVacuum` — vented air mass: flows through the vacuum valve
+    (`VacuumSystem.valve_area`) into a plenum held at `pump_pressure`,
+    through chill vents (`CastingSystem.vent_area`, outflow to ambient
+    only) and the pour hole (`ShotSleeve.pour_hole_area`; ideal vent when
+    unset).
+  - `TankVacuum` — like `ConductanceVacuum`, but the valve drains into a
+    finite tank (`tank_volume`, evacuated to `tank_pressure`) whose
+    pressure rises with every kilogram it receives; optional `pump_speed`
+    keeps evacuating it. `solve_channels()` / `ShotProcess.air_solution()`
+    publish the tank pressure as `"tank_pressure"`.
+
+  Openings are isentropic orifices (choked/subsonic, discharge
+  coefficient) unless the component carries a `VentChannel` (`gap`,
+  `length`, `entry_loss`, `roughness`; JSON: `casting.vent_channel`,
+  `vacuum.valve_channel`): then `channel_mass_flow` treats them as wide
+  slits with wall friction — isothermal duct flow choking at M = 1/√γ,
+  friction factor over all regimes (laminar 96/Re, turbulent Churchill),
+  which reduces to Poiseuille's viscous slit flow at low Reynolds numbers.
+
+  The valve closes at `VacuumSystem.end_position`, or after
+  `VacuumSystem.duration` seconds of being open (resolved along the motion
+  profile), or by default when the melt reaches it (fill-complete stroke).
 - **Temperature**: delegated to a `ThermalModel` overlay; attach it to the
   process to populate `ProcessState.melt_temperature`. Provided:
   - `ConstantTemperature`
@@ -119,7 +138,7 @@ Custom implementations plug into the same JSON via
 | `motion` | piecewise constant-acceleration `MotionProfile`, `shot_curve`, `from_velocity_law` |
 | `laws` | `ShotPlan` (volume-derived stroke targets), `PlungerLaw`, `TwoStageLaw`, `VelocityFunctionLaw` |
 | `components` | `ShotSleeve`, `Melt`, `Runner`, `Part`, `Overflow`, `CastingSystem`, `VacuumSystem`, `Environment` |
-| `vacuum` | `AirState`, `VacuumModel` + the four models, `orifice_mass_flow` |
+| `vacuum` | `AirState`, `VacuumModel` + the five models, `VentChannel`, `orifice_mass_flow`, `channel_mass_flow` |
 | `thermal` | `ThermalModel` + the three models |
 | `process` | `ShotProcess` timeline, `ProcessState`, events, query API, sampling/CSV |
 | `config` | JSON/dict loading, model registries |

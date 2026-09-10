@@ -105,11 +105,17 @@ andere rechnet weiter im Browser.
 
   `values`/`curve` sind 1:1 der Dashboard-Zustand (Browser-Einheiten:
   mm, kg, °C); `process` und `vacuum` sind optional. `vacuum` kommt
-  ebenfalls in Browser-Einheiten (`model`: `ideal` | `conductance` |
-  `aus`, `pump_mbar`, `valve_mm2`, `start_mm`) und wird in `convert.py`
-  ins SI-Schema von hpdcsim übersetzt; beim `conductance`-Modell wirken
-  zusätzlich die Entlüftungsfläche (`values.vent` → `casting.vent_area`)
-  und der Einguss als Drosselquerschnitte. Antwort: `meta`
+  ebenfalls in Browser-Einheiten und wird in `convert.py` ins SI-Schema
+  von hpdcsim übersetzt: `model` (`ideal` Sofort-Enddruck ohne Drossel ·
+  `conductance` Drossel gegen eine Pumpe mit konstantem Enddruck · `tank`
+  Drossel gegen einen Vakuumtank, dessen Druck steigt · `aus`),
+  `pump_mbar` (Enddruck bzw. Tankdruck vor dem Schuss), `valve_mm2` (die
+  Entlüftungsfläche — sie ist der Ventilquerschnitt), `start_mm`;
+  optional `gap_mm` + `channel_mm` (Entlüftungsspalt und Kanallänge →
+  Kanal mit Wandreibung statt Blende), `end` (`fill` · `stroke` mit
+  `end_mm` · `time` mit `duration_ms`: wann das Ventil schließt, danach
+  wird die Restluft verdichtet) und `tank_l` (Tankvolumen, nur `tank`).
+  Beim Tankmodell enthält `samples` zusätzlich `p_tank_mbar`. Antwort: `meta`
   (φ, Füllende-Hub, Pressrestlänge, ob die Kurve gekappt wurde), `samples`
   über die Schussphase (t, s_mm, v, gate_v, p_air_mbar, T_melt, part_fill),
   `events` (Einguss dicht, Kammer voll, …) und `critical_crossing`

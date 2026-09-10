@@ -232,6 +232,79 @@ def test_vacuum_pump_positive():
         lambda: sim_config_from_browser(VALUES, CURVE, vacuum=vac), "Enddruck")
 
 
+VAC = {"model": "conductance", "pump_mbar": 80, "valve_mm2": 800, "start_mm": 150}
+
+
+def test_vacuum_vent_area_is_the_valve_not_a_second_chill_vent():
+    # Mit Vakuum führt die Entlüftungsfläche zum Ventil — sie darf nicht
+    # zusätzlich als Kaltkanal gegen Umgebung zählen (doppelte Fläche).
+    config, _ = sim_config_from_browser(VALUES, CURVE, vacuum=VAC)
+    assert "vent_area" not in config["casting"]
+    close(config["vacuum"]["valve_area"], 800e-6)
+    # ohne Vakuum bleibt sie am Gießsystem
+    config, _ = sim_config_from_browser(VALUES, CURVE)
+    close(config["casting"]["vent_area"], 800e-6)
+
+
+def test_vacuum_channel_from_gap_and_length():
+    config, _ = sim_config_from_browser(
+        VALUES, CURVE, vacuum=dict(VAC, gap_mm=0.5, channel_mm=80))
+    ch = config["vacuum"]["valve_channel"]
+    close(ch["gap"], 0.5e-3)
+    close(ch["length"], 0.08)
+    # fehlt eines von beiden: Blende
+    config, _ = sim_config_from_browser(VALUES, CURVE, vacuum=dict(VAC, gap_mm=0.5))
+    assert "valve_channel" not in config["vacuum"]
+    # das Sofort-Modell kennt keinen Kanal
+    config, _ = sim_config_from_browser(
+        VALUES, CURVE, vacuum=dict(VAC, model="ideal", gap_mm=0.5, channel_mm=80))
+    assert "valve_channel" not in config["vacuum"]
+    raises_convert_error(lambda: sim_config_from_browser(
+        VALUES, CURVE, vacuum=dict(VAC, gap_mm=-1, channel_mm=80)), "negativ")
+
+
+def test_vacuum_tank_model():
+    config, _ = sim_config_from_browser(
+        VALUES, CURVE, vacuum=dict(VAC, model="tank", tank_l=500))
+    m = config["vacuum"]["model"]
+    assert m["type"] == "tank"
+    close(m["tank_volume"], 0.5)                # L → m³
+    close(m["tank_pressure"], 8000.0)           # mbar → Pa
+    assert "pump_pressure" not in m
+    raises_convert_error(lambda: sim_config_from_browser(
+        VALUES, CURVE, vacuum=dict(VAC, model="tank", tank_l=0)), "Tankvolumen")
+    raises_convert_error(lambda: sim_config_from_browser(
+        VALUES, CURVE, vacuum=dict(VAC, model="tank")), "tank_l")
+
+
+def test_vacuum_valve_closing_modes():
+    # Vorgabe: am Füllende — hpdcsim löst end_position selbst auf
+    config, _ = sim_config_from_browser(VALUES, CURVE, vacuum=VAC)
+    assert "end_position" not in config["vacuum"]
+    assert "duration" not in config["vacuum"]
+    config, _ = sim_config_from_browser(VALUES, CURVE, vacuum=dict(VAC, end="fill"))
+    assert "end_position" not in config["vacuum"]
+    # Kolbenweg
+    config, meta = sim_config_from_browser(
+        VALUES, CURVE, vacuum=dict(VAC, end="stroke", end_mm=400))
+    close(config["vacuum"]["end_position"], 0.4)
+    # hinter dem Füllende: bis zum Füllende (gekappt, kein Fehler)
+    config, meta = sim_config_from_browser(
+        VALUES, CURVE, vacuum=dict(VAC, end="stroke", end_mm=5000))
+    assert config["vacuum"]["end_position"] <= meta["fill_complete_mm"] / 1000.0 + 1e-12
+    raises_convert_error(lambda: sim_config_from_browser(
+        VALUES, CURVE, vacuum=dict(VAC, end="stroke", end_mm=150)), "Schließweg")
+    # Offenzeit
+    config, _ = sim_config_from_browser(
+        VALUES, CURVE, vacuum=dict(VAC, end="time", duration_ms=40))
+    close(config["vacuum"]["duration"], 0.04)
+    assert "end_position" not in config["vacuum"]
+    raises_convert_error(lambda: sim_config_from_browser(
+        VALUES, CURVE, vacuum=dict(VAC, end="time", duration_ms=0)), "Offenzeit")
+    raises_convert_error(lambda: sim_config_from_browser(
+        VALUES, CURVE, vacuum=dict(VAC, end="sometime")), "Ventilschluss")
+
+
 # ── Prozess-Overrides ───────────────────────────────────────────
 
 def test_process_override():

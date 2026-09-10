@@ -34,7 +34,7 @@ export default {
   usesCurve: true,
   usesSim: true,
   csv: true,
-  inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'densitySolid', 'shrink', 'diam', 'length', 'gate', 'vent', 'vmax', 'amax', 'tmax', 'biscuitMin', 'gateMin', 'gateMax', 'vacModel', 'vacPump', 'vacStart'],
+  inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'densitySolid', 'shrink', 'diam', 'length', 'gate', 'vent', 'ventGap', 'ventLen', 'vmax', 'amax', 'tmax', 'biscuitMin', 'gateMin', 'gateMax', 'vacModel', 'vacPump', 'vacTank', 'vacStart', 'vacEnd', 'vacEndStroke', 'vacEndTime'],
 
   calc(v, { shot }) {
     if (shot.error) return { err: shot.error, title: this.title };
@@ -78,23 +78,37 @@ export default {
       q.pts.push({ x: tb === 'sv' ? nodes.s[i] * 1000 : nodes.t[i], y: tb === 'ts' ? nodes.s[i] * 1000 : nodes.v[i] });
     }
 
-    /* Luftdruck in der Kammer (Backend-Simulation, hpdcsim) — zweite Achse. */
+    /* Luftdruck in der Kammer (Backend-Simulation, hpdcsim) — zweite Achse.
+       Beim Tankmodell dazu der Tankdruck: er steigt mit jeder abgesaugten
+       Luftmasse und zeigt, wie viel Gefälle der Absaugung bleibt. */
     const sd = sim.data;
     if (sd && sd.samples) {
-      const sx = [], sp = [];
       const src = tb === 'sv' ? sd.samples.s_mm : sd.samples.t;
-      for (let i = 0; i < src.length; i++) {
-        const xv = src[i], pv = sd.samples.p_air_mbar[i];
-        if (xv === null || pv === null || !isFinite(xv) || !isFinite(pv)) continue;
-        if (pv > P_CLIP_MBAR) break;
-        sx.push(xv); sp.push(pv);
-      }
+      const pick = arr => {
+        const sx = [], sp = [];
+        if (!Array.isArray(arr)) return [sx, sp];
+        for (let i = 0; i < src.length; i++) {
+          const xv = src[i], pv = arr[i];
+          if (xv === null || pv === null || !isFinite(xv) || !isFinite(pv)) continue;
+          if (pv > P_CLIP_MBAR) break;
+          sx.push(xv); sp.push(pv);
+        }
+        return [sx, sp];
+      };
+      const [sx, sp] = pick(sd.samples.p_air_mbar);
       if (sx.length > 1) {
         q.ys.push({
           n: 'Luftdruck Kammer (Simulation)', u: 'mbar', c: C.series4,
           axis: 'right', y: x.map(xv => interpSim(sx, sp, xv))
         });
         q.rl = 'Luftdruck in mbar (Anzeige ≤ ' + fmt(P_CLIP_MBAR) + ')';
+        const [tx, tp] = pick(sd.samples.p_tank_mbar);
+        if (tx.length > 1) {
+          q.ys.push({
+            n: 'Tankdruck (Simulation)', u: 'mbar', c: C.series2,
+            axis: 'right', y: x.map(xv => interpSim(tx, tp, xv))
+          });
+        }
       }
     } else if (sim.status === 'error') {
       /* Auch fachliche 422-Meldungen des Backends (convert.py) anzeigen —

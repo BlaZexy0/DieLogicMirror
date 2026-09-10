@@ -112,6 +112,35 @@ def test_shot_with_vacuum_lowers_air_pressure():
         p for p in without if p is not None)
 
 
+def test_shot_tank_model_reports_rising_tank_pressure():
+    vac = {"model": "tank", "pump_mbar": 80, "valve_mm2": 800, "start_mm": 150,
+           "gap_mm": 0.5, "channel_mm": 80, "tank_l": 50}
+    r = shot(payload_extra={"vacuum": vac})
+    assert r.status_code == 200, r.text
+    s = r.json()["samples"]
+    tank = [p for p in s["p_tank_mbar"] if p is not None]
+    assert len(tank) == 200
+    assert abs(tank[0] - 80.0) < 1e-6
+    assert tank[-1] > 80.0 * 1.1                 # 50 L füllen sich merklich
+    assert all(b >= a - 1e-9 for a, b in zip(tank, tank[1:]))
+    # das Pumpen-Modell veröffentlicht keinen Tankkanal
+    plenum = shot(payload_extra={"vacuum": dict(vac, model="conductance")}).json()
+    assert "p_tank_mbar" not in plenum["samples"]
+
+
+def test_shot_valve_duration_closes_before_fill_end():
+    base = {"model": "conductance", "pump_mbar": 80, "valve_mm2": 800,
+            "start_mm": 150, "gap_mm": 0.5, "channel_mm": 80}
+    until_fill = {e["id"]: e for e in shot(payload_extra={"vacuum": base}).json()["events"]}
+    timed = {e["id"]: e for e in shot(
+        payload_extra={"vacuum": dict(base, end="time", duration_ms=30)}).json()["events"]}
+    assert timed["vacuum_end"]["s_mm"] < until_fill["vacuum_end"]["s_mm"]
+    assert abs((timed["vacuum_end"]["t"] - timed["vacuum_start"]["t"]) - 0.030) < 1e-6
+    by_stroke = {e["id"]: e for e in shot(
+        payload_extra={"vacuum": dict(base, end="stroke", end_mm=400)}).json()["events"]}
+    assert abs(by_stroke["vacuum_end"]["s_mm"] - 400.0) < 1e-6
+
+
 def test_shot_vacuum_invalid_model_is_422():
     vac = {"model": "turbo", "pump_mbar": 80, "valve_mm2": 100, "start_mm": 150}
     r = shot(payload_extra={"vacuum": vac})

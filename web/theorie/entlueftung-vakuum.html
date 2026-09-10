@@ -68,7 +68,7 @@
         <li><a href="#s2">2. Der Bedarf: Fläche gegen Füllzeit</a></li>
         <li><a href="#s3">3. Die Übersetzung: Kolben → Luft</a></li>
         <li><a href="#s4">4. Drossel und Choking</a></li>
-        <li><a href="#s5">5. Vakuum: Idealpumpe und Drossel</a></li>
+        <li><a href="#s5">5. Vakuum: vier Modelle</a></li>
         <li><a href="#s6">6. Die Restblase unter Nachdruck</a></li>
         <li><a href="#s7">7. Konsequenz fürs Dashboard</a></li>
         <li><a href="#quellen">8. Quellen</a></li>
@@ -176,39 +176,86 @@
             Auslegungsgröße — und nicht der Druck.</span></div>
       </div>
       <div class="prose">
+        <p>Eine reale Entlüftung ist aber keine Blende, sondern ein <b>Kanal</b>: ein breiter
+          Schlitz von einigen Zehntelmillimetern Höhe und einigen Zentimetern Länge bis zum
+          Ventil. Auf diesem Weg reibt die Luft an den Wänden, und mit dem Druck ändert sich,
+          <em>wie</em> sie strömt. Das Dashboard rechnet den Kanal deshalb mit Spalthöhe und
+          Kanallänge (hydraulischer Durchmesser 2·Spalt) als isotherme Rohrströmung mit
+          Wandreibung — und die kennt drei Regime:</p>
+      </div>
+      <div class="derivation-box">
+        <div class="step"><span class="step-num">①</span>
+          <span><b>Choking</b> bei großem Druckverhältnis: der Austritt erreicht die
+            (isotherme) Schallgeschwindigkeit, der Massenstrom hängt nur noch vom Druck im
+            Volumen ab. Die Reibung verschiebt die Grenze: je länger und enger der Kanal,
+            desto früher chokt er und desto weniger fließt — mit 0,5 mm × 80 mm etwa
+            zwei Drittel dessen, was eine Blende gleicher Fläche liefern würde.</span></div>
+        <div class="step"><span class="step-num">②</span>
+          <span><b>Reibungsbestimmt</b> dazwischen: turbulente Strömung, der Widerstand
+            wächst mit dem Quadrat der Geschwindigkeit, Reibbeiwert nach Churchill
+            (Rauheit 5 µm). Hier zählt die Kanallänge — nicht mehr die Druckdifferenz
+            allein.</span></div>
+        <div class="step"><span class="step-num">③</span>
+          <span><b>Zäh (laminar)</b> bei kleiner Druckdifferenz und niedrigem Druck: gegen
+            Ende der Absaugung, wenn Kammer- und Pumpendruck nur noch Millibar trennen,
+            fällt die Reynolds-Zahl unter einige Hundert. Dann fließt die Luft nach
+            Poiseuille — der Massenstrom wächst mit der Differenz der <em>Quadrate</em> der
+            Drücke und mit der dritten Potenz der Spalthöhe. Die letzten Millibar zum
+            Enddruck sind darum die langsamsten.</span></div>
+      </div>
+      <div class="prose">
         <p>Das Sammelvolumen selbst wird isotherm bilanziert (p·V = m·R·T bei
-          Umgebungstemperatur): Der Kolben verkleinert V, die Blende trägt Masse aus, daraus
+          Umgebungstemperatur): Der Kolben verkleinert V, der Kanal trägt Masse aus, daraus
           folgt der Druckverlauf p(t). Sichtbar ist er im Dashboard als
           <b>Luftdruck-Kurve der Schusskurve</b> (rechte Achse, mbar) — inklusive des steilen
           Anstiegs am Füllende, wenn das Restvolumen gegen null geht.</p>
       </div>
 
       <span class="section-anchor" id="s5"></span>
-      <h2 class="section-title">5. Vakuum: Idealpumpe und Drossel</h2>
+      <h2 class="section-title">5. Vakuum: vier Modelle</h2>
       <div class="prose">
-        <p>Vakuum ändert an dieser Bilanz nur die Randbedingung. Das Dashboard kennt drei
-          Modelle, wählbar in der Seitenleiste:</p>
+        <p>Vakuum ändert an dieser Bilanz nur die Randbedingung hinter dem Kanal. Das
+          Dashboard kennt vier Modelle, wählbar in der Seitenleiste:</p>
       </div>
       <div class="derivation-box">
         <div class="step"><span class="step-num">①</span>
           <span><b>ohne Vakuum:</b> Umgebungsdruck bis „Einfüllöffnung verschlossen", danach
             dichte isotherme Kompression — die Luft kann nur noch ins Bauteil.</span></div>
         <div class="step"><span class="step-num">②</span>
-          <span><b>Idealpumpe (Enddruck):</b> Ab dem Kolbenweg „Vakuum ab" hält das Ventil den
-            Pumpen-Enddruck (Standard 80 mbar); schließt es, komprimiert der Rest isotherm
-            weiter. Obere Abschätzung dessen, was eine Anlage leisten kann.</span></div>
+          <span><b>Sofort-Enddruck (ideal, ohne Drossel):</b> Ab dem Kolbenweg „Vakuum ab"
+            springt der Druck augenblicklich auf den Enddruck (Standard 80 mbar) und bleibt
+            dort, solange das Ventil offen ist — eine unendlich schnelle Pumpe hinter einem
+            unendlich weiten Kanal. Entlüftungsfläche, Spalt und Kanallänge gehen hier
+            nicht ein. Obere Abschätzung dessen, was eine Anlage überhaupt leisten
+            könnte.</span></div>
         <div class="step"><span class="step-num">③</span>
-          <span><b>Entlüftung (Drossel):</b> das realistische Modell aus Abschnitt 4 — die
-            Absaugung muss durch die endliche Entlüftungsfläche, mit Choking als Grenze.
-            Hier zahlt sich Fläche aus, nicht Pumpenleistung.</span></div>
+          <span><b>Drossel → Pumpe (Enddruck konstant):</b> das Kanalmodell aus Abschnitt 4
+            gegen eine Pumpe, die den Enddruck hält, egal wie viel Luft ankommt. Die
+            Absaugung muss durch Fläche, Spalt und Kanal — Choking, Reibung und der zähe
+            Schluss begrenzen sie. Hier zahlt sich Fläche aus, nicht Pumpenleistung.</span></div>
+        <div class="step"><span class="step-num">④</span>
+          <span><b>Drossel → Vakuumtank (Druck steigt):</b> derselbe Kanal, aber dahinter ein
+            Tank endlichen Volumens, der vor dem Schuss auf den Enddruck evakuiert wurde. Jedes
+            Kilogramm Luft aus der Form hebt seinen Druck um R·T/V<sub>Tank</sub>; die
+            treibende Druckdifferenz schrumpft mit dem Schuss — je kleiner der Tank, desto
+            früher. Die Pumpe trägt in den wenigen Zehntelsekunden nichts bei (Zeitkonstante
+            V<sub>Tank</sub>/S liegt bei Sekunden), genau deshalb gibt es den Tank. Der
+            Tankdruck erscheint als eigene Kurve in der Schusskurve.</span></div>
       </div>
       <div class="prose">
+        <p>In allen Modellen schließt das Ventil entweder am <b>Füllende</b> (die Schmelze
+          erreicht den Kanal), bei einem gewählten <b>Kolbenweg</b> oder nach einer
+          <b>Offenzeit</b> ab dem Öffnen. Ab dem Schluss ist die Restluft eingeschlossen und
+          wird isotherm verdichtet — wer das Ventil früh schließt, verschenkt Absaugung, wer
+          es zu spät schließt, riskiert Metall im Ventil.</p>
         <p>Die entscheidende Zahl am Ende ist der <b>Restluftdruck beim Füllende</b>: der letzte
           Wert der Luftdruck-Kurve, bevor die Kavität voll ist. Er heißt im nächsten Abschnitt
           p<sub>vor</sub> — der Druck, unter dem die eingeschlossene Restluft als Blase in der
-          Schmelze steht. Mit den Standardwerten liefert das Drosselmodell dort rund 90 mbar
-          statt 1013 mbar ohne Vakuum: elfmal weniger eingeschlossene Luftmasse, bevor der
-          Nachdruck überhaupt anfängt.</p>
+          Schmelze steht. Mit den Standardwerten liefert das Drosselmodell dort rund 200 mbar
+          statt 1013 mbar ohne Vakuum: fünfmal weniger eingeschlossene Luftmasse, bevor der
+          Nachdruck überhaupt anfängt. In der langsamen Phase fällt der Kammerdruck fast auf
+          den Enddruck; erst die schnelle Phase verdichtet die Luft schneller, als der Kanal
+          sie abführt — die letzten Millisekunden entscheiden.</p>
       </div>
 
       <span class="section-anchor" id="s6"></span>
@@ -258,8 +305,9 @@
           <b>Restblase</b> (Abschnitt 6) als Diagramm „Luftblase unter Nachdruck" samt
           Kennwert „Luftblasen-Kompression" im Thermik-Panel — gerechnet beim gewählten
           Nachdruck (metallseitig) und mit dem simulierten p<sub>vor</sub>, sobald die
-          Vakuum-Simulation Daten liefert. Die Modellwahl (ohne Vakuum · Idealpumpe ·
-          Entlüftung) gilt überall gleichzeitig — eine Eingabe, ein Luftmodell.</p>
+          Vakuum-Simulation Daten liefert. Die Modellwahl (ohne Vakuum · Sofort-Enddruck ·
+          Drossel → Pumpe · Drossel → Vakuumtank) gilt überall gleichzeitig — eine Eingabe,
+          ein Luftmodell.</p>
       </div>
       <div class="warning-box">
         <b>Grenzen des Modells:</b> Ein Sammelvolumen kennt keine Luftsäcke — lokal
@@ -283,10 +331,13 @@
           mit den Standardwerten:</p>
         <ul>
           <li>DieLogic-Simulationskern <code>hpdcsim</code> (<code>vacuum.py</code>) —
-            Sammelvolumen-Bilanz, isentrope Blendenströmung mit Choking, Vakuummodelle
-            Idealpumpe und Drossel.</li>
+            Sammelvolumen-Bilanz, Blenden- und Kanalströmung mit Choking, Vakuummodelle
+            Sofort-Enddruck, Drossel gegen Pumpe und Drossel gegen Tank.</li>
           <li>Isentrope Düsen-/Blendenströmung und kritisches Druckverhältnis: Standard-
-            Gasdynamik (kompressible Strömung idealer Gase).</li>
+            Gasdynamik (kompressible Strömung idealer Gase). Isotherme Rohrströmung mit
+            Wandreibung und Choking bei M = 1/√γ: Shapiro, <i>The Dynamics and
+            Thermodynamics of Compressible Fluid Flow</i>; Reibbeiwert aller Regime nach
+            Churchill (1977), laminarer Ast des breiten Spalts f = 96/Re.</li>
           <li>Grenzwerte und Faustregeln (v<sub>luft,max</sub>, Entlüftungs- zu
             Anschnittfläche, Füllzeit): Prozessfenster-Eingaben des Dashboards — Kriterien
             und Literaturbelege im Artikel

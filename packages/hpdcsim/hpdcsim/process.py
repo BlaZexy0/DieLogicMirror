@@ -135,9 +135,23 @@ class ShotProcess:
                 f"{plan.fill_complete_stroke*1000:.2f} mm "
                 f"(biscuit {plan.biscuit_length*1000:.2f} mm).")
         if vacuum is not None:
-            if vacuum.end_position is None:
-                vacuum = replace(vacuum, end_position=min(
-                    profile.end_position, plan.fill_complete_stroke))
+            latest = min(profile.end_position, plan.fill_complete_stroke)
+            if vacuum.duration is not None:
+                # Valve open for a fixed time: walk the profile from the
+                # opening stroke and close where the plunger stands then —
+                # never later than the melt reaching the valve.
+                if vacuum.start_position >= profile.end_position:
+                    raise ValueError("vacuum start_position lies beyond the "
+                                     "profile travel.")
+                t_open = profile.time_at_position(vacuum.start_position)
+                t_close = min(t_open + vacuum.duration, profile.end_time)
+                end = min(profile.position_at_time(t_close), latest)
+                if end <= vacuum.start_position:
+                    raise ValueError("vacuum duration closes the valve "
+                                     "before the plunger has moved.")
+                vacuum = replace(vacuum, end_position=end, duration=None)
+            elif vacuum.end_position is None:
+                vacuum = replace(vacuum, end_position=latest)
             if vacuum.end_position > profile.end_position:
                 raise ValueError("vacuum end_position lies beyond the "
                                  "profile travel.")
@@ -256,14 +270,20 @@ class ShotProcess:
         return self._air_state(t, phase, stroke, melt)
 
     # --- physics overlays ---
+    def air_solution(self):
+        """The air model's time series as a dict — "time" and "pressure"
+        always, plus model-specific channels (TankVacuum: "tank_pressure").
+        Solved once and cached; closed-form models are sampled."""
+        if self._pressure_solution is None:
+            self._pressure_solution = self.air_model.solve_channels(self)
+        return self._pressure_solution
+
     def _air_pressure(self, air: AirState):
         pressure = self.air_model.pressure_at(self, air)
         if pressure is not None:
             return float(pressure)
-        if self._pressure_solution is None:
-            self._pressure_solution = self.air_model.solve(self)
-        times, pressures = self._pressure_solution
-        return float(np.interp(air.time, times, pressures))
+        solution = self.air_solution()
+        return float(np.interp(air.time, solution["time"], solution["pressure"]))
 
     def _melt_temperature(self, time):
         if self.thermal is None or self._solving_thermal:

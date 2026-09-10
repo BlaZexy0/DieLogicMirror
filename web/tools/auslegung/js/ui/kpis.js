@@ -22,6 +22,7 @@ import { fmt, subHTML } from '../core/format.js';
 import { total, afterGate, pistonArea, travel, injForceEff, hydArea, cavityVolume, cavityTravel, biscuitSolid, intensStroke, rhoSolidus } from '../core/physics.js';
 import { pqCore } from '../charts/pq2.js';
 import { ratio as bubbleRatio, vacPressure } from '../charts/bubble.js';
+import { sim } from '../core/simstore.js';
 import { ACTIVE_SPAN } from './chamber.js';
 
 /* Während eines Renders eingesammelte Prüfungen für die Prüfleiste. */
@@ -150,7 +151,28 @@ function minTag(x, min) {
    die Kammer hinaus (p3 > L), wird die Skala auf p3 gedehnt und die
    Kammerlänge als Grenze markiert.
    Darüber eine zweite, dünne Spur: ab wo die Einfüllöffnung dicht ist und
-   über welchen Kolbenweg Vakuum gezogen wird (vacStart bis Füllende). */
+   über welchen Kolbenweg Vakuum gezogen wird (vacStart bis Ventilschluss:
+   Füllende, gewählter Kolbenweg oder — nach Offenzeit — der Hub aus der
+   Simulation, solange sie keinen liefert das Füllende). */
+function simEventStroke(id) {
+  const ev = sim.data && Array.isArray(sim.data.events) && sim.data.events.find(e => e.id === id);
+  return ev && Number.isFinite(ev.s_mm) ? ev.s_mm : null;
+}
+
+function vacuumEnd(v, sEnd) {
+  const r = x => fmt(Math.round(x));
+  if (v.vacEnd === 'stroke' && v.vacEndStroke > v.vacStart) {
+    const to = Math.min(v.vacEndStroke, sEnd);
+    return { to, label: 'bis Kolbenweg ' + r(to) + ' mm' };
+  }
+  if (v.vacEnd === 'time' && v.vacEndTime > 0) {
+    const s = simEventStroke('vacuum_end');
+    const to = s !== null ? Math.min(s, sEnd) : sEnd;
+    return { to, label: 'für ' + fmt(v.vacEndTime) + ' ms' + (s !== null ? ' (bis ' + r(to) + ' mm)' : '') };
+  }
+  return { to: sEnd, label: 'bis Füllende ' + r(sEnd) + ' mm' };
+}
+
 function rulerHTML(v, g) {
   const { L, fill, sFill, p1, cav, intens, bisc, p3 } = g;
   const span = Math.max(L, p3);
@@ -163,14 +185,15 @@ function rulerHTML(v, g) {
   const w = len => pctStr((P1 - P0) * Math.max(0, len) / span);
   const vacOn = v.vacModel && v.vacModel !== 'aus' && v.vacStart >= 0;
   const sEnd = over ? span : sFill + cav;                      // Füllende
+  const vacTo = vacuumEnd(v, sEnd);
   const vacHtml = '<div class="kr-vac' + (vacOn ? '' : ' off') + '">'
     + '<span class="vl" style="margin-left:' + pctStr(P0) + '">' + (vacOn
-      ? 'Vakuum ab ' + fmt(Math.round(v.vacStart)) + ' mm bis Füllende ' + fmt(Math.round(sEnd)) + ' mm'
+      ? 'Vakuum ab ' + fmt(Math.round(v.vacStart)) + ' mm ' + vacTo.label
       : 'ohne Vakuum')
     + (v.sealStroke > 0 ? ' · Einfüllöffnung dicht ab ' + fmt(Math.round(v.sealStroke)) + ' mm' : '') + '</span>'
     + '<div class="kr-vtrack">'
     + (g.x0 != null ? '<span class="base" style="left:' + x(0) + ';width:' + w(span) + '"></span>' : '')
-    + (vacOn && sEnd > v.vacStart ? '<span class="seg" style="left:' + x(v.vacStart) + ';width:' + w(Math.min(span, sEnd) - Math.max(0, v.vacStart)) + '"></span>' : '')
+    + (vacOn && vacTo.to > v.vacStart ? '<span class="seg" style="left:' + x(v.vacStart) + ';width:' + w(Math.min(span, vacTo.to) - Math.max(0, v.vacStart)) + '"></span>' : '')
     + (v.sealStroke > 0 ? '<i class="tick seal" style="left:' + x(v.sealStroke) + '" title="Einfüllöffnung verschlossen"></i>' : '')
     + '</div></div>';
   const mm = x => fmt(Math.round(x));

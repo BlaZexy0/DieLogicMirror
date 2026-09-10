@@ -149,12 +149,21 @@ def _clamped_curve(curve, limit):
     return out, clamped
 
 
-ALLOWED_VACUUM_MODELS = ("ideal", "conductance")
+ALLOWED_VACUUM_MODELS = ("ideal", "conductance", "tank")
+VACUUM_END_MODES = ("fill", "stroke", "time")
 
 
 def _vacuum_config(vac, fill_complete, travel):
-    """Vakuum-Block in Browser-Einheiten (model, pump_mbar, valve_mm2,
-    start_mm) → hpdcsim-VacuumSystem (SI). None wenn kein Vakuum gewählt."""
+    """Vakuum-Block in Browser-Einheiten → hpdcsim-VacuumSystem (SI). None
+    wenn kein Vakuum gewählt.
+
+    Schlüssel: model (ideal · conductance · tank · aus), pump_mbar (Enddruck
+    der Pumpe bzw. Tankdruck vor dem Schuss), valve_mm2 (Entlüftungsfläche —
+    sie IST der Ventilquerschnitt, ein separates Feld gibt es nicht),
+    start_mm. Optional: gap_mm + channel_mm (Entlüftungsspalt und Kanallänge
+    → Drossel mit Wandreibung statt Blende; beide > 0), end (fill · stroke ·
+    time) mit end_mm bzw. duration_ms (Ventilschluss), tank_l (nur tank).
+    """
     model = str(vac.get("model", "") or "").strip()
     if model in ("", "aus", "none", "sealed"):
         return None
@@ -176,11 +185,48 @@ def _vacuum_config(vac, fill_complete, travel):
         raise ConvertError(
             f"Vakuum-Start ({start * 1000:.0f} mm) muss vor dem Kurvenende/"
             f"Füllende ({limit * 1000:.0f} mm) liegen.")
-    return {
-        "start_position": start,
-        "valve_area": valve,
-        "model": {"type": model, "pump_pressure": pump},
-    }
+    system = {"start_position": start, "valve_area": valve}
+
+    # Ventilschluss: am Füllende (Vorgabe), bei einem Kolbenweg oder nach
+    # einer Offenzeit ab Ventilöffnung. Ein Schließweg hinter dem Füllende
+    # heißt schlicht „bis zum Füllende" — hpdcsim kappt auch selbst dort.
+    end_mode = str(vac.get("end", "fill") or "fill").strip()
+    if end_mode not in VACUUM_END_MODES:
+        raise ConvertError(
+            f"Ventilschluss '{end_mode}' unbekannt — erlaubt: "
+            + ", ".join(VACUUM_END_MODES) + ".")
+    if end_mode == "stroke":
+        end = _num(vac, "end_mm") / 1000.0
+        if end <= start:
+            raise ConvertError(
+                f"Ventil-Schließweg ({end * 1000:.0f} mm) muss hinter dem "
+                f"Vakuum-Start ({start * 1000:.0f} mm) liegen.")
+        system["end_position"] = min(end, limit)
+    elif end_mode == "time":
+        duration = _num(vac, "duration_ms") / 1000.0
+        if duration <= 0:
+            raise ConvertError("Ventil-Offenzeit muss > 0 ms sein.")
+        system["duration"] = duration
+
+    # Drossel mit Wandreibung: Spalt und Kanallänge beschreiben den
+    # Entlüftungskanal als breiten Schlitz. Fehlt eines davon, bleibt es bei
+    # der Blende; das Sofort-Modell kennt weder Fläche noch Kanal.
+    gap = _num_opt(vac, "gap_mm", 0.0) / 1000.0
+    length = _num_opt(vac, "channel_mm", 0.0) / 1000.0
+    if gap < 0 or length < 0:
+        raise ConvertError("Entlüftungsspalt und Kanallänge dürfen nicht negativ sein.")
+    if model != "ideal" and gap > 0 and length > 0:
+        system["valve_channel"] = {"gap": gap, "length": length}
+
+    if model == "tank":
+        tank = _num(vac, "tank_l") / 1000.0        # L → m³
+        if tank <= 0:
+            raise ConvertError("Tankvolumen muss > 0 L sein.")
+        system["model"] = {"type": "tank", "tank_volume": tank,
+                           "tank_pressure": pump}
+    else:
+        system["model"] = {"type": model, "pump_pressure": pump}
+    return system
 
 
 def sim_config_from_browser(values, curve, process=None, vacuum=None):
@@ -284,13 +330,18 @@ def sim_config_from_browser(values, curve, process=None, vacuum=None):
     # die_face/downstream mit htc und wall_temperature). Das sind
     # Modellparameter, die niemand vorgegeben hat; sie gehören entschieden,
     # nicht geraten. Bis dahin bleibt T_melt ein leerer Kanal.
-    if vent > 0:
+    # Mit Vakuum ist die Entlüftungsfläche der Weg zum Ventil (valve_area)
+    # und sonst nichts: der Kanal endet am Ventil, vor dem Öffnen und nach
+    # dem Schließen ist er eine Sackgasse. Dieselbe Fläche zusätzlich als
+    # Kaltkanal gegen die Umgebung zu führen (bisher), zählte sie doppelt,
+    # sobald der Kammerdruck über Umgebung stieg. Ohne Vakuum bleibt sie
+    # als vent_area am Gießsystem (das dichte Modell nutzt sie nicht).
+    vac = (_vacuum_config(vacuum, fill_complete, positions_velocities[-1][0])
+           if vacuum else None)
+    if vac is not None:
+        config["vacuum"] = vac
+    elif vent > 0:
         config["casting"]["vent_area"] = vent
-    if vacuum:
-        vac = _vacuum_config(vacuum, fill_complete,
-                             positions_velocities[-1][0])
-        if vac is not None:
-            config["vacuum"] = vac
 
     meta = {
         "phi": phi,

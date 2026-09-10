@@ -16,7 +16,8 @@ from .laws import TwoStageLaw
 from .motion import MotionProfile
 from .process import ShotProcess
 from .thermal import ConstantTemperature, LumpedCapacitance, MultiSurfaceLumped
-from .vacuum import ConductanceVacuum, IdealVacuum, NoVacuum, PumpedVacuum
+from .vacuum import (ConductanceVacuum, IdealVacuum, NoVacuum, PumpedVacuum,
+                     TankVacuum, VentChannel)
 
 
 class ConfigError(ValueError):
@@ -96,7 +97,17 @@ VACUUM_MODEL_TYPES = {
     "ideal": lambda data, path: _call_factory(IdealVacuum, data, path),
     "pumped": lambda data, path: _call_factory(PumpedVacuum, data, path),
     "conductance": lambda data, path: _call_factory(ConductanceVacuum, data, path),
+    "tank": lambda data, path: _call_factory(TankVacuum, data, path),
 }
+
+
+def _with_channel(data, key, path):
+    """Replace a nested vent-channel object (gap, length, ...) by its
+    VentChannel; None stays None."""
+    data = dict(data)
+    if data.get(key) is not None:
+        data[key] = _build_dataclass(VentChannel, data[key], f"{path}.{key}")
+    return data
 
 
 def register_vacuum_model(name, factory):
@@ -162,7 +173,8 @@ def process_from_dict(config) -> ShotProcess:
     sleeve = _build_dataclass(ShotSleeve, config["sleeve"], "sleeve")
 
     casting_data = dict(_expect_dict(config["casting"], "casting"))
-    unknown = set(casting_data) - {"runner", "part", "overflow", "vent_area"}
+    unknown = set(casting_data) - {"runner", "part", "overflow", "vent_area",
+                                   "vent_channel"}
     if unknown:
         raise ConfigError(f"casting: unknown keys {sorted(unknown)}.")
     if {"runner", "part"} - set(casting_data):
@@ -174,8 +186,10 @@ def process_from_dict(config) -> ShotProcess:
                 if "overflow" in casting_data else Overflow(0.0))
     casting = _call_factory(
         CastingSystem,
-        {"runner": runner, "part": part, "overflow": overflow,
-         "vent_area": casting_data.get("vent_area")}, "casting")
+        _with_channel({"runner": runner, "part": part, "overflow": overflow,
+                       "vent_area": casting_data.get("vent_area"),
+                       "vent_channel": casting_data.get("vent_channel")},
+                      "vent_channel", "casting"), "casting")
 
     melt = (_build_dataclass(Melt, config["melt"], "melt")
             if "melt" in config else None)
@@ -193,7 +207,9 @@ def process_from_dict(config) -> ShotProcess:
         model = _resolve_type(vacuum_data.pop("model"), "vacuum.model",
                               VACUUM_MODEL_TYPES, "vacuum model")
         vacuum_data["model"] = model
-        vacuum = _build_dataclass(VacuumSystem, vacuum_data, "vacuum")
+        vacuum = _build_dataclass(
+            VacuumSystem, _with_channel(vacuum_data, "valve_channel", "vacuum"),
+            "vacuum")
 
     thermal = (_resolve_type(config["thermal"], "thermal", THERMAL_TYPES,
                              "thermal model")

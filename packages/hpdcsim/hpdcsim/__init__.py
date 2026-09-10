@@ -23,7 +23,9 @@ from .process import Event, Phase, ProcessState, ShotProcess
 from .thermal import (ConstantTemperature, LumpedCapacitance,
                       MultiSurfaceLumped, ThermalModel)
 from .vacuum import (ATMOSPHERE, AirState, ConductanceVacuum, IdealVacuum,
-                     NoVacuum, PumpedVacuum, VacuumModel, orifice_mass_flow)
+                     NoVacuum, PumpedVacuum, TankVacuum, VacuumModel,
+                     VentChannel, channel_mass_flow, choking_ratio,
+                     orifice_mass_flow, slit_friction_factor)
 
 __version__ = "0.1.0"
 
@@ -34,13 +36,15 @@ __all__ = [
     "Event", "GRAVITY", "IdealVacuum", "LumpedCapacitance", "Melt",
     "MotionProfile", "MotionSample", "MultiSurfaceLumped", "NoVacuum",
     "Overflow", "Part", "Phase", "PlungerLaw", "ProcessState", "PumpedVacuum",
-    "Runner", "ShotPlan", "ShotProcess", "ShotSleeve", "ThermalModel",
-    "TwoStageLaw", "VacuumModel", "VacuumSystem", "VelocityFunctionLaw",
-    "area_fraction_from_height", "circular_section",
+    "Runner", "ShotPlan", "ShotProcess", "ShotSleeve", "TankVacuum",
+    "ThermalModel", "TwoStageLaw", "VacuumModel", "VacuumSystem",
+    "VelocityFunctionLaw", "VentChannel",
+    "area_fraction_from_height", "channel_mass_flow", "choking_ratio",
+    "circular_section",
     "critical_velocity_garber_lopez", "critical_velocity_nogowizin",
     "critical_velocity_cfd_table", "critical_velocity_segment_fit",
     "height_from_fill_fraction", "load_process", "orifice_mass_flow",
     "process_from_dict", "register_critical_velocity_model",
     "register_motion_type", "register_thermal_model",
-    "register_vacuum_model",
+    "register_vacuum_model", "slit_friction_factor",
 ]

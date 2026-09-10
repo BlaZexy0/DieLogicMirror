@@ -114,14 +114,26 @@ export const groups = [
   },
   {
     id: 'vacuum', title: 'Vakuum und Entlüftung',
-    note: 'Die Entlüftungsfläche treibt Entlüftungs-KPIs und -Diagramme und drosselt im Vakuum-Modell „Entlüftung" die simulierte Luftdruck-Kurve der Schusskurve (Backend).',
+    note: 'Die Entlüftungsfläche treibt die Entlüftungs-KPIs und -Diagramme. In den Drossel-Modellen der Simulation (Backend) ist sie mit Spalt und Kanallänge der Widerstand, durch den die Luft zur Pumpe bzw. in den Tank muss: bei großem Druckverhältnis chokt der Kanal (Schallgeschwindigkeit am Austritt), dazwischen begrenzt die Wandreibung, bei kleiner Druckdifferenz und niedrigem Druck fließt die Luft zäh (laminar). „Sofort-Enddruck" ignoriert Fläche und Kanal — der Druck springt beim Öffnen auf den Enddruck. Der Tank ist vor dem Schuss auf den Enddruck evakuiert; sein Druck steigt mit jeder abgesaugten Luftmasse. Schließt das Ventil vor dem Füllende, wird die Restluft danach verdichtet.',
     fields: [
       { key: 'vacModel', label: 'Vakuum-Modell', unit: '', def: 'conductance', type: 'select',
-        options: [['aus', 'ohne Vakuum'], ['ideal', 'Idealpumpe (Enddruck)'], ['conductance', 'Entlüftung (Drossel)']] },
+        options: [['aus', 'ohne Vakuum'], ['ideal', 'Sofort-Enddruck (ideal, ohne Drossel)'], ['conductance', 'Drossel → Pumpe (Enddruck konstant)'], ['tank', 'Drossel → Vakuumtank (Druck steigt)']] },
       { key: 'vent', label: 'Entlüftungsfläche', unit: 'mm²', def: 800,
         auto: 'Ideal: Entlüftungsbedarf bei der Füllzeit der Schusskurve — A_ent = V_luft/(t_f·v_luft,max), auf 10 mm² aufgerundet', gt: 0, max: 100000, bound: 'plaus' },
-      { key: 'vacPump',  label: 'Pumpen-Enddruck',    unit: 'mbar', def: 80 , gt: 0, max: 1013, bound: 'hart', why: 'ein Enddruck über dem Umgebungsdruck ist kein Vakuum' },
-      { key: 'vacStart', label: 'Vakuum ab Kolbenweg', unit: 'mm',  def: 150 , min: 0, max: 3000, bound: 'plaus' }
+      /* Entlüftungskanal als breiter Schlitz: Spalthöhe und Weglänge bis zum
+         Ventil bestimmen die Wandreibung (hydraulischer Ø = 2·Spalt). */
+      { key: 'ventGap', label: 'Entlüftungsspalt', unit: 'mm', def: 0.5, gt: 0, max: 50, bound: 'plaus' },
+      { key: 'ventLen', label: 'Entlüftungskanal Länge', unit: 'mm', def: 80, gt: 0, max: 5000, bound: 'plaus' },
+      { key: 'vacPump',  label: 'Enddruck Pumpe / Tank vor Schuss', unit: 'mbar', def: 80 , gt: 0, max: 1013, bound: 'hart', why: 'ein Enddruck über dem Umgebungsdruck ist kein Vakuum' },
+      { key: 'vacTank',  label: 'Vakuumtank-Volumen', unit: 'L', def: 500, gt: 0, max: 100000, bound: 'plaus' },
+      { key: 'vacStart', label: 'Vakuum ab Kolbenweg', unit: 'mm',  def: 150 , min: 0, max: 3000, bound: 'plaus' },
+      /* Ventilschluss: am Füllende (Schmelze erreicht das Ventil), bei einem
+         Kolbenweg oder nach einer Offenzeit ab Ventilöffnung — das jeweils
+         andere Zahlenfeld ist dann ohne Wirkung. */
+      { key: 'vacEnd', label: 'Ventil schließt', unit: '', def: 'fill', type: 'select',
+        options: [['fill', 'am Füllende'], ['stroke', 'bei Kolbenweg'], ['time', 'nach Offenzeit']] },
+      { key: 'vacEndStroke', label: 'Ventil zu bei Kolbenweg', unit: 'mm', def: 700, min: 0, max: 3000, bound: 'plaus' },
+      { key: 'vacEndTime', label: 'Ventil-Offenzeit', unit: 'ms', def: 500, gt: 0, max: 10000, bound: 'plaus' }
     ]
   },
   {

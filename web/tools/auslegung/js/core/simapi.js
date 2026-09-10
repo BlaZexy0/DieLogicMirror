@@ -14,9 +14,17 @@ export function toSimPayload(values, curve, count = 400) {
       model: values.vacModel,
       pump_mbar: values.vacPump,
       /* Die Entlüftungsfläche drosselt — ein separater Ventilquerschnitt
-         entfällt, das Backend-Feld heißt weiterhin valve_mm2. */
+         entfällt, das Backend-Feld heißt weiterhin valve_mm2. Spalt und
+         Kanallänge machen aus der Blende einen Kanal mit Wandreibung. */
       valve_mm2: values.vent,
-      start_mm: values.vacStart
+      gap_mm: values.ventGap,
+      channel_mm: values.ventLen,
+      start_mm: values.vacStart,
+      /* Ventilschluss: fill · stroke (end_mm) · time (duration_ms) */
+      end: values.vacEnd || 'fill',
+      end_mm: values.vacEndStroke,
+      duration_ms: values.vacEndTime,
+      tank_l: values.vacTank
     };
   }
   return payload;

@@ -45,6 +45,15 @@ def run_shot_simulation(values, curve, *, count=400, process=None, vacuum=None):
         samples["T_melt"].append(_clean(st.melt_temperature))
         samples["part_fill"].append(_clean(st.part_fill))
 
+    # Tankmodell: der Tankdruck steigt mit jeder abgesaugten Luftmasse —
+    # als eigener Kanal, damit die Schusskurve ihn neben dem Kammerdruck
+    # zeigen kann. Andere Modelle veröffentlichen keinen zweiten Kanal.
+    if proc.vacuum is not None:
+        solution = proc.air_solution()
+        if "tank_pressure" in solution:
+            tank = np.interp(times, solution["time"], solution["tank_pressure"])
+            samples["p_tank_mbar"] = [_clean(x / 100.0) for x in tank]
+
     events = []
     for key, ev in proc.events().items():
         events.append({

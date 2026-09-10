@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from .geometry import GRAVITY, CircularSection, circular_section
-from .vacuum import VacuumModel
+from .vacuum import VacuumModel, VentChannel
 
 
 @dataclass(frozen=True)
@@ -19,12 +19,14 @@ class Environment:
     ambient_temperature: float = 293.15    # K (absolute — gas law)
     gas_constant: float = 287.05           # J/(kg K), air
     heat_capacity_ratio: float = 1.4       # gamma, air
+    viscosity: float = 1.82e-5             # Pa s, air at 20 °C (vent channels)
 
     def __post_init__(self):
         if (self.ambient_pressure <= 0.0 or self.ambient_temperature <= 0.0
-                or self.gas_constant <= 0.0 or self.heat_capacity_ratio <= 1.0):
+                or self.gas_constant <= 0.0 or self.heat_capacity_ratio <= 1.0
+                or self.viscosity <= 0.0):
             raise ValueError("environment values must be physical "
-                             "(pressures/temperatures > 0, gamma > 1).")
+                             "(pressures/temperatures/viscosity > 0, gamma > 1).")
 
 
 @dataclass(frozen=True)
@@ -143,15 +145,20 @@ class Overflow:
 class CastingSystem:
     """Everything downstream of the sleeve, filled in order
     runner -> part -> overflow. vent_area is the total chill-vent flow area
-    to ambient (used by conductance-based vacuum models)."""
+    to ambient (used by the vented vacuum models); vent_channel describes
+    those vents as slit channels with friction — without it they are plain
+    orifices."""
     runner: Runner
     part: Part
     overflow: Overflow = field(default_factory=lambda: Overflow(0.0))
     vent_area: float | None = None
+    vent_channel: VentChannel | None = None
 
     def __post_init__(self):
         if self.vent_area is not None and self.vent_area <= 0.0:
             raise ValueError("vent_area must be greater than zero.")
+        if self.vent_channel is not None and self.vent_area is None:
+            raise ValueError("vent_channel needs a vent_area.")
 
     @property
     def total_volume(self):
@@ -185,15 +192,20 @@ class CastingSystem:
 
 @dataclass(frozen=True)
 class VacuumSystem:
-    """Vacuum valve activated between two plunger strokes, with an attached
-    pressure model. end_position=None means "until the melt reaches the
-    valve" and resolves to the fill-complete stroke (capped at the profile
-    travel) when the process is built. valve_area is the valve's flow area,
-    needed by conductance-based models."""
+    """Vacuum valve opened at a plunger stroke, with an attached pressure
+    model. It closes at `end_position`, or after `duration` seconds of
+    being open (the process resolves that to a stroke along the motion
+    profile), or — with neither given — "when the melt reaches the valve":
+    the fill-complete stroke (capped at the profile travel). After closing
+    the remaining air is compressed. valve_area is the valve's flow area,
+    needed by the vented models; valve_channel describes the vent path to
+    the valve as a slit channel with friction (without it: plain orifice)."""
     start_position: float
     model: VacuumModel
     end_position: float | None = None
     valve_area: float | None = None
+    valve_channel: VentChannel | None = None
+    duration: float | None = None
 
     def __post_init__(self):
         if self.start_position < 0.0:
@@ -201,8 +213,16 @@ class VacuumSystem:
         if (self.end_position is not None
                 and self.end_position <= self.start_position):
             raise ValueError("end_position must exceed start_position.")
+        if self.duration is not None:
+            if self.duration <= 0.0:
+                raise ValueError("duration must be greater than zero.")
+            if self.end_position is not None:
+                raise ValueError("give either end_position or duration, "
+                                 "not both.")
         if self.valve_area is not None and self.valve_area <= 0.0:
             raise ValueError("valve_area must be greater than zero.")
+        if self.valve_channel is not None and self.valve_area is None:
+            raise ValueError("valve_channel needs a valve_area.")
 
     def active(self, stroke):
         if self.end_position is None:

@@ -101,8 +101,13 @@ diese Datei nicht neu erzeugt, bekommt einen roten CI-Lauf.
 | Feld | Einheit | Vorgabe | Zulässig | Art |
 |---|---|---:|---|---|
 | Entlüftungsfläche `vent` | mm² | 800 | `> 0 … 100000` | plausibel |
-| Pumpen-Enddruck `vacPump` | mbar | 80 | `> 0 … 1013` | **hart** |
+| Entlüftungsspalt `ventGap` | mm | 0,5 | `> 0 … 50` | plausibel |
+| Entlüftungskanal Länge `ventLen` | mm | 80 | `> 0 … 5000` | plausibel |
+| Enddruck Pumpe / Tank vor Schuss `vacPump` | mbar | 80 | `> 0 … 1013` | **hart** |
+| Vakuumtank-Volumen `vacTank` | L | 500 | `> 0 … 100000` | plausibel |
 | Vakuum ab Kolbenweg `vacStart` | mm | 150 | `0 … 3000` | plausibel |
+| Ventil zu bei Kolbenweg `vacEndStroke` | mm | 700 | `0 … 3000` | plausibel |
+| Ventil-Offenzeit `vacEndTime` | ms | 500 | `> 0 … 10000` | plausibel |
 
 ### Prozessfenster
 
@@ -137,7 +142,7 @@ diese Datei nicht neu erzeugt, bekommt einen roten CI-Lauf.
 | Angussgewicht `runner` | `> 0 … 1000` | ohne Anguss erreicht die Schmelze die Kavität nicht — die Simulation weist es ab |
 | Pressrestgewicht `biscuit` | `> 0 … 1000` | ohne Pressrest führte der Kolben bis in die Form — die Simulation weist es ab |
 | Durchflussbeiwert `Cd` | `> 0 … 1` | ein Durchflussbeiwert über 1 hieße mehr Durchfluss als Antrieb |
-| Pumpen-Enddruck `vacPump` | `> 0 … 1013` | ein Enddruck über dem Umgebungsdruck ist kein Vakuum |
+| Enddruck Pumpe / Tank vor Schuss `vacPump` | `> 0 … 1013` | ein Enddruck über dem Umgebungsdruck ist kein Vakuum |
 | Füllgrad Ziel min. `fillMin` | `0 … 100` | ein Füllgrad ist ein Anteil und liegt in 0…100 % |
 | Füllgrad Ziel max. `fillMax` | `0 … 100` | ein Füllgrad ist ein Anteil und liegt in 0…100 % |
 | Zul. Erstarrung `Sfrac` | `0 … 100` | ein Erstarrungsanteil ist ein Anteil und liegt in 0…100 % |
@@ -244,4 +249,4 @@ Zahlen „nicht belastbar" seien.
 
 ---
 
-_81 Felder, davon 12 mit harter Grenze · 16 Regeln zwischen Feldern · erzeugt aus `config/fields.js` und `shared/felddomaene.js`._
+_86 Felder, davon 12 mit harter Grenze · 16 Regeln zwischen Feldern · erzeugt aus `config/fields.js` und `shared/felddomaene.js`._
