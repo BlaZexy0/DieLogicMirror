@@ -9,7 +9,7 @@ import { applyCurveGen } from './core/curvegen.js';
 import { applyAuto } from './core/autofit.js';
 import { charts, chartsById } from './charts/registry.js';
 import { PRESET_KEYS, PRESET_DOMAINS } from './config/fields.js';
-import { buildInputs, validate, refreshAuto } from './ui/inputs.js';
+import { buildInputs, validate, refreshAuto, updateFieldVisibility } from './ui/inputs.js';
 import { initPresetSelect } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
 import { buildCard, renderCard } from './ui/cards.js';
@@ -28,6 +28,7 @@ function render() {
   const genErr = applyCurveGen(v);
   applyAuto(v);
   refreshAuto();
+  updateFieldVisibility();
   if (def.usesCurve && state.curveGen.mode !== 'points') renderCurveTable(genErr);
   /* Erst prüfen, dann rechnen — wie im Dashboard (main.js). */
   const urteil = validate(v);

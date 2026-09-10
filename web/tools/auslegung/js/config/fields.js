@@ -17,6 +17,11 @@ export const PRESET_DOMAINS = [
     groupElId: 'part-preset-group', global: '__PARTS__', listKey: 'parts', config: '/shared/examples/parts.js' }
 ];
 
+/* Vakuum-Modelle, die überhaupt Vakuum ziehen bzw. die Entlüftung als
+   Drossel rechnen — Bedingungen (when) der Vakuum-Felder. */
+const VAC_ON = ['ideal', 'conductance', 'tank'];
+const VAC_DROSSEL = ['conductance', 'tank'];
+
 export const groups = [
   {
     id: 'machineFields', title: 'Maschinenwerte', preset: 'machine',
@@ -122,18 +127,21 @@ export const groups = [
         auto: 'Ideal: Entlüftungsbedarf bei der Füllzeit der Schusskurve — A_ent = V_luft/(t_f·v_luft,max), auf 10 mm² aufgerundet', gt: 0, max: 100000, bound: 'plaus' },
       /* Entlüftungskanal als breiter Schlitz: Spalthöhe und Weglänge bis zum
          Ventil bestimmen die Wandreibung (hydraulischer Ø = 2·Spalt). */
-      { key: 'ventGap', label: 'Entlüftungsspalt', unit: 'mm', def: 0.5, gt: 0, max: 50, bound: 'plaus' },
-      { key: 'ventLen', label: 'Entlüftungskanal Länge', unit: 'mm', def: 80, gt: 0, max: 5000, bound: 'plaus' },
-      { key: 'vacPump',  label: 'Enddruck Pumpe / Tank vor Schuss', unit: 'mbar', def: 80 , gt: 0, max: 1013, bound: 'hart', why: 'ein Enddruck über dem Umgebungsdruck ist kein Vakuum' },
-      { key: 'vacTank',  label: 'Vakuumtank-Volumen', unit: 'L', def: 500, gt: 0, max: 100000, bound: 'plaus' },
-      { key: 'vacStart', label: 'Vakuum ab Kolbenweg', unit: 'mm',  def: 150 , min: 0, max: 3000, bound: 'plaus' },
+      /* when: nur sichtbar (und geprüft), solange das Modell das Feld
+         braucht — der Kanal nur in den Drossel-Modellen, der Tank nur beim
+         Tankmodell, alles Weitere nur mit Vakuum. */
+      { key: 'ventGap', label: 'Entlüftungsspalt', unit: 'mm', def: 10, gt: 0, max: 50, bound: 'plaus', when: { vacModel: VAC_DROSSEL } },
+      { key: 'ventLen', label: 'Entlüftungskanal Länge', unit: 'mm', def: 80, gt: 0, max: 5000, bound: 'plaus', when: { vacModel: VAC_DROSSEL } },
+      { key: 'vacPump',  label: 'Enddruck Pumpe / Tank vor Schuss', unit: 'mbar', def: 80 , gt: 0, max: 1013, bound: 'hart', why: 'ein Enddruck über dem Umgebungsdruck ist kein Vakuum', when: { vacModel: VAC_ON } },
+      { key: 'vacTank',  label: 'Vakuumtank-Volumen', unit: 'L', def: 500, gt: 0, max: 100000, bound: 'plaus', when: { vacModel: ['tank'] } },
+      { key: 'vacStart', label: 'Vakuum ab Kolbenweg', unit: 'mm',  def: 150 , min: 0, max: 3000, bound: 'plaus', when: { vacModel: VAC_ON } },
       /* Ventilschluss: am Füllende (Schmelze erreicht das Ventil), bei einem
-         Kolbenweg oder nach einer Offenzeit ab Ventilöffnung — das jeweils
-         andere Zahlenfeld ist dann ohne Wirkung. */
+         Kolbenweg oder nach einer Offenzeit ab Ventilöffnung — nur das
+         Zahlenfeld des gewählten Modus ist sichtbar. */
       { key: 'vacEnd', label: 'Ventil schließt', unit: '', def: 'fill', type: 'select',
-        options: [['fill', 'am Füllende'], ['stroke', 'bei Kolbenweg'], ['time', 'nach Offenzeit']] },
-      { key: 'vacEndStroke', label: 'Ventil zu bei Kolbenweg', unit: 'mm', def: 700, min: 0, max: 3000, bound: 'plaus' },
-      { key: 'vacEndTime', label: 'Ventil-Offenzeit', unit: 'ms', def: 500, gt: 0, max: 10000, bound: 'plaus' }
+        options: [['fill', 'am Füllende'], ['stroke', 'bei Kolbenweg'], ['time', 'nach Offenzeit']], when: { vacModel: VAC_ON } },
+      { key: 'vacEndStroke', label: 'Ventil zu bei Kolbenweg', unit: 'mm', def: 700, min: 0, max: 3000, bound: 'plaus', when: { vacModel: VAC_ON, vacEnd: ['stroke'] } },
+      { key: 'vacEndTime', label: 'Ventil-Offenzeit', unit: 'ms', def: 500, gt: 0, max: 10000, bound: 'plaus', when: { vacModel: VAC_ON, vacEnd: ['time'] } }
     ]
   },
   {
@@ -236,4 +244,17 @@ export const PAIRS = [
    den HTML-Attributen und dem Generator scripts/gen-domain-doc.mjs. */
 export function domainFields() {
   return allFields().filter(f => f.type !== 'select');
+}
+
+/* Felder, die zum aktuellen Zustand nicht gehören: `when` nennt je
+   Select-Feld die Werte, bei denen das Feld gilt; alle Bedingungen müssen
+   zutreffen. Solche Felder sind in der Seitenleiste ausgeblendet und
+   zählen nicht in der Domänenprüfung — ihr Wert bleibt im Zustand und ist
+   beim Zurückschalten wieder da. */
+export function hiddenFields(v) {
+  const out = new Set();
+  for (const f of allFields()) {
+    if (f.when && !Object.entries(f.when).every(([k, vals]) => vals.includes(v[k]))) out.add(f.key);
+  }
+  return out;
 }

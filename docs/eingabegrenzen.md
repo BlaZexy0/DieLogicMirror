@@ -101,7 +101,7 @@ diese Datei nicht neu erzeugt, bekommt einen roten CI-Lauf.
 | Feld | Einheit | Vorgabe | Zulässig | Art |
 |---|---|---:|---|---|
 | Entlüftungsfläche `vent` | mm² | 800 | `> 0 … 100000` | plausibel |
-| Entlüftungsspalt `ventGap` | mm | 0,5 | `> 0 … 50` | plausibel |
+| Entlüftungsspalt `ventGap` | mm | 10 | `> 0 … 50` | plausibel |
 | Entlüftungskanal Länge `ventLen` | mm | 80 | `> 0 … 5000` | plausibel |
 | Enddruck Pumpe / Tank vor Schuss `vacPump` | mbar | 80 | `> 0 … 1013` | **hart** |
 | Vakuumtank-Volumen `vacTank` | L | 500 | `> 0 … 100000` | plausibel |

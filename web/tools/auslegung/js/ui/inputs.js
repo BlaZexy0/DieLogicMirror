@@ -1,7 +1,7 @@
 /* Baut die Eingabe-Sidebar aus der Felddefinition, validiert Grenzen und
    hebt auf Wunsch die Eingaben eines Diagramms hervor. */
 
-import { AUTO_KEYS, groups, PRESET_KEYS, PRESET_DOMAINS } from '../config/fields.js';
+import { AUTO_KEYS, groups, PRESET_KEYS, PRESET_DOMAINS, hiddenFields } from '../config/fields.js';
 import { state, notify } from '../core/state.js';
 import { subHTML } from '../core/format.js';
 import { checkValues } from '../core/domain.js';
@@ -95,6 +95,17 @@ export function buildInputs(container, onlyKeys = null) {
     cb.onchange = () => { state.auto[cb.dataset.auto] = cb.checked; notify(); };
   });
   refreshAuto(container);
+  updateFieldVisibility(container);
+}
+
+/* Felder mit `when` (fields.js) nur zeigen, solange das gewählte Modell sie
+   braucht — nach jeder Zustandsänderung, wie refreshAuto. */
+export function updateFieldVisibility(root = document) {
+  const hidden = hiddenFields(state.values);
+  root.querySelectorAll('.field[data-field]').forEach(el => {
+    const hide = hidden.has(el.dataset.field);
+    if (el.hidden !== hide) el.hidden = hide;
+  });
 }
 
 /* Auto-Felder nach jeder Zustandsänderung auf den berechneten Wert setzen. */

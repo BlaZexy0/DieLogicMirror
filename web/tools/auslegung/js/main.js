@@ -6,7 +6,7 @@ import { computeShot } from './core/physics.js';
 import { applyCurveGen } from './core/curvegen.js';
 import { applyAuto } from './core/autofit.js';
 import { charts } from './charts/registry.js';
-import { buildInputs, validate, highlightInputs, clearHighlights, refreshAuto } from './ui/inputs.js';
+import { buildInputs, validate, highlightInputs, clearHighlights, refreshAuto, updateFieldVisibility } from './ui/inputs.js';
 import { initPresetSelects } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
 import { renderKpis } from './ui/kpis.js';
@@ -39,6 +39,7 @@ function render() {
   const genErr = applyCurveGen(v);
   applyAuto(v);
   refreshAuto();
+  updateFieldVisibility();
   if (state.curveGen.mode !== 'points') renderCurveTable(genErr);
   /* Erst prüfen, dann rechnen. Liegt eine Eingabe außerhalb der Domäne, wird
      NICHT gerechnet: die Zahlen kämen sonst in computeShot und in alle 19

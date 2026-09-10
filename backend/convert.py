@@ -210,13 +210,15 @@ def _vacuum_config(vac, fill_complete, travel):
 
     # Drossel mit Wandreibung: Spalt und Kanallänge beschreiben den
     # Entlüftungskanal als breiten Schlitz. Fehlt eines davon, bleibt es bei
-    # der Blende; das Sofort-Modell kennt weder Fläche noch Kanal.
-    gap = _num_opt(vac, "gap_mm", 0.0) / 1000.0
-    length = _num_opt(vac, "channel_mm", 0.0) / 1000.0
-    if gap < 0 or length < 0:
-        raise ConvertError("Entlüftungsspalt und Kanallänge dürfen nicht negativ sein.")
-    if model != "ideal" and gap > 0 and length > 0:
-        system["valve_channel"] = {"gap": gap, "length": length}
+    # der Blende; das Sofort-Modell kennt weder Fläche noch Kanal und liest
+    # die Felder gar nicht erst (das Dashboard blendet sie dort aus).
+    if model != "ideal":
+        gap = _num_opt(vac, "gap_mm", 0.0) / 1000.0
+        length = _num_opt(vac, "channel_mm", 0.0) / 1000.0
+        if gap < 0 or length < 0:
+            raise ConvertError("Entlüftungsspalt und Kanallänge dürfen nicht negativ sein.")
+        if gap > 0 and length > 0:
+            system["valve_channel"] = {"gap": gap, "length": length}
 
     if model == "tank":
         tank = _num(vac, "tank_l") / 1000.0        # L → m³

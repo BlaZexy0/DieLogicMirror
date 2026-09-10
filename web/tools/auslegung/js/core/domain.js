@@ -14,7 +14,7 @@
    ungültige Zahl gar nicht erst in die Rechnung gelangt, muss sich kein
    Diagramm dagegen wehren. Siehe docs/eingabegrenzen.md.                  */
 
-import { PAIRS, domainFields } from '../config/fields.js';
+import { PAIRS, domainFields, hiddenFields } from '../config/fields.js';
 import { pMaxMachine, pistonArea, intensStroke } from './physics.js';
 
 /* null = in Ordnung, sonst der Grund im Klartext. */
@@ -36,7 +36,12 @@ export function checkField(f, x) {
 export function checkValues(v, opt) {
   const bad = new Set(), msgs = [], grenzen = [];
 
+  /* Ein Feld, das zum gewählten Modell nicht gehört (fields.js `when`),
+     ist ausgeblendet und darf die Rechnung nicht sperren — das Backend
+     liest es für dieses Modell ebenfalls nicht. */
+  const versteckt = hiddenFields(v);
   for (const f of domainFields()) {
+    if (versteckt.has(f.key)) continue;
     const grund = checkField(f, v[f.key]);
     if (grund) { bad.add(f.key); grenzen.push(f.label + ' ' + grund); }
   }

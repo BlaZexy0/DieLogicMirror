@@ -294,3 +294,41 @@ test('sperre: die Abblend-Regel trifft Elemente, die es gibt', async () => {
   const js = readFileSync(path.join(site, 'tools/auslegung/js/main.js'), 'utf8');
   assert.match(js, /classList\.toggle\('inputs-invalid'/, 'main.js setzt die Klasse nicht');
 });
+
+/* ── Felder, die zum gewählten Vakuum-Modell nicht gehören ─────────── */
+
+const { hiddenFields } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
+
+test('hiddenFields: je Vakuum-Modell nur die Felder, die es braucht', () => {
+  const v = defaults();
+  const sichtbar = k => !hiddenFields(v).has(k);
+  v.vacModel = 'aus';
+  for (const k of ['ventGap', 'ventLen', 'vacPump', 'vacTank', 'vacStart', 'vacEnd', 'vacEndStroke', 'vacEndTime'])
+    assert.ok(!sichtbar(k), `ohne Vakuum: ${k} müsste ausgeblendet sein`);
+  assert.ok(sichtbar('vent'), 'die Entlüftungsfläche treibt KPIs und bleibt immer sichtbar');
+  v.vacModel = 'ideal';
+  assert.ok(sichtbar('vacPump') && sichtbar('vacStart') && sichtbar('vacEnd'));
+  assert.ok(!sichtbar('ventGap') && !sichtbar('ventLen') && !sichtbar('vacTank'), 'Sofort-Enddruck kennt keinen Kanal und keinen Tank');
+  v.vacModel = 'conductance';
+  assert.ok(sichtbar('ventGap') && sichtbar('ventLen') && !sichtbar('vacTank'));
+  v.vacModel = 'tank';
+  assert.ok(sichtbar('vacTank'));
+  /* Ventilschluss: nur das Zahlenfeld des gewählten Modus */
+  v.vacEnd = 'fill';
+  assert.ok(!sichtbar('vacEndStroke') && !sichtbar('vacEndTime'));
+  v.vacEnd = 'stroke';
+  assert.ok(sichtbar('vacEndStroke') && !sichtbar('vacEndTime'));
+  v.vacEnd = 'time';
+  assert.ok(!sichtbar('vacEndStroke') && sichtbar('vacEndTime'));
+});
+
+test('checkValues: ein ausgeblendetes Feld sperrt die Rechnung nicht', () => {
+  const v = defaults();
+  v.vacModel = 'conductance';
+  v.vacTank = 0;                       // ungültig, aber nur das Tankmodell liest es
+  assert.equal(checkValues(v).ok, true);
+  v.vacModel = 'tank';
+  const urteil = checkValues(v);
+  assert.equal(urteil.ok, false);
+  assert.ok(urteil.bad.has('vacTank'));
+});
