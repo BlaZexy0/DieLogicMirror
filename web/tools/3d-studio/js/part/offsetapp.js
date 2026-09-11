@@ -3,25 +3,27 @@
    Zwei getrennte Schritte, und nur der erste kostet Zeit:
 
    1. FELD BERECHNEN (auf Knopfdruck) — js/part/field.js rastert das
-      Bauteil und legt für jeden Rasterpunkt den vorzeichenbehafteten
-      Abstand zur Oberfläche ab. Auflösung und Bandbreite bestimmen
-      Genauigkeit, Speicher und Dauer; beide stehen als Regler daneben,
-      und was sie kosten werden, steht VOR dem Rechnen in den Kennzahlen.
+      Bauteil mit der gewählten ZELLKANTE und legt für jeden Rasterpunkt
+      den vorzeichenbehafteten Abstand zur Oberfläche ab. Das Feld reicht
+      nur so weit wie das Bauteil (zwei Zellen Luft): nach außen braucht
+      diese Seite nichts — Abstandsflächen außen, für die Temperierung,
+      rechnet der Temperierkanal-Designer selbst. Nach innen ist das Feld
+      vollständig (der Kern über die Distanztransformation). Was die
+      Zellkante kostet, steht VOR dem Rechnen in den Kennzahlen.
    2. FLÄCHE ABLEITEN (sofort) — js/part/surfacenets.js zieht die Fläche
-      gleichen Abstands heraus. Solange das Aufmaß in der Bandbreite
-      liegt, geht das ohne Neurechnung: eintippen, Eingabetaste, fertig.
+      gleichen Abstands INNEN heraus: ein Untermaß von s lässt stehen, was
+      dicker als 2·s ist — die Kerne. Eintippen oder ziehen, kein neues
+      Feld.
 
-   Zusätzlich lässt sich das Feld selbst ansehen — ein Schnitt als
-   Rasterbild in der Turbo-Skala, wahlweise nur innen (dann zeigt es die
-   Wandstärke), nur außen oder beides, mit der Höhenlinie des aktuellen
-   Aufmaßes. Im Schnitt steht nur das Bauteil, durchscheinend — die
-   Offsetfläche verdeckte ihn sonst. */
+   Dazu der FELDSCHNITT — die Wandstärke als Rasterbild in der Turbo-Skala
+   — und die WÄRMEZENTREN: die dicksten Stellen als Kugeln mit dem Radius
+   des Feldwerts, gefärbt nach ihrer Größe auf derselben Skala. */
 
 import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
 import { mountPartSource, frame } from './partsource.js';
-import { buildField, fieldSize, fieldExtrema, thickMaxima } from './field.js';
+import { buildField, fieldSize, fieldExtrema, thickMaxima, suggestCell, CELL_RANGE } from './field.js';
 import { surfaceNets } from './surfacenets.js';
 import { writeSTL } from './stlio.js';
 import { volume, surface } from '../mesh.js';
@@ -41,11 +43,18 @@ const view = initScene(container, {
 });
 mountViewBar(container, view);
 
+/* Das Feld eng um das Bauteil: zwei Zellen Luft, exakt gestempelte
+   Abstände drei Zellen um die Oberfläche, der Rest innen aus der
+   Distanztransformation (auf eine halbe Zelle genau). */
+const PAD_CELLS = 2;
+const BAND_CELLS = 3;
+
 const state = {
   name: '', model: null, field: null, offsetTris: null,
-  res: 96, band: 10, delta: 2,
+  cell: 3, cellTouched: false,
+  under: 2, underTouched: false,              // Untermaß in mm, nach innen
   show: 'both', opacity: 0.35,
-  slice: { on: false, axis: 2, pos: 50, scale: 'innen' },
+  slice: { on: false, axis: 2, pos: 50 },
   /* Wärmezentren: die dicksten Stellen als Kugeln (Kugelprobe) oder
      Kreise, ab einem Anteil der größten Wandstärke. */
   hot: { on: false, shape: 'kugeln', min: 75, clear: true },
@@ -77,20 +86,14 @@ group.add(sliceMesh);
 
 /* Die Marken der dicksten Stellen. Eine Kugel hat genau den Radius des
    Feldwerts — sie ist die Kugelprobe selbst, ihr Durchmesser die
-   Wandstärke. Ein Kreis ist dieselbe Kugel als Umriss, immer zur Kamera
-   gedreht und ohne Tiefenprüfung, damit er auch im deckenden Bauteil zu
-   sehen ist. */
+   Wandstärke — und die Farbe ihrer Größe auf der Wandstärken-Skala. Ein
+   Kreis ist dieselbe Kugel als Umriss, immer zur Kamera gedreht und ohne
+   Tiefenprüfung, damit er auch im deckenden Bauteil zu sehen ist. */
 const hotGroup = new T.Group();
 hotGroup.visible = false;
 group.add(hotGroup);
 const hotSphereGeo = new T.SphereGeometry(1, 24, 16);
 const hotRingGeo = new T.RingGeometry(0.86, 1, 48);
-const hotSphereMat = new T.MeshStandardMaterial({
-  color: 0xb42318, roughness: 0.5, metalness: 0.05, transparent: true, opacity: 0.6, depthWrite: false
-});
-const hotRingMat = new T.MeshBasicMaterial({
-  color: 0xb42318, transparent: true, opacity: 0.92, side: T.DoubleSide, depthTest: false, depthWrite: false
-});
 
 /* ── Bauteil laden ───────────────────────────────────────────── */
 const source = mountPartSource({
@@ -103,12 +106,12 @@ const source = mountPartSource({
     state.stats = null;
     state.maxima = [];
     state.stale = true;
-    state.deltaTouched = false;               // ein neues Teil bekommt wieder die Vorgabe
-    /* Bandbreite an die Bauteilgröße anpassen, solange der Nutzer sie
-       nicht selbst gesetzt hat. */
-    if (!state.bandTouched) {
-      state.band = round1(Math.max(2, Math.min(25, model.bounds.diag * 0.05)));
-      $('band').value = fmt(state.band);
+    state.underTouched = false;               // ein neues Teil bekommt wieder die Vorgabe
+    /* Die Zellkante folgt dem Bauteil (halbe Wanddicke 2V/A), solange der
+       Nutzer sie nicht selbst gesetzt hat. */
+    if (!state.cellTouched) {
+      state.cell = suggestCell(model);
+      $('cell').value = fmtPlain(state.cell);
     }
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.BufferAttribute(Float32Array.from(model.tris), 3));
@@ -118,6 +121,7 @@ const source = mountPartSource({
     offsetMesh.geometry.dispose();
     offsetMesh.geometry = new T.BufferGeometry();
     sliceMesh.visible = false;
+    clearHotspots();
     view.fitTo(partMesh);
     updateFieldFacts();
     updateOffsetFacts();
@@ -126,6 +130,12 @@ const source = mountPartSource({
     state.ready = true;
   }
 });
+
+/** Zellkante, Band und Luft des Feldes — alles aus der Zellkante. */
+function fieldParams() {
+  const h = state.cell;
+  return { h, band: BAND_CELLS * h, pad: PAD_CELLS * h };
+}
 
 /* ── Schritt 1: Feld ─────────────────────────────────────────── */
 async function runField() {
@@ -139,22 +149,22 @@ async function runField() {
     busy.classList.add('on');
     await frame();
     state.field = await buildField(state.model, {
-      res: state.res, band: state.band,
+      ...fieldParams(),
       onProgress: (p, what) => { busy.textContent = 'Feld rastern · ' + what + ' … ' + Math.round(p * 100) + ' %'; }
     });
     state.ms = performance.now() - t0;
     state.stale = false;
     state.stats = fieldExtrema(state.field);
-    /* Nach innen endet die Skala am Maximum: tiefer als die dickste
-       Stelle gibt es keine Fläche mehr, also auch keinen Reglerweg. */
-    $('delta-slider').min = String(-Math.ceil(state.stats.maxIn * 2) / 2);
+    /* Der Regler endet an der dicksten Stelle: tiefer als das Maximum gibt
+       es keine Fläche mehr. */
+    $('under-slider').max = String(Math.ceil(state.stats.maxIn * 2) / 2);
     /* Vorgabe: ein Untermaß von der halben größten Tiefe — stehen bleibt,
        was dicker ist als die halbe größte Wandstärke: die Kerne, um die es
-       geht. Wer das Aufmaß selbst gesetzt hat, behält es. */
-    if (!state.deltaTouched) state.delta = -Math.round(state.stats.maxIn) / 2;
-    if (state.delta < -state.stats.maxIn) state.delta = -Math.floor(state.stats.maxIn * 2) / 2;
-    $('delta').value = fmtPlain(state.delta);
-    $('delta-slider').value = String(Math.max(+$('delta-slider').min, Math.min(40, state.delta)));
+       geht. Wer das Untermaß selbst gesetzt hat, behält es. */
+    if (!state.underTouched) state.under = Math.round(state.stats.maxIn) / 2;
+    if (state.under > state.stats.maxIn) state.under = Math.floor(state.stats.maxIn * 2) / 2;
+    $('under').value = fmtPlain(state.under);
+    $('under-slider').value = String(state.under);
     extract();
   } catch (err) {
     $('model-warn').textContent = 'Das Feld konnte nicht gerechnet werden: ' + err.message;
@@ -181,14 +191,11 @@ function updateRunButton() {
   if (!state.model) return setRun({ label: 'Feld berechnen', disabled: true });
   if (!state.field) {
     return setRun({ label: 'Feld berechnen',
-      note: 'Noch kein Feld — ohne Feld gibt es keine Offsetfläche.' });
+      note: 'Noch kein Feld — ohne Feld gibt es weder Wandstärke noch Kern.' });
   }
   if (state.stale) {
     return setRun({ label: 'Feld neu berechnen', warn: true,
-      note: state.delta > state.field.band
-        ? 'Das Aufmaß liegt außerhalb der gerechneten Bandbreite (bis +'
-          + fmt(state.field.band) + ' mm) — das Feld muss nach außen größer werden.'
-        : 'Rastereinstellungen geändert — das Bild zeigt noch das vorige Feld.' });
+      note: 'Zellkante geändert — das Bild zeigt noch das vorige Feld.' });
   }
   setRun({ label: 'Feld ist aktuell', outline: true, disabled: true });
 }
@@ -197,7 +204,7 @@ function updateRunButton() {
 function extract() {
   if (!state.field) return;
   const t0 = performance.now();
-  state.offsetTris = surfaceNets(state.field, state.delta);
+  state.offsetTris = surfaceNets(state.field, -state.under);
   const g = new T.BufferGeometry();
   g.setAttribute('position', new T.BufferAttribute(Float32Array.from(state.offsetTris), 3));
   g.computeVertexNormals();
@@ -212,8 +219,12 @@ function extract() {
 }
 
 /* ── Wärmezentren ────────────────────────────────────────────── */
+function clearHotspots() {
+  for (const c of hotGroup.children.slice()) { c.material.dispose(); hotGroup.remove(c); }
+}
+
 function updateHotspots() {
-  for (const c of hotGroup.children.slice()) hotGroup.remove(c);
+  clearHotspots();
   const on = state.hot.on && !!state.field && !!state.stats;
   hotGroup.visible = on;
   if (!on) { facts('hot-facts', []); view.invalidate(); return; }
@@ -223,36 +234,42 @@ function updateHotspots() {
     state.hotMin = state.hot.min;
   }
   const rings = state.hot.shape === 'kreise';
+  const maxIn = Math.max(state.stats.maxIn, 1e-6);
   for (const m of state.maxima) {
-    const mesh = new T.Mesh(rings ? hotRingGeo : hotSphereGeo, rings ? hotRingMat : hotSphereMat);
+    const rgb = turbo(m.r / maxIn);
+    const color = new T.Color(rgb[0], rgb[1], rgb[2]);
+    const mat = rings
+      ? new T.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, side: T.DoubleSide, depthTest: false, depthWrite: false })
+      : new T.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.05, transparent: true, opacity: 0.65, depthWrite: false });
+    const mesh = new T.Mesh(rings ? hotRingGeo : hotSphereGeo, mat);
     mesh.position.set(m.x, m.y, m.z);
     mesh.scale.setScalar(m.r);
     mesh.renderOrder = 4;
+    mesh.userData.r = m.r;
     if (rings) mesh.onBeforeRender = (renderer, scene, camera) => { mesh.quaternion.copy(camera.quaternion); };
     hotGroup.add(mesh);
   }
-  const st = state.stats;
   const rows = [
     ['Stellen', fmt(state.maxima.length, 0)],
-    ['größte Wandstärke', (st.clipped ? '≥ ' : '') + fmt(2 * st.maxIn) + ' mm']
+    ['größte Wandstärke', fmt(2 * state.stats.maxIn) + ' mm']
   ];
   if (state.maxima[0]) {
     const m = state.maxima[0];
     rows.push(['dickste bei', [m.x, m.y, m.z].map(v => fmt(v, 0)).join(' / ') + ' mm']);
   }
+  if (state.maxima.length > 1) {
+    const last = state.maxima[state.maxima.length - 1];
+    rows.push(['kleinste Marke', fmt(2 * last.r) + ' mm']);
+  }
   facts('hot-facts', rows);
-  $('hot-note').textContent = st.clipped
-    ? 'Im Kern steht das Feld auf der Bandbreite — das Bauteil ist dort dicker als ' + fmt(2 * state.field.band)
-      + ' mm. Bandbreite erhöhen und das Feld neu rechnen, dann sind auch diese Stellen zu sehen.'
-    : '';
   view.invalidate();
 }
 
 function applyVisibility() {
   /* Im Schnitt — und bei markierten Wärmezentren, wenn man es so will —
-     nur das Bauteil, und zwar durchscheinend: die Offsetfläche legte
-     sich sonst über Schnittebene und Marken, und das Bauteil deckend
-     davor verdeckte sie ebenso. */
+     nur das Bauteil, und zwar durchscheinend: die Kernfläche legte sich
+     sonst über Schnittebene und Marken, und das Bauteil deckend davor
+     verdeckte sie ebenso. */
   const slice = (state.slice.on || (state.hot.on && state.hot.clear)) && !!state.field;
   partMesh.visible = slice || state.show !== 'offset';
   offsetMesh.visible = !slice && state.show !== 'part' && !!(state.offsetTris && state.offsetTris.length);
@@ -269,10 +286,11 @@ function applyVisibility() {
 /* ── Kennzahlen ──────────────────────────────────────────────── */
 function updateFieldFacts() {
   if (!state.model) { facts('field-facts', []); return; }
-  const est = fieldSize(state.model, state.res, state.band);
+  const p = fieldParams();
+  const est = fieldSize(state.model, 0, p.band, { h: p.h, pad: p.pad });
   const mb = est.bytes / (1024 * 1024);
   const rows = [
-    ['Zellgröße', fmt(est.h) + ' mm'],
+    ['Zellkante', fmt(est.h, 2) + ' mm'],
     ['Raster', est.dims.join(' × ')],
     ['Rasterpunkte', (est.samples / 1e6).toFixed(2) + ' Mio.'],
     ['Speicher', mb.toFixed(1) + ' MB']
@@ -280,7 +298,7 @@ function updateFieldFacts() {
   if (state.field && !state.stale) rows.push(['Rechenzeit', state.ms.toFixed(0) + ' ms']);
   facts('field-facts', rows);
   $('model-warn').textContent = mb > 400
-    ? 'Das Raster braucht ' + mb.toFixed(0) + ' MB — Auflösung oder Bandbreite verkleinern.'
+    ? 'Das Raster braucht ' + mb.toFixed(0) + ' MB — Zellkante vergrößern.'
     : '';
 }
 
@@ -294,44 +312,27 @@ function updateOffsetFacts() {
   facts('offset-facts', [
     ['Dreiecke', fmt(state.offsetTris.length / 9, 0)],
     ['Volumen Bauteil', fmt(vPart / 1000) + ' cm³'],
-    ['Volumen Offset', fmt(vOff / 1000) + ' cm³'],
-    ['Fläche Offset', fmt(surface(state.offsetTris) / 100) + ' cm²'],
-    ['Volumenfaktor', (vPart ? vOff / vPart : 1).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })],
+    ['Volumen Kern', fmt(vOff / 1000) + ' cm³'],
+    ['Fläche Kern', fmt(surface(state.offsetTris) / 100) + ' cm²'],
+    ['Volumenanteil', (100 * (vPart ? vOff / vPart : 0)).toFixed(1) + ' %'],
     ['Ableiten', state.extractMs.toFixed(0) + ' ms']
   ]);
 }
 
 /* ── Feldschnitt als Rasterbild ──────────────────────────────── */
-/* Die Turbo-Skala über den gewählten Bereich:
-     innen   |v| von 0 (Oberfläche, blau) bis band (dick, rot) — die Wandstärke;
-     außen   v von 0 (blau) bis band (rot);
-     beides  von −band (innen, rot) über 0 (grün) bis +band (außen, blau).
-   Was nicht zum Bereich gehört, bleibt hellgrau — so hebt sich der
-   Querschnitt des Bauteils ab. Zwei Höhenlinien liegen darüber: die
-   Bauteilfläche (Abstand 0) und die aktuelle Offsetfläche. */
+/* Die Turbo-Skala über die Wandstärke: |v| von 0 (Oberfläche, blau) bis
+   zur dicksten Stelle (rot). Außen bleibt hellgrau — so hebt sich der
+   Querschnitt des Bauteils ab; die Bauteilkontur liegt als dunkle Linie
+   darüber. Turbo läuft an beiden Enden ins Dunkle; benutzt wird das
+   Stück von sattem Blau bis sattem Rot. */
 const OUTSIDE_SCALE = [0.87, 0.9, 0.91];
-/* Turbo läuft an beiden Enden ins Dunkle; benutzt wird das Stück von
-   sattem Blau bis sattem Rot — sonst lag alles jenseits des Bandes als
-   schwarze Fläche im Bild. */
 const turbo = t => C.turbo(0.08 + 0.84 * Math.max(0, Math.min(1, t)));
-/* Die Enden der Skala sind die GRÖSSTEN Werte, die im Feld vorkommen —
-   nicht die Bandbreite. Ein Band von 13 mm bei 6 mm dicksten Wänden
-   ließ die halbe Skala ungenutzt, und alles Dicke sah gleich grün aus. */
-const scaleEnds = () => {
-  const st = state.stats || { maxIn: state.field ? state.field.band : 1, maxOut: state.field ? state.field.band : 1 };
-  return { inn: Math.max(st.maxIn, 1e-6), out: Math.max(st.maxOut, 1e-6) };
-};
-function sliceRgb(v, mode, ends) {
-  if (mode === 'innen') return v >= 0 ? OUTSIDE_SCALE : turbo(-v / ends.inn);
-  if (mode === 'aussen') return v <= 0 ? OUTSIDE_SCALE : turbo(v / ends.out);
-  return turbo((ends.out - v) / (ends.inn + ends.out));
-}
-const sliceCss = (v, mode, ends) => 'rgb(' + sliceRgb(v, mode, ends).map(x => Math.round(x * 255)).join(',') + ')';
+const scaleEnd = () => Math.max(state.stats ? state.stats.maxIn : 1, 1e-6);
+const sliceRgb = (v, inn) => (v >= 0 ? OUTSIDE_SCALE : turbo(-v / inn));
+const sliceCss = (v, inn) => 'rgb(' + sliceRgb(v, inn).map(x => Math.round(x * 255)).join(',') + ')';
 
-/* Nur die Bauteilkontur liegt als Linie darüber. Die Offsetfläche hat
-   hier nichts zu suchen: der Schnitt zeigt das Feld, nicht die Wahl. */
-function sliceColor(v, h, mode, ends, out, o) {
-  const rgb = sliceRgb(v, mode, ends);
+function sliceColor(v, h, inn, out, o) {
+  const rgb = sliceRgb(v, inn);
   let r = rgb[0], g = rgb[1], b = rgb[2];
   if (Math.abs(v) < h * 0.6) { r = 0.08; g = 0.13; b = 0.16; }
   out[o] = r * 255; out[o + 1] = g * 255; out[o + 2] = b * 255; out[o + 3] = 255;
@@ -352,12 +353,12 @@ function updateSlice() {
   const w = f.dims[ua], hgt = f.dims[va];
   const px = new Uint8Array(w * hgt * 4);
   const at = (i, j, kk) => f.data[(kk * ny + j) * nx + i];
-  const ends = scaleEnds();
+  const inn = scaleEnd();
   for (let vv = 0; vv < hgt; vv++) {
     for (let uu = 0; uu < w; uu++) {
       const idx = [0, 0, 0];
       idx[a] = k; idx[ua] = uu; idx[va] = vv;
-      sliceColor(at(idx[0], idx[1], idx[2]), f.h, state.slice.scale, ends, px, (vv * w + uu) * 4);
+      sliceColor(at(idx[0], idx[1], idx[2]), f.h, inn, px, (vv * w + uu) * 4);
     }
   }
   const tex = new T.DataTexture(px, w, hgt, T.RGBAFormat);
@@ -381,94 +382,62 @@ function updateSlice() {
 }
 
 /* ── Farbskala ───────────────────────────────────────────────── */
-/* Innen zeigt die Skala die WANDSTÄRKE (das Doppelte des Feldwerts —
-   der Betrag ist der Radius der größten Kugel, die dort hineinpasst),
-   außen und beides den Abstand zur Oberfläche. Unten steht jeweils die
-   Oberfläche, oben das Ende des Bandes. */
+/* Eine Skala für Schnitt und Marken: die WANDSTÄRKE (das Doppelte des
+   Feldwerts — der Betrag ist der Radius der größten Kugel, die dort
+   hineinpasst), unten die Oberfläche, oben die dickste Stelle. */
 function updateColorbar() {
-  if (!state.field || !state.slice.on) return colorbar(null);
-  const mode = state.slice.scale;
-  const ends = scaleEnds();
-  const clipped = state.stats && state.stats.clipped;
-  const extra = chip('#14212a') + 'Bauteilkontur';
-  if (mode === 'innen') {
-    colorbar({
-      title: 'Wandstärke' + (clipped ? ' (≥ Band)' : ''),
-      stops: gradient(t => sliceCss(-ends.inn * t, mode, ends)),
-      ticks: [1, 0.75, 0.5, 0.25, 0].map(q => fmt(2 * ends.inn * q) + ' mm'),
-      extra
-    });
-  } else if (mode === 'aussen') {
-    colorbar({
-      title: 'Abstand nach außen',
-      stops: gradient(t => sliceCss(ends.out * t, mode, ends)),
-      ticks: [1, 0.75, 0.5, 0.25, 0].map(q => fmt(ends.out * q) + ' mm'),
-      extra
-    });
-  } else {
-    const span = ends.inn + ends.out;
-    colorbar({
-      title: 'Abstand zur Oberfläche',
-      stops: gradient(t => sliceCss(ends.out - span * t, mode, ends)),
-      ticks: [0, 0.25, 0.5, 0.75, 1].map(q => fmt(-ends.inn + span * q) + ' mm'),
-      extra: extra + ' · innen negativ'
-    });
-  }
+  if (!state.field || !state.stats || !(state.slice.on || state.hot.on)) return colorbar(null);
+  const inn = scaleEnd();
+  colorbar({
+    title: 'Wandstärke',
+    stops: gradient(t => sliceCss(-inn * t, inn)),
+    ticks: [1, 0.75, 0.5, 0.25, 0].map(q => fmt(2 * inn * q) + ' mm'),
+    extra: (state.slice.on ? chip('#14212a') + 'Bauteilkontur' : '')
+      + (state.hot.on ? (state.slice.on ? ' · ' : '') + 'Marken nach Größe gefärbt' : '')
+  });
 }
 
 /* ── Bedienung ───────────────────────────────────────────────── */
-const round1 = v => Math.round(v * 10) / 10;
-
-slider('res', v => { state.res = v; markStale(); updateFieldFacts(); }, v => v + ' Zellen');
-numberInput('band', v => {
-  state.bandTouched = true;
-  state.band = Math.max(0.1, Math.min(1e4, v));
+numberInput('cell', v => {
+  state.cellTouched = true;
+  state.cell = Math.max(CELL_RANGE[0], Math.min(CELL_RANGE[1], v));
   markStale();
   updateFieldFacts();
-  return state.band;
+  return state.cell;
 });
 $('run-field').addEventListener('click', runField);
 
-/* Das Aufmaß: ein Regler von −20 bis +40 mm für die Hand und ein Feld
-   für die Zahl — beide zeigen denselben Wert. Verlangt das Aufmaß mehr,
-   als das Feld speichert, wird die Bandbreite gleich mitgezogen; dann
-   genügt ein Klick auf „Feld neu berechnen". Am Regler wird höchstens
-   einmal je Bild abgeleitet: das Ableiten kostet Millisekunden, aber ein
-   Regler meldet sich öfter, als Bilder gezeichnet werden. */
+/* Das Untermaß: ein Regler von 0 bis zur dicksten Stelle für die Hand und
+   ein Feld für die Zahl — beide zeigen denselben Wert; ein Minus davor
+   ist egal, nach innen geht es ohnehin. Am Regler wird höchstens einmal
+   je Bild abgeleitet: das Ableiten kostet Millisekunden, aber ein Regler
+   meldet sich öfter, als Bilder gezeichnet werden. */
 let extractRaf = 0;
-/* Tiefer als die dickste Stelle geht es nicht: dort ist nichts mehr,
-   was eine Fläche gleichen Abstands haben könnte. */
-const minDelta = () => (state.stats ? -state.stats.maxIn : -1e4);
-function setDelta(v, live) {
-  state.deltaTouched = true;
-  state.delta = Math.max(minDelta(), Math.min(1e4, v));
-  $('delta').value = fmtPlain(state.delta);
-  $('delta-slider').value = String(Math.max(+$('delta-slider').min, Math.min(40, state.delta)));
-  if (state.field && state.delta > state.field.band) {
-    state.band = round1(Math.abs(state.delta) * 1.15 + 1);
-    state.bandTouched = true;
-    $('band').value = fmt(state.band);
-    markStale();
-  } else if (state.field) {
+const maxUnder = () => (state.stats ? state.stats.maxIn : 1e4);
+function setUnder(v, live) {
+  state.underTouched = true;
+  state.under = Math.max(0, Math.min(maxUnder(), Math.abs(v)));
+  $('under').value = fmtPlain(state.under);
+  $('under-slider').value = String(state.under);
+  if (state.field) {
     if (live) {
       if (!extractRaf) extractRaf = requestAnimationFrame(() => { extractRaf = 0; extract(); });
     } else extract();
   }
-  updateColorbar();
-  return state.delta;
+  return state.under;
 }
-numberInput('delta', v => setDelta(v, false));
+numberInput('under', v => setUnder(v, false));
 /* Von Hand verdrahtet statt über slider(): der Regler hat kein eigenes
    Wertfeld — die Zahl steht im Eingabefeld daneben. */
-$('delta-slider').addEventListener('input', e => setDelta(+e.target.value, true));
+$('under-slider').addEventListener('input', e => setUnder(+e.target.value, true));
 segButtons('show-seg', v => { state.show = v; applyVisibility(); });
 
 $('offset-export').addEventListener('click', () => {
   if (!state.offsetTris || !state.offsetTris.length) return;
-  const blob = new Blob([writeSTL(state.offsetTris, 'form3d Offsetflaeche')], { type: 'model/stl' });
+  const blob = new Blob([writeSTL(state.offsetTris, 'form3d Kern')], { type: 'model/stl' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = (state.name.replace(/\.stl$/i, '') || 'bauteil') + '-offset.stl';
+  a.download = (state.name.replace(/\.stl$/i, '') || 'bauteil') + '-kern.stl';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 });
@@ -481,12 +450,12 @@ $('slice-on').addEventListener('change', e => {
   applyVisibility();
 });
 segButtons('slice-seg', v => { state.slice.axis = +v; updateSlice(); });
-segButtons('slice-scale-seg', v => { state.slice.scale = v; updateSlice(); updateColorbar(); });
 
 $('hot-on').addEventListener('change', e => {
   state.hot.on = e.target.checked;
   $('hot-block').classList.toggle('disabled', !state.hot.on);
   updateHotspots();
+  updateColorbar();
   applyVisibility();
 });
 $('hot-clear').addEventListener('change', e => { state.hot.clear = e.target.checked; applyVisibility(); });

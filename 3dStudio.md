@@ -20,8 +20,8 @@ rules.
 |---|---|---|---|
 | `index.html` | Übersicht | The tools as cards. | – |
 | `form.html` | Formaufbau | An editable die assembly: groups (fixed side, moving side, cooling fixed/moving, sliders, casting), STL import into a group, rename, move, remove, open/close animation, clip planes. Loads the example die by default. | one GLB (`dielogic-formaufbau`) |
-| `entformungsanalyse.html` | Entformungsanalyse | Assigns every triangle of a part to a die half, a slider or an undercut, finds the parting line and the faces without draft. Rule based, no knobs, opening axis chosen automatically (X/Y/Z can be forced). Runs on load. | colours, facts |
-| `wandstaerke.html` | Wandstärkenanalyse | Signed distance field by rasterisation: wall thickness, thermal centre, equidistant (offset) surfaces, field sections. | offset surface as STL |
+| `entformungsanalyse.html` | Entformungsanalyse | Assigns every triangle of a part to a die half, a slider or an undercut, finds the parting line and the faces without draft. Rule based, no knobs, opening axis chosen automatically (X/Y/Z can be forced), moving side switchable. Runs on load. The sidebar tabs are modes: part (grey), parting (regions/draft), die pieces pulled apart with each of the six possible pieces switchable, projected areas as silhouettes beyond the part, grip per face with a grip map on the parting plane. | colours, facts |
+| `wandstaerke.html` | Wandstärkenanalyse | Signed distance field by rasterisation, tight around the part (cell edge in mm, no outside band): wall thickness, field sections, the core as the inward offset surface, thermal centres as spheres coloured by size. | core surface as STL |
 | `abstand.html` | Abstandsanalyse | Shortest distance from every point of one file to another file, coloured on a user set scale. | colours, facts |
 | `fuellung.html` | Füllabschätzung | Fill order of the cavity: rectangular gates on the wall, a front runs through the raster cells (Dijkstra, thin walls brake, bigger gates reach further). Fill grade per location, fill body at any grade, last filled spots. | JSON plan (`dielogic-fuellung`), fill body STL |
 | `anguss.html` | Angussdesigner | The runner system as a graph: biscuit, spline runners with drafted trapezoid section, branches (optionally mirrored), mirror points, gates with transition types. Cross section, curvature, Bernoulli style losses per millimetre, fill balance, flow chart, rule check, automatic sizing from the gates backwards. Arrival times on the DieLogic shot curve of the current project (`js/runner/shottime.js`; the page loads `shared/project.js` and the example presets for that). | JSON (`dielogic-anguss`), STL |
@@ -51,10 +51,17 @@ assembles (Formaufbau).
   `visibility-worker.js`: the parting analysis (six directions in Web
   Workers). `js/part/dieview.js` turns its regions into die pieces
   (triangles per direction, seam edges, a skirt extruded from the seam
-  into the die), `js/part/dieviewer.js` shows them pulled apart along
-  their opening directions and looks into a half from the parting
-  plane, clipping the other side — the "Formansicht" of the
-  Entformungsanalyse and of the Werkbank's part stage.
+  into the die, projected areas per piece), `js/part/dieviewer.js` shows
+  them pulled apart along their opening directions and looks into a half
+  from the parting plane, showing only that half and the sliders on its
+  side — the "Formansicht" of the Entformungsanalyse and of the
+  Werkbank's part stage. Silhouettes of the projected areas and the grip
+  map are planes beyond the part in each piece's opening direction and
+  do not need the die view. `js/part/ejector.js` gives the grip per face
+  (draft, friction, shrink-on factor from the angle to the centroid: 1
+  towards it, ½ across, 0 away), the totals per half and the smoothed
+  grip map on the parting plane. The mesh is never refined by the page —
+  fine tessellation is the export's job (see the parts below).
 - `js/assembly.js`, `js/components.js`, `js/materials.js`, `js/die.js`,
   `js/clipcaps.js`: the die assembly, its registry, materials and the
   cross section caps.
@@ -124,10 +131,10 @@ feet, rounded free rib ends.
 
 | id | Label | Size (mm) | Volume | Wall 2V/A | Triangles | Notes |
 |---|---|---|---|---|---|---|
-| `gearbox_cover` | Getriebedeckel mit Schiebern | 424 × 344 × 92 | 1263 cm³ | 4.7 mm | 52 890 | default part of most tools; two side faces need sliders; +X wall drafted 1.5° (tests measure against x = 190 + z·tan 1.5°) |
-| `oil_pan` | Ölwanne | 444 × 334 × 127 | 1334 cm³ | 4.6 mm | 30 884 | the part inside the example die; runner preset "Ölwanne" puts four gates on its long flange edge |
-| `heat_sink` | Kühlkörper | 420 × 300 × 53 | 2007 cm³ | 4.1 mm | 15 424 | fin field, no sliders |
-| `u_channel_ribbed` | U-Profil mit Rippen | 38 × 300 × 40 | 144 cm³ | 3.7 mm | 12 670 | the first part; no sliders, the check case for the parting rules |
+| `gearbox_cover` | Getriebedeckel mit Schiebern | 424 × 344 × 92 | 1263 cm³ | 4.7 mm | 59 682 | default part of most tools; two side faces need sliders; +X wall drafted 1.5° (tests measure against x = 190 + z·tan 1.5°) |
+| `oil_pan` | Ölwanne | 444 × 334 × 127 | 1334 cm³ | 4.6 mm | 38 648 | the part inside the example die; runner preset "Ölwanne" puts four gates on its long flange edge |
+| `heat_sink` | Kühlkörper | 420 × 300 × 53 | 2007 cm³ | 4.1 mm | 32 032 | fin field, no sliders |
+| `u_channel_ribbed` | U-Profil mit Rippen | 38 × 300 × 40 | 144 cm³ | 3.7 mm | 13 460 | the first part; no sliders, the check case for the parting rules |
 | `coolfix`, `coolmov` | Temperierung fest/beweglich | – | 368/371 cm³ | – | ~1 440 | the cooling circuits of the example die, used as the counterpart in the Abstandsanalyse only |
 
 Expected results that the tests pin: no sliders and no undercuts on the
@@ -179,7 +186,12 @@ GLB above.
 
 - `openscad_parts/render.sh --studio`: renders the four parts with
   `openscad-nightly` (manifold backend, binary STL), converts them with
-  `tools/stl2glb.mjs` and copies the GLBs into `assets/parts/`.
+  `tools/stl2glb.mjs --max-area 100` (triangles above 100 mm² are split at
+  their longest edge, conforming and re-welded — OpenSCAD's fans of huge
+  triangles on flat faces made the parting analysis's slider areas depend
+  on the tessellation; area-bounded so the files stay small) and copies
+  the GLBs into `assets/parts/`. Triangle counts in the table above are
+  after that step (since 2026-09-11).
 - `openscad_parts/render_die.sh --studio`: renders the twenty die pieces
   and runs `scripts/3d-studio/build-die-stl.mjs`, which uses the same
   `buildDieFromPieces` as the editor so names, extras and materials

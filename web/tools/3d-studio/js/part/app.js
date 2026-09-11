@@ -8,12 +8,25 @@
    Gerechnet wird sofort beim Laden — es gibt keine Regler, die eine
    Bestätigung bräuchten. Die Formöffnung wird automatisch gewählt; X/Y/Z
    lassen sich zum Vergleich fest setzen, das rechnet nur die Zuordnung
-   neu. Darstellungsschalter (Einfärbung, Grenzwert, Deckkraft) wirken
-   sofort und rechnen nichts neu.
+   neu. Das Netz wird genommen, wie es kommt — feinere Netze sind Sache
+   des Exports, nicht der Analyse.
 
-   Gezeichnet wird EIN Netz mit Punktfarben; die Darstellungsart tauscht
-   nur das Farb-Attribut aus. Trennlinie und Netzkanten sind eigene
-   Linien-Objekte. Die Wandstärkenanalyse hat eine eigene Seite
+   Die Seitenleiste hat REITER, und jeder Reiter ist ein MODUS: er
+   bestimmt allein, was im Viewport steht, und nimmt es beim Verlassen
+   wieder mit.
+     Bauteil     das graue Netz (Netzkanten wahlweise)
+     Entformung  das Bauteil nach Regionen oder Schräge gefärbt, Trennlinie
+     Formteile   die Regionen als Formteile auseinandergezogen, jedes
+                 der sechs möglichen ein- und ausblendbar (js/part/dieviewer.js)
+     Flächen     die projizierten Flächen als Silhouetten jenseits des
+                 Bauteils, Abstand und Deckkraft einstellbar
+     Haftung     das Bauteil nach Haftmaß gefärbt und die Haftkarte der
+                 gewählten Hälfte jenseits des Bauteils (js/part/ejector.js)
+   Kein Schalter schaltet einen anderen mit.
+
+   Gezeichnet wird EIN Netz mit Punktfarben; der Modus tauscht nur das
+   Farb-Attribut aus. Trennlinie und Netzkanten sind eigene Linien-
+   Objekte. Die Wandstärkenanalyse hat eine eigene Seite
    (wandstaerke.html) — sie rechnet über ein Rasterfeld, nicht über dieses
    Netz. */
 
@@ -24,6 +37,8 @@ import { mountPartSource, frame } from './partsource.js';
 import { computeVisibility, DIRS } from './visibility.js';
 import { segment, UNDERCUT } from './segment.js';
 import { draftAngles, draftStats, dirNames } from './draft.js';
+import { diePieces, pieceProjections } from './dieview.js';
+import { gripPerFace, ejectorMap } from './ejector.js';
 import { $, fmt, rgbCss, facts, segButtons, segButtonSet, slider, colorbar, gradient, chip } from '../ui/controls.js';
 import * as C from './colors.js';
 import { createDieView } from './dieviewer.js';
@@ -39,17 +54,27 @@ const view = initScene(container, {
 });
 mountViewBar(container, view);
 
+const TABS = ['bauteil', 'entformung', 'formteile', 'flaechen', 'haftung'];
+
 /* ── Zustand ─────────────────────────────────────────────────── */
 const state = {
   name: '', model: null, vis: null, seg: null, draft: null,
+  tab: 'entformung',
   axis: 'auto',       // Formöffnung: 'auto' oder 0/1/2
-  mode: 'regions',
+  movSign: 1,         // welche Hälfte auf der Achse die bewegliche ist: +1 oder −1
+  mode: 'regions',    // Einfärbung im Reiter Entformung: 'regions' | 'draft'
   draftLimit: 1.5,
   showParting: true,
   showEdges: false,
-  opacity: 1,
-  /* Formansicht: die Regionen als Formteile auseinandergezogen (js/part/dieviewer.js). */
-  die: { on: false, dist: 60, skirt: 8, part: true, look: 'frei', distTouched: false },
+  /* Formteile: Abstand und Rand der Stücke, das Bauteil durchscheinend
+     dazwischen, je Formteil ein Schalter (label → false = ausgeblendet). */
+  die: { dist: 60, skirt: 8, part: true, show: {}, distTouched: false },
+  pieces: null,       // die Stücke (js/part/dieview.js) — auch für Flächen und Haftung
+  proj: null,         // projizierte Flächen je Stück
+  projView: { gap: 30, alpha: 0.6, gapTouched: false },
+  /* Haftung: Haftmaß je Dreieck und die Karte der gewählten Hälfte. */
+  grip: null, ejMap: null,
+  ej: { side: 'mov', mu: 0.3, gap: 30, alpha: 0.7, gapTouched: false },
   analysed: false,    // Sichtbarkeit + Zuordnung liegen vor
   running: false,
   ready: false,       // false, solange geladen oder gerechnet wird
@@ -76,6 +101,7 @@ edgeLines.visible = false;
 group.add(edgeLines);
 
 const dieView = createDieView(view);
+let dieBuiltFor = null;                          // die Stücke, aus denen die Formteile gebaut sind
 
 /* ── Bauteil laden: danach sofort rechnen ────────────────────── */
 const source = mountPartSource({
@@ -86,25 +112,31 @@ const source = mountPartSource({
     state.vis = null;
     state.seg = null;
     state.draft = null;
+    state.pieces = null; state.proj = null; state.grip = null; state.ejMap = null;
     state.analysed = false;
+    dieBuiltFor = null;
     buildGeometry();
     clearAnalysis();
-    dieView.build(null, null);
-    /* Der Abstand der Formteile folgt der Bauteilgröße, solange niemand
-       ihn gesetzt hat. */
+    /* Abstände folgen der Bauteilgröße, solange niemand sie gesetzt hat. */
     const longest = Math.max(...model.bounds.size);
     $('die-dist').max = String(Math.max(50, Math.round(longest * 1.2)));
-    if (!state.die.distTouched) {
-      state.die.dist = Math.max(10, Math.round(longest * 0.25));
-      $('die-dist').value = String(state.die.dist);
-      $('die-dist-val').textContent = fmt(state.die.dist, 0) + ' mm';
-      dieView.setDistance(state.die.dist);
+    if (!state.die.distTouched) setSlider('die-dist', Math.max(10, Math.round(longest * 0.25)), ' mm');
+    state.die.dist = +$('die-dist').value;
+    for (const [id, st] of [['proj-gap', state.projView], ['ej-gap', state.ej]]) {
+      $(id).max = String(Math.max(50, Math.round(longest)));
+      if (!st.gapTouched) setSlider(id, Math.max(10, Math.round(longest * 0.08)), ' mm');
+      st.gap = +$(id).value;
     }
     view.fitTo(partMesh);
     state.ready = true;
     runAnalysis();
   }
 });
+
+function setSlider(id, v, unit) {
+  $(id).value = String(v);
+  $(id + '-val').textContent = fmt(v, 0) + unit;
+}
 
 function buildGeometry() {
   const tris = state.model.tris;
@@ -126,8 +158,8 @@ function buildGeometry() {
     $('show-edges').checked = false;
     $('show-edges').disabled = true;
     state.showEdges = false;
-    edgeLines.visible = false;
   }
+  edgeLines.visible = false;
 }
 
 /* Die Sichtbarkeit hängt nur am Netz und wird einmal je Bauteil
@@ -154,6 +186,10 @@ async function runAnalysis() {
     state.visMs = performance.now() - t0;
     state.analysed = true;
     recompute();
+    /* Wer im Reiter Bauteil ein Teil lädt, will sein Ergebnis sehen — dort
+       steht das Netz aber absichtlich grau. Also hinüber zur Entformung;
+       in jedem anderen Reiter bleibt es beim gewählten. */
+    if (state.tab === 'bauteil') showTab('entformung');
   } catch (err) {
     $('model-warn').textContent = 'Die Analyse ist gescheitert: ' + err.message;
     console.error(err);
@@ -161,86 +197,135 @@ async function runAnalysis() {
     busy.classList.remove('on');
     state.running = false;
     state.ready = true;
+    /* Kam währenddessen ein anderes Teil, ist es noch ungerechnet: der
+       Aufruf beim Laden lief ins Leere, weil hier noch gerechnet wurde. */
+    if (state.model !== model) runAnalysis();
   }
 }
 
-/* Anzeige ohne Analyse: graues Bauteil, leere Legende. */
+/* Anzeige ohne Analyse: graues Bauteil, leere Legenden und Listen. */
 function clearAnalysis() {
   const col = partMesh.geometry.getAttribute('color');
   if (col) { col.array.fill(0.75); col.needsUpdate = true; }
   partingLines.visible = false;
   $('parting-count').textContent = '0';
   $('legend').innerHTML = '<div class="legend-row"><span class="name">Rechnet …</span></div>';
-  $('seg-facts').innerHTML = '';
-  $('draft-facts').innerHTML = '';
+  for (const id of ['seg-facts', 'draft-facts', 'proj-facts', 'ej-facts', 'ej-legend', 'die-pieces']) $(id).innerHTML = '';
   $('analysis-state').textContent = '';
-  updateColorbar();
+  $('ej-warn').textContent = '';
+  dieView.build(null, null);
+  dieView.setProjections(null);
+  dieView.setEjector(null);
+  applyMode();
 }
 
 /* ── Zuordnung (Millisekunden — Regeln, keine Regler) ────────── */
 function recompute() {
   if (!state.model || !state.vis) return;
   const t0 = performance.now();
-  state.seg = segment(state.model, state.vis, { mainAxis: state.axis });
+  state.seg = segment(state.model, state.vis, { mainAxis: state.axis, movingSign: state.movSign });
   state.draft = draftAngles(state.model, state.vis, state.seg.label);
+  state.pieces = diePieces(state.model, state.seg, { skirt: state.die.skirt });
+  state.proj = pieceProjections(state.pieces, state.model, state.seg);
+  state.grip = gripPerFace(state.model, state.vis, state.seg, { mu: state.ej.mu, movSign: state.movSign });
+  state.ejMap = null;
+  dieBuiltFor = null;
   state.segMs = performance.now() - t0;
-  updateColors();
+  const ax = 'XYZ'[state.seg.mainAxis];
+  $('mov-plus').textContent = '+' + ax;
+  $('mov-minus').textContent = '−' + ax;
   updatePartingLine();
   updateLegend();
-  updateColorbar();
   updateFacts();
-  updateDieView();
+  updateProjFacts();
+  updateGripFacts();
+  updatePieceRows();
+  dieView.setPieces(state.pieces);
+  dieView.setProjections(state.proj);
+  dieView.setEjector(null);
+  applyMode();
 }
 
-/* ── Formansicht ─────────────────────────────────────────────── */
-function updateDieView() {
-  if (!state.die.on || !state.seg) { dieView.lookFree(); dieView.show(false); applyOpacity(); return; }
-  dieView.build(state.model, state.seg, { skirt: state.die.skirt });
-  dieView.setDistance(state.die.dist);
-  dieView.show(true);
-  applyLook();
+/* ── Modus: der Reiter bestimmt den Viewport ─────────────────── */
+
+/** Die Einfärbung des Bauteils im aktuellen Reiter. */
+function colouring() {
+  return state.tab === 'entformung' ? state.mode : state.tab === 'haftung' ? 'grip' : 'plain';
 }
 
-/* Der Blick: alle Stücke frei, oder von der Trennebene in eine Hälfte
-   (die andere Seite weggeschnitten, das Bauteil aus dem Bild). */
-function applyLook() {
-  const look = state.die.look;
-  if (look === 'frei' || !state.die.on || !state.seg) dieView.lookFree();
-  else if (!dieView.lookInto(halfLabel(look === 'mov' ? 1 : -1))) { state.die.look = 'frei'; segButtonSet('die-look-seg', 'frei'); dieView.lookFree(); }
+function applyMode() {
+  const t = state.tab, has = !!state.seg;
+  updateColors();
+  updateColorbar();
+  if (t === 'formteile' && has) { ensureDie(); dieView.show(true); }
+  else dieView.show(false);
+  dieView.showProjections(t === 'flaechen' && has);
+  if (t === 'haftung' && has) { ensureMap(); dieView.showEjector(true); }
+  else dieView.showEjector(false);
+  if (t === 'flaechen') { dieView.setGap(state.projView.gap); dieView.setOverlayOpacity(state.projView.alpha); }
+  if (t === 'haftung') { dieView.setGap(state.ej.gap); dieView.setOverlayOpacity(state.ej.alpha); }
   applyOpacity();
 }
 
-/* Das Bauteil: deckend wie eingestellt — in der Formansicht durchscheinend
-   zwischen den Formteilen, beim Blick in eine Hälfte oder ohne Häkchen weg. */
+/* Die Formteile aus den aktuellen Stücken — einmal je Zuordnung, dann nur
+   noch ein- und ausblenden. */
+function ensureDie() {
+  if (dieBuiltFor !== state.pieces) {
+    dieView.build(state.model, state.seg, { pieces: state.pieces });
+    dieView.setDistance(state.die.dist);
+    dieBuiltFor = state.pieces;
+  }
+  for (let l = 0; l < 6; l++) dieView.setVisible(l, state.die.show[l] !== false);
+}
+
+/* Die Haftkarte der gewählten Hälfte — gerechnet, wenn sie gebraucht wird. */
+function ensureMap() {
+  const label = ejLabel();
+  if (state.ejMap && state.ejMap.label === label && state.ejMap.grip === state.grip) return;
+  state.ejMap = ejectorMap(state.model, state.seg, state.grip, label);
+  state.ejMap.grip = state.grip;
+  dieView.setEjector(state.ejMap);
+}
+
+/* Das Bauteil: deckend — im Reiter Formteile durchscheinend zwischen den
+   Formteilen oder ganz weg. Trennlinie nur in der Entformung, Netzkanten
+   nur im Reiter Bauteil. */
 function applyOpacity() {
-  const ghost = state.die.on && state.seg;
-  const o = ghost ? (state.die.part && state.die.look === 'frei' ? Math.min(state.opacity, 0.18) : 0) : state.opacity;
+  const ghost = state.tab === 'formteile' && !!state.seg;
+  const o = ghost ? (state.die.part ? 0.18 : 0) : 1;
   partMesh.visible = o > 0;
   partMat.opacity = o;
   partMat.transparent = o < 0.999;
   partMat.depthWrite = o >= 0.999;
   partMat.needsUpdate = true;
-  /* Die Linien gehören zum Bauteil: ohne Bauteil hingen sie in der Luft. */
-  partingLines.visible = o > 0 && state.showParting && partingLines.geometry.getAttribute('position')?.count > 0;
-  edgeLines.visible = o > 0 && state.showEdges;
+  partingLines.visible = state.tab === 'entformung' && state.showParting
+    && !!state.seg && partingLines.geometry.getAttribute('position')?.count > 0;
+  edgeLines.visible = state.tab === 'bauteil' && state.showEdges && !!state.model;
   view.invalidate();
 }
 
-/** Das Formteil der Hälfte: +Achse ist die bewegliche, −Achse die feste Seite. */
+/** Das Formteil der Hälfte: sign +1 die bewegliche, −1 die feste Seite —
+    welche das auf der Achse ist, sagt state.movSign. */
 function halfLabel(sign) {
   if (!state.seg) return -1;
-  return DIRS.findIndex(d => d.axis === state.seg.mainAxis && d.sign === sign);
+  return DIRS.findIndex(d => d.axis === state.seg.mainAxis && d.sign === sign * state.movSign);
+}
+
+function ejLabel() {
+  return state.ej.side === 'fix' ? halfLabel(-1) : halfLabel(1);
 }
 
 /* ── Farben ──────────────────────────────────────────────────── */
 function updateColors() {
-  const { model, seg, draft, mode } = state;
-  if (!seg) return;
+  const { model, seg, draft } = state;
+  const mode = colouring();
   const col = partMesh.geometry.getAttribute('color');
+  if (!col) return;
   const arr = col.array;
+  if (!seg || mode === 'plain') { arr.fill(0); for (let i = 0; i < arr.length; i += 3) { arr[i] = 0.72; arr[i + 1] = 0.76; arr[i + 2] = 0.78; } col.needsUpdate = true; view.invalidate(); return; }
   for (let f = 0; f < model.faceCount; f++) {
     let rgb;
-    if (mode === 'plain') rgb = [0.72, 0.76, 0.78];
+    if (mode === 'grip') rgb = gripColor(f);
     else if (seg.label[f] === UNDERCUT) rgb = C.hex2rgb(mode === 'draft' ? C.UNDERCUT_DARK : C.UNDERCUT_COLOR);
     else if (mode === 'draft') rgb = C.draftColor(draft[f], state.draftLimit);
     else rgb = C.hex2rgb(C.REGION_COLORS[seg.label[f]]);
@@ -251,6 +336,16 @@ function updateColors() {
     }
   }
   col.needsUpdate = true;
+  view.invalidate();
+}
+
+/* Haftung: Turbo nach dem Haftmaß je Fläche; was nicht haftet (Außenwand,
+   waagerecht, Schieber, Hinterschnitt), bleibt hellgrau. */
+const GRIP_NONE = [0.84, 0.87, 0.88];
+function gripColor(f) {
+  const g = state.grip;
+  if (!g || !(g.intensity[f] > 0) || !(g.maxIntensity > 0)) return GRIP_NONE;
+  return C.turbo(0.08 + 0.84 * Math.min(1, g.intensity[f] / g.maxIntensity));
 }
 
 function updatePartingLine() {
@@ -271,34 +366,32 @@ function updatePartingLine() {
   const g = new T.BufferGeometry();
   g.setAttribute('position', new T.BufferAttribute(Float32Array.from(pts), 3));
   partingLines.geometry = g;
-  partingLines.visible = state.showParting && pts.length > 0;
   $('parting-count').textContent = (pts.length / 6).toLocaleString('de-DE');
 }
 
-/* ── Legende, Farbskala und Kennzahlen ───────────────────────── */
+/* ── Legenden, Farbskala und Kennzahlen ──────────────────────── */
+const legendRows = rows => rows.map(([n, color, txt]) =>
+  '<div class="legend-row">' + chip(color) + '<span class="name">' + n + '</span><span class="pct">' + (txt || '') + '</span></div>').join('');
+
+/* Die Legende der Entformung: Regionen mit Flächenanteil oder die Stufen
+   der Schräge. */
 function updateLegend() {
   const { model, seg, mode } = state;
   if (!seg) return;
   const el = $('legend');
-  const names = dirNames(seg.mainAxis);
   const A = model.totalArea || 1;
-
   if (mode === 'draft') {
     const st = draftStats(model, state.draft, seg.label, state.draftLimit);
-    const rows = [
-      ['unter ' + fmt(state.draftLimit) + '°', C.draftColor(0, state.draftLimit), st.below / A],
-      [fmt(state.draftLimit) + '° … ' + fmt(3 * state.draftLimit) + '°', C.draftColor(state.draftLimit * 1.4, state.draftLimit), null],
-      ['über ' + fmt(3 * state.draftLimit) + '°', C.draftColor(state.draftLimit * 4, state.draftLimit), null],
-      ['Hinterschnitt', C.hex2rgb(C.UNDERCUT_DARK), st.undercut / A]
-    ];
-    el.innerHTML = rows.map(([n, rgb, frac]) =>
-      '<div class="legend-row">' + chip(rgbCss(rgb))
-      + '<span class="name">' + n + '</span><span class="pct">'
-      + (frac === null ? '' : (100 * frac).toFixed(1) + ' %') + '</span></div>').join('');
+    const lim = state.draftLimit;
+    el.innerHTML = legendRows([
+      ['unter ' + fmt(lim) + '°', rgbCss(C.draftColor(0, lim)), (100 * st.below / A).toFixed(1) + ' %'],
+      [fmt(lim) + '° … ' + fmt(3 * lim) + '°', rgbCss(C.draftColor(lim * 1.4, lim)), ''],
+      ['über ' + fmt(3 * lim) + '°', rgbCss(C.draftColor(lim * 4, lim)), ''],
+      ['Hinterschnitt', C.UNDERCUT_DARK, (100 * st.undercut / A).toFixed(1) + ' %']
+    ]);
     return;
   }
-  if (mode === 'plain') { el.innerHTML = '<div class="legend-row"><span class="name">Ohne Einfärbung.</span></div>'; return; }
-
+  const names = dirNames(seg.mainAxis, state.movSign);
   const rows = names.map((d, i) => ({ name: d.name, color: C.REGION_COLORS[i], frac: seg.areaByLabel[i] / A }));
   rows.push({ name: 'Hinterschnitt (keine Richtung)', color: C.UNDERCUT_COLOR, frac: seg.areaByLabel[6] / A });
   el.innerHTML = rows.map(r =>
@@ -307,10 +400,19 @@ function updateLegend() {
     + '<span class="pct">' + (100 * r.frac).toFixed(1) + ' %</span></div>').join('');
 }
 
-/* Farbskala links unten im Viewport — nur für die Entformschräge, die
-   eine Ordnung hat. Bei den Regionen wäre eine Skala falsch. */
+/* Farbskala links unten im Viewport — für die Schräge und die Haftung,
+   die eine Ordnung haben. Bei den Regionen wäre eine Skala falsch. */
 function updateColorbar() {
-  if (!state.seg || state.mode !== 'draft') return colorbar(null);
+  const mode = state.seg ? colouring() : 'plain';
+  if (mode === 'grip') {
+    return colorbar({
+      title: 'Haftung',
+      stops: gradient(t => rgbCss(C.turbo(0.08 + 0.84 * t))),
+      ticks: ['stark', '', '', '', 'schwach'],
+      extra: chip(rgbCss(GRIP_NONE)) + 'haftet nicht'
+    });
+  }
+  if (mode !== 'draft') return colorbar(null);
   const lim = state.draftLimit, top = 3 * lim;
   colorbar({
     title: 'Entformschräge',
@@ -327,13 +429,16 @@ function updateFacts() {
   let halves = 0, sliders = 0;
   for (let d = 0; d < 6; d++) (DIRS[d].axis === seg.mainAxis ? halves += seg.areaByLabel[d] : sliders += seg.areaByLabel[d]);
   const axisName = 'XYZ'[seg.mainAxis];
-  $('analysis-state').textContent = 'Formöffnung ' + axisName + (seg.auto ? ' (automatisch gewählt)' : ' (fest gewählt)');
-  facts('seg-facts', [
+  $('analysis-state').textContent = 'Formöffnung ' + axisName + (seg.auto ? ' (automatisch gewählt)' : ' (fest gewählt)')
+    + ' · bewegliche Seite ' + (state.movSign > 0 ? '+' : '−') + axisName;
+  const rows = [
     ['Formhälften', (100 * halves / A).toFixed(1) + ' % der Fläche'],
     ['Schieber', (100 * sliders / A).toFixed(1) + ' % der Fläche'],
-    ['Hinterschnitt', (100 * seg.areaByLabel[6] / A).toFixed(1) + ' % der Fläche'],
-    ['Rechenzeit', (state.visMs + state.segMs).toFixed(0) + ' ms (Sichtbarkeit ' + state.visMs.toFixed(0) + ')']
-  ]);
+    ['Hinterschnitt', (100 * seg.areaByLabel[6] / A).toFixed(1) + ' % der Fläche']
+  ];
+  if (seg.sliverArea > 0) rows.push(['Splitter den Hälften zugeschlagen', fmt(seg.sliverArea, 1) + ' mm²']);
+  rows.push(['Rechenzeit', (state.visMs + state.segMs).toFixed(0) + ' ms (Sichtbarkeit ' + state.visMs.toFixed(0) + ')']);
+  facts('seg-facts', rows);
 
   const st = draftStats(model, state.draft, seg.label, state.draftLimit);
   facts('draft-facts', [
@@ -343,24 +448,89 @@ function updateFacts() {
   ]);
 }
 
+/* ── Formteile: je mögliches Formteil ein Schalter ───────────── */
+function updatePieceRows() {
+  const el = $('die-pieces');
+  const { seg, model } = state;
+  if (!seg) { el.innerHTML = ''; return; }
+  const names = dirNames(seg.mainAxis, state.movSign);
+  const A = model.totalArea || 1;
+  /* Erst die beiden Hälften, dann die vier Schieber in fester Reihenfolge. */
+  const order = [halfLabel(1), halfLabel(-1)].concat([0, 1, 2, 3, 4, 5].filter(l => DIRS[l].axis !== seg.mainAxis));
+  let html = order.map(l => {
+    const area = seg.areaByLabel[l], has = area > 0;
+    const on = has && state.die.show[l] !== false;
+    return '<label class="inline piece-row' + (has ? '' : ' off') + '" title="'
+      + (has ? 'Dieses Formteil zeigen oder ausblenden' : 'Kein Dreieck braucht dieses Formteil — es kommt in der Form nicht vor') + '">'
+      + '<input type="checkbox" data-label="' + l + '"' + (on ? ' checked' : '') + (has ? '' : ' disabled') + '>'
+      + chip(C.REGION_COLORS[l]) + '<span class="name">' + names[l].name + '</span>'
+      + '<span class="pct">' + (has ? (100 * area / A).toFixed(1) + ' %' : 'nicht in der Form') + '</span></label>';
+  }).join('');
+  if (seg.areaByLabel[6] > 0) {
+    html += '<div class="legend-row">' + chip(C.UNDERCUT_COLOR) + '<span class="name">Hinterschnitt — bleibt rot an Ort und Stelle</span>'
+      + '<span class="pct">' + (100 * seg.areaByLabel[6] / A).toFixed(1) + ' %</span></div>';
+  }
+  el.innerHTML = html;
+}
+
+/* ── Projizierte Flächen ─────────────────────────────────────── */
+function updateProjFacts() {
+  const { seg, proj } = state;
+  if (!seg || !proj) return;
+  const names = dirNames(seg.mainAxis, state.movSign);
+  const rows = proj.pieces.map(q => [names[q.label].name, fmt(q.area / 100, 1) + ' cm²']);
+  rows.push(['Bauteil auf die Trennebene', fmt(proj.total.area / 100, 1) + ' cm²']);
+  facts('proj-facts', rows);
+}
+
+/* ── Haftung ─────────────────────────────────────────────────── */
+function updateGripFacts() {
+  const { seg, grip } = state;
+  if (!seg || !grip) return;
+  const sum = grip.mov + grip.fix;
+  const movPct = sum > 0 ? 100 * grip.mov / sum : 50;
+  facts('ej-facts', [
+    ['Haftung bewegliche Seite', fmt(movPct, 0) + ' %'],
+    ['Haftung feste Seite', fmt(100 - movPct, 0) + ' %']
+  ]);
+  $('ej-warn').textContent = sum <= 0 ? 'Keine Fläche haftet — das Teil hält sich nirgends.'
+    : grip.fix > grip.mov ? 'Das Teil haftet stärker an der festen Seite — beim Öffnen bliebe es dort, nicht bei den Auswerfern.' : '';
+  $('ej-legend').innerHTML = legendRows([
+    ['haftet stark', rgbCss(C.turbo(0.92)), ''],
+    ['haftet wenig', rgbCss(C.turbo(0.2)), ''],
+    ['haftet nicht', rgbCss(GRIP_NONE), '']
+  ]);
+}
+
 /* ── Bedienung ───────────────────────────────────────────────── */
+segButtons('tab-seg', v => showTab(v));
+function showTab(v) {
+  if (!TABS.includes(v)) return;
+  state.tab = v;
+  for (const t of TABS) $('tab-' + t).classList.toggle('tab-off', t !== v);
+  segButtonSet('tab-seg', v);
+  applyMode();
+}
+
+/* Bauteil */
+$('show-edges').addEventListener('change', e => { state.showEdges = e.target.checked; applyOpacity(); });
+
+/* Entformung */
 segButtons('axis-seg', v => { state.axis = v === 'auto' ? 'auto' : +v; recompute(); });
+segButtons('mov-seg', v => { state.movSign = +v === -1 ? -1 : 1; recompute(); });
 segButtons('mode-seg', v => {
   state.mode = v;
   $('draft-block').classList.toggle('disabled', v !== 'draft');
-  updateColors(); updateLegend(); updateColorbar();
+  updateLegend();
+  applyMode();
 });
 slider('draft-limit', v => {
   state.draftLimit = v;
-  if (state.seg) { updateColors(); updateLegend(); updateColorbar(); updateFacts(); }
+  if (state.seg) { updateLegend(); updateFacts(); applyMode(); }
 }, v => fmt(v) + ' °');
-slider('opacity', v => { state.opacity = v / 100; applyOpacity(); }, v => v + ' %');
+$('show-parting').addEventListener('change', e => { state.showParting = e.target.checked; applyOpacity(); });
 
-$('die-on').addEventListener('change', e => {
-  state.die.on = e.target.checked;
-  $('die-block').classList.toggle('disabled', !state.die.on);
-  updateDieView();
-});
+/* Formteile */
 slider('die-dist', v => {
   state.die.dist = v;
   if (v !== +$('die-dist').defaultValue) state.die.distTouched = true;
@@ -370,22 +540,54 @@ let skirtTimer = 0;
 slider('die-skirt', v => {
   state.die.skirt = v;
   clearTimeout(skirtTimer);
-  if (state.die.on && state.seg) skirtTimer = setTimeout(updateDieView, 120);
+  if (state.seg) skirtTimer = setTimeout(() => {
+    state.pieces = diePieces(state.model, state.seg, { skirt: state.die.skirt });
+    dieBuiltFor = null;
+    dieView.setPieces(state.pieces);
+    applyMode();
+  }, 120);
 }, v => fmt(v, 0) + ' mm');
 $('die-part').addEventListener('change', e => { state.die.part = e.target.checked; applyOpacity(); });
-segButtons('die-look-seg', v => { state.die.look = v; applyLook(); });
-
-$('show-parting').addEventListener('change', e => {
-  state.showParting = e.target.checked;
-  partingLines.visible = state.showParting
-    && partingLines.geometry.getAttribute('position')?.count > 0;
-});
-$('show-edges').addEventListener('change', e => {
-  state.showEdges = e.target.checked;
-  edgeLines.visible = state.showEdges;
+$('die-pieces').addEventListener('change', e => {
+  const l = Number(e.target && e.target.dataset ? e.target.dataset.label : NaN);
+  if (!Number.isInteger(l)) return;
+  state.die.show[l] = !!e.target.checked;
+  dieView.setVisible(l, state.die.show[l]);
 });
 
-/* Hover: Richtung und Entformschräge des Dreiecks unter der Maus.
+/* Flächen */
+slider('proj-gap', v => {
+  state.projView.gap = v;
+  if (v !== +$('proj-gap').defaultValue) state.projView.gapTouched = true;
+  if (state.tab === 'flaechen') dieView.setGap(v);
+}, v => fmt(v, 0) + ' mm');
+slider('proj-alpha', v => {
+  state.projView.alpha = v / 100;
+  if (state.tab === 'flaechen') dieView.setOverlayOpacity(state.projView.alpha);
+}, v => fmt(v, 0) + ' %');
+
+/* Haftung */
+slider('ej-mu', v => {
+  state.ej.mu = v;
+  if (state.seg) {
+    state.grip = gripPerFace(state.model, state.vis, state.seg, { mu: v, movSign: state.movSign });
+    state.ejMap = null;
+    updateGripFacts();
+    applyMode();
+  }
+}, v => fmt(v, 2));
+segButtons('ej-side-seg', v => { state.ej.side = v; state.ejMap = null; applyMode(); });
+slider('ej-gap', v => {
+  state.ej.gap = v;
+  if (v !== +$('ej-gap').defaultValue) state.ej.gapTouched = true;
+  if (state.tab === 'haftung') dieView.setGap(v);
+}, v => fmt(v, 0) + ' mm');
+slider('ej-alpha', v => {
+  state.ej.alpha = v / 100;
+  if (state.tab === 'haftung') dieView.setOverlayOpacity(state.ej.alpha);
+}, v => fmt(v, 0) + ' %');
+
+/* Hover: Richtung, Entformschräge und Haftung des Dreiecks unter der Maus.
 
    Der Strahlentest läuft ohne Beschleunigungsstruktur über das ganze Netz —
    gemessen 9,7 ms je Ereignis bei 197k Dreiecken, und pointermove feuert so
@@ -404,7 +606,7 @@ view.renderer.domElement.addEventListener('pointermove', ev => {
 });
 
 function evalHover(at) {
-  if (!state.seg) { status.textContent = IDLE; return; }
+  if (!state.seg || !partMesh.visible) { status.textContent = IDLE; return; }
   const r = view.renderer.domElement.getBoundingClientRect();
   const p = new T.Vector2(((at.x - r.left) / r.width) * 2 - 1, -((at.y - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(p, view.camera);
@@ -412,12 +614,14 @@ function evalHover(at) {
   if (!hit) { status.textContent = IDLE; return; }
   const f = hit.faceIndex;
   const l = state.seg.label[f];
-  const names = dirNames(state.seg.mainAxis);
+  const names = dirNames(state.seg.mainAxis, state.movSign);
   const vis = [];
   for (let d = 0; d < 6; d++) if (state.seg.cand[f] & (1 << d)) vis.push(DIRS[d].label);
+  const g = state.grip && state.grip.intensity[f] > 0 && state.grip.maxIntensity > 0
+    ? ' · Haftung ' + fmt(100 * state.grip.intensity[f] / state.grip.maxIntensity, 0) + ' %' : '';
   status.textContent = (l === UNDERCUT ? 'Hinterschnitt' : names[l].name)
     + ' · Entformschräge ' + fmt(state.draft[f]) + '°'
-    + ' · frei gesehen aus: ' + (vis.length ? vis.join(' ') : 'keiner Richtung');
+    + ' · frei gesehen aus: ' + (vis.length ? vis.join(' ') : 'keiner Richtung') + g;
 }
 view.renderer.domElement.addEventListener('pointerleave', () => {
   hoverAt = null;
@@ -426,7 +630,7 @@ view.renderer.domElement.addEventListener('pointerleave', () => {
 
 /* Handle für die Browser-Konsole UND für den Verdrahtungstest
    (tests/viewer.test.mjs). */
-export const __viewer = { state, view, partMesh, partingLines, edgeLines, dieView, recompute, runAnalysis };
+export const __viewer = { state, view, partMesh, partingLines, edgeLines, dieView, recompute, runAnalysis, showTab, colouring };
 window.__form3d = __viewer;
 
 source.start();

@@ -29,9 +29,15 @@ export function dirVector(d) {
  *   model  Arbeitsmodell (js/part/model.js): tris, index, verts, nbr, areas, centroids
  *   seg    Zuordnung (js/part/segment.js): label je Dreieck
  *   opts.skirt  Rand in mm entlang der Trennlinie, in die Form hinein (0: keiner)
- * → [{ label, dir, axis, span, faces, area, center, tris, skirt, edges }], Hälften und
+ * → [{ label, dir, axis, span, side, faces, area, center, tris, skirt, skirtLen, edges }], Hälften und
  *   Schieber nach Richtung geordnet, Hinterschnitte (ohne Richtung, ohne
- *   Rand) zuletzt.
+ *   Rand) zuletzt. `side` sagt, auf welcher Seite der Trennebene ein Stück
+ *   liegt (+1 bewegliche, −1 feste Seite): für die Hälften ihr Vorzeichen,
+ *   für Schieber und Hinterschnitte die Seite ihres Flächenschwerpunkts —
+ *   dort sitzt der Schieber in der Form. Die Trennebene ist dabei die
+ *   mittlere Höhe der Trennlinie zwischen den beiden Hälften
+ *   (`parting`, auf jedem Stück), nicht z = 0: das Bauteil darf liegen,
+ *   wo es will.
  */
 export function diePieces(model, seg, opts = {}) {
   const skirt = Math.max(0, Number(opts.skirt) || 0);
@@ -87,8 +93,127 @@ export function diePieces(model, seg, opts = {}) {
                 ax, ay, az, bx + dx, by + dy, bz + dz, ax + dx, ay + dy, az + dz], k * 18);
       }
     }
-    out.push({ label: l, dir, axis, span: axis >= 0 ? [lo, hi] : null, faces: faces.length, area, center: c, tris: t, skirt: sk, edges: lines });
+    out.push({ label: l, dir, axis, span: axis >= 0 ? [lo, hi] : null, faces: faces.length, area, center: c, tris: t, skirt: sk, skirtLen: sk.length ? skirt : 0, edges: lines });
   }
   out.sort((a, b) => (a.label === UNDERCUT ? 99 : a.label) - (b.label === UNDERCUT ? 99 : b.label));
+  /* Die Trennebene: Kanten zwischen den beiden Hälften, längengewichtet. */
+  const ax = seg.mainAxis;
+  let sum = 0, len = 0;
+  for (let f = 0; f < F; f++) {
+    const lf = label[f];
+    if (lf < 0 || DIRS[lf].axis !== ax) continue;
+    for (let e = 0; e < 3; e++) {
+      const w = nbr[f * 3 + e];
+      if (w < f || label[w] < 0 || label[w] === lf || DIRS[label[w]].axis !== ax) continue;
+      const i0 = index[f * 3 + e] * 3, i1 = index[f * 3 + (e + 1) % 3] * 3;
+      const l = Math.hypot(verts[i0] - verts[i1], verts[i0 + 1] - verts[i1 + 1], verts[i0 + 2] - verts[i1 + 2]);
+      sum += (verts[i0 + ax] + verts[i1 + ax]) / 2 * l; len += l;
+    }
+  }
+  const parting = len > 0 ? sum / len : (model.bounds.min[ax] + model.bounds.max[ax]) / 2;
+  for (const p of out) {
+    p.parting = parting;
+    p.side = p.axis === ax ? p.dir[ax] : (p.center[ax] >= parting ? 1 : -1);
+  }
   return out;
+}
+
+/* ── Projizierte Flächen ──────────────────────────────────────────
+   Die Fläche, die ein Formteil in seiner Öffnungsrichtung dem Metall-
+   druck entgegenstellt: für die Hälften die Projektion auf die Trenn-
+   ebene (mit Anguss und Überläufen die Sprengfläche der Auslegung), für
+   einen Schieber die Fläche, gegen die er verriegelt werden muss.
+   Gerastert als Vereinigung — eine Summe projizierter Dreiecke zählte
+   jede Stelle doppelt (Ober- und Unterseite einer Wand). */
+
+/** Das Raster über die beiden Querachsen der Achse `axis`: u = nächste,
+    v = übernächste Achse (z: x/y, x: y/z, y: z/x — rechtshändig). */
+export function projectionFrame(bounds, axis, cell) {
+  const ua = (axis + 1) % 3, va = (axis + 2) % 3;
+  const diag = bounds.diag || Math.hypot(...bounds.size);
+  let h = Math.max(0.05, cell || diag / 500);
+  const MAX = 3e6;
+  while ((bounds.size[ua] / h + 3) * (bounds.size[va] / h + 3) > MAX) h *= 1.5;
+  const u0 = bounds.min[ua] - h, v0 = bounds.min[va] - h;
+  const nu = Math.ceil(bounds.size[ua] / h) + 3, nv = Math.ceil(bounds.size[va] / h) + 3;
+  return { axis, ua, va, u0, v0, h, nu, nv };
+}
+
+/**
+ * Dreiecke in die Maske des Rasters malen (Zellmitten im projizierten
+ * Dreieck). `only(f)` wählt Dreiecke aus, `onCell(idx, f)` wird je Zelle
+ * und Dreieck gerufen (auch für schon gesetzte Zellen). Liefert die Zahl
+ * neu gesetzter Zellen.
+ */
+export function rasterize(tris, frame, mask, only = null, onCell = null) {
+  const { ua, va, u0, v0, h, nu, nv } = frame;
+  let count = 0;
+  for (let f = 0, i = 0; i < tris.length; f++, i += 9) {
+    if (only && !only(f)) continue;
+    const ax = tris[i + ua], ay = tris[i + va], bx = tris[i + 3 + ua], by = tris[i + 3 + va], cx = tris[i + 6 + ua], cy = tris[i + 6 + va];
+    const area2 = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+    if (Math.abs(area2) < 1e-12) continue;                   // steht in der Richtung: keine Fläche
+    const s = area2 > 0 ? 1 : -1;
+    const i0 = Math.max(0, Math.floor((Math.min(ax, bx, cx) - u0) / h));
+    const i1 = Math.min(nu - 1, Math.ceil((Math.max(ax, bx, cx) - u0) / h));
+    const j0 = Math.max(0, Math.floor((Math.min(ay, by, cy) - v0) / h));
+    const j1 = Math.min(nv - 1, Math.ceil((Math.max(ay, by, cy) - v0) / h));
+    for (let j = j0; j <= j1; j++) {
+      const py = v0 + (j + 0.5) * h;
+      for (let ii = i0; ii <= i1; ii++) {
+        const px = u0 + (ii + 0.5) * h;
+        const e0 = ((bx - ax) * (py - ay) - (by - ay) * (px - ax)) * s;
+        const e1 = ((cx - bx) * (py - by) - (cy - by) * (px - bx)) * s;
+        const e2 = ((ax - cx) * (py - cy) - (ay - cy) * (px - cx)) * s;
+        if (e0 < 0 || e1 < 0 || e2 < 0) continue;
+        const idx = j * nu + ii;
+        if (!mask[idx]) { mask[idx] = 1; count++; }
+        if (onCell) onCell(idx, f);
+      }
+    }
+  }
+  return count;
+}
+
+/** Projektion einer Dreieckssuppe entlang `axis` → { frame, mask, area } in mm². */
+export function projectSoup(tris, bounds, axis, opts = {}) {
+  const frame = projectionFrame(bounds, axis, opts.cell);
+  const mask = new Uint8Array(frame.nu * frame.nv);
+  const cells = rasterize(tris, frame, mask);
+  return { frame, mask, area: cells * frame.h * frame.h };
+}
+
+/** Der Umriss einer Maske als Strecken [u0, v0, u1, v1, …] in Weltmaß —
+    die Zellkanten zwischen gesetzt und leer. */
+export function maskOutline(frame, mask) {
+  const { u0, v0, h, nu, nv } = frame;
+  const out = [];
+  const at = (i, j) => (i < 0 || j < 0 || i >= nu || j >= nv ? 0 : mask[j * nu + i]);
+  for (let j = 0; j < nv; j++) {
+    for (let i = 0; i < nu; i++) {
+      if (!mask[j * nu + i]) continue;
+      const x = u0 + i * h, y = v0 + j * h;
+      if (!at(i - 1, j)) out.push(x, y, x, y + h);
+      if (!at(i + 1, j)) out.push(x + h, y, x + h, y + h);
+      if (!at(i, j - 1)) out.push(x, y, x + h, y);
+      if (!at(i, j + 1)) out.push(x, y + h, x + h, y + h);
+    }
+  }
+  return Float32Array.from(out);
+}
+
+/**
+ * Projizierte Fläche jedes Stücks in seiner Richtung (Hinterschnitte
+ * haben keine) und die des ganzen Bauteils auf die Trennebene.
+ * → { pieces: [{ label, axis, area, frame, mask }], total: { axis, area, frame, mask } }
+ */
+export function pieceProjections(pieces, model, seg, opts = {}) {
+  const out = [];
+  for (const p of pieces) {
+    if (p.axis < 0) continue;
+    const pr = projectSoup(p.tris, model.bounds, p.axis, opts);
+    out.push({ label: p.label, axis: p.axis, area: pr.area, frame: pr.frame, mask: pr.mask });
+  }
+  const total = projectSoup(model.tris, model.bounds, seg.mainAxis, opts);
+  return { pieces: out, total: { axis: seg.mainAxis, ...total } };
 }

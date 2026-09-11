@@ -62,11 +62,15 @@ export function draftStats(model, draft, label, limitDeg) {
   };
 }
 
-/** Beschriftung der sechs Richtungen abhängig von der Formöffnungsrichtung. */
-export function dirNames(mainAxis) {
+/** Beschriftung der sechs Richtungen abhängig von der Formöffnungsrichtung.
+    Welche Hälfte die bewegliche ist, sagt movSign: +1 (Vorgabe) — im
+    Bauteilrahmen liegt die Trennebene bei z = 0 und die Form öffnet nach
+    +z, die +Seite ist die Auswerferseite —, oder −1, wenn das Teil anders
+    herum in der Form liegt. */
+export function dirNames(mainAxis, movSign = 1) {
   return DIRS.map(d => {
     if (d.axis !== mainAxis) return { ...d, role: 'slider', name: 'Schieber ' + d.label };
     return { ...d, role: 'half',
-      name: (d.sign > 0 ? 'Bewegliche Seite ' : 'Feste Seite ') + d.label };
+      name: (d.sign === movSign ? 'Bewegliche Seite ' : 'Feste Seite ') + d.label };
   });
 }

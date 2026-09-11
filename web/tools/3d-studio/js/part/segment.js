@@ -19,17 +19,38 @@
                  ihrer Nachbarn (Kantenlänge), damit die Trennlinie nicht
                  über die Wand zackt; bei Gleichstand der beweglichen
                  Hälfte. Die Schrägen-Ansicht zeigt sie rot (0°).
-   3. SCHIEBER   Was keine Hälfte sieht, bekommt der Schieber, der es
-                 frei sieht — der mit der frontalsten Sicht. Eine Fläche
-                 PARALLEL zur Schieberrichtung (0°) ist erlaubt: eine
-                 Querbohrung wird von einem Kern ohne Schräge gebildet.
-                 Sehen zwei Schieber eine Fläche gleich gut, nimmt sie der
-                 von der näheren Seite.
+   3. SCHIEBER   Was keine Hälfte sieht, bekommt ein Schieber, der es
+                 frei sieht. Eine Fläche PARALLEL zur Schieberrichtung
+                 (0°) ist erlaubt: eine Querbohrung wird von einem Kern
+                 ohne Schräge gebildet. Welcher Schieber, entscheidet der
+                 zusammenhängende FLECK, nicht das einzelne Dreieck: die
+                 Richtung, die die größte Fläche des Flecks sieht, bekommt
+                 alles, was sie sieht; was übrig bleibt, wird erneut so
+                 verteilt. Ein Sensordom auf der Seitenwand geht damit als
+                 Ganzes an EINEN Schieber — nach der frontalsten Sicht je
+                 Dreieck bekämen seine Flanken zwei weitere Schieber, die
+                 kein Werkzeugmacher bauen würde. Sehen zwei Richtungen
+                 gleich viel (eine Querbohrung ohne Schräge von beiden
+                 Seiten), gilt je Dreieck die frontalste Sicht und bei
+                 Gleichstand die nähere Seite: Kerne von beiden Seiten.
    4. HINTERSCHNITT  Was keine Richtung frei sieht.
    5. LÖCHER     Ein Fleck, der ganz von EINER anderen Region umschlossen
                  ist und den diese Richtung ebenfalls sieht, schlägt ihr
                  zu — sonst blieben an Kanten und Verrundungen Splitter
-                 zwischen zwei Schiebern stehen.
+                 zwischen zwei Schiebern stehen. Einer Hälfte genügt dafür
+                 die streifende Sicht (eine senkrechte Wand).
+
+   6. SPLITTER   Ein Schieber- oder Hinterschnittfleck unter SLIVER_FRAC der
+                 Oberfläche, der nur an Hälften grenzt, geht an die Hälfte
+                 mit der längsten gemeinsamen Kante: ein Splitter an einer
+                 Verrundung, den keine Hälfte sieht, ist kein Grund für
+                 einen Schieber. Die Fläche wird gezählt (sliverArea) und
+                 gemeldet, nicht verschwiegen.
+
+   Was eine Hälfte nur TEILWEISE sieht (ein großes Dreieck der Flansch-
+   unterseite, von dem ein Streifen über einem Dom liegt), zählt hier als
+   Ganzes als nicht gesehen — js/part/refine.js zerlegt solche Dreiecke
+   an der Schattengrenze, bevor die Zuordnung endgültig ist.
 
    Die Formöffnungsrichtung wird, wenn nicht vorgegeben, automatisch
    gewählt: die Achse mit der kleinsten Fläche aus Schiebern und
@@ -40,22 +61,24 @@
    (js/part/visibility.js) hängt nur am Netz; alles hier kostet danach
    Millisekunden. */
 
-import { DIRS } from './visibility.js';
+import { DIRS, FACING_EPS } from './visibility.js';
 
 export const UNDERCUT = -2;
 export const MIN_DRAFT_DEG = 0.5;     // darunter sieht eine Hälfte eine Fläche nur streifend
+export const SLIVER_FRAC = 1e-5;      // Splitter: Flecken unter diesem Anteil der Oberfläche
 const NONE = -1;
 const MIN_DOT = Math.sin(MIN_DRAFT_DEG * Math.PI / 180);
 
 /** Bitmaske der Richtungen, die ein Dreieck frei sehen (Normale nicht
-    abgewandt, alle Abtastpunkte unverdeckt). */
+    abgewandt — bis FACING_EPS Gegenschräge, siehe visibility.js —, alle
+    Abtastpunkte unverdeckt). */
 export function candidates(model, vis) {
   const F = model.faceCount;
   const cand = new Uint8Array(F);
   for (let f = 0; f < F; f++) {
     let m = 0;
     for (let d = 0; d < 6; d++) {
-      if (vis.dot[f * 6 + d] > -1e-9 && vis.frac[f * 6 + d] >= 1 - 1e-9) m |= 1 << d;
+      if (vis.dot[f * 6 + d] >= -FACING_EPS && vis.frac[f * 6 + d] >= 1 - 1e-9) m |= 1 << d;
     }
     cand[f] = m;
   }
@@ -99,39 +122,95 @@ function edgeLength(model, f, e) {
   return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-function assign(model, vis, cand, mainAxis) {
+/* Der Schieber mit der frontalsten Sicht auf Dreieck f; bei Gleichstand
+   (etwa 0° an beiden Enden einer Querbohrung) der von der näheren Seite. */
+function frontalSlider(model, vis, cand, f, mainAxis, mid, allowed) {
+  const { tris } = model;
+  let best = -1, dotBest = -Infinity;
+  for (let d = 0; d < 6; d++) {
+    if (DIRS[d].axis === mainAxis || !(cand[f] & (1 << d)) || !(allowed & (1 << d))) continue;
+    const dot = vis.dot[f * 6 + d];
+    if (dot > dotBest + 1e-9) { dotBest = dot; best = d; }
+    else if (Math.abs(dot - dotBest) <= 1e-9 && best >= 0) {
+      const c = centroid(tris, f, DIRS[d].axis) - mid[DIRS[d].axis];
+      const cb = centroid(tris, f, DIRS[best].axis) - mid[DIRS[best].axis];
+      if (c * DIRS[d].sign > cb * DIRS[best].sign) best = d;
+    }
+  }
+  return best;
+}
+
+/* 3: Schieber je zusammenhängendem Fleck der noch unverteilten Dreiecke.
+   Die Richtung mit der größten gesehenen Fläche bekommt alles, was sie
+   sieht; der Rest bildet neue Flecken und wird ebenso verteilt. Sehen
+   mehrere Richtungen gleich viel, entscheidet je Dreieck die frontalste
+   Sicht. */
+function assignSliders(model, vis, cand, label, pending, mainAxis, mid) {
   const F = model.faceCount;
-  const { nbr, areas, tris, bounds } = model;
+  const { nbr, areas } = model;
+  let sliderMask = 0;
+  for (let d = 0; d < 6; d++) if (DIRS[d].axis !== mainAxis) sliderMask |= 1 << d;
+  const open = new Uint8Array(F);
+  for (const f of pending) open[f] = 1;
+  let left = pending.length;
+  for (let round = 0; left > 0 && round < 8; round++) {
+    for (const members of patches(F, nbr, () => true, f => open[f] === 1)) {
+      const cov = new Float64Array(6);
+      for (const f of members) for (let d = 0; d < 6; d++) if (cand[f] & sliderMask & (1 << d)) cov[d] += areas[f];
+      let best = -1;
+      for (let d = 0; d < 6; d++) if (cov[d] > (best < 0 ? 0 : cov[best])) best = d;
+      if (best < 0) continue;
+      const tied = [];
+      for (let d = 0; d < 6; d++) if (cov[d] > 0 && Math.abs(cov[d] - cov[best]) <= 1e-9 * cov[best]) tied.push(d);
+      if (tied.length > 1) {
+        let allowed = 0;
+        for (const d of tied) allowed |= 1 << d;
+        for (const f of members) {
+          const d = frontalSlider(model, vis, cand, f, mainAxis, mid, allowed);
+          if (d < 0) continue;
+          label[f] = d; open[f] = 0; left--;
+        }
+        continue;
+      }
+      for (const f of members) {
+        if (!(cand[f] & (1 << best))) continue;
+        label[f] = best; open[f] = 0; left--;
+      }
+    }
+  }
+  /* Was nach acht Runden noch offen wäre, sähe keine Richtung — das kann
+     nicht sein; zur Sicherheit die frontalste Sicht. */
+  for (const f of pending) if (open[f]) label[f] = frontalSlider(model, vis, cand, f, mainAxis, mid, sliderMask);
+}
+
+function assign(model, vis, cand, mainAxis, movingSign = 1) {
+  const F = model.faceCount;
+  const { nbr, areas, bounds } = model;
   const label = new Int8Array(F).fill(NONE);
   const weak = new Uint8Array(F);
   const mid = [(bounds.min[0] + bounds.max[0]) / 2, (bounds.min[1] + bounds.max[1]) / 2, (bounds.min[2] + bounds.max[2]) / 2];
   const counts = { half: 0, slider: 0, undercut: 0, weak: 0, holes: 0 };
 
-  const movingHalf = DIRS.findIndex(d => d.axis === mainAxis && d.sign > 0);
+  const movingHalf = DIRS.findIndex(d => d.axis === mainAxis && d.sign === movingSign);
+  let sliderMask = 0;
+  for (let d = 0; d < 6; d++) if (DIRS[d].axis !== mainAxis) sliderMask |= 1 << d;
 
-  /* 1, 3, 4: je Dreieck; senkrechte Flächen (2) werden vorgemerkt. */
+  /* 1, 4: je Dreieck; senkrechte Flächen (2) werden vorgemerkt, Schieber-
+     flächen (3) gesammelt. */
+  const pending = [];
   for (let f = 0; f < F; f++) {
-    let bestHalf = -1, dotHalf = -Infinity, bestSlider = -1, dotSlider = -Infinity;
+    let bestHalf = -1, dotHalf = -Infinity;
     for (let d = 0; d < 6; d++) {
-      if (!(cand[f] & (1 << d))) continue;
+      if (DIRS[d].axis !== mainAxis || !(cand[f] & (1 << d))) continue;
       const dot = vis.dot[f * 6 + d];
-      if (DIRS[d].axis === mainAxis) {
-        if (dot > dotHalf) { dotHalf = dot; bestHalf = d; }
-      } else if (dot > dotSlider + 1e-9) {
-        dotSlider = dot; bestSlider = d;
-      } else if (Math.abs(dot - dotSlider) <= 1e-9 && bestSlider >= 0) {
-        /* Gleichstand (etwa 0° an beiden Enden einer Querbohrung): der
-           Schieber von der näheren Seite. */
-        const c = centroid(tris, f, DIRS[d].axis) - mid[DIRS[d].axis];
-        const cb = centroid(tris, f, DIRS[bestSlider].axis) - mid[DIRS[bestSlider].axis];
-        if (c * DIRS[d].sign > cb * DIRS[bestSlider].sign) bestSlider = d;
-      }
+      if (dot > dotHalf) { dotHalf = dot; bestHalf = d; }
     }
     if (bestHalf >= 0 && dotHalf >= MIN_DOT) { label[f] = bestHalf; counts.half++; }
     else if (bestHalf >= 0) { label[f] = bestHalf; weak[f] = 1; counts.weak++; }
-    else if (bestSlider >= 0) { label[f] = bestSlider; counts.slider++; }
+    else if (cand[f] & sliderMask) { pending.push(f); counts.slider++; }
     else { label[f] = UNDERCUT; counts.undercut++; }
   }
+  assignSliders(model, vis, cand, label, pending, mainAxis, mid);
 
   /* 2: senkrechte Flächen folgen als Fleck der Mehrheit ihrer Nachbarn,
      gewichtet mit der gemeinsamen Kantenlänge. Ein Fleck, dessen Rand nur
@@ -176,8 +255,10 @@ function assign(model, vis, cand, mainAxis) {
         if (!ok) break;
       }
       if (!ok || other < 0) continue;
-      const strong = DIRS[other].axis === mainAxis;
-      if (members.some(f => !(cand[f] & (1 << other)) || (strong && vis.dot[f * 6 + other] < MIN_DOT))) continue;
+      /* Eine Hälfte nimmt den Fleck auch streifend (senkrechte Wand, bis
+         FACING_EPS Gegenschräge) — ein Schieber für einen Splitter ohne
+         Schräge wäre teurer als jede Wand ohne Schräge. */
+      if (members.some(f => !(cand[f] & (1 << other)))) continue;
       for (const f of members) label[f] = other;
       counts.holes += members.length;
       changed++;
@@ -185,25 +266,57 @@ function assign(model, vis, cand, mainAxis) {
     if (!changed) break;
   }
 
+  /* 6: Splitter. */
+  const sliverMax = SLIVER_FRAC * (model.totalArea || 0);
+  let sliverArea = 0;
+  for (const members of patches(F, nbr, (a, b) => label[a] === label[b])) {
+    const mine = label[members[0]];
+    if (mine >= 0 && DIRS[mine].axis === mainAxis) continue;
+    let area = 0;
+    for (const f of members) area += areas[f];
+    if (area > sliverMax) continue;
+    const votes = new Float64Array(6);
+    let ok = true;
+    for (const f of members) {
+      for (let e = 0; e < 3 && ok; e++) {
+        const w = nbr[f * 3 + e];
+        if (w < 0 || label[w] === mine) continue;
+        if (label[w] < 0 || DIRS[label[w]].axis !== mainAxis) { ok = false; break; }
+        votes[label[w]] += edgeLength(model, f, e);
+      }
+      if (!ok) break;
+    }
+    if (!ok) continue;
+    let best = -1;
+    for (let d = 0; d < 6; d++) if (votes[d] > (best < 0 ? 0 : votes[best])) best = d;
+    if (best < 0) continue;
+    for (const f of members) { label[f] = best; weak[f] = 1; }
+    sliverArea += area;
+    counts.slivers = (counts.slivers || 0) + members.length;
+  }
+
   const areaByLabel = new Float64Array(7);        // 0..5 Richtungen, 6 = Hinterschnitt
   for (let f = 0; f < F; f++) areaByLabel[label[f] === UNDERCUT ? 6 : label[f]] += areas[f];
   let sliderArea = 0, weakArea = 0;
   for (let d = 0; d < 6; d++) if (DIRS[d].axis !== mainAxis) sliderArea += areaByLabel[d];
   for (let f = 0; f < F; f++) if (weak[f]) weakArea += areas[f];
-  return { label, weak, areaByLabel, counts, mainAxis, weakArea, score: sliderArea + 2 * areaByLabel[6] };
+  return { label, weak, areaByLabel, counts, mainAxis, weakArea, sliverArea, score: sliderArea + 2 * areaByLabel[6] };
 }
 
-/** Zuordnung. opts.mainAxis: 0, 1, 2 oder 'auto' (Vorgabe). */
+/** Zuordnung. opts.mainAxis: 0, 1, 2 oder 'auto' (Vorgabe); opts.movingSign:
+    +1 (Vorgabe) oder −1 — welche Hälfte auf der Achse die bewegliche ist
+    (sie bekommt senkrechte Wände bei Gleichstand). */
 export function segment(model, vis, opts = {}) {
   const cand = candidates(model, vis);
   const want = opts.mainAxis;
   const fixed = want === 0 || want === 1 || want === 2;
+  const movingSign = opts.movingSign === -1 ? -1 : 1;
   let best = null;
   const scores = [];
   const better = (a, b) => a.score < b.score - 1e-9
     || (Math.abs(a.score - b.score) <= 1e-9 && a.weakArea < b.weakArea - 1e-9);
   for (const axis of fixed ? [want] : [2, 1, 0]) {
-    const r = assign(model, vis, cand, axis);
+    const r = assign(model, vis, cand, axis, movingSign);
     scores[axis] = r.score;
     if (!best || better(r, best)) best = r;
   }

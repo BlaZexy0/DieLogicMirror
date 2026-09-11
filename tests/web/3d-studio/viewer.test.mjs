@@ -122,11 +122,12 @@ test('Analyse läuft und die Legende füllt sich', () => {
   assert.ok(+doc.getElementById('parting-count').textContent.replace(/\D/g, '') > 0, 'Trennlinie gefunden');
 });
 
-test('Formöffnung: automatisch gewählt, fest wählbar, sofort neu gerechnet', () => {
+test('Formöffnung: automatisch gewählt, fest wählbar, sofort neu gerechnet', async () => {
   const s = app.__viewer.state;
   assert.equal(s.axis, 'auto');
   assert.equal(s.seg.auto, true);
   assert.equal(s.seg.mainAxis, 2, 'der Getriebedeckel entformt in Z');
+  assert.equal(s.model.faceCount, s.model.rawFaceCount - (s.model.rawFaceCount - s.model.faceCount), 'das Netz bleibt, wie es geladen wurde');
   const ax = doc.getElementById('axis-seg').querySelectorAll('button');
   const before = [...s.seg.areaByLabel];
   ax.find(b => b.dataset.value === '0').dispatch('click');
@@ -137,72 +138,197 @@ test('Formöffnung: automatisch gewählt, fest wählbar, sofort neu gerechnet', 
   assert.ok(doc.getElementById('analysis-state').textContent.includes('X'), 'die Achse steht im Hinweis');
   ax.find(b => b.dataset.value === 'auto').dispatch('click');
   assert.deepEqual([...s.seg.areaByLabel], before, 'Auto findet wieder Z');
+  /* Welche Hälfte die bewegliche ist, steht dabei und lässt sich tauschen. */
+  assert.ok(doc.getElementById('analysis-state').textContent.includes('bewegliche Seite +Z'), doc.getElementById('analysis-state').textContent);
+  assert.equal(doc.getElementById('mov-plus').textContent, '+Z');
+  assert.ok(doc.getElementById('legend').innerHTML.includes('Bewegliche Seite +Z'));
+  doc.getElementById('mov-seg').querySelectorAll('button').find(b => b.dataset.value === '-1').dispatch('click');
+  assert.equal(s.movSign, -1);
+  assert.ok(doc.getElementById('legend').innerHTML.includes('Bewegliche Seite −Z') && doc.getElementById('legend').innerHTML.includes('Feste Seite +Z'), 'die Namen wandern mit');
+  assert.ok(doc.getElementById('analysis-state').textContent.includes('bewegliche Seite −Z'));
+  doc.getElementById('mov-seg').querySelectorAll('button').find(b => b.dataset.value === '1').dispatch('click');
+  assert.equal(s.movSign, 1);
 });
 
-test('Formansicht: die Regionen fahren als Formteile auseinander, der Blick in die Hälften stellt die Kamera', () => {
+test('Reiter sind Modi: je Reiter ein Abschnitt und eine eigene Darstellung', () => {
+  const s = app.__viewer.state;
+  const tabs = ['bauteil', 'entformung', 'formteile', 'flaechen', 'haftung'];
+  const secs = tabs.map(t => doc.getElementById('tab-' + t));
+  assert.ok(secs.every(Boolean), 'fünf Abschnitte');
+  const visible = () => tabs.filter((t, i) => !secs[i].classList.contains('tab-off'));
+  assert.deepEqual(visible(), ['entformung'], 'zu Beginn die Entformung');
+  assert.equal(s.tab, 'entformung');
+  assert.equal(app.__viewer.colouring(), 'regions');
+  for (const t of tabs) {
+    doc.getElementById('tab-seg').querySelectorAll('button').find(b => b.dataset.value === t).dispatch('click');
+    assert.deepEqual(visible(), [t], 'nur ' + t);
+    assert.equal(s.tab, t);
+  }
+  /* Der Reiter bestimmt die Farbe des Bauteils: grau im Bauteil und bei
+     den Flächen, Regionen/Schräge in der Entformung, Haftmaß in der Haftung. */
+  app.__viewer.showTab('bauteil');
+  assert.equal(app.__viewer.colouring(), 'plain');
+  const col = app.__viewer.partMesh.geometry.getAttribute('color').array;
+  assert.ok(Math.abs(col[0] - 0.72) < 1e-6 && Math.abs(col[1] - 0.76) < 1e-6, 'grau im Reiter Bauteil');
+  app.__viewer.showTab('flaechen');
+  assert.equal(app.__viewer.colouring(), 'plain');
+  app.__viewer.showTab('haftung');
+  assert.equal(app.__viewer.colouring(), 'grip');
+  assert.equal(doc.getElementById('cb-title').textContent, 'Haftung', 'Farbskala der Haftung');
+  app.__viewer.showTab('entformung');
+  assert.equal(app.__viewer.colouring(), 'regions');
+  assert.ok(!doc.getElementById('colorbar').classList.contains('on'), 'bei den Regionen keine Skala');
+  /* Die Netzkanten gehören zum Reiter Bauteil. */
+  const edges = doc.getElementById('show-edges');
+  edges.checked = true; edges.dispatch('change');
+  assert.equal(app.__viewer.edgeLines.visible, false, 'in der Entformung keine Netzkanten');
+  app.__viewer.showTab('bauteil');
+  assert.equal(app.__viewer.edgeLines.visible, true, 'im Bauteil da');
+  edges.checked = false; edges.dispatch('change');
+  assert.equal(app.__viewer.edgeLines.visible, false);
+  app.__viewer.showTab('entformung');
+  assert.ok(doc.getElementById('mode-seg').querySelectorAll('button').every(b => b.dataset.value !== 'grip' && b.dataset.value !== 'plain'),
+    'Einfärbung nur Regionen und Schräge');
+});
+
+test('Formteile: der Reiter zeigt die Regionen auseinandergezogen, jedes der sechs Formteile schaltbar', () => {
   const s = app.__viewer.state;
   const dv = app.__viewer.dieView;
-  assert.equal(dv.group.visible, false, 'aus, solange nicht angehakt');
-  const on = doc.getElementById('die-on');
-  on.checked = true;
-  on.dispatch('change');
-  assert.equal(s.die.on, true);
-  assert.equal(doc.getElementById('die-block').classList.contains('disabled'), false);
+  assert.equal(dv.group.visible, false, 'in anderen Reitern aus');
+  app.__viewer.showTab('formteile');
   assert.equal(dv.group.visible, true, 'die Formteile stehen im Viewport');
   const pieces = dv.pieces;
   assert.ok(pieces.length >= 2, 'mindestens die beiden Hälften: ' + pieces.length);
   assert.equal(pieces.reduce((a, p) => a + p.faces, 0), s.model.faceCount, 'alle Dreiecke verteilt');
   assert.ok(pieces.every(p => p.skirt.length > 0 || p.dir.every(v => v === 0)), 'jedes gerichtete Stück hat einen Rand');
   assert.ok(app.__viewer.partMesh.material.opacity < 0.2, 'das Bauteil steht durchscheinend dazwischen');
+  assert.equal(app.__viewer.partingLines.visible, false, 'ohne Trennlinie');
   /* Der Abstand schiebt jedes Stück entlang seiner Richtung. */
   const dist = doc.getElementById('die-dist');
   dist.value = '80';
   dist.dispatch('input');
   assert.equal(s.die.dist, 80);
-  for (const h of dv.group.children) {
+  for (const h of dv.holders) {
     const p = h.userData.piece;
     assert.ok(Math.abs(h.position.x - p.dir[0] * 80) < 1e-9 && Math.abs(h.position.z - p.dir[2] * 80) < 1e-9, 'Stück ' + p.label + ' verschoben');
   }
-  /* Der Blick in die bewegliche Hälfte: Kamera vor der +Z-Fläche, Blick
-     entlang +Z, die feste Seite an der Ebene dazwischen weggeschnitten,
-     das Bauteil aus dem Bild. */
-  const cam = app.__viewer.view.camera;
-  const look = v => doc.getElementById('die-look-seg').querySelectorAll('button').find(b => b.dataset.value === v).dispatch('click');
-  look('mov');
-  assert.equal(s.die.look, 'mov');
-  const target = app.__viewer.view.controls.target;
-  assert.ok(cam.position.z < target.z, 'Kamera auf der Trennebenenseite der beweglichen Hälfte');
-  assert.equal(dv.looking, 4, 'gesehen wird +Z');
-  const mov = dv.group.children.find(h => h.userData.piece.label === 4);
-  const fix = dv.group.children.find(h => h.userData.piece.label === 5);
-  const plane = mov.children[0].material.clippingPlanes[0];
-  assert.ok(plane && plane.normal.z > 0.99, 'Schnittebene mit Normale +Z');
-  const zMovMin = mov.userData.piece.span[0] + mov.position.z, zFixMax = fix.userData.piece.span[1] + fix.position.z;
-  const zPlane = -plane.constant;
-  assert.ok(zPlane < zMovMin && zPlane > zFixMax, 'die Ebene liegt zwischen den Hälften: ' + zFixMax + ' < ' + zPlane + ' < ' + zMovMin);
-  assert.equal(app.__viewer.partMesh.visible, false, 'das Bauteil ist aus dem Bild');
-  assert.equal(app.__viewer.partingLines.visible, false, 'und seine Trennlinie mit ihm');
-  look('fix');
-  assert.ok(cam.position.z > app.__viewer.view.controls.target.z, 'und umgekehrt für die feste Hälfte');
-  assert.ok(fix.children[0].material.clippingPlanes[0].normal.z < -0.99);
-  look('frei');
-  assert.equal(dv.looking, null);
-  assert.equal(mov.children[0].material.clippingPlanes, null, 'ohne Blick keine Schnittebene');
-  assert.equal(app.__viewer.partMesh.visible, true);
+  assert.equal(+doc.getElementById('die-skirt').getAttribute('max'), 500, 'der Rand darf bis 500 mm lang sein');
+  /* Sechs mögliche Formteile: zwei Hälften, vier Schieber. Der Getriebedeckel
+     hat +X und −Y; −X und +Y stehen grau und lassen sich nicht schalten. */
+  const rows = doc.getElementById('die-pieces').querySelectorAll('input');
+  assert.equal(rows.length, 6, 'sechs Schalter');
+  const byLabel = l => rows.find(r => r.dataset.label === String(l));
+  assert.equal(byLabel(4).checked, true, 'bewegliche Hälfte an');
+  assert.equal(byLabel(5).checked, true, 'feste Hälfte an');
+  assert.equal(byLabel(0).checked, true, 'Schieber +X an');
+  const offRows = doc.getElementById('die-pieces').querySelectorAll('label').filter(l => l.classList.contains('off'));
+  assert.equal(offRows.length, 2, 'Schieber −X und +Y stehen grau: nicht in der Form');
+  assert.equal(byLabel(1).getAttribute('disabled') !== undefined && byLabel(2).getAttribute('disabled') !== undefined, true, 'und lassen sich nicht schalten');
+  assert.ok(doc.getElementById('die-pieces').innerHTML.includes('nicht in der Form'));
+  const holder = l => dv.holders.find(h => h.userData.piece.label === l);
+  byLabel(0).checked = false; byLabel(0).dispatch('change');
+  assert.equal(s.die.show[0], false);
+  assert.equal(holder(0).visible, false, 'Schieber +X ausgeblendet');
+  assert.equal(holder(4).visible, true, 'die anderen bleiben');
+  byLabel(5).checked = false; byLabel(5).dispatch('change');
+  assert.equal(holder(5).visible, false, 'die feste Hälfte ausgeblendet');
+  /* Reiter wechseln: die Formteile verschwinden, beim Zurückkommen stehen sie
+     mit denselben Schaltern wieder da. */
+  app.__viewer.showTab('entformung');
+  assert.equal(dv.group.visible, false, 'im nächsten Reiter weg');
+  assert.equal(app.__viewer.partMesh.material.opacity, 1, 'das Bauteil wieder deckend');
   assert.equal(app.__viewer.partingLines.visible, true, 'die Trennlinie ist wieder da');
-  /* Ohne Bauteil dazwischen ist es unsichtbar; aus stellt alles zurück. */
+  app.__viewer.showTab('formteile');
+  assert.equal(dv.group.visible, true);
+  assert.equal(holder(0).visible, false, 'Schalter bleiben: +X noch aus');
+  byLabel(0).checked = true; byLabel(0).dispatch('change');
+  byLabel(5).checked = true; byLabel(5).dispatch('change');
+  assert.ok(dv.holders.every(h => h.visible), 'alle wieder an');
+  /* Ohne Bauteil dazwischen ist es unsichtbar. */
   const part = doc.getElementById('die-part');
-  part.checked = false;
-  part.dispatch('change');
+  part.checked = false; part.dispatch('change');
   assert.equal(app.__viewer.partMesh.visible, false);
-  on.checked = false;
-  on.dispatch('change');
-  assert.equal(dv.group.visible, false);
+  part.checked = true; part.dispatch('change');
   assert.equal(app.__viewer.partMesh.visible, true);
-  assert.equal(app.__viewer.partMesh.material.opacity, s.opacity, 'Deckkraft wieder wie eingestellt');
+  app.__viewer.showTab('entformung');
+});
+
+test('Flächen und Haftung: jeder Reiter zeigt seine Ebenen jenseits des Bauteils — und nimmt sie beim Verlassen mit', () => {
+  const s = app.__viewer.state;
+  const dv = app.__viewer.dieView;
+  const b = s.model.bounds;
+  /* Flächen: Zahlen je Formteil, ohne Kräfte; Silhouetten nur in diesem Reiter. */
+  const pf = doc.getElementById('proj-facts').innerHTML;
+  assert.ok(pf.includes('cm²') && !pf.includes('kN') && !pf.includes('bar'), 'Flächen, keine Kräfte: ' + pf);
+  assert.ok(pf.includes('Bewegliche') && pf.includes('Schieber'), 'Hälften und Schieber');
+  const mov = s.proj.pieces.find(q => q.label === 4), sl = s.proj.pieces.filter(q => q.axis !== 2);
+  assert.ok(mov.area > 0.9 * s.proj.total.area, 'die bewegliche Hälfte deckt fast den ganzen Grundriss');
+  assert.ok(sl.every(q => q.area < 0.05 * mov.area), 'ein Schieber sieht eine kleine Fläche');
+  const proj = () => dv.overlays.children.filter(o => o.userData.overlay === 'proj');
+  assert.ok(proj().every(o => !o.visible), 'in der Entformung keine Silhouetten');
+  app.__viewer.showTab('flaechen');
+  assert.equal(dv.group.visible, false, 'keine Formteile in diesem Reiter');
+  assert.equal(proj().length, s.proj.pieces.length, 'je gerichtetem Stück eine Silhouette');
+  assert.ok(proj().every(o => o.visible), 'alle sichtbar');
+  const coordOf = o => { const p = o.userData.piece; return o.children[0].position.getComponent(p.axis); };
+  for (const o of proj()) {
+    const p = o.userData.piece, sg = p.dir[p.axis], c = coordOf(o);
+    assert.ok(sg > 0 ? c > b.max[p.axis] + 5 : c < b.min[p.axis] - 5, 'Ebene ' + p.label + ' jenseits des Bauteils: ' + c);
+  }
+  /* Abstand und Deckkraft. */
+  const movO = () => proj().find(o => o.userData.piece.label === 4);
+  const z0 = coordOf(movO());
+  const gapEl = doc.getElementById('proj-gap');
+  gapEl.value = String(s.projView.gap + 50); gapEl.dispatch('input');
+  assert.ok(Math.abs(coordOf(movO()) - z0 - 50) < 1e-6, 'der Abstand schiebt die Ebene: ' + coordOf(movO()));
+  const alphaEl = doc.getElementById('proj-alpha');
+  alphaEl.value = '25'; alphaEl.dispatch('input');
+  assert.ok(Math.abs(movO().children[0].material.opacity - 0.25) < 1e-9, 'Deckkraft der Füllung');
+  /* Der Fehler von vorhin: in einen anderen Reiter wechseln — die
+     Silhouetten müssen mitgehen. */
+  app.__viewer.showTab('bauteil');
+  assert.ok(proj().every(o => !o.visible), 'im Reiter Bauteil keine Silhouetten');
+  assert.equal(app.__viewer.colouring(), 'plain');
+  /* Haftung: der Deckel schrumpft auf den Kern der beweglichen Hälfte —
+     Innenwände, Rippen und Ring haften, die Außenwände nicht. */
+  assert.ok(s.grip.mov > 3 * s.grip.fix, 'haftet an der beweglichen Seite: ' + s.grip.mov + ' / ' + s.grip.fix);
+  assert.ok(doc.getElementById('ej-facts').innerHTML.includes('%'));
+  assert.ok(doc.getElementById('ej-legend').innerHTML.includes('haftet'));
+  assert.equal(doc.getElementById('ej-warn').textContent, '', 'keine Warnung');
+  let ribs = 0, ribGrip = 0;
+  for (let f = 0; f < s.model.faceCount; f++) {
+    const n = s.model.normals, c = s.model.centroids;
+    if (Math.abs(n[f * 3 + 2]) > 0.1 || c[f * 3 + 2] > -8 || c[f * 3 + 2] < -60 || Math.abs(c[f * 3]) > 160 || Math.abs(c[f * 3 + 1]) > 120 || Math.hypot(c[f * 3], c[f * 3 + 1]) < 45) continue;
+    if (s.seg.label[f] !== 4) continue;
+    ribs++; if (s.grip.intensity[f] > 0) ribGrip++;
+  }
+  assert.ok(ribs > 50 && ribGrip > 0.9 * ribs, 'die Rippenflanken haften: ' + ribGrip + ' von ' + ribs);
+  const ej = () => dv.overlays.children.find(o => o.userData.overlay === 'ejector');
+  assert.ok(!ej() || !ej().visible, 'ohne den Reiter keine Karte');
+  app.__viewer.showTab('haftung');
+  assert.equal(app.__viewer.colouring(), 'grip', 'das Bauteil trägt das Haftmaß');
+  assert.ok(s.ejMap && s.ejMap.label === 4 && s.ejMap.max > 0, 'Karte der beweglichen Hälfte');
+  assert.ok(ej() && ej().visible && ej().children.length === 1, 'eine Ebene, keine Stifte');
+  assert.ok(ej().children[0].position.z > b.max[2] + 5, 'jenseits des Bauteils in +Z');
+  assert.ok(proj().every(o => !o.visible), 'keine Silhouetten in der Haftung');
+  const egap = doc.getElementById('ej-gap');
+  const ez0 = ej().children[0].position.z;
+  egap.value = String(s.ej.gap + 40); egap.dispatch('input');
+  assert.ok(Math.abs(ej().children[0].position.z - ez0 - 40) < 1e-6, 'Abstand der Karte');
+  const ea = doc.getElementById('ej-alpha');
+  ea.value = '40'; ea.dispatch('input');
+  assert.ok(Math.abs(ej().children[0].material.opacity - 0.4) < 1e-9, 'Deckkraft der Karte');
+  doc.getElementById('ej-side-seg').querySelectorAll('button').find(b2 => b2.dataset.value === 'fix').dispatch('click');
+  assert.equal(s.ejMap.label, 5, 'Karte der festen Hälfte');
+  assert.ok(ej().children[0].position.z < b.min[2] - 5, 'jenseits in −Z');
+  doc.getElementById('ej-side-seg').querySelectorAll('button').find(b2 => b2.dataset.value === 'mov').dispatch('click');
+  app.__viewer.showTab('entformung');
+  assert.ok(!ej().visible, 'beim Verlassen weg');
+  assert.equal(app.__viewer.colouring(), 'regions');
 });
 
 test('Einfärbungen schalten um', async () => {
+  app.__viewer.showTab('entformung');
   const s = app.__viewer.state;
   const modes = doc.getElementById('mode-seg').querySelectorAll('button');
   const draftBlock = doc.getElementById('draft-block');
@@ -219,6 +345,7 @@ test('Einfärbungen schalten um', async () => {
 });
 
 test('Farbskala erscheint nur bei geordneten Größen', () => {
+  app.__viewer.showTab('entformung');
   const modes = doc.getElementById('mode-seg').querySelectorAll('button');
   const bar = doc.getElementById('colorbar');
 
@@ -258,6 +385,9 @@ test('STL laden: Datei, Ziehen-und-Ablegen, kaputte Datei', async () => {
   const buf = writeSTL(S.box(40, 30, 20), 'test');
   const file = { name: 'pruefwuerfel.stl', arrayBuffer: () => Promise.resolve(buf), byteLength: buf.byteLength };
 
+  /* Geladen wird im Reiter Bauteil — dort steht das Netz grau. Nach der
+     Rechnung springt die Seite zur Entformung, sonst sähe man nichts. */
+  app.__viewer.showTab('bauteil');
   const input = doc.getElementById('stl-input');
   input.files = [file];
   input.dispatch('change');
@@ -267,6 +397,26 @@ test('STL laden: Datei, Ziehen-und-Ablegen, kaputte Datei', async () => {
   const c = app.__viewer.state.seg.counts;
   assert.equal(c.half + c.weak + c.slider, 12, 'jede Seite zugeordnet');
   assert.equal(c.slider, 0, 'ein Quader braucht keinen Schieber');
+  assert.equal(app.__viewer.state.tab, 'entformung', 'nach dem Laden zur Entformung');
+  assert.equal(app.__viewer.colouring(), 'regions', 'und das Teil ist gefärbt');
+  const col = app.__viewer.partMesh.geometry.getAttribute('color').array;
+  assert.ok(Math.abs(col[0] - 0.72) > 0.05 || Math.abs(col[1] - 0.76) > 0.05, 'nicht mehr grau');
+
+  /* Ein zweites Teil, während das erste noch rechnet: früher blieb es
+     ungerechnet und grau, weil der Aufruf ins Leere lief. */
+  const buf3 = writeSTL(S.box(20, 20, 20), 'test');
+  input.files = [{ name: 'erstes.stl', arrayBuffer: () => Promise.resolve(buf3), byteLength: buf3.byteLength }];
+  input.dispatch('change');
+  for (let i = 0; i < 400 && !(app.__viewer.state.running && app.__viewer.state.name === 'erstes.stl'); i++) await new Promise(r => setTimeout(r, 5));
+  assert.equal(app.__viewer.state.running, true, 'das erste rechnet noch');
+  const buf4 = writeSTL(S.box(10, 30, 20), 'test');
+  input.files = [{ name: 'zweites.stl', arrayBuffer: () => Promise.resolve(buf4), byteLength: buf4.byteLength }];
+  input.dispatch('change');
+  await ready(app, 'zweites.stl');
+  await analyse(doc, app);
+  assert.equal(app.__viewer.state.name, 'zweites.stl');
+  assert.ok(app.__viewer.state.seg && app.__viewer.state.seg.label.length === app.__viewer.state.model.faceCount, 'das zweite ist gerechnet');
+  assert.ok(doc.getElementById('legend').innerHTML.includes('%'), 'und hat eine Legende');
 
   /* Ziehen-und-Ablegen über dem Viewport. */
   const vp = doc.getElementById('viewport');
@@ -621,7 +771,7 @@ test('Formaufbau: als GLB speichern und daraus wieder laden', async () => {
 const fmtDe = v => v.toLocaleString('de-DE', { maximumFractionDigits: 2 });
 
 /* ── Wandstärkenanalyse ────────────────────────────────────── */
-test('Wandstärkenanalyse: Feld auf Knopfdruck, Fläche daraus abgeleitet', async () => {
+test('Wandstärkenanalyse: Feld auf Knopfdruck, Kern daraus abgeleitet', async () => {
   const { doc: d4 } = buildDocument(read('wandstaerke.html'));
   installGlobals(d4);
   globalThis.location = { search: '?part=cover', href: 'http://test/wandstaerke.html' };
@@ -631,96 +781,100 @@ test('Wandstärkenanalyse: Feld auf Knopfdruck, Fläche daraus abgeleitet', asyn
   assert.ok(s.model, 'Bauteil geladen');
   assert.equal(s.field, null, 'ohne Bestätigung wird kein Feld gerechnet');
   assert.equal(d4.getElementById('run-field').textContent, 'Feld berechnen');
-  assert.ok(d4.getElementById('field-facts').innerHTML.includes('Zellgröße'),
+  assert.ok(d4.getElementById('field-facts').innerHTML.includes('Zellkante'),
     'die Kosten stehen VOR dem Rechnen da');
+  /* Die Zellkante kommt aus dem Bauteil: die halbe Wanddicke. */
+  const F4 = await import('../../../web/tools/3d-studio/js/part/field.js');
+  assert.equal(s.cell, F4.suggestCell(s.model), 'Vorgabe halbe Wanddicke: ' + s.cell);
+  assert.equal(d4.getElementById('cell').value, fmtDe(s.cell).replace(/\./g, ''));
 
   /* Grobes Raster, damit der Test flott bleibt. */
-  const res = d4.getElementById('res');
-  res.value = '48'; res.dispatch('input');
-  assert.equal(s.res, 48);
-  const band = d4.getElementById('band');
-  band.value = '8'; band.dispatch('change');
-  assert.equal(s.band, 8);
+  const cell = d4.getElementById('cell');
+  cell.value = '8'; cell.dispatch('change');
+  assert.equal(s.cell, 8);
+  assert.ok(d4.getElementById('field-facts').innerHTML.includes('8 mm'), 'die Kennzahlen folgen');
 
   d4.getElementById('run-field').dispatch('click');
   for (let i = 0; i < 800 && !s.field; i++) await new Promise(r => setTimeout(r, 25));
   assert.ok(s.field, 'Feld gerechnet');
   assert.equal(s.stale, false);
   assert.equal(d4.getElementById('run-field').textContent, 'Feld ist aktuell');
-  assert.ok(s.offsetTris && s.offsetTris.length > 0, 'Fläche sofort mit abgeleitet');
+  /* Das Feld reicht nur so weit wie das Bauteil: zwei Zellen Luft, kein Band nach außen. */
+  const b = s.model.bounds;
+  for (let a = 0; a < 3; a++) {
+    assert.ok(Math.abs(s.field.origin[a] - (b.min[a] - 2 * 8)) < 1e-6, 'Ursprung zwei Zellen vor dem Bauteil, Achse ' + a);
+    assert.ok(s.field.origin[a] + (s.field.dims[a] - 1) * s.field.h >= b.max[a] + 2 * 8 - 1e-6, 'und zwei dahinter');
+    assert.ok(s.field.origin[a] + (s.field.dims[a] - 1) * s.field.h < b.max[a] + 3 * 8 + 1e-6, 'aber nicht mehr');
+  }
+  assert.ok(s.field.fullInside, 'innen vollständig');
+  assert.ok(s.offsetTris && s.offsetTris.length > 0, 'Kern sofort mit abgeleitet');
   /* Die Vorgabe nach dem Rechnen: ein Untermaß von der halben größten
      Tiefe — die Fläche zeigt die Kerne. */
-  assert.ok(Math.abs(s.delta + Math.round(s.stats.maxIn) / 2) < 1e-9, 'Vorgabe −maxIn/2: ' + s.delta + ' bei maxIn ' + s.stats.maxIn);
-  assert.equal(d4.getElementById('delta').value, fmtDe(s.delta).replace(/\./g, ''), 'das Feld zeigt sie');
+  assert.ok(Math.abs(s.under - Math.round(s.stats.maxIn) / 2) < 1e-9, 'Vorgabe maxIn/2: ' + s.under + ' bei maxIn ' + s.stats.maxIn);
+  assert.equal(d4.getElementById('under').value, fmtDe(s.under).replace(/\./g, ''), 'das Feld zeigt sie');
   assert.ok(d4.getElementById('offset-facts').innerHTML.includes('cm³'), 'Kennwerte');
 
-  /* Aufmaß ändern: nur ableiten, kein neues Feld. */
+  /* Untermaß ändern: nur ableiten, kein neues Feld. Ein Minus ist egal —
+     nach innen geht es ohnehin. */
   const before = s.offsetTris.length;
   const fieldRef = s.field;
-  const d = d4.getElementById('delta');
-  for (const [typed, want] of [['+5', 5], ['-3', -3], ['−2', -2], ['1,5', 1.5]]) {
+  const d = d4.getElementById('under');
+  for (const [typed, want] of [['+4', 4], ['-3', 3], ['−2', 2], ['1,5', 1.5]]) {
     d.value = typed;
     d.dispatch('change');
-    assert.equal(s.delta, want, 'Eingabe „' + typed + '"');
+    assert.equal(s.under, want, 'Eingabe „' + typed + '"');
   }
   assert.equal(s.field, fieldRef, 'dasselbe Feld — nur neu abgeleitet');
   assert.equal(s.stale, false);
   assert.notEqual(s.offsetTris.length, before, 'andere Fläche');
-  assert.equal(d4.getElementById('delta-slider').value, '1.5', 'der Regler folgt dem Feld');
+  assert.equal(d4.getElementById('under-slider').value, '1.5', 'der Regler folgt dem Feld');
 
-  /* Der Regler: −20 bis 40, das Feld folgt, abgeleitet wird je Bild. */
-  const sl = d4.getElementById('delta-slider');
-  assert.equal(sl.getAttribute('min'), '-20');
-  assert.equal(sl.getAttribute('max'), '40');
+  /* Der Regler: von 0 bis zur dicksten Stelle, das Feld folgt, abgeleitet wird je Bild. */
+  const sl = d4.getElementById('under-slider');
+  assert.equal(sl.getAttribute('min'), '0');
+  assert.ok(Math.abs(+sl.max - Math.ceil(s.stats.maxIn * 2) / 2) < 1e-9, 'Reglerende = Maximum innen: ' + sl.max);
   const beforeSlider = s.offsetTris.length;
-  sl.value = '-4';
+  sl.value = '4';
   sl.dispatch('input');
-  assert.equal(s.delta, -4, 'der Regler setzt das Aufmaß');
-  assert.equal(d4.getElementById('delta').value, '-4', 'das Feld zeigt es');
+  assert.equal(s.under, 4, 'der Regler setzt das Untermaß');
+  assert.equal(d4.getElementById('under').value, '4', 'das Feld zeigt es');
   await new Promise(r => setTimeout(r, 30));
   assert.notEqual(s.offsetTris.length, beforeSlider, 'und die Fläche ist neu abgeleitet');
 
-  /* Nach innen endet der Regler an der dicksten Stelle — tiefer gibt es
-     keine Fläche mehr; die Zahl wird dort ebenfalls festgehalten. */
-  assert.ok(s.stats && s.stats.maxIn > 0, 'die dickste Stelle ist bekannt');
-  assert.ok(Math.abs(+d4.getElementById('delta-slider').getAttribute('min') + Math.ceil(s.stats.maxIn * 2) / 2) < 1e-9
-    || Math.abs(+d4.getElementById('delta-slider').min + Math.ceil(s.stats.maxIn * 2) / 2) < 1e-9, 'Reglerende = −Maximum innen');
-  d.value = '-99'; d.dispatch('change');
-  assert.ok(Math.abs(s.delta + s.stats.maxIn) < 1e-9, 'tiefer als das Maximum geht es nicht: ' + s.delta);
-  assert.equal(s.stale, false, 'und dafür braucht es kein neues Feld');
-
-  /* Außerhalb der Bandbreite nach außen: der Wert bleibt stehen, das
-     Band wird mitgezogen und ein neues Feld verlangt. */
+  /* Tiefer als die dickste Stelle geht es nicht — und dafür braucht es
+     kein neues Feld: nach außen wird nichts mehr gerechnet. */
   d.value = '99'; d.dispatch('change');
-  assert.equal(s.delta, 99, 'der Wunsch bleibt erhalten');
-  assert.equal(d4.getElementById('delta-slider').value, '40', 'der Regler bleibt an seinem Ende');
-  assert.ok(s.band > 99, 'Bandbreite zieht mit: ' + s.band);
-  assert.equal(s.stale, true, 'Feld muss größer werden');
-  assert.ok(d4.getElementById('field-state').textContent.includes('Bandbreite'));
+  assert.ok(Math.abs(s.under - s.stats.maxIn) < 1e-9, 'tiefer als das Maximum geht es nicht: ' + s.under);
+  assert.equal(s.stale, false, 'kein neues Feld nötig');
+
+  /* Eine andere Zellkante verlangt ein neues Feld; ein selbst gesetztes
+     Untermaß überlebt es. */
   d.value = '2'; d.dispatch('change');
-  band.value = '8'; band.dispatch('change');
+  cell.value = '10'; cell.dispatch('change');
+  assert.equal(s.stale, true, 'Feld muss neu gerechnet werden');
+  assert.ok(d4.getElementById('field-state').textContent.includes('Zellkante'));
   d4.getElementById('run-field').dispatch('click');
   for (let i = 0; i < 800 && s.stale; i++) await new Promise(r => setTimeout(r, 25));
   assert.equal(s.stale, false, 'nach dem Neurechnen wieder aktuell');
-  assert.equal(s.delta, 2, 'ein selbst gesetztes Aufmaß überlebt das neue Feld');
+  assert.equal(s.under, 2, 'ein selbst gesetztes Untermaß überlebt das neue Feld');
 
   /* Anzeige-Umschalter. */
   const seg = d4.getElementById('show-seg').querySelectorAll('button');
-  seg.find(b => b.dataset.value === 'offset').dispatch('click');
+  seg.find(b2 => b2.dataset.value === 'offset').dispatch('click');
   assert.equal(off.__viewer.partMesh.visible, false);
   assert.equal(off.__viewer.offsetMesh.visible, true);
-  seg.find(b => b.dataset.value === 'part').dispatch('click');
+  seg.find(b2 => b2.dataset.value === 'part').dispatch('click');
   assert.equal(off.__viewer.offsetMesh.visible, false);
-  seg.find(b => b.dataset.value === 'both').dispatch('click');
+  seg.find(b2 => b2.dataset.value === 'both').dispatch('click');
   assert.ok(off.__viewer.partMesh.visible && off.__viewer.offsetMesh.visible);
 });
 
-test('Wandstärkenanalyse: Feldschnitt und Farbskala', async () => {
+test('Wandstärkenanalyse: Feldschnitt, Farbskala und nach Größe gefärbte Wärmezentren', async () => {
   const off = await import('../../../web/tools/3d-studio/js/part/offsetapp.js');
   const d4 = globalThis.document;
   const s = off.__viewer.state;
   const bar = d4.getElementById('colorbar');
-  assert.ok(!bar.classList.contains('on'), 'ohne Schnitt keine Skala');
+  assert.ok(!bar.classList.contains('on'), 'ohne Schnitt und Marken keine Skala');
 
   const on = d4.getElementById('slice-on');
   on.checked = true;
@@ -729,28 +883,18 @@ test('Wandstärkenanalyse: Feldschnitt und Farbskala', async () => {
   assert.ok(off.__viewer.sliceMesh.visible, 'Schnittebene sichtbar');
   assert.ok(off.__viewer.sliceMesh.material.map, 'Rasterbild erzeugt');
   assert.ok(bar.classList.contains('on'), 'Skala eingeblendet');
-  /* Im Schnitt nur das Bauteil, durchscheinend — keine Offsetfläche. */
-  assert.equal(off.__viewer.offsetMesh.visible, false, 'die Offsetfläche verdeckte den Schnitt');
+  /* Im Schnitt nur das Bauteil, durchscheinend — kein Kern. */
+  assert.equal(off.__viewer.offsetMesh.visible, false, 'der Kern verdeckte den Schnitt');
   assert.ok(off.__viewer.partMesh.visible && off.__viewer.partMesh.material.transparent
     && off.__viewer.partMesh.material.opacity <= 0.45, 'das Bauteil durchscheinend');
-  /* Die Skala: voreingestellt innen = Wandstärke, in Turbo. */
-  assert.equal(s.slice.scale, 'innen');
-  assert.match(d4.getElementById('cb-title').textContent, /^Wandstärke/);
-  /* Die Skala endet beim größten Wert im Feld, nicht am Band. */
+  /* Die Skala: die Wandstärke in Turbo, bis zum größten Wert im Feld. */
+  assert.equal(d4.getElementById('cb-title').textContent, 'Wandstärke');
   const F4 = await import('../../../web/tools/3d-studio/js/part/field.js');
   const st = F4.fieldExtrema(s.field);
   assert.ok(s.stats && Math.abs(s.stats.maxIn - st.maxIn) < 1e-9, 'die Enden sind gerechnet');
   assert.ok(d4.getElementById('cb-ticks').innerHTML.includes(fmtDe(2 * st.maxIn)), 'oben die größte Wandstärke: ' + d4.getElementById('cb-ticks').innerHTML);
-  assert.ok(!d4.getElementById('cb-extra').innerHTML.includes('Offset'), 'das Aufmaß steht nicht im Schnitt');
   assert.ok(d4.getElementById('cb-extra').innerHTML.includes('Bauteilkontur'));
-  const scaleSeg = d4.getElementById('slice-scale-seg').querySelectorAll('button');
-  scaleSeg.find(b => b.dataset.value === 'beides').dispatch('click');
-  assert.equal(s.slice.scale, 'beides');
-  assert.equal(d4.getElementById('cb-title').textContent, 'Abstand zur Oberfläche');
-  assert.ok(d4.getElementById('cb-extra').innerHTML.includes('innen negativ'));
-  scaleSeg.find(b => b.dataset.value === 'aussen').dispatch('click');
-  assert.equal(d4.getElementById('cb-title').textContent, 'Abstand nach außen');
-  scaleSeg.find(b => b.dataset.value === 'innen').dispatch('click');
+  assert.equal(d4.getElementById('slice-scale-seg'), null, 'keine Skalenwahl mehr — außen gibt es nichts zu zeigen');
   const C4 = await import('../../../web/tools/3d-studio/js/part/colors.js');
   const lo = C4.turbo(0.15), hi = C4.turbo(0.85), mid = C4.turbo(0.5);
   assert.ok(lo[2] > 0.9 && lo[2] > lo[0] && hi[0] > 0.8 && hi[0] > hi[2] && mid[1] > mid[0] && mid[1] > mid[2],
@@ -771,9 +915,10 @@ test('Wandstärkenanalyse: Feldschnitt und Farbskala', async () => {
   on.dispatch('change');
   assert.equal(off.__viewer.sliceMesh.visible, false);
   assert.ok(!bar.classList.contains('on'));
-  assert.equal(off.__viewer.offsetMesh.visible, true, 'ohne Schnitt ist die Offsetfläche wieder da');
+  assert.equal(off.__viewer.offsetMesh.visible, true, 'ohne Schnitt ist der Kern wieder da');
 
-  /* Wärmezentren: Kugeln mit dem Radius des Feldwerts, wahlweise Kreise. */
+  /* Wärmezentren: Kugeln mit dem Radius des Feldwerts, nach Größe gefärbt
+     — dieselbe Skala wie der Schnitt, wahlweise Kreise. */
   const hot = d4.getElementById('hot-on');
   assert.equal(off.__viewer.hotGroup.visible, false);
   hot.checked = true;
@@ -781,8 +926,19 @@ test('Wandstärkenanalyse: Feldschnitt und Farbskala', async () => {
   assert.equal(off.__viewer.hotGroup.visible, true);
   assert.equal(off.__viewer.hotGroup.children.length, s.maxima.length, 'je Stelle eine Marke');
   assert.ok(s.maxima.length >= 1, 'ein vollständiger Kern hat dickste Stellen');
-  /* Frei sichtbar: Offsetfläche weg, Bauteil durchscheinend — abschaltbar. */
-  assert.equal(off.__viewer.offsetMesh.visible, false, 'die Offsetfläche verdeckte die Marken');
+  assert.ok(bar.classList.contains('on') && d4.getElementById('cb-title').textContent === 'Wandstärke', 'die Skala erklärt die Farben');
+  assert.ok(d4.getElementById('cb-extra').innerHTML.includes('Marken'));
+  const m0 = off.__viewer.hotGroup.children[0];
+  assert.ok(Math.abs(m0.scale.x - s.maxima[0].r) < 1e-9, 'Radius = Feldwert');
+  const top = C4.turbo(0.08 + 0.84 * s.maxima[0].r / s.stats.maxIn);
+  assert.ok(Math.abs(m0.material.color.r - top[0]) < 0.02 && Math.abs(m0.material.color.b - top[2]) < 0.02, 'die größte Marke trägt die Farbe ihrer Größe');
+  if (s.maxima.length > 1) {
+    const last = off.__viewer.hotGroup.children[s.maxima.length - 1];
+    assert.ok(last.userData.r <= m0.userData.r, 'nach Größe sortiert');
+    if (last.userData.r < 0.8 * m0.userData.r) assert.ok(last.material.color.b > m0.material.color.b, 'kleinere Marken bläulicher');
+  }
+  /* Frei sichtbar: Kern weg, Bauteil durchscheinend — abschaltbar. */
+  assert.equal(off.__viewer.offsetMesh.visible, false, 'der Kern verdeckte die Marken');
   assert.ok(off.__viewer.partMesh.material.transparent && off.__viewer.partMesh.material.opacity <= 0.45);
   const clear = d4.getElementById('hot-clear');
   clear.checked = false; clear.dispatch('change');
@@ -791,27 +947,25 @@ test('Wandstärkenanalyse: Feldschnitt und Farbskala', async () => {
   assert.equal(off.__viewer.offsetMesh.visible, false);
   assert.match(d4.getElementById('hot-facts').innerHTML, /Stellen/);
   assert.match(d4.getElementById('hot-facts').innerHTML, /größte Wandstärke/);
-  if (s.maxima.length) {
-    const m0 = off.__viewer.hotGroup.children[0];
-    assert.ok(Math.abs(m0.scale.x - s.maxima[0].r) < 1e-9, 'Kugelradius = Feldwert');
-    assert.equal(m0.geometry.type, 'SphereGeometry');
-    d4.getElementById('hot-seg').querySelectorAll('button').find(b => b.dataset.value === 'kreise').dispatch('click');
-    assert.equal(off.__viewer.hotGroup.children[0].geometry.type, 'RingGeometry', 'als Kreise');
-  } else {
-    assert.match(d4.getElementById('hot-note').textContent, /Bandbreite/, 'abgeschnittener Kern wird benannt');
-  }
-  const hm = d4.getElementById('hot-min');
-  hm.value = '100'; hm.dispatch('input');
-  assert.equal(s.hot.min, 100);
-  assert.ok(s.maxima.length <= 1 || s.maxima.every(m => m.r >= s.stats.maxIn - 1e-9), 'bei 100 % nur die dickste');
-  hot.checked = false;
-  hot.dispatch('change');
+  /* Kreise: dieselben Stellen als Umriss zur Kamera, dieselbe Farbe. */
+  d4.getElementById('hot-seg').querySelectorAll('button').find(b => b.dataset.value === 'kreise').dispatch('click');
+  assert.equal(s.hot.shape, 'kreise');
+  const r0 = off.__viewer.hotGroup.children[0];
+  assert.ok(typeof r0.onBeforeRender === 'function', 'Kreise drehen sich zur Kamera');
+  assert.ok(Math.abs(r0.material.color.r - top[0]) < 0.02, 'gleiche Farbe wie die Kugel');
+  /* Die Schwelle: weniger Stellen ab einem höheren Anteil. */
+  const n75 = s.maxima.length;
+  const min = d4.getElementById('hot-min');
+  min.value = '100'; min.dispatch('input');
+  assert.ok(s.maxima.length <= n75 && s.maxima.length >= 1, 'bei 100 % nur die dicksten: ' + s.maxima.length);
+  assert.ok(s.maxima.every(m => m.r >= s.stats.maxIn - 1e-9), 'bei 100 % nur die dickste');
+  min.value = '75'; min.dispatch('input');
+  hot.checked = false; hot.dispatch('change');
   assert.equal(off.__viewer.hotGroup.visible, false);
-  assert.equal(off.__viewer.offsetMesh.visible, true, 'die Offsetfläche kommt zurück');
-  assert.equal(d4.getElementById('part-note'), null, 'kein Beispieltext unter dem Laden-Knopf');
+  assert.ok(!bar.classList.contains('on'), 'ohne Marken keine Skala');
+  assert.equal(off.__viewer.offsetMesh.visible, true, 'der Kern kommt zurück');
 });
 
-/* ── Abstandsanalyse ─────────────────────────────────────────── */
 test('Abstandsseite: zwei Dateien, Abstand auf Knopfdruck', async () => {
   const { doc: d5 } = buildDocument(read('abstand.html'));
   installGlobals(d5);

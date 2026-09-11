@@ -154,15 +154,32 @@ Endung.
    - **Hälfte** — sieht eine der beiden Formhälften das Dreieck frei und
      mit mindestens 0,5° Schräge, gehört es ihr (bei beiden: der mit der
      größeren Schräge).
-   - **Schieber** — sonst bekommt es der Schieber, der es frei sieht, der
-     mit der frontalsten Sicht. Eine Fläche *parallel* zur Schieberrichtung
-     (0°) ist erlaubt: eine Querbohrung wird von einem Kern ohne Schräge
-     gebildet. Bei Gleichstand nimmt sie der Schieber von der näheren Seite.
+   - **Schieber** — sonst bekommt es ein Schieber, der es frei sieht. Eine
+     Fläche *parallel* zur Schieberrichtung (0°) ist erlaubt: eine
+     Querbohrung wird von einem Kern ohne Schräge gebildet. *Welcher*
+     Schieber, entscheidet der zusammenhängende Fleck, nicht das einzelne
+     Dreieck: die Richtung, die die größte Fläche des Flecks sieht,
+     bekommt alles, was sie sieht, der Rest wird erneut so verteilt. Ein
+     Sensordom auf der Seitenwand geht damit als Ganzes an *einen*
+     Schieber; nach der frontalsten Sicht je Dreieck bekämen seine
+     Flanken zwei weitere. Sehen zwei Richtungen gleich viel (Querbohrung
+     ohne Schräge), gilt je Dreieck die frontalste Sicht, bei Gleichstand
+     die nähere Seite — Kerne von beiden Seiten.
    - **Hinterschnitt** — was keine Richtung frei sieht (rot).
    - **Nachbarn** — eine senkrechte Wand, die nur eine Hälfte streifend
      sieht und kein Schieber erreicht, folgt der Mehrheit ihrer Nachbarn.
+     Streifend heißt bis 0,5° Gegenschräge: eine senkrecht gebaute Wand
+     kommt aus dem Export mit `n·d = −0,00002`, und mit einer harten Grenze
+     bei 0 sähe die Hälfte sie nicht — ein 7-mm²-Streifen am Fuß einer
+     Rippe wurde so zum Schieber. Eine *hohe* Wand mit Gegenschräge
+     verdeckt sich dabei selbst und bleibt Hinterschnitt.
    - **Löcher** — ein Fleck, der ganz von *einer* anderen Region umschlossen
-     ist und den diese Richtung ebenfalls sieht, schlägt ihr zu.
+     ist und den diese Richtung ebenfalls sieht, schlägt ihr zu; einer
+     Hälfte genügt die streifende Sicht.
+   - **Splitter** — ein Schieber- oder Hinterschnittfleck unter 1/100 000
+     der Oberfläche, der nur an Hälften grenzt, geht an die Hälfte mit der
+     längsten gemeinsamen Kante. Die Fläche wird in den Kennzahlen
+     gemeldet, nicht verschwiegen.
 
    Die Regeln gelten **je Dreieck**, nicht als Optimierung über das Netz.
    Der Vorgänger wuchs Regionen mit Kosten je Dreieck über das Netz — und
@@ -180,51 +197,130 @@ Endung.
 
 Wo zwei Regionen aufeinandertreffen, liegt die **Trennlinie**.
 
-### Einfärbungen
+Das Netz wird genommen, wie es kommt — die Regeln urteilen je Dreieck als
+Ganzem. Sieht eine Hälfte ein Dreieck nur zum Teil, gilt es als nicht
+gesehen und geht an einen Schieber; bei großen Dreiecken hängt die
+Schieberfläche damit an der Zerlegung. Feinere Netze sind Sache des
+Exports, nicht der Analyse: die Beispielteile kommen mit Dreiecken bis
+100 mm² aus `openscad_parts` (`tools/stl2glb.mjs --max-area 100`, in
+`render.sh` voreingestellt — Dreiecke über der Fläche werden an ihrer
+längsten Kante geteilt, die Nachbarn mit, damit keine T-Stöße entstehen;
+flächengebunden, damit die Dateien klein bleiben: Getriebedeckel +10 %,
+Kühlkörper ×2). Der Schatten eines Doms auf der Flanschunterseite ist
+damit auf ~10 mm genau beim Schieber statt als ganzes 700-mm²-
+Fächerdreieck.
 
-**Regionen** (sechs Farben + Rot für Hinterschnitte), **Schräge**
-(Farbverlauf um einen Grenzwert, Hinterschnitte dunkelrot) und **Grau**.
-Die Legende nennt je Eintrag den Flächenanteil, die Kennzahlen die
-Bilanz Hälften / Schieber / Hinterschnitt, die gewählte Formöffnung und
-die Rechenzeit. Bei der Schräge steht links unten im Viewport eine
-**Farbskala** mit den Zahlenwerten; bei den Regionen bleibt sie aus, dort
-gibt es keine Reihenfolge.
+**Bewegliche Seite** ist die +Seite der Formöffnungsachse — im
+Bauteilrahmen liegt die Trennebene bei z = 0 und die Form öffnet nach
++z, die +Seite ist die Auswerferseite. Liegt das Teil anders herum,
+tauscht der Schalter „Bewegliche Seite" die Rollen: Namen, Blick in die
+Hälften, Haftung und der Gleichstand senkrechter Wände folgen ihm.
 
-### Formansicht
+### Reiter sind Modi
 
-Ein Häkchen unter „Formansicht" macht aus den Regionen **Formteile**: die
-Flächen jeder Hälfte und jedes Schiebers werden zu einem eigenen Stück und
-fahren um den eingestellten **Abstand** entlang ihrer Entformrichtung
-heraus — die Form geht auf wie beim Öffnen, das Bauteil bleibt
-durchscheinend (oder gar nicht) dazwischen stehen, Hinterschnitte bleiben
-rot an ihrem Ort. Entlang der Trennlinie trägt jedes Stück einen **Rand**,
-um den gewählten Betrag in die Form hinein gezogen: die Trennfläche in
+Die Seitenleiste hat fünf **Reiter**, und jeder ist ein Modus: er
+bestimmt allein, was im Viewport steht, und nimmt es beim Verlassen
+wieder mit. Kein Schalter schaltet einen anderen mit.
+
+- **Bauteil** — laden, Kennzahlen, das Netz grau (Netzkanten wahlweise).
+  Wer hier ein Teil lädt, landet nach der Rechnung in der Entformung —
+  sonst stünde das neue Teil grau da, als wäre nichts geschehen. Ein
+  Teil, das geladen wird, während noch gerechnet wird, kommt danach dran.
+- **Entformung** — Formöffnung, bewegliche Seite, die Legende und die
+  Bilanz Hälften / Schieber / Hinterschnitt, die **Einfärbung**
+  (**Regionen**: sechs Farben + Rot für Hinterschnitte; **Schräge**:
+  Farbverlauf um einen Grenzwert, Hinterschnitte dunkelrot, mit Farbskala
+  links unten im Viewport), die Trennlinie.
+- **Formteile** — die Regionen als Formteile auseinandergezogen (unten).
+- **Flächen** — die projizierten Flächen mit ihren Silhouetten (unten).
+- **Haftung** — das Bauteil nach Haftmaß gefärbt (Turbo, Farbskala; was
+  nicht haftet, hellgrau) und die Haftkarte (unten).
+
+### Formteile
+
+Im Reiter Formteile werden die Regionen zu **Formteilen**: die Flächen
+jeder Hälfte und jedes Schiebers werden zu einem eigenen Stück und fahren
+um den eingestellten **Abstand** entlang ihrer Entformrichtung heraus —
+die Form geht auf wie beim Öffnen, das Bauteil bleibt durchscheinend
+(oder gar nicht) dazwischen stehen, Hinterschnitte bleiben rot an ihrem
+Ort. Entlang der Trennlinie trägt jedes Stück einen **Rand**, um den
+gewählten Betrag in die Form hinein gezogen: die Trennfläche in
 Andeutung, damit das Stück nicht wie Papier aussieht, sondern wie der
-Einsatz, aus dem das Bauteil gerade gezogen wurde. Der Schalter **Blick**
-stellt die Kamera von der Trennebene aus in die bewegliche bzw. feste
-Hälfte — so sieht man die Kavität von innen, von der Seite, auf der das
-Bauteil war; was jenseits der Trennebene liegt (die Gegenhälfte, deren
-Schieber, das Bauteil), ist dabei weggeschnitten, sonst stünde es beim
-Blick von außen davor. „Alle" zeigt wieder alles. Die Stücke baut
-`js/part/dieview.js` (Dreiecke je Region, Trennkanten,
-Rand; ohne Three.js), gezeichnet und verschoben werden sie in
+Einsatz, aus dem das Bauteil gerade gezogen wurde (bis 500 mm, dann sieht
+das Stück aus wie ein Formblock). Darunter die **sechs möglichen
+Formteile** — zwei Hälften, vier Schieber — je mit Farbe, Flächenanteil
+und Schalter: anklicken zeigt oder verbirgt das Stück; was kein Dreieck
+braucht, steht grau („nicht in der Form") und lässt sich nicht schalten.
+Die Stücke baut `js/part/dieview.js` (Dreiecke je Region, Trennkanten,
+Rand, Seite; ohne Three.js), gezeichnet und verschoben werden sie in
 `js/part/dieviewer.js`; die Werkbank hat dieselbe Formansicht im Schritt
-Bauteil.
+Bauteil, dort mit dem Blick von der Trennebene in eine Hälfte.
+
+### Projizierte Flächen
+
+Für jedes Formteil die Fläche, die es in seiner Öffnungsrichtung dem
+Metalldruck entgegenstellt (`pieceProjections` in `js/part/dieview.js`):
+die Flächen des Stücks entlang seiner Achse auf ein Raster projiziert
+und als **Vereinigung** gezählt — die Summe projizierter Dreiecke zählte
+Ober- und Unterseite einer Wand doppelt. Für die Hälften ist das die
+Projektion auf die Trennebene (mit Anguss und Überläufen die
+Sprengfläche der Auslegung), für einen Schieber die Fläche, gegen die
+er verriegelt werden muss; dazu das ganze Bauteil auf die Trennebene.
+Nur Flächen, keine Kräfte — der Druck gehört zur Auslegung. Im Reiter
+stehen sie als **Silhouetten**: Umriss und Füllung in der Regionsfarbe
+auf einer Ebene JENSEITS des Bauteils in der Entformrichtung des Stücks;
+**Abstand** (Luft zum Bauteil) und **Deckkraft** der Füllung sind
+Regler.
+
+### Haftung
+
+Beim Öffnen muss das Teil auf *einer* Seite bleiben — der mit den
+Auswerfern. Es hängt an den Wänden, die eine Hälfte abbildet, umso
+fester, je weniger Schräge sie haben — und dort, wo es beim Erstarren auf
+die Form **aufschrumpft** (Kerne, Taschen, Bohrungen), nicht an
+Außenwänden, von denen es sich wegzieht. `js/part/ejector.js` rechnet je
+Dreieck einer Hälfte das Haftmaß
+
+    H = A · max(0, μ·cos α − sin α) · g,   g = min(1, max(0, cos θ + ½))
+
+mit der Fläche A, der Entformschräge α gegen die Hälfte, dem Reibwert μ
+(Regler, Vorgabe 0,3; die Klammer ist die Kraft, die eine mit dem Druck
+1 angepresste Wand der Entformung entgegensetzt, Menges/Mohren) und dem
+Schrumpffaktor g aus dem Winkel θ zwischen Flächennormale und Richtung
+zum Volumenschwerpunkt: 1 für Wände, die beim Schrumpfen in die Form
+hineinwandern (Innenwand einer Tasche, Bohrung um einen Kern, die dem
+Schwerpunkt zugewandte Flanke einer Rippe), 0 für Wände, die sich
+zurückziehen (Außenwände, die abgewandte Rippenflanke), ½ für Wände quer
+dazu — die Flanken einer Rippe, die auf den Schwerpunkt zuläuft, gleiten
+beim Schrumpfen an der Form entlang, werden nicht angepresst, halten aber
+mit Reibung. (Ein erster Wurf wog mit dem Betrag der Annäherung und ließ
+solche Rippen ganz aus — der Konstrukteur erwartet sie zu Recht auf der
+Karte.) Bewusst grob: kein Betrag der Schrumpfung, keine Elastizität,
+keine Spannung zwischen Kernen; relativ — die **Summen beider Hälften**
+sagen, auf welcher Seite das Teil bleibt (Kennzahlen in Prozent, eine
+Warnung, wenn die feste Seite stärker hält).
+
+Die **Haftkarte** verteilt das Haftmaß der gewählten Hälfte auf das
+Raster ihrer Projektion und glättet es (σ = 4 mm; senkrechte Wände
+hätten sonst nur eine Linie als Spur). Sie steht wie die Silhouetten
+jenseits des Bauteils in der Entformrichtung der Hälfte, mit Reglern für
+Abstand und Deckkraft; im selben Reiter trägt das Bauteil das Haftmaß
+als Farbe. Wo Auswerfer sitzen, entscheidet der Konstrukteur mit der
+Karte — Stiftvorschläge macht die Seite nicht.
 
 ## Wandstärkenanalyse (`wandstaerke.html`)
 
-Eine Offsetfläche dadurch zu bauen, dass man jeden Punkt des Netzes
-entlang seiner Normale nach außen schiebt, geht nur bei kleinen Beträgen
-gut. Sobald das Aufmaß in die Größenordnung von Verrundungen und Taschen
-kommt, durchdringen sich die verschobenen Flächen selbst: eine Innenecke
-klappt um, ein schmaler Steg wächst durch sich hindurch. Deshalb läuft
-das hier über ein **Rasterfeld**.
+Die Frage der Seite: wie dick ist das Bauteil wo, wo liegt sein Kern,
+und wo erstarrt es zuletzt? Beantwortet wird sie über ein **Rasterfeld**
+des Abstands zur Oberfläche. (Offsetflächen nach außen, für die
+Temperierung, hat diese Seite nicht mehr — der Temperierkanal-Designer
+rechnet seine Abstandsfläche selbst.)
 
 ### Schritt 1 — Feld (auf Knopfdruck)
 
 `js/part/field.js` legt ein Raster über das Bauteil und speichert für
 jeden Rasterpunkt den vorzeichenbehafteten Abstand zur Oberfläche (innen
-negativ). Zwei Durchgänge:
+negativ). Drei Durchgänge:
 
 1. **Innen/außen** — für jede Rastersäule (feste x, y) werden alle
    Dreiecke gesucht, die sie überdecken, und ihre z-Durchstoßpunkte
@@ -234,26 +330,29 @@ negativ). Zwei Durchgänge:
    Säulen liegen um Bruchteile einer Zelle versetzt, damit ein Strahl
    nicht genau eine Netzkante trifft.
 2. **Abstandsband** — jedes Dreieck trägt seinen exakten Abstand
-   (Punkt-Dreieck nach Ericson) in die Rasterpunkte seiner um `band`
+   (Punkt-Dreieck nach Ericson) in die Rasterpunkte seiner um drei Zellen
    aufgeweiteten Bounding-Box ein. Eine untere Schranke über die Box
-   spart den teuren Test fast überall. Außerhalb des Bandes bleibt der
-   Wert nach außen bei +band stehen — das hält Speicher und Rechenzeit
-   im Rahmen.
-3. **Der Kern** — nach innen gibt es keine solche Grenze: der Abstand
-   kann nie größer werden als die halbe Dicke, und genau dieses Maximum
-   ist die Zahl, um die es bei der Wandstärke geht. Zellen jenseits des
-   Bandes bekommen deshalb ihren Abstand aus einer exakten euklidischen
+   spart den teuren Test fast überall.
+3. **Der Kern** — nach innen gibt es keine Grenze: der Abstand kann nie
+   größer werden als die halbe Dicke, und genau dieses Maximum ist die
+   Zahl, um die es bei der Wandstärke geht. Zellen jenseits des Bandes
+   bekommen deshalb ihren Abstand aus einer exakten euklidischen
    Distanztransformation der Innen/Außen-Maske (Felzenszwalb &
    Huttenlocher, trennbar, O(N)) — auf eine halbe Zelle genau; nahe der
    Oberfläche bleibt der exakt gestempelte Wert. Das Feld ist innen
-   immer vollständig, ein abgeschnittener Kern kommt nicht mehr vor.
+   immer vollständig.
 
-**Auflösung** (Zellen entlang der längsten Kante) und **Bandbreite
-außen** stehen als Regler daneben; was sie kosten werden — Zellgröße,
-Rasterabmessungen, Punktzahl, Speicher — steht *vor* dem Rechnen in den
-Kennzahlen. Gerechnet wird erst auf „Feld berechnen".
+Das Feld reicht nur so weit wie das Bauteil, zwei Zellen Luft darum —
+nach außen wird nichts gespeichert, was diese Seite nicht braucht. Der
+einzige Regler ist die **Zellkante** in mm (Vorgabe aus dem Bauteil: die
+halbe Wanddicke 2V/A, damit jede Wand mindestens zwei Zellen über ihre
+Dicke hat; ein selbst gesetzter Wert überlebt ein neues Bauteil). Was sie
+kosten wird — Rasterabmessungen, Punktzahl, Speicher — steht *vor* dem
+Rechnen in den Kennzahlen. Gerechnet wird erst auf „Feld berechnen".
+Die Werkbank benutzt dasselbe Modul mit einem Band nach außen, weil ihre
+Temperierung es braucht.
 
-### Schritt 2 — Fläche ableiten (sofort)
+### Schritt 2 — Kern ableiten (sofort)
 
 `js/part/surfacenets.js` zieht die Fläche gleichen Abstands heraus:
 je Rasterzelle mit Vorzeichenwechsel ein Punkt (Mittelwert der
@@ -262,24 +361,17 @@ zwischen den vier angrenzenden Zellpunkten. Gegenüber Marching Cubes
 braucht das keine 256-Zeilen-Tabelle, liefert gleichmäßigere Dreiecke und
 ist geschlossen und mannigfaltig.
 
-Das **Aufmaß** hat einen Regler und daneben ein Feld für die Zahl
-(`+10`, `-10`, `−10`, `1,5` und `1.5` gelten alle; nach oben auch
-jenseits des Reglers, der bleibt dann an seinem Ende stehen). Nach innen
-endet der Regler an der **dicksten Stelle** — tiefer gibt es nichts
-mehr, was eine Fläche gleichen Abstands haben könnte; auch die Zahl
-wird dort festgehalten. Nach oben reicht er bis +40 mm. Beide zeigen
-denselben Wert. Nach dem Rechnen steht als **Vorgabe ein Untermaß von
-der halben größten Tiefe**: stehen bleibt, was dicker ist als die halbe
-größte Wandstärke — die Kerne, um die es geht. Ein selbst gesetztes
-Aufmaß überlebt ein neues Feld; ein neues Bauteil bekommt wieder die
-Vorgabe. Solange er in der Bandbreite liegt, kostet ein
-anderer Wert nur das Ableiten — Millisekunden, kein neues Feld; am
-Regler wird höchstens einmal je Bild abgeleitet. Verlangt es mehr, zieht
-die Bandbreite automatisch mit und die Seite bittet um ein neues Feld.
-
-Was dabei herauskommt, ist geometrisch richtig statt nur verschoben:
-an konvexen Kanten entsteht ein Radius in Höhe des Aufmaßes, enge Spalte
-wachsen zu, statt sich zu durchdringen. `tests/field.test.mjs` prüft das
+Abgeleitet wird nur nach innen: das **Untermaß** s hat einen Regler von 0
+bis zur dicksten Stelle und daneben ein Feld für die Zahl (`4`, `1,5`
+und `1.5` gelten; ein Minus davor ist egal, nach innen geht es ohnehin;
+tiefer als das Maximum wird die Zahl festgehalten — dort gibt es keine
+Fläche mehr). Stehen bleibt, was dicker ist als 2·s: der **Kern**. Nach
+dem Rechnen steht als Vorgabe ein Untermaß von der halben größten Tiefe
+— die Kerne, um die es geht; ein selbst gesetztes überlebt ein neues
+Feld, ein neues Bauteil bekommt wieder die Vorgabe. Jeder andere Wert
+kostet nur das Ableiten — Millisekunden, kein neues Feld; am Regler wird
+höchstens einmal je Bild abgeleitet. Der Kern lässt sich als STL
+speichern. `tests/field.test.mjs` prüft die Fläche gleichen Abstands
 gegen die geschlossene Formel für den Offset eines Quaders
 (V = abc + 2r(ab+bc+ca) + πr²(a+b+c) + 4/3 πr³) und gegen die Kugel.
 
@@ -293,18 +385,23 @@ Bauteils; und die erstarrt zuletzt. Genau dort entstehen Lunker und
 Porosität, und bis dorthin muss der Nachdruck über Anguss und Speiser
 reichen.
 
-Zwei Wege, das abzulesen:
-
-- **Untermaß −s am Regler** — alles, was dünner als 2·s ist, verschwindet;
-  stehen bleiben genau die Kerne, die dicker sind. Der Betrag, bei dem
-  der Körper zerfällt, ist die halbe größte Wandstärke.
-- **Feldschnitt einschalten** — mit der Skala „innen" sind die roten
-  Bereiche die dicken Stellen, die Farbskala nennt die Wandstärke in mm.
-
-Der Erstarrungsmodul V/A ist damit nicht identisch; die Kugelprobe ist
-sein üblicher Stellvertreter und für Wände exakt gleich (bei einer Platte
-der Dicke t sind beide t/2, bei einem Zylinder mit Ø d ergibt die Kugel
-d/2, der Modul d/4).
+Drei Wege, das abzulesen: der **Kern** (oben), der **Feldschnitt** — ein
+Schnitt durch das Feld als Rasterbild in der Turbo-Skala, blau an der
+Oberfläche, rot an der dicksten Stelle, außen grau, mit der Bauteilkontur
+als Linie; Achse und Lage sind Regler, im Schnitt steht nur das Bauteil
+durchscheinend — und die **Wärmezentren**: `thickMaxima` in
+`js/part/field.js` sucht die Rasterpunkte, deren Abstand keinen größeren
+Nachbarn hat, behält die ab einem wählbaren Anteil der größten
+Wandstärke und lässt nahe einer stärkeren Stelle (näher als das
+1,6-fache von deren Radius) nichts weiteres zu. Jede Marke ist die
+größte Kugel, die dort ins Bauteil passt — Radius = Feldwert, Durchmesser
+= Wandstärke — und trägt die **Farbe ihrer Größe** auf derselben
+Wandstärken-Skala wie der Schnitt (blau dünn, rot dick); die Farbskala
+im Viewport gilt für beide. Wahlweise Kreise statt Kugeln (zur Kamera
+gedreht, ohne Tiefenprüfung, damit sie auch im deckenden Bauteil zu
+sehen sind), und „frei sichtbar" nimmt den Kern weg und macht das
+Bauteil durchscheinend. Die Kennzahlen nennen Zahl der Stellen, größte
+und kleinste markierte Wandstärke und den Ort der dicksten.
 
 ### Das Feld ansehen
 
@@ -1113,6 +1210,7 @@ js/part/glbio.js      GLB lesen ohne Three.js (Beispielteile und Uploads)
 js/part/stlio.js      STL lesen und schreiben
 js/part/colors.js     Farben der Analyse (aus der DieLogic-Palette)
 js/part/app.js        Einstieg Entformungsanalyse
+js/part/ejector.js    Haftmaß je Fläche, Haftkarte
 js/part/offsetapp.js  Einstieg Wandstärkenanalyse
 js/part/distanceapp.js Einstieg Abstandsanalyse-Viewer
 js/runner/vec.js      kleine Vektorrechnung (ohne Three.js, unter Node lauffähig)

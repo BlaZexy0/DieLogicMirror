@@ -266,3 +266,138 @@ test('Formansicht: jedes Dreieck in genau einem Stück, Rand aus den Trennkanten
   assert.ok(bare.every(p => p.skirt.length === 0));
   assert.equal(bare.reduce((a, p) => a + p.faces, 0), m.faceCount);
 });
+
+/* ── Schieber je Fleck, Splitter, Flächen, Haftung ──────────── */
+import { FACING_EPS } from '../../../web/tools/3d-studio/js/part/visibility.js';
+import { pieceProjections, projectSoup, maskOutline } from '../../../web/tools/3d-studio/js/part/dieview.js';
+import { gripPerFace, ejectorMap, volumeCentroid } from '../../../web/tools/3d-studio/js/part/ejector.js';
+
+/* Zusammenhängende Flecken je Marke. */
+function labelPatches(model, seg, pick) {
+  const F = model.faceCount, seen = new Uint8Array(F), out = [];
+  for (let f = 0; f < F; f++) {
+    if (seen[f] || !pick(seg.label[f])) continue;
+    const l = seg.label[f], stack = [f], mem = [];
+    seen[f] = 1;
+    while (stack.length) {
+      const c = stack.pop(); mem.push(c);
+      for (let e = 0; e < 3; e++) { const w = model.nbr[c * 3 + e]; if (w >= 0 && !seen[w] && seg.label[w] === l) { seen[w] = 1; stack.push(w); } }
+    }
+    out.push({ label: l, faces: mem, area: mem.reduce((a, q) => a + model.areas[q], 0) });
+  }
+  return out;
+}
+
+test('Getriebedeckel: ein Schieber je Dom, keine Splitter ohne Schräge, keine dritte Richtung', async () => {
+  const { model, vis, seg } = await analyse(demoTris('gearbox_cover'));
+  assert.equal(seg.mainAxis, 2);
+  /* Sensordom auf der +X-Wand, Steckerdom auf der −Y-Wand — nichts an −X, +Y. */
+  assert.ok(seg.areaByLabel[0] > 2000 && seg.areaByLabel[3] > 3000, 'Schieber +X und −Y: ' + seg.areaByLabel[0].toFixed(0) + ' / ' + seg.areaByLabel[3].toFixed(0));
+  assert.equal(seg.areaByLabel[1], 0, 'kein Schieber −X');
+  assert.equal(seg.areaByLabel[2], 0, 'kein Schieber +Y');
+  const patches = labelPatches(model, seg, l => l >= 0 && DIRS[l].axis !== 2).sort((a, b) => b.area - a.area);
+  const sliders = seg.areaByLabel[0] + seg.areaByLabel[3];
+  assert.ok(patches.length >= 2 && patches[0].area + patches[1].area > 0.85 * sliders,
+    'zwei Flecken tragen die Schieberfläche: ' + patches.map(p => DIRS[p.label].label + ' ' + p.area.toFixed(0)).join(', '));
+  assert.ok(sliders < 10000, 'kein ganzes Fächerdreieck der Flanschunterseite mehr beim Schieber: ' + sliders.toFixed(0));
+  /* Senkrechte Splitter mit Rauschen in der Normalen (n·d = −0,00002) sind
+     keine Schieber mehr: senkrechte Schieberfläche nur an den Domen selbst. */
+  for (const p of patches) for (const f of p.faces) {
+    if (Math.abs(vis.dot[f * 6 + 5]) >= FACING_EPS) continue;
+    const x = model.centroids[f * 3], y = model.centroids[f * 3 + 1];
+    assert.ok(Math.hypot(x - 198, y - 60) < 40 || Math.hypot(x + 90, y + 160) < 50, 'senkrechte Schieberfläche nur an den Domen: ' + x.toFixed(0) + '/' + y.toFixed(0));
+  }
+});
+
+test('Splitter: ein winziger Fleck ohne Sicht einer Hälfte geht an die Hälften und wird gemeldet', async () => {
+  const { seg, model } = await analyse(demoTris('u_channel_ribbed'));
+  assert.ok(seg.sliverArea > 0 && seg.sliverArea < 1e-4 * model.totalArea, 'Splitterfläche gemeldet: ' + seg.sliverArea);
+  assert.equal([0, 1, 2, 3].reduce((a, i) => a + seg.areaByLabel[i], 0), 0, 'und kein Schieber');
+});
+
+test('Bewegliche Seite: +Achse als Vorgabe, tauschbar — Namen und Gleichstand folgen', async () => {
+  const m = buildModel(S.box(60, 40, 30));
+  const vis = await computeVisibility(m, { samples: 7 });
+  const plus = segment(m, vis, { mainAxis: 2 });
+  const minus = segment(m, vis, { mainAxis: 2, movingSign: -1 });
+  /* Die senkrechten Seiten gehen bei Gleichstand an die bewegliche Hälfte. */
+  assert.ok(plus.areaByLabel[4] > plus.areaByLabel[5], 'Vorgabe: die Seiten bei +Z');
+  assert.ok(minus.areaByLabel[5] > minus.areaByLabel[4], 'getauscht: bei −Z');
+  assert.equal(dirNames(2)[4].name, 'Bewegliche Seite +Z');
+  assert.equal(dirNames(2, -1)[4].name, 'Feste Seite +Z');
+  assert.equal(dirNames(2, -1)[5].name, 'Bewegliche Seite −Z');
+});
+
+test('Projizierte Flächen: je Stück in seiner Richtung, gerastert als Vereinigung', async () => {
+  const m = buildModel(S.box(60, 40, 30));
+  const vis = await computeVisibility(m, { samples: 7 });
+  const seg = segment(m, vis, { mainAxis: 2 });
+  const pieces = diePieces(m, seg, { skirt: 5 });
+  const pr = pieceProjections(pieces, m, seg, { cell: 0.5 });
+  const top = pr.pieces.find(q => q.label === 4), bottom = pr.pieces.find(q => q.label === 5);
+  near(top.area, 2400, 0.03, 'obere Hälfte: 60 × 40');
+  near(bottom.area, 2400, 0.03, 'untere Hälfte');
+  near(pr.total.area, 2400, 0.03, 'Bauteil auf die Trennebene');
+  assert.equal(top.frame.axis, 2);
+  const px = projectSoup(m.tris, m.bounds, 0, { cell: 0.5 });
+  near(px.area, 1200, 0.03, 'in X: 40 × 30');
+  const outline = maskOutline(top.frame, top.mask);
+  let len = 0;
+  for (let i = 0; i < outline.length; i += 4) len += Math.hypot(outline[i + 2] - outline[i], outline[i + 3] - outline[i + 1]);
+  near(len, 200, 0.05, 'der Umriss ist der Rand des Rechtecks');
+  /* Die Trennebene und die Seiten der Stücke: die senkrechten Wände gehen
+     bei Gleichstand an die bewegliche Hälfte, die Trennlinie liegt also an
+     der Unterkante. */
+  assert.ok(pieces.every(p => Math.abs(p.parting + 15) < 1e-6), 'Trennlinie an der Unterkante: ' + pieces[0].parting);
+  assert.equal(pieces.find(p => p.label === 4).side, 1);
+  assert.equal(pieces.find(p => p.label === 5).side, -1);
+  assert.equal(pieces.find(p => p.label === 4).skirtLen, 5, 'der Rand kennt seine Länge');
+});
+
+test('Haftung: eine Wanne schrumpft auf den Kern der beweglichen Hälfte, Rippenflanken zum Schwerpunkt haften, Außenwände nicht', async () => {
+  const t = Math.tan(1.5 * Math.PI / 180);
+  const outer = S.rectLoft([{ z: -40, w: 100 - 80 * t, h: 80 - 80 * t }, { z: 0, w: 100, h: 80 }]);
+  const inner = S.rectLoft([{ z: -34, w: 88 - 68 * t, h: 68 - 68 * t }, { z: 1, w: 88 + 2 * t, h: 68 + 2 * t }]);
+  const part = subtract(outer, inner);
+  const { model, vis, seg } = await analyse(part, { mainAxis: 2 });
+  const c = volumeCentroid(model);
+  assert.ok(Math.abs(c[0]) < 1e-6 && Math.abs(c[1]) < 1e-6 && c[2] < -10, 'Schwerpunkt in der Mitte, unten: ' + c);
+  const grip = gripPerFace(model, vis, seg, { mu: 0.3 });
+  assert.ok(grip.mov > 0, 'die Innenwände haften an +Z');
+  assert.ok(grip.fix < 0.05 * grip.mov, 'die Außenwände ziehen sich zurück: ' + grip.fix + ' / ' + grip.mov);
+  assert.ok(gripPerFace(model, vis, seg, { mu: 0.5 }).mov > grip.mov, 'mehr Reibung, mehr Haftung');
+  assert.equal(gripPerFace(model, vis, seg, { mu: 0.3, movSign: -1 }).movLabel, 5, 'getauscht ist −Z die bewegliche');
+  const em = ejectorMap(model, seg, grip, grip.movLabel, { cell: 0.5 });
+  assert.ok(em.max > 0 && em.map.every(v => v >= 0 && v <= 1), 'Karte normiert');
+  assert.equal(em.label, 4);
+  /* Die Karte trägt ihre Haftung am Rand der Wanne (unter den Innenwänden), nicht in der Mitte. */
+  const { frame, map } = em;
+  const at = (x, y) => map[Math.floor((y - frame.v0) / frame.h) * frame.nu + Math.floor((x - frame.u0) / frame.h)];
+  assert.ok(at(43, 0) > 0.5 && at(0, 0) < 0.05, 'Rand hoch, Mitte leer: ' + at(43, 0) + ' / ' + at(0, 0));
+
+  /* Rippen: zwei parallele Rippen auf einer Platte. Die Flanken, die zum
+     Schwerpunkt zeigen, schrumpfen auf den Formsteg dazwischen auf und
+     haften voll; die Außenflanken und die Rippenenden am Rand zeigen vom
+     Schwerpunkt weg und ziehen sich zurück. (Halb haften Flanken quer zum
+     Schwerpunkt — die radialen Rippen des Getriebedeckels, geprüft im
+     Viewer-Test.) */
+  const plate = S.box(120, 80, 6);
+  const ribA = S.translate(S.box(100, 4, 30), 0, -20, 18), ribB = S.translate(S.box(100, 4, 30), 0, 20, 18);
+  const r = await analyse(union(union(plate, ribA), ribB), { mainAxis: 2 });
+  const g2 = gripPerFace(r.model, r.vis, r.seg, { mu: 0.3 });
+  let nIn = 0, inHeld = 0, nOut = 0, outFree = 0, nEnd = 0, endHalf = 0;
+  for (let f = 0; f < r.model.faceCount; f++) {
+    const ny = r.model.normals[f * 3 + 1], nx = r.model.normals[f * 3], y = r.model.centroids[f * 3 + 1];
+    if (r.model.centroids[f * 3 + 2] < 4) continue;
+    if (Math.abs(ny) > 0.99) {
+      if (ny * y < 0) { nIn++; if (g2.intensity[f] > 0.2) inHeld++; }
+      else { nOut++; if (g2.intensity[f] < 0.05) outFree++; }
+    } else if (Math.abs(nx) > 0.99) {
+      nEnd++;
+      if (g2.intensity[f] < 0.05) endHalf++;
+    }
+  }
+  assert.ok(nIn >= 2 && inHeld === nIn, 'Innenflanken haften voll: ' + inHeld + ' von ' + nIn);
+  assert.ok(nOut >= 2 && outFree === nOut, 'Außenflanken haften nicht: ' + outFree + ' von ' + nOut);
+  assert.ok(nEnd >= 4 && endHalf === nEnd, 'Rippenenden am Rand haften nicht: ' + endHalf + ' von ' + nEnd);
+});

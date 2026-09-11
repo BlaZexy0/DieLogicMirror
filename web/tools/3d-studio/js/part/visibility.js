@@ -25,11 +25,41 @@ export const DIRS = [
   { key: 'zm', axis: 2, sign: -1, label: '−Z' }
 ];
 
+/* Eine Wand ohne Schräge hat n·d = 0 — im Netz aber nie genau: ein Sockel-
+   streifen, der senkrecht gebaut ist, kommt mit n·d = −0,00002 aus dem
+   Export. Mit einer harten Grenze bei 0 sähe die Hälfte ihn nicht, und
+   die Regeln machten aus einem 7-mm²-Streifen einen Schieber. Deshalb
+   gilt eine Fläche bis 0,5° Gegenschräge noch als der Richtung zugewandt
+   und wird auf Verdeckung geprüft — ihr eigener Überhang zählt dabei mit:
+   eine hohe Wand mit Gegenschräge verdeckt sich selbst und bleibt
+   Hinterschnitt, ein Splitter ohne messbaren Überhang fällt der Hälfte
+   zu. Die Zuordnung behandelt solche Flächen wie senkrechte Wände (0°),
+   die Schrägen-Ansicht zeigt den negativen Winkel. */
+export const FACING_DEG = 0.5;
+export const FACING_EPS = Math.sin(FACING_DEG * Math.PI / 180);
+
 /* Abtastpunkte in baryzentrischen Koordinaten: Schwerpunkt plus drei
    ecknahe Punkte. Sie liegen bewusst im Inneren — Punkte auf einer Kante
    würden vom Nachbardreieck „verdeckt". */
 const BARY4 = [[1 / 3, 1 / 3, 1 / 3], [0.6, 0.2, 0.2], [0.2, 0.6, 0.2], [0.2, 0.2, 0.6]];
 const BARY7 = BARY4.concat([[0.45, 0.45, 0.1], [0.1, 0.45, 0.45], [0.45, 0.1, 0.45]]);
+
+/** Regelmäßiges Gitter im Dreieck: die Schwerpunkte der n·(n+1)/2
+    Teildreiecke einer n-fachen Unterteilung, baryzentrisch — für die
+    Haftkarte (js/part/ejector.js), die große Dreiecke gleichmäßig auf
+    Rasterzellen verteilt. */
+const gridCache = new Map();
+export function gridBary(n) {
+  let g = gridCache.get(n);
+  if (g) return g;
+  g = [];
+  for (let i = 0; i < n; i++) for (let j = 0; i + j < n; j++) {
+    const k = n - 1 - i - j;
+    g.push([(i + 1 / 3) / n, (j + 1 / 3) / n, (k + 1 / 3) / n]);
+  }
+  gridCache.set(n, g);
+  return g;
+}
 
 const nextAxis = a => (a + 1) % 3;
 
@@ -90,8 +120,8 @@ function computeDirection(model, dirIndex, out, samples, cells) {
     /* Auch Flächen mit nd ≈ 0 (senkrechte Wände, 0° Schräge) werden
        geprüft: erst damit kann die Mindest-Entformschräge bis 0
        heruntergedreht werden und die Wand fällt der Hälfte zu, statt
-       einen Schieber zu verlangen. */
-    if (nd < -1e-9) { out.frac[f * 6 + dirIndex] = 0; continue; }
+       einen Schieber zu verlangen. Bis FACING_EPS Gegenschräge ebenso. */
+    if (nd < -FACING_EPS) { out.frac[f * 6 + dirIndex] = 0; continue; }
 
     const i = f * 9;
     const nx = normals[f * 3] * lift, ny = normals[f * 3 + 1] * lift, nz = normals[f * 3 + 2] * lift;
