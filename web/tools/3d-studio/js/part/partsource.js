@@ -3,8 +3,9 @@
    Netz aufbereiten und die Kennzahlen anzeigen.
 
    Alle Bauteil-Seiten brauchen exakt dasselbe, deshalb steht es hier
-   einmal. Erwartet werden die ids demo-select, stl-btn, stl-input,
-   part-note, model-facts, model-warn — mit `suffix` auch mehrfach auf
+   einmal. Erwartet werden die ids demo-select, stl-btn, stl-input und
+   model-warn; part-note und model-facts sind freiwillig (die
+   Abstandsanalyse lässt beide weg) — mit `suffix` auch mehrfach auf
    einer Seite (die Abstandsanalyse hat zwei Quellen: „-a" und „-b").
 
    Beispielteile kommen als fertige GLB aus assets/parts/ — genauso wie

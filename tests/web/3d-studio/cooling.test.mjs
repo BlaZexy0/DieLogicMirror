@@ -25,8 +25,8 @@ test('Plan: Kühlstich und Kanal mit Vorgaben, Endpunkte, beide Enden bewegen', 
   assert.equal(plan.dist, 20);
   const s = M.addStich(plan, [10, 0, 0], [2, 0, 0]);
   assert.deepEqual(s.dir, [1, 0, 0], 'Richtung normiert');
-  assert.equal(s.d, 8); assert.equal(s.len, 60);
-  assert.deepEqual(M.axisOf(s).b, [70, 0, 0], 'das äußere Ende liegt len weiter');
+  assert.equal(s.d, 20, 'Vorgabe Durchmesser'); assert.equal(s.len, 200, 'Vorgabe Länge');
+  assert.deepEqual(M.axisOf(s).b, [210, 0, 0], 'das äußere Ende liegt len weiter');
   const k = M.addKanal(plan, [0, 0, 0], [0, 100, 0], { d: 12 });
   assert.equal(k.d, 12);
   assert.equal(M.lengthOf(k), 100);

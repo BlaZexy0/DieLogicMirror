@@ -21,9 +21,13 @@ export const fmtPlain = (v, max = 2) =>
 
 export const rgbCss = rgb => 'rgb(' + rgb.map(v => Math.round(v * 255)).join(',') + ')';
 
-/** Kennzahlenblock aus [Bezeichnung, Wert]-Paaren. */
+/** Kennzahlenblock aus [Bezeichnung, Wert]-Paaren. Ohne das Element
+    passiert nichts — nicht jede Seite zeigt jeden Block (die
+    Abstandsanalyse verzichtet auf die Netz-Kennzahlen). */
 export function facts(id, rows) {
-  $(id).innerHTML = rows.map(([k, v]) =>
+  const el = $(id);
+  if (!el) return;
+  el.innerHTML = rows.map(([k, v]) =>
     '<div class="fact"><span>' + k + '</span><span>' + v + '</span></div>').join('');
 }
 

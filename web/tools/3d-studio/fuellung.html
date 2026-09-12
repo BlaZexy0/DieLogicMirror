@@ -86,13 +86,13 @@
 
     <h2>Darstellung</h2>
     <div class="seg" id="show-seg">
-      <button type="button" data-value="farbe" class="active" title="Bauteil nach Füllgrad gefärbt; was über dem Regler liegt, bleibt grau">Füllgrad</button>
-      <button type="button" data-value="koerper" title="Die Schmelze beim gewählten Füllgrad als Körper, das Bauteil durchscheinend">Füllkörper</button>
+      <button type="button" data-value="farbe" title="Bauteil nach Füllgrad gefärbt; was über dem Regler liegt, bleibt grau">Füllgrad</button>
+      <button type="button" data-value="koerper" class="active" title="Die Schmelze beim gewählten Füllgrad als Körper, das Bauteil durchscheinend">Füllkörper</button>
       <button type="button" data-value="grau" title="Nur das Bauteil und die Anschnitte">Bauteil</button>
     </div>
     <div class="row disabled" id="q-row">
       <span title="Bis zu welchem Füllgrad gezeigt wird — die Front wandert mit dem Regler.">Füllgrad</span>
-      <input type="range" id="q" min="0" max="100" step="1" value="100">
+      <input type="range" id="q" min="0" max="100" step="1" value="50">
       <span class="val" id="q-val"></span>
     </div>
     <label class="inline"><input type="checkbox" id="spots-on" checked> Zuletzt gefüllte Stellen markieren</label>

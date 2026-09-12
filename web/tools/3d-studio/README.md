@@ -234,7 +234,7 @@ wieder mit. Kein Schalter schaltet einen anderen mit.
 - **Formteile** — die Regionen als Formteile auseinandergezogen (unten).
 - **Flächen** — die projizierten Flächen mit ihren Silhouetten (unten).
 - **Haftung** — das Bauteil nach Haftmaß gefärbt (Turbo, Farbskala; was
-  nicht haftet, hellgrau) und die Haftkarte (unten).
+  nicht haftet, hellgrau) und die Haftkarten beider Hälften (unten).
 
 ### Formteile
 
@@ -300,18 +300,24 @@ keine Spannung zwischen Kernen; relativ — die **Summen beider Hälften**
 sagen, auf welcher Seite das Teil bleibt (Kennzahlen in Prozent, eine
 Warnung, wenn die feste Seite stärker hält).
 
-Die **Haftkarte** verteilt das Haftmaß der gewählten Hälfte auf das
-Raster ihrer Projektion und glättet es (σ = 4 mm; senkrechte Wände
-hätten sonst nur eine Linie als Spur). Sie steht wie die Silhouetten
-jenseits des Bauteils in der Entformrichtung der Hälfte, mit Reglern für
-Abstand und Deckkraft; im selben Reiter trägt das Bauteil das Haftmaß
-als Farbe. Wo Auswerfer sitzen, entscheidet der Konstrukteur mit der
-Karte — Stiftvorschläge macht die Seite nicht.
+Die **Haftkarte** verteilt das Haftmaß einer Hälfte auf das Raster
+ihrer Projektion und glättet es (σ = 4 mm; senkrechte Wände hätten sonst
+nur eine Linie als Spur). Gezeigt werden die Karten **beider Hälften
+zugleich** (`ejectorMaps`), ohne Auswahl, auf **gemeinsamer Skala**: die
+stärker haftende Seite trägt die 1, die andere bleibt darunter — jede
+für sich normiert sähen beide gleich rot aus, und die Frage „welche
+Seite hält mehr" wäre aus den Karten nicht zu lesen. Schieber haben
+keine Karte; ihr Haftmaß ist 0, sie werden hier vernachlässigt. Die
+Karten stehen wie die Silhouetten jenseits des Bauteils, jede in der
+Entformrichtung ihrer Hälfte, mit Reglern für Abstand und Deckkraft; im
+selben Reiter trägt das Bauteil das Haftmaß als Farbe. Wo Auswerfer
+sitzen, entscheidet der Konstrukteur mit der Karte — Stiftvorschläge
+macht die Seite nicht.
 
 ## Wandstärkenanalyse (`wandstaerke.html`)
 
-Die Frage der Seite: wie dick ist das Bauteil wo, wo liegt sein Kern,
-und wo erstarrt es zuletzt? Beantwortet wird sie über ein **Rasterfeld**
+Die Frage der Seite: wie dick ist das Bauteil wo, wo liegen seine
+dicken Bereiche, und wo erstarrt es zuletzt? Beantwortet wird sie über ein **Rasterfeld**
 des Abstands zur Oberfläche. (Offsetflächen nach außen, für die
 Temperierung, hat diese Seite nicht mehr — der Temperierkanal-Designer
 rechnet seine Abstandsfläche selbst.)
@@ -333,7 +339,7 @@ negativ). Drei Durchgänge:
    (Punkt-Dreieck nach Ericson) in die Rasterpunkte seiner um drei Zellen
    aufgeweiteten Bounding-Box ein. Eine untere Schranke über die Box
    spart den teuren Test fast überall.
-3. **Der Kern** — nach innen gibt es keine Grenze: der Abstand kann nie
+3. **Das Innere** — nach innen gibt es keine Grenze: der Abstand kann nie
    größer werden als die halbe Dicke, und genau dieses Maximum ist die
    Zahl, um die es bei der Wandstärke geht. Zellen jenseits des Bandes
    bekommen deshalb ihren Abstand aus einer exakten euklidischen
@@ -352,7 +358,7 @@ Rechnen in den Kennzahlen. Gerechnet wird erst auf „Feld berechnen".
 Die Werkbank benutzt dasselbe Modul mit einem Band nach außen, weil ihre
 Temperierung es braucht.
 
-### Schritt 2 — Kern ableiten (sofort)
+### Schritt 2 — Isofläche ableiten (sofort)
 
 `js/part/surfacenets.js` zieht die Fläche gleichen Abstands heraus:
 je Rasterzelle mit Vorzeichenwechsel ein Punkt (Mittelwert der
@@ -365,13 +371,14 @@ Abgeleitet wird nur nach innen: das **Untermaß** s hat einen Regler von 0
 bis zur dicksten Stelle und daneben ein Feld für die Zahl (`4`, `1,5`
 und `1.5` gelten; ein Minus davor ist egal, nach innen geht es ohnehin;
 tiefer als das Maximum wird die Zahl festgehalten — dort gibt es keine
-Fläche mehr). Stehen bleibt, was dicker ist als 2·s: der **Kern**. Nach
-dem Rechnen steht als Vorgabe ein Untermaß von der halben größten Tiefe
-— die Kerne, um die es geht; ein selbst gesetztes überlebt ein neues
-Feld, ein neues Bauteil bekommt wieder die Vorgabe. Jeder andere Wert
-kostet nur das Ableiten — Millisekunden, kein neues Feld; am Regler wird
-höchstens einmal je Bild abgeleitet. Der Kern lässt sich als STL
-speichern. `tests/field.test.mjs` prüft die Fläche gleichen Abstands
+Fläche mehr). Stehen bleibt, was dicker ist als 2·s — die Seite nennt
+die Fläche **Isofläche** (nicht „Kern": das Wort ist in der Form schon
+vergeben). Nach dem Rechnen steht als Vorgabe ein Untermaß von der
+halben größten Tiefe — die dicken Bereiche, um die es geht; ein selbst
+gesetztes überlebt ein neues Feld, ein neues Bauteil bekommt wieder die
+Vorgabe. Jeder andere Wert kostet nur das Ableiten — Millisekunden, kein
+neues Feld; am Regler wird höchstens einmal je Bild abgeleitet. Die
+Isofläche lässt sich als STL speichern. `tests/field.test.mjs` prüft die Fläche gleichen Abstands
 gegen die geschlossene Formel für den Offset eines Quaders
 (V = abc + 2r(ab+bc+ca) + πr²(a+b+c) + 4/3 πr³) und gegen die Kugel.
 
@@ -385,7 +392,7 @@ Bauteils; und die erstarrt zuletzt. Genau dort entstehen Lunker und
 Porosität, und bis dorthin muss der Nachdruck über Anguss und Speiser
 reichen.
 
-Drei Wege, das abzulesen: der **Kern** (oben), der **Feldschnitt** — ein
+Drei Wege, das abzulesen: die **Isofläche** (oben), der **Feldschnitt** — ein
 Schnitt durch das Feld als Rasterbild in der Turbo-Skala, blau an der
 Oberfläche, rot an der dicksten Stelle, außen grau, mit der Bauteilkontur
 als Linie; Achse und Lage sind Regler, im Schnitt steht nur das Bauteil
@@ -399,7 +406,7 @@ größte Kugel, die dort ins Bauteil passt — Radius = Feldwert, Durchmesser
 Wandstärken-Skala wie der Schnitt (blau dünn, rot dick); die Farbskala
 im Viewport gilt für beide. Wahlweise Kreise statt Kugeln (zur Kamera
 gedreht, ohne Tiefenprüfung, damit sie auch im deckenden Bauteil zu
-sehen sind), und „frei sichtbar" nimmt den Kern weg und macht das
+sehen sind), und „frei sichtbar" nimmt die Isofläche weg und macht das
 Bauteil durchscheinend. Die Kennzahlen nennen Zahl der Stellen, größte
 und kleinste markierte Wandstärke und den Ort der dicksten.
 
@@ -415,7 +422,7 @@ an der Oberfläche nach Blau außen). Was nicht zum Bereich gehört, bleibt
 hellgrau, so hebt sich der Querschnitt ab. Die Skala reicht bis zum
 **größten Wert, der im Feld vorkommt**, nicht bis zur Bandbreite — ein
 Band von 13 mm bei 6 mm dicksten Wänden ließ sonst die halbe Skala
-ungenutzt, und alles Dicke sah gleich grün aus (steht der Kern auf −band,
+ungenutzt, und alles Dicke sah gleich grün aus (steht das Innere auf −band,
 sagt der Titel „≥ Band"). Darüber liegt nur die Höhenlinie der
 Bauteilfläche; das gewählte Aufmaß hat im Schnitt nichts zu suchen, er
 zeigt das Feld, nicht die Wahl. Im Schnitt steht **nur das Bauteil,
@@ -448,9 +455,12 @@ Bauteiloberfläche vom Temperierkanal entfernt, vom Auswerferstift, vom
 Nachbarteil? Zu nah heißt Durchbruchgefahr und eine Stelle, die zu
 schnell erstarrt; zu weit heißt, die Kühlung greift dort nicht.
 
-Zwei Dateien (Beispielteil, STL oder GLB), dann für jeden Punkt der einen
-Oberfläche der kürzeste Weg zur anderen — und umgekehrt, damit sich beide
-einfärben lassen.
+Zwei Dateien (Beispielteil, STL oder GLB; voreingestellt die Ölwanne und
+die Temperierung der festen Hälfte ihrer Form), dann für jeden Punkt der
+einen Oberfläche der kürzeste Weg zur anderen — und umgekehrt, damit sich
+beide einfärben lassen. Die Seitenleiste bleibt knapp: je Datei nur
+Auswahl, Ladeknopf und Warnzeile — Dreiecke, Abmessungen, Oberfläche und
+die Beschreibung des Beispielteils sagen nichts über den Abstand.
 
 - **Exakt, nicht gerastert.** Gerechnet wird der echte
   Punkt-Dreieck-Abstand (`js/part/distance.js`). Ein Würfelraster
@@ -1007,7 +1017,12 @@ der Fläche gleichen Abstands (voreingestellt 20 mm), die aus demselben
 Rasterfeld kommt wie die Wandstärkenanalyse (`js/part/field.js`,
 `js/part/surfacenets.js`) und beim Laden des Bauteils gerechnet wird;
 der Regler „Abstand" leitet sie neu ab, nur ein Abstand jenseits des
-Bandes kostet ein neues Feld. Sie liegt durchscheinend um das Bauteil und
+Bandes kostet ein neues Feld. Wie fein das Feld ist, sagt die
+**Kantenlänge** der Zellen in mm — wie auf den anderen Seiten; die
+Vorgabe beim Laden ist ein 64stel der längsten Bauteilkante (nicht die
+halbe Wanddicke: hier zählt die Fläche außen, nicht die Wand innen), ein
+selbst gesetzter Wert bleibt auch für das nächste Bauteil stehen. Sie
+liegt durchscheinend um das Bauteil und
 ist das Ziel des Zielmodus; das Häkchen „Durchscheinend" macht sie
 deckend — dann zeigt sie ihre Form, wo sie eng wird und wo sie Rippen
 nachzeichnet, und die Stiche und Kanäle davor, ohne dass das Bauteil
@@ -1017,7 +1032,8 @@ durchscheint. „Abstandsfläche zeigen" blendet sie ganz aus.
 
 - **Kühlstich** — ein Klick auf die Abstandsfläche. Die Spitze sitzt am
   Punkt (dort hat sie genau den Abstand der Fläche), der Stich läuft um
-  seine **Länge** vom Bauteil weg, mit seinem **Durchmesser**; die
+  seine **Länge** vom Bauteil weg, mit seinem **Durchmesser** (Vorgaben
+  20 mm und 200 mm, im Abschnitt „Kühlstiche" einstellbar); die
   Spitze ist eine Halbkugel wie das Ende eines Bohrers. Die **Richtung**
   wählt man vorher: die Flächennormale (senkrecht zur Abstandsfläche,
   nach außen), der Blick (auf die Kamera zu — so, wie man gerade schaut)
@@ -1136,6 +1152,9 @@ Anschnitten liegt dort, wo beide Fronten zugleich ankommen. Nach dem
 ersten Anschnitt rechnet jede Änderung am Plan von selbst nach.
 
 ### Drei Ansichten
+
+Voreingestellt ist der **Füllkörper bei 50 %** — die Front mitten im
+Teil sagt auf einen Blick, wohin die Schmelze zuerst kommt.
 
 - **Füllgrad** — das Bauteil nach Füllgrad gefärbt (Turbo: früh blau,
   spät rot; der Wert an der Oberfläche kommt aus den Innenzellen daneben).

@@ -15,7 +15,11 @@
    Grobe Netze werden vor der Messung verfeinert. Eine ebene Wand aus
    zwei Dreiecken hat vier Eckpunkte; zwischen ihnen würde linear
    interpoliert, und der wahre Abstandsverlauf ginge verloren — genau auf
-   so einer Wand liegt aber der interessante Fall. */
+   so einer Wand liegt aber der interessante Fall.
+
+   Die Seitenleiste bleibt knapp: je Datei nur Auswahl, Ladeknopf und
+   Warnzeile — Dreiecke, Abmessungen, Oberfläche und die Beschreibung des
+   Beispielteils sagen hier nichts über den Abstand. */
 
 import * as T from 'three';
 import { initScene } from '../scene.js';
@@ -94,7 +98,6 @@ function mount(key, suffix, startId) {
       state.stale = true;
       buildGeometry(key);
       fitBoth();
-      showMeshFacts(key, model, state[key].model);
       applyColors();
       updateRunButton();
       updateFacts();
@@ -102,8 +105,11 @@ function mount(key, suffix, startId) {
     }
   });
 }
+/* Voreingestellt das Gussteil der Ölwannen-Form und die Temperierung
+   ihrer festen Hälfte — die liegt unter dem flachen Boden, dort ist der
+   Abstand die Frage. */
 const sourceA = mount('a', '-a', 'oil_pan');
-const sourceB = mount('b', '-b', 'coolmov');
+const sourceB = mount('b', '-b', 'coolfix');
 
 function buildGeometry(key) {
   const m = state[key].model;
@@ -122,16 +128,6 @@ function fitBoth() {
     if (state[key].model) box.expandByObject(mesh);
   }
   if (!box.isEmpty()) view.fitTo(box);
-}
-
-function showMeshFacts(key, raw, used) {
-  const s = used.bounds.size;
-  facts('model-facts' + '-' + key, [
-    ['Dreiecke', fmt(used.faceCount, 0)
-      + (used.faceCount !== raw.faceCount ? ' (verfeinert aus ' + fmt(raw.faceCount, 0) + ')' : '')],
-    ['Abmessungen', s.map(v => fmt(v)).join(' × ') + ' mm'],
-    ['Oberfläche', fmt(used.surface / 100) + ' cm²']
-  ]);
 }
 
 /* ── Rechnen auf Bestätigung ─────────────────────────────────── */

@@ -8,12 +8,12 @@
       nur so weit wie das Bauteil (zwei Zellen Luft): nach außen braucht
       diese Seite nichts — Abstandsflächen außen, für die Temperierung,
       rechnet der Temperierkanal-Designer selbst. Nach innen ist das Feld
-      vollständig (der Kern über die Distanztransformation). Was die
+      vollständig (das Innere über die Distanztransformation). Was die
       Zellkante kostet, steht VOR dem Rechnen in den Kennzahlen.
-   2. FLÄCHE ABLEITEN (sofort) — js/part/surfacenets.js zieht die Fläche
-      gleichen Abstands INNEN heraus: ein Untermaß von s lässt stehen, was
-      dicker als 2·s ist — die Kerne. Eintippen oder ziehen, kein neues
-      Feld.
+   2. ISOFLÄCHE ABLEITEN (sofort) — js/part/surfacenets.js zieht die
+      Fläche gleichen Abstands INNEN heraus: ein Untermaß von s lässt
+      stehen, was dicker als 2·s ist — die dicken Bereiche. Eintippen oder
+      ziehen, kein neues Feld.
 
    Dazu der FELDSCHNITT — die Wandstärke als Rasterbild in der Turbo-Skala
    — und die WÄRMEZENTREN: die dicksten Stellen als Kugeln mit dem Radius
@@ -159,8 +159,8 @@ async function runField() {
        es keine Fläche mehr. */
     $('under-slider').max = String(Math.ceil(state.stats.maxIn * 2) / 2);
     /* Vorgabe: ein Untermaß von der halben größten Tiefe — stehen bleibt,
-       was dicker ist als die halbe größte Wandstärke: die Kerne, um die es
-       geht. Wer das Untermaß selbst gesetzt hat, behält es. */
+       was dicker ist als die halbe größte Wandstärke: die dicken Bereiche,
+       um die es geht. Wer das Untermaß selbst gesetzt hat, behält es. */
     if (!state.underTouched) state.under = Math.round(state.stats.maxIn) / 2;
     if (state.under > state.stats.maxIn) state.under = Math.floor(state.stats.maxIn * 2) / 2;
     $('under').value = fmtPlain(state.under);
@@ -191,7 +191,7 @@ function updateRunButton() {
   if (!state.model) return setRun({ label: 'Feld berechnen', disabled: true });
   if (!state.field) {
     return setRun({ label: 'Feld berechnen',
-      note: 'Noch kein Feld — ohne Feld gibt es weder Wandstärke noch Kern.' });
+      note: 'Noch kein Feld — ohne Feld gibt es weder Wandstärke noch Isofläche.' });
   }
   if (state.stale) {
     return setRun({ label: 'Feld neu berechnen', warn: true,
@@ -267,7 +267,7 @@ function updateHotspots() {
 
 function applyVisibility() {
   /* Im Schnitt — und bei markierten Wärmezentren, wenn man es so will —
-     nur das Bauteil, und zwar durchscheinend: die Kernfläche legte sich
+     nur das Bauteil, und zwar durchscheinend: die Isofläche legte sich
      sonst über Schnittebene und Marken, und das Bauteil deckend davor
      verdeckte sie ebenso. */
   const slice = (state.slice.on || (state.hot.on && state.hot.clear)) && !!state.field;
@@ -312,8 +312,8 @@ function updateOffsetFacts() {
   facts('offset-facts', [
     ['Dreiecke', fmt(state.offsetTris.length / 9, 0)],
     ['Volumen Bauteil', fmt(vPart / 1000) + ' cm³'],
-    ['Volumen Kern', fmt(vOff / 1000) + ' cm³'],
-    ['Fläche Kern', fmt(surface(state.offsetTris) / 100) + ' cm²'],
+    ['Volumen in der Isofläche', fmt(vOff / 1000) + ' cm³'],
+    ['Inhalt der Isofläche', fmt(surface(state.offsetTris) / 100) + ' cm²'],
     ['Volumenanteil', (100 * (vPart ? vOff / vPart : 0)).toFixed(1) + ' %'],
     ['Ableiten', state.extractMs.toFixed(0) + ' ms']
   ]);
@@ -434,10 +434,10 @@ segButtons('show-seg', v => { state.show = v; applyVisibility(); });
 
 $('offset-export').addEventListener('click', () => {
   if (!state.offsetTris || !state.offsetTris.length) return;
-  const blob = new Blob([writeSTL(state.offsetTris, 'form3d Kern')], { type: 'model/stl' });
+  const blob = new Blob([writeSTL(state.offsetTris, 'form3d Isofläche')], { type: 'model/stl' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = (state.name.replace(/\.stl$/i, '') || 'bauteil') + '-kern.stl';
+  a.download = (state.name.replace(/\.stl$/i, '') || 'bauteil') + '-isoflaeche.stl';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 });

@@ -20,8 +20,9 @@
                  der sechs möglichen ein- und ausblendbar (js/part/dieviewer.js)
      Flächen     die projizierten Flächen als Silhouetten jenseits des
                  Bauteils, Abstand und Deckkraft einstellbar
-     Haftung     das Bauteil nach Haftmaß gefärbt und die Haftkarte der
-                 gewählten Hälfte jenseits des Bauteils (js/part/ejector.js)
+     Haftung     das Bauteil nach Haftmaß gefärbt und die Haftkarten beider
+                 Hälften jenseits des Bauteils, auf gemeinsamer Skala
+                 (js/part/ejector.js); Schieber haben keine Karte
    Kein Schalter schaltet einen anderen mit.
 
    Gezeichnet wird EIN Netz mit Punktfarben; der Modus tauscht nur das
@@ -38,7 +39,7 @@ import { computeVisibility, DIRS } from './visibility.js';
 import { segment, UNDERCUT } from './segment.js';
 import { draftAngles, draftStats, dirNames } from './draft.js';
 import { diePieces, pieceProjections } from './dieview.js';
-import { gripPerFace, ejectorMap } from './ejector.js';
+import { gripPerFace, ejectorMaps } from './ejector.js';
 import { $, fmt, rgbCss, facts, segButtons, segButtonSet, slider, colorbar, gradient, chip } from '../ui/controls.js';
 import * as C from './colors.js';
 import { createDieView } from './dieviewer.js';
@@ -72,9 +73,9 @@ const state = {
   pieces: null,       // die Stücke (js/part/dieview.js) — auch für Flächen und Haftung
   proj: null,         // projizierte Flächen je Stück
   projView: { gap: 30, alpha: 0.6, gapTouched: false },
-  /* Haftung: Haftmaß je Dreieck und die Karte der gewählten Hälfte. */
-  grip: null, ejMap: null,
-  ej: { side: 'mov', mu: 0.3, gap: 30, alpha: 0.7, gapTouched: false },
+  /* Haftung: Haftmaß je Dreieck und die Karten beider Hälften. */
+  grip: null, ejMaps: null,
+  ej: { mu: 0.3, gap: 30, alpha: 0.7, gapTouched: false },
   analysed: false,    // Sichtbarkeit + Zuordnung liegen vor
   running: false,
   ready: false,       // false, solange geladen oder gerechnet wird
@@ -112,7 +113,7 @@ const source = mountPartSource({
     state.vis = null;
     state.seg = null;
     state.draft = null;
-    state.pieces = null; state.proj = null; state.grip = null; state.ejMap = null;
+    state.pieces = null; state.proj = null; state.grip = null; state.ejMaps = null;
     state.analysed = false;
     dieBuiltFor = null;
     buildGeometry();
@@ -228,7 +229,7 @@ function recompute() {
   state.pieces = diePieces(state.model, state.seg, { skirt: state.die.skirt });
   state.proj = pieceProjections(state.pieces, state.model, state.seg);
   state.grip = gripPerFace(state.model, state.vis, state.seg, { mu: state.ej.mu, movSign: state.movSign });
-  state.ejMap = null;
+  state.ejMaps = null;
   dieBuiltFor = null;
   state.segMs = performance.now() - t0;
   const ax = 'XYZ'[state.seg.mainAxis];
@@ -278,13 +279,15 @@ function ensureDie() {
   for (let l = 0; l < 6; l++) dieView.setVisible(l, state.die.show[l] !== false);
 }
 
-/* Die Haftkarte der gewählten Hälfte — gerechnet, wenn sie gebraucht wird. */
+/* Die Haftkarten beider Hälften — gerechnet, wenn sie gebraucht werden,
+   einmal je Haftmaß; auf gemeinsamer Skala, damit die Seiten vergleichbar
+   sind. Schieber bekommen keine Karte: sie haften nicht mit. */
 function ensureMap() {
-  const label = ejLabel();
-  if (state.ejMap && state.ejMap.label === label && state.ejMap.grip === state.grip) return;
-  state.ejMap = ejectorMap(state.model, state.seg, state.grip, label);
-  state.ejMap.grip = state.grip;
-  dieView.setEjector(state.ejMap);
+  if (state.ejMaps && state.ejMaps.grip === state.grip) return;
+  const labels = [halfLabel(1), halfLabel(-1)].filter(l => l >= 0);
+  state.ejMaps = ejectorMaps(state.model, state.seg, state.grip, labels);
+  state.ejMaps.grip = state.grip;
+  dieView.setEjector(state.ejMaps);
 }
 
 /* Das Bauteil: deckend — im Reiter Formteile durchscheinend zwischen den
@@ -309,10 +312,6 @@ function applyOpacity() {
 function halfLabel(sign) {
   if (!state.seg) return -1;
   return DIRS.findIndex(d => d.axis === state.seg.mainAxis && d.sign === sign * state.movSign);
-}
-
-function ejLabel() {
-  return state.ej.side === 'fix' ? halfLabel(-1) : halfLabel(1);
 }
 
 /* ── Farben ──────────────────────────────────────────────────── */
@@ -571,12 +570,11 @@ slider('ej-mu', v => {
   state.ej.mu = v;
   if (state.seg) {
     state.grip = gripPerFace(state.model, state.vis, state.seg, { mu: v, movSign: state.movSign });
-    state.ejMap = null;
+    state.ejMaps = null;
     updateGripFacts();
     applyMode();
   }
 }, v => fmt(v, 2));
-segButtons('ej-side-seg', v => { state.ej.side = v; state.ejMap = null; applyMode(); });
 slider('ej-gap', v => {
   state.ej.gap = v;
   if (v !== +$('ej-gap').defaultValue) state.ej.gapTouched = true;

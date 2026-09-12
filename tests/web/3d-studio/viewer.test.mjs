@@ -303,27 +303,36 @@ test('Flächen und Haftung: jeder Reiter zeigt seine Ebenen jenseits des Bauteil
     ribs++; if (s.grip.intensity[f] > 0) ribGrip++;
   }
   assert.ok(ribs > 50 && ribGrip > 0.9 * ribs, 'die Rippenflanken haften: ' + ribGrip + ' von ' + ribs);
-  const ej = () => dv.overlays.children.find(o => o.userData.overlay === 'ejector');
-  assert.ok(!ej() || !ej().visible, 'ohne den Reiter keine Karte');
+  const ejs = () => dv.overlays.children.filter(o => o.userData.overlay === 'ejector');
+  const ejOf = label => ejs().find(o => o.userData.piece.label === label);
+  assert.ok(ejs().every(o => !o.visible), 'ohne den Reiter keine Karte');
   app.__viewer.showTab('haftung');
   assert.equal(app.__viewer.colouring(), 'grip', 'das Bauteil trägt das Haftmaß');
-  assert.ok(s.ejMap && s.ejMap.label === 4 && s.ejMap.max > 0, 'Karte der beweglichen Hälfte');
-  assert.ok(ej() && ej().visible && ej().children.length === 1, 'eine Ebene, keine Stifte');
-  assert.ok(ej().children[0].position.z > b.max[2] + 5, 'jenseits des Bauteils in +Z');
+  /* Beide Hälften bekommen ihre Karte, ohne Auswahl, auf gemeinsamer
+     Skala: eine trägt die 1, die andere bleibt darunter. Die Schieber
+     haben keine — sie haften nicht mit. */
+  assert.ok(s.ejMaps && s.ejMaps.length === 2, 'zwei Karten: ' + (s.ejMaps && s.ejMaps.length));
+  const mapMov = s.ejMaps.find(m => m.label === 4), mapFix = s.ejMaps.find(m => m.label === 5);
+  assert.ok(mapMov && mapMov.max > 0 && mapFix && mapFix.max > 0, 'Karten der beweglichen und der festen Hälfte');
+  const peak = m => Math.max(...m.map);
+  assert.ok(Math.abs(Math.max(peak(mapMov), peak(mapFix)) - 1) < 1e-6 && Math.min(peak(mapMov), peak(mapFix)) < 1,
+    'gemeinsame Skala: ' + peak(mapMov) + ' / ' + peak(mapFix));
+  assert.equal(ejs().length, 2, 'zwei Ebenen im Viewport');
+  assert.ok(ejs().every(o => o.visible && o.children.length === 1), 'je eine Ebene, keine Stifte');
+  assert.ok(ejOf(4).children[0].position.z > b.max[2] + 5, 'bewegliche Hälfte: jenseits des Bauteils in +Z');
+  assert.ok(ejOf(5).children[0].position.z < b.min[2] - 5, 'feste Hälfte: jenseits in −Z');
   assert.ok(proj().every(o => !o.visible), 'keine Silhouetten in der Haftung');
   const egap = doc.getElementById('ej-gap');
-  const ez0 = ej().children[0].position.z;
+  const ez0 = ejOf(4).children[0].position.z, ez1 = ejOf(5).children[0].position.z;
   egap.value = String(s.ej.gap + 40); egap.dispatch('input');
-  assert.ok(Math.abs(ej().children[0].position.z - ez0 - 40) < 1e-6, 'Abstand der Karte');
+  assert.ok(Math.abs(ejOf(4).children[0].position.z - ez0 - 40) < 1e-6, 'Abstand der Karte in +Z');
+  assert.ok(Math.abs(ejOf(5).children[0].position.z - ez1 + 40) < 1e-6, 'Abstand der Karte in −Z');
   const ea = doc.getElementById('ej-alpha');
   ea.value = '40'; ea.dispatch('input');
-  assert.ok(Math.abs(ej().children[0].material.opacity - 0.4) < 1e-9, 'Deckkraft der Karte');
-  doc.getElementById('ej-side-seg').querySelectorAll('button').find(b2 => b2.dataset.value === 'fix').dispatch('click');
-  assert.equal(s.ejMap.label, 5, 'Karte der festen Hälfte');
-  assert.ok(ej().children[0].position.z < b.min[2] - 5, 'jenseits in −Z');
-  doc.getElementById('ej-side-seg').querySelectorAll('button').find(b2 => b2.dataset.value === 'mov').dispatch('click');
+  assert.ok(ejs().every(o => Math.abs(o.children[0].material.opacity - 0.4) < 1e-9), 'Deckkraft der Karten');
+  assert.equal(doc.getElementById('ej-side-seg'), null, 'keine Auswahl der Hälfte mehr');
   app.__viewer.showTab('entformung');
-  assert.ok(!ej().visible, 'beim Verlassen weg');
+  assert.ok(ejs().every(o => !o.visible), 'beim Verlassen weg');
   assert.equal(app.__viewer.colouring(), 'regions');
 });
 
@@ -976,10 +985,13 @@ test('Abstandsseite: zwei Dateien, Abstand auf Knopfdruck', async () => {
 
   assert.ok(s.a.model && s.b.model, 'beide Dateien geladen');
   assert.ok(s.a.name.includes('Ölwanne'), 'A ist die Ölwanne, das Gussteil der Form: ' + s.a.name);
-  assert.ok(s.b.name.includes('Temperierung'), 'B ist die Temperierung: ' + s.b.name);
+  assert.ok(s.b.name.includes('Temperierung fest'), 'B ist die Temperierung der festen Hälfte: ' + s.b.name);
   assert.equal(s.analysed, false, 'ohne Bestätigung wird nicht gerechnet');
-  assert.ok(d5.getElementById('model-facts-a').innerHTML.includes('cm²'), 'Kennzahlen A');
-  assert.ok(d5.getElementById('model-facts-b').innerHTML.includes('cm²'), 'Kennzahlen B');
+  /* Die Seitenleiste bleibt knapp: keine Netz-Kennzahlen, keine
+     Beschreibung des Beispielteils — nur die Warnzeile. */
+  assert.equal(d5.getElementById('model-facts-a'), null, 'keine Kennzahlen A');
+  assert.equal(d5.getElementById('part-note-b'), null, 'keine Beschreibung B');
+  assert.ok(d5.getElementById('model-warn-a') && d5.getElementById('model-warn-b'), 'die Warnzeilen bleiben');
 
   /* Das Gegenstück darf nur hier in der Auswahl stehen. */
   const optsA = d5.getElementById('demo-select-a').innerHTML;
@@ -991,10 +1003,16 @@ test('Abstandsseite: zwei Dateien, Abstand auf Knopfdruck', async () => {
   assert.ok(s.a.dist && s.a.dist.length === s.a.model.vertexCount, 'ein Wert je Punkt von A');
   assert.ok(s.b.dist && s.b.dist.length === s.b.model.vertexCount, 'ein Wert je Punkt von B');
 
-  /* Beide Richtungen müssen denselben kleinsten Abstand finden — der
-     kürzeste Weg zwischen zwei Flächen ist symmetrisch. */
-  assert.ok(Math.abs(s.a.stats.min - s.b.stats.min) < 0.5,
-    'kleinster Abstand von beiden Seiten gleich: ' + s.a.stats.min.toFixed(2) + ' / ' + s.b.stats.min.toFixed(2));
+  /* Beide Richtungen müssen (fast) denselben kleinsten Abstand finden —
+     der kürzeste Weg zwischen zwei Flächen ist symmetrisch. Gemessen wird
+     aber an den Eckpunkten des verfeinerten Netzes (Schritt diag/80,
+     hier gut 6 mm), und der nächste Punkt der Gegenfläche liegt selten
+     genau auf einem Eckpunkt: ein Unterschied von einem Bruchteil des
+     Schritts ist Abtastung, kein Fehler. */
+  const step = Math.max(s.a.model.bounds.diag, s.b.model.bounds.diag) / 80;
+  assert.ok(Math.abs(s.a.stats.min - s.b.stats.min) < step / 4,
+    'kleinster Abstand von beiden Seiten gleich: ' + s.a.stats.min.toFixed(2) + ' / ' + s.b.stats.min.toFixed(2)
+    + ' (Schritt ' + step.toFixed(2) + ')');
   assert.ok(s.a.stats.min > 0, 'die Körper berühren sich nicht');
   /* Die Skala stellt sich auf die Messwerte: kleinster bis größter Abstand. */
   const lo = Math.min(s.a.stats.min, s.b.stats.min), hi = Math.max(s.a.stats.max, s.b.stats.max);
@@ -1693,6 +1711,13 @@ test('Temperierkanal-Designer: Abstandsfläche, Kühlstich, Kanal, Achsenpfeile,
   assert.ok(v.shellMesh.visible && v.shellMesh.geometry.attributes.position.count > 0, 'und steht im Viewport');
   assert.match(d8.getElementById('shell-note').textContent, /20 mm/);
   assert.equal(d8.getElementById('add-stich').disabled, false, 'setzen ist frei');
+  /* Kantenlänge in mm statt Auflösung, wie auf den anderen Seiten —
+     Vorgabe ein 64stel der längsten Bauteilkante, auf halbe Millimeter. */
+  const longest = Math.max(...v.state.model.bounds.size);
+  assert.ok(Math.abs(v.state.h - Math.round(longest / 64 * 2) / 2) < 1e-9, 'Vorgabe der Kantenlänge: ' + v.state.h);
+  assert.equal(d8.getElementById('cell').value, String(v.state.h).replace('.', ','));
+  assert.ok(Math.abs(v.state.field.h - v.state.h) < 1e-9, 'das Feld hat diese Zellkante');
+  assert.equal(d8.getElementById('res'), null, 'kein Auflösungsregler mehr');
   /* Durchscheinend oder deckend — ein Häkchen schaltet das Material um. */
   assert.ok(v.shellMesh.material.transparent && v.shellMesh.material.opacity < 0.5 && !v.shellMesh.material.depthWrite, 'voreingestellt durchscheinend');
   const clear = d8.getElementById('shell-clear');
@@ -1730,7 +1755,7 @@ test('Temperierkanal-Designer: Abstandsfläche, Kühlstich, Kanal, Achsenpfeile,
   const wallX = 190 + c[2] * Math.tan(1.5 * Math.PI / 180);
   assert.ok(s1.p[0] > wallX + 15 && s1.p[0] < wallX + 25, 'die Spitze sitzt rund 20 mm vor der Wand: ' + s1.p);
   assert.ok(s1.dir[0] > 0.95, 'und der Stich läuft nach außen (+X): ' + s1.dir);
-  assert.equal(s1.d, 8); assert.equal(s1.len, 60);
+  assert.equal(s1.d, 20, 'Vorgabe Durchmesser'); assert.equal(s1.len, 200, 'Vorgabe Länge');
   assert.match(d8.getElementById('pt-sel').innerHTML, /Kühlstich/);
   assert.match(d8.getElementById('sel-facts').innerHTML, /Wandabstand/, 'der Wandabstand steht im Feld');
 
@@ -1825,7 +1850,7 @@ test('Temperierkanal-Designer: Abstandsfläche, Kühlstich, Kanal, Achsenpfeile,
   for (const a of autos()) {
     assert.ok(Math.abs(F8.sampleField(v.state.field, ...a.p) - 20) < v.state.field.h * 1.5, 'auf der Abstandsfläche: ' + F8.sampleField(v.state.field, ...a.p));
     assert.ok(Math.abs(Math.hypot(...a.dir) - 1) < 1e-9);
-    assert.equal(a.d, 8); assert.equal(a.len, 60);
+    assert.equal(a.d, 20); assert.equal(a.len, 200);
   }
   assert.match(d8.getElementById('auto-facts').innerHTML, /mittlerer Abstand/);
   assert.match(d8.getElementById('pt-sel').textContent || d8.getElementById('pt-sel').innerHTML, /Kein Element/);

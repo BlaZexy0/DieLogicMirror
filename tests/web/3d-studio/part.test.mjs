@@ -270,7 +270,7 @@ test('Formansicht: jedes Dreieck in genau einem Stück, Rand aus den Trennkanten
 /* ── Schieber je Fleck, Splitter, Flächen, Haftung ──────────── */
 import { FACING_EPS } from '../../../web/tools/3d-studio/js/part/visibility.js';
 import { pieceProjections, projectSoup, maskOutline } from '../../../web/tools/3d-studio/js/part/dieview.js';
-import { gripPerFace, ejectorMap, volumeCentroid } from '../../../web/tools/3d-studio/js/part/ejector.js';
+import { gripPerFace, ejectorMap, ejectorMaps, volumeCentroid } from '../../../web/tools/3d-studio/js/part/ejector.js';
 
 /* Zusammenhängende Flecken je Marke. */
 function labelPatches(model, seg, pick) {
@@ -374,6 +374,18 @@ test('Haftung: eine Wanne schrumpft auf den Kern der beweglichen Hälfte, Rippen
   const { frame, map } = em;
   const at = (x, y) => map[Math.floor((y - frame.v0) / frame.h) * frame.nu + Math.floor((x - frame.u0) / frame.h)];
   assert.ok(at(43, 0) > 0.5 && at(0, 0) < 0.05, 'Rand hoch, Mitte leer: ' + at(43, 0) + ' / ' + at(0, 0));
+
+  /* Beide Hälften auf gemeinsamer Skala: die bewegliche behält ihre 1,
+     die feste (die Außenwände ziehen sich zurück) bleibt weit darunter —
+     jede für sich normiert sähen beide gleich rot aus. Schieber-Labels
+     bekommen eine leere Karte, keine Haftung. */
+  const both = ejectorMaps(model, seg, grip, [grip.movLabel, grip.fixLabel], { cell: 0.5 });
+  assert.equal(both.length, 2);
+  const peak = m => Math.max(...m.map);
+  assert.ok(Math.abs(peak(both[0]) - 1) < 1e-6, 'die bewegliche Hälfte trägt die 1');
+  assert.ok(both[1].max < 0.05 * both[0].max && peak(both[1]) < 0.05, 'die feste bleibt auf der Skala klein: ' + peak(both[1]));
+  assert.ok(Math.abs(peak(both[1]) - both[1].max / both[0].max) < 1e-5, 'skaliert mit dem Verhältnis der Maxima');
+  assert.equal(ejectorMaps(model, seg, grip, [0], { cell: 0.5 })[0].max, 0, 'ein Schieber hat keine Haftung');
 
   /* Rippen: zwei parallele Rippen auf einer Platte. Die Flanken, die zum
      Schwerpunkt zeigen, schrumpfen auf den Formsteg dazwischen auf und

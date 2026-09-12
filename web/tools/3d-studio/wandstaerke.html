@@ -22,7 +22,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Wandstärkenanalyse</h1>
-    <p class="subtitle">Wandstärke, Wärmezentrum und Kern aus dem Abstandsfeld — Untermaß nach innen, Schnitte, dickste Stellen als Kugeln.</p>
+    <p class="subtitle">Wandstärke, Wärmezentrum und Isofläche aus dem Abstandsfeld — Untermaß nach innen, Schnitte, dickste Stellen als Kugeln.</p>
   </div>
 </section>
 
@@ -49,9 +49,9 @@
     <button type="button" class="btn btn-primary block-btn" id="run-field">Feld berechnen</button>
     <div class="run-note" id="field-state"></div>
 
-    <h2>Kern</h2>
+    <h2>Isofläche</h2>
     <div class="row">
-      <span title="Abstand nach innen von der Bauteiloberfläche. Stehen bleibt, was dicker als das Doppelte ist — die Kerne, in denen das Teil zuletzt erstarrt.">Untermaß</span>
+      <span title="Abstand der Isofläche nach innen von der Bauteiloberfläche. Stehen bleibt, was dicker als das Doppelte ist — die dicken Bereiche, in denen das Teil zuletzt erstarrt.">Untermaß</span>
       <input type="text" id="under" inputmode="decimal" value="2" spellcheck="false"
              title="Zahl eingeben und mit Eingabetaste bestätigen">
       <span class="val">mm</span>
@@ -65,12 +65,12 @@
       <span>Anzeige</span>
       <div class="seg" id="show-seg">
         <button type="button" data-value="both" class="active">beide</button>
-        <button type="button" data-value="offset">Kern</button>
+        <button type="button" data-value="offset">Isofläche</button>
         <button type="button" data-value="part">Bauteil</button>
       </div>
     </div>
     <div class="facts" id="offset-facts"></div>
-    <button type="button" class="btn btn-outline block-btn" id="offset-export">Kern als STL speichern</button>
+    <button type="button" class="btn btn-outline block-btn" id="offset-export">Isofläche als STL speichern</button>
 
     <h2>Feldschnitt</h2>
     <label class="inline"><input type="checkbox" id="slice-on"> Schnitt durch das Feld zeigen</label>
@@ -88,7 +88,7 @@
         <input type="range" id="slice-pos" min="0" max="100" step="1" value="50">
         <span class="val" id="slice-pos-val"></span>
       </div>
-      <div class="hint">Im Schnitt steht nur das Bauteil, durchscheinend — der Kern verdeckte
+      <div class="hint">Im Schnitt steht nur das Bauteil, durchscheinend — die Isofläche verdeckte
         die Schnittebene sonst. Innen zeigt die Turbo-Skala die Wandstärke (dick = rot), bis zur
         dicksten Stelle im Feld; außen bleibt es grau.</div>
     </div>
@@ -96,7 +96,7 @@
     <h2>Wärmezentren</h2>
     <label class="inline"><input type="checkbox" id="hot-on"> Dickste Stellen markieren</label>
     <div id="hot-block" class="disabled">
-      <label class="inline" title="Sonst liegen die Marken im deckenden Bauteil oder hinter dem Kern."><input type="checkbox" id="hot-clear" checked> Frei sichtbar: Bauteil durchscheinend, ohne Kern</label>
+      <label class="inline" title="Sonst liegen die Marken im deckenden Bauteil oder hinter der Isofläche."><input type="checkbox" id="hot-clear" checked> Frei sichtbar: Bauteil durchscheinend, ohne Isofläche</label>
       <div class="row">
         <span>Form</span>
         <div class="seg" id="hot-seg">
@@ -136,9 +136,9 @@
       Abstandsflächen außen, für die Temperierung, rechnet der
       <a href="temperier.html">Temperierkanal-Designer</a> selbst.
 
-      <p style="margin-top:.7rem"><b>Kern:</b> die Fläche gleichen
+      <p style="margin-top:.7rem"><b>Isofläche:</b> die Fläche gleichen
       Abstands nach innen, ein Untermaß von s — alles, was dünner als 2·s
-      ist, verschwindet, stehen bleiben genau die dicken Kerne; der Regler
+      ist, verschwindet, stehen bleiben genau die dicken Bereiche; der Regler
       endet an der dicksten Stelle, tiefer gibt es nichts mehr. Aus
       <em>einem</em> Feld lassen sich beliebig viele Untermaße abgreifen —
       nur das Feld selbst kostet Zeit. Der <b>Feldschnitt</b> zeigt

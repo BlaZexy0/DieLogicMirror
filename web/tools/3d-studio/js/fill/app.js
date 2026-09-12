@@ -43,7 +43,9 @@ mountViewBar(container, view);
 const state = {
   plan: M.emptyPlan(), model: null, name: '', field: null, fieldH: 0,
   h: 3, hAuto: true, result: null, surf: null, stale: true, computing: false, queued: false,
-  show: 'farbe', q: 1, spots: { on: true, count: 5, list: [] },
+  /* Voreingestellt der Füllkörper bei halbem Füllgrad — die Front mitten
+     im Teil sagt auf einen Blick, wo die Schmelze zuerst hinkommt. */
+  show: 'koerper', q: 0.5, spots: { on: true, count: 5, list: [] },
   defaults: { w: 30, h: 2 }, ms: 0, opacity: 1, ready: false
 };
 

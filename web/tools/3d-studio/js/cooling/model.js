@@ -24,7 +24,7 @@ export const FORMAT = 'dielogic-temperier';
 export const FORMAT_VERSION = 1;
 
 export const TYPES = {
-  stich: { label: 'Kühlstich', color: '#e07b39', params: { d: 8, len: 60 } },
+  stich: { label: 'Kühlstich', color: '#e07b39', params: { d: 20, len: 200 } },
   kanal: { label: 'Kanal', color: '#2e6da4', params: { d: 10 } }
 };
 

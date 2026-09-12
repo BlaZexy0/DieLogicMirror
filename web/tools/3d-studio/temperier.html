@@ -51,9 +51,10 @@
       <span class="val" id="dist-val"></span>
     </div>
     <div class="row">
-      <span title="Zellen des Abstandsfelds entlang der längsten Kante. Feiner heißt glatter und langsamer.">Auflösung</span>
-      <input type="range" id="res" min="32" max="128" step="8" value="64">
-      <span class="val" id="res-val"></span>
+      <span title="Kantenlänge einer Zelle des Abstandsfelds in mm. Vorgabe beim Laden: ein 64stel der längsten Bauteilkante. Feiner heißt glatter und langsamer — der Speicher wächst mit der dritten Potenz.">Kantenlänge</span>
+      <input type="text" id="cell" inputmode="decimal" value="6" spellcheck="false"
+             title="Wert eingeben und mit Eingabetaste bestätigen">
+      <span class="val">mm</span>
     </div>
     <label class="inline"><input type="checkbox" id="shell-on" checked> Abstandsfläche zeigen</label>
     <label class="inline" title="Durchscheinend sieht man das Bauteil in der Fläche; deckend zeigt ihre Form und die Stiche und Kanäle davor."><input type="checkbox" id="shell-clear" checked> Durchscheinend</label>
@@ -72,12 +73,12 @@
     </div>
     <div class="row">
       <span>Durchmesser</span>
-      <input type="text" id="def-d" inputmode="decimal" value="8" spellcheck="false">
+      <input type="text" id="def-d" inputmode="decimal" value="20" spellcheck="false">
       <span class="val">mm</span>
     </div>
     <div class="row">
       <span>Länge</span>
-      <input type="text" id="def-len" inputmode="decimal" value="60" spellcheck="false">
+      <input type="text" id="def-len" inputmode="decimal" value="200" spellcheck="false">
       <span class="val">mm</span>
     </div>
 
@@ -131,12 +132,12 @@
       <div id="sel-block" class="disabled">
         <div class="row">
           <span>Durchmesser</span>
-          <input type="text" id="sel-d" inputmode="decimal" value="8" spellcheck="false">
+          <input type="text" id="sel-d" inputmode="decimal" value="20" spellcheck="false">
           <span class="val">mm</span>
         </div>
         <div class="row" id="sel-len-row">
           <span>Länge</span>
-          <input type="text" id="sel-len" inputmode="decimal" value="60" spellcheck="false">
+          <input type="text" id="sel-len" inputmode="decimal" value="200" spellcheck="false">
           <span class="val">mm</span>
         </div>
         <div class="row" id="sel-dir-row">

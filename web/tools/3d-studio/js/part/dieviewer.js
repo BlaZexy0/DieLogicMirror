@@ -39,7 +39,7 @@ export function createDieView(view) {
   let dist = 0;
   let looking = null;
   let projections = null, projOn = false;
-  let ejector = null, ejOn = false;
+  let ejectors = [], ejOn = false;
   let gap = 20;
   let alpha = 0.6;                               // Deckkraft der Silhouetten und der Karte
   const hidden = new Set();                      // Formteile, die der Nutzer ausgeblendet hat
@@ -207,7 +207,7 @@ export function createDieView(view) {
       if (p.axis < 0) continue;
       const color = REGION_COLORS[p.label];
       const pr = projections && projections.pieces.find(q => q.label === p.label);
-      const em = ejector && ejector.label === p.label ? ejector : null;
+      const em = ejectors.find(q => q.label === p.label) || null;
       if (pr) {
         const og = new T.Group();
         og.userData.overlay = 'proj';
@@ -259,8 +259,14 @@ export function createDieView(view) {
       dieselben noch einmal ändern nichts. */
   function setProjections(pr) { const next = pr || null; if (next === projections) return; projections = next; rebuildOverlays(); }
   function showProjections(on) { projOn = !!on; placeOverlays(); view.invalidate(); }
-  /** Haftkarte (ejectorMap) hinterlegen — null löscht. */
-  function setEjector(em) { const next = em || null; if (next === ejector) return; ejector = next; rebuildOverlays(); }
+  /** Haftkarten hinterlegen (ejectorMaps, oder eine einzelne ejectorMap)
+      — je Stück höchstens eine; null löscht, dieselben ändern nichts. */
+  function setEjector(em) {
+    const next = em ? (Array.isArray(em) ? em : [em]) : [];
+    if (next.length === ejectors.length && next.every((m, i) => m === ejectors[i])) return;
+    ejectors = next;
+    rebuildOverlays();
+  }
   function showEjector(on) { ejOn = !!on; placeOverlays(); view.invalidate(); }
 
   /**

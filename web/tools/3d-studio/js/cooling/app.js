@@ -3,7 +3,10 @@
    Um das Bauteil liegt die ABSTANDSFLÄCHE: die Fläche, die überall
    denselben Abstand zur Kavität hat (voreingestellt 20 mm). Sie kommt aus
    demselben Rasterfeld wie die Wandstärkenanalyse (js/part/field.js,
-   js/part/surfacenets.js) und wird beim Laden des Bauteils gerechnet.
+   js/part/surfacenets.js) und wird beim Laden des Bauteils gerechnet;
+   wie fein, sagt die KANTENLÄNGE der Zellen in mm — wie auf den anderen
+   Seiten, mit einer Vorgabe aus dem Bauteil (ein 64stel der längsten
+   Kante: hier zählt die Fläche außen, nicht die Wand innen).
    Auf ihr werden die Elemente gesetzt:
 
      Kühlstich   ein Klick — die Spitze sitzt am Punkt, der Stich läuft
@@ -20,9 +23,9 @@
 import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
-import { $, fmt, facts, segButtons, slider, numberInput } from '../ui/controls.js';
+import { $, fmt, fmtPlain, facts, segButtons, slider, numberInput } from '../ui/controls.js';
 import { mountPartSource, frame } from '../part/partsource.js';
-import { buildField, sampleField } from '../part/field.js';
+import { buildField, sampleField, CELL_RANGE } from '../part/field.js';
 import { surfaceNets } from '../part/surfacenets.js';
 import { writeSTL } from '../part/stlio.js';
 import { createHandles, SELECTED_RING } from '../handles.js';
@@ -41,8 +44,8 @@ mountViewBar(container, view);
 
 const state = {
   plan: M.emptyPlan(), model: null, name: '', field: null, shellDist: null,
-  res: 64, dirMode: 'normal', both: false, showShell: true, shellClear: true,
-  defaults: { d: 8, len: 60, kd: 10 },
+  h: 6, hAuto: true, fieldH: 0, dirMode: 'normal', both: false, showShell: true, shellClear: true,
+  defaults: { d: 20, len: 200, kd: 10 },
   auto: { count: 8, spacing: 25, replace: true, stats: null },
   pending: null, computing: false, ready: false
 };
@@ -150,6 +153,17 @@ function updateFacts() {
 }
 
 /* ── Abstandsfläche ──────────────────────────────────────────── */
+/* Vorgabe der Kantenlänge: ein 64stel der längsten Bauteilkante, auf
+   glatte Werte gerundet (halbe Millimeter ab 1 mm, darunter Zehntel).
+   Nicht die halbe Wanddicke wie bei Wandstärke und Füllung — das Feld
+   reicht hier weit nach außen, und die Fläche im Abstand braucht keine
+   Zellen, die eine Wand auflösen. */
+function suggestShellCell(model) {
+  const longest = Math.max(...model.bounds.size) || 1;
+  const h = Math.max(CELL_RANGE[0], Math.min(CELL_RANGE[1], longest / 64));
+  return h >= 1 ? Math.round(h * 2) / 2 : Math.round(h * 10) / 10;
+}
+
 /* Das Feld reicht nach außen bis über den Abstand hinaus; ein Abstand
    innerhalb des Bandes kostet nur das Ableiten, mehr ein neues Feld. */
 async function computeShell() {
@@ -158,15 +172,15 @@ async function computeShell() {
   const need = dist * 1.3 + 5;
   state.computing = true;
   try {
-    if (!state.field || state.field.band < dist + 1 || state.fieldRes !== state.res) {
+    if (!state.field || state.field.band < dist + 1 || state.fieldH !== state.h) {
       busy.textContent = 'Abstandsfeld rastern …';
       busy.classList.add('on');
       await frame();
       state.field = await buildField(state.model, {
-        res: state.res, band: need,
+        h: state.h, band: need,
         onProgress: (p, what) => { busy.textContent = 'Abstandsfeld · ' + what + ' … ' + Math.round(p * 100) + ' %'; }
       });
-      state.fieldRes = state.res;
+      state.fieldH = state.h;
     }
     const tris = surfaceNets(state.field, dist);
     setTris(shellMesh, tris, true);
@@ -409,7 +423,14 @@ slider('dist', v => {
   clearTimeout(distTimer);
   distTimer = setTimeout(computeShell, 250);         // erst wenn der Regler stillsteht
 }, v => v + ' mm');
-slider('res', v => { state.res = v; state.field = null; clearTimeout(distTimer); distTimer = setTimeout(computeShell, 250); }, v => v + ' Zellen');
+/* Die Kantenlänge: eintippen, bestätigen, das Feld wird neu gerastert.
+   Einmal gesetzt, bleibt sie auch für das nächste Bauteil stehen. */
+numberInput('cell', v => {
+  state.hAuto = false;
+  state.h = Math.max(CELL_RANGE[0], Math.min(CELL_RANGE[1], v));
+  if (state.h !== state.fieldH) { state.field = null; clearTimeout(distTimer); distTimer = setTimeout(computeShell, 250); }
+  return state.h;
+});
 $('shell-on').addEventListener('change', e => { state.showShell = e.target.checked; applyVisibility(); });
 $('shell-clear').addEventListener('change', e => { state.shellClear = e.target.checked; shellClear(state.shellClear); view.invalidate(); });
 slider('ref-opacity', v => {
@@ -428,6 +449,7 @@ const source = mountPartSource({
     state.name = name;
     state.field = null;
     state.shellDist = null;
+    if (state.hAuto) { state.h = suggestShellCell(model); $('cell').value = fmtPlain(state.h); }
     const geo = new T.BufferGeometry();
     geo.setAttribute('position', new T.BufferAttribute(Float32Array.from(model.tris), 3));
     geo.computeVertexNormals();

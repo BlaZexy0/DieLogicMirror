@@ -31,9 +31,11 @@
    Verhältnis zu wo, und auf welcher Seite mehr. Das Maß ist relativ; die
    Summen beider Hälften sagen, auf welcher Seite das Teil bleibt.
 
-   Die HAFTKARTE verteilt das Haftmaß der gewählten Hälfte auf ihre
-   Trennebene (das Raster der Projektion, js/part/dieview.js) und glättet
-   es — senkrechte Wände hätten sonst nur eine Linie als Spur. Wo Stifte
+   Die HAFTKARTE verteilt das Haftmaß einer Hälfte auf ihre Trennebene
+   (das Raster der Projektion, js/part/dieview.js) und glättet es —
+   senkrechte Wände hätten sonst nur eine Linie als Spur. Die Seite zeigt
+   die Karten BEIDER Hälften zugleich, auf gemeinsamer Skala
+   (ejectorMaps); Schieber haben keine, ihr Haftmaß ist 0. Wo Stifte
    sitzen sollen, entscheidet der Konstrukteur mit der Karte. Kein
    Three.js — die Tests rechnen es nach. */
 
@@ -167,4 +169,24 @@ export function ejectorMap(model, seg, grip, label, opts = {}) {
   const map = new Float32Array(sm.length);
   if (max > 0) for (let i = 0; i < sm.length; i++) map[i] = sm[i] / max;
   return { frame, map, max, total, label };
+}
+
+/**
+ * Die Haftkarten mehrerer Hälften auf GEMEINSAMER Skala: jede wie
+ * ejectorMap gerechnet, dann alle durch das größte Maximum geteilt.
+ * Sonst sähe die schwächer haftende Seite genauso rot aus wie die
+ * stärkere, und die Frage „welche Seite hält mehr" wäre aus den Karten
+ * nicht zu lesen. Die Karte mit dem größten Maximum behält ihre 1.
+ * → Array der Karten (je mit `label`, `max` in mm²/Zelle vor der Glättung,
+ *   `total`); `map` 0…1 über alle Karten hinweg
+ */
+export function ejectorMaps(model, seg, grip, labels, opts = {}) {
+  const maps = labels.map(l => ejectorMap(model, seg, grip, l, opts));
+  const top = Math.max(0, ...maps.map(m => m.max));
+  for (const m of maps) {
+    if (!(top > 0) || !(m.max < top)) continue;
+    const k = m.max / top;
+    for (let i = 0; i < m.map.length; i++) m.map[i] *= k;
+  }
+  return maps;
 }
