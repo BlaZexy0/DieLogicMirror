@@ -51,8 +51,10 @@
      (Dashboard, Diagramme, Sprengfläche, Teilekosten, Zyklus) und
      „3D-Studio". Die fünf Auslegungs-Reiter standen lange einzeln in der
      Leiste; mit dem Studio daneben war das eine Reihe von neun, in der
-     man die zwei Hälften nicht mehr sah. „Auslegung" hat Spalten, weil
-     die 19 Diagramme sonst nicht in ein Menü passen. */
+     man die zwei Hälften nicht mehr sah. Beide Menüs haben dieselben
+     Spalten: links das Ganze (Werkzeuge · Werkbank), rechts die vielen
+     Einzelnen (Diagramme · Einzeltools) — die 19 Diagramme und die acht
+     Werkzeuge des Studios in je zwei Spalten. */
   const NAV_LINKS = [
     { label: 'Auslegung', columns: [
       { title: 'Werkzeuge', items: [
@@ -65,17 +67,21 @@
         { label: title, href: '/tools/auslegung/chart.html?id=' + id }
       )) },
     ] },
-    { label: '3D-Studio', children: [
-      { label: 'Übersicht', href: '/tools/3d-studio/' },
-      { label: 'Werkbank', href: '/tools/3d-studio/werkbank.html' },
-      { label: 'Formaufbau', href: '/tools/3d-studio/form.html' },
-      { label: 'Entformungsanalyse', href: '/tools/3d-studio/entformungsanalyse.html' },
-      { label: 'Wandstärkenanalyse', href: '/tools/3d-studio/wandstaerke.html' },
-      { label: 'Abstandsanalyse', href: '/tools/3d-studio/abstand.html' },
-      { label: 'Angussdesigner', href: '/tools/3d-studio/anguss.html' },
-      { label: 'Überlaufdesigner', href: '/tools/3d-studio/ueberlauf.html' },
-      { label: 'Temperierkanäle', href: '/tools/3d-studio/temperier.html' },
-      { label: 'Füllabschätzung', href: '/tools/3d-studio/fuellung.html' },
+    { label: '3D-Studio', columns: [
+      { title: 'Werkbank', items: [
+        { label: 'Werkbank', href: '/tools/3d-studio/werkbank.html' },
+        { label: 'Übersicht', href: '/tools/3d-studio/' },
+      ] },
+      { title: 'Einzeltools', wide: true, items: [
+        { label: 'Formaufbau', href: '/tools/3d-studio/form.html' },
+        { label: 'Entformungsanalyse', href: '/tools/3d-studio/entformungsanalyse.html' },
+        { label: 'Wandstärkenanalyse', href: '/tools/3d-studio/wandstaerke.html' },
+        { label: 'Abstandsanalyse', href: '/tools/3d-studio/abstand.html' },
+        { label: 'Angussdesigner', href: '/tools/3d-studio/anguss.html' },
+        { label: 'Überlaufdesigner', href: '/tools/3d-studio/ueberlauf.html' },
+        { label: 'Temperierkanal-Designer', href: '/tools/3d-studio/temperier.html' },
+        { label: 'Füllabschätzung', href: '/tools/3d-studio/fuellung.html' },
+      ] },
     ] },
     { label: 'Theorie', children: [
       { label: 'Das PQ²-Diagramm', href: '/theorie/pq2.html' },

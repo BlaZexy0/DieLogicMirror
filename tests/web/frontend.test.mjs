@@ -285,7 +285,7 @@ test('nav: CHARTS-Liste entspricht der Registry (Ids, Titel, Reihenfolge)', () =
 /* Die Leiste wurde schmal zum Scrollstreifen: die Links schoben „Anmelden"
    aus dem Bild, sichtbar blieb nur das Logo. Seitdem klappt nav.js zum
    Burger-Menü zusammen — dieser Test hält die Bestandteile fest. */
-test('nav: Auslegung ist ein Untermenü wie das 3D-Studio, mit den fünf Reitern und den Diagrammen', () => {
+test('nav: Auslegung und 3D-Studio sind Spaltenmenüs — Werkzeuge · Diagramme, Werkbank · Einzeltools', () => {
   const src = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
   const m = src.match(/const NAV_LINKS = \[([\s\S]*?)\n {2}\];/);
   assert.ok(m, 'NAV_LINKS in nav.js nicht gefunden');
@@ -298,6 +298,17 @@ test('nav: Auslegung ist ein Untermenü wie das 3D-Studio, mit den fünf Reitern
     assert.ok(auslegung.includes("label: '" + l + "'"), l + ' gehört zur Auslegung');
   }
   assert.ok(/title: 'Diagramme'[\s\S]*CHARTS\.map/.test(auslegung), 'die Diagramme stehen als Spalte in der Auslegung');
+  /* Das Studio hat dieselbe Darstellung: links die Werkbank, rechts die
+     Einzeltools als Spalte — nicht mehr eine flache Liste von zehn. */
+  const studio = body.slice(body.indexOf("label: '3D-Studio'"), body.indexOf("label: 'Theorie'"));
+  assert.match(studio, /columns: \[/, 'das Studio ist ein Spaltenmenü wie die Auslegung');
+  assert.match(studio, /title: 'Werkbank'/, 'Spalte Werkbank');
+  assert.match(studio, /title: 'Einzeltools', wide: true/, 'Spalte Einzeltools, zweispaltig wie die Diagramme');
+  for (const l of ['Werkbank', 'Übersicht', 'Formaufbau', 'Entformungsanalyse', 'Wandstärkenanalyse', 'Abstandsanalyse',
+    'Angussdesigner', 'Überlaufdesigner', 'Temperierkanal-Designer', 'Füllabschätzung']) {
+    assert.ok(studio.includes("label: '" + l + "'"), l + ' gehört zum Studio');
+  }
+  assert.ok(!/children:/.test(studio), 'keine flache Liste mehr');
   assert.match(src, /dl-nav-dropdown--cols/, 'das Spaltenmenü hat seinen Stil');
   assert.match(src, /dl-nav-group-label\$\{activeGroup\}/, 'die Gruppe trägt den Reiter-Strich der aktiven Seite');
 });
