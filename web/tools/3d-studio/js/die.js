@@ -2,10 +2,17 @@
 
    Eine Form als bearbeitbare Baugruppe (js/assembly.js): voreingestellt
    kommt assets/die.glb, dazu lassen sich STL-Dateien in Gruppen laden,
-   Teile umbenennen, verschieben und entfernen, Gruppen anlegen — und das
-   Ganze als eine GLB speichern und wieder laden. Die Seitenleiste
+   Teile umbenennen, verschieben, färben und entfernen, Gruppen anlegen —
+   und das Ganze als eine GLB speichern und wieder laden. Die Seitenleiste
    (js/ui/assembly-sidebar.js) zeichnet die Gruppen, hier läuft die
-   Verdrahtung: Dateien, Regler, Schnitt, Hover.
+   Verdrahtung: Dateien, Regler, Schnitt, Hover — und das HERVORHEBEN.
+
+   Hervorheben ist der Heizkühlplan für die Halle: ein Tipp auf ein Teil
+   (in der Leiste oder im Bild), auf eine Gruppe oder auf „Temperierung",
+   und genau das bleibt deckend, alles andere wird blass — der Stahl unter
+   seine Transparenz, Gussteil und Anguss ebenso. Ein zweiter Tipp nimmt
+   es wieder heraus, „Aufheben" räumt alles. Die Hervorhebung ist eine
+   Sache der Ansicht, nicht der Baugruppe: sie steht nicht in der GLB.
 
    Die Zuordnung Modell ↔ Seitenleiste läuft über Knotennamen und
    userData (glTF-extras) — beides überlebt den GLB-Roundtrip. Der Viewer
@@ -47,22 +54,115 @@ mountViewBar(container, view);
 let asm = null;
 let clip = null;
 let sidebar = null;
-const ui = { opacity: $('opacity').value / 100, open: 0, clip: null };
+const ui = { opacity: $('opacity').value / 100, open: 0, clip: null, highlight: new Set() };
 
 /* ── Darstellung ─────────────────────────────────────────────── */
-function setSteelOpacity(o) {
-  ui.opacity = o;
+/* Blass, aber noch da: so viel bleibt von einem nicht hervorgehobenen
+   Teil — der Stahl fast weg, das Gegossene als Schemen, damit die Lage
+   des Kreises im Teil lesbar bleibt. */
+const GHOST = { steel: 0.06, other: 0.14 };
+
+/* Stahl-Transparenz und Hervorhebung in einem Durchgang: ein Material je
+   Teil (js/assembly.js sorgt dafür), also Deckkraft je Teil. Hervor-
+   gehobene Teile leuchten leicht aus sich heraus, damit auch ein dunkler
+   Kreis vor dem blassen Stahl steht. */
+function applyLook() {
   if (!asm) return;
-  const mats = new Set();
-  asm.scene.traverse(x => { if (x.isMesh && x.material && x.material.name === 'steel') mats.add(x.material); });
-  for (const m of mats) {
-    m.opacity = o;
-    m.transparent = o < 0.999;
-    m.depthWrite = o >= 0.999;   // vermeidet Sortier-Artefakte bei Transparenz
-    m.needsUpdate = true;
+  const hl = ui.highlight, any = hl.size > 0;
+  for (const it of asm.items) {
+    const on = hl.has(it.id);
+    it.object.traverse(o => {
+      if (!o.isMesh || o.userData.stencilTwin || !o.material) return;
+      const m = o.material;
+      const steel = m.name === 'steel';
+      let a = steel ? ui.opacity : 1;
+      if (any) a = on ? 1 : Math.min(a, steel ? GHOST.steel : GHOST.other);
+      m.opacity = a;
+      m.transparent = a < 0.999;
+      m.depthWrite = a >= 0.999;   // vermeidet Sortier-Artefakte bei Transparenz
+      if (m.emissive) {
+        if (any && on) m.emissive.copy(m.color).multiplyScalar(0.22); else m.emissive.setHex(0);
+      }
+      m.needsUpdate = true;
+    });
   }
+  if (clip) clip.setClassAlpha(any ? activeClasses() : null);
   view.invalidate();
 }
+
+function setSteelOpacity(o) {
+  ui.opacity = o;
+  applyLook();
+}
+
+/* Die Werkstoffklassen der hervorgehobenen Teile — deren Schnittflächen
+   bleiben kräftig. */
+function activeClasses() {
+  const out = new Set();
+  for (const id of ui.highlight) {
+    const it = asm.itemOf(id);
+    if (it) it.object.traverse(o => { if (o.isMesh && o.material && !o.userData.stencilTwin) out.add(o.material.name || 'steel'); });
+  }
+  return out;
+}
+
+/* ── Hervorheben ─────────────────────────────────────────────── */
+const highlighted = id => ui.highlight.has(id);
+
+/** Genau diese Teile hervorheben (leer = keins). */
+function setHighlight(ids) {
+  ui.highlight = new Set([...ids].filter(id => asm && asm.itemOf(id)));
+  afterHighlight();
+}
+
+/** Teile umschalten: sind alle schon hervorgehoben, gehen sie heraus,
+    sonst kommen sie dazu — so wirkt ein Tipp auf ein Teil, auf eine
+    Gruppe und auf „Temperierung" gleich. */
+function toggleHighlight(ids) {
+  if (!asm) return;
+  const list = [...ids].filter(id => asm.itemOf(id));
+  if (!list.length) return;
+  const all = list.every(id => ui.highlight.has(id));
+  for (const id of list) { if (all) ui.highlight.delete(id); else ui.highlight.add(id); }
+  afterHighlight();
+}
+
+function clearHighlight() {
+  if (!ui.highlight.size) return;
+  ui.highlight.clear();
+  afterHighlight();
+}
+
+function afterHighlight() {
+  applyLook();
+  if (sidebar) sidebar.render();
+  syncQuick();
+}
+
+/* Die Temperierung: alle Teile in Gruppen der Klassen coolFix/coolMov. */
+function coolingIds() {
+  if (!asm) return [];
+  const cool = new Set(asm.groups.filter(g => g.mat === 'coolFix' || g.mat === 'coolMov').map(g => g.key));
+  return asm.items.filter(i => cool.has(i.group)).map(i => i.id);
+}
+
+/* Die Schnellknöpfe über der Liste. */
+function syncQuick() {
+  const n = ui.highlight.size;
+  const cool = coolingIds();
+  $('hl-clear').disabled = !n;
+  $('hl-clear').textContent = n ? 'Aufheben (' + n + ')' : 'Aufheben';
+  $('hl-cooling').disabled = !cool.length;
+  $('hl-cooling').classList.toggle('active', n > 0 && n === cool.length && cool.every(id => ui.highlight.has(id)));
+}
+$('hl-cooling').addEventListener('click', () => toggleHighlight(coolingIds()));
+$('hl-clear').addEventListener('click', clearHighlight);
+$('show-all').addEventListener('click', () => {
+  if (!asm) return;
+  for (const it of asm.items) asm.setVisible(it.id, true);
+  ui.highlight.clear();
+  afterHighlight();
+});
 
 /* Nach jeder Änderung an den Teilen: Schnitt-Zwillinge neu, Stahl-
    Transparenz auf neue Materialien, Öffnungsversatz nachziehen. Reine
@@ -71,7 +171,7 @@ function changed(info = {}) {
   if (!asm) return;
   if (!info.visibility) {
     clip.refresh(asm.scene);
-    setSteelOpacity(ui.opacity);
+    applyLook();
     asm.setOpen(ui.open);
   }
   note();
@@ -96,11 +196,16 @@ function adopt(scene, sourceName) {
   }
   if (asm) { view.scene.remove(asm.scene); asm.dispose(); }
   asm = next;
+  ui.highlight.clear();                      // eine Hervorhebung gehört zum alten Modell
   view.scene.add(scene);
   if (!clip) clip = initClipCaps(view.scene, scene); else clip.refresh(scene);
   if (ui.clip) clip.setClip(ui.clip);
-  sidebar = mountAssemblySidebar($('components'), asm, { onChanged: changed, onAddFiles: pickFiles, targetSelect: $('stl-target') });
-  setSteelOpacity(ui.opacity);
+  sidebar = mountAssemblySidebar($('components'), asm, {
+    onChanged: changed, onAddFiles: pickFiles, targetSelect: $('stl-target'),
+    onHighlight: toggleHighlight, highlighted
+  });
+  applyLook();
+  syncQuick();
   asm.setOpen(ui.open);
   $('file-warn').textContent = '';
   note();
@@ -223,19 +328,45 @@ $('group-add').addEventListener('click', () => {
   changed({ visibility: true });
 });
 
-/* ── Hover: Teil unter der Maus in der Statusleiste nennen ────── */
+/* ── Hover und Tipp im Bild ──────────────────────────────────── */
 const ray = new T.Raycaster();
-view.renderer.domElement.addEventListener('pointermove', ev => {
-  if (!asm) return;
+/** Das Teil unter dem Zeiger (Teil-id) oder null. */
+function pick(ev) {
+  if (!asm) return null;
   const r = view.renderer.domElement.getBoundingClientRect();
   const p = new T.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(p, view.camera);
   const hits = ray.intersectObjects(asm.items.filter(i => i.object.visible).map(i => i.object), true);
-  /* Die unsichtbaren Stencil-Zwillinge tragen kein compId und fallen durch. */
-  const hit = hits.find(h => h.object.userData.compId && !h.object.userData.stencilTwin);
-  status.textContent = hit ? (asm.labelOf(hit.object.userData.compId) || IDLE) : IDLE;
+  /* Die unsichtbaren Stencil-Zwillinge tragen kein compId und fallen durch.
+     Blasse Teile zählen nicht — sonst träfe der Tipp auf einen Kreis den
+     Stahl davor. */
+  const hit = hits.find(h => h.object.userData.compId && !h.object.userData.stencilTwin
+    && (!ui.highlight.size || ui.highlight.has(h.object.userData.compId)));
+  return hit ? hit.object.userData.compId : null;
+}
+view.renderer.domElement.addEventListener('pointermove', ev => {
+  if (!asm) return;
+  const id = pick(ev);
+  status.textContent = id ? (asm.labelOf(id) || IDLE) : IDLE;
 });
 view.renderer.domElement.addEventListener('pointerleave', () => { status.textContent = IDLE; });
 
-Object.assign(__viewer, { view, setSteelOpacity, adopt, saveGLB, addFiles });
+/* Ein Tipp (kein Ziehen: kaum bewegt, kurz) hebt das Teil darunter
+   hervor oder nimmt es heraus; ein Tipp ins Leere hebt alles auf. So
+   lässt sich der Kreis direkt im Bild wählen — in der Halle am Tablet. */
+let press = null;
+view.renderer.domElement.addEventListener('pointerdown', ev => {
+  press = ev.button === 0 || ev.button === undefined ? { x: ev.clientX, y: ev.clientY, t: performance.now() } : null;
+});
+view.renderer.domElement.addEventListener('pointerup', ev => {
+  if (!press || !asm) return;
+  const moved = Math.hypot(ev.clientX - press.x, ev.clientY - press.y);
+  const dt = performance.now() - press.t;
+  press = null;
+  if (moved > 6 || dt > 700) return;
+  const id = pick(ev);
+  if (id) toggleHighlight([id]); else clearHighlight();
+});
+
+Object.assign(__viewer, { view, ui, setSteelOpacity, applyLook, setHighlight, toggleHighlight, clearHighlight, adopt, saveGLB, addFiles });
 window.__form3d = __viewer;

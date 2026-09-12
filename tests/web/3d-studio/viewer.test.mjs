@@ -716,6 +716,115 @@ test('Formaufbau: STL laden, umbenennen, verschieben, entfernen, Gruppen anlegen
   assert.ok(!asm.groups.some(x => x.key === g.key), 'die leere Gruppe ist weg');
 });
 
+test('Formaufbau: Hervorheben je Teil, Gruppe und Temperierung, Farben, Menüs statt Auswahl je Zeile', async () => {
+  const { root } = await legacyDie();
+  globalThis.__TEST_GLTF = root;
+  const { doc: d } = buildDocument(read('form.html'));
+  installGlobals(d);
+  const mod = await import('../../../web/tools/3d-studio/js/die.js?variante=hervorheben');
+  await new Promise(r => setTimeout(r, 30));
+  const v = mod.__viewer;
+  const asm = v.asm;
+  const list = d.getElementById('components');
+  const rowOf = id => list.querySelectorAll('[data-item]').find(r => r.getAttribute('data-item') === id);
+  const headOf = key => list.querySelectorAll('.group-head').find(h => h.getAttribute('data-group') === key);
+  const matOf = id => root.getObjectByName(id).children[0].material;
+
+  /* Keine Auswahl je Zeile mehr: das Verschieben sitzt mit Umbenennen und
+     Entfernen im Menü „⋯", das zu ist, bis man es öffnet. */
+  const row = rowOf('coolFixL');
+  assert.ok(row.querySelector('[data-act="menu"]'), 'ein Menüknopf je Zeile');
+  const menu = row.querySelector('.row-menu');
+  assert.ok(menu.classList.contains('hidden'), 'das Menü ist zu');
+  row.querySelector('[data-act="menu"]').dispatch('click');
+  assert.ok(!menu.classList.contains('hidden'), 'und geht auf');
+  assert.ok(menu.querySelector('[data-act="move"]') && menu.querySelector('[data-act="rename"]') && menu.querySelector('[data-act="remove"]'),
+    'Verschieben, Umbenennen, Entfernen im Menü');
+  row.querySelector('[data-act="menu"]').dispatch('click');
+  assert.ok(menu.classList.contains('hidden'), 'ein zweiter Tipp schließt es');
+  const head = headOf('coolFix');
+  assert.ok(head.querySelector('.row-menu').classList.contains('hidden'), 'auch das Gruppenmenü ist zu');
+  assert.ok(head.querySelector('[data-act="group-color"]') && head.querySelector('[data-act="add-stl"]'), 'Farbe und Laden im Gruppenmenü');
+
+  /* Ein Tipp auf den Namen hebt das Teil hervor: es bleibt deckend, alles
+     andere wird blass — der Stahl unter seine Transparenz, das Gussteil
+     ebenso. Ein zweiter Tipp nimmt es wieder heraus. */
+  row.querySelector('[data-act="hl"]').dispatch('click');
+  assert.ok(v.ui.highlight.has('coolFixL') && v.ui.highlight.size === 1, 'ein Teil hervorgehoben');
+  assert.ok(rowOf('coolFixL').classList.contains('hl'), 'die Zeile zeigt es');
+  assert.ok(!rowOf('coolFixR').classList.contains('hl'));
+  assert.equal(matOf('coolFixL').opacity, 1);
+  assert.ok(matOf('fixHalf').opacity < 0.1, 'Stahl blass: ' + matOf('fixHalf').opacity);
+  assert.ok(matOf('castPart').opacity < 0.2 && matOf('castPart').transparent, 'Gussteil blass: ' + matOf('castPart').opacity);
+  assert.equal(d.getElementById('hl-clear').disabled, false);
+  assert.match(d.getElementById('hl-clear').textContent, /\(1\)/);
+  rowOf('coolFixL').querySelector('[data-act="hl"]').dispatch('click');
+  assert.equal(v.ui.highlight.size, 0);
+  assert.ok(Math.abs(matOf('fixHalf').opacity - 0.4) < 1e-9, 'Stahl wieder auf dem Regler');
+  assert.equal(matOf('castPart').opacity, 1);
+  assert.equal(d.getElementById('hl-clear').disabled, true);
+
+  /* Der Gruppenname hebt alle Teile der Gruppe hervor; „Temperierung"
+     alle Kreise beider Hälften; „Aufheben" räumt. */
+  headOf('coolFix').querySelector('[data-act="hl-group"]').dispatch('click');
+  assert.deepEqual([...v.ui.highlight].sort(), ['coolFixL', 'coolFixR']);
+  assert.ok(headOf('coolFix').classList.contains('hl'), 'der Kopf zeigt es');
+  assert.ok(!headOf('coolMov').classList.contains('hl'));
+  d.getElementById('hl-cooling').dispatch('click');
+  assert.deepEqual([...v.ui.highlight].sort(), ['coolFixL', 'coolFixR', 'coolMovL', 'coolMovR']);
+  assert.ok(d.getElementById('hl-cooling').classList.contains('active'));
+  d.getElementById('hl-cooling').dispatch('click');
+  assert.equal(v.ui.highlight.size, 0, 'ein zweiter Tipp auf Temperierung nimmt sie heraus');
+  d.getElementById('hl-cooling').dispatch('click');
+  d.getElementById('hl-clear').dispatch('click');
+  assert.equal(v.ui.highlight.size, 0);
+  assert.ok(!d.getElementById('hl-cooling').classList.contains('active'));
+
+  /* Tipp im Bild: das getroffene Teil wird hervorgehoben, ein Tipp ins
+     Leere hebt auf, Ziehen ist kein Tipp. (Alle Ersatzteile sind Würfel
+     im Ursprung — die Kamera schaut dorthin.) */
+  const canvas = v.view.renderer.domElement;
+  v.view.controls.target.set(0, 0, 0);
+  v.view.camera.lookAt(0, 0, 0);
+  v.view.camera.updateMatrixWorld(true);
+  const tap = (x, y, x2 = x, y2 = y) => {
+    canvas.dispatch('pointerdown', { button: 0, clientX: x, clientY: y });
+    canvas.dispatch('pointerup', { button: 0, clientX: x2, clientY: y2 });
+  };
+  tap(400, 300);
+  assert.equal(v.ui.highlight.size, 1, 'ein Tipp ins Bild hebt das Teil darunter hervor');
+  tap(5, 5);
+  assert.equal(v.ui.highlight.size, 0, 'ein Tipp ins Leere hebt auf');
+  tap(400, 300, 470, 340);
+  assert.equal(v.ui.highlight.size, 0, 'Ziehen hebt nichts hervor');
+
+  /* Farbe: das Farbfeld der Zeile färbt Material und Metadatum — beides
+     geht mit in die GLB. Die Gruppenfarbe färbt alle Teile der Gruppe. */
+  const colorIn = rowOf('coolFixL').querySelector('[data-act="color"]');
+  colorIn.value = '#00ff00'; colorIn.dispatch('input');
+  assert.equal(asm.itemOf('coolFixL').color, '#00ff00');
+  assert.equal(matOf('coolFixL').color.getHexString(), '00ff00');
+  assert.ok(asm.metadata().items.some(i => i.id === 'coolFixL' && i.color === '#00ff00'), 'die Farbe steht in den Metadaten');
+  assert.equal(rowOf('coolFixL').querySelector('.dot').style.background, '#00ff00', 'das Farbfeld folgt');
+  const gcol = headOf('coolMov').querySelector('[data-act="group-color"]');
+  gcol.value = '#123456'; gcol.dispatch('input');
+  assert.equal(asm.itemOf('coolMovL').color, '#123456');
+  assert.equal(asm.itemOf('coolMovR').color, '#123456');
+  assert.equal(asm.groupOf('coolMov').color, '#123456');
+  assert.equal(matOf('coolMovR').color.getHexString(), '123456');
+  assert.equal(asm.setColor('coolMovR', 'rot'), false, 'nur #rrggbb');
+
+  /* „Alle zeigen": versteckte Teile kommen zurück, die Hervorhebung geht. */
+  rowOf('fixHalf').querySelector('[data-comp]').checked = false;
+  rowOf('fixHalf').querySelector('[data-comp]').dispatch('change');
+  v.toggleHighlight(['castPart']);
+  assert.equal(root.getObjectByName('fixHalf').visible, false);
+  d.getElementById('show-all').dispatch('click');
+  assert.equal(root.getObjectByName('fixHalf').visible, true);
+  assert.equal(v.ui.highlight.size, 0);
+  assert.ok(list.querySelectorAll('.bulb-btn').every(b => b.classList.contains('on')), 'alle Birnen leuchten wieder');
+});
+
 test('Formaufbau: als GLB speichern und daraus wieder laden', async () => {
   const { root, COMPONENTS } = await legacyDie();
   globalThis.__TEST_GLTF = root;

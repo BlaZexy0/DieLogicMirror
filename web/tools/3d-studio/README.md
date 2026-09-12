@@ -38,8 +38,10 @@ aneinander.
 Der Formaufbau ist ein Werkzeug für **eigene Formen**: STL-Dateien laden
 und in Gruppen einsortieren — Feste Seite, Temperierung fest, Bewegliche
 Seite, Temperierung beweglich, Schieber, Gussteil, dazu beliebige eigene
-Gruppen —, Teile umbenennen, verschieben und entfernen, und das Ganze als
-**eine GLB-Datei** speichern, die der Viewer wieder lädt. Jede Gruppe hat
+Gruppen —, Teile umbenennen, verschieben, färben und entfernen, und das
+Ganze als **eine GLB-Datei** speichern, die der Viewer wieder lädt. Und
+er ist der **Heizkühlplan für die Halle**: ein Tipp hebt einen
+Temperierkreis oder eine Gruppe hervor, der Rest der Form wird blass. Jede Gruppe hat
 eine Seite (fest bleibt stehen, beweglich fährt beim Öffnen mit), eine
 Werkstoffklasse für neu geladene Teile (Stahl, Gussteil, Anguss,
 Temperierung …; sie steuert Transparenz und Schnittfarbe) und kann ein
@@ -72,19 +74,39 @@ Formrücken geht;
 je Hälfte zwei Temperierkreise (fest: unter dem flachen Boden und unter
 dem Sumpf), an Pressrest, Anguss und Auswerferstiften vorbeigeführt.
 
-Bedienung:
+Bedienung (die Seitenleiste ist für Tablet und Halle gebaut: hohe
+Zeilen, das Häufige sichtbar, das Seltene hinter „⋯"):
 
+- **Schnellknöpfe** über der Liste: **Alle zeigen** (alles einblenden,
+  Hervorhebung weg), **Temperierung** (alle Kreise beider Hälften
+  hervorheben — die Teile in Gruppen der Klassen Temperierung fest /
+  beweglich; ein zweiter Tipp nimmt sie wieder heraus) und **Aufheben**
+  (mit der Zahl der hervorgehobenen Teile).
 - **Gruppen** mit je einer **Glühbirne** im Kopf: leuchtet sie, ist
-  mindestens ein Teil sichtbar; ein Klick schaltet die ganze Gruppe um.
-  Daneben ✎ (umbenennen), + (STL-Dateien in diese Gruppe laden) und ×
-  (eine leere Gruppe entfernen). Je Teil: Schalter, Farbe, Name (✎),
-  Gruppenauswahl zum Verschieben und ×. „Gruppe anlegen" fragt Name,
-  Seite, Werkstoffklasse und Schieber-Richtung samt Weg.
+  mindestens ein Teil sichtbar; ein Tipp schaltet die ganze Gruppe um.
+  Ein Tipp auf den **Gruppennamen** hebt alle Teile der Gruppe hervor.
+  „⋯" öffnet Umbenennen, STL-Dateien in diese Gruppe laden, eine Farbe
+  für alle Teile und Entfernen (nur leer). Je Teil: Schalter, **Farbfeld**
+  (tippen öffnet den Farbwähler; Kolben und Stifte behalten ihre festen
+  Farben), **Name** (tippen hebt hervor) und „⋯" mit Umbenennen,
+  Verschieben in eine andere Gruppe und Entfernen — das Verschieben stand
+  früher als Auswahlfeld in jeder Zeile, als Plan in der Halle braucht das
+  niemand. „Gruppe anlegen" fragt Name, Seite, Werkstoffklasse und
+  Schieber-Richtung samt Weg.
+- **Hervorheben**: die hervorgehobenen Teile bleiben deckend und leuchten
+  leicht, alles andere wird blass (Stahl auf 6 %, Gegossenes auf 14 %),
+  auch die Schnittflächen der anderen Klassen (`clip.setClassAlpha`).
+  Ein **Tipp ins Bild** hebt das Teil darunter hervor (ein kurzer Tipp
+  ohne Ziehen; blasse Teile fangen den Tipp nicht ab), ein Tipp ins
+  Leere hebt alles auf. Die Hervorhebung ist Sache der Ansicht und steht
+  nicht in der GLB — Farben und Namen schon (`assembly.setColor`,
+  Materialfarbe plus Metadatum).
 - **Dateien**: „STL laden in" (Zielgruppe wählbar, mehrere Dateien auf
   einmal, auch per Ziehen-und-Ablegen auf den Viewport), „GLB laden"
   ersetzt die ganze Baugruppe, „Als GLB speichern" schreibt sie mit allen
   Metadaten. Eine abgelegte GLB wird ebenfalls als Baugruppe geladen.
-- **Stahl-Transparenz** und **Form öffnen**.
+- **Stahl-Transparenz** und **Form öffnen** — beides bleibt bei einer
+  Hervorhebung erhalten, blass heißt „unter der Transparenz".
 - **Schnittebene** (Achse, Position, Seite) — der Schnitt zeigt die Körper
   *geschlossen*: Stencil-Capping zeichnet je Werkstoffklasse (Stahl,
   Gussteil, Anguss, Überläufe, Temperierung, Kolben, Stifte) massive

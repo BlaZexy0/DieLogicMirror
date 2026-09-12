@@ -38,6 +38,7 @@ export function initClipCaps(scene, dieScene) {
   let twins = [];
   let caps = [];
   let last = { on: false, axis: 'x', pos: 0, flip: false };
+  let activeClasses = null;   // null = alle Deckflächen in voller Farbe
 
   /* Stencil-Zwillinge: zwei geteilte Materialien, renderOrder je Klasse. */
   function stencilMat(side, op) {
@@ -116,9 +117,34 @@ export function initClipCaps(scene, dieScene) {
       cap.onAfterRender = renderer => renderer.clearStencil();
       cap.visible = false;
       cap.userData.capOffset = name === 'steel' ? 0.05 : 0.6;
+      cap.userData.className = name;
+      cap.userData.baseColor = classColor.get(name).clone();
       scene.add(cap);
       caps.push(cap);
     }
+    applyClassAlpha();
+  }
+
+  /* Bei einer Hervorhebung im Viewer verblassen die Deckflächen der
+     Klassen, von denen nichts hervorgehoben ist — sonst stünde ein
+     massiver Stahlschnitt vor einem blassen Stahlkörper. Verblassen
+     heißt: Farbe zum Hintergrund hin mischen, NICHT transparent machen —
+     eine transparente Deckfläche käme in den zweiten Renderdurchgang,
+     nach allen Stencil-Zwillingen, und der Zähler wäre dann längst
+     überschrieben. */
+  const FADE = new T.Color(0xf3f6f6);
+  function applyClassAlpha() {
+    for (const cap of caps) {
+      const dim = activeClasses && !activeClasses.has(cap.userData.className);
+      cap.material.color.copy(cap.userData.baseColor);
+      if (dim) cap.material.color.lerp(FADE, 0.78);
+    }
+  }
+  /** Klassen mit hervorgehobenen Teilen (Iterable von Materialnamen)
+      bleiben kräftig, alle anderen blass; null = alle kräftig. */
+  function setClassAlpha(active) {
+    activeClasses = active ? new Set(active) : null;
+    applyClassAlpha();
   }
 
   function setClip({ on, axis, pos, flip }) {
@@ -152,5 +178,5 @@ export function initClipCaps(scene, dieScene) {
   }
 
   build();
-  return { setClip, refresh };
+  return { setClip, refresh, setClassAlpha };
 }

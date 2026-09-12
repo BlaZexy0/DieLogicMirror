@@ -22,13 +22,20 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Formaufbau</h1>
-    <p class="subtitle">Eine Druckgießform aus STL-Dateien zusammenstellen: Teile in Gruppen einsortieren, als eine GLB speichern und wieder laden.</p>
+    <p class="subtitle">Eine Druckgießform als Baugruppe: Teile in Gruppen, Kreise und Gruppen hervorheben, Farben ändern — als eine GLB speichern und wieder laden.</p>
   </div>
 </section>
 
 <div class="layout">
-  <aside>
+  <aside class="form-side">
     <h2>Gruppen und Teile</h2>
+    <div class="quick" id="quick">
+      <button type="button" class="btn btn-outline" id="show-all" title="Alle Teile einblenden, Hervorhebung aufheben">Alle zeigen</button>
+      <button type="button" class="btn btn-outline" id="hl-cooling" title="Alle Temperierkreise hervorheben, der Rest wird blass">Temperierung</button>
+      <button type="button" class="btn btn-outline" id="hl-clear" disabled title="Hervorhebung aufheben">Aufheben</button>
+    </div>
+    <div class="hint quick-hint">Name tippen: hervorheben (auch im Bild) · Farbfeld: Farbe · ⋯: umbenennen,
+      verschieben, entfernen</div>
     <div id="components"></div>
     <button type="button" class="btn btn-outline block-btn" id="group-new">+ Gruppe anlegen</button>
     <div id="group-form" class="hidden">
@@ -46,20 +53,6 @@
         <button type="button" class="btn btn-outline" id="group-cancel">Abbrechen</button>
       </div>
     </div>
-
-    <h2>Dateien</h2>
-    <div class="row"><span>STL laden in</span><select id="stl-target"></select></div>
-    <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" multiple hidden>
-    <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ STL-Dateien laden</button>
-    <input type="file" id="glb-input" accept=".glb,model/gltf-binary" hidden>
-    <div class="row"><span>Dateiname</span><input type="text" id="glb-name" value="formaufbau"><span class="val">.glb</span></div>
-    <div class="btn-pair">
-      <button type="button" class="btn btn-outline" id="glb-btn">GLB laden</button>
-      <button type="button" class="btn btn-primary" id="glb-save">Als GLB speichern</button>
-    </div>
-    <div class="hint" id="file-note"></div>
-    <div class="hint hidden-empty">Geladen: <span id="file-source"></span></div>
-    <div class="warn-line" id="file-warn"></div>
 
     <h2>Darstellung</h2>
     <div class="row">
@@ -92,14 +85,31 @@
       <label class="inline"><input type="checkbox" id="clip-flip"> Seite umkehren</label>
     </div>
 
+    <h2>Dateien</h2>
+    <div class="row"><span>STL laden in</span><select id="stl-target"></select></div>
+    <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" multiple hidden>
+    <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ STL-Dateien laden</button>
+    <input type="file" id="glb-input" accept=".glb,model/gltf-binary" hidden>
+    <div class="row"><span>Dateiname</span><input type="text" id="glb-name" value="formaufbau"><span class="val">.glb</span></div>
+    <div class="btn-pair">
+      <button type="button" class="btn btn-outline" id="glb-btn">GLB laden</button>
+      <button type="button" class="btn btn-primary" id="glb-save">Als GLB speichern</button>
+    </div>
+    <div class="hint" id="file-note"></div>
+    <div class="hint hidden-empty">Geladen: <span id="file-source"></span></div>
+    <div class="warn-line" id="file-warn"></div>
+
     <div class="hint">
-      Der Schnitt zeigt die Körper <b>geschlossen</b>: je Werkstoffklasse
-      (Stahl, Gussteil, Anguss, Überläufe, Temperierung, Kolben, Stifte) zeichnet ein
-      Stencil-Durchgang eine massive Schnittfläche in Klassenfarbe. Die Klasse eines
-      geladenen Teils kommt aus seiner Gruppe; beim Verschieben wechselt sie mit.
-      Gruppen, Seiten und Schieberwege werden als glTF-<code>extras</code> mit in die
-      GLB geschrieben; eine GLB ohne diese Angaben wird über die Namen aus
-      <code>js/registry.js</code> einsortiert.
+      <b>Heizkühlplan:</b> „Temperierung" hebt alle Kreise hervor, ein Tipp auf einen Kreis
+      nur diesen — der Rest der Form wird blass, Stahl-Transparenz und Schnitt bleiben.
+      Farben und Namen der Teile werden mit in die GLB geschrieben, die Hervorhebung nicht.
+      <p style="margin-top:.7rem">Der Schnitt zeigt die Körper <b>geschlossen</b>: je
+      Werkstoffklasse (Stahl, Gussteil, Anguss, Überläufe, Temperierung, Kolben, Stifte)
+      zeichnet ein Stencil-Durchgang eine massive Schnittfläche in Klassenfarbe; bei einer
+      Hervorhebung verblassen die Schnittflächen der anderen Klassen. Die Klasse eines
+      geladenen Teils kommt aus seiner Gruppe; beim Verschieben wechselt sie mit. Gruppen,
+      Seiten und Schieberwege stehen als glTF-<code>extras</code> in der GLB; eine GLB ohne
+      diese Angaben wird über die Namen aus <code>js/registry.js</code> einsortiert.</p>
     </div>
   </aside>
 

@@ -56,6 +56,16 @@ function legacyGroup(c) {
 const slug = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '')
   .replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'teil';
 
+/* Farben als '#rrggbb' — so kommen sie aus dem Farbwähler und so stehen
+   sie in den Metadaten. */
+const normalizeHex = c => {
+  const m = String(c || '').trim().match(/^#?([0-9a-fA-F]{6})$/);
+  return m ? '#' + m[1].toLowerCase() : null;
+};
+/* Klassen mit fester Farbe (js/materials.js): Kolben und Stifte bleiben,
+   wie sie sind, auch wenn das Teil eine andere Farbe bekommt. */
+const FIXED_COLOR = new Set(['plunger', 'pins']);
+
 /** Dreieckssuppe → indizierte Geometrie mit weichen Normalen über den
     Knickwinkel; so sehen geladene STL aus wie die Stücke der Form. */
 export function geometryOf(tris, crease = 32) {
@@ -120,6 +130,21 @@ export function createAssembly(scene) {
     return out;
   };
 
+  /* Jedes Teil bekommt eigene Materialien: eine fremd erzeugte GLB darf
+     ein Material über mehrere Knoten teilen, aber Farbe, Hervorhebung und
+     Transparenz gelten hier je Teil — ein geteiltes Material trüge die
+     Änderung des einen Teils in das andere. */
+  (function ownMaterials() {
+    const owner = new Map();
+    for (const it of items) {
+      for (const m of meshesOf(it.object)) {
+        const who = owner.get(m.material);
+        if (who && who !== it.id) m.material = m.material.clone();
+        owner.set(m.material, it.id);
+      }
+    }
+  })();
+
   /* Öffnen: die bewegliche Hälfte fährt in z, Schieber zusätzlich in der
      Trennebene — als Versatz ihres Teil-Knotens, damit die Stencil-
      Zwillinge des Schnitts (Kinder desselben Knotens) mitfahren. */
@@ -164,6 +189,30 @@ export function createAssembly(scene) {
     const it = itemOf(id);
     if (!it || !label.trim()) return false;
     it.label = label.trim();
+    return true;
+  }
+
+  /* Farbe eines Teils: Material und Metadatum. Beides überlebt den
+     GLB-Roundtrip — die Materialfarbe in der Datei, das Metadatum in den
+     extras. Kolben und Stifte behalten ihre festen Farben. */
+  function setColor(id, color) {
+    const it = itemOf(id), hex = normalizeHex(color);
+    if (!it || !hex) return false;
+    it.color = hex;
+    for (const m of meshesOf(it.object)) {
+      if (FIXED_COLOR.has(m.material.name)) continue;
+      m.material.color.set(hex);
+      m.material.needsUpdate = true;
+    }
+    return true;
+  }
+
+  /** Eine Farbe für alle Teile der Gruppe — und für neue Teile darin. */
+  function setGroupColor(key, color) {
+    const g = groupOf(key), hex = normalizeHex(color);
+    if (!g || !hex) return false;
+    g.color = hex;
+    for (const it of items) if (it.group === key) setColor(it.id, hex);
     return true;
   }
 
@@ -253,7 +302,8 @@ export function createAssembly(scene) {
   return {
     scene, die, fixedRoot, movingRoot, groups, items,
     get openTravel() { return openTravel; },
-    setOpen, addItem, removeItem, renameItem, moveItem, addGroup, removeGroup, renameGroup,
+    setOpen, addItem, removeItem, renameItem, moveItem, setColor, setGroupColor,
+    addGroup, removeGroup, renameGroup,
     setVisible, labelOf, groupOf, itemOf, metadata, toExportRoot, dispose
   };
 }
