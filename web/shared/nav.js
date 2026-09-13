@@ -81,6 +81,7 @@
         { label: 'Überlaufdesigner', href: '/tools/3d-studio/ueberlauf.html' },
         { label: 'Temperierkanal-Designer', href: '/tools/3d-studio/temperier.html' },
         { label: 'Füllabschätzung', href: '/tools/3d-studio/fuellung.html' },
+        { label: 'Angussfüllung (LBM)', href: '/tools/3d-studio/angussfuellung.html' },
       ] },
     ] },
     { label: 'Theorie', children: [

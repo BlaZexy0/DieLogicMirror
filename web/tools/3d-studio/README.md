@@ -17,6 +17,7 @@ liefert das Backend sie nur mit Sitzung aus (`login_gate` in
 | `wandstaerke.html` | **Wandstärkenanalyse** — Abstandsfeld durch Rasterisierung: Wandstärke und Wärmezentrum, Fläche gleichen Abstands (die Frage nach *innen*) |
 | `abstand.html`  | **Abstandsanalyse** — kürzester Abstand zwischen zwei Dateien, eingefärbt auf einer selbst gesetzten Skala (die Frage nach *außen*) |
 | `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen mit Zwickelradius, Anschnitte mit geradem Steg — als ein geschlossener Körper; dazu Querschnitt, Krümmung, Bernoulli-Verluste und Füllbalance, Ankunft nach der Schusskurve mit der Füllkammer von hier |
+| `angussfuellung.html` | **Angussfüllung** — die Schmelze vom Pressrest bis zu den Anschnitten: Lattice-Boltzmann mit freier Oberfläche auf der Grafikkarte (WebGPU), Kolben nach der DieLogic-Kurve, Ankunft je Anschnitt neben der 1D-Rechnung, Füllstand zu jeder Zeit; Code in `js/lbm/` |
 | `ueberlauf.html` | **Überlaufdesigner** — Überläufe und Entlüftungen aufs Bauteil setzen: Bohne, Bohne mit Entlüftungskanal, Waschbrett (Chill-Vent), Entlüftungsschlitz; das Volumen fürs Schussgewicht |
 | `temperier.html` | **Temperierkanal-Designer** — Kühlstiche und Kanäle auf der Abstandsfläche im gewählten Abstand zur Kavität, Automatik für die Stiche, Wandabstand aus dem Feld |
 | `fuellung.html` | **Füllabschätzung** — die Schmelzefront von rechteckigen Anschnitten durch das gerasterte Bauteil: Füllgrad, Füllkörper, zuletzt gefüllte Stellen |
@@ -977,6 +978,101 @@ voll", v₂ und die Füllzeit der Kurve gegen die des Prozesses;
 Häkchen „Ankunft nach der DieLogic-Schusskurve" schaltet auf den
 konstanten Strom zurück. Ohne Projekt gelten die Vorgabewerte der
 Auslegung (HCC-1600, AlSi9Cu3).
+
+## Angussfüllung (`angussfuellung.html`)
+
+Der Angussdesigner sagt mit seiner 1D-Rechnung, WANN die Schmelze an
+jedem Anschnitt ankommt — über Verluste je Millimeter Mittellinie. Die
+Angussfüllung rechnet es nach: die Schmelze steht beim Start voll im
+Pressrest („Kammer voll" auf der DieLogic-Kurve), der Kolben schiebt mit
+der Kurve — erst v_krit, dann die Rampe der zweiten Phase —, und die
+Front läuft durch die Laufkanäle bis zu den Anschnitten. Ein Knopf, auf
+der Grafikkarte Sekunden.
+
+### Das Verfahren
+
+**Lattice-Boltzmann D3Q19 mit freier Oberfläche nach Körner (2005)**
+(`js/lbm/`). Nur die Schmelze wird gerechnet, das Gas ist ein Druck; jede
+Gitterzelle ist voll, leer oder Front. Frontzellen tragen eine Masse,
+die sich aus dem Austausch der Verteilungen mit den Nachbarn ändert;
+wird sie größer als die Dichte, ist die Zelle voll, wird sie negativ,
+leer — und die Nachbarn rücken als neue Front nach. Verteilungen, die
+aus dem Gas kämen, werden aus dem Gleichgewicht zur Gasdichte und der
+Geschwindigkeit der Zelle rekonstruiert, ebenso die aus der Richtung der
+Oberflächennormalen (Thürey), damit die Front druckfrei bleibt.
+
+Ein Zeitschritt sind fünf Durchgänge über alle Zellen, jeder liest nur,
+was der vorige geschrieben hat — deshalb laufen sie auf der GPU zellweise
+parallel: strömen und stoßen mit Massenaustausch; markieren (Front →
+voll / leer, auch die einsamen Frontzellen ohne Gas- oder ohne
+Schmelzenachbarn); Nachbarn (leer neben neu voll wird Front, voll neben
+neu leer wird Front, Widersprüche zugunsten voll); anlegen und zählen
+(neue Frontzellen aus dem Mittel ihrer Nachbarn, Überschuss der
+gewandelten Zellen); anwenden (Flaggen, Überschuss gleichmäßig an die
+Front-Nachbarn, Ankunft stempeln). Der Kern existiert zweimal mit
+gleichen Puffern und gleicher Reihenfolge: `fslbm.js` in JavaScript —
+für die Tests und als Notfall ohne WebGPU — und `gpu.js` in WGSL, aus
+denselben Tabellen (`lattice.js`) zusammengesetzt. Fünf Compute-Shader
+je Schritt, Kolbengeschwindigkeit und Schrittzähler in einem
+Uniform-Puffer mit einem Eintrag je Schritt, 32 Schritte je
+Befehlspuffer; gelesen wird nur für ein Bild.
+
+**Stoß**: BGK mit Smagorinsky-Zusatz. Aluminium ist so dünnflüssig,
+dass die echte Zähigkeit auf dem Gitter Größenordnungen unter dem
+Stabilen läge; τ bleibt deshalb bei 0,51 stehen, und der Wirbelzusatz
+macht aus dem Rest ein grobes LES. Kein Schwerefeld (in den
+Millisekunden der Füllung fällt die Schmelze keinen Millimeter), keine
+Oberflächenspannung, kein Gasdruck. Das ist eine SCHNELLE Rechnung für
+Reihenfolge und Zeiten, keine Gießsimulation.
+
+**Der Kolben** ist die unterste Zellschicht des Pressrests, mit
+Nichtgleichgewichts-Extrapolation (Guo 2002) als Geschwindigkeitsrand —
+das nackte Gleichgewicht war halb Druck-, halb Geschwindigkeitsrand, und
+der Zustrom lag zehn Prozent unter dem Soll. **Die Anschnitte** sind die
+letzte Zellschicht vor der Austrittsfläche: was ankommt, verlässt den
+Anguss; die Schicht davor ist ein Melder, und wer ihn benetzt, hat den
+Anschnitt erreicht (atomicMin über den Schrittzähler). Auf grobem Gitter
+liegt im Steg womöglich keine Zelle — dann rückt der Auslass
+stromaufwärts, bis er eine findet.
+
+**Das Gitter** (`domain.js`) kommt aus Angusskörper und Pressrest, mit
+dem Rasterer der Bauteilseiten (`js/part/field.js`) auf einem
+gemeinsamen Raster, ein Rand aus Wandzellen um alles. **Die
+Einheiten** (`piston.js`): der Zeitschritt folgt aus der schnellsten
+Stelle — dem Kolbenstrom durch den kleinsten Laufkanalquerschnitt vor
+den Übergängen — mit Gittergeschwindigkeit 0,06; der Steg selbst zählt
+nicht, er ist eine Zelle hoch und dort hört die Rechnung auf.
+
+### Grenzen, die man kennen muss
+
+Die Zellkante muss die Kanäle auflösen: unter vier, fünf Zellen über die
+Tiefe bremst die Wandhaftung die Strömung weit stärker als in
+Wirklichkeit, und die Ankunft wandert nach hinten (das Zwei-Anschnitte-
+Beispiel: 13 ms bei 4 mm, 35 ms bei 5 mm, die 1D-Rechnung sagt 16). Der
+Vorschlag für die Zellkante zielt auf 400 000 Zellen auf der
+Grafikkarte, 120 000 in JavaScript; mehr als 1,5 Millionen (128 MB je
+Verteilungspuffer) bzw. 250 000 gehen nicht. Ohne WebGPU (Firefox,
+Safari) rechnet JavaScript — Minuten statt Sekunden; die Seite sagt es.
+
+### Anzeige und Zahlen
+
+Die Schmelze als Fläche des halben Füllstands (`js/part/surfacenets.js`)
+zur Zeit des Reglers, mit Abspielen; der Anguss durchscheinend oder nach
+der Ankunft der Front gefärbt (Turbo, nie erreicht grau). Je Anschnitt
+die Ankunft der Rechnung neben der 1D-Rechnung, dazu Füllstand am Ende,
+Schritte, Zellen, Rechenzeit, Zeitschritt und τ. Die Zeiten zählen ab
+„Kammer voll"; die Rechnung endet, wenn alle Anschnitte gemeldet sind
+(plus fünf Prozent für das Bild), spätestens am Ende der Kurve oder beim
+Dreifachen der 1D-Schätzung.
+
+`tests/web/3d-studio/lbm.test.mjs` prüft das Gitter (Gewichte,
+Symmetrie, Gegenrichtungen), den JavaScript-Kern (Masse in der
+geschlossenen Box exakt, Zustrom und Frontweg am Kolben, ein ganzer Lauf
+auf grobem Gitter bis zur Ankunft), Gitterbau, Kolben und Einheiten;
+`viewer.test.mjs` fährt die Seite ohne WebGPU durch. Der WGSL-Kern wurde
+im kopflosen Chromium mit WebGPU (SwiftShader-Vulkan) gegen den
+JavaScript-Kern auf demselben Gitter geprüft: gleiche Ankünfte auf
+wenige Prozent, gleicher Füllstand.
 
 ## Überlaufdesigner (`ueberlauf.html`)
 

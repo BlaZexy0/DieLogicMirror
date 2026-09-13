@@ -14,6 +14,7 @@ const PAGES = [
   ['ueberlauf.html', () => window.__ueberlauf?.state?.ready],
   ['temperier.html', () => window.__temperier?.state?.ready],
   ['fuellung.html', () => window.__fuellung?.state?.ready],
+  ['angussfuellung.html', () => window.__angussfuellung?.state?.ready],
   ['werkbank.html', () => window.__werkbank?.ctx?.ready]
 ];
 

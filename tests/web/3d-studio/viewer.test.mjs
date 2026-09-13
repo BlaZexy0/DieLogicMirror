@@ -1662,6 +1662,66 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.equal(d6.getElementById('run-merge'), null, 'aber kein Verschmelzen mehr');
 });
 
+/* ── Angussfüllung ──────────────────────────────────────────
+   Ohne WebGPU rechnet die Seite in JavaScript — hier auf grobem Gitter
+   durch dieselbe Kette wie im Browser: Beispiel, Kurve, Knopf, Lauf bis
+   zur Ankunft an beiden Anschnitten, Regler und Färbung. */
+test('Angussfüllung: Beispiel, Kurve, ein Lauf in JavaScript bis zur Ankunft, Regler und Ankunftsfarben', async () => {
+  const { doc: d9 } = buildDocument(read('angussfuellung.html'));
+  installGlobals(d9);
+  loadDesignScripts();
+  globalThis.location = { search: '', href: 'http://test/angussfuellung.html' };
+  const mod = await import('../../../web/tools/3d-studio/js/lbm/app.js');
+  const v = mod.__viewer;
+  assert.ok(v.state.ready, 'das Beispiel steht');
+  assert.equal(v.gpu, false, 'unter Node gibt es kein WebGPU');
+  assert.match(d9.getElementById('engine-note').textContent, /Kein WebGPU/, 'die Seite sagt es');
+  assert.match(d9.getElementById('curve-facts').innerHTML, /Kammer voll/, 'die Kurve steht');
+  assert.match(d9.getElementById('curve-facts').innerHTML, /1D-Rechnung/, 'und die Vergleichszeiten');
+  assert.match(d9.getElementById('grid-note').textContent, /Zellen/);
+  assert.equal(d9.getElementById('run').disabled, false);
+
+  /* Grob, damit der Lauf Sekunden dauert — aber nicht so grob, dass ein
+     Kanal von zwei Zellen Breite dichtmacht. */
+  const ch = d9.getElementById('cell-h');
+  ch.value = '6';
+  ch.dispatch('change');
+  assert.equal(v.state.h, 6);
+  await v.simulate();
+  const r = v.state.result;
+  assert.ok(r, 'ein Ergebnis');
+  assert.equal(r.engine, 'cpu');
+  assert.equal(r.reason, 'alle Anschnitte erreicht', r.reason);
+  assert.equal(r.gates.length, 2);
+  for (const gt of r.gates) {
+    assert.ok(Number.isFinite(gt.tSim) && gt.tSim > 0.002 && gt.tSim < 0.05, gt.id + ': ' + gt.tSim);
+    assert.ok(Number.isFinite(gt.t1d), 'mit 1D-Vergleich');
+  }
+  assert.ok(r.snapshots.length > 3, 'Bilder des Füllstands');
+  assert.ok(r.filled > 0.5, 'der Anguss ist am Ende weitgehend voll: ' + r.filled);
+  assert.match(d9.getElementById('result-facts').innerHTML, /Anschnitt k\d+/);
+  assert.match(d9.getElementById('result-facts').innerHTML, /JavaScript/);
+  assert.ok(v.meltMesh.visible, 'die Schmelze ist zu sehen');
+  assert.equal(d9.getElementById('t-slider').max, String(r.snapshots.length - 1));
+  /* Regler zurück: am Anfang steht die Schmelze im Pressrest, wenig im Anguss. */
+  const sl = d9.getElementById('t-slider');
+  sl.value = '0';
+  sl.dispatch('input');
+  assert.equal(v.state.frame, 0);
+  assert.match(d9.getElementById('t-val').textContent, /0 ms/);
+  /* Ankunftsfarben: das Netz des Angusses trägt Farben. */
+  d9.getElementById('show-seg').querySelectorAll('button').find(b => b.dataset.value === 'ankunft').dispatch('click');
+  assert.equal(v.state.show, 'ankunft');
+  assert.ok(v.runnerMesh.geometry.getAttribute('color'), 'je Ecke eine Farbe');
+  assert.ok(d9.getElementById('colorbar').classList.contains('on'), 'mit Skala');
+  /* Prozess ändern rechnet die Kurve neu und verwirft das Ergebnis. */
+  const cl = d9.getElementById('chamber-len');
+  cl.value = '600';
+  cl.dispatch('change');
+  assert.equal(v.state.proc.chamberLen, 600);
+  assert.equal(v.state.timeline.v.length, 600);
+});
+
 /* ── Überlaufdesigner ─────────────────────────────────────── */
 test('Überlaufdesigner: setzen, ziehen, drehen, neu setzen, Datei', async () => {
   const { doc: d7 } = buildDocument(read('ueberlauf.html'));
