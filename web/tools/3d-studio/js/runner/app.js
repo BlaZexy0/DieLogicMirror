@@ -20,7 +20,6 @@ import {
 import { parseSTL, writeSTL } from '../part/stlio.js';
 import { readGLB, isGLB } from '../part/glbio.js';
 import { volume } from '../mesh.js';
-import { concat } from '../solids.js';
 import * as G from './graph.js';
 import { sampleNetwork } from './curve.js';
 import { sweepRunner, biscuitMesh, centerlines } from './sweep.js';
@@ -746,16 +745,19 @@ slider('ref-opacity', v => {
 
 const fileName = () => safeName(state.name || 'anguss');
 
-/* Die STL enthält, was im Viewport steht: die Kanäle als EIN
-   geschlossener Körper (js/runner/sweep.js) und, wenn eingeblendet, der
-   Pressrest als eigener Zylinder, der im ersten Kanal steckt. */
+/* Zwei STL-Dateien: der Anguss — ein geschlossener Körper, am Mantel
+   des Pressrests beschnitten (js/runner/sweep.js) — und der Pressrest
+   als Zylinder. Beide berühren sich am Mantel, keiner steckt im
+   anderen; im CAD sind es zwei Körper, die man vereinigen kann oder
+   nicht. Der Browser fragt beim ersten Mal, ob die Seite mehrere
+   Dateien laden darf. */
 $('stl-save').addEventListener('click', () => {
-  const parts = [sweepRunner(state.net)];
-  if ($('show-biscuit').checked) parts.push(biscuitMesh(state.graph.biscuit));
-  const tris = concat(parts);
-  if (!tris.length) return;
-  download(new Blob([writeSTL(tris, 'DieLogic Angusssystem')], { type: 'model/stl' }),
-    fileName() + '.stl');
+  const runner = sweepRunner(state.net);
+  if (!runner.length) return;
+  download(new Blob([writeSTL(runner, 'DieLogic Anguss')], { type: 'model/stl' }),
+    fileName() + '-anguss.stl');
+  download(new Blob([writeSTL(biscuitMesh(state.graph.biscuit), 'DieLogic Pressrest')], { type: 'model/stl' }),
+    fileName() + '-pressrest.stl');
 });
 
 $('json-save').addEventListener('click', () => {

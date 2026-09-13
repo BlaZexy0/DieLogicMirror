@@ -796,10 +796,25 @@ ihre Kanten so kurz, dass ihre Ringe sich noch überschneiden, gibt es
 keinen Zwickel: die Kanäle sind dort wirklich ein überlappender Körper,
 und den vereinigte nur eine Boolesche Operation. Solche Gabelungen
 bleiben Schläuche mit Deckeln übereinander, und die Prüfregel „Abgänge
-durchdringen sich" sagt es (`junctionPlan` in `sweep.js`). Ein Pressrest
-mit mehreren Abgängen ebenso — seine Kanten beginnen alle in der
-Zylindermitte; der Pressrest selbst bleibt ein eigener Zylinder, in dem
-der erste Kanal steckt.
+durchdringen sich" sagt es (`junctionPlan` in `sweep.js`).
+
+**Am Pressrest ist der Kanal beschnitten.** Der erste Kanal beginnt in
+der Mitte des Pressrests; Anguss und Pressrest sollen aber zwei Körper
+sein, die sich berühren statt zu durchdringen. Jede Kante vom Pressrest
+wird deshalb am Mantel des Zylinders abgeschnitten — am selben 64-Eck,
+aus dem `biscuitMesh` den Zylinder baut, damit der Deckel des Kanals
+genau auf dessen Facetten liegt: jede Längslinie des Schlauchs (ein
+Umrisspunkt über alle Schnitte) wird bis zu ihrem Austritt durch den
+Mantel verfolgt (`trimAtBiscuit`), der Ring dieser Austrittspunkte ist
+der Anfang des Kanals, und das Feld darin wird auf dem abgewickelten
+Mantel facettenweise trianguliert (`biscuitCap`) — Ringkanten, die eine
+Facettengrenze kreuzen, werden dort geteilt, und die erste Reihe des
+Schlauchs benutzt dieselben Teilpunkte, sonst stünde ein T-Stoß im Netz.
+Die erste Reihe reicht bis zum übernächsten Schnitt, weil die
+Mittellinie bei s = Radius genau an einem Schnitt austritt. Verlässt ein
+Kanal den Zylinder nicht durch den Mantel (zu kurz, schon draußen),
+bleibt er wie früher mit einem Deckel in der Mitte stehen; ein Pressrest
+mit mehreren Abgängen wird je Kante beschnitten.
 
 Geschrieben wird in ein vorab bemessenes Feld: die Stücke der Gabelungen
 werden zuerst gebaut, dann steht die Zahl der Dreiecke fest. Der warme
@@ -916,9 +931,11 @@ die Griffe, nicht das Netz.
   unter „Import und Export" oder per Ziehen-und-Ablegen über dem
   Viewport; was für eine Datei es ist, entscheidet der Inhalt, nicht die
   Endung.
-- **STL** — was im Viewport steht: die Kanäle als ein geschlossener
-  Körper (siehe „Das Netz"), dazu der Pressrest als eigener Zylinder,
-  wenn er eingeblendet ist.
+- **STL** — zwei Dateien aus einem Klick: `<name>-anguss.stl`, die
+  Kanäle als ein geschlossener Körper, am Mantel des Pressrests
+  beschnitten (siehe „Das Netz"), und `<name>-pressrest.stl`, der
+  Zylinder. Beide berühren sich, keiner steckt im anderen; der Browser
+  fragt beim ersten Mal, ob die Seite mehrere Dateien laden darf.
 - **Referenzbauteil (STL/GLB)** — wird durchscheinend dazugestellt, damit
   die Anschnitte dorthin zeigen, wo sie hingehören. Sein **Volumen wird
   als Gussvolumen übernommen**: das ist die Zahl, aus der über die

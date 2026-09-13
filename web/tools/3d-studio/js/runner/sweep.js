@@ -30,10 +30,21 @@
 
    Ein Punkt mit genau einem Abgang braucht nichts: der letzte Schnitt
    der Kante davor und der erste der Kante danach sind derselbe Ring.
-   Deckel gibt es nur am Pressrest (dort steckt er im Zylinder) und am
-   Anschnitt — die Austrittsfläche ins Bauteil. Ein Pressrest mit
-   mehreren Abgängen ist die Ausnahme: seine Kanten beginnen jede mit
-   einem Deckel in der Mitte des Zylinders und durchdringen sich dort.
+   Einen ebenen Deckel gibt es nur am Anschnitt — die Austrittsfläche
+   ins Bauteil.
+
+   AM PRESSREST IST DER KANAL BESCHNITTEN. Der erste Kanal beginnt in
+   der Mitte des Pressrests; Anguss und Pressrest sollen aber zwei
+   Körper sein, die sich berühren statt zu durchdringen. Jede Kante
+   vom Pressrest wird deshalb am Mantel des Zylinders abgeschnitten —
+   am selben 64-Eck, aus dem biscuitMesh den Zylinder baut, damit der
+   Deckel des Kanals genau auf dessen Facetten liegt: jede Längslinie
+   des Schlauchs wird bis zu ihrem Austritt durch den Mantel verfolgt,
+   der Ring dieser Austrittspunkte ist der Anfang des Kanals, und das
+   Feld darin wird auf dem abgewickelten Mantel facettenweise
+   trianguliert. Verlässt ein Kanal den Zylinder nicht durch den Mantel
+   (zu kurz, tiefer als der Pressrest, schon draußen), bleibt er wie
+   früher mit einem Deckel in der Mitte stehen.
 
    Ausgabe wie überall im Studio: Dreieckssuppe, 9 Werte je Dreieck. */
 
@@ -327,6 +338,210 @@ function fillLoop(loop, e1, e2, out, w) {
     const A = pts[a], B = pts[b], C = pts[c];
     const nrm = cross(sub(B, A), sub(C, A));
     if (dot(nrm, out) >= 0) w.tri3(A, B, C); else w.tri3(A, C, B);
+  }
+}
+
+/* ── Der Pressrest: Beschnitt am Mantel ──────────────────────── */
+
+const BISCUIT_SEG = 64;
+
+/** Der Pressrest als Prisma mit BISCUIT_SEG Facetten — dieselben wie in
+    biscuitMesh (über dieselbe Achsenabbildung von js/solids.js), damit
+    der beschnittene Kanal genau auf ihnen endet. */
+function prismOf(biscuit) {
+  const key = biscuit.axis in AXES ? biscuit.axis : '+y';
+  const axis = AXES[key];
+  const R = Math.max(1, biscuit.d / 2), T = Math.max(0.5, biscuit.t);
+  const C = biscuit.pos;
+  const dirs = [];
+  for (let i = 0; i < BISCUIT_SEG; i++) {
+    const a = 2 * Math.PI * i / BISCUIT_SEG;
+    const p = place(Float64Array.from([Math.cos(a), Math.sin(a), 0]), key.replace('+', ''), 0, 0, 0);
+    dirs.push([p[0], p[1], p[2]]);
+  }
+  const verts = dirs.map(d => addScaled(C, d, R));
+  const normals = dirs.map((d, i) => norm(add(d, dirs[(i + 1) % BISCUIT_SEG])));
+  const apothem = R * Math.cos(Math.PI / BISCUIT_SEG);
+  return {
+    C, axis, R, T, verts, normals, apothem, seg: BISCUIT_SEG,
+    Lf: dist(verts[0], verts[1]),
+    /* Größter Abstand zu einer Facettenebene und die Facette dazu:
+       ≤ 0 heißt seitlich drinnen, 0 heißt auf dem Mantel. */
+    support(p) {
+      let f = -Infinity, j = 0;
+      for (let i = 0; i < BISCUIT_SEG; i++) {
+        const d = dot(sub(p, C), normals[i]) - apothem;
+        if (d > f) { f = d; j = i; }
+      }
+      return { f, j };
+    },
+    /* Austritt der Strecke a→b (a drinnen) durch den Mantel: die erste
+       Facettenebene, die die Strecke kreuzt. */
+    exit(a, b) {
+      let t = Infinity;
+      for (let i = 0; i < BISCUIT_SEG; i++) {
+        const fa = dot(sub(a, C), normals[i]) - apothem, fb = dot(sub(b, C), normals[i]) - apothem;
+        if (fa <= 0 && fb > 0) t = Math.min(t, fa / (fa - fb));
+      }
+      return Number.isFinite(t) ? addScaled(a, sub(b, a), t) : null;
+    },
+    height(p) { return dot(sub(p, C), axis); }
+  };
+}
+
+/* Die Kante vom Pressrest am Mantel beschneiden: jede Längslinie des
+   Schlauchs (ein Umrisspunkt über alle Schnitte) bis zu ihrem Austritt
+   verfolgen. Liefert den Ring der Austrittspunkte und den Index des
+   ersten Schnitts, der für ALLE Linien draußen liegt — oder null, wenn
+   der Kanal nicht durch den Mantel austritt. */
+function trimAtBiscuit(prism, sections, iEnd) {
+  const rings = [];
+  const ring = k => rings[k] || (rings[k] = ringPoints(sections[k]));
+  const out = new Float64Array(POINTS * 3);
+  let kmax = 0;
+  for (let i = 0; i < POINTS; i++) {
+    let prev = pt(ring(0), i);
+    if (prism.support(prev).f > 0) return { reason: 'beginnt außerhalb' };
+    let hit = null, k = 1;
+    for (; k <= iEnd; k++) {
+      const q = pt(ring(k), i);
+      if (prism.support(q).f > 0) { hit = prism.exit(prev, q); break; }
+      prev = q;
+    }
+    if (!hit) return { reason: 'tritt nicht aus' };
+    /* Die Höhe des Austritts wird nicht geprüft: wölbt sich der Bogen
+       ein wenig über die Trennebene oder reicht der Kanal tiefer als der
+       Pressrest, liegt der Deckel eben auf dem verlängerten Mantel —
+       immer noch ein geschlossener Körper, der den Zylinder berührt. */
+    out[i * 3] = hit[0]; out[i * 3 + 1] = hit[1]; out[i * 3 + 2] = hit[2];
+    kmax = Math.max(kmax, k);
+  }
+  /* Die erste Reihe reicht bis zum ÜBERNÄCHSTEN Schnitt: tritt eine
+     Linie genau an einem Schnitt aus (die Mittellinie bei s = Radius,
+     wenn der Schritt aufgeht), fiele ihr Austrittspunkt sonst mit dem
+     Punkt des nächsten Schnitts zusammen — ein Dreieck ohne Fläche,
+     dessen Kanten sich mit nichts paaren. */
+  return kmax + 1 < iEnd ? { ring: out, k: kmax + 1 } : { reason: 'zu kurz' };
+}
+
+/* Der Deckel des beschnittenen Kanals: das Feld im Austrittsring, auf
+   dem ABGEWICKELTEN Mantel (Umfangskoordinate s, Höhe y) facettenweise
+   trianguliert, damit jedes Dreieck in einer Facettenebene liegt und
+   der Deckel den Zylinder weder durchdringt noch von ihm abhebt. Die
+   Nahtstelle der Abwicklung liegt dem Kanal gegenüber. */
+function biscuitCap(prism, ring, w) {
+  const { seg, Lf, verts, axis } = prism;
+  const info = [];
+  const mean = [0, 0, 0];
+  for (let i = 0; i < POINTS; i++) {
+    const p = pt(ring, i);
+    info.push({ p, j: prism.support(p).j });
+    mean[0] += p[0] / POINTS; mean[1] += p[1] / POINTS; mean[2] += p[2] / POINTS;
+  }
+  const shift = (seg / 2 - prism.support(mean).j + 2 * seg) % seg;
+  /* Ein Punkt dicht an einer Facettengrenze wird in der Abwicklung auf
+     sie gerastet: tritt der Kanal genau an einer Prismenecke aus (der
+     übliche Fall — die Ecke bei 270° liegt in Laufrichtung), lägen
+     sonst Teilpunkte um Bruchteile eines Mikrometers neben Ringpunkten,
+     und die Splitter dazwischen fielen beim Verschweißen zusammen. Das
+     Raster ändert nur die Zuordnung zur Facette, nicht den Raumpunkt. */
+  const SNAP = 1e-3 * Lf;
+  const snap = sx => { const k = Math.round(sx / Lf); return Math.abs(sx - k * Lf) < SNAP ? k * Lf : sx; };
+  const unroll = (p, j) => {
+    const V = verts[j];
+    const e = scale(sub(verts[(j + 1) % seg], V), 1 / Lf);
+    return [snap(((j + shift) % seg) * Lf + dot(sub(p, V), e)), prism.height(p)];
+  };
+  const back = (sx, y) => {
+    const k = clamp(Math.floor(sx / Lf + 1e-9), 0, seg - 1);
+    const j = (k - shift + 2 * seg) % seg;
+    const V = verts[j];
+    return add(addScaled(V, sub(verts[(j + 1) % seg], V), (sx - k * Lf) / Lf), scale(axis, y));
+  };
+  /* Polygon in der Abwicklung; die Ringpunkte behalten ihre Raumpunkte.
+     Wo eine Ringkante eine Facettengrenze kreuzt, wird sie VORHER
+     geteilt — die Teilpunkte gehen als `splits` an die erste Reihe des
+     Schlauchs, die dieselben Punkte benutzen muss, sonst stünde dort ein
+     T-Stoß und das Netz wäre offen. */
+  const ringPoly = info.map(it => { const [sx, y] = unroll(it.p, it.j); return { sx, y, p: it.p }; });
+  const poly = [];
+  const splits = [];
+  for (let i = 0; i < POINTS; i++) {
+    const a = ringPoly[i], b = ringPoly[(i + 1) % POINTS];
+    poly.push(a);
+    const list = [];
+    const lo = Math.min(a.sx, b.sx), hi = Math.max(a.sx, b.sx);
+    for (let k = Math.floor(lo / Lf) + 1; k * Lf < hi; k++) {
+      const bound = k * Lf;
+      if (bound <= lo + SNAP || bound >= hi - SNAP) continue;
+      const t = (bound - a.sx) / (b.sx - a.sx);
+      const y = a.y + (b.y - a.y) * t;
+      list.push({ sx: bound, y, p: back(bound, y), t });
+    }
+    list.sort((x, z) => x.t - z.t);
+    for (const q of list) poly.push(q);
+    splits.push(list.map(q => q.p));
+  }
+  if (Array.isArray(prism.capLog)) prism.capLog.push({ poly: poly.map(q => [q.sx, q.y]), splits: splits.map(l => l.length), Lf });
+  let sMin = Infinity, sMax = -Infinity;
+  for (const q of poly) { sMin = Math.min(sMin, q.sx); sMax = Math.max(sMax, q.sx); }
+  /* Sutherland–Hodgman gegen sx ≥ lo und sx ≤ hi. Alle Kreuzungen sind
+     schon Ecken, neue Punkte entstehen nicht mehr (Ecken genau auf der
+     Grenze zählen für beide Seiten als drinnen). */
+  const clip = (pts, lo, hi) => {
+    let cur = pts;
+    for (const [bound, keepBelow] of [[lo, false], [hi, true]]) {
+      const next = [];
+      for (let i = 0; i < cur.length; i++) {
+        const a = cur[i], b = cur[(i + 1) % cur.length];
+        const ina = keepBelow ? a.sx <= bound : a.sx >= bound;
+        const inb = keepBelow ? b.sx <= bound : b.sx >= bound;
+        if (ina) next.push(a);
+        if (ina !== inb) {
+          const t = (bound - a.sx) / (b.sx - a.sx);
+          if (t > 1e-9 && t < 1 - 1e-9) {
+            const y = a.y + (b.y - a.y) * t;
+            next.push({ sx: bound, y, p: back(bound, y) });
+          }
+        }
+      }
+      cur = next;
+      if (cur.length < 3) return [];
+    }
+    return cur;
+  };
+  for (let k = Math.max(0, Math.floor(sMin / Lf)); k <= Math.min(seg - 1, Math.floor(sMax / Lf)); k++) {
+    const sub2 = clip(poly, k * Lf, (k + 1) * Lf);
+    if (sub2.length < 3) continue;
+    const j = (k - shift + 2 * seg) % seg;
+    const n2 = prism.normals[j];
+    let area2 = 0;
+    for (let i = 0; i < sub2.length; i++) {
+      const a = sub2[i], b = sub2[(i + 1) % sub2.length];
+      area2 += a.sx * b.y - b.sx * a.y;
+    }
+    const ccw = area2 < 0 ? sub2.slice().reverse() : sub2;
+    for (const [a, b, c] of earClip(ccw.map(q => [q.sx, q.y]))) {
+      const A = ccw[a].p, B = ccw[b].p, Cc = ccw[c].p;
+      /* Nach außen heißt hier: in den Pressrest hinein, gegen die Facette. */
+      if (dot(cross(sub(B, A), sub(Cc, A)), n2) <= 0) w.tri3(A, B, Cc); else w.tri3(A, Cc, B);
+    }
+  }
+  return splits;
+}
+
+/* Die erste Reihe des beschnittenen Schlauchs: vom Austrittsring (mit
+   den Teilpunkten des Deckels auf seinen Kanten) zum ersten ganzen
+   Schnitt. Je Viereck ein Fächer von der Ecke des nächsten Rings über
+   die geteilte Ringkante — dieselbe Wicklung wie in shell(). */
+function firstRow(ring, splits, next, w) {
+  for (let i = 0; i < POINTS; i++) {
+    const j = (i + 1) % POINTS;
+    w.tri(ring, i, next, i, next, j);
+    let prev = pt(ring, i);
+    const nj = pt(next, j);
+    for (const x of splits[i]) { w.tri3(prev, nj, x); prev = x; }
+    w.tri3(prev, nj, pt(ring, j));
   }
 }
 
@@ -653,7 +868,7 @@ export function sweepRunner(net) {
   for (const e of net.edges) {
     if (e.sections.length < 2) continue;
     const c = cut.get(e) || { a: 0, b: e.sections.length - 1 };
-    estimate += Math.max(0, c.b - c.a) * POINTS * 2 + 2 * POINTS;
+    estimate += Math.max(0, c.b - c.a) * POINTS * 2 + 8 * POINTS;
   }
   for (const b of built) {
     for (const s of [b.right, b.left, ...b.crotches]) estimate += (s.length - 1) * (HALF - 1) * 2;
@@ -661,15 +876,27 @@ export function sweepRunner(net) {
   }
   const w = writer(estimate);
 
+  const prism = net.biscuit ? prismOf(net.biscuit) : null;
+  if (prism && Array.isArray(net.capLog)) prism.capLog = net.capLog;
   for (const e of net.edges) {
     if (e.sections.length < 2) continue;
     const c = cut.get(e) || { a: 0, b: e.sections.length - 1 };
     if (c.b <= c.a) continue;
-    shell(e.sections, c.a, c.b, w);
-    /* Deckel nur am Pressrest und an einem Ende ohne Abgang; ein Punkt
-       mit einem Abgang teilt seinen Ring mit der nächsten Kante, eine
-       Gabelung bekommt ihr Hosenstück. */
-    if (e.from.type === 'root' || !e.from.parent || capped.has(e.fromId)) cap(e.sections, c.a, false, w);
+    const fromRoot = e.from.type === 'root' || !e.from.parent;
+    /* Vom Pressrest: am Mantel beschnitten, der Deckel liegt auf ihm. */
+    const trim = fromRoot && prism && c.a === 0 ? trimAtBiscuit(prism, e.sections, c.b) : null;
+    if (Array.isArray(net.trimLog)) net.trimLog.push({ edge: e.toId, k: trim && trim.ring ? trim.k : null, reason: trim && trim.reason });
+    if (trim && trim.ring) {
+      const splits = biscuitCap(prism, trim.ring, w);
+      firstRow(trim.ring, splits, ringPoints(e.sections[trim.k]), w);
+      shell(e.sections, trim.k, c.b, w);
+    } else {
+      shell(e.sections, c.a, c.b, w);
+      /* Ebener Deckel nur am Pressrest ohne Beschnitt; ein Punkt mit
+         einem Abgang teilt seinen Ring mit der nächsten Kante, eine
+         Gabelung bekommt ihr Hosenstück. */
+      if (fromRoot || capped.has(e.fromId)) cap(e.sections, c.a, false, w);
+    }
     if (!e.to.children.length || capped.has(e.toId)) cap(e.sections, c.b, true, w);
   }
   /* Für Tests und die Fehlersuche: die Randzüge der Felder. */

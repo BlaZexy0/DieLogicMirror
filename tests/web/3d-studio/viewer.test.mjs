@@ -1647,9 +1647,18 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   assert.equal(kugeln.length, knoten * 2, 'je Punkt zwei Kugeln');
   assert.equal(kugeln.filter(m => m.material.depthTest === false).length, knoten);
 
-  /* Import und Export: der Graph als JSON, die Geometrie als STL. */
+  /* Import und Export: der Graph als JSON, die Geometrie als ZWEI STL —
+     der Anguss (am Pressrest beschnitten) und der Pressrest. */
+  const blobs = [];
+  const urlBefore = globalThis.URL.createObjectURL;
+  globalThis.URL.createObjectURL = b => { blobs.push(b); return 'blob:test'; };
   d6.getElementById('json-save').dispatch('click');
+  assert.equal(blobs.length, 1);
   d6.getElementById('stl-save').dispatch('click');
+  assert.equal(blobs.length, 3, 'zwei Dateien aus einem Klick');
+  assert.ok(blobs[1].size > 84 && blobs[2].size > 84, 'beide mit Inhalt');
+  assert.ok(blobs[1].size > blobs[2].size * 3, 'der Anguss ist die große, der Pressrest die kleine');
+  globalThis.URL.createObjectURL = urlBefore;
   assert.equal(d6.getElementById('run-merge'), null, 'aber kein Verschmelzen mehr');
 });
 

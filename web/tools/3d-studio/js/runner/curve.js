@@ -282,7 +282,11 @@ export function sampleNetwork(g) {
   /* Kanalform mitgeben: der Sweep rechnet an den Gabelungen eigene
      Zwischenschnitte und braucht dafür Schräge, Bodenradius und den
      Zwickelradius. */
-  const out = { edges: [], step: g.step, draft: g.draft, radius: g.radius, branchR: g.branchR, points: 0 };
+  const out = {
+    edges: [], step: g.step, draft: g.draft, radius: g.radius, branchR: g.branchR, points: 0,
+    /* Und der Pressrest: der Sweep beschneidet den ersten Kanal an ihm. */
+    biscuit: { ...g.biscuit, pos: g.biscuit.pos.slice() }
+  };
   for (const e of G.edges(g)) {
     const s = sampleEdge(g, e.from, e.to);
     out.edges.push(s);

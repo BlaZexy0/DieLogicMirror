@@ -655,15 +655,25 @@ const openEdges = tris => {
   return open;
 };
 
-test('Sweep: konstanter Querschnitt ergibt genau Fläche × Länge', () => {
+test('Sweep: konstanter Querschnitt ergibt genau Fläche × Länge — und beschnitten Fläche × Länge außerhalb des Pressrests', () => {
   const g = straight(100, 20, 10);
   const net = sampleNetwork(g);
-  const tris = sweepRunner(net);
   const a = P.area(P.section(20, 10, g.draft, g.radius));
-  assert.ok(Math.abs(volume(tris) - a * 100) < 1e-6 * a * 100,
-    `Volumen ${volume(tris).toFixed(3)} gegen ${(a * 100).toFixed(3)}`);
-  assert.ok(volume(tris) > 0, 'die Normalen zeigen nach außen');
-  assert.equal(openEdges(tris), 0, 'jeder Schlauch ist für sich geschlossen');
+  /* Ohne Pressrest im Netz: der nackte Schlauch. */
+  const raw = sweepRunner({ ...net, biscuit: null });
+  assert.ok(Math.abs(volume(raw) - a * 100) < 1e-6 * a * 100,
+    `Volumen ${volume(raw).toFixed(3)} gegen ${(a * 100).toFixed(3)}`);
+  assert.ok(volume(raw) > 0, 'die Normalen zeigen nach außen');
+  assert.equal(openEdges(raw), 0, 'jeder Schlauch ist für sich geschlossen');
+  /* Mit Pressrest (Ø 90): der Kanal beginnt am Mantel. Die Seitenlinien
+     treten früher aus als die Mitte (√(R² − x²)), das gibt im Mittel
+     w²/(24R) mehr Länge als L − R. */
+  const R = g.biscuit.d / 2;
+  const trimmed = sweepRunner(net);
+  const expect = a * (100 - R + 20 * 20 / (24 * R));
+  assert.ok(Math.abs(volume(trimmed) - expect) < a * 0.3,
+    `beschnitten ${volume(trimmed).toFixed(1)} gegen ${expect.toFixed(1)}`);
+  assert.equal(openEdges(trimmed), 0, 'auch beschnitten geschlossen');
 });
 
 /* Zusammenhängende Stücke eines Netzes: Breitensuche über die Nachbarschaft. */
@@ -698,9 +708,10 @@ const oneBody = (g, name) => {
   const v = volume(tris), sv = sectionVolume(net);
   assert.ok(v > 0, name + ': nach außen orientiert');
   /* Grob: das Hosenstück ist nicht die Summe der Schnittflächen mal Weg
-     — eine dreifache Gabel liegt gut 5 % darüber —, aber es darf weder
+     — eine dreifache Gabel liegt gut 5 % darüber —, und der Beschnitt
+     am Pressrest nimmt das Stück im Zylinder weg; es darf aber weder
      ein Nichts noch das Doppelte sein. */
-  assert.ok(Math.abs(v - sv) / sv < 0.12, `${name}: Volumen ${v.toFixed(0)} gegen Schnittintegral ${sv.toFixed(0)}`);
+  assert.ok(v > sv * 0.6 && v < sv * 1.15, `${name}: Volumen ${v.toFixed(0)} gegen Schnittintegral ${sv.toFixed(0)}`);
   return tris;
 };
 
@@ -769,6 +780,61 @@ test('Sweep: T-Stück, dreifache Gabelung, gerade abgehender Ast und Verzweigung
   const hint = checkRules(e, nete, F.analyseFlow(e, nete, F.DEFAULT_PROCESS), F.DEFAULT_PROCESS).find(r => /durchdringen/.test(r.title));
   assert.ok(hint && hint.level === 'warn', 'die Prüfliste benennt die Durchdringung');
   assert.match(hint.text, /Zwickel/);
+});
+
+test('Sweep: der Anguss ist am Pressrest beschnitten — nichts steckt im Zylinder, der Deckel liegt auf seinen Facetten', () => {
+  /* Der Pressrest als 64-Eck, so wie biscuitMesh ihn baut: ein Punkt ist
+     drinnen, wenn er innerhalb des Apothems liegt. */
+  const inside = (tris, b) => {
+    const seg = 64, R = b.d / 2, apothem = R * Math.cos(Math.PI / seg);
+    let deepest = -Infinity, onMantle = 0, count = 0;
+    for (let i = 0; i < tris.length; i += 3) {
+      const x = tris[i] - b.pos[0], z = tris[i + 2] - b.pos[2];      // Achse +y
+      /* Abstand zur nächsten Facettenebene (Prismenecken bei 2πk/64 in
+         der x/−z-Ebene der Achsenabbildung von js/solids.js). */
+      let f = -Infinity;
+      for (let k = 0; k < seg; k++) {
+        const a = 2 * Math.PI * (k + 0.5) / seg;
+        f = Math.max(f, x * Math.cos(a) - z * Math.sin(a) - apothem);
+      }
+      deepest = Math.max(deepest, -f);
+      if (Math.abs(f) < 1e-6) onMantle++;
+      count++;
+    }
+    return { deepest, onMantle, count };
+  };
+  for (const d of PRE.DEMOS) {
+    const g = d.build();
+    const net = sampleNetwork(g);
+    const tris = sweepRunner(net);
+    const r = inside(tris, g.biscuit);
+    assert.ok(r.deepest < 1e-6, `${d.id}: ein Punkt liegt ${r.deepest.toFixed(3)} mm im Pressrest`);
+    assert.ok(r.onMantle > P.POINTS, `${d.id}: der Deckel liegt auf dem Mantel (${r.onMantle} Punkte)`);
+    assert.equal(openEdges(tris), 0, d.id + ': geschlossen');
+    assert.equal(components(tris), 1, d.id + ': ein Körper');
+    /* Und das Volumen fehlt genau um das Stück im Zylinder — grob: die
+       Schnitte innerhalb des Radius. */
+    let inner = 0, all = 0;
+    for (const e of net.edges) {
+      for (let i = 0; i + 1 < e.sections.length; i++) {
+        const dv = (e.sections[i].area + e.sections[i + 1].area) / 2 * (e.sections[i + 1].s - e.sections[i].s);
+        all += dv;
+        if (e.from.type === 'root' && e.sections[i + 1].s <= g.biscuit.d / 2) inner += dv;
+      }
+    }
+    const v = volume(tris);
+    assert.ok(inner > 0 && Math.abs(v - (all - inner)) / (all - inner) < 0.12,
+      `${d.id}: Volumen ${v.toFixed(0)} gegen ${(all - inner).toFixed(0)} außerhalb des Pressrests`);
+  }
+  /* Ein Kanal, der den Zylinder nicht verlässt, bleibt mit Deckel in der
+     Mitte stehen — und der Körper trotzdem dicht. */
+  const short = straight(30, 20, 10);
+  G.addChild(short, G.allNodes(short)[1].id, 'gate');
+  const net2 = sampleNetwork(short);
+  net2.trimLog = [];
+  const tris2 = sweepRunner(net2);
+  assert.equal(net2.trimLog[0].reason, 'tritt nicht aus');
+  assert.equal(openEdges(tris2), 0);
 });
 
 test('Sweep: der Zwickelradius formt die Nase — größer heißt weiter hinten und runder', () => {
