@@ -16,7 +16,7 @@ liefert das Backend sie nur mit Sitzung aus (`login_gate` in
 | `entformungsanalyse.html` | **Entformungsanalyse** — für ein Bauteil die Zuordnung jedes Dreiecks zu Formhälfte oder Schieber |
 | `wandstaerke.html` | **Wandstärkenanalyse** — Abstandsfeld durch Rasterisierung: Wandstärke und Wärmezentrum, Fläche gleichen Abstands (die Frage nach *innen*) |
 | `abstand.html`  | **Abstandsanalyse** — kürzester Abstand zwischen zwei Dateien, eingefärbt auf einer selbst gesetzten Skala (die Frage nach *außen*) |
-| `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen, Anschnitte; dazu Querschnitt, Krümmung, Bernoulli-Verluste und Füllbalance, Ankunft nach der Schusskurve |
+| `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen mit Zwickelradius, Anschnitte mit geradem Steg — als ein geschlossener Körper; dazu Querschnitt, Krümmung, Bernoulli-Verluste und Füllbalance, Ankunft nach der Schusskurve mit der Füllkammer von hier |
 | `ueberlauf.html` | **Überlaufdesigner** — Überläufe und Entlüftungen aufs Bauteil setzen: Bohne, Bohne mit Entlüftungskanal, Waschbrett (Chill-Vent), Entlüftungsschlitz; das Volumen fürs Schussgewicht |
 | `temperier.html` | **Temperierkanal-Designer** — Kühlstiche und Kanäle auf der Abstandsfläche im gewählten Abstand zur Kavität, Automatik für die Stiche, Wandabstand aus dem Feld |
 | `fuellung.html` | **Füllabschätzung** — die Schmelzefront von rechteckigen Anschnitten durch das gerasterte Bauteil: Füllgrad, Füllkörper, zuletzt gefüllte Stellen |
@@ -669,6 +669,17 @@ Zulaufquerschnitt zum Anschnitt. Vorher begann die Kante in diesem Fall
 mit dem Kanalmaß des Anschnittknotens, und am Knoten sprang der
 Querschnitt (414 → 374 mm² im Fächerbeispiel).
 
+**Die Anschnitttiefe ist gerade.** Der Steg — die letzten `gate.len`
+Millimeter — ist ein Prisma entlang der Mündungsrichtung (die gebundene,
+sonst die Sehne vom Vorgänger): der Bogen endet an seinem Anfang, und ab
+dort laufen die Schnitte parallel mit festem Maß (`gateLand` in
+`js/runner/curve.js`). Die Tiefe ist damit über die ganze Breite
+dieselbe, die Breite ändert sich im Steg nicht mehr, und die Richtung,
+mit der der Anschnitt ins Bauteil zeigt, ist die Achse eines Stücks.
+Solange der Steg auf der Kurve lag, hing seine Länge von der Krümmung ab
+— außen länger, innen kürzer —, ein breiter Fächer verdrehte sich über
+die letzten Millimeter, und die Mündung war die Tangente an einer Stelle.
+
 Zwischen zwei Knoten wird die **Fläche** geführt, nicht Breite und Tiefe
 einzeln. Bei einem Fächeranschnitt (26 × 17 → 97 × 2,4) stünde sonst in
 der Mitte 35 × 6,8 — und das sind 238 mm² gegenüber 374 am Anfang und
@@ -680,9 +691,12 @@ A = Q·Anteil / v_Ziel am Anschnitt, das `runnerRatio`-fache davon im
 zuführenden Kanal, und weiter stromaufwärts jeweils die Summe der
 Abgänge geteilt durch die Verjüngung. Danach nimmt der Querschnitt
 garantiert nirgends zu. An einer Verzweigung startet jeder Ast mit
-seinem ANTEIL am Zulaufquerschnitt (beide Maße mit der Wurzel des
-Anteils skaliert) — ohne das wüchse der Querschnitt an jeder Gabelung
-auf das Doppelte.
+seinem ANTEIL am Zulaufquerschnitt — die Tiefe läuft durch, die Breite
+teilt sich (`widthForArea` in `profile.js`), so wie man eine Gabelung
+fräst: ein Boden in einer Tiefe, der sich in zwei Nuten teilt. Ohne
+Aufteilung wüchse der Querschnitt an jeder Gabelung auf das Doppelte;
+mit beiden Maßen skaliert (so war es) sprang der Boden an jeder
+Gabelung um fast ein Drittel nach oben.
 
 ### Strömung und Füllbalance
 
@@ -729,41 +743,68 @@ Alle Beispiele sind ohne Beanstandung; `runner.test.mjs` prüft das.
 
 ### Das Netz
 
-`js/runner/sweep.js` zieht das Profil entlang der Mittellinie: je Kante
-ein geschlossener Schlauch, exakt so bemaßt wie eingegeben, in
-Millisekunden fertig. An den Verzweigungen durchdringen sich die
-Schläuche — die Vereinigung entsteht nicht durch Rechnen, sondern durch
-Überlappung.
+`js/runner/sweep.js` zieht das Profil entlang der Mittellinie — je Kante
+ein Schlauch, exakt so bemaßt wie eingegeben — und macht daraus **einen
+geschlossenen Körper**. Die Schläuche enden nicht in Deckeln, die sich an
+den Gabelungen durchdringen: dort bleiben sie offen, und die Gabelung ist
+ein eigenes Flächenstück, das die drei Ringe verbindet — ein Hosenstück,
+konstruiert aus Kurve, Profil und Radius; nichts gerastert, nichts
+boolesch gerechnet:
 
-**An den Gabelungen sind die Deckel gerundet.** Ein flacher Deckel endet
-mit einer scharfen Kante, und weil der Zulaufkanal genau in der Gabelung
-aufhört, klafft zwischen den beiden Abgängen ein Keil — die Stelle, an
-der eine Schmelze abreißt und ein Fräser nie hinkommt. Der gerundete
-Deckel füllt genau diesen Keil: der Umriss des Profils wird über einen
-Viertelkreis auf null zusammengezogen und dabei in Laufrichtung
-vorgeschoben. Er hat damit die Form des QUERSCHNITTS, nicht die einer
-Kugel — ein flacher breiter Kanal bekommt eine flache breite Kuppe, und
-seine Höhe ist das kleinere der beiden Profilmaße.
+- **Außenstreifen** — die rechte Profilhälfte (Flanke samt
+  Bodenverrundung, von der oberen Ecke bis zum Flankenfuß) läuft über
+  einen Hermite-Bogen vom Zulaufring in die rechte Hälfte des rechten
+  Abgangs, die linke in den linken. Die Außenwand biegt stetig vom Zulauf
+  in den Abgang.
+- **Zwickel** — die einander zugewandten Innenhälften zweier Abgänge gehen
+  entlang der Zwickelkante ineinander über: die geraden Innenwände beider
+  Abgänge bis zu ihrem Schnittpunkt, dort mit einem Kreisbogen vom
+  **Zwickelradius** („Kanalform", in der Datei `branchR`) verrundet, so
+  wie ein Fräser die Innenecke stehen lässt. Das Profil dreht dabei von
+  der einen Wand um die Nase herum in die andere. Schneiden sich die
+  Wände nicht (T-Stück, sehr flache Gabel), verbindet ein Hermite-Bogen
+  beide Wände stetig.
+- **Deckfläche und Boden** — die Felder zwischen den oberen Kanten bzw.
+  den Flankenfüßen. Das Ohrenabschneiden liefert nur irgendeine
+  Triangulation, meist Fächer aus langen Splitterdreiecken, und auf dem
+  leicht geneigten Boden hatte jedes davon seine eigene Normale — die
+  Flächenschattierung zeigte Streifen, die vom Nasenpunkt ausstrahlten.
+  Deshalb zwei Tauschdurchgänge nach Lawson: erst Delaunay in der Ebene
+  (Sprossen quer über den Kanal statt Strahlen längs), dann im Raum die
+  Diagonale mit dem kleinsten Normalenknick je Viereck
+  (Dyn/Levin/Rippa) — das räumt auch die feinen Sprossen in verdrehten
+  Feldern auf. Getauscht wird nur über konvexe Vierecke, der Rand
+  bleibt, wie er ist.
 
-Gerundet wird nur an Gabelungen. Am Anschnitt bleibt der Deckel eben:
-das ist die Austrittsfläche ins Bauteil. Am Pressrest ebenfalls, dort
-steckt er ohnehin im Zylinder.
+Die Streifen treffen die Ringe der Schläuche Punkt für Punkt (die linke
+Umrisshälfte ist das Spiegelbild der rechten in derselben Reihenfolge,
+`profile.js` führt die Indexlisten); das Netz ist geschlossen und
+einheitlich nach außen orientiert. `runner.test.mjs` prüft das an allen
+Beispielen, an einem T-Stück, einer dreifachen Gabel, einem geradeaus
+abgehenden Ast, einer Verzweigung in gekippter Ebene und ohne
+Zwickelradius. Der Zulauf wird für das Hosenstück um etwa drei Viertel
+der Kanalbreite gekürzt, jeder Abgang so weit, dass Zwickel und Bogen vor
+seinem Ring Platz haben — je flacher die Gabel, desto länger die Hose,
+nie mehr als knapp die halbe Kante. Ein Punkt mit einem Abgang braucht
+nichts: der letzte Schnitt der Kante davor und der erste der Kante
+danach sind derselbe Ring (die Kurve liefert die Endmaße exakt, nicht
+über die Umkehrung der Fläche). Deckel gibt es nur am Pressrest (im
+Zylinder) und am Anschnitt — die Austrittsfläche ins Bauteil.
 
-Die **Auflösung der Kuppe** richtet sich am Umriss aus, damit sie nicht
-die schwächste Stelle des Netzes ist: dessen Bodenverrundung wird mit
-fünf Sehnen über etwa 85° angenähert, also mit rund 0,017 mm
-Sehnenfehler. Sechzehn Ringe über den Viertelkreis (5,6° je Schritt)
-treffen denselben Wert. Vier Ringe waren es anfangs — 22,5° je Schritt,
-0,26 mm Fehler auf einer 13,7 mm hohen Kuppe, deren Umriss damit aus
-vier geraden Stücken bestand und genau so aussah.
+**Abgänge, die sich durchdringen.** Liegen zwei Abgänge so eng oder sind
+ihre Kanten so kurz, dass ihre Ringe sich noch überschneiden, gibt es
+keinen Zwickel: die Kanäle sind dort wirklich ein überlappender Körper,
+und den vereinigte nur eine Boolesche Operation. Solche Gabelungen
+bleiben Schläuche mit Deckeln übereinander, und die Prüfregel „Abgänge
+durchdringen sich" sagt es (`junctionPlan` in `sweep.js`). Ein Pressrest
+mit mehreren Abgängen ebenso — seine Kanten beginnen alle in der
+Zylindermitte; der Pressrest selbst bleibt ein eigener Zylinder, in dem
+der erste Kanal steckt.
 
-Bezahlt wird das nicht mit Rechenzeit, sondern mit einer Zeile weniger
-Bequemlichkeit: die Dreiecke gehen in ein **vorab bemessenes** Feld statt
-in ein wachsendes Array (`triCount` weiß die Zahl vorher). Der Sweep läuft
-bei jedem Mausschritt eines Zuges neu, und ein Array, das
-340.000-mal wächst und am Ende noch einmal kopiert wird, war dabei die
-Hälfte der Zeit: 10,0 → 3,1 ms bei vierfacher Kuppenauflösung, die ganze
-Kette von Abtasten bis Sweep 16,9 → 10,7 ms.
+Geschrieben wird in ein vorab bemessenes Feld: die Stücke der Gabelungen
+werden zuerst gebaut, dann steht die Zahl der Dreiecke fest. Der warme
+Sweep braucht für die Beispiele 7 bis 14 ms, die ganze Kette von Abtasten
+bis Netz bleibt unter 25 ms — der Sweep läuft bei jedem Mausschritt.
 
 ### Freies Drehen — in allen Viewern
 
@@ -875,11 +916,9 @@ die Griffe, nicht das Netz.
   unter „Import und Export" oder per Ziehen-und-Ablegen über dem
   Viewport; was für eine Datei es ist, entscheidet der Inhalt, nicht die
   Endung.
-- **STL** — was im Viewport steht: je Kanal ein geschlossener Schlauch,
-  dazu der Pressrest, wenn er eingeblendet ist. An den Gabelungen
-  durchdringen sich die Schläuche — das ist ein Satz sauberer Körper,
-  kein einzelner verschmolzener. Zum Anschauen, Messen und Drucken
-  genügt das; im CAD vereinigt man sie mit einem Klick.
+- **STL** — was im Viewport steht: die Kanäle als ein geschlossener
+  Körper (siehe „Das Netz"), dazu der Pressrest als eigener Zylinder,
+  wenn er eingeblendet ist.
 - **Referenzbauteil (STL/GLB)** — wird durchscheinend dazugestellt, damit
   die Anschnitte dorthin zeigen, wo sie hingehören. Sein **Volumen wird
   als Gussvolumen übernommen**: das ist die Zahl, aus der über die
@@ -903,9 +942,16 @@ Auswahlfeld und in der Prüfregel der Spanne — steht nach der
 **DieLogic-Schusskurve** der Auslegung (`js/runner/shottime.js`), nicht
 nach einem konstanten Strom: die Kurve (López-Anfahrt bis v_krit, Plateau
 bis „Kammer voll", Rampe mit a_max auf das v₂ der NADCA-Füllzeit) wird
-für dieses System erzeugt — Maschine, Kammer, Legierung und Thermik aus
-dem aktuellen Projekt (`shared/project.js`, der Auslegungsabschnitt),
-Gussvolumen, Anguss und Pressrest von hier. Die Ankunft bei konstantem
+für dieses System erzeugt — mit der **Füllkammer von hier**: der
+Pressrest-Ø ist der Kolben-Ø, die Kammerlänge steht unter „Prozess",
+daraus folgt der Füllgrad (die Seitenleiste nennt ihn), und der bestimmt
+die ganze erste Phase; dazu Gussvolumen, Anguss und Pressrest von hier.
+Maschine (v_max, a_max) und Thermik kommen aus dem aktuellen Projekt
+(`shared/project.js`, der Auslegungsabschnitt) — eine Anbindung an die
+Auslegung ist das nicht, nur ihre Kurve. Vorher nahm die Kurve auch
+Kolben und Kammer aus dem Projekt: ein 150er Kolben mit 900 mm Kammer
+unter einem 90er Pressrest, Füllgrad 3 %, und entsprechend seltsame
+Zeiten. Die Ankunft bei konstantem
 Strom ist ein Volumen, das den Pressrest passiert hat; auf der Kurve ist
 das ein Kolbenweg hinter „Kammer voll", und das Profil kennt die Zeit
 dazu. Die Zeiten zählen ab Kolbenstart. Die Seitenleiste nennt „Kammer

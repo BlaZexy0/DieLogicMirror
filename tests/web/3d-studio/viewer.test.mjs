@@ -1245,6 +1245,22 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   }
   assert.ok(d6.getElementById('chart-facts').innerHTML.includes('ab Kolbenstart'), 'die Kennzahlen nennen die Kurve');
   assert.ok(d6.getElementById('shot-facts').innerHTML.includes('Kammer voll'), 'die Seitenleiste zeigt die Kurve');
+  /* Die Füllkammer ist die von hier: der Pressrest als Kolben, die
+     Kammerlänge aus dem Feld — nicht die Kammer des Projekts. */
+  assert.ok(d6.getElementById('shot-facts').innerHTML.includes('Füllgrad'), 'die Seitenleiste nennt den Füllgrad');
+  assert.equal(v.state.timeline.v.diam, v.state.graph.biscuit.d, 'der Pressrest-Ø ist der Kolben-Ø der Kurve');
+  assert.equal(v.state.timeline.v.length, v.state.proc.chamberLen);
+  assert.equal(d6.getElementById('chamber-len').value, '450');
+  const phiBefore = v.state.timeline.phi;
+  const cl = d6.getElementById('chamber-len');
+  cl.value = '600';
+  cl.dispatch('change');
+  assert.equal(v.state.proc.chamberLen, 600);
+  assert.equal(v.state.timeline.v.length, 600, 'die Kurve rechnet mit der neuen Kammer');
+  assert.ok(v.state.timeline.phi < phiBefore, 'längere Kammer, kleinerer Füllgrad');
+  cl.value = '450';
+  cl.dispatch('change');
+  assert.equal(v.state.proc.chamberLen, 450);
   assert.equal(d6.getElementById('shot-adopt').disabled, false);
   const tfillBefore = v.state.proc.fillTime;
   d6.getElementById('shot-adopt').dispatch('click');
@@ -1305,6 +1321,30 @@ test('Angussseite: Graph bearbeiten, Regeln, Flussschema, Referenzteil', async (
   dInput.value = '120';
   dInput.dispatch('change');
   assert.equal(v.state.graph.biscuit.d, 120);
+
+  /* Die Ausstoßrichtung umschalten dreht das System um den Pressrest —
+     die Kamera bleibt, wo sie ist. Vorher passte die Seite das Bild neu
+     ein, und der Blick, den man sich gerade eingestellt hatte, war weg. */
+  {
+    const camBefore = v.view.camera.position.toArray();
+    const tgtBefore = v.view.controls.target.toArray();
+    const ax = d6.getElementById('axis-seg').querySelectorAll('button');
+    ax.find(b => b.dataset.value === '+z').dispatch('click');
+    assert.equal(v.state.graph.biscuit.axis, '+z');
+    assert.deepEqual(v.view.camera.position.toArray(), camBefore, 'die Kamera steht noch');
+    assert.deepEqual(v.view.controls.target.toArray(), tgtBefore, 'und ihr Ziel auch');
+    ax.find(b => b.dataset.value === '+y').dispatch('click');
+    assert.equal(v.state.graph.biscuit.axis, '+y');
+  }
+
+  /* Der Zwickelradius steht unter „Kanalform" und formt die Gabelungen. */
+  assert.equal(d6.getElementById('branch-r').value, '4');
+  const br = d6.getElementById('branch-r');
+  br.value = '6';
+  br.dispatch('change');
+  assert.equal(v.state.graph.branchR, 6);
+  br.value = '4';
+  br.dispatch('change');
 
   /* Der Pressrest zieht beim Verschieben das ganze System mit. */
   const vorher = Object.values(v.state.graph.nodes).map(n => n.pos.slice());

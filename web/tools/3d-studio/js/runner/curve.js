@@ -17,14 +17,24 @@
 
    Der Querschnitt zwischen zwei Knoten wird linear über die Bogenlänge
    geführt. Vor einem Anschnitt teilt sich die Kante in drei Abschnitte:
-   Laufkanal, Übergang und Anschnittlänge — der Übergang ist das, was
-   `transition` einstellt. */
+   Laufkanal, Übergang und Anschnitttiefe — der Übergang ist das, was
+   `transition` einstellt.
+
+   DIE ANSCHNITTTIEFE IST GERADE. Der Steg vor dem Bauteil — die letzten
+   `gate.len` Millimeter — ist ein Prisma entlang der Mündungsrichtung
+   (die gebundene Richtung, sonst die Sehne vom Vorgänger): der Bogen
+   endet an seinem Anfang, und ab dort laufen die Schnitte parallel mit
+   festem Maß. Lag der Steg noch auf der Kurve, hing seine Länge von der
+   Krümmung ab — außen länger, innen kürzer —, ein breiter Fächer
+   verdrehte sich über den letzten Millimetern, und die Richtung, mit der
+   der Anschnitt ins Bauteil zeigte, war die Tangente an einer Stelle
+   statt die Achse eines Stücks. */
 
 import {
   add, sub, scale, addScaled, dot, cross, norm, len, dist, clamp
 } from './vec.js';
 import * as G from './graph.js';
-import { section, area, hydraulic, dimsForArea, POINTS } from './profile.js';
+import { section, area, hydraulic, dimsForArea, widthForArea, POINTS } from './profile.js';
 
 /* ── Tangenten ───────────────────────────────────────────────── */
 
@@ -60,13 +70,18 @@ function inDir(g, child, parent) {
   return len(d) ? d : chord;
 }
 
-/** Hermite-Bogen einer Kante: Punkte, erste und zweite Ableitung. */
-export function hermite(g, from, to) {
-  const L = Math.max(dist(from.pos, to.pos), 1e-6);
+/** Hermite-Bogen einer Kante: Punkte, erste und zweite Ableitung.
+    `end` ersetzt Endpunkt und Endrichtung (der Bogen vor einem geraden
+    Anschnittsteg endet an dessen Anfang) — die Anfangstangente kommt
+    weiter aus dem echten Zielknoten, damit sie dieselbe ist wie die
+    Endtangente der Kante davor: ein Punkt mit einem Abgang muss auf
+    beiden Kanten denselben Ring haben. */
+export function hermite(g, from, to, end = null) {
+  const P0 = from.pos, P1 = end ? end.pos : to.pos;
+  const L = Math.max(dist(P0, P1), 1e-6);
   const k = (g.tension || 1) * L;
   const m0 = scale(outDir(g, from, to), k);
-  const m1 = scale(inDir(g, to, from), k);
-  const P0 = from.pos, P1 = to.pos;
+  const m1 = scale(end ? end.dir : inDir(g, to, from), k);
   /* Ausgeschrieben statt über [0,1,2].map: die Kurve wird je Mauszug
      einige tausend Mal ausgewertet, und drei Closures samt Hilfsfeld je
      Aufruf waren der teuerste Posten der ganzen Abtastung. */
@@ -92,16 +107,20 @@ export function hermite(g, from, to) {
 
 /* Querschnitt am ANFANG einer Kante. An einer Verzweigung ist das nicht
    der volle Zulaufquerschnitt: der teilt sich auf die Äste auf. Jeder
-   Ast startet mit seinem Anteil daran — beide Seitenmaße mit der Wurzel
-   des Anteils skaliert, damit das Seitenverhältnis bleibt und die
-   Flächen sich zum Zulauf addieren. Ohne das wüchse der Querschnitt an
-   jeder Gabelung auf das Doppelte, und keine Prüfregel könnte je
-   erfüllt werden. */
+   Ast startet mit seinem Anteil daran — die TIEFE läuft durch, die
+   Breite teilt sich, so dass die Flächen sich zum Zulauf addieren. So
+   fräst man eine Gabelung: ein Boden in einer Tiefe, der sich in zwei
+   Nuten teilt. Vorher wurden beide Maße mit der Wurzel des Anteils
+   skaliert; dann sprang der Boden an jeder Gabelung um fast ein Drittel
+   nach oben, und das Hosenstück des Sweeps (js/runner/sweep.js) musste
+   diese Stufe als schiefes Feld ausgleichen. Ohne Aufteilung wüchse der
+   Querschnitt an jeder Gabelung auf das Doppelte, und keine Prüfregel
+   könnte je erfüllt werden. */
 function startDims(g, from, to) {
   const kids = from.children.filter(c => g.nodes[c]);
   if (kids.length < 2) return { w: from.w, h: from.h };
-  const f = Math.sqrt(G.branchShare(g, from, to.id));
-  return { w: from.w * f, h: from.h * f };
+  const A = area(section(from.w, from.h, g.draft, g.radius)) * G.branchShare(g, from, to.id);
+  return { w: widthForArea(A, from.h, g.draft, g.radius), h: from.h };
 }
 
 /* Vor einem Anschnitt zerfällt die Kante in drei Abschnitte. `share`
@@ -120,17 +139,28 @@ function ramp2(g, aw, ah, bw, bh) {
   const A0 = area(section(aw, ah, g.draft, g.radius));
   const A1 = area(section(bw, bh, g.draft, g.radius));
   const q0 = ah / Math.max(aw, 1e-6), q1 = bh / Math.max(bw, 1e-6);
-  return q => dimsForArea(A0 + (A1 - A0) * q, q0 + (q1 - q0) * q, g.draft, g.radius);
+  /* An den Enden die Maße selbst, nicht die Umkehrung über die Fläche:
+     die trifft auf 1e-7, und um genau so viel unterschieden sich sonst
+     der letzte Schnitt der einen Kante und der erste der nächsten. Der
+     Sweep verlässt sich darauf, dass beide DERSELBE Ring sind. */
+  return q => (q <= 0 ? { w: aw, h: ah } : q >= 1 ? { w: bw, h: bh }
+    : dimsForArea(A0 + (A1 - A0) * q, q0 + (q1 - q0) * q, g.draft, g.radius));
 }
 
-function schedule(g, from, to, L) {
+/* Der Fahrplan nimmt die BOGENLÄNGE s in mm, nicht den Anteil an der
+   Kante: der Steganfang muss exakt getroffen werden, und ein Anteil,
+   der hin- und zurückgerechnet wird, verfehlt ihn um eine Rundung. */
+function schedule(g, from, to, L, land = 0) {
   const a = startDims(g, from, to);
-  if (to.type !== 'gate' || !to.gate) return ramp2(g, a.w, a.h, to.w, to.h);
+  if (to.type !== 'gate' || !to.gate) {
+    const r = ramp2(g, a.w, a.h, to.w, to.h);
+    return s => r(s / L);
+  }
 
   const gt = G.TRANSITIONS[to.gate.transition] || G.TRANSITIONS.ende;
-  const land = clamp(to.gate.len, 0, L * 0.4);
   const trans = Math.max(L * 0.01, (L - land) * gt.share);
   const runEnd = Math.max(0, L - land - trans);
+  const transEnd = L - land;                                 // der Steganfang
   const gw = Math.max(0.4, to.gate.w), gh = Math.max(0.2, to.gate.h);
   const runRamp = ramp2(g, a.w, a.h, to.w, to.h);
   /* Nimmt der Übergang die ganze Länge („über die ganze Länge", Fächer),
@@ -141,11 +171,10 @@ function schedule(g, from, to, L) {
      374 am Anfang dieser. */
   const t0 = runEnd > 1e-9 ? { w: to.w, h: to.h } : a;
   const transRamp = ramp2(g, t0.w, t0.h, gw, gh);
-  return u => {
-    const s = u * L;
+  return s => {
     if (runEnd > 1e-9 && s <= runEnd) return runRamp(s / runEnd);
-    if (s <= runEnd + trans) {
-      const d = transRamp(trans > 1e-9 ? (s - runEnd) / trans : 1);
+    if (s <= transEnd + 1e-9) {
+      const d = transRamp(trans > 1e-9 ? Math.min(1, (s - runEnd) / trans) : 1);
       return { w: d.w, h: d.h, trans: true };
     }
     return { w: gw, h: gh, land: true };
@@ -163,25 +192,40 @@ function frameNormal(nA, nB, u, t) {
   return len(perp) > 1e-6 ? norm(perp) : norm(addScaled(nA, t, -dot(nA, t)));
 }
 
-/** Eine Kante abtasten. Ergebnis sind Schnitte in gleichen mm-Schritten. */
+/** Der gerade Steg vor einem Anschnitt: Richtung, Länge und sein Anfang
+    — oder null, wenn die Kante nicht in einem Anschnitt endet oder der
+    Steg keine Länge hat. Der Steg kann höchstens die halbe Sehne lang
+    sein; was darüber liegt, wäre keine Kante mehr, sondern ein Balken. */
+export function gateLand(g, from, to) {
+  if (to.type !== 'gate' || !to.gate) return null;
+  const dir = to.aim && len(to.aim) ? norm(to.aim) : norm(sub(to.pos, from.pos));
+  if (!len(dir)) return null;
+  const length = clamp(to.gate.len || 0, 0, dist(from.pos, to.pos) * 0.5);
+  if (length <= 1e-9) return null;
+  return { dir, len: length, start: addScaled(to.pos, dir, -length) };
+}
+
+/** Eine Kante abtasten. Ergebnis sind Schnitte in gleichen mm-Schritten
+    entlang des Bogens; ein gerader Anschnittsteg hängt mit eigenen
+    Schritten daran, der erste Schnitt des Stegs ist der letzte des Bogens. */
 export function sampleEdge(g, from, to) {
-  const cur = hermite(g, from, to);
+  const land = gateLand(g, from, to);
+  /* Mit Steg endet der Bogen an dessen Anfang, mit der Richtung des Stegs. */
+  const cur = hermite(g, from, to, land ? { pos: land.start, dir: land.dir } : null);
   /* Bogenlänge über eine feine Hilfsabtastung; daraus die Umkehrung
      Bogenlänge → Parameter. */
   const M = 200;
-  const ts = new Float64Array(M + 1), arc = new Float64Array(M + 1);
+  const arc = new Float64Array(M + 1);
   let prev = cur.at(0);
   for (let i = 1; i <= M; i++) {
-    const t = i / M;
-    const p = cur.at(t);
+    const p = cur.at(i / M);
     arc[i] = arc[i - 1] + dist(p, prev);
-    ts[i] = t;
     prev = p;
   }
-  const L = arc[M];
+  const Lc = arc[M];
   const paramAt = s => {
     if (s <= 0) return 0;
-    if (s >= L) return 1;
+    if (s >= Lc) return 1;
     let lo = 0, hi = M;
     while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (arc[mid] <= s) lo = mid; else hi = mid; }
     const f = (s - arc[lo]) / Math.max(arc[hi] - arc[lo], 1e-12);
@@ -189,36 +233,56 @@ export function sampleEdge(g, from, to) {
   };
 
   const step = Math.max(0.2, g.step || 1);
-  const n = Math.max(2, Math.round(L / step));
-  const sched = schedule(g, from, to, L);
+  const L = Lc + (land ? land.len : 0);
+  const sched = schedule(g, from, to, L, land ? land.len : 0);
   const nA = G.planeNormal(g, from), nB = G.planeNormal(g, to);
   const sections = [];
-  for (let i = 0; i <= n; i++) {
-    const s = L * i / n;
-    const t = paramAt(s);
-    const p = cur.at(t);
-    const d1 = cur.d1(t), d2 = cur.d2(t);
-    const sp = Math.max(len(d1), 1e-9);
-    const tan = scale(d1, 1 / sp);
-    const kappa = len(cross(d1, d2)) / (sp * sp * sp);
-    const nrm = frameNormal(nA, nB, i / n, tan);
+  const push = (s, p, tan, kappa, nrm, dims) => {
     let u = cross(nrm, tan);
     if (len(u) < 1e-9) u = cross(nrm, [tan[1], tan[2], tan[0]]);
     u = norm(u);
-    const dims = sched(i / n);
     const sec = section(dims.w, dims.h, g.draft, g.radius);
     sections.push({
       s, p, t: tan, n: nrm, u, v: scale(nrm, -1),
       kappa, sec, area: area(sec), dh: hydraulic(sec),
       land: !!dims.land, trans: !!dims.trans
     });
+  };
+
+  const n = Math.max(land ? 1 : 2, Math.round(Lc / step));
+  for (let i = 0; i <= n; i++) {
+    const s = Lc * i / n;
+    const t = paramAt(s);
+    const p = cur.at(t);
+    const d1 = cur.d1(t), d2 = cur.d2(t);
+    const sp = Math.max(len(d1), 1e-9);
+    const tan = scale(d1, 1 / sp);
+    const kappa = len(cross(d1, d2)) / (sp * sp * sp);
+    /* An den Enden die Normale des Knotens selbst, nicht die Mischung
+       an der Stelle 0 bzw. 1 — die weicht um Rundungsfehler ab, und
+       der Sweep braucht an einem Punkt mit einem Abgang auf beiden
+       Kanten denselben Ring. */
+    const nrm = i === 0 ? frameNormal(nA, nA, 0, tan) : i === n ? frameNormal(nB, nB, 0, tan)
+      : frameNormal(nA, nB, i / n, tan);
+    push(s, p, tan, kappa, nrm, sched(s));
+  }
+  if (land) {
+    const nrm = frameNormal(nB, nB, 0, land.dir);
+    const m = Math.max(1, Math.round(land.len / step));
+    for (let j = 1; j <= m; j++) {
+      const s = Lc + land.len * j / m;
+      push(s, addScaled(land.start, land.dir, land.len * j / m), land.dir, 0, nrm, sched(s));
+    }
   }
   return { fromId: from.id, toId: to.id, from, to, length: L, sections };
 }
 
 /** Das ganze Netz abtasten. */
 export function sampleNetwork(g) {
-  const out = { edges: [], step: g.step, points: 0 };
+  /* Kanalform mitgeben: der Sweep rechnet an den Gabelungen eigene
+     Zwischenschnitte und braucht dafür Schräge, Bodenradius und den
+     Zwickelradius. */
+  const out = { edges: [], step: g.step, draft: g.draft, radius: g.radius, branchR: g.branchR, points: 0 };
   for (const e of G.edges(g)) {
     const s = sampleEdge(g, e.from, e.to);
     out.edges.push(s);

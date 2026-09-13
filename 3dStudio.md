@@ -24,7 +24,7 @@ rules.
 | `wandstaerke.html` | Wandstärkenanalyse | Signed distance field by rasterisation, tight around the part (cell edge in mm, no outside band): wall thickness, field sections, the core as the inward offset surface, thermal centres as spheres coloured by size. | core surface as STL |
 | `abstand.html` | Abstandsanalyse | Shortest distance from every point of one file to another file, coloured on a user set scale. | colours, facts |
 | `fuellung.html` | Füllabschätzung | Fill order of the cavity: rectangular gates on the wall, a front runs through the raster cells (Dijkstra, thin walls brake, bigger gates reach further). Fill grade per location, fill body at any grade, last filled spots. | JSON plan (`dielogic-fuellung`), fill body STL |
-| `anguss.html` | Angussdesigner | The runner system as a graph: biscuit, spline runners with drafted trapezoid section, branches (optionally mirrored), mirror points, gates with transition types. Cross section, curvature, Bernoulli style losses per millimetre, fill balance, flow chart, rule check, automatic sizing from the gates backwards. Arrival times on the DieLogic shot curve of the current project (`js/runner/shottime.js`; the page loads `shared/project.js` and the example presets for that). | JSON (`dielogic-anguss`), STL |
+| `anguss.html` | Angussdesigner | The runner system as a graph: biscuit, spline runners with drafted trapezoid section, branches (optionally mirrored), mirror points, gates with transition types and a straight land. The mesh is one closed body: every junction is a constructed pants piece (outer strips on Hermite arcs, a crotch rounded with the branch radius, top and floor fields), no booleans, no raster; the depth runs through a fork, the width splits. Cross section, curvature, Bernoulli style losses per millimetre, fill balance, flow chart, rule check, automatic sizing from the gates backwards. Arrival times on the DieLogic shot curve with the tool's own chamber (biscuit diameter as plunger, chamber length under Prozess, fill ratio shown); machine and thermal values come from the current project (`js/runner/shottime.js`; the page loads `shared/project.js` and the example presets for that). | JSON (`dielogic-anguss`), STL |
 | `ueberlauf.html` | Überlaufdesigner | Overflows and vents on the part: overflow bean, bean with vent channel (drawn as points in the wall plane from a sphere at the bean end), chill vent, plain vent slot. Volumes for the shot weight. | JSON (`dielogic-luft`), STL |
 | `temperier.html` | Temperierkanal-Designer | Cooling drills and channels placed on the offset surface at a chosen distance from the cavity, ends movable with axis arrows, automatic placement of drills. | JSON (`dielogic-temperier`), STL |
 | `werkbank.html` | Werkbank | All of the above as six stages in one rail around one part: part analysis (parting + wall thickness), runner (proposed from the part, gates bound to its wall), fill estimate (inlets are the runner's gates), overflows (with the fill's last spots as marks), cooling, and the Auslegung dashboard fed with masses, gate area, wall thickness and projected area from the model. Existing tools are untouched; the stages reuse their modules. | JSON (`dielogic-werkbank`) plus every per-tool file |
@@ -170,7 +170,7 @@ follows this contract loads back into the Formaufbau editor.
 
 | Format | Version | Tool | Content |
 |---|---|---|---|
-| `dielogic-anguss` | 1 | Angussdesigner | biscuit, global section settings, nodes (type, parent, children, position, tilt, section, ratio, mirror flag, gate data, aim direction) |
+| `dielogic-anguss` | 1 | Angussdesigner | biscuit, global section settings (draft, bottom radius, branch radius `branchR` — absent in files before 2026-09-12, then 4 mm —, tension, step, gate height), nodes (type, parent, children, position, tilt, section, ratio, mirror flag, gate data, aim direction) |
 | `dielogic-luft` | 3 | Überlaufdesigner | items with type, position, outward normal, rotation, dimensions; vented beans carry `vent`, the channel points in wall plane coordinates (version 2 files with a channel length migrate to one point) |
 | `dielogic-fuellung` | 1 | Füllabschätzung | gates with position, normal, rotation, width, height, optional share; α (older files may carry a fill time, ignored) |
 | `dielogic-temperier` | 1 | Temperierkanal | offset distance; drills with tip, direction, diameter, length and an `auto` flag; channels with both ends and diameter |
@@ -234,7 +234,10 @@ GLB above.
   ends run out rounded, rib ends that meet a wall run into it.
 - Geometry is exchanged as triangle soups (9 floats per triangle);
   unions come from overlap, not from booleans, except where `csg.js` is
-  used deliberately.
+  used deliberately. The runner body is the exception the other way:
+  one manifold built from constructed junction patches
+  (`js/runner/sweep.js`), analytic, no booleans, no raster; only
+  outlets that still overlap at their rings fall back to capped tubes.
 - Coplanar faces of overlapping bodies are handled in the material
   (polygon offset), not by trimming geometry.
 - Rendering uses WebGL through Three.js; WebGPU from the original brief

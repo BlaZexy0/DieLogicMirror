@@ -14,6 +14,7 @@
 
 import * as G from './graph.js';
 import { ALLOYS } from './flow.js';
+import { junctionPlan } from './sweep.js';
 import { sub, norm, len, dot } from './vec.js';
 
 /* Fenster der Anschnittgeschwindigkeit je Werkstoff, m/s. */
@@ -256,6 +257,21 @@ export function checkRules(g, net, flow, proc) {
         'Alle Anschnitte werden innerhalb von ' + fmt(spread) + ' ms erreicht (erster nach '
         + fmt(early.tArrive * 1000) + ' ms, letzter nach ' + fmt(late.tArrive * 1000) + ' ms).');
     }
+  }
+
+  /* ── 14. Abgänge, die sich durchdringen ──
+     Der Sweep baut jede Gabelung als Hosenstück mit Zwickel — wenn die
+     Abgänge an ihren Ringen getrennt sind. Liegen sie so eng oder sind
+     ihre Kanten so kurz, dass die Kanäle sich hinter der Gabelung noch
+     überschneiden, bleibt dort ein Satz überlappender Schläuche; die
+     Geometrie zeigt es, hier steht es als Satz. */
+  for (const j of junctionPlan(net)) {
+    if (!j.degenerate) continue;
+    add('warn', 'Abgänge durchdringen sich',
+      'An ' + label(g, j.id) + ' liegen die Abgänge ' + j.kids.map(k => label(g, k)).join(' und ')
+      + ' so eng oder sind so kurz, dass ihre Kanäle sich hinter der Gabelung noch überschneiden — '
+      + 'dort gibt es keinen Zwickel, die Kanäle bleiben übereinander. Den Winkel öffnen oder die '
+      + 'Kanten hinter der Gabelung verlängern.');
   }
 
   return out;

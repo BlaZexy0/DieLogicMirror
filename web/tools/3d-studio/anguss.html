@@ -71,6 +71,11 @@
       <span class="val">mm</span>
     </div>
     <div class="row">
+      <span title="Radius der Innenkante an jeder Gabelung — die Nase des Zwickels zwischen zwei Abgängen, so groß wie der Fräser, der sie stehen lässt. Die Außenwände gehen ohnehin stetig vom Zulauf in die Abgänge über.">Zwickelradius</span>
+      <input type="text" id="branch-r" inputmode="decimal" value="4" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <div class="row">
       <span title="Höhe aller Anschnitte — die dünnste Stelle des ganzen Systems. Gilt für jeden Anschnitt, dem im Auswahlfeld keine eigene Höhe gegeben wurde.">Anschnitthöhe</span>
       <input type="text" id="gate-h" inputmode="decimal" value="2" spellcheck="false">
       <span class="val">mm</span>
@@ -125,7 +130,12 @@
       <input type="range" id="cbranch" min="10" max="120" step="5" value="50">
       <span class="val" id="cbranch-val"></span>
     </div>
-    <label class="inline" title="Die Ankunft der Schmelze an jedem Anschnitt nach der DieLogic-Schusskurve der Auslegung (López-Anfahrt bis v_krit, Plateau bis Kammer voll, Rampe auf das v₂ der NADCA-Füllzeit) — erzeugt mit Maschine, Kammer und Legierung des aktuellen Projekts und den Volumen von hier. Ohne Häkchen: ein konstanter Strom aus Gussvolumen und Füllzeit."><input type="checkbox" id="shot-time" checked> Ankunft nach der DieLogic-Schusskurve</label>
+    <div class="row">
+      <span title="Länge der Füllkammer vom Kolben in Startlage bis zum Pressrest. Mit dem Durchmesser des Pressrests als Kolben-Ø folgt daraus der Füllgrad, den die Schusskurve braucht.">Füllkammerlänge</span>
+      <input type="text" id="chamber-len" inputmode="decimal" value="450" spellcheck="false">
+      <span class="val">mm</span>
+    </div>
+    <label class="inline" title="Die Ankunft der Schmelze an jedem Anschnitt nach der DieLogic-Schusskurve der Auslegung (López-Anfahrt bis v_krit, Plateau bis Kammer voll, Rampe auf das v₂ der NADCA-Füllzeit) — erzeugt mit der Füllkammer von hier (Pressrest-Ø als Kolben-Ø, Kammerlänge von oben) und den Volumen von hier; Maschine und Thermik aus dem aktuellen Projekt. Ohne Häkchen: ein konstanter Strom aus Gussvolumen und Füllzeit."><input type="checkbox" id="shot-time" checked> Ankunft nach der DieLogic-Schusskurve</label>
     <div class="facts" id="shot-facts"></div>
     <div class="warn-line" id="shot-warn"></div>
     <button type="button" class="btn btn-outline block-btn" id="shot-adopt" title="Die Füllzeit ab Anschnitt, die die Kurve braucht, als Füllzeit des Prozesses übernehmen — dann passen Ströme und Zeiten zusammen.">Füllzeit der Kurve übernehmen</button>
@@ -133,7 +143,9 @@
       Schmelze stehen im <b>Flussschema</b> (Knopf rechts unten im Viewport) — dort, wo auch
       Fläche, Geschwindigkeit und Aufteilung an jedem Ast hängen. Mit der Schusskurve zählt die
       Ankunft ab Kolbenstart: erst die langsame erste Phase bis „Kammer voll", dann füllt sich
-      der Anguss in der Rampe der zweiten Phase.</div>
+      der Anguss in der Rampe der zweiten Phase. Die Kammer ist die von hier — Pressrest-Ø und
+      Kammerlänge, daraus der Füllgrad; Maschine (v<sub>max</sub>, a<sub>max</sub>) und Thermik
+      nimmt die Kurve aus dem aktuellen Projekt.</div>
 
     <h2>Darstellung</h2>
     <div class="row">
@@ -156,9 +168,9 @@
     <div class="hint"><b>JSON</b> ist der Graph selbst — nur damit lässt sich weiterarbeiten.
       Dateien nimmt auch der Viewport per Ablegen entgegen; was für eine es ist, entscheidet
       der Inhalt.<br>
-      <b>STL</b> ist, was im Viewport steht: je Kanal ein geschlossener Schlauch, dazu der
-      Pressrest, wenn er eingeblendet ist. An den Gabelungen durchdringen sie sich — ein Satz
-      sauberer Körper, kein verschmolzener; im CAD vereinigt man sie mit einem Klick.</div>
+      <b>STL</b> ist, was im Viewport steht: die Kanäle als <b>ein</b> geschlossener Körper —
+      an den Gabelungen gehen sie mit Zwickelradius ineinander über —, dazu der Pressrest,
+      wenn er eingeblendet ist; der steckt als eigener Zylinder im ersten Kanal.</div>
 
     <h2>Prüfung</h2>
     <div class="rules" id="rules-list"></div>
@@ -241,7 +253,7 @@
               <span class="val">mm</span>
             </div>
             <div class="row">
-              <span title="Tiefe des Anschnitts in Fließrichtung (Steg): die Strecke mit unverändertem Querschnitt vor dem Bauteil. Nicht die Breite — die steht darunter.">Anschnitttiefe</span>
+              <span title="Tiefe des Anschnitts in Fließrichtung (Steg): ein gerades Stück mit unverändertem Querschnitt vor dem Bauteil, entlang der Mündungsrichtung. Nicht die Breite — die steht darunter.">Anschnitttiefe</span>
               <input type="text" id="sel-glen" inputmode="decimal" value="4" spellcheck="false">
               <span class="val">mm</span>
             </div>

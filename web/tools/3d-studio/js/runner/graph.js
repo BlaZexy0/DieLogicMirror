@@ -74,6 +74,7 @@ export const TRANSITIONS = {
 const DEF = {
   draft: 5,          // Entformschräge der Kanäle, Grad
   radius: 1.5,       // Eckenradius am Kanalboden, mm
+  branchR: 4,        // Zwickelradius: Verrundung der Innenkante an jeder Gabelung, mm
   tension: 1.0,      // Straffheit der Splines
   step: 1.0,         // Abtastschritt entlang der Mittellinie, mm
   gateH: 2.0         // Anschnitthöhe, mm — Vorgabe für alle Anschnitte ohne eigene
@@ -83,7 +84,7 @@ export function emptyGraph() {
   return {
     format: FORMAT, version: FORMAT_VERSION,
     biscuit: { pos: [0, 0, 0], axis: '+y', d: 90, t: 25 },
-    draft: DEF.draft, radius: DEF.radius, tension: DEF.tension, step: DEF.step,
+    draft: DEF.draft, radius: DEF.radius, branchR: DEF.branchR, tension: DEF.tension, step: DEF.step,
     gateH: DEF.gateH,
     nodes: {}, rootId: null, seq: 0
   };
@@ -537,7 +538,7 @@ export function toJSON(g) {
   return {
     format: FORMAT, version: FORMAT_VERSION,
     biscuit: { ...g.biscuit, pos: g.biscuit.pos.slice() },
-    draft: g.draft, radius: g.radius, tension: g.tension, step: g.step,
+    draft: g.draft, radius: g.radius, branchR: g.branchR, tension: g.tension, step: g.step,
     gateH: g.gateH,
     rootId: g.rootId, nodes
   };
@@ -549,7 +550,8 @@ export function fromJSON(obj) {
   const g = emptyGraph();
   Object.assign(g.biscuit, obj.biscuit || {});
   if (!AXES[g.biscuit.axis]) g.biscuit.axis = '+y';
-  for (const k of ['draft', 'radius', 'tension', 'step', 'gateH']) if (Number.isFinite(obj[k])) g[k] = obj[k];
+  /* Ältere Dateien kennen den Zwickelradius nicht — dann gilt die Vorgabe. */
+  for (const k of ['draft', 'radius', 'branchR', 'tension', 'step', 'gateH']) if (Number.isFinite(obj[k])) g[k] = obj[k];
   const list = Array.isArray(obj.nodes) ? obj.nodes : [];
   if (!list.length) throw new Error('Die Datei enthält keine Knoten.');
   for (const n of list) {

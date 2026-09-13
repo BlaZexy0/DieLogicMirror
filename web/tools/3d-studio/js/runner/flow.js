@@ -47,7 +47,11 @@ export const DEFAULT_PROCESS = {
   volume: 420,      // cm³ Gussvolumen einschließlich Überläufen
   fillTime: 45,     // ms
   cBranch: 0.5,     // Beiwert des Verzweigungsverlusts
-  vGate: 40         // m/s Zielgeschwindigkeit am Anschnitt
+  vGate: 40,        // m/s Zielgeschwindigkeit am Anschnitt
+  /* Länge der Füllkammer, mm. Mit dem Pressrest-Ø als Kolben-Ø ergibt
+     sie den Füllgrad, den die Schusskurve braucht (js/runner/shottime.js);
+     die Strömungsrechnung selbst braucht sie nicht. */
+  chamberLen: 450
 };
 
 const lambdaOf = re => (re < 2300 ? 64 / Math.max(re, 1e-3) : 0.316 / Math.pow(re, 0.25));

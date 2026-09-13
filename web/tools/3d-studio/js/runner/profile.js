@@ -45,6 +45,18 @@ const N_BOTTOM = 4;   // Boden (ohne Endpunkt)
 const N_TOP = 4;      // Trennebene (ohne Endpunkt)
 export const POINTS = 2 * N_FLANK + 2 * N_ARC + N_BOTTOM + N_TOP;
 
+/* Die Teile des Umrisses, wie der Sweep (js/runner/sweep.js) sie an den
+   Verzweigungen braucht: die rechte Flanke samt Bodenverrundung von der
+   oberen Ecke bis zum Flankenfuß, die linke als ihr Spiegelbild IN
+   DERSELBEN REIHENFOLGE (LEFT_HALF[k] ist der Spiegelpunkt von
+   RIGHT_HALF[k] — die Tests prüfen das), dazu die obere Kante von links
+   nach rechts und der Boden von rechts nach links. Deckfläche und Boden
+   einer Gabelung werden als Felder zwischen diesen Kanten gefüllt. */
+export const RIGHT_HALF = Array.from({ length: N_FLANK + N_ARC + 1 }, (_, k) => k);
+export const LEFT_HALF = RIGHT_HALF.map(k => 2 * N_FLANK + 2 * N_ARC + N_BOTTOM - k);
+export const TOP_EDGE = [...Array.from({ length: N_TOP }, (_, k) => 2 * N_FLANK + 2 * N_ARC + N_BOTTOM + k), 0];
+export const BOTTOM_EDGE = Array.from({ length: N_BOTTOM + 1 }, (_, k) => N_FLANK + N_ARC + k);
+
 /** Maße eines Querschnitts aufbereiten und auf das Machbare klemmen.
     Ergebnis ist die einzige Beschreibung, mit der outline() und sdf2d()
     arbeiten — beide leiten alles daraus ab. */
@@ -191,6 +203,28 @@ export function dimsForArea(target, aspect, draftDeg, radius) {
     if (Math.abs(f - 1) < 1e-7) break;
   }
   return { w: Math.max(0.4, w), h: Math.max(0.2, q * w) };
+}
+
+/** Die Breite zu einer Zielfläche bei FESTER Tiefe — für die Aufteilung
+    an einer Gabelung: die Tiefe läuft durch, die Breite teilt sich. Die
+    Fläche ist in der Breite linear (Trapez minus Eckenabzug), solange
+    die Schräge nicht klemmt; ein Sekantenschritt am Umriss fängt den
+    Rest. Unter 0,4 mm Breite gibt es nichts zu teilen. */
+export function widthForArea(target, h, draftDeg, radius) {
+  const depth = Math.max(0.2, h);
+  const tgt = Math.max(target, 0.1);
+  const s0 = section(Math.max(0.4, tgt / depth), depth, draftDeg, radius);
+  let w = Math.max(0.4, (tgt + cornerDeficit(s0)) / depth + depth * s0.tanA);
+  let a = area(section(w, depth, draftDeg, radius));
+  for (let i = 0; i < 3 && Math.abs(a - tgt) > 1e-9 * tgt; i++) {
+    const w2 = Math.max(0.4, w * 1.01 + 0.01);
+    const a2 = area(section(w2, depth, draftDeg, radius));
+    const slope = (a2 - a) / (w2 - w);
+    if (!(slope > 1e-12)) break;
+    w = Math.max(0.4, w + (tgt - a) / slope);
+    a = area(section(w, depth, draftDeg, radius));
+  }
+  return w;
 }
 
 /* ── Dieselbe Form als Abstandsfunktion ──────────────────────────

@@ -53,6 +53,31 @@ test('shotTimeline: die DieLogic-Kurve für das Modell — Massen aus den Volume
   assert.equal(tl.timeForVolume(beyond), null, 'jenseits des Kurvenhubs');
 });
 
+test('shotTimeline: die Füllkammer des Modells ersetzt die des Projekts — Kolben-Ø, Länge und damit der Füllgrad', () => {
+  const v = defaults();
+  const own = shotTimeline(v, VOL, { diam: 90, length: 450 });
+  assert.ok(!own.error, own.error);
+  assert.equal(own.v.diam, 90);
+  assert.equal(own.v.length, 450);
+  /* Füllgrad: flüssig dosiertes Volumen durch Kammervolumen — die Massen
+     kommen aus den festen Volumen mit ρ_sol, in der Kammer stehen sie
+     flüssig mit ρ. */
+  const Vdose = (VOL.part + VOL.runner + VOL.overflow + VOL.biscuit) * 1e-9 * rhoSolidus(own.v) / own.v.density;
+  const A = Math.PI / 4 * 0.09 * 0.09;
+  assert.ok(Math.abs(own.phi - Vdose / (A * 0.45)) < 1e-9, 'Füllgrad ' + own.phi);
+  assert.ok(Math.abs(own.A - A) < 1e-12, 'die Kolbenfläche ist die des Pressrests');
+  /* Ohne Angabe bleibt die Kammer der Auslegung. */
+  const proj = shotTimeline(v, VOL);
+  assert.equal(proj.v.diam, v.diam);
+  assert.equal(proj.v.length, v.length);
+  assert.ok(Math.abs(proj.phi - proj.shot.phi) < 1e-12);
+  /* Die kleine Kammer ist voller und früher voll als die große des Projekts. */
+  assert.ok(own.phi > proj.phi, own.phi + ' gegen ' + proj.phi);
+  assert.ok(own.tFull < proj.tFull, 'Kammer voll: ' + own.tFull + ' gegen ' + proj.tFull);
+  /* Zu viel Schmelze für die Kammer ist ein Fehler, kein Absturz. */
+  assert.match(shotTimeline(v, VOL, { diam: 40, length: 100 }).error || '', /Füllgrad|Dosiervolumen/);
+});
+
 test('shotArrivals: die Substitution Zeit × Strom → Volumen → Kurvenzeit', () => {
   /* Eine Kurve, die das Volumen mit dem Strom Qc herausschiebt — dann
      müssen genau die Zeiten des konstanten Stroms herauskommen. */

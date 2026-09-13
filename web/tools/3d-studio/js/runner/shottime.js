@@ -35,13 +35,22 @@ import { computeShot, pistonArea, rhoSolidus } from '../../../auslegung/js/core/
  *   values      Auslegungszustand (state.values des Dashboards)
  *   volumesMm3  { part, runner, overflow, biscuit } in mm³ aus dem Modell
  *               (0 zählt); was fehlt, bleibt bei der Auslegung
- * → { error } oder { v, points, warn, shot, A, tFull, timeForVolume(V) }
- *   mit A in m², tFull der Kurvenzeit von „Kammer voll" in s und
- *   timeForVolume(V in m³) der Zeit ab „Kammer voll", zu der V den
- *   Pressrest passiert hat — null, wenn die Kurve vorher endet.
+ *   chamber     { diam, length } in mm — die Füllkammer des Modells: der
+ *               Kolben-Ø (beim Angussdesigner der Pressrest) und die
+ *               Kammerlänge. Daraus folgt der Füllgrad, und der bestimmt
+ *               die ganze erste Phase; ohne Angabe gilt die Kammer der
+ *               Auslegung (die Werkbank hat sie aus ihrem Dashboard).
+ * → { error } oder { v, points, warn, shot, A, phi, tFull, timeForVolume(V) }
+ *   mit A in m², phi dem Füllgrad, tFull der Kurvenzeit von „Kammer
+ *   voll" in s und timeForVolume(V in m³) der Zeit ab „Kammer voll", zu
+ *   der V den Pressrest passiert hat — null, wenn die Kurve vorher endet.
  */
-export function shotTimeline(values, volumesMm3 = {}) {
+export function shotTimeline(values, volumesMm3 = {}, chamber = null) {
   const v = { ...values };
+  if (chamber) {
+    if (chamber.diam > 0) v.diam = chamber.diam;
+    if (chamber.length > 0) v.length = chamber.length;
+  }
   const rho = rhoSolidus(v);
   for (const k of ['part', 'runner', 'overflow', 'biscuit']) {
     const mm3 = volumesMm3[k];
@@ -59,7 +68,7 @@ export function shotTimeline(values, volumesMm3 = {}) {
   if (!full || !full.inP) return { error: 'Die Kurve endet, bevor die Kammer voll ist.' };
   const tFull = full.t;
   return {
-    v, points: gen.points, warn: gen.warn || null, shot, A, tFull, v2: gen.v2, tN: gen.tN,
+    v, points: gen.points, warn: gen.warn || null, shot, A, phi: shot.phi, tFull, v2: gen.v2, tN: gen.tN,
     timeForVolume(V) {
       if (!(V >= 0)) return null;
       const s = shot.sFill + V / A;

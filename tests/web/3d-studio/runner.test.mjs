@@ -15,7 +15,8 @@ const R = '../../../web/tools/3d-studio/';
 const P = await import(R + 'js/runner/profile.js');
 const G = await import(R + 'js/runner/graph.js');
 const PRE = await import(R + 'js/runner/presets.js');
-const { sampleNetwork, hermite } = await import(R + 'js/runner/curve.js');
+const { sampleNetwork, hermite, gateLand } = await import(R + 'js/runner/curve.js');
+const V = await import(R + 'js/runner/vec.js');
 const { sweepRunner, biscuitMesh } = await import(R + 'js/runner/sweep.js');
 const F = await import(R + 'js/runner/flow.js');
 const { checkRules } = await import(R + 'js/runner/rules.js');
@@ -77,6 +78,38 @@ test('Profil: obere Kante scharf, Boden verrundet, Fläche unter dem Trapez', ()
   assert.ok(P.area(sec) < trap, 'die Verrundung nimmt Fläche weg');
   assert.ok(P.area(sec) > trap * 0.99, 'aber nur wenig');
   assert.ok(sec.r > 0 && sec.r <= 1.5);
+});
+
+test('Profil: die linke Hälfte ist Punkt für Punkt das Spiegelbild der rechten', () => {
+  /* Der Sweep hängt die Halbringe einer Gabelung nach diesen Listen
+     zusammen — die linke Hälfte muss in DERSELBEN Reihenfolge laufen wie
+     die rechte (obere Ecke → Flanke → Verrundung → Flankenfuß). */
+  assert.equal(P.LEFT_HALF.length, P.RIGHT_HALF.length);
+  for (const [w, h, d, r] of CASES) {
+    const o = P.outline(P.section(w, h, d, r));
+    for (let k = 0; k < P.RIGHT_HALF.length; k++) {
+      const a = P.RIGHT_HALF[k], b = P.LEFT_HALF[k];
+      assert.ok(Math.abs(o[a * 2] + o[b * 2]) < 1e-12 && Math.abs(o[a * 2 + 1] - o[b * 2 + 1]) < 1e-12,
+        `${w}×${h}: Punkt ${k} (${a} gegen ${b})`);
+    }
+  }
+  assert.equal(P.RIGHT_HALF[0], P.TOP_EDGE[P.TOP_EDGE.length - 1], 'rechts beginnt an der rechten oberen Ecke');
+  assert.equal(P.LEFT_HALF[0], P.TOP_EDGE[0], 'links an der linken');
+  assert.equal(P.RIGHT_HALF[P.RIGHT_HALF.length - 1], P.BOTTOM_EDGE[0], 'rechts endet am rechten Flankenfuß');
+  assert.equal(P.LEFT_HALF[P.LEFT_HALF.length - 1], P.BOTTOM_EDGE[P.BOTTOM_EDGE.length - 1], 'links am linken');
+});
+
+test('Profil: widthForArea trifft die Zielfläche bei fester Tiefe', () => {
+  for (const [w, h, d, r] of CASES) {
+    const A = P.area(P.section(w, h, d, r));
+    for (const share of [0.2, 0.5, 0.65, 1]) {
+      const wk = P.widthForArea(A * share, h, d, r);
+      const a = P.area(P.section(wk, h, d, r));
+      if (wk <= 0.4 + 1e-9) continue;                           // an der Klemmgrenze
+      assert.ok(Math.abs(a - A * share) / (A * share) < 1e-6, `${w}×${h}, Anteil ${share}: ${a} statt ${A * share}`);
+    }
+    assert.ok(Math.abs(P.widthForArea(A, h, d, r) - w) < 1e-6, 'der volle Anteil gibt die Breite zurück');
+  }
 });
 
 test('Profil: dimsForArea trifft die Zielfläche bei vorgegebenem Seitenverhältnis', () => {
@@ -351,6 +384,51 @@ test('Kurve: ein Übergang über die ganze Länge beginnt mit dem Zulaufquerschn
   }
 });
 
+test('Kurve: der Anschnittsteg ist gerade, hält Maß, Richtung und Querschnitt', () => {
+  /* Vorher lag der Steg auf der Kurve: bei gekrümmtem Zulauf war er
+     außen länger als innen, ein breiter Fächer verdrehte sich über die
+     letzten Millimeter, und die Mündung zeigte in die Tangente EINER
+     Stelle statt entlang eines Stücks. */
+  for (const d of PRE.DEMOS) {
+    const g = d.build();
+    const net = sampleNetwork(g);
+    for (const e of net.edges) {
+      if (e.to.type !== 'gate') continue;
+      const land = gateLand(g, e.from, e.to);
+      assert.ok(land && Math.abs(land.len - e.to.gate.len) < 1e-9, d.id + ': der Steg hat die eingestellte Tiefe');
+      const onLand = e.sections.filter(s => s.land);
+      assert.ok(onLand.length >= 1, d.id + ': Schnitte im Steg');
+      const first = e.sections[e.sections.length - 1 - onLand.length];  // der Übergang endet, wo der Steg beginnt
+      const last = e.sections[e.sections.length - 1];
+      assert.ok(Math.abs(last.s - first.s - land.len) < 1e-9, d.id + ': Steglänge entlang der Kante');
+      assert.ok(Math.abs(V.dist(first.p, last.p) - land.len) < 1e-9, d.id + ': gerade — die Sehne ist so lang wie der Weg');
+      assert.ok(V.dist(last.p, e.to.pos) < 1e-9, d.id + ': der Steg endet am Anschnitt');
+      assert.ok(V.dist(first.p, land.start) < 1e-9, d.id + ': und beginnt am Steganfang');
+      for (const s of onLand) assert.equal(s.kappa, 0, d.id + ': keine Krümmung im Steg');
+      for (const s of [first, ...onLand]) {
+        assert.ok(V.dot(s.t, land.dir) > 1 - 1e-12, d.id + ': die Richtung ist die Mündungsrichtung');
+        assert.equal(s.sec.width, last.sec.width, d.id + ': Breite konstant');
+        assert.equal(s.sec.depth, last.sec.depth, d.id + ': Höhe konstant');
+      }
+      assert.ok(Math.abs(last.sec.width - e.to.gate.w) < 1e-9 && Math.abs(last.sec.depth - e.to.gate.h) < 1e-9, 'das Anschnittmaß');
+    }
+  }
+  /* Gebunden: der Steg liegt in der gebundenen Richtung, auch wenn die
+     Sehne vom Vorgänger woanders hinzeigt. */
+  const g = PRE.demoTwoGates();
+  const lead = G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id));
+  G.aimAt(g, lead.id, lead.pos, [-0.6, 0, 0.8]);
+  const e = sampleNetwork(g).edges.find(x => x.toId === lead.id);
+  const last = e.sections[e.sections.length - 1];
+  assert.ok(V.dot(last.t, [-0.6, 0, 0.8]) > 1 - 1e-12);
+  const onLand = e.sections.filter(s => s.land);
+  const first = e.sections[e.sections.length - 1 - onLand.length];
+  assert.ok(Math.abs(V.dot(V.norm(V.sub(last.p, first.p)), [-0.6, 0, 0.8]) - 1) < 1e-9, 'der Steg zeigt in die gebundene Richtung');
+  /* Ohne Steg (Tiefe 0) gibt es keinen. */
+  lead.gate.len = 0;
+  assert.equal(gateLand(g, g.nodes[lead.parent], lead), null);
+});
+
 test('Regeln: eine Mündung aus der Trennebene heraus wird benannt', () => {
   const g = PRE.demoTwoGates();
   const lead = G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id));
@@ -543,17 +621,20 @@ test('Kurve: Querschnitt nimmt entlang jeder Kante monoton ab', () => {
   }
 });
 
-test('Kurve: die Abgänge einer Verzweigung teilen den Zulaufquerschnitt', () => {
+test('Kurve: die Abgänge einer Verzweigung teilen den Zulaufquerschnitt — in der Breite, die Tiefe läuft durch', () => {
   const g = PRE.demoTwoGates();
   const b = G.allNodes(g).find(n => n.type === 'branch');
   b.ratio = 0.65;
   b.mirror = false;
   const net = sampleNetwork(g);
   const parent = net.nodeArea[b.id].area;
-  const kids = b.children.map(c => net.edges.find(e => e.toId === c).sections[0].area);
-  assert.ok(Math.abs(kids[0] + kids[1] - parent) / parent < 0.02,
-    `Summe der Abgänge ${(kids[0] + kids[1]).toFixed(1)} gegen Zulauf ${parent.toFixed(1)}`);
-  assert.ok(Math.abs(kids[0] / parent - 0.65) < 0.02, 'nach dem eingestellten Verhältnis');
+  const starts = b.children.map(c => net.edges.find(e => e.toId === c).sections[0]);
+  const kids = starts.map(s => s.area);
+  assert.ok(Math.abs(kids[0] + kids[1] - parent) / parent < 1e-6,
+    `Summe der Abgänge ${(kids[0] + kids[1]).toFixed(3)} gegen Zulauf ${parent.toFixed(3)}`);
+  assert.ok(Math.abs(kids[0] / parent - 0.65) < 1e-6, 'nach dem eingestellten Verhältnis');
+  for (const s of starts) assert.equal(s.sec.depth, net.nodeArea[b.id].sec.depth, 'die Tiefe bleibt — der Boden läuft durch die Gabelung');
+  assert.ok(starts[0].sec.width > starts[1].sec.width, 'der größere Anteil ist der breitere Ast');
 });
 
 test('Kurve: der Hermite-Bogen trifft beide Endpunkte', () => {
@@ -583,6 +664,138 @@ test('Sweep: konstanter Querschnitt ergibt genau Fläche × Länge', () => {
     `Volumen ${volume(tris).toFixed(3)} gegen ${(a * 100).toFixed(3)}`);
   assert.ok(volume(tris) > 0, 'die Normalen zeigen nach außen');
   assert.equal(openEdges(tris), 0, 'jeder Schlauch ist für sich geschlossen');
+});
+
+/* Zusammenhängende Stücke eines Netzes: Breitensuche über die Nachbarschaft. */
+const components = tris => {
+  const F2 = tris.length / 9;
+  const adj = adjacency(weld(tris).index, F2);
+  const seen = new Uint8Array(F2);
+  let n = 0;
+  for (let f = 0; f < F2; f++) {
+    if (seen[f]) continue;
+    n++;
+    const stack = [f];
+    seen[f] = 1;
+    while (stack.length) {
+      const x = stack.pop();
+      for (let e = 0; e < 3; e++) { const y = adj[x * 3 + e]; if (y >= 0 && !seen[y]) { seen[y] = 1; stack.push(y); } }
+    }
+  }
+  return n;
+};
+const sectionVolume = net => net.edges.reduce((v, e) => {
+  for (let i = 0; i + 1 < e.sections.length; i++) {
+    v += (e.sections[i].area + e.sections[i + 1].area) / 2 * (e.sections[i + 1].s - e.sections[i].s);
+  }
+  return v;
+}, 0);
+const oneBody = (g, name) => {
+  const net = sampleNetwork(g);
+  const tris = sweepRunner(net);
+  assert.equal(openEdges(tris), 0, name + ': offene oder gleichläufige Kanten');
+  assert.equal(components(tris), 1, name + ': mehr als ein Körper');
+  const v = volume(tris), sv = sectionVolume(net);
+  assert.ok(v > 0, name + ': nach außen orientiert');
+  /* Grob: das Hosenstück ist nicht die Summe der Schnittflächen mal Weg
+     — eine dreifache Gabel liegt gut 5 % darüber —, aber es darf weder
+     ein Nichts noch das Doppelte sein. */
+  assert.ok(Math.abs(v - sv) / sv < 0.12, `${name}: Volumen ${v.toFixed(0)} gegen Schnittintegral ${sv.toFixed(0)}`);
+  return tris;
+};
+
+test('Sweep: jedes Beispiel ist EIN geschlossener Körper — die Gabelungen sind Hosenstücke, keine Durchdringung', () => {
+  for (const d of PRE.DEMOS) oneBody(d.build(), d.id);
+});
+
+test('Sweep: T-Stück, dreifache Gabelung, gerade abgehender Ast und Verzweigung aus der Kippung bleiben geschlossen', () => {
+  /* T: beide Abgänge quer zum Zulauf — die Innenwände sind eine Wand,
+     der Zwickel ist eine Gerade ohne Bogen. */
+  const t = PRE.demoTwoGates();
+  const b = G.allNodes(t).find(n => n.type === 'branch');
+  b.mirror = false;
+  const [c1, c2] = b.children.map(id => t.nodes[id]);
+  G.setPos(t, c1.id, [-70, 0, b.pos[2]]);
+  G.setPos(t, c2.id, [70, 0, b.pos[2]]);
+  for (const c of [c1, c2]) G.setPos(t, c.children[0], [c.pos[0] + Math.sign(c.pos[0]) * 45, 0, b.pos[2]]);
+  oneBody(t, 'T-Stück');
+
+  /* Drei Abgänge: rechts, geradeaus, links — zwei Zwickel. */
+  const d3 = straight(70);
+  const p = G.allNodes(d3)[1];
+  const br = G.addChild(d3, p.id, 'branch');
+  br.pos = [0, 0, 130];
+  G.addChild(d3, br.id, 'gate');
+  assert.equal(br.children.length, 3);
+  const [k1, k2, k3] = br.children.map(id => d3.nodes[id]);
+  G.setPos(d3, k1.id, [60, 0, 200]);
+  G.setPos(d3, k2.id, [-60, 0, 200]);
+  G.setPos(d3, k3.id, [0, 0, 215]);
+  F.applyAutoGates(d3, F.DEFAULT_PROCESS);
+  oneBody(d3, 'dreifach');
+  assert.ok(!checkRules(d3, sampleNetwork(d3), F.analyseFlow(d3, sampleNetwork(d3), F.DEFAULT_PROCESS), F.DEFAULT_PROCESS)
+    .find(r => /durchdringen/.test(r.title)), 'drei getrennte Abgänge: kein Hinweis');
+
+  /* Ein Ast geradeaus, einer zur Seite: die Gabel ist unsymmetrisch. */
+  const u = PRE.demoTwoGates();
+  const bu = G.allNodes(u).find(n => n.type === 'branch');
+  bu.mirror = false;
+  const [a1] = bu.children.map(id => u.nodes[id]);
+  G.setPos(u, a1.id, [0, 0, bu.pos[2] + 60]);
+  G.setPos(u, a1.children[0], [0, 0, bu.pos[2] + 110]);
+  oneBody(u, 'unsymmetrisch');
+
+  /* Verzweigung hinter einer quer gekippten Ebene (Rampe): das Hosenstück
+     liegt in der gekippten Ebene. */
+  const k = PRE.demoStep();
+  oneBody(k, 'gekippt');
+
+  /* Zwickelradius null: die Nase bleibt spitz, das Netz trotzdem dicht. */
+  const z = PRE.demoFourGates();
+  z.branchR = 0;
+  oneBody(z, 'ohne Zwickelradius');
+
+  /* Abgänge, die sich an ihren Ringen noch durchdringen — drei Anschnitte
+     dicht beieinander an kurzen Kanten: dort gibt es keinen Zwickel, die
+     Schläuche bleiben übereinander, die Prüfliste sagt es, und nichts
+     bricht. */
+  const e = PRE.demoFan();
+  const pe = G.allNodes(e).find(n => n.type === 'point');
+  const be = G.addChild(e, pe.id, 'branch');
+  G.addChild(e, be.id, 'gate');
+  const nete = sampleNetwork(e);
+  const trise = sweepRunner(nete);
+  assert.ok(trise.length > 0 && volume(trise) > 0);
+  const hint = checkRules(e, nete, F.analyseFlow(e, nete, F.DEFAULT_PROCESS), F.DEFAULT_PROCESS).find(r => /durchdringen/.test(r.title));
+  assert.ok(hint && hint.level === 'warn', 'die Prüfliste benennt die Durchdringung');
+  assert.match(hint.text, /Zwickel/);
+});
+
+test('Sweep: der Zwickelradius formt die Nase — größer heißt weiter hinten und runder', () => {
+  const g = PRE.demoTwoGates();
+  const b = G.allNodes(g).find(n => n.type === 'branch');
+  /* Die Nase: der Punkt des Körpers zwischen den Abgängen, der dem
+     Zulauf am nächsten liegt — gesucht in einem schmalen Streifen um die
+     Symmetrieachse hinter der Gabelung. */
+  const nose = tris => {
+    let best = Infinity;
+    for (let i = 0; i < tris.length; i += 3) {
+      if (Math.abs(tris[i]) < 1.5 && tris[i + 2] > b.pos[2] && Math.abs(tris[i + 1]) < 0.5) best = Math.min(best, tris[i + 2]);
+    }
+    return best;
+  };
+  g.branchR = 1;
+  const z1 = nose(sweepRunner(sampleNetwork(g)));
+  g.branchR = 8;
+  const z8 = nose(sweepRunner(sampleNetwork(g)));
+  assert.ok(Number.isFinite(z1) && Number.isFinite(z8), 'die Nase liegt auf der Achse');
+  assert.ok(z8 > z1 + 2, `mit 8 mm Radius weicht die Nase zurück: ${z1.toFixed(1)} → ${z8.toFixed(1)} mm`);
+  /* Hin und zurück durch die Datei — samt Vorgabe für alte Dateien. */
+  const back = G.fromJSON(JSON.parse(JSON.stringify(G.toJSON(g))));
+  assert.equal(back.branchR, 8);
+  const alt = G.toJSON(g);
+  delete alt.branchR;
+  assert.equal(G.fromJSON(alt).branchR, 4, 'ohne Angabe die Vorgabe');
 });
 
 test('Pressrest: Zylinder wächst ENTGEGEN der Ausstoßrichtung', () => {

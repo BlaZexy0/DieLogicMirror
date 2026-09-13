@@ -154,10 +154,15 @@ function rebuild(mode) {
 }
 
 /* ── Die Schusskurve unter dem Anguss ────────────────────────
-   Die Kurve der Auslegung — Maschine, Kammer, Legierung, Thermik aus dem
-   aktuellen Projekt — mit den Volumen von hier: das Gussvolumen (Bauteil
-   samt Überläufen, wie unter „Prozess" eingetragen), dieser Anguss,
-   dieser Pressrest. */
+   Die Kurve der Auslegung mit dem, was HIER feststeht: die Volumen (das
+   Gussvolumen samt Überläufen, wie unter „Prozess" eingetragen, dieser
+   Anguss, dieser Pressrest) und die Füllkammer — der Pressrest-Ø ist
+   der Kolben-Ø, die Kammerlänge steht unter „Prozess". Daraus folgt der
+   Füllgrad, und der bestimmt die ganze erste Phase; ihn aus der Kammer
+   des Projekts zu nehmen, hieße einen 150er Kolben unter einen 90er
+   Pressrest zu setzen. Maschine (v_max, a_max) und Thermik kommen
+   weiter aus dem aktuellen Projekt — eine Anbindung an die Auslegung
+   ist das nicht, nur ihre Kurve. */
 function modelVolumes() {
   const b = state.graph.biscuit;
   return {
@@ -170,7 +175,8 @@ function updateTimeline() {
   state.timeline = null;
   state.flowShown = state.flow;
   if (!state.onCurve || !state.flow) return;
-  const tl = shotTimeline(design.values, modelVolumes());
+  const tl = shotTimeline(design.values, modelVolumes(),
+    { diam: state.graph.biscuit.d, length: state.proc.chamberLen });
   if (tl.error) { state.timeline = { error: tl.error }; return; }
   state.timeline = tl;
   state.flowShown = flowOnCurve(state.flow, tl);
@@ -187,6 +193,7 @@ function updateShotFacts() {
   if (tl.error) { facts('shot-facts', []); warn.textContent = 'Keine DieLogic-Kurve: ' + tl.error + ' Die Ankunft steht mit konstantem Strom.'; return; }
   const sh = tl.shot;
   const rows = [
+    ['Füllkammer', 'Ø ' + fmt(tl.v.diam, 0) + ' × ' + fmt(tl.v.length, 0) + ' mm · Füllgrad ' + fmt(tl.phi * 100, 0) + ' %'],
     ['Kammer voll', 'bei ' + fmt(tl.tFull * 1000, 0) + ' ms · Kolben ' + fmt(sh.events[0].v, 2) + ' m/s'],
     ['2. Phase', 'v₂ ' + fmt(tl.v2) + ' m/s' + (Number.isFinite(sh.fill) ? ' · Füllzeit ' + fmt(sh.fill, 0) + ' ms' : '')
       + (Number.isFinite(tl.tN) ? ' (NADCA ' + fmt(tl.tN, 0) + ' ms)' : '')]
@@ -633,7 +640,9 @@ segButtons('axis-seg', value => {
   G.setBiscuit(g, {});
   rebuild();
   syncSelection();
-  view.fitTo(group);
+  /* Die Kamera bleibt stehen. Das System dreht sich um den Pressrest;
+     wer die Richtung umschaltet, will sehen, wie es sich dreht — nicht
+     ein neu eingepasstes Bild. */
 });
 
 /* ── Kanalform ───────────────────────────────────────────────── */
@@ -648,6 +657,12 @@ numberInput('gate-h', v => {
 numberInput('radius', v => {
   const r = Math.max(0, Math.min(20, v));
   state.graph.radius = r;
+  rebuild();
+  return r;
+});
+numberInput('branch-r', v => {
+  const r = Math.max(0, Math.min(40, v));
+  state.graph.branchR = r;
   rebuild();
   return r;
 });
@@ -685,6 +700,12 @@ numberInput('vgate', v => {
   state.proc.vGate = Math.max(1, Math.min(200, v));
   rebuild();
   return state.proc.vGate;
+});
+numberInput('chamber-len', v => {
+  state.proc.chamberLen = Math.max(50, Math.min(3000, v));
+  rebuild();
+  syncSelection();
+  return state.proc.chamberLen;
 });
 slider('cbranch', v => { state.proc.cBranch = v / 100; rebuild(); }, v => fmt(v / 100, 2));
 $('shot-time').addEventListener('change', e => {
@@ -725,10 +746,9 @@ slider('ref-opacity', v => {
 
 const fileName = () => safeName(state.name || 'anguss');
 
-/* Die STL enthält, was im Viewport steht — die Schläuche durchdringen
-   sich an den Gabelungen. Ein einziger verschmolzener Körper wäre schöner
-   und war einmal da; er kostete ein Rasterfeld und eine Wartezeit, und
-   jedes CAD vereinigt überlappende Körper mit einem Klick. */
+/* Die STL enthält, was im Viewport steht: die Kanäle als EIN
+   geschlossener Körper (js/runner/sweep.js) und, wenn eingeblendet, der
+   Pressrest als eigener Zylinder, der im ersten Kanal steckt. */
 $('stl-save').addEventListener('click', () => {
   const parts = [sweepRunner(state.net)];
   if ($('show-biscuit').checked) parts.push(biscuitMesh(state.graph.biscuit));
@@ -887,6 +907,7 @@ function adoptGraph() {
   $('draft').value = String(g.draft);
   $('draft-val').textContent = fmt(g.draft) + '°';
   $('radius').value = fmt(g.radius, 2);
+  $('branch-r').value = fmt(g.branchR, 2);
   $('tension').value = String(Math.round(g.tension * 100));
   $('tension-val').textContent = fmt(g.tension, 2);
   $('step').value = fmt(g.step, 2);
