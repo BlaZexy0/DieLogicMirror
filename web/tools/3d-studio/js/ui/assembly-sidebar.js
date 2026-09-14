@@ -143,11 +143,18 @@ export function mountAssemblySidebar(el, asm, {
       const count = span('count', '');
       count.title = 'Tippen: ' + g.title + (open ? ' zuklappen' : ' aufklappen');
       const more = button('row-btn more', '&#8943;', 'Umbenennen, STL laden, Farbe, entfernen', 'group-menu');
-      /* Eine Zeile, die nicht umbricht — der Name wird notfalls gekürzt;
-         das Menü darunter ist die zweite Zeile des Kopfes. */
+      /* Eine Zeile, die nicht umbricht: Pfeil, Glühbirne, dann der Name
+         mit Seite und Zahl der Teile klein darunter, rechts „⋯"; das Menü
+         ist die zweite Zeile des Kopfes. */
       const line = document.createElement('div');
       line.className = 'group-line';
-      line.append(fold, bulb, title, tag, count, more);
+      const text = document.createElement('div');
+      text.className = 'group-text';
+      const meta = document.createElement('div');
+      meta.className = 'group-meta';
+      meta.append(tag, span('sep', ' · '), count);
+      text.append(title, meta);
+      line.append(fold, bulb, text, more);
       head.appendChild(line);
 
       /* Das Menü der Gruppe — zu, bis „⋯" es öffnet. */
