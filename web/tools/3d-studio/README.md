@@ -19,6 +19,8 @@ liefert das Backend sie nur mit Sitzung aus (`login_gate` in
 | `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen mit Zwickelradius, Anschnitte mit geradem Steg — als ein geschlossener Körper; dazu Querschnitt, Krümmung, Bernoulli-Verluste und Füllbalance, Ankunft nach der Schusskurve mit der Füllkammer von hier |
 | `angussfuellung.html` | **Angussfüllung** — die Schmelze vom Pressrest bis zu den Anschnitten: Lattice-Boltzmann mit freier Oberfläche auf der Grafikkarte (WebGPU), Kolben nach der DieLogic-Kurve, Ankunft je Anschnitt neben der 1D-Rechnung, Füllstand zu jeder Zeit; Code in `js/lbm/` |
 | `kammerfuellung.html` | **Kammerfüllung** — die Welle in der Füllkammer: liegender Zylinder mit Durchmesser, Länge und Füllgrad, der Kolben fährt die Schusskurve (DieLogic oder v₁/v₂), Schwerkraft; Kammer voll gegen die Kurve, eingeschlossene Luft, Füllstand und Kolben zu jeder Zeit; Code in `js/lbm/` |
+| `angussfuellung-sph.html` | **Angussfüllung · Partikel** — dieselbe Frage mit Partikeln (SPH) statt Gitter: der Pressrest voll Partikel, dahinter die Säule des Zustroms, die der Kolben schiebt, die Wände als Abstandsfeld; Ankunft je Anschnitt, Partikel zu jeder Zeit; Code in `js/sph/` |
+| `kammerfuellung-sph.html` | **Kammerfüllung · Partikel** — die Welle in der Füllkammer mit Partikeln (SPH): analytische Wände, Kolbenebene nach der Kurve, Schwerkraft; Kammer voll, eingeschlossene Luft aus dem Partikelbild; Code in `js/sph/` |
 | `ueberlauf.html` | **Überlaufdesigner** — Überläufe und Entlüftungen aufs Bauteil setzen: Bohne, Bohne mit Entlüftungskanal, Waschbrett (Chill-Vent), Entlüftungsschlitz; das Volumen fürs Schussgewicht |
 | `temperier.html` | **Temperierkanal-Designer** — Kühlstiche und Kanäle auf der Abstandsfläche im gewählten Abstand zur Kavität, Automatik für die Stiche, Wandabstand aus dem Feld |
 | `fuellung.html` | **Füllabschätzung** — die Schmelzefront von rechteckigen Anschnitten durch das gerasterte Bauteil: Füllgrad, Füllkörper, zuletzt gefüllte Stellen |
@@ -1156,6 +1158,118 @@ Maximum (das wären die paar Zellen an der Engstelle) und nicht die
 Bilder danach: dann herrschen Anschnitte bzw. Laufkanal mit dem Zehn-
 fachen, und der ganze Weg davor wäre einfarbig blau. Was schneller ist,
 bleibt rot; die Leiste sagt es.
+
+## Angussfüllung und Kammerfüllung mit Partikeln (`angussfuellung-sph.html`, `kammerfuellung-sph.html`)
+
+Dieselben zwei Fragen — wann kommt die Schmelze an den Anschnitten an,
+wie läuft die Welle in der Kammer — noch einmal gerechnet, mit
+Partikeln statt Gitter: **schwach kompressible SPH** (WCSPH nach
+Monaghan) in `js/sph/`. Beide Seiten sind Abbilder der Gitterseiten
+(gleiche Eingaben, gleiche Kurve, gleiche Ausgaben), damit man die
+Verfahren nebeneinander lesen kann; der einzige andere Regler ist der
+**Partikelabstand** statt der Zellkante.
+
+- `wcsph.js` — der JavaScript-Kern: Tait-Druck (p = B((ρ/ρ0)⁷ − 1), B =
+  ρ0c0²/7, negative Drücke gekappt), Druckkraft und künstliche Zähigkeit
+  (α = 0,1), die Dichte aus der Kontinuitätsgleichung mit δ-Diffusion
+  (δ = 0,1); Wendland-C2-Kern (`kernel.js`, Träger 2h, h = 1,2 d);
+  Nachbarn über ein Gitter mit Zellkante 2h (`grid.js`). Die Dichte
+  kommt NICHT aus der Summe über die Nachbarn: an Wand und Oberfläche
+  fehlt der Summe der halbe Träger. Und die δ-Diffusion ist Pflicht:
+  ohne sie treibt die Dichte in Ruhe binnen Hunderten Schritten um zehn
+  Prozent davon, mit ihr findet sie zu ρ0 zurück — der Vergleich steht
+  im Kopf der Datei. XSPH ist aus (bewegt die Partikel mit einer
+  anderen Geschwindigkeit als der, die die Kontinuität sieht).
+- **Wände sind Abstandsfelder, keine Partikel**: wer näher als d/2 an
+  die Wand kommt, wird zurückgesetzt und verliert die Geschwindigkeit
+  in die Wand — Gleiten, keine Haftung. Das ist der Preis gegenüber der
+  Gitterrechnung, die haftet; im Anguss kommt die Partikelfront deshalb
+  eher früher an. Für die Kammer ist das Feld analytisch (Zylinder,
+  Kolbenebene, Stirnwand mit dem Laufkanal als Loch). Für den Anguss
+  kommt es aus dem **Rollenraster** der Gitterseite (`js/lbm/domain.js`,
+  auf dem Partikelabstand, mindestens 2 mm): eine exakte euklidische
+  Abstandstransformation über die Nichtwandzellen
+  (`signedDistanceFromFlags` in `domain.js`, Felzenszwalb–Huttenlocher,
+  drei Durchgänge je Achse), die Fläche eine halbe Zelle vor der Wand.
+  Nicht aus den Körpern: der Anguss ist am Pressrestmantel gekappt, und
+  das Minimum zweier Körperfelder hätte auf dieser Kappfläche den
+  Abstand null — eine unsichtbare Wand genau an der Mündung, die
+  Schmelze käme nie in den Anguss (so war es zuerst).
+- **Kolben**: in der Kammer eine Ebene, die die Kurve fährt (Partikel
+  dahinter werden vor sie gesetzt und bekommen ihre Geschwindigkeit).
+  Im Anguss steht hinter dem Pressrest die **Säule des Zustroms**: so
+  lang wie der Kolbenweg des Laufs, Partikel, die starr mit der
+  Kolbengeschwindigkeit fahren und jenseits der Einlassebene zu
+  Schmelze werden — die Füllkammer, ohne dass der Pressrest je leer
+  wird. Sie tragen den Druck des Schmelzepartikels, auf das sie wirken
+  (gespiegelt, wie Wandpartikel nach Adami): mit Druck null schöbe die
+  Schmelze vor ihnen stärker als sie selbst, und der Pressrest liefe
+  rückwärts in die Säule statt in den Anguss — auch das war zuerst so.
+  Dazu hält die Einlassebene die Schmelze wie die Kolbenebene der
+  Kammer. **Auslass und Melder** je Anschnitt liegen dort, wo ein
+  Partikel noch hinkommt (`gateZones`): Steg und Übergang sind zwei bis
+  wenige Millimeter tief, da passt kein Partikel von d/2 Radius hinein
+  — die Front bliebe davor stehen, meldete nie, und der Anguss wäre für
+  die Partikel eine Sackgasse mit Druckstau. Je Anschnitt wird die
+  vorderste Zelle vor ihm gesucht, die tief genug im Feld liegt; die
+  letzte halbe Weite davor ist der Auslass, die zwei Abstände davor der
+  Melder. Die Ankunft ist also die am Übergang zum Anschnitt, ein paar
+  Millimeter vor der des Gitters; feinere Partikel rücken sie näher
+  heran. Der Auslass ist **gedrosselt**: ab seiner Ankunft lässt er je
+  Meter Kolbenweg nur so viele Partikel hinaus, wie sein Flächenanteil
+  am Kolbenstrom trägt (`gateRate` = Anteil · Kolbenfläche / d³; im
+  GPU-Kern je Anschnitt drei Worte: Ankunftsschritt, Kolbenweg bei
+  Ankunft, Hinausgelassene). Ein freier Auslass war ein Abfluss ohne
+  Widerstand: der zuerst erreichte Anschnitt zog alles, und beim
+  Beispiel „zwei" — dessen linker Ast ein flacher Fächer ist, in den
+  kein 5-mm-Partikel passt — entleerte sich der Anguss an der Mündung
+  des Fächers, und der zweite Anschnitt wurde nie erreicht.
+- **Auflösung**: ein Kanal braucht wenigstens vier Partikel über seine
+  Tiefe. Mit fünf Millimetern im Beispiel „zwei" (Kanäle 12 mm tief)
+  passen ein bis zwei Reihen hinein, und die Front klemmt dreißig
+  Millimeter vor den Anschnitten — nicht am Verfahren, an der Packung:
+  zwei Reihen Kugeln fließen nicht wie eine Flüssigkeit. Der Vorschlag
+  der Seite (40 000 Partikel auf der Grafikkarte) liegt bei zwei
+  Millimetern; in JavaScript (2 500 Partikel) reicht es nur für grobe
+  Bilder, nicht für Ankunftszeiten.
+- **Schall und Zeitschritt**: c0 = 10 · Bezugsgeschwindigkeit (Kammer:
+  die größte Kolbengeschwindigkeit; Anguss: der Kolbenstrom durch den
+  kleinsten Laufkanalquerschnitt, wie bei der Gitterrechnung), dt =
+  0,25 · h/(c0 + v); die Geschwindigkeit ist auf c0/2 geklemmt. Die
+  Kammer kommt vor dem Start **zur Ruhe** (20 ms mit hoher Zähigkeit,
+  dann v = 0) — die hydrostatische Vorgabe passt an der freien
+  Oberfläche nie ganz, und der Schwapp davon soll nicht in die Welle.
+- `gpu.js` — derselbe Kern in WGSL: je Schritt das Suchgitter leeren,
+  einsortieren (je Zelle ein Zähler und 48 feste Fächer, kein Sortieren),
+  dann ein Durchgang mit Druck der Nachbarn aus deren Dichte, Kräften,
+  Kontinuität, Wänden, Auslass und Meldern; Ort und Geschwindigkeit
+  doppelt gepuffert. Acht Speicherpuffer — mehr erlaubt WebGPU je
+  Shader nicht, darum Zähler und Fächer in einem und Rolle und Melder
+  in einem Wort. Ohne WebGPU rechnet `wcsph.js` mit wenigen Partikeln.
+- **Bilder** (`run.js`): je Bild die Orte der Schmelzepartikel (mm) und
+  der Betrag der Geschwindigkeit als Byte auf das Maximum des Bildes —
+  wie bei der Gitterrechnung. `points.js` zeichnet sie als beleuchtete
+  Kugeln vom Partikelabstand (Punkt-Sprites), nach Geschwindigkeit auf
+  derselben Turbo-Skala wie die Fläche der Gitterseiten (99. Perzentil
+  bis zur ersten Ankunft). **Eingeschlossene Luft** der Kammer: das
+  Partikelbild auf ein Raster von 1,5 d gelegt, belegte Zellen sind
+  Schmelze, dann `enclosedGas` aus `js/lbm/sleeve.js`; der Füllgrad des
+  Angusses ebenso über die belegten Angusszellen des Rollenrasters.
+
+Zum Vergleich, im kopflosen Chromium mit WebGPU (SwiftShader): die
+Kammer Ø 60 × 200 mm, 45 %, v₁/v₂ 0,6/2 m/s, 3 mm Partikel — Kammer
+voll bei 190 ms und 113 mm (Kurve 186 ms, 110 mm; Gitter 3 mm: 179 ms,
+106 mm). Das Beispiel „zwei" mit 4 mm Partikeln — Anschnitte bei 27 und
+32 ms (Gitter 5 mm: 34,6 und 33,3 ms; 1D 15,6 ms); beide Kerne stimmen
+auf demselben Partikelsatz Schritt für Schritt überein, bis die
+Dynamik nach den ersten Umwandlungen auseinanderläuft (Millimeter nach
+600 Schritten — dieselbe Physik, andere Rundung).
+
+`tests/web/3d-studio/sph.test.mjs` prüft Kern (Normierung), Kammer
+(Ruhe unter Schwerkraft, Kolben bis Kammer voll, Luft), Anguss
+(Partikelsatz, Säule, Abstandsfeld, Melderzonen, Drossel, erste
+Schritte) und Bilder; `viewer.test.mjs` fährt beide Seiten ohne WebGPU
+durch (grob und kurz — Bilder, keine Ankunftszeiten).
 
 ## Überlaufdesigner (`ueberlauf.html`)
 

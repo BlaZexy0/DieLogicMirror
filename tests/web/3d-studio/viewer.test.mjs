@@ -1861,6 +1861,110 @@ test('Kammerfüllung: Kammer und Kurve einstellen, ein Lauf in JavaScript bis Ka
   assert.match(d10.getElementById('t-val').textContent, /0 ms/);
 });
 
+/* ── Angussfüllung mit Partikeln ────────────────────────────
+   Dieselbe Kette wie die Gitterseite, in JavaScript mit wenigen
+   Partikeln: Beispiel, Kurve, Knopf, Lauf bis zur Ankunft, Regler,
+   Farben. */
+test('Angussfüllung · Partikel: Beispiel, Kurve, ein Lauf in JavaScript, Regler und Farben', async () => {
+  const { doc: d11 } = buildDocument(read('angussfuellung-sph.html'));
+  installGlobals(d11);
+  loadDesignScripts();
+  globalThis.location = { search: '', href: 'http://test/angussfuellung-sph.html' };
+  const mod = await import('../../../web/tools/3d-studio/js/sph/app.js');
+  const v = mod.__viewer;
+  assert.ok(v.state.ready, 'das Beispiel steht');
+  assert.equal(v.gpu, false);
+  assert.match(d11.getElementById('engine-note').textContent, /Kein WebGPU/);
+  assert.match(d11.getElementById('curve-facts').innerHTML, /1D-Rechnung/);
+  assert.match(d11.getElementById('grid-note').textContent, /Partikel/);
+  assert.ok(v.state.travel > 10, 'der Kolbenweg des Laufs: ' + v.state.travel + ' mm');
+  assert.equal(d11.getElementById('show-seg').querySelectorAll('button').length, 2, 'Schmelze und Anguss — keine Ankunftsfarben');
+  const sp = d11.getElementById('spacing');
+  sp.value = '8';
+  sp.dispatch('change');
+  assert.equal(v.state.d, 8);
+  /* Grob und kurz, damit der Lauf Sekunden dauert: 8 mm Partikel in
+     Kanälen von zwei Partikeln Tiefe, 25 ms statt der dreifachen 1D-Zeit. */
+  v.state.tMax = 0.025;
+  await v.simulate();
+  const r = v.state.result;
+  assert.ok(r, 'ein Ergebnis');
+  assert.equal(r.engine, 'cpu');
+  assert.equal(r.gates.length, 2);
+  assert.ok(r.snapshots.length > 3, 'Bilder');
+  assert.ok(r.nFluid > 100 && r.nInflow > 100, 'Pressrest ' + r.nFluid + ', Säule ' + r.nInflow);
+  for (const gt of r.gates) if (Number.isFinite(gt.tSim)) assert.ok(gt.tSim > 0.002 && gt.tSim < 0.03, gt.id + ': ' + gt.tSim);
+  assert.ok(r.filled > 0.1, 'der Anguss füllt sich: ' + r.filled);
+  assert.ok(r.snapshots[r.snapshots.length - 1].n > r.nFluid, 'aus der Säule ist Schmelze geworden');
+  assert.ok(r.vScale > 0.5 && r.vScale < 200, 'Skala ' + r.vScale + ' m/s');
+  assert.match(d11.getElementById('result-facts').innerHTML, /Anschnitt k\d+/);
+  assert.match(d11.getElementById('result-facts').innerHTML, /JavaScript/);
+  assert.ok(v.points.visible, 'die Partikel sind zu sehen');
+  const pa = v.points.geometry.getAttribute('position'), ca = v.points.geometry.getAttribute('color');
+  assert.ok(pa.count > 100 && ca.count === pa.count, 'Ort und Farbe je Partikel');
+  assert.ok(d11.getElementById('colorbar').classList.contains('on'));
+  assert.match(d11.getElementById('cb-title').textContent, /Geschwindigkeit/);
+  const sl = d11.getElementById('t-slider');
+  assert.equal(sl.max, String(r.snapshots.length - 1));
+  sl.value = '0';
+  sl.dispatch('input');
+  assert.equal(v.state.frame, 0);
+  assert.match(d11.getElementById('t-val').textContent, /0 ms/);
+  assert.equal(v.points.geometry.getAttribute('position').count, r.nFluid, 'am Anfang nur der Pressrest');
+  d11.getElementById('show-seg').querySelectorAll('button').find(b => b.dataset.value === 'anguss').dispatch('click');
+  assert.equal(v.points.visible, false);
+  assert.ok(!d11.getElementById('colorbar').classList.contains('on'));
+});
+
+/* ── Kammerfüllung mit Partikeln ────────────────────────────── */
+test('Kammerfüllung · Partikel: Kammer und Kurve einstellen, ein Lauf in JavaScript bis Kammer voll, Luft, Regler', async () => {
+  const { doc: d12 } = buildDocument(read('kammerfuellung-sph.html'));
+  installGlobals(d12);
+  loadDesignScripts();
+  globalThis.location = { search: '', href: 'http://test/kammerfuellung-sph.html' };
+  const mod = await import('../../../web/tools/3d-studio/js/sph/sleeveapp.js');
+  const v = mod.__viewer;
+  assert.ok(v.state.ready);
+  assert.equal(v.gpu, false);
+  assert.match(d12.getElementById('curve-facts').innerHTML, /Kammer voll/);
+  const set = (id, val) => { const el = d12.getElementById(id); el.value = val; el.dispatch('change'); };
+  set('sl-d', '40'); set('sl-len', '120');
+  const fillEl = d12.getElementById('sl-fill'); fillEl.value = '45'; fillEl.dispatch('input');
+  d12.getElementById('curve-seg').querySelectorAll('button').find(b => b.dataset.value === 'v1v2').dispatch('click');
+  set('sl-v1', '0,6'); set('sl-v2', '2'); set('sl-a', '100');
+  assert.ok(v.state.curve && v.state.curve.sFill > 0);
+  set('spacing', '5');
+  assert.equal(v.state.d, 5);
+  assert.match(d12.getElementById('grid-note').textContent, /Partikel über den Durchmesser/);
+  assert.equal(d12.getElementById('run').disabled, false);
+  await v.simulate();
+  const r = v.state.result;
+  assert.ok(r, 'ein Ergebnis');
+  assert.equal(r.engine, 'cpu');
+  assert.ok(r.settleSteps > 0, 'vorher zur Ruhe gekommen');
+  assert.ok(r.full, 'Kammer voll: ' + r.reason);
+  assert.ok(r.full.t > 0.02 && r.full.t < 0.5, 'nach ' + r.full.t + ' s');
+  assert.ok(r.full.s > 40 && r.full.s < 120, 'bei ' + r.full.s + ' mm');
+  assert.ok(r.snapshots.length > 5);
+  assert.ok(Number.isFinite(r.airMax.air) && r.airMax.air >= 0);
+  assert.ok(r.vScale > 0.1 && r.vScale < 20, 'Skala ' + r.vScale);
+  assert.match(d12.getElementById('result-facts').innerHTML, /Kammer voll/);
+  assert.match(d12.getElementById('result-facts').innerHTML, /Luft/);
+  assert.match(d12.getElementById('result-facts').innerHTML, /Tsd\. Partikel/);
+  assert.ok(v.points.visible, 'die Partikel sind zu sehen');
+  assert.ok(d12.getElementById('colorbar').classList.contains('on'));
+  const sl = d12.getElementById('t-slider');
+  assert.equal(sl.max, String(r.snapshots.length - 1));
+  sl.value = '0';
+  sl.dispatch('input');
+  assert.match(d12.getElementById('t-val').textContent, /0 ms/);
+  const showBtn = val => d12.getElementById('show-seg').querySelectorAll('button').find(b => b.dataset.value === val);
+  showBtn('kammer').dispatch('click');
+  assert.equal(v.points.visible, false);
+  showBtn('schmelze').dispatch('click');
+  assert.ok(v.points.visible);
+});
+
 /* ── Überlaufdesigner ─────────────────────────────────────── */
 test('Überlaufdesigner: setzen, ziehen, drehen, neu setzen, Datei', async () => {
   const { doc: d7 } = buildDocument(read('ueberlauf.html'));

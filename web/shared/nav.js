@@ -83,6 +83,8 @@
         { label: 'Füllabschätzung', href: '/tools/3d-studio/fuellung.html' },
         { label: 'Angussfüllung (LBM)', href: '/tools/3d-studio/angussfuellung.html' },
         { label: 'Kammerfüllung (LBM)', href: '/tools/3d-studio/kammerfuellung.html' },
+        { label: 'Angussfüllung (SPH)', href: '/tools/3d-studio/angussfuellung-sph.html' },
+        { label: 'Kammerfüllung (SPH)', href: '/tools/3d-studio/kammerfuellung-sph.html' },
       ] },
     ] },
     { label: 'Theorie', children: [
