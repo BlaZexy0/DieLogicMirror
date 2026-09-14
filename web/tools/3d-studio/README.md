@@ -18,6 +18,7 @@ liefert das Backend sie nur mit Sitzung aus (`login_gate` in
 | `abstand.html`  | **Abstandsanalyse** — kürzester Abstand zwischen zwei Dateien, eingefärbt auf einer selbst gesetzten Skala (die Frage nach *außen*) |
 | `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen mit Zwickelradius, Anschnitte mit geradem Steg — als ein geschlossener Körper; dazu Querschnitt, Krümmung, Bernoulli-Verluste und Füllbalance, Ankunft nach der Schusskurve mit der Füllkammer von hier |
 | `angussfuellung.html` | **Angussfüllung** — die Schmelze vom Pressrest bis zu den Anschnitten: Lattice-Boltzmann mit freier Oberfläche auf der Grafikkarte (WebGPU), Kolben nach der DieLogic-Kurve, Ankunft je Anschnitt neben der 1D-Rechnung, Füllstand zu jeder Zeit; Code in `js/lbm/` |
+| `kammerfuellung.html` | **Kammerfüllung** — die Welle in der Füllkammer: liegender Zylinder mit Durchmesser, Länge und Füllgrad, der Kolben fährt die Schusskurve (DieLogic oder v₁/v₂), Schwerkraft; Kammer voll gegen die Kurve, eingeschlossene Luft, Füllstand und Kolben zu jeder Zeit; Code in `js/lbm/` |
 | `ueberlauf.html` | **Überlaufdesigner** — Überläufe und Entlüftungen aufs Bauteil setzen: Bohne, Bohne mit Entlüftungskanal, Waschbrett (Chill-Vent), Entlüftungsschlitz; das Volumen fürs Schussgewicht |
 | `temperier.html` | **Temperierkanal-Designer** — Kühlstiche und Kanäle auf der Abstandsfläche im gewählten Abstand zur Kavität, Automatik für die Stiche, Wandabstand aus dem Feld |
 | `fuellung.html` | **Füllabschätzung** — die Schmelzefront von rechteckigen Anschnitten durch das gerasterte Bauteil: Füllgrad, Füllkörper, zuletzt gefüllte Stellen |
@@ -1068,11 +1069,66 @@ Dreifachen der 1D-Schätzung.
 `tests/web/3d-studio/lbm.test.mjs` prüft das Gitter (Gewichte,
 Symmetrie, Gegenrichtungen), den JavaScript-Kern (Masse in der
 geschlossenen Box exakt, Zustrom und Frontweg am Kolben, ein ganzer Lauf
-auf grobem Gitter bis zur Ankunft), Gitterbau, Kolben und Einheiten;
-`viewer.test.mjs` fährt die Seite ohne WebGPU durch. Der WGSL-Kern wurde
+auf grobem Gitter bis zur Ankunft), Gitterbau, Kolben und Einheiten, und
+für die Kammer Füllstand, Gitter, Ruhe unter Schwerkraft und den
+wandernden Kolben; `viewer.test.mjs` fährt beide Seiten ohne WebGPU
+durch. Der WGSL-Kern wurde
 im kopflosen Chromium mit WebGPU (SwiftShader-Vulkan) gegen den
 JavaScript-Kern auf demselben Gitter geprüft: gleiche Ankünfte auf
 wenige Prozent, gleicher Füllstand.
+
+## Kammerfüllung (`kammerfuellung.html`)
+
+Dasselbe Verfahren wie in der Angussfüllung, angewandt auf die
+Füllkammer — den liegenden Zylinder, in dem die Schmelze vor dem Schuss
+ruhig unten steht und die Welle entsteht, um die es in der ersten Phase
+geht. Durchmesser, Länge und Füllgrad wählen (der Stand der Schmelze
+folgt aus dem Kreissegment, `fillLevel` in `js/lbm/sleeve.js`), dazu den
+Laufkanal oben in der Stirnfläche (Breite × Tiefe) und die Schusskurve:
+die DieLogic-Kurve des Projekts, mit Kolben-Ø, Länge und Füllgrad von
+hier — die Massen werden so gesetzt, dass die Kurve den gewählten
+Füllgrad rechnet —, oder zweistufig v₁/v₂ mit einer Beschleunigung.
+Ein Knopf; die Rechnung beginnt beim Kolbenstart und endet, wenn die
+Schmelze den Laufkanal erreicht (plus ein Stück für das Bild), spätestens
+am Ende der Kurve.
+
+Zwei Dinge brauchte der Kern dafür (`js/lbm/fslbm.js`, `gpu.js`, in
+beiden gleich):
+
+- **Schwerkraft** als Volumenkraft nach Guo (2002): die Geschwindigkeit
+  um die halbe Kraft verschoben, ein Quellterm im Stoß; g in
+  Gittereinheiten ist g·Δt²/Δx. Der Start ist hydrostatisch
+  (`hydrostatic`: ρ = 1 + 3·g·Tiefe), damit die Schmelze unter
+  Schwerkraft still steht statt sich erst zusammenzudrücken — die Tests
+  prüfen, dass der Spiegel dreihundert Schritte lang bleibt.
+- **Ein wandernder Kolben**: vor jedem Schritt wird die Zellschicht
+  `ip` (aus dem Kolbenweg der Kurve) zum Kolben — Einlass, wo Schmelze
+  an ihr steht, Wand darüber (eine Kolbenfläche über dem Spiegel darf
+  keine Quelle sein, sonst tränkt sie die Luft daneben) —, alles davor zu
+  Stahl. Was der Kolben überfährt, hat er vorher als Zustrom
+  eingeschoben; die Masse geht im Mittel auf.
+
+Dabei fiel ein Fehler beider Kerne auf: Durchgang 1 las Füllstand,
+Dichte und Geschwindigkeit der Nachbarn und schrieb dieselben Felder
+für die eigene Zelle in denselben Puffer — in JavaScript sah eine
+spätere Zelle schon neue Werte, auf der GPU je nach Thread alte oder
+neue, und beide Kerne liefen in der Kammer weit auseinander (im Anguss
+war es kaum aufgefallen). Die Zellwerte liegen seitdem doppelt vor;
+Durchgang 1 liest den alten Satz und schreibt den neuen. Danach stimmen
+beide Kerne im kopflosen Chromium mit WebGPU auf dieselbe Kammer-voll-
+Zeit (92 gegen 94 ms bei 113 ms der Kurve) und dieselbe Luft überein.
+
+**Eingeschlossene Luft** (`enclosedGas`): Gaszellen, die nicht mit der
+größten Luftblase zusammenhängen — je Bild gezählt, als Höchstwert über
+den Lauf und am Ende ausgewiesen. Es gibt keinen Gasdruck und keine
+Oberflächenspannung; eine Welle, die überschlägt, schließt in dieser
+Rechnung Luft ein, ob sie im echten Schuss entweicht, sagt sie nicht.
+Der Zeitschritt folgt aus der doppelten Kolbengeschwindigkeit (die
+Welle ist nicht viel schneller als der Kolben) — der Laufkanal wird
+schneller, dort klemmt der Kern die Geschwindigkeit; die erste Phase
+dauert deshalb je nach v₂ Zehntausende Schritte. Der Vorschlag für die
+Zellkante zielt auf 150 000 Zellen auf der Grafikkarte (dreißig Zellen
+über den Durchmesser bei 90 mm), 30 000 in JavaScript.
 
 ## Überlaufdesigner (`ueberlauf.html`)
 

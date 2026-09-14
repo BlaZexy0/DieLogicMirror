@@ -32,7 +32,8 @@ import { buildDomain, suggestCell, cellCount, runnerMask, MAX_CELLS, MAX_CELLS_C
 import { pistonCurve, minRunnerArea, latticeUnits } from './piston.js';
 import { createSolver } from './fslbm.js';
 import { createGpuSolver, hasWebGPU } from './gpu.js';
-import { NEVER, FLAG } from './lattice.js';
+import { runSimulation } from './run.js';
+import { NEVER } from './lattice.js';
 
 const container = $('viewport');
 const busy = $('busy');
@@ -213,51 +214,25 @@ async function simulate() {
     const mask = runnerMask(domain);
     let maskCount = 0;
     for (let i = 0; i < domain.N; i++) maskCount += mask[i];
-    const snapshots = [];
-    const gateDone = new Array(domain.gates.length).fill(NEVER);
     const uAt = s => { const u = units.uIn(piston.v(s * units.dt)); return [domain.axis[0] * u, domain.axis[1] * u, domain.axis[2] * u]; };
-    const takeSnapshot = (fill, step) => {
-      const u8 = new Uint8Array(domain.N);
-      let filled = 0;
-      for (let i = 0; i < domain.N; i++) { const e = fill[i]; u8[i] = Math.round(Math.min(1, Math.max(0, e)) * 255); if (mask[i]) filled += e; }
-      snapshots.push({ t: step * units.dt, step, fill: u8, filled: maskCount ? filled / maskCount : 0 });
-      return snapshots[snapshots.length - 1];
-    };
-    let step = 0, stopAt = Infinity, reason = '';
-    const allReached = () => gateDone.every(a => a !== NEVER);
-    takeSnapshot(engine === 'gpu' ? new Float32Array(domain.N).map((_, i) => (domain.flags[i] === FLAG.FLUID || domain.flags[i] === FLAG.INLET ? 1 : domain.flags[i] === FLAG.INTERFACE ? 0.5 : 0)) : solver.fill(), 0);
-    while (step < stepsMax && step < stopAt && !state.cancel) {
-      const n = Math.min(snapEvery, stepsMax - step, stopAt - step);
-      if (engine === 'gpu') {
-        const uIns = [];
-        for (let k = 1; k <= n; k++) uIns.push(uAt(step + k));
-        solver.run(uIns, step + 1);
-        step += n;
-        const [fill, gates] = await Promise.all([solver.readFill(), solver.readGates()]);
-        for (let k = 0; k < gateDone.length; k++) gateDone[k] = gates[k];
-        takeSnapshot(fill, step);
-      } else {
-        const tChunk = performance.now();
-        for (let k = 1; k <= n; k++) {
-          step++;
-          solver.step(uAt(step), step);
-          if (performance.now() - tChunk > 40) { busy.textContent = 'Rechnet … ' + fmt(step * units.dt * 1000, 1) + ' ms'; await tick(); }
-        }
-        for (let k = 0; k < gateDone.length; k++) gateDone[k] = solver.gateArrival[k];
-        takeSnapshot(solver.fill(), step);
+    const filledOf = fill => { let f = 0; for (let i = 0; i < domain.N; i++) if (mask[i]) f += fill[i]; return maskCount ? f / (255 * maskCount) : 0; };
+    const run = await runSimulation({
+      solver, engine, domain, stepsMax, snapEvery, uAt,
+      isCancelled: () => state.cancel,
+      onWork: step => { busy.textContent = 'Rechnet … ' + fmt(step * units.dt * 1000, 1) + ' ms'; },
+      onSnapshot: (snap, gateDone) => {
+        snap.t = snap.step * units.dt;
+        snap.filled = filledOf(snap.fill);
+        busy.textContent = 'Rechnet … ' + fmt(snap.t * 1000, 1) + ' ms · Anguss ' + fmt(snap.filled * 100, 0) + ' % · Schritt ' + fmt(snap.step, 0);
+        $('run-note').textContent = busy.textContent;
+        return gateDone.every(a => a !== NEVER) ? 'alle Anschnitte erreicht' : null;
       }
-      const last = snapshots[snapshots.length - 1];
-      busy.textContent = 'Rechnet … ' + fmt(last.t * 1000, 1) + ' ms · Anguss ' + fmt(last.filled * 100, 0) + ' % · Schritt ' + fmt(step, 0);
-      $('run-note').textContent = busy.textContent;
-      if (stopAt === Infinity && allReached()) {
-        stopAt = Math.min(stepsMax, step + Math.max(snapEvery, Math.round(step * 0.05)));
-        reason = 'alle Anschnitte erreicht';
-      }
-      await tick();
-    }
-    if (state.cancel) reason = 'abgebrochen';
-    else if (!reason) reason = step >= stepsMax ? (tMax >= piston.tEnd - 1e-9 ? 'die Kurve endet' : 'Zeitgrenze erreicht') : reason;
-    const arrival = engine === 'gpu' ? await solver.readArrival() : solver.arrival().slice();
+    });
+    const { snapshots, arrival, gateDone } = run;
+    snapshots[0].t = 0; snapshots[0].filled = filledOf(snapshots[0].fill);
+    const step = run.steps;
+    const reason = run.reason === 'Schrittgrenze erreicht'
+      ? (tMax >= piston.tEnd - 1e-9 ? 'die Kurve endet' : 'Zeitgrenze erreicht') : run.reason;
     const gates = domain.gates.map((gt, k) => {
       const r1 = state.flowShown.gates.find(x => x.id === gt.id);
       return {

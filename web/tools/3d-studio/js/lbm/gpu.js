@@ -19,7 +19,7 @@
    Gibt es kein WebGPU (navigator.gpu fehlt), meldet createGpuSolver das
    mit einem Fehler; die Seite fällt dann auf den JavaScript-Kern zurück. */
 
-import { Q, C, W, OPP, FLAG, NEVER, FF, FU } from './lattice.js';
+import { Q, C, W, OPP, FLAG, NEVER, NO_PLUNGER, FF, FU } from './lattice.js';
 import { PARAMS } from './fslbm.js';
 
 const WG = 64;                                  // Zellen je Arbeitsgruppe
@@ -39,14 +39,16 @@ struct U {
   n: u32, nx: u32, ny: u32, step: u32,
   tau0: f32, csq: f32, kappa: f32, umax: f32,
   uin: vec4<f32>,
-  indir: u32, inoff: i32, pad0: u32, pad1: u32
+  g: vec4<f32>,
+  indir: u32, inoff: i32, ip: u32, pad1: u32
 };
 @group(0) @binding(0) var<uniform> u: U;
 @group(0) @binding(1) var<storage, read_write> fa: array<f32>;
 @group(0) @binding(2) var<storage, read_write> fb: array<f32>;
-@group(0) @binding(3) var<storage, read_write> cf: array<f32>;
-@group(0) @binding(4) var<storage, read_write> cu: array<u32>;
-@group(0) @binding(5) var<storage, read_write> gate: array<atomic<u32>>;
+@group(0) @binding(3) var<storage, read_write> ci: array<f32>;   // Zellwerte vor dem Schritt
+@group(0) @binding(4) var<storage, read_write> cf: array<f32>;   // Zellwerte nach Durchgang 1
+@group(0) @binding(5) var<storage, read_write> cu: array<u32>;
+@group(0) @binding(6) var<storage, read_write> gate: array<atomic<u32>>;
 
 const Q = ${Q}u;
 /* Als var<private>, nicht const: die Tabellen werden mit der Laufvariablen
@@ -59,6 +61,7 @@ const WALL = ${F.WALL}u; const GAS = ${F.GAS}u; const INTERFACE = ${F.INTERFACE}
 const INLET = ${F.INLET}u; const OUTLET = ${F.OUTLET}u; const TO_FLUID = ${F.TO_FLUID}u; const TO_GAS = ${F.TO_GAS}u;
 const TO_IF_GAS = ${F.TO_IF_GAS}u; const TO_IF_FLUID = ${F.TO_IF_FLUID}u;
 const NEVER = ${NEVER}u;
+const NO_PLUNGER = ${NO_PLUNGER}u;
 
 fn MASS(i: u32) -> u32 { return ${FF.MASS}u * u.n + i; }
 fn RHO(i: u32) -> u32 { return ${FF.RHO}u * u.n + i; }
@@ -73,12 +76,34 @@ fn NEW2(i: u32) -> u32 { return ${FU.NEW2}u * u.n + i; }
 fn COUNT(i: u32) -> u32 { return ${FU.COUNT}u * u.n + i; }
 fn ARRIVAL(i: u32) -> u32 { return ${FU.ARRIVAL}u * u.n + i; }
 fn SENSOR(i: u32) -> u32 { return ${FU.SENSOR}u * u.n + i; }
+fn SHAPE(i: u32) -> u32 { return ${FU.SHAPE}u * u.n + i; }
 fn nb(idx: u32, i: u32) -> u32 { return u32(i32(idx) + OFFV[i]); }
 fn feq(i: u32, rho: f32, v: vec3<f32>) -> f32 {
   let cu_ = dot(CV[i], v);
   return WV[i] * rho * (1.0 + 3.0 * cu_ + 4.5 * cu_ * cu_ - 1.5 * dot(v, v));
 }
 fn recon(i: u32, v: vec3<f32>, fopp: f32) -> f32 { return feq(i, 1.0, v) + feq(OPPV[i], 1.0, v) - fopp; }
+
+/* 0 — der wandernde Kolben: Schicht ip wird Kolben, alles davor Stahl */
+@compute @workgroup_size(${WG})
+fn pass0(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let idx = gid.x;
+  if (idx >= u.n || u.ip == NO_PLUNGER) { return; }
+  let i = idx % u.nx;
+  if (i > u.ip) { return; }
+  let fl = cu[FL(idx)];
+  if (fl == WALL || (fl == INLET && i == u.ip)) { return; }
+  if (i < u.ip || cu[SHAPE(idx)] != 1u || fl == GAS || fl == OUTLET) {
+    cu[FL(idx)] = WALL; cu[NEW1(idx)] = WALL; cu[NEW2(idx)] = WALL;
+    ci[MASS(idx)] = 0.0; ci[EPS(idx)] = 0.0;
+  } else {
+    let vin = u.uin.xyz;
+    cu[FL(idx)] = INLET; cu[NEW1(idx)] = INLET; cu[NEW2(idx)] = INLET;
+    ci[RHO(idx)] = 1.0; ci[UX(idx)] = vin.x; ci[UY(idx)] = vin.y; ci[UZ(idx)] = vin.z;
+    ci[MASS(idx)] = 1.0; ci[EPS(idx)] = 1.0;
+    for (var q = 0u; q < Q; q++) { fa[q * u.n + idx] = feq(q, 1.0, vin); }
+  }
+}
 
 /* 1 — strömen, stoßen, Masse */
 @compute @workgroup_size(${WG})
@@ -91,8 +116,8 @@ fn pass1(@builtin(global_invocation_id) gid: vec3<u32>) {
     let nfl = cu[FL(n2)];
     let vin = u.uin.xyz;
     if (u.indir != 0u && (nfl == FLUID || nfl == INTERFACE)) {
-      let r = cf[RHO(n2)];
-      let v2 = vec3<f32>(cf[UX(n2)], cf[UY(n2)], cf[UZ(n2)]);
+      let r = ci[RHO(n2)];
+      let v2 = vec3<f32>(ci[UX(n2)], ci[UY(n2)], ci[UZ(n2)]);
       for (var i = 0u; i < Q; i++) { fb[i * u.n + idx] = feq(i, r, vin) + (fa[i * u.n + n2] - feq(i, r, v2)); }
       cf[RHO(idx)] = r;
     } else {
@@ -100,19 +125,25 @@ fn pass1(@builtin(global_invocation_id) gid: vec3<u32>) {
       cf[RHO(idx)] = 1.0;
     }
     cf[UX(idx)] = vin.x; cf[UY(idx)] = vin.y; cf[UZ(idx)] = vin.z;
-    cf[MASS(idx)] = 1.0; cf[EPS(idx)] = 1.0;
+    cf[MASS(idx)] = 1.0; cf[EPS(idx)] = 1.0; cf[EXCESS(idx)] = 0.0;
     return;
   }
-  if (fl != FLUID && fl != INTERFACE) { return; }
-  let uo = vec3<f32>(cf[UX(idx)], cf[UY(idx)], cf[UZ(idx)]);
-  let epsOld = cf[EPS(idx)];
+  if (fl != FLUID && fl != INTERFACE) {
+    /* Unbeteiligt: die Werte mitnehmen, damit der neue Satz vollständig ist. */
+    cf[MASS(idx)] = ci[MASS(idx)]; cf[RHO(idx)] = ci[RHO(idx)];
+    cf[UX(idx)] = ci[UX(idx)]; cf[UY(idx)] = ci[UY(idx)]; cf[UZ(idx)] = ci[UZ(idx)];
+    cf[EPS(idx)] = ci[EPS(idx)]; cf[EXCESS(idx)] = ci[EXCESS(idx)];
+    return;
+  }
+  let uo = vec3<f32>(ci[UX(idx)], ci[UY(idx)], ci[UZ(idx)]);
+  let epsOld = ci[EPS(idx)];
   var nrm = vec3<f32>(0.0);
   if (fl == INTERFACE) {
     var e: array<f32, 6>;
     let ids = array<u32, 6>(nb(idx, 2u), nb(idx, 1u), nb(idx, 4u), nb(idx, 3u), nb(idx, 6u), nb(idx, 5u));
     for (var k = 0u; k < 6u; k++) {
       let q = ids[k];
-      if (cu[FL(q)] == WALL) { e[k] = epsOld; } else { e[k] = cf[EPS(q)]; }
+      if (cu[FL(q)] == WALL) { e[k] = epsOld; } else { e[k] = ci[EPS(q)]; }
     }
     nrm = vec3<f32>(e[0] - e[1], e[2] - e[3], e[4] - e[5]);
     let l = length(nrm);
@@ -135,14 +166,15 @@ fn pass1(@builtin(global_invocation_id) gid: vec3<u32>) {
       let nfl = cu[FL(q)];
       let ex = fa[OPPV[i] * u.n + q] - fa[i * u.n + idx];
       if (nfl == FLUID || nfl == INLET) { dm += ex; }
-      else if (nfl == INTERFACE) { dm += ex * 0.5 * (epsOld + cf[EPS(q)]); }
+      else if (nfl == INTERFACE) { dm += ex * 0.5 * (epsOld + ci[EPS(q)]); }
     }
   }
   var rho = 0.0;
   var v = vec3<f32>(0.0);
   for (var i = 0u; i < Q; i++) { rho += fi[i]; v += CV[i] * fi[i]; }
   rho = max(rho, 1e-9);
-  v = v / rho;
+  let Fg = rho * u.g.xyz;
+  v = (v + 0.5 * Fg) / rho;
   let sp = length(v);
   if (sp > u.umax) { v = v * (u.umax / sp); }
   var fe: array<f32, ${Q}>;
@@ -157,11 +189,18 @@ fn pass1(@builtin(global_invocation_id) gid: vec3<u32>) {
   let qn = sqrt(pxx * pxx + pyy * pyy + pzz * pzz + 2.0 * (pxy * pxy + pxz * pxz + pyz * pyz));
   let tau = 0.5 * (u.tau0 + sqrt(u.tau0 * u.tau0 + 18.0 * 1.4142135623730951 * u.csq * qn / rho));
   let om = 1.0 / tau;
-  for (var i = 0u; i < Q; i++) { fb[i * u.n + idx] = fi[i] - om * (fi[i] - fe[i]); }
+  let fac = 1.0 - 0.5 * om;
+  let uF = dot(v, Fg);
+  for (var i = 0u; i < Q; i++) {
+    let cF = dot(CV[i], Fg);
+    let S = fac * WV[i] * (3.0 * cF + 9.0 * dot(CV[i], v) * cF - 3.0 * uF);
+    fb[i * u.n + idx] = fi[i] - om * (fi[i] - fe[i]) + S;
+  }
   cf[RHO(idx)] = rho; cf[UX(idx)] = v.x; cf[UY(idx)] = v.y; cf[UZ(idx)] = v.z;
+  cf[EXCESS(idx)] = 0.0;
   if (fl == FLUID) { cf[MASS(idx)] = rho; cf[EPS(idx)] = 1.0; }
   else {
-    let m = cf[MASS(idx)] + dm;
+    let m = ci[MASS(idx)] + dm;
     cf[MASS(idx)] = m;
     cf[EPS(idx)] = clamp(m / rho, 0.0, 1.0);
   }
@@ -319,22 +358,26 @@ export async function createGpuSolver(domain, params = {}) {
     cu[FU.FLAG * N + idx] = fl; cu[FU.NEW1 * N + idx] = fl; cu[FU.NEW2 * N + idx] = fl;
     cu[FU.ARRIVAL * N + idx] = (fl === FLUID || fl === INLET || fl === INTERFACE) ? 0 : NEVER;
     cu[FU.SENSOR * N + idx] = domain.sensor ? domain.sensor[idx] : 0;
-    cf[FF.RHO * N + idx] = 1;
-    const m = fl === FLUID || fl === INLET ? 1 : fl === INTERFACE ? 0.5 : 0;
-    cf[FF.MASS * N + idx] = m; cf[FF.EPS * N + idx] = m;
-    for (let i = 0; i < Q; i++) f0[i * N + idx] = W[i];
+    cu[FU.SHAPE * N + idx] = domain.shape ? domain.shape[idx] : (fl === WALL ? 0 : 1);
+    const r0 = domain.rho0 && domain.rho0[idx] > 0 ? domain.rho0[idx] : 1;
+    cf[FF.RHO * N + idx] = r0;
+    const m = fl === FLUID || fl === INLET ? r0 : fl === INTERFACE ? 0.5 * r0 : 0;
+    cf[FF.MASS * N + idx] = m; cf[FF.EPS * N + idx] = fl === INTERFACE ? 0.5 : (m > 0 ? 1 : 0);
+    for (let i = 0; i < Q; i++) f0[i * N + idx] = W[i] * r0;
   }
   void WALL; void GAS;
 
   const mk = (size, usage) => device.createBuffer({ size: Math.max(16, Math.ceil(size / 4) * 4), usage });
   const ST = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST;
   const bufA = mk(f0.byteLength, ST), bufB = mk(f0.byteLength, ST);
-  const bufF = mk(cf.byteLength, ST), bufU = mk(cu.byteLength, ST);
+  const bufCA = mk(cf.byteLength, ST), bufCB = mk(cf.byteLength, ST);
+  const bufU = mk(cu.byteLength, ST);
   const gates = new Uint32Array(Math.max(1, (domain.gates || []).length)).fill(NEVER);
   const bufG = mk(gates.byteLength, ST);
   const bufUni = device.createBuffer({ size: UNIFORM_STRIDE * BATCH, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   device.queue.writeBuffer(bufA, 0, f0); device.queue.writeBuffer(bufB, 0, f0);
-  device.queue.writeBuffer(bufF, 0, cf); device.queue.writeBuffer(bufU, 0, cu);
+  device.queue.writeBuffer(bufCA, 0, cf); device.queue.writeBuffer(bufCB, 0, cf);
+  device.queue.writeBuffer(bufU, 0, cu);
   device.queue.writeBuffer(bufG, 0, gates);
 
   const module = device.createShaderModule({ code: wgsl(nx, ny) });
@@ -348,22 +391,23 @@ export async function createGpuSolver(domain, params = {}) {
   const layout = device.createBindGroupLayout({
     entries: [
       { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform', hasDynamicOffset: true } },
-      ...[1, 2, 3, 4, 5].map(b => ({ binding: b, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }))
+      ...[1, 2, 3, 4, 5, 6].map(b => ({ binding: b, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }))
     ]
   });
   const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [layout] });
-  const pipes = await Promise.all(['pass1', 'pass2', 'pass3', 'pass4', 'pass5'].map(entryPoint =>
+  const pipes = await Promise.all(['pass0', 'pass1', 'pass2', 'pass3', 'pass4', 'pass5'].map(entryPoint =>
     device.createComputePipelineAsync({ layout: pipelineLayout, compute: { module, entryPoint } })));
-  const bind = (a, b) => device.createBindGroup({
+  const bind = (a, b, ca, cb) => device.createBindGroup({
     layout,
     entries: [
       { binding: 0, resource: { buffer: bufUni, size: UNIFORM_STRIDE } },
       { binding: 1, resource: { buffer: a } }, { binding: 2, resource: { buffer: b } },
-      { binding: 3, resource: { buffer: bufF } }, { binding: 4, resource: { buffer: bufU } },
-      { binding: 5, resource: { buffer: bufG } }
+      { binding: 3, resource: { buffer: ca } }, { binding: 4, resource: { buffer: cb } },
+      { binding: 5, resource: { buffer: bufU } }, { binding: 6, resource: { buffer: bufG } }
     ]
   });
-  const groups = [bind(bufA, bufB), bind(bufB, bufA)];
+  const groups = [bind(bufA, bufB, bufCA, bufCB), bind(bufB, bufA, bufCB, bufCA)];
+  const cfBufs = [bufCA, bufCB];
   let parity = 0;
   const OFF = C.map(c => c[0] + c[1] * nx + c[2] * nx * ny);
   const inDir = domain.inletDir || 0;
@@ -371,14 +415,15 @@ export async function createGpuSolver(domain, params = {}) {
   const uni = new ArrayBuffer(UNIFORM_STRIDE * BATCH);
   const u32 = new Uint32Array(uni), f32 = new Float32Array(uni), i32 = new Int32Array(uni);
 
-  function encodeBatch(uIns, firstStep) {
+  function encodeBatch(uIns, firstStep, ips) {
     const n = uIns.length;
     for (let k = 0; k < n; k++) {
       const o = k * UNIFORM_STRIDE / 4;
       u32[o] = N; u32[o + 1] = nx; u32[o + 2] = ny; u32[o + 3] = firstStep + k;
       f32[o + 4] = P.tau0; f32[o + 5] = P.smagorinsky * P.smagorinsky; f32[o + 6] = P.kappa; f32[o + 7] = P.uMax;
       f32[o + 8] = uIns[k][0]; f32[o + 9] = uIns[k][1]; f32[o + 10] = uIns[k][2]; f32[o + 11] = 0;
-      u32[o + 12] = inDir; i32[o + 13] = OFF[inDir]; u32[o + 14] = 0; u32[o + 15] = 0;
+      f32[o + 12] = P.g[0]; f32[o + 13] = P.g[1]; f32[o + 14] = P.g[2]; f32[o + 15] = 0;
+      u32[o + 16] = inDir; i32[o + 17] = OFF[inDir]; u32[o + 18] = ips ? ips[k] : NO_PLUNGER; u32[o + 19] = 0;
     }
     device.queue.writeBuffer(bufUni, 0, uni, 0, n * UNIFORM_STRIDE);
     const enc = device.createCommandEncoder();
@@ -409,16 +454,20 @@ export async function createGpuSolver(domain, params = {}) {
 
   return {
     N, device,
-    /** n Schritte; uIns[k] ist die Kolbengeschwindigkeit des Schritts firstStep + k. */
-    run(uIns, firstStep) {
-      for (let s = 0; s < uIns.length; s += BATCH) encodeBatch(uIns.slice(s, s + BATCH), firstStep + s);
+    /** n Schritte; uIns[k] ist die Kolbengeschwindigkeit des Schritts
+        firstStep + k, ips[k] (wahlweise) die Kolbenschicht. */
+    run(uIns, firstStep, ips = null) {
+      for (let s = 0; s < uIns.length; s += BATCH) {
+        encodeBatch(uIns.slice(s, s + BATCH), firstStep + s, ips ? ips.slice(s, s + BATCH) : null);
+      }
     },
-    readFill: () => read(bufF, FF.EPS * N * 4, N * 4, Float32Array),
+    /* Nach dem letzten Schritt hält der Puffer des NÄCHSTEN Eingangs die neuesten Werte. */
+    readFill: () => read(cfBufs[parity], FF.EPS * N * 4, N * 4, Float32Array),
     readArrival: () => read(bufU, FU.ARRIVAL * N * 4, N * 4, Uint32Array),
     readFlags: () => read(bufU, FU.FLAG * N * 4, N * 4, Uint32Array),
     readGates: () => read(bufG, 0, gates.byteLength, Uint32Array),
     /** Warten, bis die Karte alles abgearbeitet hat. */
     sync: () => device.queue.onSubmittedWorkDone(),
-    dispose() { for (const b of [bufA, bufB, bufF, bufU, bufG, bufUni]) b.destroy(); device.destroy(); }
+    dispose() { for (const b of [bufA, bufB, bufCA, bufCB, bufU, bufG, bufUni]) b.destroy(); device.destroy(); }
   };
 }

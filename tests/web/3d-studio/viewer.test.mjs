@@ -1722,6 +1722,54 @@ test('Angussfüllung: Beispiel, Kurve, ein Lauf in JavaScript bis zur Ankunft, R
   assert.equal(v.state.timeline.v.length, 600);
 });
 
+/* ── Kammerfüllung ──────────────────────────────────────────
+   Eine kleine Kammer mit zweistufiger Kurve, in JavaScript: Kolben,
+   Welle, Kammer voll, Luft, Regler. */
+test('Kammerfüllung: Kammer und Kurve einstellen, ein Lauf in JavaScript bis Kammer voll, Regler', async () => {
+  const { doc: d10 } = buildDocument(read('kammerfuellung.html'));
+  installGlobals(d10);
+  loadDesignScripts();
+  globalThis.location = { search: '', href: 'http://test/kammerfuellung.html' };
+  const mod = await import('../../../web/tools/3d-studio/js/lbm/sleeveapp.js');
+  const v = mod.__viewer;
+  assert.ok(v.state.ready, 'die Seite steht');
+  assert.equal(v.gpu, false);
+  assert.match(d10.getElementById('curve-facts').innerHTML, /Kammer voll/, 'die DieLogic-Kurve steht');
+  assert.match(d10.getElementById('curve-facts').innerHTML, /v_krit/);
+  /* Kleine Kammer, grobes Gitter, zweistufige Kurve. */
+  const set = (id, val) => { const el = d10.getElementById(id); el.value = val; el.dispatch('change'); };
+  set('sl-d', '40'); set('sl-len', '120');
+  const fillEl = d10.getElementById('sl-fill'); fillEl.value = '45'; fillEl.dispatch('input');
+  assert.equal(v.state.spec.fill, 0.45);
+  d10.getElementById('curve-seg').querySelectorAll('button').find(b => b.dataset.value === 'v1v2').dispatch('click');
+  assert.equal(v.state.curveMode, 'v1v2');
+  assert.ok(!d10.getElementById('v1v2-block').classList.contains('hidden'));
+  set('sl-v1', '0,6'); set('sl-v2', '2'); set('sl-a', '100');
+  assert.ok(v.state.curve && v.state.curve.sFill > 0, 'die zweistufige Kurve steht');
+  assert.ok(Math.abs(v.state.curve.sFill - 0.55 * 120) < 1e-9, 'Kammer voll nach (1 − Füllgrad) · Länge');
+  set('cell-h', '5');
+  assert.equal(v.state.h, 5);
+  assert.equal(d10.getElementById('run').disabled, false);
+  await v.simulate();
+  const r = v.state.result;
+  assert.ok(r, 'ein Ergebnis');
+  assert.equal(r.engine, 'cpu');
+  assert.ok(r.full, 'Kammer voll: ' + r.reason);
+  assert.ok(r.full.t > 0.02 && r.full.t < 0.5, 'Kammer voll nach ' + r.full.t + ' s');
+  assert.ok(r.full.s > 40 && r.full.s < 120, 'bei ' + r.full.s + ' mm');
+  assert.ok(r.snapshots.length > 5, 'Bilder');
+  assert.ok(Number.isFinite(r.airMax.air) && r.airMax.air >= 0, 'Luft');
+  assert.match(d10.getElementById('result-facts').innerHTML, /Kammer voll/);
+  assert.match(d10.getElementById('result-facts').innerHTML, /Luft/);
+  assert.ok(v.meltMesh.visible, 'die Schmelze ist zu sehen');
+  const sl = d10.getElementById('t-slider');
+  assert.equal(sl.max, String(r.snapshots.length - 1));
+  sl.value = '0';
+  sl.dispatch('input');
+  assert.equal(v.state.frame, 0);
+  assert.match(d10.getElementById('t-val').textContent, /0 ms/);
+});
+
 /* ── Überlaufdesigner ─────────────────────────────────────── */
 test('Überlaufdesigner: setzen, ziehen, drehen, neu setzen, Datei', async () => {
   const { doc: d7 } = buildDocument(read('ueberlauf.html'));

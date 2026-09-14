@@ -59,7 +59,12 @@ export const NEVER = 0xFFFFFFFF;
    acht Speicherpuffer je Shader), der JavaScript-Kern hält dieselbe
    Anordnung, damit Tests beide vergleichen können. */
 export const FF = { MASS: 0, RHO: 1, UX: 2, UY: 3, UZ: 4, EPS: 5, EXCESS: 6, COUNT_F: 7 };
-export const FU = { FLAG: 0, NEW1: 1, NEW2: 2, COUNT: 3, ARRIVAL: 4, SENSOR: 5, COUNT_U: 6 };
+/* SHAPE: 1, wo Schmelze sein darf (im Kanal, in der Kammer), 0 im Stahl —
+   der wandernde Kolben macht daraus seine Zellschicht. */
+export const FU = { FLAG: 0, NEW1: 1, NEW2: 2, COUNT: 3, ARRIVAL: 4, SENSOR: 5, SHAPE: 6, COUNT_U: 7 };
+
+/** Kein Kolben in diesem Schritt (Angussfüllung: die Kolbenfläche steht). */
+export const NO_PLUNGER = 0xFFFFFFFF;
 
 /** Gleichgewichtsverteilung. */
 export function feq(i, rho, ux, uy, uz) {

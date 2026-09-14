@@ -23,6 +23,7 @@ const R = '../../../web/tools/3d-studio/';
 const L = await import(R + 'js/lbm/lattice.js');
 const { createSolver } = await import(R + 'js/lbm/fslbm.js');
 const { buildDomain, suggestCell, cellCount, runnerMask } = await import(R + 'js/lbm/domain.js');
+const SL = await import(R + 'js/lbm/sleeve.js');
 const { pistonCurve, minRunnerArea, latticeUnits } = await import(R + 'js/lbm/piston.js');
 const PRE = await import(R + 'js/runner/presets.js');
 const F = await import(R + 'js/runner/flow.js');
@@ -174,4 +175,71 @@ test('Ganzer Lauf auf grobem Gitter: die Front kommt an beiden Anschnitten an, i
   for (let i = 0; i < d.N; i++) if (mask[i]) { filled += e[i]; n++; }
   assert.ok(filled / n > 0.6, 'der Anguss ist dann weitgehend voll: ' + (filled / n));
   for (let i = 0; i < d.N; i++) assert.ok(Number.isFinite(e[i]));
+});
+
+/* ── Die Füllkammer ──────────────────────────────────────────── */
+
+test('Kammer: Füllstand aus dem Füllgrad, das Gitter mit Kolben, Laufkanal und ruhender Schmelze', () => {
+  assert.ok(Math.abs(SL.fillLevel(0.5, 45) - 45) < 1e-9, 'halb voll heißt bis zur Achse');
+  assert.ok(SL.fillLevel(0.3, 45) < 45 && SL.fillLevel(0.3, 45) > 20);
+  assert.equal(SL.fillLevel(0, 45), 0);
+  assert.equal(SL.fillLevel(1, 45), 90);
+  const spec = { d: 40, length: 80, fill: 0.4, outletW: 20, outletH: 10 };
+  const d = SL.buildSleeveDomain(spec, 4);
+  assert.deepEqual(d.dims, SL.cellCount(spec, 4).dims);
+  const cyl = Math.PI * 20 * 20 * 80 / 64;
+  assert.ok(Math.abs(d.cells - cyl) / cyl < 0.25, 'Zellen in der Kammer ' + d.cells + ' gegen ' + cyl.toFixed(0));
+  assert.ok(Math.abs(d.fluidCells / d.cells - 0.4) < 0.12, 'Füllgrad im Gitter ' + (d.fluidCells / d.cells).toFixed(2));
+  assert.equal(d.inletDir, 1, 'der Kolben fährt nach +x');
+  assert.ok(d.gates[0].outlet > 0 && d.gates[0].sensor > 0, 'Laufkanal und Melder');
+  /* Der Kolben: Einlass nur, wo Schmelze steht; darüber Wand. */
+  const [nx, ny] = d.dims;
+  let inlet = 0, wallAbove = 0;
+  for (let k = 0; k < d.dims[2]; k++) for (let j = 0; j < ny; j++) {
+    const idx = (k * ny + j) * nx + 2;
+    if (!d.shape[idx]) continue;
+    if (d.flags[idx] === FLAG.INLET) inlet++; else if (d.flags[idx] === FLAG.WALL) wallAbove++;
+  }
+  assert.ok(inlet > 0 && wallAbove > 0, 'Kolbenfläche: ' + inlet + ' Einlass, ' + wallAbove + ' Wand');
+  /* Hydrostatik: unten dichter als am Spiegel. */
+  const rho0 = SL.hydrostatic(d, 1e-4);
+  let lo = Infinity, hi = 0;
+  for (let i = 0; i < d.N; i++) if (d.flags[i] === FLAG.FLUID) { lo = Math.min(lo, rho0[i]); hi = Math.max(hi, rho0[i]); }
+  assert.ok(hi > lo && lo >= 1, 'Dichte ' + lo + ' … ' + hi);
+});
+
+test('Kammer: unter Schwerkraft bleibt die ruhende Schmelze ruhig, und der wandernde Kolben schiebt sie zum Laufkanal', () => {
+  const spec = { d: 40, length: 80, fill: 0.4, outletW: 20, outletH: 10 };
+  const d = SL.buildSleeveDomain(spec, 4);
+  const gLat = 2e-4;
+  d.rho0 = SL.hydrostatic(d, gLat);
+  const s = createSolver(d, { g: [0, -gLat, 0] });
+  const [nx, ny, nz] = d.dims;
+  const column = i => { const e = s.fill(); let m = 0; for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) { const idx = (k * ny + j) * nx + i; if (d.shape[idx]) m += e[idx]; } return m; };
+  const m0 = s.totals().mass, c0 = column(10);
+  for (let k = 1; k <= 300; k++) s.step([0, 0, 0], k);
+  assert.ok(Math.abs(s.totals().mass - m0) / m0 < 0.01, 'Masse in Ruhe: ' + m0 + ' → ' + s.totals().mass);
+  assert.ok(Math.abs(column(10) - c0) < 1.5, 'der Spiegel bleibt: ' + c0 + ' → ' + column(10));
+  assert.equal(s.gateArrival[0], NEVER, 'ohne Kolben kommt nichts am Laufkanal an');
+
+  /* Der Kolben fährt mit 0,02 Zellen je Schritt: die Schicht wandert,
+     dahinter ist Stahl, und irgendwann ist die Kammer am Laufkanal voll. */
+  const d2 = SL.buildSleeveDomain(spec, 4);
+  d2.rho0 = SL.hydrostatic(d2, gLat);
+  const s2 = createSolver(d2, { g: [0, -gLat, 0] });
+  const u = 0.02;
+  let ip = 2, k = 0;
+  while (k < 1500 && s2.gateArrival[0] === NEVER) { k++; ip = 2 + Math.floor(u * k); s2.step([u, 0, 0], k, ip); }
+  assert.ok(s2.gateArrival[0] !== NEVER, 'der Laufkanal wird erreicht');
+  const fl = s2.flags();
+  let behind = 0, inletNow = 0;
+  for (let kk = 0; kk < nz; kk++) for (let j = 0; j < ny; j++) {
+    for (let i = 2; i < ip; i++) if (fl[(kk * ny + j) * nx + i] !== FLAG.WALL) behind++;
+    if (fl[(kk * ny + j) * nx + ip] === FLAG.INLET) inletNow++;
+  }
+  assert.equal(behind, 0, 'hinter dem Kolben nur Stahl');
+  assert.ok(inletNow > 0, 'die Kolbenschicht ist Einlass');
+  const eg = SL.enclosedGas(s2.fill(), d2);
+  assert.ok(eg.total > 0 && eg.enclosed >= 0 && eg.enclosed <= eg.total);
+  for (const e of s2.fill()) assert.ok(Number.isFinite(e));
 });

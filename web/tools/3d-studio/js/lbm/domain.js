@@ -149,9 +149,11 @@ export async function buildDomain(g, h, opts = {}) {
       if (f === FLUID || f === INLET) { flags[idx] = INTERFACE; break; }
     }
   }
+  const shape = new Uint8Array(N);
+  for (let idx = 0; idx < N; idx++) shape[idx] = flags[idx] === WALL ? 0 : 1;
   prog(1, 'fertig');
   return {
-    dims, origin, h, N, flags, sensor, gates, inletDir, axis,
+    dims, origin, h, N, flags, sensor, shape, gates, inletDir, axis,
     runnerCells, biscuitCells, inletCells,
     net, runnerTris: runner, biscuitTris: bisc, field: fieldR,
     center: add(box.min, scale(box.size, 0.5))
