@@ -243,3 +243,100 @@ test('Kammer: unter Schwerkraft bleibt die ruhende Schmelze ruhig, und der wande
   assert.ok(eg.total > 0 && eg.enclosed >= 0 && eg.enclosed <= eg.total);
   for (const e of s2.fill()) assert.ok(Number.isFinite(e));
 });
+
+/* ── Der Lauf und die Farbe der Schmelze ─────────────────────── */
+test('Lauf: jedes Bild trägt die Geschwindigkeit — in Ruhe fast null, an der Kolbenschicht die des Kolbens; Skala und Farben der Fläche', async () => {
+  const { runSimulation } = await import(R + 'js/lbm/run.js');
+  const { speedScale, paintMelt, speedColorbar } = await import(R + 'js/lbm/paint.js');
+  const { surfaceNets } = await import(R + 'js/part/surfacenets.js');
+  const T = await import('three');
+  const spec = { d: 40, length: 80, fill: 0.4, outletW: 20, outletH: 10 };
+  const gLat = 2e-4;
+  const mk = () => { const d = SL.buildSleeveDomain(spec, 4); d.rho0 = SL.hydrostatic(d, gLat); return d; };
+
+  /* In Ruhe unter Schwerkraft: der Kern hält still, die Bilder sagen es. */
+  const d0 = mk();
+  const s0 = createSolver(d0, { g: [0, -gLat, 0] });
+  assert.equal(s0.velocity().length, 3 * d0.N, 'x, y, z je Zelle');
+  const rest = await runSimulation({ solver: s0, engine: 'cpu', domain: d0, stepsMax: 200, snapEvery: 100, uAt: () => [0, 0, 0] });
+  assert.equal(rest.snapshots[0].uMax, 0, 'vor dem Start ruht alles');
+  /* Was bleibt, sind Scheinströmungen an Front und Treppenwand — sie
+     wachsen mit g, und das g hier ist zwanzigmal das der Seite; weit
+     unter einem langsamen Kolben (0,02) müssen sie trotzdem liegen. */
+  for (const sn of rest.snapshots.slice(1)) assert.ok(sn.uMax < 0.01, 'in Ruhe bleibt es ruhig: ' + sn.uMax);
+  assert.ok(speedScale(rest.snapshots) < 0.008, 'auch das 99. Perzentil: ' + speedScale(rest.snapshots));
+
+  /* Der Kolben fährt mit u: die Kolbenschicht trägt genau u, nichts ist
+     schneller als die Klemme, Gas trägt nichts, 255 ist das Maximum. */
+  const d = mk();
+  const s = createSolver(d, { g: [0, -gLat, 0] });
+  const u = 0.02;
+  const run = await runSimulation({
+    solver: s, engine: 'cpu', domain: d, stepsMax: 400, snapEvery: 100,
+    uAt: () => [u, 0, 0], ipAt: step => 2 + Math.floor(u * step)
+  });
+  assert.equal(run.snapshots.length, 5);
+  const last = run.snapshots[4];
+  assert.ok(last.uMax >= u * 0.999 && last.uMax < 0.25, 'die Kolbenschicht schiebt mit u: ' + last.uMax);
+  assert.equal(last.fill.length, d.N);
+  assert.equal(last.speed.length, d.N);
+  let top = 0, melt = 0;
+  for (let i = 0; i < d.N; i++) {
+    if (last.fill[i] === 0) assert.equal(last.speed[i], 0, 'Gas trägt keine Geschwindigkeit');
+    else melt++;
+    top = Math.max(top, last.speed[i]);
+  }
+  assert.equal(top, 255, '255 ist das Maximum des Bildes');
+  assert.ok(melt > 100, 'Schmelzezellen: ' + melt);
+  const uScale = speedScale(run.snapshots);
+  assert.ok(uScale > 0 && uScale <= last.uMax, 'Skala ' + uScale + ' bis ' + last.uMax);
+  assert.ok(speedScale(run.snapshots, 1) >= uScale, 'das 100. Perzentil ist nicht kleiner');
+  assert.equal(speedScale([run.snapshots[0]]), 0, 'ohne Bewegung keine Skala');
+
+  /* Die Fläche des Bildes: je Ecke eine Farbe, gültig, und nicht eine für alle. */
+  const data = new Float32Array(d.N);
+  for (let i = 0; i < d.N; i++) data[i] = 0.5 - last.fill[i] / 255;
+  const tris = surfaceNets({ dims: d.dims, origin: d.origin, h: d.h, data }, 0);
+  assert.ok(tris.length > 0);
+  const mesh = new T.Mesh(new T.BufferGeometry());
+  mesh.geometry.setAttribute('position', new T.BufferAttribute(new Float32Array(tris), 3));
+  paintMelt(mesh, last, d, uScale);
+  const col = mesh.geometry.getAttribute('color');
+  assert.equal(col.count, tris.length / 3, 'je Ecke eine Farbe');
+  const seen = new Set();
+  for (let v = 0; v < col.count; v++) {
+    for (let c = 0; c < 3; c++) { const x = col.array[3 * v + c]; assert.ok(x >= 0 && x <= 1, 'Farbe ' + x); }
+    seen.add(Math.round(col.array[3 * v] * 20) + ',' + Math.round(col.array[3 * v + 1] * 20) + ',' + Math.round(col.array[3 * v + 2] * 20));
+  }
+  assert.ok(seen.size > 3, 'die Front ist nicht einfarbig: ' + seen.size + ' Farben');
+  /* Noch einmal mit demselben Netz: die Farben werden an Ort und Stelle nachgezogen. */
+  paintMelt(mesh, run.snapshots[0], d, uScale);
+  assert.equal(mesh.geometry.getAttribute('color'), col, 'dasselbe Attribut');
+  const c0 = col.array.slice(0, 3);
+  for (let v = 1; v < col.count; v++) for (let c = 0; c < 3; c++) assert.equal(col.array[3 * v + c], c0[c], 'in Ruhe alles eine Farbe');
+  const bar = speedColorbar(1.234, 'bis hier');
+  assert.match(bar.ticks[0], /1,23 m\/s/);
+  assert.equal(bar.ticks[2], '0 m/s');
+  assert.match(bar.extra, /bis hier/);
+  assert.ok(bar.stops.length > 4);
+
+  /* Der Maximumfilter: eine schnelle Zelle färbt ihre 26 Nachbarn mit,
+     nicht mehr; am Rand geht nichts verloren. */
+  const { dilate } = await import(R + 'js/lbm/paint.js');
+  const dims = [5, 4, 3];
+  const sp = new Uint8Array(60);
+  const at = (i, j, k) => (k * 4 + j) * 5 + i;
+  sp[at(2, 1, 1)] = 200; sp[at(0, 0, 0)] = 90; sp[at(4, 3, 2)] = 50;
+  const dl = dilate(sp, dims);
+  let n200 = 0, n90 = 0, n50 = 0;
+  for (let k = 0; k < 3; k++) for (let j = 0; j < 4; j++) for (let i = 0; i < 5; i++) {
+    const v = dl[at(i, j, k)];
+    const near = Math.abs(i - 2) <= 1 && Math.abs(j - 1) <= 1 && Math.abs(k - 1) <= 1;
+    if (near) assert.equal(v, 200, 'Nachbar von (2,1,1): ' + [i, j, k]);
+    if (v === 200) n200++; else if (v === 90) n90++; else if (v === 50) n50++; else assert.equal(v, 0);
+  }
+  assert.equal(n200, 27);
+  assert.equal(n90, 4, 'die Ecke (0,0,0) füllt ihre 2×2×2 — bis auf die vier, die schon der 200 gehören');
+  assert.equal(n50, 6, 'die Ecke (4,3,2) ebenso, zwei gehören der 200');
+  assert.equal(sp[at(2, 1, 1)], 200, 'das Original bleibt');
+});

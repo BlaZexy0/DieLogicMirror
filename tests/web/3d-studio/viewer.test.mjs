@@ -1702,6 +1702,14 @@ test('Angussfüllung: Beispiel, Kurve, ein Lauf in JavaScript bis zur Ankunft, R
   assert.match(d9.getElementById('result-facts').innerHTML, /Anschnitt k\d+/);
   assert.match(d9.getElementById('result-facts').innerHTML, /JavaScript/);
   assert.ok(v.meltMesh.visible, 'die Schmelze ist zu sehen');
+  /* … nach Geschwindigkeit gefärbt, mit Skala in m/s. */
+  assert.ok(r.uScale > 0 && r.vScale > 0.05 && r.vScale < 100, 'Skala der Geschwindigkeit: ' + r.vScale + ' m/s');
+  assert.ok(r.snapshots[r.snapshots.length - 1].speed instanceof Uint8Array, 'jedes Bild trägt die Geschwindigkeit');
+  const meltCol = v.meltMesh.geometry.getAttribute('color');
+  assert.ok(meltCol && meltCol.count === v.meltMesh.geometry.getAttribute('position').count, 'die Schmelze trägt je Ecke eine Farbe');
+  assert.ok(d9.getElementById('colorbar').classList.contains('on'), 'mit Skala');
+  assert.match(d9.getElementById('cb-title').textContent, /Geschwindigkeit/);
+  assert.match(d9.getElementById('cb-ticks').innerHTML, /m\/s/);
   assert.equal(d9.getElementById('t-slider').max, String(r.snapshots.length - 1));
   /* Regler zurück: am Anfang steht die Schmelze im Pressrest, wenig im Anguss. */
   const sl = d9.getElementById('t-slider');
@@ -1714,6 +1722,11 @@ test('Angussfüllung: Beispiel, Kurve, ein Lauf in JavaScript bis zur Ankunft, R
   assert.equal(v.state.show, 'ankunft');
   assert.ok(v.runnerMesh.geometry.getAttribute('color'), 'je Ecke eine Farbe');
   assert.ok(d9.getElementById('colorbar').classList.contains('on'), 'mit Skala');
+  assert.match(d9.getElementById('cb-title').textContent, /Ankunft/, 'die Skala gehört jetzt der Ankunft');
+  d9.getElementById('show-seg').querySelectorAll('button').find(b => b.dataset.value === 'anguss').dispatch('click');
+  assert.ok(!d9.getElementById('colorbar').classList.contains('on'), 'nur Anguss: keine Skala');
+  d9.getElementById('show-seg').querySelectorAll('button').find(b => b.dataset.value === 'schmelze').dispatch('click');
+  assert.match(d9.getElementById('cb-title').textContent, /Geschwindigkeit/, 'zurück zur Schmelze: die Geschwindigkeit');
   /* Prozess ändern rechnet die Kurve neu und verwirft das Ergebnis. */
   const cl = d9.getElementById('chamber-len');
   cl.value = '600';
@@ -1762,6 +1775,19 @@ test('Kammerfüllung: Kammer und Kurve einstellen, ein Lauf in JavaScript bis Ka
   assert.match(d10.getElementById('result-facts').innerHTML, /Kammer voll/);
   assert.match(d10.getElementById('result-facts').innerHTML, /Luft/);
   assert.ok(v.meltMesh.visible, 'die Schmelze ist zu sehen');
+  /* … nach Geschwindigkeit gefärbt: die Skala des Laufs liegt in der
+     Größenordnung des Kolbens, die Leiste zeigt sie, „Kammer" nimmt sie weg. */
+  assert.ok(r.vScale > 0.1 && r.vScale < 20, 'Skala der Geschwindigkeit: ' + r.vScale + ' m/s');
+  const meltCol = v.meltMesh.geometry.getAttribute('color');
+  assert.ok(meltCol && meltCol.count === v.meltMesh.geometry.getAttribute('position').count, 'die Schmelze trägt je Ecke eine Farbe');
+  assert.ok(d10.getElementById('colorbar').classList.contains('on'), 'mit Skala');
+  assert.match(d10.getElementById('cb-title').textContent, /Geschwindigkeit/);
+  const showBtn = val => d10.getElementById('show-seg').querySelectorAll('button').find(b => b.dataset.value === val);
+  showBtn('kammer').dispatch('click');
+  assert.equal(v.meltMesh.visible, false);
+  assert.ok(!d10.getElementById('colorbar').classList.contains('on'), 'ohne Schmelze keine Skala');
+  showBtn('schmelze').dispatch('click');
+  assert.ok(v.meltMesh.visible && d10.getElementById('colorbar').classList.contains('on'));
   const sl = d10.getElementById('t-slider');
   assert.equal(sl.max, String(r.snapshots.length - 1));
   sl.value = '0';

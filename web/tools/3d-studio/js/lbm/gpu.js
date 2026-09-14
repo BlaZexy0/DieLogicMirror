@@ -325,6 +325,7 @@ export const wgslSource = (nx, ny) => wgsl(nx, ny);
  * js/lbm/fslbm.js, nur dass Lesen asynchron ist:
  *   run(uIns, firstStep)   n Schritte mit den Kolbengeschwindigkeiten uIns[k] (je [x,y,z])
  *   readFill()             Float32Array Füllstand je Zelle
+ *   readVelocity()         Float32Array Geschwindigkeit je Zelle (N-mal x, dann y, dann z)
  *   readArrival()          Uint32Array Ankunftsschritt je Zelle
  *   readGates()            Uint32Array Ankunft je Melder
  *   dispose()
@@ -463,6 +464,7 @@ export async function createGpuSolver(domain, params = {}) {
     },
     /* Nach dem letzten Schritt hält der Puffer des NÄCHSTEN Eingangs die neuesten Werte. */
     readFill: () => read(cfBufs[parity], FF.EPS * N * 4, N * 4, Float32Array),
+    readVelocity: () => read(cfBufs[parity], FF.UX * N * 4, 3 * N * 4, Float32Array),
     readArrival: () => read(bufU, FU.ARRIVAL * N * 4, N * 4, Uint32Array),
     readFlags: () => read(bufU, FU.FLAG * N * 4, N * 4, Uint32Array),
     readGates: () => read(bufG, 0, gates.byteLength, Uint32Array),

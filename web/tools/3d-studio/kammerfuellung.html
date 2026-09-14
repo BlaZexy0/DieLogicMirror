@@ -110,7 +110,7 @@
 
     <h2>Darstellung</h2>
     <div class="seg" id="show-seg">
-      <button type="button" data-value="schmelze" class="active" title="Die Schmelze zur Zeit des Reglers, die Kammer durchscheinend">Schmelze</button>
+      <button type="button" data-value="schmelze" class="active" title="Die Schmelze zur Zeit des Reglers, nach Geschwindigkeit gefärbt, die Kammer durchscheinend">Schmelze</button>
       <button type="button" data-value="kammer" title="Nur Kammer, Kolben und Laufkanal">Kammer</button>
     </div>
     <div class="row disabled" id="t-row">
@@ -129,6 +129,14 @@
   <div id="viewport">
     <div id="status">
       <b>Leer</b>: drehen &nbsp;·&nbsp; <b>rechts</b>: verschieben &nbsp;·&nbsp; <b>Rad</b>: zoomen
+    </div>
+    <div class="colorbar" id="colorbar">
+      <div class="cb-title" id="cb-title"></div>
+      <div class="cb-body">
+        <div class="cb-scale" id="cb-scale"></div>
+        <div class="cb-ticks" id="cb-ticks"></div>
+      </div>
+      <div class="cb-extra" id="cb-extra"></div>
     </div>
     <div id="busy"></div>
   </div>

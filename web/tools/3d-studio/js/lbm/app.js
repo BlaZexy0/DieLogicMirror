@@ -12,7 +12,8 @@
    Schritte in Paketen mit Bildern des Füllstands dazwischen, bis alle
    Anschnitte gemeldet sind oder die Kurve endet. Danach: Ankunft je
    Anschnitt neben der 1D-Rechnung des Angussdesigners, der Füllstand zu
-   jeder Zeit am Regler, der Anguss nach Ankunft gefärbt. */
+   jeder Zeit am Regler — die Schmelze nach Geschwindigkeit gefärbt
+   (js/lbm/paint.js) —, der Anguss nach Ankunft. */
 
 import * as T from 'three';
 import { initScene } from '../scene.js';
@@ -33,6 +34,7 @@ import { pistonCurve, minRunnerArea, latticeUnits } from './piston.js';
 import { createSolver } from './fslbm.js';
 import { createGpuSolver, hasWebGPU } from './gpu.js';
 import { runSimulation } from './run.js';
+import { paintMelt, speedScale, speedColorbar } from './paint.js';
 import { NEVER } from './lattice.js';
 
 const container = $('viewport');
@@ -48,7 +50,7 @@ const state = {
   proc: { ...F.DEFAULT_PROCESS },
   h: 2, timeline: null, flow: null, flowShown: null, piston: null,
   domain: null, units: null,
-  result: null,          // { snapshots: [{ t, fill: Uint8Array }], arrival, gates, engine, steps, ms, filled, reason }
+  result: null,          // { snapshots: [{ t, fill, speed, uMax }], arrival, gates, engine, steps, ms, filled, reason, uScale, vScale }
   running: false, cancel: false,
   show: 'schmelze', frame: 0, playing: null, opacity: 0.3,
   forceCpu: false, ready: false
@@ -72,8 +74,8 @@ const biscMat = new T.MeshStandardMaterial({
 });
 const biscMesh = new T.Mesh(new T.BufferGeometry(), biscMat);
 group.add(biscMesh);
-/* Die Schmelze: warm und metallisch, deckend. */
-const meltMat = new T.MeshStandardMaterial({ color: 0xd8862a, roughness: 0.3, metalness: 0.5, side: T.DoubleSide, flatShading: true });
+/* Die Schmelze: deckend, je Ecke nach Geschwindigkeit gefärbt (js/lbm/paint.js). */
+const meltMat = new T.MeshStandardMaterial({ vertexColors: true, color: 0xffffff, roughness: 0.55, metalness: 0.05, side: T.DoubleSide, flatShading: true });
 const meltMesh = new T.Mesh(new T.BufferGeometry(), meltMat);
 meltMesh.visible = false;
 group.add(meltMesh);
@@ -245,6 +247,12 @@ async function simulate() {
       snapshots, arrival, gates, engine, steps: step, ms: performance.now() - t0, reason,
       filled: snapshots[snapshots.length - 1].filled, dt: units.dt, tau0: units.tau0, N: domain.N
     };
+    /* Die Skala aus den Bildern bis zur ersten Ankunft — danach
+       herrschen die Anschnitte, und der Anguss wäre einfarbig blau. */
+    const first = Math.min(...gateDone.filter(a => a !== NEVER), Infinity);
+    const before = snapshots.filter(s => s.step <= first);
+    state.result.uScale = speedScale(before.length > 1 ? before : snapshots);
+    state.result.vScale = state.result.uScale * units.dx / units.dt;
     colourByArrival();
     state.frame = snapshots.length - 1;
     $('t-slider').max = String(snapshots.length - 1);
@@ -252,7 +260,7 @@ async function simulate() {
     $('t-row').classList.remove('disabled');
     $('play').disabled = false;
     updateResultFacts();
-    showFrame(state.frame);
+    applyShow();
   } catch (err) {
     $('run-note').textContent = 'Die Rechnung ist gescheitert: ' + (err && err.message || err);
     $('run-note').className = 'run-note stale';
@@ -288,7 +296,8 @@ function updateResultFacts() {
 /* ── Anzeige ─────────────────────────────────────────────────── */
 
 /* Die Schmelze zu einem Bild: Fläche des halben Füllstands aus dem
-   Gitter, Stahl zählt als leer, damit die Fläche an der Wand zugeht. */
+   Gitter, Stahl zählt als leer, damit die Fläche an der Wand zugeht;
+   je Ecke die Geschwindigkeit als Farbe. */
 function showFrame(k) {
   const r = state.result;
   if (!r || !state.domain) return;
@@ -301,6 +310,7 @@ function showFrame(k) {
   for (let i = 0; i < d.N; i++) data[i] = 0.5 - snap.fill[i] / 255;
   const tris = surfaceNets({ dims: d.dims, origin: d.origin, h: d.h, data }, 0);
   setTris(meltMesh, tris);
+  paintMelt(meltMesh, snap, d, r.uScale);
   meltMesh.visible = tris.length > 0;
   view.invalidate();
 }
@@ -354,7 +364,8 @@ function applyShow() {
       ticks: [fmt(r.tMax * 1000, 1) + ' ms', fmt(r.tMax * 500, 1) + ' ms', '0 ms'],
       extra: '<span class="chip" style="background:rgb(184,194,199)"></span> nie erreicht'
     });
-  } else colorbar(null);
+  } else if (state.show === 'schmelze' && r) colorbar(speedColorbar(r.vScale, 'bis zur ersten Ankunft'));
+  else colorbar(null);
   if (state.show === 'schmelze' && r) showFrame(state.frame);
   else meltMesh.visible = false;
   view.invalidate();

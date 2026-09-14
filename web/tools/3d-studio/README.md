@@ -1058,8 +1058,10 @@ Safari) rechnet JavaScript — Minuten statt Sekunden; die Seite sagt es.
 ### Anzeige und Zahlen
 
 Die Schmelze als Fläche des halben Füllstands (`js/part/surfacenets.js`)
-zur Zeit des Reglers, mit Abspielen; der Anguss durchscheinend oder nach
-der Ankunft der Front gefärbt (Turbo, nie erreicht grau). Je Anschnitt
+zur Zeit des Reglers, mit Abspielen, je Ecke nach ihrer Geschwindigkeit
+gefärbt (Turbo, Skala in m/s — `js/lbm/paint.js`, siehe unten bei der
+Kammerfüllung); der Anguss durchscheinend oder nach der Ankunft der
+Front gefärbt (Turbo, nie erreicht grau). Je Anschnitt
 die Ankunft der Rechnung neben der 1D-Rechnung, dazu Füllstand am Ende,
 Schritte, Zellen, Rechenzeit, Zeitschritt und τ. Die Zeiten zählen ab
 „Kammer voll"; die Rechnung endet, wenn alle Anschnitte gemeldet sind
@@ -1129,6 +1131,26 @@ schneller, dort klemmt der Kern die Geschwindigkeit; die erste Phase
 dauert deshalb je nach v₂ Zehntausende Schritte. Der Vorschlag für die
 Zellkante zielt auf 150 000 Zellen auf der Grafikkarte (dreißig Zellen
 über den Durchmesser bei 90 mm), 30 000 in JavaScript.
+
+**Die Schmelze nach Geschwindigkeit** (`js/lbm/paint.js`, in beiden
+Seiten): jedes Bild des Laufs trägt neben dem Füllstand den Betrag der
+Geschwindigkeit je Schmelzezelle — als Byte auf das Maximum des Bildes
+bezogen, so bleibt ein Bild zwei Byte je Zelle, und die Skala muss beim
+Rechnen noch nicht bekannt sein (`readVelocity` im GPU-Kern,
+`velocity()` im JavaScript-Kern, `speedBytes` in `run.js`). Die Fläche
+bekommt je Ecke die Geschwindigkeit der acht umliegenden Gitterpunkte,
+trilinear gewichtet, Gaszellen ausgenommen — und zwar die **schnellste
+Schmelze im Umkreis einer Zelle** (Maximumfilter 3×3×3, `dilate`): an
+der Wand haftet die Schmelze, und im vollen Kanal ist die Wand die
+sichtbare Fläche; mit der Geschwindigkeit der Ecke selbst bliebe der
+Anguss einfarbig blau, wie schnell er innen auch fließt. Die Skala gilt für den
+ganzen Lauf, damit die Bilder vergleichbar bleiben; ihr Ende ist das
+99. Perzentil (`speedScale`) über die Bilder **bis zur ersten Ankunft**
+— im Anguss am ersten Anschnitt, in der Kammer am Laufkanal. Nicht das
+Maximum (das wären die paar Zellen an der Engstelle) und nicht die
+Bilder danach: dann herrschen Anschnitte bzw. Laufkanal mit dem Zehn-
+fachen, und der ganze Weg davor wäre einfarbig blau. Was schneller ist,
+bleibt rot; die Leiste sagt es.
 
 ## Überlaufdesigner (`ueberlauf.html`)
 

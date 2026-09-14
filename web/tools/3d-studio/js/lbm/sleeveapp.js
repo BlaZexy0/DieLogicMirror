@@ -9,12 +9,12 @@
    Kolben, js/lbm/run.js fährt den Lauf). Heraus kommt: wann die
    Schmelze den Laufkanal erreicht („Kammer voll", gegen die Kurve), wie
    viel Luft die Welle einschließt, und der Füllstand zu jeder Zeit am
-   Regler. */
+   Regler, die Schmelze nach Geschwindigkeit gefärbt (js/lbm/paint.js). */
 
 import * as T from 'three';
 import { initScene } from '../scene.js';
 import { mountViewBar } from '../ui/viewbar.js';
-import { $, fmt, fmtPlain, facts, segButtons, slider, numberInput } from '../ui/controls.js';
+import { $, fmt, fmtPlain, facts, segButtons, slider, numberInput, colorbar } from '../ui/controls.js';
 import { setTris } from '../ui/common.js';
 import { surfaceNets } from '../part/surfacenets.js';
 import * as F from '../runner/flow.js';
@@ -27,6 +27,7 @@ import { latticeUnits } from './piston.js';
 import { createSolver } from './fslbm.js';
 import { createGpuSolver, hasWebGPU } from './gpu.js';
 import { runSimulation } from './run.js';
+import { paintMelt, speedScale, speedColorbar } from './paint.js';
 import { NEVER } from './lattice.js';
 
 const container = $('viewport');
@@ -60,7 +61,8 @@ group.add(plungerMesh);
 const outletMat = new T.MeshStandardMaterial({ color: 0x008c82, roughness: 0.5, metalness: 0.05, side: T.DoubleSide });
 const outletMesh = new T.Mesh(new T.BufferGeometry(), outletMat);
 group.add(outletMesh);
-const meltMat = new T.MeshStandardMaterial({ color: 0xd8862a, roughness: 0.3, metalness: 0.5, side: T.DoubleSide, flatShading: true });
+/* Die Schmelze: deckend, je Ecke nach Geschwindigkeit gefärbt (js/lbm/paint.js). */
+const meltMat = new T.MeshStandardMaterial({ vertexColors: true, color: 0xffffff, roughness: 0.55, metalness: 0.05, side: T.DoubleSide, flatShading: true });
 const meltMesh = new T.Mesh(new T.BufferGeometry(), meltMat);
 meltMesh.visible = false;
 group.add(meltMesh);
@@ -194,6 +196,7 @@ function clearResult() {
   facts('result-facts', []);
   $('run-note').textContent = '';
   $('run-note').className = 'run-note';
+  colorbar(null);
   view.invalidate();
 }
 
@@ -253,13 +256,18 @@ async function simulate() {
       reason: run.reason === 'Schrittgrenze erreicht' ? 'der Kolben ist am Ende der Kurve' : run.reason,
       full, airMax, dt: units.dt, tau0: units.tau0
     };
+    /* Die Skala aus den Bildern bis Kammer voll — danach herrscht der
+       Laufkanal, und die Welle wäre einfarbig blau. */
+    const before = snapshots.filter(s => gateDone[0] === NEVER || s.step <= gateDone[0]);
+    state.result.uScale = speedScale(before.length > 1 ? before : snapshots);
+    state.result.vScale = state.result.uScale * units.dx / units.dt;
     state.frame = snapshots.length - 1;
     $('t-slider').max = String(snapshots.length - 1);
     $('t-slider').value = String(state.frame);
     $('t-row').classList.remove('disabled');
     $('play').disabled = false;
     updateResultFacts();
-    showFrame(state.frame);
+    applyShow();
   } catch (err) {
     $('run-note').textContent = 'Die Rechnung ist gescheitert: ' + (err && err.message || err);
     $('run-note').className = 'run-note stale';
@@ -307,6 +315,7 @@ function showFrame(k) {
   for (let i = 0; i < d.N; i++) data[i] = 0.5 - snap.fill[i] / 255;
   const tris = surfaceNets({ dims: d.dims, origin: d.origin, h: d.h, data }, 0);
   setTris(meltMesh, tris);
+  paintMelt(meltMesh, snap, d, r.uScale);
   meltMesh.visible = tris.length > 0;
   view.invalidate();
 }
@@ -315,8 +324,8 @@ function applyShow() {
   sleeveMat.transparent = state.opacity < 1;
   sleeveMat.depthWrite = state.opacity >= 1;
   sleeveMat.needsUpdate = true;
-  if (state.show === 'schmelze' && state.result) showFrame(state.frame);
-  else meltMesh.visible = false;
+  if (state.show === 'schmelze' && state.result) { showFrame(state.frame); colorbar(speedColorbar(state.result.vScale, 'bis Kammer voll')); }
+  else { meltMesh.visible = false; colorbar(null); }
   view.invalidate();
 }
 function stopPlay() {

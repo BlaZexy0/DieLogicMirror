@@ -354,6 +354,8 @@ export function createSolver(domain, params = {}) {
     },
     /** Füllstand je Zelle (0 … 1). */
     fill() { return cfO.subarray(EPS, EPS + N); },
+    /** Geschwindigkeit je Zelle in Gittereinheiten: N-mal x, dann y, dann z. */
+    velocity() { return cfO.subarray(UX, UX + 3 * N); },
     /** Ankunftsschritt je Zelle (NEVER = nie). */
     arrival() { return cu.subarray(ARRIVAL, ARRIVAL + N); },
     flags() { return cu.subarray(FL, FL + N); },
