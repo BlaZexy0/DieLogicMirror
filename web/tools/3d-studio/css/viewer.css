@@ -42,10 +42,26 @@ aside h2:first-child { margin-top: 4px; }
   font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
   margin: 0; font-weight: 700;
 }
-.group-head .group-title { cursor: pointer; padding: 4px 2px; border-radius: 4px; min-width: 0; }
+.group-head .group-line { display: flex; align-items: center; gap: 7px; flex: 1 0 100%; min-width: 0; }
+.group-head .group-title {
+  cursor: pointer; padding: 4px 2px; border-radius: 4px; min-width: 0; flex: 1 1 auto;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .group-head .group-title:hover { color: var(--primary-deep); background: var(--pale); }
 .group-head.hl { background: var(--pale); box-shadow: inset 3px 0 0 var(--primary); }
 .group-head.hl h3 { color: var(--primary-deep); }
+/* Eine Gruppe zur Zeit aufgeklappt: der Kopf trägt Pfeil und Zahl der
+   Teile und klappt beim Tippen; die Zeilen der anderen bleiben im Baum,
+   nur unsichtbar. */
+.group-head { cursor: pointer; }
+.group-head.folded { margin-bottom: 0; }
+.group-head .fold-btn {
+  border: 0; background: none; color: var(--muted-light); width: 22px; height: 24px; padding: 0;
+  font-size: .95rem; line-height: 1; cursor: pointer; border-radius: 5px; flex-shrink: 0; font-family: var(--sans);
+}
+.group-head .fold-btn:hover { background: var(--pale); color: var(--primary-deep); }
+.group-head .count { font-size: .66rem; color: var(--muted-light); white-space: nowrap; flex-shrink: 0; }
+.group-body.folded { display: none; }
 /* Glühbirne als Gruppenschalter: leuchtet, solange etwas sichtbar ist. */
 .bulb-btn {
   border: 1px solid var(--border); background: var(--surface2); border-radius: 6px;
@@ -100,7 +116,7 @@ aside h2:first-child { margin-top: 4px; }
 .swatch:hover .dot { border-color: var(--primary); box-shadow: 0 0 0 2px var(--pale); }
 
 /* Bearbeitbare Baugruppe: „⋯" je Kopf und Zeile, Menü darunter. */
-.group-head .side-tag { font-size: .66rem; color: var(--muted-light); margin: 0 auto 0 0; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.group-head .side-tag { font-size: .66rem; color: var(--muted-light); margin: 0; text-transform: none; letter-spacing: 0; white-space: nowrap; flex-shrink: 0; }
 .row-btn {
   border: 1px solid var(--border); background: var(--surface2); border-radius: 5px;
   padding: 0 5px; min-width: 20px; line-height: 1.35; font-size: .78rem; cursor: pointer;

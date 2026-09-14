@@ -12,6 +12,16 @@
    Auswahlfeld in JEDER Zeile — als Heizkühlplan in der Halle braucht das
    niemand, es nahm nur Platz und Aufmerksamkeit.
 
+   Aufgeklappt ist EINE Gruppe zur Zeit: ihre Zeilen stehen unter dem
+   Kopf, die der anderen Gruppen bleiben im Baum, nur unsichtbar — eine
+   Form hat schnell dreißig Teile, und wer zwischen den Gruppen wechseln
+   will, soll nicht durch alle Zeilen rollen. Ein Tipp auf den Kopf (den
+   Pfeil, die Zahl der Teile, die freie Fläche) klappt die Gruppe auf und
+   die vorige zu, ein zweiter Tipp klappt sie zu. Glühbirne, Name und „⋯"
+   tun weiter ihr Eigenes. Eine NEUE Hervorhebung zieht die Gruppe des
+   Teils auf, damit die Zeile zu sehen ist; wer sie danach zuklappt,
+   bekommt sie nicht wieder aufgedrängt.
+
    Hervorheben ist Sache des Viewers (js/die.js): er sagt der Leiste mit
    `highlighted(id)`, was hervorgehoben ist, und bekommt mit
    `onHighlight(ids)` die Teile, die der Tipp meint. Die Leiste wird nach
@@ -86,6 +96,9 @@ export function mountAssemblySidebar(el, asm, {
   onChanged, onAddFiles, targetSelect, onHighlight = () => {}, highlighted = () => false
 }) {
   let openMenu = null;
+  let openGroup;                   // Schlüssel der aufgeklappten Gruppe; null = alle zu
+  let lastHl = '';                 // die Hervorhebung beim letzten Zeichnen
+  const firstWithItems = () => { const g = asm.groups.find(x => asm.items.some(i => i.group === x.key)) || asm.groups[0]; return g ? g.key : null; };
   const closeMenus = () => { if (openMenu) { openMenu.classList.add('hidden'); openMenu = null; } };
   const toggleMenu = menu => {
     const wasOpen = openMenu === menu;
@@ -101,13 +114,23 @@ export function mountAssemblySidebar(el, asm, {
     const refreshers = [];
     const refreshAll = () => { for (const f of refreshers) f(); };
 
+    if (openGroup === undefined || (openGroup !== null && !asm.groups.some(g => g.key === openGroup))) openGroup = firstWithItems();
+    const hlNow = asm.items.filter(i => highlighted(i.id)).map(i => i.id).sort().join(' ');
+    if (hlNow !== lastHl) {
+      lastHl = hlNow;
+      if (hlNow && !asm.items.some(i => i.group === openGroup && highlighted(i.id))) openGroup = asm.items.find(i => highlighted(i.id)).group;
+    }
+
     for (const g of asm.groups) {
       const mine = asm.items.filter(i => i.group === g.key);
       const allHl = mine.length > 0 && mine.every(i => highlighted(i.id));
+      const open = g.key === openGroup;
 
       const head = document.createElement('div');
-      head.className = 'group-head' + (allHl ? ' hl' : '');
+      head.className = 'group-head' + (allHl ? ' hl' : '') + (open ? '' : ' folded');
       head.setAttribute('data-group', g.key);
+      const fold = button('fold-btn', open ? '&#9662;' : '&#9656;', g.title + (open ? ' zuklappen' : ' aufklappen'), 'fold');
+      fold.setAttribute('aria-expanded', open ? 'true' : 'false');
       const bulb = button('bulb-btn', BULB, g.title + ' ein- oder ausblenden');
       bulb.setAttribute('aria-pressed', 'true');
       const title = document.createElement('h3');
@@ -117,8 +140,15 @@ export function mountAssemblySidebar(el, asm, {
       title.setAttribute('data-act', 'hl-group');
       const tag = span('side-tag', SIDE_LABEL[g.side]
         + (g.slide ? ' · Schieber ' + (g.slide.sign > 0 ? '+' : '−') + g.slide.axis.toUpperCase() : ''));
+      const count = span('count', '');
+      count.title = 'Tippen: ' + g.title + (open ? ' zuklappen' : ' aufklappen');
       const more = button('row-btn more', '&#8943;', 'Umbenennen, STL laden, Farbe, entfernen', 'group-menu');
-      head.append(bulb, title, tag, more);
+      /* Eine Zeile, die nicht umbricht — der Name wird notfalls gekürzt;
+         das Menü darunter ist die zweite Zeile des Kopfes. */
+      const line = document.createElement('div');
+      line.className = 'group-line';
+      line.append(fold, bulb, title, tag, count, more);
+      head.appendChild(line);
 
       /* Das Menü der Gruppe — zu, bis „⋯" es öffnet. */
       const menu = document.createElement('div');
@@ -140,20 +170,35 @@ export function mountAssemblySidebar(el, asm, {
       head.appendChild(menu);
       el.appendChild(head);
 
-      const boxes = mine.map(it => addRow(it, refreshAll));
+      /* Die Zeilen der Gruppe — zu, wenn eine andere aufgeklappt ist. */
+      const body = document.createElement('div');
+      body.className = 'group-body' + (open ? '' : ' folded');
+      body.setAttribute('data-body', g.key);
+      el.appendChild(body);
+      const boxes = mine.map(it => addRow(it, refreshAll, body));
       if (!mine.length) {
         const empty = document.createElement('div');
         empty.className = 'comp-empty';
         empty.textContent = 'keine Teile — über ⋯ laden oder ein Teil hierher verschieben';
-        el.appendChild(empty);
+        body.appendChild(empty);
       }
 
       const refresh = () => {
-        const on = !boxes.length || boxes.some(b => b.checked);
+        const shown = boxes.filter(b => b.checked).length;
+        const on = !boxes.length || shown > 0;
         bulb.classList.toggle('on', on);
         bulb.setAttribute('aria-pressed', on ? 'true' : 'false');
+        count.textContent = !mine.length ? 'leer'
+          : mine.length + (mine.length === 1 ? ' Teil' : ' Teile') + (shown < mine.length ? ' · ' + (mine.length - shown) + ' aus' : '');
       };
       refreshers.push(refresh);
+      const toggleFold = () => { openGroup = open ? null : g.key; render(); };
+      fold.addEventListener('click', e => { e.stopPropagation(); toggleFold(); });
+      head.addEventListener('click', e => {
+        const t = e.target;
+        if (t && t.closest && t.closest('button, .group-title, .row-menu, input, label, .inline-edit')) return;
+        toggleFold();
+      });
       bulb.addEventListener('click', () => {
         const show = !boxes.some(b => b.checked);
         for (const b of boxes) { b.checked = show; asm.setVisible(b.getAttribute('data-comp'), show); }
@@ -181,7 +226,7 @@ export function mountAssemblySidebar(el, asm, {
     if (dot) dot.style.background = it.color;
   }
 
-  function addRow(it, refreshAll) {
+  function addRow(it, refreshAll, parent) {
     const row = document.createElement('div');
     row.className = 'comp-row' + (highlighted(it.id) ? ' hl' : '');
     row.setAttribute('data-item', it.id);
@@ -227,7 +272,7 @@ export function mountAssemblySidebar(el, asm, {
     const del = button('menu-btn danger', '&times; Entfernen', 'Teil entfernen', 'remove');
     menu.append(ren, moveWrap, del);
     row.appendChild(menu);
-    el.appendChild(row);
+    parent.appendChild(row);
 
     cb.addEventListener('change', () => { asm.setVisible(it.id, cb.checked); refreshAll(); onChanged({ visibility: true }); });
     colorIn.addEventListener('input', () => { if (asm.setColor(it.id, colorIn.value)) { paintDot(it); onChanged({ color: true }); } });

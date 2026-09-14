@@ -716,6 +716,71 @@ test('Formaufbau: STL laden, umbenennen, verschieben, entfernen, Gruppen anlegen
   assert.ok(!asm.groups.some(x => x.key === g.key), 'die leere Gruppe ist weg');
 });
 
+test('Formaufbau: eine Gruppe zur Zeit aufgeklappt — der Kopf schaltet, die Zeilen der anderen bleiben da, eine Hervorhebung zieht ihre Gruppe auf', async () => {
+  const { root } = await legacyDie();
+  globalThis.__TEST_GLTF = root;
+  const { doc: d } = buildDocument(read('form.html'));
+  installGlobals(d);
+  const mod = await import('../../../web/tools/3d-studio/js/die.js?variante=klappen');
+  await new Promise(r => setTimeout(r, 30));
+  const v = mod.__viewer;
+  const asm = v.asm;
+  const list = d.getElementById('components');
+  const headOf = key => list.querySelectorAll('.group-head').find(h => h.getAttribute('data-group') === key);
+  const rowOf = id => list.querySelectorAll('[data-item]').find(r => r.getAttribute('data-item') === id);
+  const openKeys = () => list.querySelectorAll('.group-body').filter(b => !b.classList.contains('folded')).map(b => b.getAttribute('data-body'));
+  const first = asm.groups.find(g => asm.items.some(i => i.group === g.key)).key;
+  assert.deepEqual(openKeys(), [first], 'anfangs ist die erste Gruppe mit Teilen auf, alle anderen zu');
+  assert.equal(list.querySelectorAll('.group-body').length, asm.groups.length, 'je Gruppe ein Zeilenblock');
+  assert.equal(list.querySelectorAll('[data-comp]').length, asm.items.length, 'die Zeilen der zugeklappten Gruppen sind da, nur nicht zu sehen');
+  assert.ok(headOf('coolFix').classList.contains('folded') && !headOf(first).classList.contains('folded'), 'der Kopf zeigt den Zustand');
+  assert.equal(headOf('coolFix').querySelector('[data-act="fold"]').getAttribute('aria-expanded'), 'false');
+  assert.match(headOf('coolFix').querySelector('.count').textContent, /^2 Teile$/, 'der Kopf zählt die Teile');
+  const emptyKey = asm.groups.find(g => !asm.items.some(i => i.group === g.key)).key;
+  assert.equal(headOf(emptyKey).querySelector('.count').textContent, 'leer', 'die leere Gruppe sagt es');
+
+  /* Der Pfeil klappt auf und die vorige zu; ein zweiter Tipp klappt zu. */
+  headOf('coolFix').querySelector('[data-act="fold"]').dispatch('click');
+  assert.deepEqual(openKeys(), ['coolFix'], 'ein Tipp klappt die Gruppe auf und die vorige zu');
+  assert.equal(headOf('coolFix').querySelector('[data-act="fold"]').getAttribute('aria-expanded'), 'true');
+  headOf('coolFix').querySelector('[data-act="fold"]').dispatch('click');
+  assert.deepEqual(openKeys(), [], 'ein zweiter Tipp klappt sie zu — alles kompakt');
+
+  /* Die freie Fläche des Kopfes und die Zahl tun es auch — nicht aber
+     Glühbirne, Name und „⋯", die ihr Eigenes tun. */
+  headOf('mov').dispatch('click');
+  assert.deepEqual(openKeys(), ['mov']);
+  headOf('coolMov').querySelector('.count').dispatch('click');
+  assert.deepEqual(openKeys(), ['coolMov']);
+  headOf('coolMov').querySelector('.bulb-btn').dispatch('click');
+  assert.deepEqual(openKeys(), ['coolMov'], 'die Glühbirne schaltet die Sichtbarkeit, nicht die Klappe');
+  assert.match(headOf('coolMov').querySelector('.count').textContent, /2 Teile · 2 aus/, 'der Kopf sagt, wie viele aus sind');
+  headOf('coolMov').querySelector('.bulb-btn').dispatch('click');
+  assert.equal(headOf('coolMov').querySelector('.count').textContent, '2 Teile');
+  headOf('coolMov').querySelector('[data-act="hl-group"]').dispatch('click');
+  assert.deepEqual(openKeys(), ['coolMov'], 'der Name hebt hervor, klappt nicht');
+  assert.equal(v.ui.highlight.size, 2);
+  headOf('coolMov').querySelector('[data-act="group-menu"]').dispatch('click');
+  assert.deepEqual(openKeys(), ['coolMov'], '„⋯" öffnet das Menü, klappt nicht');
+  assert.ok(!headOf('coolMov').querySelector('.row-menu').classList.contains('hidden'));
+  d.getElementById('hl-clear').dispatch('click');
+
+  /* Eine neue Hervorhebung in einer zugeklappten Gruppe zieht sie auf;
+     wer sie dann zuklappt, bekommt sie nicht wieder aufgedrängt. */
+  assert.deepEqual(openKeys(), ['coolMov']);
+  rowOf('coolFixL').querySelector('[data-act="hl"]').dispatch('click');
+  assert.ok(v.ui.highlight.has('coolFixL'));
+  assert.deepEqual(openKeys(), ['coolFix'], 'die Gruppe des hervorgehobenen Teils geht auf');
+  assert.ok(rowOf('coolFixL').classList.contains('hl'));
+  headOf('coolFix').querySelector('[data-act="fold"]').dispatch('click');
+  assert.deepEqual(openKeys(), [], 'zugeklappt trotz Hervorhebung');
+  v.setSteelOpacity(0.5);
+  d.getElementById('show-all').dispatch('click');
+  assert.deepEqual(openKeys(), [], 'und bleibt zu, solange die Hervorhebung sich nicht ändert');
+  d.getElementById('hl-cooling').dispatch('click');
+  assert.ok(v.ui.highlight.size === 4 && openKeys().length === 1 && ['coolFix', 'coolMov'].includes(openKeys()[0]), 'Temperierung: eine der Kreisgruppen geht auf');
+});
+
 test('Formaufbau: Hervorheben je Teil, Gruppe und Temperierung, Farben, Menüs statt Auswahl je Zeile', async () => {
   const { root } = await legacyDie();
   globalThis.__TEST_GLTF = root;

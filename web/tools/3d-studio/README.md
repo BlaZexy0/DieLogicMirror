@@ -94,7 +94,12 @@ Zeilen, das Häufige sichtbar, das Seltene hinter „⋯"):
   Verschieben in eine andere Gruppe und Entfernen — das Verschieben stand
   früher als Auswahlfeld in jeder Zeile, als Plan in der Halle braucht das
   niemand. „Gruppe anlegen" fragt Name, Seite, Werkstoffklasse und
-  Schieber-Richtung samt Weg.
+  Schieber-Richtung samt Weg. Aufgeklappt ist **eine Gruppe zur Zeit**:
+  ein Tipp auf den Kopf (Pfeil, Zahl der Teile oder freie Fläche) klappt
+  sie auf und die vorige zu, ein zweiter Tipp zu — so bleibt die Leiste
+  kurz, auch wenn eine Gruppe dreißig Teile hat; der Kopf sagt, wie viele
+  Teile es sind und wie viele ausgeblendet. Eine neue Hervorhebung zieht
+  die Gruppe des Teils auf, damit die Zeile zu sehen ist.
 - **Hervorheben**: die hervorgehobenen Teile bleiben deckend und leuchten
   leicht, alles andere wird blass (Stahl auf 6 %, Gegossenes auf 14 %),
   auch die Schnittflächen der anderen Klassen (`clip.setClassAlpha`).
