@@ -338,19 +338,25 @@
   min-width: 280px;
   max-height: min(60vh, 520px);
   overflow-y: auto;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-4px);
-  transition: all 0.15s;
+  display: none;
   z-index: 200;
   box-shadow: 0 8px 24px rgba(0,20,27,.35);
 }
 /* Offen ist ein Menü genau dann, wenn es .open trägt — Maus, Klick,
-   Touch und Tastatur setzen die Klasse in wireDropdowns(), nicht :hover. */
+   Touch und Tastatur setzen die Klasse in wireDropdowns(), nicht :hover.
+   Zu heißt display: none, nicht visibility: hidden: Firefox trifft beim
+   Zeigertest (elementFromPoint) die Einträge eines unsichtbaren Menüs,
+   sobald darin eine Spaltenüberschrift über beide Spalten geht
+   (column-span: all) — auch mit pointer-events: none, Chromium nicht.
+   Auf dem Weg von „Auslegung" nach unten „betrat" der Zeiger so das
+   verborgene 3D-Studio-Menü, das darüberliegt, und das Menü schaltete um.
+   Ein Menü, das nicht dargestellt wird, kann niemand treffen. */
 .dl-nav-group.open .dl-nav-dropdown {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
+  display: block;
+  animation: dl-menu-in 0.15s ease-out;
+}
+@keyframes dl-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
 }
 .dl-nav-dropdown a {
   display: block;
@@ -513,9 +519,7 @@
 .dl-nav--compact .dl-nav-dropdown {
   display: none;
   position: static;
-  opacity: 1;
-  visibility: visible;
-  transform: none;
+  animation: none;
   min-width: 0;
   max-height: none;
   overflow: visible;
@@ -581,8 +585,8 @@
   color: white;
   border-bottom: 2px solid ${C.primary};
 }
+.dl-nav-group.open .dl-nav-dropdown--cols { display: flex; }
 .dl-nav-dropdown--cols {
-  display: flex;
   align-items: flex-start;
   left: auto;
   right: 0;
@@ -658,28 +662,35 @@
      Klasse .open, immer nur ein Menü zur Zeit.
      Mit der Maus reichte :hover nicht. „Auslegung" und „3D-Studio" hängen
      mit der rechten Kante am Reiter und klappen nach links auf; der Weg
-     zum Eintrag führt schräg aus dem Reiter heraus — über die leere
-     Leiste oder quer über den Nachbarreiter. :hover schloss das Menü dort
-     (oder schaltete aufs Nachbarmenü um), bevor der Zeiger ankam, und
-     man musste erst klicken. Jetzt gilt: Solange der Zeiger im Dreieck
-     zwischen seinem letzten Punkt im Reiter und der Oberkante des Menüs
-     nach unten wandert, bleibt das Menü offen. Außerhalb schaltet ein
-     anderer Reiter sofort um, die leere Fläche schließt nach einer kurzen
-     Gnadenfrist. Ein Klick auf den Reiter hält das Menü fest, bis daneben
-     geklickt, weggetabbt oder Escape gedrückt wird. */
+     zu „Dashboard" oder „Werkbank" läuft Hunderte Pixel die Leiste entlang
+     und nur 30 px hinunter — über die leere Leiste oder quer über den
+     Nachbarreiter. :hover schloss das Menü dort (oder schaltete um).
+     Ein Zielkorridor (Dreieck vom Reiter zur Menükante) half nur für
+     gerade Linien: die Hand zieht erst waagerecht, einen Pixel zu hoch,
+     und das Menü war zu. Darum gilt jetzt:
+       - Der Streifen der Leiste über dem offenen Menü gehört zum Menü.
+         Dort bleibt es offen, egal wie der Zeiger läuft.
+       - Ein anderer Reiter in diesem Streifen übernimmt erst, wenn der
+         Zeiger auf ihm zur Ruhe kommt (DWELL_MS lang weniger als
+         DWELL_PX bewegt) — wer nur darüber hinwegzieht, auch langsam,
+         behält sein Menü.
+       - Ein anderer Reiter außerhalb schaltet sofort um; sonst schließt
+         das Menü GRACE_MS, nachdem der Zeiger Menü und Streifen verlassen hat.
+     Ein Klick auf den Reiter hält das Menü fest, bis daneben geklickt,
+     weggetabbt oder Escape gedrückt wird. */
   function wireDropdowns() {
     const nav = document.querySelector('.dl-nav');
     const groups = Array.from(document.querySelectorAll('.dl-nav .dl-nav-group'));
     if (!nav || !groups.length) return;
-    const GRACE_MS = 250;   // Zeiger kurz neben dem Menü: bleibt so lange stehen
-    const AIM_MS = 400;     // im Dreieck stehengeblieben: dann doch umschalten/schließen
+    const GRACE_MS = 250;      // Zeiger neben Menü und Streifen: so lange bleibt es stehen
+    const DWELL_MS = 120;      // so lange ruhig auf einem anderen Reiter im Streifen: dann übernimmt er
+    const DWELL_PX = 4;        // „ruhig" = weniger bewegt als das (Handzittern)
 
     let current = null;     // offene Gruppe
     let pinned = false;     // per Klick geöffnet
     let muted = null;       // gerade per Klick/Escape geschlossen: kein Hover-Öffnen, bis der Zeiger sie verlässt
-    let apex = null;        // letzter Zeigerpunkt im Reiter der offenen Gruppe
-    let lastOver = null;
-    let lastY = 0;
+    let lastItem = null;    // Reiter/Link der Leiste unter dem Zeiger (li) oder null
+    let dwellOn = null, dwellX = 0, dwellY = 0;
     let timer = 0;
 
     const compact = () => nav.classList.contains('dl-nav--compact');
@@ -695,52 +706,55 @@
       });
       current = g;
       pinned = !!(g && pin);
-      apex = null;
+      dwellOn = null;
     }
 
-    /* Zeiger kommt zur Ruhe: der Reiter unter ihm gewinnt, sonst zu. */
+    /* Timer abgelaufen: was unter dem Zeiger liegt, gewinnt. */
     function settle() {
       timer = 0;
-      if (lastOver && lastOver !== muted) setOpen(lastOver, pinned);
-      else if (!pinned) setOpen(null);
+      const g = lastItem && lastItem.classList.contains('dl-nav-group') ? lastItem : null;
+      if (g && g !== current && g !== muted) setOpen(g, pinned);
+      else if (!pinned && g !== current) setOpen(null);
     }
 
-    /* Liegt (x, y) im Dreieck Apex – Oberkante des offenen Menüs? */
-    function aiming(x, y) {
-      if (!current || !apex) return false;
-      const r = current.querySelector('.dl-nav-dropdown').getBoundingClientRect();
-      if (y <= apex.y || y > r.top) return false;
-      const t = (y - apex.y) / (r.top - apex.y);
-      return x >= apex.x + t * (r.left - apex.x) - 4
-          && x <= apex.x + t * (r.right - apex.x) + 4;
+    /* Liegt (x, y) im Leistenstreifen über dem offenen Menü? */
+    function inStrip(x, y) {
+      const d = current.querySelector('.dl-nav-dropdown').getBoundingClientRect();
+      const n = nav.getBoundingClientRect();
+      return x >= d.left && x <= d.right && y >= n.top && y < Math.max(d.top, n.bottom);
     }
 
     document.addEventListener('pointermove', (e) => {
       if (e.pointerType === 'touch' || compact()) return;
       const t = e.target;
-      const over = t && t.closest ? t.closest('.dl-nav-group') : null;
-      const x = e.clientX, y = e.clientY;
-      const down = y > lastY;
-      lastY = y;
-      lastOver = over;
-      if (over !== muted) muted = null;
-      if (over && over === muted) return;
-      const aim = aiming(x, y);
-      if (over && over !== current && !aim) setOpen(over, pinned);
-      if (!current) return;
-      if (over === current) {
-        cancel();
-        apex = label(over).contains(t) ? { x, y } : null;
-      } else if (aim) {
-        if (down || !timer) later(AIM_MS);
-      } else if (!pinned && !timer) {
-        later(GRACE_MS);
+      const item = t && t.closest ? t.closest('.dl-nav-links > li') : null;
+      const group = item && item.classList.contains('dl-nav-group') ? item : null;
+      lastItem = item;
+      if (group !== muted) muted = null;
+      if (!current) {
+        if (group && group !== muted) setOpen(group, false);
+        return;
       }
+      if (group === current) { cancel(); dwellOn = null; return; }
+      if (inStrip(e.clientX, e.clientY)) {
+        if (!item) { cancel(); dwellOn = null; return; }
+        if (!group && pinned) { cancel(); return; }
+        if (dwellOn !== item || Math.hypot(e.clientX - dwellX, e.clientY - dwellY) >= DWELL_PX) {
+          dwellOn = item; dwellX = e.clientX; dwellY = e.clientY;
+          later(DWELL_MS);
+        }
+        return;
+      }
+      const wasDwelling = dwellOn !== null;
+      dwellOn = null;
+      if (group && group !== muted) setOpen(group, pinned);
+      else if (pinned) cancel();
+      else if (wasDwelling || !timer) later(GRACE_MS);
     });
     /* Zeiger verlässt das Fenster */
     document.addEventListener('pointerout', (e) => {
       if (e.relatedTarget || e.pointerType === 'touch' || compact()) return;
-      lastOver = null;
+      lastItem = null;
       if (current && !pinned) later(GRACE_MS);
     });
 

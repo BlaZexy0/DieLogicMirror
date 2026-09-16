@@ -36,6 +36,14 @@ export default defineConfig({
       args: ['--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox']
     }
   },
+  /* Die Kopfleiste zusätzlich in Firefox: der trifft die Einträge eines
+     unsichtbaren Menüs beim Zeigertest, Chromium nicht — ein Fehler, den
+     nur Chromium-Tests zweimal durchgelassen haben. Braucht einmal
+     `npx playwright install firefox`. */
+  projects: [
+    { name: 'chromium', use: { browserName: 'chromium' } },
+    { name: 'firefox-nav', testMatch: /nav\.spec\.mjs/, use: { browserName: 'firefox', launchOptions: {} } }
+  ],
   webServer: {
     command: 'python3 -m http.server 8130 --bind 127.0.0.1 --directory web',
     cwd: ROOT,
