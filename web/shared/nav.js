@@ -326,7 +326,7 @@
 }
 .dl-nav-group:hover > .dl-nav-group-label,
 .dl-nav-group.open > .dl-nav-group-label,
-.dl-nav-group:focus-within > .dl-nav-group-label { color: white; }
+.dl-nav-group > .dl-nav-group-label:focus-visible { color: white; }
 .dl-nav-dropdown {
   position: absolute;
   top: 56px;
@@ -345,11 +345,9 @@
   z-index: 200;
   box-shadow: 0 8px 24px rgba(0,20,27,.35);
 }
-/* Aufklappen bei Maus-Hover, per Klick/Touch (.open) und bei
-   Tastatur-Fokus im Menü (:focus-within). */
-.dl-nav-group:hover .dl-nav-dropdown,
-.dl-nav-group.open .dl-nav-dropdown,
-.dl-nav-group:focus-within .dl-nav-dropdown {
+/* Offen ist ein Menü genau dann, wenn es .open trägt — Maus, Klick,
+   Touch und Tastatur setzen die Klasse in wireDropdowns(), nicht :hover. */
+.dl-nav-group.open .dl-nav-dropdown {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -656,30 +654,123 @@
     wireCompact();
   }
 
-  /* Aufklapp-Menüs klickbar (Touch) und per Tastatur nutzbar machen —
-     :hover allein erreicht weder Touch-Geräte noch Tab-Fokus. */
+  /* Aufklapp-Menüs: Maus, Klick/Touch und Tastatur schalten dieselbe
+     Klasse .open, immer nur ein Menü zur Zeit.
+     Mit der Maus reichte :hover nicht. „Auslegung" und „3D-Studio" hängen
+     mit der rechten Kante am Reiter und klappen nach links auf; der Weg
+     zum Eintrag führt schräg aus dem Reiter heraus — über die leere
+     Leiste oder quer über den Nachbarreiter. :hover schloss das Menü dort
+     (oder schaltete aufs Nachbarmenü um), bevor der Zeiger ankam, und
+     man musste erst klicken. Jetzt gilt: Solange der Zeiger im Dreieck
+     zwischen seinem letzten Punkt im Reiter und der Oberkante des Menüs
+     nach unten wandert, bleibt das Menü offen. Außerhalb schaltet ein
+     anderer Reiter sofort um, die leere Fläche schließt nach einer kurzen
+     Gnadenfrist. Ein Klick auf den Reiter hält das Menü fest, bis daneben
+     geklickt, weggetabbt oder Escape gedrückt wird. */
   function wireDropdowns() {
+    const nav = document.querySelector('.dl-nav');
     const groups = Array.from(document.querySelectorAll('.dl-nav .dl-nav-group'));
-    const closeAll = (except) => groups.forEach(g => {
-      if (g !== except) {
-        g.classList.remove('open');
-        g.querySelector('.dl-nav-group-label').setAttribute('aria-expanded', 'false');
+    if (!nav || !groups.length) return;
+    const GRACE_MS = 250;   // Zeiger kurz neben dem Menü: bleibt so lange stehen
+    const AIM_MS = 400;     // im Dreieck stehengeblieben: dann doch umschalten/schließen
+
+    let current = null;     // offene Gruppe
+    let pinned = false;     // per Klick geöffnet
+    let muted = null;       // gerade per Klick/Escape geschlossen: kein Hover-Öffnen, bis der Zeiger sie verlässt
+    let apex = null;        // letzter Zeigerpunkt im Reiter der offenen Gruppe
+    let lastOver = null;
+    let lastY = 0;
+    let timer = 0;
+
+    const compact = () => nav.classList.contains('dl-nav--compact');
+    const label = g => g.querySelector('.dl-nav-group-label');
+    const cancel = () => { clearTimeout(timer); timer = 0; };
+    const later = (ms) => { clearTimeout(timer); timer = setTimeout(settle, ms); };
+
+    function setOpen(g, pin) {
+      cancel();
+      groups.forEach(o => {
+        o.classList.toggle('open', o === g);
+        label(o).setAttribute('aria-expanded', String(o === g));
+      });
+      current = g;
+      pinned = !!(g && pin);
+      apex = null;
+    }
+
+    /* Zeiger kommt zur Ruhe: der Reiter unter ihm gewinnt, sonst zu. */
+    function settle() {
+      timer = 0;
+      if (lastOver && lastOver !== muted) setOpen(lastOver, pinned);
+      else if (!pinned) setOpen(null);
+    }
+
+    /* Liegt (x, y) im Dreieck Apex – Oberkante des offenen Menüs? */
+    function aiming(x, y) {
+      if (!current || !apex) return false;
+      const r = current.querySelector('.dl-nav-dropdown').getBoundingClientRect();
+      if (y <= apex.y || y > r.top) return false;
+      const t = (y - apex.y) / (r.top - apex.y);
+      return x >= apex.x + t * (r.left - apex.x) - 4
+          && x <= apex.x + t * (r.right - apex.x) + 4;
+    }
+
+    document.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch' || compact()) return;
+      const t = e.target;
+      const over = t && t.closest ? t.closest('.dl-nav-group') : null;
+      const x = e.clientX, y = e.clientY;
+      const down = y > lastY;
+      lastY = y;
+      lastOver = over;
+      if (over !== muted) muted = null;
+      if (over && over === muted) return;
+      const aim = aiming(x, y);
+      if (over && over !== current && !aim) setOpen(over, pinned);
+      if (!current) return;
+      if (over === current) {
+        cancel();
+        apex = label(over).contains(t) ? { x, y } : null;
+      } else if (aim) {
+        if (down || !timer) later(AIM_MS);
+      } else if (!pinned && !timer) {
+        later(GRACE_MS);
       }
     });
+    /* Zeiger verlässt das Fenster */
+    document.addEventListener('pointerout', (e) => {
+      if (e.relatedTarget || e.pointerType === 'touch' || compact()) return;
+      lastOver = null;
+      if (current && !pinned) later(GRACE_MS);
+    });
+
     groups.forEach(g => {
-      const btn = g.querySelector('.dl-nav-group-label');
-      btn.addEventListener('click', () => {
-        const open = g.classList.toggle('open');
-        btn.setAttribute('aria-expanded', String(open));
-        closeAll(g);
+      label(g).addEventListener('click', () => {
+        if (current === g && (pinned || compact())) {
+          setOpen(null);
+          muted = g;
+        } else {
+          setOpen(g, true);
+        }
+      });
+      /* Mit Tab aus dem Menü heraus: zu. (Ein Klick daneben schließt
+         über den Dokument-Klick unten.) */
+      g.addEventListener('focusout', (e) => {
+        const to = e.relatedTarget;
+        if (current === g && !compact() && to && !g.contains(to)) setOpen(null);
       });
     });
     document.addEventListener('click', (e) => {
       const t = e.target;
-      if (!(t && t.closest && t.closest('.dl-nav-group'))) closeAll(null);
+      if (current && !(t && t.closest && t.closest('.dl-nav-group'))) setOpen(null);
     });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeAll(null);
+      if (e.key !== 'Escape' || !current) return;
+      const g = current;
+      const inside = g.contains(document.activeElement);
+      setOpen(null);
+      muted = g;
+      if (inside) label(g).focus();
     });
   }
 
