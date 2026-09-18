@@ -35,3 +35,9 @@ header .header-actions .back-link { padding: 8px 12px; font-size: 13px; }
   .layout { margin: 0; height: auto; }
   .sidebar, .content { height: auto; }
 }
+@media (max-width: 680px) {
+  /* Diagrammwahl und „← Übersicht" passen nicht mehr nebeneinander:
+     umbrechen, das Auswahlmenü nimmt die ganze Breite. */
+  header .header-actions { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+  header .nav-select { max-width: 100%; }
+}

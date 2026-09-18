@@ -121,7 +121,7 @@ export default {
 
   /* Zusätzliches Markup unter dem Canvas: Ereignistabelle + Prüfliste. */
   extraHTML() {
-    return '<div class="sc-extra"><table class="ev-table"><thead><tr><th></th><th>Ereignis</th><th>Hub [mm]</th><th>Zeit [s]</th><th>Kolben-v [m/s]</th><th>Anschnitt-v [m/s]</th></tr></thead><tbody class="sc-events"></tbody></table><ul class="checks sc-checks"></ul></div>';
+    return '<div class="sc-extra"><div class="table-scroll"><table class="ev-table"><thead><tr><th></th><th>Ereignis</th><th>Hub [mm]</th><th>Zeit [s]</th><th>Kolben-v [m/s]</th><th>Anschnitt-v [m/s]</th></tr></thead><tbody class="sc-events"></tbody></table></div><ul class="checks sc-checks"></ul></div>';
   },
 
   renderExtras(card, shot) {

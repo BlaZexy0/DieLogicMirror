@@ -291,6 +291,9 @@ body {
 }
 
 .th-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 1rem 0; }
+/* Breite Tabellen scrollen in ihrem Kasten, statt die Seite zu verbreitern. */
+.table-scroll { overflow-x: auto; margin: 1rem 0; }
+.table-scroll .th-table { margin: 0; }
 .th-table th {
   background: var(--dark);
   color: var(--ondark);
@@ -324,6 +327,13 @@ body {
 /* KaTeX setzt sich selbst auf 1,21em — für die Serifenschrift neben unserer
    Sans zu groß. 1,05em gleicht die x-Höhen an (gilt auch für Inline-Mathe). */
 body .katex { font-size: 1.05em; }
+
+/* Grid-Kinder dürfen schmaler werden als ihr breitester Inhalt (Formeln,
+   Figuren) — sonst wächst die Spalte auf Formelbreite und die Seite
+   scrollt auf dem Handy seitwärts. Was breiter ist, scrollt in seinem
+   Kasten (.eq) oder skaliert (Bilder). */
+.content-cols > * { min-width: 0; }
+.theory-article img, .theory-article svg, .theory-article canvas { max-width: 100%; height: auto; }
 
 @media (max-width: 960px) {
   .content-cols { grid-template-columns: 1fr; }

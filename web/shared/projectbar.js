@@ -86,7 +86,8 @@
 .dl-pb-row{display:flex;gap:.6rem}.dl-pb-row>*{flex:1}\
 .dl-pb-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem}\
 .dl-pb-err{color:' + C.warn + ';font-size:12px;margin-top:.5rem;min-height:1em}\
-@media (max-width:1100px){.dl-pb-desc{display:none}.dl-pb{padding:.3rem 1rem}}';
+@media (max-width:1100px){.dl-pb-desc{display:none}.dl-pb{padding:.3rem 1rem}}\
+@media (max-width:700px){.dl-pb{flex-wrap:wrap;row-gap:.25rem}.dl-pb-status,.dl-pb-user{white-space:normal}}';
 
   var syncState = { status: 'idle', at: null, error: null }; // idle | saving | ok | error
   /* Projekte, deren Autosave der Server mit 409 abgelehnt hat: dort liegt ein
