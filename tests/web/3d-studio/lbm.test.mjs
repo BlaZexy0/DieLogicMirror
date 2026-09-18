@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -29,7 +29,7 @@ const PRE = await import(R + 'js/runner/presets.js');
 const F = await import(R + 'js/runner/flow.js');
 const { sampleNetwork } = await import(R + 'js/runner/curve.js');
 const { shotTimeline } = await import(R + 'js/runner/shottime.js');
-const { allFields } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
+const { allFields } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
 const { FLAG, NEVER } = L;
 
 const defaults = () => { const v = {}; for (const f of allFields()) v[f.key] = f.def; return v; };

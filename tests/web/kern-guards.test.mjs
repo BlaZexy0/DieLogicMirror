@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -20,14 +20,14 @@ globalThis.localStorage = { getItem: () => null, setItem: () => {} };
 for (const f of ['shared/palette.js', 'shared/theme.js', 'shared/examples/machines.js',
   'shared/project.js', 'shared/clampmodel.js']) require(path.join(site, f));
 
-const { theme } = await import(path.join(site, 'tools/auslegung/js/core/theme.js'));
+const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
 Object.assign(theme, globalThis.__THEME__);
 
-const { allFields, DEFAULT_CURVE } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
-const Ph = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
-const { seq } = await import(path.join(site, 'tools/auslegung/js/core/format.js'));
-const { fillTimeMs } = await import(path.join(site, 'tools/auslegung/js/core/curvegen.js'));
-const { feasibleBand } = await import(path.join(site, 'tools/auslegung/js/core/limits.js'));
+const { allFields, DEFAULT_CURVE } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
+const Ph = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
+const { seq } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/format.js')));
+const { fillTimeMs } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/curvegen.js')));
+const { feasibleBand } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/limits.js')));
 
 const values = () => { const v = {}; for (const f of allFields()) v[f.key] = f.def; return v; };
 const shot = over => Ph.computeShot(Object.assign(values(), over || {}), DEFAULT_CURVE.map(p => p.slice()));
@@ -98,7 +98,7 @@ test('Nachverdichtungshub wird nicht auf 0 geklemmt und schlägt an', () => {
 });
 
 test('ftwall: gleiche Fließ- und Formtemperatur ist ein Fehler, keine Kurve', async () => {
-  const ftwall = (await import(path.join(site, 'tools/auslegung/js/charts/ftwall.js'))).default;
+  const ftwall = (await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/ftwall.js')))).default;
   const v = values();
   assert.ok(!ftwall.calc(v).err, 'mit den Defaults rechnet es durch');
   for (const bad of [{ Tflow: 200, Tdie: 200 }, { Tflow: 150, Tdie: 200 }]) {
@@ -133,7 +133,7 @@ test('orgpresets: Serverfehler ist nicht „keine Stammdaten"', () => {
 
 test('jede Prozentangabe der Kennzahlen ist endlich und in [0, 100]', async () => {
   globalThis.document = { getElementById: () => null, querySelectorAll: () => [] };
-  const { renderKpis } = await import(path.join(site, 'tools/auslegung/js/ui/kpis.js'));
+  const { renderKpis } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/ui/kpis.js')));
   const keys = ['pAccOp', 'pAcc', 'injForce', 'diam', 'length', 'area', 'force',
     'psel', 'safety', 'density', 'part', 'gate', 'vmax', 'dmin', 'lmin', 'biscuit'];
 

@@ -13,7 +13,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -25,8 +25,8 @@ for (const f of ['shared/palette.js', 'shared/theme.js', 'shared/examples/machin
   'shared/examples/alloys.js', 'shared/project.js', 'shared/clampmodel.js']) require(path.join(site, f));
 
 const { allFields, groups, PRESET_DOMAINS, DEFAULT_CURVE } =
-  await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
-const Ph = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
+  await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
+const Ph = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
 
 const defaults = () => { const v = {}; for (const f of allFields()) v[f.key] = f.def; return v; };
 
@@ -75,7 +75,7 @@ test('die Kammer-KPI zeigt den Schmelzerest, nicht die Pressrestsäule (H-12)', 
     getElementById: () => null,
     querySelectorAll: () => [],
   };
-  const { renderKpis } = await import(path.join(site, 'tools/auslegung/js/ui/kpis.js'));
+  const { renderKpis } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/ui/kpis.js')));
 
   const v = defaults();
   const shot = Ph.computeShot(v, DEFAULT_CURVE.map(p => p.slice()));

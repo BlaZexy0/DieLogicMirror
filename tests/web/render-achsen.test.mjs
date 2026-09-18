@@ -10,7 +10,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -24,13 +24,13 @@ globalThis.getComputedStyle = () => ({ fontFamily: 'Arial', getPropertyValue: ()
 
 for (const f of ['shared/palette.js', 'shared/theme.js', 'shared/examples/machines.js',
   'shared/project.js', 'shared/clampmodel.js']) require(path.join(site, f));
-const { theme } = await import(path.join(site, 'tools/auslegung/js/core/theme.js'));
+const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
 Object.assign(theme, globalThis.__THEME__);
 
-const { drawLine } = await import(path.join(site, 'tools/auslegung/js/render/line.js'));
-const { lineFrame, LEGEND_MAX_ROWS } = await import(path.join(site, 'tools/auslegung/js/render/base.js'));
-const { allFields } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
-const windowChart = (await import(path.join(site, 'tools/auslegung/js/charts/window.js'))).default;
+const { drawLine } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/line.js')));
+const { lineFrame, LEGEND_MAX_ROWS } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/base.js')));
+const { allFields } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
+const windowChart = (await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/window.js')))).default;
 
 /* Aufzeichnender 2D-Kontext: merkt sich jede Koordinate und jeden Text
    samt der Farbe, mit der er gesetzt wurde. */

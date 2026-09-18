@@ -6,11 +6,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
-const { vCrit, vCritTheory, vCritNogowizin } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
+const { vCrit, vCritTheory, vCritNogowizin } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
 
 const rows = readFileSync(path.join(site, '../fixtures/vkrit/v_krit_sim.csv'), 'utf8')
   .trim().split('\n').slice(1).map(l => l.split(';').map(Number));

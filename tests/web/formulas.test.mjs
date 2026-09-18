@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -24,10 +24,10 @@ require(path.join(site, 'shared/theme.js'));
 require(path.join(site, 'shared/examples/machines.js'));
 require(path.join(site, 'shared/project.js'));
 require(path.join(site, 'shared/clampmodel.js'));
-const { theme } = await import(path.join(site, 'tools/auslegung/js/core/theme.js'));
+const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
 Object.assign(theme, globalThis.__THEME__);
-const { charts } = await import(path.join(site, 'tools/auslegung/js/charts/registry.js'));
-const { eq, tex } = await import(path.join(site, 'tools/auslegung/js/charts/mathfmt.js'));
+const { charts } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/registry.js')));
+const { eq, tex } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/mathfmt.js')));
 
 const render = (src, display) => globalThis.katex.renderToString(src, { throwOnError: true, displayMode: display, strict: 'ignore' });
 

@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -51,13 +51,13 @@ require(path.join(site, 'shared/theme.js'));
 require(path.join(site, 'shared/examples/machines.js'));
 require(path.join(site, 'shared/project.js'));
 require(path.join(site, 'shared/clampmodel.js'));
-const { theme } = await import(path.join(site, 'tools/auslegung/js/core/theme.js'));
+const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
 Object.assign(theme, globalThis.__THEME__);
 
-const { allFields, DEFAULT_CURVE } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
-const { computeShot } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
-const { drawAny } = await import(path.join(site, 'tools/auslegung/js/render/draw.js'));
-const { charts } = await import(path.join(site, 'tools/auslegung/js/charts/registry.js'));
+const { allFields, DEFAULT_CURVE } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
+const { computeShot } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
+const { drawAny } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/draw.js')));
+const { charts } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/registry.js')));
 
 const values = {};
 for (const f of allFields()) values[f.key] = f.def;
@@ -65,7 +65,7 @@ const shot = computeShot(values, DEFAULT_CURVE.map(p => p.slice()));
 assert.ok(!shot.error, 'computeShot mit Defaults darf nicht fehlschlagen: ' + shot.error);
 
 /* ── Füllkammer-Schema: SVG-String je Variante prüfen ── */
-const { buildSvg } = await import(path.join(site, 'tools/auslegung/js/ui/chamber.js'));
+const { buildSvg } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/ui/chamber.js')));
 
 for (const va of ['A', 'B', 'C']) {
   test('chamber-svg: Variante ' + va + ' vollständig und ohne NaN', () => {
@@ -136,7 +136,7 @@ for (const [label, bad] of DEGENERATE) {
 }
 
 test('turbo(): nicht endliche Werte werfen nicht, sondern bleiben leer', async () => {
-  const { turbo } = await import(path.join(site, 'tools/auslegung/js/render/base.js'));
+  const { turbo } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/base.js')));
   for (const t of [NaN, Infinity, -Infinity, undefined, null]) {
     assert.doesNotThrow(() => turbo(t), `turbo(${t}) wirft`);
   }

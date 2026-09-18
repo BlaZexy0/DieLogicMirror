@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -17,12 +17,12 @@ require(path.join(site, 'shared/theme.js'));
 require(path.join(site, 'shared/examples/machines.js'));
 require(path.join(site, 'shared/project.js'));
 require(path.join(site, 'shared/clampmodel.js'));
-const { theme } = await import(path.join(site, 'tools/auslegung/js/core/theme.js'));
+const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
 Object.assign(theme, globalThis.__THEME__);
-const { allFields } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
-const pq2 = (await import(path.join(site, 'tools/auslegung/js/charts/pq2.js'))).default;
-const { pqCore } = await import(path.join(site, 'tools/auslegung/js/charts/pq2.js'));
-const { injForceEff, pMaxMachine } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
+const { allFields } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
+const pq2 = (await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/pq2.js')))).default;
+const { pqCore } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/pq2.js')));
+const { injForceEff, pMaxMachine } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
 
 const defaults = () => { const v = {}; for (const f of allFields()) v[f.key] = f.def; return v; };
 const calc = (v, tab, tab2) => { pq2.tab = tab; pq2.tab2 = tab2; return pq2.calc(v); };
@@ -120,7 +120,7 @@ test('pq2: eingestellter Akkumulatordruck skaliert Gießkraft, p₀, Hüllkurve 
   closeTo(pqCore(Object.assign({}, v, { pAccOp: 999 })).p0, c1.p0);
   closeTo(calc(Object.assign({}, v, { pAccOp: 999 }), 'q', 'ph').y1, 1.05 * v.pAcc);
   /* Antriebskolben aus dem Preset: 1300 kN / 190 bar ≈ 684,2 cm² (1 kN/bar = 100 cm²) */
-  const { hydArea } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
+  const { hydArea } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
   closeTo(hydArea(v), 1300 / 190 * 100);
 });
 

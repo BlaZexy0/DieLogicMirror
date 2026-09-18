@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync, readdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -17,7 +17,7 @@ const read = f => readFileSync(path.join(site, f), 'utf8');
 globalThis.window = globalThis;
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
 for (const f of ['shared/palette.js', 'shared/theme.js']) require(path.join(site, f));
-const { theme } = await import(path.join(site, 'tools/auslegung/js/core/theme.js'));
+const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
 Object.assign(theme, globalThis.__THEME__);
 
 /* Aufzeichnender Kontext — geprüft wird, WAS gezeichnet wird. */
@@ -37,7 +37,7 @@ function rec() {
 /* ── Betriebspunkt-Marker ─────────────────────────────────────────────── */
 
 test('ein Betriebspunkt außerhalb des Rahmens verschwindet nicht stumm', async () => {
-  const { marker } = await import(path.join(site, 'tools/auslegung/js/render/base.js'));
+  const { marker } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/base.js')));
   const f = { L: 75, R: 50, T: 92, B: 58, pw: 700, ph: 400 };
 
   const drin = rec();
@@ -57,7 +57,7 @@ test('ein Betriebspunkt außerhalb des Rahmens verschwindet nicht stumm', async 
 /* ── Ringdiagramm ─────────────────────────────────────────────────────── */
 
 test('Ringdiagramm: Zeichnung und Hover benutzen dieselbe Bezugsgröße', async () => {
-  const { donutTotal } = await import(path.join(site, 'tools/auslegung/js/render/donut.js'));
+  const { donutTotal } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/donut.js')));
   assert.equal(donutTotal({ total: 18.2 }), 18.2);
   for (const bad of [0, -1, NaN, Infinity, undefined]) {
     assert.equal(donutTotal({ total: bad }), 0, 'unbrauchbar → 0: ' + bad);

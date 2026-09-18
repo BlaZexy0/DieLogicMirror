@@ -12,7 +12,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 
 const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../web');
@@ -29,15 +29,13 @@ globalThis.document = {
   querySelectorAll: () => [], getElementById: () => null,
 };
 
-const { allFields, PAIRS, domainFields } = await import(
-  path.join(site, 'tools/auslegung/js/config/fields.js'));
-const { checkValues, checkField, clampToDomain } = await import(
-  path.join(site, 'tools/auslegung/js/core/domain.js'));
+const { allFields, PAIRS, domainFields } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
+const { checkValues, checkField, clampToDomain } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/domain.js')));
 /* Theme für den Zeichenpfad in renderCard (wie render-smoke.test.mjs). */
 globalThis.getComputedStyle = () => ({ fontFamily: 'Arial', getPropertyValue: () => '' });
 createRequire(import.meta.url)(path.join(site, 'shared/palette.js'));
 createRequire(import.meta.url)(path.join(site, 'shared/theme.js'));
-const { theme } = await import(path.join(site, 'tools/auslegung/js/core/theme.js'));
+const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
 Object.assign(theme, globalThis.__THEME__);
 
 const defaults = () => {
@@ -209,7 +207,7 @@ test('nachführen: Zielbänder bleiben unangetastet', () => {
 });
 
 test('sperre: renderCard ruft calc() nicht auf, wenn gesperrt', async () => {
-  const { renderCard } = await import(path.join(site, 'tools/auslegung/js/ui/cards.js'));
+  const { renderCard } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/ui/cards.js')));
   let gerufen = 0;
   const def = { id: 'probe', title: 'Probe', calc: () => { gerufen++; return { series: [] }; } };
   const card = stubCard();
@@ -250,8 +248,8 @@ test('domäne: jede Paarregel nennt existierende Felder und einen Text', () => {
    eingetippt hat — und er könnte es nicht korrigieren, weil das Feld
    schreibgeschützt ist. Deshalb wird an der Quelle geklemmt. */
 test('auto: berechnete Werte bleiben in der Domäne', async () => {
-  const { state } = await import(path.join(site, 'tools/auslegung/js/core/state.js'));
-  const { applyAuto } = await import(path.join(site, 'tools/auslegung/js/core/autofit.js'));
+  const { state } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/state.js')));
+  const { applyAuto } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/autofit.js')));
   const felder = Object.fromEntries(allFields().map(f => [f.key, f]));
   state.auto.gate = true; state.auto.vent = true;
 
@@ -297,7 +295,7 @@ test('sperre: die Abblend-Regel trifft Elemente, die es gibt', async () => {
 
 /* ── Felder, die zum gewählten Vakuum-Modell nicht gehören ─────────── */
 
-const { hiddenFields } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
+const { hiddenFields } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
 
 test('hiddenFields: je Vakuum-Modell nur die Felder, die es braucht', () => {
   const v = defaults();

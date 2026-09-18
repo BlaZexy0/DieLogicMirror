@@ -3,12 +3,11 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
-const { feasibleInterval, feasibleBand, violates } = await import(
-  path.join(site, 'tools/auslegung/js/core/limits.js'));
+const { feasibleInterval, feasibleBand, violates } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/limits.js')));
 
 /* ── feasibleInterval: Schnittmenge konstanter Schranken ─────── */
 

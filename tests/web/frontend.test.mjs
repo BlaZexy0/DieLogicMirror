@@ -16,7 +16,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -33,18 +33,16 @@ globalThis.window = globalThis;
 require(path.join(site, 'shared/examples/machines.js'));
 const MACHINES = globalThis.__MACHINES__.machines;
 
-const { allFields, groups, PRESET_KEYS } = await import(
-  path.join(site, 'tools/auslegung/js/config/fields.js'));
+const { allFields, groups, PRESET_KEYS } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
 
 /* inputs.js/curvegen.js ziehen core/state.js mit — der braucht das Projekt-Modul
    (project.js fällt ohne localStorage auf einen Leerspeicher zurück). */
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-const { checkValues, checkField } = await import(
-  path.join(site, 'tools/auslegung/js/ui/inputs.js'));
-const { generateCurve, fillTimeMs } = await import(path.join(site, 'tools/auslegung/js/core/curvegen.js'));
-const { computeShot, cavityVolume } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
-const { state, applyData } = await import(path.join(site, 'tools/auslegung/js/core/state.js'));
-const { charts } = await import(path.join(site, 'tools/auslegung/js/charts/registry.js'));
+const { checkValues, checkField } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/ui/inputs.js')));
+const { generateCurve, fillTimeMs } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/curvegen.js')));
+const { computeShot, cavityVolume } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
+const { state, applyData } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/state.js')));
+const { charts } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/registry.js')));
 
 function defaultValues() {
   const v = {};
@@ -125,9 +123,9 @@ test('curvegen: fillTimeMs — Rampe + Plateau, Grenzfälle', () => {
 });
 
 test('state: Folge-Felder — eingestellter Akkumulatordruck folgt dem Nennwert des Presets', async () => {
-  const { FOLLOWS } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
+  const { FOLLOWS } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
   assert.deepEqual(FOLLOWS, { pAccOp: 'pAcc' });
-  const { state, applyData, applyFollows } = await import(path.join(site, 'tools/auslegung/js/core/state.js'));
+  const { state, applyData, applyFollows } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/state.js')));
   /* Defaults: Preset hcc1600 hat 160 bar → Betriebsdruck 160 */
   assert.equal(state.values.pAccOp, state.values.pAcc);
   /* Preset mit anderem Nennwert → Folge-Feld zieht nach */
@@ -142,9 +140,9 @@ test('state: Folge-Felder — eingestellter Akkumulatordruck folgt dem Nennwert 
 });
 
 test('autofit: ideale Anschnitt- und Entlüftungsfläche aus Schusskurve bzw. NADCA', async () => {
-  const { idealGate, idealVent, applyAuto } = await import(path.join(site, 'tools/auslegung/js/core/autofit.js'));
-  const { DEFAULT_CURVE } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
-  const { state } = await import(path.join(site, 'tools/auslegung/js/core/state.js'));
+  const { idealGate, idealVent, applyAuto } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/autofit.js')));
+  const { DEFAULT_CURVE } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
+  const { state } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/state.js')));
   const v = defaultValues();
   const shot = computeShot(v, DEFAULT_CURVE.map(p => p.slice()));
   assert.ok(!shot.error && shot.v2 > 0 && shot.fill > 0);
@@ -194,12 +192,12 @@ test('Indizes: keine rohen innerHTML-Einsetzungen an subHTML vorbei', () => {
 });
 
 test('Indizes: subHTML (HTML) und fillRich (Canvas) setzen „_token" als Tiefindex', async () => {
-  const { subHTML } = await import(path.join(site, 'tools/auslegung/js/core/format.js'));
+  const { subHTML } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/format.js')));
   assert.equal(subHTML('v_a max 50 m/s'), 'v<sub>a</sub> max 50 m/s');
   assert.equal(subHTML('P_{acc} · Q_dry · t_f,min'), 'P<sub>acc</sub> · Q<sub>dry</sub> · t<sub>f,min</sub>');
   assert.equal(subHTML('ohne Index'), 'ohne Index');
   assert.equal(subHTML('x: Q, v_p, t_f · y'), 'x: Q, v<sub>p</sub>, t<sub>f</sub> · y');   // Komma als Trenner bleibt draußen
-  const { fillRich } = await import(path.join(site, 'tools/auslegung/js/render/base.js'));
+  const { fillRich } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/base.js')));
   /* Fake-Kontext: zeichnet Segmente mit Font und Position auf */
   const calls = [];
   const ctx = { font: 'bold 12px Arial', textAlign: 'center', fillStyle: '#000',
@@ -809,7 +807,7 @@ test('zyklus: unbekannter Bezugspunkt und ungültige Dauer → Fehler, endliche 
 });
 
 test('physics: jede Prüfung trägt eine stabile id — die Liste ist es nicht', async () => {
-  const { DEFAULT_CURVE } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
+  const { DEFAULT_CURVE } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
   const v = {}; for (const f of allFields()) v[f.key] = f.def;
   const mit = computeShot(v, DEFAULT_CURVE.map(p => p.slice()));
   const ohne = computeShot(Object.assign({}, v, { amax: 0 }), DEFAULT_CURVE.map(p => p.slice()));

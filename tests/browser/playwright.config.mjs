@@ -44,8 +44,10 @@ export default defineConfig({
     { name: 'chromium', use: { browserName: 'chromium' } },
     { name: 'firefox-nav', testMatch: /nav\.spec\.mjs/, use: { browserName: 'firefox', launchOptions: {} } }
   ],
+  /* Unter Windows heißt der Interpreter `python`; `python3` ist dort nur
+     der Store-Alias, der den Server nie startet. */
   webServer: {
-    command: 'python3 -m http.server 8130 --bind 127.0.0.1 --directory web',
+    command: (process.platform === 'win32' ? 'python' : 'python3') + ' -m http.server 8130 --bind 127.0.0.1 --directory web',
     cwd: ROOT,
     url: 'http://127.0.0.1:8130/tools/3d-studio/',
     reuseExistingServer: true,
