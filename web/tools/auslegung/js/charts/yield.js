@@ -31,7 +31,7 @@ export default {
     return `
 <h4>Materialausbeute</h4>
 <p class="math-note">Jedes Gramm, das nicht im Bauteil landet, wird trotzdem geschmolzen, gefahren und wieder
-eingeschmolzen — Anguss, Überlauf und Pressrest kosten Energie, Ofenkapazität und Abbrand. Das Ringdiagramm
+eingeschmolzen: Anguss, Überlauf und Pressrest kosten Energie, Ofenkapazität und Abbrand. Das Ringdiagramm
 zerlegt deshalb das Dosiergewicht in seine vier Anteile; die Ausbeute η ist der Bauteilanteil:</p>
 ${eq('m_{\\text{dos}} = m_{\\text{Bauteil}} + m_{\\text{Anguss}} + m_{\\text{Überlauf}} + m_{\\text{Pressrest}}')}
 ${eq('\\eta = \\frac{m_{\\text{Bauteil}}}{m_{\\text{dos}}} \\cdot 100 \\% \\qquad\\ \\text{Anteil}_{i} = \\frac{m_{i}}{m_{\\text{dos}}} \\cdot 100 \\%')}

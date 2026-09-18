@@ -10,7 +10,7 @@ import { eq } from './mathfmt.js';
 export default {
   id: 'slowshot',
   title: 'Kritische Kolbengeschw. 1. Phase',
-  desc: 'OpenFOAM-CFD — konsistent zur Schusskurve',
+  desc: 'OpenFOAM-CFD, konsistent zur Schusskurve',
   heat: true,
   inputs: ['dmin', 'dmax', 'part', 'runner', 'overflow', 'biscuit', 'density', 'length', 'diam'],
   usesCurve: true,
@@ -50,7 +50,7 @@ export default {
     const ff = 100e9 * ((total(v) + v.biscuit) / v.density) / (v.length * pistonArea(v));
     q.pt = [ff, v.diam];
     q.ptl = 'Ø ' + fmt(v.diam) + ' mm · Füllgrad ' + fmt(ff) + ' %';
-    q.info = 'OpenFOAM-CFD-Tabelle — identisch zur Schusskurven-Prüfung · Füllgrad inkl. Pressrest · v₁ = '
+    q.info = 'OpenFOAM-CFD-Tabelle, identisch zur Schusskurven-Prüfung · Füllgrad inkl. Pressrest · v₁ = '
       + (v1 == null ? '—' : fmt(v1)) + ' m/s (aus Schusskurve)';
     return q;
   },
@@ -62,13 +62,13 @@ export default {
 überschlagen und Luft einzuwirbeln. Die Grenzgeschwindigkeit skaliert mit der
 Schwerewellen-Geschwindigkeit √(g·D) und fällt mit dem Füllgrad. DieLogic interpoliert
 die eigene OpenFOAM-CFD-Tabelle (Ø 60–300 mm × φ 0,1–0,9) bilinear:</p>
-${eq('v_{\\text{krit}}(D, \\varphi) = \\sqrt{9{,}81 \\cdot D} \\cdot f(D, \\varphi) \\quad \\;\\text{—}\\; \\quad f\\ \\text{aus der CFD-Tabelle}\\\\ (\\text{v\\_krit\\_sim.csv})')}
+${eq('v_{\\text{krit}}(D, \\varphi) = \\sqrt{9{,}81 \\cdot D} \\cdot f(D, \\varphi) \\qquad \\text{mit}\\ f\\ \\text{aus der CFD-Tabelle}\\\\ (\\text{v\\_krit\\_sim.csv})')}
 <p class="math-note">Die Flachwassertheorie (Deckenkriterium) und die Nogowizin-Näherung sind ab
-mittleren Füllgraden <b>optimistisch</b> — die 3D-Rechnung zeigt Brechen vor Deckenberührung
+mittleren Füllgraden <b>optimistisch</b>: die 3D-Rechnung zeigt Brechen vor Deckenberührung
 (bei φ = 0,7 rund +28 % Theorie-Überschätzung) und bei φ ≥ 0,8 einen zusätzlichen Abschlag für
 kleine Kolben-Ø. Herleitung und Vergleich: Theorie-Artikel „Kritische Kolbengeschwindigkeit".</p>
 <p class="math-note">Dieselbe Formel wird in der Schusskurven-Prüfung („1. Phase bis Kammer voll") und als
-v<sub>krit</sub>-Grenze im (φ, λ)-Auslegungsfenster verwendet — alle drei Diagramme sind konsistent.
+v<sub>krit</sub>-Grenze im (φ, λ)-Auslegungsfenster verwendet; alle drei Diagramme sind konsistent.
 φ ist der Füllgrad inkl. Pressrest (Dosiergewicht).</p>
 <p class="math-note">Aktuell: φ = <b data-m="phi"></b> · v<sub>krit</sub>(Ø <span data-m="D"></span>) = <b data-m="vc"></b> ·
 v₁ = <b data-m="v1"></b> (max. bis „Kammer voll", aus der Schusskurve) ⇒ <b data-m="cmp"></b></p>`;

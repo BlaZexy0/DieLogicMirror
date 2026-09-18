@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Angussdesigner · 3D-Studio · DieLogic</title>
-<meta name="description" content="Angusssysteme für den Druckguss aus Splines entwerfen: Pressrest, Laufkanäle mit Trapezquerschnitt, Verzweigungen mit Spiegelung und Aufteilung, Anschnitte — dazu Querschnitt, Krümmung, eine Bernoulli-Abschätzung der Verluste über jeden Millimeter und die Füllbalance.">
+<meta name="description" content="Angusssysteme für den Druckguss aus Splines entwerfen: Pressrest, Laufkanäle mit Trapezquerschnitt, Verzweigungen mit Spiegelung und Aufteilung, Anschnitte, dazu Querschnitt, Krümmung, eine Bernoulli-Abschätzung der Verluste über jeden Millimeter und die Füllbalance.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -29,7 +29,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Angussdesigner</h1>
-    <p class="subtitle">Pressrest, Laufkanäle, Verzweigungen und Anschnitte als Graph entwerfen — mit Querschnitt, Verlusten und Füllbalance.</p>
+    <p class="subtitle">Pressrest, Laufkanäle, Verzweigungen und Anschnitte als Graph entwerfen, mit Querschnitt, Verlusten und Füllbalance.</p>
   </div>
 </section>
 
@@ -51,7 +51,7 @@
       <button type="button" id="ref-clear" title="Referenzbauteil entfernen">×</button>
     </div>
     <div class="hint">Liegt durchscheinend dabei, damit die Anschnitte dorthin zeigen, wo sie
-      hingehören. Sein Volumen wird das <b>Gussvolumen</b> — ohne Überläufe, die schlägt man
+      hingehören. Sein Volumen wird das <b>Gussvolumen</b>, ohne Überläufe; die schlägt man
       unter „Prozess" auf.</div>
     <div class="row">
       <span>Deckkraft</span>
@@ -66,17 +66,17 @@
       <span class="val" id="draft-val"></span>
     </div>
     <div class="row">
-      <span title="Radius am Kanalboden. An der Trennebene bleibt die Kante scharf — dort stoßen die Formhälften aufeinander.">Bodenradius</span>
+      <span title="Radius am Kanalboden. An der Trennebene bleibt die Kante scharf: dort stoßen die Formhälften aufeinander.">Bodenradius</span>
       <input type="text" id="radius" inputmode="decimal" value="1.5" spellcheck="false">
       <span class="val">mm</span>
     </div>
     <div class="row">
-      <span title="Radius der Innenkante an jeder Gabelung — die Nase des Zwickels zwischen zwei Abgängen, so groß wie der Fräser, der sie stehen lässt. Die Außenwände gehen ohnehin stetig vom Zulauf in die Abgänge über.">Zwickelradius</span>
+      <span title="Radius der Innenkante an jeder Gabelung: die Nase des Zwickels zwischen zwei Abgängen, so groß wie der Fräser, der sie stehen lässt. Die Außenwände gehen ohnehin stetig vom Zulauf in die Abgänge über.">Zwickelradius</span>
       <input type="text" id="branch-r" inputmode="decimal" value="4" spellcheck="false">
       <span class="val">mm</span>
     </div>
     <div class="row">
-      <span title="Höhe aller Anschnitte — die dünnste Stelle des ganzen Systems. Gilt für jeden Anschnitt, dem im Auswahlfeld keine eigene Höhe gegeben wurde.">Anschnitthöhe</span>
+      <span title="Höhe aller Anschnitte: die dünnste Stelle des ganzen Systems. Gilt für jeden Anschnitt, dem im Auswahlfeld keine eigene Höhe gegeben wurde.">Anschnitthöhe</span>
       <input type="text" id="gate-h" inputmode="decimal" value="2" spellcheck="false">
       <span class="val">mm</span>
     </div>
@@ -86,7 +86,7 @@
       <span class="val" id="tension-val"></span>
     </div>
     <div class="row">
-      <span title="Abstand der Schnitte entlang der Mittellinie. Alles — Querschnitt, Krümmung, Verlust — wird je Schritt gerechnet.">Abtastschritt</span>
+      <span title="Abstand der Schnitte entlang der Mittellinie. Alles (Querschnitt, Krümmung, Verlust) wird je Schritt gerechnet.">Abtastschritt</span>
       <input type="text" id="step" inputmode="decimal" value="1" spellcheck="false">
       <span class="val">mm</span>
     </div>
@@ -111,7 +111,7 @@
       <select id="alloy"></select>
     </div>
     <div class="row">
-      <span title="Gussvolumen einschließlich Überläufen — das, was durch die Anschnitte muss.">Gussvolumen</span>
+      <span title="Gussvolumen einschließlich Überläufen: das, was durch die Anschnitte muss.">Gussvolumen</span>
       <input type="text" id="vol" inputmode="decimal" value="420" spellcheck="false">
       <span class="val">cm³</span>
     </div>
@@ -135,15 +135,15 @@
       <input type="text" id="chamber-len" inputmode="decimal" value="450" spellcheck="false">
       <span class="val">mm</span>
     </div>
-    <label class="inline" title="Die Ankunft der Schmelze an jedem Anschnitt nach der DieLogic-Schusskurve der Auslegung (López-Anfahrt bis v_krit, Plateau bis Kammer voll, Rampe auf das v₂ der NADCA-Füllzeit) — erzeugt mit der Füllkammer von hier (Pressrest-Ø als Kolben-Ø, Kammerlänge von oben) und den Volumen von hier; Maschine und Thermik aus dem aktuellen Projekt. Ohne Häkchen: ein konstanter Strom aus Gussvolumen und Füllzeit."><input type="checkbox" id="shot-time" checked> Ankunft nach der DieLogic-Schusskurve</label>
+    <label class="inline" title="Die Ankunft der Schmelze an jedem Anschnitt nach der DieLogic-Schusskurve der Auslegung (López-Anfahrt bis v_krit, Plateau bis Kammer voll, Rampe auf das v₂ der NADCA-Füllzeit), erzeugt mit der Füllkammer von hier (Pressrest-Ø als Kolben-Ø, Kammerlänge von oben) und den Volumen von hier; Maschine und Thermik aus dem aktuellen Projekt. Ohne Häkchen: ein konstanter Strom aus Gussvolumen und Füllzeit."><input type="checkbox" id="shot-time" checked> Ankunft nach der DieLogic-Schusskurve</label>
     <div class="facts" id="shot-facts"></div>
     <div class="warn-line" id="shot-warn"></div>
-    <button type="button" class="btn btn-outline block-btn" id="shot-adopt" title="Die Füllzeit ab Anschnitt, die die Kurve braucht, als Füllzeit des Prozesses übernehmen — dann passen Ströme und Zeiten zusammen.">Füllzeit der Kurve übernehmen</button>
+    <button type="button" class="btn btn-outline block-btn" id="shot-adopt" title="Die Füllzeit ab Anschnitt, die die Kurve braucht, als Füllzeit des Prozesses übernehmen. Dann passen Ströme und Zeiten zusammen.">Füllzeit der Kurve übernehmen</button>
     <div class="hint">Lauflänge, Angussvolumen, Volumenstrom, Druckbedarf und die Ankunft der
-      Schmelze stehen im <b>Flussschema</b> (Knopf rechts unten im Viewport) — dort, wo auch
+      Schmelze stehen im <b>Flussschema</b> (Knopf rechts unten im Viewport), wo auch
       Fläche, Geschwindigkeit und Aufteilung an jedem Ast hängen. Mit der Schusskurve zählt die
       Ankunft ab Kolbenstart: erst die langsame erste Phase bis „Kammer voll", dann füllt sich
-      der Anguss in der Rampe der zweiten Phase. Die Kammer ist die von hier — Pressrest-Ø und
+      der Anguss in der Rampe der zweiten Phase. Die Kammer ist die von hier: Pressrest-Ø und
       Kammerlänge, daraus der Füllgrad; Maschine (v<sub>max</sub>, a<sub>max</sub>) und Thermik
       nimmt die Kurve aus dem aktuellen Projekt.</div>
 
@@ -165,12 +165,12 @@
       <button type="button" class="btn btn-outline" id="json-save">JSON speichern</button>
     </div>
     <button type="button" class="btn btn-outline block-btn" id="stl-save">Als STL speichern (zwei Dateien)</button>
-    <div class="hint"><b>JSON</b> ist der Graph selbst — nur damit lässt sich weiterarbeiten.
+    <div class="hint"><b>JSON</b> ist der Graph selbst: nur damit lässt sich weiterarbeiten.
       Dateien nimmt auch der Viewport per Ablegen entgegen; was für eine es ist, entscheidet
       der Inhalt.<br>
-      <b>STL</b> sind zwei Dateien: der <b>Anguss</b> als ein geschlossener Körper — an den
+      <b>STL</b> sind zwei Dateien: der <b>Anguss</b> als ein geschlossener Körper (an den
       Gabelungen gehen die Kanäle mit Zwickelradius ineinander über, am Pressrest ist der erste
-      Kanal an dessen Mantel beschnitten — und der <b>Pressrest</b> als Zylinder. Beide berühren
+      Kanal an dessen Mantel beschnitten) und der <b>Pressrest</b> als Zylinder. Beide berühren
       sich, keiner steckt im anderen.</div>
 
     <h2>Prüfung</h2>
@@ -194,7 +194,7 @@
           </div>
           <div id="bisc-block">
             <div class="row">
-              <span title="Durchmesser des Pressrests — also der Füllkammer.">Durchmesser</span>
+              <span title="Durchmesser des Pressrests, also der Füllkammer.">Durchmesser</span>
               <input type="text" id="bisc-d" inputmode="decimal" value="90" spellcheck="false">
               <span class="val">mm</span>
             </div>
@@ -227,12 +227,12 @@
           </div>
           <div id="plane-block">
             <div class="row">
-              <span title="Arbeitsebene um die Laufrichtung kippen — der Kanal legt sich auf die Seite.">Ebene längs</span>
+              <span title="Arbeitsebene um die Laufrichtung kippen: der Kanal legt sich auf die Seite.">Ebene längs</span>
               <input type="range" id="sel-roll" min="-60" max="60" step="1" value="0">
               <span class="val" id="sel-roll-val"></span>
             </div>
             <div class="row">
-              <span title="Arbeitsebene quer zur Laufrichtung kippen — daraus wird eine Stufe im Verteiler.">Ebene quer</span>
+              <span title="Arbeitsebene quer zur Laufrichtung kippen: daraus wird eine Stufe im Verteiler.">Ebene quer</span>
               <input type="range" id="sel-pitch" min="-60" max="60" step="1" value="0">
               <span class="val" id="sel-pitch-val"></span>
             </div>
@@ -240,7 +240,7 @@
 
           <div id="branch-block">
             <div class="row">
-              <span title="Wie viel des Stroms in den ersten Ast gehen SOLL. Was wirklich fließt, entscheidet der Widerstand — beides steht im Flussschema nebeneinander.">Aufteilung</span>
+              <span title="Wie viel des Stroms in den ersten Ast gehen SOLL. Was wirklich fließt, entscheidet der Widerstand. Beides steht im Flussschema nebeneinander.">Aufteilung</span>
               <input type="range" id="sel-ratio" min="10" max="90" step="1" value="50">
               <span class="val" id="sel-ratio-val"></span>
             </div>
@@ -254,7 +254,7 @@
               <span class="val">mm</span>
             </div>
             <div class="row">
-              <span title="Tiefe des Anschnitts in Fließrichtung (Steg): ein gerades Stück mit unverändertem Querschnitt vor dem Bauteil, entlang der Mündungsrichtung. Nicht die Breite — die steht darunter.">Anschnitttiefe</span>
+              <span title="Tiefe des Anschnitts in Fließrichtung (Steg): ein gerades Stück mit unverändertem Querschnitt vor dem Bauteil, entlang der Mündungsrichtung. Nicht die Breite: die steht darunter.">Anschnitttiefe</span>
               <input type="text" id="sel-glen" inputmode="decimal" value="4" spellcheck="false">
               <span class="val">mm</span>
             </div>
@@ -273,7 +273,7 @@
         </div>
       <div class="pt-menu-title">Punkt anfügen</div>
       <button type="button" id="add-point" title="Regulären Punkt hinter der Auswahl anfügen">+ Punkt</button>
-      <button type="button" id="add-branch" title="Verzweigung mit zwei eigenständigen Ästen anfügen — das Häkchen im Auswahlfeld koppelt sie spiegelsymmetrisch">+ Verzweigung</button>
+      <button type="button" id="add-branch" title="Verzweigung mit zwei eigenständigen Ästen anfügen; das Häkchen im Auswahlfeld koppelt sie spiegelsymmetrisch">+ Verzweigung</button>
       <button type="button" id="add-mirror" title="Spiegelpunkt: ein Ast wird bearbeitet, zwei entstehen">+ Spiegelpunkt</button>
       <button type="button" id="add-gate" title="Anschnitt als Endpunkt anfügen">+ Anschnitt</button>
       <button type="button" id="insert-point" title="Punkt zwischen Auswahl und Vorgänger einfügen">Davor einfügen</button>

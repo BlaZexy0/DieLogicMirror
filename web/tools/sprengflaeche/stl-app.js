@@ -140,10 +140,10 @@
        Masse. Das gehört gesagt. */
     const gewendet = models.filter(m => !(m.volumeSigned > 0)).map(m => m.name);
     statusEl.textContent = [
-      errors.length ? 'Nicht lesbar — ' + errors.join(' · ') : '',
+      errors.length ? 'Nicht lesbar: ' + errors.join(' · ') : '',
       gewendet.length ? 'Achtung: ' + gewendet.join(', ')
         + (gewendet.length === 1 ? ' hat' : ' haben')
-        + ' kein positives Volumen — die Dreiecke zeigen nach innen oder das Netz ist '
+        + ' kein positives Volumen: die Dreiecke zeigen nach innen oder das Netz ist '
         + 'inkonsistent gewickelt. Die Massen daraus sind nicht belastbar.' : ''
     ].filter(Boolean).join(' · ');
     invalidateUnion();
@@ -311,15 +311,15 @@
     const a = currentAlloy();
     inp.classList.toggle('linked', shrinkLinked && !!a);
     inp.title = shrinkLinked && a
-      ? 'Aus dem Legierungs-Preset ' + a.name + ' — Eingabe von Hand löst die Vorbelegung.'
+      ? 'Aus dem Legierungs-Preset ' + a.name + '. Eingabe von Hand löst die Vorbelegung.'
       : 'Von Hand gesetzt (bauteilspezifisch).';
     const s = getShrink(), vf = volumeFactor(), af = areaFactor();
     const dens = a
       ? 'Dichte (fest) <strong>' + fmt(getDensity()) + ' kg/m³</strong>'
-      : 'Keine Legierungs-Presets geladen — Dichte (fest) <strong>2.700 kg/m³</strong>';
+      : 'Keine Legierungs-Presets geladen, Dichte (fest) <strong>2.700 kg/m³</strong>';
     const src = !a ? ''
       : shrinkLinked ? ' (aus dem Preset)'
-      : ' (von Hand — Preset: ' + fmt(alloyShrink()) + ' % <a href="#" id="shrink-reset">zurücksetzen</a>)';
+      : ' (von Hand; Preset: ' + fmt(alloyShrink()) + ' % <a href="#" id="shrink-reset">zurücksetzen</a>)';
     const conv = s <= 0
       ? ' · ohne Schwindung: Flächen und Volumen wie geladen'
       : onToolScale()
@@ -399,7 +399,7 @@
     const box = document.getElementById('input-warn');
     if (box) {
       box.textContent = urteil.ok ? '' : 'Unzulässige Eingaben: ' + urteil.msgs.join(' · ')
-        + ' — es wird erst wieder gerechnet, wenn sie im zulässigen Bereich liegen.';
+        + '. Es wird erst wieder gerechnet, wenn sie im zulässigen Bereich liegen.';
       box.classList.toggle('hidden', urteil.ok);
     }
     document.body.classList.toggle('inputs-invalid', !urteil.ok);
@@ -485,7 +485,7 @@
       ' · Außermittigkeit e = Schwerpunkt vom Ursprung: <strong>' +
       a.uName + '</strong> ' + fmt(cog.cu) + ' mm · <strong>' + a.vName + '</strong> ' + fmt(cog.cv) + ' mm' +
       (ready
-        ? ' · Dashboard-Übernahme bereit — alle vier Zuordnungen vorhanden.'
+        ? ' · Dashboard-Übernahme bereit, alle vier Zuordnungen vorhanden.'
         : ' · Für die Dashboard-Übernahme fehlt die Zuordnung: <strong>' + missing.join(', ') + '</strong>.');
 
     const { rows, pref } = LOGIC.machineRows(MACHINES, CLAMP, {
@@ -502,10 +502,10 @@
         <td>${fmt(r.f.force)} kN</td>
         <td>${fmt(r.p0)} bar</td>
         <td>${fmt(r.pS)} bar</td>
-        <td>${fmt(r.pK)} bar <span class="sub">(k ${r.k.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 3 })})</span>${r.lift ? ' <span class="warn-lift" title="Schwerpunkt zu weit außermittig — die Form klafft an der gegenüberliegenden Ecke">⚠ Abheben</span>' : ''}</td>
+        <td>${fmt(r.pK)} bar <span class="sub">(k ${r.k.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 3 })})</span>${r.lift ? ' <span class="warn-lift" title="Schwerpunkt zu weit außermittig: die Form klafft an der gegenüberliegenden Ecke">⚠ Abheben</span>' : ''}</td>
         <td><button class="dash-btn" data-id="${escapeHtml(r.mc.id)}"${ready ? '' : ' disabled'} title="${ready
           ? 'Werte übernehmen und Dashboard öffnen'
-          : 'Erst jeder Datei eine Zuordnung geben — es fehlt: ' + missing.join(', ')}">→ Dashboard</button></td>
+          : 'Erst jeder Datei eine Zuordnung geben. Es fehlt: ' + missing.join(', ')}">→ Dashboard</button></td>
       </tr>`;
     }).join('');
   }
@@ -540,7 +540,7 @@
     }, mc.fields, alloy ? alloy.fields : null);
     /* Geometrie-Abschnitt des Projekts: was analysiert wurde, mit Ergebnis —
        die Netze selbst bleiben in den Dateien (zu groß für den Speicher). */
-    if (!window.__PROJECT__.current()) { alert('Kein Projekt aktiv — bitte zuerst anmelden.'); return; }
+    if (!window.__PROJECT__.current()) { alert('Kein Projekt aktiv. Bitte zuerst anmelden.'); return; }
     window.__PROJECT__.setSection('geometry', {
       alloy: alloy ? alloy.id : null, density: getDensity(), toolScale: onToolScale(),
       shrink: getShrink(), shrinkFromAlloy: shrinkLinked, safety: S, psel: pTarget,
@@ -602,7 +602,7 @@
   function update() {
     const a = AXES[dir];
     document.getElementById('proj-label').innerHTML =
-      'Formöffnungsrichtung <strong>' + dir + '</strong> — Silhouette in der ' + a.uName + '–' + a.vName + '-Ebene';
+      'Formöffnungsrichtung <strong>' + dir + '</strong> · Silhouette in der ' + a.uName + '–' + a.vName + '-Ebene';
     const cog = unionSilhouette();
     document.getElementById('cog-label').innerHTML = cog
       ? 'Schwerpunkt S vom Ursprung: <strong>' + a.uName + '</strong> ' + fmt(cog.cu) +
@@ -739,7 +739,7 @@
     const files = Array.isArray(g.files) ? g.files.map(f => f.name).filter(Boolean) : [];
     note.innerHTML = 'Einstellungen aus der letzten Analyse dieses Projekts übernommen'
       + (when && !isNaN(when) ? ' (' + when.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) + ')' : '')
-      + (files.length ? ' — damals geladen: ' + files.map(escapeHtml).join(', ') + '. Die Netze müssen erneut geladen werden.' : '.');
+      + (files.length ? '. Damals geladen: ' + files.map(escapeHtml).join(', ') + '. Die Netze müssen erneut geladen werden.' : '.');
     note.classList.remove('hidden');
   }
 

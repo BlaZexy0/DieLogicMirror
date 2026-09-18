@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Angussfüllung (SPH) · 3D-Studio · DieLogic</title>
-<meta name="description" content="Wie füllt sich der Anguss? Die Schmelze als Partikel (SPH) auf der Grafikkarte: der Pressrest voll, der Kolben schiebt mit der DieLogic-Schusskurve, und die Partikel laufen durch die Laufkanäle bis zu den Anschnitten — Ankunft je Anschnitt, Partikel zu jeder Zeit, nach Geschwindigkeit gefärbt.">
+<meta name="description" content="Wie füllt sich der Anguss? Die Schmelze als Partikel (SPH) auf der Grafikkarte: der Pressrest voll, der Kolben schiebt mit der DieLogic-Schusskurve, und die Partikel laufen durch die Laufkanäle bis zu den Anschnitten: Ankunft je Anschnitt, Partikel zu jeder Zeit, nach Geschwindigkeit gefärbt.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -28,7 +28,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Angussfüllung · Partikel</h1>
-    <p class="subtitle">Die Schmelze vom Pressrest bis zu den Anschnitten — als Partikel (SPH) statt als Gitter, auf der Grafikkarte, mit der DieLogic-Schusskurve. Die Gitterrechnung: <a href="angussfuellung.html">Angussfüllung</a>.</p>
+    <p class="subtitle">Die Schmelze vom Pressrest bis zu den Anschnitten, als Partikel (SPH) statt als Gitter, auf der Grafikkarte, mit der DieLogic-Schusskurve. Die Gitterrechnung: <a href="angussfuellung.html">Angussfüllung</a>.</p>
   </div>
 </section>
 
@@ -51,7 +51,7 @@
       <select id="alloy"></select>
     </div>
     <div class="row">
-      <span title="Gussvolumen einschließlich Überläufen — bestimmt die zweite Phase der Kurve.">Gussvolumen</span>
+      <span title="Gussvolumen einschließlich Überläufen; es bestimmt die zweite Phase der Kurve.">Gussvolumen</span>
       <input type="text" id="vol" inputmode="decimal" value="420" spellcheck="false">
       <span class="val">cm³</span>
     </div>
@@ -63,7 +63,7 @@
     <div class="facts" id="curve-facts"></div>
     <div class="warn-line" id="curve-warn"></div>
     <div class="hint">Die Rechnung beginnt bei „Kammer voll": die Schmelze steht im Pressrest, und der
-      Kolben schiebt mit der DieLogic-Kurve — erst v<sub>krit</sub>, dann die Rampe der zweiten
+      Kolben schiebt mit der DieLogic-Kurve: erst v<sub>krit</sub>, dann die Rampe der zweiten
       Phase. Maschine und Thermik kommen aus dem aktuellen Projekt.</div>
 
     <h2>Simulation</h2>
@@ -80,7 +80,7 @@
     <div class="hint">Schwach kompressible SPH: die Schmelze als Partikel mit Dichte und Druck (Tait),
       künstlicher Zähigkeit und δ-Diffusion der Dichte; die Wände als Abstandsfeld, an dem die Partikel
       gleiten (keine Haftung), der Kolben als Säule von Zustrompartikeln hinter dem Pressrest. Keine
-      Schwerkraft, keine Oberflächenspannung — eine <b>schnelle</b> Rechnung für Reihenfolge und Zeiten,
+      Schwerkraft, keine Oberflächenspannung: eine <b>schnelle</b> Rechnung für Reihenfolge und Zeiten,
       keine Gießsimulation. Die Ankunft steht neben der 1D-Rechnung und neben der Gitterrechnung.</div>
 
     <h2>Darstellung</h2>
@@ -89,7 +89,7 @@
       <button type="button" data-value="anguss" title="Nur Anguss und Pressrest">Anguss</button>
     </div>
     <div class="row disabled" id="t-row">
-      <span title="Zeit ab „Kammer voll" — die Front wandert mit dem Regler.">Zeit</span>
+      <span title="Zeit ab „Kammer voll". Die Front wandert mit dem Regler.">Zeit</span>
       <input type="range" id="t-slider" min="0" max="0" step="1" value="0">
       <span class="val" id="t-val"></span>
     </div>

@@ -132,7 +132,7 @@
   };
 
   /* Legierung, wenn das Projekt keine hat: EN AC-AlSi9Cu3(Fe) ([B] 12.4.1). */
-  var ALLOY_FALLBACK = { name: 'AlSi9Cu3(Fe) — Beispielwerte', Tcast: 660, Tliq: 593, Tsol: 521, hf: 403, cp20: 846, cpS: 1034, cpL: 1056 };
+  var ALLOY_FALLBACK = { name: 'AlSi9Cu3(Fe), Beispielwerte', Tcast: 660, Tliq: 593, Tsol: 521, hf: 403, cp20: 846, cpS: 1034, cpL: 1056 };
 
   /* Eingaben der Wärmebilanz (cycle.heat). Alles Übrige kommt aus dem
      Projekt (Auslegung: Schussgewicht, Legierung, Gießtemperatur, Form-
@@ -263,8 +263,8 @@
   function extrasFromState(st) {
     var list = [];
     (st.schieber || []).forEach(function (s) {
-      list.push({ label: s.name + ' — ziehen', track: 'kern', anchor: 'oeffnen', lag: s.pullLag, dur: s.pullDur, short: 'ziehen' });
-      list.push({ label: s.name + ' — einfahren', track: 'kern', anchor: 'schliessen', lag: s.pushLag, dur: s.pushDur, short: 'einfahren' });
+      list.push({ label: s.name + ' (ziehen)', track: 'kern', anchor: 'oeffnen', lag: s.pullLag, dur: s.pullDur, short: 'ziehen' });
+      list.push({ label: s.name + ' (einfahren)', track: 'kern', anchor: 'schliessen', lag: s.pushLag, dur: s.pushDur, short: 'einfahren' });
     });
     SECTION_META.forEach(function (m) {
       ((st.sections || {})[m[0]] || []).forEach(function (e) {
@@ -295,7 +295,7 @@
          beim nächsten Laden den DEFAULT einsetzte. Dieselbe Eingabe ergab
          so zwei verschiedene Zykluszeiten (gemessen 48 s live gegen 52 s
          nach dem Neuladen), und die Kosten sprangen mit. */
-      if (badDur(raw)) errors.push('Ungültige Dauer bei „' + p.label + '" — als 0 s gerechnet.');
+      if (badDur(raw)) errors.push('Ungültige Dauer bei „' + p.label + '": als 0 s gerechnet.');
       var d = cleanDur(raw);
       anchors[p.id] = t;
       items.push({ id: p.id, label: p.label, track: p.track, start: t, end: t + d, dur: d, main: true });
@@ -306,14 +306,14 @@
     (extras || []).forEach(function (e, i) {
       var base = anchors[e.anchor];
       if (base === undefined) {
-        errors.push('Unbekannter Bezugspunkt bei „' + e.label + '" — Start am Zyklusstart.');
+        errors.push('Unbekannter Bezugspunkt bei „' + e.label + '": Start am Zyklusstart.');
         base = 0;
       }
       /* Dieselbe Regel wie für die Hauptphasen: eine unbrauchbare Dauer
          oder ein unbrauchbarer Versatz wird gemeldet, nicht stumm zu 0. */
-      if (badDur(e.dur)) errors.push('Ungültige Dauer bei „' + e.label + '" — als 0 s gerechnet.');
+      if (badDur(e.dur)) errors.push('Ungültige Dauer bei „' + e.label + '": als 0 s gerechnet.');
       if (e.lag != null && e.lag !== '' && !isFinite(Number(e.lag))) {
-        errors.push('Ungültiger Versatz bei „' + e.label + '" — als 0 s gerechnet.');
+        errors.push('Ungültiger Versatz bei „' + e.label + '": als 0 s gerechnet.');
       }
       var start = Math.max(base + (isFinite(e.lag) ? Number(e.lag) : 0), 0);
       var d = cleanDur(e.dur);

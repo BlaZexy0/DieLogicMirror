@@ -46,7 +46,7 @@ function parseAscii(text) {
   const kaputt = vals.findIndex(v => !Number.isFinite(v));
   if (kaputt >= 0 && kaputt < nTri * 9) {
     throw new Error('Unlesbare Koordinate in der ASCII-STL (Punkt '
-      + (Math.floor(kaputt / 3) + 1) + ') — die Datei ist beschädigt.');
+      + (Math.floor(kaputt / 3) + 1) + '): die Datei ist beschädigt.');
   }
   return Float64Array.from(vals.slice(0, nTri * 9));
 }

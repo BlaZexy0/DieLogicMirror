@@ -220,7 +220,7 @@ function adopt(scene, sourceName) {
 new GLTFLoader().load('assets/die.glb', gltf => adopt(gltf.scene, 'assets/die.glb'),
   undefined,
   err => {
-    status.textContent = 'assets/die.glb fehlt oder ist defekt — neu erzeugen: in openscad_parts ./render_die.sh --studio';
+    status.textContent = 'assets/die.glb fehlt oder ist defekt. Neu erzeugen: in openscad_parts ./render_die.sh --studio';
     console.error(err);
   });
 

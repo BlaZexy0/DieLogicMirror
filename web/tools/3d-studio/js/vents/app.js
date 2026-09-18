@@ -310,7 +310,7 @@ function cancelAim() {
 /** Ein neuer Überlauf der Art `type`: der nächste Klick aufs Bauteil setzt sie. */
 function startPlace(type) {
   if (!M.TYPES[type]) return;
-  if (!refMesh.visible) { aim.note('Zuerst ein Bauteil laden — dann setzt der Klick den Überlauf dorthin.'); return; }
+  if (!refMesh.visible) { aim.note('Zuerst ein Bauteil laden, dann setzt der Klick den Überlauf dorthin.'); return; }
   handles.select(null);
   aim.show(true, M.TYPES[type].label + ': die Stelle am Bauteil anklicken, wo sie sitzen soll. Ziehen dreht die Ansicht, Esc bricht ab.');
   aim.onCancel = cancelAim;
@@ -329,7 +329,7 @@ function startPlace(type) {
 function startMove(id) {
   const it = state.plan.items[id];
   if (!it) return;
-  if (!refMesh.visible) { aim.note('Zuerst ein Bauteil laden — dann setzt der Klick den Überlauf dorthin.'); return; }
+  if (!refMesh.visible) { aim.note('Zuerst ein Bauteil laden, dann setzt der Klick den Überlauf dorthin.'); return; }
   aim.show(true, M.TYPES[it.type].label + ' ' + id + ': die neue Stelle am Bauteil anklicken. Esc bricht ab.');
   aim.onCancel = cancelAim;
   handles.armAim({

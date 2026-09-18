@@ -54,7 +54,7 @@
   <div class="inner">
     <h1>Die kritische Kolbengeschwindigkeit der ersten Phase</h1>
     <p class="subtitle">Vor dem Kolben läuft eine Welle. Wer schneller fährt als sie verkraften
-      kann, schlägt Luft in die Schmelze. Hier steht die vollständige Herleitung — von den
+      kann, schlägt Luft in die Schmelze. Hier steht die vollständige Herleitung: von den
       Flachwassergleichungen über die Kolbenwelle bis zur Frage, wie gut das Nogowizin-Polynom
       die echte Kreisquerschnitts-Lösung trifft.</p>
     <div class="hero-tags">
@@ -78,7 +78,7 @@
         <li><a href="#s4">4. Von der Störung zur Invariante</a></li>
         <li><a href="#s5">5. Die Kolbenwelle</a></li>
         <li><a href="#s6">6. Das Deckenkriterium</a></li>
-        <li><a href="#s7">7. Passt das Polynom — und die Theorie?</a></li>
+        <li><a href="#s7">7. Passt das Polynom? Und die Theorie?</a></li>
         <li><a href="#s8">8. Konsequenz für die Schusskurve</a></li>
         <li><a href="#quellen">9. Quellen</a></li>
       </ul>
@@ -105,28 +105,28 @@
         <p>Fährt der Kolben zu schnell, bricht diese Welle wie eine Brandung: Sie überschlägt sich,
           faltet die Kammerluft in die Schmelze ein und transportiert sie als Porosität bis ins
           Bauteil. Fährt er viel zu langsam, kühlt die Schmelze aus und die Welle reflektiert am
-          Kammerende. Die erste Phase hat also ein Fenster — und dessen obere Kante ist die
+          Kammerende. Die erste Phase hat also ein Fenster, und dessen obere Kante ist die
           kritische Kolbengeschwindigkeit. Um sie <em>herzuleiten</em> statt nur zu zitieren,
           braucht es drei Zutaten: die Flachwassergleichungen, ihre Charakteristiken und die
           Geometrie des Kreisquerschnitts.</p>
       </div>
       <div class="fig-wrap">
         <div class="fig-row">
-          <img src="/assets/theorie/welle-unterkritisch.svg" alt="Längsschnitt der Füllkammer: unterkritische Kolbengeschwindigkeit — die Stauwelle läuft flach vor dem Kolben" loading="lazy">
-          <img src="/assets/theorie/welle-kritisch.svg" alt="Längsschnitt der Füllkammer: kritische Kolbengeschwindigkeit — der Wellenkamm erreicht die Kammerdecke" loading="lazy">
-          <img src="/assets/theorie/welle-ueberkritisch.svg" alt="Längsschnitt der Füllkammer: überkritische Kolbengeschwindigkeit — die Welle überschlägt sich und schließt Luft ein" loading="lazy">
+          <img src="/assets/theorie/welle-unterkritisch.svg" alt="Längsschnitt der Füllkammer: unterkritische Kolbengeschwindigkeit; die Stauwelle läuft flach vor dem Kolben" loading="lazy">
+          <img src="/assets/theorie/welle-kritisch.svg" alt="Längsschnitt der Füllkammer: kritische Kolbengeschwindigkeit; der Wellenkamm erreicht die Kammerdecke" loading="lazy">
+          <img src="/assets/theorie/welle-ueberkritisch.svg" alt="Längsschnitt der Füllkammer: überkritische Kolbengeschwindigkeit; die Welle überschlägt sich und schließt Luft ein" loading="lazy">
         </div>
         <div class="fig-cap"><b>Die Stauwelle in drei Zuständen</b> (Füllkammer im Längsschnitt):
           Unterhalb der kritischen Geschwindigkeit läuft die Welle dem Kolben flach voraus.
           Bei v<sub>K</sub> = v<sub>krit</sub> erreicht der Kamm gerade die Kammerdecke
-          (h<sub>K</sub> = D — das Deckenkriterium aus Abschnitt 6). Darüber überschlägt sich
+          (h<sub>K</sub> = D, das Deckenkriterium aus Abschnitt 6). Darüber überschlägt sich
           die Welle wie eine Brandung und faltet die Kammerluft als Blasen in die Schmelze ein.</div>
       </div>
 
       <span class="section-anchor" id="s2"></span>
       <h2 class="section-title">2. Flachwasser in der Füllkammer</h2>
       <div class="prose">
-        <p>Die Füllkammer ist ein liegender Zylinder — als Gerinne betrachtet ein <em>prismatischer
+        <p>Die Füllkammer ist ein liegender Zylinder, als Gerinne betrachtet ein <em>prismatischer
           Kanal</em>: Der Querschnitt ändert sich nicht entlang der Achse. Bei Füllstand h (vom
           Kammerboden gemessen) ist die benetzte Fläche A(h) ein
           <a href="kreissegmente.html">Kreissegment</a> und die freie Oberfläche eine Sehne der
@@ -136,7 +136,7 @@
           der Schmelze ist vernachlässigbar, der Druck im Innern deshalb hydrostatisch, und die
           Geschwindigkeit v(x,&nbsp;t) ist über den Querschnitt einheitlich. Für die träge,
           zentimetertiefe Metallströmung im Vorlauf ist das eine gute Näherung. Damit bleiben zwei
-          Bilanzen — Masse und Impuls:</p>
+          Bilanzen, Masse und Impuls:</p>
       </div>
       <div class="derivation-box">
         <div class="step"><span class="step-num">①</span>
@@ -147,7 +147,7 @@
             ∂v/∂t + v·∂v/∂x + g·∂h/∂x = 0.</span></div>
       </div>
       <div class="prose">
-        <p>Zwei gekoppelte Gleichungen für h(x,&nbsp;t) und v(x,&nbsp;t) — mehr braucht die ganze
+        <p>Zwei gekoppelte Gleichungen für h(x,&nbsp;t) und v(x,&nbsp;t); mehr braucht die ganze
           Herleitung nicht.</p>
       </div>
 
@@ -157,11 +157,11 @@
         <p>Wie schnell läuft eine kleine Störung auf ruhender Schmelze (v ≈ 0, h ≈ const)? Setzt
           man h = h₀ + h′ und v = v′ mit kleinen Störungen ein und streicht Produkte von
           Störgrößen, bleiben ∂h′/∂t + (A/T)·∂v′/∂x = 0 und ∂v′/∂t + g·∂h′/∂x = 0. Ineinander
-          eingesetzt ergibt das die Wellengleichung — mit der Ausbreitungsgeschwindigkeit:</p>
+          eingesetzt ergibt das die Wellengleichung, mit der Ausbreitungsgeschwindigkeit:</p>
       </div>
       <div class="eq">$$c = \sqrt{g \cdot \frac{A}{T}}$$</div>
       <div class="prose">
-        <p>A/T ist die <em>hydraulische Tiefe</em> — die mittlere Tiefe, die ein Querschnitt
+        <p>A/T ist die <em>hydraulische Tiefe</em>: die mittlere Tiefe, die ein Querschnitt
           „effektiv" hat. Probe am Rechteckkanal: A = B·h, T = B ⇒ c = √(g·h), die klassische
           Flachwasserformel. Im Kreisquerschnitt hängen A und T nur von D und Füllgrad φ ab; das
           Dashboard rechnet genau dieses c als „Wellengeschwindigkeit".</p>
@@ -170,7 +170,7 @@
       <span class="section-anchor" id="s4"></span>
       <h2 class="section-title">4. Von der Störung zur Invariante</h2>
       <div class="prose">
-        <p>Für die <em>große</em> Welle vor dem Kolben reicht Linearisierung nicht — dort ändert
+        <p>Für die <em>große</em> Welle vor dem Kolben reicht Linearisierung nicht: Dort ändert
           sich h um Faktoren. Der Schlüssel: Beide Gleichungen aus Abschnitt 2 lassen sich so
           kombinieren, dass eine einzige Größe entlang einer Bahn konstant bleibt. Das ist keine
           Zauberei, sondern eine Substitution: Statt der Höhe h benutzt man ihr
@@ -193,16 +193,16 @@
       <div class="prose">
         <p>Diese transportierten Größen heißen <b>Riemann-Invarianten</b>, ihre Bahnen
           <b>Charakteristiken</b>. Anschaulich: ω(h) misst, „wie viel Welle" in einer Anhebung von
-          h₀ auf h steckt — und v ± ω ist die Bilanz aus Strömung und Wellengehalt, die eine
+          h₀ auf h steckt, und v ± ω ist die Bilanz aus Strömung und Wellengehalt, die eine
           rechts- bzw. linkslaufende Welle mit sich trägt. Probe am Rechteckkanal: dort ist
-          g/c = g/√(g·h) und das Integral ergibt ω = 2·(c − c₀) — die bekannte
+          g/c = g/√(g·h) und das Integral ergibt ω = 2·(c − c₀), die bekannte
           „2c-Invariante" der Flachwassertheorie.</p>
       </div>
 
       <span class="section-anchor" id="s5"></span>
       <h2 class="section-title">5. Die Kolbenwelle</h2>
       <div class="prose">
-        <p>Jetzt der Kolben. Er startet aus der Ruhe und beschleunigt moderat — vor der Welle ist
+        <p>Jetzt der Kolben. Er startet aus der Ruhe und beschleunigt moderat; vor der Welle ist
           die Schmelze noch ungestört: v = 0, h = h₀, also v − ω = 0 (mit ω ab h₀ gezählt). Diese
           <em>linkslaufenden</em> Charakteristiken aus dem ungestörten Gebiet erreichen jeden Punkt
           der Welle. Deshalb gilt <b>überall</b> in der Kolbenwelle v = ω(h): Die
@@ -215,7 +215,7 @@
       <div class="prose">
         <p>gilt: Je schneller der Kolben, desto höher türmt sich die Schmelze vor ihm auf. Die
           rechtslaufenden Charakteristiken höherer Wasserstände sind dabei schneller (v + c wächst
-          mit h) — die Front wird steiler und würde bei zu schneller Beschleunigung zum brechenden
+          mit h); die Front wird steiler und würde bei zu schneller Beschleunigung zum brechenden
           Schwall. Beim moderaten Vorlauf bleibt die Welle glatt, und die Beziehung oben beschreibt
           ihren Kamm am Kolben.</p>
       </div>
@@ -224,7 +224,7 @@
       <h2 class="section-title">6. Das Deckenkriterium</h2>
       <div class="prose">
         <p>Kritisch wird es, wenn der Wellenkamm die <em>Kammerdecke</em> erreicht: h<sub>K</sub> = D.
-          Ab da kann die Welle nicht mehr höher ausweichen — sie schlägt über und schließt die
+          Ab da kann die Welle nicht mehr höher ausweichen: Sie schlägt über und schließt die
           restliche Kammerluft ein. Die kritische Kolbengeschwindigkeit ist also keine neue
           Gleichung, sondern die Kolbenwellen-Beziehung aus Abschnitt&nbsp;5, ausgewertet an der
           Decke: v<sub>krit</sub> = ω(D).</p>
@@ -232,13 +232,13 @@
       <div class="eq">$$v_{\text{krit}} = \omega (D) = \int _{h_{0}}^{D} \sqrt{g \cdot \frac{T(h)}{A(h)}}\ \text{dh}\ = \sqrt{g \cdot D} \cdot f(\varphi)$$</div>
       <div class="prose">
         <p>Probe am Rechteckkanal: Dort ist ω = 2·(c − c₀) (Abschnitt&nbsp;4), und das
-          Deckenkriterium wird geschlossen lösbar — die klassische 2D-Form nach Garber,
+          Deckenkriterium wird geschlossen lösbar: die klassische 2D-Form nach Garber,
           v<sub>krit,2D</sub> = 2·(√(g·D) − √(g·h₀)). Im Kreisquerschnitt gibt es diese
           Abkürzung nicht. Der zweite Schritt ist dann reine Skalierung: Ersetzt man h = D·y,
-          kürzt sich D bis auf den Faktor √(g·D) heraus — übrig bleibt ein dimensionsloses
+          kürzt sich D bis auf den Faktor √(g·D) heraus; übrig bleibt ein dimensionsloses
           Integral f(φ), das nur noch vom Anfangs-Füllgrad abhängt. Jetzt zahlt sich die
           <a href="kreissegmente.html">Segmentgeometrie</a> aus: Für den Kreisquerschnitt sind
-          Sehne und Segmentfläche geschlossen bekannt — T/D = 2·√(y·(1−y)) und
+          Sehne und Segmentfläche geschlossen bekannt, T/D = 2·√(y·(1−y)) und
           A/D² = ¼·[arccos(1−2y) − 2·(1−2y)·√(y·(1−y))]. Eingesetzt wird das Deckenkriterium
           vollständig explizit; das ist die <b>Endformel</b> der Herleitung:</p>
       </div>
@@ -246,13 +246,13 @@
       <div class="prose">
         <p>Darin ist y₀ = h₀/D die Anfangsfüllhöhe, die über die numerisch invertierte
           φ↔h-Beziehung des <a href="kreissegmente.html">Kreissegments</a> aus dem Füllgrad
-          folgt. Die Formel ist damit vollständig bestimmt — aber nur numerisch auswertbar:
+          folgt. Die Formel ist damit vollständig bestimmt, aber nur numerisch auswertbar:
           Weder das Integral hat eine Stammfunktion, noch lässt sich y₀(φ) geschlossen
           angeben. Genau hier setzen die Näherungen aus der Literatur an.</p>
       </div>
 
       <span class="section-anchor" id="s7"></span>
-      <h2 class="section-title">7. Passt das Polynom — und die Theorie?</h2>
+      <h2 class="section-title">7. Passt das Polynom? Und die Theorie?</h2>
       <div class="prose">
         <p>Nogowizins Formel ersetzt die Endformel aus Abschnitt 6 durch ein Polynom zweiter
           Ordnung in φ:</p>
@@ -260,18 +260,18 @@
       <div class="eq">$$v_{\text{krit}} = \sqrt{g \cdot D} \cdot \left( 1{,}386 - 1{,}915 \cdot \varphi + 0{,}615 \cdot \varphi ^{2} \right)$$</div>
       <div class="prose">
         <p>Das lässt sich prüfen: Das exakte Integral aus Abschnitt 6 ist numerisch in Sekunden
-          ausgewertet. Der Vergleich zeigt einen sauberen Fit — mit klar erkennbarem
+          ausgewertet. Der Vergleich zeigt einen sauberen Fit, mit klar erkennbarem
           Gültigkeitsbereich:</p>
       </div>
       <div class="prose">
         <p>Antwort in zwei Teilen. <b>Im Arbeitsbereich: ja.</b> Für φ = 0,2–0,75 trifft das
-          Polynom die exakte Kreisquerschnitts-Lösung auf ≈&nbsp;2 % — im Füllgrad-Zielband
+          Polynom die exakte Kreisquerschnitts-Lösung auf ≈&nbsp;2 %; im Füllgrad-Zielband
           40–60 % ist der Unterschied praktisch bedeutungslos. <b>An den Rändern: nein.</b> Unter
           φ ≈ 0,15 ist es konservativ, über φ ≈ 0,8 wird es optimistisch: Bei φ = 0,9 erlaubt es
           rund ein Viertel mehr Geschwindigkeit als das Deckenkriterium.</p>
         <p>Der Grund ist die Form der exakten Lösung an den Rändern: Bei fast leerer Kammer steckt
           eine φ<sup>1/3</sup>-Spitze in f (die Segmentfläche wächst wie h<sup>3/2</sup>), bei
-          fast voller ein Abfall wie (1−φ)<sup>5/6</sup> — beides kann ein Polynom in φ prinzipiell
+          fast voller ein Abfall wie (1−φ)<sup>5/6</sup>; beides kann ein Polynom in φ prinzipiell
           nicht abbilden. Baut man diese beiden Asymptotiken dagegen in den Ansatz ein, reicht
           dieselbe Anzahl Koeffizienten für einen Fit, der <b>überall</b> passt. DieLogic rechnet
           deshalb mit diesem <b>Segment-Fit</b>:</p>
@@ -280,13 +280,13 @@
       <div class="fig-wrap">
         <img src="/assets/theorie/vkrit-fits.svg" alt="Alle Fits in einem Bild: exakte Lösung, Nogowizin-Polynom, Segment-Fit und OpenFOAM-CFD" loading="lazy">
         <div class="fig-cap"><b>Alle Fits in einem Bild:</b> exakte Lösung des Deckenkriteriums
-          (dunkel), das Nogowizin-Polynom (karmin) und der Segment-Fit (türkis — deckungsgleich
+          (dunkel), das Nogowizin-Polynom (karmin) und der Segment-Fit (türkis, deckungsgleich
           auf der exakten Kurve), alles als v<sub>krit</sub>/√(g·D) über dem Füllgrad. Im
           markierten Füllgrad-Zielband (40–60&nbsp;%) liegen alle drei fast aufeinander; an den
           Rändern trennt sich das Polynom. Gold dazu die OpenFOAM-CFD aus dem Realitäts-Check
           unten (Mittel über alle Bohrungen, Band = Spanne): links von φ ≈ 0,25 ist die
           Flachwassertheorie konservativ, rechts davon zunehmend optimistisch; ab φ ≈ 0,8
-          fächert die Spanne auf — der Klein-Ø-Abschlag.</div>
+          fächert die Spanne auf: der Klein-Ø-Abschlag.</div>
       </div>
       <div class="table-scroll">
       <table class="th-table">
@@ -305,12 +305,12 @@
         <div class="label">Ergebnis der Prüfung</div>
         <p>Das Nogowizin-Polynom ist im klassischen Arbeitsbereich eine gute Näherung; der
           Segment-Fit hält <b>maximal 0,25 % Abweichung über den gesamten Bereich
-          φ = 0,01–0,98</b>. Beide sind damit treue Vertreter der Flachwassertheorie — ob die
+          φ = 0,01–0,98</b>. Beide sind damit treue Vertreter der Flachwassertheorie; ob die
           <em>Theorie selbst</em> stimmt, ist eine andere Frage. Die beantwortet der
           Realitäts-Check direkt im Anschluss mit 3D-Strömungssimulation.</p>
       </div>
       <div class="prose">
-        <p>Nebenbefund derselben Rechnung: Je voller die Kammer, desto niedriger die Grenze — bei
+        <p>Nebenbefund derselben Rechnung: Je voller die Kammer, desto niedriger die Grenze. Bei
           hohem Füllgrad bleibt der Welle kaum Raum unter der Decke. Ein hoher Füllgrad spart
           Pressrest und Zykluszeit, erkauft sich das aber mit einer langsameren, empfindlicheren
           ersten Phase.</p>
@@ -320,16 +320,16 @@
       <div class="prose">
         <p>Die Flachwassertheorie ist eindimensional: hydrostatischer Druck, glatte Welle, Brechen
           erst an der Decke. DieLogic hat das Kriterium deshalb mit <b>OpenFOAM</b> dreidimensional
-          nachgerechnet — ein Raster aus 25 Bohrungen (Ø 60–300 mm) × 17 Füllgraden (0,1–0,9),
+          nachgerechnet: ein Raster aus 25 Bohrungen (Ø 60–300 mm) × 17 Füllgraden (0,1–0,9),
           425 Simulationsläufe (<code>fixtures/vkrit/v_krit_sim.csv</code>). Zwei Befunde:</p>
         <p><b>Die Skalierung stimmt, die Grenze nicht.</b> Der Ansatz v<sub>krit</sub> = √(g·D)·f
-          kollabiert die CFD-Daten bis φ ≈ 0,75 auf eine einzige Kurve (Streuung ≤ 3 %) — die
+          kollabiert die CFD-Daten bis φ ≈ 0,75 auf eine einzige Kurve (Streuung ≤ 3 %); die
           Schwerewellen-Skalierung der Theorie ist also richtig. Aber die Kurve selbst liegt
           anders (gold in der Abbildung oben): Bei kleinen Füllgraden erlaubt die
           3D-Rechnung <em>mehr</em> als das
-          Deckenkriterium (+17 % bei φ = 0,1 — viel Luftraum, die Welle darf die Decke berühren,
+          Deckenkriterium (+17 % bei φ = 0,1: viel Luftraum, die Welle darf die Decke berühren,
           bevor sie Luft einschlägt). Ab φ ≈ 0,3 kippt es: Die reale Welle <b>bricht, bevor sie
-          die Decke erreicht</b> — bei φ = 0,5 ist die Theorie ≈ 10 % zu optimistisch, bei
+          die Decke erreicht</b>; bei φ = 0,5 ist die Theorie ≈ 10 % zu optimistisch, bei
           φ = 0,7 schon ≈ 28 %, bei φ = 0,9 mehr als das Doppelte.</p>
         <p><b>Kleine Kammern verlieren extra.</b> Ab φ ≈ 0,8 bricht der √(g·D)-Kollaps: Eine
           Ø-60-Kammer liegt bei φ = 0,85 rund 19 % unter einer Ø-300-Kammer (kapillare und viskose
@@ -339,12 +339,12 @@
         <div class="label">Konsequenz</div>
         <p>DieLogic rechnet v<sub>krit</sub> deshalb <b>direkt aus der CFD-Tabelle</b> (bilineare
           Interpolation über Ø und φ; unter φ = 0,1 konservativ geklemmt, über φ = 0,9 linear auf
-          0 auslaufend) — in der Schusskurven-Prüfung, der Heatmap, dem (φ,&nbsp;λ)-Fenster und im
+          0 auslaufend): in der Schusskurven-Prüfung, der Heatmap, dem (φ,&nbsp;λ)-Fenster und im
           Backend (hpdcsim-Modell <code>cfd_table</code>). Flachwassertheorie
           (<code>segment_fit</code>), Nogowizin und Garber/Lopez bleiben als Referenzmodelle
           wählbar. Die Herleitung der Abschnitte 2–6 bleibt das Verständnis-Gerüst: Sie erklärt
           die √(g·D)-Skalierung und <em>warum</em> es überhaupt eine kritische Geschwindigkeit
-          gibt — die Zahlen kommen aus der Simulation.</p>
+          gibt; die Zahlen kommen aus der Simulation.</p>
       </div>
 
       <span class="section-anchor" id="s8"></span>
@@ -352,7 +352,7 @@
       <div class="prose">
         <p>Die Regel für die Kurvenplanung ist damit einfach: <strong>Bis die Kammer voll ist,
           bleibt die Kolbengeschwindigkeit unter v<sub>krit</sub></strong>; erst danach darf auf
-          die zweite Phase beschleunigt werden. Das Dashboard prüft genau das — es sucht das
+          die zweite Phase beschleunigt werden. Das Dashboard prüft genau das: Es sucht das
           Maximum der Schusskurve im Vorlaufweg und vergleicht es mit der v<sub>krit</sub>-Grenze
           aus der CFD-Tabelle (bilinear über Ø und φ interpoliert, Abschnitt&nbsp;7); das
           Ereignis „Kammer voll" markiert den Umschaltpunkt, ab dem die Grenze nicht mehr gilt.</p>
@@ -360,13 +360,13 @@
       <div class="fig-wrap">
         <img src="/assets/theorie/shotcurve-sv.svg" alt="Schusskurve mit v_krit-Grenze der ersten Phase" loading="lazy">
         <div class="fig-cap"><b>Die Schusskurve aus dem Dashboard (Weg–Geschwindigkeit):</b> Die
-          schraffierte Fläche ist „v_krit 1. Phase" — sie endet exakt beim Ereignis ① „Kammer
+          schraffierte Fläche ist „v_krit 1. Phase"; sie endet exakt beim Ereignis ① „Kammer
           voll", denn ab da gibt es keine freie Oberfläche mehr, die überschlagen könnte. Die
           Standardkurve bleibt mit 0,4 m/s unter der Grenze und beschleunigt erst danach.</div>
       </div>
       <div class="warning-box">
         <b>Grenzen des Modells:</b> Die Herleitung nimmt eine glatte, quasi-stationär aufgebaute
-        Welle an — aggressive Anfahrrampen (Schwallbildung unterwegs), Wellenreflexionen am
+        Welle an; aggressive Anfahrrampen (Schwallbildung unterwegs), Wellenreflexionen am
         Kammerende und das Eintauchverhalten am Eingusskanal bildet sie nicht ab. Auch das
         Deckenkriterium selbst ist eine Idealisierung: Reale Wellen schlagen je nach
         Beschleunigungsprofil etwas früher oder später über. Für die Feinabstimmung der ersten
@@ -385,13 +385,13 @@
           Fit-Prüfung und Realitäts-Check in Abschnitt 7 sind eigene Rechnungen:</p>
         <ul>
           <li>B. Nogowizin: <i>Theorie und Praxis des Druckgusses.</i> Schiele &amp; Schön,
-            Berlin 2011 — Polynom-Näherung der kritischen Kolbengeschwindigkeit und
+            Berlin 2011: Polynom-Näherung der kritischen Kolbengeschwindigkeit und
             Flachwasser-Betrachtung der Vorlaufphase.</li>
           <li>L. W. Garber: <i>Theoretical Analysis and Experimental Observation of Air
-            Entrapment During Cold Chamber Filling.</i> Die Casting Engineer, 1982 —
+            Entrapment During Cold Chamber Filling.</i> Die Casting Engineer, 1982:
             Deckenkriterium der Schwallwelle in der Füllkammer.</li>
           <li>DieLogic-OpenFOAM-Simulationsreihe (<code>fixtures/vkrit/v_krit_sim.csv</code>,
-            25 Bohrungen × 17 Füllgrade) — Datenbasis des Realitäts-Checks und der
+            25 Bohrungen × 17 Füllgrade): Datenbasis des Realitäts-Checks und der
             CFD-Tabelle im Dashboard.</li>
         </ul>
         <p class="fig-cap" style="border:0;padding:0.4rem 0 0;">Vor einer Veröffentlichung

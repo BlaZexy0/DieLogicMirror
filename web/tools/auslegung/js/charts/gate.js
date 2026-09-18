@@ -40,15 +40,15 @@ export default {
   mathHTML() {
     return `
 <h4>Anschnittfläche aus der Zielgeschwindigkeit</h4>
-<p class="math-note">Die Anschnittgeschwindigkeit bestimmt, wie die Schmelze in die Kavität eintritt — zu
+<p class="math-note">Die Anschnittgeschwindigkeit bestimmt, wie die Schmelze in die Kavität eintritt: zu
 langsam füllt schlecht und bindet nicht, zu schnell erodiert Form und Kerne (das Zielband kommt aus dem
 Prozessfenster). Direkt einstellen kann man v<sub>a</sub> aber nicht: gefahren wird der Kolben. Das Bindeglied
-ist wieder die Kontinuität — derselbe Volumenstrom fließt durch Kolben und Anschnitt,
+ist wieder die Kontinuität: derselbe Volumenstrom fließt durch Kolben und Anschnitt,
 Q = A<sub>K</sub> · v<sub>p</sub> = A<sub>a</sub> · v<sub>a</sub>, der Anschnitt wirkt als Düse mit dem
 Übersetzungsverhältnis A<sub>K</sub>/A<sub>a</sub>. Für eine Ziel-Anschnittgeschwindigkeit folgt die nötige
 Fläche:</p>
 ${eq('A_{a}(v_{p}) = \\frac{A_{K} \\cdot v_{p}}{v_{a}}')}
-<p class="math-note">Die beiden Kurven gelten für v<sub>a</sub> = Ziel-min (obere Kurve — langsame Zielgeschwindigkeit
+<p class="math-note">Die beiden Kurven gelten für v<sub>a</sub> = Ziel-min (obere Kurve: langsame Zielgeschwindigkeit
 braucht große Fläche) und Ziel-max (untere Kurve); dazwischen liegt das zulässige Fenster.</p>
 <p class="math-note">Aktuell bei v₂ = <span data-m="vsel"></span> (Mittel nach Anschnitt, aus der Schusskurve):
 A<sub>a</sub>(v<sub>a</sub> = <span data-m="gmin"></span>) = <b data-m="Amax"></b> ·

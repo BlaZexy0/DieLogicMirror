@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sprengflächenanalyse — DieLogic</title>
+  <title>Sprengflächenanalyse · DieLogic</title>
   <meta name="theme-color" content="#002733">
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -300,7 +300,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Sprengflächenanalyse</h1>
-    <p class="subtitle">STL-Dateien im Browser auswerten: Volumen, Masse, projizierte Fläche, Maschinenwahl — und die Auslegung ins Projekt übernehmen.</p>
+    <p class="subtitle">STL-Dateien im Browser auswerten (Volumen, Masse, projizierte Fläche, Maschinenwahl) und die Auslegung ins Projekt übernehmen.</p>
   </div>
 </section>
 
@@ -315,19 +315,19 @@
       <button data-dir="Y">Y</button>
       <button data-dir="Z" class="active">Z</button>
     </div>
-    <span class="stl-hint">100 % clientseitig — kein Upload zu einem Server.</span>
+    <span class="stl-hint">100 % clientseitig, kein Upload zu einem Server.</span>
   </div>
   <div class="stl-status" id="status"></div>
   <!-- Einstellungen aus dem geometry-Abschnitt des Projekts zurückgelesen. -->
   <div class="stl-status hidden" id="restored-note" style="border-left:3px solid var(--primary);"></div>
 
   <div class="stl-note"><strong>Konvention und Schwindung:</strong> Der Ursprung des
-    STL-Koordinatensystems (<strong>0</strong>) gilt als Werkzeugmitte (Mitte des Säulenfelds) — die
+    STL-Koordinatensystems (<strong>0</strong>) gilt als Werkzeugmitte (Mitte des Säulenfelds); die
     Außermittigkeit des Schwerpunkts und damit Hebelfaktor k und Maschinenempfehlung werden direkt
     vom Ursprung gemessen; die Dateien also schon im CAD passend zur Werkzeugmitte exportieren,
     diese Seite verschiebt und dreht nichts. Der Schalter <strong>„Modelle auf Werkzeugmaß"</strong>
     sagt, was die Dateien zeigen: das Werkzeug (Schwindungsaufmaß eingerechnet) oder das fertige
-    Bauteil. Daraus rechnet die Seite beide Seiten aus — <strong>Flächen</strong> (Sprengfläche,
+    Bauteil. Daraus rechnet die Seite beide Seiten aus: <strong>Flächen</strong> (Sprengfläche,
     Oberfläche) gelten für die Kavität, <strong>Volumen und Massen</strong> für das kalte Bauteil,
     mit der Feststoffdichte der gewählten Legierung. Das Schwindmaß ist mit dem Legierungs-Preset
     vorbelegt und je Bauteil überschreibbar.</div>
@@ -346,17 +346,17 @@
     <div class="canvas-caption">
       <span id="proj-label"></span>
       <span id="cog-label"></span>
-      <span>Einheiten: STL ist einheitenlos — angenommen wird <strong>mm</strong>.</span>
+      <span>Einheiten: STL ist einheitenlos, angenommen wird <strong>mm</strong>.</span>
     </div>
   </div>
 
   <div class="stl-table-card">
     <div class="machine-head">
       <h2>Geladene Dateien</h2>
-      <label for="alloy-select" title="Legierungs-Preset — liefert Feststoffdichte für die Massen und das Schwindmaß">Legierung
+      <label for="alloy-select" title="Legierungs-Preset: liefert Feststoffdichte für die Massen und das Schwindmaß">Legierung
         <select id="alloy-select"></select>
       </label>
-      <label for="shrink-input" title="Lineares Schwindmaß — mit dem Legierungs-Preset vorbelegt, je Bauteil überschreibbar">Schwindmaß s
+      <label for="shrink-input" title="Lineares Schwindmaß: mit dem Legierungs-Preset vorbelegt, je Bauteil überschreibbar">Schwindmaß s
         <input type="number" id="shrink-input" step="0.05"> %
       </label>
       <label class="check" for="shrink-toggle" title="Sind die Modelle auf Werkzeugmaß gezeichnet (Schwindungsaufmaß eingerechnet), ist das kalte Bauteil um (1 + s/100)³ kleiner; sonst ist die Kavität um (1 + s/100)² größer als die geladene Silhouette.">
@@ -384,7 +384,7 @@
 
   <div class="stl-table-card" style="margin-top:1.2rem;">
     <div class="machine-head">
-      <h2>Max. Nachdruck je Maschine — Sprengfläche aus projizierter Fläche + Seitenschiebern</h2>
+      <h2>Max. Nachdruck je Maschine: Sprengfläche aus projizierter Fläche + Seitenschiebern</h2>
       <p id="input-warn" class="input-warn hidden"></p>
       <label for="ptarget-input">Nachdruck (metallseitig)
         <input type="number" id="ptarget-input" value="600" step="50"> bar
@@ -392,10 +392,10 @@
       <label for="safety-input">Sicherheitsfaktor S
         <input type="number" id="safety-input" value="1.3" step="0.05">
       </label>
-      <label for="core-area-input" title="Projizierte Schieberfläche in Zugrichtung — wirkt mit A·tan(α) auf die Sprengfläche"><span>Seitenschieber A<sub>S</sub></span>
+      <label for="core-area-input" title="Projizierte Schieberfläche in Zugrichtung; wirkt mit A·tan(α) auf die Sprengfläche"><span>Seitenschieber A<sub>S</sub></span>
         <input type="number" id="core-area-input" value="0" step="100" style="width:90px"> mm²
       </label>
-      <label for="core-angle-input" title="Sperrwinkel der Abstützschräge — üblich 10–15°">Sperrwinkel α
+      <label for="core-angle-input" title="Sperrwinkel der Abstützschräge, üblich 10–15°">Sperrwinkel α
         <input type="number" id="core-angle-input" value="11" step="1"> °
       </label>
     </div>
@@ -419,15 +419,15 @@
 
   <p class="stl-footnote">Volumen über die Summe signierter Tetraeder (setzt ein geschlossenes Netz
     voraus), Oberfläche als Summe der Dreiecksflächen. Die projizierte Fläche ist die Silhouette des
-    Bauteils senkrecht zur gewählten <strong>Formöffnungsrichtung</strong> — also die Fläche, auf die
-    der Metalldruck gegen die Schließkraft wirkt —, per Rasterung bestimmt. Die Summenzeile addiert
+    Bauteils senkrecht zur gewählten <strong>Formöffnungsrichtung</strong>, also die Fläche, auf die
+    der Metalldruck gegen die Schließkraft wirkt, per Rasterung bestimmt. Die Summenzeile addiert
     Volumen, Masse und Oberfläche der Dateien; ihre projizierte Fläche ist dagegen die
-    <strong>vereinigte</strong> Silhouette aller Dateien — Überdeckungen, auch zwischen
+    <strong>vereinigte</strong> Silhouette aller Dateien; Überdeckungen, auch zwischen
     verschiedenen Dateien, zählen nur einfach.
     <strong>S</strong> markiert den flächengewichteten Gesamtschwerpunkt der projizierten Flächen,
     <strong>0</strong> den Ursprung des STL-Koordinatensystems.
     Der maximale Nachdruck je Maschine folgt dem Zuhaltungs-Modell des Dashboards
-    (Herleitung: <a href="/theorie/zuhaltung-sprengflaeche.html">Theorie — Zuhaltung und
+    (Herleitung: <a href="/theorie/zuhaltung-sprengflaeche.html">Theorie: Zuhaltung und
     Sprengfläche</a>):
     p<sub>max</sub> = F<sub>s</sub> / (100 · S · k · A) mit A als Sprengfläche
     (in m²) und dem Hebelfaktor k = 1 + 2|e<sub>x</sub>|/a<sub>x</sub> + 2|e<sub>y</sub>|/a<sub>y</sub>
@@ -436,7 +436,7 @@
     <strong>Seitenschieber-Zuschlag</strong> A<sub>S</sub> · tan(α): der Metalldruck wirkt auf die
     in Zugrichtung projizierte Schieberfläche A<sub>S</sub>, die Abstützschräge mit Sperrwinkel α
     leitet davon den Anteil tan(α) in die Öffnungsrichtung (üblich 10–15°). Der Zuschlag geht in
-    die Drucktabelle und die Dashboard-Übernahme ein, verschiebt aber den Schwerpunkt S nicht —
+    die Drucktabelle und die Dashboard-Übernahme ein, verschiebt aber den Schwerpunkt S nicht, denn
     die Lage der Schieber ist hier unbekannt.
     Die drei Spalten: nur Schließkraft (S = 1, k = 1), mit Sicherheitsfaktor S,
     mit S und Außermittigkeit. Die Masse je Datei ist Bauteilvolumen × Feststoffdichte aus dem
@@ -456,7 +456,7 @@
     die Sprengfläche (vereinigte projizierte Fläche + Seitenschieber-Zuschlag),
     Außermittigkeit, Massen aus der Zuordnung,
     Sicherheitsfaktor, metallseitigen Nachdruck sowie Maschinen- und Legierungs-Preset in das Dashboard und
-    öffnet es — möglich, sobald alle vier Zuordnungen (Bauteil, Anguss, Überlauf, Pressrest)
+    öffnet es; möglich, sobald alle vier Zuordnungen (Bauteil, Anguss, Überlauf, Pressrest)
     vergeben sind. Die Legierung bringt beide Dichten mit: hier rechnet die Feststoffdichte die
     Massen, im Dashboard die Flüssigdichte die Schmelzevolumina.</p>
 

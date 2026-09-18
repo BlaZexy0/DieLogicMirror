@@ -157,8 +157,8 @@ function updateGridNote() {
     + fmt(mb, 0) + ' MB auf der Grafikkarte';
   const limit = gpu ? MAX_CELLS : MAX_CELLS_CPU;
   const notes = [];
-  if (!gpu) notes.push('Kein WebGPU in diesem Browser — gerechnet wird in JavaScript, auf grobem Gitter (bis ' + fmt(MAX_CELLS_CPU / 1e3, 0) + ' Tsd. Zellen). Chrome oder Edge rechnen auf der Grafikkarte.');
-  if (count > limit) notes.push('Zu fein: höchstens ' + fmt(limit / 1e6, 2) + ' Mio. Zellen — die Zellkante vergrößern.');
+  if (!gpu) notes.push('Kein WebGPU in diesem Browser: gerechnet wird in JavaScript, auf grobem Gitter (bis ' + fmt(MAX_CELLS_CPU / 1e3, 0) + ' Tsd. Zellen). Chrome oder Edge rechnen auf der Grafikkarte.');
+  if (count > limit) notes.push('Zu fein: höchstens ' + fmt(limit / 1e6, 2) + ' Mio. Zellen. Die Zellkante vergrößern.');
   $('engine-note').textContent = notes.join(' ');
   $('run').disabled = state.running || !state.timeline || count > limit;
 }

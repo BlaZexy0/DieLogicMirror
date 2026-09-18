@@ -26,10 +26,10 @@ export default {
   mathHTML() {
     return `
 <h4>Erstarrungszeit des Anschnitts</h4>
-<p class="math-note">Der Anschnitt ist die dünnste Stelle zwischen Kolben und Bauteil — er friert zuerst zu und
+<p class="math-note">Der Anschnitt ist die dünnste Stelle zwischen Kolben und Bauteil: er friert zuerst zu und
 kappt damit die Druckübertragung in die Kavität. Wie lange das dauert, sagt die Chvorinov-Regel: die
 Erstarrungszeit skaliert mit dem Quadrat von Volumen je Kühlfläche, und bei einem plattenförmigen Anschnitt
-ist dieses Verhältnis gerade die Dicke s — daher der quadratische Ansatz mit der legierungs- und
+ist dieses Verhältnis gerade die Dicke s, daher der quadratische Ansatz mit der legierungs- und
 formabhängigen Erstarrungskonstante k<sub>s</sub>:</p>
 ${eq('t_{\\text{erst}}(s) = k_{s} \\cdot s^{2}')}
 <p class="math-note">Der Anschnitt darf erst nach der Nachdruckaufbauzeit t<sub>N</sub> zufrieren, sonst ist

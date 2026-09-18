@@ -32,13 +32,13 @@ export default {
     return `
 <h4>1 · Füllgrad über Kolben-Ø</h4>
 <p class="math-note">Der Kolben-Ø ist der stärkste Hebel auf den Füllgrad, denn er geht quadratisch in die
-Kammerquerschnittsfläche ein — die Kammerlänge nur linear. Dieses Diagramm beantwortet deshalb die
+Kammerquerschnittsfläche ein, die Kammerlänge nur linear. Dieses Diagramm beantwortet deshalb die
 Auswahlfrage: <em>Welche Kolben-Ø aus dem Maschinenbereich bringen den Füllgrad ins Zielband?</em> Bei fester
 Kammerlänge L gilt:</p>
 ${eq('\\varphi (D) = \\frac{V_{\\text{dos}}}{A_{K}(D) \\cdot L} \\cdot 100 \\% = \\frac{4 \\cdot V_{\\text{dos}}}{\\pi \\cdot D^{2} \\cdot L} \\cdot 100 \\%')}
 
 <h4>2 · Umkehrung: Ø-Bereich für das Zielband</h4>
-${eq('D(\\varphi) = \\sqrt{\\frac{4 \\cdot V_{\\text{dos}}}{\\pi \\cdot \\varphi \\cdot L}} \\quad \\;\\text{—}\\; \\ \\text{hoher Ziel-Füllgrad verlangt einen kleinen Kolben und umgekehrt}')}
+${eq('D(\\varphi) = \\sqrt{\\frac{4 \\cdot V_{\\text{dos}}}{\\pi \\cdot \\varphi \\cdot L}} \\qquad \\text{hoher Ziel-Füllgrad verlangt einen kleinen Kolben und umgekehrt}')}
 <p class="math-note">Aktuell: φ(Ø <span data-m="D"></span>) = <b data-m="phi"></b> · Zielband
 <span data-m="band"></span> ⇒ zulässiger Ø-Bereich <b data-m="Dband"></b></p>`;
   },

@@ -52,11 +52,11 @@ export default {
 <p class="math-note">Dieselbe Physik wie bei der Entlüftungsgeschwindigkeit, nur als Auslegungsfrage gestellt:
 <em>Wie viel Entlüftungsfläche braucht diese Füllzeit?</em> Das zu verdrängende Luftvolumen ist die gesamte
 Kavität (V<sub>luft</sub> = Σ m<sub>i</sub>/ρ<sub>sol</sub>); es muss während der Füllzeit t<sub>f</sub> mit
-höchstens v<sub>luft,max</sub> durch die Kanäle — sonst staut sich die Luft und wird eingeschlossen. Fläche =
+höchstens v<sub>luft,max</sub> durch die Kanäle, sonst staut sich die Luft und wird eingeschlossen. Fläche =
 Volumenstrom durch zulässige Geschwindigkeit:</p>
 ${eq('A_{\\text{ent},\\text{erf}}(t_{f}) = \\frac{V_{\\text{luft}}}{t_{f} \\cdot v_{\\text{luft},\\max}}')}
 <p class="math-note">Kurze Füllzeiten verlangen große Entlüftungsflächen (Hyperbel). Die gestrichelten Linien
-zeigen die vorhandene Entlüftungsfläche und als Referenz die Anschnittfläche — die Entlüftung liegt
+zeigen die vorhandene Entlüftungsfläche und als Referenz die Anschnittfläche; die Entlüftung liegt
 üblicherweise in deren Größenordnung (häufige Faustregel: rund die Hälfte der Anschnittfläche).</p>
 <p class="math-note">Aktuell: V<sub>luft</sub> = <b data-m="V"></b> · Betriebspunkt t<sub>f</sub> = <b data-m="tf"></b>
 (aus v₂, dem Mittel nach Anschnitt aus der Schusskurve, und Kolben-Ø) ⇒ A<sub>ent,erf</sub> = <b data-m="Areq"></b> · vorhanden <b data-m="Avail"></b></p>`;

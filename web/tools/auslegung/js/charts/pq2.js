@@ -121,7 +121,7 @@ export default {
        Kurvenschranken, die als Funktion des Achsenwerts ausgewertet werden). */
     let fx, ix, xl, Qlo = 0;
     if (tb === 'q') { fx = Q => Q * 1000; ix = x => x / 1000; xl = 'Durchfluss Q in l/s'; }
-    else if (tb === 'q2') { fx = Q => Q * Q * 1e6; ix = x => Math.sqrt(Math.max(x, 0)) / 1000; xl = 'Q² in (l/s)² — Maschinenlinie wird Gerade'; }
+    else if (tb === 'q2') { fx = Q => Q * Q * 1e6; ix = x => Math.sqrt(Math.max(x, 0)) / 1000; xl = 'Q² in (l/s)² (Maschinenlinie wird Gerade)'; }
     else if (tb === 'vp') { fx = Q => Q / Ap; ix = x => x * Ap; xl = 'Kolbengeschwindigkeit v_p in m/s'; }
     else { fx = Q => Q > 0 ? Vag / Q * 1000 : Infinity; ix = x => x > 0 ? Vag / (x / 1000) : Infinity; xl = 'Füllzeit ab Anschnitt t_f in ms (Bauteil + Überlauf)'; Qlo = Vag / (tfPlot / 1000); }
 
@@ -256,20 +256,20 @@ export default {
   mathHTML() {
     return `
 <p class="math-note"><b>Quelle:</b> M. A. Pego Guerra, <i>Die Casting Design. A Parametric Approach</i>,
-Carleton University, 1997, Kap. 2–3 — dort nach CSIRO (P–Q², 1977) und Karni (Machine Performance
+Carleton University, 1997, Kap. 2–3; dort nach CSIRO (P–Q², 1977) und Karni (Machine Performance
 Envelope). Gleichungsnummern unten beziehen sich auf diese Arbeit.</p>
 
 <h4>1 · Grundgrößen</h4>
 ${eq('A_{K} = \\frac{\\pi \\cdot D^{2}}{4} \\qquad p_{0} = \\frac{F_{G}}{A_{K}} = P_{\\text{acc}} \\cdot \\frac{A_{h}}{A_{K}} \\qquad Q_{\\text{dry}} = A_{K} \\cdot v_{\\text{dry}} \\qquad V_{a} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Überlauf}}}{\\rho }')}
-<p class="math-note">Die Gießkraft F<sub>G</sub> = P<sub>acc</sub>·A<sub>h</sub> stammt aus Akkumulatordruck × Antriebskolbenfläche —
+<p class="math-note">Die Gießkraft F<sub>G</sub> = P<sub>acc</sub>·A<sub>h</sub> stammt aus Akkumulatordruck × Antriebskolbenfläche;
 die Maschinenkonstante ist der Antriebskolben A<sub>h</sub> = F<sub>max</sub>/P<sub>max</sub> (Preset: Gießkraft bei
 max. Akkumulatordruck). Der <em>eingestellte</em> Akkumulatordruck (höchstens das Maximum) bestimmt die Gießkraft:
 weniger Druck, weniger p₀ und weniger Leistung a. Aktuell F<sub>G</sub> = <b data-m="FG"></b>;
-v<sub>dry</sub> ist die <b>Trockenschuss-Geschwindigkeit</b> (Kolben ohne Metall, alle Verluste im Schusskreis) —
+v<sub>dry</sub> ist die <b>Trockenschuss-Geschwindigkeit</b> (Kolben ohne Metall, alle Verluste im Schusskreis),
 unser Eingabefeld „Kolbengeschw. max.". Aktuell: A<sub>K</sub> = <b data-m="AK"></b> · p₀ = <b data-m="p0"></b> ·
 Q<sub>dry</sub> = <b data-m="Qmax"></b> · V<sub>a</sub> = <b data-m="Va"></b></p>
 
-<h4>2 · Werkzeuglinie (Die Line) — Gl. 2.3/2.5</h4>
+<h4>2 · Werkzeuglinie (Die Line) · Gl. 2.3/2.5</h4>
 <p class="math-note">Energieerhaltung (Bernoulli) vom Kolben bis zum Anschnitt, Kavitätsdruck ≈ 0 bei
 funktionierender Entlüftung. Alle Verluste stecken im zusammengesetzten Durchflussbeiwert:</p>
 ${eq('P = C_{t} \\cdot v_{a}^{2} \\quad (2.3) \\quad \\Rightarrow \\quad\\ \\text{mit}\\ v_{a} = Q/A_{a}: \\quad P_{W}(Q) = \\frac{C_{t}}{A_{a}^{2}} \\cdot Q^{2} \\quad (2.5) \\quad\\ \\text{mit}\\ \\quad C_{t} = \\frac{\\rho }{2 \\cdot C_{d}^{2}}')}
@@ -277,7 +277,7 @@ ${eq('P = C_{t} \\cdot v_{a}^{2} \\quad (2.3) \\quad \\Rightarrow \\quad\\ \\tex
 Lauf-/Anschnittsystems und wird in der Praxis aus Messungen bestimmt. Steigung der Geraden im Q²-Modus:
 C<sub>W</sub> = C<sub>t</sub>/A<sub>a</sub>². Aktuell: C<sub>W</sub> = <b data-m="CW"></b></p>
 
-<h4>3 · Maschinenlinie — Gl. 2.6–2.9</h4>
+<h4>3 · Maschinenlinie · Gl. 2.6–2.9</h4>
 <p class="math-note">Hydraulikseite: P<sub>h</sub> = P<sub>acc</sub> − K<sub>v</sub>·v² (2.6); Kräftegleichgewicht am
 Kolben P = P<sub>h</sub>·A<sub>h</sub>/A<sub>K</sub> (2.7). Mit v = Q/A<sub>K</sub> folgt die Karni-Form und daraus die
 von CSIRO experimentell bestätigte Form über die Trockenschuss-Geschwindigkeit:</p>
@@ -285,32 +285,32 @@ ${eq('P_{M}(Q) = P_{\\text{acc}} \\cdot \\frac{A_{h}}{A_{K}} - K_{t} \\cdot Q^{2
 <p class="math-note">Nullstellen: Q = 0 → voller statischer Druck p₀; Q = Q<sub>dry</sub> → alle Leistung geht in
 die Kolbenbewegung, kein Druck aufs Metall. Im Q²-Modus eine Gerade mit Steigung −p₀/Q<sub>dry</sub>².</p>
 
-<h4>4 · Hüllkurve (Machine Performance Envelope) — Gl. 2.10–2.14</h4>
+<h4>4 · Hüllkurve (Machine Performance Envelope) · Gl. 2.10–2.14</h4>
 <p class="math-note">Jeder Kolben-Ø liefert eine eigene Maschinenlinie. Die Hüllkurve ist die Einhüllende aller
-dieser Linien — <b>Herleitung A (Karni, physikalisch)</b>: Die Leistung des Akkumulators ist näherungsweise
-konstant, Power = P·A<sub>K</sub>·v = P<sub>acc</sub>·A<sub>h</sub>·v ≈ const (2.10–2.12) — eine Hyperbel P·Q = const:</p>
+dieser Linien. <b>Herleitung A (Karni, physikalisch)</b>: Die Leistung des Akkumulators ist näherungsweise
+konstant, Power = P·A<sub>K</sub>·v = P<sub>acc</sub>·A<sub>h</sub>·v ≈ const (2.10–2.12), also eine Hyperbel P·Q = const:</p>
 ${eq('P_{\\text{env}}(Q) = \\frac{a}{Q} \\quad (2.13) \\quad\\ \\text{mit}\\ \\quad a = \\frac{2 \\cdot \\sqrt{3}}{9} \\cdot A_{h} \\cdot P_{\\text{acc}} \\cdot v_{\\text{dry}} = \\frac{2 \\cdot \\sqrt{3}}{9} \\cdot F_{G} \\cdot v_{\\text{dry}} \\quad (2.14)')}
 <p class="math-note"><b>Herleitung B (formal)</b>: p<sub>M</sub>(Q; A<sub>K</sub>) = F<sub>G</sub>/A<sub>K</sub> − F<sub>G</sub>·Q²/(A<sub>K</sub>³·v<sub>dry</sub>²)
 nach dem Scharparameter A<sub>K</sub> maximieren: ∂p/∂A<sub>K</sub> = 0 ⇒ A<sub>K,opt</sub>(Q) = √3·Q/v<sub>dry</sub>;
-Einsetzen liefert dieselbe Hyperbel. Jede Kolbenparabel berührt die Hüllkurve genau einmal — bei
+Einsetzen liefert dieselbe Hyperbel. Jede Kolbenparabel berührt die Hüllkurve genau einmal, bei
 v<sub>p</sub> = v<sub>dry</sub>/√3 ≈ 0,577·v<sub>dry</sub> und P = ⅔·p₀(D). Die Hüllkurve ist eine reine
-Maschineneigenschaft (unabhängig von Kolben und Werkzeug); a hat die Dimension einer Leistung — die
+Maschineneigenschaft (unabhängig von Kolben und Werkzeug); a hat die Dimension einer Leistung: die
 Energie, die der Akkumulator während der Einspritzphase an die Schmelze abgibt.</p>
 <p class="math-note">Im Diagramm ist die Fläche <b>oberhalb</b> der Erreichbarkeitsgrenze grau
 maskiert: zwischen den Berührpunkten Q<sub>t</sub> = A<sub>K</sub>·v<sub>dry</sub>/√3 von Ø<sub>min</sub> und
-Ø<sub>max</sub> ist das die Hüllkurve a/Q, außerhalb die Parabel des Grenz-Kolbens — dort kommt kein
+Ø<sub>max</sub> ist das die Hüllkurve a/Q, außerhalb die Parabel des Grenz-Kolbens; dort kommt kein
 Betriebspunkt hin, egal welcher Kolben montiert ist; alle anderen Grenzflächen sind darauf gestutzt. Aktuell:
 a = <b data-m="aMPE"></b> · gültig für Q = <b data-m="Qt"></b> · Berührpunkt aktueller Kolben bei
 <b data-m="Qtcur"></b> · optimaler Kolben-Ø am Arbeitspunkt: <b data-m="Dopt"></b></p>
 <p class="math-note"><b>Achsen mit Kolbenbezug:</b> Die x-Achse v<sub>p</sub> = Q/A<sub>K</sub> ist die
-Geschwindigkeit des <em>montierten</em> Kolbens — ein anderer Ø hätte bei gleichem Q eine andere v<sub>p</sub>.
+Geschwindigkeit des <em>montierten</em> Kolbens; ein anderer Ø hätte bei gleichem Q eine andere v<sub>p</sub>.
 Dieser Modus zeigt deshalb nur den montierten Kolben: die Achse endet bei v<sub>max</sub>, die graue Grenze ist
 seine Maschinenlinie, das hellere Band „anderer Kolben-Ø" entfällt. Auf der Hydraulikdruck-Achse wird jeder Punkt
 mit der Fläche des Kolbens umgerechnet, der ihn erreicht (P<sub>h</sub> = P·A/A<sub>h</sub>,
-A<sub>h</sub> = F<sub>G</sub>/P<sub>acc</sub>) — die Antriebsseite bleibt so immer ≤ P<sub>acc</sub>, auch entlang
+A<sub>h</sub> = F<sub>G</sub>/P<sub>acc</sub>); die Antriebsseite bleibt so immer ≤ P<sub>acc</sub>, auch entlang
 der Hüllkurve.</p>
 
-<h4>5 · Arbeitspunkt — Gl. 2.15/2.16</h4>
+<h4>5 · Arbeitspunkt · Gl. 2.15/2.16</h4>
 <p class="math-note">Schnittpunkt Maschinen- × Werkzeuglinie. Mit der Hüllkurven-Konstante a lässt sich die
 Maschinenlinie äquivalent schreiben und der Arbeitspunkt lösen:</p>
 ${eq('P_{M} = p_{0} \\cdot \\left( 1 - \\frac{4}{27} \\cdot \\frac{p_{0}^{2} \\cdot Q^{2}}{a^{2}} \\right) \\quad (2.15) \\quad \\Rightarrow \\quad Q_{s}^{2} = \\frac{p_{0}}{C_{t}/A_{a}^{2} + (4/27) \\cdot p_{0}^{2}/a^{2}} \\quad (2.16)')}
@@ -318,22 +318,22 @@ ${eq('\\text{gleichwertig:}\\ \\quad Q_{s} = \\sqrt{\\frac{p_{0}}{C_{W} + p_{0} 
 <p class="math-note">Aktuell: Q<sub>s</sub> = <b data-m="Qs"></b> · p<sub>s</sub> = <b data-m="ps"></b></p>
 <p class="math-note"><b>Schnittpunkt ≠ Betriebspunkt:</b> Der Schnittpunkt ist der Punkt, auf den sich die
 <em>ungedrosselte</em> Maschine bei vollem Akkumulatordruck einstellt. Tatsächlich fährt die Schusskurve in der
-2. Phase v₂ — der reale Arbeitspunkt liegt auf der Werkzeuglinie bei Q = A<sub>K</sub>·v₂ mit
+2. Phase v₂; der reale Arbeitspunkt liegt auf der Werkzeuglinie bei Q = A<sub>K</sub>·v₂ mit
 p = C<sub>W</sub>·Q²; liegt er unter dem Schnittpunkt, wird die Maschine gedrosselt (Ventil), und der Abstand zur
 Maschinenlinie ist der verlorene Druck. Liegt er darüber, kann die Maschine diese v₂ nicht liefern.
 Aktuell: v₂ = <b data-m="v2"></b> · Q = <b data-m="Qop"></b> · p = <b data-m="pOp"></b> ·
 Maschinenlinie dort <b data-m="pMop"></b> · Drosselverlust <b data-m="dpOp"></b> · t<sub>f</sub> = <b data-m="tfop"></b></p>
 
-<h4>6 · Achsenmodi und Operational Window — Gl. 3.1–3.3</h4>
+<h4>6 · Achsenmodi und Operational Window · Gl. 3.1–3.3</h4>
 <p class="math-note">Die Druckachse lässt sich in Anschnittgeschwindigkeit übersetzen, die
-Volumenstromachse in Füllzeit — dieselben zwei Linien in vier Koordinaten:</p>
+Volumenstromachse in Füllzeit: dieselben zwei Linien in vier Koordinaten:</p>
 ${eq('v_{a}(P) = C_{d} \\cdot \\sqrt{\\frac{2 \\cdot P}{\\rho }} \\quad (3.1) \\qquad v_{p} = \\frac{Q}{A_{K}} \\qquad t_{f} = \\frac{V_{a}}{Q} \\quad (3.3)')}
 <p class="math-note">Das <b>Operational Window</b> ist das Rechteck [t<sub>f,min</sub>, t<sub>f,max</sub>] ×
 [v<sub>a,min</sub>, v<sub>a,max</sub>]. Im PQ²-Plan wird es nach dem UPCT-TFG (Gl. 2.25–2.27) konvertiert:
 die t<sub>f</sub>-Seiten sind Vertikalen bei Q = V<sub>a</sub>/t<sub>f</sub>, die v<sub>a</sub>-Seiten
-Horizontalen auf der Druckachse — <b>unabhängig von der Anschnittfläche</b>:</p>
+Horizontalen auf der Druckachse, <b>unabhängig von der Anschnittfläche</b>:</p>
 ${eq('P(v_{a}) = \\frac{\\rho }{2} \\cdot \\left( \\frac{v_{a}}{C_{d}} \\right)^{2} \\quad\\ (\\text{UPCT 2.26}) \\qquad Q(t_{f}) = \\frac{V_{a}}{t_{f}} \\quad\\ (\\text{UPCT 2.27})')}
-<p class="math-note">Die Werkzeuglinie schneidet die v<sub>a</sub>-Horizontale genau bei Q = v<sub>a</sub>·A<sub>a</sub> —
+<p class="math-note">Die Werkzeuglinie schneidet die v<sub>a</sub>-Horizontale genau bei Q = v<sub>a</sub>·A<sub>a</sub>;
 die alte Darstellung als Vertikale ist der Spezialfall „A<sub>a</sub> fest". Verletzungsfolgen (Fig. 3.1/3.2):
 über t<sub>f,max</sub> (Zone A) kalte Läufe und schlechte Oberflächen, unter v<sub>a,min</sub> (B) poröser Guss
 (keine Zerstäubung), unter t<sub>f,min</sub> (C) unvollständige Entlüftung, über v<sub>a,max</sub> (D) Formerosion
@@ -344,20 +344,20 @@ t<sub>f</sub> = <b data-m="tf"></b></p>
 <h4>6b · y-Achsenmodi: Hydraulikdruck und Leistung</h4>
 ${eq('P_{h} = P \\cdot \\frac{A_{K}}{A_{h}} = P \\cdot \\frac{P_{\\text{acc}}}{p_{0}} \\qquad\\ \\text{Leistung}\\ = P \\cdot Q \\quad \\Rightarrow \\quad\\ \\text{Hüllkurve}\\ P \\cdot Q = a\\ \\text{wird die Horizontale}\\ y = a')}
 <p class="math-note">Der Hydraulikdruck-Modus skaliert die Druckachse aufs Antriebssystem (Kräftegleichgewicht
-am Kolben, statischer Achsenabschnitt = P<sub>acc</sub>); der Leistungsmodus zeigt P·Q — die Maschinenkurve
+am Kolben, statischer Achsenabschnitt = P<sub>acc</sub>); der Leistungsmodus zeigt P·Q; die Maschinenkurve
 jedes Kolben-Ø berührt dort ihr Maximum exakt auf der a-Linie (bei v<sub>p</sub> = v<sub>dry</sub>/√3), die
 v<sub>a</sub>-Fenstergrenzen werden zu Ursprungsgeraden y = P(v<sub>a</sub>)·Q.
 <b>Hinweis:</b> auf der Hydraulik-Achse wird jeder Punkt mit der Fläche des Kolbens umgerechnet, der ihn
-erreicht — der montierte Kolben liegt statisch beim eingestellten Akkumulatordruck, die Hüllkurve anderer Ø
+erreicht: der montierte Kolben liegt statisch beim eingestellten Akkumulatordruck, die Hüllkurve anderer Ø
 bei ⅔ davon; nichts liegt über dem Akkumulatordruck. Aktuell:
 P<sub>acc</sub> = <b data-m="pAccM"></b> · a = <b data-m="aMPE2"></b></p>
 
 <h4>7 · Füllzeit- und v<sub>a</sub>-Grenzen</h4>
 <p class="math-note">Untergrenzen der Füllzeit aus drei unabhängigen Bedingungen; die schärfste gilt:</p>
 ${eq('\\text{Entlüftung}\\\\ (\\text{Zone}\\ C): \\; t_{f} \\ge t_{\\text{vent}} = \\frac{V_{\\text{luft}}}{A_{\\text{ent}} \\cdot v_{\\text{luft},\\max}} \\qquad\\ \\text{Erosion:}\\ \\; t_{f} \\ge \\frac{V_{a}}{A_{a} \\cdot v_{a,\\max}} \\qquad\\ \\text{Hydraulik:}\\ \\; t_{f} \\ge \\frac{V_{a}}{A_{a} \\cdot v_{a,\\text{hydr}}} \\;\\ \\text{mit}\\ \\; v_{a,\\text{hydr}} = C_{d} \\cdot \\sqrt{\\frac{2 \\cdot p_{0}}{\\rho }}')}
-${eq('\\text{Obergrenzen:}\\ \\; t_{f} \\le \\frac{V_{a}}{A_{a} \\cdot v_{a,\\min}} \\;\\ (\\text{Zerstäubung}) \\quad\\ \\text{und}\\ \\quad t_{f} \\le t_{\\max} \\;\\ (\\text{thermisch}\\ \\;\\text{—}\\; \\ \\text{NADCA-Formel, siehe}\\ \\text{“Empfohlene Füllzeit”})')}
+${eq('\\text{Obergrenzen:}\\ \\; t_{f} \\le \\frac{V_{a}}{A_{a} \\cdot v_{a,\\min}} \\;\\ (\\text{Zerstäubung}) \\quad\\ \\text{und}\\ \\quad t_{f} \\le t_{\\max} \\;\\ (\\text{thermisch:}\\ \\text{NADCA-Formel, siehe}\\ \\text{“Empfohlene Füllzeit”})')}
 <p class="math-note"><b>Zerstäubungsband (Herman-J-Faktor, UPCT Gl. 2.38):</b> unabhängig vom NADCA-Zielband
-liefert das Atomisierungs-Kriterium ein Band der Anschnittgeschwindigkeit — unter J<sub>min</sub> zerstäubt der
+liefert das Atomisierungs-Kriterium ein Band der Anschnittgeschwindigkeit: unter J<sub>min</sub> zerstäubt der
 Strahl nicht, über J<sub>max</sub> drohen Überzerstäubung und Formerosion:</p>
 ${eq('J = v_{a}^{1.71} \\cdot e_{p} \\cdot \\rho \\quad \\Rightarrow \\quad v_{a}(J) = \\left( \\frac{J}{\\rho \\cdot e_{p}} \\right)^{1/1.71} \\qquad J_{\\min} \\le J \\le J_{\\max}')}
 <p class="math-note">Empirische Formel in inch-pound-Einheiten (v in in/s, Anschnittdicke e<sub>p</sub> in inch,
@@ -366,14 +366,14 @@ Erosionsgrenze. Im Fenster wirkt je Seite die schärfere Grenze. Aktuell: J = <b
 e<sub>p</sub> = <b data-m="ep"></b> · v<sub>a</sub>(J<sub>min</sub>) = <b data-m="vaAtom"></b> ·
 v<sub>a</sub>(J<sub>max</sub>) = <b data-m="vaAtomMax"></b></p>
 <p class="math-note"><b>Volumen-Konvention:</b> V<sub>luft</sub> = Dosiervolumen ohne Pressrest (Bauteil + Anguss +
-Überlauf) — die verdrängte Luft aus Kavität und Lauf; die Füllzeit-Achse rechnet dagegen ab Anschnitt mit
-V<sub>a</sub> (Bauteil + Überlauf). Das UPCT-TFG nutzt für beides V<sub>m</sub> inkl. Anguss (Gl. 2.27) —
+Überlauf), also die verdrängte Luft aus Kavität und Lauf; die Füllzeit-Achse rechnet dagegen ab Anschnitt mit
+V<sub>a</sub> (Bauteil + Überlauf). Das UPCT-TFG nutzt für beides V<sub>m</sub> inkl. Anguss (Gl. 2.27);
 hier gilt die App-Konvention (siehe Seitenleiste).
 Aktuell: t<sub>vent</sub> = <b data-m="tVent"></b> · t<sub>min,Erosion</sub> = <b data-m="tminE"></b> ·
 t<sub>min,J</sub> = <b data-m="tminJ"></b> (v<sub>a,hydr</sub> = <b data-m="vah"></b>) ·
 t<sub>max,Zerstäubung</sub> = <b data-m="tmaxZ"></b> · Arbeitspunkt t<sub>f</sub> = <b data-m="tf2"></b></p>
 
-<h4>8 · Extremwerte der Anschnittfläche — Kap. 3.3</h4>
+<h4>8 · Extremwerte der Anschnittfläche · Kap. 3.3</h4>
 <p class="math-note">Werkzeuglinien durch die Ecken des Operational Window liefern die zulässige Spanne der
 Anschnittfläche (Fig. 3.3): steilste Linie durch (t<sub>f,max</sub>, v<sub>a,max</sub>), flachste durch
 (t<sub>f,min</sub>, v<sub>a,min</sub>):</p>
@@ -411,10 +411,10 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
       const Qop = c.Ap * v2, pOp = c.Cdie * Qop * Qop;
       const pM = Qop < c.Qmax ? c.p0 * (1 - (Qop / c.Qmax) ** 2) : 0;
       set('v2', fmt(v2) + ' m/s'); set('Qop', fmt(Qop * 1000) + ' l/s'); set('pOp', fmt(pOp) + ' bar');
-      set('pMop', Qop < c.Qmax ? fmt(pM) + ' bar' : '— (über Q_dry)');
-      set('dpOp', pM > pOp ? fmt(pM - pOp) + ' bar' : (Qop < c.Qmax ? 'keiner — v₂ über dem Schnittpunkt, nicht erreichbar' : 'nicht erreichbar'));
+      set('pMop', Qop < c.Qmax ? fmt(pM) + ' bar' : '(über Q_dry)');
+      set('dpOp', pM > pOp ? fmt(pM - pOp) + ' bar' : (Qop < c.Qmax ? 'keiner: v₂ über dem Schnittpunkt, nicht erreichbar' : 'nicht erreichbar'));
       set('tfop', fmt(c.Vag / Qop * 1000) + ' ms');
-    } else ['v2', 'Qop', 'pOp', 'pMop', 'dpOp', 'tfop'].forEach(k => set(k, '— (keine Schusskurve)'));
+    } else ['v2', 'Qop', 'pOp', 'pMop', 'dpOp', 'tfop'].forEach(k => set(k, '(keine Schusskurve)'));
     /* Operational Window auf der Druckachse + y-Modi */
     const Pg = vg => v.density * (vg / v.Cd) * (vg / v.Cd) / 2 / 1e5;
     set('Pgmin', v.gateMin > 0 ? fmt(Pg(v.gateMin)) + ' bar' : '—');

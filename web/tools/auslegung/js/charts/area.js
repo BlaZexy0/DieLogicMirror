@@ -62,7 +62,7 @@ export default {
     return `
 <h4>1 · Kräftegleichgewicht an der Form</h4>
 <p class="math-note">Beim Nachdruck steht die ganze Kavität unter Metalldruck p. Druck wirkt überall senkrecht
-auf die Wand — aufsummiert bleibt in Öffnungsrichtung aber genau p mal die <em>projizierte</em> Fläche der
+auf die Wand; aufsummiert bleibt in Öffnungsrichtung aber genau p mal die <em>projizierte</em> Fläche der
 Kavität übrig (die Sprengfläche A, deshalb zählt die Projektion und nicht die Oberfläche). Diese Kraft
 versucht, die Form aufzudrücken; die Schließkraft muss mit Sicherheitsfaktor S dagegenhalten:</p>
 ${eq('F_{\\text{auf}} = p \\cdot A \\qquad F_{\\text{schließ}} \\ge S \\cdot p \\cdot A')}
@@ -72,12 +72,12 @@ ${eq('F_{\\text{auf}} = p \\cdot A \\qquad F_{\\text{schließ}} \\ge S \\cdot p 
 der Säulenmitte (Säulenabstände a<sub>x</sub> × a<sub>y</sub>, starre Platte, lineare Lastverteilung),
 trägt die meistbelastete Säule das k-fache einer zentrisch belasteten Säule:</p>
 ${eq('k = 1 + \\frac{2 \\cdot |e_{x}|}{a_{x}} + \\frac{2 \\cdot |e_{y}|}{a_{y}}')}
-<p class="math-note">Bei zentrischem Schwerpunkt (e = 0) ist k = 1. Abheben, wenn k − 1 ≥ 1 —
+<p class="math-note">Bei zentrischem Schwerpunkt (e = 0) ist k = 1. Abheben, wenn k − 1 ≥ 1:
 dann klafft die Form an der gegenüberliegenden Ecke (F<sub>Säule,min</sub> ≤ 0).
 Aktuell: k = <b data-m="k"></b> ⇒ <b data-m="lift"></b></p>
 
 <h4>3 · Zulässige Sprengfläche</h4>
-${eq('A_{\\max}(p) = \\frac{F_{\\text{schließ}}}{100 \\cdot S \\cdot k \\cdot p} \\qquad (A [\\text{m}^{2}], F [\\text{kN}], p [\\text{bar}] \\;\\text{—}\\; 1\\ \\text{bar}\\ = 100\\ \\text{kN}/\\text{m}^{2})')}
+${eq('A_{\\max}(p) = \\frac{F_{\\text{schließ}}}{100 \\cdot S \\cdot k \\cdot p} \\qquad (A [\\text{m}^{2}], F [\\text{kN}], p [\\text{bar}];\\ \\; 1\\ \\text{bar}\\ = 100\\ \\text{kN}/\\text{m}^{2})')}
 <p class="math-note">Aktuell bei p = <b data-m="psel"></b>: A<sub>max</sub>(S = 1, k = 1) = <b data-m="a1"></b> ·
 A<sub>max</sub>(S = <span data-m="S"></span>, k = 1) = <b data-m="aS"></b> ·
 A<sub>max</sub>(S = <span data-m="S2"></span>, k = <span data-m="k2"></span>) = <b data-m="aK"></b> ·
@@ -90,7 +90,7 @@ gewählt: A = <b data-m="asel"></b></p>`;
     const ok = v.psel > 0 && v.safety > 0;
     set('k', fmt(k));
     set('k2', fmt(k));
-    set('lift', k - 1 >= 1 ? '✗ Abheben — Schwerpunkt zu weit außermittig' : '✓ kein Abheben');
+    set('lift', k - 1 >= 1 ? '✗ Abheben: Schwerpunkt zu weit außermittig' : '✓ kein Abheben');
     set('psel', fmt(v.psel) + ' bar');
     set('S', fmt(v.safety));
     set('S2', fmt(v.safety));

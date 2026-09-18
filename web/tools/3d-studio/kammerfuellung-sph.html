@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kammerfüllung (SPH) · 3D-Studio · DieLogic</title>
-<meta name="description" content="Die Welle in der Füllkammer als Partikel (SPH): liegender Zylinder mit Durchmesser, Länge und Füllgrad, der Kolben fährt die Schusskurve, die Schmelze wird als Partikel auf der Grafikkarte gerechnet — Kammer voll, eingeschlossene Luft, die Partikel zu jeder Zeit, nach Geschwindigkeit gefärbt.">
+<meta name="description" content="Die Welle in der Füllkammer als Partikel (SPH): liegender Zylinder mit Durchmesser, Länge und Füllgrad, der Kolben fährt die Schusskurve, die Schmelze wird als Partikel auf der Grafikkarte gerechnet: Kammer voll, eingeschlossene Luft, die Partikel zu jeder Zeit, nach Geschwindigkeit gefärbt.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -28,7 +28,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Kammerfüllung · Partikel</h1>
-    <p class="subtitle">Die Welle in der Füllkammer — Durchmesser, Länge, Füllgrad und Schusskurve wählen; die Schmelze als Partikel (SPH) auf der Grafikkarte. Die Gitterrechnung: <a href="kammerfuellung.html">Kammerfüllung</a>.</p>
+    <p class="subtitle">Die Welle in der Füllkammer: Durchmesser, Länge, Füllgrad und Schusskurve wählen; die Schmelze als Partikel (SPH) auf der Grafikkarte. Die Gitterrechnung: <a href="kammerfuellung.html">Kammerfüllung</a>.</p>
   </div>
 </section>
 
@@ -46,7 +46,7 @@
       <span class="val">mm</span>
     </div>
     <div class="row">
-      <span title="Anteil des Kammervolumens, der mit Schmelze gefüllt ist — sie steht ruhig unten in der Kammer.">Füllgrad</span>
+      <span title="Anteil des Kammervolumens, der mit Schmelze gefüllt ist. Sie steht ruhig unten in der Kammer.">Füllgrad</span>
       <input type="range" id="sl-fill" min="10" max="90" step="1" value="40">
       <span class="val" id="sl-fill-val"></span>
     </div>
@@ -89,7 +89,7 @@
     <div class="facts" id="curve-facts"></div>
     <div class="warn-line" id="curve-warn"></div>
     <div class="hint">Die Rechnung beginnt beim Kolbenstart und endet, wenn die Schmelze den Laufkanal
-      erreicht hat — plus ein Stück für das Bild. Die DieLogic-Kurve nimmt Maschine und Thermik aus dem
+      erreicht hat, plus ein Stück für das Bild. Die DieLogic-Kurve nimmt Maschine und Thermik aus dem
       aktuellen Projekt, Kammer und Füllgrad von hier.</div>
 
     <h2>Simulation</h2>
@@ -107,7 +107,7 @@
       künstlicher Zähigkeit und δ-Diffusion der Dichte, Schwerkraft; die Kammer als Abstandsfeld, an
       dem die Partikel gleiten, der Kolben als Ebene, die die Kurve fährt. Keine Oberflächenspannung,
       kein Gasdruck. <b>Eingeschlossene Luft</b>: das Partikelbild auf ein Raster gelegt, Luftzellen
-      ohne Verbindung zur Blase über der Schmelze — die Zahl, um die es in der ersten Phase geht.</div>
+      ohne Verbindung zur Blase über der Schmelze: die Zahl, um die es in der ersten Phase geht.</div>
 
     <h2>Darstellung</h2>
     <div class="seg" id="show-seg">
@@ -115,7 +115,7 @@
       <button type="button" data-value="kammer" title="Nur Kammer, Kolben und Laufkanal">Kammer</button>
     </div>
     <div class="row disabled" id="t-row">
-      <span title="Zeit ab Kolbenstart — Welle und Kolben wandern mit dem Regler.">Zeit</span>
+      <span title="Zeit ab Kolbenstart. Welle und Kolben wandern mit dem Regler.">Zeit</span>
       <input type="range" id="t-slider" min="0" max="0" step="1" value="0">
       <span class="val" id="t-val"></span>
     </div>

@@ -185,7 +185,7 @@
     <div class="dl-footer-logo">
       <span class="dl-footer-wordmark">${WORDMARK}</span>
     </div>
-    <p class="dl-footer-desc">Gießtechnische Auslegung für den Druckguss (HPDC): Schusskurve, PQ², Füllkammer, Zyklus und Teilekosten — ein Projekt, alle Werkzeuge.</p>
+    <p class="dl-footer-desc">Gießtechnische Auslegung für den Druckguss (HPDC): Schusskurve, PQ², Füllkammer, Zyklus und Teilekosten: ein Projekt, alle Werkzeuge.</p>
     <p class="dl-footer-desc" style="margin-top:1rem;color:${C.ondark2};">© 2026 DieLogic</p>
   </div>
 
@@ -229,7 +229,7 @@
   </div>
 
   <div class="dl-footer-bottom">
-    DieLogic — Auslegungsrechnung und Visualisierung im Browser. Für Gießerei-Ingenieure gebaut.
+    DieLogic: Auslegungsrechnung und Visualisierung im Browser. Für Gießerei-Ingenieure gebaut.
     &nbsp;·&nbsp; <a href="${r('/recht/impressum.html')}" style="color:${C.ondark2};">Impressum</a>
     &nbsp;·&nbsp; <a href="${r('/recht/datenschutz.html')}" style="color:${C.ondark2};">Datenschutz</a>
   </div>

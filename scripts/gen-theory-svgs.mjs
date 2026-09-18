@@ -4,7 +4,7 @@
 import path from 'node:path';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'web');
@@ -194,13 +194,13 @@ require(path.join(site, 'shared/examples/machines.js'));
 require(path.join(site, 'shared/examples/alloys.js'));
 require(path.join(site, 'shared/examples/parts.js'));
 require(path.join(site, 'shared/clampmodel.js'));
-const { theme } = await import(path.join(site, 'tools/auslegung/js/core/theme.js'));
+const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')).href);
 Object.assign(theme, globalThis.__THEME__);
 
-const { allFields, DEFAULT_CURVE } = await import(path.join(site, 'tools/auslegung/js/config/fields.js'));
-const { computeShot, vCritTheory } = await import(path.join(site, 'tools/auslegung/js/core/physics.js'));
-const { drawAny } = await import(path.join(site, 'tools/auslegung/js/render/draw.js'));
-const { chartsById } = await import(path.join(site, 'tools/auslegung/js/charts/registry.js'));
+const { allFields, DEFAULT_CURVE } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')).href);
+const { computeShot, vCritTheory } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')).href);
+const { drawAny } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/draw.js')).href);
+const { chartsById } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/registry.js')).href);
 
 const values = {};
 for (const f of allFields()) values[f.key] = f.def;
@@ -268,7 +268,7 @@ function vkritFits() {
   }
   const C = theme.chart;
   return {
-    title: 'Die Fits im Vergleich — exakte Lösung, Nogowizin, Segment-Fit und CFD',
+    title: 'Die Fits im Vergleich: exakte Lösung, Nogowizin, Segment-Fit und CFD',
     info: 'f = v_krit/√(g·D) · Nogowizin: ≈2 % für φ = 0,2–0,75, am Rand bis 28 % · Segment-Fit (DieLogic-Theorie): ≤ 0,25 % überall · CFD ab φ ≈ 0,3 unter allen Flachwasser-Kurven',
     x,
     ys: [
@@ -300,13 +300,13 @@ const jobs = [
   /* Grundbild im Q²-Modus: dort sind beide Kennlinien Geraden — der
      namensgebende Trick des Diagramms wird sichtbar. xFull hält die Achse
      wie beim interaktiven Slider bis Q_dry des größten Kolbens fest. */
-  { file: 'pq2-grund.svg', id: 'pq2', tab: 'q2', tab2: 'pm', xFull: true, post: d => { simplify(false)(d); delete d.segs; d.title = 'PQ²-Grundbild — im Q²-Maßstab werden beide Kennlinien zu Geraden'; } },
+  { file: 'pq2-grund.svg', id: 'pq2', tab: 'q2', tab2: 'pm', xFull: true, post: d => { simplify(false)(d); delete d.segs; d.title = 'PQ²-Grundbild: im Q²-Maßstab werden beide Kennlinien zu Geraden'; } },
   /* Einzelbilder für die Herleitungs-Abschnitte: nur je eine Kennlinie. */
   { file: 'pq2-maschine.svg', id: 'pq2', tab: 'q', tab2: 'pm', post: d => {
     simplify(false)(d);
     delete d.pt2; delete d.ptl2; delete d.segs;             // Schnittpunkt/Drossel gehören zur Werkzeuglinie
     d.ys = d.ys.filter(sr => /Maschine/.test(sr.n));
-    d.title = 'Die Maschinenlinie — und die Hüllkurve als Grenze aller Kolben';
+    d.title = 'Die Maschinenlinie und die Hüllkurve als Grenze aller Kolben';
   } },
   /* Werkzeuglinie: drei Anschnittflächen zeigen den A_a²-Hebel — ohne
      Maschinenanteile, y-Achse auf die steilste Linie skaliert. */
@@ -325,8 +325,8 @@ const jobs = [
     d.limits = []; delete d.feasible; delete d.feasibleSplit;
     delete d.pt; delete d.ptl; delete d.pt2; delete d.ptl2; delete d.segs;
     d.y1 = 1.12 * Math.max(...d.ys[0].y.filter(Number.isFinite));
-    d.title = 'Die Werkzeuglinie — die Anschnittfläche stellt die Steilheit';
-    d.info = 'p_W = ρ/(2·c_d²·A_a²) · Q² — kleinere Fläche: steiler (mehr Druck je Volumenstrom), größere: flacher';
+    d.title = 'Die Werkzeuglinie: die Anschnittfläche stellt die Steilheit';
+    d.info = 'p_W = ρ/(2·c_d²·A_a²) · Q²; kleinere Fläche: steiler (mehr Druck je Volumenstrom), größere: flacher';
     return { d, def };
   } },
   { file: 'pq2-q.svg', id: 'pq2', tab: 'q', tab2: 'pm' },

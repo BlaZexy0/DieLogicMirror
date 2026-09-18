@@ -134,7 +134,7 @@ async function compute(m, band) {
     field.stale = false;
     field.ms = performance.now() - t0;
     $('model-warn').textContent = lifted
-      ? 'Feiner geht hier nicht: ' + fmt(MAX_SAMPLES / 1e6, 0) + ' Mio. Rasterpunkte sind die Grenze — die Zellkante steht auf ' + fmt(h, 2) + ' mm.'
+      ? 'Feiner geht hier nicht: ' + fmt(MAX_SAMPLES / 1e6, 0) + ' Mio. Rasterpunkte sind die Grenze; die Zellkante steht auf ' + fmt(h, 2) + ' mm.'
       : '';
   } catch (err) {
     $('model-warn').textContent = 'Das Abstandsfeld konnte nicht gerechnet werden: ' + err.message;
@@ -245,7 +245,7 @@ function loadJSON(obj, name) {
   if (f === FORMAT_ANGUSS) { ctx.stages.anguss.loadJSON(obj, name); activate('anguss'); return; }
   if (f === FORMAT_LUFT) { ctx.stages.ueberlauf.fromJSON(obj); activate('ueberlauf'); return; }
   if (f === FORMAT_TEMPERIER) { ctx.stages.temperier.fromJSON(obj); activate('temperier'); return; }
-  if (f === FORMAT_FUELLUNG) throw new Error('Füllpläne braucht die Werkbank nicht — ihre Anschnitte kommen aus dem Anguss.');
+  if (f === FORMAT_FUELLUNG) throw new Error('Füllpläne braucht die Werkbank nicht: ihre Anschnitte kommen aus dem Anguss.');
   throw new Error('unbekannte Kennung „' + f + '"');
 }
 
@@ -286,7 +286,7 @@ async function loadWerkbank(obj) {
     $('demo-select').value = demo;
     await source.pickDemo(demo);
   } else if (!demo && obj.part && obj.part.name && obj.part.name !== part.name) {
-    $('model-warn').textContent = 'Die Datei gehört zum Bauteil „' + obj.part.name + '" — das Netz selbst steht nicht darin. Die Pläne liegen jetzt am geladenen Bauteil.';
+    $('model-warn').textContent = 'Die Datei gehört zum Bauteil „' + obj.part.name + '". Das Netz selbst steht nicht darin. Die Pläne liegen jetzt am geladenen Bauteil.';
   }
   const an = ctx.stages.anguss;
   if (obj.prozess) an.setProc(obj.prozess);

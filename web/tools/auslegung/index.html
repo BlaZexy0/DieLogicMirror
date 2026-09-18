@@ -20,8 +20,8 @@
 <body>
   <header>
     <div class="header-title">
-      <h1>Dashboard — Gießtechnische Auslegung + Schusskurve</h1>
-      <p class="header-sub">Massenbilanz, Maschine, Füllkammer, Anschnitt, Prozessfenster und Schusskurve — alle Diagramme auf dem aktuellen Projekt.</p>
+      <h1>Dashboard: Gießtechnische Auslegung + Schusskurve</h1>
+      <p class="header-sub">Massenbilanz, Maschine, Füllkammer, Anschnitt, Prozessfenster und Schusskurve: alle Diagramme auf dem aktuellen Projekt.</p>
     </div>
     <div class="header-actions">
     </div>
@@ -36,11 +36,11 @@
           <h3>Presets</h3>
           <div class="fields">
             <div class="field"><label>Maschine</label>
-              <select id="machineSel"><option value="">— manuell —</option></select></div>
+              <select id="machineSel"><option value="">manuell</option></select></div>
             <div class="field"><label>Legierung</label>
-              <select id="alloySel"><option value="">— manuell —</option></select></div>
+              <select id="alloySel"><option value="">manuell</option></select></div>
             <div class="field"><label>Bauteiltyp</label>
-              <select id="partSel"><option value="">— manuell —</option></select></div>
+              <select id="partSel"><option value="">manuell</option></select></div>
           </div>
         </div>
         <div class="group" id="curve-group">
@@ -55,7 +55,7 @@
         <div id="groups" class="groups"></div>
         <div class="hint">
           Dosiergewicht = Bauteil + Anguss + Überlauf + Pressrest. Gewicht ab Anschnitt = Bauteil + Überlauf.<br>
-          <b>Konvention:</b> Der Pressrest zählt zur dosierten Schmelze — alle Füllgrad-Angaben (KPI, Diagramme, Schusskurve, Auslegungsfenster) rechnen mit dem Dosiergewicht. Füllzeit und Entlüftung rechnen ab Anschnitt (Bauteil + Überlauf, ohne Anguss und Pressrest). Die Kammer wird flüssig dosiert (Dichte flüssig), die Kavitäten sind feste Geometrie (Dichte fest, um das Schwindmaß vergrößert); was die Form beim Füllende nicht aufnimmt, schiebt der Kolben in der Nachverdichtung nach — der Pressrest wird fest geprüft.<br>
+          <b>Konvention:</b> Der Pressrest zählt zur dosierten Schmelze; alle Füllgrad-Angaben (KPI, Diagramme, Schusskurve, Auslegungsfenster) rechnen mit dem Dosiergewicht. Füllzeit und Entlüftung rechnen ab Anschnitt (Bauteil + Überlauf, ohne Anguss und Pressrest). Die Kammer wird flüssig dosiert (Dichte flüssig), die Kavitäten sind feste Geometrie (Dichte fest, um das Schwindmaß vergrößert); was die Form beim Füllende nicht aufnimmt, schiebt der Kolben in der Nachverdichtung nach. Der Pressrest wird fest geprüft.<br>
           🔴 <b>Roter Marker</b> = aktueller Betriebspunkt in jedem Diagramm. Rot umrandete Felder liegen außerhalb ihrer min/max-Grenzen.
           <span id="error"></span>
         </div>

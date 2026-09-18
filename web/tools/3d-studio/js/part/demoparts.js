@@ -17,16 +17,16 @@ export const DEMO_PARTS = [
      von dort nach assets/parts/ kopiert); `source` nennt die Quelle. */
   { id: 'gearbox_cover', label: 'Getriebedeckel mit Schiebern', file: 'assets/parts/gearbox_cover.glb',
     source: 'openscad_parts/parts/gearbox_cover.scad',
-    note: 'Sensor- und Steckerdom quer zur Entformrichtung: Flächen, die nur +X bzw. −Y bilden können — zwei Schieber. Dichtdom, Rippen, blinde Kernpilote (1300-t-Klasse).' },
+    note: 'Sensor- und Steckerdom quer zur Entformrichtung: Flächen, die nur +X bzw. −Y bilden können: zwei Schieber. Dichtdom, Rippen, blinde Kernpilote (1300-t-Klasse).' },
   { id: 'oil_pan', label: 'Ölwanne', file: 'assets/parts/oil_pan.glb',
     source: 'openscad_parts/parts/oil_pan.scad',
-    note: 'Zweistufige Wanne mit Flansch, Schwallblechen, Rippen und Ablassdom — alles in ±Z entformbar, Bohrungen als blinde Kernpilote (1400-t-Klasse). Das Gussteil der Form im Formaufbau-Viewer.' },
+    note: 'Zweistufige Wanne mit Flansch, Schwallblechen, Rippen und Ablassdom, alles in ±Z entformbar, Bohrungen als blinde Kernpilote (1400-t-Klasse). Das Gussteil der Form im Formaufbau-Viewer.' },
   { id: 'heat_sink', label: 'Kühlkörper', file: 'assets/parts/heat_sink.glb',
     source: 'openscad_parts/parts/heat_sink.scad',
-    note: 'Grundplatte mit 22 gezogenen Rippen und Fußradien — kein Schieber nötig (1200-t-Klasse).' },
+    note: 'Grundplatte mit 22 gezogenen Rippen und Fußradien, kein Schieber nötig (1200-t-Klasse).' },
   { id: 'u_channel_ribbed', label: 'U-Profil mit Rippen', file: 'assets/parts/u_channel_ribbed.glb',
     source: 'openscad_parts/parts/u_channel_ribbed.scad',
-    note: 'Gezogenes U-Profil, 4 mm Wand, neun Rippen und ein Dom mit Kernloch — sauber in ±Z entformbar.' },
+    note: 'Gezogenes U-Profil, 4 mm Wand, neun Rippen und ein Dom mit Kernloch, sauber in ±Z entformbar.' },
   /* pairOnly: kein Bauteil, sondern ein Gegenstück — nur die
      Abstandsanalyse bietet es an. In der Formteilung wäre ein
      Temperierkreis als „Bauteil" nur Verwirrung. Die Kreise gehören zur
@@ -45,7 +45,7 @@ export async function loadDemo(id) {
   const p = DEMO_PARTS.find(d => d.id === id) || DEMO_PARTS[0];
   const res = await fetch(p.file);
   if (!res.ok) {
-    throw new Error(p.file + ' fehlt — aus ' + p.source + ' exportieren (openscad_parts: ./render.sh --studio)');
+    throw new Error(p.file + ' fehlt: aus ' + p.source + ' exportieren (openscad_parts: ./render.sh --studio)');
   }
   return { ...p, tris: readGLB(await res.arrayBuffer()) };
 }

@@ -166,7 +166,7 @@ export default {
     return `
 <h4>1 · Bewegungsprofil (stückweise konstante Beschleunigung)</h4>
 <p class="math-note">Die Schusskurve wird durch Wegpunkte (s<sub>i</sub>, v<sub>i</sub>) definiert; der Ursprung
-(0 mm, 0 m/s) wird automatisch ergänzt. Zwischen zwei Punkten ist die Beschleunigung konstant — aus den
+(0 mm, 0 m/s) wird automatisch ergänzt. Zwischen zwei Punkten ist die Beschleunigung konstant; aus den
 Kinematikbeziehungen folgt je Segment:</p>
 ${eq('a_{i} = \\frac{v_{i}^{2} - v_{i - 1}^{2}}{2 \\cdot (s_{i} - s_{i - 1})} \\qquad \\Delta t_{i} = \\frac{2 \\cdot (s_{i} - s_{i - 1})}{v_{i - 1} + v_{i}}')}
 ${eq('v(s) = \\sqrt{v_{i - 1}^{2} + 2 \\cdot a_{i} \\cdot (s - s_{i - 1})} \\qquad s(t) = s_{i - 1} + v_{i - 1} \\cdot \\Delta t + \\tfrac{1}{2} \\cdot a_{i} \\cdot \\Delta t^{2}')}
@@ -181,7 +181,7 @@ ${eq('s_{\\text{Ereignis}} = s_{\\text{voll}} + \\frac{\\sum V_{i}}{A_{K}} \\qua
 ${eq('\\Delta s_{\\text{NV}} = \\frac{m_{\\text{dos}}}{\\rho_{l} A_{K}} - \\frac{\\sum V_{i}}{A_{K}} - l_{\\text{Pressrest}} \\qquad l_{\\text{Pressrest}} = \\frac{m_{b}}{\\rho_{\\text{sol}} A_{K}}')}
 <p class="math-note">Die Kammer wird flüssig dosiert (ρ<sub>l</sub>), die Kavitäten sind feste Geometrie: das Werkzeug
 ist um das Schwindmaß s größer als das kalte Bauteil (ρ<sub>s</sub>), fasst also V = m/ρ<sub>sol</sub>. Was die Kavität
-beim Füllende flüssig nicht aufnimmt, schiebt der Kolben in der Nachverdichtung Δs<sub>NV</sub> nach — bis zur Endlage
+beim Füllende flüssig nicht aufnimmt, schiebt der Kolben in der Nachverdichtung Δs<sub>NV</sub> nach, bis zur Endlage
 mit festem Pressrest.</p>
 <p class="math-note">Aktuell: φ = <b data-m="phi"></b> · Kammer voll bei <b data-m="sfill"></b> ·
 Füllende = <b data-m="stroke"></b> · Nachverdichtung + Schwindung = <b data-m="intens"></b> · Pressrest fest = <b data-m="lb"></b></p>
@@ -189,7 +189,7 @@ Füllende = <b data-m="stroke"></b> · Nachverdichtung + Schwindung = <b data-m=
 <h4>3 · Abgeleitete Größen und Prüfungen</h4>
 ${eq('v_{a} = v_{p} \\cdot \\frac{A_{K}}{A_{a}} \\quad\\ (\\text{Anschnittgeschwindigkeit aus der Kolbengeschwindigkeit})')}
 ${eq('t_{f} = t(\\text{Überlauf gefüllt}) - t(\\text{Anguss gefüllt}) \\quad\\ (\\text{Füllzeit ab Anschnitt})')}
-${eq('v_{\\text{krit}}(D, \\varphi) = \\sqrt{9{,}81 \\cdot D} \\cdot f(D, \\varphi) \\quad \\;\\text{—}\\; \\quad f\\ \\text{aus der OpenFOAM-CFD-Tabelle, bilinear interpoliert}\\ \\quad\\ (\\text{Grenze der 1. Phase bis}\\ \\text{“Kammer voll”})')}
+${eq('v_{\\text{krit}}(D, \\varphi) = \\sqrt{9{,}81 \\cdot D} \\cdot f(D, \\varphi) \\qquad \\text{mit}\\ f\\ \\text{aus der OpenFOAM-CFD-Tabelle, bilinear interpoliert}\\ \\quad\\ (\\text{Grenze der 1. Phase bis}\\ \\text{“Kammer voll”})')}
 <p class="math-note">Aktuell: A<sub>K</sub>/A<sub>a</sub> = <b data-m="ratio"></b> · t<sub>f</sub> = <b data-m="tf"></b> ·
 v<sub>krit</sub> = <b data-m="vcrit"></b> · max. v der 1. Phase = <b data-m="vslow"></b></p>`;
   },

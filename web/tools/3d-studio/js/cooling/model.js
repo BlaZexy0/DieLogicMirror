@@ -36,7 +36,7 @@ export const PARAM_META = {
 /** Wie die Richtung eines Kühlstichs beim Setzen bestimmt wird. */
 export const DIRECTIONS = {
   normal: { label: 'Normale', hint: 'senkrecht zur Abstandsfläche, vom Bauteil weg' },
-  blick:  { label: 'Blick', hint: 'auf die Kamera zu — so, wie man gerade schaut' },
+  blick:  { label: 'Blick', hint: 'auf die Kamera zu, so wie man gerade schaut' },
   x: { label: 'X', hint: 'entlang X, vom Bauteil weg' },
   y: { label: 'Y', hint: 'entlang Y, vom Bauteil weg' },
   z: { label: 'Z', hint: 'entlang Z, vom Bauteil weg' }

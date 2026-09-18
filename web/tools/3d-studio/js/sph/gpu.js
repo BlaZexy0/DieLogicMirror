@@ -281,7 +281,7 @@ export async function createGpuSphSolver(setup, params = {}) {
   const need = Math.max(gridWords * 4, 16 * n);
   if (need > adapter.limits.maxStorageBufferBindingSize) {
     throw new Error('Der Partikelsatz braucht ' + (need / 1048576).toFixed(0) + ' MB je Puffer, die Grafikkarte erlaubt '
-      + (adapter.limits.maxStorageBufferBindingSize / 1048576).toFixed(0) + ' MB — Partikelabstand vergrößern.');
+      + (adapter.limits.maxStorageBufferBindingSize / 1048576).toFixed(0) + ' MB. Partikelabstand vergrößern.');
   }
   if (need > 134217728) { limits.maxStorageBufferBindingSize = need; limits.maxBufferSize = need; }
   const device = await adapter.requestDevice({ requiredLimits: limits });

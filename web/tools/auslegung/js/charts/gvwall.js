@@ -26,7 +26,7 @@ export default {
   mathHTML() {
     return `
 <h4>Anschnittgeschwindigkeit über Wandstärke</h4>
-<p class="math-note">Dünne Wände erstarren in Millisekunden — die Schmelze muss fein zerstäubt und schnell
+<p class="math-note">Dünne Wände erstarren in Millisekunden: die Schmelze muss fein zerstäubt und schnell
 eingebracht werden, bevor die Front ansteht; dicke Wände vertragen (und wollen) eine ruhigere Füllung, weil
 hohe Geschwindigkeit dort nur Lufteinschluss und Formverschleiß kauft. Das ist eine Erfahrungs-Empfehlung,
 keine Naturkonstante: zwischen den Stützstellen des Wandstärkenbereichs (v<sub>a,max</sub> bei

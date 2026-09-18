@@ -88,7 +88,7 @@
            es gemeldet. */
         if (r2.ok) return r2.json();
         root.__ORG_PRESETS_ERROR__ = 'Stammdaten konnten nicht geladen werden (HTTP ' + r2.status + ')'
-          + (cached ? ' — es gilt der zuletzt geladene Stand.' : ' — es gelten die Beispielwerte.');
+          + (cached ? '; es gilt der zuletzt geladene Stand.' : '; es gelten die Beispielwerte.');
         return undefined;   // undefined = Fehler, null = „nichts hinterlegt"
       });
     })
@@ -108,7 +108,7 @@
       sessionStorage.removeItem('dl-org-reload');
     })
     .catch(function () {
-      root.__ORG_PRESETS_ERROR__ = 'Stammdaten konnten nicht geladen werden — es gelten '
+      root.__ORG_PRESETS_ERROR__ = 'Stammdaten konnten nicht geladen werden; es gelten '
         + (cached ? 'die zuletzt geladenen Werte.' : 'die Beispielwerte.');
       announceError();
     });

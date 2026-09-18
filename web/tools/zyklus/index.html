@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zyklusanalyse — DieLogic</title>
+  <title>Zyklusanalyse · DieLogic</title>
   <meta name="theme-color" content="#002733">
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -206,7 +206,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Zyklusanalyse</h1>
-    <p class="subtitle">Der Druckguss-Zyklus als Zeitleiste — Hauptzyklus, Kernzüge, Handling, Sprühen, Kühlung — und die Wärmebilanz je Zyklus: wie viel Wärme bringt das Gussstück ein, was geht von selbst weg, was muss das Temperiersystem abführen?</p>
+    <p class="subtitle">Der Druckguss-Zyklus als Zeitleiste (Hauptzyklus, Kernzüge, Handling, Sprühen, Kühlung) und die Wärmebilanz je Zyklus: wie viel Wärme bringt das Gussstück ein, was geht von selbst weg, was muss das Temperiersystem abführen?</p>
   </div>
 </section>
 
@@ -232,7 +232,7 @@
   <div class="zk-card">
     <div class="head">
       <h2>Hauptzyklus</h2>
-      <small>Feste Reihenfolge 1 → 8, jede Phase startet am Ende der vorigen — nur die Dauern sind einstellbar.</small>
+      <small>Feste Reihenfolge 1 → 8, jede Phase startet am Ende der vorigen; nur die Dauern sind einstellbar.</small>
       <button class="zk-btn ghost" id="reset-btn">Beispielzyklus zurücksetzen</button>
     </div>
     <div class="main-grid" id="main-grid"></div>
@@ -242,7 +242,7 @@
   <div class="zk-card">
     <div class="head">
       <h2>Kernzüge</h2>
-      <small>Je Schieber eine Zeile: Ziehen relativ zum Beginn „Form öffnen", Einfahren relativ zum Beginn „Form schließen" — negativer Versatz zieht vor.</small>
+      <small>Je Schieber eine Zeile: Ziehen relativ zum Beginn „Form öffnen", Einfahren relativ zum Beginn „Form schließen"; negativer Versatz zieht vor.</small>
     </div>
     <div style="overflow-x:auto;">
       <table class="zk-table">
@@ -268,7 +268,7 @@
   <div class="zk-card">
     <div class="head">
       <h2>Parallelvorgänge</h2>
-      <small>Bauteilhandling, Sprühroboter und Kühlung — Ankern am Zyklusstart, am Beginn einer Hauptzyklus-Phase oder am Ende des Hauptzyklus.</small>
+      <small>Bauteilhandling, Sprühroboter und Kühlung: Ankern am Zyklusstart, am Beginn einer Hauptzyklus-Phase oder am Ende des Hauptzyklus.</small>
     </div>
     <div style="overflow-x:auto;">
       <table class="zk-table">
@@ -290,7 +290,7 @@
   <div class="zk-card" id="heat-card">
     <div class="head">
       <h2>Wärmebilanz je Zyklus</h2>
-      <small>Wie viel Wärme bringt der Schuss in die Form, was geht von selbst weg, was muss das Temperiersystem abführen — aus Legierung, Temperaturen und Zykluszeit des Projekts.</small>
+      <small>Wie viel Wärme bringt der Schuss in die Form, was geht von selbst weg, was muss das Temperiersystem abführen? Aus Legierung, Temperaturen und Zykluszeit des Projekts.</small>
       <span class="kpi-inline">Temperierleistung <span id="k-pt">—</span> kW</span>
     </div>
     <div class="zk-cols">
@@ -305,8 +305,8 @@
         </div>
         <div class="zk-group"><h3>Eingaben</h3>
           <div class="zk-field"><label>Entformungstemperatur <span class="unit">°C</span></label><input type="number" step="5" data-h="Teject"></div>
-          <div class="zk-field"><label title="Abfall der besprühten Formhaut (t_spr1 − t_spr2) nach Gl. (12.21) — hängt am Sprühregime; die Zahlenbeispiele der Quelle arbeiten mit rund 50 K.">Abkühlung Formhaut beim Sprühen <span class="unit">K</span></label><input type="number" step="5" min="0" data-h="dTspray"></div>
-          <div class="zk-field"><label title="Wie viel der Phase „Sprühen &amp; Ausblasen“ auf das Ausblasen entfällt. Q_Bl (12.15) rechnet nur mit dieser Zeit — das Sprühen steckt in Q_Spr, sonst zählt dieselbe Zeit zweimal.">Anteil Ausblasen an der Phase <span class="unit">%</span></label><input type="number" step="5" min="0" max="100" data-h="blowFrac"></div>
+          <div class="zk-field"><label title="Abfall der besprühten Formhaut (t_spr1 − t_spr2) nach Gl. (12.21). Hängt am Sprühregime; die Zahlenbeispiele der Quelle arbeiten mit rund 50 K.">Abkühlung Formhaut beim Sprühen <span class="unit">K</span></label><input type="number" step="5" min="0" data-h="dTspray"></div>
+          <div class="zk-field"><label title="Wie viel der Phase „Sprühen &amp; Ausblasen“ auf das Ausblasen entfällt. Q_Bl (12.15) rechnet nur mit dieser Zeit, denn das Sprühen steckt in Q_Spr, sonst zählt dieselbe Zeit zweimal.">Anteil Ausblasen an der Phase <span class="unit">%</span></label><input type="number" step="5" min="0" max="100" data-h="blowFrac"></div>
           <div class="zk-field"><label>Form B × H × L <span class="unit">mm</span></label>
             <span><input type="number" step="10" min="0" data-die="B" style="width:58px" placeholder="B"> <input type="number" step="10" min="0" data-die="H" style="width:58px" placeholder="H"> <input type="number" step="10" min="0" data-die="L" style="width:58px" placeholder="L"></span></div>
         </div>
@@ -323,14 +323,14 @@
       <div class="eq">$$Q_{U} = Q_{\text{Kon}+\text{Str}} + Q_{\text{Pl}} + Q_{\text{Luft}} + Q_{\text{Bl}} + Q_{\text{Spr}} \quad (12.6) \qquad Q_{T} = Q - Q_{U} \quad (12.1, 5.19) \qquad P_{T} = Q_{T}/\tau _{z} \quad (5.4)$$</div>
       <div class="eq">$$Q_{\text{Kon}+\text{Str}} = 9{,}7 \cdot 2L(B+H) \cdot \tau _{z} \cdot (t_{\text{fa}} - 20) \quad (12.7, 12.9) \qquad Q_{\text{Pl}} = 100 \cdot \tau _{z} \cdot 2 \cdot B \cdot H \cdot (t_{\text{fa}} - 55) \quad (12.10) \qquad t_{\text{fa}} = 20 + 0{,}6 \cdot (T_{\text{Form}} - 20) \quad (12.3)$$</div>
       <div class="eq">$$Q_{\text{Luft}} = B \cdot H \cdot L \cdot 60\,\text{K} \quad (12.14) \qquad Q_{\text{Bl}} = 40 \cdot A_{\text{fgr}} \cdot \tau _{\text{bl}} \cdot (\tfrac{1}{2}(T_{e} + T_{\text{Form}} + 30) - 20) \quad (12.15) \qquad m_{\text{Spr}} = 0{,}744 \cdot A_{\text{fgr}} \cdot 0{,}01\,\text{m} \cdot \Delta t_{\text{Spr}} \quad (12.21) \qquad Q_{\text{Spr}} = 2594\ \text{kJ}/\text{kg}\ \cdot m_{\text{Spr}} \quad (12.22)$$</div>
-      <p>Wärmeübergangs- und Referenzwerte sind die Erfahrungswerte der Quellen (Luft 20 °C, Aufspannplatten 55 °C, Luft zwischen den offenen Hälften 80 °C, Gravur vor dem Gießen = Formtemperatur + 30 K, α 9,7 / 100 / 40 W/(m²·K)). Formabmessungen: B = H = 0,8 · Säulenabstand der Maschine, L = 0,5·B — bei Bedarf überschreiben. Quellen: Temperiersystem der Druckgießform (Kap. 5), Heizung und Kühlung der Druckgießformen mit Temperiergeräten (Kap. 12); Gleichungsnummern wie dort, Abgleich in <code>docs/heat_flow_hpd_die.md</code>.</p>
+      <p>Wärmeübergangs- und Referenzwerte sind die Erfahrungswerte der Quellen (Luft 20 °C, Aufspannplatten 55 °C, Luft zwischen den offenen Hälften 80 °C, Gravur vor dem Gießen = Formtemperatur + 30 K, α 9,7 / 100 / 40 W/(m²·K)). Formabmessungen: B = H = 0,8 · Säulenabstand der Maschine, L = 0,5·B; bei Bedarf überschreiben. Quellen: Temperiersystem der Druckgießform (Kap. 5), Heizung und Kühlung der Druckgießformen mit Temperiergeräten (Kap. 12); Gleichungsnummern wie dort, Abgleich in <code>docs/heat_flow_hpd_die.md</code>.</p>
     </details>
   </div>
   <p class="zk-footnote"><strong>Modell der Zeitleiste:</strong> Der Hauptzyklus ist eine feste
-    Kette auf einer Zeile — Erstarren &amp; Halten folgt immer auf den Schuss, die Entnahme auf das
+    Kette auf einer Zeile: Erstarren &amp; Halten folgt immer auf den Schuss, die Entnahme auf das
     Öffnen usw.; editiert werden nur die Dauern, die Nummern in den Balken entsprechen der Liste
     darunter. Jeder Schieber der Kernzüge hat eine eigene Zeile mit zwei Bewegungen: Ziehen (relativ
-    zum Beginn „Form öffnen") und Einfahren (relativ zum Beginn „Form schließen" — mit negativem
+    zum Beginn „Form öffnen") und Einfahren (relativ zum Beginn „Form schließen"; mit negativem
     Versatz endet es, bevor die Form schließt). Bauteilhandling, Sprühroboter und Kühlung sind
     freie Parallelvorgänge auf festen Zeilen; der Bereich ergibt sich aus der Tabelle, eine
     Spur-Auswahl gibt es nicht. Das Zustandsband oben zeigt geschlossen → öffnet →
@@ -339,7 +339,7 @@
     Schließen-Ende) einschränken. Die Zykluszeit ist das späteste Ende über alle Vorgänge und geht als τ<sub>z</sub> in die
     Wärmebilanz ein (Formzuhaltezeit = Schuss + Erstarren, Nebenzeit = Rest, Blasphase = „Sprühen &amp;
     Ausblasen"). Noch nicht modelliert: physikalische Mindestdauern (z.&nbsp;B. Erstarrungszeit aus
-    k·s²) und die Rückwirkung der Kühlleistung auf die Haltezeit — sie folgen als nächste Ausbaustufe.</p>
+    k·s²) und die Rückwirkung der Kühlleistung auf die Haltezeit; sie folgen als nächste Ausbaustufe.</p>
 
 </div>
 <script src="/shared/examples/machines.js"></script>
@@ -506,7 +506,7 @@
       if (row.gutter)
         s += '<text x="' + (L - 12) + '" y="' + (y + LANE_H / 2 + 4) + '" text-anchor="end" font-size="11.5" font-weight="600" fill="' + P.muted + '">' + escapeHtml(row.gutter) + '</text>';
       if (!row.items.length)
-        s += '<text x="' + (L + 10) + '" y="' + (y + LANE_H / 2 + 4) + '" font-size="11" fill="' + P.muted + '">— keine Einträge —</text>';
+        s += '<text x="' + (L + 10) + '" y="' + (y + LANE_H / 2 + 4) + '" font-size="11" fill="' + P.muted + '">(keine Einträge)</text>';
 
       row.items.forEach(function (it, k) {
         if (!it || it.end <= w0 || it.start >= w1) return;
@@ -575,7 +575,7 @@
         '<td class="r"><input type="number" data-k="pushDur" step="0.5" min="0" value="' + sch.pushDur + '" aria-label="Dauer Einfahren"></td>' +
         '<td><button class="remove-btn" title="Schieber entfernen" aria-label="' + escapeHtml(sch.name) + ' entfernen">✕</button></td>' +
       '</tr>';
-    }).join('') || '<tr><td colspan="6" style="color:var(--muted);">Keine Schieber — über den Knopf unten hinzufügen.</td></tr>';
+    }).join('') || '<tr><td colspan="6" style="color:var(--muted);">Keine Schieber. Über den Knopf unten hinzufügen.</td></tr>';
   }
 
   function renderParallel() {
@@ -670,13 +670,13 @@
     var D = PR.derived(), h = st.heat, src = {};
     var alloy = D.alloy ? D.alloy.fields : null;
     var alloyOk = !!alloy && ['Tliq', 'Tsol', 'hf', 'cp20', 'cpS', 'cpL'].every(function (k) { return isFinite(alloy[k]) && alloy[k] > 0; });
-    src.alloy = alloyOk ? D.sources.alloy : (D.alloy ? 'Preset ohne Thermik-Werte — Beispielwerte AlSi9Cu3' : 'kein Projektwert — Beispielwerte AlSi9Cu3');
+    src.alloy = alloyOk ? D.sources.alloy : (D.alloy ? 'Preset ohne Thermik-Werte, Beispielwerte AlSi9Cu3' : 'kein Projektwert, Beispielwerte AlSi9Cu3');
     var Tcast = D.Tcast != null ? D.Tcast : (alloyOk && isFinite(alloy.Tcast) ? alloy.Tcast : LOGIC.ALLOY_FALLBACK.Tcast);
     src.Tcast = D.Tcast != null ? D.sources.Tcast : 'Legierungs-Preset';
     var mdose = D.mdose != null ? D.mdose : 18.2;
-    src.mdose = D.mdose != null ? D.sources.mdose : 'kein Projektwert — Standard';
+    src.mdose = D.mdose != null ? D.sources.mdose : 'kein Projektwert, Standard';
     var Tdie = D.Tdie != null ? D.Tdie : 200;
-    src.Tdie = D.Tdie != null ? D.sources.Tdie : 'kein Projektwert — Standard';
+    src.Tdie = D.Tdie != null ? D.sources.Tdie : 'kein Projektwert, Standard';
     var Acav;
     if (D.Acav != null) { Acav = D.Acav; src.Acav = D.sources.Acav; }
     else if (D.area != null) {
@@ -686,9 +686,9 @@
       Acav = 2.5 * D.area;
       src.Acav = '≈ 2,5 × Sprengfläche (' + D.sources.area + ')';
     }
-    else { Acav = 0.6; src.Acav = 'kein Projektwert — Standard'; }
+    else { Acav = 0.6; src.Acav = 'kein Projektwert, Standard'; }
     var est = LOGIC.dieFromMachine(D.machinePreset ? D.machinePreset.fields : null);
-    src.die = D.machinePreset ? 'geschätzt aus Säulenabstand ' + D.machinePreset.name : 'kein Maschinen-Preset — Standardform';
+    src.die = D.machinePreset ? 'geschätzt aus Säulenabstand ' + D.machinePreset.name : 'kein Maschinen-Preset, Standardform';
     var die = { B: h.die.B || est.B, H: h.die.H || est.H, L: h.die.L || est.L };
     return {
       v: { mdose: mdose, Tcast: Tcast, alloy: alloyOk ? alloy : null, Tdie: Tdie, Teject: h.Teject,
@@ -717,7 +717,7 @@
     if (r.QT > 0) segs.push({ label: 'Temperiersystem', v: r.QT, c: P.primary2 });
     var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" font-family="Arial" aria-label="Wärmebilanz je Zyklus">';
     s += '<text x="' + L + '" y="15" font-size="11.5" font-weight="700" fill="' + P.muted + '">Wärme in die Form Q = ' + fmt(Q, 0) + ' kJ je Zyklus</text>';
-    s += '<text x="' + (W - R) + '" y="15" font-size="11" text-anchor="end" fill="' + (r.deficit ? P.warn : P.muted) + '">' + (r.deficit ? 'Verluste > Eintrag — Form muss beheizt werden' : 'Temperiersystem ' + fmt(r.k * 100, 0) + ' %') + '</text>';
+    s += '<text x="' + (W - R) + '" y="15" font-size="11" text-anchor="end" fill="' + (r.deficit ? P.warn : P.muted) + '">' + (r.deficit ? 'Verluste > Eintrag: Form muss beheizt werden' :'Temperiersystem ' + fmt(r.k * 100, 0) + ' %') + '</text>';
     var x = L;
     segs.forEach(function (sg) {
       if (!(sg.v > 0)) return;
@@ -764,7 +764,7 @@
       ' · Schussgewicht: ' + escapeHtml(inp.src.mdose) +
       ' · Formtemperatur: ' + escapeHtml(inp.src.Tdie) + ' · Gravurfläche: ' + escapeHtml(inp.src.Acav) +
       ' · Form: ' + escapeHtml(inp.src.die) +
-      (h.die.B || h.die.H || h.die.L ? ' (überschrieben — <a href="#" id="h-die-reset">Schätzung übernehmen</a>)' : '');
+      (h.die.B || h.die.H || h.die.L ? ' (überschrieben, <a href="#" id="h-die-reset">Schätzung übernehmen</a>)' : '');
     var rl = document.getElementById('h-die-reset');
     if (rl) rl.addEventListener('click', function (e) { e.preventDefault(); h.die = { B: null, H: null, L: null }; renderChart(); });
     /* Eingabefelder (Formmaße: Platzhalter = Schätzung) */
@@ -785,20 +785,20 @@
       document.getElementById('h-errors').textContent =
         (isFinite(v.Teject) && !(v.Teject > rng.min && v.Teject < rng.max))
           ? 'Entformungstemperatur ' + fmt(v.Teject, 0) + ' °C liegt außerhalb von '
-            + fmt(rng.min, 0) + '–' + fmt(rng.max, 0) + ' °C (Umgebung bis Solidus) — '
+            + fmt(rng.min, 0) + '–' + fmt(rng.max, 0) + ' °C (Umgebung bis Solidus): '
             + 'entformt wird ein festes Teil.'
-          : 'Wärmeeintrag nicht berechenbar — Schussgewicht > 0 und Liquidus > Solidus nötig.';
+          : 'Wärmeeintrag nicht berechenbar: Schussgewicht > 0 und Liquidus > Solidus nötig.';
       document.getElementById('k-pt').textContent = '—';
       return;
     }
-    document.getElementById('h-errors').textContent = v.tz > 0 ? '' : 'Zykluszeit 0 — Dauern im Hauptzyklus eintragen.';
+    document.getElementById('h-errors').textContent = v.tz > 0 ? '' : 'Zykluszeit 0: Dauern im Hauptzyklus eintragen.';
     document.getElementById('k-pt').textContent = isFinite(r.PT) ? fmt(r.PT, 1) : '—';
     var q = r.input;
     var Tliq = v.alloy ? v.alloy.Tliq : LOGIC.ALLOY_FALLBACK.Tliq;
     document.getElementById('h-kpis').innerHTML =
       kpi('Temperierleistung P<sub>T</sub>', (isFinite(r.PT) ? fmt(r.PT, 1) : '—') + ' kW', 'Q<sub>T</sub>/τ<sub>z</sub> · Temperiersystem ' + fmt(r.k * 100, 0) + ' % (Richtwert 40–60 %)', 'hero' + (r.deficit ? ' bad' : '')) +
       kpi('Wärme in die Form Q', fmt(q.Qdie, 0) + ' kJ', fmt(q.q, 0) + ' kJ/kg: Erstarrung ' + fmt(q.Qlat, 0) + ' · Intervall ' + fmt(q.Qsemi, 0) + ' · Abkühlung ' + fmt(q.Qcool, 0)) +
-      kpi('Überhitzung', fmt(q.Qsuper, 0) + ' kJ', fmt(v.Tcast, 0) + ' → ' + fmt(Tliq, 0) + ' °C — geht in Gießkammer und Aufspannplatte') +
+      kpi('Überhitzung', fmt(q.Qsuper, 0) + ' kJ', fmt(v.Tcast, 0) + ' → ' + fmt(Tliq, 0) + ' °C, geht in Gießkammer und Aufspannplatte') +
       kpi('Natürliche Verluste Q<sub>U</sub>', fmt(r.losses.QU, 0) + ' kJ', fmt(r.losses.QU / q.Qdie * 100, 0) + ' % · Trennstoff ' + fmt(r.losses.mSpray * 1000, 0) + ' g/Zyklus') +
       kpi('Wärmeleistung gesamt', fmt(q.Qtotal / v.tz, 1) + ' kW', '(Q + Überhitzung)/τ<sub>z</sub> bei τ<sub>z</sub> = ' + fmt(v.tz) + ' s');
     document.getElementById('h-chart').innerHTML = svgBalance(r);

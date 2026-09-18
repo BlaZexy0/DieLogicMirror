@@ -295,14 +295,14 @@ function removeSelected() {
 
 /* ── Zielmodus: setzen und neu setzen ────────────────────────── */
 const aim = createAimUI();
-const MISS = 'Daneben — die Stelle muss auf der Abstandsfläche liegen.';
+const MISS = 'Daneben: die Stelle muss auf der Abstandsfläche liegen.';
 const stillAiming = () => handles.aiming;
 function cancelAim() {
   handles.cancelAim();
   state.pending = null;
   aim.hide();
 }
-const noShell = () => aim.note('Zuerst ein Bauteil laden — die Abstandsfläche entsteht daraus, und auf ihr wird gesetzt.');
+const noShell = () => aim.note('Zuerst ein Bauteil laden: die Abstandsfläche entsteht daraus, und auf ihr wird gesetzt.');
 const toCamera = point => {
   const c = view.camera.position;
   return [c.x - point[0], c.y - point[1], c.z - point[2]];
@@ -318,7 +318,7 @@ function startPlace(type) {
   state.pending = null;
   aim.onCancel = cancelAim;
   if (type === 'stich') {
-    aim.show(true, 'Kühlstich: die Stelle auf der Abstandsfläche anklicken — dort sitzt die Spitze, der Stich läuft '
+    aim.show(true, 'Kühlstich: die Stelle auf der Abstandsfläche anklicken. Dort sitzt die Spitze, der Stich läuft '
       + M.DIRECTIONS[state.dirMode].hint + '. Esc bricht ab.');
     handles.armAim({
       onHit: hit => {
@@ -398,7 +398,7 @@ function runAuto() {
     ['größter Abstand', fmt(plan.stats.max) + ' mm']
   ]);
   $('auto-note').textContent = plan.sites.length < state.auto.count
-    ? 'Nur ' + plan.sites.length + ' Stellen halten den Mindestabstand — Abstand kleiner wählen oder weniger Bohrungen.'
+    ? 'Nur ' + plan.sites.length + ' Stellen halten den Mindestabstand: Abstand kleiner wählen oder weniger Bohrungen.'
     : '';
 }
 $('auto-run').addEventListener('click', runAuto);

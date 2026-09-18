@@ -178,7 +178,7 @@ async function runDistance() {
     updateFacts();
   } catch (err) {
     if (err.message === CANCELLED) {
-      $('model-warn-a').textContent = 'Abstandsrechnung abgebrochen — das Bild zeigt noch die vorige Rechnung.';
+      $('model-warn-a').textContent = 'Abstandsrechnung abgebrochen: das Bild zeigt noch die vorige Rechnung.';
       state.stale = true;
     } else {
       $('model-warn-a').textContent = 'Der Abstand konnte nicht gerechnet werden: ' + err.message;
@@ -211,7 +211,7 @@ function reachWarning() {
   const diag = Math.max(a.bounds.diag, b.bounds.diag);
   if (!(state.reach > diag * 0.25)) return '';
   return ' Die Suchgrenze ist groß gegenüber den Teilen (' + fmt(state.reach)
-    + ' mm zu ' + fmt(diag) + ' mm Diagonale) — das kann lange dauern.';
+    + ' mm zu ' + fmt(diag) + ' mm Diagonale): das kann lange dauern.';
 }
 
 function updateRunButton() {
@@ -221,13 +221,13 @@ function updateRunButton() {
   }
   if (!state.analysed) {
     return setRun({ label: 'Abstand berechnen', warn: !!reachWarning(),
-      note: 'Noch nicht gerechnet — ' + fmt(state.a.model.vertexCount + state.b.model.vertexCount, 0)
+      note: 'Noch nicht gerechnet: ' + fmt(state.a.model.vertexCount + state.b.model.vertexCount, 0)
         + ' Punkte gegen ' + fmt(state.a.model.faceCount + state.b.model.faceCount, 0) + ' Dreiecke.'
         + reachWarning() });
   }
   if (state.stale) {
     return setRun({ label: 'Abstand neu berechnen', warn: true,
-      note: 'Datei oder Suchgrenze geändert — das Bild zeigt noch die vorige Rechnung.' + reachWarning() });
+      note: 'Datei oder Suchgrenze geändert: das Bild zeigt noch die vorige Rechnung.' + reachWarning() });
   }
   setRun({ label: 'Abstand ist aktuell', outline: true, disabled: true });
 }
@@ -309,7 +309,7 @@ function updateFacts() {
   $('model-warn-a').textContent = drin.length
     ? 'Achtung: ' + drin.map(k => fmt(100 * state[k].inside, 1) + ' % der Punkte von '
       + k.toUpperCase()).join(' und ')
-      + ' liegen INNERHALB des anderen Netzes — die Teile durchdringen sich. '
+      + ' liegen INNERHALB des anderen Netzes; die Teile durchdringen sich. '
       + 'Der gemessene Abstand ist dort kein Freiraum.'
     : '';
 }

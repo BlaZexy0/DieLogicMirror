@@ -82,7 +82,7 @@ export function createAimUI() {
     clearTimeout(missTimer);
     const keep = text.textContent;
     banner.classList.add('miss');
-    text.textContent = msg || 'Daneben — die Stelle muss auf dem Bauteil liegen.';
+    text.textContent = msg || 'Daneben: die Stelle muss auf dem Bauteil liegen.';
     missTimer = setTimeout(() => {
       if (stillAiming && stillAiming()) { banner.classList.remove('miss'); text.textContent = keep; }
       else show(false);

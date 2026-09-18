@@ -111,7 +111,7 @@
        genau dann ist er am wichtigsten. */
     if (session || expired || !P.storageOk()) {
       var h = statusHTML();
-      cloud = '<span class="' + h.cls + '" id="dl-pb-status" title="Die Datenbank ist der Stand der Wahrheit — Änderungen werden automatisch übertragen.">' + esc(h.text) + '</span>'
+      cloud = '<span class="' + h.cls + '" id="dl-pb-status" title="Die Datenbank ist der Stand der Wahrheit. Änderungen werden automatisch übertragen.">' + esc(h.text) + '</span>'
         + (h.expired ? '<a class="dl-pb-btn" id="dl-pb-relogin" href="' + KONTO + '?next=' + encodeURIComponent(location.pathname + location.search) + '">Neu anmelden</a>' : '')
         + (h.conflict ? '<button class="dl-pb-btn" id="dl-pb-conflict" title="Den lokalen Stand verwerfen und den Stand vom Server laden">Serverstand laden</button>' : '')
         + (session ? '<button class="dl-pb-btn primary" id="dl-pb-save" title="Benannten Schnappschuss (Revision) des aktuellen Stands anlegen">⎘ Revision</button>' : '');
@@ -182,12 +182,12 @@
     /* Reihenfolge ist der ganze Befund H-10: cur.dirty stand vorn und
        übertönte jeden Fehlerzustand — der Anwender sah „speichert …",
        während längst gar nichts mehr gespeichert wurde. */
-    if (!P.storageOk()) { status = 'Browser-Speicher voll oder gesperrt — Änderungen gehen verloren'; cls = ' dirty'; }
-    else if (expired) { status = 'Sitzung abgelaufen — Änderungen sind nur lokal'; cls = ' dirty'; }
-    else if (conflict) { status = 'Konflikt — auf dem Server liegt ein neuerer Stand'; cls = ' dirty'; }
+    if (!P.storageOk()) { status = 'Browser-Speicher voll oder gesperrt: Änderungen gehen verloren'; cls = ' dirty'; }
+    else if (expired) { status = 'Sitzung abgelaufen: Änderungen sind nur lokal'; cls = ' dirty'; }
+    else if (conflict) { status = 'Konflikt: Auf dem Server liegt ein neuerer Stand'; cls = ' dirty'; }
     else if (orphanNote) { status = orphanNote; cls = ' dirty'; }
     else if (syncState.status === 'saving' || cur.dirty) { status = 'speichert …'; cls = ' pending'; }
-    else if (syncState.status === 'error') { status = 'nicht synchronisiert — ' + syncState.error; cls = ' dirty'; }
+    else if (syncState.status === 'error') { status = 'nicht synchronisiert: ' + syncState.error; cls = ' dirty'; }
     else status = 'gespeichert' + (cur.remote && cur.remote.rev ? ' · Rev ' + cur.remote.rev : '') + (syncState.at ? ' · ' + fmtTime(syncState.at) : '');
     return { text: status, cls: 'dl-pb-status' + cls, conflict: conflict, expired: expired };
   }
@@ -405,7 +405,7 @@
     if (!p.dirty) { orphanNote = '„' + p.name + '" wurde auf dem Server archiviert und hier entfernt.'; P.remove(p.id); return; }
     var copy = P.duplicate(p.id, p.name);
     P.remove(p.id);
-    orphanNote = '„' + p.name + '" gibt es auf dem Server nicht mehr — die ungespeicherten Änderungen liegen jetzt als neues Projekt vor.';
+    orphanNote = '„' + p.name + '" gibt es auf dem Server nicht mehr. Die ungespeicherten Änderungen liegen jetzt als neues Projekt vor.';
     if (copy) pending[copy.id] = true;
   }
 
@@ -501,7 +501,7 @@
         location.replace(KONTO + '?next=' + encodeURIComponent(location.pathname + location.search));
         return;
       }
-      bar.insertAdjacentHTML('beforeend', '<span class="dl-pb-status dirty">Backend nicht erreichbar — Änderungen bleiben nur in diesem Browser.</span>');
+      bar.insertAdjacentHTML('beforeend', '<span class="dl-pb-status dirty">Backend nicht erreichbar: Änderungen bleiben nur in diesem Browser.</span>');
       return;
     }
     refresh();

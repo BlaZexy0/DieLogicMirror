@@ -88,7 +88,7 @@ export function mountPartSource({ busy, viewport, onStart, onLoad, suffix = '',
        Rohzahl der Dreiecke. */
     const raw = tris.length / 9;
     $(id('model-warn')).textContent = raw > BIG_MESH
-      ? 'Großes Netz (' + fmt(raw, 0) + ' Dreiecke) — Aufbereitung und jede Rechnung dauern entsprechend.'
+      ? 'Großes Netz (' + fmt(raw, 0) + ' Dreiecke): Aufbereitung und jede Rechnung dauern entsprechend.'
       : '';
     busy.textContent = raw > BIG_MESH
       ? 'Netz aufbereiten (' + fmt(raw, 0) + ' Dreiecke) …'
@@ -155,7 +155,7 @@ function showFacts(m, id) {
      großen UND offenen Netz erfuhr man nur das Erste. */
   const notes = [];
   if (m.faceCount > BIG_MESH) {
-    notes.push('Großes Netz (' + fmt(m.faceCount, 0) + ' Dreiecke) — jede Rechnung dauert entsprechend.');
+    notes.push('Großes Netz (' + fmt(m.faceCount, 0) + ' Dreiecke): jede Rechnung dauert entsprechend.');
   }
   if (m.flippedFaces) {
     notes.push(fmt(m.flippedFaces, 0) + ' Dreiecke waren gegenläufig gewickelt und wurden ausgerichtet.');
@@ -163,10 +163,10 @@ function showFacts(m, id) {
   const openFrac = openEdgeRatio(m);
   if (openFrac > 0.005) {
     notes.push('Achtung: ' + (100 * openFrac).toFixed(1)
-      + ' % der Kanten haben keinen Nachbarn — das Netz ist offen oder nicht mannigfaltig.');
+      + ' % der Kanten haben keinen Nachbarn: das Netz ist offen oder nicht mannigfaltig.');
   }
   if (m.volume <= 0 && openFrac <= 0.005) {
-    notes.push('Das Volumen ist nicht positiv — die Dreiecke zeigen nach innen oder das Netz überlappt sich.');
+    notes.push('Das Volumen ist nicht positiv: die Dreiecke zeigen nach innen oder das Netz überlappt sich.');
   }
   $(id('model-warn')).textContent = notes.join(' ');
 }

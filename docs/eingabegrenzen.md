@@ -139,8 +139,8 @@ diese Datei nicht neu erzeugt, bekommt einen roten CI-Lauf.
 | Feld | Grenze | Warum sie hart ist |
 |---|---|---|
 | Sicherheitsfaktor `safety` | `1 … 5` | ein Sicherheitsfaktor unter 1 ist keiner |
-| Angussgewicht `runner` | `> 0 … 1000` | ohne Anguss erreicht die Schmelze die Kavität nicht — die Simulation weist es ab |
-| Pressrestgewicht `biscuit` | `> 0 … 1000` | ohne Pressrest führte der Kolben bis in die Form — die Simulation weist es ab |
+| Angussgewicht `runner` | `> 0 … 1000` | ohne Anguss erreicht die Schmelze die Kavität nicht; die Simulation weist es ab |
+| Pressrestgewicht `biscuit` | `> 0 … 1000` | ohne Pressrest führte der Kolben bis in die Form; die Simulation weist es ab |
 | Durchflussbeiwert `Cd` | `> 0 … 1` | ein Durchflussbeiwert über 1 hieße mehr Durchfluss als Antrieb |
 | Enddruck Pumpe / Tank vor Schuss `vacPump` | `> 0 … 1013` | ein Enddruck über dem Umgebungsdruck ist kein Vakuum |
 | Füllgrad Ziel min. `fillMin` | `0 … 100` | ein Füllgrad ist ein Anteil und liegt in 0…100 % |
@@ -227,7 +227,7 @@ Harte Grenzen: `a` — bei 100 % Ausschuss gibt es kein Gutteil, auf das sich Ko
 
 | Bedingung | in Worten |
 |---|---|
-| `mpart` ≤ `mdose` | Bauteilgewicht kann das Schussgewicht nicht übersteigen — die Materialausbeute wäre über 100 % |
+| `mpart` ≤ `mdose` | Bauteilgewicht kann das Schussgewicht nicht übersteigen: Die Materialausbeute wäre über 100 % |
 
 ## Sprengflächenanalyse
 

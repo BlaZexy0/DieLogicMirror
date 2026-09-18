@@ -16,7 +16,7 @@ import { buildByType, buildAll, volumeOf, wallClearance } from '../cooling/geom.
 import { planCooling } from '../cooling/auto.js';
 import { setTris, download, safeName, dirText } from '../ui/common.js';
 
-const SUBTITLE = 'Temperierung: Kühlstiche und Kanäle auf der Abstandsfläche zur Kavität — die Enden frei bewegen, der Wandabstand aus dem Feld.';
+const SUBTITLE = 'Temperierung: Kühlstiche und Kanäle auf der Abstandsfläche zur Kavität, die Enden frei bewegen, der Wandabstand aus dem Feld.';
 const STATUS = '<b>Setzen</b>: Art wählen, dann auf die Abstandsfläche klicken &nbsp;·&nbsp; <b>Punkt</b> ziehen: in der Bildebene &nbsp;·&nbsp; '
   + '<b>Achsenpfeil</b>: je Achse &nbsp;·&nbsp; <b>Pfeil</b> am Kühlstich: neu setzen &nbsp;·&nbsp; <b>Leer</b>: drehen &nbsp;·&nbsp; <b>rechts</b>: verschieben &nbsp;·&nbsp; <b>Rad</b>: zoomen';
 const SHELL_OPACITY = 0.22;
@@ -246,14 +246,14 @@ export function createCoolingStage(ctx) {
     ctx.aim.hide();
   }
   const stillAiming = () => handles.aiming;
-  const MISS = 'Daneben — die Stelle muss auf der Abstandsfläche liegen.';
+  const MISS = 'Daneben: die Stelle muss auf der Abstandsfläche liegen.';
   const toCamera = point => {
     const c = view.camera.position;
     return [c.x - point[0], c.y - point[1], c.z - point[2]];
   };
   const dirAt = hit => M.directionFor(state.dirMode, [-hit.dir[0], -hit.dir[1], -hit.dir[2]], toCamera(hit.point));
   function noShell() {
-    ctx.aim.note(ctx.part.model ? 'Die Abstandsfläche wird noch gerechnet — gleich noch einmal.' : 'Zuerst ein Bauteil laden (Schritt 1) — die Abstandsfläche entsteht daraus.');
+    ctx.aim.note(ctx.part.model ? 'Die Abstandsfläche wird noch gerechnet, gleich noch einmal.' : 'Zuerst ein Bauteil laden (Schritt 1): die Abstandsfläche entsteht daraus.');
   }
   function startPlace(type) {
     if (!state.shellDist) { noShell(); return; }
@@ -261,7 +261,7 @@ export function createCoolingStage(ctx) {
     state.pending = null;
     ctx.aim.onCancel = cancelAim;
     if (type === 'stich') {
-      ctx.aim.show(true, 'Kühlstich: die Stelle auf der Abstandsfläche anklicken — dort sitzt die Spitze, der Stich läuft '
+      ctx.aim.show(true, 'Kühlstich: die Stelle auf der Abstandsfläche anklicken. Dort sitzt die Spitze, der Stich läuft '
         + M.DIRECTIONS[state.dirMode].hint + '. Esc bricht ab.');
       handles.armAim({
         onHit: hit => {
@@ -334,7 +334,7 @@ export function createCoolingStage(ctx) {
       ['größter Abstand', fmt(plan.stats.max) + ' mm']
     ]);
     $('te-auto-note').textContent = plan.sites.length < state.auto.count
-      ? 'Nur ' + plan.sites.length + ' Stellen halten den Mindestabstand — Abstand kleiner wählen oder weniger Bohrungen.'
+      ? 'Nur ' + plan.sites.length + ' Stellen halten den Mindestabstand: Abstand kleiner wählen oder weniger Bohrungen.'
       : '';
   }
   $('te-auto-run').addEventListener('click', runAuto);
@@ -392,7 +392,7 @@ export function createCoolingStage(ctx) {
   ctx.on('part', () => {
     state.field = null; state.shellDist = null; state.shellField = null;
     setTris(shellMesh, []);
-    $('te-shell-note').textContent = 'Noch keine Fläche — sie entsteht aus dem Abstandsfeld des Bauteils.';
+    $('te-shell-note').textContent = 'Noch keine Fläche: sie entsteht aus dem Abstandsfeld des Bauteils.';
     loadPlan(M.emptyPlan());
   });
   ctx.on('field', () => { if (state.active) computeShell(); });

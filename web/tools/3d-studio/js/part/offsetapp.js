@@ -191,11 +191,11 @@ function updateRunButton() {
   if (!state.model) return setRun({ label: 'Feld berechnen', disabled: true });
   if (!state.field) {
     return setRun({ label: 'Feld berechnen',
-      note: 'Noch kein Feld — ohne Feld gibt es weder Wandstärke noch Isofläche.' });
+      note: 'Noch kein Feld: ohne Feld gibt es weder Wandstärke noch Isofläche.' });
   }
   if (state.stale) {
     return setRun({ label: 'Feld neu berechnen', warn: true,
-      note: 'Zellkante geändert — das Bild zeigt noch das vorige Feld.' });
+      note: 'Zellkante geändert: das Bild zeigt noch das vorige Feld.' });
   }
   setRun({ label: 'Feld ist aktuell', outline: true, disabled: true });
 }
@@ -298,7 +298,7 @@ function updateFieldFacts() {
   if (state.field && !state.stale) rows.push(['Rechenzeit', state.ms.toFixed(0) + ' ms']);
   facts('field-facts', rows);
   $('model-warn').textContent = mb > 400
-    ? 'Das Raster braucht ' + mb.toFixed(0) + ' MB — Zellkante vergrößern.'
+    ? 'Das Raster braucht ' + mb.toFixed(0) + ' MB: Zellkante vergrößern.'
     : '';
 }
 

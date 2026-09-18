@@ -16,13 +16,14 @@
    Aufruf:  node scripts/gen-domain-doc.mjs                                   */
 
 import { writeFileSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+/* Als file://-URL: ein absoluter Windows-Pfad ist für den ESM-Loader keine URL. */
 const { groups, PAIRS, domainFields } = await import(
-  join(ROOT, 'web/tools/auslegung/js/config/fields.js'));
+  pathToFileURL(join(ROOT, 'web/tools/auslegung/js/config/fields.js')).href);
 
 const num = x => String(x).replace('.', ',');
 

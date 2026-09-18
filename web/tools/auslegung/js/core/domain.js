@@ -92,7 +92,7 @@ export function checkValues(v, opt) {
   if (isFinite(hub) && hub < -1e-6) {
     ['densitySolid', 'density', 'shrink'].forEach(k => bad.add(k));
     msgs.push('Nachverdichtungshub wäre negativ (' + hub.toFixed(1) +
-      ' mm) — die Feststoffdichte liegt unter der Schmelzedichte');
+      ' mm): die Feststoffdichte liegt unter der Schmelzedichte');
   }
 
   return { ok: bad.size === 0, bad, msgs };

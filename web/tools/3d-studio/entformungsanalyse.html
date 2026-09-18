@@ -48,7 +48,7 @@
     <div class="facts" id="model-facts"></div>
     <div class="warn-line" id="model-warn"></div>
     <label class="inline"><input type="checkbox" id="show-edges"> Netzkanten zeigen</label>
-    <div class="hint">Das Netz wird genommen, wie es kommt — die Analyse urteilt je Dreieck als
+    <div class="hint">Das Netz wird genommen, wie es kommt. Die Analyse urteilt je Dreieck als
       Ganzem. Große Dreiecke (die Fächer ebener Flächen aus dem CAD) machen die Zuordnung an
       Schattengrenzen grob: ein Dreieck, das eine Hälfte nur zum Teil sieht, geht ganz an einen
       Schieber. Feinere Netze sind Sache des Exports; die Beispielteile sind mit Dreiecken bis
@@ -67,7 +67,7 @@
       </div>
     </div>
     <div class="row">
-      <span title="Welche der beiden Hälften auf der Formöffnungsachse die bewegliche ist (Auswerferseite). Im Bauteilrahmen liegt die Trennebene bei z = 0 und die Form öffnet nach +z — die +Seite ist die bewegliche.">Bewegliche Seite</span>
+      <span title="Welche der beiden Hälften auf der Formöffnungsachse die bewegliche ist (Auswerferseite). Im Bauteilrahmen liegt die Trennebene bei z = 0 und die Form öffnet nach +z: die +Seite ist die bewegliche.">Bewegliche Seite</span>
       <div class="seg" id="mov-seg">
         <button type="button" data-value="1" class="active" id="mov-plus">+Z</button>
         <button type="button" data-value="-1" id="mov-minus">−Z</button>
@@ -98,7 +98,7 @@
       frei ist (verdeckungsgenau, nicht nur über den Winkel). Dann gelten
       feste Regeln: eine <b>Formhälfte</b>, die das Dreieck mit mindestens
       0,5° Schräge sieht, bekommt es; eine senkrechte Wand (bis 0,5°
-      Gegenschräge) bleibt bei den Hälften; sonst ein <b>Schieber</b> —
+      Gegenschräge) bleibt bei den Hälften; sonst ein <b>Schieber</b>:
       je zusammenhängendem Fleck die Richtung, die am meisten davon sieht,
       auch parallel (0°); was niemand sieht, ist <b>Hinterschnitt</b>.
       Splitter ohne Schräge, die keine Hälfte sieht, gehen an die Hälften
@@ -122,15 +122,15 @@
       <span class="val" id="die-dist-val"></span>
     </div>
     <div class="row">
-      <span title="Ein Rand entlang der Trennlinie, in die Form hinein gezogen — die Trennfläche in Andeutung, damit das Stück nicht wie Papier aussieht.">Rand</span>
+      <span title="Ein Rand entlang der Trennlinie, in die Form hinein gezogen: die Trennfläche in Andeutung, damit das Stück nicht wie Papier aussieht.">Rand</span>
       <input type="range" id="die-skirt" min="0" max="500" step="1" value="8">
       <span class="val" id="die-skirt-val"></span>
     </div>
-    <label class="inline" title="Das Bauteil bleibt durchscheinend an seinem Ort stehen — zwischen den Formteilen."><input type="checkbox" id="die-part" checked> Bauteil durchscheinend dazwischen</label>
+    <label class="inline" title="Das Bauteil bleibt durchscheinend an seinem Ort stehen, zwischen den Formteilen."><input type="checkbox" id="die-part" checked> Bauteil durchscheinend dazwischen</label>
     <div class="pieces" id="die-pieces"></div>
     <div class="hint">Jede Region wird zum Formteil: die Flächen einer Hälfte oder eines Schiebers
       rücken entlang ihrer Entformrichtung auseinander, wie beim Öffnen der Form. Jedes Formteil
-      zeigt genau die Flächen, die es abbildet — von der Seite, von der man in die offene Form
+      zeigt genau die Flächen, die es abbildet, von der Seite, von der man in die offene Form
       sieht; der Rand ist die Trennlinie, ein Stück in die Form hinein gezogen. Sechs Formteile
       sind möglich, zwei Hälften und vier Schieber; was kein Dreieck braucht, steht grau und
       kommt in der Form nicht vor. Hinterschnitte bleiben rot an ihrem Ort.</div>
@@ -152,7 +152,7 @@
     <div class="hint">Jedes Formteil projiziert in seine Öffnungsrichtung, gerastert als Vereinigung
       (nicht als Summe der Dreiecke): bei den Hälften die Fläche auf der Trennebene, bei einem
       Schieber die Fläche, gegen die er verriegelt werden muss. Die Silhouetten stehen jenseits des
-      Bauteils in der jeweiligen Entformrichtung — Umriss und Füllung in der Regionsfarbe.</div>
+      Bauteils in der jeweiligen Entformrichtung, Umriss und Füllung in der Regionsfarbe.</div>
     </section>
 
     <section id="tab-haftung" class="tab-off">
@@ -176,16 +176,16 @@
       <span class="val" id="ej-alpha-val"></span>
     </div>
     <div class="hint">Das Teil hängt an den Wänden, die eine Hälfte abbildet, umso fester, je weniger
-      Schräge sie haben — und dort, wo es beim Erstarren auf die Form <b>aufschrumpft</b> (Kerne,
+      Schräge sie haben, und dort, wo es beim Erstarren auf die Form <b>aufschrumpft</b> (Kerne,
       Taschen, Bohrungen), nicht an Außenwänden, von denen es sich wegzieht. Haftmaß je Fläche:
-      <code>A · (μ·cos α − sin α) · g</code> — Fläche, Reibung gegen Schräge, und <code>g</code>
+      <code>A · (μ·cos α − sin α) · g</code>: Fläche, Reibung gegen Schräge, und <code>g</code>
       aus dem Winkel zwischen Flächennormale und Richtung zum Schwerpunkt: 1 zum Schwerpunkt hin
       (Innenwand, Bohrung, die zugewandte Rippenflanke), 0 davon weg (Außenwand), ½ quer dazu
       (Flanken, die an der Form entlanggleiten). Die Summen beider Hälften sagen, auf welcher
       Seite das Teil bleibt. Das Bauteil trägt das Maß als Farbe; je Hälfte verteilt eine Karte
       es auf ihre Trennebene, beide auf derselben Skala, jenseits des Bauteils in ihrer
-      Entformrichtung. Schieber und Hinterschnitte bleiben außen vor — sie tragen nichts zur
-      Haftung an den Hälften bei. Eine grobe Näherung ohne Elastizität — sie sagt WO im
+      Entformrichtung. Schieber und Hinterschnitte bleiben außen vor: sie tragen nichts zur
+      Haftung an den Hälften bei. Eine grobe Näherung ohne Elastizität: sie sagt WO im
       Verhältnis zu wo, keine Kraft in Newton.</div>
     </section>
   </aside>

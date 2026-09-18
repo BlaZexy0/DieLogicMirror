@@ -160,8 +160,8 @@ function updateGridNote() {
     + fmt(state.spec.d / state.d, 0) + ' Partikel über den Durchmesser';
   const limit = gpu ? MAX_PARTICLES : MAX_PARTICLES_CPU;
   const notes = [];
-  if (!gpu) notes.push('Kein WebGPU in diesem Browser — gerechnet wird in JavaScript, mit wenigen Partikeln (bis ' + fmt(limit / 1e3, 0) + ' Tsd.), und das dauert Minuten. Chrome oder Edge rechnen auf der Grafikkarte.');
-  if (count > limit) notes.push('Zu fein: höchstens ' + fmt(limit / 1e3, 0) + ' Tsd. Partikel — den Abstand vergrößern.');
+  if (!gpu) notes.push('Kein WebGPU in diesem Browser: gerechnet wird in JavaScript, mit wenigen Partikeln (bis ' + fmt(limit / 1e3, 0) + ' Tsd.), und das dauert Minuten. Chrome oder Edge rechnen auf der Grafikkarte.');
+  if (count > limit) notes.push('Zu fein: höchstens ' + fmt(limit / 1e3, 0) + ' Tsd. Partikel. Den Abstand vergrößern.');
   $('engine-note').textContent = notes.join(' ');
   $('run').disabled = state.running || !state.curve || count > limit;
 }
@@ -225,7 +225,7 @@ async function simulate() {
         snap.bubbles = air.bubbles;
         busy.textContent = 'Rechnet … ' + fmt(snap.t * 1000, 0) + ' ms · Kolben bei ' + fmt(snap.s, 0) + ' mm · Luft ' + fmt(snap.air, 1) + ' cm³';
         $('run-note').textContent = busy.textContent;
-        return gateDone[0] !== NEVER ? 'Kammer voll — der Laufkanal ist erreicht' : null;
+        return gateDone[0] !== NEVER ? 'Kammer voll: der Laufkanal ist erreicht' : null;
       }
     });
     const { snapshots, gateDone } = run;
@@ -267,7 +267,7 @@ function updateResultFacts() {
   const rows = [
     ['Kammer voll', r.full
       ? 'Simulation ' + fmt(r.full.t * 1000, 0) + ' ms bei ' + fmt(r.full.s, 0) + ' mm · Kurve ' + fmt(cv.tFull * 1000, 0) + ' ms bei ' + fmt(cv.sFill, 0) + ' mm'
-      : 'nicht erreicht — Kurve: ' + fmt(cv.tFull * 1000, 0) + ' ms bei ' + fmt(cv.sFill, 0) + ' mm'],
+      : 'nicht erreicht · Kurve ' + fmt(cv.tFull * 1000, 0) + ' ms bei ' + fmt(cv.sFill, 0) + ' mm'],
     ['Eingeschlossene Luft', 'höchstens ' + fmt(r.airMax.air, 1) + ' cm³ bei ' + fmt(r.airMax.t * 1000, 0) + ' ms · am Ende '
       + fmt(last.air, 1) + ' cm³ in ' + fmt(last.bubbles, 0) + ' Blasen'],
     ['Ende', r.reason],

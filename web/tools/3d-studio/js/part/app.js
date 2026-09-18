@@ -460,13 +460,13 @@ function updatePieceRows() {
     const area = seg.areaByLabel[l], has = area > 0;
     const on = has && state.die.show[l] !== false;
     return '<label class="inline piece-row' + (has ? '' : ' off') + '" title="'
-      + (has ? 'Dieses Formteil zeigen oder ausblenden' : 'Kein Dreieck braucht dieses Formteil — es kommt in der Form nicht vor') + '">'
+      + (has ? 'Dieses Formteil zeigen oder ausblenden' : 'Kein Dreieck braucht dieses Formteil: es kommt in der Form nicht vor') + '">'
       + '<input type="checkbox" data-label="' + l + '"' + (on ? ' checked' : '') + (has ? '' : ' disabled') + '>'
       + chip(C.REGION_COLORS[l]) + '<span class="name">' + names[l].name + '</span>'
       + '<span class="pct">' + (has ? (100 * area / A).toFixed(1) + ' %' : 'nicht in der Form') + '</span></label>';
   }).join('');
   if (seg.areaByLabel[6] > 0) {
-    html += '<div class="legend-row">' + chip(C.UNDERCUT_COLOR) + '<span class="name">Hinterschnitt — bleibt rot an Ort und Stelle</span>'
+    html += '<div class="legend-row">' + chip(C.UNDERCUT_COLOR) + '<span class="name">Hinterschnitt: bleibt rot an Ort und Stelle</span>'
       + '<span class="pct">' + (100 * seg.areaByLabel[6] / A).toFixed(1) + ' %</span></div>';
   }
   el.innerHTML = html;
@@ -492,8 +492,8 @@ function updateGripFacts() {
     ['Haftung bewegliche Seite', fmt(movPct, 0) + ' %'],
     ['Haftung feste Seite', fmt(100 - movPct, 0) + ' %']
   ]);
-  $('ej-warn').textContent = sum <= 0 ? 'Keine Fläche haftet — das Teil hält sich nirgends.'
-    : grip.fix > grip.mov ? 'Das Teil haftet stärker an der festen Seite — beim Öffnen bliebe es dort, nicht bei den Auswerfern.' : '';
+  $('ej-warn').textContent = sum <= 0 ? 'Keine Fläche haftet: das Teil hält sich nirgends.'
+    : grip.fix > grip.mov ? 'Das Teil haftet stärker an der festen Seite: beim Öffnen bliebe es dort, nicht bei den Auswerfern.' : '';
   $('ej-legend').innerHTML = legendRows([
     ['haftet stark', rgbCss(C.turbo(0.92)), ''],
     ['haftet wenig', rgbCss(C.turbo(0.2)), ''],

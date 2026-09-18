@@ -202,7 +202,7 @@ function updateShotFacts() {
       : 'die Kurve endet vorher (' + fl.unreached.join(', ') + ')']);
   }
   if (Number.isFinite(sh.fill) && Math.abs(sh.fill - state.proc.fillTime) > 0.5) {
-    rows.push(['Prozess', 'Füllzeit ' + fmt(state.proc.fillTime, 0) + ' ms — die Kurve braucht ' + fmt(sh.fill, 0) + ' ms']);
+    rows.push(['Prozess', 'Füllzeit ' + fmt(state.proc.fillTime, 0) + ' ms, die Kurve braucht ' + fmt(sh.fill, 0) + ' ms']);
   }
   facts('shot-facts', rows);
   warn.textContent = tl.warn || '';
@@ -287,7 +287,7 @@ function updateFacts() {
      Schusskurve ab Kolbenstart, sonst ab Eintritt in den Anguss. */
   if (gates.length && Number.isFinite(fl.tFirst)) {
     rows.push(['Ankunft', (gates.length > 1
-      ? fmt(fl.tFirst * 1000) + ' – ' + fmt(fl.tLast * 1000) + ' ms'
+      ? fmt(fl.tFirst * 1000) + ' bis ' + fmt(fl.tLast * 1000) + ' ms'
       : fmt(fl.tFirst * 1000) + ' ms') + (fl.onCurve ? ' ab Kolbenstart' : ' bei konstantem Strom')]);
   }
   if (fl.onCurve && state.timeline) {
@@ -326,7 +326,7 @@ function selectionLabel(g, id) {
   const meta = G.TYPES[n.type];
   return '<span class="dot" style="background:' + meta.color + '"></span>'
     + meta.label + ' <code>' + id + '</code>'
-    + (G.isFollower(g, id) ? ' <em>(gespiegelt — die andere Seite bearbeiten)</em>'
+    + (G.isFollower(g, id) ? ' <em>(gespiegelt: die andere Seite bearbeiten)</em>'
       : n.aim ? ' <em class="pinned">ans Bauteil gebunden</em>' : '');
 }
 
@@ -361,7 +361,7 @@ function startAim(id) {
   const n = id && state.graph.nodes[id];
   if (!n || n.type !== 'gate' || G.isFollower(state.graph, id)) return;
   if (!refMesh.visible) {
-    aim.note('Zuerst ein Referenzbauteil laden (STL oder GLB) — dann zeigt der Klick auf den Pfeil, wo der Anschnitt münden soll.');
+    aim.note('Zuerst ein Referenzbauteil laden (STL oder GLB), dann zeigt der Klick auf den Pfeil, wo der Anschnitt münden soll.');
     return;
   }
   /* Schon scharf für diesen Anschnitt: bleibt scharf. Abgebrochen wird
@@ -381,7 +381,7 @@ function startAim(id) {
       rebuild();
       syncSelection();
     },
-    onMiss: () => aim.miss('Daneben — die Stelle muss auf dem Bauteil liegen.', () => editor.aiming)
+    onMiss: () => aim.miss('Daneben: die Stelle muss auf dem Bauteil liegen.', () => editor.aiming)
   });
 }
 
@@ -445,7 +445,7 @@ function syncSelection() {
   if (isGate) {
     $('sel-gh').value = fmt(n.gate.h, 2);
     $('sel-gh').title = n.gate.hAuto
-      ? 'Folgt der Anschnitthöhe unter „Kanalform" — ein eigener Wert löst ihn davon.'
+      ? 'Folgt der Anschnitthöhe unter „Kanalform". Ein eigener Wert löst ihn davon.'
       : 'Eigene Höhe dieses Anschnitts; die Vorgabe unter „Kanalform" gilt hier nicht mehr.';
     $('sel-gh').classList.toggle('inherited', !!n.gate.hAuto);
     $('sel-glen').value = fmt(n.gate.len, 2);

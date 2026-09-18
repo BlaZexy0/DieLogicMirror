@@ -224,7 +224,7 @@ function rulerHTML(v, g) {
     + '</div>'
     + '<div class="kr-lbl bot">'
     + (over
-      ? '<span style="left:0">Schmelzesäule ' + mm(p3) + ' mm — ' + mm(p3 - L) + ' mm länger als die Kammer</span>'
+      ? '<span style="left:0">Schmelzesäule ' + mm(p3) + ' mm, ' + mm(p3 - L) + ' mm länger als die Kammer</span>'
       : '<span style="left:' + x(sFill / 2) + '">1. Phase · Füllgrad ' + fmt(fill) + ' %</span>'
         + '<span style="left:' + x(sFill + cav / 2) + '">Formfüllung ' + mm(cav) + ' mm</span>'
         + (intens / span > 0.06 ? '<span style="left:' + x(sFill + cav + intens / 2) + '">Δs ' + mm(intens) + '</span>' : ''))
@@ -358,7 +358,7 @@ export function renderKpis(el, v, shot, chamberEl) {
     + kv('Dosiervolumen', fmt(Vdos * 1e6) + ' cm³', 'inkl. Pressrest · Flüssigdichte ' + fmt(v.density) + ' kg/m³')
     + kv('Materialausbeute', fmt(eta) + ' %', 'Bauteil / Dosiergewicht · Rest ist Kreislaufmaterial')
     + kv('Kammerverhältnis λ', fmt(ratioLD), 'λ = L/D der gewählten Kammer')
-    + kv('Nachverdichtung + Schwindung', fmt(intens) + ' mm', 'Kolbenweg vom Füllende bis zur Endlage — speist Abkühl- und Erstarrungsschwund; die Schmelze verliert schon vor Solidus Temperatur und damit Dichte (ρ flüssig ' + fmt(v.density) + ' → ρ_sol ' + fmt(Math.round(rhoSolidus(v))) + ' kg/m³)');
+    + kv('Nachverdichtung + Schwindung', fmt(intens) + ' mm', 'Kolbenweg vom Füllende bis zur Endlage; speist Abkühl- und Erstarrungsschwund; die Schmelze verliert schon vor Solidus Temperatur und damit Dichte (ρ flüssig ' + fmt(v.density) + ' → ρ_sol ' + fmt(Math.round(rhoSolidus(v))) + ' kg/m³)');
   GROUP = 'Füllkammer';
   const nCh0 = CHECKS.length;
   const chamberRows =
@@ -418,7 +418,7 @@ export function renderKpis(el, v, shot, chamberEl) {
         })());
         const rQop = (Qop !== null && Qop > Qs
         ? row('PQ²-Arbeitspunkt', fmt(v2) + ' m/s',
-          'v₂ über dem Schnittpunkt Maschine × Werkzeug (' + fmt(Qs / pq.Ap) + ' m/s) — mit dieser Gießkraft nicht erreichbar',
+          'v₂ über dem Schnittpunkt Maschine × Werkzeug (' + fmt(Qs / pq.Ap) + ' m/s), mit dieser Gießkraft nicht erreichbar',
           'bad', 'nicht erreichbar', meter(Qop / Qs))
         : '');
         const rGv = (isFinite(gvShown)
@@ -436,7 +436,7 @@ export function renderKpis(el, v, shot, chamberEl) {
             '0', 'Band ' + fmt(v.JatomMin) + '–' + fmt(v.JatomMax), fmt(Math.max(1.2 * v.JatomMax, 1.05 * Jist))))
         : row('Zerstäubung (J-Faktor)', '—', 'braucht Anschnittgeschwindigkeit, -dicke und Dichte', 'nodata'));
         const rFz = shot.error ? '' : (shot.fill === null
-          ? row('Füllzeit ab Anschnitt', '—', 'Kurve endet vor „Überlauf gefüllt" — Kurvenhub verlängern', 'nodata')
+          ? row('Füllzeit ab Anschnitt', '—', 'Kurve endet vor „Überlauf gefüllt": Kurvenhub verlängern', 'nodata')
           : row('Füllzeit ab Anschnitt', fmt(shot.fill) + ' ms', 'aus Schusskurve · max ' + fmt(v.tmax) + ' ms',
             utilStatus(shot.fill / v.tmax), utilTag(shot.fill / v.tmax), meter(shot.fill / v.tmax)));
         const rNadca = (!isFinite(tNadca) || shot.error || shot.fill === null

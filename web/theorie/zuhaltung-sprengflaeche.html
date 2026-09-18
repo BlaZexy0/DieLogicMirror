@@ -46,7 +46,7 @@
 <section class="page-hero">
   <div class="inner">
     <h1>Was die Form zuhält: Sprengfläche, Säulenkräfte und der Hebelfaktor</h1>
-    <p class="subtitle">Der Nachdruck versucht, die Form aufzudrücken — die vier Säulen der
+    <p class="subtitle">Der Nachdruck versucht, die Form aufzudrücken; die vier Säulen der
       Maschine halten dagegen. Hier steht die Statik dahinter: von der projizierten Fläche über
       die Kraft auf jede einzelne Säule bis zum Hebelfaktor, mit dem Außermittigkeit und
       Schieber die nutzbare Schließkraft verkleinern.</p>
@@ -66,7 +66,7 @@
       <h3>Inhalt</h3>
       <ul>
         <li><a href="#s1">1. Die Aufdrückkraft</a></li>
-        <li><a href="#s2">2. Die Sprengfläche — und der Schieber-Zuschlag</a></li>
+        <li><a href="#s2">2. Die Sprengfläche und der Schieber-Zuschlag</a></li>
         <li><a href="#s3">3. Vier Säulen, eine Platte</a></li>
         <li><a href="#s4">4. Die Kräfte auf alle vier Säulen</a></li>
         <li><a href="#s5">5. Der Hebelfaktor k</a></li>
@@ -82,7 +82,7 @@
         📚 <b>Quellen &amp; Prüfung:</b> Das Säulenmodell (starre Aufspannplatte, lineare
         Lastverteilung) ist klassische Statik und exakt das DieLogic-Zuhaltungsmodell
         (<code>shared/clampmodel.js</code>), das Dashboard und Sprengflächenanalyse gemeinsam
-        verwenden. Grenzwerte und Sicherheitsfaktoren sind Prozessfenster-Eingaben — Kriterien
+        verwenden. Grenzwerte und Sicherheitsfaktoren sind Prozessfenster-Eingaben; Kriterien
         dazu im Artikel <a href="nebenbedingungen.html">Nebenbedingungen</a> (Kategorie D).
         Vor Veröffentlichung fachlich gegenlesen.
       </div>
@@ -90,7 +90,7 @@
       <span class="section-anchor" id="s1"></span>
       <h2 class="section-title">1. Die Aufdrückkraft</h2>
       <div class="prose">
-        <p>Nach der Formfüllung steht die Schmelze unter dem metallseitigen Nachdruck p — und
+        <p>Nach der Formfüllung steht die Schmelze unter dem metallseitigen Nachdruck p und
           drückt damit auf jede benetzte Fläche der Kavität, egal wie verwinkelt sie ist. Für
           die Zuhaltung zählt aber nur eine Richtung: die Formöffnungsrichtung. Summiert man
           die Druckkräfte auf alle Flächenelemente und behält nur ihre Komponenten entlang
@@ -99,7 +99,7 @@
       </div>
       <div class="eq">$$F = p \cdot A$$</div>
       <div class="prose">
-        <p>F ist die Aufdrückkraft, A die projizierte Fläche — die <b>Sprengfläche</b>. Als
+        <p>F ist die Aufdrückkraft, A die projizierte Fläche, die <b>Sprengfläche</b>. Als
           Druck ist der metallseitige Nachdruck maßgebend: Er ist der höchste Druck, den die
           Schmelze quasistatisch auf die Form ausübt, und wirkt genau dann, wenn die Form
           geschlossen bleiben muss. Dynamische Druckspitzen beim Umschalten deckt der
@@ -107,29 +107,29 @@
       </div>
 
       <span class="section-anchor" id="s2"></span>
-      <h2 class="section-title">2. Die Sprengfläche — und der Schieber-Zuschlag</h2>
+      <h2 class="section-title">2. Die Sprengfläche und der Schieber-Zuschlag</h2>
       <div class="fig-wrap">
         <img src="/assets/theorie/sprengflaeche-saeulen.svg" alt="Blick auf die Trennebene: Aufspannplatte mit vier Säulen im Abstand a_x mal a_y, Sprengfläche aus Bauteil, Anguss, Überläufen und Pressrest mit Schwerpunkt S und Außermittigkeit e_x, e_y zur Maschinenmitte 0" loading="lazy">
         <div class="fig-cap"><b>Blick auf die Trennebene:</b> Die Sprengfläche A ist die
           vereinigte Silhouette aus Bauteil, Anguss, Überläufen und Pressrest. In ihrem
-          Flächenschwerpunkt S greift die Aufdrückkraft F = p·A senkrecht zur Bildebene an —
+          Flächenschwerpunkt S greift die Aufdrückkraft F = p·A senkrecht zur Bildebene an,
           um (e<sub>x</sub>,&nbsp;e<sub>y</sub>) neben der Maschinenmitte 0. Aufgenommen wird
           F von den vier Säulen an den Positionen (±a<sub>x</sub>/2,&nbsp;±a<sub>y</sub>/2)
           als Säulenkräfte F<sub>1</sub> bis F<sub>4</sub>; wie sich F auf sie verteilt,
           klären die Abschnitte&nbsp;3 und&nbsp;4.</div>
       </div>
       <div class="prose">
-        <p>Zur Silhouette gehört alles, was Schmelze sieht: Bauteil, Anguss und Überläufe —
+        <p>Zur Silhouette gehört alles, was Schmelze sieht: Bauteil, Anguss und Überläufe,
           und bei der Kaltkammermaschine der <b>Pressrest</b>: Die Schmelze in der Füllkammer
           steht unter demselben Nachdruck und drückt mit dem Kammerquerschnitt gegen die
           bewegliche Formhälfte. Überdecken sich Teilflächen in der Projektion, zählen sie nur
-          einfach — die Sprengfläche ist die <em>vereinigte</em> Silhouette, nicht die Summe
+          einfach: Die Sprengfläche ist die <em>vereinigte</em> Silhouette, nicht die Summe
           der Einzelflächen.</p>
         <p>Seitenschieber liegen quer dazu: Ihre Zugrichtung steht senkrecht auf der
           Öffnungsrichtung, der Metalldruck schiebt den Kern also erst einmal nur nach außen,
           mit der Kraft p·A<sub>S</sub> auf seine in Zugrichtung projizierte Fläche
           A<sub>S</sub>. Gehalten wird der Kern von der <b>Abstützschräge</b> der beweglichen
-          Hälfte — einer Fläche, die um den Sperrwinkel α gegen die Öffnungsrichtung geneigt
+          Hälfte, einer Fläche, die um den Sperrwinkel α gegen die Öffnungsrichtung geneigt
           ist. Die Kräftezerlegung an dieser Schräge liefert den Anteil, der doch auf die
           Zuhaltung durchschlägt:</p>
       </div>
@@ -137,7 +137,7 @@
         <img src="/assets/theorie/schieber-sperrwinkel.svg" alt="Seitenschieber im Schnitt: Metalldruck auf die Kernfläche, Abstützschräge mit Sperrwinkel, Kraftkomponente in Öffnungsrichtung" loading="lazy">
         <div class="fig-cap"><b>Der Schieber als Keil:</b> Der Metalldruck treibt den Kern mit
           F<sub>S</sub> = p·A<sub>S</sub> in Zugrichtung; die um α geneigte Abstützschräge
-          lenkt davon die Komponente F<sub>S</sub>·tan&nbsp;α in die Formöffnungsrichtung um —
+          lenkt davon die Komponente F<sub>S</sub>·tan&nbsp;α in die Formöffnungsrichtung um;
           sie muss von der Zuhaltung mitgetragen werden. Je steiler die Schräge (größeres α),
           desto größer der Zuschlag.</div>
       </div>
@@ -153,20 +153,20 @@
       <h2 class="section-title">3. Vier Säulen, eine Platte</h2>
       <div class="prose">
         <p>Die Aufdrückkraft greift nicht in der Maschinenmitte an, sondern im
-          <b>Flächenschwerpunkt S</b> der Sprengfläche — denn der Druck ist überall gleich,
+          <b>Flächenschwerpunkt S</b> der Sprengfläche, denn der Druck ist überall gleich,
           also wirkt die Resultierende im Schwerpunkt der Projektion. Liegt S wie in der
           Abbildung aus Abschnitt&nbsp;2 um (e<sub>x</sub>,&nbsp;e<sub>y</sub>) neben der
           Maschinenmitte 0, entsteht ein Moment, und die vier Säulen an den Positionen
           (±a<sub>x</sub>/2,&nbsp;±a<sub>y</sub>/2) tragen unterschiedlich.</p>
         <p>Das Modell dahinter, bewusst einfach: Die Aufspannplatte ist <em>starr</em>, die
           vier Säulen sind gleiche, linear-elastische Dehnstäbe. Kippt die starre Platte unter
-          dem Moment minimal, wachsen die Säulendehnungen — und damit die Kräfte — <em>linear</em>
+          dem Moment minimal, wachsen die Säulendehnungen (und damit die Kräfte) <em>linear</em>
           über die Plattenebene. Der allgemeinste lineare Verlauf ist</p>
       </div>
       <div class="eq">$$F_{i} = \frac{F}{4} + a \cdot x_{i} + b \cdot y_{i}$$</div>
       <div class="prose">
         <p>mit den Säulenpositionen (x<sub>i</sub>,&nbsp;y<sub>i</sub>) und zwei noch
-          unbekannten Koeffizienten a und b. Mehr Ansatz braucht es nicht — den Rest erledigt
+          unbekannten Koeffizienten a und b. Mehr Ansatz braucht es nicht; den Rest erledigt
           die Statik.</p>
       </div>
 
@@ -175,7 +175,7 @@
       <div class="derivation-box">
         <div class="step"><span class="step-num">①</span>
           <span>Kräftegleichgewicht: ΣF<sub>i</sub> = F. Die linearen Terme heben sich über
-            die vier symmetrischen Positionen weg (Σx<sub>i</sub> = Σy<sub>i</sub> = 0) — der
+            die vier symmetrischen Positionen weg (Σx<sub>i</sub> = Σy<sub>i</sub> = 0); der
             konstante Anteil ist also F/4, wie im Ansatz schon geschrieben.</span></div>
         <div class="step"><span class="step-num">②</span>
           <span>Momentengleichgewicht um die y-Achse: ΣF<sub>i</sub>·x<sub>i</sub> =
@@ -190,17 +190,17 @@
       </div>
       <div class="eq">$$F_{i} = \frac{F}{4} \left( 1 \pm \frac{2 e_{x}}{a_{x}} \pm \frac{2 e_{y}}{a_{y}} \right)$$</div>
       <div class="prose">
-        <p>Die Vorzeichen folgen dem Quadranten der Säule — mit der Nummerierung aus der
+        <p>Die Vorzeichen folgen dem Quadranten der Säule, mit der Nummerierung aus der
           Abbildung in Abschnitt&nbsp;2 (S im ersten Quadranten, e<sub>x</sub>,&nbsp;e<sub>y</sub> ≥ 0):</p>
       </div>
       <div class="table-scroll">
       <table class="th-table">
         <thead><tr><th>Säule</th><th>Position (x<sub>i</sub>, y<sub>i</sub>)</th><th>Säulenkraft F<sub>i</sub></th><th>Rolle</th></tr></thead>
         <tbody>
-          <tr><td>1</td><td>(+a<sub>x</sub>/2, +a<sub>y</sub>/2)</td><td>F/4 · (1 + 2e<sub>x</sub>/a<sub>x</sub> + 2e<sub>y</sub>/a<sub>y</sub>)</td><td>meistbelastet — S-nächste Säule</td></tr>
+          <tr><td>1</td><td>(+a<sub>x</sub>/2, +a<sub>y</sub>/2)</td><td>F/4 · (1 + 2e<sub>x</sub>/a<sub>x</sub> + 2e<sub>y</sub>/a<sub>y</sub>)</td><td>meistbelastet (S-nächste Säule)</td></tr>
           <tr><td>2</td><td>(−a<sub>x</sub>/2, +a<sub>y</sub>/2)</td><td>F/4 · (1 − 2e<sub>x</sub>/a<sub>x</sub> + 2e<sub>y</sub>/a<sub>y</sub>)</td><td rowspan="2">gemischt</td></tr>
           <tr><td>4</td><td>(+a<sub>x</sub>/2, −a<sub>y</sub>/2)</td><td>F/4 · (1 + 2e<sub>x</sub>/a<sub>x</sub> − 2e<sub>y</sub>/a<sub>y</sub>)</td></tr>
-          <tr><td>3</td><td>(−a<sub>x</sub>/2, −a<sub>y</sub>/2)</td><td>F/4 · (1 − 2e<sub>x</sub>/a<sub>x</sub> − 2e<sub>y</sub>/a<sub>y</sub>)</td><td>meistentlastet — S-fernste Säule</td></tr>
+          <tr><td>3</td><td>(−a<sub>x</sub>/2, −a<sub>y</sub>/2)</td><td>F/4 · (1 − 2e<sub>x</sub>/a<sub>x</sub> − 2e<sub>y</sub>/a<sub>y</sub>)</td><td>meistentlastet (S-fernste Säule)</td></tr>
         </tbody>
       </table>
       </div>
@@ -208,7 +208,7 @@
         <p>Zwei Proben: Die Summe der vier Ausdrücke ist F (alle ±-Terme heben sich), und bei
           zentrischem Kraftangriff (e<sub>x</sub> = e<sub>y</sub> = 0) trägt jede Säule genau
           F/4. Interessant sind die beiden Extreme: Die S-nächste Säule trägt <em>mehr</em>
-          als ihr Viertel, die diagonal gegenüberliegende <em>weniger</em> — die
+          als ihr Viertel, die diagonal gegenüberliegende <em>weniger</em>: Die
           Außermittigkeit verschiebt Last von Säule 3 auf Säule 1.</p>
       </div>
 
@@ -221,7 +221,7 @@
       </div>
       <div class="eq">$$k = \frac{F_{\max}}{F/4} = 1 + \frac{2\,\lvert e_{x} \rvert}{a_{x}} + \frac{2\,\lvert e_{y} \rvert}{a_{y}}$$</div>
       <div class="prose">
-        <p>Die Beträge machen die Formel quadranten-unabhängig — welches Vorzeichen die
+        <p>Die Beträge machen die Formel quadranten-unabhängig: Welches Vorzeichen die
           Außermittigkeit hat, ist der Statik gleich. Weil die meistbelastete Säule ihr
           zulässiges Viertel schon bei der k-fach kleineren Gesamtkraft erreicht, schrumpft die
           <em>nutzbare</em> Schließkraft auf F<sub>s</sub>/k. Mit dem Sicherheitsfaktor S wird
@@ -232,7 +232,7 @@
       <div class="insight-box">
         <div class="label">Die zweite Grenze: Abheben</div>
         <p>Die meist<em>ent</em>lastete Säule (Nummer 3) trägt F/4·(2&nbsp;−&nbsp;k). Erreicht
-          der Hebelfaktor k = 2, wird sie kraftfrei — die Form beginnt auf der S-fernen Seite
+          der Hebelfaktor k = 2, wird sie kraftfrei: Die Form beginnt auf der S-fernen Seite
           zu klaffen, noch bevor irgendeine Säule überlastet ist. Neben der Druckgrenze
           p<sub>max</sub> prüft die Sprengflächenanalyse deshalb auch k &lt; 2 als
           Eignungsbedingung: Eine stark außermittige Kavität kann eine Maschine
@@ -243,17 +243,17 @@
       <h2 class="section-title">6. Schieber verschieben den Hebel</h2>
       <div class="prose">
         <p>Der Schieber-Zuschlag aus Abschnitt&nbsp;2 ist eine Kraft mit eigenem Angriffspunkt:
-          F<sub>S</sub>·tan&nbsp;α wirkt dort, wo die Abstützschräge sitzt — typischerweise am
+          F<sub>S</sub>·tan&nbsp;α wirkt dort, wo die Abstützschräge sitzt, typischerweise am
           Rand der Form, also weit außen. Streng genommen wandert damit der Schwerpunkt der
           Resultierenden: Er ist das flächengewichtete Mittel aus Silhouetten-Schwerpunkt und
           Schieber-Angriffspunkten,</p>
       </div>
       <div class="eq">$$\vec{e} = \frac{A_{\text{proj}} \cdot \vec{e}_{\text{proj}} + \sum_{j} \left( A_{S,j} \tan \alpha_{j} \right) \cdot \vec{r}_{S,j}}{A_{\text{proj}} + \sum_{j} A_{S,j} \tan \alpha_{j}}$$</div>
       <div class="prose">
-        <p>Ein großer Schieber am Formrand kann e — und damit k — spürbar vergrößern: Er wirkt
+        <p>Ein großer Schieber am Formrand kann e (und damit k) spürbar vergrößern: Er wirkt
           doppelt, einmal als Fläche im Nenner der Druckgrenze und einmal als Hebel im
           Hebelfaktor. Die DieLogic-Werkzeuge rechnen den Zuschlag bewusst <em>ohne</em> diese
-          Schwerpunkt-Verschiebung — die Lage der Schieber ist aus einem STL der Kavität nicht
+          Schwerpunkt-Verschiebung: Die Lage der Schieber ist aus einem STL der Kavität nicht
           ablesbar. Wer außermittige Schieber hat, führt e<sub>x</sub> und e<sub>y</sub>
           deshalb von Hand nach; die Formel oben sagt, wohin.</p>
       </div>
@@ -266,7 +266,7 @@
           Maschinengröße", nach A die „Zulässige Sprengfläche", nach p die Obergrenze des
           Zielbands im „Spezifischen Gießdruck" und die KPI „Nachdruck-Auslastung". Die
           <a href="/tools/sprengflaeche/">Sprengflächenanalyse</a> bestimmt dazu die Eingaben
-          aus dem STL — vereinigte Silhouette, Schwerpunkt S, Außermittigkeit gegenüber 0 —
+          aus dem STL (vereinigte Silhouette, Schwerpunkt S, Außermittigkeit gegenüber 0)
           und zeigt je Maschinen-Preset den maximalen Nachdruck in drei Stufen: nur
           Schließkraft (S und k gleich eins), mit Sicherheitsfaktor, mit Sicherheitsfaktor und
           Außermittigkeit. „Empfohlen" ist die kleinste Maschine, die den geforderten
@@ -275,11 +275,11 @@
       </div>
       <div class="warning-box">
         <b>Grenzen des Modells:</b> Die Platte ist nicht wirklich starr und die Säulen sind
-        nicht exakt gleich steif — reale Maschinen verteilen die Last etwas gutmütiger oder
+        nicht exakt gleich steif; reale Maschinen verteilen die Last etwas gutmütiger oder
         böser, je nach Plattensteifigkeit und Säulenvorspannung. Das Modell kennt außerdem
         weder thermische Verzüge der Form noch die Nachgiebigkeit der Aufspannung, und der
         Sperrwinkel-Zuschlag setzt eine spielfreie, steife Abstützschräge voraus. Es ist eine
-        Auslegungs-Statik — die Feinverteilung liefert erst eine Struktursimulation.
+        Auslegungs-Statik; die Feinverteilung liefert erst eine Struktursimulation.
       </div>
       <p style="margin-top:1.5rem;">
         <a href="/tools/auslegung/chart.html?id=machine" class="btn btn-primary">Im Dashboard: Erforderliche Maschinengröße →</a>
@@ -293,7 +293,7 @@
         <p>Die Herleitung ist elementare Statik; die Formeln sind exakt die der
           DieLogic-Implementierung:</p>
         <ul>
-          <li>DieLogic-Zuhaltungsmodell <code>shared/clampmodel.js</code> — Hebelfaktor,
+          <li>DieLogic-Zuhaltungsmodell <code>shared/clampmodel.js</code>: Hebelfaktor,
             Zuhaltungsbedingung und ihre drei Umstellungen; eine Implementierung für Dashboard
             und Sprengflächenanalyse.</li>
           <li>Starre Platte auf gleichen elastischen Stützen mit linearer Lastverteilung:

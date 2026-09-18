@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Temperierkanal-Designer · 3D-Studio · DieLogic</title>
-<meta name="description" content="Kühlstiche und Temperierkanäle um ein Druckguss-Bauteil setzen: auf der Abstandsfläche im gewählten Abstand, Kühlstiche mit Bohrerspitze in wählbarer Richtung, Kanäle zwischen zwei Punkten — Enden frei bewegen, Wandabstand aus dem Feld.">
+<meta name="description" content="Kühlstiche und Temperierkanäle um ein Druckguss-Bauteil setzen: auf der Abstandsfläche im gewählten Abstand, Kühlstiche mit Bohrerspitze in wählbarer Richtung, Kanäle zwischen zwei Punkten; Enden frei bewegen, Wandabstand aus dem Feld.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -23,7 +23,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Temperierkanal-Designer</h1>
-    <p class="subtitle">Kühlstiche und Kanäle um das Bauteil, gesetzt auf der Abstandsfläche zur Kavität — die Enden frei bewegen.</p>
+    <p class="subtitle">Kühlstiche und Kanäle um das Bauteil, gesetzt auf der Abstandsfläche zur Kavität, die Enden frei bewegen.</p>
   </div>
 </section>
 
@@ -46,19 +46,19 @@
 
     <h2>Abstandsfläche</h2>
     <div class="row">
-      <span title="Abstand der Fläche zur Kavität — dort sitzen die Spitzen der Kühlstiche und die Achsen der Kanäle.">Abstand</span>
+      <span title="Abstand der Fläche zur Kavität: dort sitzen die Spitzen der Kühlstiche und die Achsen der Kanäle.">Abstand</span>
       <input type="range" id="dist" min="5" max="60" step="1" value="20">
       <span class="val" id="dist-val"></span>
     </div>
     <div class="row">
-      <span title="Kantenlänge einer Zelle des Abstandsfelds in mm. Vorgabe beim Laden: ein 64stel der längsten Bauteilkante. Feiner heißt glatter und langsamer — der Speicher wächst mit der dritten Potenz.">Kantenlänge</span>
+      <span title="Kantenlänge einer Zelle des Abstandsfelds in mm. Vorgabe beim Laden: ein 64stel der längsten Bauteilkante. Feiner heißt glatter und langsamer: der Speicher wächst mit der dritten Potenz.">Kantenlänge</span>
       <input type="text" id="cell" inputmode="decimal" value="6" spellcheck="false"
              title="Wert eingeben und mit Eingabetaste bestätigen">
       <span class="val">mm</span>
     </div>
     <label class="inline"><input type="checkbox" id="shell-on" checked> Abstandsfläche zeigen</label>
     <label class="inline" title="Durchscheinend sieht man das Bauteil in der Fläche; deckend zeigt ihre Form und die Stiche und Kanäle davor."><input type="checkbox" id="shell-clear" checked> Durchscheinend</label>
-    <div class="hint" id="shell-note">Noch keine Fläche — sie entsteht beim Laden des Bauteils.</div>
+    <div class="hint" id="shell-note">Noch keine Fläche: sie entsteht beim Laden des Bauteils.</div>
 
     <h2>Kühlstiche</h2>
     <div class="row">
@@ -109,7 +109,7 @@
       <span class="val">mm</span>
     </div>
     <div class="hint">Zwei Klicks auf die Abstandsfläche, ein Ende hier, das andere dort. Danach an den
-      Achsenpfeilen ziehen — oder am Punkt, dann rutscht er in der Bildebene.</div>
+      Achsenpfeilen ziehen, oder am Punkt: dann rutscht er in der Bildebene.</div>
 
     <h2>Übersicht</h2>
     <div class="facts" id="plan-facts"></div>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Füllabschätzung · 3D-Studio · DieLogic</title>
-<meta name="description" content="Wie füllt sich das Druckgussteil? Rechteckige Anschnitte auf die Wand setzen, das Bauteil wird gerastert und die Schmelzefront läuft durch die Zellen: Füllgrad je Stelle, Füllkörper bei jedem Füllgrad, zuletzt gefüllte Stellen für die Überläufe — in Sekunden, ohne Strömungsrechnung.">
+<meta name="description" content="Wie füllt sich das Druckgussteil? Rechteckige Anschnitte auf die Wand setzen, das Bauteil wird gerastert und die Schmelzefront läuft durch die Zellen: Füllgrad je Stelle, Füllkörper bei jedem Füllgrad, zuletzt gefüllte Stellen für die Überläufe. In Sekunden, ohne Strömungsrechnung.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -46,12 +46,12 @@
 
     <h2>Raster</h2>
     <div class="row">
-      <span title="Kantenlänge der Rasterzellen. Eine Wand braucht mindestens zwei Zellen über ihre Dicke — die halbe Wanddicke ist ein guter Wert. Feiner dauert länger; beim Laden wird sie aus dem Bauteil vorgeschlagen.">Kantenlänge</span>
+      <span title="Kantenlänge der Rasterzellen. Eine Wand braucht mindestens zwei Zellen über ihre Dicke: die halbe Wanddicke ist ein guter Wert. Feiner dauert länger; beim Laden wird sie aus dem Bauteil vorgeschlagen.">Kantenlänge</span>
       <input type="text" id="cell-h" inputmode="decimal" value="3" spellcheck="false">
       <span class="val">mm</span>
     </div>
     <button type="button" class="btn btn-outline block-btn" id="regrid" disabled>Neu rastern</button>
-    <div class="hint" id="grid-note">Das Raster entsteht beim Laden des Bauteils — eng um das Teil, zwei Zellen Rand.</div>
+    <div class="hint" id="grid-note">Das Raster entsteht beim Laden des Bauteils: eng um das Teil, zwei Zellen Rand.</div>
     <div class="warn-line" id="res-note"></div>
 
     <h2>Anschnitte</h2>
@@ -80,9 +80,9 @@
     <div class="facts" id="result-facts"></div>
     <div class="facts" id="inlet-facts"></div>
     <div class="hint">Der <b>Füllgrad</b> einer Stelle ist der Anteil des Volumens, der voll ist, wenn
-      die Front sie erreicht — eine Reihenfolge, keine Zeit. <b>Fließweg / Wanddicke</b> ist die
+      die Front sie erreicht: eine Reihenfolge, keine Zeit. <b>Fließweg / Wanddicke</b> ist die
       klassische Kennzahl der Füllbarkeit; über etwa 300 : 1 wird es eng. Ein Anschnitt mit ⚠
-      trifft kaum eine Rasterzelle — feiner rastern oder höher machen.</div>
+      trifft kaum eine Rasterzelle: feiner rastern oder höher machen.</div>
 
     <h2>Darstellung</h2>
     <div class="seg" id="show-seg">
@@ -91,7 +91,7 @@
       <button type="button" data-value="grau" title="Nur das Bauteil und die Anschnitte">Bauteil</button>
     </div>
     <div class="row disabled" id="q-row">
-      <span title="Bis zu welchem Füllgrad gezeigt wird — die Front wandert mit dem Regler.">Füllgrad</span>
+      <span title="Bis zu welchem Füllgrad gezeigt wird. Die Front wandert mit dem Regler.">Füllgrad</span>
       <input type="range" id="q" min="0" max="100" step="1" value="50">
       <span class="val" id="q-val"></span>
     </div>
@@ -102,7 +102,7 @@
       <span class="val" id="spots-count-val"></span>
     </div>
     <div class="hint">Wo die Front zuletzt ankommt, sammelt sich die Luft: dort gehören die Überläufe
-      hin — der <a href="ueberlauf.html">Überlaufdesigner</a> setzt sie.</div>
+      hin. Der <a href="ueberlauf.html">Überlaufdesigner</a> setzt sie.</div>
 
     <h2>Import und Export</h2>
     <input type="file" id="json-input" accept=".json,application/json" hidden>
@@ -111,7 +111,7 @@
       <button type="button" class="btn btn-outline" id="json-save">JSON speichern</button>
     </div>
     <button type="button" class="btn btn-outline block-btn" id="stl-save">Füllkörper als STL speichern</button>
-    <div class="hint"><b>JSON</b> ist der Plan — Anschnitte und α. <b>STL</b> ist der
+    <div class="hint"><b>JSON</b> ist der Plan: Anschnitte und α. <b>STL</b> ist der
       Füllkörper beim eingestellten Füllgrad.</div>
   </aside>
 

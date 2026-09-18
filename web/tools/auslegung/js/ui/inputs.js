@@ -167,7 +167,7 @@ export function validate(v) {
     if (!sel) continue;
     const presetBad = !!state[dom.stateKey] && [...bad].some(k => PRESET_KEYS[k] === dom.id);
     sel.classList.toggle('invalid', presetBad);
-    if (presetBad) msgs.push('Werte des gewählten ' + dom.title + 's ungültig — Preset prüfen oder „manuell" wählen');
+    if (presetBad) msgs.push('Werte des gewählten ' + dom.title + 's ungültig: Preset prüfen oder „manuell" wählen');
   }
 
   const err = document.getElementById('error');

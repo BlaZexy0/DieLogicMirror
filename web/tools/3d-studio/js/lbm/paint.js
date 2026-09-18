@@ -133,6 +133,6 @@ export function speedColorbar(vScale, until = 'des Laufs') {
     title: 'Geschwindigkeit der Schmelze',
     stops: gradient(t => rgbCss(turbo(t))),
     ticks: [fmt(v, 2) + ' m/s', fmt(v / 2, 2) + ' m/s', '0 m/s'],
-    extra: 'Skala: 99. Perzentil ' + until + ' — Schnelleres bleibt rot'
+    extra: 'Skala: 99. Perzentil ' + until + ' · Schnelleres bleibt rot'
   };
 }

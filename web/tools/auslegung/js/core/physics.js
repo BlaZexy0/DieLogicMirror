@@ -205,7 +205,7 @@ export function computeShot(v, curvePoints) {
   const Vr = v.runner / rhoS, Vp = v.part / rhoS, Vo = v.overflow / rhoS;
   const Vdose = (v.runner + v.part + v.overflow + v.biscuit) / rho;
   const phi = Vdose / (A * L);
-  if (phi >= 1) return { error: 'Dosiervolumen (' + fmt(Vdose * 1e6) + ' cm³) übersteigt das Kammervolumen — Füllgrad ≥ 100 %.' };
+  if (phi >= 1) return { error: 'Dosiervolumen (' + fmt(Vdose * 1e6) + ' cm³) übersteigt das Kammervolumen: Füllgrad ≥ 100 %.' };
   if (phi <= 0) return { error: 'Dosiervolumen ist null.' };
 
   const sFill = (1 - phi) * L;
@@ -270,8 +270,8 @@ export function computeShot(v, curvePoints) {
      Kavität und Pressrest fest mehr Platz brauchen, als die Dosierung
      flüssig hergibt. */
   check('intens', intens >= -1e-9, 'Nachverdichtung + Schwindung ' + fmt(intens * 1000) + ' mm '
-    + (intens >= -1e-9 ? '≥ 0 — die Dosierung deckt Kavität und Pressrest.'
-      : '< 0 — Kavität und Pressrest fest brauchen mehr Platz, als die Dosierung flüssig hergibt (Feststoffdichte unter der Schmelzedichte?).'));
+    + (intens >= -1e-9 ? '≥ 0: die Dosierung deckt Kavität und Pressrest.'
+      : '< 0: Kavität und Pressrest fest brauchen mehr Platz, als die Dosierung flüssig hergibt (Feststoffdichte unter der Schmelzedichte?).'));
   if (fill !== null) check('filltime', fill <= v.tmax, 'Füllzeit ab Anschnitt ' + fmt(fill) + ' ms ' + (fill <= v.tmax ? '≤' : '>') + ' Maximum ' + fmt(v.tmax) + ' ms.');
   if (gateR && evs[2].inP) check('gatev', evs[2].gv >= v.gateMin && evs[2].gv <= v.gateMax, 'Anschnittgeschwindigkeit bei Bauteilfüllung ' + fmt(evs[2].gv) + ' m/s im Zielband ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s.');
 

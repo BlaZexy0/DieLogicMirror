@@ -83,7 +83,7 @@ export function generateCurve(v, g) {
   const A = pistonArea(v);
   const mdos = total(v) + v.biscuit;
   const phi = 1e9 * (mdos / v.density) / (v.length * A);
-  if (!(phi > 0 && phi < 1)) return { error: 'Füllgrad außerhalb (0, 1) — Kurve nicht generierbar.' };
+  if (!(phi > 0 && phi < 1)) return { error: 'Füllgrad außerhalb (0, 1), Kurve nicht generierbar.' };
   const sFill = (1 - phi) * v.length;                       // „Kammer voll" [mm]
   const sEnd = sFill + cavityTravel(total(v), v);            // Füllende: Kavität (fest, ρ_sol) voll [mm]
 
@@ -127,7 +127,7 @@ export function generateCurve(v, g) {
        die Formfüllung hineinläuft (bei a_max = 0: sofort auf v₂). */
     const denN = v.Tflow - v.Tdie;
     const tN = denN !== 0 ? v.kfill * v.wall * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / denN : NaN;
-    if (!(tN > 0)) return { error: 'NADCA-Füllzeit nicht berechenbar — Temperaturen und k prüfen.' };
+    if (!(tN > 0)) return { error: 'NADCA-Füllzeit nicht berechenbar: Temperaturen und k prüfen.' };
     const sGate = sR + cavityTravel(v.runner, v);             // Anguss gefüllt [mm]
     const sOver = sR + cavityTravel(total(v), v);             // Überlauf gefüllt [mm]
     const vFlat = 1e9 * cavityVolume(afterGate(v), v) / (tN * A); // ohne Rampe nötig
@@ -136,7 +136,7 @@ export function generateCurve(v, g) {
     const vCap = v.vmax > 0 ? v.vmax : Infinity;
     if (!(v.amax > 0)) {
       v2 = Math.min(vFlat, vCap);
-      if (vFlat > vCap) warn = 'v_max ' + fmt(vCap) + ' m/s reicht für die NADCA-Füllzeit ' + fmt(tN) + ' ms nicht — erreichbar sind ' + fmt(want(vCap)) + ' ms.';
+      if (vFlat > vCap) warn = 'v_max ' + fmt(vCap) + ' m/s reicht für die NADCA-Füllzeit ' + fmt(tN) + ' ms nicht; erreichbar sind ' + fmt(want(vCap)) + ' ms.';
     } else {
       /* Schnellstmögliche 2. Phase: volle Rampe bis zum Schussende, höchstens v_max */
       const vEndMax = Math.floor(Math.sqrt(vTop * vTop + 2 * v.amax * (sEnd - sR) / 1000) * 1000) / 1000;
@@ -144,7 +144,7 @@ export function generateCurve(v, g) {
       if (want(vFast) > tN) {
         v2 = vFast;
         warn = (vEndMax < vCap ? 'a_max ' + fmt(v.amax) + ' m/s²' : 'v_max ' + fmt(vCap) + ' m/s')
-          + ' reicht für die NADCA-Füllzeit ' + fmt(tN) + ' ms nicht — die Kurve fährt die schnellste mögliche 2. Phase, Füllzeit ≈ ' + fmt(want(vFast)) + ' ms.';
+          + ' reicht für die NADCA-Füllzeit ' + fmt(tN) + ' ms nicht; die Kurve fährt die schnellste mögliche 2. Phase, Füllzeit ≈ ' + fmt(want(vFast)) + ' ms.';
       } else {
         let lo = vTop, hi = vFast;
         for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (want(m) > tN) lo = m; else hi = m; }
@@ -154,7 +154,7 @@ export function generateCurve(v, g) {
       }
     }
     const w = ramp(pts, vTop, v2, sR, sEnd, v.amax);
-    if (w !== null && !warn) warn = 'a_max reicht nicht — 2. Phase erreicht ' + fmt(w) + ' statt ' + fmt(v2) + ' m/s.';
+    if (w !== null && !warn) warn = 'a_max reicht nicht: 2. Phase erreicht ' + fmt(w) + ' statt ' + fmt(v2) + ' m/s.';
     return { points: clean(pts), warn, v2, tN };
   }
 
@@ -163,13 +163,13 @@ export function generateCurve(v, g) {
       return { error: 'V₁, V₂, a₁ und a₂ müssen > 0 sein.' };
     const s1 = g.v1 * g.v1 / (2 * g.a1) * 1000;
     if (s1 >= sFill - 0.5)
-      return { error: 'Rampe auf V₁ (' + Math.round(s1) + ' mm) reicht über „Kammer voll" (' + Math.round(sFill) + ' mm) — a₁ erhöhen oder V₁ senken.' };
+      return { error: 'Rampe auf V₁ (' + Math.round(s1) + ' mm) reicht über „Kammer voll" (' + Math.round(sFill) + ' mm): a₁ erhöhen oder V₁ senken.' };
     const pts = [[s1, g.v1], [sFill, g.v1]];
     const w = ramp(pts, g.v1, g.v2, sFill, sEnd, g.a2);
     return {
       points: clean(pts),
       warn: w === null ? null
-        : 'Rampe auf V₂ passt nicht vor das Schussende — erreicht ' + fmt(w) + ' statt ' + fmt(g.v2) + ' m/s (a₂ erhöhen oder V₂ senken).'
+        : 'Rampe auf V₂ passt nicht vor das Schussende: erreicht ' + fmt(w) + ' statt ' + fmt(g.v2) + ' m/s (a₂ erhöhen oder V₂ senken).'
     };
   }
 

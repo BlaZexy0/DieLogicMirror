@@ -25,7 +25,7 @@ const VAC_DROSSEL = ['conductance', 'tank'];
 export const groups = [
   {
     id: 'machineFields', title: 'Maschinenwerte', preset: 'machine',
-    note: 'Diese Felder setzt das Maschinen-Preset. Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
+    note: 'Diese Felder setzt das Maschinen-Preset. Bei gewähltem Preset sind sie ausgeblendet; „manuell" wählen, um sie frei einzugeben.',
     fields: [
       { key: 'force',    label: 'Maschinenkraft',          unit: 'kN',   def: 16000 , gt: 0, max: 100000, bound: 'plaus' },
       /* Maschinenkonstante ist der Antriebskolben: Gießkraft bei max.
@@ -63,19 +63,19 @@ export const groups = [
   },
   {
     id: 'mass', title: 'Massenbilanz',
-    note: 'Alle Gewichte für den ganzen Schuss, also über alle Kavitäten zusammen — die Summe der vier ist das Dosiergewicht und muss in die Gießkammer passen (Füllgrad φ). Das Angussgewicht ist ohne Pressrest; der steht im eigenen Feld.',
+    note: 'Alle Gewichte für den ganzen Schuss, also über alle Kavitäten zusammen. Die Summe der vier ist das Dosiergewicht und muss in die Gießkammer passen (Füllgrad φ). Das Angussgewicht ist ohne Pressrest; der steht im eigenen Feld.',
     fields: [
       { key: 'part',     label: 'Bauteilgewicht',   unit: 'kg', def: 12 , gt: 0, max: 1000, bound: 'plaus' },
       { key: 'runner',   label: 'Angussgewicht',    unit: 'kg', def: 3 , gt: 0, max: 1000, bound: 'hart',
-        why: 'ohne Anguss erreicht die Schmelze die Kavität nicht — die Simulation weist es ab' },
+        why: 'ohne Anguss erreicht die Schmelze die Kavität nicht; die Simulation weist es ab' },
       { key: 'overflow', label: 'Überlaufgewicht',  unit: 'kg', def: 2 , min: 0, max: 1000, bound: 'plaus' },
       { key: 'biscuit',  label: 'Pressrestgewicht', unit: 'kg', def: 1.2 , gt: 0, max: 1000, bound: 'hart',
-        why: 'ohne Pressrest führte der Kolben bis in die Form — die Simulation weist es ab' }
+        why: 'ohne Pressrest führte der Kolben bis in die Form; die Simulation weist es ab' }
     ]
   },
   {
     id: 'alloyFields', title: 'Legierungswerte', preset: 'alloy',
-    note: 'Diese Felder setzt das Legierungs-Preset (/shared/examples/alloys.js). Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
+    note: 'Diese Felder setzt das Legierungs-Preset (/shared/examples/alloys.js). Bei gewähltem Preset sind sie ausgeblendet; „manuell" wählen, um sie frei einzugeben.',
     fields: [
       { key: 'density', label: 'Dichte flüssig',    unit: 'kg/m³',  def: 2400 , gt: 0, max: 20000, bound: 'plaus' },
       /* Feststoffdichte und Schwindmaß nutzt die Sprengflächenanalyse für
@@ -112,19 +112,19 @@ export const groups = [
       /* auto: optionaler Auto-Schalter (core/autofit.js) — ideale Fläche aus
          Projekt und Schusskurve, Feld wird dann schreibgeschützt. */
       { key: 'gate',   label: 'Anschnittfläche',      unit: 'mm²', def: 1800,
-        auto: 'Ideal: Anschnittgeschwindigkeit in der Mitte des Zielbands bei der Kolbengeschwindigkeit „Bauteil gefüllt" der Schusskurve — A_a = A_K·v_p/v_a,Ziel', gt: 0, max: 100000, bound: 'plaus' },
+        auto: 'Ideal: Anschnittgeschwindigkeit in der Mitte des Zielbands bei der Kolbengeschwindigkeit „Bauteil gefüllt" der Schusskurve: A_a = A_K·v_p/v_a,Ziel', gt: 0, max: 100000, bound: 'plaus' },
       { key: 'gateTh', label: 'Anschnittdicke',       unit: 'mm',  def: 3 , gt: 0, max: 100, bound: 'plaus' },
       { key: 'Cd',     label: 'Durchflussbeiwert',    unit: '-',   def: 0.5 , gt: 0, max: 1, bound: 'hart', why: 'ein Durchflussbeiwert über 1 hieße mehr Durchfluss als Antrieb' }
     ]
   },
   {
     id: 'vacuum', title: 'Vakuum und Entlüftung',
-    note: 'Die Entlüftungsfläche treibt die Entlüftungs-KPIs und -Diagramme. In den Drossel-Modellen der Simulation (Backend) ist sie mit Spalt und Kanallänge der Widerstand, durch den die Luft zur Pumpe bzw. in den Tank muss: bei großem Druckverhältnis chokt der Kanal (Schallgeschwindigkeit am Austritt), dazwischen begrenzt die Wandreibung, bei kleiner Druckdifferenz und niedrigem Druck fließt die Luft zäh (laminar). „Sofort-Enddruck" ignoriert Fläche und Kanal — der Druck springt beim Öffnen auf den Enddruck. Der Tank ist vor dem Schuss auf den Enddruck evakuiert; sein Druck steigt mit jeder abgesaugten Luftmasse. Schließt das Ventil vor dem Füllende, wird die Restluft danach verdichtet.',
+    note: 'Die Entlüftungsfläche treibt die Entlüftungs-KPIs und -Diagramme. In den Drossel-Modellen der Simulation (Backend) ist sie mit Spalt und Kanallänge der Widerstand, durch den die Luft zur Pumpe bzw. in den Tank muss: bei großem Druckverhältnis chokt der Kanal (Schallgeschwindigkeit am Austritt), dazwischen begrenzt die Wandreibung, bei kleiner Druckdifferenz und niedrigem Druck fließt die Luft zäh (laminar). „Sofort-Enddruck" ignoriert Fläche und Kanal; der Druck springt beim Öffnen auf den Enddruck. Der Tank ist vor dem Schuss auf den Enddruck evakuiert; sein Druck steigt mit jeder abgesaugten Luftmasse. Schließt das Ventil vor dem Füllende, wird die Restluft danach verdichtet.',
     fields: [
       { key: 'vacModel', label: 'Vakuum-Modell', unit: '', def: 'conductance', type: 'select',
         options: [['aus', 'ohne Vakuum'], ['ideal', 'Sofort-Enddruck (ideal, ohne Drossel)'], ['conductance', 'Drossel → Pumpe (Enddruck konstant)'], ['tank', 'Drossel → Vakuumtank (Druck steigt)']] },
       { key: 'vent', label: 'Entlüftungsfläche', unit: 'mm²', def: 800,
-        auto: 'Ideal: Entlüftungsbedarf bei der Füllzeit der Schusskurve — A_ent = V_luft/(t_f·v_luft,max), auf 10 mm² aufgerundet', gt: 0, max: 100000, bound: 'plaus' },
+        auto: 'Ideal: Entlüftungsbedarf bei der Füllzeit der Schusskurve: A_ent = V_luft/(t_f·v_luft,max), auf 10 mm² aufgerundet', gt: 0, max: 100000, bound: 'plaus' },
       /* Entlüftungskanal als breiter Schlitz: Spalthöhe und Weglänge bis zum
          Ventil bestimmen die Wandreibung (hydraulischer Ø = 2·Spalt). */
       /* when: nur sichtbar (und geprüft), solange das Modell das Feld
@@ -164,7 +164,7 @@ export const groups = [
   },
   {
     id: 'partFields', title: 'Bauteilgeometrie und Thermik', preset: 'part', wide: true,
-    note: 'Diese Felder setzt das Bauteiltyp-Preset (/shared/examples/parts.js). Bei gewähltem Preset sind sie ausgeblendet — „manuell" wählen, um sie frei einzugeben.',
+    note: 'Diese Felder setzt das Bauteiltyp-Preset (/shared/examples/parts.js). Bei gewähltem Preset sind sie ausgeblendet; „manuell" wählen, um sie frei einzugeben.',
     fields: [
       { key: 'wall',    label: 'Wandstärke',      unit: 'mm',    def: 3.5 , gt: 0, max: 100, bound: 'plaus' },
       { key: 'wallMin', label: 'Wandstärke min.', unit: 'mm',    def: 1.5 , gt: 0, max: 100, bound: 'plaus' },

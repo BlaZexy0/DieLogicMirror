@@ -172,13 +172,13 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Projekte &amp; Konto</h1>
-    <p class="subtitle">Projekte der Organisation mit Revisionsverlauf, Stammdaten, Mitglieder und Einladungen — die Datenbank ist der Stand der Wahrheit, die Werkzeuge speichern automatisch.</p>
+    <p class="subtitle">Projekte der Organisation mit Revisionsverlauf, Stammdaten, Mitglieder und Einladungen. Die Datenbank ist der Stand der Wahrheit, die Werkzeuge speichern automatisch.</p>
   </div>
 </section>
 
 <div class="kt-wrap">
 
-  <div id="nobackend" class="kt-note hidden">Das Backend ist nicht erreichbar — Anmeldung und Projekte
+  <div id="nobackend" class="kt-note hidden">Das Backend ist nicht erreichbar. Anmeldung und Projekte
     stehen erst wieder zur Verfügung, wenn der Server antwortet.</div>
 
   <!-- ── Einladung einlösen ──────────────────────────────── -->
@@ -200,7 +200,7 @@
     <div class="brand"><img src="/assets/logo.svg" alt=""><span>DieLogic</span></div>
     <h2>Anmelden</h2>
     <p>Die Werkzeuge arbeiten auf den Projekten Ihrer Organisation. Noch kein Konto? DieLogic ist derzeit
-      nur auf Einladung nutzbar — bitte einen Einladungslink anfordern (<a href="/recht/kontakt.html">Kontakt</a>).</p>
+      nur auf Einladung nutzbar. Bitte einen Einladungslink anfordern (<a href="/recht/kontakt.html">Kontakt</a>).</p>
     <form id="login-form">
       <label for="l-email">E-Mail</label><input id="l-email" type="email" required autocomplete="username">
       <label for="l-pw">Passwort</label><input id="l-pw" type="password" required autocomplete="current-password">
@@ -252,7 +252,7 @@
           <span class="eyebrow">Organisation</span>
           <h2>Projekte</h2>
           <p>Änderungen in den Werkzeugen werden laufend gespeichert; „Revision" in der Projektleiste legt einen
-            benannten Schnappschuss an. „Öffnen" macht ein Projekt zum aktiven, „Verlauf" zeigt alle Revisionen —
+            benannten Schnappschuss an. „Öffnen" macht ein Projekt zum aktiven, „Verlauf" zeigt alle Revisionen;
             jede lässt sich als Kopie wiederherstellen.</p>
         </div>
         <div class="actions">
@@ -275,7 +275,7 @@
         <div>
           <span class="eyebrow">Organisation</span>
           <h2>Stammdaten</h2>
-          <p>Maschinen, Legierungen, Bauteiltypen und Kosten &amp; Sätze Ihrer Firma — sie ersetzen in allen
+          <p>Maschinen, Legierungen, Bauteiltypen und Kosten &amp; Sätze Ihrer Firma; sie ersetzen in allen
             Werkzeugen die Beispielwerte. <span id="sd-perm"></span></p>
         </div>
       </div>
@@ -292,7 +292,7 @@
           <button class="btn btn-outline btn-sm" id="sd-add">+ Eintrag</button>
           <button class="btn btn-outline btn-sm" id="sd-load-defaults" title="Beispielwerte aus den mitgelieferten Presets in die Tabelle laden">Beispielwerte laden</button>
           <span style="flex:1"></span>
-          <button class="btn btn-ghost btn-sm" id="sd-reset" title="Eigene Werte löschen — es gelten wieder die Beispielwerte">Auf Beispielwerte zurücksetzen</button>
+          <button class="btn btn-ghost btn-sm" id="sd-reset" title="Eigene Werte löschen: Es gelten wieder die Beispielwerte">Auf Beispielwerte zurücksetzen</button>
           <button class="btn btn-primary btn-sm" id="sd-save">Speichern</button>
           <span class="kt-err" id="sd-err" style="margin:0;"></span>
           <span class="kt-ok" id="sd-ok"></span>
@@ -306,7 +306,7 @@
         <div>
           <span class="eyebrow">Organisation</span>
           <h2>Mitglieder &amp; Einladungen</h2>
-          <p>Zugang gibt es nur auf Einladung. Administratoren laden per Link ein — er ist 14 Tage gültig und einmal einlösbar.</p>
+          <p>Zugang gibt es nur auf Einladung. Administratoren laden per Link ein. Er ist 14 Tage gültig und einmal einlösbar.</p>
         </div>
       </div>
       <div class="kt-two">
@@ -325,7 +325,7 @@
               <button class="btn btn-primary btn-sm" type="submit">Einladen</button>
             </div>
             <div class="kt-err" id="invite-err"></div>
-            <div id="invite-result" class="hidden"><span class="kt-ok">Einladung erstellt — Link weitergeben:</span>
+            <div id="invite-result" class="hidden"><span class="kt-ok">Einladung erstellt. Link weitergeben:</span>
               <div class="link-box" id="invite-link"></div>
               <div class="kt-actions" style="margin-top:.5rem;"><button type="button" class="btn btn-outline btn-sm" id="copy-link">Link kopieren</button></div></div>
           </form>
@@ -421,7 +421,7 @@
       if (!d || !d.email) return;
       $('demo-login').hidden = false;
       $('demo-hint').hidden = false;
-      $('demo-hint').textContent = d.email + ' — auf „Als Demo anmelden" klicken';
+      $('demo-hint').textContent = d.email + ': auf „Als Demo anmelden" klicken';
       /* Über /auth/demo/login: das Passwort verlässt den Server nicht mehr. */
       $('demo-login').onclick = async function () {
         $('login-err').textContent = '';
@@ -584,14 +584,14 @@
 
   async function showRevisions(id, name) {
     show('rev-panel', true);
-    $('rev-title').textContent = 'Verlauf — ' + name;
+    $('rev-title').textContent = 'Verlauf: ' + name;
     var revs = await api('GET', '/api/projects/' + id + '/revisions');
     $('rev-body').innerHTML = revs.map(function (r) {
       return '<li><span class="no">Rev ' + r.rev + '</span>'
         + '<div><div class="note">' + (r.note ? esc(r.note) : '<span class="muted">ohne Notiz</span>') + '</div>'
         + '<div class="by">' + esc(r.author ? (r.author.name || r.author.email) : '—') + ' · ' + fmt(r.created_at) + '</div></div>'
         + '<button class="btn btn-ghost btn-sm" data-restore="' + esc(id) + '" data-rev="' + r.rev + '" data-name="' + esc(name) + '">Als Kopie öffnen</button></li>';
-    }).join('') || '<li class="mem-empty">Noch keine Revisionen — „Revision" in der Projektleiste legt die erste an.</li>';
+    }).join('') || '<li class="mem-empty">Noch keine Revisionen. „Revision" in der Projektleiste legt die erste an.</li>';
     $('rev-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
   $('rev-close').addEventListener('click', function () { show('rev-panel', false); });
@@ -636,7 +636,7 @@
       } else {
         if (!confirm('Passwort von ' + b.dataset.mail + ' zurücksetzen?\n\nEs wird ein temporäres Passwort erzeugt, das Sie einmalig sehen und weitergeben. Alle Sitzungen dieser Person enden sofort.')) return;
         var r = await api('POST', '/api/org/members/' + b.dataset.resetpw + '/password');
-        window.prompt('Temporäres Passwort für ' + r.email + ' — jetzt kopieren, es wird nicht noch einmal angezeigt:', r.password);
+        window.prompt('Temporäres Passwort für ' + r.email + '. Jetzt kopieren, es wird nicht noch einmal angezeigt:', r.password);
       }
       loadMembers();
     } catch (err) { alert(err.message); }
@@ -829,7 +829,7 @@ function render() {
   const src = settings[tab];
   $('sd-source').innerHTML = src
     ? '<span class="chip own"><span class="dot"></span>eigene Werte</span> zuletzt geändert ' + fmtDate(src.updated_at)
-    : '<span class="chip"><span class="dot"></span>Beispielwerte</span> noch nicht angepasst — Einträge bearbeiten und speichern, damit sie in allen Werkzeugen gelten.';
+    : '<span class="chip"><span class="dot"></span>Beispielwerte</span> noch nicht angepasst. Einträge bearbeiten und speichern, damit sie in allen Werkzeugen gelten.';
   $('sd-add').hidden = tab === 'kosten';
   $('sd-actions').querySelectorAll('button').forEach(b => { b.disabled = !admin; });
   if (!work[tab]) work[tab] = currentData(tab);
@@ -849,7 +849,7 @@ function renderList(admin) {
       + '<td>' + (admin ? '<button class="btn-link" data-del="' + i + '">entfernen</button>' : '') + '</td></tr>';
   });
   h += '</tbody></table>';
-  if (!rows.length) h = '<p class="mem-empty">Keine Einträge — „+ Eintrag" oder „Beispielwerte laden".</p>';
+  if (!rows.length) h = '<p class="mem-empty">Keine Einträge: „+ Eintrag" oder „Beispielwerte laden".</p>';
   $('sd-body').innerHTML = h;
 }
 
@@ -900,7 +900,7 @@ $('sd-save').addEventListener('click', async () => {
     settings[tab] = await api('PUT', '/api/org/settings/' + tab, { data });
     work[tab] = null;
     try { localStorage.removeItem('dielogic-org-settings-v1'); } catch (e) { /* egal */ }
-    $('sd-ok').textContent = 'Gespeichert — gilt ab dem nächsten Laden der Werkzeuge.';
+    $('sd-ok').textContent = 'Gespeichert. Gilt ab dem nächsten Laden der Werkzeuge.';
     render();
   } catch (err) { $('sd-err').textContent = err.message; }
 });

@@ -340,7 +340,7 @@ export async function createGpuSolver(domain, params = {}) {
   const limits = {};
   if (need > adapter.limits.maxStorageBufferBindingSize) {
     throw new Error('Das Gitter braucht ' + (need / 1048576).toFixed(0) + ' MB je Verteilungspuffer, die Grafikkarte erlaubt '
-      + (adapter.limits.maxStorageBufferBindingSize / 1048576).toFixed(0) + ' MB — Zellkante vergrößern.');
+      + (adapter.limits.maxStorageBufferBindingSize / 1048576).toFixed(0) + ' MB. Zellkante vergrößern.');
   }
   if (need > 134217728) {
     limits.maxStorageBufferBindingSize = need;

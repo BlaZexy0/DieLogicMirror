@@ -18,7 +18,7 @@ import * as M from '../vents/model.js';
 import { buildByType, buildAll, volumeOf } from '../vents/geom.js';
 import { setTris, download, safeName, dirText, outward } from '../ui/common.js';
 
-const SUBTITLE = 'Überläufe: vier Arten aufs Bauteil setzen — dort, wo die Füllung zuletzt ankommt; ihr Volumen gehört zum Schussgewicht.';
+const SUBTITLE = 'Überläufe: vier Arten aufs Bauteil setzen, dort, wo die Füllung zuletzt ankommt; ihr Volumen gehört zum Schussgewicht.';
 const STATUS = '<b>Art</b> wählen, dann aufs Bauteil klicken &nbsp;·&nbsp; <b>Punkt</b> ziehen: auf der Wand &nbsp;·&nbsp; '
   + '<b>Alt</b>: von der Wand weg &nbsp;·&nbsp; <b>Pfeil</b>: neu setzen &nbsp;·&nbsp; <b>Leer</b>: drehen &nbsp;·&nbsp; <b>rechts</b>: verschieben &nbsp;·&nbsp; <b>Rad</b>: zoomen';
 const VENT_POINT_COLOR = '#6f9bc9';
@@ -273,7 +273,7 @@ export function createVentStage(ctx) {
   const stillAiming = () => handles.aiming;
   function startPlace(type) {
     if (!M.TYPES[type]) return;
-    if (!ctx.part.model) { ctx.aim.note('Zuerst ein Bauteil laden (Schritt 1) — dann setzt der Klick den Überlauf dorthin.'); return; }
+    if (!ctx.part.model) { ctx.aim.note('Zuerst ein Bauteil laden (Schritt 1). Dann setzt der Klick den Überlauf dorthin.'); return; }
     handles.select(null);
     ctx.aim.show(true, M.TYPES[type].label + ': die Stelle am Bauteil anklicken, wo sie sitzen soll. Ziehen dreht die Ansicht, Esc bricht ab.');
     ctx.aim.onCancel = cancelAim;
@@ -318,7 +318,7 @@ export function createVentStage(ctx) {
     const list = fill ? fill.spots() : [];
     for (const m of list) spotGroup.add(fill.spotMesh(m));
     spotGroup.visible = state.active && state.showSpots && list.length > 0;
-    $('ue-spots-note').textContent = state.showSpots && !list.length ? 'Noch keine Füllung gerechnet (Schritt 3) — dann stehen die zuletzt gefüllten Stellen hier als Marken.' : '';
+    $('ue-spots-note').textContent = state.showSpots && !list.length ? 'Noch keine Füllung gerechnet (Schritt 3). Danach stehen die zuletzt gefüllten Stellen hier als Marken.' : '';
     view.invalidate();
   }
   $('ue-show-spots').addEventListener('change', e => { state.showSpots = e.target.checked; updateSpots(); });

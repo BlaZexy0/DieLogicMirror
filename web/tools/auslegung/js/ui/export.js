@@ -41,7 +41,7 @@ export function copyChart(card, def) {
 
 /* Schusskurven-Samples + Ereignisse als CSV. */
 export function exportShotCSV(shot) {
-  if (!shot || shot.error) { alert('Schusskurve ungültig — kein Export möglich.'); return; }
+  if (!shot || shot.error) { alert('Schusskurve ungültig, kein Export möglich.'); return; }
   const sm = shot.samples, gate = !!shot.gateR;
   let csv = 'zeit_s,weg_mm,geschwindigkeit_m_s,beschleunigung_m_s2' + (gate ? ',anschnittgeschwindigkeit_m_s' : '') + '\n';
   for (let i = 0; i < sm.t.length; i++) {

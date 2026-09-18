@@ -88,7 +88,7 @@ async function init() {
     mathSec.className = 'card wide math-panel';
     mathSec.innerHTML =
       '<div class="head"><div><h3>Mathematik &amp; Herleitung</h3>' +
-      '<small>Alle Gleichungen dieses Diagramms — Zahlenwerte folgen den Eingaben live</small></div></div>' +
+      '<small>Alle Gleichungen dieses Diagramms · Zahlenwerte folgen den Eingaben live</small></div></div>' +
       '<div class="body math-body">' + def.mathHTML() + '</div>';
     document.getElementById('charts').appendChild(mathSec);
   }

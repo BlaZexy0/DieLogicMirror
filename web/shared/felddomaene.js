@@ -61,7 +61,7 @@
   var PAARE = {
     teilekosten: [
       { a: 'mpart', b: 'mdose', op: '<=',
-        text: 'Bauteilgewicht kann das Schussgewicht nicht übersteigen — die Materialausbeute wäre über 100 %' }
+        text: 'Bauteilgewicht kann das Schussgewicht nicht übersteigen: Die Materialausbeute wäre über 100 %' }
     ],
     sprengflaeche: []
   };

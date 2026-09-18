@@ -23,7 +23,7 @@ import { cross, dot, norm, addScaled } from '../runner/vec.js';
 import { fillClock, openingFractions, unitsForFraction } from './filltime.js';
 import { setTris, download, safeName } from '../ui/common.js';
 
-const SUBTITLE = 'Füllung: die Schmelzefront läuft von den Anschnitten des Angusses durch das gerasterte Bauteil — Füllgrad, Füllkörper, die letzten Stellen.';
+const SUBTITLE = 'Füllung: die Schmelzefront läuft von den Anschnitten des Angusses durch das gerasterte Bauteil; Füllgrad, Füllkörper, die letzten Stellen.';
 const IDLE = 'Ziehen: drehen · Rechte Maustaste: verschieben · Rad: zoomen';
 const GREY = [0.71, 0.75, 0.77];
 
@@ -117,8 +117,8 @@ export function createFillStage(ctx) {
     facts('fu-inlet-facts', rows);
     facts('fu-menu-facts', rows);
     $('fu-pt-sel').textContent = items.length ? items.length + (items.length === 1 ? ' Anschnitt' : ' Anschnitte') + ' aus dem Anguss' : 'Noch kein Anschnitt';
-    $('fu-inlet-warn').textContent = !items.length ? 'Noch kein Anguss — im Schritt Anguss einen Vorschlag anlegen.'
-      : items.some(it => !it.bound) ? 'Nicht jeder Anschnitt ist ans Bauteil gebunden — er trifft die Wand vielleicht nicht.' : '';
+    $('fu-inlet-warn').textContent = !items.length ? 'Noch kein Anguss: im Schritt Anguss einen Vorschlag anlegen.'
+      : items.some(it => !it.bound) ? 'Nicht jeder Anschnitt ist ans Bauteil gebunden. Er trifft die Wand vielleicht nicht.' : '';
   }
 
   /* ── Rechnen ──────────────────────────────────────────────── */
@@ -261,7 +261,7 @@ export function createFillStage(ctx) {
         title: 'Füllgrad',
         stops: gradient(t => rgbCss(turbo(t))),
         ticks: [100, 75, 50, 25, 0].map(v => v + ' %'),
-        extra: tm ? fmt(tm.tFirst * 1000, 0) + ' – ' + (tm.tEnd === null ? '?' : fmt(tm.tEnd * 1000, 0)) + ' ms ab Kolbenstart' : ''
+        extra: tm ? fmt(tm.tFirst * 1000, 0) + '–' + (tm.tEnd === null ? '?' : fmt(tm.tEnd * 1000, 0)) + ' ms ab Kolbenstart' : ''
       } : null);
       $('fu-q-val').textContent = qLabel(+$('fu-q').value);
     }
@@ -283,7 +283,7 @@ export function createFillStage(ctx) {
     }
     const tm = state.timing;
     const dauer = state.ms >= 1000 ? fmt(state.ms / 1000, 1) + ' s' : fmt(state.ms, 0) + ' ms';
-    note.textContent = (state.stale ? 'Der Anguss hat sich geändert — rechnet nach …' : 'Gerechnet in ' + dauer + ' · α = ' + fmt(r.stats.alpha, 1))
+    note.textContent = (state.stale ? 'Der Anguss hat sich geändert, rechnet nach …' : 'Gerechnet in ' + dauer + ' · α = ' + fmt(r.stats.alpha, 1))
       + (r.stats.unreached ? ' · ⚠ ' + fmt(r.stats.unreached, 0) + ' Zellen nicht erreicht' : '');
     note.className = 'run-note' + (state.stale || r.stats.unreached ? ' stale' : '');
     const rows = [
@@ -295,7 +295,7 @@ export function createFillStage(ctx) {
     if (tm) {
       const opens = tm.clock.gates.filter(g => g.open).map(g => g.t);
       rows.push(['Anschnitte öffnen', (opens.length > 1 && Math.max(...opens) - Math.min(...opens) > 5e-4
-        ? fmt(tm.tFirst * 1000, 0) + ' – ' + fmt(Math.max(...opens) * 1000, 0) : fmt(tm.tFirst * 1000, 0)) + ' ms ab Kolbenstart']);
+        ? fmt(tm.tFirst * 1000, 0) + '–' + fmt(Math.max(...opens) * 1000, 0) : fmt(tm.tFirst * 1000, 0)) + ' ms ab Kolbenstart']);
       rows.push(['Bauteil voll', tm.tEnd === null ? 'die Kurve endet vorher' : 'bei ' + fmt(tm.tEnd * 1000, 0) + ' ms']);
       if (tm.tEnd !== null) rows.push(['Füllzeit Bauteil', fmt((tm.tEnd - tm.tFirst) * 1000, 0) + ' ms']);
       if (Number.isFinite(tm.shotFill)) rows.push(['Füllzeit Auslegung', fmt(tm.shotFill, 0) + ' ms (Anguss → Überlauf gefüllt)']);
@@ -308,9 +308,9 @@ export function createFillStage(ctx) {
     }
     facts('fu-result-facts', rows);
     const tnote = $('fu-time-note');
-    if (!state.curve || !state.curve.onCurve) tnote.textContent = 'Ohne Schusskurve keine Zeiten — im Schritt Anguss „Ankunft nach der DieLogic-Schusskurve" anhaken.';
-    else if (state.curve.timeline && state.curve.timeline.error) tnote.textContent = 'Keine DieLogic-Kurve (' + state.curve.timeline.error + ') — die Füllung läuft ohne Uhr.';
-    else if (tm && tm.tEnd === null) tnote.textContent = 'Die Schusskurve endet, bevor das Bauteil voll ist — Kurvenhub in der Auslegung prüfen.';
+    if (!state.curve || !state.curve.onCurve) tnote.textContent = 'Ohne Schusskurve keine Zeiten: im Schritt Anguss „Ankunft nach der DieLogic-Schusskurve" anhaken.';
+    else if (state.curve.timeline && state.curve.timeline.error) tnote.textContent = 'Keine DieLogic-Kurve (' + state.curve.timeline.error + '). Die Füllung läuft ohne Uhr.';
+    else if (tm && tm.tEnd === null) tnote.textContent = 'Die Schusskurve endet, bevor das Bauteil voll ist: Kurvenhub in der Auslegung prüfen.';
     else tnote.textContent = '';
     $('fu-grid-note').textContent = state.field
       ? 'Zellkante ' + fmt(state.field.h, 2) + ' mm · Raster ' + state.field.dims.join(' × ') + ' (das Abstandsfeld des Bauteils, Zellkante im Schritt Bauteil).'

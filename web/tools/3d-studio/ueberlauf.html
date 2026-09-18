@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Überlaufdesigner · 3D-Studio · DieLogic</title>
-<meta name="description" content="Überläufe und Entlüftungen für den Druckguss am Bauteil setzen: Überlaufbohne, Überlauf mit Entlüftung, Waschbrett (Chill-Vent) und Entlüftungsschlitz — mit Steg, Maßen, Drehung und dem Volumen fürs Schussgewicht.">
+<meta name="description" content="Überläufe und Entlüftungen für den Druckguss am Bauteil setzen: Überlaufbohne, Überlauf mit Entlüftung, Waschbrett (Chill-Vent) und Entlüftungsschlitz, mit Steg, Maßen, Drehung und dem Volumen fürs Schussgewicht.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -48,7 +48,7 @@
     <h2>Volumen</h2>
     <div class="facts" id="plan-facts"></div>
     <div class="hint">Wo die Schmelze zuletzt ankommt, muss die Luft hinaus: dort sitzen die
-      Überläufe. Was sie fassen, gehört zum Schussgewicht — <b>Gesamt</b> ist das Gussvolumen,
+      Überläufe. Was sie fassen, gehört zum Schussgewicht. <b>Gesamt</b> ist das Gussvolumen,
       das der Angussdesigner unter „Prozess" braucht.</div>
 
     <h2>Import und Export</h2>
@@ -58,7 +58,7 @@
       <button type="button" class="btn btn-outline" id="json-save">JSON speichern</button>
     </div>
     <button type="button" class="btn btn-outline block-btn" id="stl-save">Als STL speichern</button>
-    <div class="hint"><b>JSON</b> ist der Plan selbst — Orte, Richtungen, Maße. <b>STL</b> sind
+    <div class="hint"><b>JSON</b> ist der Plan selbst: Orte, Richtungen, Maße. <b>STL</b> sind
       die Körper: je Element Steg, Bohne und Kanal als geschlossene Körper.</div>
   </aside>
 
@@ -81,7 +81,7 @@
           <span class="val">mm</span>
         </div>
         <div class="row">
-          <span title="Drehung um die Achse des Elements (die Wandnormale) — was an der Bohne oben ist, wandert um den Steg herum.">Drehung</span>
+          <span title="Drehung um die Achse des Elements (die Wandnormale): was an der Bohne oben ist, wandert um den Steg herum.">Drehung</span>
           <input type="range" id="sel-rot" min="-180" max="180" step="1" value="0">
           <span class="val" id="sel-rot-val"></span>
         </div>
@@ -90,7 +90,7 @@
           <div class="pt-menu-title">Entlüftungskanal</div>
           <div class="pt-note" id="vent-note"></div>
           <div class="btn-pair">
-            <button type="button" id="vent-add" title="Einen Punkt anhängen — in der Richtung des letzten Stücks weiter">+ Punkt</button>
+            <button type="button" id="vent-add" title="Einen Punkt anhängen, in der Richtung des letzten Stücks weiter">+ Punkt</button>
             <button type="button" id="vent-del" title="Den gewählten Punkt entfernen (der letzte bleibt)">− Punkt</button>
           </div>
         </div>
@@ -100,7 +100,7 @@
       <button type="button" id="add-bohne" title="Tasche am Ende des Fließwegs: sammelt die erste, kalte und oxidhaltige Schmelze."><span class="dot" style="background:#e07b39"></span>Überlaufbohne</button>
       <button type="button" id="add-entlueftet" title="Bohne mit flachem Entlüftungskanal: ab der Kugel am Bohnenende Punkt für Punkt in der Wandebene gezogen."><span class="dot" style="background:#2e6da4"></span>Überlauf mit Entlüftung</button>
       <button type="button" id="add-waschbrett" title="Gewellter Kanal: die Schmelze erstarrt in den Wellen, die Luft kommt hindurch."><span class="dot" style="background:#9a77e8"></span>Waschbrett (Chill-Vent)</button>
-      <button type="button" id="add-schlitz" title="Nur der flache Kanal, ohne Bohne — wo Luft hinaus muss, aber nichts gesammelt wird."><span class="dot" style="background:#4c9f70"></span>Entlüftungsschlitz</button>
+      <button type="button" id="add-schlitz" title="Nur der flache Kanal, ohne Bohne: wo Luft hinaus muss, aber nichts gesammelt wird."><span class="dot" style="background:#4c9f70"></span>Entlüftungsschlitz</button>
       <button type="button" id="del-item" class="danger" title="Auswahl entfernen (Entf)">Löschen</button>
     </div>
     <div class="vp-right">

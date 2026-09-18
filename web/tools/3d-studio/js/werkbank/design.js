@@ -32,7 +32,7 @@ import { $, fmt } from '../ui/controls.js';
 import { sweepRunner, biscuitMesh } from '../runner/sweep.js';
 import { projectedAreaXY, massOf, round } from './measure.js';
 
-const SUBTITLE = 'Auslegung: Massen, Anschnitt, Wandstärke und Sprengfläche aus dem Modell — Kennzahlen und Diagramme wie im Dashboard.';
+const SUBTITLE = 'Auslegung: Massen, Anschnitt, Wandstärke und Sprengfläche aus dem Modell; Kennzahlen und Diagramme wie im Dashboard.';
 
 /* Die übernehmbaren Größen: Schlüssel im Auslegungszustand, Bezeichnung,
    Einheit, Quelle im Modell. */

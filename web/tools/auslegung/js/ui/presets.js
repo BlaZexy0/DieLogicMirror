@@ -51,7 +51,7 @@ function summaryHTML(dom, p) {
   if (!missing.length) return set;
   const names = missing.map(k => subHTML(FIELD_DEFS[k] ? FIELD_DEFS[k].label : k)).join(', ');
   return set + '<br><span class="preset-gap">⚠ Dieses Preset setzt ' + names
-    + ' nicht — es gilt der Standardwert. Auf der Konto-Seite ergänzen oder „manuell" wählen.</span>';
+    + ' nicht; es gilt der Standardwert. Auf der Konto-Seite ergänzen oder „manuell" wählen.</span>';
 }
 
 export function initPresetSelect(dom, sel) {

@@ -142,7 +142,7 @@ async function computeField() {
   while (g.size.samples > MAX_SAMPLES) { h = Math.round(h * 110) / 100; g = gridFor(m, h); lifted = true; }
   if (lifted) { state.h = h; $('cell-h').value = fmt(h, 2); }
   $('res-note').textContent = lifted
-    ? 'Feiner geht hier nicht: ' + fmt(MAX_SAMPLES / 1e6, 0) + ' Mio. Rasterpunkte sind die Grenze — die Kante steht auf ' + fmt(h, 2) + ' mm.'
+    ? 'Feiner geht hier nicht: ' + fmt(MAX_SAMPLES / 1e6, 0) + ' Mio. Rasterpunkte sind die Grenze. Die Kante steht auf ' + fmt(h, 2) + ' mm.'
     : '';
   busy.textContent = 'Bauteil rastern …';
   busy.classList.add('on');
@@ -296,7 +296,7 @@ function updateFacts() {
   const rows = [];
   const items = M.allItems(state.plan);
   if (!items.length) {
-    $('run-note').textContent = state.field ? 'Noch kein Anschnitt — im Auswahlfeld „Anschnitt setzen", dann aufs Bauteil klicken.' : '';
+    $('run-note').textContent = state.field ? 'Noch kein Anschnitt: im Auswahlfeld „Anschnitt setzen", dann aufs Bauteil klicken.' : '';
     $('run-note').className = 'run-note';
     facts('result-facts', []);
     facts('inlet-facts', []);
@@ -418,7 +418,7 @@ function cancelAim() {
 
 
 function startPlace() {
-  if (!partMesh.visible) { aim.note('Zuerst ein Bauteil laden — dann setzt der Klick den Anschnitt dorthin.'); return; }
+  if (!partMesh.visible) { aim.note('Zuerst ein Bauteil laden, dann setzt der Klick den Anschnitt dorthin.'); return; }
   handles.select(null);
   aim.show(true, 'Anschnitt: die Stelle am Bauteil anklicken, wo die Schmelze eintritt. Ziehen dreht die Ansicht, Esc bricht ab.');
   aim.onCancel = cancelAim;
@@ -437,7 +437,7 @@ function startPlace() {
 function startMove(id) {
   const it = state.plan.items[id];
   if (!it) return;
-  if (!partMesh.visible) { aim.note('Zuerst ein Bauteil laden — dann setzt der Klick den Anschnitt dorthin.'); return; }
+  if (!partMesh.visible) { aim.note('Zuerst ein Bauteil laden, dann setzt der Klick den Anschnitt dorthin.'); return; }
   aim.show(true, 'Anschnitt ' + id + ': die neue Stelle am Bauteil anklicken. Esc bricht ab.');
   aim.onCancel = cancelAim;
   handles.armAim({

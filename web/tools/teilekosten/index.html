@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teilekosten-Kalkulation — DieLogic</title>
+  <title>Teilekosten-Kalkulation · DieLogic</title>
   <meta name="theme-color" content="#002733">
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -106,7 +106,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Teilekosten-Kalkulation</h1>
-    <p class="subtitle">Kosten je Gutteil aus Massenbilanz, Zykluszeit, Preisen und Sätzen — mit Zykluszeit- und Material-Hebel.</p>
+    <p class="subtitle">Kosten je Gutteil aus Massenbilanz, Zykluszeit, Preisen und Sätzen, mit Zykluszeit- und Material-Hebel.</p>
   </div>
 </section>
 
@@ -122,7 +122,7 @@
     <div class="tk-card">
       <h2>Prozess</h2>
       <div class="body">
-        <div class="tk-field"><label title="Alle Kavitäten zusammen — dieselbe Bilanz wie im Dashboard: Schussgewicht = Bauteil + Anguss + Überlauf + Pressrest.">Bauteilgewicht je Schuss <span class="unit">kg</span></label><input id="i-mpart" type="number" step="0.1"></div>
+        <div class="tk-field"><label title="Alle Kavitäten zusammen, dieselbe Bilanz wie im Dashboard: Schussgewicht = Bauteil + Anguss + Überlauf + Pressrest.">Bauteilgewicht je Schuss <span class="unit">kg</span></label><input id="i-mpart" type="number" step="0.1"></div>
         <div class="tk-field"><label title="Der ganze Schuss: Bauteil(e) + Anguss + Überlauf + Pressrest.">Schussgewicht <span class="unit">kg</span></label><input id="i-mdose" type="number" step="0.1"></div>
         <div class="tk-field"><label>Zykluszeit <span class="unit">s</span></label><input id="i-tz" type="number" step="0.5"></div>
         <div class="tk-field"><label>Kavitäten <span class="unit">−</span></label><input id="i-kav" type="number" step="1"></div>
@@ -187,14 +187,14 @@
 
     <div class="viz-card">
       <div class="head"><h2>Stückkosten über die Zykluszeit</h2>
-        <small>Material bleibt konstant — Maschine, Personal und Durchsatz skalieren mit t<sub>Z</sub>. Der Punkt markiert die aktuelle Auslegung.</small></div>
+        <small>Material bleibt konstant; Maschine, Personal und Durchsatz skalieren mit t<sub>Z</sub>. Der Punkt markiert die aktuelle Auslegung.</small></div>
       <div id="viz-curve"></div>
     </div>
   </div>
 
   <!-- ── Material-Hebel ───────────────────────────────────── -->
   <div class="viz-card wide" style="margin-bottom:1.2rem;">
-    <div class="head"><h2>Material-Hebel — was ein eingespartes Gramm wert ist</h2>
+    <div class="head"><h2>Material-Hebel: was ein eingespartes Gramm wert ist</h2>
       <small>Konstruktive Gewichtsabnahme am Bauteil (dünnere Wände, Rippen statt Vollmaterial,
         Topologieoptimierung): je Gramm entfallen Neumetall, anteilig Krätze und Schmelzenergie
         über das Schussgewicht sowie das Umschmelzen des Ausschussanteils. Maschine, Personal
@@ -217,7 +217,7 @@
 
   <!-- ── Formeln ──────────────────────────────────────────── -->
   <div class="viz-card wide" style="margin-bottom:1.2rem;">
-    <div class="head"><h2>Rechnung</h2><small>Kostenmodell — Zahlenwerte folgen den Eingaben live</small></div>
+    <div class="head"><h2>Rechnung</h2><small>Kostenmodell, die Zahlenwerte folgen den Eingaben live</small></div>
     <div style="padding:0 1.1rem 1rem;">
       <div class="eq">Gutteile/h = <span class="frac"><span class="num">3600</span><span class="den">t<sub>Z</sub></span></span> · n<sub>Kav</sub> · OEE · (1 − a) = <b data-m="eq-pph">—</b></div>
       <div class="eq">K<sub>Material</sub> = m<sub>Teil</sub>·p<sub>Leg</sub> + <span class="frac"><span class="num">m<sub>Kreislauf</sub>·p<sub>Um</sub> + m<sub>Schuss</sub>·k<sub>r</sub>·p<sub>Leg</sub></span><span class="den">n<sub>Kav</sub>·(1 − a)</span></span> = <b data-m="eq-mat">—</b></div>
@@ -232,10 +232,10 @@
     Zelle als Gutteil verlässt oder als Krätze verloren geht. Energie umfasst Schmelzen und
     Warmhalten des gesamten Schussgewichts; Antriebsenergie der Maschine steckt im Stundensatz.
     Der Material-Hebel nimmt an, dass ein leichteres Bauteil das Schussgewicht je Kavität 1:1
-    reduziert — Anguss, Überlauf, Pressrest und Zykluszeit bleiben unverändert (dünnere Wände
+    reduziert; Anguss, Überlauf, Pressrest und Zykluszeit bleiben unverändert (dünnere Wände
     können zusätzlich die Erstarrungszeit und damit die Zykluszeit verkürzen, das ist nicht
     modelliert). Rüstkosten, Nacharbeit, Gemeinkosten und Ausschuss-Entdeckungszeitpunkt sind
-    nicht modelliert — alle Preise sind Beispielwerte (Preset:
+    nicht modelliert; alle Preise sind Beispielwerte (Preset:
     <code>shared/examples/kosten.js</code>) wie auf der Preisseite.</p>
 
 </div>
@@ -277,7 +277,7 @@
       var on = linked[k] && D[k] != null;
       if (on) el.value = D[k];
       el.classList.toggle('linked', on);
-      el.title = on ? 'Aus dem Projekt: ' + D.sources[k] + ' — Eingabe von Hand löst die Verknüpfung.' : '';
+      el.title = on ? 'Aus dem Projekt: ' + D.sources[k] + '. Eingabe von Hand löst die Verknüpfung.' : '';
     });
     var parts = LINKED.map(function (k) {
       if (linked[k] && D[k] != null) return LINK_LABEL[k] + ' ← ' + D.sources[k];
@@ -285,10 +285,10 @@
       return LINK_LABEL[k] + ': von Hand gesetzt';
     });
     var anyBroken = LINKED.some(function (k) { return !linked[k]; });
-    document.getElementById('handoff-note').innerHTML = 'Projekt <strong>' + escapeHtml((PR.current() || { name: '—' }).name) + '</strong> — '
+    document.getElementById('handoff-note').innerHTML = 'Projekt <strong>' + escapeHtml((PR.current() || { name: '—' }).name) + '</strong>: '
       + parts.join(' · ')
       + (anyBroken ? ' &nbsp;<a href="#" id="relink">Verknüpfungen wiederherstellen</a>' : '')
-      + '. Preise und Sätze: ' + (window.__KOSTEN__.source === 'org' ? 'Stammdaten der Organisation' : 'Beispielwerte — auf der Konto-Seite als Stammdaten hinterlegen') + '.';
+      + '. Preise und Sätze: ' + (window.__KOSTEN__.source === 'org' ? 'Stammdaten der Organisation' : 'Beispielwerte; auf der Konto-Seite als Stammdaten hinterlegen') + '.';
     var rl = document.getElementById('relink');
     if (rl) rl.addEventListener('click', function (e) {
       e.preventDefault();
@@ -361,7 +361,7 @@
     var box = document.getElementById('input-warn');
     box.innerHTML = urteil.ok ? ''
       : '<strong>Unzulässige Eingaben:</strong> ' + urteil.msgs.map(escapeHtml).join(' · ')
-        + ' — es wird erst wieder gerechnet, wenn sie im zulässigen Bereich liegen.';
+        + '. Es wird erst wieder gerechnet, wenn sie im zulässigen Bereich liegen.';
     box.classList.toggle('hidden', urteil.ok);
     return urteil.ok;
   }
@@ -458,18 +458,18 @@
        kann damit nicht über 100 % steigen. */
     var yieldPct = v.mdose > 0 ? 100 * v.mpart / v.mdose : NaN;
     put('k-yield', fmt(yieldPct, 1));
-    put('k-yield-sub', 'Bauteil(e) / Schussgewicht, beides je Schuss — Rest zirkuliert als Kreislaufmaterial (siehe Diagramm „Materialausbeute")');
+    put('k-yield-sub', 'Bauteil(e) / Schussgewicht, beides je Schuss; der Rest zirkuliert als Kreislaufmaterial (siehe Diagramm „Materialausbeute")');
     put('k-en', fmt(r.energyKwh, 2));
     put('k-en-sub', fmt(v.eKg, 2) + ' kWh/kg über ' + fmt(v.mdose, 1) + ' kg Schuss · ' + fmt(r.energyKwh * v.pE, 2) + ' €/Teil');
     put('k-lever', fmt(r.leverTime, 1));
-    put('k-lever-sub', '1 s Zykluszeit ≈ ' + fmt(r.leverTime / 100, 3) + ' €/Teil — bei '
+    put('k-lever-sub', '1 s Zykluszeit ≈ ' + fmt(r.leverTime / 100, 3) + ' €/Teil, bei '
       + fmt(r.pph * H_MONTH, 0) + ' Teilen/Monat (≈ ' + H_MONTH + ' Produktionsstunden) '
       + fmt(r.leverTime / 100 * r.pph * H_MONTH, 0) + ' €/Monat');
 
     /* Material-Hebel: €/kg → ct/g ist Faktor 0,1 */
     var ml = r.leverMass;
     put('k-mlever', fmt(ml.total * 0.1, 3));
-    put('k-mlever-sub', '1 g weniger Bauteilgewicht ≈ ' + fmt(ml.total / 1000, 4) + ' €/Teil — '
+    put('k-mlever-sub', '1 g weniger Bauteilgewicht ≈ ' + fmt(ml.total / 1000, 4) + ' €/Teil, '
       + fmt(ml.total / 1000 * r.pph * H_MONTH, 0) + ' €/Monat je Gramm');
 
     var rows = '', total = r.total;

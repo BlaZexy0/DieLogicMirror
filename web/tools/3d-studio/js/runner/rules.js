@@ -61,7 +61,7 @@ export function checkRules(g, net, flow, proc) {
       + 'Anschnitt stetig abnehmen.');
   } else {
     add('ok', 'Der Querschnitt nimmt durchgehend ab',
-      'Vom Pressrest bis zu jedem Anschnitt wird der Kanal enger — der Strahl bleibt an der Wand.');
+      'Vom Pressrest bis zu jedem Anschnitt wird der Kanal enger: der Strahl bleibt an der Wand.');
   }
 
   /* ── 2. Verzweigungen: Summe der Abgänge ── */
@@ -78,11 +78,11 @@ export function checkRules(g, net, flow, proc) {
     } else if (ratio < 0.7) {
       add('warn', 'Verzweigung schnürt stark ein',
         'An ' + label(g, n.id) + ' bleiben nur ' + fmt(ratio * 100, 0)
-        + ' % des Zulaufquerschnitts übrig. Üblich sind 85 bis 100 % — darunter '
+        + ' % des Zulaufquerschnitts übrig. Üblich sind 85 bis 100 %. Darunter '
         + 'beschleunigt der Strahl im Verteiler stärker als nötig.');
     } else {
       add('ok', 'Verzweigung ' + label(g, n.id),
-        fmt(ratio * 100, 0) + ' % des Zulaufquerschnitts gehen weiter — im üblichen Band.');
+        fmt(ratio * 100, 0) + ' % des Zulaufquerschnitts gehen weiter, im üblichen Band.');
     }
   }
 
@@ -90,7 +90,7 @@ export function checkRules(g, net, flow, proc) {
   const [vLo, vHi] = V_GATE[alloy];
   const bad = flow.gates.filter(r => r.v < vLo || r.v > vHi);
   if (!flow.gates.length) {
-    add('warn', 'Kein Anschnitt', 'Ohne Anschnitt endet der Kanal im Nichts — es lässt sich nichts füllen.');
+    add('warn', 'Kein Anschnitt', 'Ohne Anschnitt endet der Kanal im Nichts: es lässt sich nichts füllen.');
   } else if (bad.length) {
     const worst = bad.reduce((a, b) => (Math.abs(b.v - (vLo + vHi) / 2) > Math.abs(a.v - (vLo + vHi) / 2) ? b : a));
     add(worst.v > vHi * 1.4 || worst.v < vLo * 0.6 ? 'bad' : 'warn', 'Anschnittgeschwindigkeit außerhalb',
@@ -118,7 +118,7 @@ export function checkRules(g, net, flow, proc) {
       + ' m/s wäscht der Strahl den Stahl aus; der Querschnitt sollte weiter vorn großzügiger sein.');
   } else {
     add('ok', 'Laufkanal ruhig',
-      'Höchste Kanalgeschwindigkeit ' + fmt(vRunner) + ' m/s — der Strahl bleibt unter der Auswaschgrenze.');
+      'Höchste Kanalgeschwindigkeit ' + fmt(vRunner) + ' m/s: der Strahl bleibt unter der Auswaschgrenze.');
   }
 
   /* ── 5. Seitenverhältnis ── */
@@ -152,7 +152,7 @@ export function checkRules(g, net, flow, proc) {
       'Zwischen ' + label(g, tight.e.fromId) + ' und ' + label(g, tight.e.toId)
       + ' beträgt der Krümmungsradius nur das ' + fmt(tight.rel, 1)
       + '-fache des hydraulischen Durchmessers. Unter dem Doppelten löst sich die Strömung '
-      + 'an der Innenseite ab — Punkte weiter auseinanderziehen oder den Knick entschärfen.');
+      + 'an der Innenseite ab. Punkte weiter auseinanderziehen oder den Knick entschärfen.');
   } else if (tight) {
     add('ok', 'Bögen weit genug',
       'Engster Bogen: ' + fmt(tight.rel, 1) + '·d_h (empfohlen ≥ 2).');
@@ -173,7 +173,7 @@ export function checkRules(g, net, flow, proc) {
     add(im > 0.12 ? 'bad' : im > 0.05 ? 'warn' : 'ok', 'Füllbalance',
       im <= 0.05
         ? 'Die tatsächliche Aufteilung weicht um höchstens ' + fmt(im * 100) + ' Prozentpunkte von der gewollten ab.'
-        : 'Die Widerstände teilen den Strom anders auf als eingestellt — bis zu '
+        : 'Die Widerstände teilen den Strom anders auf als eingestellt: bis zu '
           + fmt(im * 100) + ' Prozentpunkte Abweichung. Der Anschnitt mit dem geringsten '
           + 'Widerstand füllt vor; am anderen Ende entstehen Kaltfluss und Lufteinschlüsse.');
   }
@@ -213,7 +213,7 @@ export function checkRules(g, net, flow, proc) {
     const deg = Math.acos(Math.max(-1, Math.min(1, hook.c))) * 180 / Math.PI;
     add(hook.c < 0 ? 'bad' : 'warn', 'Mündung quer zur Anströmung',
       label(g, hook.id) + ' mündet ' + fmt(deg, 0) + '° gegen die Richtung, aus der '
-      + 'der Kanal kommt' + (hook.c < 0 ? ' — der Kanal muss dafür eine Schleife schlagen. ' : '. ')
+      + 'der Kanal kommt' + (hook.c < 0 ? '. Der Kanal muss dafür eine Schleife schlagen. ' : '. ')
       + 'Den Punkt davor auf die Zuströmseite legen oder eine andere Stelle am Bauteil wählen.');
   }
 
@@ -231,8 +231,8 @@ export function checkRules(g, net, flow, proc) {
   if (lift && lift.deg > 30) {
     add(lift.deg > 60 ? 'bad' : 'warn', 'Mündung aus der Trennebene',
       label(g, lift.id) + ' mündet ' + fmt(lift.deg, 0) + '° aus seiner Arbeitsebene heraus. '
-      + 'Der Anschnitt liegt in der Trennebene und kann nur in ihr ins Bauteil münden — '
-      + 'eine Stelle an der Bauteilwand wählen, nicht auf einer Fläche in der Ebene.');
+      + 'Der Anschnitt liegt in der Trennebene und kann nur in ihr ins Bauteil münden. '
+      + 'Eine Stelle an der Bauteilwand wählen, nicht auf einer Fläche in der Ebene.');
   }
 
   /* ── 13. Ankunft der Schmelze ──
@@ -249,7 +249,7 @@ export function checkRules(g, net, flow, proc) {
     if (rel > 0.15) {
       add(rel > 0.3 ? 'bad' : 'warn', 'Anschnitte werden nacheinander erreicht',
         label(g, early.id) + ' bekommt die Schmelze nach ' + fmt(early.tArrive * 1000) + ' ms, '
-        + label(g, late.id) + ' erst nach ' + fmt(late.tArrive * 1000) + ' ms — die Spanne von '
+        + label(g, late.id) + ' erst nach ' + fmt(late.tArrive * 1000) + ' ms. Die Spanne von '
         + fmt(spread) + ' ms ist ' + fmt(rel * 100, 0) + ' % der Füllzeit. Der frühe Anschnitt füllt vor; '
         + 'den Weg zum späten kürzen oder dessen Kanal öffnen.');
     } else {
@@ -269,7 +269,7 @@ export function checkRules(g, net, flow, proc) {
     if (!j.degenerate) continue;
     add('warn', 'Abgänge durchdringen sich',
       'An ' + label(g, j.id) + ' liegen die Abgänge ' + j.kids.map(k => label(g, k)).join(' und ')
-      + ' so eng oder sind so kurz, dass ihre Kanäle sich hinter der Gabelung noch überschneiden — '
+      + ' so eng oder sind so kurz, dass ihre Kanäle sich hinter der Gabelung noch überschneiden: '
       + 'dort gibt es keinen Zwickel, die Kanäle bleiben übereinander. Den Winkel öffnen oder die '
       + 'Kanten hinter der Gabelung verlängern.');
   }

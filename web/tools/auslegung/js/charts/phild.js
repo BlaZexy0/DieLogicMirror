@@ -129,7 +129,7 @@ export default {
 <h4>1 · Volumen aus der Massenbilanz</h4>
 <p class="math-note">Das Auslegungsfenster beantwortet die Kammerfrage als Ganzes: <em>Welche Kombinationen aus
 Kolben-Ø und Kammerlänge sind mit diesem Schuss überhaupt machbar?</em> Fester Ausgangspunkt ist das dosierte
-Volumen — flüssig, denn so liegt es in der Kammer. Nur der Pressrest wird fest gerechnet (ρ<sub>sol</sub> =
+Volumen, flüssig, denn so liegt es in der Kammer. Nur der Pressrest wird fest gerechnet (ρ<sub>sol</sub> =
 ρ<sub>s</sub>/(1+s)³), weil seine Mindestlänge eine Prüfung der Endlage ist:</p>
 ${eq('V = \\frac{m_{\\text{dos}}}{\\rho } = \\frac{m_{\\text{Bauteil}} + m_{\\text{Anguss}} + m_{\\text{Überlauf}} + m_{\\text{Pressrest}}}{\\rho }')}
 ${eq('V_{b} = \\frac{m_{\\text{Pressrest}}}{\\rho_{\\text{sol}}}')}
@@ -148,8 +148,8 @@ Hyperbeln (r ∝ 1/φ), Kurven konstanter Länge sind Wurzelkurven (r ∝ √φ)
 ${eq('\\text{Ø-Bereich:}\\ \\; r = \\frac{4V}{\\pi \\cdot \\varphi \\cdot D^{3}} \\;\\ \\text{mit}\\ D = D_{\\min}\\ (\\text{obere Grenze})\\ \\text{bzw.}\\ D = D_{\\max}\\ (\\text{untere Grenze})')}
 ${eq('\\text{Längenbereich:}\\ \\; r = \\sqrt{\\frac{\\pi \\cdot L^{3} \\cdot \\varphi }{4V}} \\;\\ \\text{mit}\\ L = L_{\\max}\\ (\\text{obere})\\ \\text{bzw.}\\ L = L_{\\min}\\ (\\text{untere Grenze})')}
 ${eq('\\text{Pressrest:}\\ \\; b = \\frac{V_{b}}{A} = \\frac{4V_{b}}{\\pi \\cdot D^{2}} \\ge b_{\\min} \\; \\Leftrightarrow \\; D \\le D_{b} = \\sqrt{\\frac{4V_{b}}{\\pi \\cdot b_{\\min}}} \\; \\Rightarrow \\; r \\ge \\frac{4V}{\\pi \\cdot \\varphi \\cdot D_{b}^{3}}')}
-<p class="math-note">Aktuell: D<sub>b</sub> = <b data-m="Db"></b> — der Mindest-Pressrest begrenzt den maximalen Kolben-Ø.</p>
-${eq('\\text{Langsame Phase:}\\ \\; v_{1} \\le v_{\\text{krit}}(D, \\varphi) = \\sqrt{9{,}81 \\cdot D} \\cdot f(D, \\varphi) \\; \\;\\text{—}\\; \\; f\\ \\text{aus der OpenFOAM-CFD-Tabelle}\\\\ (\\text{bilinear interpoliert}),\\ \\text{Grenz-Ø per Bisektion}')}
+<p class="math-note">Aktuell: D<sub>b</sub> = <b data-m="Db"></b>; der Mindest-Pressrest begrenzt den maximalen Kolben-Ø.</p>
+${eq('\\text{Langsame Phase:}\\ \\; v_{1} \\le v_{\\text{krit}}(D, \\varphi) = \\sqrt{9{,}81 \\cdot D} \\cdot f(D, \\varphi) \\qquad \\text{mit}\\ f\\ \\text{aus der OpenFOAM-CFD-Tabelle}\\\\ (\\text{bilinear interpoliert}),\\ \\text{Grenz-Ø per Bisektion}')}
 ${eq('v_{1} \\le v_{\\text{krit}} \\; \\Leftrightarrow \\; D \\ge D_{c}(\\varphi) = \\frac{v_{1}^{2}}{9{,}81 \\cdot f(\\varphi)^{2}} \\; \\Rightarrow \\; r \\le \\frac{4V}{\\pi \\cdot \\varphi \\cdot D_{c}(\\varphi)^{3}} = \\frac{4V \\cdot 9{,}81^{3} \\cdot f(\\varphi)^{6}}{\\pi \\cdot \\varphi \\cdot v_{1}^{6}}')}
 
 <h4>4 · Machbares Band</h4>
@@ -159,7 +159,7 @@ ${eq('\\text{machbar}\\ \\; \\Leftrightarrow \\; r_{\\text{lo}}(\\varphi) \\le r
 
 <h4>5 · Geometrische Deutung</h4>
 <p class="math-note">Das machbare Gebiet ist das Bild des Maschinen-Rechtecks
-[D<sub>min</sub>, D<sub>max</sub>] × [L<sub>min</sub>, L<sub>max</sub>] unter der Abbildung (D, L) → (φ, r) —
+[D<sub>min</sub>, D<sub>max</sub>] × [L<sub>min</sub>, L<sub>max</sub>] unter der Abbildung (D, L) → (φ, r):
 ein „verzerrtes Rechteck" zwischen zwei Hyperbeln und zwei Wurzelkurven, beschnitten durch die Pressrest-
 und die v<sub>krit</sub>-Kurve. Seine Ecken sind die vier Grenzkombinationen:</p>
 <div class="math-corners" data-m="corners"></div>`;
@@ -173,11 +173,11 @@ und die v<sub>krit</sub>-Kurve. Seine Ecken sind die vier Grenzkombinationen:</p
     const set = (key, val) => { const s = el.querySelector('[data-m="' + key + '"]'); if (s) s.innerHTML = subHTML(val); };
     set('V', fmt(V * 1e6) + ' cm³');
     set('Vb', fmt(Vb * 1e6) + ' cm³');
-    set('Db', isFinite(Db) ? fmt(Db * 1000) + ' mm' : '— (kein Mindest-Pressrest gesetzt)');
+    set('Db', isFinite(Db) ? fmt(Db * 1000) + ' mm' : '(kein Mindest-Pressrest gesetzt)');
     const corner = (Dmm, Lmm) => {
       const phi = 4 * V / (PI * Math.pow(Dmm / 1000, 2) * (Lmm / 1000));
       const r = Lmm / Dmm;
-      const out = phi >= 1 ? ' — <span class="math-out">außerhalb (φ ≥ 100 %, Kammer zu klein)</span>' : '';
+      const out = phi >= 1 ? ' · <span class="math-out">außerhalb (φ ≥ 100 %, Kammer zu klein)</span>' : '';
       return '<li>Ø ' + fmt(Dmm) + ' × L ' + fmt(Lmm) + ' mm → φ = ' + fmt(phi * 100) + ' %, λ = ' + fmt(r) + out + '</li>';
     };
     set('corners', '<ul>'

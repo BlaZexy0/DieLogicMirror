@@ -53,7 +53,7 @@ function checkExtensions(json) {
   const req = (json.extensionsRequired || []).filter(Boolean);
   if (req.length) {
     throw new Error('Diese Datei verlangt glTF-Erweiterungen, die hier nicht '
-      + 'gelesen werden (' + req.join(', ') + ') — bitte unkomprimiert exportieren.');
+      + 'gelesen werden (' + req.join(', ') + '). Bitte unkomprimiert exportieren.');
   }
 }
 
@@ -63,7 +63,7 @@ function readAccessor(json, bin, idx) {
   const out = new Float64Array(acc.count * n);
   /* Sparse-Accessoren tragen ihre Werte in einem eigenen Block; ohne ihn zu
      lesen wäre das Ergebnis wieder ein stilles Nullnetz. */
-  if (acc.sparse) throw new Error('Sparse-Accessoren werden nicht gelesen — bitte unkomprimiert exportieren.');
+  if (acc.sparse) throw new Error('Sparse-Accessoren werden nicht gelesen. Bitte unkomprimiert exportieren.');
   if (acc.bufferView === undefined) return out;          // laut Norm: alles null
   const bv = json.bufferViews[acc.bufferView];
   if (!bin) throw new Error('glTF ohne Binärblock');

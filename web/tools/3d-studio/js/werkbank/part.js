@@ -241,7 +241,7 @@ export function createPartStage(ctx) {
     for (let d = 0; d < 6; d++) (DIRS[d].axis === seg.mainAxis ? halves += seg.areaByLabel[d] : sliders += seg.areaByLabel[d]);
     const axisName = 'XYZ'[seg.mainAxis];
     $('bt-analysis-state').textContent = 'Formöffnung ' + axisName + (seg.auto ? ' (automatisch gewählt)' : ' (fest gewählt)')
-      + (seg.mainAxis !== 2 ? ' — die Werkbank rechnet mit Z; das Teil liegt vermutlich falsch herum.' : '');
+      + (seg.mainAxis !== 2 ? '. Die Werkbank rechnet mit Z; das Teil liegt vermutlich falsch herum.' : '');
     facts('bt-seg-facts', [
       ['Formhälften', (100 * halves / A).toFixed(1) + ' % der Fläche'],
       ['Schieber', (100 * sliders / A).toFixed(1) + ' % der Fläche'],
@@ -265,14 +265,14 @@ export function createPartStage(ctx) {
       facts('bt-field-facts', []);
       btn.disabled = !!ctx.field.promise;
       btn.textContent = ctx.field.promise ? 'rechnet …' : 'Feld berechnen';
-      note.textContent = 'Noch kein Feld — es entsteht hier, im Schritt Füllung oder Temperierung.';
+      note.textContent = 'Noch kein Feld: es entsteht hier, im Schritt Füllung oder Temperierung.';
       note.className = 'run-note';
       return;
     }
     const stale = ctx.field.stale;
     btn.disabled = !stale;
     btn.textContent = stale ? 'Feld neu berechnen' : 'Feld ist aktuell';
-    note.textContent = stale ? 'Zellkante geändert — das Bild zeigt noch das vorige Feld.' : '';
+    note.textContent = stale ? 'Zellkante geändert: das Bild zeigt noch das vorige Feld.' : '';
     note.className = 'run-note' + (stale ? ' stale' : '');
     const rows = [
       ['Zellkante', fmt(f.h, 2) + ' mm'],

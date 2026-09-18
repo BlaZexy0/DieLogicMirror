@@ -31,7 +31,7 @@ import { proposeRunner, gateRays } from './propose.js';
 import { shotTimeline, flowOnCurve } from '../runner/shottime.js';
 import { download, safeName, dirText } from '../ui/common.js';
 
-const SUBTITLE = 'Anguss: Pressrest, Laufkanäle und Anschnitte als Graph — vorgeschlagen aus dem Bauteil, gebunden an seine Wand.';
+const SUBTITLE = 'Anguss: Pressrest, Laufkanäle und Anschnitte als Graph, vorgeschlagen aus dem Bauteil, gebunden an seine Wand.';
 const STATUS = '<b>Punkt</b> ziehen: in der Arbeitsebene &nbsp;·&nbsp; <b>Alt</b>: aus ihr heraus &nbsp;·&nbsp; '
   + '<b>Pfeil</b> am Anschnitt: Mündung ans Bauteil &nbsp;·&nbsp; <b>Leer</b>: drehen &nbsp;·&nbsp; <b>rechts</b>: verschieben &nbsp;·&nbsp; <b>Rad</b>: zoomen';
 
@@ -220,7 +220,7 @@ export function createRunnerStage(ctx) {
         : 'die Kurve endet vorher (' + fl.unreached.join(', ') + ')']);
     }
     if (Number.isFinite(sh.fill) && Math.abs(sh.fill - state.proc.fillTime) > 0.5) {
-      rows.push(['Prozess', 'Füllzeit ' + fmt(state.proc.fillTime, 0) + ' ms — die Kurve braucht ' + fmt(sh.fill, 0) + ' ms']);
+      rows.push(['Prozess', 'Füllzeit ' + fmt(state.proc.fillTime, 0) + ' ms, die Kurve braucht ' + fmt(sh.fill, 0) + ' ms']);
     }
     facts('an-shot-facts', rows);
     warn.textContent = tl.warn || '';
@@ -240,7 +240,7 @@ export function createRunnerStage(ctx) {
     ];
     if (gates.length && Number.isFinite(fl.tFirst)) {
       rows.push(['Ankunft', (gates.length > 1
-        ? fmt(fl.tFirst * 1000) + ' – ' + fmt(fl.tLast * 1000) + ' ms'
+        ? fmt(fl.tFirst * 1000) + '–' + fmt(fl.tLast * 1000) + ' ms'
         : fmt(fl.tFirst * 1000) + ' ms') + (fl.onCurve ? ' ab Kolbenstart' : ' bei konstantem Strom')]);
     }
     if (fl.onCurve && state.timeline) {
@@ -275,7 +275,7 @@ export function createRunnerStage(ctx) {
     const meta = G.TYPES[n.type];
     return '<span class="dot" style="background:' + meta.color + '"></span>'
       + meta.label + ' <code>' + id + '</code>'
-      + (G.isFollower(g, id) ? ' <em>(gespiegelt — die andere Seite bearbeiten)</em>'
+      + (G.isFollower(g, id) ? ' <em>(gespiegelt: die andere Seite bearbeiten)</em>'
         : n.aim ? ' <em class="pinned">ans Bauteil gebunden</em>' : '');
   }
 
@@ -294,7 +294,7 @@ export function createRunnerStage(ctx) {
   function startAim(id) {
     const n = id && state.graph.nodes[id];
     if (!n || n.type !== 'gate' || G.isFollower(state.graph, id)) return;
-    if (!ctx.part.model) { ctx.aim.note('Zuerst ein Bauteil laden (Schritt 1) — dann zeigt der Klick auf den Pfeil, wo der Anschnitt münden soll.'); return; }
+    if (!ctx.part.model) { ctx.aim.note('Zuerst ein Bauteil laden (Schritt 1). Dann zeigt der Klick auf den Pfeil, wo der Anschnitt münden soll.'); return; }
     ctx.aim.show(true, 'Mündung ans Bauteil: eine Stelle auf dem Bauteil anklicken. Ziehen dreht die Ansicht, Esc bricht ab.');
     ctx.aim.onCancel = cancelAim;
     editor.armAim({
@@ -308,7 +308,7 @@ export function createRunnerStage(ctx) {
         rebuild();
         syncSelection();
       },
-      onMiss: () => ctx.aim.miss('Daneben — die Stelle muss auf dem Bauteil liegen.', () => editor.aiming)
+      onMiss: () => ctx.aim.miss('Daneben: die Stelle muss auf dem Bauteil liegen.', () => editor.aiming)
     });
   }
 
@@ -358,7 +358,7 @@ export function createRunnerStage(ctx) {
     state.name = ctx.part.name;
     const bound = aimGatesAtPart();
     autoTaper(state.graph, state.proc, state.sizing);
-    $('an-warn').textContent = bound ? '' : 'Kein Anschnitt hat die Wand bei −Y getroffen — die Mündungen über den Pfeil von Hand ans Bauteil setzen.';
+    $('an-warn').textContent = bound ? '' : 'Kein Anschnitt hat die Wand bei −Y getroffen: die Mündungen über den Pfeil von Hand ans Bauteil setzen.';
     adoptGraph();
     if (fit) fitAll();
   }
@@ -738,7 +738,7 @@ export function createRunnerStage(ctx) {
     state.name = (name || 'anguss').replace(/\.json$/i, '');
     const ax = g.biscuit.axis;
     $('an-warn').textContent = ax === '+z' || ax === '-z' ? ''
-      : 'Die Datei liegt im Rahmen des Angussdesigners (Achse ' + ax + ') — die Werkbank erwartet die Trennebene bei z = 0: im Auswahlfeld des Pressrests die Richtung auf −Z stellen und den Pressrest an seinen Ort ziehen.';
+      : 'Die Datei liegt im Rahmen des Angussdesigners (Achse ' + ax + '). Die Werkbank erwartet die Trennebene bei z = 0: im Auswahlfeld des Pressrests die Richtung auf −Z stellen und den Pressrest an seinen Ort ziehen.';
     adoptGraph();
   }
 

@@ -56,7 +56,7 @@ export const TYPES = {
   },
   schlitz: {
     label: 'Entlüftungsschlitz', color: '#4c9f70',
-    hint: 'Nur der flache Kanal, ohne Bohne — wo Luft hinaus muss, aber nichts gesammelt wird.',
+    hint: 'Nur der flache Kanal, ohne Bohne: wo Luft hinaus muss, aber nichts gesammelt wird.',
     params: { ventW: 25, ventH: 0.15, ventL: 50 }
   }
 };

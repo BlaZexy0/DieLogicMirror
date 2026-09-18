@@ -149,8 +149,8 @@ function updateGridNote() {
     + fmt(mb, 0) + ' MB auf der Grafikkarte';
   const limit = gpu ? MAX_PARTICLES : MAX_PARTICLES_CPU;
   const notes = [];
-  if (!gpu) notes.push('Kein WebGPU in diesem Browser — gerechnet wird in JavaScript, mit wenigen Partikeln (bis ' + fmt(limit / 1e3, 0) + ' Tsd.), und das dauert Minuten. Chrome oder Edge rechnen auf der Grafikkarte.');
-  if (count > limit) notes.push('Zu fein: höchstens ' + fmt(limit / 1e3, 0) + ' Tsd. Partikel — den Abstand vergrößern.');
+  if (!gpu) notes.push('Kein WebGPU in diesem Browser: gerechnet wird in JavaScript, mit wenigen Partikeln (bis ' + fmt(limit / 1e3, 0) + ' Tsd.), und das dauert Minuten. Chrome oder Edge rechnen auf der Grafikkarte.');
+  if (count > limit) notes.push('Zu fein: höchstens ' + fmt(limit / 1e3, 0) + ' Tsd. Partikel. Den Abstand vergrößern.');
   $('engine-note').textContent = notes.join(' ');
   $('run').disabled = state.running || !state.timeline || count > limit;
 }

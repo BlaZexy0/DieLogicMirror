@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Werkbank · 3D-Studio · DieLogic</title>
-<meta name="description" content="Ein Bauteil, alle Schritte: Entformung und Wandstärke analysieren, das Angusssystem ans Bauteil legen, die Füllung abschätzen, Überläufe und Temperierkanäle setzen — und die Zahlen daraus direkt in die gießtechnische Auslegung übernehmen.">
+<meta name="description" content="Ein Bauteil, alle Schritte: Entformung und Wandstärke analysieren, das Angusssystem ans Bauteil legen, die Füllung abschätzen, Überläufe und Temperierkanäle setzen, und die Zahlen daraus direkt in die gießtechnische Auslegung übernehmen.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -32,7 +32,7 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Werkbank</h1>
-    <p class="subtitle" id="wb-subtitle">Ein Bauteil, alle Schritte: Analyse, Anguss, Füllung, Überläufe, Temperierung, Auslegung — in einem Viewport.</p>
+    <p class="subtitle" id="wb-subtitle">Ein Bauteil, alle Schritte: Analyse, Anguss, Füllung, Überläufe, Temperierung, Auslegung, in einem Viewport.</p>
   </div>
 </section>
 
@@ -134,13 +134,13 @@
           <span class="val" id="bt-die-dist-val"></span>
         </div>
         <div class="row">
-          <span title="Ein Rand entlang der Trennlinie, in die Form hinein gezogen — die Trennfläche in Andeutung.">Rand</span>
+          <span title="Ein Rand entlang der Trennlinie, in die Form hinein gezogen: die Trennfläche in Andeutung.">Rand</span>
           <input type="range" id="bt-die-skirt" min="0" max="500" step="1" value="8">
           <span class="val" id="bt-die-skirt-val"></span>
         </div>
         <label class="inline"><input type="checkbox" id="bt-die-part" checked> Bauteil durchscheinend dazwischen</label>
         <div class="row">
-        <span title="Von der Trennebene aus in eine Hälfte sehen — die Seite, auf der das Bauteil war. Was jenseits der Trennebene liegt, wird dabei weggeschnitten.">Blick</span>
+        <span title="Von der Trennebene aus in eine Hälfte sehen: die Seite, auf der das Bauteil war. Was jenseits der Trennebene liegt, wird dabei weggeschnitten.">Blick</span>
         <div class="seg" id="bt-die-look-seg">
           <button type="button" data-value="frei" class="active" title="Alle Formteile, frei drehbar">Alle</button>
           <button type="button" data-value="mov" title="In die Kavität der beweglichen Hälfte">Bewegliche</button>
@@ -150,7 +150,7 @@
       </div>
       <div class="hint">Die Werkbank rechnet im Bauteilsystem: Trennebene z = 0, die Form öffnet nach +z.
         Die Entformungsanalyse prüft trotzdem alle drei Achsen und sagt, welche die
-        kleinste Schieber- und Hinterschnittfläche hat — weicht sie von Z ab, liegt das
+        kleinste Schieber- und Hinterschnittfläche hat. Weicht sie von Z ab, liegt das
         Teil für die übrigen Schritte falsch herum.</div>
 
       <h2>Wandstärke</h2>
@@ -187,7 +187,7 @@
           <span class="val" id="bt-slice-pos-val"></span>
         </div>
       </div>
-      <div class="hint">Jede Marke ist die größte Kugel, die an dieser Stelle ins Bauteil passt — ihr
+      <div class="hint">Jede Marke ist die größte Kugel, die an dieser Stelle ins Bauteil passt: ihr
         Durchmesser ist die Wandstärke. Dort erstarrt das Teil zuletzt; bis dorthin muss der
         Nachdruck reichen. Im Schnitt ist innen die Wandstärke gefärbt (dick = rot).</div>
 
@@ -229,7 +229,7 @@
         <span class="val">mm</span>
       </div>
       <div class="row">
-        <span title="Höhe aller Anschnitte — die dünnste Stelle des ganzen Systems. Gilt für jeden Anschnitt ohne eigene Höhe.">Anschnitthöhe</span>
+        <span title="Höhe aller Anschnitte: die dünnste Stelle des ganzen Systems. Gilt für jeden Anschnitt ohne eigene Höhe.">Anschnitthöhe</span>
         <input type="text" id="an-gate-h" inputmode="decimal" value="2.2" spellcheck="false">
         <span class="val">mm</span>
       </div>
@@ -261,11 +261,11 @@
         <select id="an-alloy"></select>
       </div>
       <div class="row">
-        <span title="Gussvolumen einschließlich Überläufen — das, was durch die Anschnitte muss.">Gussvolumen</span>
+        <span title="Gussvolumen einschließlich Überläufen: das, was durch die Anschnitte muss.">Gussvolumen</span>
         <input type="text" id="an-vol" inputmode="decimal" value="420" spellcheck="false">
         <span class="val">cm³</span>
       </div>
-      <label class="inline" title="Bauteil plus die Überläufe aus Schritt 4 — sobald sich dort etwas ändert, zieht das Volumen nach."><input type="checkbox" id="an-vol-auto" checked> aus Bauteil und Überläufen</label>
+      <label class="inline" title="Bauteil plus die Überläufe aus Schritt 4. Sobald sich dort etwas ändert, zieht das Volumen nach."><input type="checkbox" id="an-vol-auto" checked> aus Bauteil und Überläufen</label>
       <div class="row">
         <span>Füllzeit</span>
         <input type="text" id="an-tfill" inputmode="decimal" value="45" spellcheck="false">
@@ -281,14 +281,14 @@
         <input type="range" id="an-cbranch" min="10" max="120" step="5" value="50">
         <span class="val" id="an-cbranch-val"></span>
       </div>
-      <label class="inline" title="Die Ankunft der Schmelze an jedem Anschnitt nach der DieLogic-Schusskurve (López-Anfahrt bis v_krit, Plateau bis Kammer voll, Rampe auf das v₂ der NADCA-Füllzeit) — erzeugt für dieses Modell mit Maschine, Kammer und Legierung aus Schritt 6. Ohne Häkchen: ein konstanter Strom aus Gussvolumen und Füllzeit."><input type="checkbox" id="an-shot-time" checked> Ankunft nach der DieLogic-Schusskurve</label>
+      <label class="inline" title="Die Ankunft der Schmelze an jedem Anschnitt nach der DieLogic-Schusskurve (López-Anfahrt bis v_krit, Plateau bis Kammer voll, Rampe auf das v₂ der NADCA-Füllzeit), erzeugt für dieses Modell mit Maschine, Kammer und Legierung aus Schritt 6. Ohne Häkchen: ein konstanter Strom aus Gussvolumen und Füllzeit."><input type="checkbox" id="an-shot-time" checked> Ankunft nach der DieLogic-Schusskurve</label>
       <div class="facts" id="an-shot-facts"></div>
       <div class="warn-line" id="an-shot-warn"></div>
-      <button type="button" class="btn btn-outline block-btn" id="an-from-design" title="Legierung nach der Dichte, Füllzeit aus der Schusskurve, Zielgeschwindigkeit aus der Mitte des Zielbands — alles aus Schritt 6.">Prozess aus der Auslegung</button>
+      <button type="button" class="btn btn-outline block-btn" id="an-from-design" title="Legierung nach der Dichte, Füllzeit aus der Schusskurve, Zielgeschwindigkeit aus der Mitte des Zielbands, alles aus Schritt 6.">Prozess aus der Auslegung</button>
       <div class="hint">Lauflänge, Angussvolumen, Volumenstrom, Druckbedarf und die Ankunft der Schmelze
         stehen im <b>Flussschema</b> (Knopf rechts unten im Viewport). Mit der Schusskurve zählt
         die Ankunft ab Kolbenstart: erst die langsame erste Phase bis „Kammer voll", dann füllt
-        sich der Anguss in der Rampe der zweiten Phase — nicht mit dem mittleren Strom. Die
+        sich der Anguss in der Rampe der zweiten Phase, nicht mit dem mittleren Strom. Die
         Füllung (Schritt 3) lässt jeden Anschnitt zu seiner Zeit öffnen.</div>
 
       <h2>Darstellung</h2>
@@ -314,7 +314,7 @@
         <button type="button" class="btn btn-outline" id="an-json-save">JSON speichern</button>
       </div>
       <button type="button" class="btn btn-outline block-btn" id="an-stl-save">Als STL speichern</button>
-      <div class="hint"><b>JSON</b> ist der Graph (dieselbe Datei wie im Angussdesigner — dort liegt die
+      <div class="hint"><b>JSON</b> ist der Graph (dieselbe Datei wie im Angussdesigner: dort liegt die
         Trennebene bei y = 0, hier bei z = 0; die Datei trägt die Achse mit). <b>STL</b> sind
         die Kanäle als Schläuche plus Pressrest.</div>
 
@@ -329,7 +329,7 @@
       <div class="warn-line" id="fu-inlet-warn"></div>
       <div class="hint">Die Anschnitte kommen aus dem Angusssystem: Ort und Richtung der Mündung,
         Breite und Höhe, der Anteil am Strom aus der Strömungsrechnung. Ein Anschnitt mit ⚠
-        trifft kaum eine Rasterzelle — im Schritt Anguss den Pfeil des Anschnitts anklicken und
+        trifft kaum eine Rasterzelle: im Schritt Anguss den Pfeil des Anschnitts anklicken und
         die Mündung ans Bauteil setzen.</div>
 
       <h2>Raster</h2>
@@ -348,7 +348,7 @@
       <div class="hint">Der <b>Füllgrad</b> einer Stelle ist der Anteil des Volumens, der voll ist, wenn die
         Front sie erreicht. Die <b>Zeit</b> dazu kommt von der DieLogic-Schusskurve der Auslegung:
         jeder Anschnitt öffnet, wenn ihn die Schmelze im Anguss erreicht (Schritt 2), und bis
-        dahin füllen nur die früheren — mit ihrem Anteil am Kolbenstrom. Wo die Front zuletzt
+        dahin füllen nur die früheren, mit ihrem Anteil am Kolbenstrom. Wo die Front zuletzt
         ankommt, sammelt sich die Luft: dort gehören die Überläufe hin; die zuletzt gefüllten
         Stellen bleiben im nächsten Schritt als Marken stehen.</div>
 
@@ -359,7 +359,7 @@
         <button type="button" data-value="grau" title="Nur das Bauteil und die Anschnitte">Bauteil</button>
       </div>
       <div class="row disabled" id="fu-q-row">
-        <span title="Bis zu welchem Füllgrad gezeigt wird — die Front wandert mit dem Regler.">Füllgrad</span>
+        <span title="Bis zu welchem Füllgrad gezeigt wird. Die Front wandert mit dem Regler.">Füllgrad</span>
         <input type="range" id="fu-q" min="0" max="100" step="1" value="100">
         <span class="val" id="fu-q-val"></span>
       </div>
@@ -384,9 +384,9 @@
       <h2>Volumen</h2>
       <div class="facts" id="ue-plan-facts"></div>
       <div class="hint">Wo die Schmelze zuletzt ankommt, muss die Luft hinaus: dort sitzen die Überläufe.
-        Was sie fassen, gehört zum Schussgewicht — <b>Gesamt</b> ist das Gussvolumen, das der
+        Was sie fassen, gehört zum Schussgewicht. <b>Gesamt</b> ist das Gussvolumen, das der
         Anguss unter „Prozess" bekommt und die Auslegung als Überlaufgewicht.</div>
-      <label class="inline" title="Die zuletzt gefüllten Stellen aus Schritt 3 — die Kandidaten für Überläufe."><input type="checkbox" id="ue-show-spots" checked> Zuletzt gefüllte Stellen zeigen</label>
+      <label class="inline" title="Die zuletzt gefüllten Stellen aus Schritt 3: die Kandidaten für Überläufe."><input type="checkbox" id="ue-show-spots" checked> Zuletzt gefüllte Stellen zeigen</label>
       <div class="warn-line" id="ue-spots-note"></div>
 
       <h2>Darstellung</h2>
@@ -403,7 +403,7 @@
         <button type="button" class="btn btn-outline" id="ue-json-save">JSON speichern</button>
       </div>
       <button type="button" class="btn btn-outline block-btn" id="ue-stl-save">Als STL speichern</button>
-      <div class="hint"><b>JSON</b> ist der Plan selbst — Orte, Richtungen, Maße (dieselbe Datei wie im
+      <div class="hint"><b>JSON</b> ist der Plan selbst: Orte, Richtungen, Maße (dieselbe Datei wie im
         Überlaufdesigner). <b>STL</b> sind die Körper: je Element Steg, Bohne und Kanal.</div>
     </section>
 
@@ -411,13 +411,13 @@
     <section class="wb-stage hidden" id="stage-temperier">
       <h2>Abstandsfläche</h2>
       <div class="row">
-        <span title="Abstand der Fläche zur Kavität — dort sitzen die Spitzen der Kühlstiche und die Achsen der Kanäle.">Abstand</span>
+        <span title="Abstand der Fläche zur Kavität: dort sitzen die Spitzen der Kühlstiche und die Achsen der Kanäle.">Abstand</span>
         <input type="range" id="te-dist" min="5" max="60" step="1" value="20">
         <span class="val" id="te-dist-val"></span>
       </div>
       <label class="inline"><input type="checkbox" id="te-shell-on" checked> Abstandsfläche zeigen</label>
       <label class="inline" title="Durchscheinend sieht man das Bauteil in der Fläche; deckend zeigt ihre Form."><input type="checkbox" id="te-shell-clear" checked> Durchscheinend</label>
-      <div class="hint" id="te-shell-note">Noch keine Fläche — sie entsteht aus dem Abstandsfeld des Bauteils.</div>
+      <div class="hint" id="te-shell-note">Noch keine Fläche: sie entsteht aus dem Abstandsfeld des Bauteils.</div>
 
       <h2>Kühlstiche</h2>
       <div class="row">
@@ -494,17 +494,17 @@
       <label class="inline" title="Sobald sich Bauteil, Anguss oder Überläufe ändern, werden die angehakten Werte neu übernommen."><input type="checkbox" id="au-auto"> automatisch nachführen</label>
       <button type="button" class="btn btn-primary block-btn" id="au-apply">In die Auslegung übernehmen</button>
       <div class="hint">Massen aus Volumen × Dichte bei Solidus (Dichte fest, um das Schwindmaß
-        verkleinert — so rechnet auch das Dashboard die Kavität). Die Sprengfläche ist die
+        verkleinert; so rechnet auch das Dashboard die Kavität). Die Sprengfläche ist die
         Projektion von Bauteil, Anguss, Pressrest und Überläufen auf die Trennebene, als Vereinigung
-        gerastert. Die Eingaben unten sind der Auslegungsabschnitt des aktuellen Projekts —
+        gerastert. Die Eingaben unten sind der Auslegungsabschnitt des aktuellen Projekts,
         dieselben wie im Dashboard.</div>
       <div class="warn-line" id="au-warn"></div>
 
       <h2>Presets</h2>
       <div class="au-fields">
-        <div class="field"><label>Maschine</label><select id="machineSel"><option value="">— manuell —</option></select></div>
-        <div class="field"><label>Legierung</label><select id="alloySel"><option value="">— manuell —</option></select></div>
-        <div class="field"><label>Bauteiltyp</label><select id="partSel"><option value="">— manuell —</option></select></div>
+        <div class="field"><label>Maschine</label><select id="machineSel"><option value="">manuell</option></select></div>
+        <div class="field"><label>Legierung</label><select id="alloySel"><option value="">manuell</option></select></div>
+        <div class="field"><label>Bauteiltyp</label><select id="partSel"><option value="">manuell</option></select></div>
       </div>
 
       <h2>Schusskurve</h2>
@@ -542,7 +542,7 @@
         </div>
         <div id="an-bisc-block">
           <div class="row">
-            <span title="Durchmesser des Pressrests — also der Füllkammer.">Durchmesser</span>
+            <span title="Durchmesser des Pressrests, also der Füllkammer.">Durchmesser</span>
             <input type="text" id="an-bisc-d" inputmode="decimal" value="90" spellcheck="false">
             <span class="val">mm</span>
           </div>
@@ -580,7 +580,7 @@
             <span class="val" id="an-sel-roll-val"></span>
           </div>
           <div class="row">
-            <span title="Arbeitsebene quer zur Laufrichtung kippen — eine Stufe im Verteiler.">Ebene quer</span>
+            <span title="Arbeitsebene quer zur Laufrichtung kippen: eine Stufe im Verteiler.">Ebene quer</span>
             <input type="range" id="an-sel-pitch" min="-60" max="60" step="1" value="0">
             <span class="val" id="an-sel-pitch-val"></span>
           </div>

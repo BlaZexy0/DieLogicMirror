@@ -186,7 +186,7 @@ export function mountAssemblySidebar(el, asm, {
       if (!mine.length) {
         const empty = document.createElement('div');
         empty.className = 'comp-empty';
-        empty.textContent = 'keine Teile — über ⋯ laden oder ein Teil hierher verschieben';
+        empty.textContent = 'keine Teile: über ⋯ laden oder ein Teil hierher verschieben';
         body.appendChild(empty);
       }
 

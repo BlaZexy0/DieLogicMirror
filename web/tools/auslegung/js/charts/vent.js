@@ -33,7 +33,7 @@ export default {
   mathHTML() {
     return `
 <h4>Entlüftungsgeschwindigkeit</h4>
-<p class="math-note">Bevor die Schmelze kommt, muss die Luft raus — und sie hat nur die Entlüftungskanäle.
+<p class="math-note">Bevor die Schmelze kommt, muss die Luft raus, und sie hat nur die Entlüftungskanäle.
 Deren Fläche wirkt wie eine Düse für die Luft: die Kontinuität übersetzt die Kolbengeschwindigkeit mit dem
 Verhältnis A<sub>K</sub>/A<sub>ent</sub> in die Luftgeschwindigkeit. Wird sie zu hoch (Richtwert
 v<sub>luft,max</sub>, deutlich unter der Schallgrenze), drosselt der Kanal, die Luft staut sich vor der
