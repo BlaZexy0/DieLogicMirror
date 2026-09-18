@@ -248,7 +248,9 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  font-family: -apple-system,'Inter',BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-family: 'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  -webkit-font-smoothing: antialiased;
+  box-shadow: 0 1px 0 rgba(255,255,255,.06), 0 8px 24px -12px rgba(0,20,27,.5);
 }
 .dl-nav-logo {
   display: flex;
@@ -281,41 +283,53 @@
 }
 .dl-nav-links a {
   color: ${C.ondark};
-  font-size: 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 500;
   padding: 0 0.9rem;
   text-decoration: none;
   line-height: 56px;
   transition: color 0.15s;
   display: inline-block;
   white-space: nowrap;
+  position: relative;
 }
 .dl-nav-links a:hover { color: white; }
-.dl-nav-links > li > a.active {
-  color: white;
-  border-bottom: 2px solid ${C.primary};
+/* Aktiver Reiter: kurzer, runder Strich unter dem Wort statt einer Linie
+   über die ganze Reiterbreite. */
+.dl-nav-links > li > a.active,
+.dl-nav-group > .dl-nav-group-label.active { color: white; }
+.dl-nav-links > li > a.active::after,
+.dl-nav-group > .dl-nav-group-label.active::after {
+  content: '';
+  position: absolute;
+  left: 0.9rem; right: 0.9rem; bottom: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: ${C.primaryLight};
 }
 .dl-nav-cta { display: flex; gap: 0.5rem; margin-left: 1.5rem; }
 .dl-nav-cta a {
   display: inline-flex;
   align-items: center;
-  padding: 0.3rem 0.7rem;
-  border-radius: 8px;
-  font-size: 0.78rem;
+  padding: 0.42rem 0.95rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
   font-weight: 600;
   text-decoration: none;
   background: ${C.primary};
   color: white;
-  transition: background 0.15s;
+  transition: background 0.15s, box-shadow 0.15s;
   white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
 }
-.dl-nav-cta a:hover { background: ${C.primary2}; }
+.dl-nav-cta a:hover { background: ${C.primary2}; box-shadow: 0 4px 14px -4px rgba(0,140,130,.7), inset 0 1px 0 rgba(255,255,255,.14); }
 
 .dl-nav-group { position: relative; display: inline-block; }
 .dl-nav-group > .dl-nav-group-label {
   color: ${C.ondark};
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   font-family: inherit;
-  font-weight: 400;
+  font-weight: 500;
   padding: 0 0.9rem;
   line-height: 56px;
   cursor: pointer;
@@ -323,6 +337,7 @@
   transition: color 0.15s;
   background: none;
   border: 0;
+  position: relative;
 }
 .dl-nav-group:hover > .dl-nav-group-label,
 .dl-nav-group.open > .dl-nav-group-label,
@@ -332,15 +347,15 @@
   top: 56px;
   left: 0;
   background: ${C.dark2};
-  border: 1px solid ${C.dark3};
-  border-radius: 6px;
-  padding: 0.4rem 0;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 0.45rem;
   min-width: 280px;
   max-height: min(60vh, 520px);
   overflow-y: auto;
   display: none;
   z-index: 200;
-  box-shadow: 0 8px 24px rgba(0,20,27,.35);
+  box-shadow: 0 16px 40px -8px rgba(0,20,27,.55), 0 0 0 1px rgba(0,0,0,.2);
 }
 /* Offen ist ein Menü genau dann, wenn es .open trägt — Maus, Klick,
    Touch und Tastatur setzen die Klasse in wireDropdowns(), nicht :hover.
@@ -360,27 +375,28 @@
 }
 .dl-nav-dropdown a {
   display: block;
-  padding: 0.45rem 1rem;
-  font-size: 0.82rem;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.84rem;
   line-height: 1.4;
   color: ${C.ondark};
   text-decoration: none;
+  border-radius: 8px;
 }
-.dl-nav-dropdown a:hover { color: white; background: rgba(255,255,255,.05); }
+.dl-nav-dropdown a:hover { color: white; background: rgba(255,255,255,.07); }
 .dl-nav-dropdown a.active {
   color: white;
-  border-left: 2px solid ${C.primary};
-  padding-left: calc(1rem - 2px);
+  background: rgba(0,140,130,.18);
 }
 
 .dl-footer {
   background: ${C.dark};
   color: ${C.ondark};
-  padding: 2.5rem 2rem;
+  padding: 3.5rem 2rem 2rem;
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 2rem;
-  font-family: -apple-system,'Inter',BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-family: 'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 .dl-footer-logo {
   color: white;
@@ -496,10 +512,11 @@
   text-align: left;
 }
 .dl-nav--compact .dl-nav-links > li > a.active {
-  border-bottom: 0;
   border-left: 3px solid ${C.primary};
   padding-left: calc(1.25rem - 3px);
 }
+.dl-nav--compact .dl-nav-links > li > a.active::after,
+.dl-nav--compact .dl-nav-group > .dl-nav-group-label.active::after { content: none; }
 .dl-nav--compact .dl-nav-group { display: block; position: static; }
 .dl-nav--compact .dl-nav-group > .dl-nav-group-label { justify-content: space-between; }
 .dl-nav--compact .dl-nav-group > .dl-nav-group-label::after {
@@ -538,6 +555,8 @@
   font-size: 0.88rem;
 }
 .dl-nav--compact .dl-nav-dropdown a.active {
+  background: none;
+  border-radius: 0;
   border-left: 3px solid ${C.primary};
   padding-left: calc(2.25rem - 3px);
 }
@@ -581,10 +600,6 @@
 /* ── Menü mit Spalten („Auslegung"): Werkzeuge links, die Diagramme
    rechts in zwei Spalten. Es hängt mit der rechten Kante am Reiter,
    weil es breiter ist als der Platz rechts davon. ─────────────── */
-.dl-nav-group > .dl-nav-group-label.active {
-  color: white;
-  border-bottom: 2px solid ${C.primary};
-}
 .dl-nav-group.open .dl-nav-dropdown--cols { display: flex; }
 .dl-nav-dropdown--cols {
   align-items: flex-start;
@@ -593,17 +608,17 @@
   min-width: 0;
   max-height: none;
   overflow: visible;
-  padding: 0.5rem 0.4rem 0.6rem;
+  padding: 0.6rem 0.5rem 0.7rem;
 }
 .dl-nav-col { padding: 0 0.3rem; min-width: 200px; }
-.dl-nav-col + .dl-nav-col { border-left: 1px solid ${C.dark3}; }
+.dl-nav-col + .dl-nav-col { border-left: 1px solid rgba(255,255,255,.08); }
 .dl-nav-col-title {
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: ${C.ondark2};
-  padding: 0.3rem 1rem 0.4rem;
+  padding: 0.3rem 0.8rem 0.45rem;
   column-span: all;
 }
 .dl-nav-col--two { column-count: 2; column-gap: 0; }
@@ -613,7 +628,7 @@
 .dl-nav--compact .dl-nav-col { padding: 0; min-width: 0; column-count: 1; }
 .dl-nav--compact .dl-nav-col + .dl-nav-col { border-left: 0; margin-top: 0.25rem; }
 .dl-nav--compact .dl-nav-col-title { padding: 0.45rem 1.25rem 0.2rem 2.25rem; }
-.dl-nav--compact .dl-nav-group > .dl-nav-group-label.active { border-bottom: 0; }
+.dl-nav--compact .dl-nav-dropdown a { border-radius: 0; }
 
 @media (max-width: 960px) {
   .dl-nav { padding: 0 1rem; gap: 1rem; }

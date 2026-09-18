@@ -9,7 +9,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--dark);
-  font: 14px Arial, sans-serif;
+  font: 14px/1.45 var(--sans);
   overflow: hidden;
 }
 

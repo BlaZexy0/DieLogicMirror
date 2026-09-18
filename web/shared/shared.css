@@ -50,9 +50,35 @@
   --cat-slate: #557786;
   --cat-orange: #e07b39;
   --mono: 'JetBrains Mono','Fira Code','Courier New',monospace;
-  --sans: -apple-system,'Inter',BlinkMacSystemFont,'Segoe UI',sans-serif;
-  --radius: 8px;
-  --shadow: 0 2px 12px rgba(0,39,51,.08);
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Rundungen: Karten und Flächen (--radius), Bedienelemente (--radius-sm),
+     Pillen (--radius-pill). Schatten in zwei Lagen: ein feiner Kontaktschatten
+     und ein weiter, weicher, der die Karte vom Grund abhebt. */
+  --radius: 14px;
+  --radius-sm: 9px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgba(0,39,51,.05), 0 8px 24px -8px rgba(0,39,51,.12);
+  --shadow-lg: 0 2px 4px rgba(0,39,51,.05), 0 20px 48px -16px rgba(0,39,51,.22);
+  --ring: 0 0 0 3px rgba(0,140,130,.28);
+  --ease: cubic-bezier(.2,.7,.2,1);
+}
+
+/* ── Schrift: Inter, selbst gehostet (SIL OFL, shared/vendor/inter) ── */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/shared/vendor/inter/inter-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/shared/vendor/inter/inter-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 /* ── Reset ─────────────────────────────────────────────────── */
@@ -63,26 +89,51 @@
 }
 
 /* ── Basis ─────────────────────────────────────────────────── */
+html { -webkit-text-size-adjust: 100%; }
 body {
   font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
   background: var(--bg);
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* Kurze Seiten: der Footer bleibt unten, nicht in der Seitenmitte. */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
+body > * { flex: none; }
+body > .dl-footer { margin-top: auto; }
+/* Zahlen laufen in Tabellen und Kennwerten untereinander sauber, wenn alle
+   Ziffern gleich breit sind. */
+table, .kpi, .num, [data-num] { font-variant-numeric: tabular-nums; }
+::selection { background: rgba(0,140,130,.22); }
+:focus-visible { outline: none; box-shadow: var(--ring); border-radius: 4px; }
 
 /* ── Buttons ───────────────────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.45rem 1rem;
-  border-radius: var(--radius);
-  font-size: 0.82rem;
-  font-weight: 500;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 40px;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
   cursor: pointer;
-  transition: all 0.15s;
-  border: none;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease), box-shadow 0.15s var(--ease), transform 0.15s var(--ease);
+  border: 1px solid transparent;
   text-decoration: none;
+  white-space: nowrap;
 }
+.btn:focus-visible { box-shadow: var(--ring); border-radius: var(--radius-sm); }
+.btn:active { transform: translateY(1px); }
 
 /* Randlose Schaltfläche. --ondark ist auf dunklem Grund richtig (7,34:1),
    auf hellem aber nicht lesbar: gemessen 1,968:1 gegen --bg und 2,14:1
@@ -92,30 +143,34 @@ body {
    Ton, damit die Optik der Startseite unverändert bleibt. */
 .btn-ghost {
   background: transparent;
-  border: 1px solid var(--dark3);
+  border-color: var(--border);
   color: inherit;
 }
 
 /* Ausdrücklich auf dunklem Grund — dort ist --ondark der gewollte Ton. */
-.btn-ghost-ondark { color: var(--ondark); }
+.btn-ghost-ondark { color: var(--ondark); border-color: rgba(255,255,255,.18); }
+.btn-ghost-ondark:hover { background: rgba(255,255,255,.06); color: white; border-color: rgba(255,255,255,.35); }
 
 .btn-ghost:hover {
   border-color: var(--primary);
   color: var(--primary);
+  background: rgba(0,140,130,.06);
 }
 
 .btn-primary {
   background: var(--primary);
   color: white;
+  box-shadow: 0 1px 2px rgba(0,39,51,.12), inset 0 1px 0 rgba(255,255,255,.12);
 }
 
 .btn-primary:hover {
   background: var(--primary2);
+  box-shadow: 0 4px 14px -4px rgba(0,140,130,.55), inset 0 1px 0 rgba(255,255,255,.12);
 }
 
 .btn-outline {
   background: transparent;
-  border: 1px solid var(--primary);
+  border-color: var(--primary);
   color: var(--primary);
 }
 
@@ -124,24 +179,44 @@ body {
   color: white;
 }
 
-.btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
-.btn-lg { padding: 0.65rem 1.5rem; font-size: 0.95rem; }
+.btn-sm { min-height: 32px; padding: 0.3rem 0.8rem; font-size: 0.8rem; border-radius: 8px; }
+.btn-lg { min-height: 48px; padding: 0.7rem 1.6rem; font-size: 1rem; border-radius: var(--radius-sm); }
+
+/* ── Formularfelder (Basis; Werkzeugseiten verfeinern in ihrem CSS) ── */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+select, textarea {
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+input::placeholder, textarea::placeholder { color: var(--muted-light); }
 
 /* ── Inhaltsseiten (Impressum, Datenschutz, AGB, Widerruf, Kontakt) ── */
 .page-hero {
-  background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
-  padding: 3rem 2rem;
+  background:
+    radial-gradient(900px 420px at 85% -20%, rgba(0,140,130,.28), transparent 60%),
+    linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
+  padding: 3.5rem 2rem 3rem;
   color: white;
 }
 .page-hero .inner { max-width: 800px; margin: 0 auto; }
-.page-hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
-.page-hero .subtitle { color: var(--ondark); font-size: 0.95rem; line-height: 1.6; }
+.page-hero h1 { font-size: clamp(1.7rem, 3vw, 2.3rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 0.6rem; }
+.page-hero .subtitle { color: var(--ondark); font-size: 1rem; line-height: 1.6; max-width: 62ch; }
 /* Kompakt (Werkzeugseiten hinter dem Login — gleiches Maß wie der
    Dashboard-Kopf): 82px hoch, Titel + eine Zeile, keine Tags. */
 .page-hero.compact { padding: 14px 28px; min-height: 82px; display: flex; align-items: center; }
 .page-hero.compact .inner { max-width: none; margin: 0; min-width: 0; }
 .page-hero.compact h1 { font-size: 1.35rem; margin-bottom: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.page-hero.compact .subtitle { font-size: 0.85rem; line-height: 1.4; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.page-hero.compact .subtitle { font-size: 0.85rem; line-height: 1.4; margin-top: 2px; max-width: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .page-hero.compact .hero-tags { display: none; }
 
 .page-content {
@@ -150,11 +225,12 @@ body {
   padding: 2.5rem 2rem 4rem;
 }
 .page-content h2 {
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   font-weight: 700;
-  margin: 2rem 0 0.7rem;
-  padding-bottom: 0.4rem;
-  border-bottom: 2px solid var(--border);
+  letter-spacing: -0.015em;
+  margin: 2.2rem 0 0.7rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--border);
 }
 .page-content h2:first-child { margin-top: 0; }
 .page-content h3 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; }
@@ -187,14 +263,26 @@ body {
 .breadcrumb a { color: var(--primary); text-decoration: none; }
 .breadcrumb span { margin: 0 0.35rem; color: var(--muted); }
 
-.hero-tags { display: flex; gap: 0.5rem; margin-top: 1.2rem; flex-wrap: wrap; }
+.hero-tags { display: flex; gap: 0.5rem; margin-top: 1.3rem; flex-wrap: wrap; }
 .hero-tag {
-  background: rgba(255,255,255,.08);
+  background: rgba(255,255,255,.07);
   color: var(--ondark);
+  font-size: 0.74rem;
+  font-weight: 500;
+  padding: 0.25rem 0.7rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(6px);
+}
+/* Kleine Überzeile über Abschnittstiteln (Landingpage, Konto) */
+.eyebrow {
+  display: inline-block;
   font-size: 0.72rem;
-  padding: 0.2rem 0.6rem;
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,.1);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 0.6rem;
 }
 
 .content-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem; }
