@@ -196,6 +196,27 @@ test('Start: erst holen, dann senden — eine Werkzeugseite überschreibt keinen
     'pull() muss vor dem ersten Schreibzugriff kommen: ' + order.join(' | '));
 });
 
+test('Leerer Browser, Projekt auf dem Server: Seite baut neu auf, statt ihren Default-Stand darüberzuschieben', async () => {
+  /* Der Fall „Kollegin öffnet die Seite auf einem anderen Rechner": der
+     Cache ist leer, der Server hat den Arbeitsstand. Das erste geholte
+     Projekt wird beim Ablegen still zum aktuellen — die Seite hat ihren
+     Zustand aber schon aus Defaults aufgebaut. Ohne Reload schrieb sie ihn
+     beim nächsten Rendern in den Abschnitt und pushte ihn mit passendem
+     base_draft_at: der Server nahm die Defaults an, die Arbeit war weg. */
+  const { P, srv, nav } = boot();
+  srv.projects.srv1 = { id: 'srv1', name: 'Ölwanne', description: '', customer: '', part_no: '', rev: 0,
+    created_at: '2026-08-31T00:00:01.000000+00:00', updated_at: '2026-08-31T00:00:05.000000+00:00',
+    draft_at: '2026-08-31T00:00:05.000000+00:00', data: { design: { values: { pAccOp: 197 } } } };
+  await tick(0);
+  assert.equal(nav.reloads, 1, 'die Seite muss mit dem Serverstand neu aufbauen');
+  assert.equal(P.current().remote.id, 'srv1');
+  assert.equal(P.getSection('design').values.pAccOp, 197);
+  /* Was die Seite vor dem Reload noch tut (Rendern, Default-Zustand
+     schreiben), darf nicht als Änderung zum Server gehen. */
+  assert.equal(srv.calls(/^PUT .*\/draft$/).length, 0, 'kein Draft-Push beim ersten Öffnen: ' + srv.log.join(' | '));
+  assert.equal(srv.projects.srv1.data.design.values.pAccOp, 197);
+});
+
 test('Autosave läuft nicht endlos — ein Push je Änderung (C-2)', async () => {
   const { P, srv } = boot();
   await tick(0);

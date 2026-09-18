@@ -453,32 +453,34 @@
     var remote = await api('GET', '/api/projects');
     var byRemote = {};
     P.list().forEach(function (p) { if (p.remote) byRemote[p.remote.id] = p; });
-    var curId = P.current() ? P.current().id : null, curChanged = false;
     var before = sectionSnapshot();
     for (var i = 0; i < remote.length; i++) {
       var r = remote[i], have = byRemote[r.id];
       if (have && (have.dirty || (have.remote.savedAt && have.remote.savedAt >= r.updated_at))) continue;
       var full = await api('GET', '/api/projects/' + r.id);
-      var doc = Object.assign({ id: have ? have.id : undefined, name: full.name, description: full.description,
+      P.put(Object.assign({ id: have ? have.id : undefined, name: full.name, description: full.description,
         customer: full.customer, partNo: full.part_no, createdAt: full.created_at, updatedAt: full.updated_at,
-        remote: { id: full.id, rev: full.rev, savedAt: full.updated_at, draftAt: full.draft_at }, dirty: false }, full.data || {});
-      var put = P.put(doc, false);
-      if (have && have.id === curId && put) curChanged = true;
+        remote: { id: full.id, rev: full.rev, savedAt: full.updated_at, draftAt: full.draft_at }, dirty: false }, full.data || {}), false);
     }
     /* Organisation ohne Projekt: das erste auf dem Server anlegen. */
     if (!remote.length && !P.list().length) {
       var res = await api('POST', '/api/projects', { name: 'Erstes Projekt', description: 'Angelegt beim ersten Öffnen der Werkzeuge.', data: {} });
       P.put({ name: res.name, description: res.description, remote: { id: res.id, rev: res.rev, savedAt: res.updated_at, draftAt: res.draft_at }, dirty: false }, true);
-      curChanged = true;
     }
-    if (!P.current() && P.list().length) { P.select(P.list()[0].id); curChanged = true; }
+    if (!P.current() && P.list().length) P.select(P.list()[0].id);
     /* Der localStorage trägt jetzt den fremden Stand — die laufende Seite hält
        aber noch ihre Kopie im Speicher, und ein Tastendruck würde sie zurück
        auf den Server schieben. Deshalb neu aufbauen, sobald sich die Abschnitte
        des aktuellen Projekts wirklich geändert haben. Der Inhaltsvergleich
        schließt einen Reload-Kreisel aus (danach ist lokal == Server) und
-       ersetzt die alte Sperre, die genau einmal je Sitzung griff. */
-    if (curChanged && sectionSnapshot() !== before) { location.reload(); return; }
+       ersetzt die alte Sperre, die genau einmal je Sitzung griff.
+       Allein der Fingerabdruck entscheidet — nicht, ob ein schon bekanntes
+       Projekt ersetzt wurde: in einem leeren Browser wird das erste vom
+       Server geholte Projekt bereits in P.put() zum aktuellen (save() wählt
+       es, weil keins gewählt war). Ohne Neuaufbau lief die Seite dann mit
+       ihrem Default-Zustand weiter und schob ihn beim nächsten Rendern als
+       Draft über den Stand der Kollegin. */
+    if (sectionSnapshot() !== before) { location.reload(); return; }
     refresh();
   }
 
