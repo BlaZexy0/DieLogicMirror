@@ -350,6 +350,10 @@
     }
     @media (max-width: 480px) {
       .catalog-grid { grid-template-columns: 1fr; }
+      /* Drei kleine Kacheln nebeneinander statt drei hoher untereinander */
+      .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; width: 100%; margin-top: 2.2rem; }
+      .hero-stat { min-width: 0; padding: 0.7rem 0.5rem; font-size: 0.7rem; line-height: 1.25; }
+      .hero-stat strong { font-size: 1.35rem; }
     }
   </style>
 </head>

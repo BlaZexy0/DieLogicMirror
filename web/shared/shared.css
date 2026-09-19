@@ -107,7 +107,12 @@ body {
   display: flex;
   flex-direction: column;
 }
-body > * { flex: none; }
+/* Als Flex-Kinder würden Seiten-Wrapper mit „max-width + margin: auto"
+   nicht mehr auf Fensterbreite gestreckt, sondern auf ihre Inhaltsbreite
+   (auto-Ränder heben das Strecken auf): auf dem Handy wurde die Seite so
+   breit wie ihre breiteste Tabelle. width: 100 % stellt das Blockverhalten
+   wieder her; max-width deckelt, die auto-Ränder zentrieren weiterhin. */
+body > :not(dialog):not(script):not(style) { flex: none; width: 100%; }
 body > .dl-footer { margin-top: auto; }
 /* Zahlen laufen in Tabellen und Kennwerten untereinander sauber, wenn alle
    Ziffern gleich breit sind. */
