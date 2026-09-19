@@ -65,6 +65,20 @@
     .kt-row > .btn { flex: 0 0 auto; }
     .kt-actions { margin-top: 1rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
     .kt-err { color: var(--warn); font-size: .82rem; min-height: 1.2em; margin-top: .5rem; }
+    /* Dialog „Neues Projekt": dieselbe Form wie in der Projektleiste. Ein
+       echtes <dialog> statt window.prompt(): das kann kein Browser wegklicken
+       oder unterdrücken, und es fragt gleich Beschreibung, Kunde und
+       Teilenummer mit ab. */
+    .kt-dialog { border: 0; border-radius: var(--radius); padding: 0; max-width: 32rem; width: calc(100% - 2rem); box-shadow: var(--shadow-lg); color: var(--text); }
+    .kt-dialog::backdrop { background: rgba(0,39,51,.45); }
+    .kt-dialog form { padding: 1.3rem 1.5rem 1.4rem; }
+    .kt-dialog h3 { margin: 0 0 .6rem; font-size: 1.1rem; letter-spacing: -.01em; }
+    .kt-dialog label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted); margin: .7rem 0 .25rem; }
+    .kt-dialog input, .kt-dialog textarea { width: 100%; font: inherit; padding: .5rem .65rem; border: 1px solid var(--border); border-radius: var(--radius-sm); box-sizing: border-box; }
+    .kt-dialog textarea { min-height: 4.5rem; resize: vertical; }
+    .kt-dialog .row { display: flex; gap: .6rem; }
+    .kt-dialog .row > * { flex: 1; }
+    .kt-dialog .actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.1rem; }
     .kt-ok { color: var(--primary); font-size: .82rem; }
     .kt-note { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius); padding: .7rem 1.1rem; margin-bottom: 1.2rem; font-size: .82rem; color: var(--muted); line-height: 1.55; }
     .btn-link { background: none; border: 0; color: var(--primary); font: inherit; font-size: .78rem; font-weight: 600; cursor: pointer; padding: 0; }
@@ -263,6 +277,24 @@
       </div>
       <div class="pj-grid" id="proj-body"><div class="pj-empty">Lade …</div></div>
       <div class="kt-err" id="org-err" style="margin:.4rem 0 0;"></div>
+      <dialog class="kt-dialog" id="org-newdlg">
+        <form method="dialog" id="org-newform">
+          <h3>Neues Projekt</h3>
+          <label for="org-f-name">Projektname</label>
+          <input id="org-f-name" required maxlength="200" placeholder="z. B. DieCastPartA" autocomplete="off">
+          <label for="org-f-desc">Beschreibung</label>
+          <textarea id="org-f-desc" maxlength="5000" placeholder="Bauteil, Legierung, Stückzahl, Stand …"></textarea>
+          <div class="row">
+            <div><label for="org-f-cust">Kunde</label><input id="org-f-cust" maxlength="200"></div>
+            <div><label for="org-f-pno">Teilenummer</label><input id="org-f-pno" maxlength="100"></div>
+          </div>
+          <div class="kt-err" id="org-newerr"></div>
+          <div class="actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="org-newcancel">Abbrechen</button>
+            <button type="submit" class="btn btn-primary btn-sm">Projekt anlegen</button>
+          </div>
+        </form>
+      </dialog>
       <div id="rev-panel" class="rev-panel hidden">
         <div class="head"><h3 id="rev-title">Verlauf</h3><button class="btn-link" id="rev-close">schließen</button></div>
         <ul class="rev-list" id="rev-body"></ul>
@@ -556,9 +588,21 @@
     orgAction(b).catch(function (err) { alert(err.message); });
   });
   $('org-new').addEventListener('click', function () {
-    var name = prompt('Name des neuen Projekts:', 'DieCastPartA');
-    if (!name) return;
-    createOnServer({ name: name.trim() }, {}, false).then(loadProjects, function (err) { $('org-err').textContent = err.message; });
+    var dlg = $('org-newdlg');
+    $('org-f-name').value = ''; $('org-f-desc').value = ''; $('org-f-cust').value = ''; $('org-f-pno').value = '';
+    $('org-newerr').textContent = '';
+    dlg.showModal();
+    $('org-f-name').focus();
+  });
+  $('org-newcancel').addEventListener('click', function () { $('org-newdlg').close(); });
+  $('org-newform').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = $('org-f-name').value.trim();
+    if (!name) { $('org-newerr').textContent = 'Bitte einen Projektnamen angeben.'; return; }
+    var meta = { name: name, description: $('org-f-desc').value.trim(),
+      customer: $('org-f-cust').value.trim(), part_no: $('org-f-pno').value.trim() };
+    createOnServer(meta, {}, false).then(function () { $('org-newdlg').close(); loadProjects(); },
+      function (err) { $('org-newerr').textContent = err.message; });
   });
   $('org-import').addEventListener('click', function () { $('org-file').click(); });
   $('org-file').addEventListener('change', function (e) {
