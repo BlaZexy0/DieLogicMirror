@@ -1,5 +1,5 @@
 /* Wärmebilanz der Zyklusanalyse (zyklus-logic.js) gegen die Zahlenbeispiele
-   der Quellen (docs/heat_flow_hpd_die.md, Abschnitt 21):
+   der Quellen (docs/waermebilanz.md):
    1. [B] 12.4 (S. 705–708): Wärmeeintrag und Verlustterme
    2. computeHeat() auf dem Beispielprojekt, Formabmessungen aus der
       Maschine, Zustands-Sanitisierung */

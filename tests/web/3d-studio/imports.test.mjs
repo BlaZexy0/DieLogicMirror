@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, resolve, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'web', 'tools', '3d-studio');
 
@@ -104,9 +104,9 @@ test('alle Imports der JS-Module lösen auf', () => {
 
 test('alle Imports der HTML-Seiten lösen auf', () => {
   const problems = [];
-  const htmls = [];
-  for (const f of ['index.html', 'form.html', 'entformungsanalyse.html', 'wandstaerke.html',
-    'abstand.html', 'anguss.html', 'ueberlauf.html', 'temperier.html', 'fuellung.html']) htmls.push(join(ROOT, f));
+  /* Alle Seiten des Ordners — eine neue Seite ist damit von selbst dabei. */
+  const htmls = readdirSync(ROOT).filter(f => f.endsWith('.html')).map(f => join(ROOT, f));
+  assert.ok(htmls.length >= 10, 'Seiten gefunden: ' + htmls.length);
   for (const f of htmls) {
     assert.ok(existsSync(f), 'fehlt: ' + f);
     const src = readFileSync(f, 'utf8');
@@ -138,11 +138,9 @@ test('alle Imports der HTML-Seiten lösen auf', () => {
 
 test('jede id, die ein Viewer-Modul anspricht, steht im HTML', () => {
   const pairs = [
-    ['entformungsanalyse.html', [join('js', 'part', 'app.js'), join('js', 'part', 'partsource.js')]],
-    ['wandstaerke.html', [join('js', 'part', 'offsetapp.js'), join('js', 'part', 'partsource.js')]],
-    ['abstand.html', [join('js', 'part', 'distanceapp.js')]],
-    ['form.html', [join('js', 'die.js'), join('js', 'ui', 'sidebar.js')]],
-    ['anguss.html', [join('js', 'runner', 'app.js')]]
+    /* Nur noch der Formaufbau spricht ids an — alle anderen Seiten laufen im
+       gemeinsamen Rahmen und finden ihre Felder über data-ui (nächster Test). */
+    ['form.html', [join('js', 'die.js'), join('js', 'ui', 'sidebar.js')]]
   ];
   const problems = [];
   for (const [html, jsList] of pairs) {
@@ -161,5 +159,69 @@ test('jede id, die ein Viewer-Modul anspricht, steht im HTML', () => {
     for (const id of [...used]) if (/'|\+|\$\{/.test(id)) used.delete(id);
     for (const id of used) if (!ids.has(id)) problems.push(html + ': keine id „' + id + '"');
   }
+  assert.deepEqual(problems, []);
+});
+
+/* Die Werkzeuge des gemeinsamen Rahmens (js/studio/) kennen keine ids: sie
+   finden ihre Felder mit ui('name') = [data-ui="name"] — in ihren eigenen
+   Feldern (js/<werkzeug>/panel.js) oder im Gerüst des Rahmens. Die Felder
+   entstehen aus Bausteinen (rows.js), deshalb werden sie hier GEBAUT und
+   nicht im Quelltext gesucht: geprüft wird, was wirklich auf der Seite
+   landet. */
+test('jedes data-ui, das ein Werkzeug des Rahmens anspricht, steht in seinen Feldern oder im Rahmen', async () => {
+  const namesIn = html => new Set([...String(html).matchAll(/data-ui="([^"]+)"/g)].map(m => m[1]));
+  const frame = new Set();
+  for (const f of [join('js', 'studio', 'shell.js'), join('js', 'ui', 'viewbar.js')]) {
+    const src = readFileSync(join(ROOT, f), 'utf8');
+    for (const n of namesIn(src)) frame.add(n);
+    for (const m of src.matchAll(/setAttribute\('data-ui', '([^']+)'\)/g)) frame.add(m[1]);
+  }
+  assert.ok(frame.has('primary') && frame.has('darstellung'), 'das Gerüst des Rahmens wurde gelesen');
+
+  const tools = readdirSync(join(ROOT, 'js')).filter(d =>
+    existsSync(join(ROOT, 'js', d, 'tool.js')) && existsSync(join(ROOT, 'js', d, 'panel.js')));
+  assert.ok(tools.includes('wandstaerke'), 'Werkzeuge gefunden: ' + tools.join(', '));
+  const problems = [];
+  for (const dir of tools) {
+    const panel = await import(pathToFileURL(join(ROOT, 'js', dir, 'panel.js')));
+    const own = new Set();
+    const take = v => {
+      if (typeof v === 'string') for (const n of namesIn(v)) own.add(n);
+      else if (Array.isArray(v)) v.forEach(take);
+      else if (v && typeof v === 'object') Object.values(v).forEach(take);
+    };
+    Object.values(panel).forEach(take);
+    const src = readFileSync(join(ROOT, 'js', dir, 'tool.js'), 'utf8');
+    const used = new Set();
+    for (const m of src.matchAll(/\bui\('([^']+)'\)/g)) used.add(m[1]);
+    for (const m of src.matchAll(/\[data-ui="([^"]+)"\]/g)) used.add(m[1]);
+    assert.ok(used.size > 0, dir + ': das Werkzeug spricht Felder an');
+    for (const n of used) if (!own.has(n) && !frame.has(n)) problems.push('js/' + dir + '/tool.js: kein data-ui „' + n + '"');
+  }
+
+  /* Die beiden Simulationen teilen sich einen Ordner (js/simulation/): zwei
+     Werkzeuge (anguss.js, kammer.js), ein gemeinsamer Kern (core.js) und
+     ihre Felder in *-panel.js, panel-common.js und table.js. Geprüft wird
+     der Ordner als Ganzes — was einer der Module anspricht, muss in einem
+     davon stehen (als Baustein exportiert oder als Vorlage im Quelltext). */
+  const sim = join(ROOT, 'js', 'simulation');
+  const simFiles = readdirSync(sim).filter(f => f.endsWith('.js'));
+  assert.ok(simFiles.includes('core.js') && simFiles.includes('anguss.js') && simFiles.includes('kammer.js'), 'js/simulation/ gefunden');
+  const simOwn = new Set();
+  const simTake = v => {
+    if (typeof v === 'string') for (const n of namesIn(v)) simOwn.add(n);
+    else if (Array.isArray(v)) v.forEach(simTake);
+    else if (v && typeof v === 'object') Object.values(v).forEach(simTake);
+  };
+  for (const f of simFiles.filter(f => /panel[^/]*\.js$|^table\.js$/.test(f))) Object.values(await import(pathToFileURL(join(sim, f)))).forEach(simTake);
+  for (const f of simFiles) for (const n of namesIn(readFileSync(join(sim, f), 'utf8'))) simOwn.add(n);
+  const simUsed = new Map();
+  for (const f of simFiles) {
+    const src = readFileSync(join(sim, f), 'utf8');
+    for (const m of src.matchAll(/\bui\('([^']+)'\)/g)) simUsed.set(m[1], f);
+    for (const m of src.matchAll(/\[data-ui="([^"]+)"\]/g)) simUsed.set(m[1], f);
+  }
+  assert.ok(simUsed.size > 10, 'die Simulationen sprechen Felder an');
+  for (const [n, f] of simUsed) if (!simOwn.has(n) && !frame.has(n)) problems.push('js/simulation/' + f + ': kein data-ui „' + n + '"');
   assert.deepEqual(problems, []);
 });

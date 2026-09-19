@@ -1,62 +1,50 @@
-/* Zentraler Halter für das Backend-Simulationsergebnis (hpdcsim).
-   Beobachtet den Zustand, holt debounced neu und stößt danach ein
-   Re-Render an — Charts (z. B. die Schusskurve) lesen `sim.data`
-   synchron in ihrem calc(). Ohne erreichbares Backend bleibt
-   `sim.data` null und die Charts zeichnen ohne Simulations-Serie. */
+/* Zentraler Halter für das Ergebnis der Luftsimulation (core/airsim/).
+   Charts (z. B. die Schusskurve) lesen `sim.data` synchron in ihrem calc().
 
-import { state, subscribe, notify } from './state.js';
-import { toSimPayload, fetchSim } from './simapi.js';
+   Die Simulation läuft im Browser und kostet wenige Millisekunden — sie
+   wird deshalb bei jeder Zustandsänderung sofort und synchron gerechnet:
+   kein Entprellen, kein Ladezustand, und `sim.data` gehört immer zur
+   aktuellen Eingabe. Lässt sich die Eingabe nicht simulieren, ist
+   `sim.data` null und `sim.error` die Meldung für den Anwender.
+
+   Reihenfolge: initSim() abonniert den Zustand und muss VOR dem render()
+   der Seite abonnieren (main.js, single.js, Werkbank) — notify() ruft die
+   Abonnenten der Reihe nach, und die Diagramme sollen das frische Ergebnis
+   sehen. */
+
+import { state, subscribe } from './state.js';
+import { simulateAir, SimError } from './airsim/simulate.js';
 
 export const sim = { status: 'idle', data: null, error: null };
 
-const DEBOUNCE_MS = 400;
-const TIMEOUT_MS = 15000;
-let timer = null, ctrl = null, lastKey = '';
+let lastKey = null;
 
 function key() {
   return JSON.stringify([state.values, state.curve]);
 }
 
-function schedule() {
-  if (key() === lastKey) return;   // Ergebnis bzw. laufender Abruf passt schon
-  clearTimeout(timer);
-  timer = setTimeout(run, DEBOUNCE_MS);
-}
-
-async function run() {
-  if (ctrl) ctrl.abort();
-  const mine = ctrl = new AbortController();
-  /* Hängendes Backend: nach TIMEOUT_MS abbrechen — sonst bliebe der
-     Status für immer 'loading'. */
-  const kill = setTimeout(() => mine.abort(), TIMEOUT_MS);
-  lastKey = key();
-  sim.status = 'loading';
-  /* Veraltete Daten dürfen während des Nachladens nicht als aktuell
-     durchgehen: die Diagramme lesen sim.data synchron und hätten sonst die
-     Kurve der VORIGEN Eingabe zu den neuen Zahlen gezeichnet. */
-  sim.data = null;
+export function refreshSim() {
+  const k = key();
+  if (k === lastKey) return;   // Ergebnis passt schon (notify() ohne Änderung an Werten oder Kurve)
+  lastKey = k;
   try {
-    sim.data = await fetchSim(toSimPayload(state.values, state.curve), mine.signal);
+    sim.data = simulateAir(state.values, state.curve);
     sim.error = null;
     sim.status = 'ok';
   } catch (e) {
-    if (mine !== ctrl) return;    // von einem neueren Abruf abgelöst
     sim.data = null;
     sim.status = 'error';
-    sim.error = e.name === 'AbortError' ? 'Zeitüberschreitung (' + TIMEOUT_MS / 1000 + ' s)'
-      : (e instanceof TypeError) ? 'offline' : e.message;
-    /* Ohne das blieb lastKey auf der gescheiterten Eingabe stehen und
-       schedule() sprang nie wieder an: nach EINEM Timeout blieb die
-       Simulation für den Rest der Sitzung stumm, solange der Anwender
-       nicht zufällig etwas anderes eintippte. */
-    lastKey = '';
-  } finally {
-    clearTimeout(kill);
+    if (e instanceof SimError) sim.error = e.message;
+    else {
+      /* Programmfehler in der Simulation: das Dashboard rechnet ohne die
+         Luftdruck-Serie weiter, statt mit dem Rendern aufzuhören. */
+      sim.error = 'interner Fehler (' + e.message + ')';
+      console.error(e);
+    }
   }
-  notify();   // bei Erfolg: lastKey unverändert → schedule() löst nichts aus
 }
 
 export function initSim() {
-  subscribe(schedule);
-  schedule();
+  subscribe(refreshSim);
+  refreshSim();
 }

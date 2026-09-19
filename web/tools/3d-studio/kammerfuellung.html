@@ -4,17 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kammerfüllung · 3D-Studio · DieLogic</title>
-<meta name="description" content="Die Welle in der Füllkammer: liegender Zylinder mit Durchmesser, Länge und Füllgrad, der Kolben fährt die Schusskurve, die Schmelze wird mit Lattice-Boltzmann und freier Oberfläche auf der Grafikkarte gerechnet: Kammer voll, eingeschlossene Luft, der Füllstand zu jeder Zeit.">
+<meta name="description" content="Die Welle in der Füllkammer: liegender Zylinder mit Durchmesser, Länge und Füllgrad, der Kolben fährt die Schusskurve — gerechnet mit dem Gitter (Lattice-Boltzmann mit freier Oberfläche) oder mit Partikeln (SPH), auf der Grafikkarte: Kammer voll gegen die Kurve, eingeschlossene Luft, das Bild zu jeder Zeit.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
 <link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="stylesheet" href="/shared/shared.css">
-<link rel="stylesheet" href="css/viewer.css">
+<link rel="stylesheet" href="css/studio.css">
 <script src="/shared/version.js"></script>
 <script src="/shared/palette.js"></script>
 <script src="/shared/nav.js" data-footer="none"></script>
-<!-- Die Schusskurve der Auslegung: Maschine, Legierung und Thermik aus dem Projekt. -->
+<!-- Die Schusskurve der Auslegung: Maschine und Thermik aus dem Projekt. -->
 <script src="/shared/examples/machines.js"></script>
 <script src="/shared/examples/alloys.js"></script>
 <script src="/shared/examples/parts.js"></script>
@@ -23,125 +23,8 @@
   { "imports": { "three": "./vendor/three/three.module.js" } }
 </script>
 </head>
-<body class="viewer designer kammerfuellung">
-
-<section class="page-hero compact">
-  <div class="inner">
-    <h1>Kammerfüllung</h1>
-    <p class="subtitle">Die Welle in der Füllkammer: Durchmesser, Länge, Füllgrad und Schusskurve wählen; Lattice-Boltzmann mit freier Oberfläche auf der Grafikkarte.</p>
-  </div>
-</section>
-
-<div class="layout">
-  <aside>
-    <h2>Füllkammer</h2>
-    <div class="row">
-      <span title="Innendurchmesser der Füllkammer = Kolben-Ø.">Durchmesser</span>
-      <input type="text" id="sl-d" inputmode="decimal" value="90" spellcheck="false">
-      <span class="val">mm</span>
-    </div>
-    <div class="row">
-      <span title="Länge der Kammer vom Kolben in Startlage bis zur Stirnfläche am Werkzeug.">Länge</span>
-      <input type="text" id="sl-len" inputmode="decimal" value="450" spellcheck="false">
-      <span class="val">mm</span>
-    </div>
-    <div class="row">
-      <span title="Anteil des Kammervolumens, der mit Schmelze gefüllt ist. Sie steht ruhig unten in der Kammer.">Füllgrad</span>
-      <input type="range" id="sl-fill" min="10" max="90" step="1" value="40">
-      <span class="val" id="sl-fill-val"></span>
-    </div>
-    <div class="row">
-      <span title="Der Laufkanal oben in der Stirnfläche: Breite × Tiefe. Was dort ankommt, verlässt die Kammer; die Zellen davor melden „Kammer voll".">Laufkanal</span>
-      <div class="triple">
-        <input type="text" id="sl-ow" inputmode="decimal" value="30" spellcheck="false" title="Breite">
-        <input type="text" id="sl-oh" inputmode="decimal" value="15" spellcheck="false" title="Tiefe">
-      </div>
-      <span class="val">mm</span>
-    </div>
-    <div class="facts" id="sleeve-facts"></div>
-
-    <h2>Schusskurve</h2>
-    <div class="seg" id="curve-seg">
-      <button type="button" data-value="dielogic" class="active" title="Die DieLogic-Kurve des Projekts: López-Anfahrt bis v_krit, Plateau bis Kammer voll, Rampe auf v₂">DieLogic</button>
-      <button type="button" data-value="v1v2" title="Zweistufig: Rampe auf v₁, Plateau bis Kammer voll, Rampe auf v₂">v₁ / v₂</button>
-    </div>
-    <div id="v1v2-block" class="hidden">
-      <div class="row">
-        <span>v₁</span>
-        <input type="text" id="sl-v1" inputmode="decimal" value="0,5" spellcheck="false">
-        <span class="val">m/s</span>
-      </div>
-      <div class="row">
-        <span>v₂</span>
-        <input type="text" id="sl-v2" inputmode="decimal" value="2" spellcheck="false">
-        <span class="val">m/s</span>
-      </div>
-      <div class="row">
-        <span title="Beschleunigung beider Rampen.">Beschleunigung</span>
-        <input type="text" id="sl-a" inputmode="decimal" value="100" spellcheck="false">
-        <span class="val">m/s²</span>
-      </div>
-    </div>
-    <div class="row">
-      <span>Legierung</span>
-      <select id="alloy"></select>
-    </div>
-    <div class="facts" id="curve-facts"></div>
-    <div class="warn-line" id="curve-warn"></div>
-    <div class="hint">Die Rechnung beginnt beim Kolbenstart und endet, wenn die Schmelze den Laufkanal
-      erreicht hat, plus ein Stück für das Bild. Die DieLogic-Kurve nimmt Maschine und Thermik aus dem
-      aktuellen Projekt, Kammer und Füllgrad von hier.</div>
-
-    <h2>Simulation</h2>
-    <div class="row">
-      <span title="Kantenlänge der Gitterzellen. Die Welle braucht wenigstens zwanzig Zellen über den Durchmesser.">Zellkante</span>
-      <input type="text" id="cell-h" inputmode="decimal" value="3" spellcheck="false">
-      <span class="val">mm</span>
-    </div>
-    <div class="hint" id="grid-note"></div>
-    <div class="warn-line" id="engine-note"></div>
-    <button type="button" class="btn btn-primary block-btn" id="run">Simulieren</button>
-    <div class="run-note" id="run-note"></div>
-    <div class="facts" id="result-facts"></div>
-    <div class="hint">Lattice-Boltzmann D3Q19 mit freier Oberfläche nach Körner, Schwerkraft als
-      Volumenkraft, der Kolben als wandernde Zellschicht. Zähigkeit auf das Stabile angehoben, keine
-      Oberflächenspannung, kein Gasdruck. <b>Eingeschlossene Luft</b> sind Gaszellen, die nicht mehr mit
-      der Luftblase über der Schmelze zusammenhängen: die Zahl, um die es in der ersten Phase geht.</div>
-
-    <h2>Darstellung</h2>
-    <div class="seg" id="show-seg">
-      <button type="button" data-value="schmelze" class="active" title="Die Schmelze zur Zeit des Reglers, nach Geschwindigkeit gefärbt, die Kammer durchscheinend">Schmelze</button>
-      <button type="button" data-value="kammer" title="Nur Kammer, Kolben und Laufkanal">Kammer</button>
-    </div>
-    <div class="row disabled" id="t-row">
-      <span title="Zeit ab Kolbenstart. Welle und Kolben wandern mit dem Regler.">Zeit</span>
-      <input type="range" id="t-slider" min="0" max="0" step="1" value="0">
-      <span class="val" id="t-val"></span>
-    </div>
-    <button type="button" class="btn btn-outline block-btn" id="play" disabled>▶ Abspielen</button>
-    <div class="row">
-      <span>Deckkraft Kammer</span>
-      <input type="range" id="opacity" min="5" max="100" value="25">
-      <span class="val" id="opacity-val"></span>
-    </div>
-  </aside>
-
-  <div id="viewport">
-    <div id="status">
-      <b>Leer</b>: drehen &nbsp;·&nbsp; <b>rechts</b>: verschieben &nbsp;·&nbsp; <b>Rad</b>: zoomen
-    </div>
-    <div class="colorbar" id="colorbar">
-      <div class="cb-title" id="cb-title"></div>
-      <div class="cb-body">
-        <div class="cb-scale" id="cb-scale"></div>
-        <div class="cb-ticks" id="cb-ticks"></div>
-      </div>
-      <div class="cb-extra" id="cb-extra"></div>
-    </div>
-    <div id="busy"></div>
-  </div>
-</div>
-
-<script type="module" src="js/lbm/sleeveapp.js"></script>
+<body class="studio">
+<div id="studio" class="st-root"></div>
+<script type="module" src="js/studio/pages/kammerfuellung.js"></script>
 </body>
 </html>

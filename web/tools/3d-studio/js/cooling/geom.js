@@ -124,3 +124,16 @@ export function wallClearance(item, sample, steps = 24) {
   }
   return min;
 }
+
+/**
+ * Das Urteil über einen Wandabstand: 'bad' — die Bohrung bricht in die
+ * Kavität durch; 'warn' — sie steht näher als der Mindest-Wandabstand;
+ * 'ok' sonst; '' ohne Messwert. `tol` ist, was das Feld nicht besser weiß
+ * (ein Bruchteil der Zellkante): eine Bohrung, die genau auf der
+ * Abstandsfläche sitzt, soll nicht am Rauschen der Abtastung scheitern.
+ */
+export function wallVerdict(clearance, minWall, tol = 0) {
+  if (clearance === null || !Number.isFinite(clearance)) return '';
+  if (clearance <= 0) return 'bad';
+  return clearance < minWall - tol ? 'warn' : 'ok';
+}

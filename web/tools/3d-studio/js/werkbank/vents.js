@@ -1,6 +1,6 @@
 /* Schritt 4 — Überläufe: Überläufe und Entlüftungen am Bauteil.
 
-   Die Portierung des Überlaufdesigners (js/vents/app.js): Art wählen,
+   Die Portierung des Überlaufdesigners (js/vents/tool.js): Art wählen,
    aufs Bauteil klicken, am Punkt ziehen, am Pfeil neu setzen, im
    Auswahlfeld drehen und bemaßen. Der Plan (js/vents/model.js) ist die
    Quelle, die Körper (js/vents/geom.js) entstehen daraus.

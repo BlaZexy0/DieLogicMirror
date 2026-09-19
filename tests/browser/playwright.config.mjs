@@ -40,9 +40,13 @@ export default defineConfig({
      unsichtbaren Menüs beim Zeigertest, Chromium nicht — ein Fehler, den
      nur Chromium-Tests zweimal durchgelassen haben. Braucht einmal
      `npx playwright install firefox`. */
+  /* … und die UX-Regeln des Studio-Rahmens ebenfalls: Firefox setzt die
+     Systemschrift breiter als Chromium, abgeschnittene Reiter und Schalter
+     zeigten sich nur dort. */
   projects: [
     { name: 'chromium', use: { browserName: 'chromium' } },
-    { name: 'firefox-nav', testMatch: /nav\.spec\.mjs/, use: { browserName: 'firefox', launchOptions: {} } }
+    { name: 'firefox-nav', testMatch: /nav\.spec\.mjs/, use: { browserName: 'firefox', launchOptions: {} } },
+    { name: 'firefox-ux', testMatch: /ux\.spec\.mjs/, use: { browserName: 'firefox', launchOptions: {} } }
   ],
   /* Unter Windows heißt der Interpreter `python`; `python3` ist dort nur
      der Store-Alias, der den Server nie startet. */

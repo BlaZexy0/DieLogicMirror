@@ -4,12 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Entformungsanalyse · 3D-Studio · DieLogic</title>
+<meta name="description" content="Welche Fläche entformt in welche Richtung? Formhälften, Schieber, Trennlinie, Hinterschnitte, projizierte Flächen und Haftung eines Druckgussteils — im Browser, ohne Server.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
 <link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="stylesheet" href="/shared/shared.css">
-<link rel="stylesheet" href="css/viewer.css">
+<link rel="stylesheet" href="css/studio.css">
 <script src="/shared/version.js"></script>
 <script src="/shared/palette.js"></script>
 <script src="/shared/nav.js" data-footer="none"></script>
@@ -17,194 +18,8 @@
   { "imports": { "three": "./vendor/three/three.module.js" } }
 </script>
 </head>
-<body class="viewer">
-
-<section class="page-hero compact">
-  <div class="inner">
-    <h1>Entformungsanalyse</h1>
-    <p class="subtitle">Welche Fläche entformt in welche Richtung? Formhälften, Schieber, Trennlinie und Hinterschnitte, sofort beim Laden.</p>
-  </div>
-</section>
-
-<div class="layout">
-  <aside>
-    <div class="seg tabs" id="tab-seg">
-      <button type="button" data-value="bauteil">Bauteil</button>
-      <button type="button" data-value="entformung" class="active">Entformung</button>
-      <button type="button" data-value="formteile">Formteile</button>
-      <button type="button" data-value="flaechen">Flächen</button>
-      <button type="button" data-value="haftung">Haftung</button>
-    </div>
-
-    <section id="tab-bauteil" class="tab-off">
-    <h2>Bauteil</h2>
-    <div class="row">
-      <span>Beispielteil</span>
-      <select id="demo-select"></select>
-    </div>
-    <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" hidden>
-    <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ Eigene STL/GLB laden</button>
-    <div class="hint" id="part-note"></div>
-    <div class="facts" id="model-facts"></div>
-    <div class="warn-line" id="model-warn"></div>
-    <label class="inline"><input type="checkbox" id="show-edges"> Netzkanten zeigen</label>
-    <div class="hint">Das Netz wird genommen, wie es kommt. Die Analyse urteilt je Dreieck als
-      Ganzem. Große Dreiecke (die Fächer ebener Flächen aus dem CAD) machen die Zuordnung an
-      Schattengrenzen grob: ein Dreieck, das eine Hälfte nur zum Teil sieht, geht ganz an einen
-      Schieber. Feinere Netze sind Sache des Exports; die Beispielteile sind mit Dreiecken bis
-      100 mm² exportiert.</div>
-    </section>
-
-    <section id="tab-entformung">
-    <h2>Entformung</h2>
-    <div class="row">
-      <span>Formöffnung</span>
-      <div class="seg" id="axis-seg">
-        <button type="button" data-value="auto" class="active" title="Die Achse mit der kleinsten Schieber- und Hinterschnittfläche">Auto</button>
-        <button type="button" data-value="0">X</button>
-        <button type="button" data-value="1">Y</button>
-        <button type="button" data-value="2">Z</button>
-      </div>
-    </div>
-    <div class="row">
-      <span title="Welche der beiden Hälften auf der Formöffnungsachse die bewegliche ist (Auswerferseite). Im Bauteilrahmen liegt die Trennebene bei z = 0 und die Form öffnet nach +z: die +Seite ist die bewegliche.">Bewegliche Seite</span>
-      <div class="seg" id="mov-seg">
-        <button type="button" data-value="1" class="active" id="mov-plus">+Z</button>
-        <button type="button" data-value="-1" id="mov-minus">−Z</button>
-      </div>
-    </div>
-    <div class="run-note" id="analysis-state"></div>
-    <div class="row">
-      <span>Einfärbung</span>
-      <div class="seg" id="mode-seg">
-        <button type="button" data-value="regions" class="active">Regionen</button>
-        <button type="button" data-value="draft">Schräge</button>
-      </div>
-    </div>
-    <div class="legend" id="legend"></div>
-    <div class="facts" id="seg-facts"></div>
-    <div id="draft-block" class="disabled">
-      <div class="row">
-        <span>Grenzwert</span>
-        <input type="range" id="draft-limit" min="0.5" max="5" step="0.1" value="1.5">
-        <span class="val" id="draft-limit-val"></span>
-      </div>
-      <div class="facts" id="draft-facts"></div>
-    </div>
-    <label class="inline"><input type="checkbox" id="show-parting" checked> Trennlinie zeigen (<span id="parting-count">0</span> Kanten)</label>
-    <div class="hint">
-      <b>Was hier gerechnet wird:</b> für jedes Dreieck wird in allen sechs
-      Hauptrichtungen geprüft, ob die Normale dorthin zeigt und ob der Weg
-      frei ist (verdeckungsgenau, nicht nur über den Winkel). Dann gelten
-      feste Regeln: eine <b>Formhälfte</b>, die das Dreieck mit mindestens
-      0,5° Schräge sieht, bekommt es; eine senkrechte Wand (bis 0,5°
-      Gegenschräge) bleibt bei den Hälften; sonst ein <b>Schieber</b>:
-      je zusammenhängendem Fleck die Richtung, die am meisten davon sieht,
-      auch parallel (0°); was niemand sieht, ist <b>Hinterschnitt</b>.
-      Splitter ohne Schräge, die keine Hälfte sieht, gehen an die Hälften
-      und werden als Fläche gemeldet. Weder Formhälften noch Schieber
-      müssen dafür vorhanden sein. Die Formöffnung wird automatisch so
-      gewählt, dass Schieber und Hinterschnitte zusammen die kleinste
-      Fläche haben. <b>Bewegliche Seite</b> ist die +Seite der Achse
-      (Bauteilrahmen: Trennebene z = 0, Öffnung nach +z); liegt das Teil
-      anders herum, hier tauschen. Die Entformschräge ist
-      <code>arcsin(n · d)</code> gegen die <em>zugewiesene</em> Richtung;
-      eine Schieberfläche wird also gegen den Schieber bewertet.
-      Wandstärken haben eine <a href="wandstaerke.html">eigene Seite</a>.
-    </div>
-    </section>
-
-    <section id="tab-formteile" class="tab-off">
-    <h2>Formteile</h2>
-    <div class="row">
-      <span title="Wie weit jedes Formteil entlang seiner Entformrichtung herausfährt.">Abstand</span>
-      <input type="range" id="die-dist" min="0" max="300" step="1" value="60">
-      <span class="val" id="die-dist-val"></span>
-    </div>
-    <div class="row">
-      <span title="Ein Rand entlang der Trennlinie, in die Form hinein gezogen: die Trennfläche in Andeutung, damit das Stück nicht wie Papier aussieht.">Rand</span>
-      <input type="range" id="die-skirt" min="0" max="500" step="1" value="8">
-      <span class="val" id="die-skirt-val"></span>
-    </div>
-    <label class="inline" title="Das Bauteil bleibt durchscheinend an seinem Ort stehen, zwischen den Formteilen."><input type="checkbox" id="die-part" checked> Bauteil durchscheinend dazwischen</label>
-    <div class="pieces" id="die-pieces"></div>
-    <div class="hint">Jede Region wird zum Formteil: die Flächen einer Hälfte oder eines Schiebers
-      rücken entlang ihrer Entformrichtung auseinander, wie beim Öffnen der Form. Jedes Formteil
-      zeigt genau die Flächen, die es abbildet, von der Seite, von der man in die offene Form
-      sieht; der Rand ist die Trennlinie, ein Stück in die Form hinein gezogen. Sechs Formteile
-      sind möglich, zwei Hälften und vier Schieber; was kein Dreieck braucht, steht grau und
-      kommt in der Form nicht vor. Hinterschnitte bleiben rot an ihrem Ort.</div>
-    </section>
-
-    <section id="tab-flaechen" class="tab-off">
-    <h2>Projizierte Flächen</h2>
-    <div class="facts" id="proj-facts"></div>
-    <div class="row">
-      <span title="Wie weit die Silhouetten jenseits des Bauteils stehen, in seiner Entformrichtung.">Abstand</span>
-      <input type="range" id="proj-gap" min="0" max="500" step="1" value="30">
-      <span class="val" id="proj-gap-val"></span>
-    </div>
-    <div class="row">
-      <span>Deckkraft</span>
-      <input type="range" id="proj-alpha" min="10" max="100" step="5" value="60">
-      <span class="val" id="proj-alpha-val"></span>
-    </div>
-    <div class="hint">Jedes Formteil projiziert in seine Öffnungsrichtung, gerastert als Vereinigung
-      (nicht als Summe der Dreiecke): bei den Hälften die Fläche auf der Trennebene, bei einem
-      Schieber die Fläche, gegen die er verriegelt werden muss. Die Silhouetten stehen jenseits des
-      Bauteils in der jeweiligen Entformrichtung, Umriss und Füllung in der Regionsfarbe.</div>
-    </section>
-
-    <section id="tab-haftung" class="tab-off">
-    <h2>Haftung</h2>
-    <div class="row">
-      <span title="Reibwert zwischen Guss und Formwand beim Auswerfen.">Reibwert μ</span>
-      <input type="range" id="ej-mu" min="0.1" max="0.6" step="0.05" value="0.3">
-      <span class="val" id="ej-mu-val"></span>
-    </div>
-    <div class="legend" id="ej-legend"></div>
-    <div class="facts" id="ej-facts"></div>
-    <div class="warn-line" id="ej-warn"></div>
-    <div class="row">
-      <span title="Wie weit die Karten jenseits des Bauteils stehen, jede in der Entformrichtung ihrer Hälfte.">Abstand</span>
-      <input type="range" id="ej-gap" min="0" max="500" step="1" value="30">
-      <span class="val" id="ej-gap-val"></span>
-    </div>
-    <div class="row">
-      <span>Deckkraft</span>
-      <input type="range" id="ej-alpha" min="10" max="100" step="5" value="70">
-      <span class="val" id="ej-alpha-val"></span>
-    </div>
-    <div class="hint">Das Teil hängt an den Wänden, die eine Hälfte abbildet, umso fester, je weniger
-      Schräge sie haben, und dort, wo es beim Erstarren auf die Form <b>aufschrumpft</b> (Kerne,
-      Taschen, Bohrungen), nicht an Außenwänden, von denen es sich wegzieht. Haftmaß je Fläche:
-      <code>A · (μ·cos α − sin α) · g</code>: Fläche, Reibung gegen Schräge, und <code>g</code>
-      aus dem Winkel zwischen Flächennormale und Richtung zum Schwerpunkt: 1 zum Schwerpunkt hin
-      (Innenwand, Bohrung, die zugewandte Rippenflanke), 0 davon weg (Außenwand), ½ quer dazu
-      (Flanken, die an der Form entlanggleiten). Die Summen beider Hälften sagen, auf welcher
-      Seite das Teil bleibt. Das Bauteil trägt das Maß als Farbe; je Hälfte verteilt eine Karte
-      es auf ihre Trennebene, beide auf derselben Skala, jenseits des Bauteils in ihrer
-      Entformrichtung. Schieber und Hinterschnitte bleiben außen vor: sie tragen nichts zur
-      Haftung an den Hälften bei. Eine grobe Näherung ohne Elastizität: sie sagt WO im
-      Verhältnis zu wo, keine Kraft in Newton.</div>
-    </section>
-  </aside>
-
-  <div id="viewport">
-    <div id="status"></div>
-    <div class="colorbar" id="colorbar">
-      <div class="cb-title" id="cb-title"></div>
-      <div class="cb-body">
-        <div class="cb-scale" id="cb-scale"></div>
-        <div class="cb-ticks" id="cb-ticks"></div>
-      </div>
-      <div class="cb-extra" id="cb-extra"></div>
-    </div>
-    <div id="busy"></div>
-    <div class="drop-hint">STL oder GLB hier ablegen</div>
-  </div>
-</div>
-
-<script type="module" src="js/part/app.js"></script>
+<body class="studio">
+<div id="studio" class="st-root"></div>
+<script type="module" src="js/studio/pages/entformung.js"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@ services:
     runtime: python
     plan: free
     region: frankfurt
-    buildCommand: pip install -r backend/requirements.txt ./packages/hpdcsim
+    buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:

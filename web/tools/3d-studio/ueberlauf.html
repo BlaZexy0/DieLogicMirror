@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Überlaufdesigner · 3D-Studio · DieLogic</title>
-<meta name="description" content="Überläufe und Entlüftungen für den Druckguss am Bauteil setzen: Überlaufbohne, Überlauf mit Entlüftung, Waschbrett (Chill-Vent) und Entlüftungsschlitz, mit Steg, Maßen, Drehung und dem Volumen fürs Schussgewicht.">
+<meta name="description" content="Überläufe und Entlüftungen für den Druckguss am Bauteil setzen: Überlaufbohne, Überlauf mit Entlüftung, Waschbrett (Chill-Vent) und Entlüftungsschlitz — mit Steg, Maßen, Drehung und dem Volumen fürs Schussgewicht.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
 <link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="stylesheet" href="/shared/shared.css">
-<link rel="stylesheet" href="css/viewer.css">
+<link rel="stylesheet" href="css/studio.css">
 <script src="/shared/version.js"></script>
 <script src="/shared/palette.js"></script>
 <script src="/shared/nav.js" data-footer="none"></script>
@@ -18,111 +18,8 @@
   { "imports": { "three": "./vendor/three/three.module.js" } }
 </script>
 </head>
-<body class="viewer designer ueberlauf">
-
-<section class="page-hero compact">
-  <div class="inner">
-    <h1>Überlaufdesigner</h1>
-    <p class="subtitle">Überläufe und Entlüftungen aufs Bauteil setzen: vier Arten, jedes Maß am Element, das Volumen fürs Schussgewicht.</p>
-  </div>
-</section>
-
-<div class="layout">
-  <aside>
-    <h2>Bauteil</h2>
-    <div class="row">
-      <span>Beispielteil</span>
-      <select id="demo-select"></select>
-    </div>
-    <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" hidden>
-    <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ Eigene STL/GLB laden</button>
-    <div class="hint" id="part-note"></div>
-    <div class="facts" id="model-facts"></div>
-    <div class="warn-line" id="model-warn"></div>
-    <div class="row">
-      <span>Deckkraft</span>
-      <input type="range" id="ref-opacity" min="5" max="100" value="100">
-      <span class="val" id="ref-opacity-val"></span>
-    </div>
-
-    <h2>Volumen</h2>
-    <div class="facts" id="plan-facts"></div>
-    <div class="hint">Wo die Schmelze zuletzt ankommt, muss die Luft hinaus: dort sitzen die
-      Überläufe. Was sie fassen, gehört zum Schussgewicht. <b>Gesamt</b> ist das Gussvolumen,
-      das der Angussdesigner unter „Prozess" braucht.</div>
-
-    <h2>Import und Export</h2>
-    <input type="file" id="json-input" accept=".json,application/json" hidden>
-    <div class="btn-pair">
-      <button type="button" class="btn btn-outline" id="json-btn">JSON laden</button>
-      <button type="button" class="btn btn-outline" id="json-save">JSON speichern</button>
-    </div>
-    <button type="button" class="btn btn-outline block-btn" id="stl-save">Als STL speichern</button>
-    <div class="hint"><b>JSON</b> ist der Plan selbst: Orte, Richtungen, Maße. <b>STL</b> sind
-      die Körper: je Element Steg, Bohne und Kanal als geschlossene Körper.</div>
-  </aside>
-
-  <div id="viewport">
-    <div class="pt-menu" id="pt-menu">
-      <div class="pt-menu-title">Auswahl</div>
-      <div class="pt-sel" id="pt-sel">Kein Überlauf gewählt</div>
-      <div id="sel-block" class="disabled">
-        <div class="row">
-          <span>Art</span>
-          <select id="sel-type"></select>
-        </div>
-        <div class="row pos">
-          <span>Lage</span>
-          <div class="triple">
-            <input type="text" id="sel-x" inputmode="decimal" value="0" spellcheck="false" title="X">
-            <input type="text" id="sel-y" inputmode="decimal" value="0" spellcheck="false" title="Y">
-            <input type="text" id="sel-z" inputmode="decimal" value="0" spellcheck="false" title="Z">
-          </div>
-          <span class="val">mm</span>
-        </div>
-        <div class="row">
-          <span title="Drehung um die Achse des Elements (die Wandnormale): was an der Bohne oben ist, wandert um den Steg herum.">Drehung</span>
-          <input type="range" id="sel-rot" min="-180" max="180" step="1" value="0">
-          <span class="val" id="sel-rot-val"></span>
-        </div>
-        <div id="sel-params"></div>
-        <div id="vent-block" class="hidden">
-          <div class="pt-menu-title">Entlüftungskanal</div>
-          <div class="pt-note" id="vent-note"></div>
-          <div class="btn-pair">
-            <button type="button" id="vent-add" title="Einen Punkt anhängen, in der Richtung des letzten Stücks weiter">+ Punkt</button>
-            <button type="button" id="vent-del" title="Den gewählten Punkt entfernen (der letzte bleibt)">− Punkt</button>
-          </div>
-        </div>
-        <div class="facts" id="sel-facts"></div>
-      </div>
-      <div class="pt-menu-title">Überlauf setzen</div>
-      <button type="button" id="add-bohne" title="Tasche am Ende des Fließwegs: sammelt die erste, kalte und oxidhaltige Schmelze."><span class="dot" style="background:#e07b39"></span>Überlaufbohne</button>
-      <button type="button" id="add-entlueftet" title="Bohne mit flachem Entlüftungskanal: ab der Kugel am Bohnenende Punkt für Punkt in der Wandebene gezogen."><span class="dot" style="background:#2e6da4"></span>Überlauf mit Entlüftung</button>
-      <button type="button" id="add-waschbrett" title="Gewellter Kanal: die Schmelze erstarrt in den Wellen, die Luft kommt hindurch."><span class="dot" style="background:#9a77e8"></span>Waschbrett (Chill-Vent)</button>
-      <button type="button" id="add-schlitz" title="Nur der flache Kanal, ohne Bohne: wo Luft hinaus muss, aber nichts gesammelt wird."><span class="dot" style="background:#4c9f70"></span>Entlüftungsschlitz</button>
-      <button type="button" id="del-item" class="danger" title="Auswahl entfernen (Entf)">Löschen</button>
-    </div>
-    <div class="vp-right">
-      <div class="pt-legend" id="pt-legend"></div>
-    </div>
-    <div id="status">
-      <b>Art</b> wählen, dann aufs Bauteil klicken &nbsp;·&nbsp; <b>Punkt</b> ziehen: auf der Wand &nbsp;·&nbsp;
-      <b>Alt</b>: von der Wand weg &nbsp;·&nbsp; <b>Pfeil</b>: neu setzen &nbsp;·&nbsp;
-      <b>Kugel am Bohnenende</b>: Kanalpunkte anhängen &nbsp;·&nbsp;
-      <b>Leer</b>: drehen &nbsp;·&nbsp; <b>rechts</b>: verschieben &nbsp;·&nbsp; <b>Rad</b>: zoomen
-    </div>
-    <div class="drop-hint">STL oder GLB hier ablegen</div>
-    <div class="aim-banner hidden" id="aim-banner">
-      <div class="aim-pill">
-        <span id="aim-text"></span>
-        <button type="button" id="aim-cancel">Abbrechen</button>
-      </div>
-    </div>
-    <div id="busy"></div>
-  </div>
-</div>
-
-<script type="module" src="js/vents/app.js"></script>
+<body class="studio">
+<div id="studio" class="st-root"></div>
+<script type="module" src="js/studio/pages/ueberlauf.js"></script>
 </body>
 </html>

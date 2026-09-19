@@ -9,8 +9,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import * as S from '../../../web/tools/3d-studio/js/solids.js';
@@ -192,12 +192,15 @@ test('Volumen wird nicht mehr mit Math.abs schöngerechnet (H-24)', () => {
 
 test('Strahlentest läuft höchstens einmal je Bild (H-25)', () => {
   /* Beide Viewer: die Abstandsseite testet sogar zwei Netze je Ereignis. */
-  for (const f of ['js/part/app.js', 'js/part/distanceapp.js']) {
+  for (const f of ['js/entformung/tool.js', 'js/abstand/tool.js']) {
     const s = src(f);
     const at = s.indexOf("addEventListener('pointermove'");
     assert.ok(at > 0, f + ': kein pointermove-Zuhörer gefunden');
-    /* Nur der Rumpf des Zuhörers, bis zu seinem eigenen Ende. */
-    const body = s.slice(at, s.indexOf('\n});', at));
+    /* Nur der Rumpf des Zuhörers, bis zu seinem eigenen Ende — die Zeile, die
+       mit „});" beginnt, gleich wie tief sie eingerückt ist. */
+    const end = /\n\s*\}\);/.exec(s.slice(at));
+    assert.ok(end, f + ': Ende des Zuhörers nicht gefunden');
+    const body = s.slice(at, at + end.index);
     assert.ok(!body.includes('intersectObject'),
       f + ': der Strahlentest darf nicht direkt im Zuhörer stehen — 9,7 ms je Ereignis bei 197k Dreiecken');
     assert.ok(body.includes('requestAnimationFrame'), f + ': die Drosselung auf den Bildtakt fehlt');
@@ -234,7 +237,7 @@ test('innen und außen lassen sich unterscheiden — der Abstand allein nicht', 
   const draussen = buildModel(S.box(10, 10, 10).map((v, i) => (i % 3 === 0 ? v + 500 : v)));
   assert.equal(insideFraction(draussen, loc), 0);
 
-  const app = src('js/part/distanceapp.js');
+  const app = src('js/abstand/tool.js');
   assert.match(app, /insideFraction/, 'die Seite misst die Durchdringung nicht');
   assert.match(app, /durchdringen sich/, 'und meldet sie nicht');
 });
@@ -277,4 +280,48 @@ test('Lesefehler und fehlende GLB-Knoten melden sich', () => {
   const die = src('js/die.js');
   assert.match(die, /catch \(err\) \{\s*status\.textContent = err\.message/);
   assert.match(die, /if \(asm\) \{ asm\.setOpen\(t\)/, 'der Regler wartet, bis eine Baugruppe steht');
+});
+
+/* ── Der gemeinsame Rahmen (js/studio/) ───────────────────────────────── */
+
+/* Die Module des Rahmens und die OBERFLÄCHE der Werkzeuge darin: je Ordner
+   mit tool.js und panel.js genau diese beiden und help.js. Im selben Ordner
+   liegen bei den Designern auch die Fachmodule (graph.js, model.js, geom.js …),
+   und die runden beim Schreiben ihrer Dateien mit +x.toFixed(4) — das ist
+   Arithmetik, keine Anzeige, und js/runner/graph.js bleibt ohnehin unberührt. */
+const SURFACE = ['tool.js', 'panel.js', 'help.js'];
+function shellSources() {
+  const js = resolve(ROOT, 'js');
+  const out = [];
+  const take = dir => { for (const f of readdirSync(dir, { withFileTypes: true })) { const p = join(dir, f.name); if (f.isDirectory()) take(p); else if (f.name.endsWith('.js')) out.push(p); } };
+  take(join(js, 'studio'));
+  for (const d of readdirSync(js)) {
+    if (!existsSync(join(js, d, 'tool.js')) || !existsSync(join(js, d, 'panel.js'))) continue;
+    for (const f of SURFACE) if (existsSync(join(js, d, f))) out.push(join(js, d, f));
+  }
+  /* Die beiden Simulationen (js/simulation/) sind ganz Oberfläche — auch die
+     Adapter schreiben Text (die Kostenzeile „grob 2 min"); ihre Felder heißen
+     anguss-panel.js, kammer-panel.js, panel-common.js. */
+  take(join(js, 'simulation'));
+  return out;
+}
+
+test('Rahmen: Zahlen gehen durch format.js — kein toFixed in der Oberfläche', () => {
+  const files = shellSources();
+  assert.ok(files.length >= 12, 'Module gefunden: ' + files.length);
+  const hits = [];
+  for (const f of files) {
+    readFileSync(f, 'utf8').split('\n').forEach((line, i) => { if (/\.toFixed\(/.test(line)) hits.push(f.slice(ROOT.length + 1) + ':' + (i + 1)); });
+  }
+  assert.deepEqual(hits, [], 'toFixed schreibt einen Punkt — fmt/fmtUnit aus js/studio/format.js schreiben deutsch');
+});
+
+test('Rahmen: Erklärungen stehen in der Hilfe (ⓘ, data-help), nicht in einem title der Felder', () => {
+  const panels = shellSources().filter(f => /panel[^/]*\.js$/.test(f));
+  assert.ok(panels.some(f => f.endsWith('panel-common.js')) && panels.some(f => f.endsWith('kammer-panel.js')), 'auch die Felder der Simulationen: ' + panels.length);
+  const hits = [];
+  for (const f of panels) {
+    readFileSync(f, 'utf8').split('\n').forEach((line, i) => { if (/\btitle\s*[:=]/.test(line)) hits.push(f.slice(ROOT.length + 1) + ':' + (i + 1)); });
+  }
+  assert.deepEqual(hits, [], 'ein title erscheint nur unter der Maus — auf dem Tablett nie');
 });

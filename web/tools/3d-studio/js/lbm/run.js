@@ -28,7 +28,8 @@ const tick = () => new Promise(r => (typeof requestAnimationFrame === 'function'
  *   (Gittereinheiten); Gaszellen tragen 0.
  */
 export async function runSimulation(opts) {
-  const { solver, engine, domain, stepsMax, snapEvery, uAt, ipAt, onSnapshot, isCancelled } = opts;
+  const { solver, engine, domain, stepsMax, snapEvery, uAt, ipAt, onSnapshot, signal } = opts;
+  const isCancelled = () => (opts.isCancelled && opts.isCancelled()) || (signal && signal.aborted);
   const N = domain.N;
   const snapshots = [];
   const gateDone = new Array((domain.gates || []).length).fill(NEVER);
@@ -74,11 +75,16 @@ export async function runSimulation(opts) {
       for (let k = 0; k < gateDone.length; k++) gateDone[k] = gates[k];
       fill = f; vel = u;
     } else {
-      const t0 = performance.now();
+      /* Nach je 40 ms Rechnen ein Bild lang Luft holen — und die Uhr dann
+         NEU stellen: stand sie still, wartete die Schleife ab den ersten
+         40 ms nach JEDEM Schritt auf das nächste Bild (gemessen 15,8 ms je
+         Schritt bei 2,3 ms Rechnen, ein Gitterlauf 66 s statt 28 s). Die
+         Schritte selbst und ihre Reihenfolge bleiben dieselben. */
+      let t0 = performance.now();
       for (let k = 1; k <= n; k++) {
         step++;
         solver.step(uAt(step), step, ip(step));
-        if (performance.now() - t0 > 40 && opts.onWork) { opts.onWork(step); await tick(); }
+        if (performance.now() - t0 > 40 && opts.onWork) { opts.onWork(step); await tick(); t0 = performance.now(); }
       }
       for (let k = 0; k < gateDone.length; k++) gateDone[k] = solver.gateArrival[k];
       fill = solver.fill(); vel = solver.velocity();

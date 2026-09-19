@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
@@ -45,4 +45,29 @@ test('vkrit: Referenzmodelle bleiben verfügbar und plausibel', () => {
   /* Theorie oberhalb der CFD ab mittleren Füllgraden (Brechen vor Decke) */
   assert.ok(vCritTheory(0.15, 0.6) > vCrit(0.15, 0.6));
   assert.ok(vCritNogowizin(0.15, 0.5) > 0);
+});
+
+test('vkrit: unter Ø 60 mm wird auf der sicheren Seite extrapoliert', () => {
+  /* f steigt mit D. Unter dem kleinsten Tabellen-Ø wurde früher geklemmt —
+     das meldete ein zu HOHES v_krit, also die unsichere Richtung. */
+  const v60 = vCrit(0.060, 0.5);
+  for (const D of [0.050, 0.040, 0.030]) {
+    const v = vCrit(D, 0.5);
+    assert.ok(v > 0 && v < v60, 'Ø ' + D * 1000 + ' mm: ' + v + ' muss unter dem 60-mm-Wert liegen');
+    /* Konservativ heißt: unter dem, was reines Klemmen liefern würde. */
+    const geklemmt = Math.sqrt(9.81 * D) * (v60 / Math.sqrt(9.81 * 0.060));
+    assert.ok(v <= geklemmt + 1e-12, 'die Extrapolation darf nicht über dem Klemmwert liegen');
+  }
+});
+
+test('vkrit: die Physik-Fixtures verlangen den exakten Wert', () => {
+  /* Die Tabelle wird mit g = 9,81 normiert und muss mit derselben Konstante
+     entnormiert werden. Eine zweite Implementierung nahm einmal 9,80665;
+     die Fixtures lockerten daraufhin ihre Toleranz auf 1e-3 und verdeckten
+     die Abweichung, statt sie zu melden. */
+  const dir = path.join(site, '../fixtures/physics');
+  for (const f of readdirSync(dir).filter(f => f.endsWith('.json'))) {
+    const vc = JSON.parse(readFileSync(path.join(dir, f), 'utf8')).expected.v_crit;
+    if (vc) assert.ok(vc.rtol <= 1e-9, f + ': die Toleranz verdeckt wieder eine Abweichung');
+  }
 });

@@ -246,7 +246,12 @@ export function initScene(container, opts = {}) {
     if (dir.lengthSq() < 0.5) dir.set(1, 0.75, 1).normalize();
 
     controls.target.copy(center);
-    orthoHalfH = radius * margin;
+    /* Das Modell muss in BEIDE Richtungen ins Bild passen. Die halbe Bildhöhe
+       allein genügte, solange das Bild breiter als hoch ist; in einem
+       hochkant stehenden Viewport (schmales Fenster, Tablett hochkant) ist die
+       halbe Breite nur Höhe × Seitenverhältnis — das Modell ragte seitlich
+       hinaus. */
+    orthoHalfH = radius * margin / Math.min(1, aspect());
     const d = (orthoHalfH / Math.tan(halfFov()));
     persp.position.copy(center).addScaledVector(dir, d);
     persp.near = Math.max(radius / 500, 0.01);

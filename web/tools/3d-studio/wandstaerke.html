@@ -4,12 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wandstärkenanalyse · 3D-Studio · DieLogic</title>
+<meta name="description" content="Wandstärke, Wärmezentrum und Isofläche eines Druckgussteils aus einem gerasterten Abstandsfeld — im Browser, ohne Server.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
 <link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="stylesheet" href="/shared/shared.css">
-<link rel="stylesheet" href="css/viewer.css">
+<link rel="stylesheet" href="css/studio.css">
 <script src="/shared/version.js"></script>
 <script src="/shared/palette.js"></script>
 <script src="/shared/nav.js" data-footer="none"></script>
@@ -17,152 +18,8 @@
   { "imports": { "three": "./vendor/three/three.module.js" } }
 </script>
 </head>
-<body class="viewer">
-
-<section class="page-hero compact">
-  <div class="inner">
-    <h1>Wandstärkenanalyse</h1>
-    <p class="subtitle">Wandstärke, Wärmezentrum und Isofläche aus dem Abstandsfeld: Untermaß nach innen, Schnitte, dickste Stellen als Kugeln.</p>
-  </div>
-</section>
-
-<div class="layout">
-  <aside>
-    <h2>Bauteil</h2>
-    <div class="row">
-      <span>Beispielteil</span>
-      <select id="demo-select"></select>
-    </div>
-    <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" hidden>
-    <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ Eigene STL/GLB laden</button>
-    <div class="facts" id="model-facts"></div>
-    <div class="warn-line" id="model-warn"></div>
-
-    <h2>Rasterfeld</h2>
-    <div class="row">
-      <span title="Kantenlänge einer Rasterzelle in mm. Vorgabe: die halbe Wanddicke (2V/A), damit jede Wand mindestens zwei Zellen über ihre Dicke hat. Feiner heißt genauer und langsamer: der Speicher wächst mit der dritten Potenz.">Zellkante</span>
-      <input type="text" id="cell" inputmode="decimal" value="3" spellcheck="false"
-             title="Wert eingeben und mit Eingabetaste bestätigen">
-      <span class="val">mm</span>
-    </div>
-    <div class="facts" id="field-facts"></div>
-    <button type="button" class="btn btn-primary block-btn" id="run-field">Feld berechnen</button>
-    <div class="run-note" id="field-state"></div>
-
-    <h2>Isofläche</h2>
-    <div class="row">
-      <span title="Abstand der Isofläche nach innen von der Bauteiloberfläche. Stehen bleibt, was dicker als das Doppelte ist: die dicken Bereiche, in denen das Teil zuletzt erstarrt.">Untermaß</span>
-      <input type="text" id="under" inputmode="decimal" value="2" spellcheck="false"
-             title="Zahl eingeben und mit Eingabetaste bestätigen">
-      <span class="val">mm</span>
-    </div>
-    <div class="row">
-      <span></span>
-      <input type="range" id="under-slider" min="0" max="40" step="0.5" value="2"
-             title="Von der Oberfläche bis zur dicksten Stelle: tiefer gibt es nichts">
-    </div>
-    <div class="row">
-      <span>Anzeige</span>
-      <div class="seg" id="show-seg">
-        <button type="button" data-value="both" class="active">beide</button>
-        <button type="button" data-value="offset">Isofläche</button>
-        <button type="button" data-value="part">Bauteil</button>
-      </div>
-    </div>
-    <div class="facts" id="offset-facts"></div>
-    <button type="button" class="btn btn-outline block-btn" id="offset-export">Isofläche als STL speichern</button>
-
-    <h2>Feldschnitt</h2>
-    <label class="inline"><input type="checkbox" id="slice-on"> Schnitt durch das Feld zeigen</label>
-    <div id="slice-block" class="disabled">
-      <div class="row">
-        <span>Achse</span>
-        <div class="seg" id="slice-seg">
-          <button type="button" data-value="0">X</button>
-          <button type="button" data-value="1">Y</button>
-          <button type="button" data-value="2" class="active">Z</button>
-        </div>
-      </div>
-      <div class="row">
-        <span>Position</span>
-        <input type="range" id="slice-pos" min="0" max="100" step="1" value="50">
-        <span class="val" id="slice-pos-val"></span>
-      </div>
-      <div class="hint">Im Schnitt steht nur das Bauteil, durchscheinend: die Isofläche verdeckte
-        die Schnittebene sonst. Innen zeigt die Turbo-Skala die Wandstärke (dick = rot), bis zur
-        dicksten Stelle im Feld; außen bleibt es grau.</div>
-    </div>
-
-    <h2>Wärmezentren</h2>
-    <label class="inline"><input type="checkbox" id="hot-on"> Dickste Stellen markieren</label>
-    <div id="hot-block" class="disabled">
-      <label class="inline" title="Sonst liegen die Marken im deckenden Bauteil oder hinter der Isofläche."><input type="checkbox" id="hot-clear" checked> Frei sichtbar: Bauteil durchscheinend, ohne Isofläche</label>
-      <div class="row">
-        <span>Form</span>
-        <div class="seg" id="hot-seg">
-          <button type="button" data-value="kugeln" class="active">Kugeln</button>
-          <button type="button" data-value="kreise">Kreise</button>
-        </div>
-      </div>
-      <div class="row">
-        <span title="Nur Stellen, die mindestens diesen Anteil der größten Wandstärke erreichen.">ab</span>
-        <input type="range" id="hot-min" min="20" max="100" step="5" value="75">
-        <span class="val" id="hot-min-val"></span>
-      </div>
-      <div class="facts" id="hot-facts"></div>
-      <div class="warn-line" id="hot-note"></div>
-      <div class="hint">Jede Marke ist die größte Kugel, die an dieser Stelle ins Bauteil passt:
-        ihr Durchmesser ist die Wandstärke, ihre Farbe die Größe auf der Wandstärken-Skala
-        (blau dünn, rot dick). Dort erstarrt das Teil zuletzt; bis dorthin muss der Nachdruck
-        reichen.</div>
-    </div>
-
-    <h2>Darstellung</h2>
-    <div class="row">
-      <span>Deckkraft Bauteil</span>
-      <input type="range" id="opacity" min="10" max="100" value="35">
-      <span class="val" id="opacity-val"></span>
-    </div>
-
-    <div class="hint">
-      <b>Warum ein Raster:</b> für jeden Rasterpunkt im Bauteil wird der
-      <b>Abstand zur Oberfläche</b> gespeichert. Sein Betrag ist der Radius
-      der größten Kugel, die dort noch ins Bauteil passt, bei
-      plattenförmigen Bereichen also die <b>halbe Wandstärke</b>. Das macht
-      dieselbe Rechnung zur Dickenanalyse: wo der Betrag am größten ist,
-      liegt die dickste Stelle, und die erstarrt zuletzt. Genau dort sitzen
-      Lunker und Porosität, und bis dorthin muss der Nachdruck über Anguss
-      und Speiser reichen. Das Feld reicht nur so weit wie das Bauteil.
-      Abstandsflächen außen, für die Temperierung, rechnet der
-      <a href="temperier.html">Temperierkanal-Designer</a> selbst.
-
-      <p style="margin-top:.7rem"><b>Isofläche:</b> die Fläche gleichen
-      Abstands nach innen, ein Untermaß von s: alles, was dünner als 2·s
-      ist, verschwindet, stehen bleiben genau die dicken Bereiche; der Regler
-      endet an der dicksten Stelle, tiefer gibt es nichts mehr. Aus
-      <em>einem</em> Feld lassen sich beliebig viele Untermaße abgreifen;
-      nur das Feld selbst kostet Zeit. Der <b>Feldschnitt</b> zeigt
-      dieselbe Information flächig, die <b>Wärmezentren</b> als Kugeln.
-      (Der Erstarrungsmodul V/A ist damit nicht identisch: die Kugelprobe
-      ist sein üblicher Stellvertreter und für Wände exakt gleich.)</p>
-    </div>
-  </aside>
-
-  <div id="viewport">
-    <div id="status"></div>
-    <div class="colorbar" id="colorbar">
-      <div class="cb-title" id="cb-title"></div>
-      <div class="cb-body">
-        <div class="cb-scale" id="cb-scale"></div>
-        <div class="cb-ticks" id="cb-ticks"></div>
-      </div>
-      <div class="cb-extra" id="cb-extra"></div>
-    </div>
-    <div id="busy"></div>
-    <div class="drop-hint">STL oder GLB hier ablegen</div>
-  </div>
-</div>
-
-<script type="module" src="js/part/offsetapp.js"></script>
+<body class="studio">
+<div id="studio" class="st-root"></div>
+<script type="module" src="js/studio/pages/wandstaerke.js"></script>
 </body>
 </html>

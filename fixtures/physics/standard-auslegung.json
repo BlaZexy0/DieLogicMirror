@@ -1,6 +1,6 @@
 {
   "name": "standard-auslegung",
-  "beschreibung": "Dashboard-Defaults (fields.js + DEFAULT_CURVE): 150-mm-Kolben, 700-mm-Kammer, 18,2 kg Schussgewicht bei 2700 kg/m³. Kurvenende (675 mm) liegt knapp hinter dem Füllende (674,85 mm) — prüft auch das Kappen im Backend.",
+  "beschreibung": "Dashboard-Defaults (fields.js + DEFAULT_CURVE): 150-mm-Kolben, 700-mm-Kammer, 18,2 kg Schussgewicht bei 2700 kg/m³. Kurvenende (675 mm) liegt knapp hinter dem Füllende (674,85 mm) — prüft auch das Kappen in der Luftsimulation.",
   "inputs": {
     "values": {
       "part": 12,
@@ -63,7 +63,7 @@
     "v_crit": {
       "value": 0.5666580794941226,
       "rtol": 1e-9,
-      "note": "√(g·D)·f(D, φ) aus der OpenFOAM-CFD-Tabelle (fixtures/vkrit/v_krit_sim.csv, bilinear interpoliert). Tabelle und beide Sprachen entnormieren mit VKRIT_GRAVITY — JS und hpdcsim stimmen damit bitgenau überein."
+      "note": "√(g·D)·f(D, φ) aus der OpenFOAM-CFD-Tabelle (fixtures/vkrit/v_krit_sim.csv, bilinear interpoliert). Auslegung und Luftsimulation entnormieren mit VKRIT_GRAVITY — dieselbe Funktion vCrit(), bitgleich."
     },
     "v_slow_max": {
       "value": 0.4664064678148772,
@@ -93,7 +93,7 @@
     "fill_time_ms": {
       "value": 78.04463709040765,
       "rtol": 0.0001,
-      "note": "t(Füllende) − t(Anguss gefüllt); Backend kappt 1 µm davor"
+      "note": "t(Füllende) − t(Anguss gefüllt); die Luftsimulation kappt 1 µm davor"
     }
   }
 }

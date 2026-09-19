@@ -100,6 +100,26 @@ export function addKanal(plan, a, b, params = {}) {
 
 export function removeItem(plan, id) { delete plan.items[id]; }
 
+/* ── Mindest-Wandabstand ─────────────────────────────────────── */
+/* Wie viel Stahl zwischen Bohrungswand und Kavität mindestens stehen soll.
+   Ohne eigene Angabe (plan.minWall fehlt = „Auto") folgt er aus dem, was
+   man eingestellt hat: eine Bohrung mit dem größten Vorgabe-Durchmesser,
+   deren Achse auf der Abstandsfläche sitzt, hält ihn gerade ein — was das
+   Werkzeug mit seinen eigenen Vorgaben setzt, gilt also nie als zu nah. */
+export const MIN_WALL_RANGE = [0, 100];
+const MIN_WALL_FLOOR = 1;
+
+/** Die Vorgabe: Achsabstand − Ø/2 des dicksten Vorgabe-Durchmessers, mindestens 1 mm. */
+export function autoMinWall(dist, ...diameters) {
+  const d = Math.max(0, ...diameters.filter(Number.isFinite));
+  return Math.max(MIN_WALL_FLOOR, dist - d / 2);
+}
+
+/** Der geltende Mindest-Wandabstand: der eingetragene — oder die Vorgabe. */
+export function minWallOf(plan, ...diameters) {
+  return Number.isFinite(plan.minWall) ? plan.minWall : autoMinWall(plan.dist, ...diameters);
+}
+
 /** Die Endpunkte eines Elements in der Welt: a am Bauteil, b außen. */
 export function axisOf(item) {
   if (item.type === 'stich') return { a: item.p.slice(), b: addScaled(item.p, item.dir, item.len) };
@@ -140,6 +160,9 @@ export function toJSON(plan) {
   const r4 = v => +v.toFixed(4);
   return {
     format: FORMAT, version: FORMAT_VERSION, dist: plan.dist,
+    /* Nur wer einen eigenen Mindest-Wandabstand eingetragen hat, bekommt den
+       Schlüssel — ohne ihn gilt „Auto", auch für alle älteren Dateien. */
+    ...(Number.isFinite(plan.minWall) ? { minWall: plan.minWall } : {}),
     items: allItems(plan).map(it => (it.type === 'stich'
       ? { id: it.id, type: 'stich', p: it.p.map(r4), dir: it.dir.map(v => +v.toFixed(6)), d: it.d, len: it.len, ...(it.auto ? { auto: true } : {}) }
       : { id: it.id, type: 'kanal', a: it.a.map(r4), b: it.b.map(r4), d: it.d }))
@@ -151,6 +174,7 @@ export function fromJSON(obj) {
   if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
   const plan = emptyPlan();
   if (Number.isFinite(obj.dist)) plan.dist = Math.max(1, Math.min(200, Number(obj.dist)));
+  if (Number.isFinite(obj.minWall)) plan.minWall = Math.max(MIN_WALL_RANGE[0], Math.min(MIN_WALL_RANGE[1], Number(obj.minWall)));
   for (const raw of Array.isArray(obj.items) ? obj.items : []) {
     const num = +String(raw.id || '').replace(/\D/g, '');
     const id = raw.id ? String(raw.id) : 't' + (plan.seq + 1);

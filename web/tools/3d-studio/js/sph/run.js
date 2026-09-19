@@ -46,7 +46,8 @@ export function snapshotOf(pos, vel, n, step) {
  * → { snapshots, gateDone, steps, reason }
  */
 export async function runSph(opts) {
-  const { solver, engine, dt, stepsMax, snapEvery, ctrlAt, onSnapshot, onWork, isCancelled, settleSteps = 0 } = opts;
+  const { solver, engine, dt, stepsMax, snapEvery, ctrlAt, onSnapshot, onWork, signal, settleSteps = 0 } = opts;
+  const isCancelled = () => (opts.isCancelled && opts.isCancelled()) || (signal && signal.aborted);
   const n = solver.n;
   const gateDone = new Array(opts.gates || solver.gates || (solver.gateArrival ? solver.gateArrival.length : 1)).fill(NEVER);
   if (settleSteps > 0) {
@@ -72,12 +73,17 @@ export async function runSph(opts) {
       for (let k = 0; k < gateDone.length; k++) gateDone[k] = g[k];
       snap = snapshotOf(p, v, n, step);
     } else {
-      const t0 = performance.now();
+      /* Nach je 40 ms Rechnen ein Bild lang Luft holen — und die Uhr dann
+         NEU stellen: stand sie still, wartete die Schleife ab den ersten
+         40 ms nach JEDEM Schritt auf das nächste Bild (gemessen 15,8 ms je
+         Schritt bei 2,3 ms Rechnen, ein Gitterlauf 66 s statt 28 s). Die
+         Schritte selbst und ihre Reihenfolge bleiben dieselben. */
+      let t0 = performance.now();
       for (let k = 1; k <= m; k++) {
         step++;
         const c = ctrlAt(step);
         solver.step(dt, { uIn: c.uIn, piston: c.piston, step });
-        if (performance.now() - t0 > 40 && onWork) { onWork(step); await tick(); }
+        if (performance.now() - t0 > 40 && onWork) { onWork(step); await tick(); t0 = performance.now(); }
       }
       for (let k = 0; k < gateDone.length; k++) gateDone[k] = solver.gateArrival[k];
       snap = snapshotOf(solver.positions(), solver.velocities(), n, step);

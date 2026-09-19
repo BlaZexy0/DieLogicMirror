@@ -1,12 +1,12 @@
 /* Schritt 1 — Bauteil: Entformung und Wandstärke.
 
    Die Entformungsanalyse läuft wie auf ihrer eigenen Seite
-   (js/part/app.js): Sichtbarkeit in sechs Richtungen, feste Regeln,
+   (js/entformung/tool.js): Sichtbarkeit in sechs Richtungen, feste Regeln,
    sofort beim Laden, ohne Regler. Die Wandstärke kommt aus dem
    Abstandsfeld, das die Werkbank für alle Schritte EINMAL rechnet
    (js/werkbank/app.js, ctx.field): Wärmezentren als Kugeln, ein Schnitt
    durch das Feld als Rasterbild — die Offsetfläche und der Turbo-Schnitt
-   der Wandstärkenseite (js/part/offsetapp.js) in verkürzter Form.
+   der Wandstärkenseite (js/wandstaerke/tool.js) in verkürzter Form.
 
    Das Bauteil selbst (Laden, Netz, Kennzahlen) verwaltet app.js; dieser
    Schritt bekommt es über das Ereignis „part". */

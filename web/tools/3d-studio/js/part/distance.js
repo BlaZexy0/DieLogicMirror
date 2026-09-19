@@ -17,6 +17,7 @@
 
    Kein Three.js — damit unter Node testbar. */
 
+import { abortError } from '../abort.js';
 import { bounds, distSqPointTri } from '../mesh.js';
 
 /** Dreiecke eines Netzes in ein Würfelraster einsortieren. */
@@ -157,7 +158,7 @@ export function closestDistance(loc, px, py, pz, maxDist = Infinity) {
     Punktweise (nicht je Dreieck), damit die Einfärbung weich verläuft.
     Ist onProgress gesetzt, wird zwischendurch die Kontrolle abgegeben. */
 export async function distanceToMesh(model, loc, opts = {}) {
-  const { maxDist = Infinity, onProgress = null } = opts;
+  const { maxDist = Infinity, onProgress = null, signal = null } = opts;
   const V = model.vertexCount;
   const out = new Float32Array(V);
   const verts = model.verts;
@@ -171,6 +172,7 @@ export async function distanceToMesh(model, loc, opts = {}) {
       onProgress(end / V);
       await new Promise(r => setTimeout(r, 0));
     }
+    if (signal && signal.aborted) throw abortError();
   }
   return out;
 }

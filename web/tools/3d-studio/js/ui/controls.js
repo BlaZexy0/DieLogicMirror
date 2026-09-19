@@ -3,42 +3,48 @@
    Zahleneingaben, Kennzahlenblöcke, der „Rechnen"-Knopf mit seiner
    Hinweiszeile und die Farbskala im Viewport.
 
-   Vorher stand das in jeder Seite noch einmal — mit dem üblichen
-   Ergebnis, dass Kleinigkeiten auseinanderliefen (mal „btn-primary",
-   mal nicht; mal mit Tausenderpunkt, mal ohne). Die Entscheidung, WAS
-   angezeigt wird, bleibt in der jeweiligen Seite; hier steht nur, WIE. */
+   Jeder Helfer nimmt ein ELEMENT oder eine id — die alten Seiten reichen
+   ids, die Werkzeuge des gemeinsamen Rahmens (js/studio/) ihre über
+   data-ui gefundenen Elemente. Zahlen kommen aus js/studio/format.js
+   (deutsch lesen und schreiben); die Namen bleiben hier exportiert, weil
+   die Rechenmodule und Tests sie von hier holen. */
+
+import { fmt, fmtPlain, parseNumber, clamp, rangeText } from '../studio/format.js';
+
+export { fmt, fmtPlain, parseNumber };
 
 export const $ = id => document.getElementById(id);
 
-/** Zahl in deutscher Schreibweise (Komma, Tausenderpunkt) — für Anzeigen. */
-export const fmt = (v, max = 2) => v.toLocaleString('de-DE', { maximumFractionDigits: max });
-
-/** Dasselbe ohne Gruppentrenner — für Eingabefelder, deren Inhalt wieder
-    eingelesen wird. Mit Tausenderpunkt las parseNumber die eigene Ausgabe
-    falsch zurück: „1.500" wurde zu 1,5 und „1.234,5" gar nicht mehr erkannt. */
-export const fmtPlain = (v, max = 2) =>
-  v.toLocaleString('de-DE', { maximumFractionDigits: max, useGrouping: false });
+/** Element oder id → Element. */
+export const el = x => (typeof x === 'string' ? $(x) : x);
 
 export const rgbCss = rgb => 'rgb(' + rgb.map(v => Math.round(v * 255)).join(',') + ')';
 
 /** Kennzahlenblock aus [Bezeichnung, Wert]-Paaren. Ohne das Element
     passiert nichts — nicht jede Seite zeigt jeden Block (die
-    Abstandsanalyse verzichtet auf die Netz-Kennzahlen). */
+    Abstandsanalyse verzichtet auf die Netz-Kennzahlen). Jede Zeile ist
+    ein Raster mit fester Spalte für die Bezeichnung, damit lange Werte
+    nie die Bezeichnung umbrechen. */
 export function facts(id, rows) {
-  const el = $(id);
-  if (!el) return;
-  el.innerHTML = rows.map(([k, v]) =>
+  const e = el(id);
+  if (!e) return;
+  e.innerHTML = rows.map(([k, v]) =>
     '<div class="fact"><span>' + k + '</span><span>' + v + '</span></div>').join('');
 }
 
 /** Segmentierter Schalter: der Zuhörer sitzt am Rahmen, nicht an jedem
-    Knopf — deshalb funktioniert er auch für später eingefügte Knöpfe. */
+    Knopf — deshalb funktioniert er auch für später eingefügte Knöpfe.
+    Der Rahmen ist eine Radiogruppe für Hilfstechnik. */
 export function segButtons(id, onPick) {
-  const el = $(id);
-  el.addEventListener('click', ev => {
+  const e = el(id);
+  e.setAttribute('role', 'radiogroup');
+  const mark = () => { for (const b of e.querySelectorAll('button')) { b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', b.classList.contains('active') ? 'true' : 'false'); } };
+  mark();
+  e.addEventListener('click', ev => {
     const b = ev.target.closest('button');
-    if (!b) return;
-    [...el.querySelectorAll('button')].forEach(x => x.classList.toggle('active', x === b));
+    if (!b || b.disabled) return;
+    [...e.querySelectorAll('button')].forEach(x => x.classList.toggle('active', x === b));
+    mark();
     onPick(b.dataset.value);
   });
 }
@@ -46,56 +52,78 @@ export function segButtons(id, onPick) {
 /** Den aktiven Knopf eines segmentierten Schalters von außen setzen —
     z. B. nach dem Laden einer Datei, ohne den Rückruf auszulösen. */
 export function segButtonSet(id, value) {
-  for (const b of $(id).querySelectorAll('button')) b.classList.toggle('active', b.dataset.value === value);
+  for (const b of el(id).querySelectorAll('button')) {
+    const on = b.dataset.value === value;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
 }
 
-/** Regler; die Wertanzeige daneben heißt <id>-val. */
-export function slider(id, onChange, format) {
-  const el = $(id), out = $(id + '-val');
+/** Regler; die Wertanzeige daneben heißt <id>-val — oder wird als
+    `out` mitgegeben. */
+export function slider(id, onChange, format, out) {
+  const e = el(id);
+  const o = out || (typeof id === 'string' ? $(id + '-val') : (e.parentNode && e.parentNode.querySelector('.val')));
   const push = () => {
-    const v = +el.value;
-    if (out) out.textContent = format ? format(v) : String(v);
+    const v = +e.value;
+    if (o) o.textContent = format ? format(v) : String(v);
     onChange(v);
   };
-  el.addEventListener('input', push);
+  e.addEventListener('input', push);
   push();
-  return el;
-}
-
-/* „+10", „-10", „−10" (echtes Minuszeichen), „1,5" und „1.5" gelten alle. */
-function parseNumber(txt) {
-  const t = String(txt).trim().replace(/\s/g, '').replace(/−/g, '-').replace(',', '.').replace(/^\+/, '');
-  if (t === '' || t === '-') return null;
-  const v = Number(t);
-  return Number.isFinite(v) ? v : null;
+  return e;
 }
 
 /** Zahleneingabe: übernommen wird mit der Eingabetaste oder beim
     Verlassen. apply(wert) gibt den tatsächlich gesetzten Wert zurück
     (geklemmt o. ä.), unlesbare Eingaben werden rot markiert und der
-    letzte gültige Wert bleibt stehen. */
-export function numberInput(id, apply) {
-  /* Auch ein Element statt einer id — für Felder, die eine Seite je
-     Auswahl neu aufbaut und die deshalb nicht über das Dokument gesucht
-     werden sollen. */
-  const el = typeof id === 'string' ? $(id) : id;
+    letzte gültige Wert bleibt stehen. Mit `min`/`max` klemmt der Helfer
+    selbst und sagt es kurz dazu („auf 30 mm begrenzt"). */
+export function numberInput(id, apply, opts = {}) {
+  const e = el(id);
+  const { min, max, unit = '' } = opts;
   const run = () => {
-    const v = parseNumber(el.value);
-    if (v === null) { el.classList.add('bad'); return; }
-    el.classList.remove('bad');
+    const v = parseNumber(e.value);
+    if (v === null) { e.classList.add('bad'); return; }
+    e.classList.remove('bad');
+    let use = v;
+    if (min !== undefined || max !== undefined) {
+      const c = clamp(v, { min, max });
+      use = c.value;
+      if (c.clamped) clampNote(e, 'auf ' + fmtPlain(use) + (unit ? ' ' + unit : '') + ' begrenzt (' + rangeText(min, max, unit) + ')');
+    }
     /* Ohne Gruppentrenner zurückschreiben: was hier steht, liest parseNumber
        beim nächsten „change"/Enter wieder ein (der Zuhörer hängt an beiden). */
-    el.value = fmtPlain(apply(v));
+    const set = apply(use);
+    e.value = fmtPlain(set === undefined ? use : set);
   };
-  el.addEventListener('change', run);
-  el.addEventListener('keydown', ev => { if (ev.key === 'Enter') run(); });
-  return el;
+  e.addEventListener('change', run);
+  e.addEventListener('keydown', ev => { if (ev.key === 'Enter') { run(); ev.preventDefault(); } });
+  return e;
 }
 
-/** „Rechnen"-Knopf samt Hinweiszeile. Gibt eine Funktion zurück, die den
-    Zustand setzt: { label, note, outline, disabled, warn }. */
+/* Der Hinweis unter einem geklemmten Feld: kurz, dann weg. */
+const noteTimers = new WeakMap();
+export function clampNote(input, text) {
+  const row = input.closest('.row') || input.parentNode;
+  if (!row) return;
+  let note = row.querySelector('.clamp-note');
+  if (!note) {
+    note = document.createElement('small');
+    note.className = 'clamp-note';
+    row.appendChild(note);
+  }
+  note.textContent = text;
+  note.classList.add('on');
+  clearTimeout(noteTimers.get(input));
+  noteTimers.set(input, setTimeout(() => { note.classList.remove('on'); note.textContent = ''; }, 2500));
+}
+
+/** „Rechnen"-Knopf samt Hinweiszeile (die Seiten ohne Rahmen). Gibt eine
+    Funktion zurück, die den Zustand setzt: { label, note, outline,
+    disabled, warn }. */
 export function runControl(btnId, noteId) {
-  const btn = $(btnId), note = $(noteId);
+  const btn = el(btnId), note = el(noteId);
   return spec => {
     btn.textContent = spec.label;
     btn.disabled = !!spec.disabled;
@@ -105,7 +133,7 @@ export function runControl(btnId, noteId) {
   };
 }
 
-/* ── Farbskala links unten im Viewport ───────────────────────── */
+/* ── Farbskala im Viewport ───────────────────────────────────── */
 
 /** Stetiger Verlauf: fn(t) mit t von 0 (unten) bis 1 (oben) liefert die
     Farbe als CSS-Zeichenkette. */
@@ -119,9 +147,10 @@ export const steps = colors => colors.map((c, i) =>
 /** Skala setzen — oder mit null ausblenden. ticks laufen von oben nach
     unten, extra ist eine Zeile darunter (z. B. „Hinterschnitt"). */
 export function colorbar(spec) {
-  const el = $('colorbar');
-  if (!spec) { el.classList.remove('on'); return; }
-  el.classList.add('on');
+  const e = $('colorbar');
+  if (!e) return;
+  if (!spec) { e.classList.remove('on'); return; }
+  e.classList.add('on');
   $('cb-title').textContent = spec.title;
   $('cb-scale').style.background = 'linear-gradient(to top, ' + spec.stops.join(', ') + ')';
   $('cb-ticks').className = 'cb-ticks' + (spec.bands ? ' bands' : '');

@@ -33,7 +33,7 @@ function clean(pts) {
 /* Rampe von vFrom Richtung vTo ab s0 mit Beschleunigungsbetrag a, dann
    Plateau bis sEnd; a = 0 heißt „kein Limit" (kürzestmögliche Rampe).
    Reicht der Weg für die Rampe nicht, endet sie bei sEnd mit der tatsächlich
-   erreichten Geschwindigkeit (wie hpdcsim MotionProfile.shot_curve) — die
+   erreichten Geschwindigkeit — die
    Beschleunigung überschreitet a dadurch nie. a in m/s², s in mm.
    Rückgabe: erreichte End-Geschwindigkeit, oder null wenn vTo erreicht wird. */
 function ramp(pts, vFrom, vTo, s0, sEnd, a) {
@@ -189,7 +189,7 @@ export function applyCurveGen(v) {
 }
 
 /* Generierte Kurven VOR persist() und den Subscribern aktualisieren:
-   localStorage und alle Subscriber (z. B. die Backend-Simulation in
+   localStorage und alle Subscriber (z. B. die Luftsimulation in
    core/simstore.js) sehen so dieselbe Kurve wie die Diagramme — sonst
    hinge das von der Subscriber-Reihenfolge ab. */
 addPreparer(() => { applyCurveGen(state.values); });

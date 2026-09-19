@@ -3,9 +3,10 @@
    OpenFOAM-CFD-Tabelle der kritischen Kolbengeschwindigkeit:
    VKRIT_F[i][j] = v_krit/√(9,81·D) für VKRIT_D_MM[i], VKRIT_PHI[j]. */
 
-/* Die Konstante, mit der die Tabelle normiert WURDE. Beide Sprachen müssen
-   mit derselben entnormieren — sonst weicht jeder v_krit-Wert systematisch
-   ab (Python rechnete mit 9,80665: Faktor 1 + 1,708e-4 auf jedem Wert). */
+/* Die Konstante, mit der die Tabelle normiert WURDE. Wer die Tabelle liest,
+   muss mit derselben entnormieren — sonst weicht jeder v_krit-Wert
+   systematisch ab (mit der Normfallbeschleunigung 9,80665 um den Faktor
+   1 + 1,708e-4 auf jedem Wert). */
 export const VKRIT_GRAVITY = 9.81;
 
 export const VKRIT_D_MM = [60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300];
