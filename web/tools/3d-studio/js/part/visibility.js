@@ -16,6 +16,8 @@
      dot  = n·d               (sin der Entformschräge, < 0 = falsche Seite)
      frac = Anteil unverdeckter Abtastpunkte (1 = frei, 0 = ganz verdeckt) */
 
+import { abortError } from '../abort.js';
+
 export const DIRS = [
   { key: 'xp', axis: 0, sign:  1, label: '+X' },
   { key: 'xm', axis: 0, sign: -1, label: '−X' },
@@ -178,7 +180,7 @@ export function computeOneDirection(model, dirIndex, samples) {
 /* Die sechs Richtungen sind unabhängig — im Browser rechnen sie
    parallel in Web-Workern (einer je Richtung, so viele wie Kerne da sind).
    Ohne Worker (Node, die Tests) läuft alles im selben Faden. */
-function parallelVisibility(model, samples, onProgress) {
+function parallelVisibility(model, samples, onProgress, signal) {
   const F = model.faceCount;
   const out = { dot: new Float32Array(F * 6), frac: new Float32Array(F * 6), samples };
   const slim = { tris: model.tris, normals: model.normals, faceCount: F, bounds: model.bounds };
@@ -189,6 +191,7 @@ function parallelVisibility(model, samples, onProgress) {
   return new Promise((resolve, reject) => {
     const workers = [];
     const finish = () => { for (const w of workers) w.terminate(); };
+    if (signal) signal.addEventListener('abort', () => { finish(); reject(abortError()); }, { once: true });
     const feed = w => {
       if (!queue.length) { w.terminate(); return; }
       w.postMessage({ model: slim, dir: queue.shift(), samples });
@@ -217,14 +220,17 @@ function parallelVisibility(model, samples, onProgress) {
     in der Oberfläche ankommt; ohne Rückruf läuft alles am Stück durch
     (so rufen die Tests es auf). */
 export async function computeVisibility(model, opts = {}) {
-  const { samples = 4, onProgress = null } = opts;
+  const { samples = 4, onProgress = null, signal = null } = opts;
+  const check = () => { if (signal && signal.aborted) throw abortError(); };
   if (typeof Worker !== 'undefined' && opts.parallel !== false) {
     try {
-      return await parallelVisibility(model, samples, onProgress);
+      return await parallelVisibility(model, samples, onProgress, signal);
     } catch (err) {
+      if (err && err.name === 'AbortError') throw err;
       console.warn('Sichtbarkeit: Worker nicht verfügbar, rechne im Hauptfaden —', err.message);
     }
   }
+  check();
   const F = model.faceCount;
   const out = { dot: new Float32Array(F * 6), frac: new Float32Array(F * 6), samples };
   const cells = cellsFor(F);
@@ -234,6 +240,7 @@ export async function computeVisibility(model, opts = {}) {
       onProgress((d + 1) / 6, DIRS[d].label);
       await new Promise(r => setTimeout(r, 0));
     }
+    check();
   }
   return out;
 }

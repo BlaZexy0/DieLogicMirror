@@ -28,6 +28,7 @@
    Volumennetz und Minuten; das hier braucht eine Sekunde und sagt, in
    welcher Reihenfolge die Kavität voll wird. */
 
+import { abortError } from '../abort.js';
 import { frameOf, shares, allItems } from './model.js';
 
 /* ── Binärer Heap über Zellindizes ───────────────────────────── */
@@ -122,7 +123,7 @@ export function seedCells(field, item) {
  *   opts.wallThickness: Wanddicke fürs Verhältnis Fließweg/Wanddicke (sonst 2·Bezugsdicke)
  */
 export async function solveFill(field, plan, opts = {}) {
-  const { alpha = plan.alpha ?? 0.5, onProgress = null, wallThickness = null, offsets = null } = opts;
+  const { alpha = plan.alpha ?? 0.5, onProgress = null, wallThickness = null, offsets = null, signal = null } = opts;
   const [nx, ny, nz] = field.dims;
   const N = nx * ny * nz;
   const d = field.data, h = field.h;
@@ -167,7 +168,11 @@ export async function solveFill(field, plan, opts = {}) {
     const c = heap.pop();
     if (done[c]) continue;
     done[c] = 1;
-    if (onProgress && (++pops & 4095) === 0) { onProgress(pops / total); await new Promise(r => setTimeout(r, 0)); }
+    if (onProgress && (++pops & 4095) === 0) {
+      onProgress(pops / total);
+      await new Promise(r => setTimeout(r, 0));
+      if (signal && signal.aborted) throw abortError();
+    }
     const k = (c / (nx * ny)) | 0, j = ((c - k * nx * ny) / nx) | 0, i = c - (k * ny + j) * nx;
     const m = mult[source[c]] || 1;
     for (const [di, dj, dk, l] of NB) {

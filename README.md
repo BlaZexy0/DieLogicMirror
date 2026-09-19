@@ -166,7 +166,8 @@ Wie in CI (`.github/workflows/ci.yml`):
 ```bash
 node tests/web/syntax-check.mjs                 # Syntax aller JS + Inline-Scripts
 node --import ./tests/web/3d-studio/stubs/register.mjs \
-     --test tests/web/*.test.mjs tests/web/3d-studio/*.test.mjs
+     --test tests/web/*.test.mjs tests/web/3d-studio/*.test.mjs \
+            tests/web/3d-studio/tools/*.test.mjs
                                                 # Frontend, Physik-Fixtures, Grenzen, Render-Rauchtest
                                                 # und das 3D-Studio (Geometrie, CSG, Formteilung,
                                                 # Abstandsfeld, Angussdesigner, Verdrahtung aller Viewer)

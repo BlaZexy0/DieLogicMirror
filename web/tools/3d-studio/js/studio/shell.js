@@ -1,0 +1,440 @@
+/* Der gemeinsame Rahmen aller Werkzeugseiten des 3D-Studios.
+
+   Eine Seite ist überall gleich gebaut:
+
+     Kopfzeile   Werkzeugname · Bauteil-Chip (öffnet das Laden) ·
+                 Rückgängig/Wiederholen · Speicherstand · Speichern ·
+                 Exportieren ▾ · Hilfe
+     Seitenleiste  Reiter = MODI (einer sichtbar, jeder besitzt, was er
+                 im Viewport zeigt), darunter eine Hinweiszeile, der
+                 Inhalt des Modus, unten fest der Hauptknopf mit
+                 Fortschritt und Zustandszeile
+     Viewport    Ansichtsleiste (mit Einpassen und Darstellung ▾), oben
+                 links die Aktions-Chips und das Auswahlfeld, unten rechts
+                 Legende und Farbskala, unten links die Bedienhinweise,
+                 dazu Zielhinweis, Toast und Hinweisstreifen
+     Hilfe       eine Lade von rechts, je Werkzeug ein Text mit Ankern
+
+   Der Rahmen kennt kein Werkzeug. Er baut das Gerüst, verwaltet Modi,
+   Knöpfe, Felder und Meldungen und reicht dem Werkzeug Elemente über
+   data-ui — ids gibt es nur für die Einzelstücke, die js/ui/controls.js
+   und js/ui/common.js seit jeher über ids finden (colorbar, status,
+   busy, aim-banner, viewport, demo-select …). Davon gibt es je Seite
+   genau eines. */
+
+import { colorbar as setColorbar } from '../ui/controls.js';
+import { mountViewBar } from '../ui/viewbar.js';
+import { createAimUI } from '../ui/common.js';
+import { createViewport } from './viewport.js';
+import { mountHelp } from './help.js';
+import { fmtTime } from './format.js';
+
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+const SKELETON = (title) => `
+<header class="st-bar" data-ui="bar">
+  <button type="button" class="st-icon st-panel-toggle" data-ui="panel-toggle" title="Einstellungen ein- und ausblenden" aria-label="Einstellungen" aria-expanded="true">☰</button>
+  <div class="st-bar-left">
+    <span class="st-tool-name" data-ui="tool-name">${esc(title)}</span>
+    <div class="st-part" data-ui="part">
+      <button type="button" class="st-chip" data-ui="part-chip" aria-haspopup="true" aria-expanded="false" title="Bauteil wählen oder laden">
+        <span class="st-chip-label" data-ui="part-label">Bauteil</span> <b data-ui="part-name">—</b><span class="st-chip-warn" data-ui="part-warn-mark" hidden>⚠</span> <span class="st-caret">▾</span>
+      </button>
+      <div class="st-pop" data-ui="part-pop" hidden>
+        <label class="row"><span>Beispielteil</span><select id="demo-select"></select></label>
+        <input type="file" id="stl-input" accept=".stl,.glb,.json,model/stl,model/gltf-binary,application/sla,application/json" hidden>
+        <button type="button" class="btn btn-outline block-btn" id="stl-btn">Datei öffnen …</button>
+        <div class="st-pop-hint">STL oder GLB, oder ein gespeicherter Plan (JSON). Dateien lassen sich auch in den Viewport ziehen.</div>
+        <div class="warn-line" id="model-warn"></div>
+        <details class="st-details"><summary>Zum Bauteil</summary>
+          <div class="hint" id="part-note"></div>
+          <div class="facts" id="model-facts"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+  <div class="st-bar-right">
+    <div class="st-undo" data-ui="undo-group" hidden>
+      <button type="button" class="st-icon" data-ui="undo" title="Rückgängig (Strg+Z)" aria-label="Rückgängig" disabled>↶</button>
+      <button type="button" class="st-icon" data-ui="redo" title="Wiederholen (Strg+Y)" aria-label="Wiederholen" disabled>↷</button>
+    </div>
+    <span class="st-save-state" data-ui="save-state" title="Entwürfe werden in diesem Browser aufgehoben"></span>
+    <button type="button" class="btn btn-sm" data-ui="save" title="Den Plan als JSON-Datei speichern">Speichern</button>
+    <div class="st-menu" data-ui="export-menu">
+      <button type="button" class="btn btn-sm" data-ui="export" aria-haspopup="true" aria-expanded="false">Exportieren ▾</button>
+      <div class="st-menu-list" data-ui="export-list" hidden></div>
+    </div>
+    <button type="button" class="st-icon" data-ui="help-btn" title="Hilfe zu diesem Werkzeug" aria-label="Hilfe">?</button>
+  </div>
+</header>
+<div class="st-layout" data-ui="layout">
+  <aside class="st-panel" data-ui="panel" aria-label="Einstellungen">
+    <div class="st-banner" data-ui="banner" hidden></div>
+    <div class="st-tabs seg tabs" role="tablist" data-ui="tabs"></div>
+    <div class="st-hint" data-ui="hint"></div>
+    <div class="st-body" data-ui="body"></div>
+    <div class="st-actions" data-ui="actions">
+      <button type="button" class="btn btn-primary block-btn" data-ui="primary" hidden></button>
+      <div class="st-progress" data-ui="progress" hidden><div class="st-progress-bar" data-ui="progress-bar"></div></div>
+      <div class="st-note" data-ui="note"></div>
+    </div>
+  </aside>
+  <div id="viewport" class="st-viewport" data-ui="viewport">
+    <div class="st-dock-tl" data-dock="tl">
+      <div class="st-chips" data-ui="chips" data-dock="chips" hidden></div>
+      <div class="st-inspector" data-ui="inspector" data-dock="inspector" hidden>
+        <div class="st-inspector-head">
+          <span class="st-inspector-title" data-ui="inspector-title"></span>
+          <button type="button" class="st-icon" data-ui="inspector-toggle" title="Einklappen" aria-label="Einklappen">▾</button>
+          <button type="button" class="st-icon" data-ui="inspector-close" title="Auswahl aufheben (Esc)" aria-label="Auswahl aufheben">✕</button>
+        </div>
+        <div class="st-inspector-body" data-ui="inspector-body"></div>
+      </div>
+    </div>
+    <div class="st-dock-br" data-dock="br">
+      <div class="colorbar" id="colorbar" data-dock="colorbar">
+        <div class="cb-title" id="cb-title"></div>
+        <div class="cb-body"><div class="cb-scale" id="cb-scale"></div><div class="cb-ticks" id="cb-ticks"></div></div>
+        <div class="cb-extra" id="cb-extra"></div>
+      </div>
+      <div class="pt-legend" id="pt-legend" data-dock="legend"></div>
+    </div>
+    <div id="status" class="st-status" data-dock="status"></div>
+    <div id="busy"></div>
+    <div class="drop-hint" data-ui="drop-hint">Datei hier ablegen</div>
+    <div class="aim-banner hidden" id="aim-banner" data-dock="aim"><div class="aim-pill"><span id="aim-text"></span><button type="button" id="aim-cancel">Abbrechen</button></div></div>
+    <div class="st-toast" data-ui="toast" hidden role="status"></div>
+  </div>
+  <aside class="st-help" data-ui="help" hidden aria-label="Hilfe">
+    <div class="st-help-head"><span data-ui="help-title">Hilfe</span><button type="button" class="st-icon" data-ui="help-close" title="Hilfe schließen" aria-label="Hilfe schließen">✕</button></div>
+    <div class="st-help-body" data-ui="help-body"></div>
+  </aside>
+</div>`;
+
+export function createShell({ mount, title, help = '', sceneOpts = {} }) {
+  mount.innerHTML = SKELETON(title);
+  mount.classList.add('st-root');
+  const ui = name => mount.querySelector('[data-ui="' + name + '"]');
+  const viewport = ui('viewport');
+  const vp = createViewport(viewport, sceneOpts);
+  const view = vp.view;
+  const viewbar = mountViewBar(viewport, view, { fit: () => vp.fit(), popover: true });
+  const aim = createAimUI();
+  const helpApi = mountHelp({ drawer: ui('help'), body: ui('help-body'), closeBtn: ui('help-close'), html: help });
+  ui('help-title').textContent = 'Hilfe · ' + title;
+
+  /* ── Modi ─────────────────────────────────────────────────── */
+  let modes = [];
+  let current = null;
+  const modeListeners = [];
+  const tabs = ui('tabs'), body = ui('body'), hint = ui('hint');
+
+  function setModes(list) {
+    modes = list;
+    tabs.innerHTML = list.map(m => '<button type="button" role="tab" data-mode="' + m.id + '" aria-selected="false" title="' + esc(m.hint || '') + '">'
+      + '<span class="st-tab-label">' + m.label + '</span><span class="st-tab-badge" data-badge="' + m.id + '" hidden></span></button>').join('');
+    body.innerHTML = list.map(m => '<section class="st-mode" data-mode="' + m.id + '" role="tabpanel" hidden>' + (m.html || '') + '</section>').join('');
+    /* ⓘ-Knöpfe öffnen die Hilfe an ihrem Anker. */
+    for (const b of body.querySelectorAll('[data-help]')) {
+      b.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); helpApi.show(b.getAttribute('data-help')); });
+    }
+    current = null;
+  }
+  tabs.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-mode]');
+    if (b) setMode(b.getAttribute('data-mode'));
+  });
+  function setMode(id) {
+    const m = modes.find(x => x.id === id);
+    if (!m || id === current) return;
+    const prev = current;
+    current = id;
+    for (const b of tabs.querySelectorAll('[data-mode]')) {
+      const on = b.getAttribute('data-mode') === id;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    }
+    for (const s of body.querySelectorAll('.st-mode')) s.hidden = s.getAttribute('data-mode') !== id;
+    hint.textContent = m.hint || '';
+    hint.hidden = !m.hint;
+    for (const fn of modeListeners) fn(id, prev);
+    view.invalidate();
+  }
+  const modeSection = id => body.querySelector('.st-mode[data-mode="' + id + '"]');
+  function setTabBadge(id, text, kind = '') {
+    const b = tabs.querySelector('[data-badge="' + id + '"]');
+    if (!b) return;
+    b.textContent = text || '';
+    b.hidden = !text;
+    b.className = 'st-tab-badge' + (kind ? ' ' + kind : '');
+  }
+
+  /* ── Hauptknopf, Fortschritt, Zustandszeile ──────────────── */
+  const primary = ui('primary'), note = ui('note'), progress = ui('progress'), progressBar = ui('progress-bar');
+  const actions = ui('actions');
+  /* Ohne Knopf, Fortschritt und Zeile bleibt kein leerer Streifen stehen. */
+  const syncActions = () => { actions.hidden = primary.hidden && note.hidden && progress.hidden; };
+  let lastPrimary = null, busy = false, busyClick = null;
+  let primaryHandler = null;
+  primary.addEventListener('click', () => { if (busy) { if (busyClick) busyClick(); } else if (primaryHandler) primaryHandler(); });
+  function renderPrimary() {
+    const spec = lastPrimary;
+    if (busy) {
+      primary.hidden = false;
+      primary.disabled = false;
+      primary.className = 'btn btn-outline block-btn st-cancel';
+      primary.textContent = 'Abbrechen';
+      return;
+    }
+    if (!spec || spec.hidden) { primary.hidden = true; return; }
+    primary.hidden = false;
+    primary.disabled = !!spec.disabled;
+    primary.className = 'btn ' + (spec.kind === 'outline' ? 'btn-outline' : 'btn-primary') + ' block-btn';
+    primary.textContent = spec.label || '';
+    primaryHandler = spec.onClick || null;
+  }
+  function setPrimary(spec) {
+    lastPrimary = spec;
+    renderPrimary();
+    if (!spec) setNote('');
+    else if (spec.reason !== undefined) setNote(spec.reason, spec.disabled ? 'muted' : (spec.noteKind || ''));
+    syncActions();
+  }
+  function setNote(text, kind = '') {
+    note.textContent = text || '';
+    note.className = 'st-note' + (kind ? ' ' + kind : '');
+    note.hidden = !text;
+    syncActions();
+  }
+  const busyEl = mount.querySelector('#busy');
+  function setBusy(on, text, onCancel) {
+    busy = !!on;
+    busyClick = on ? (onCancel || busyClick) : null;
+    if (text !== undefined && on) busyEl.textContent = text;
+    busyEl.classList.toggle('on', busy);
+    renderPrimary();
+    syncActions();
+  }
+  function setProgress(p, text) {
+    if (p === null || p === undefined) { progress.hidden = true; progressBar.style.width = '0%'; syncActions(); return; }
+    progress.hidden = false;
+    progressBar.style.width = Math.round(Math.max(0, Math.min(1, p)) * 100) + '%';
+    if (text) { setNote(text, 'busy'); busyEl.textContent = text; }
+    /* js/part/partsource.js nimmt dem Schleier nach dem Laden die Klasse —
+       läuft währenddessen eine Rechnung, steht er mit dem nächsten Schritt wieder. */
+    if (busy) busyEl.classList.add('on');
+    syncActions();
+  }
+
+  /* ── Aktions-Chips ───────────────────────────────────────── */
+  const chipsEl = ui('chips');
+  let chips = [];
+  function setChips(list) {
+    chips = list || [];
+    chipsEl.hidden = !chips.length;
+    chipsEl.innerHTML = chips.map(c => '<button type="button" class="st-chipbtn" data-chip="' + c.id + '">'
+      + (c.icon ? '<span class="st-chip-icon" style="background:' + c.icon + '"></span>' : '') + '<span>' + c.label + '</span></button>').join('');
+    renderChips();
+  }
+  function renderChips() {
+    for (const c of chips) {
+      const b = chipsEl.querySelector('[data-chip="' + c.id + '"]');
+      if (!b) continue;
+      const enabled = typeof c.enabled === 'function' ? c.enabled() : c.enabled !== false;
+      const reason = !enabled && c.reason ? (typeof c.reason === 'function' ? c.reason() : c.reason) : '';
+      b.classList.toggle('off', !enabled);
+      b.classList.toggle('active', !!(typeof c.active === 'function' ? c.active() : c.active));
+      b.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+      b.title = reason || c.title || '';
+    }
+  }
+  chipsEl.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-chip]');
+    if (!b) return;
+    const c = chips.find(x => x.id === b.getAttribute('data-chip'));
+    if (!c) return;
+    const enabled = typeof c.enabled === 'function' ? c.enabled() : c.enabled !== false;
+    if (!enabled) { toast(c.reason ? (typeof c.reason === 'function' ? c.reason() : c.reason) : 'Geht gerade nicht.'); return; }
+    c.onClick();
+    renderChips();
+  });
+
+  /* ── Auswahlfeld ─────────────────────────────────────────── */
+  const inspectorEl = ui('inspector'), inspTitle = ui('inspector-title'), inspBody = ui('inspector-body');
+  let onInspectorClose = null;
+  const inspector = {
+    el: inspectorEl, body: inspBody,
+    show({ title: t, html }) {
+      inspTitle.innerHTML = t || '';
+      if (html !== undefined) inspBody.innerHTML = html;
+      inspectorEl.hidden = false;
+      return inspBody;
+    },
+    setTitle(t) { inspTitle.innerHTML = t || ''; },
+    hide() { inspectorEl.hidden = true; },
+    get visible() { return !inspectorEl.hidden; },
+    collapse(on) { inspectorEl.classList.toggle('collapsed', on === undefined ? !inspectorEl.classList.contains('collapsed') : !!on); ui('inspector-toggle').textContent = inspectorEl.classList.contains('collapsed') ? '▸' : '▾'; },
+    onClose(fn) { onInspectorClose = fn; }
+  };
+  ui('inspector-toggle').addEventListener('click', () => inspector.collapse());
+  ui('inspector-close').addEventListener('click', () => { if (onInspectorClose) onInspectorClose(); else inspector.hide(); });
+
+  /* Freies Rechteck für das Einpassen: rechts vom Auswahlfeld. */
+  vp.setClearRect(() => {
+    const w = viewport.clientWidth, h = viewport.clientHeight;
+    const dock = mount.querySelector('[data-dock="tl"]');
+    const r = dock ? dock.getBoundingClientRect() : null;
+    const vr = viewport.getBoundingClientRect();
+    let left = 0;
+    if (!inspectorEl.hidden && r && r.width > 0) left = Math.min(w * 0.5, r.right - vr.left + 12);
+    return { left, top: 0, width: w - left, height: h };
+  });
+
+  /* ── Legende, Farbskala, Hinweise ────────────────────────── */
+  const legendEl = mount.querySelector('#pt-legend');
+  const statusEl = mount.querySelector('#status');
+  const legend = html => { legendEl.innerHTML = html || ''; };
+  /* Die Hinweiszeile unten links. Zum Einstieg steht dort, wie man das Bild
+     bewegt — auf jeder Seite dasselbe, deshalb gehört der Text dem Rahmen;
+     nach dem ersten Griff in den Viewport verblasst er. Was ein Werkzeug
+     später meldet (status), steht wieder voll da. */
+  const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  const INTRO = coarse
+    ? 'Ein Finger dreht · zwei Finger schieben und zoomen'
+    : 'Ziehen: drehen · rechte Maustaste: verschieben · Rad: zoomen · F: einpassen';
+  /* In einem schmalen Bild die kurze Fassung (css/studio.css, @container). */
+  const INTRO_SHORT = coarse ? 'Ein Finger dreht · zwei zoomen' : 'Ziehen dreht · Rad zoomt · F passt ein';
+  let intro = true;
+  statusEl.innerHTML = '<span class="st-intro-long">' + INTRO + '</span><span class="st-intro-short">' + INTRO_SHORT + '</span>';
+  const status = html => { intro = false; statusEl.classList.remove('seen'); statusEl.innerHTML = html || ''; };
+  const introSeen = () => { if (intro) statusEl.classList.add('seen'); };
+  viewport.addEventListener('pointerdown', introSeen);
+  viewport.addEventListener('wheel', introSeen, { passive: true });
+  /* „Darstellung ▾" gibt es nur, wenn das Werkzeug Anzeigeoptionen hat. */
+  const darstellungBtn = viewbar.querySelector('[data-darstellung]'), darstellungSep = viewbar.querySelector('[data-darstellung-sep]');
+  const darstellung = html => {
+    if (viewbar.pop) viewbar.pop.innerHTML = html || '';
+    if (darstellungBtn) darstellungBtn.hidden = !html;
+    if (darstellungSep) darstellungSep.hidden = !html;
+    return viewbar.pop;
+  };
+  darstellung('');
+
+  /* ── Toast und Streifen ──────────────────────────────────── */
+  const toastEl = ui('toast');
+  let toastTimer = 0;
+  function toast(text, { action, onAction, ms = 6000 } = {}) {
+    clearTimeout(toastTimer);
+    toastEl.innerHTML = '<span>' + esc(text) + '</span>' + (action ? '<button type="button" class="st-toast-act">' + esc(action) + '</button>' : '');
+    toastEl.hidden = false;
+    const act = toastEl.querySelector('.st-toast-act');
+    if (act) act.addEventListener('click', () => { toastEl.hidden = true; if (onAction) onAction(); });
+    toastTimer = setTimeout(() => { toastEl.hidden = true; }, ms);
+  }
+  const bannerEl = ui('banner');
+  function banner(spec) {
+    if (!spec) { bannerEl.hidden = true; bannerEl.innerHTML = ''; return; }
+    bannerEl.innerHTML = '<div class="st-banner-text">' + esc(spec.text) + '</div><div class="st-banner-actions">'
+      + (spec.actions || []).map((a, i) => '<button type="button" class="btn btn-sm ' + (a.primary ? 'btn-primary' : 'btn-outline') + '" data-banner="' + i + '">' + esc(a.label) + '</button>').join('') + '</div>';
+    bannerEl.hidden = false;
+    for (const b of bannerEl.querySelectorAll('[data-banner]')) {
+      b.addEventListener('click', () => { const a = spec.actions[+b.getAttribute('data-banner')]; banner(null); if (a.onClick) a.onClick(); });
+    }
+  }
+
+  /* ── Kopfzeile ───────────────────────────────────────────── */
+  const partChip = ui('part-chip'), partPop = ui('part-pop');
+  const partOpen = on => { partPop.hidden = !on; partChip.setAttribute('aria-expanded', on ? 'true' : 'false'); partChip.classList.toggle('active', on); };
+  partChip.addEventListener('click', ev => { ev.stopPropagation(); partOpen(partPop.hidden); });
+  partPop.addEventListener('click', ev => ev.stopPropagation());
+  const exportBtn = ui('export'), exportList = ui('export-list');
+  const exportOpen = on => { exportList.hidden = !on; exportBtn.setAttribute('aria-expanded', on ? 'true' : 'false'); };
+  exportBtn.addEventListener('click', ev => { ev.stopPropagation(); exportOpen(exportList.hidden); });
+  document.addEventListener('click', () => { partOpen(false); exportOpen(false); });
+  let exportsList = [];
+  function setExports(list) {
+    exportsList = list || [];
+    exportBtn.hidden = !exportsList.length;
+    exportList.innerHTML = exportsList.map((e, i) => '<button type="button" data-export="' + i + '">' + esc(e.label) + '</button>').join('');
+    for (const b of exportList.querySelectorAll('[data-export]')) {
+      b.addEventListener('click', ev => {
+        ev.stopPropagation();
+        const e = exportsList[+b.getAttribute('data-export')];
+        const ok = typeof e.enabled === 'function' ? e.enabled() : e.enabled !== false;
+        exportOpen(false);
+        if (!ok) { toast(e.reason ? (typeof e.reason === 'function' ? e.reason() : e.reason) : 'Dafür gibt es noch nichts.'); return; }
+        e.run();
+      });
+    }
+  }
+  const header = {
+    setPart(name, label, warning = '') {
+      ui('part-name').textContent = name || '—';
+      if (label) ui('part-label').textContent = label;
+      ui('part-warn-mark').hidden = !warning;
+      partChip.title = warning ? 'Hinweis zum Netz: ' + warning : 'Bauteil wählen oder laden';
+      partOpen(false);
+    },
+    partOpen,
+    setSave({ state, when }) {
+      const el = ui('save-state');
+      const t = when ? fmtTime(when) : '';
+      const text = state === 'dirty' ? 'Ungespeichert' : state === 'draft' ? 'Entwurf ' + t : state === 'saved' ? 'Gespeichert ' + t : '';
+      el.textContent = text;
+      el.className = 'st-save-state' + (state ? ' ' + state : '');
+      /* Solange etwas nicht in einer Datei steht, ist Speichern der gefüllte Knopf. */
+      ui('save').classList.toggle('dirty', state === 'dirty' || state === 'draft');
+    },
+    setUndo({ visible = true, canUndo = false, canRedo = false, undoLabel = '', redoLabel = '' }) {
+      ui('undo-group').hidden = !visible;
+      const u = ui('undo'), r = ui('redo');
+      u.disabled = !canUndo; r.disabled = !canRedo;
+      u.title = 'Rückgängig (Strg+Z)' + (undoLabel ? ': ' + undoLabel : '');
+      r.title = 'Wiederholen (Strg+Y)' + (redoLabel ? ': ' + redoLabel : '');
+    },
+    onSave(fn) { ui('save').addEventListener('click', fn); },
+    onUndo(fn) { ui('undo').addEventListener('click', fn); },
+    onRedo(fn) { ui('redo').addEventListener('click', fn); },
+    setExports,
+    hideSave() { ui('save').hidden = true; ui('save-state').hidden = true; },
+    /** Für Werkzeuge mit eigenen Dateien (die Abstandsanalyse hat zwei). */
+    hidePart() { ui('part').hidden = true; }
+  };
+  ui('help-btn').addEventListener('click', ev => { ev.stopPropagation(); helpApi.toggle(); });
+  /* ☰ nimmt die Seitenleiste weg und holt sie wieder — bei jeder Breite: wo
+     sie neben dem Bild steht, bekommt das Bild den Platz; unter 720 px, wo sie
+     als Lade darüber liegt, gleitet sie hinaus (css/studio.css). Sie ist DA,
+     bis man sie wegnimmt: ein Klick ins Bild schließt sie nicht, sonst wäre
+     sie für jeden, der mit schmalem Fenster arbeitet, ständig verschwunden. */
+  const layoutEl = ui('layout'), toggleEl = ui('panel-toggle');
+  toggleEl.addEventListener('click', ev => {
+    ev.stopPropagation();
+    const closed = layoutEl.classList.toggle('panel-closed');
+    toggleEl.setAttribute('aria-expanded', closed ? 'false' : 'true');
+    view.invalidate();
+  });
+
+  /* ── Tastatur: ein Zuhörer, das Werkzeug bekommt die Taste ─ */
+  const keyListeners = [];
+  document.addEventListener('keydown', ev => {
+    const t = ev.target;
+    const tag = t && t.tagName ? t.tagName : '';
+    const inInput = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || (t && t.isContentEditable);
+    if (ev.key === 'Escape' && helpApi.open) { helpApi.hide(); return; }
+    for (const fn of keyListeners) { if (fn(ev, { inInput }) === true) { ev.preventDefault(); return; } }
+  });
+
+  return {
+    root: mount, ui, viewport, view, vp, viewbar, aim, help: helpApi,
+    fit: (box, margin) => vp.fit(box, margin),
+    setModes, setMode, get mode() { return current; }, onMode(fn) { modeListeners.push(fn); }, modeSection, setTabBadge,
+    setPrimary, setNote, setBusy, progress: setProgress, get busy() { return busy; },
+    setChips, renderChips,
+    inspector,
+    legend, status, colorbar: setColorbar, darstellung,
+    toast, banner,
+    header,
+    onKey(fn) { keyListeners.push(fn); },
+    busyEl
+  };
+}

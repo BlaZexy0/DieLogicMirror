@@ -45,6 +45,8 @@ export class TrackballControls {
     this.maxDistance = 1e5;
     this.minZoom = 0.01;
     this.maxZoom = 500;
+    /* Zoomen zum Zeiger statt zum Ziel — der gemeinsame Rahmen schaltet es ein. */
+    this.zoomToCursor = false;
 
     this._mode = -1;
     this._last = { x: 0, y: 0 };
@@ -124,7 +126,40 @@ export class TrackballControls {
   _wheel(e) {
     if (!this.enabled) return;
     e.preventDefault();
-    this.dolly(Math.pow(0.95, -Math.sign(e.deltaY) * this.zoomSpeed));
+    const factor = Math.pow(0.95, -Math.sign(e.deltaY) * this.zoomSpeed);
+    if (this.zoomToCursor) {
+      const r = this.domElement.getBoundingClientRect();
+      const nx = ((e.clientX - r.left) / Math.max(r.width, 1)) * 2 - 1;
+      const ny = -((e.clientY - r.top) / Math.max(r.height, 1)) * 2 + 1;
+      this.dollyAt(factor, nx, ny);
+    } else this.dolly(factor);
+  }
+
+  /** Zoomen zum Zeiger: der Punkt unter dem Zeiger (in der Ebene durch
+      das Ziel, quer zur Blickrichtung) bleibt im Bild stehen — Ziel und
+      Kamera rücken um den Rest dorthin. Ohne Treffer wie dolly(). */
+  dollyAt(factor, nx, ny) {
+    const cam = this.object;
+    const dir = new T.Vector3().subVectors(this.target, cam.position).normalize();
+    const plane = new T.Plane().setFromNormalAndCoplanarPoint(dir, this.target);
+    const ray = new T.Raycaster();
+    ray.setFromCamera(new T.Vector2(nx, ny), cam);
+    const hit = ray.ray.intersectPlane(plane, new T.Vector3());
+    if (!hit) { this.dolly(factor); return; }
+    let ratio;
+    if (cam.isOrthographicCamera) {
+      const before = cam.zoom;
+      this.dolly(factor);
+      ratio = before / cam.zoom;
+    } else {
+      const before = cam.position.distanceTo(this.target);
+      this.dolly(factor);
+      ratio = cam.position.distanceTo(this.target) / before;
+    }
+    const shift = hit.sub(this.target).multiplyScalar(1 - ratio);
+    this.target.add(shift);
+    cam.position.add(shift);
+    cam.updateMatrixWorld();
   }
 
   /* ── Bewegungen ────────────────────────────────────────────── */

@@ -46,7 +46,8 @@ export function snapshotOf(pos, vel, n, step) {
  * → { snapshots, gateDone, steps, reason }
  */
 export async function runSph(opts) {
-  const { solver, engine, dt, stepsMax, snapEvery, ctrlAt, onSnapshot, onWork, isCancelled, settleSteps = 0 } = opts;
+  const { solver, engine, dt, stepsMax, snapEvery, ctrlAt, onSnapshot, onWork, signal, settleSteps = 0 } = opts;
+  const isCancelled = () => (opts.isCancelled && opts.isCancelled()) || (signal && signal.aborted);
   const n = solver.n;
   const gateDone = new Array(opts.gates || solver.gates || (solver.gateArrival ? solver.gateArrival.length : 1)).fill(NEVER);
   if (settleSteps > 0) {

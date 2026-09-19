@@ -28,7 +28,8 @@ const tick = () => new Promise(r => (typeof requestAnimationFrame === 'function'
  *   (Gittereinheiten); Gaszellen tragen 0.
  */
 export async function runSimulation(opts) {
-  const { solver, engine, domain, stepsMax, snapEvery, uAt, ipAt, onSnapshot, isCancelled } = opts;
+  const { solver, engine, domain, stepsMax, snapEvery, uAt, ipAt, onSnapshot, signal } = opts;
+  const isCancelled = () => (opts.isCancelled && opts.isCancelled()) || (signal && signal.aborted);
   const N = domain.N;
   const snapshots = [];
   const gateDone = new Array((domain.gates || []).length).fill(NEVER);

@@ -18,7 +18,7 @@
    hängen nicht an den Formteil-Meshes, damit sie auch ohne die Formteile
    stehen. Einzelne Formteile lassen sich ausblenden (setVisible).
 
-   Gemeinsam für die Entformungsanalyse (js/part/app.js) und den Schritt
+   Gemeinsam für die Entformungsanalyse (js/entformung/tool.js) und den Schritt
    Bauteil der Werkbank (js/werkbank/part.js), die nur die Formteile nutzt. */
 
 import * as T from 'three';

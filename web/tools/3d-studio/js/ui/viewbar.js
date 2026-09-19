@@ -1,10 +1,15 @@
-/* Ansichtsleiste über dem Viewport — in beiden Viewern dieselbe.
+/* Ansichtsleiste über dem Viewport — in allen Viewern dieselbe.
 
    X · Y · Z · Iso schwenken die Kamera auf die Achse. Ein ZWEITER Klick
    auf denselben Knopf dreht die Blickrichtung um; die Beschriftung
    wechselt dann auf −X, −Y, −Z bzw. Iso'. Rechts daneben steht die
    Projektion: Zentralprojektion (perspektivisch) oder 2D-Parallel-
-   projektion (orthografisch, maßstäblich — für Risse und zum Abmessen). */
+   projektion (orthografisch, maßstäblich — für Risse und zum Abmessen).
+
+   Der gemeinsame Rahmen (js/studio/) gibt zwei Dinge dazu: „Einpassen"
+   (opts.fit) und ein Aufklappfeld „Darstellung" für die Anzeigeoptionen
+   des Werkzeugs (opts.popover: true) — beides fehlt auf den alten Seiten,
+   die die Leiste ohne opts aufrufen. */
 
 const VIEW_BUTTONS = [
   { key: 'x', label: 'X', title: 'Blick entlang der X-Achse (nochmal klicken: −X)' },
@@ -13,14 +18,17 @@ const VIEW_BUTTONS = [
   { key: 'iso', label: 'Iso', title: 'Schrägbild (nochmal klicken: Gegenecke)' }
 ];
 
-export function mountViewBar(container, view) {
+export function mountViewBar(container, view, opts = {}) {
   const bar = document.createElement('div');
   bar.className = 'view-bar';
+  bar.setAttribute('data-dock', 'viewbar');
   bar.innerHTML =
     VIEW_BUTTONS.map(b => '<button type="button" data-view="' + b.key + '" title="' + b.title + '">' + b.label + '</button>').join('')
+    + (opts.fit ? '<button type="button" data-fit title="Einpassen: alles ins Bild (F, Doppelklick)">Einpassen</button>' : '')
     + '<div class="sep"></div>'
     + '<button type="button" data-proj="persp" class="active" title="Zentralprojektion (perspektivisch)">Persp</button>'
-    + '<button type="button" data-proj="ortho" title="2D-Parallelprojektion (orthografisch, maßstäblich)">Parallel</button>';
+    + '<button type="button" data-proj="ortho" title="2D-Parallelprojektion (orthografisch, maßstäblich)">Parallel</button>'
+    + (opts.popover ? '<div class="sep" data-darstellung-sep></div><button type="button" data-darstellung aria-haspopup="true" aria-expanded="false" title="Anzeigeoptionen">Darstellung ▾</button>' : '');
   container.appendChild(bar);
 
   const viewBtns = [...bar.querySelectorAll('[data-view]')];
@@ -45,6 +53,35 @@ export function mountViewBar(container, view) {
       view.setProjection(b.dataset.proj);
       for (const other of projBtns) other.classList.toggle('active', other === b);
     });
+  }
+
+  const fitBtn = bar.querySelector('[data-fit]');
+  if (fitBtn) fitBtn.addEventListener('click', () => opts.fit());
+
+  /* Das Aufklappfeld „Darstellung": ein Kasten unter der Leiste, den das
+     Werkzeug mit seinen Zeilen füllt (bar.popover). Zu, sobald man
+     daneben klickt oder Escape drückt. */
+  let popover = null;
+  bar.pop = null;
+  const toggleBtn = bar.querySelector('[data-darstellung]');
+  if (toggleBtn) {
+    popover = document.createElement('div');
+    popover.className = 'view-pop';
+    popover.setAttribute('data-ui', 'darstellung');
+    popover.setAttribute('data-dock', 'darstellung');
+    popover.hidden = true;
+    container.appendChild(popover);
+    const setOpen = on => {
+      popover.hidden = !on;
+      toggleBtn.classList.toggle('active', on);
+      toggleBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+    };
+    toggleBtn.addEventListener('click', ev => { ev.stopPropagation(); setOpen(popover.hidden); });
+    popover.addEventListener('click', ev => ev.stopPropagation());
+    document.addEventListener('click', () => { if (!popover.hidden) setOpen(false); });
+    document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !popover.hidden) setOpen(false); });
+    bar.pop = popover;
+    bar.openPop = setOpen;
   }
   return bar;
 }

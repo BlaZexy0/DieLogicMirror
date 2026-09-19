@@ -41,6 +41,7 @@
 
    Kein Three.js — damit unter Node testbar. */
 
+import { abortError, isAbort } from '../abort.js';
 import { distSqPointTri } from '../mesh.js';
 
 /** Erlaubte Zellkanten in mm — feiner frisst Speicher, gröber sieht keine Wand. */
@@ -205,12 +206,14 @@ function stampDistances(model, f, data, from, to) {
     Kontrolle abgegeben, damit der Fortschritt in der Oberfläche ankommt;
     ohne Rückruf läuft alles am Stück durch (so rufen die Tests es auf). */
 export async function buildField(model, opts = {}) {
-  const { res = 96, h = 0, pad = -1, band = 10, onProgress = null } = opts;
+  const { res = 96, h = 0, pad = -1, band = 10, onProgress = null, signal = null } = opts;
+  const check = () => { if (signal && signal.aborted) throw abortError(); };
   const f = fieldSize(model, res, band, { h, pad });
   const data = new Float32Array(f.samples).fill(band);
   f.data = data;
 
   if (onProgress) { onProgress(0.02, 'innen/außen'); await tick(); }
+  check();
   fillInside(model, f, data);
 
   const F = model.faceCount;
@@ -221,8 +224,10 @@ export async function buildField(model, opts = {}) {
       onProgress(0.1 + 0.85 * Math.min(1, (t + chunk) / F), 'Abstände');
       await tick();
     }
+    check();
   }
   if (onProgress) { onProgress(0.96, 'Kern'); await tick(); }
+  check();
   fillInterior(f);
   return f;
 }
@@ -299,6 +304,7 @@ export function fillInterior(f) {
 }
 
 const tick = () => new Promise(r => setTimeout(r, 0));
+export { abortError, isAbort };
 
 /** Volumen aus dem Feld: Rasterpunkte unterhalb des Wertes zählen. */
 export function fieldVolume(f, iso) {

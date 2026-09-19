@@ -44,6 +44,7 @@ jobs:
         run: >-
           node --import ./tests/web/3d-studio/stubs/register.mjs
           --test tests/web/*.test.mjs tests/web/3d-studio/*.test.mjs
+          tests/web/3d-studio/tools/*.test.mjs
       - name: Generierte Dateien aktuell? (Theorie-SVGs, v_krit-Tabellen, Icon-Sprite, Eingabegrenzen)
         # Die eingecheckten Artefakte müssen zum Code passen — alle
         # Generatoren sind deterministisch, ein Diff heißt: Regenerieren

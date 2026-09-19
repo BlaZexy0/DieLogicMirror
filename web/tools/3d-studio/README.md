@@ -165,6 +165,18 @@ Modell vorhanden sein müssen, ohne Regler, sofort beim Laden. Welches
 Format eine hochgeladene Datei hat, entscheidet der Dateikopf, nicht die
 Endung.
 
+
+Die Seite läuft im **gemeinsamen Rahmen** (`js/entformung/`): die Analyse
+startet beim Laden als Rechnung mit Fortschritt und **Abbrechen** (ein
+abgebrochenes Teil bleibt grau, der Hauptknopf „Entformung rechnen" holt es
+nach; kommt währenddessen ein anderes Teil, beginnt die Rechnung für das neue
+von vorn). Die Legende der Regionen steht im Viewport unten rechts und nennt
+nur, was vorkommt; die Bilanz steht als Kennzahlen mit Urteil in der
+Seitenleiste (Hinterschnitt > 0 ist rot, Haftung an der festen Seite auch),
+Rechenzeit und Splitter zugeklappt unter „Rechnung", der Grenzwert der
+Schräge nur bei der Einfärbung „Schräge". Die Erklärungen der früheren
+Textblöcke stehen in der Hilfe (ⓘ).
+
 ### Der Weg dahin
 
 1. **Sichtbarkeit** (`js/part/visibility.js`) — für jede der sechs
@@ -353,6 +365,20 @@ des Abstands zur Oberfläche. (Offsetflächen nach außen, für die
 Temperierung, hat diese Seite nicht mehr — der Temperierkanal-Designer
 rechnet seine Abstandsfläche selbst.)
 
+Die Seite läuft als erste im **gemeinsamen Rahmen** (siehe „Der gemeinsame
+Rahmen"). Ihre Reiter sind Modi, von links nach rechts die Arbeitsfolge:
+**Bauteil** (Abmessungen, Volumen, Wanddicke 2V/A) · **Feld** (Zellkante,
+Kosten vorab, „Feld berechnen" mit Fortschritt und Abbrechen) ·
+**Isofläche** · **Schnitt** · **Wärmezentren**. Jeder Modus besitzt, was er
+im Viewport zeigt — Schnitt und Wärmezentren stellen das Bauteil von selbst
+durchscheinend, ein eigener Haken dafür entfällt. Nach dem ersten Feld geht
+die Seite von selbst zur Isofläche; ohne Feld zeigen die drei Ergebnis-Modi
+den Aufruf zum Rechnen, mit einem veralteten (andere Zellkante) „Feld neu
+berechnen". Die Deckkraft des Bauteils steht unter „Darstellung" in der
+Ansichtsleiste, die Isofläche als STL unter „Exportieren". Das Werkzeug
+liegt in `js/wandstaerke/` (`tool.js`, `panel.js`, `help.js`), die
+Erklärungen stehen in der Hilfe (ⓘ, „?").
+
 ### Schritt 1 — Feld (auf Knopfdruck)
 
 `js/part/field.js` legt ein Raster über das Bauteil und speichert für
@@ -437,19 +463,18 @@ größte Kugel, die dort ins Bauteil passt — Radius = Feldwert, Durchmesser
 Wandstärken-Skala wie der Schnitt (blau dünn, rot dick); die Farbskala
 im Viewport gilt für beide. Wahlweise Kreise statt Kugeln (zur Kamera
 gedreht, ohne Tiefenprüfung, damit sie auch im deckenden Bauteil zu
-sehen sind), und „frei sichtbar" nimmt die Isofläche weg und macht das
-Bauteil durchscheinend. Die Kennzahlen nennen Zahl der Stellen, größte
+sehen sind); der Modus nimmt die Isofläche weg und macht das Bauteil
+durchscheinend. Die Kennzahlen nennen Zahl der Stellen, größte
 und kleinste markierte Wandstärke und den Ort der dicksten.
 
 ### Das Feld ansehen
 
 Ein **Feldschnitt** zeigt das Feld selbst als Rasterbild: Achse und
 Position wählbar, gefärbt in der **Turbo-Skala** (dunkelblau über Grün
-und Gelb nach Rot; `js/part/colors.js`, das Polynom nach Popov) über den
-Bereich, den man wählt — **innen** (dann ist es die Wandstärke: an der
-Oberfläche blau, dick rot, die Skala nennt das Doppelte des Feldwerts),
-**außen** (der Abstand vom Bauteil) oder **beides** (innen rot über Grün
-an der Oberfläche nach Blau außen). Was nicht zum Bereich gehört, bleibt
+und Gelb nach Rot; `js/part/colors.js`, das Polynom nach Popov) — **innen**
+ist es die Wandstärke: an der Oberfläche blau, dick rot, die Skala nennt
+das Doppelte des Feldwerts. Außen gibt es nichts zu zeigen (das Feld
+reicht nur zwei Zellen über das Bauteil hinaus), dort bleibt das Bild
 hellgrau, so hebt sich der Querschnitt ab. Die Skala reicht bis zum
 **größten Wert, der im Feld vorkommt**, nicht bis zur Bandbreite — ein
 Band von 13 mm bei 6 mm dicksten Wänden ließ sonst die halbe Skala
@@ -472,13 +497,23 @@ ist die Kugelprobe selbst, ihr Durchmesser die Wandstärke — oder als
 damit er auch im deckenden Bauteil zu sehen ist. Der Regler „ab" lässt
 nur Stellen ab einem Anteil der größten Wandstärke zu, und eine Stelle,
 die in der Kugel einer stärkeren liegt, fällt weg — sonst säumten
-Dutzende Punkte jeden Grat. Damit die Marken zu sehen sind, schaltet
-„Frei sichtbar" (voreingestellt an) das Bauteil durchscheinend und die
-Offsetfläche aus — sonst lagen sie im deckenden Bauteil oder hinter der
-Fläche. Die Kennzahlen nennen die Zahl der Stellen, die größte
+Dutzende Punkte jeden Grat. Damit die Marken zu sehen sind, stellt der
+Modus das Bauteil durchscheinend und zeigt die Isofläche nicht — sonst
+lagen sie im deckenden Bauteil oder hinter der Fläche. Die Kennzahlen
+nennen die Zahl der Stellen, die größte
 Wandstärke und den Ort der dicksten.
 
 ## Abstandsanalyse (`abstand.html`)
+
+Die Seite läuft im **gemeinsamen Rahmen** (`js/abstand/`) und ist dort das eine
+Werkzeug mit zwei Bauteilen: der Bauteil-Chip der Kopfzeile entfällt, die beiden
+Quellen stehen im Modus **Dateien**, und eine ins Bild gezogene STL/GLB fragt, ob
+sie A oder B sein soll. **Abstand** trägt Suchgrenze, Hauptknopf („Abstand
+berechnen", während der Rechnung „Abbrechen") und die Kennzahlen — Punkte
+innerhalb des anderen Netzes sind rot —, **Skala** die Grenzen der Farben und die
+Wahl, welche Datei gefärbt wird. Bei den Dateien stehen beide Netze grau; die
+Karte gehört zu Abstand und Skala. Welche Datei zu sehen ist und die Deckkraft
+stehen unter „Darstellung".
 
 Die Wandstärkenanalyse beantwortet die Frage nach innen. Nach außen steht die
 andere, und die braucht **zwei Körper**: wie weit ist die
@@ -1550,6 +1585,79 @@ Teil sagt auf einen Blick, wohin die Schmelze zuerst kommt.
 Dateien: **JSON** ist der Plan (`dielogic-fuellung`, Fassung 1: Anschnitte
 mit Ort, Normale, Drehung, Maßen und Anteil, dazu α).
 
+## Der gemeinsame Rahmen (`js/studio/`)
+
+Alle Werkzeugseiten bekommen dasselbe Gerüst und denselben Ablauf.
+Wandstärken-, Entformungs- und Abstandsanalyse laufen schon darin, die übrigen ziehen
+nach (bis dahin tragen sie `css/viewer.css` und ihre eigene Seitenleiste).
+
+```
+Kopfzeile     Werkzeug · Bauteil-Chip (Beispielteil, Datei öffnen) · ↶ ↷ ·
+              Speicherstand · Speichern · Exportieren ▾ · ?
+Seitenleiste  Reiter = MODI (links → rechts = Arbeitsfolge) · eine Zeile
+              Hinweis · die Felder des Modus · unten fest EIN Hauptknopf
+              mit Fortschritt und Zustandszeile
+Viewport      Ansichtsleiste (X Y Z Iso · Einpassen · Persp/Parallel ·
+              Darstellung ▾) · Aktions-Chips und Auswahlfeld oben links ·
+              Farbskala und Legende unten rechts · Hinweiszeile unten links
+Hilfe         eine Lade von rechts, je Werkzeug ein Text mit Ankern (ⓘ)
+```
+
+Die Regeln, die der Rahmen durchsetzt — und die Tests, die sie halten:
+
+- **Ein Modus besitzt, was er im Viewport zeigt**, und hat höchstens EINEN
+  Hauptknopf, benannt nach dem Ergebnis („Feld berechnen"). Läuft die
+  Rechnung, heißt derselbe Knopf „Abbrechen" (`job.js`): die Rechenmodule
+  bekommen ein `AbortSignal` und prüfen es an ihren Haltepunkten
+  (`js/abort.js`; `buildField`, `computeVisibility`, `solveFill`,
+  `distanceToMesh`, `runSimulation`, `runSph`). Gibt es nichts zu tun, steht
+  kein toter Knopf da — die Zeile sagt, wie es weitergeht.
+- **Die Seitenleiste scrollt nicht** (1280 × 720, 1024 × 768, auch unter
+  dem Finger und mit aufgeklappten Details): Kennzahlen, die selten
+  interessieren, liegen in einem zugeklappten „Details", Erklärungen in
+  der Hilfe. Nichts im Viewport überdeckt einander (`[data-dock]`).
+- **Plan oder Einstellungen.** Ein Designer hat einen *Plan*: jeder Schritt
+  landet im Verlauf (`history.js`, Strg+Z/Y) und als Entwurf im Browser
+  (`store.js`, je Werkzeug und Bauteil); ein Entwurf wird angeboten, nie
+  still übernommen, und die Seite fragt, bevor Ungesichertes verloren
+  geht. Eine Analyse hat nur *Einstellungen* (`settingsOnly`): die merkt
+  sich der Browser still und bringt sie beim nächsten Mal zurück — mit
+  einer Meldung und „Zurücksetzen"; kein „Ungespeichert", keine Frage beim
+  Verlassen. „Speichern" schreibt in beiden Fällen JSON
+  (`<bauteil>-<werkzeug>.json`), „Öffnen" und Ablegen entscheiden nach dem
+  Inhalt (Netz oder Plan), nicht nach der Endung.
+- **Zahlen sprechen deutsch** (`format.js`): Anzeige mit Komma und
+  Tausenderpunkt, Stellen je Einheit, und ein Parser, der `1.500` als 1500
+  und `1.5` als 1,5 liest. Eine Eingabe außerhalb der Grenzen wird geklemmt
+  und das kurz dazugesagt. Kein `toFixed` in der Oberfläche.
+- **Unter dem Finger** (`pointer: coarse`) ist alles Antippbare 44 px hoch.
+  Die Seitenleiste STEHT bis 720 px hinunter neben dem Bild (340 px breit,
+  unter 1280 px 320) — im halben Fenster eines Full-HD-Schirms (960 px), bei
+  125 % Skalierung (768 px), auf dem Tablett hochkant. Erst darunter ist sie
+  eine Lade über dem Bild. ☰ in der Kopfzeile nimmt sie bei jeder Breite weg
+  und holt sie wieder; ein Klick ins Bild schließt sie nicht. Passt die
+  Ansichtsleiste nicht in ein schmales Bild, bricht sie um. Unter 600 px
+  gestapelt: Bild, dann Felder.
+- **Nichts wird abgeschnitten.** Die Seite hat keine eigene Schrift, sie
+  nimmt die des Systems — und die ist je Browser verschieden breit (Firefox
+  setzt hier Noto Sans, deutlich breiter als Chromiums Wahl). Reiter, die
+  nicht in eine Zeile passen, brechen um; ein Schalter, der neben seiner
+  Bezeichnung keinen Platz hat, rutscht darunter; Bezeichnungen brechen in
+  ihrer Spalte um. `ux.spec.mjs` misst das in jedem Modus, in Chromium UND
+  Firefox.
+- **Erklärt wird auf Wunsch**: ein ⓘ öffnet die Hilfe an seinem Anker;
+  Erklärungen stehen nie nur in einem `title` (den gibt es auf dem Tablett
+  nicht).
+
+Ein Werkzeug ist eine Fabrik `createXTool(host)` in seinem Ordner
+(`tool.js`, dazu `panel.js` mit den Feldern je Modus und `help.js`). Es
+findet seine Felder mit `ui('name')` = `[data-ui="name"]` statt über ids —
+auf der Werkbank werden mehrere Werkzeuge auf einer Seite leben. Der
+Gastgeber (`host.js`) besitzt Bauteil, Abstandsfeld, Verlauf, Entwurf,
+Rechnungen und Dateien und verdrahtet Reiter, Hauptknopf, Speichern,
+Exportieren und Tasten; die Seite selbst ist nur noch
+`<div id="studio">` und ein Modul unter `js/studio/pages/`.
+
 ## Struktur
 
 ```
@@ -1563,7 +1671,8 @@ ueberlauf.html        Viewer 6: Überlaufdesigner (Überläufe und Entlüftungen
 temperier.html        Viewer 7: Temperierkanal-Designer (Kühlstiche und Kanäle)
 fuellung.html         Viewer 8: Füllabschätzung (Frontausbreitung von Anschnitten)
 css/site.css          Übersichtsseite und Karten
-css/viewer.css        Seitenleiste und Viewport aller Viewer
+css/viewer.css        Seitenleiste und Viewport der Viewer, die noch nicht im Rahmen laufen
+css/studio.css        der gemeinsame Rahmen: Kopfzeile, Modi, Viewport-Aufsätze, Hilfe, Stufen, Touch
 assets/die.glb        DAS Formmodell — binäres glTF, vom Viewer geladen
 assets/parts/*.glb    die Beispielteile — ebenfalls fertiges glTF
 
@@ -1606,10 +1715,24 @@ js/part/demoparts.js  Beispielteile: Beschreibung + Laden der GLB
 js/part/glbio.js      GLB lesen ohne Three.js (Beispielteile und Uploads)
 js/part/stlio.js      STL lesen und schreiben
 js/part/colors.js     Farben der Analyse (aus der DieLogic-Palette)
-js/part/app.js        Einstieg Entformungsanalyse
 js/part/ejector.js    Haftmaß je Fläche, Haftkarte
-js/part/offsetapp.js  Einstieg Wandstärkenanalyse
-js/part/distanceapp.js Einstieg Abstandsanalyse-Viewer
+js/abort.js           AbortError für lange Rechnungen (die Rechenmodule prüfen ein AbortSignal)
+js/studio/shell.js    DER RAHMEN: Gerüst, Modi, Hauptknopf, Chips, Auswahlfeld, Toast, Tasten
+js/studio/host.js     Gastgeber eines Werkzeugs: Bauteil, Feld, Verlauf, Entwurf, Rechnungen, Dateien
+js/studio/part.js     das Bauteil des Rahmens (ein Netz, zwei Materialien, Laden über den Chip)
+js/studio/viewport.js Szene + Einpassen in den freien Teil des Bildes, Zoom zum Zeiger
+js/studio/job.js      lange Rechnungen: Knopf wird „Abbrechen", Fortschritt, AbortSignal
+js/studio/history.js  Rückgängig/Wiederholen als Stapel von JSON-Abzügen
+js/studio/store.js    Entwürfe und Einstellungen in localStorage, je Werkzeug und Bauteil
+js/studio/files.js    Öffnen nach Inhalt, Speichern als JSON, Ablegen auf dem Viewport
+js/studio/format.js   Zahlen deutsch schreiben und lesen (fmt, fmtUnit, parseNumber, clamp)
+js/studio/rows.js     Bausteine der Seitenleiste (Zahl, Regler, Schalter, Kennzahlen, Details)
+js/studio/help.js     die Hilfe-Lade mit Ankern
+js/studio/pages/      je Seite ein Modul: Gastgeber bauen, Werkzeug einsetzen
+js/studio/partinfo.js der Modus „Bauteil" — in jedem Werkzeug derselbe (Kennzahlen, Netzwarnung, Details)
+js/wandstaerke/       Wandstärkenanalyse im Rahmen: tool.js, panel.js (Felder je Modus), help.js
+js/entformung/        Entformungsanalyse im Rahmen: tool.js, panel.js, help.js
+js/abstand/           Abstandsanalyse im Rahmen — das eine Werkzeug mit ZWEI Bauteilen (createHost({ part: false }))
 js/runner/vec.js      kleine Vektorrechnung (ohne Three.js, unter Node lauffähig)
 js/runner/graph.js    DAS Datenmodell: Knoten, Arbeitsebenen, Spiegelung, JSON
 js/runner/presets.js  Beispielsysteme (durch die Auslegung gelaufen)
@@ -1677,7 +1800,8 @@ Aus dem Repo-Root, zusammen mit den übrigen Frontend-Tests:
 
 ```
 node --import ./tests/web/3d-studio/stubs/register.mjs \
-     --test tests/web/*.test.mjs tests/web/3d-studio/*.test.mjs
+     --test tests/web/*.test.mjs tests/web/3d-studio/*.test.mjs \
+            tests/web/3d-studio/tools/*.test.mjs
 ```
 
 Der `--import`-Hook löst nur `three` und den GLTFLoader auf und ersetzt
@@ -1691,14 +1815,27 @@ nichts. Die Dateien liegen unter `tests/web/3d-studio/`:
 | `field.test.mjs` | Abstandsfeld und Offsetfläche gegen die geschlossene Formel (Quader, Kugel), Untermaß, Geschlossenheit, verschmelzende Spalte |
 | `distance.test.mjs` | Punkt-Netz-Abstand gegen Fläche, Kante, Ecke und Innenraum, Symmetrie, Unabhängigkeit von der Rasterweite, Verfeinern |
 | `die.test.mjs` | jede Baugruppe geschlossen und richtig orientiert, **kein Bauteil steckt im Stahl eines anderen**, Kavität als Negativ mit Spalt, Kernstift, Füllkammer |
-| `imports.test.mjs` | jeder Import löst auf, jeder exportierte Name existiert, jede angesprochene HTML-id ist vorhanden |
+| `imports.test.mjs` | jeder Import löst auf, jeder exportierte Name existiert, jede angesprochene HTML-id ist vorhanden — und für die Werkzeuge des Rahmens: jedes `ui('name')` steht als `data-ui` in den (dafür gebauten) Feldern oder im Gerüst |
+| `studio-core.test.mjs` | der Rahmen ohne Werkzeug: `parseNumber` (`1.500`, `1.5`, `0.500`, `1.234,5`, `−3`), Rundlauf mit `fmtPlain`, Verlauf (Zug = ein Eintrag, Zusammenfassen, Grenze), Entwurf (schreiben, finden, verwerfen, ohne Speicher), Abbruch erreicht `buildField` und `runSimulation` |
+| `tools/*.test.mjs` | je Werkzeug des Rahmens die Seite unter dem DOM-Platzhalter (`tools/fixture.mjs`): Modi besitzen ihren Viewport, Hauptknopf und Zustandszeile, Abbrechen, Einstellungen kommen zurück und lassen sich zurücksetzen, Datei |
 | `runner.test.mjs` | der Angussdesigner ohne Browser: Profil (Umriss gegen Abstandsfunktion), Graph (Spiegelung, Einfügen, Löschen, JSON), Kurve (Bogenlänge, monotoner Querschnitt), Sweep (Volumen = Fläche × Länge, geschlossen auch mit gerundeten Deckeln), Strömung, Regeln, Auslegung, Flussschema |
 | `fill.test.mjs` | die Füllabschätzung ohne Browser: Plan und Anteile, Startzellen unter dem Rechteck, Frontausbreitung (Ankunft wächst mit dem Weg, Füllgrad als Volumenrang, der größere Anschnitt kommt weiter, die Dünnwand-Bremse verzögert eine Rippe), Füllkörper bei 100 % und 50 %, letzte Stellen |
 | `viewer.test.mjs` | die Verdrahtung aller Viewer — mit einem winzigen DOM aus der **echten** HTML-Seite und dem echten Three.js ohne WebGL-Renderer (`tests/stubs/`) |
 
-Der letzte Test ist der Ersatz für den Browser, den es in der
-Kommandozeile nicht gibt: er klickt Knöpfe, zieht Regler und prüft, dass
-Kamera, Farben, Legende und Kennzahlen wirklich reagieren.
+`viewer.test.mjs` und `tools/` sind der Ersatz für den Browser, den es in
+der Kommandozeile nicht gibt: sie klicken Knöpfe, ziehen Regler und prüfen,
+dass Kamera, Farben, Legende und Kennzahlen wirklich reagieren. Felder und
+Modelle dabei nie mit `assert.equal` vergleichen, sondern mit
+`assert.ok(a === b)`: schlägt der Vergleich fehl, baut Node einen
+Textvergleich beider Objekte — bei Millionen Rasterwerten frisst das den
+Arbeitsspeicher.
+
+Was nur ein Layout beantworten kann, prüft Playwright im echten Browser
+(`npm run browser`, `tests/browser/`): `studio.spec.mjs` lädt jede Seite,
+`ux.spec.mjs` hält die Regeln des Rahmens — keine scrollende Seitenleiste
+in keinem Modus, keine überdeckten Aufsätze, Abbrechen, Einstellungen nach
+dem Neuladen, Hilfe am Anker, 44-px-Ziele unter dem Finger. Eine Seite, die
+in den Rahmen umzieht, kommt dort in die Liste `SEITEN`.
 
 **Was er NICHT ersetzt, ist das Bild.** Ohne WebGL wird nichts
 gezeichnet, und dabei bleibt genau eine Klasse Fehler unsichtbar: die
