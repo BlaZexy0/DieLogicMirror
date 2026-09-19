@@ -159,8 +159,24 @@
     table.sd tr:hover input:not(:disabled) { border-color: var(--border); background: var(--surface); }
     table.sd input:focus { outline: 2px solid var(--primary); outline-offset: -1px; background: var(--surface); }
     table.sd input.name { width: 15rem; text-align: left; font-family: var(--sans); font-weight: 600; }
+    /* Die Tabelle scrollt in beide Richtungen in ihrem Kasten: die
+       Überschriften bleiben oben stehen, die Namensspalte links, die
+       Eckzelle über beidem. Ohne das verschwanden die Spaltennamen beim
+       Runterscrollen unter der Kopfleiste, und niemand wusste mehr, welche
+       Zahl welche Spalte ist. */
+    .sd-scroll { overflow: auto; max-height: 70vh; -webkit-overflow-scrolling: touch; }
+    table.sd thead th { position: sticky; top: 0; background: var(--surface); z-index: 2; }
     table.sd th:first-child, table.sd td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; box-shadow: 2px 0 0 var(--border-light); }
+    table.sd thead th:first-child { z-index: 3; }
     table.sd tbody tr:nth-child(even) td:first-child { background: var(--surface2); }
+    /* Handy: die Namensspalte nahm fast die ganze Breite ein, die Werte
+       liefen beim Wischen unsichtbar darunter durch. */
+    @media (max-width: 600px) {
+      table.sd input.name { width: 8.5rem; font-size: .74rem; }
+      table.sd th:first-child, table.sd td:first-child { padding-right: .25rem; }
+      table.sd td.id, table.sd thead th:nth-child(2) { display: none; }
+      table.sd input { width: 5.4rem; }
+    }
     table.sd input:disabled { color: var(--text); }
     table.sd td.id { font-family: var(--mono); color: var(--muted-light); font-size: .68rem; }
     .sd-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .6rem 1rem; margin-top: .6rem; }
@@ -319,7 +335,7 @@
           <button data-tab="kosten"><span class="dot"></span>Kosten &amp; Sätze</button>
         </div>
         <div class="sd-meta" id="sd-source"></div>
-        <div id="sd-body" style="overflow-x:auto;"></div>
+        <div id="sd-body" class="sd-scroll"></div>
         <div class="kt-actions" id="sd-actions">
           <button class="btn btn-outline btn-sm" id="sd-add">+ Eintrag</button>
           <button class="btn btn-outline btn-sm" id="sd-load-defaults" title="Beispielwerte aus den mitgelieferten Presets in die Tabelle laden">Beispielwerte laden</button>
