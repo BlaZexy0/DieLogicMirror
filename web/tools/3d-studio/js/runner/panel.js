@@ -19,7 +19,7 @@ const info = anchor => ' <button type="button" class="st-info" data-help="' + an
 export const MODES = [
   {
     id: 'system', label: 'System',
-    hint: 'Einen Punkt anklicken wählt ihn — die Knöpfe über dem Bild hängen den nächsten an.',
+    hint: 'Einen Punkt anklicken wählt ihn; die Knöpfe über dem Bild hängen den nächsten an.',
     html: selectRow({ ui: 'preset', label: 'Beispiel', options: [] })
       + '<div class="st-hintline" data-ui="graph-note"></div>'
       + warnLine('graph-warn')
@@ -34,7 +34,7 @@ export const MODES = [
   },
   {
     id: 'kanalform', label: 'Kanalform',
-    hint: 'Der Trapezquerschnitt aller Kanäle — und die Vorgaben, nach denen „Querschnitte abstufen" sie bemisst.',
+    hint: 'Der Trapezquerschnitt aller Kanäle und die Vorgaben, nach denen „Querschnitte abstufen" sie bemisst.',
     html: sliderRow({ ui: 'draft', label: 'Entformschräge', min: 0, max: 15, step: 0.5, value: 5, help: 'kanalform' })
       + numberRow({ ui: 'radius', label: 'Bodenradius', unit: 'mm', value: '1,5', help: 'kanalform' })
       + numberRow({ ui: 'branch-r', label: 'Zwickelradius', unit: 'mm', value: '4', help: 'zwickel' })
@@ -48,7 +48,7 @@ export const MODES = [
   },
   {
     id: 'prozess', label: 'Prozess',
-    hint: 'Volumen und Füllzeit ergeben den Strom — daraus folgt jede Anschnittfläche.',
+    hint: 'Volumen und Füllzeit ergeben den Strom; daraus folgt jede Anschnittfläche.',
     html: selectRow({ ui: 'alloy', label: 'Legierung', options: [] })
       + numberRow({ ui: 'vol', label: 'Gussvolumen', unit: 'cm³', value: '420', help: 'gussvolumen' })
       + numberRow({ ui: 'tfill', label: 'Füllzeit', unit: 'ms', value: '45' })

@@ -6,7 +6,7 @@ import { numberRow, sliderRow, segRow, kpiBlock, factsBlock, detailsBlock, warnL
 export const MODES = [
   {
     id: 'feld', label: 'Feld',
-    hint: 'Ein Raster über das Bauteil, je Punkt der Abstand zur Oberfläche — die Grundlage für alles Weitere.',
+    hint: 'Ein Raster über das Bauteil, je Punkt der Abstand zur Oberfläche: die Grundlage für alles Weitere.',
     html: numberRow({ ui: 'cell', label: 'Zellkante', unit: 'mm', value: '3', help: 'zellkante' })
       + '<div class="st-hintline" data-ui="field-cost"></div>'
       + warnLine('field-warn')
@@ -30,7 +30,7 @@ export const MODES = [
   },
   {
     id: 'waermezentren', label: 'Wärmezentren',
-    hint: 'Die dicksten Stellen als Kugeln — dort erstarrt das Teil zuletzt.',
+    hint: 'Die dicksten Stellen als Kugeln: Dort erstarrt das Teil zuletzt.',
     html: segRow({ ui: 'hot-seg', label: 'Form', value: 'kugeln', options: [['kugeln', 'Kugeln'], ['kreise', 'Kreise']] })
       + sliderRow({ ui: 'hot-min', label: 'ab', min: 20, max: 100, step: 5, value: 75, help: 'waermezentren' })
       + kpiBlock('hot-kpis')

@@ -99,7 +99,12 @@ const REWORDED = {
   'invalid--runner-zero.json': 'Angussgewicht muss > 0 sein.',
   'invalid--curve-dead-segment.json': /Abschnitt steht an beiden Enden still/,
   'invalid--duration-too-short.json': /Ventil-Offenzeit zu kurz/,
-  'invalid--missing-pump-pressure.json': 'Eingabe \'vacPump\' fehlt oder ist keine Zahl.'
+  'invalid--missing-pump-pressure.json': 'Eingabe \'vacPump\' fehlt oder ist keine Zahl.',
+  /* Gedankenstriche der Referenz durch Satzzeichen ersetzt. */
+  'invalid--dose-exceeds-sleeve.json': /übersteigt das Kammervolumen \(Füllgrad ≥ 100 %\)\.$/,
+  'invalid--negative-intens.json': /liegt unter der Schmelzedichte \(\d+ kg\/m³\)\. Das Gussstück würde beim Erstarren größer\.$/,
+  'invalid--unknown-end-mode.json': "Ventilschluss 'never' unbekannt; erlaubt: fill, stroke, time.",
+  'invalid--unknown-model.json': "Vakuum-Modell 'turbo' unbekannt; erlaubt: ideal, conductance, tank oder 'aus'."
 };
 
 for (const file of invalid) {

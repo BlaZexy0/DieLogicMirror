@@ -46,7 +46,7 @@ test('Zwei Dateien als Chips A und B in der Kopfzeile, nichts gerechnet', () => 
   assert.ok(doc.getElementById('demo-select-a').innerHTML.includes('coolmov'), 'Gegenstücke sind hier wählbar');
   assert.equal(doc.querySelector('.st-mode #demo-select-a'), null, 'die Seitenleiste lädt keine Dateien mehr');
   assert.equal(ui('primary').textContent, 'Abstand berechnen');
-  assert.match(ui('note').textContent, /Noch nicht gerechnet — .* Punkte gegen .* Dreiecke/);
+  assert.match(ui('note').textContent, /Noch nicht gerechnet: .* Punkte gegen .* Dreiecke/);
   /* Anzeigeoptionen stehen unter „Darstellung". */
   const bar = doc.getElementById('viewport').querySelector('.view-bar');
   assert.equal(bar.querySelector('[data-darstellung]').hidden, false);
@@ -174,7 +174,7 @@ test('Abbrechen: die Rechnung hält an, das vorige Bild bleibt', async () => {
   await wait(() => !s.running && s.ready, 1600);
   same(s.a.dist, distRef, 'die vorigen Messwerte bleiben');
   assert.equal(s.stale, true);
-  assert.match(ui('note').textContent, /Abgebrochen — das Bild zeigt noch die vorige Rechnung/);
+  assert.match(ui('note').textContent, /Abgebrochen: Das Bild zeigt noch die vorige Rechnung/);
   assert.equal(ui('primary').textContent, 'Abstand neu berechnen');
 });
 

@@ -185,7 +185,7 @@ export function createAngussfuellungTool(host) {
     if (!tl) { kpis(ui('curve-kpis'), []); return; }
     kpis(ui('curve-kpis'), [
       { label: 'Füllkammer', value: 'Ø ' + fmt(tl.v.diam, 0) + ' × ' + fmt(tl.v.length, 0) + ' mm', note: 'Füllgrad ' + fmtUnit(tl.phi * 100, '%') },
-      { label: 'Kammer voll', value: 'bei ' + fmtUnit(tl.tFull * 1000, 'ms', 0), note: 'Kolben ' + fmtUnit(tl.shot.events[0].v, 'm/s') + ' — ab hier zählen alle Zeiten' },
+      { label: 'Kammer voll', value: 'bei ' + fmtUnit(tl.tFull * 1000, 'ms', 0), note: 'Kolben ' + fmtUnit(tl.shot.events[0].v, 'm/s') + ', ab hier zählen alle Zeiten' },
       { label: '2. Phase', value: 'v₂ ' + fmtUnit(tl.v2, 'm/s'), note: 'die Kurve endet ' + fmtUnit(state.piston.tEnd * 1000, 'ms', 0) + ' nach „Kammer voll"' }
     ]);
   }
@@ -213,7 +213,7 @@ export function createAngussfuellungTool(host) {
           label: G.TYPES.gate.label + ' ' + id,
           cells: [...res.map(r => (r ? (Number.isFinite(tSim(r, id)) ? ms1(tSim(r, id)) : 'nie') : '—')), ms1(t1d(id))]
         })),
-        { label: 'Δ erster – letzter', sum: true, cells: [...res.map(r => (r ? spread(ids.map(id => tSim(r, id))) : '—')), spread(ids.map(t1d))] }
+        { label: 'Δ erster bis letzter', sum: true, cells: [...res.map(r => (r ? spread(ids.map(id => tSim(r, id))) : '—')), spread(ids.map(t1d))] }
       ]
     });
     const r = shownNow;

@@ -245,15 +245,15 @@ export function createSimCore(opts) {
     if (est.blocked) return { label: RUN, disabled: true, reason: est.blocked };
     const id = state.engine, r = state.results[id];
     if (state.failed) return { label: RUN, onClick: simulate, noteKind: 'bad', reason: 'Die Rechnung ist gescheitert: ' + state.failed };
-    if (state.cancelled && !r) return { label: RUN, onClick: simulate, noteKind: 'warn', reason: 'Abgebrochen — es gibt kein Ergebnis.' };
+    if (state.cancelled && !r) return { label: RUN, onClick: simulate, noteKind: 'warn', reason: 'Abgebrochen: es gibt kein Ergebnis.' };
     if (shell.mode === 'ergebnis') {
       if (r) return { hidden: true, reason: opts.resultNote(r) };
       const other = shown();
       return { label: RUN, onClick: simulate, reason: 'Mit ' + WITH[id] + ' noch nicht gerechnet'
-        + (other ? ' — das Bild zeigt die Rechnung mit ' + WITH[other.engine] + '.' : '.') };
+        + (other ? ' (das Bild zeigt die Rechnung mit ' + WITH[other.engine] + ').' : '.') };
     }
     return { label: RUN, onClick: simulate, reason: r
-      ? 'Gerechnet mit ' + fmtUnit(r.cell, 'mm') + ' in ' + fmtUnit(r.ms / 1000, 's') + ' — steht unter „Ergebnis". Ein neuer Lauf ersetzt es.'
+      ? 'Gerechnet mit ' + fmtUnit(r.cell, 'mm') + ' in ' + fmtUnit(r.ms / 1000, 's') + ', steht unter „Ergebnis". Ein neuer Lauf ersetzt es.'
       : '' };
   }
 

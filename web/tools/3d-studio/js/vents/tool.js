@@ -36,7 +36,7 @@ import { buildByType, buildAll, volumeOf } from './geom.js';
 import { MODES, INSPECTOR, DARSTELLUNG } from './panel.js';
 
 const VENT_POINT_COLOR = '#6f9bc9';
-const NEEDS_PART = 'Zuerst ein Bauteil laden — der Klick setzt das Element auf seine Wand.';
+const NEEDS_PART = 'Zuerst ein Bauteil laden; der Klick setzt das Element auf seine Wand.';
 const HANDLE_HINT = '<b>Punkt</b> ziehen: auf der Wand · <b>Alt</b>: von ihr weg · <b>Pfeil</b>: neu setzen · <b>Entf</b>: entfernen';
 
 /* Auf den Chips steht die Kurzform — die volle Bezeichnung im title, im
@@ -337,7 +337,7 @@ export function createUeberlaufTool(host) {
   }
 
   shell.setChips(Object.entries(M.TYPES).map(([type, meta]) => ({
-    id: type, label: CHIP_LABEL[type] || meta.label, icon: meta.color, title: meta.label + ' — ' + meta.hint,
+    id: type, label: CHIP_LABEL[type] || meta.label, icon: meta.color, title: meta.label + ': ' + meta.hint,
     enabled: () => !!host.part.model, reason: NEEDS_PART,
     active: () => state.placing === type,
     onClick: () => startPlace(type)

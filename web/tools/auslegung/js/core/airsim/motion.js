@@ -34,7 +34,7 @@ export function plungerMotion(positions, velocities) {
     if (!(ds > 0)) throw new SimError('Schusskurve: Wege müssen streng steigen.');
     if (v[i] < 0 || v[i - 1] < 0) throw new SimError('Schusskurve: Geschwindigkeiten müssen ≥ 0 sein.');
     if (v[i - 1] + v[i] <= 0) {
-      throw new SimError('Schusskurve: ein Abschnitt steht an beiden Enden still — er ließe sich nie durchfahren.');
+      throw new SimError('Schusskurve: ein Abschnitt steht an beiden Enden still: Er ließe sich nie durchfahren.');
     }
     a.push((v[i] * v[i] - v[i - 1] * v[i - 1]) / (2 * ds));
     t.push(t[i - 1] + (2 * ds) / (v[i - 1] + v[i]));

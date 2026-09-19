@@ -180,7 +180,7 @@ export function createWandstaerkeTool(host) {
     }
     if (state.maxima.length > 1) rows.push({ label: 'kleinste Marke', value: fmtUnit(2 * state.maxima[state.maxima.length - 1].r, 'mm') });
     kpis(ui('hot-kpis'), rows);
-    ui('hot-note').textContent = state.maxima.length ? '' : 'Keine Stelle erreicht den Anteil — den Regler „ab" senken.';
+    ui('hot-note').textContent = state.maxima.length ? '' : 'Keine Stelle erreicht den Anteil: den Regler „ab" senken.';
     view.invalidate();
   }
 
@@ -271,7 +271,7 @@ export function createWandstaerkeTool(host) {
     const est = fieldSize(m, 0, p.band, { h: p.h, pad: p.pad });
     const mb = est.bytes / (1024 * 1024);
     ui('field-cost').textContent = 'Raster ' + est.dims.join(' × ') + ' · ' + fmt(est.samples / 1e6, 2) + ' Mio. Punkte · ' + fmtUnit(mb, 'MB');
-    ui('field-warn').textContent = mb > 400 ? 'Das Raster braucht ' + fmt(mb, 0) + ' MB — Zellkante vergrößern.' : '';
+    ui('field-warn').textContent = mb > 400 ? 'Das Raster braucht ' + fmt(mb, 0) + ' MB: Zellkante vergrößern.' : '';
     const rows = [['Zellkante', fmtUnit(est.h, 'mm', 2)], ['Raster', est.dims.join(' × ')], ['Rasterpunkte', fmt(est.samples / 1e6, 2) + ' Mio.'], ['Speicher', fmtUnit(mb, 'MB')]];
     if (state.field && !state.stale) rows.push(['Rechenzeit', fmtUnit(state.ms, 'ms', 0)]);
     facts(ui('field-facts'), rows);
@@ -306,15 +306,15 @@ export function createWandstaerkeTool(host) {
     if (!part.model) return { label: RUN, disabled: true, reason: 'Zuerst ein Bauteil laden.' };
     /* Nach einem Abbruch sagt die Zeile, was jetzt zu sehen ist. */
     if (!state.field) return { label: RUN, onClick: runField, noteKind: state.cancelled ? 'warn' : '',
-      reason: state.cancelled ? 'Abgebrochen — es gibt noch kein Feld.' : 'Noch kein Feld — ohne Feld gibt es weder Wandstärke noch Isofläche.' };
+      reason: state.cancelled ? 'Abgebrochen: Es gibt noch kein Feld.' : 'Noch kein Feld: Ohne Feld gibt es weder Wandstärke noch Isofläche.' };
     if (state.stale) return { label: 'Feld neu berechnen', onClick: runField, noteKind: 'warn',
-      reason: (state.cancelled ? 'Abgebrochen' : 'Zellkante geändert') + ' — das Bild zeigt noch das vorige Feld.' };
+      reason: (state.cancelled ? 'Abgebrochen' : 'Zellkante geändert') + ': Das Bild zeigt noch das vorige Feld.' };
     /* Aktuell: nichts zu tun, also kein Knopf — die Zeile sagt, wie es weitergeht. */
-    return { hidden: true, noteKind: 'ok', reason: 'Das Feld ist aktuell — weiter mit Isofläche, Schnitt oder Wärmezentren.' };
+    return { hidden: true, noteKind: 'ok', reason: 'Das Feld ist aktuell: weiter mit Isofläche, Schnitt oder Wärmezentren.' };
   }
   /* Die abgeleiteten Modi: ohne Feld der Aufruf zum Rechnen, mit einem
      veralteten derselbe Knopf wie im Modus „Feld", sonst nichts. */
-  const needsField = () => (state.field && !state.stale ? null : (state.field ? fieldPrimary() : { label: RUN, onClick: runField, reason: 'Zuerst das Feld berechnen — dann gibt es hier etwas zu sehen.' }));
+  const needsField = () => (state.field && !state.stale ? null : (state.field ? fieldPrimary() : { label: RUN, onClick: runField, reason: 'Zuerst das Feld berechnen, dann gibt es hier etwas zu sehen.' }));
 
   const modes = MODES.map(m => ({ ...m }));
   const by = Object.fromEntries(modes.map(m => [m.id, m]));
@@ -421,7 +421,7 @@ export function createWandstaerkeTool(host) {
   const exports = [{
     label: 'Isofläche als STL',
     enabled: () => !!(state.offsetTris && state.offsetTris.length),
-    reason: 'Zuerst das Feld berechnen — dann gibt es eine Isofläche.',
+    reason: 'Zuerst das Feld berechnen, dann gibt es eine Isofläche.',
     run: () => {
       download(new Blob([writeSTL(state.offsetTris, 'DieLogic Isofläche')], { type: 'model/stl' }),
         safeName((baseName(part.name) || 'bauteil') + '-isoflaeche') + '.stl');

@@ -91,9 +91,9 @@ export const sph = {
     parts.push(fmtMB(count * 64), roughTime(runTime({ steps: tRun / dt, stepsMax: tLimit / dt, frames: kammer ? 100 : 80, c: count * tempo('sph', kernel), kernel })), kernelName(kernel));
     return {
       text: parts.join(' · '), count, kernel,
-      note: env.gpu ? '' : 'Kein WebGPU in diesem Browser — gerechnet wird in JavaScript, mit wenigen Partikeln (bis ' + fmt(MAX_PARTICLES_CPU / 1e3, 0)
+      note: env.gpu ? '' : 'Kein WebGPU in diesem Browser: gerechnet wird in JavaScript, mit wenigen Partikeln (bis ' + fmt(MAX_PARTICLES_CPU / 1e3, 0)
         + ' Tsd.), und das dauert Minuten. Chrome oder Edge rechnen auf der Grafikkarte.',
-      blocked: count > limit ? 'Zu fein: höchstens ' + fmt(limit / 1e3, 0) + ' Tsd. Partikel — den Abstand vergrößern.' : ''
+      blocked: count > limit ? 'Zu fein: höchstens ' + fmt(limit / 1e3, 0) + ' Tsd. Partikel. Den Abstand vergrößern.' : ''
     };
   },
 
@@ -241,7 +241,7 @@ async function runSleeve(problem, cell, kernel, { check, progress, signal, t0, o
       snap.air = air.enclosed * 1e6;
       snap.bubbles = air.bubbles;
       progress(0.05 + 0.95 * snap.step / stepsMax, 'Rechnet … ' + fmtUnit(snap.t * 1000, 'ms', 0) + ' · Kolben bei ' + fmtUnit(snap.s, 'mm', 0) + ' · Luft ' + fmtUnit(snap.air, 'cm³'));
-      return gateDone[0] !== NEVER ? 'Kammer voll — der Laufkanal ist erreicht' : null;
+      return gateDone[0] !== NEVER ? 'Kammer voll: der Laufkanal ist erreicht' : null;
     }
   });
   if (run.reason === 'abgebrochen') throw abortError();

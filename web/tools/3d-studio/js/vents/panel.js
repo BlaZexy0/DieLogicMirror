@@ -7,7 +7,7 @@ import { sliderRow, selectRow, kpiBlock, factsBlock, hintLine } from '../studio/
 export const MODES = [
   {
     id: 'elemente', label: 'Elemente',
-    hint: 'Oben im Bild eine Art wählen, dann aufs Bauteil klicken. Hier steht, was gesetzt ist — ein Klick wählt es.',
+    hint: 'Oben im Bild eine Art wählen, dann aufs Bauteil klicken. Hier steht, was gesetzt ist; ein Klick wählt es.',
     html: '<div class="st-list" data-ui="item-list" data-scroll></div>'
       + hintLine('<span data-ui="item-empty">Noch nichts gesetzt.</span>')
   },

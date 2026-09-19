@@ -112,7 +112,7 @@ test('Kühlstich setzen: Spitze auf der Fläche, Stich nach außen — und die V
   chip('stich').dispatch('click');
   assert.ok(v.handles.aiming);
   assert.ok(chip('stich').classList.contains('active'), 'der Chip zeigt, was gesetzt wird');
-  assert.match(P.doc.getElementById('aim-text').textContent, /auf die Abstandsfläche klicken — er läuft senkrecht zur Fläche/);
+  assert.match(P.doc.getElementById('aim-text').textContent, /auf die Abstandsfläche klicken; er läuft senkrecht zur Fläche/);
   klick(400, 300);
   assert.ok(!v.handles.aiming);
   assert.ok(!chip('stich').classList.contains('active'));
@@ -453,7 +453,7 @@ test('Mindest-Wandabstand: Auto folgt dem Achsabstand; von Hand gehört er zum P
   assert.ok(v.state.field === feld, 'innerhalb des Bandes kostet es nur das Ableiten');
   assert.match(kpiText(ui('shell-kpis')), /30 mm/);
   assert.ok(ui('primary').hidden, 'aktuell: kein toter Knopf');
-  assert.match(ui('note').textContent, /steht — weiter mit „Setzen"/);
+  assert.match(ui('note').textContent, /steht: weiter mit „Setzen"/);
   /* Die gesetzten Elemente bleiben, wo sie sind — und stehen jetzt zu nah. */
   assert.equal(v.state.checks.get(s1.id).verdict, 'warn');
   host.undo();
@@ -564,7 +564,7 @@ test('Abbruch: die Rechnung der Fläche lässt sich anhalten — danach gilt die
   assert.ok(s.field === vorher, 'kein Ergebnis nach dem Abbruch — das vorige Feld bleibt');
   assert.equal(s.shellDist, 20);
   assert.ok(s.stale, 'und gilt als veraltet');
-  assert.match(ui('note').textContent, /Abgebrochen — das Bild zeigt noch die vorige Fläche/);
+  assert.match(ui('note').textContent, /Abgebrochen: Das Bild zeigt noch die vorige Fläche/);
   assert.equal(ui('primary').textContent, 'Abstandsfläche berechnen');
   assert.ok(ui('shell-kpis').querySelector('.krow.warn'));
   assert.ok(!chip('stich').classList.contains('off'), 'auf der vorigen Fläche lässt sich weiter setzen');
@@ -577,7 +577,7 @@ test('Abbruch: die Rechnung der Fläche lässt sich anhalten — danach gilt die
   await wait(() => !s.queued, 100, 10);
   assert.ok(s.held && !s.running && s.ready, 'gehalten: gerechnet wird erst auf Knopfdruck');
   assert.equal(ui('primary').textContent, 'Abstandsfläche berechnen');
-  assert.match(ui('note').textContent, /etwa \d+ min — gerechnet wird deshalb erst auf Knopfdruck/);
+  assert.match(ui('note').textContent, /etwa \d+ min\. Gerechnet wird deshalb erst auf Knopfdruck/);
   /* Zurück zur alten Zellkante: das vorige Feld passt wieder, nichts zu rechnen. */
   tippen('cell', String(hVorher).replace('.', ','));
   await ruhig();

@@ -72,8 +72,8 @@ const NS_PER_VISIT = 17;
 const HOLD_S = 20;
 const AUTO = 'Kühlstiche automatisch setzen';
 const RUN = 'Abstandsfläche berechnen';
-const MISS = 'Daneben — die Stelle muss auf der Abstandsfläche liegen.';
-const NEEDS_PART = 'Zuerst ein Bauteil laden — die Abstandsfläche entsteht daraus, und auf ihr wird gesetzt.';
+const MISS = 'Daneben: Die Stelle muss auf der Abstandsfläche liegen.';
+const NEEDS_PART = 'Zuerst ein Bauteil laden: Die Abstandsfläche entsteht daraus, und auf ihr wird gesetzt.';
 const SHOWS_SHELL = ['flaeche', 'setzen'];
 const AIM_DIR = { normal: 'senkrecht zur Fläche', blick: 'auf die Kamera zu', x: 'entlang X', y: 'entlang Y', z: 'entlang Z' };
 
@@ -218,7 +218,7 @@ export function createTemperierTool(host) {
   const label = it => M.TYPES[it.type].label + ' ' + it.id;
   /* „Eingehalten" bei 9,7 gegen 10 mm verlangt eine Erklärung: so genau ist das Feld. */
   const within = c => (c !== null && c < minWall() ? ' (das Feld ist auf ± ' + fmtUnit(tolerance(), 'mm') + ' genau)' : '');
-  const verdictNote = (verdict, min, c) => (verdict === 'bad' ? 'Durchbruch — die Bohrung schneidet das Bauteil'
+  const verdictNote = (verdict, min, c) => (verdict === 'bad' ? 'Durchbruch: Die Bohrung schneidet das Bauteil'
     : verdict === 'warn' ? 'unter dem Mindest-Wandabstand von ' + fmtUnit(min, 'mm')
       : verdict === 'ok' ? 'Mindest-Wandabstand ' + fmtUnit(min, 'mm') + ' eingehalten' + within(c) : '');
 
@@ -366,7 +366,7 @@ export function createTemperierTool(host) {
     const f = state.field;
     kpis(ui('shell-kpis'), hasShell() ? [
       { label: 'Fläche im Abstand', value: fmtUnit(state.shellDist, 'mm', 0), verdict: state.stale ? 'warn' : 'ok',
-        note: state.stale ? 'das Bild zeigt noch diese Fläche — die Einstellungen haben sich seither geändert' : '' }
+        note: state.stale ? 'das Bild zeigt noch diese Fläche; die Einstellungen haben sich seither geändert' : '' }
     ] : []);
     facts(ui('shell-facts'), f && hasShell() ? [
       ['Dreiecke der Fläche', fmt(state.shellCount, 0)],
@@ -375,7 +375,7 @@ export function createTemperierTool(host) {
       ['Feld reicht bis', fmtUnit(f.band, 'mm')],
       ['Rechenzeit', fmtUnit(state.ms / 1000, 's')]
     ] : []);
-    if (state.lifted && f) ui('shell-warn').textContent = 'Zellkante auf ' + fmtUnit(f.h, 'mm', 2) + ' angehoben — das Raster wäre sonst zu groß.';
+    if (state.lifted && f) ui('shell-warn').textContent = 'Zellkante auf ' + fmtUnit(f.h, 'mm', 2) + ' angehoben: Das Raster wäre sonst zu groß.';
   }
 
   /* Der Mindest-Wandabstand: mit „Auto" folgt das Feld den Einstellungen
@@ -494,8 +494,8 @@ export function createTemperierTool(host) {
   }
   host.cancelAim = cancelAim;
   const noShellReason = () => (!part.model ? NEEDS_PART
-    : state.running ? 'Die Abstandsfläche wird gerade gerechnet — gleich lässt sich setzen.'
-      : 'Noch keine Abstandsfläche — im Modus „Abstandsfläche" berechnen.');
+    : state.running ? 'Die Abstandsfläche wird gerade gerechnet. Gleich lässt sich setzen.'
+      : 'Noch keine Abstandsfläche: im Modus „Abstandsfläche" berechnen.');
   const toCamera = point => {
     const c = view.camera.position;
     return [c.x - point[0], c.y - point[1], c.z - point[2]];
@@ -518,7 +518,7 @@ export function createTemperierTool(host) {
     if (type === 'stich') {
       /* Kurz: im schmalen Bild hat der Hinweis 350 px — die lange Fassung der
          Richtung (M.DIRECTIONS[…].hint) steht in der Hilfe. */
-      aim.show(true, 'Kühlstich: auf die Abstandsfläche klicken — er läuft ' + AIM_DIR[state.dirMode] + '. Esc bricht ab.');
+      aim.show(true, 'Kühlstich: auf die Abstandsfläche klicken; er läuft ' + AIM_DIR[state.dirMode] + '. Esc bricht ab.');
       handles.armAim({
         onHit: hit => {
           aim.hide();
@@ -631,30 +631,30 @@ export function createTemperierTool(host) {
      nah steht — und womit gerechnet wird, wenn der Regler unter 1,5 × Ø liegt. */
   function autoPrimary() {
     if (!part.model) return { label: AUTO, disabled: true, reason: 'Zuerst ein Bauteil laden.' };
-    if (!hasShell()) return { label: AUTO, disabled: true, reason: state.cancelled ? 'Abgebrochen — es gibt noch keine Abstandsfläche (Modus „Abstandsfläche").' : 'Die Abstandsfläche steht noch aus.' };
+    if (!hasShell()) return { label: AUTO, disabled: true, reason: state.cancelled ? 'Abgebrochen: Es gibt noch keine Abstandsfläche (Modus „Abstandsfläche").' : 'Die Abstandsfläche steht noch aus.' };
     const notes = [];
     let warn = false;
     const last = state.auto.last;
     if (last) {
       notes.push(fmt(last.placed, 0) + (last.placed === 1 ? ' Kühlstich' : ' Kühlstiche') + ' gesetzt');
-      if (last.placed < last.wanted) { warn = true; notes.push('nur so viele Stellen halten den Mindestabstand — Abstand kleiner wählen oder weniger Bohrungen'); }
+      if (last.placed < last.wanted) { warn = true; notes.push('nur so viele Stellen halten den Mindestabstand: Abstand kleiner wählen oder weniger Bohrungen'); }
     }
     const tight = M.allItems(state.plan).filter(it => it.auto && isTight(it.id)).length;
-    if (tight) { warn = true; notes.push(fmt(tight, 0) + ' automatische unter dem Mindest-Wandabstand — siehe „Prüfung"'); }
+    if (tight) { warn = true; notes.push(fmt(tight, 0) + ' automatische unter dem Mindest-Wandabstand (siehe „Prüfung")'); }
     const sp = spacingUsed();
     if (sp.floored) notes.push('Stiche halten ' + fmtUnit(sp.value, 'mm') + ' Abstand, nicht ' + fmtUnit(state.auto.spacing, 'mm') + ': mindestens 1,5 × Ø ' + fmtPlain(state.defaults.d));
     return { label: AUTO, onClick: runAuto, reason: notes.join(' · '), noteKind: warn ? 'warn' : '' };
   }
   function shellPrimary() {
     if (!part.model) return { label: RUN, disabled: true, reason: 'Zuerst ein Bauteil laden.' };
-    const was = hasShell() ? ' — das Bild zeigt noch die vorige Fläche (' + fmtUnit(state.shellDist, 'mm', 0) + ', Zellkante ' + fmtUnit(state.field.h, 'mm', 2) + ').' : ' — es gibt noch keine Abstandsfläche.';
+    const was = hasShell() ? ': Das Bild zeigt noch die vorige Fläche (' + fmtUnit(state.shellDist, 'mm', 0) + ', Zellkante ' + fmtUnit(state.field.h, 'mm', 2) + ').' : ': Es gibt noch keine Abstandsfläche.';
     const run = () => computeShell(true);
     const cost = fieldFits() ? '' : ' Das Feld braucht ' + fmtDuration(estimate()) + '.';
     if (state.cancelled) return { label: RUN, onClick: run, noteKind: 'warn', reason: 'Abgebrochen' + was + cost };
-    if (state.held) return { label: RUN, onClick: run, noteKind: 'warn', reason: 'Das Feld braucht mit diesen Einstellungen ' + fmtDuration(estimate()) + ' — gerechnet wird deshalb erst auf Knopfdruck. Eine größere Zellkante geht schneller.' };
+    if (state.held) return { label: RUN, onClick: run, noteKind: 'warn', reason: 'Das Feld braucht mit diesen Einstellungen ' + fmtDuration(estimate()) + '. Gerechnet wird deshalb erst auf Knopfdruck. Eine größere Zellkante geht schneller.' };
     if (state.stale && !state.queued) return { label: RUN, onClick: run, noteKind: hasShell() ? 'warn' : '', reason: (hasShell() ? 'Einstellungen geändert' + was : 'Noch keine Abstandsfläche.') + cost };
     /* Aktuell: nichts zu tun, also kein Knopf — die Zeile sagt, wie es weitergeht. */
-    return { hidden: true, noteKind: 'ok', reason: state.queued ? '' : 'Die Abstandsfläche steht — weiter mit „Setzen".' };
+    return { hidden: true, noteKind: 'ok', reason: state.queued ? '' : 'Die Abstandsfläche steht: weiter mit „Setzen".' };
   }
 
   /* ── Modi: jeder besitzt, was er zeigt ───────────────────── */

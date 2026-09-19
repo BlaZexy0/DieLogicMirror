@@ -12,7 +12,7 @@ export const MODES = [
        einer zweiten — das kostete jeden Modus eine Zeile. Die Hinweiszeile
        darunter sagt, welche Fläche. */
     id: 'flaeche', label: 'Fläche',
-    hint: 'Die Abstandsfläche: überall derselbe Abstand zur Kavität — auf ihr sitzen die Spitzen der Kühlstiche und die Achsen der Kanäle.',
+    hint: 'Die Abstandsfläche: überall derselbe Abstand zur Kavität; auf ihr sitzen die Spitzen der Kühlstiche und die Achsen der Kanäle.',
     html: sliderRow({ ui: 'dist', label: 'Achsabstand zur Kavität', min: 5, max: 60, step: 1, value: 20, help: 'achsabstand' })
       + numberRow({ ui: 'cell', label: 'Zellkante', unit: 'mm', value: '6', help: 'zellkante' })
       + numberRow({ ui: 'min-wall', label: 'Mindest-Wandabstand', unit: 'mm', value: '10', help: 'mindestabstand' })
@@ -23,7 +23,7 @@ export const MODES = [
   },
   {
     id: 'setzen', label: 'Setzen',
-    hint: 'Oben im Bild „Kühlstich" oder „Kanal" wählen, dann auf die Abstandsfläche klicken — oder die Automatik verteilt die Stiche.',
+    hint: 'Oben im Bild „Kühlstich" oder „Kanal" wählen, dann auf die Abstandsfläche klicken, oder die Automatik verteilt die Stiche.',
     /* Knapp gehalten: mit 44-px-Zeilen unter dem Finger und umbrochenen Reitern
        bleiben hier sieben Zeilen — deshalb Ø und Länge in einer. */
     html: segRow({ ui: 'dir-seg', label: 'Richtung', value: 'normal', help: 'richtung',
@@ -41,7 +41,7 @@ export const MODES = [
   },
   {
     id: 'pruefung', label: 'Prüfung',
-    hint: 'Was gesetzt ist — und ob überall genug Stahl zwischen Bohrung und Kavität bleibt.',
+    hint: 'Was gesetzt ist, und ob überall genug Stahl zwischen Bohrung und Kavität bleibt.',
     html: kpiBlock('plan-kpis')
       + heading('Unter dem Mindest-Wandabstand')
       + '<div class="st-list" data-ui="offender-list" data-scroll></div>'

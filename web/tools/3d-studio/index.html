@@ -24,7 +24,7 @@
       als Schritte an einem Bauteil aneinander. Eines zeigt, wie eine
       Druckgießform aufgebaut ist. Vier beantworten Fragen an das Bauteil: wo die Form geteilt
       wird, wie dick die Wände sind, wie weit die Nachbarn entfernt liegen, in welcher
-      Reihenfolge es sich füllt. Zwei rechnen die Schmelze selbst — im Anguss und in der
+      Reihenfolge es sich füllt. Zwei rechnen die Schmelze selbst: im Anguss und in der
       Füllkammer, als Gitter oder mit Partikeln. Drei entwerfen, was
       um das Bauteil herum in die Form kommt: das Angusssystem, die Überläufe mit ihren
       Entlüftungen und die Temperierkanäle. Bauteile kommen als STL oder GLB, es geht nichts an
@@ -44,7 +44,7 @@
 <section class="how-section" id="weg">
   <div class="how-inner">
     <h2 class="section-title">Der Weg durch das Studio</h2>
-    <p class="section-sub">Ein Bauteil, drei Fragen, in dieser Reihenfolge — und die Zahlen wandern von Seite zu Seite weiter.
+    <p class="section-sub">Ein Bauteil, drei Fragen, in dieser Reihenfolge, und die Zahlen wandern von Seite zu Seite weiter.
       Wer den ganzen Weg an einem Bauteil gehen will, nimmt die <a href="werkbank.html">Werkbank</a>: dieselben Werkzeuge als Schritte in einer Leiste.</p>
     <div class="steps-grid">
       <div class="step">
@@ -95,7 +95,7 @@
         <h3>Werkbank</h3>
         <p>Ein Bauteil, sechs Schritte in einer Leiste: Entformung und Wandstärke, der Anguss
           als Vorschlag ans Bauteil gelegt, die Füllung von seinen Anschnitten aus, Überläufe
-          dort, wo sie zuletzt ankommt, Temperierung auf der Abstandsfläche — und die Auslegung
+          dort, wo sie zuletzt ankommt, Temperierung auf der Abstandsfläche, und die Auslegung
           mit Massen, Anschnitt und Sprengfläche aus dem Modell.</p>
         <ul>
           <li>Ein Viewport, ein Abstandsfeld für Wandstärke, Füllung und Temperierung</li>
@@ -119,7 +119,7 @@
         <h3>Formaufbau</h3>
         <p>Eigene Formen aus STL-Dateien zusammenstellen: Teile in Gruppen einsortieren
           (feste und bewegliche Seite, Temperierung, Schieber, Gussteil), umbenennen, färben,
-          verschieben — und als eine GLB speichern. Voreingestellt: die Ölwannen-Form.</p>
+          verschieben und als eine GLB speichern. Voreingestellt: die Ölwannen-Form.</p>
         <ul>
           <li>Heizkühlplan für die Halle: ein Tipp hebt einen Kreis oder eine Gruppe hervor, der Rest wird blass</li>
           <li>Schnittebene mit geschlossenen Schnittflächen je Werkstoffklasse, Form öffnen, Stahl durchscheinend</li>
@@ -142,7 +142,7 @@
         <h3>Entformungsanalyse</h3>
         <p>Welche Fläche entformt in welche Richtung? Aus der Sichtbarkeit in den sechs
           Hauptrichtungen entstehen Formhälften und Schieber, die Trennlinie, die Hinterschnitte
-          und die Entformschrägen — nach festen Regeln, ohne Regler.</p>
+          und die Entformschrägen, nach festen Regeln, ohne Regler.</p>
         <ul>
           <li>Hälften zuerst, Schieber nur für das, was keine Hälfte bildet, Hinterschnitte rot</li>
           <li>Formöffnung automatisch gewählt, Trennlinie und Flächenbilanz sofort beim Laden</li>
@@ -165,11 +165,11 @@
         <div class="tool-tag">Analysieren</div>
         <h3>Wandstärkenanalyse</h3>
         <p>Die Frage nach <b>innen</b>: Wandstärke und Aufmaß aus einem gerasterten
-          Abstandsfeld — innen ist der Betrag des Feldes die halbe Wanddicke, und die Fläche
+          Abstandsfeld. Innen ist der Betrag des Feldes die halbe Wanddicke, und die Fläche
           gleichen Abstands ist die Offsetfläche.</p>
         <ul>
           <li>Keine Selbstdurchdringung, konvexe Kanten bekommen den Radius des Aufmaßes</li>
-          <li>Dicke Bereiche erstarren zuletzt — dort sitzen die Lunker</li>
+          <li>Dicke Bereiche erstarren zuletzt: Dort sitzen die Lunker</li>
           <li>Ein Feld, beliebig viele Aufmaße am Regler; Feldschnitt mit Turbo-Skala, Export als STL</li>
         </ul>
         <div class="card-btns">
@@ -192,7 +192,7 @@
           zur anderen. Wie weit ist die Kavität vom Temperierkanal, vom Auswerferstift, vom
           Nachbarteil?</p>
         <ul>
-          <li>Exakt gerechnet, Punkt gegen Dreieck — kein Raster</li>
+          <li>Exakt gerechnet, Punkt gegen Dreieck, kein Raster</li>
           <li>Farbskala mit selbst gesetzten Grenzen: erst das macht die Karte zur Aussage</li>
           <li>Grobe Netze werden vorher verfeinert, sonst misst man nur die Ecken</li>
         </ul>
@@ -239,7 +239,7 @@
         <div class="tool-tag">Entwerfen</div>
         <h3>Überlaufdesigner</h3>
         <p>Überläufe und Entlüftungen am Bauteil: eine Stelle anklicken, und dort sitzt die Bohne
-          mit ihrem Steg — auf der Wand, entlang ihrer Normalen nach außen. Am Punkt ziehen, am
+          mit ihrem Steg: auf der Wand, entlang ihrer Normalen nach außen. Am Punkt ziehen, am
           Pfeil neu setzen, um die Achse drehen.</p>
         <ul>
           <li>Überlaufbohne, Überlauf mit Entlüftung, Waschbrett (Chill-Vent), Entlüftungsschlitz</li>
@@ -289,11 +289,11 @@
         <div class="tool-tag">Analysieren</div>
         <h3>Füllabschätzung</h3>
         <p>Rechteckige Anschnitte auf die Wand setzen; das Bauteil wird gerastert, und die
-          Schmelzefront läuft von dort durch die Zellen — dünne Wände bremsen, große Anschnitte
+          Schmelzefront läuft von dort durch die Zellen: Dünne Wände bremsen, große Anschnitte
           kommen weiter. Keine Strömungsrechnung, eine Abschätzung in Zehntelsekunden.</p>
         <ul>
           <li>Füllgrad an jeder Stelle, als Farbe und als Zeit</li>
-          <li>Füllkörper zu jedem Füllgrad — die Front wandert mit dem Regler</li>
+          <li>Füllkörper zu jedem Füllgrad: Die Front wandert mit dem Regler</li>
           <li>Zuletzt gefüllte Stellen: dort gehören die Überläufe hin</li>
           <li>Fließweg / Wanddicke, Anteil jedes Anschnitts am Volumen, Füllkörper als STL</li>
         </ul>
@@ -314,13 +314,13 @@
         <h3>Angussfüllung</h3>
         <p>Die Schmelze vom Pressrest bis zu den Anschnitten: sie steht im Pressrest, der Kolben
           schiebt mit der DieLogic-Schusskurve, die Front läuft durch die Laufkanäle. Zwei
-          Rechenverfahren auf einer Seite — als <b>Gitter</b> (Lattice-Boltzmann mit freier Oberfläche)
-          oder als <b>Partikel</b> (SPH) — und ihre Ergebnisse nebeneinander.</p>
+          Rechenverfahren auf einer Seite, als <b>Gitter</b> (Lattice-Boltzmann mit freier Oberfläche)
+          oder als <b>Partikel</b> (SPH), und ihre Ergebnisse nebeneinander.</p>
         <ul>
           <li>Anguss aus dem Angussdesigner (Beispiel oder JSON)</li>
           <li>Ankunft der Schmelze je Anschnitt: Gitter · Partikel · 1D-Rechnung des Angussdesigners</li>
           <li>Schmelze zu jeder Zeit am Regler, nach Geschwindigkeit gefärbt; der Anguss nach Ankunft</li>
-          <li>Auf der Grafikkarte (WebGPU), ohne sie in JavaScript gröber — jederzeit abzubrechen</li>
+          <li>Auf der Grafikkarte (WebGPU), ohne sie in JavaScript gröber, jederzeit abzubrechen</li>
         </ul>
         <div class="card-btns">
           <a href="angussfuellung.html" class="btn btn-primary">Öffnen</a>
@@ -339,14 +339,14 @@
         <div class="tool-tag">Analysieren</div>
         <h3>Kammerfüllung</h3>
         <p>Die Welle in der Füllkammer: liegender Zylinder mit Durchmesser, Länge und Füllgrad, der
-          Kolben fährt die Schusskurve — die DieLogic-Kurve des Projekts oder zweistufig v₁/v₂ —, und
+          Kolben fährt die Schusskurve (die DieLogic-Kurve des Projekts oder zweistufig v₁/v₂), und
           die Schmelze wird mit Schwerkraft gerechnet: als <b>Gitter</b> (Lattice-Boltzmann mit freier
           Oberfläche) oder als <b>Partikel</b> (SPH), auf derselben Seite.</p>
         <ul>
           <li>Kammer voll: wann die Schmelze den Laufkanal erreicht, gegen die Kurve</li>
-          <li>Eingeschlossene Luft über die Zeit — was die erste Phase entscheidet</li>
+          <li>Eingeschlossene Luft über die Zeit, was die erste Phase entscheidet</li>
           <li>Füllstand und Kolben zu jeder Zeit am Regler</li>
-          <li>Auf der Grafikkarte (WebGPU), ohne sie in JavaScript gröber — jederzeit abzubrechen</li>
+          <li>Auf der Grafikkarte (WebGPU), ohne sie in JavaScript gröber, jederzeit abzubrechen</li>
         </ul>
         <div class="card-btns">
           <a href="kammerfuellung.html" class="btn btn-primary">Öffnen</a>
@@ -361,8 +361,8 @@
   <div class="note-box">
     <h4>Was die Seiten verbindet</h4>
     <p>Dasselbe Bauteil geht durch alle Werkzeuge: Beispielteile aus <code>assets/parts/</code> oder
-      eine eigene STL/GLB, erkannt am Dateikopf, nicht an der Endung. Alles rechnet im Browser —
-      die Seiten brauchen weder Backend noch Projekt und tragen deshalb keine Projektleiste. Was
+      eine eigene STL/GLB, erkannt am Dateikopf, nicht an der Endung. Alles rechnet im Browser:
+      Die Seiten brauchen weder Backend noch Projekt und tragen deshalb keine Projektleiste. Was
       ein Werkzeug ausrechnet, nimmt das nächste: das Volumen von Bauteil und Überläufe ist das
       Gussvolumen des Angussdesigners, dessen Druckbedarf gehört als Formwiderstand ins
       PQ²-Diagramm der <a href="/tools/auslegung/">Auslegung</a>, und die Körper aus

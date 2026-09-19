@@ -7,7 +7,7 @@ import { sliderRow, segRow, checkRow, kpiBlock, factsBlock, detailsBlock, warnLi
 export const MODES = [
   {
     id: 'entformung', label: 'Entformung',
-    hint: 'Welche Fläche entformt wohin: Formhälften, Schieber, Hinterschnitt — sofort beim Laden.',
+    hint: 'Welche Fläche entformt wohin: Formhälften, Schieber, Hinterschnitt. Sofort beim Laden.',
     html: segRow({ ui: 'axis-seg', label: 'Formöffnung', value: 'auto', help: 'regeln',
       options: [['auto', 'Auto'], ['0', 'X'], ['1', 'Y'], ['2', 'Z']] })
       + segRow({ ui: 'mov-seg', label: 'Bewegliche Seite', value: '1', help: 'bewegliche-seite', options: [['1', '+Z'], ['-1', '−Z']] })
@@ -22,7 +22,7 @@ export const MODES = [
   },
   {
     id: 'formteile', label: 'Formteile',
-    hint: 'Jede Region wird zum Formteil und rückt entlang ihrer Entformrichtung heraus — wie beim Öffnen der Form.',
+    hint: 'Jede Region wird zum Formteil und rückt entlang ihrer Entformrichtung heraus, wie beim Öffnen der Form.',
     html: sliderRow({ ui: 'die-dist', label: 'Abstand', min: 0, max: 300, step: 1, value: 60, help: 'formteile' })
       + sliderRow({ ui: 'die-skirt', label: 'Rand', min: 0, max: 500, step: 1, value: 8, help: 'formteile' })
       + checkRow({ ui: 'die-part', label: 'Bauteil durchscheinend dazwischen', checked: true })
@@ -30,14 +30,14 @@ export const MODES = [
   },
   {
     id: 'flaechen', label: 'Flächen',
-    hint: 'Die projizierte Fläche je Formteil — als Silhouette jenseits des Bauteils, in seiner Entformrichtung.',
+    hint: 'Die projizierte Fläche je Formteil, als Silhouette jenseits des Bauteils, in seiner Entformrichtung.',
     html: kpiBlock('proj-kpis')
       + sliderRow({ ui: 'proj-gap', label: 'Abstand', min: 0, max: 500, step: 1, value: 30, help: 'flaechen' })
       + sliderRow({ ui: 'proj-alpha', label: 'Deckkraft', min: 10, max: 100, step: 5, value: 60 })
   },
   {
     id: 'haftung', label: 'Haftung',
-    hint: 'Wo das Teil beim Erstarren auf die Form aufschrumpft — und auf welcher Seite es beim Öffnen bleibt.',
+    hint: 'Wo das Teil beim Erstarren auf die Form aufschrumpft, und auf welcher Seite es beim Öffnen bleibt.',
     html: sliderRow({ ui: 'ej-mu', label: 'Reibwert μ', min: 0.1, max: 0.6, step: 0.05, value: 0.3, help: 'haftung' })
       + kpiBlock('ej-kpis')
       + warnLine('ej-warn')

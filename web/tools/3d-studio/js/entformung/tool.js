@@ -402,7 +402,7 @@ export function createEntformungTool(host) {
         + '<span class="pct">' + (has ? pct(area / A) : 'nicht in der Form') + '</span></label>';
     }).join('');
     if (seg.areaByLabel[6] > 0) {
-      html += '<div class="legend-row">' + chip(C.UNDERCUT_COLOR) + '<span class="name">Hinterschnitt — bleibt rot am Ort</span>'
+      html += '<div class="legend-row">' + chip(C.UNDERCUT_COLOR) + '<span class="name">Hinterschnitt: bleibt rot am Ort</span>'
         + '<span class="pct">' + pct(seg.areaByLabel[6] / A) + '</span></div>';
     }
     el.innerHTML = html;
@@ -430,8 +430,8 @@ export function createEntformungTool(host) {
       { label: 'Haftung bewegliche Seite', value: fmtUnit(movPct, '%'), verdict: sum <= 0 ? '' : wrongSide ? 'bad' : 'ok' },
       { label: 'Haftung feste Seite', value: fmtUnit(100 - movPct, '%') }
     ]);
-    ui('ej-warn').textContent = sum <= 0 ? 'Keine Fläche haftet — das Teil hält sich nirgends.'
-      : wrongSide ? 'Das Teil haftet stärker an der festen Seite — beim Öffnen bliebe es dort, nicht bei den Auswerfern.' : '';
+    ui('ej-warn').textContent = sum <= 0 ? 'Keine Fläche haftet: Das Teil hält sich nirgends.'
+      : wrongSide ? 'Das Teil haftet stärker an der festen Seite: Beim Öffnen bliebe es dort, nicht bei den Auswerfern.' : '';
   }
 
   /* ── Hauptknopf: nur, wenn die Analyse aussteht ──────────── */
@@ -439,7 +439,7 @@ export function createEntformungTool(host) {
     if (!part.model) return { label: RUN, disabled: true, reason: 'Zuerst ein Bauteil laden.' };
     if (state.analysed || state.running) return null;
     return { label: RUN, onClick: runAnalysis, noteKind: state.cancelled ? 'warn' : '',
-      reason: state.cancelled ? 'Abgebrochen — das Bauteil ist noch nicht untersucht.' : 'Die Analyse steht noch aus.' };
+      reason: state.cancelled ? 'Abgebrochen: Das Bauteil ist noch nicht untersucht.' : 'Die Analyse steht noch aus.' };
   }
   const modes = MODES.map(m => ({ ...m }));
   for (const m of modes) {

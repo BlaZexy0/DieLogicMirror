@@ -10,7 +10,7 @@ import { SIMULATION_ROWS, resultRows } from './panel-common.js';
 export const MODES = [
   {
     id: 'system', label: 'System',
-    hint: 'Das Angusssystem, das gefüllt wird. Ein anderes: oben über den Anguss-Chip — oder eine Angussdatei (JSON) ins Bild ziehen.',
+    hint: 'Das Angusssystem, das gefüllt wird. Ein anderes: oben über den Anguss-Chip, oder eine Angussdatei (JSON) ins Bild ziehen.',
     html: kpiBlock('graph-kpis') + '<div class="st-hintline" data-ui="graph-note"></div>' + warnLine('graph-warn')
   },
   {
@@ -23,12 +23,12 @@ export const MODES = [
   },
   {
     id: 'simulation', label: 'Simulation',
-    hint: 'Zwei Verfahren für dieselbe Frage — eine schnelle Rechnung für Reihenfolge und Zeiten, keine Gießsimulation.',
+    hint: 'Zwei Verfahren für dieselbe Frage: eine schnelle Rechnung für Reihenfolge und Zeiten, keine Gießsimulation.',
     html: SIMULATION_ROWS
   },
   {
     id: 'ergebnis', label: 'Ergebnis',
-    hint: 'Wann die Schmelze an jedem Anschnitt ankommt — neben der 1D-Rechnung des Angussdesigners.',
+    hint: 'Wann die Schmelze an jedem Anschnitt ankommt, neben der 1D-Rechnung des Angussdesigners.',
     /* „Zeigen" steht nur da, wenn es etwas zu wählen gibt: Ankunftsfarben kennt nur das Gitter. */
     html: resultRows('<div data-ui="show-row">'
       + segRow({ ui: 'show-seg', label: 'Zeigen', value: 'schmelze', options: [['schmelze', 'Schmelze'], ['ankunft', 'Ankunft']], help: 'anzeige' })

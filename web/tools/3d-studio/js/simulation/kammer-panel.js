@@ -10,7 +10,7 @@ const field = (name, label) => '<input type="text" inputmode="decimal" data-ui="
 export const MODES = [
   {
     id: 'kammer', label: 'Kammer',
-    hint: 'Die Füllkammer als liegender Zylinder — die Schmelze steht beim Start ruhig unten, der Laufkanal sitzt oben in der Stirnfläche.',
+    hint: 'Die Füllkammer als liegender Zylinder: Die Schmelze steht beim Start ruhig unten, der Laufkanal sitzt oben in der Stirnfläche.',
     html: numberRow({ ui: 'sl-d', label: 'Durchmesser', unit: 'mm', value: '90', help: 'kammer' })
       + numberRow({ ui: 'sl-len', label: 'Länge', unit: 'mm', value: '450', help: 'kammer' })
       + sliderRow({ ui: 'sl-fill', label: 'Füllgrad', min: 10, max: 90, step: 1, value: 40, help: 'fuellgrad' })
@@ -22,7 +22,7 @@ export const MODES = [
   {
     /* „Kurve", nicht „Schusskurve": vier Reiter sollen in EINE Zeile passen — auch in Firefox' breiterer Schrift. */
     id: 'kurve', label: 'Kurve',
-    hint: 'Die Schusskurve: die DieLogic-Kurve des Projekts mit Kammer und Füllgrad von hier — oder zweistufig v₁ / v₂.',
+    hint: 'Die Schusskurve: die DieLogic-Kurve des Projekts mit Kammer und Füllgrad von hier, oder zweistufig v₁ / v₂.',
     html: segRow({ ui: 'curve-seg', label: 'Kurve', value: 'dielogic', options: [['dielogic', 'DieLogic'], ['v1v2', 'v₁ / v₂']], help: 'kurve' })
       + '<div data-ui="v1v2-block" hidden>'
       + numberRow({ ui: 'sl-v1', label: 'v₁', unit: 'm/s', value: '0,5' })
@@ -34,7 +34,7 @@ export const MODES = [
   },
   {
     id: 'simulation', label: 'Simulation',
-    hint: 'Zwei Verfahren für dieselbe Welle — vom Kolbenstart, bis die Schmelze den Laufkanal erreicht.',
+    hint: 'Zwei Verfahren für dieselbe Welle: vom Kolbenstart, bis die Schmelze den Laufkanal erreicht.',
     html: SIMULATION_ROWS
   },
   {

@@ -94,9 +94,9 @@ export const lbm = {
     parts.push(fmtMB(count * bytesPerCell(problem.kind)), roughTime(ms), kernelName(kernel));
     return {
       text: parts.join(' · '), count, kernel,
-      note: env.gpu ? '' : 'Kein WebGPU in diesem Browser — gerechnet wird in JavaScript, auf grobem Gitter (bis ' + fmt(MAX_CELLS_CPU / 1e3, 0)
+      note: env.gpu ? '' : 'Kein WebGPU in diesem Browser: gerechnet wird in JavaScript, auf grobem Gitter (bis ' + fmt(MAX_CELLS_CPU / 1e3, 0)
         + ' Tsd. Zellen)' + (problem.kind === 'kammer' ? ', und die erste Phase dauert Minuten' : '') + '. Chrome oder Edge rechnen auf der Grafikkarte.',
-      blocked: count > limit ? 'Zu fein: höchstens ' + fmt(limit / 1e6, 2) + ' Mio. Zellen — die Zellkante vergrößern.' : ''
+      blocked: count > limit ? 'Zu fein: höchstens ' + fmt(limit / 1e6, 2) + ' Mio. Zellen. Die Zellkante vergrößern.' : ''
     };
   },
 
@@ -267,7 +267,7 @@ async function runSleeve(problem, cell, kernel, { check, progress, signal, t0, o
       snap.air = eg.enclosed * h3;
       snap.bubbles = eg.bubbles;
       progress(0.02 + 0.98 * snap.step / stepsMax, 'Rechnet … ' + fmtUnit(snap.t * 1000, 'ms', 0) + ' · Kolben bei ' + fmtUnit(snap.s, 'mm', 0) + ' · Luft ' + fmtUnit(snap.air, 'cm³'));
-      return gateDone[0] !== NEVER ? 'Kammer voll — der Laufkanal ist erreicht' : null;
+      return gateDone[0] !== NEVER ? 'Kammer voll: der Laufkanal ist erreicht' : null;
     }
   });
   if (run.reason === 'abgebrochen') throw abortError();

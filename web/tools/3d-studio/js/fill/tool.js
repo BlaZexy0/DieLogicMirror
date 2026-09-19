@@ -46,8 +46,8 @@ import { solveFill, fracToSurface, sampleFrac, fillBodyField, lastSpots } from '
 import { MODES, INSPECTOR, GROUPS, DARSTELLUNG } from './panel.js';
 
 const RUN = 'Rechnen';
-const NEEDS_PART = 'Zuerst ein Bauteil laden — der Klick setzt den Anschnitt auf seine Wand.';
-const NO_GATE = 'Noch kein Anschnitt — oben im Bild „Anschnitt setzen", dann aufs Bauteil klicken.';
+const NEEDS_PART = 'Zuerst ein Bauteil laden; der Klick setzt den Anschnitt auf seine Wand.';
+const NO_GATE = 'Noch kein Anschnitt: oben im Bild „Anschnitt setzen", dann aufs Bauteil klicken.';
 const HANDLE_HINT = '<b>Punkt</b> ziehen: auf der Wand · <b>Pfeil</b>: neu setzen · <b>Entf</b>: entfernen';
 const SPOT_COLOR = '#b42318';
 const GREY = [0.71, 0.75, 0.77];
@@ -223,7 +223,7 @@ export function createFuellungTool(host) {
     if (Math.abs(f.h - state.h) > 1e-9) {
       state.h = f.h;
       ui('cell').value = fmtPlain(f.h);
-      ui('cell-note').textContent = 'Feiner geht hier nicht: 16 Mio. Rasterpunkte sind die Grenze — die Zellkante steht auf ' + fmtUnit(f.h, 'mm', 2) + '.';
+      ui('cell-note').textContent = 'Feiner geht hier nicht: 16 Mio. Rasterpunkte sind die Grenze, die Zellkante steht auf ' + fmtUnit(f.h, 'mm', 2) + '.';
     } else ui('cell-note').textContent = '';
     /* Ein Ergebnis gehört zu SEINEM Raster: mit dem neuen ist das alte weg. */
     dropResult();
@@ -245,7 +245,7 @@ export function createFuellungTool(host) {
     const plan = f ? null : plannedGrid();
     if (plan) {
       ui('cell-note').textContent = plan.lifted
-        ? 'Das wären ' + fmt(plan.asked.samples / 1e6, 0) + ' Mio. Rasterpunkte, die Grenze sind 16 Mio. — gerastert wird mit ' + fmtUnit(plan.est.h, 'mm', 2) + '.'
+        ? 'Das wären ' + fmt(plan.asked.samples / 1e6, 0) + ' Mio. Rasterpunkte, die Grenze sind 16 Mio.; gerastert wird mit ' + fmtUnit(plan.est.h, 'mm', 2) + '.'
         : '';
     }
     const est = f ? { dims: f.dims, samples: f.data.length, bytes: f.data.length * 4 } : plan.est;
@@ -549,7 +549,7 @@ export function createFuellungTool(host) {
     const thin = !!inf && inf.seeds <= 1;
     kpis(ui('sel-kpis'), [inf
       ? { label: 'füllt', value: fillsText(inf) + ' des Volumens', verdict: thin ? 'warn' : '',
-        note: thin ? 'trifft kaum eine Rasterzelle — feiner rastern oder höher machen' : '' }
+        note: thin ? 'trifft kaum eine Rasterzelle: feiner rastern oder höher machen' : '' }
       : { label: 'füllt', value: '—', note: state.running || (state.auto && state.result) ? 'rechnet nach …' : 'noch nicht gerechnet' }]);
     const rows = [
       ['Fläche', fmtUnit(M.areaOf(it), 'mm²')],
@@ -647,24 +647,24 @@ export function createFuellungTool(host) {
     if (!M.allItems(state.plan).length) return { hidden: true, reason: NO_GATE };
     if (cellChanged()) {
       return { label: 'Neu rastern', onClick: () => compute({ regrid: true }), noteKind: 'warn',
-        reason: (state.cancelled ? 'Abgebrochen' : 'Zellkante geändert') + ' — ' + (state.result ? 'das Bild zeigt noch das vorige Raster.' : 'das Raster hat noch die vorige Kante.') };
+        reason: (state.cancelled ? 'Abgebrochen' : 'Zellkante geändert') + ': ' + (state.result ? 'Das Bild zeigt noch das vorige Raster.' : 'Das Raster hat noch die vorige Kante.') };
     }
-    if (state.result && state.stale) return { hidden: true, reason: 'Der Plan hat sich geändert — rechnet nach …' };
+    if (state.result && state.stale) return { hidden: true, reason: 'Der Plan hat sich geändert, rechnet nach …' };
     if (!state.result) {
       return { label: RUN, onClick: () => compute({ advance: true }), noteKind: state.cancelled ? 'warn' : '',
-        reason: state.cancelled ? 'Abgebrochen — zu diesem Plan gibt es keine Füllung.'
-          : where === 'ergebnis' ? 'Zuerst die Füllung rechnen — dann gibt es hier etwas zu sehen.'
+        reason: state.cancelled ? 'Abgebrochen: Zu diesem Plan gibt es keine Füllung.'
+          : where === 'ergebnis' ? 'Zuerst die Füllung rechnen, dann gibt es hier etwas zu sehen.'
             : 'Der Plan ist noch nicht gerechnet.' };
     }
     if (where === 'ergebnis') return null;
     /* Aktuell: nichts zu tun, also kein Knopf — die Zeile sagt, wie es weitergeht. */
-    return { hidden: true, noteKind: 'ok', reason: 'Gerechnet in ' + dauer(state.ms) + ' — jede Änderung am Plan rechnet jetzt von selbst nach.' };
+    return { hidden: true, noteKind: 'ok', reason: 'Gerechnet in ' + dauer(state.ms) + '. Jede Änderung am Plan rechnet jetzt von selbst nach.' };
   }
   /* Bei den Anschnitten wird gesetzt, nicht gerechnet — die Zeile sagt, wo es weitergeht. */
   function gatesPrimary() {
     if (!part.model) return { hidden: true, reason: 'Zuerst ein Bauteil laden.' };
     if (!M.allItems(state.plan).length) return null;                // der Hinweis des Modus sagt es schon
-    if (!state.result && !state.running) return { hidden: true, reason: 'Weiter im Reiter „Füllung" — dort wird gerechnet.' };
+    if (!state.result && !state.running) return { hidden: true, reason: 'Weiter im Reiter „Füllung"; dort wird gerechnet.' };
     return null;
   }
 
@@ -832,10 +832,10 @@ export function createFuellungTool(host) {
     },
     exports: [{
       label: 'Füllkörper als STL',
-      enabled: () => !!state.result, reason: 'Zuerst die Füllung rechnen — dann gibt es einen Füllkörper.',
+      enabled: () => !!state.result, reason: 'Zuerst die Füllung rechnen, dann gibt es einen Füllkörper.',
       run: () => {
         const tris = surfaceNets(fillBodyField(state.field, state.result.frac, state.q), 0);
-        if (!tris.length) { shell.toast('Bei ' + Math.round(100 * state.q) + ' % gibt es noch keinen Füllkörper — den Füllgrad anheben.'); return; }
+        if (!tris.length) { shell.toast('Bei ' + Math.round(100 * state.q) + ' % gibt es noch keinen Füllkörper; den Füllgrad anheben.'); return; }
         download(new Blob([writeSTL(tris, 'DieLogic Füllkörper ' + Math.round(100 * state.q) + ' %')], { type: 'model/stl' }), stlName());
       }
     }],

@@ -14,7 +14,7 @@ die es in der ersten Phase geht.</p>
 </section>
 <section data-help-anchor="fuellgrad">
 <h3>Füllgrad</h3>
-<p>Anteil des Kammervolumens, der mit Schmelze gefüllt ist — sie steht ruhig unten in der Kammer. Der Stand
+<p>Anteil des Kammervolumens, der mit Schmelze gefüllt ist. Sie steht ruhig unten in der Kammer. Der Stand
 der Schmelze folgt aus dem Kreissegment.</p>
 </section>
 <section data-help-anchor="laufkanal">
@@ -24,28 +24,28 @@ davor melden „Kammer voll".</p>
 </section>
 <section data-help-anchor="kurve">
 <h3>Schusskurve</h3>
-<p><b>DieLogic</b>: die DieLogic-Kurve des Projekts — López-Anfahrt bis v<sub>krit</sub>, Plateau bis
+<p><b>DieLogic</b>: die DieLogic-Kurve des Projekts: López-Anfahrt bis v<sub>krit</sub>, Plateau bis
 Kammer voll, Rampe auf v₂. Sie nimmt Maschine und Thermik aus dem aktuellen Projekt, Kammer und Füllgrad
 von hier; die Massen werden so gesetzt, dass die Kurve den gewählten Füllgrad rechnet.</p>
-<p><b>v₁ / v₂</b>: zweistufig — Rampe auf v₁, Plateau bis Kammer voll, Rampe auf v₂. Die Beschleunigung
+<p><b>v₁ / v₂</b>: zweistufig: Rampe auf v₁, Plateau bis Kammer voll, Rampe auf v₂. Die Beschleunigung
 gilt für beide Rampen.</p>
-<p>Die Rechnung beginnt beim Kolbenstart und endet, wenn die Schmelze den Laufkanal erreicht hat — plus
-ein Stück für das Bild —, spätestens am Ende der Kurve. Alle Zeiten zählen ab Kolbenstart.</p>
+<p>Die Rechnung beginnt beim Kolbenstart und endet, wenn die Schmelze den Laufkanal erreicht hat (plus
+ein Stück für das Bild), spätestens am Ende der Kurve. Alle Zeiten zählen ab Kolbenstart.</p>
 </section>
 <section data-help-anchor="verfahren">
 <h3>Zwei Verfahren</h3>
-<p><b>Gitter</b> — Lattice-Boltzmann D3Q19 mit freier Oberfläche nach Körner, Schwerkraft als
+<p><b>Gitter</b>: Lattice-Boltzmann D3Q19 mit freier Oberfläche nach Körner, Schwerkraft als
 Volumenkraft, der Kolben als wandernde Zellschicht. Zähigkeit auf das Stabile angehoben, keine
 Oberflächenspannung, kein Gasdruck. <b>Eingeschlossene Luft</b> sind Gaszellen, die nicht mehr mit der
-Luftblase über der Schmelze zusammenhängen — die Zahl, um die es in der ersten Phase geht.</p>
-<p><b>Partikel</b> — Schwach kompressible SPH: die Schmelze als Partikel mit Dichte und Druck (Tait),
+Luftblase über der Schmelze zusammenhängen: die Zahl, um die es in der ersten Phase geht.</p>
+<p><b>Partikel</b>: schwach kompressible SPH: die Schmelze als Partikel mit Dichte und Druck (Tait),
 künstlicher Zähigkeit und δ-Diffusion der Dichte, Schwerkraft; die Kammer als Abstandsfeld, an dem die
 Partikel gleiten, der Kolben als Ebene, die die Kurve fährt. Keine Oberflächenspannung, kein Gasdruck.
 <b>Eingeschlossene Luft</b>: das Partikelbild auf ein Raster gelegt, Luftzellen ohne Verbindung zur Blase
-über der Schmelze — die Zahl, um die es in der ersten Phase geht. Vor dem Start kommt die Schmelze zur
+über der Schmelze: die Zahl, um die es in der ersten Phase geht. Vor dem Start kommt die Schmelze zur
 Ruhe (20 ms mit hoher Zähigkeit, dann v = 0): die hydrostatische Vorgabe passt an der freien Oberfläche nie
 ganz, und der Schwapp davon soll nicht in die Welle.</p>
-<p>Beide rechnen auf der Grafikkarte (WebGPU) oder, ohne sie, in JavaScript — dann grob, und die erste
+<p>Beide rechnen auf der Grafikkarte (WebGPU) oder, ohne sie, in JavaScript, dann grob, und die erste
 Phase dauert Minuten; die Zeile unter dem Feld sagt vorher, womit und wie lange ungefähr.
 <b>Abbrechen</b> beendet einen Lauf sofort; danach gibt es kein Ergebnis.</p>
 </section>
@@ -58,7 +58,7 @@ zwanzig Partikel über den Durchmesser.</p>
 <h3>Grenzen, die man kennen muss</h3>
 <p>Es gibt keinen Gasdruck und keine Oberflächenspannung; eine Welle, die überschlägt, schließt in dieser
 Rechnung Luft ein, ob sie im echten Schuss entweicht, sagt sie nicht. Der Zeitschritt folgt aus der
-doppelten Kolbengeschwindigkeit (die Welle ist nicht viel schneller als der Kolben) — der Laufkanal wird
+doppelten Kolbengeschwindigkeit (die Welle ist nicht viel schneller als der Kolben). Der Laufkanal wird
 schneller, dort klemmt der Kern die Geschwindigkeit; die erste Phase dauert deshalb je nach v₂
 Zehntausende Schritte. Der Vorschlag für die Zellkante zielt auf 150 000 Zellen auf der Grafikkarte
 (dreißig Zellen über den Durchmesser bei 90 mm), 30 000 in JavaScript; für die Partikel auf 60 000 bzw.
@@ -71,14 +71,14 @@ eingeschlossene Luft beider in einer Tabelle neben der Kurve; „Bild" wählt, w
 sehen ist. Ändern sich Kammer, Kurve oder Legierung, gehören beide Ergebnisse zum alten Problem und
 verschwinden.</p>
 <p>Zum Vergleich, im kopflosen Chromium mit WebGPU (SwiftShader): die Kammer Ø 60 × 200 mm, 45 %, v₁/v₂
-0,6/2 m/s, 3 mm Partikel — Kammer voll bei 190 ms und 113 mm (Kurve 186 ms, 110 mm; Gitter 3 mm: 179 ms,
+0,6/2 m/s, 3 mm Partikel: Kammer voll bei 190 ms und 113 mm (Kurve 186 ms, 110 mm; Gitter 3 mm: 179 ms,
 106 mm).</p>
 </section>
 <section data-help-anchor="zeit">
 <h3>Zeit und Bild</h3>
-<p>Zeit ab Kolbenstart — Welle und Kolben wandern mit dem Regler. Die Schmelze ist nach Geschwindigkeit
+<p>Zeit ab Kolbenstart. Welle und Kolben wandern mit dem Regler. Die Schmelze ist nach Geschwindigkeit
 gefärbt, die Kammer durchscheinend (ihre Deckkraft steht unter „Darstellung"). Die Skala gilt für den
-ganzen Lauf; ihr Ende ist das 99. Perzentil über die Bilder bis „Kammer voll" — danach herrscht der
+ganzen Lauf; ihr Ende ist das 99. Perzentil über die Bilder bis „Kammer voll". Danach herrscht der
 Laufkanal, und die Welle wäre einfarbig blau. Was schneller ist, bleibt rot.</p>
 </section>
 `;

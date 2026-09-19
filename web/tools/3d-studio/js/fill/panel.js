@@ -13,7 +13,7 @@ const de = v => String(v).replace('.', ',');
 export const MODES = [
   {
     id: 'anschnitte', label: 'Anschnitte',
-    hint: 'Oben im Bild „Anschnitt setzen", dann aufs Bauteil klicken. Hier steht, was gesetzt ist — ein Klick wählt es.',
+    hint: 'Oben im Bild „Anschnitt setzen", dann aufs Bauteil klicken. Hier steht, was gesetzt ist; ein Klick wählt es.',
     html: heading('Vorgaben für neue Anschnitte')
       + numberRow({ ui: 'def-w', label: 'Breite', unit: 'mm', value: de(DEFAULTS.w), help: 'vorgaben' })
       + numberRow({ ui: 'def-h', label: 'Höhe', unit: 'mm', value: de(DEFAULTS.h) })
@@ -26,7 +26,7 @@ export const MODES = [
   },
   {
     id: 'fuellung', label: 'Füllung',
-    hint: 'Das Bauteil wird gerastert, die Front läuft von den Anschnitten durch die Zellen — eine Abschätzung, keine Strömung.',
+    hint: 'Das Bauteil wird gerastert, die Front läuft von den Anschnitten durch die Zellen: eine Abschätzung, keine Strömung.',
     html: numberRow({ ui: 'cell', label: 'Zellkante', unit: 'mm', value: '3', help: 'zellkante' })
       + warnLine('cell-note')
       + sliderRow({ ui: 'alpha', label: 'Dünnwand-Bremse α', min: 0, max: 1, step: 0.1, value: 0.5, help: 'alpha' })
@@ -36,13 +36,13 @@ export const MODES = [
   },
   {
     id: 'ergebnis', label: 'Ergebnis',
-    hint: 'Der Füllgrad einer Stelle ist der Anteil des Volumens, der voll ist, wenn die Front sie erreicht — eine Reihenfolge, keine Zeit.',
+    hint: 'Der Füllgrad einer Stelle ist der Anteil des Volumens, der voll ist, wenn die Front sie erreicht: eine Reihenfolge, keine Zeit.',
     html: segRow({ ui: 'show-seg', label: 'Anzeige', value: 'koerper', help: 'ansichten',
       options: [['farbe', 'Füllgrad'], ['koerper', 'Füllkörper'], ['grau', 'Bauteil']] })
       + sliderRow({ ui: 'q', label: 'Füllgrad', min: 0, max: 100, step: 1, value: 50, help: 'fuellgrad' })
       + sliderRow({ ui: 'spots-count', label: 'Letzte Stellen', min: 0, max: 20, step: 1, value: 5, help: 'letzte-stellen' })
       + kpiBlock('result-kpis')
-      + hintLine('Wo die Front zuletzt ankommt, sammelt sich die Luft: dort gehören die Überläufe hin — der <a href="ueberlauf.html">Überlaufdesigner</a> setzt sie.')
+      + hintLine('Wo die Front zuletzt ankommt, sammelt sich die Luft: dort gehören die Überläufe hin; der <a href="ueberlauf.html">Überlaufdesigner</a> setzt sie.')
   }
 ];
 

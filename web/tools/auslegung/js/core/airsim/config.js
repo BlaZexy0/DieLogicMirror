@@ -72,7 +72,7 @@ function clampedCurve(curve, limit) {
   /* Liegt die ganze Kurve hinter dem Kappunkt, bleibt der ergänzte Ursprung
      und der erste Punkt wird auf den Kappunkt interpoliert. */
   const cut = limit - CLAMP_MARGIN;
-  if (cut <= 0) throw new SimError('Füllende-Hub ist null — das Pressrestvolumen lässt keinen Kolbenweg zu.');
+  if (cut <= 0) throw new SimError('Füllende-Hub ist null: Das Pressrestvolumen lässt keinen Kolbenweg zu.');
   let clamped = false;
   const out = [pts[0]];
   for (let i = 1; i < pts.length; i++) {
@@ -102,7 +102,7 @@ function vacuumSystem(values, fillComplete, travel) {
   const model = String(values.vacModel ?? '').trim();
   if (!values.vacModel || NO_VACUUM.includes(model)) return null;
   if (!VACUUM_MODELS.includes(model)) {
-    throw new SimError('Vakuum-Modell \'' + model + '\' unbekannt — erlaubt: ' + VACUUM_MODELS.join(', ') + ' oder \'aus\'.');
+    throw new SimError('Vakuum-Modell \'' + model + '\' unbekannt; erlaubt: ' + VACUUM_MODELS.join(', ') + ' oder \'aus\'.');
   }
 
   const pump = num(values, 'vacPump') * 100;        // mbar → Pa
@@ -122,7 +122,7 @@ function vacuumSystem(values, fillComplete, travel) {
      heißt schlicht „bis zum Füllende". */
   const endMode = String(values.vacEnd || 'fill').trim();
   if (!VALVE_END_MODES.includes(endMode)) {
-    throw new SimError('Ventilschluss \'' + endMode + '\' unbekannt — erlaubt: ' + VALVE_END_MODES.join(', ') + '.');
+    throw new SimError('Ventilschluss \'' + endMode + '\' unbekannt; erlaubt: ' + VALVE_END_MODES.join(', ') + '.');
   }
   let endPosition = null, duration = null;
   if (endMode === 'stroke') {
@@ -189,7 +189,7 @@ export function processConfigFromDesign(values, curve) {
   const Vdose = (runner + part + overflow + biscuit) / rho;
   const phi = Vdose / (A * L);
   if (phi >= 1) {
-    throw new SimError('Dosiervolumen (' + (Vdose * 1e6).toFixed(0) + ' cm³) übersteigt das Kammervolumen — Füllgrad ≥ 100 %.');
+    throw new SimError('Dosiervolumen (' + (Vdose * 1e6).toFixed(0) + ' cm³) übersteigt das Kammervolumen (Füllgrad ≥ 100 %).');
   }
   if (phi <= 0) throw new SimError('Dosiervolumen ist null.');
 
@@ -205,7 +205,7 @@ export function processConfigFromDesign(values, curve) {
   if (intens < -1e-6) {
     throw new SimError('Nachverdichtungshub wäre negativ (' + (intens * 1000).toFixed(1) + ' mm): die Feststoffdichte ('
       + rhoSol.toFixed(0) + ' kg/m³ nach Schwindung) liegt unter der Schmelzedichte (' + rho.toFixed(0)
-      + ' kg/m³) — das Gussstück würde beim Erstarren größer.');
+      + ' kg/m³). Das Gussstück würde beim Erstarren größer.');
   }
   const { points, clamped } = clampedCurve(curve, fillComplete);
 

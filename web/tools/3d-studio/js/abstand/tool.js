@@ -195,23 +195,23 @@ export function createAbstandTool(host) {
     const diag = Math.max(a.bounds.diag, b.bounds.diag);
     if (!(state.reach > diag * 0.25)) return '';
     return ' Die Suchgrenze ist groß gegenüber den Teilen (' + fmtUnit(state.reach, 'mm') + ' zu ' + fmtUnit(diag, 'mm', 0)
-      + ' Diagonale) — das kann lange dauern.';
+      + ' Diagonale). Das kann lange dauern.';
   }
 
   function primary() {
     if (!state.a.model || !state.b.model) return { label: RUN, disabled: true, reason: 'Es fehlt noch eine Datei.' };
     if (!state.analysed) {
       return { label: RUN, onClick: runDistance, noteKind: state.cancelled || reachWarning() ? 'warn' : '',
-        reason: (state.cancelled ? 'Abgebrochen — noch nichts gerechnet. ' : 'Noch nicht gerechnet — ')
+        reason: (state.cancelled ? 'Abgebrochen: Noch nichts gerechnet. ' : 'Noch nicht gerechnet: ')
           + fmt(state.a.model.vertexCount + state.b.model.vertexCount, 0) + ' Punkte gegen '
           + fmt(state.a.model.faceCount + state.b.model.faceCount, 0) + ' Dreiecke.' + reachWarning() };
     }
     if (state.stale) {
       return { label: 'Abstand neu berechnen', onClick: runDistance, noteKind: 'warn',
-        reason: (state.cancelled ? 'Abgebrochen' : 'Datei oder Suchgrenze geändert') + ' — das Bild zeigt noch die vorige Rechnung.' + reachWarning() };
+        reason: (state.cancelled ? 'Abgebrochen' : 'Datei oder Suchgrenze geändert') + ': Das Bild zeigt noch die vorige Rechnung.' + reachWarning() };
     }
     /* Aktuell: nichts zu tun, also kein Knopf. */
-    return shell.mode === 'abstand' ? { hidden: true, noteKind: 'ok', reason: 'Der Abstand ist aktuell — die Grenzen der Farben stehen unter „Skala".' } : null;
+    return shell.mode === 'abstand' ? { hidden: true, noteKind: 'ok', reason: 'Der Abstand ist aktuell: Die Grenzen der Farben stehen unter „Skala".' } : null;
   }
 
   /* ── Einfärben ───────────────────────────────────────────── */
@@ -277,7 +277,7 @@ export function createAbstandTool(host) {
     const drin = ['a', 'b'].filter(k => state[k].inside > 0.001);
     ui('dist-warn').textContent = drin.length
       ? 'Achtung: ' + drin.map(k => fmtFixed(100 * state[k].inside, 1) + ' % der Punkte von ' + k.toUpperCase()).join(' und ')
-        + ' liegen INNERHALB des anderen Netzes — die Teile durchdringen sich. Der gemessene Abstand ist dort kein Freiraum.'
+        + ' liegen INNERHALB des anderen Netzes: Die Teile durchdringen sich. Der gemessene Abstand ist dort kein Freiraum.'
       : '';
   }
 
@@ -305,8 +305,8 @@ export function createAbstandTool(host) {
   let chips = null;
   function mounted() {
     chips = shell.header.addPartChips([
-      { key: 'a', label: 'A', title: 'Datei A wählen oder laden — ihre Oberfläche wird gemessen und eingefärbt' },
-      { key: 'b', label: 'B', title: 'Datei B wählen oder laden — das Gegenstück' }
+      { key: 'a', label: 'A', title: 'Datei A wählen oder laden (ihre Oberfläche wird gemessen und eingefärbt)' },
+      { key: 'b', label: 'B', title: 'Datei B wählen oder laden (das Gegenstück)' }
     ], CHIP_HINT);
     mountSource('a', 'oil_pan');
     mountSource('b', 'coolfix');
@@ -318,7 +318,7 @@ export function createAbstandTool(host) {
     numberInput(ui('scale-max'), v => { state.scale.max = v; applyColors(); return v; });
     ui('scale-auto').addEventListener('click', () => {
       if (scaleFromStats()) applyColors();
-      else shell.toast('Zuerst den Abstand berechnen — dann gibt es Messwerte.');
+      else shell.toast('Zuerst den Abstand berechnen, dann gibt es Messwerte.');
     });
     segButtons(ui('color-seg'), v => { state.color = v; applyColors(); changed('Einfärben'); });
 

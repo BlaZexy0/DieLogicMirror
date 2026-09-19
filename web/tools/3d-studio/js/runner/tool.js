@@ -53,9 +53,9 @@ import { download, safeName, dirText, setTris } from '../ui/common.js';
 import { MODES, INSPECTOR, DARSTELLUNG, CHART } from './panel.js';
 
 const HANDLE_HINT = '<b>Punkt</b> ziehen: in der Arbeitsebene · <b>Alt</b>: aus ihr heraus · <b>Pfeil</b> am Anschnitt: Mündung ans Bauteil · <b>Entf</b>: entfernen';
-const NEEDS_SEL = 'Zuerst einen Punkt wählen — der neue hängt sich dahinter.';
-const IS_FOLLOWER = 'Das ist die gespiegelte Seite — bearbeitet wird die andere.';
-const NEEDS_PART = 'Zuerst ein Referenzbauteil laden (oben über den Bauteil-Chip) — dann zeigt der Klick, wo der Anschnitt münden soll.';
+const NEEDS_SEL = 'Zuerst einen Punkt wählen; der neue hängt sich dahinter.';
+const IS_FOLLOWER = 'Das ist die gespiegelte Seite; bearbeitet wird die andere.';
+const NEEDS_PART = 'Zuerst ein Referenzbauteil laden (oben über den Bauteil-Chip), dann zeigt der Klick, wo der Anschnitt münden soll.';
 const DETAILS = 'Details';
 
 /* Die Grenzen der Prozesswerte — an einer Stelle, weil Felder UND Dateien
@@ -286,7 +286,7 @@ export function createAngussTool(host) {
        „15,6 – 15,6 ms · Δ 0" sagte das umständlicher. */
     const even = many && (fl.tLast - fl.tFirst) * 1000 < 0.05;
     return {
-      many, value: many && !even ? fmt(fl.tFirst * 1000, 1) + ' – ' + ms(fl.tLast) : ms(fl.tFirst),
+      many, value: many && !even ? fmt(fl.tFirst * 1000, 1) + ' bis ' + ms(fl.tLast) : ms(fl.tFirst),
       spread: many ? ms(fl.tLast - fl.tFirst) : ''
     };
   }
@@ -314,7 +314,7 @@ export function createAngussTool(host) {
     const usable = cm3 >= 0.01 && cm3 <= 1e5;
     kpis(ui('ref-kpis'), [{
       label: host.part.name || 'Bauteil', value: usable ? fmtUnit(cm3, 'cm³') : '—', verdict: usable ? '' : 'warn',
-      note: usable ? '' : 'Volumen unbrauchbar (offenes Netz) — das Gussvolumen bleibt, wie es ist.'
+      note: usable ? '' : 'Volumen unbrauchbar (offenes Netz); das Gussvolumen bleibt, wie es ist.'
     }]);
   }
 
@@ -417,7 +417,7 @@ export function createAngussTool(host) {
   function selectionLabel(g, n) {
     const meta = G.TYPES[n.type] || G.TYPES.point;
     return '<span class="dot" style="background:' + meta.color + '"></span>' + meta.label + ' <code>' + n.id + '</code>'
-      + (G.isFollower(g, n.id) ? ' <em>gespiegelt — die andere Seite bearbeiten</em>'
+      + (G.isFollower(g, n.id) ? ' <em>gespiegelt, die andere Seite bearbeiten</em>'
         : n.aim ? ' <em class="pinned">ans Bauteil gebunden</em>' : '');
   }
 
@@ -570,13 +570,13 @@ export function createAngussTool(host) {
     const n = sel();
     if (!n) return NEEDS_SEL;
     if (G.isFollower(state.graph, n.id)) return IS_FOLLOWER;
-    if (n.type === 'gate') return 'Hinter einem Anschnitt ist Schluss — einen Punkt davor wählen oder „Davor einfügen".';
+    if (n.type === 'gate') return 'Hinter einem Anschnitt ist Schluss: einen Punkt davor wählen oder „Davor einfügen".';
     return '';
   };
   const insertReason = () => {
     const n = sel();
-    if (!n) return 'Zuerst einen Punkt wählen — der neue kommt zwischen ihn und seinen Vorgänger.';
-    if (!n.parent) return 'Vor dem Pressrest gibt es nichts — er ist der Anfang.';
+    if (!n) return 'Zuerst einen Punkt wählen; der neue kommt zwischen ihn und seinen Vorgänger.';
+    if (!n.parent) return 'Vor dem Pressrest gibt es nichts; er ist der Anfang.';
     if (G.isFollower(state.graph, n.id)) return IS_FOLLOWER;
     return '';
   };
@@ -607,7 +607,7 @@ export function createAngussTool(host) {
     const n = sel();
     /* Unter dem offenen Flussschema sieht man nicht, was man entfernte. */
     if (!n || state.chartOpen) return false;
-    if (!n.parent) { shell.toast('Der Pressrest bleibt — er ist der Anfang des Systems.'); return true; }
+    if (!n.parent) { shell.toast('Der Pressrest bleibt; er ist der Anfang des Systems.'); return true; }
     if (G.isFollower(g, n.id)) { shell.toast(IS_FOLLOWER); return true; }
     let behind = 0;
     if (n.children.length !== 1) {
@@ -667,7 +667,7 @@ export function createAngussTool(host) {
         syncSelection();
         host.changed('Mündung ans Bauteil gebunden');
       },
-      onMiss: () => aim.miss('Daneben — die Stelle muss auf dem Bauteil liegen.', () => editor.aiming)
+      onMiss: () => aim.miss('Daneben: Die Stelle muss auf dem Bauteil liegen.', () => editor.aiming)
     });
   }
 
@@ -798,7 +798,7 @@ export function createAngussTool(host) {
       state.refPending = Promise.resolve(host.part.pickDemo(refId)).then(() => {
         /* Kam das Teil nicht (Datei fehlt), meldet es die Bauteil-Klappe —
            die Seite arbeitet ohne weiter. */
-        if (!state.ready) { ui('graph-warn').textContent = '„' + d.ref.name + '" konnte nicht geladen werden — das Beispiel steht ohne sein Bauteil.'; state.ready = true; }
+        if (!state.ready) { ui('graph-warn').textContent = '„' + d.ref.name + '" konnte nicht geladen werden; das Beispiel steht ohne sein Bauteil.'; state.ready = true; }
       });
       return state.refPending;
     }
@@ -1071,7 +1071,7 @@ export function createAngussTool(host) {
       if (fill === null) {
         return {
           label: 'Füllzeit der Kurve übernehmen', disabled: true,
-          reason: state.onCurve ? 'Ohne DieLogic-Kurve gibt es keine Füllzeit zu übernehmen.' : 'Schusskurve aus (Details) — es gilt die Füllzeit von oben.'
+          reason: state.onCurve ? 'Ohne DieLogic-Kurve gibt es keine Füllzeit zu übernehmen.' : 'Schusskurve aus (Details); es gilt die Füllzeit von oben.'
         };
       }
       if (Math.abs(fill - state.proc.fillTime) <= 0.5) return { hidden: true, reason: 'Prozess und Schusskurve rechnen mit derselben Füllzeit.', noteKind: 'ok' };

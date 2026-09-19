@@ -11,7 +11,7 @@ export const CHIP_HINT = 'STL oder GLB. Eine Datei, ins Bild gezogen, fragt, ob 
 export const MODES = [
   {
     id: 'abstand', label: 'Abstand',
-    hint: 'Für jeden Punkt der einen Oberfläche der kürzeste Weg zur anderen — exakt, in beide Richtungen.',
+    hint: 'Für jeden Punkt der einen Oberfläche der kürzeste Weg zur anderen: exakt, in beide Richtungen.',
     html: numberRow({ ui: 'reach', label: 'Suchgrenze', unit: 'mm', value: '50', help: 'suchgrenze' })
       + kpiBlock('dist-kpis')
       + warnLine('dist-warn')
