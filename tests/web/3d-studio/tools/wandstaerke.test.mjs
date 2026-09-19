@@ -27,7 +27,7 @@ test('Rahmen: Modi als Reiter, der Bauteil-Chip trägt den Namen, kein Feld ohne
   const s = v.state;
   assert.ok(s.model, 'Bauteil geladen');
   assert.deepEqual(doc.querySelectorAll('[role="tab"]').map(b => b.getAttribute('data-mode')),
-    ['bauteil', 'feld', 'isoflaeche', 'schnitt', 'waermezentren']);
+    ['feld', 'isoflaeche', 'schnitt', 'waermezentren']);
   assert.equal(shell.mode, 'feld', 'die Seite beginnt beim Feld — dem ersten Schritt');
   assert.match(ui('part-name').textContent, /Getriebedeckel/);
   same(s.field, null, 'ohne Bestätigung wird kein Feld gerechnet');
@@ -191,11 +191,10 @@ test('Modi besitzen ihren Viewport: Isofläche, Schnitt mit Skala, Wärmezentren
   assert.ok(s.maxima.every(m => m.r >= s.stats.maxIn - 1e-9), 'bei 100 % nur die dickste');
   min.value = '75'; min.dispatch('input');
 
-  shell.setMode('bauteil');
+  shell.setMode('feld');
   assert.equal(v.hotGroup.visible, false, 'die Marken gehen mit ihrem Modus');
-  assert.ok(!bar.classList.contains('on'));
-  assert.ok(v.partMesh.visible && !v.partMesh.material.transparent, 'das Bauteil deckend');
-  assert.match(kpiText(ui('part-kpis')), /Wanddicke 2V\/A/);
+  assert.ok(!bar.classList.contains('on'), 'und ihre Skala mit ihnen');
+  assert.ok(v.partMesh.visible && v.partMesh.material.transparent, 'das Bauteil durchscheinend, wie in jedem Modus');
 });
 
 test('Speichern und Entwurf: die Einstellungen als Datei, ein Entwurf im Browser', async () => {

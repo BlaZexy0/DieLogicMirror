@@ -2,10 +2,8 @@
    die früher darunter standen, liegen in help.js. */
 
 import { numberRow, sliderRow, segRow, kpiBlock, factsBlock, detailsBlock, warnLine } from '../studio/rows.js';
-import { partMode } from '../studio/partinfo.js';
 
 export const MODES = [
-  partMode(),
   {
     id: 'feld', label: 'Feld',
     hint: 'Ein Raster über das Bauteil, je Punkt der Abstand zur Oberfläche — die Grundlage für alles Weitere.',

@@ -6,13 +6,11 @@
    Anschnitte setzen, rechnen, das Ergebnis lesen. */
 
 import { numberRow, sliderRow, segRow, kpiBlock, factsBlock, detailsBlock, warnLine, heading, hintLine } from '../studio/rows.js';
-import { partMode } from '../studio/partinfo.js';
 import { DEFAULTS } from './model.js';
 
 const de = v => String(v).replace('.', ',');
 
 export const MODES = [
-  partMode(),
   {
     id: 'anschnitte', label: 'Anschnitte',
     hint: 'Oben im Bild „Anschnitt setzen", dann aufs Bauteil klicken. Hier steht, was gesetzt ist — ein Klick wählt es.',

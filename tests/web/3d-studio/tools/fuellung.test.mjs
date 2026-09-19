@@ -43,7 +43,7 @@ test('Rahmen: vier Modi, ein Chip, kein Raster ohne Knopf — und jede Zeile sag
   const { doc, v, ui, shell, host } = P;
   const s = v.state;
   assert.ok(s.ready && s.model, 'das Beispielteil steht');
-  assert.deepEqual(doc.querySelectorAll('[role="tab"][data-mode]').map(t => t.getAttribute('data-mode')), ['bauteil', 'anschnitte', 'fuellung', 'ergebnis']);
+  assert.deepEqual(doc.querySelectorAll('[role="tab"][data-mode]').map(t => t.getAttribute('data-mode')), ['anschnitte', 'fuellung', 'ergebnis']);
   assert.equal(shell.mode, 'anschnitte', 'die Seite beginnt dort, wo gearbeitet wird');
   assert.match(ui('part-name').textContent, /Getriebedeckel/);
   assert.deepEqual(doc.querySelectorAll('[data-chip]').map(x => x.getAttribute('data-chip')), ['anschnitt']);

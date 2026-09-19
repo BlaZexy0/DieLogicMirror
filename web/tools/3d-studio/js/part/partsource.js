@@ -147,6 +147,7 @@ function showFacts(m, id) {
       + (m.faceCount !== m.rawFaceCount ? ' (roh ' + fmt(m.rawFaceCount, 0) + ')' : '')],
     ['Abmessungen', s.map(v => fmt(v)).join(' × ') + ' mm'],
     ['Volumen', fmt(m.volume / 1000) + ' cm³'],
+    ['Wanddicke 2V/A', m.totalArea > 0 ? fmt(2 * m.volume / m.totalArea) + ' mm' : '—'],
     ['Oberfläche', fmt(m.surface / 100) + ' cm²']
   ]);
 

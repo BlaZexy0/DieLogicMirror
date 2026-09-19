@@ -33,7 +33,6 @@ import * as T from 'three';
 import { facts, segButtons, slider, numberInput, clampNote, gradient, rgbCss } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit, parseNumber, clamp, rangeText } from '../studio/format.js';
 import { kpis } from '../studio/rows.js';
-import { fillPartMode } from '../studio/partinfo.js';
 import { download, safeName, baseName } from '../studio/files.js';
 import { CELL_RANGE } from '../part/field.js';
 import { surfaceNets } from '../part/surfacenets.js';
@@ -671,7 +670,6 @@ export function createFuellungTool(host) {
 
   const modes = MODES.map(m => ({ ...m, enter: () => { syncGates(); applyMode(); }, leave: () => {} }));
   const by = Object.fromEntries(modes.map(m => [m.id, m]));
-  by.bauteil.primary = () => null;
   by.anschnitte.primary = gatesPrimary;
   by.fuellung.primary = () => runPrimary('fuellung');
   by.ergebnis.primary = () => runPrimary('ergebnis');
@@ -869,7 +867,6 @@ export function createFuellungTool(host) {
       plan.alpha = state.plan.alpha;
       loadPlan(plan);
       if (host.history) host.history.reset();
-      fillPartMode(ui, part);
       shell.renderChips();
       refresh();
       state.ready = true;

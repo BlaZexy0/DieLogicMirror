@@ -3,11 +3,9 @@
    der Seitenleiste und in den title-Attributen standen, liegen in help.js. */
 
 import { numberRow, sliderRow, segRow, checkRow, kpiBlock, factsBlock, detailsBlock, heading, hintLine, warnLine } from '../studio/rows.js';
-import { partMode } from '../studio/partinfo.js';
 import { DIRECTIONS } from './model.js';
 
 export const MODES = [
-  partMode(),
   {
     /* Der Reiter heißt kurz „Fläche": mit „Abstandsfläche" passten die vier
        Reiter in keiner Breite in eine Zeile, und „Prüfung" stand allein in

@@ -15,7 +15,6 @@ import { volume, surface } from '../mesh.js';
 import { facts, segButtons, segButtonSet, slider, numberInput, colorbar, gradient, chip } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit } from '../studio/format.js';
 import { kpis } from '../studio/rows.js';
-import { fillPartMode } from '../studio/partinfo.js';
 import { download, safeName, baseName } from '../studio/files.js';
 import * as C from '../part/colors.js';
 import { MODES, DARSTELLUNG } from './panel.js';
@@ -254,10 +253,9 @@ export function createWandstaerkeTool(host) {
     const has = !!state.field;
     state.slice.on = m === 'schnitt' && has;
     state.hot.on = m === 'waermezentren' && has;
-    const translucent = m !== 'bauteil';
     const solo = m === 'isoflaeche' && state.show === 'part';
     const opacity = (m === 'schnitt' || m === 'waermezentren') ? Math.min(state.opacity, 0.45) : state.opacity;
-    part.setLook({ visible: !(m === 'isoflaeche' && state.show === 'offset' && has), opacity: translucent && !solo ? opacity : 1, colors: false });
+    part.setLook({ visible: !(m === 'isoflaeche' && state.show === 'offset' && has), opacity: solo ? 1 : opacity, colors: false });
     offsetMesh.visible = m === 'isoflaeche' && has && state.show !== 'part' && !!(state.offsetTris && state.offsetTris.length);
     updateSlice();
     updateHotspots();
@@ -266,7 +264,6 @@ export function createWandstaerkeTool(host) {
   }
 
   /* ── Kennzahlen ──────────────────────────────────────────── */
-  const updatePartFacts = () => fillPartMode(ui, part);
   function updateFieldFacts() {
     const m = part.model;
     if (!m) { ui('field-cost').textContent = ''; facts(ui('field-facts'), []); kpis(ui('field-kpis'), []); return; }
@@ -321,7 +318,6 @@ export function createWandstaerkeTool(host) {
 
   const modes = MODES.map(m => ({ ...m }));
   const by = Object.fromEntries(modes.map(m => [m.id, m]));
-  by.bauteil.primary = () => null;
   by.feld.primary = fieldPrimary;
   by.isoflaeche.primary = needsField;
   by.schnitt.primary = needsField;
@@ -363,7 +359,6 @@ export function createWandstaerkeTool(host) {
     opacityEl = pop.querySelector('[data-ui="opacity"]');
     slider(opacityEl, v => { state.opacity = v / 100; applyMode(); changed('Deckkraft'); }, v => v + ' %');
     wired = true;
-    updatePartFacts();
     updateFieldFacts();
   }
 
@@ -377,7 +372,6 @@ export function createWandstaerkeTool(host) {
     offsetMesh.geometry = new T.BufferGeometry();
     sliceMesh.visible = false;
     clearHotspots();
-    updatePartFacts();
     updateFieldFacts();
     updateOffsetFacts();
     kpis(ui('hot-kpis'), []);

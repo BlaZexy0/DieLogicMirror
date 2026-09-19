@@ -3,10 +3,8 @@
    standen, liegen in help.js. */
 
 import { sliderRow, selectRow, kpiBlock, factsBlock, hintLine } from '../studio/rows.js';
-import { partMode } from '../studio/partinfo.js';
 
 export const MODES = [
-  partMode(),
   {
     id: 'elemente', label: 'Elemente',
     hint: 'Oben im Bild eine Art wählen, dann aufs Bauteil klicken. Hier steht, was gesetzt ist — ein Klick wählt es.',

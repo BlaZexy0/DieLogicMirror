@@ -43,7 +43,7 @@ test('Rahmen: Modi, Chips, die Abstandsfläche steht nach dem Laden, leerer Plan
   const { doc, v, ui, shell, host } = P;
   assert.ok(v.state.ready && host.part.model, 'das Beispielteil steht');
   assert.ok(v.state.model === host.part.model, 'der Testgriff kennt das Bauteil');
-  assert.deepEqual(doc.querySelectorAll('[role="tab"][data-mode]').map(t => t.getAttribute('data-mode')), ['bauteil', 'flaeche', 'setzen', 'pruefung']);
+  assert.deepEqual(doc.querySelectorAll('[role="tab"][data-mode]').map(t => t.getAttribute('data-mode')), ['flaeche', 'setzen', 'pruefung']);
   assert.equal(ui('auto-spacing').value, '30', 'die Vorgabe des Mindestabstands liegt auf dem Boden 1,5 × Ø 20');
   assert.equal(shell.mode, 'setzen', 'die Seite beginnt dort, wo gearbeitet wird');
   assert.match(ui('part-name').textContent, /Getriebedeckel/);
@@ -91,13 +91,13 @@ test('Darstellung: durchscheinend oder deckend — ein Häkchen, ein Material', 
 
 test('Modi besitzen ihr Bild: die Abstandsfläche gehört „Abstandsfläche" und „Setzen"', () => {
   const { v, shell } = P;
-  for (const [m, soll] of [['bauteil', false], ['flaeche', true], ['pruefung', false], ['setzen', true]]) {
+  for (const [m, soll] of [['flaeche', true], ['pruefung', false], ['setzen', true]]) {
     shell.setMode(m);
     assert.equal(v.shellMesh.visible, soll, m);
     assert.ok(v.partMesh.visible, 'das Bauteil steht in jedem Modus');
   }
   assert.match(P.doc.getElementById('pt-legend').innerHTML, /Abstandsfläche/);
-  shell.setMode('bauteil');
+  shell.setMode('pruefung');
   assert.doesNotMatch(P.doc.getElementById('pt-legend').innerHTML, /Abstandsfläche/, 'die Legende nennt nur, was im Bild ist');
   assert.doesNotMatch(P.doc.getElementById('pt-legend').innerHTML, /zu nah/, 'die Warnfarbe erst, wenn etwas zu nah steht');
   shell.setMode('setzen');
@@ -487,7 +487,7 @@ test('Neu setzen: der Pfeil zielt — aus „Prüfung" heraus landet man in „S
   /* Wer „Setzen" verlässt, zielt nicht mehr. */
   chip('stich').dispatch('click');
   assert.ok(v.handles.aiming);
-  shell.setMode('bauteil');
+  shell.setMode('pruefung');
   assert.ok(!v.handles.aiming && !chip('stich').classList.contains('active'));
   /* Und ein Chip führt aus jedem Modus zurück. */
   chip('stich').dispatch('click');

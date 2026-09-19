@@ -35,7 +35,7 @@ test('Rahmen: Modi, Chips je Art, leerer Plan, nichts Ungespeichertes', () => {
   const { doc, v, ui, shell, host } = P;
   assert.ok(v.state.ready && host.part.model, 'das Beispielteil steht');
   assert.ok(v.partMesh.visible);
-  assert.deepEqual(doc.querySelectorAll('[role="tab"]').map(t => t.getAttribute('data-mode')), ['bauteil', 'elemente', 'volumen']);
+  assert.deepEqual(doc.querySelectorAll('[role="tab"]').map(t => t.getAttribute('data-mode')), ['elemente', 'volumen']);
   assert.equal(shell.mode, 'elemente', 'die Seite beginnt dort, wo gearbeitet wird');
   assert.match(ui('part-name').textContent, /Getriebedeckel/);
   assert.equal(anzahl(), 0, 'ohne Plan keine Elemente');

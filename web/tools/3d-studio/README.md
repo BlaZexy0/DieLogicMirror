@@ -266,14 +266,15 @@ Hälften, Haftung und der Gleichstand senkrechter Wände folgen ihm.
 
 ### Reiter sind Modi
 
-Die Seitenleiste hat fünf **Reiter**, und jeder ist ein Modus: er
+Die Seitenleiste hat vier **Reiter**, und jeder ist ein Modus: er
 bestimmt allein, was im Viewport steht, und nimmt es beim Verlassen
-wieder mit. Kein Schalter schaltet einen anderen mit.
+wieder mit. Kein Schalter schaltet einen anderen mit. Was man vom Bauteil
+selbst wissen will (Dreiecke, Abmessungen, Volumen, Wanddicke 2V/A,
+Oberfläche, Hinweise zum Netz), steht in der Bauteil-Klappe der Kopfzeile
+unter „Zum Bauteil"; die **Netzkanten** sind Anzeige und stehen unter
+*Darstellung ▾* (auf dem Bauteil, das man sieht — bei den Formteilen nicht).
+Ein Teil, das geladen wird, während noch gerechnet wird, kommt danach dran.
 
-- **Bauteil** — laden, Kennzahlen, das Netz grau (Netzkanten wahlweise).
-  Wer hier ein Teil lädt, landet nach der Rechnung in der Entformung —
-  sonst stünde das neue Teil grau da, als wäre nichts geschehen. Ein
-  Teil, das geladen wird, während noch gerechnet wird, kommt danach dran.
 - **Entformung** — Formöffnung, bewegliche Seite, die Legende und die
   Bilanz Hälften / Schieber / Hinterschnitt, die **Einfärbung**
   (**Regionen**: sechs Farben + Rot für Hinterschnitte; **Schräge**:
@@ -372,7 +373,7 @@ rechnet seine Abstandsfläche selbst.)
 
 Die Seite läuft als erste im **gemeinsamen Rahmen** (siehe „Der gemeinsame
 Rahmen"). Ihre Reiter sind Modi, von links nach rechts die Arbeitsfolge:
-**Bauteil** (Abmessungen, Volumen, Wanddicke 2V/A) · **Feld** (Zellkante,
+**Feld** (Zellkante,
 Kosten vorab, „Feld berechnen" mit Fortschritt und Abbrechen) ·
 **Isofläche** · **Schnitt** · **Wärmezentren**. Jeder Modus besitzt, was er
 im Viewport zeigt — Schnitt und Wärmezentren stellen das Bauteil von selbst
@@ -1438,8 +1439,8 @@ sie hinaus kann.
 Die Seite läuft im gemeinsamen Rahmen (`js/studio/`, siehe unten): das
 **Setzen** sitzt als vier Chips über dem Bild (Bohne · mit Entlüftung ·
 Waschbrett · Schlitz), das **Bearbeiten** im Auswahlfeld daneben, die
-Seitenleiste hat drei Modi — *Bauteil*, *Elemente* (was gesetzt ist, ein
-Klick wählt es; der Reiter zählt mit) und *Volumen*. Körper und Griffe sind
+Seitenleiste hat zwei Modi — *Elemente* (was gesetzt ist, ein Klick wählt
+es; der Reiter zählt mit) und *Volumen*. Körper und Griffe sind
 der Plan selbst und stehen in jedem Modus im Bild.
 
 Das Bauteil (über den Bauteil-Chip der Kopfzeile: Beispielteil oder eigene
@@ -1568,9 +1569,8 @@ Gastgebers (`host.field`, `js/part/field.js`, `js/part/surfacenets.js`).
 Die Seite läuft im gemeinsamen Rahmen (`js/studio/`, Werkzeug
 `js/cooling/tool.js`): das Setzen sitzt als zwei Chips über dem Bild
 (Kühlstich · Kanal (2 Punkte)), das Bearbeiten im Auswahlfeld daneben, die
-Seitenleiste hat vier Modi:
+Seitenleiste hat drei Modi:
 
-- *Bauteil* — Kennzahlen und Netz, wie überall.
 - *Fläche* — die Abstandsfläche: **Achsabstand zur Kavität** (5–60 mm),
   **Zellkante** in mm (Vorgabe ein 64stel der längsten Bauteilkante — hier
   zählt die Fläche außen, nicht die Wand innen; ein selbst gesetzter Wert
@@ -1696,9 +1696,8 @@ das steht auch auf der Seite.
 
 ### Raster und Anschnitte
 
-Die Seite läuft im gemeinsamen Rahmen (`js/studio/`, siehe unten) mit vier
-Modi in Arbeitsreihenfolge: *Bauteil* · *Anschnitte* · *Füllung* ·
-*Ergebnis*. Anschnitte und ihre Griffe sind der Plan selbst und stehen in
+Die Seite läuft im gemeinsamen Rahmen (`js/studio/`, siehe unten) mit drei
+Modi in Arbeitsreihenfolge: *Anschnitte* · *Füllung* · *Ergebnis*. Anschnitte und ihre Griffe sind der Plan selbst und stehen in
 jedem Modus im Bild; das Bild der Füllung gehört dem Modus *Ergebnis*.
 
 **Anschnitte** sind Rechtecke auf der Wand (`js/fill/model.js`): der Chip
@@ -1825,6 +1824,11 @@ Die Regeln, die der Rahmen durchsetzt — und die Tests, die sie halten:
   dem Finger und mit aufgeklappten Details): Kennzahlen, die selten
   interessieren, liegen in einem zugeklappten „Details", Erklärungen in
   der Hilfe. Nichts im Viewport überdeckt einander (`[data-dock]`).
+- **Das Bauteil hat keinen eigenen Reiter.** Was man von ihm wissen will —
+  Dreiecke, Abmessungen, Volumen, Wanddicke 2V/A, Oberfläche, Hinweise zum
+  Netz — steht in der Bauteil-Klappe der Kopfzeile unter „Zum Bauteil"; ein
+  Hinweis zum Netz setzt ein ⚠ an den Chip. Die Reiter sind die Arbeit am
+  Bauteil, nicht das Bauteil.
 - **Setzen über dem Bild, Bearbeiten daneben.** Ein Designer setzt mit
   *Chips* über dem Viewport (kurze Bezeichnung; ein Chip, der gerade nicht
   geht, sagt beim Antippen warum) und bearbeitet die Auswahl im *Auswahlfeld*
@@ -1965,7 +1969,6 @@ js/studio/format.js   Zahlen deutsch schreiben und lesen (fmt, fmtUnit, parseNum
 js/studio/rows.js     Bausteine der Seitenleiste (Zahl, Regler, Schalter, Kennzahlen, Details)
 js/studio/help.js     die Hilfe-Lade mit Ankern
 js/studio/pages/      je Seite ein Modul: Gastgeber bauen, Werkzeug einsetzen
-js/studio/partinfo.js der Modus „Bauteil" — in jedem Werkzeug derselbe (Kennzahlen, Netzwarnung, Details)
 js/wandstaerke/       Wandstärkenanalyse im Rahmen: tool.js, panel.js (Felder je Modus), help.js
 js/entformung/        Entformungsanalyse im Rahmen: tool.js, panel.js, help.js
 js/abstand/           Abstandsanalyse im Rahmen — das eine Werkzeug mit ZWEI Bauteilen (createHost({ part: false }))

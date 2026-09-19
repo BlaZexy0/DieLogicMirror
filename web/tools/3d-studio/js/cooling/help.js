@@ -99,8 +99,8 @@ eine andere Richtung geben.</p>
 <h3>Darstellung</h3>
 <p><b>Abstandsfläche durchscheinend</b>: durchscheinend sieht man das Bauteil in der Fläche; deckend zeigt
 ihre Form — Taschen, Rippenschatten, wo die Fläche eng wird — und die Stiche und Kanäle davor.</p>
-<p>Die Abstandsfläche steht in den Modi „Abstandsfläche" und „Setzen" im Bild; „Bauteil" und „Prüfung"
-zeigen Bauteil und Bohrungen ohne sie.</p>
+<p>Die Abstandsfläche steht in den Modi „Fläche" und „Setzen" im Bild; „Prüfung" zeigt Bauteil und
+Bohrungen ohne sie.</p>
 </section>
 <section data-help-anchor="dateien">
 <h3>Dateien</h3>

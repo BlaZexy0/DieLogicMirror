@@ -25,8 +25,8 @@ test('Ansichtsleiste und Viewport sind aufgebaut', () => {
   assert.equal(bar.querySelectorAll('[data-view]').length, 4, 'X · Y · Z · Iso');
   assert.equal(bar.querySelectorAll('[data-proj]').length, 2, 'Persp · Parallel');
   assert.ok(bar.querySelector('[data-fit]'), 'Einpassen');
-  /* Dieses Werkzeug hat keine Anzeigeoptionen — also auch keinen Knopf dafür. */
-  assert.equal(bar.querySelector('[data-darstellung]').hidden, true);
+  /* Eine Anzeigeoption hat es: die Netzkanten — also den Knopf „Darstellung". */
+  assert.equal(bar.querySelector('[data-darstellung]').hidden, false);
   assert.equal(P.ui('export').hidden, true, 'und nichts zu exportieren');
 });
 
@@ -74,7 +74,10 @@ test('Analyse läuft beim Laden: Legende im Viewport, Bilanz als Kennzahlen, kei
   const legend = doc.getElementById('pt-legend');
   assert.ok(legend.innerHTML.includes('%'), 'Legende zeigt Flächenanteile');
   assert.ok(!legend.innerHTML.includes('>0 %<') && !legend.innerHTML.includes('0,0 %'), 'nur was vorkommt');
-  assert.ok(doc.getElementById('model-facts').innerHTML.includes('cm³'), 'Kennzahlen des Bauteils in der Klappe');
+  /* Was man vom Bauteil wissen will, steht in der Bauteil-Klappe der Kopfzeile —
+     einen Modus „Bauteil" gibt es dafür nicht mehr. */
+  const klappe = doc.getElementById('model-facts').innerHTML;
+  for (const k of ['Dreiecke', 'Abmessungen', 'Volumen', 'Wanddicke 2V/A', 'Oberfläche']) assert.ok(klappe.includes(k), k + ' steht in der Klappe');
   assert.match(kpiText(ui('seg-kpis')), /Formhälften.*Schieber.*Hinterschnitt/, 'Bilanz Hälften / Schieber / Hinterschnitt');
   assert.match(kpiText(ui('seg-kpis')), /\d,\d %/, 'deutsch geschrieben');
   assert.ok(ui('analysis-state').textContent.includes('automatisch'), 'die Formöffnung wurde gewählt');
@@ -118,7 +121,7 @@ test('Formöffnung: automatisch gewählt, fest wählbar, sofort neu gerechnet', 
 test('Reiter sind Modi: je Reiter ein Abschnitt und eine eigene Darstellung', () => {
   const { doc, v, ui, host } = P;
   const s = v.state;
-  const tabs = ['bauteil', 'entformung', 'formteile', 'flaechen', 'haftung'];
+  const tabs = ['entformung', 'formteile', 'flaechen', 'haftung'];
   assert.deepEqual(doc.querySelectorAll('[role="tab"]').map(b => b.getAttribute('data-mode')), tabs);
   const visible = () => doc.querySelectorAll('.st-mode').filter(x => !x.hidden).map(x => x.getAttribute('data-mode'));
   assert.deepEqual(visible(), ['entformung'], 'zu Beginn die Entformung');
@@ -128,15 +131,12 @@ test('Reiter sind Modi: je Reiter ein Abschnitt und eine eigene Darstellung', ()
     assert.deepEqual(visible(), [t], 'nur ' + t);
     assert.equal(s.tab, t);
   }
-  /* Der Modus bestimmt die Farbe des Bauteils: grau im Bauteil und bei den
-     Flächen, Regionen/Schräge in der Entformung, Haftmaß in der Haftung. */
-  v.showTab('bauteil');
-  assert.equal(v.colouring(), 'plain');
-  assert.ok(v.partMesh.material === host.part.plainMat, 'grau im Modus Bauteil');
-  assert.equal(doc.getElementById('pt-legend').innerHTML, '', 'keine Legende ohne Regionen');
-  assert.match(kpiText(ui('part-kpis')), /Abmessungen.*Volumen.*Wanddicke/);
+  /* Der Modus bestimmt die Farbe des Bauteils: grau bei den Flächen,
+     Regionen/Schräge in der Entformung, Haftmaß in der Haftung. */
   v.showTab('flaechen');
   assert.equal(v.colouring(), 'plain');
+  assert.ok(v.partMesh.material === host.part.plainMat, 'grau bei den Flächen');
+  assert.equal(doc.getElementById('pt-legend').innerHTML, '', 'keine Legende ohne Regionen');
   v.showTab('haftung');
   assert.equal(v.colouring(), 'grip');
   assert.ok(v.partMesh.material === host.part.colorMat);
@@ -145,15 +145,18 @@ test('Reiter sind Modi: je Reiter ein Abschnitt und eine eigene Darstellung', ()
   v.showTab('entformung');
   assert.equal(v.colouring(), 'regions');
   assert.ok(!doc.getElementById('colorbar').classList.contains('on'), 'bei den Regionen keine Skala');
-  /* Die Netzkanten gehören zum Modus Bauteil. */
-  const edges = ui('show-edges');
+  /* Die Netzkanten sind Anzeige: sie stehen unter „Darstellung" und gelten auf
+     dem Bauteil, das man sieht — bei den Formteilen ist es Schatten oder weg. */
+  const edges = doc.querySelector('.view-pop [data-ui="show-edges"]');
+  assert.ok(edges, 'Netzkanten unter Darstellung');
+  assert.equal(ui('show-edges'), edges, 'und nirgends sonst');
   edges.checked = true; edges.dispatch('change');
-  assert.equal(v.edgeLines.visible, false, 'in der Entformung keine Netzkanten');
-  v.showTab('bauteil');
-  assert.equal(v.edgeLines.visible, true, 'im Bauteil da');
+  assert.equal(v.edgeLines.visible, true, 'in der Entformung da');
+  v.showTab('formteile');
+  assert.equal(v.edgeLines.visible, false, 'bei den Formteilen nicht');
+  v.showTab('entformung');
   edges.checked = false; edges.dispatch('change');
   assert.equal(v.edgeLines.visible, false);
-  v.showTab('entformung');
   assert.deepEqual(ui('mode-seg').querySelectorAll('button').map(b => b.dataset.value), ['regions', 'draft'], 'Einfärbung nur Regionen und Schräge');
 });
 
@@ -244,9 +247,8 @@ test('Flächen und Haftung: jeder Modus zeigt seine Ebenen jenseits des Bauteils
   const alphaEl = ui('proj-alpha');
   alphaEl.value = '25'; alphaEl.dispatch('input');
   assert.ok(Math.abs(movO().children[0].material.opacity - 0.25) < 1e-9, 'Deckkraft der Füllung');
-  v.showTab('bauteil');
-  assert.ok(proj().every(o => !o.visible), 'im Modus Bauteil keine Silhouetten');
-  assert.equal(v.colouring(), 'plain');
+  v.showTab('entformung');
+  assert.ok(proj().every(o => !o.visible), 'in der Entformung keine Silhouetten');
   /* Haftung: der Deckel schrumpft auf den Kern der beweglichen Hälfte —
      Innenwände, Rippen und Ring haften, die Außenwände nicht. */
   assert.ok(s.grip.mov > 3 * s.grip.fix, 'haftet an der beweglichen Seite: ' + s.grip.mov + ' / ' + s.grip.fix);
@@ -342,9 +344,9 @@ test('STL laden: Datei, Ziehen-und-Ablegen, kaputte Datei', async () => {
   const S = await import('../../../../web/tools/3d-studio/js/solids.js');
   const fileOf = (name, tris) => { const buf = writeSTL(tris, 'test'); return { name, arrayBuffer: () => Promise.resolve(buf), byteLength: buf.byteLength }; };
 
-  /* Geladen wird im Modus Bauteil — dort steht das Netz grau. Nach der
-     Rechnung springt die Seite zur Entformung, sonst sähe man nichts. */
-  v.showTab('bauteil');
+  /* Geladen wird aus einem anderen Modus: das Ergebnis erscheint in der
+     Entformung, und dort ist das Teil gefärbt. */
+  v.showTab('flaechen');
   const input = () => doc.getElementById('stl-input');
   input().files = [fileOf('pruefwuerfel.stl', S.box(40, 30, 20))];
   input().dispatch('change');
@@ -354,8 +356,8 @@ test('STL laden: Datei, Ziehen-und-Ablegen, kaputte Datei', async () => {
   const c = v.state.seg.counts;
   assert.equal(c.half + c.weak + c.slider, 12, 'jede Seite zugeordnet');
   assert.equal(c.slider, 0, 'ein Quader braucht keinen Schieber');
-  assert.equal(v.state.tab, 'entformung', 'nach dem Laden zur Entformung');
-  assert.equal(v.colouring(), 'regions', 'und das Teil ist gefärbt');
+  v.showTab('entformung');
+  assert.equal(v.colouring(), 'regions', 'das Teil ist gefärbt');
   assert.ok(v.partMesh.material === host.part.colorMat, 'nicht mehr grau');
 
   /* Ein zweites Teil, während das erste noch rechnet: die laufende Rechnung

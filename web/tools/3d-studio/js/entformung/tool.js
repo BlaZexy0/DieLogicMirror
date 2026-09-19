@@ -29,9 +29,8 @@ import { createDieView } from '../part/dieviewer.js';
 import { rgbCss, facts, segButtons, segButtonSet, slider, colorbar, gradient, chip } from '../ui/controls.js';
 import { fmt, fmtUnit, fmtFixed } from '../studio/format.js';
 import { kpis } from '../studio/rows.js';
-import { fillPartMode } from '../studio/partinfo.js';
 import * as C from '../part/colors.js';
-import { MODES } from './panel.js';
+import { MODES, DARSTELLUNG } from './panel.js';
 
 export const FORMAT = 'dielogic-entformung';
 export const FORMAT_VERSION = 1;
@@ -45,6 +44,10 @@ const DEFAULTS = { axis: 'auto', movSign: 1, mode: 'regions', draftLimit: 1.5, s
 export function createEntformungTool(host) {
   const { shell, view, part } = host;
   const ui = host.ui;
+  /* Die Netzkanten stehen unter „Darstellung" — das Aufklappfeld gehört dem
+     Rahmen und steht schon, bevor die Felder der Modi eingesetzt sind. */
+  const darstellung = shell.darstellung(DARSTELLUNG);
+  const edgesBox = () => darstellung.querySelector('[data-ui="show-edges"]');
 
   const state = {
     vis: null, seg: null, draft: null,
@@ -90,9 +93,8 @@ export function createEntformungTool(host) {
     edgeLines.geometry.dispose();
     const edgesOk = model.faceCount <= 60000;
     edgeLines.geometry = edgesOk ? new T.WireframeGeometry(part.mesh.geometry) : new T.BufferGeometry();
-    ui('show-edges').disabled = !edgesOk;
-    if (!edgesOk) { ui('show-edges').checked = false; state.showEdges = false; }
-    fillPartMode(ui, part);
+    edgesBox().disabled = !edgesOk;
+    if (!edgesOk) { edgesBox().checked = false; state.showEdges = false; }
     clearAnalysis();
     /* Abstände folgen der Bauteilgröße, solange niemand sie gesetzt hat. */
     const longest = Math.max(...model.bounds.size);
@@ -147,10 +149,6 @@ export function createEntformungTool(host) {
       state.visMs = performance.now() - t0;
       state.analysed = true;
       recompute();
-      /* Wer im Modus Bauteil ein Teil lädt, will sein Ergebnis sehen — dort
-         steht das Netz aber absichtlich grau. Also hinüber zur Entformung;
-         in jedem anderen Modus bleibt es beim gewählten. */
-      if (shell.mode === 'bauteil') shell.setMode('entformung');
     } else if (!state.analysed) ui('analysis-state').textContent = '';
     const again = rerun || part.model !== model;
     rerun = false;
@@ -253,7 +251,9 @@ export function createEntformungTool(host) {
     part.setLook({ visible: o > 0, opacity: o, colors: !!state.seg && colouring() !== 'plain' });
     const n = partingLines.geometry.getAttribute('position');
     partingLines.visible = shell.mode === 'entformung' && state.showParting && !!state.seg && !!n && n.count > 0;
-    edgeLines.visible = shell.mode === 'bauteil' && state.showEdges && !!part.model;
+    /* Netzkanten gehören auf das Bauteil, das man sieht — bei den Formteilen
+       ist es Schatten oder weg. */
+    edgeLines.visible = state.showEdges && !!part.model && !ghost;
     view.invalidate();
   }
 
@@ -443,7 +443,7 @@ export function createEntformungTool(host) {
   }
   const modes = MODES.map(m => ({ ...m }));
   for (const m of modes) {
-    m.primary = m.id === 'bauteil' ? () => null : gate;
+    m.primary = gate;
     m.enter = () => applyMode();
     m.leave = () => {};
   }
@@ -456,7 +456,7 @@ export function createEntformungTool(host) {
 
   function mounted() {
     /* Bauteil */
-    ui('show-edges').addEventListener('change', e => { state.showEdges = e.target.checked; applyOpacity(); changed('Netzkanten'); });
+    edgesBox().addEventListener('change', e => { state.showEdges = e.target.checked; applyOpacity(); changed('Netzkanten'); });
 
     /* Entformung */
     segButtons(ui('axis-seg'), v => { state.axis = v === 'auto' ? 'auto' : +v; recompute(); changed('Formöffnung'); });
@@ -599,12 +599,12 @@ export function createEntformungTool(host) {
     state.movSign = obj.movSign === -1 ? -1 : 1;
     state.draftLimit = num(obj.draftLimit, 0.5, 5, state.draftLimit);
     state.showParting = obj.showParting !== false;
-    state.showEdges = !!obj.showEdges && !ui('show-edges').disabled;
+    state.showEdges = !!obj.showEdges && !edgesBox().disabled;
     segButtonSet(ui('axis-seg'), String(state.axis));
     segButtonSet(ui('mov-seg'), String(state.movSign));
     segButtonSet(ui('mode-seg'), obj.mode === 'draft' ? 'draft' : 'regions');
     ui('show-parting').checked = state.showParting;
-    ui('show-edges').checked = state.showEdges;
+    edgesBox().checked = state.showEdges;
     ui('draft-limit').value = String(state.draftLimit);
     ui('draft-limit-val').textContent = fmt(state.draftLimit) + ' °';
     const d = obj.die || {}, pv = obj.projView || {}, ej = obj.ej || {};

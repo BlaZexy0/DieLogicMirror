@@ -28,7 +28,6 @@ import * as T from 'three';
 import { facts, slider, numberInput } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit } from '../studio/format.js';
 import { kpis } from '../studio/rows.js';
-import { fillPartMode } from '../studio/partinfo.js';
 import { writeSTL } from '../part/stlio.js';
 import { createHandles, SELECTED_RING } from '../handles.js';
 import { setTris, download, safeName, dirText, outward } from '../ui/common.js';
@@ -470,7 +469,6 @@ export function createUeberlaufTool(host) {
       loadPlan(M.emptyPlan());
       if (host.history) host.history.reset();
       host.part.setLook({ visible: true, colors: false });
-      fillPartMode(ui, host.part);
       shell.renderChips();
       state.ready = true;
     },

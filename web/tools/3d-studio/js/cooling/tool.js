@@ -37,7 +37,6 @@ import * as T from 'three';
 import { facts, segButtons, slider, numberInput } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit } from '../studio/format.js';
 import { kpis } from '../studio/rows.js';
-import { fillPartMode } from '../studio/partinfo.js';
 import { baseName } from '../studio/files.js';
 import { sampleField, CELL_RANGE } from '../part/field.js';
 import { surfaceNets } from '../part/surfacenets.js';
@@ -853,7 +852,6 @@ export function createTemperierTool(host) {
     if (state.hAuto) { state.h = suggestShellCell(model); ui('cell').value = fmtPlain(state.h); }
     loadPlan(fresh, true);
     if (host.history) host.history.reset();
-    fillPartMode(ui, part);
     updateShellFacts();
     applyMode();
     shell.renderChips();

@@ -3,10 +3,8 @@
    der Regionen steht im Viewport (unten rechts), nicht mehr in der Leiste. */
 
 import { sliderRow, segRow, checkRow, kpiBlock, factsBlock, detailsBlock, warnLine } from '../studio/rows.js';
-import { partMode } from '../studio/partinfo.js';
 
 export const MODES = [
-  partMode(checkRow({ ui: 'show-edges', label: 'Netzkanten zeigen', help: 'netz' })),
   {
     id: 'entformung', label: 'Entformung',
     hint: 'Welche Fläche entformt wohin: Formhälften, Schieber, Hinterschnitt — sofort beim Laden.',
@@ -47,3 +45,8 @@ export const MODES = [
       + sliderRow({ ui: 'ej-alpha', label: 'Deckkraft', min: 10, max: 100, step: 5, value: 70 })
   }
 ];
+
+/* Das Aufklappfeld „Darstellung" der Ansichtsleiste: was nur die Anzeige
+   betrifft. (Die Netzkanten standen im Modus „Bauteil"; den gibt es nicht
+   mehr — was er vom Bauteil sagte, steht in der Bauteil-Klappe der Kopfzeile.) */
+export const DARSTELLUNG = checkRow({ ui: 'show-edges', label: 'Netzkanten zeigen', help: 'netz' });
