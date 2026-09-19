@@ -337,10 +337,9 @@
         <div class="label">Konsequenz</div>
         <p>DieLogic rechnet v<sub>krit</sub> deshalb <b>direkt aus der CFD-Tabelle</b> (bilineare
           Interpolation über Ø und φ; unter φ = 0,1 konservativ geklemmt, über φ = 0,9 linear auf
-          0 auslaufend) — in der Schusskurven-Prüfung, der Heatmap, dem (φ,&nbsp;λ)-Fenster und im
-          Backend (hpdcsim-Modell <code>cfd_table</code>). Flachwassertheorie
-          (<code>segment_fit</code>), Nogowizin und Garber/Lopez bleiben als Referenzmodelle
-          wählbar. Die Herleitung der Abschnitte 2–6 bleibt das Verständnis-Gerüst: Sie erklärt
+          0 auslaufend) — in der Schusskurven-Prüfung, der Heatmap, dem (φ,&nbsp;λ)-Fenster und in
+          der Luftsimulation. Flachwassertheorie und Nogowizin bleiben als Referenz im
+          Rechenkern (<code>vCritTheory</code>, <code>vCritNogowizin</code>). Die Herleitung der Abschnitte 2–6 bleibt das Verständnis-Gerüst: Sie erklärt
           die √(g·D)-Skalierung und <em>warum</em> es überhaupt eine kritische Geschwindigkeit
           gibt — die Zahlen kommen aus der Simulation.</p>
       </div>

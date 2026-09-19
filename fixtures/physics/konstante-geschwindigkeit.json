@@ -50,12 +50,12 @@
     "fill_complete_mm": {
       "value": 610.8233986235335,
       "rtol": 1e-9,
-      "note": "650 − Pressrestlänge; Kurvenende 615 mm liegt dahinter → Backend kappt"
+      "note": "650 − Pressrestlänge; Kurvenende 615 mm liegt dahinter → die Luftsimulation kappt"
     },
     "v_crit": {
       "value": 0.5385042558929461,
       "rtol": 1e-9,
-      "note": "√(g·D)·f(D, φ) aus der OpenFOAM-CFD-Tabelle (fixtures/vkrit/v_krit_sim.csv, bilinear interpoliert). Tabelle und beide Sprachen entnormieren mit VKRIT_GRAVITY — JS und hpdcsim stimmen damit bitgenau überein."
+      "note": "√(g·D)·f(D, φ) aus der OpenFOAM-CFD-Tabelle (fixtures/vkrit/v_krit_sim.csv, bilinear interpoliert). Auslegung und Luftsimulation entnormieren mit VKRIT_GRAVITY — dieselbe Funktion vCrit(), bitgleich."
     },
     "v_slow_max": {
       "value": 2,
@@ -85,7 +85,7 @@
     "fill_time_ms": {
       "value": 112.63272895734133,
       "rtol": 0.0001,
-      "note": "(610,823 − 385,558 mm)/2 m/s; Backend kappt 1 µm vor dem Füllende"
+      "note": "(610,823 − 385,558 mm)/2 m/s; die Luftsimulation kappt 1 µm vor dem Füllende"
     }
   }
 }

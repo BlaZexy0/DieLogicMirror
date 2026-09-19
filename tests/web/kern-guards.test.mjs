@@ -80,7 +80,7 @@ test('Anschnittgeschwindigkeit erst, wenn Schmelze im Anschnitt ist', () => {
   const s = shot();
   const byName = Object.fromEntries(s.events.map(e => [e.name, e]));
   assert.equal(byName['Kammer voll'].gv, null,
-    'hpdcsim meldet dort 0 — eine Zahl auszugeben war erfunden');
+    'die Luftsimulation meldet dort 0 — eine Zahl auszugeben war erfunden');
   assert.ok(byName['Anguss gefüllt'].gv > 0);
   assert.ok(byName['Bauteil gefüllt'].gv > 0);
 });
@@ -107,15 +107,36 @@ test('ftwall: gleiche Fließ- und Formtemperatur ist ein Fehler, keine Kurve', a
   }
 });
 
-test('simstore: nach einem Fehler wird wieder abgefragt', () => {
-  /* Der Fehlerpfad muss lastKey zurücksetzen — sonst bleibt schedule()
-     für den Rest der Sitzung stumm. */
-  const src = readFileSync(path.join(site, 'tools/auslegung/js/core/simstore.js'), 'utf8');
-  const cat = src.slice(src.indexOf('} catch (e) {'), src.indexOf('} finally {'));
-  assert.match(cat, /lastKey = '';/, 'nach einem Timeout wurde nie wieder abgefragt');
-  const run = src.slice(src.indexOf('sim.status = \'loading\';'), src.indexOf('try {'));
-  assert.match(run, /sim\.data = null;/,
-    'veraltete Daten dürfen während des Nachladens nicht als aktuell gelten');
+test('simstore: das Ergebnis gehört immer zur aktuellen Eingabe', async () => {
+  /* Die Luftsimulation läuft synchron im Browser. Früher kam sie vom Server:
+     ein Fehler ließ die Abfrage für den Rest der Sitzung verstummen, und
+     während des Nachladens galt die Kurve der VORIGEN Eingabe als aktuell.
+     Beides darf es nicht mehr geben — nach einem Fehler keine alten Daten,
+     nach der Korrektur sofort wieder ein Ergebnis. */
+  const { state } = await import(path.join(site, 'tools/auslegung/js/core/state.js'));
+  const { sim, refreshSim } = await import(path.join(site, 'tools/auslegung/js/core/simstore.js'));
+  Object.assign(state.values, values());
+  state.curve = DEFAULT_CURVE.map(p => p.slice());
+
+  refreshSim();
+  assert.equal(sim.status, 'ok', sim.error);
+  assert.ok(sim.data.samples.p_air_mbar.length > 0 && sim.error === null);
+
+  const gate = state.values.gate;
+  state.values.gate = 0;
+  refreshSim();
+  assert.equal(sim.status, 'error');
+  assert.equal(sim.data, null, 'veraltete Daten dürfen nach einem Fehler nicht als aktuell gelten');
+  assert.equal(sim.error, 'Anschnittfläche muss > 0 sein.');
+
+  state.values.gate = gate;
+  refreshSim();
+  assert.equal(sim.status, 'ok', 'nach einem Fehler wurde nie wieder gerechnet');
+  assert.ok(sim.data && sim.error === null);
+
+  const before = sim.data;
+  refreshSim();
+  assert.ok(sim.data === before, 'ohne Änderung wird nicht neu gerechnet');
 });
 
 test('orgpresets: Serverfehler ist nicht „keine Stammdaten"', () => {

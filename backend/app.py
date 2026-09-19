@@ -1,4 +1,4 @@
-"""DieLogic-Backend: API (/api/…: Simulation, Anmeldung, Projekte) + Auslieferung der statischen Website (web/).
+"""DieLogic-Backend: API (/api/…: Anmeldung, Projekte, Stammdaten) + Auslieferung der statischen Website (web/).
 
 Starten (aus dem Ordner dielogic/):
     .venv/bin/uvicorn backend.app:app --reload
@@ -20,7 +20,6 @@ from .auth import bootstrap_demo, bootstrap_from_env, optional_user, router as a
 from .db import SessionLocal, init_db
 from .orgsettings import router as orgsettings_router
 from .projects import router as projects_router
-from .sim import router as sim_router
 
 log = logging.getLogger("uvicorn.error")
 
@@ -43,7 +42,6 @@ app = FastAPI(title="DieLogic Backend", version=VERSION,
               docs_url="/docs" if DOCS else None,
               redoc_url="/redoc" if DOCS else None,
               openapi_url="/openapi.json" if DOCS else None)
-app.include_router(sim_router)
 app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(orgsettings_router)

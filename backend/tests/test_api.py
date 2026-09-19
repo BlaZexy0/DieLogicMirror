@@ -1,23 +1,11 @@
-"""End-to-End-Tests für /api/sim/shot über den FastAPI-TestClient:
-Dashboard-Payload hinein, Simulationsergebnis (oder 422) heraus."""
+"""End-to-End-Tests der Anwendung über den FastAPI-TestClient: Health,
+statische Auslieferung, Sicherheitsköpfe. (Konto, Projekte und Stammdaten
+haben ihre eigenen Dateien.)"""
 from fastapi.testclient import TestClient
 
 from backend.app import app
-from backend.sim import ShotRequest  # noqa: F401 — Import prüft das Schema
 
 client = TestClient(app)
-
-VALUES = {
-    "part": 12, "runner": 3, "overflow": 2, "biscuit": 1.2, "density": 2700,
-    "diam": 150, "length": 700, "gate": 1800, "vent": 800, "Tcast": 660,
-}
-CURVE = [[60, 0.4], [318, 0.4], [470, 4], [675, 4]]
-
-
-def shot(payload_extra=None, **overrides):
-    payload = {"values": dict(VALUES, **overrides), "curve": CURVE, "count": 200}
-    payload.update(payload_extra or {})
-    return client.post("/api/sim/shot", json=payload)
 
 
 def test_health():
@@ -25,126 +13,12 @@ def test_health():
     assert r.status_code == 200 and r.json()["status"] == "ok" and r.json()["version"]
 
 
-def test_shot_happy_path():
-    r = shot()
-    assert r.status_code == 200, r.text
-    data = r.json()
-    assert set(data) == {"meta", "samples", "events", "critical_crossing"}
-
-    meta = data["meta"]
-    assert abs(meta["phi"] - 0.544926) < 1e-4
-    assert meta["critical_velocity_model"] == "cfd_table"
-    assert meta["v_crit"] > 0
-    assert meta["curve_clamped"] is True
-
-    s = data["samples"]
-    assert all(len(s[k]) == 200 for k in
-               ("t", "s_mm", "v", "gate_v", "p_air_mbar", "T_melt", "part_fill"))
-    # Schussphase: Zeit startet bei 0, Weg wächst monoton bis zum Füllende.
-    assert s["t"][0] == 0.0
-    assert all(b >= a for a, b in zip(s["s_mm"], s["s_mm"][1:]))
-    assert abs(s["s_mm"][-1] - 674.85) < 0.1
-    # Luftdruck ohne Vakuum: startet bei Umgebungsdruck.
-    assert abs(s["p_air_mbar"][0] - 1013.25) < 1
-
-    names = {e["id"] for e in data["events"]}
-    assert {"shot_start", "sleeve_full", "runner_full", "part_full",
-            "pour_hole_sealed"} <= names
-    # Zeiten sind relativ zum Schussbeginn — nur dosing_end liegt davor.
-    for e in data["events"]:
-        if e["id"] != "dosing_end":
-            assert e["t"] is None or e["t"] >= 0
-
-
-def test_shot_event_strokes_match_volumes():
-    r = shot()
-    events = {e["id"]: e for e in r.json()["events"]}
-    # Kammer voll bei (1−phi)·L, danach kumulativ Anguss/Bauteil (Herleitung
-    # wie in test_convert.py).
-    assert abs(events["sleeve_full"]["s_mm"] - 318.552) < 1e-2
-    A = 0.017671458676442587
-    runner_full = 318.55210347028867 + (3 / 2700) / A * 1000
-    assert abs(events["runner_full"]["s_mm"] - runner_full) < 1e-2
-
-
-def test_shot_count_clamped():
-    assert len(shot(payload_extra={"count": 50}).json()["samples"]["t"]) == 50
-    # Pydantic begrenzt count auf 50…2000 → außerhalb ist ein 422.
-    assert shot(payload_extra={"count": 10}).status_code == 422
-    assert shot(payload_extra={"count": 99999}).status_code == 422
-
-
-def test_shot_invalid_inputs_are_422():
-    r = shot(part=2000)  # Füllgrad ≥ 100 %
-    assert r.status_code == 422
-    assert "Füllgrad" in r.json()["detail"]
-
-    r = shot(biscuit=0)
-    assert r.status_code == 422
-    assert "Pressrest" in r.json()["detail"]
-
-    r = shot(runner=0)  # Dashboard erlaubt 0, die Simulation nicht —
-    assert r.status_code == 422  # Meldung muss deutsch sein
-    assert "Anguss" in r.json()["detail"]
-
-
-def test_seal_stroke_drives_pour_hole_event():
-    # Das Dashboard-Feld „Einfüllöffnung verschlossen" bestimmt, wo die
-    # Luftkompression beginnt — nicht mehr die hartkodierten 20 % von L.
-    events = {e["id"]: e for e in shot(sealStroke=150).json()["events"]}
-    assert abs(events["pour_hole_sealed"]["s_mm"] - 150.0) < 1e-6
-    events = {e["id"]: e for e in shot().json()["events"]}
-    assert abs(events["pour_hole_sealed"]["s_mm"] - 140.0) < 1e-6  # 0,2·700
-
-
-def test_shot_curve_validation():
-    payload = {"values": VALUES, "curve": [], "count": 200}
-    assert client.post("/api/sim/shot", json=payload).status_code == 422  # Pydantic
-    payload["curve"] = [[i, 1] for i in range(1, 60)]
-    assert client.post("/api/sim/shot", json=payload).status_code == 422  # > 50 Punkte
-
-
-def test_shot_with_vacuum_lowers_air_pressure():
-    vac = {"model": "ideal", "pump_mbar": 80, "valve_mm2": 100, "start_mm": 150}
-    without = shot().json()["samples"]["p_air_mbar"]
-    with_vac = shot(payload_extra={"vacuum": vac}).json()["samples"]["p_air_mbar"]
-    assert min(p for p in with_vac if p is not None) < min(
-        p for p in without if p is not None)
-
-
-def test_shot_tank_model_reports_rising_tank_pressure():
-    vac = {"model": "tank", "pump_mbar": 80, "valve_mm2": 800, "start_mm": 150,
-           "gap_mm": 0.5, "channel_mm": 80, "tank_l": 50}
-    r = shot(payload_extra={"vacuum": vac})
-    assert r.status_code == 200, r.text
-    s = r.json()["samples"]
-    tank = [p for p in s["p_tank_mbar"] if p is not None]
-    assert len(tank) == 200
-    assert abs(tank[0] - 80.0) < 1e-6
-    assert tank[-1] > 80.0 * 1.1                 # 50 L füllen sich merklich
-    assert all(b >= a - 1e-9 for a, b in zip(tank, tank[1:]))
-    # das Pumpen-Modell veröffentlicht keinen Tankkanal
-    plenum = shot(payload_extra={"vacuum": dict(vac, model="conductance")}).json()
-    assert "p_tank_mbar" not in plenum["samples"]
-
-
-def test_shot_valve_duration_closes_before_fill_end():
-    base = {"model": "conductance", "pump_mbar": 80, "valve_mm2": 800,
-            "start_mm": 150, "gap_mm": 0.5, "channel_mm": 80}
-    until_fill = {e["id"]: e for e in shot(payload_extra={"vacuum": base}).json()["events"]}
-    timed = {e["id"]: e for e in shot(
-        payload_extra={"vacuum": dict(base, end="time", duration_ms=30)}).json()["events"]}
-    assert timed["vacuum_end"]["s_mm"] < until_fill["vacuum_end"]["s_mm"]
-    assert abs((timed["vacuum_end"]["t"] - timed["vacuum_start"]["t"]) - 0.030) < 1e-6
-    by_stroke = {e["id"]: e for e in shot(
-        payload_extra={"vacuum": dict(base, end="stroke", end_mm=400)}).json()["events"]}
-    assert abs(by_stroke["vacuum_end"]["s_mm"] - 400.0) < 1e-6
-
-
-def test_shot_vacuum_invalid_model_is_422():
-    vac = {"model": "turbo", "pump_mbar": 80, "valve_mm2": 100, "start_mm": 150}
-    r = shot(payload_extra={"vacuum": vac})
-    assert r.status_code == 422 and "unbekannt" in r.json()["detail"]
+def test_simulation_endpoint_is_gone():
+    """Die Luftsimulation rechnet im Browser (web/tools/auslegung/js/core/
+    airsim/). Der frühere Endpunkt darf nicht halb weiterleben — etwa als
+    statische Datei oder als Route ohne Rechenkern."""
+    r = client.post("/api/sim/shot", json={"values": {}, "curve": [[0, 1]]})
+    assert r.status_code in (404, 405)
 
 
 def test_static_site_is_served():

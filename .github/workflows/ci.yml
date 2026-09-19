@@ -1,8 +1,8 @@
 # CI: läuft bei jedem Push auf main und bei Pull Requests.
-# Zwei Jobs: Python (hpdcsim-Tests + Backend-Tests mit pytest: Konto, Projekte,
-# Stammdaten, /api/sim/shot, Physik-Fixtures) und Frontend (Syntax + Node-Tests gegen die Beispiel-STLs,
-# das Zuhaltungs-Modell, den Übernahme-Vertrag, die Preset-/Feld-Konsistenz,
-# die STL-Rechenlogik, dieselben Physik-Fixtures gegen physics.js und die
+# Zwei Jobs: Backend (pytest: Konto, Projekte, Stammdaten, Auslieferung) und
+# Frontend (Syntax + Node-Tests gegen die Beispiel-STLs, das Zuhaltungs-Modell,
+# den Übernahme-Vertrag, die Preset-/Feld-Konsistenz, die STL-Rechenlogik, die
+# Physik-Fixtures, die Referenzfälle der Luftsimulation und die
 # Geometrie/Analyse des 3D-Studios).
 name: CI
 
@@ -12,7 +12,7 @@ on:
   pull_request:
 
 jobs:
-  hpdcsim:
+  backend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,9 +21,7 @@ jobs:
           python-version: '3.13'
       - name: Abhängigkeiten installieren
         # httpx: nur für den FastAPI-TestClient der Backend-Tests.
-        run: pip install -r backend/requirements.txt "./packages/hpdcsim[plot]" httpx pytest
-      - name: hpdcsim-Tests
-        run: python packages/hpdcsim/tests/run_tests.py
+        run: pip install -r backend/requirements.txt httpx pytest
       - name: Backend-Tests (pytest)
         run: pytest backend/tests -q
 
@@ -45,7 +43,7 @@ jobs:
           node --import ./tests/web/3d-studio/stubs/register.mjs
           --test tests/web/*.test.mjs tests/web/3d-studio/*.test.mjs
           tests/web/3d-studio/tools/*.test.mjs
-      - name: Generierte Dateien aktuell? (Theorie-SVGs, v_krit-Tabellen, Icon-Sprite, Eingabegrenzen)
+      - name: Generierte Dateien aktuell? (Theorie-SVGs, v_krit-Tabelle, Icon-Sprite, Eingabegrenzen)
         # Die eingecheckten Artefakte müssen zum Code passen — alle
         # Generatoren sind deterministisch, ein Diff heißt: Regenerieren
         # vergessen (node scripts/gen-theory-svgs.mjs, gen-vkrit-table.mjs,
@@ -56,4 +54,4 @@ jobs:
           node scripts/gen-palette.mjs
           node scripts/gen-icon-sprite.mjs
           node scripts/gen-domain-doc.mjs
-          git diff --exit-code -- web/assets/theorie web/assets/palette.svg web/tools/auslegung/js/core/vkritTable.js packages/hpdcsim/hpdcsim/_vkrit_table.py web/index.html docs/eingabegrenzen.md
+          git diff --exit-code -- web/assets/theorie web/assets/palette.svg web/tools/auslegung/js/core/vkritTable.js web/index.html docs/eingabegrenzen.md

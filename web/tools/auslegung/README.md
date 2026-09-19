@@ -9,9 +9,9 @@ und setzt ein Konto voraus (Projektleiste `/shared/projectbar.js`).
 
 Die Seiten laden die ES-Module direkt aus `js/` — kein Build-Schritt,
 Quellcode-Änderungen wirken sofort. Es braucht nur einen Webserver:
-das DieLogic-Backend (`uvicorn backend.app:app`, liefert zusätzlich die
-Simulationskarte) oder lokal `python3 -m http.server 8000` im
-`web/`-Ordner. Direktes Öffnen per Doppelklick (file://) wird nicht mehr
+das DieLogic-Backend (`uvicorn backend.app:app`, mit Konto und
+Projektablage) oder lokal `python3 -m http.server 8000` im `web/`-Ordner.
+Gerechnet wird in beiden Fällen vollständig im Browser. Direktes Öffnen per Doppelklick (file://) wird nicht mehr
 unterstützt (Browser blockieren ES-Module über file://; der frühere
 Python-Bundler `build.py` → `dist/app.js` wurde dafür entfernt).
 
@@ -95,26 +95,34 @@ zwei Arten von Volumen (`core/physics.js`):
   (`biscuitSolid`, Endlage) gegen das Minimum geprüft; `shot.biscLiquid`
   ist der Schmelzerest beim Füllende.
 
-Ohne `densitySolid` (alte Projekte, direkte API) fällt alles auf die
-Flüssigdichte zurück — `backend/convert.py` (`solidus_density`) folgt
-derselben Konvention, die Fixtures in `fixtures/physics/` halten beide
-Seiten aneinander (`feststoffdichte.json`).
+Ohne `densitySolid` (alte Projekte) fällt alles auf die Flüssigdichte
+zurück — die Luftsimulation (`js/core/airsim/config.js`) folgt derselben
+Konvention über dieselbe Funktion `rhoSolidus`, die Fixtures in
+`fixtures/physics/` halten beide Rechenwege aneinander
+(`feststoffdichte.json`).
 
 ## Architektur
 
 ```
-config/            Daten, die man ohne Code-Kenntnis ändert (kein Build nötig)
+/shared/           Daten, die man ohne Code-Kenntnis ändert (kein Build nötig) — seitenweit
   palette.js         UI-Farben          (window.__PALETTE__)
   theme.js           Diagrammfarben     (window.__THEME__)
   examples/          Beispiel-Presets   (window.__MACHINES__/__ALLOYS__/__PARTS__/__KOSTEN__)
 css/main.css       Layout/Komponenten (Farb-Tokens aus /shared/shared.css)
 js/
-  config/fields.js   Eingabegruppen: Keys, Labels, Einheiten, Defaults
+  config/fields.js   Eingabegruppen: Keys, Labels, Einheiten, Defaults, Grenzen
   core/              Logik ohne DOM
     format.js          Zahlformat (de-DE), seq()
     physics.js         HPDC-Mathematik: Profil, Schussmodell, v_krit, Prüfungen
+    vkritTable.js      CFD-Tabelle der kritischen Geschwindigkeit (GENERIERT)
+    curvegen.js        Schusskurven-Generatoren (Wegpunkte aus v₁/a₁/v₂/a₂)
+    autofit.js         Auto-Schalter: ideale Anschnitt- und Entlüftungsfläche
+    domain.js          die Eingabedomäne, angewandt (welche Werte überhaupt rechnen dürfen)
+    limits.js          Grenzen (Ungleichungs-Restriktionen) als Daten
     state.js           zentraler Zustand + subscribe/notify
     theme.js           übernimmt window.__THEME__
+    airsim/            Luftsimulation der Füllkammer (siehe unten)
+    simstore.js        hält ihr Ergebnis; rechnet bei jeder Eingabe synchron neu
   render/            Canvas-Renderer (theme-gesteuert)
     base.js            Rahmen, Achsen, Marker, Farbrampe, Konturen
     limits.js          zeichnet Grenzen: Schraffuren, Zielbänder, Legende
@@ -124,6 +132,7 @@ js/
     shotcurve.js …     je: id, Titel, inputs-Liste, calc(v, {shot})
   ui/                DOM-Aufbau und Interaktion
     inputs.js          Sidebar, Validierung, Eingabe-Hervorhebung
+    chamber.js         Füllkammer-Schema über den Kennwerten
     presets.js         Maschinen-Preset-Auswahl
     curveTable.js      Schusskurven-Editor
     kpis.js            Prüfpanels (Kennwerte, Prüfzeilen, Kolbenweg-Lineal, Prüfleiste)
@@ -132,6 +141,35 @@ js/
   main.js            Einstieg Dashboard (index.html)
   single.js          Einstieg Einzelseite (chart.html)
 ```
+
+## Luftsimulation (`js/core/airsim/`)
+
+Der Luftdruck in der Form über den Schuss: alles Gas — Kammerraum über der
+Schmelze plus die ungefüllten Teile von Anguss, Bauteil und Überlauf — ist
+EIN Volumen, das der Kolben verdichtet und das Vakuumventil absaugt. Die
+Schusskurve zeichnet das Ergebnis auf der zweiten Achse (beim Tankmodell
+dazu den Tankdruck), „Luftblase unter Nachdruck" liest den Restdruck beim
+Füllende, das Kolbenweg-Lineal den Ventilschluss nach Offenzeit.
+
+| Modul | Inhalt |
+|---|---|
+| `simulate.js` | Einstieg `simulateAir(values, curve)` → `{meta, samples, events, critical_crossing}`; wirft `SimError` mit einer Meldung für den Anwender |
+| `config.js` | Dashboard-Werte → SI-Konfiguration: Prüfungen, Einheiten, Kappen der Kurve 1 µm vor dem Füllende |
+| `process.js` | Zeitachse Dosieren → Beruhigen → Schuss; Hübe, Ereignisse, Füllzustand, kritischer Übergang |
+| `motion.js` | Kolbenbewegung in SI (bewusst getrennt von `buildProfile` — Begründung im Kopf der Datei) |
+| `models.js` | Druckmodelle: `sealed` · `ideal` (Sofort-Enddruck) · `conductance` (Drossel gegen Pumpe) · `tank` (Drossel gegen Tank, dessen Druck steigt) |
+| `solver.js` | Integration der Luftmasse für die gedrosselten Modelle (4000 Schritte — Teil der Numerik) |
+| `gas.js` | Massenstrom durch Blende und Kanal mit Wandreibung, Verblockung |
+| `numeric.js` | linspace, interp, brentq mit der Semantik von numpy/scipy |
+
+Die Simulation war bis September 2026 das Python-Paket `hpdcsim` auf dem
+Server. Die Referenzfälle in `fixtures/airsim/` sind dessen Ergebnisse;
+`tests/web/airsim.test.mjs` hält die Portierung auf 1e-8 daran fest. An zwei
+Stellen hängt eine Entscheidung am letzten Bit (Ventilschluss am letzten
+Rasterpunkt, Abbruch der Nullstellensuche) — deshalb bildet `numeric.js` die
+Rechenreihenfolge von numpy und scipy nach, statt „das Naheliegende" zu tun.
+Eine Rechnung kostet wenige Millisekunden und läuft synchron bei jeder
+Eingabe: kein Ladezustand, kein veraltetes Ergebnis.
 
 ## Mathe-Erklärung auf Einzelseiten
 

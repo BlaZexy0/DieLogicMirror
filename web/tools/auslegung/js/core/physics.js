@@ -224,9 +224,9 @@ export function computeShot(v, curvePoints) {
       ev.t = q.t; ev.v = q.v;
       /* Erst ab „Anguss gefüllt" fließt Schmelze durch den Anschnitt. Bei
          „Kammer voll" (i = 0) steht noch nichts im Anschnitt — dort eine
-         Geschwindigkeit auszugeben, war eine erfundene Zahl (hpdcsim meldet
-         an derselben Stelle 0: process.py setzt gate_flow nur in den
-         Regionen part/overflow/complete). */
+         Geschwindigkeit auszugeben, war eine erfundene Zahl (die
+         Luftsimulation meldet an derselben Stelle 0: airsim/process.js setzt
+         den Anschnittstrom nur in den Regionen part/overflow/complete). */
       ev.gv = (gateR && i > 0) ? q.v * gateR : null;
     }
     evs.push(ev);
@@ -241,7 +241,7 @@ export function computeShot(v, curvePoints) {
   /* NICHT klemmen: ein negativer Hub bedeutet, dass die Kavität samt festem
      Pressrest mehr Platz braucht, als die Dosierung flüssig hergibt — ein
      unmöglicher Schuss. Ihn als 0 mm anzuzeigen ließ die Zahl harmlos
-     aussehen; das Backend antwortet auf denselben Fall inzwischen mit 422. */
+     aussehen; die Luftsimulation lehnt denselben Fall ab (airsim/config.js). */
   const intens = biscLiquid - biscLen;
   let fill = null;
   if (evs[1].inP && evs[3].inP) fill = (evs[3].t - evs[1].t) * 1000;

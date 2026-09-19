@@ -1,13 +1,12 @@
 /* Erzeugt aus fixtures/vkrit/v_krit_sim.csv (OpenFOAM-CFD: kritische
-   Kolbengeschwindigkeit über ein (Ø, φ)-Raster) die eingecheckten
-   Tabellen-Module für beide Physik-Implementierungen:
+   Kolbengeschwindigkeit über ein (Ø, φ)-Raster) das eingecheckte
+   Tabellen-Modul des Dashboards:
 
-     web/tools/auslegung/js/core/vkritTable.js        (Dashboard)
-     packages/hpdcsim/hpdcsim/_vkrit_table.py  (Backend)
+     web/tools/auslegung/js/core/vkritTable.js
 
    Gespeichert wird der dimensionslose Faktor f = V/√(g·D) mit g = 9,81 —
-   die Interpolation (bilinear, mit Randregeln) lebt in physics.js bzw.
-   geometry.py. Nach Änderungen an der CSV: node scripts/gen-vkrit-table.mjs */
+   die Interpolation (bilinear, mit Randregeln) lebt in physics.js.
+   Nach Änderungen an der CSV: node scripts/gen-vkrit-table.mjs */
 import path from 'node:path';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -36,9 +35,10 @@ writeFileSync(path.join(site, 'tools/auslegung/js/core/vkritTable.js'), `/* GENE
    OpenFOAM-CFD-Tabelle der kritischen Kolbengeschwindigkeit:
    VKRIT_F[i][j] = v_krit/√(9,81·D) für VKRIT_D_MM[i], VKRIT_PHI[j]. */
 
-/* Die Konstante, mit der die Tabelle normiert WURDE. Beide Sprachen müssen
-   mit derselben entnormieren — sonst weicht jeder v_krit-Wert systematisch
-   ab (Python rechnete mit 9,80665: Faktor 1 + 1,708e-4 auf jedem Wert). */
+/* Die Konstante, mit der die Tabelle normiert WURDE. Wer die Tabelle liest,
+   muss mit derselben entnormieren — sonst weicht jeder v_krit-Wert
+   systematisch ab (mit der Normfallbeschleunigung 9,80665 um den Faktor
+   1 + 1,708e-4 auf jedem Wert). */
 export const VKRIT_GRAVITY = ${G};
 
 export const VKRIT_D_MM = [${Ds.join(', ')}];
@@ -48,20 +48,4 @@ ${fRows.map(r => '  ' + r).join(',\n')}
 ];
 `);
 
-writeFileSync(path.join(site, '../packages/hpdcsim/hpdcsim/_vkrit_table.py'), `"""GENERATED from fixtures/vkrit/v_krit_sim.csv - do not edit by hand.
-Regenerate: node scripts/gen-vkrit-table.mjs
-OpenFOAM CFD table of the critical slow-shot velocity:
-VKRIT_F[i][j] = v_krit / sqrt(9.81 * D) at VKRIT_D_MM[i], VKRIT_PHI[j]."""
-
-# Die Konstante, mit der die Tabelle normiert WURDE — beide Sprachen
-# entnormieren damit, sonst weicht jeder v_krit-Wert systematisch ab.
-VKRIT_GRAVITY = ${G}
-
-VKRIT_D_MM = [${Ds.join(', ')}]
-VKRIT_PHI = [${phis.map(p => p.toFixed(2)).join(', ')}]
-VKRIT_F = [
-${fRows.map(r => '    ' + r).join(',\n')}
-]
-`);
-
-console.log('geschrieben: vkritTable.js + _vkrit_table.py (' + Ds.length + ' Ø × ' + phis.length + ' φ)');
+console.log('geschrieben: vkritTable.js (' + Ds.length + ' Ø × ' + phis.length + ' φ)');

@@ -2,7 +2,9 @@
 
 FastAPI-Backend: liefert die statische Website (`../web/`) aus und stellt
 unter `/api/…` Konten (nur auf Einladung), die Projektablage mit Revisionen
-und die serverseitige Simulation mit [`hpdcsim`](../packages/hpdcsim) bereit.
+und die Stammdaten der Organisation bereit. Der Server rechnet nichts: alle
+Auslegungsrechnungen, auch die Luftsimulation der Schusskurve, laufen im
+Browser (`../web/tools/auslegung/js/core/`).
 Die Werkzeugseiten unter `/tools/` (Verzeichnisse und `.html`, nicht die
 Skripte und Modelle darunter) gibt es nur mit Sitzung: ohne
 `dl_session`-Cookie antwortet `login_gate` mit 302 auf `/konto/?next=…`,
@@ -62,14 +64,12 @@ Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
 cd dielogic
 python3 -m venv .venv
 .venv/bin/pip install -r backend/requirements.txt
-.venv/bin/pip install -e ./packages/hpdcsim
 .venv/bin/uvicorn backend.app:app --reload
 ```
 
-→ http://127.0.0.1:8000/ ist die Website, das Dashboard unter
-`/tools/auslegung/` zeigt den simulierten Luftdruck auf der zweiten Achse der Schusskurve. Ohne laufendes
-Backend (statisches Hosting) entfällt nur diese Serie mit einem Hinweis — alles
-andere rechnet weiter im Browser.
+→ http://127.0.0.1:8000/ ist die Website. Ohne laufendes Backend (statisches
+Hosting) fehlen Anmeldung und Projektablage — die Werkzeuge rechnen
+unverändert im Browser, die Projekte bleiben dann dort.
 
 ## API
 
@@ -88,64 +88,15 @@ andere rechnet weiter im Browser.
   `PUT /api/projects/{id}/draft` `{data}` (Autosave des Arbeitsstands),
   `GET|POST /api/projects/{id}/revisions` (`{data: {design, geometry, cycle,
   cost}, note}`, max. 1 MB), `GET /api/projects/{id}/revisions/{rev}`.
-- `POST /api/sim/shot` — Body:
-
-  ```json
-  {
-    "values": { "part": 12, "runner": 3, "overflow": 2, "biscuit": 1.2,
-                "density": 2700, "diam": 150, "length": 700,
-                "gate": 1800, "vent": 800, "Tcast": 660 },
-    "curve": [[60, 0.4], [318, 0.4], [470, 4], [675, 4]],
-    "count": 400,
-    "process": {"dosing_time": 4.0, "dwell_time": 1.0},
-    "vacuum": {"model": "ideal", "pump_mbar": 80,
-                "valve_mm2": 100, "start_mm": 150}
-  }
-  ```
-
-  `values`/`curve` sind 1:1 der Dashboard-Zustand (Browser-Einheiten:
-  mm, kg, °C); `process` und `vacuum` sind optional. `vacuum` kommt
-  ebenfalls in Browser-Einheiten und wird in `convert.py` ins SI-Schema
-  von hpdcsim übersetzt: `model` (`ideal` Sofort-Enddruck ohne Drossel ·
-  `conductance` Drossel gegen eine Pumpe mit konstantem Enddruck · `tank`
-  Drossel gegen einen Vakuumtank, dessen Druck steigt · `aus`),
-  `pump_mbar` (Enddruck bzw. Tankdruck vor dem Schuss), `valve_mm2` (die
-  Entlüftungsfläche — sie ist der Ventilquerschnitt), `start_mm`;
-  optional `gap_mm` + `channel_mm` (Entlüftungsspalt und Kanallänge →
-  Kanal mit Wandreibung statt Blende), `end` (`fill` · `stroke` mit
-  `end_mm` · `time` mit `duration_ms`: wann das Ventil schließt, danach
-  wird die Restluft verdichtet) und `tank_l` (Tankvolumen, nur `tank`).
-  Beim Tankmodell enthält `samples` zusätzlich `p_tank_mbar`. Antwort: `meta`
-  (φ, Füllende-Hub, Pressrestlänge, ob die Kurve gekappt wurde), `samples`
-  über die Schussphase (t, s_mm, v, gate_v, p_air_mbar, T_melt, part_fill),
-  `events` (Einguss dicht, Kammer voll, …) und `critical_crossing`
-  (erste Überschreitung der kritischen Geschwindigkeit nach Garber/López).
 
 ## Aufbau
 
 | Datei | Inhalt |
 |---|---|
 | `app.py` | FastAPI-App: API-Router, Anmeldeschranke für `/tools/…` (`login_gate`), Cache-/Sicherheits-Header, statische Website |
-| `sim.py` | dünne HTTP-Schicht (`/api/sim/shot`, Pydantic-Validierung) |
-| `core.py` | löst den hpdcsim-Prozess, tastet die Schussphase ab, JSON-tauglich (NaN/Inf → null) |
-| `convert.py` | Einheiten-Übersetzung Browser ↔ SI, Füllgrad, Kurven-Kappung am Füllende-Hub — ohne Web-Abhängigkeiten testbar |
-
-Wissenswertes zur Übersetzung (`convert.py`):
-
-- Volumina aus Massen/Dichte wie im Dashboard; φ = V_dose/(A·L).
-- hpdcsim verweigert Profile, die über den Füllende-Hub (L − Pressrest)
-  hinausfahren — die Schusskurve wird dort gekappt (`meta.curve_clamped`).
-- Die Einfüllöffnung schließt bei `values.sealStroke` (Dashboard-Feld
-  „Einfüllöffnung verschlossen", mm) — dort beginnt die Luftkompression.
-- Ohne eigene Felder gesetzt: Eingusslage 0,2·L (falls `sealStroke` fehlt),
-  c_p = 1050 J/(kg·K), Dosierzeit 4 s, Beruhigungszeit 1 s.
-
-## Schnelltest ohne Server
-
-```bash
-PYTHONPATH=packages/hpdcsim python3 -c "
-from backend.simcore import run_shot_simulation
-print(run_shot_simulation({'part':12,'runner':3,'overflow':2,'biscuit':1.2,
-  'density':2700,'diam':150,'length':700,'gate':1800},
-  [[60,.4],[318,.4],[470,4],[675,4]])['meta'])"
-```
+| `db.py` | Engine, Session und ORM-Modelle — Mandantenmodell: Projekte gehören der Organisation, jede Speicherung ist eine unveränderliche Revision |
+| `auth.py` | Anmeldung nur auf Einladung: Einladungen, Registrierung, Sitzungen, Passwörter (scrypt), Bootstrap des ersten Admins aus der Umgebung |
+| `projects.py` | Projekte mit ihren Werkzeug-Abschnitten (design, geometry, cycle, cost), Arbeitsstand (Autosave) und Revisionen |
+| `orgsettings.py` | Stammdaten der Organisation (Maschinen, Legierungen, Bauteiltypen, Kosten & Sätze), geprüft gegen die Eingabedomäne |
+| `_domain.py` | die Eingabedomäne — GENERIERT aus `web/tools/auslegung/js/config/fields.js` (`node scripts/gen-domain-doc.mjs`), damit der Server dieselben Grenzen prüft wie der Browser |
+| `manage.py` | Verwaltungs-CLI: Organisationen, Einladungen, Benutzer (`python -m backend.manage …`) |

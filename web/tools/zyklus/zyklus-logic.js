@@ -9,7 +9,7 @@
       nach [A] Temperiersystem der Druckgießform, Kap. 5 und [B] Heizung
       und Kühlung der Druckgießformen mit Temperiergeräten, Kap. 12 —
       Nummern in Klammern sind die Quellen-Gleichungen, Herleitung und
-      Abgleich mit den Scans in docs/heat_flow_hpd_die.md.
+      Abgleich mit den Scans in docs/waermebilanz.md.
    Kein DOM: die Seite (index.html) ruft nur noch auf und rendert.
    Klassisches Script: Browser-Global window.__ZYKLUS_LOGIC__,
    CommonJS-Export für Tests. */

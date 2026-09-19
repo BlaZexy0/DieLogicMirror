@@ -78,7 +78,7 @@ export default {
       q.pts.push({ x: tb === 'sv' ? nodes.s[i] * 1000 : nodes.t[i], y: tb === 'ts' ? nodes.s[i] * 1000 : nodes.v[i] });
     }
 
-    /* Luftdruck in der Kammer (Backend-Simulation, hpdcsim) — zweite Achse.
+    /* Luftdruck in der Kammer (Luftsimulation, core/airsim) — zweite Achse.
        Beim Tankmodell dazu der Tankdruck: er steigt mit jeder abgesaugten
        Luftmasse und zeigt, wie viel Gefälle der Absaugung bleibt. */
     const sd = sim.data;
@@ -111,9 +111,10 @@ export default {
         }
       }
     } else if (sim.status === 'error') {
-      /* Auch fachliche 422-Meldungen des Backends (convert.py) anzeigen —
-         sonst verschwände die Luftdruck-Serie kommentarlos. */
-      const msg = sim.error === 'offline' ? 'Backend nicht erreichbar' : (sim.error || 'Fehler');
+      /* Eingaben, die sich nicht simulieren lassen (core/airsim/config.js),
+         mit ihrer Meldung anzeigen — sonst verschwände die Luftdruck-Serie
+         kommentarlos. */
+      const msg = sim.error || 'Fehler';
       q.info += ' · Luftdruck-Simulation: ' + (msg.length > 90 ? msg.slice(0, 87) + '…' : msg);
     }
     return q;

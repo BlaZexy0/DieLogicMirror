@@ -79,8 +79,8 @@
 
       <div class="draft-note">
         📚 <b>Quellen &amp; Prüfung:</b> Kontinuitäts- und Bedarfsformeln wie im Dashboard;
-        Drossel- und Vakuummodelle sind die DieLogic-eigene Implementierung im
-        Simulationskern (hpdcsim), die Blasenkompression folgt dem idealen Gasgesetz.
+        Drossel- und Vakuummodelle sind die DieLogic-eigene Implementierung der
+        Luftsimulation im Dashboard, die Blasenkompression folgt dem idealen Gasgesetz.
         Grenzwerte (v<sub>luft</sub>, Füllzeit) sind Prozessfenster-Eingaben — Kriterien und
         Literatur dazu im Artikel <a href="nebenbedingungen.html">Nebenbedingungen</a>
         (Kategorien E und I). Vor Veröffentlichung fachlich gegenlesen.
@@ -331,7 +331,7 @@
           (Kontinuität und ideales Gasgesetz); die Diagramme sind die Original-Darstellungen
           mit den Standardwerten:</p>
         <ul>
-          <li>DieLogic-Simulationskern <code>hpdcsim</code> (<code>vacuum.py</code>) —
+          <li>DieLogic-Luftsimulation (<code>tools/auslegung/js/core/airsim/</code>, rechnet im Browser) —
             Sammelvolumen-Bilanz, Blenden- und Kanalströmung mit Choking, Vakuummodelle
             Sofort-Enddruck, Drossel gegen Pumpe und Drossel gegen Tank.</li>
           <li>Isentrope Düsen-/Blendenströmung und kritisches Druckverhältnis: Standard-

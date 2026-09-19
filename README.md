@@ -4,8 +4,9 @@ Die DieLogic-Website mit integriertem Dashboard und optionalem Backend:
 Landingpage, das vollständige HPDC-Dashboard (clientseitig, ohne
 Abhängigkeiten), die Werkzeuge Sprengflächenanalyse, Teilekosten und
 Zyklusanalyse — alle auf einem gemeinsamen **Projekt** — sowie ein
-FastAPI-Backend für Konten (auf Einladung), Projektablage mit Revisionen
-und die serverseitige Schuss-Simulation mit `hpdcsim`.
+FastAPI-Backend für Konten (auf Einladung) und die Projektablage mit
+Revisionen. Gerechnet wird ausschließlich im Browser — der Server speichert
+Projekte und liefert die Seiten aus.
 
 ## Projekte: die gemeinsame Klammer
 
@@ -71,7 +72,8 @@ dielogic/
 │   │   ├── auslegung/       das Dashboard: index.html (alle Diagramme), chart.html?id=…
 │   │   │                    (Einzelseite), config/ (theme.js Diagrammfarben, examples/
 │   │   │                    Beispiel-Presets machines/alloys/parts/kosten), css/, js/…
-│   │   │                    (core/simapi.js + simstore.js = Backend-Anbindung)
+│   │   │                    (core/airsim/ = Luftsimulation der Füllkammer, simstore.js hält
+│   │   │                    ihr Ergebnis für die Diagramme)
 │   │   ├── sprengflaeche/   STL-Analyse: stl-math.js (Netz-Kennwerte, getestet),
 │   │   │                    stl-logic.js (Massenbilanz/Maschinentabelle, getestet), stl-app.js
 │   │   ├── teilekosten/     Teilekosten-Kalkulation (Abschnitt cost, verknüpfte Felder)
@@ -86,7 +88,7 @@ dielogic/
 │   │   │                    Eigenes README dort; Modelle erzeugt scripts/3d-studio/.
 │   │   └── zyklus/          Zyklusanalyse (Abschnitt cycle): Zeitleiste + Wärmebilanz je Zyklus
 │   │                        (zyklus-logic.js, getestet gegen die Zahlenbeispiele der Quellen —
-│   │                        docs/heat_flow_hpd_die.md)
+│   │                        docs/waermebilanz.md)
 │   ├── konto/           Konto: Einladung einlösen, Anmelden, Projekte/Revisionen,
 │   │                    Mitglieder, Einladungen, Stammdaten (Admin)
 │   ├── theorie/         Theorie-Artikel (Formeln als TeX über KaTeX, statische SVGs aus assets/)
@@ -99,48 +101,50 @@ dielogic/
 │   │                    per <use href="…svg#icon"> eingebunden, Farben var(--…, Fallback)
 │   └── examples/        Beispiel-STLs für die Sprengflächenanalyse (auch von Tests genutzt)
 ├── backend/         FastAPI: /api/auth (Einladung, Sitzung), /api/org (Mitglieder,
-│   │                Einladungen, Stammdaten), /api/projects (Revisionen),
-│   │                /api/sim/shot (hpdcsim) + statische Auslieferung von web/
-│   ├── app.py  db.py  auth.py  projects.py  orgsettings.py  manage.py  sim.py  simcore.py  convert.py
-│   └── tests/       API-Tests (TestClient, SQLite), convert-Unit-Tests, Physik-Fixtures
-├── packages/
-│   └── hpdcsim/     Simulationspaket (eigenes pyproject, pytest-Suite)
-├── fixtures/        Referenzdaten, die JS UND Python prüfen
-│   ├── physics/     Referenzfälle: bekannte Eingaben + Sollwerte (siehe README dort)
-│   └── vkrit/       v_krit_sim.csv — OpenFOAM-CFD-Tabelle, Quelle für beide v_krit-Tabellen
-├── docs/            Quellen-Notizen (heat_flow_hpd_die.md: Wärmebilanz-Gleichungen + Abgleich)
+│   │                Einladungen, Stammdaten), /api/projects (Revisionen)
+│   │                + statische Auslieferung von web/ (Werkzeugseiten nur mit Sitzung)
+│   ├── app.py  db.py  auth.py  projects.py  orgsettings.py  manage.py
+│   ├── _domain.py   Eingabedomäne, GENERIERT aus fields.js (scripts/gen-domain-doc.mjs)
+│   └── tests/       API-Tests (TestClient, SQLite)
+├── fixtures/        Referenzdaten der Node-Tests
+│   ├── physics/     von Hand hergeleitete Fälle: Auslegung UND Luftsimulation (README dort)
+│   ├── airsim/      Referenzfälle der Luftsimulation aus dem früheren Python-Paket (README dort)
+│   └── vkrit/       v_krit_sim.csv — OpenFOAM-CFD-Tabelle, Quelle der v_krit-Tabelle
+├── docs/            eingabegrenzen.md (GENERIERT: jede Eingabe mit ihren Grenzen),
+│   │                waermebilanz.md (Zyklusanalyse: Gleichungen, Abgleich mit den Quellen),
+│   │                3d-studio-grundlagen.md (Koordinatenrahmen, Beispielteile, Dateiformate)
 ├── tests/web/       Node-Tests der Website (nicht ausgeliefert)
 ├── scripts/         Generatoren (nicht ausgeliefert): gen-theory-svgs, gen-vkrit-table,
-│   │                gen-palette und 3d-studio/ (die glTF-Modelle des 3D-Studios)
+│   │                gen-palette, gen-icon-sprite, gen-domain-doc und 3d-studio/ (die
+│   │                glTF-Modelle des 3D-Studios); serve.py (statischer Server, npm run serve)
 ├── render.yaml      Render-Blueprint (Web Service: Build, Start, Healthcheck)
 └── .venv/           lokale Python-Umgebung (nicht einchecken)
 ```
 
 ## Starten
 
-**Mit Backend (Website + Simulation):**
+**Mit Backend (Konten, Projekte, Stammdaten):**
 
 ```bash
 cd dielogic
 python3 -m venv .venv                       # einmalig
 .venv/bin/pip install -r backend/requirements.txt
-.venv/bin/pip install -e ./packages/hpdcsim
 .venv/bin/uvicorn backend.app:app --reload
 ```
 
-→ http://127.0.0.1:8000/ — die Luftdruck-Kurve in der Schusskurve rechnet über
-`/api/sim/shot` (Details: `backend/README.md`).
+→ http://127.0.0.1:8000/ (Details: `backend/README.md`).
 
-**Nur statisch (ohne Simulation):**
+**Nur statisch (ohne Konto):**
 
 ```bash
-cd dielogic/web && python3 -m http.server 8000
+npm run serve                               # oder: cd web && python3 -m http.server 8000
 ```
 
 Das Dashboard lädt seine ES-Module direkt aus `tools/auslegung/js/` — kein
 Build-Schritt, aber ein Webserver ist nötig (file://-Doppelklick wird
-nicht unterstützt). Ohne Backend entfällt nur die Luftdruck-Serie mit einem
-Hinweis in der Schusskurve — alle 19 Diagramme rechnen unabhängig davon im Browser.
+nicht unterstützt). Alle Diagramme rechnen im Browser, auch die
+Luftdruck-Serie der Schusskurve; ohne Backend fehlen nur Anmeldung und
+Projektablage, die Projekte bleiben dann im Browser.
 
 ## Tests
 
@@ -168,21 +172,23 @@ node tests/web/syntax-check.mjs                 # Syntax aller JS + Inline-Scrip
 node --import ./tests/web/3d-studio/stubs/register.mjs \
      --test tests/web/*.test.mjs tests/web/3d-studio/*.test.mjs \
             tests/web/3d-studio/tools/*.test.mjs
-                                                # Frontend, Physik-Fixtures, Grenzen, Render-Rauchtest
+                                                # Frontend, Physik-Fixtures, Luftsimulation gegen ihre
+                                                # Referenzfälle, Grenzen, Render-Rauchtest
                                                 # und das 3D-Studio (Geometrie, CSG, Formteilung,
                                                 # Abstandsfeld, Angussdesigner, Verdrahtung aller Viewer)
 node scripts/gen-theory-svgs.mjs                # statische SVGs der Theorie-Artikel neu erzeugen
                                                 # (web/assets/theorie/ — nach Änderungen an Charts/Defaults)
-node scripts/gen-vkrit-table.mjs                # v_krit-CFD-Tabelle (JS + Python) aus
+node scripts/gen-vkrit-table.mjs                # v_krit-CFD-Tabelle aus
                                                 # fixtures/vkrit/v_krit_sim.csv neu erzeugen
-.venv/bin/python packages/hpdcsim/tests/run_tests.py
 .venv/bin/python -m pytest backend/tests -q     # braucht zusätzlich httpx + pytest
 ```
 
-Die Physik-Fixtures (`fixtures/physics/`) sind der Anker zwischen beiden
-Physik-Implementierungen: dieselben Eingabe-/Sollwert-Dateien laufen gegen
-`web/tools/auslegung/js/core/physics.js` (Node) und gegen `backend/convert.py` →
-`hpdcsim` (Python).
+Zwei Sätze Referenzdaten halten die Physik fest. Die Physik-Fixtures
+(`fixtures/physics/`) sind von Hand hergeleitet und laufen gegen beide
+Rechenwege des Dashboards — die Auslegung (`core/physics.js`) und die
+Kinematik der Luftsimulation (`core/airsim/`). Die Referenzfälle
+(`fixtures/airsim/`) sind die Ergebnisse des früheren Python-Pakets `hpdcsim`
+und halten die Druckverläufe der Luftsimulation auf 1e-8 fest.
 
 ## Vor dem Livegang (Rechtsseiten)
 
@@ -192,9 +198,9 @@ Hoster, USt-IdNr., Zahlungsweg, Stand-Datum …) ausfüllen, die Texte an das
 tatsächliche Geschäftsmodell anpassen und anwaltlich prüfen lassen — die
 Vorlagen sind keine Rechtsberatung. Der gelbe Hinweiskasten oben auf jeder
 Seite wird danach gelöscht. Die Preise auf der Landingpage
-(`web/index.html#preise`) sind ebenfalls Beispielwerte. Geht das Backend
-mit ins Netz, muss die Datenschutzerklärung um die Verarbeitung der
-Simulations-Requests ergänzt werden.
+(`web/index.html#preise`) sind ebenfalls Beispielwerte. Die
+Datenschutzerklärung sagt zu, dass der Server nichts berechnet: wer je wieder
+eine Rechnung auf den Server legt, muss sie dort ergänzen.
 
 ## Anpassen
 
@@ -223,13 +229,18 @@ Simulations-Requests ergänzt werden.
   Steuerwerk oder Sichtbarkeit einmal in einem echten Browser nachsehen:
   ohne WebGL zeichnen die Tests nichts, und ein leerer Viewport bei
   tadellosen Kennzahlen fällt sonst niemandem auf.
-- **Simulation:** Einheiten-Übersetzung und Defaults in
-  `backend/convert.py`; im Frontend holt `web/tools/auslegung/js/core/simstore.js` das
-  Ergebnis, die Schusskurve zeichnet den Luftdruck auf der zweiten Achse.
+- **Luftsimulation:** `web/tools/auslegung/js/core/airsim/` — Einheiten-
+  Übersetzung, Prüfungen und Vorgaben in `config.js`, die Modelle in
+  `models.js`/`solver.js`. `core/simstore.js` rechnet sie bei jeder Eingabe
+  synchron neu; die Schusskurve zeichnet den Luftdruck auf der zweiten Achse.
+  Jede Änderung muss `tests/web/airsim.test.mjs` bestehen.
 
 ## Herkunft
 
 - `web/tools/auslegung/` ist der Port des früheren eigenständigen `hpdc-dashboard`
   (dieser Ordner ist die gepflegte Fassung).
-- Arbeitsteilung des Backends: das Frontend zeichnet, Python rechnet —
-  die Simulation liefert `hpdcsim`.
+- Die Luftsimulation war bis September 2026 das Python-Paket `hpdcsim`
+  hinter `POST /api/sim/shot`. `core/airsim/` ist dessen Portierung; Paket und
+  Server-Anbindung liegen vollständig im Git-Verlauf (Tag `v1-final`), eine
+  Kopie des Pakets außerhalb des Repositorys unter
+  `~/DieLogic/backup/hpdcsim-2026-09-19/`.

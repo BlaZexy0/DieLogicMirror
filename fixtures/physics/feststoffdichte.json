@@ -57,7 +57,7 @@
     "v_crit": {
       "value": 0.5385042558929461,
       "rtol": 1e-9,
-      "note": "√(g·D)·f(D, φ) aus der OpenFOAM-CFD-Tabelle (fixtures/vkrit/v_krit_sim.csv, bilinear interpoliert). Tabelle und beide Sprachen entnormieren mit VKRIT_GRAVITY — JS und hpdcsim stimmen damit bitgenau überein."
+      "note": "√(g·D)·f(D, φ) aus der OpenFOAM-CFD-Tabelle (fixtures/vkrit/v_krit_sim.csv, bilinear interpoliert). Auslegung und Luftsimulation entnormieren mit VKRIT_GRAVITY — dieselbe Funktion vCrit(), bitgleich."
     },
     "v_slow_max": {
       "value": 2,
