@@ -87,6 +87,9 @@
   margin: 0;
   padding: 0;
 }
+/* Der Reset nimmt <dialog> das margin: auto, mit dem der Browser modale
+   Dialoge zentriert; ohne diese Zeile kleben sie oben links. */
+dialog { margin: auto; }
 
 /* ── Basis ─────────────────────────────────────────────────── */
 html { -webkit-text-size-adjust: 100%; }
