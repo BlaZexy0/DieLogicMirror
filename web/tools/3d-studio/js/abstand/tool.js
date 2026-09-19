@@ -11,10 +11,11 @@
    SUCHGRENZE gehört zur Rechnung: weiter als bis dorthin wird nicht gesucht.
 
    Das Werkzeug hat ZWEI Bauteile und verzichtet deshalb auf das eine des
-   Gastgebers (createHost({ part: false })): die beiden Quellen stehen im
-   Modus „Dateien", ein abgelegtes Netz fragt, ob es A oder B sein soll.
-   Die Modi: Dateien (beide Netze grau) · Abstand (Rechnung, Kennzahlen) ·
-   Skala (Grenzen, Einfärben) — die Karte steht in Abstand und Skala.
+   Gastgebers (createHost({ part: false })): die beiden Quellen stehen als
+   Chips „A" und „B" in der Kopfzeile, jeder mit derselben Klappe wie der
+   Bauteil-Chip der anderen Werkzeuge (shell.header.addPartChips); ein
+   abgelegtes Netz fragt, ob es A oder B sein soll.
+   Die Modi: Abstand (Rechnung, Kennzahlen) · Skala (Grenzen, Einfärben).
 
    Grobe Netze werden vor der Messung verfeinert. Eine ebene Wand aus zwei
    Dreiecken hat vier Eckpunkte; zwischen ihnen würde linear interpoliert,
@@ -29,7 +30,7 @@ import { facts, segButtons, segButtonSet, slider, numberInput, colorbar, gradien
 import { fmt, fmtPlain, fmtUnit, fmtFixed } from '../studio/format.js';
 import { kpis } from '../studio/rows.js';
 import * as C from '../part/colors.js';
-import { MODES, DARSTELLUNG } from './panel.js';
+import { MODES, DARSTELLUNG, CHIP_HINT } from './panel.js';
 
 export const FORMAT = 'dielogic-abstand';
 export const FORMAT_VERSION = 1;
@@ -74,8 +75,14 @@ export function createAbstandTool(host) {
   function mountSource(key, startId) {
     sources[key] = mountPartSource({
       busy: shell.busyEl, viewport: null, suffix: '-' + key, filter: () => true, start: startId,
-      onStart: name => { state.ready = false; state[key].name = name; },
+      onStart: name => { state.ready = false; state[key].name = name; chips[key].set(name + ' …'); },
       onLoad: model => {
+        /* Der Chip nennt das Teil wie die Auswahl (Beispielteil) oder beim
+           Dateinamen, und trägt ein ⚠, wenn partsource.js etwas am Netz fand. */
+        const sel = document.getElementById('demo-select-' + key);
+        const opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+        const warn = document.getElementById('model-warn-' + key);
+        chips[key].set(opt ? opt.textContent : state[key].name, warn ? warn.textContent : '');
         /* Fein genug für eine punktweise Karte — nicht feiner als nötig: der
            Abstand ändert sich über eine Fläche langsam, und jeder zusätzliche
            Punkt kostet eine vollständige Suche. Rund achtzig Schritte über die
@@ -126,8 +133,6 @@ export function createAbstandTool(host) {
   /* ── Rechnen auf Bestätigung ─────────────────────────────── */
   async function runDistance() {
     if (!state.a.model || !state.b.model || state.running) return;
-    /* Wer bei den Dateien rechnet, will die Zahlen sehen. */
-    const advance = shell.mode === 'dateien';
     state.running = true; state.cancelled = false; state.ready = false;
     host.refreshActions();
     const t0 = performance.now();
@@ -172,7 +177,6 @@ export function createAbstandTool(host) {
       updateKpis();
     }
     state.ready = true;
-    if (result && advance) shell.setMode('abstand');
     applyColors();
     host.refreshActions();
   }
@@ -212,14 +216,13 @@ export function createAbstandTool(host) {
 
   /* ── Einfärben ───────────────────────────────────────────── */
   function applyColors() {
-    const map = shell.mode !== 'dateien';              // bei den Dateien stehen beide Netze grau
     for (const key of ['a', 'b']) {
       const s = state[key], mesh = meshOf(key);
       mesh.visible = !!s.model && (key === 'a' ? state.showA : state.showB);
       if (!s.model) continue;
       const col = mesh.geometry.getAttribute('color');
       const arr = col.array;
-      const wantColor = map && (state.color === 'both' || state.color === key);
+      const wantColor = state.color === 'both' || state.color === key;
       if (!wantColor || !s.dist) arr.fill(mesh.material.userData.plain);
       else {
         const { min, max } = state.scale;
@@ -239,7 +242,7 @@ export function createAbstandTool(host) {
   }
 
   function updateColorbar() {
-    const anyColored = state.analysed && shell.mode !== 'dateien'
+    const anyColored = state.analysed
       && ((state.color !== 'b' && meshA.visible) || (state.color !== 'a' && meshB.visible));
     if (!anyColored) return colorbar(null);
     const { min, max } = state.scale;
@@ -299,7 +302,12 @@ export function createAbstandTool(host) {
   const changed = label => { if (wired) host.changed(label); };
   const els = {};
 
+  let chips = null;
   function mounted() {
+    chips = shell.header.addPartChips([
+      { key: 'a', label: 'A', title: 'Datei A wählen oder laden — ihre Oberfläche wird gemessen und eingefärbt' },
+      { key: 'b', label: 'B', title: 'Datei B wählen oder laden — das Gegenstück' }
+    ], CHIP_HINT);
     mountSource('a', 'oil_pan');
     mountSource('b', 'coolfix');
     host.dropPart = dropPart;
@@ -395,7 +403,7 @@ export function createAbstandTool(host) {
   async function start() { await sources.b.start(); await sources.a.start(); }
 
   const tool = {
-    id: 'abstand', modes, startMode: 'dateien', settingsOnly: true,
+    id: 'abstand', modes, startMode: 'abstand', settingsOnly: true,
     mounted, start, toJSON, fromJSON, resetSettings, accepts: [FORMAT], exports: [],
     docName: () => (state.a.name || 'a') + '-' + (state.b.name || 'b'),
     state, group

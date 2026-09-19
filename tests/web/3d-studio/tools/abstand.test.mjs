@@ -17,21 +17,34 @@ before(async () => {
   P = await mountPage('abstand.html', 'js/studio/pages/abstand.js');
 });
 
-test('Zwei Dateien im Modus „Dateien", kein Bauteil-Chip, nichts gerechnet', () => {
+test('Zwei Dateien als Chips A und B in der Kopfzeile, nichts gerechnet', () => {
   const { doc, v, ui, shell } = P;
   const s = v.state;
   assert.ok(s.a.model && s.b.model, 'beide Dateien geladen');
   assert.ok(s.a.name.includes('Ölwanne'), 'A ist die Ölwanne, das Gussteil der Form: ' + s.a.name);
   assert.ok(s.b.name.includes('Temperierung fest'), 'B ist die Temperierung der festen Hälfte: ' + s.b.name);
   assert.equal(s.analysed, false, 'ohne Bestätigung wird nicht gerechnet');
-  assert.deepEqual(doc.querySelectorAll('[role="tab"]').map(b => b.getAttribute('data-mode')), ['dateien', 'abstand', 'skala']);
-  assert.equal(shell.mode, 'dateien');
-  assert.equal(ui('part').hidden, true, 'zwei Dateien — der eine Bauteil-Chip der Kopfzeile entfällt');
-  /* Die Seitenleiste bleibt knapp: je Datei Auswahl, Knopf und Warnzeile. */
-  assert.equal(doc.getElementById('model-facts-a'), null, 'keine Kennzahlen A');
-  assert.equal(doc.getElementById('part-note-b'), null, 'keine Beschreibung B');
-  assert.ok(doc.getElementById('model-warn-a') && doc.getElementById('model-warn-b'), 'die Warnzeilen bleiben');
+  assert.deepEqual(doc.querySelectorAll('[role="tab"]').map(b => b.getAttribute('data-mode')), ['abstand', 'skala']);
+  assert.equal(shell.mode, 'abstand', 'die Seite beginnt bei der Rechnung');
+  assert.equal(ui('part').hidden, true, 'zwei Dateien — der eine Bauteil-Chip der Kopfzeile entfällt …');
+  /* … an seiner Stelle stehen zwei, A und B, jeder mit derselben Klappe:
+     Beispielteil, „Datei öffnen …", „Zum Bauteil" mit den Kennzahlen. */
+  assert.ok(ui('part-chip-a') && ui('part-chip-b'), 'Chips A und B');
+  assert.match(ui('part-name-a').textContent, /Ölwanne/);
+  assert.match(ui('part-name-b').textContent, /Temperierung fest/);
+  for (const k of ['a', 'b']) {
+    const pop = ui('part-pop-' + k);
+    assert.ok(pop.hidden, k + ': die Klappe ist zu');
+    ui('part-chip-' + k).dispatch('click');
+    assert.ok(!pop.hidden, k + ': ein Klick öffnet sie');
+    assert.ok(pop.querySelector('#demo-select-' + k) && pop.querySelector('#stl-btn-' + k) && pop.querySelector('#model-warn-' + k));
+    assert.match(doc.getElementById('model-facts-' + k).innerHTML, /Volumen/, k + ': Zum Bauteil nennt die Kennzahlen');
+  }
+  assert.ok(ui('part-pop-a').hidden, 'B zu öffnen schließt A');
+  ui('part-chip-b').dispatch('click');
+  assert.ok(ui('part-pop-b').hidden, 'ein zweiter Klick schließt B');
   assert.ok(doc.getElementById('demo-select-a').innerHTML.includes('coolmov'), 'Gegenstücke sind hier wählbar');
+  assert.equal(doc.querySelector('.st-mode #demo-select-a'), null, 'die Seitenleiste lädt keine Dateien mehr');
   assert.equal(ui('primary').textContent, 'Abstand berechnen');
   assert.match(ui('note').textContent, /Noch nicht gerechnet — .* Punkte gegen .* Dreiecke/);
   /* Anzeigeoptionen stehen unter „Darstellung". */
@@ -130,13 +143,10 @@ test('Skala, Einfärben, Darstellung, Farbskala — und die Suchgrenze verlangt 
   assert.equal(doc.getElementById('cb-title').textContent, 'Abstand A ↔ B');
   assert.ok(doc.getElementById('cb-ticks').innerHTML.includes('≥'), 'oberes Ende als „ab" beschriftet');
   assert.ok(doc.getElementById('cb-scale').style.background.includes('linear-gradient'));
-  /* Bei den Dateien stehen beide Netze grau, ohne Skala — die Karte gehört zu Abstand und Skala. */
-  shell.setMode('dateien');
-  assert.ok(!bar.classList.contains('on'));
-  const g = colorAt(v.meshA, 0).split(',');
-  assert.ok(g[0] === g[1] && g[1] === g[2], 'grau bei den Dateien');
-  shell.setMode('abstand');
+  /* Die Karte steht in beiden Modi — sie gehört zur Rechnung, nicht zu einem Reiter. */
+  shell.setMode('skala');
   assert.ok(bar.classList.contains('on'));
+  shell.setMode('abstand');
 
   /* Suchgrenze gehört zur Rechnung, nicht zur Anzeige. */
   const reach = ui('reach');

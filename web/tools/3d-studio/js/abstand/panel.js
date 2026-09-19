@@ -1,23 +1,14 @@
 /* Die Felder der Abstandsanalyse — je Modus ein Abschnitt. Die beiden
-   Dateiquellen tragen ids mit Suffix („-a", „-b"): js/part/partsource.js
-   findet seine Felder darüber. Anzeigeoptionen (zeigen, Deckkraft) stehen
-   unter „Darstellung" in der Ansichtsleiste. */
+   Dateien wählt man wie überall das Bauteil: oben in der Kopfzeile, je Datei
+   ein Chip mit Klappe (shell.header.addPartChips). Anzeigeoptionen (zeigen,
+   Deckkraft) stehen unter „Darstellung" in der Ansichtsleiste. */
 
-import { numberRow, sliderRow, segRow, checkRow, kpiBlock, factsBlock, detailsBlock, warnLine, heading, blockButton } from '../studio/rows.js';
+import { numberRow, sliderRow, segRow, checkRow, kpiBlock, factsBlock, detailsBlock, warnLine, blockButton } from '../studio/rows.js';
 
-const ACCEPT = '.stl,.glb,model/stl,model/gltf-binary,application/sla';
-const fileBlock = (k, K) => heading('Datei ' + K)
-  + '<label class="row"><span>Beispielteil</span><select id="demo-select-' + k + '"></select></label>'
-  + '<input type="file" id="stl-input-' + k + '" accept="' + ACCEPT + '" hidden>'
-  + '<button type="button" class="btn btn-outline block-btn" id="stl-btn-' + k + '">Datei ' + K + ' öffnen …</button>'
-  + '<div class="warn-line" id="model-warn-' + k + '"></div>';
+/* Was in der Klappe der beiden Datei-Chips unter dem Knopf steht. */
+export const CHIP_HINT = 'STL oder GLB. Eine Datei, ins Bild gezogen, fragt, ob sie A oder B sein soll.';
 
 export const MODES = [
-  {
-    id: 'dateien', label: 'Dateien',
-    hint: 'Zwei Dateien, ein Abstand. Eine STL oder GLB, ins Bild gezogen, fragt, ob sie A oder B sein soll.',
-    html: fileBlock('a', 'A') + fileBlock('b', 'B')
-  },
   {
     id: 'abstand', label: 'Abstand',
     hint: 'Für jeden Punkt der einen Oberfläche der kürzeste Weg zur anderen — exakt, in beide Richtungen.',

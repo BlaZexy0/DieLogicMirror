@@ -69,6 +69,10 @@ body.studio { display: flex; flex-direction: column; height: 100vh; overflow: hi
 }
 .st-chip:hover, .st-chip.active { background: rgba(255,255,255,.18); border-color: var(--primary-light); }
 .st-chip-label { color: var(--ondark); }
+/* Der Name eines Eingangs („A", „B") steht immer da — auch wo das Wort
+   „Bauteil" in schmalen Kopfzeilen weicht: ohne ihn wüsste man nicht, welche
+   Datei der Chip meint. */
+.st-chip-key { flex: 0 0 auto; font-weight: 700; color: var(--primary-light); }
 .st-chip b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-caret { font-size: .7rem; color: var(--ondark); }
 .st-chip-warn { color: var(--gold); font-size: .85rem; margin-left: 2px; }

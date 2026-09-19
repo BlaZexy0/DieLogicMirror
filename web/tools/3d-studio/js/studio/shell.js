@@ -402,14 +402,61 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   }
 
   /* ── Kopfzeile ───────────────────────────────────────────── */
-  const partChip = ui('part-chip'), partPop = ui('part-pop');
-  const partOpen = on => { partPop.hidden = !on; partChip.setAttribute('aria-expanded', on ? 'true' : 'false'); partChip.classList.toggle('active', on); };
-  partChip.addEventListener('click', ev => { ev.stopPropagation(); partOpen(partPop.hidden); });
-  partPop.addEventListener('click', ev => ev.stopPropagation());
+  /* Die Klappen der Kopfzeile: immer höchstens eine offen, ein Klick
+     daneben schließt sie. */
+  const closers = [];
+  const closeAll = except => { for (const c of closers) if (c !== except) c(false); };
+  function popover(chip, pop) {
+    const open = on => { pop.hidden = !on; chip.setAttribute('aria-expanded', on ? 'true' : 'false'); chip.classList.toggle('active', on); };
+    closers.push(open);
+    chip.addEventListener('click', ev => { ev.stopPropagation(); const on = pop.hidden; closeAll(open); open(on); });
+    pop.addEventListener('click', ev => ev.stopPropagation());
+    return open;
+  }
+  const partChip = ui('part-chip');
+  const partOpen = popover(partChip, ui('part-pop'));
   const exportBtn = ui('export'), exportList = ui('export-list');
   const exportOpen = on => { exportList.hidden = !on; exportBtn.setAttribute('aria-expanded', on ? 'true' : 'false'); };
-  exportBtn.addEventListener('click', ev => { ev.stopPropagation(); exportOpen(exportList.hidden); });
-  document.addEventListener('click', () => { partOpen(false); exportOpen(false); });
+  closers.push(exportOpen);
+  exportBtn.addEventListener('click', ev => { ev.stopPropagation(); const on = exportList.hidden; closeAll(exportOpen); exportOpen(on); });
+  document.addEventListener('click', () => closeAll(null));
+
+  /* Mehrere Eingänge statt eines Bauteils (die Abstandsanalyse misst Datei A
+     gegen Datei B): je Eingang ein Chip mit derselben Klappe wie der
+     Bauteil-Chip — Beispielteil, „Datei öffnen …", „Zum Bauteil". Die Felder
+     tragen ids mit Suffix („-a"), über die js/part/partsource.js sie findet. */
+  const ACCEPT_PARTS = '.stl,.glb,model/stl,model/gltf-binary,application/sla';
+  const partChipsApi = {};
+  function addPartChips(list, hint = '') {
+    const html = list.map(({ key, label, title: t = '' }) => '<div class="st-part" data-ui="part-' + key + '">'
+      + '<button type="button" class="st-chip" data-ui="part-chip-' + key + '" aria-haspopup="true" aria-expanded="false" title="' + esc(t || label + ' wählen oder laden') + '">'
+      + '<span class="st-chip-key">' + esc(label) + '</span> <b data-ui="part-name-' + key + '">—</b><span class="st-chip-warn" data-ui="part-warn-mark-' + key + '" hidden>⚠</span> <span class="st-caret">▾</span></button>'
+      + '<div class="st-pop" data-ui="part-pop-' + key + '" hidden>'
+      + '<label class="row"><span>Beispielteil</span><select id="demo-select-' + key + '"></select></label>'
+      + '<input type="file" id="stl-input-' + key + '" accept="' + ACCEPT_PARTS + '" hidden>'
+      + '<button type="button" class="btn btn-outline block-btn" id="stl-btn-' + key + '">Datei öffnen …</button>'
+      + (hint ? '<div class="st-pop-hint">' + hint + '</div>' : '')
+      + '<div class="warn-line" id="model-warn-' + key + '"></div>'
+      + '<details class="st-details"><summary>Zum Bauteil</summary><div class="hint" id="part-note-' + key + '"></div><div class="facts" id="model-facts-' + key + '"></div></details>'
+      + '</div></div>').join('');
+    /* In der Reihenfolge der Liste hinter den (verborgenen) Bauteil-Chip. */
+    ui('part').insertAdjacentHTML('afterend', html);
+    for (const { key, label, title: t = '' } of list) {
+      const chip = ui('part-chip-' + key);
+      const open = popover(chip, ui('part-pop-' + key));
+      const plain = t || label + ' wählen oder laden';
+      partChipsApi[key] = {
+        chip, open,
+        set(name, warning = '') {
+          ui('part-name-' + key).textContent = name || '—';
+          ui('part-warn-mark-' + key).hidden = !warning;
+          chip.title = warning ? 'Hinweis zum Netz: ' + warning : plain;
+          open(false);
+        }
+      };
+    }
+    return partChipsApi;
+  }
   let exportsList = [];
   function setExports(list) {
     exportsList = list || [];
@@ -457,7 +504,10 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     setExports,
     hideSave() { ui('save').hidden = true; ui('save-state').hidden = true; },
     /** Für Werkzeuge mit eigenen Dateien (die Abstandsanalyse hat zwei). */
-    hidePart() { ui('part').hidden = true; }
+    hidePart() { ui('part').hidden = true; },
+    /** Je Eingang ein Chip mit Bauteil-Klappe: [{ key, label, title }] → { key: { set(name, warning), open } } */
+    addPartChips,
+    partChips: partChipsApi
   };
   ui('help-btn').addEventListener('click', ev => { ev.stopPropagation(); helpApi.toggle(); });
   /* ☰ nimmt die Seitenleiste weg und holt sie wieder — bei jeder Breite: wo

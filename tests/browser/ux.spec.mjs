@@ -269,12 +269,12 @@ const messen = page => page.evaluate(() => {
   const body = q('body'), panel = q('panel');
   /* Abgeschnitten: Text, der breiter ist als sein Kasten; Knöpfe, die aus
      ihrem Schalter oder der Reiterzeile ragen; Felder, die breiter sind als
-     die Seitenleiste. Der Bauteilname im Chip darf kürzen (der volle steht
-     in der Klappe). */
+     die Seitenleiste. Der Bauteilname im Chip darf kürzen — auch in den
+     Chips A und B der Abstandsanalyse (der volle steht in der Klappe). */
   const knapp = [];
   const name = el => (el.dataset.ui || el.dataset.mode || el.dataset.value || el.textContent.trim() || el.tagName).slice(0, 28);
   for (const el of document.querySelectorAll('.st-root button, .st-root .klbl, .st-root .kval, .st-root .row > span, .st-root .fact span, .st-root .st-hint, .st-root .st-note, .st-root .st-hintline, .st-root summary, .st-root .st-tool-name, #status')) {
-    if (!sichtbar(el) || el.closest('[hidden]') || el.closest('[data-ui="part-chip"]')) continue;
+    if (!sichtbar(el) || el.closest('[hidden]') || el.closest('[data-ui^="part-chip"]')) continue;
     if (el.scrollWidth > el.clientWidth + 1) knapp.push('Text: ' + name(el) + ' (' + el.scrollWidth + ' > ' + el.clientWidth + ')');
   }
   for (const box of document.querySelectorAll('.st-root .seg, .st-root .view-bar, .st-root .st-bar')) {

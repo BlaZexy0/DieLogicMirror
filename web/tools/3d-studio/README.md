@@ -512,14 +512,16 @@ Wandstärke und den Ort der dicksten.
 ## Abstandsanalyse (`abstand.html`)
 
 Die Seite läuft im **gemeinsamen Rahmen** (`js/abstand/`) und ist dort das eine
-Werkzeug mit zwei Bauteilen: der Bauteil-Chip der Kopfzeile entfällt, die beiden
-Quellen stehen im Modus **Dateien**, und eine ins Bild gezogene STL/GLB fragt, ob
-sie A oder B sein soll. **Abstand** trägt Suchgrenze, Hauptknopf („Abstand
-berechnen", während der Rechnung „Abbrechen") und die Kennzahlen — Punkte
-innerhalb des anderen Netzes sind rot —, **Skala** die Grenzen der Farben und die
-Wahl, welche Datei gefärbt wird. Bei den Dateien stehen beide Netze grau; die
-Karte gehört zu Abstand und Skala. Welche Datei zu sehen ist und die Deckkraft
-stehen unter „Darstellung".
+Werkzeug mit zwei Bauteilen: statt des einen Bauteil-Chips stehen in der
+Kopfzeile zwei, **A** und **B**, jeder mit derselben Klappe (Beispielteil,
+„Datei öffnen …", „Zum Bauteil" mit den Kennzahlen des Netzes;
+`shell.header.addPartChips`). Eine ins Bild gezogene STL/GLB fragt, ob sie A
+oder B sein soll. Die Seitenleiste hat zwei Modi: **Abstand** trägt
+Suchgrenze, Hauptknopf („Abstand berechnen", während der Rechnung „Abbrechen")
+und die Kennzahlen — Punkte innerhalb des anderen Netzes sind rot —, **Skala**
+die Grenzen der Farben und die Wahl, welche Datei gefärbt wird. Die Karte steht
+in beiden. Welche Datei zu sehen ist und die Deckkraft stehen unter
+„Darstellung".
 
 Die Wandstärkenanalyse beantwortet die Frage nach innen. Nach außen steht die
 andere, und die braucht **zwei Körper**: wie weit ist die
@@ -530,9 +532,10 @@ schnell erstarrt; zu weit heißt, die Kühlung greift dort nicht.
 Zwei Dateien (Beispielteil, STL oder GLB; voreingestellt die Ölwanne und
 die Temperierung der festen Hälfte ihrer Form), dann für jeden Punkt der
 einen Oberfläche der kürzeste Weg zur anderen — und umgekehrt, damit sich
-beide einfärben lassen. Die Seitenleiste bleibt knapp: je Datei nur
-Auswahl, Ladeknopf und Warnzeile — Dreiecke, Abmessungen, Oberfläche und
-die Beschreibung des Beispielteils sagen nichts über den Abstand.
+beide einfärben lassen. Die Dateien stehen in der Kopfzeile, nicht in der
+Seitenleiste — Dreiecke, Abmessungen, Oberfläche und die Beschreibung des
+Beispielteils sagen nichts über den Abstand und stehen zugeklappt in der Klappe
+des Chips.
 
 - **Exakt, nicht gerastert.** Gerechnet wird der echte
   Punkt-Dreieck-Abstand (`js/part/distance.js`). Ein Würfelraster
@@ -1828,7 +1831,9 @@ Die Regeln, die der Rahmen durchsetzt — und die Tests, die sie halten:
   Dreiecke, Abmessungen, Volumen, Wanddicke 2V/A, Oberfläche, Hinweise zum
   Netz — steht in der Bauteil-Klappe der Kopfzeile unter „Zum Bauteil"; ein
   Hinweis zum Netz setzt ein ⚠ an den Chip. Die Reiter sind die Arbeit am
-  Bauteil, nicht das Bauteil.
+  Bauteil, nicht das Bauteil. Ein Werkzeug mit mehreren Eingängen (die
+  Abstandsanalyse: Datei A gegen Datei B) bekommt je Eingang einen solchen
+  Chip mit derselben Klappe (`shell.header.addPartChips`).
 - **Setzen über dem Bild, Bearbeiten daneben.** Ein Designer setzt mit
   *Chips* über dem Viewport (kurze Bezeichnung; ein Chip, der gerade nicht
   geht, sagt beim Antippen warum) und bearbeitet die Auswahl im *Auswahlfeld*
