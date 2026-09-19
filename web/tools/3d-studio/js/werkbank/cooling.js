@@ -1,6 +1,6 @@
 /* Schritt 5 — Temperierung: Kühlstiche und Kanäle auf der Abstandsfläche.
 
-   Die Portierung des Temperierkanal-Designers (js/cooling/app.js). Die
+   Die Portierung des Temperierkanal-Designers (js/cooling/tool.js). Die
    Abstandsfläche kommt aus dem gemeinsamen Abstandsfeld der Werkbank —
    sie braucht ein Band, das über den gewählten Abstand hinausreicht;
    wächst der Abstand darüber, rechnet die Werkbank das Feld breiter. */

@@ -8,6 +8,10 @@ nicht. Ein Konto braucht es trotzdem: wie jede Seite unter `/tools/`
 liefert das Backend sie nur mit Sitzung aus (`login_gate` in
 `backend/app.py`), sonst geht es zur Anmeldung und danach zurück.
 
+Was quer über alle Werkzeuge gilt — Koordinatenrahmen, Beispielteile, die
+Beispielform mit ihrem GLB-Vertrag, alle Dateiformate und die
+Gestaltungsregeln — steht in `docs/3d-studio-grundlagen.md`.
+
 | Seite           | Inhalt |
 |-----------------|--------|
 | `index.html`    | Übersicht: die Werkzeuge als Karten, dazu die drei Schritte der Formteilung |
@@ -17,13 +21,14 @@ liefert das Backend sie nur mit Sitzung aus (`login_gate` in
 | `wandstaerke.html` | **Wandstärkenanalyse** — Abstandsfeld durch Rasterisierung: Wandstärke und Wärmezentrum, Fläche gleichen Abstands (die Frage nach *innen*) |
 | `abstand.html`  | **Abstandsanalyse** — kürzester Abstand zwischen zwei Dateien, eingefärbt auf einer selbst gesetzten Skala (die Frage nach *außen*) |
 | `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen mit Zwickelradius, Anschnitte mit geradem Steg — als ein geschlossener Körper; dazu Querschnitt, Krümmung, Bernoulli-Verluste und Füllbalance, Ankunft nach der Schusskurve mit der Füllkammer von hier |
-| `angussfuellung.html` | **Angussfüllung** — die Schmelze vom Pressrest bis zu den Anschnitten: Lattice-Boltzmann mit freier Oberfläche auf der Grafikkarte (WebGPU), Kolben nach der DieLogic-Kurve, Ankunft je Anschnitt neben der 1D-Rechnung, Füllstand zu jeder Zeit; Code in `js/lbm/` |
-| `kammerfuellung.html` | **Kammerfüllung** — die Welle in der Füllkammer: liegender Zylinder mit Durchmesser, Länge und Füllgrad, der Kolben fährt die Schusskurve (DieLogic oder v₁/v₂), Schwerkraft; Kammer voll gegen die Kurve, eingeschlossene Luft, Füllstand und Kolben zu jeder Zeit; Code in `js/lbm/` |
-| `angussfuellung-sph.html` | **Angussfüllung · Partikel** — dieselbe Frage mit Partikeln (SPH) statt Gitter: der Pressrest voll Partikel, dahinter die Säule des Zustroms, die der Kolben schiebt, die Wände als Abstandsfeld; Ankunft je Anschnitt, Partikel zu jeder Zeit; Code in `js/sph/` |
-| `kammerfuellung-sph.html` | **Kammerfüllung · Partikel** — die Welle in der Füllkammer mit Partikeln (SPH): analytische Wände, Kolbenebene nach der Kurve, Schwerkraft; Kammer voll, eingeschlossene Luft aus dem Partikelbild; Code in `js/sph/` |
+| `angussfuellung.html` | **Angussfüllung** — die Schmelze vom Pressrest bis zu den Anschnitten, gerechnet mit dem Gitter (Lattice-Boltzmann mit freier Oberfläche) oder mit Partikeln (SPH), auf der Grafikkarte oder in JavaScript; Ankunft je Anschnitt Gitter · Partikel · 1D nebeneinander; `?engine=sph` wählt die Partikel vor; Code in `js/simulation/`, Kerne in `js/lbm/` und `js/sph/` |
+| `kammerfuellung.html` | **Kammerfüllung** — die Welle in der Füllkammer: Durchmesser, Länge, Füllgrad, Schusskurve (DieLogic oder v₁/v₂), Gitter oder Partikel; Kammer voll gegen die Kurve, eingeschlossene Luft, beide Verfahren nebeneinander |
 | `ueberlauf.html` | **Überlaufdesigner** — Überläufe und Entlüftungen aufs Bauteil setzen: Bohne, Bohne mit Entlüftungskanal, Waschbrett (Chill-Vent), Entlüftungsschlitz; das Volumen fürs Schussgewicht |
 | `temperier.html` | **Temperierkanal-Designer** — Kühlstiche und Kanäle auf der Abstandsfläche im gewählten Abstand zur Kavität, Automatik für die Stiche, Wandabstand aus dem Feld |
 | `fuellung.html` | **Füllabschätzung** — die Schmelzefront von rechteckigen Anschnitten durch das gerasterte Bauteil: Füllgrad, Füllkörper, zuletzt gefüllte Stellen |
+
+`angussfuellung-sph.html` und `kammerfuellung-sph.html` leiten nur noch auf
+`…html?engine=sph` weiter (alte Lesezeichen); der Query-String geht mit.
 
 Erreichbar über den Reiter **3D-Studio** in der Navigation oder direkt
 unter `/tools/3d-studio/`.
@@ -602,7 +607,7 @@ wartet — aber drei Dinge sorgen dafür, dass es sich auch so anfühlt:
 
 | Farbe | Art | Bedeutung |
 |-------|-----|-----------|
-| grau | **Pressrest** | Ursprung. Durchmesser, Dicke und Ausstoßrichtung stehen in seinem Auswahlfeld wie bei jedem anderen Punkt auch; die Dicke wächst ENTGEGEN der Richtung, also in dieselbe Formhälfte wie die Kanaltiefe. Ihn zu verschieben zieht das GANZE System mit — er ist der Anker, ihn allein zu versetzen hieße nur die erste Kante zu dehnen. |
+| grau | **Pressrest** | Ursprung. Durchmesser, Dicke und Ausstoßrichtung stehen im Modus „System"; die Dicke wächst ENTGEGEN der Richtung, also in dieselbe Formhälfte wie die Kanaltiefe. Ihn zu verschieben zieht das GANZE System mit — er ist der Anker, ihn allein zu versetzen hieße nur die erste Kante zu dehnen. |
 | türkis | **Punkt** | Stützpunkt des Laufkanals mit eigenem Querschnitt. |
 | gold | **Verzweigung** | Gabelung mit Aufteilung (50:50 …), beide Äste eigenständig; das Häkchen „spiegelsymmetrisch halten" koppelt sie. |
 | violett | **Spiegelpunkt** | dasselbe fest auf 50:50, aber nur EIN Ast wird bearbeitet — der andere entsteht. |
@@ -627,8 +632,11 @@ dreht damit die Mündung mit.
 Jeder führende Anschnitt trägt deshalb im Viewport einen **Pfeil** in
 seiner Mündungsrichtung — dorthin tritt die Schmelze ins Bauteil. Der
 Pfeil ist zugleich der Griff für die Bindung: **den Punkt anklicken
-zieht ihn, den Pfeil anklicken schaltet den Zielmodus scharf.** Oben im
-Viewport steht dann, was zu tun ist, und unter dem Zeiger wandert eine
+zieht ihn, den Pfeil anklicken schaltet den Zielmodus scharf.** Denselben
+Weg geht „Mündung ans Bauteil binden" im Auswahlfeld (Gruppe „Mündung").
+Solange gezielt wird, weicht das Auswahlfeld auf seine Kopfzeile zurück — es
+läge sonst dort über dem Bauteil, wo man hinklicken will. Über dem
+Viewport, in der Spalte zwischen Chips und Auswahlfeld, steht dann, was zu tun ist, und unter dem Zeiger wandert eine
 Marke über das Bauteil — ein Ring in der Austrittsfläche, ein Strich in
 Mündungsrichtung —, die zeigt, wo der Anschnitt landen würde, bevor man
 klickt. Der nächste Klick auf das Bauteil legt beides auf einmal fest:
@@ -901,29 +909,68 @@ ein freistehender Körper, den man von allen Seiten ansieht, auch von unten.
 
 ### Wo was steht
 
-Der gewählte Punkt wird VOLLSTÄNDIG im Viewport bearbeitet: Kopfzeile mit
-Artfarbe und id, Lage, Kanalmaße, Kippung der Arbeitsebene, die
-Anschnittfelder, die Kennzahlen und die Knöpfe zum Anfügen — alles in dem
-einen Feld oben links. Vorher lag die Hälfte davon in der Seitenleiste, und
-der Blick sprang beim Bearbeiten eines Punktes zwischen zwei Orten hin und
-her.
+Die Seite läuft im gemeinsamen Rahmen des Studios (`js/studio/`, siehe unten):
+Kopfzeile (Referenzbauteil-Chip, Rückgängig/Wiederholen, Speichern,
+Exportieren ▾, Hilfe), Seitenleiste mit vier MODI in der Reihenfolge der
+Arbeit, Viewport mit Chips, Auswahlfeld, Legende. Code: `js/runner/tool.js`
+(Fabrik `createAngussTool`), `panel.js` (Felder), `help.js` (alle Erklärtexte
+— in der Seitenleiste steht je Modus eine Zeile, ein ⓘ öffnet die Hilfe an der
+Stelle).
 
-Auch der **Pressrest** ist so ein Punkt: sein Durchmesser, seine Dicke und
-die Ausstoßrichtung erscheinen im Auswahlfeld, sobald man ihn anklickt.
-Eine Arbeitsebene zum Kippen bekommt er nicht — seine Ebene IST die
-Ausstoßrichtung.
+- **System** — Beispiel, Referenzbauteil (Name und Volumen), Pressrest
+  (Durchmesser, Dicke, Richtung); Punkte, Anschnitte, Lauflänge,
+  Angussvolumen zugeklappt unter „Kennzahlen".
+- **Kanalform** — Entformschräge, Bodenradius, Zwickelradius, Anschnitthöhe,
+  Verjüngung, Seitenverhältnis; Splinestraffheit und Abtastschritt unter
+  „Details". Hauptknopf: „Querschnitte abstufen".
+- **Prozess** — Legierung, Gussvolumen, Füllzeit, v_Ziel, Füllkammerlänge; als
+  Kennzahlen mit Urteil die Füllzeit der Kurve (mit v₂), die Ankunft ab
+  „Kammer voll" und das Δ zwischen erstem und letztem Anschnitt; unter
+  „Details" das Häkchen der Schusskurve, der Verzweigungsverlust, Füllgrad und
+  „Kammer voll ab Kolbenstart". Hauptknopf: „Füllzeit der Kurve übernehmen" —
+  stimmen Prozess und Kurve überein, steht dort nur die Zeile, die es sagt.
+- **Prüfung** — am Reiter, wie viele Regeln erfüllt sind („11/12", gelb oder
+  rot, wenn etwas verletzt ist); im Modus ein Balken mit einem Feld je Regel
+  und die Liste: Verletztes oben und aufgeklappt, Erfülltes als Zeile zum
+  Aufklappen. Die Liste scrollt in sich, die Seitenleiste nie. Hauptknopf:
+  „Flussschema öffnen".
 
-Die Seitenleiste behält, was für das GANZE System gilt, von oben nach
-unten in der Reihenfolge, in der man es braucht: Beispiel und Dateien,
-Referenzbauteil (es liefert das Gussvolumen, also gleich nach oben),
-Kanalform, Prozess, Darstellung, Import und Export — und ganz unten die
-Prüfliste, die das Ergebnis von allem beurteilt. Die Hinweiskästen sind
-absichtlich kurz gehalten: ein Erklärkasten von sechs Zeilen schiebt den
-nächsten Regler aus dem Bild und wird beim zweiten Mal ohnehin nicht mehr
-gelesen.
+**Anfügen** sitzt als Chips über dem Bild: + Punkt · + Verzweigung ·
++ Spiegelpunkt · + Anschnitt · Davor einfügen · Flussschema. Ein Chip, der
+gerade nicht geht, sagt beim Antippen, warum („Zuerst einen Punkt wählen …",
+„Hinter einem Anschnitt ist Schluss …"). Gewählt wird durch Anklicken eines
+Griffs — oder des Kanals: der Strahl trifft den Körper, die Mittellinien
+(`centerlines`) sagen, zu welcher Kante die Stelle gehört, gewählt wird ihr
+näheres Ende (`sweep.js` bleibt dafür unberührt). Beim Laden ist nichts
+gewählt: das erste Bild zeigt das ganze System.
 
-Das **Flussschema** öffnet der große Knopf rechts unten im Viewport und
-füllt dann den ganzen Viewport — ein Kasten in der Ecke zeigte ein System
+Der gewählte Punkt wird im **Auswahlfeld** neben dem Bild bearbeitet. Es zeigt
+immer nur EINE Gruppe (Reiterzeile): Lage (mit Ebene längs/quer) ·
+Querschnitt · Verzweigung (Aufteilung, Spiegeln) · Anschnitt (Höhe, Tiefe,
+Breite) · Mündung (Übergang, „Mündung ans Bauteil binden") · Details
+(Querschnitt, hydraulischer Ø, Verlust, Ankunft ab Kolbenstart). Über den
+Reitern steht beim Anschnitt seine Ankunft ab „Kammer voll" und wie weit er
+hinter dem ersten liegt. Die gespiegelte Seite zeigt ihre Werte, nimmt aber
+keine an. Auch der **Pressrest** lässt sich anklicken und ziehen (er zieht
+das ganze System mit); seine Maße stehen unter „System". Eine Arbeitsebene
+zum Kippen bekommt er nicht — seine Ebene IST die Ausstoßrichtung.
+
+**Alles lässt sich zurücknehmen**: Strg+Z / Strg+Y und die Pfeile der
+Kopfzeile. Ein Zug am Griff ist EIN Schritt, ein Regler ebenso; ein bloßer
+Klick auf einen Griff ist keiner. **Entf** fragt nicht: ein Punkt mit genau
+einem Nachfolger wird überbrückt, sonst fällt alles dahinter mit weg, und der
+Toast nennt es („Verzweigung k3 und 4 Punkte dahinter entfernt. ·
+Rückgängig"). Was Rückgängig zurückholt, ist danach gewählt. Ein anderes
+Beispiel, eine geladene Datei und ein neues Bauteil beginnen den Verlauf neu.
+Ungespeichertes hebt der Browser als Entwurf auf und bietet es beim nächsten
+Mal an.
+
+**Darstellung ▾** in der Ansichtsleiste: Deckkraft Bauteil, Körper (Kanäle /
+nur Linie), Pressrest zeigen, Mittellinie und Griffe zeigen — nichts davon
+ändert den Plan.
+
+Das **Flussschema** öffnen der Chip oder der Hauptknopf der Prüfung; es
+füllt den ganzen Viewport — ein Kasten in der Ecke zeigte ein System
 mit sechs Anschnitten als Briefmarke; jetzt wächst das SVG mit der Fläche,
 Schrift eingeschlossen. Esc oder das × schließen es. Die Bänder sind
 geschwungen (kubische Bögen mit waagerechten Tangenten an den Knoten):
@@ -931,7 +978,7 @@ jeder Ast verlässt seine Gabelung sanft, wie die Schmelze es tut, und die
 Bänder liegen an den Knoten bündig übereinander. Die **Kennzahlen**
 des Systems stehen dort als Streifen unter dem Kopf: Punkte, Anschnitte,
 Lauflänge, Angussvolumen, Volumenstrom, Druckbedarf, Ankunft der Schmelze
-(erster bis letzter Anschnitt). Dort steht nur, was das Schema nicht
+ab „Kammer voll" (erster bis letzter Anschnitt, mit Δ). Dort steht nur, was das Schema nicht
 ohnehin zeigt —
 Anschnittfläche, Geschwindigkeit und die Aufteilung soll/ist hängen im Bild
 an den Ästen selbst. Sie daneben noch einmal als Summe zu setzen hieße
@@ -948,9 +995,8 @@ dasselbe (v = Q/A) und beide sagen es ungenauer als das Schema, das
 neben jeden Ast die Zahl schreibt. Ein Farbton, den man an einer Skala
 ablesen muss, ist kein Ersatz für „207 mm² · 22,5 m/s".
 
-Unten rechts stehen übereinander der Knopf zum Flussschema und die
-Legende der Punktarten; die Bedienhinweise unten links sind eine Zeile,
-keine vier — sie sind Erinnerung, kein Handbuch.
+Unten rechts steht die Legende der Punktarten; die Bedienhinweise unten
+links sind eine Zeile, keine vier — sie sind Erinnerung, kein Handbuch.
 
 Oben rechts, unter der Ansichtsleiste, steht das **Achsenkreuz**. Es ist
 kein zweiter Renderdurchgang, sondern SVG über dem Bild: die
@@ -970,31 +1016,37 @@ die Griffe, nicht das Netz.
 
 ### Dateien
 
-- **JSON** — der Graph selbst, mit Kennung und Fassungsnummer. Nur damit
-  lässt sich weiterarbeiten. Laden und Speichern über die beiden Knöpfe
-  unter „Import und Export" oder per Ziehen-und-Ablegen über dem
-  Viewport; was für eine Datei es ist, entscheidet der Inhalt, nicht die
+- **Speichern** (Kopfzeile) — der Graph als JSON, Kennung `dielogic-anguss`,
+  Fassung 1, unverändert. Dazu drei freiwillige Schlüssel, die ältere Leser
+  übergehen: `process` (Prozesswerte), `sizing` (Verjüngung,
+  Seitenverhältnis) und `ref` (Lage des Referenzbauteils, gilt nur für das
+  Bauteil, zu dem sie gehört). `process` steht im Abzug, weil die
+  Anschnittbreiten am Prozess hängen — sonst nähme Rückgängig eine
+  Prozessänderung nur halb zurück. Öffnen: „Datei öffnen …" in der
+  Bauteil-Klappe oder Ablegen im Viewport; der Inhalt entscheidet, nicht die
   Endung.
-- **STL** — zwei Dateien aus einem Klick: `<name>-anguss.stl`, die
-  Kanäle als ein geschlossener Körper, am Mantel des Pressrests
-  beschnitten (siehe „Das Netz"), und `<name>-pressrest.stl`, der
-  Zylinder. Beide berühren sich, keiner steckt im anderen; der Browser
-  fragt beim ersten Mal, ob die Seite mehrere Dateien laden darf.
-- **Referenzbauteil (STL/GLB)** — wird durchscheinend dazugestellt, damit
-  die Anschnitte dorthin zeigen, wo sie hingehören. Sein **Volumen wird
-  als Gussvolumen übernommen**: das ist die Zahl, aus der über die
-  Füllzeit der Volumenstrom folgt und daraus die Anschnittflächen und
-  damit jeder Querschnitt. Sie von Hand einzutippen, während das Bauteil
-  daneben liegt, ist eine Fehlerquelle ohne Gewinn. Überläufe sind darin
-  nicht enthalten — wer sie mitrechnen will, schlägt sie im Feld auf. Ist
-  das Netz offen oder überlappend und das Volumen damit unbrauchbar,
-  bleibt die Einstellung stehen und die Seite sagt, warum. Die geladene
-  Datei steht mit Namen und Volumen in einer Zeile, mit einem × zum
-  Wegnehmen — die Zahl der Dreiecke interessiert hier niemanden, das ist
-  die Frage der Entformungsanalyse. Es ist außerdem das Ziel für die
-  **Mündung ans Bauteil** (siehe oben): ohne geladenes Bauteil ist der
-  Knopf gesperrt.
-
+- **Exportieren ▾ → STL** — zwei Dateien aus einem Klick: `<name>-anguss.stl`,
+  die Kanäle als ein geschlossener Körper, am Mantel des Pressrests
+  beschnitten (siehe „Das Netz"), und `<name>-pressrest.stl`, der Zylinder.
+  Beide berühren sich, keiner steckt im anderen; der Browser fragt beim
+  ersten Mal, ob die Seite mehrere Dateien laden darf.
+- **Referenzbauteil** — ist das Bauteil des Rahmens (Bauteil-Chip:
+  Beispielteil, Datei, Ablegen). Es kommt im Bauteilrahmen an (Trennebene
+  z = 0) und wird in die Lage des Angusses gestellt: +z gegen die
+  Ausstoßrichtung gedreht (für „Y" die Drehung um x um 90°), mit seiner
+  nächsten Kante an den fernsten Anschnitt, mittig zu allen. Das NETZ bleibt
+  unberührt — gedreht wird das Mesh; der Strahl der Bindung rechnet mit der
+  Weltmatrix. Ein Beispiel mit eigenem Teil (Ölwanne, `ref` in `presets.js`)
+  stellt es genau an seine Mündungen; ein anderes Beispiel lässt ein
+  geladenes Teil stehen und stellt es vor seine Anschnitte; „Richtung" dreht
+  es mit dem System. Sein **Volumen wird das Gussvolumen**: das ist die Zahl,
+  aus der über die Füllzeit der Volumenstrom folgt und daraus die
+  Anschnittflächen und damit jeder Querschnitt. Überläufe sind darin nicht
+  enthalten — wer sie mitrechnen will, schlägt sie im Feld auf. Ist das Netz
+  offen oder überlappend und das Volumen damit unbrauchbar, bleibt der Wert
+  stehen und „System" sagt es. Es ist außerdem das Ziel für die **Mündung ans
+  Bauteil** (siehe oben): ohne Bauteil sagt der Klick auf den Pfeil, was
+  fehlt.
 
 ### Ankunft nach der Schusskurve
 
@@ -1015,11 +1067,16 @@ unter einem 90er Pressrest, Füllgrad 3 %, und entsprechend seltsame
 Zeiten. Die Ankunft bei konstantem
 Strom ist ein Volumen, das den Pressrest passiert hat; auf der Kurve ist
 das ein Kolbenweg hinter „Kammer voll", und das Profil kennt die Zeit
-dazu. Die Zeiten zählen ab Kolbenstart. Die Seitenleiste nennt „Kammer
-voll", v₂ und die Füllzeit der Kurve gegen die des Prozesses;
-„Füllzeit der Kurve übernehmen" setzt sie als Füllzeit des Prozesses. Das
-Häkchen „Ankunft nach der DieLogic-Schusskurve" schaltet auf den
-konstanten Strom zurück. Ohne Projekt gelten die Vorgabewerte der
+dazu. Die Zeiten zählen **ab „Kammer voll"** — in Prozess, Auswahlfeld,
+Flussschema und im Text der Prüfregel —, daneben das Δ zwischen erstem und
+letztem Anschnitt; ab Kolbenstart stehen sie nur in den Details (Prozess:
+„Kammer voll ab Kolbenstart"; Auswahlfeld: „Ankunft ab Kolbenstart").
+`state.flowShown` trägt weiter die Zeiten ab Kolbenstart, `state.flowView`
+dieselbe Strömung ab „Kammer voll"; die Spanne und damit das Urteil der
+Regel bleiben gleich. Der Modus „Prozess" nennt v₂ und die Füllzeit der Kurve
+gegen die des Prozesses; „Füllzeit der Kurve übernehmen" setzt sie als
+Füllzeit des Prozesses. Das Häkchen „Ankunft nach der Schusskurve" (Prozess,
+Details) schaltet auf den konstanten Strom zurück. Ohne Projekt gelten die Vorgabewerte der
 Auslegung (HCC-1600, AlSi9Cu3).
 
 ## Angussfüllung (`angussfuellung.html`)
@@ -1031,6 +1088,30 @@ Pressrest („Kammer voll" auf der DieLogic-Kurve), der Kolben schiebt mit
 der Kurve — erst v_krit, dann die Rampe der zweiten Phase —, und die
 Front läuft durch die Laufkanäle bis zu den Anschnitten. Ein Knopf, auf
 der Grafikkarte Sekunden.
+
+### Bedienung
+
+Vier Modi, von links nach rechts: **System** — das Angusssystem; ein anderes
+wählt man oben im Anguss-Chip (Beispiel oder „Angussdatei öffnen …", JSON des
+Angussdesigners oder der Werkbank — eine Werkbankdatei bringt ihren Prozess
+mit; Ablegen im Bild geht auch). **Prozess** — Legierung, Gussvolumen,
+Füllkammerlänge und was die Kurve daraus macht; „Kammer voll" steht hier
+einmal mit Zeit, alle anderen Zeiten zählen ab dort. **Simulation** — das
+Verfahren (Gitter oder Partikel), Zellkante bzw. Partikelabstand (leer
+gelassen gilt der Vorschlag) und eine Zeile, was der Lauf kostet: Zellen oder
+Partikel, Speicher, grobe Zeit, WebGPU oder JavaScript. **Ergebnis** — die
+Tabelle der Ankunft je Anschnitt, Gitter · Partikel · 1D, darunter „Δ erster –
+letzter"; „Bild" wählt, wessen Schmelze zu sehen ist, sobald beide gerechnet
+sind; „Zeigen" schaltet beim Gitter zwischen Schmelze und Ankunftsfarben;
+Zeitregler mit Abspielen.
+
+„Simulieren" startet den Lauf; währenddessen heißt der Knopf „Abbrechen" — in
+jedem Modus — und darunter läuft der Fortschritt. Ein Abbruch erreicht den Kern
+im nächsten Schritt; danach gibt es kein Ergebnis dieses Verfahrens (das des
+anderen bleibt). Ändern sich System oder Prozess, gehen beide Ergebnisse. Die
+Einstellungen (Verfahren, Auflösung, Prozess, Anzeige) werden je Angusssystem
+im Browser gemerkt und mit „Zurücksetzen" verworfen. Methode und Grenzen
+stehen in der Hilfe (?).
 
 ### Das Verfahren
 
@@ -1115,8 +1196,8 @@ Symmetrie, Gegenrichtungen), den JavaScript-Kern (Masse in der
 geschlossenen Box exakt, Zustrom und Frontweg am Kolben, ein ganzer Lauf
 auf grobem Gitter bis zur Ankunft), Gitterbau, Kolben und Einheiten, und
 für die Kammer Füllstand, Gitter, Ruhe unter Schwerkraft und den
-wandernden Kolben; `viewer.test.mjs` fährt beide Seiten ohne WebGPU
-durch. Der WGSL-Kern wurde
+wandernden Kolben; `tools/angussfuellung.test.mjs` und
+`tools/kammerfuellung.test.mjs` fahren beide Verfahren ohne WebGPU durch. Der WGSL-Kern wurde
 im kopflosen Chromium mit WebGPU (SwiftShader-Vulkan) gegen den
 JavaScript-Kern auf demselben Gitter geprüft: gleiche Ankünfte auf
 wenige Prozent, gleicher Füllstand.
@@ -1135,6 +1216,19 @@ Füllgrad rechnet —, oder zweistufig v₁/v₂ mit einer Beschleunigung.
 Ein Knopf; die Rechnung beginnt beim Kolbenstart und endet, wenn die
 Schmelze den Laufkanal erreicht (plus ein Stück für das Bild), spätestens
 am Ende der Kurve.
+
+### Bedienung
+
+Vier Modi: **Kammer** (Durchmesser, Länge, Füllgrad, Laufkanal Breite × Tiefe
+— die ruhende Schmelze steht bis zum Spiegel im Bild), **Kurve** (DieLogic
+oder v₁ / v₂ mit Beschleunigung, Legierung, die Kennzahlen der Kurve),
+**Simulation** (Verfahren, Zellkante bzw. Partikelabstand, Aufwand) und
+**Ergebnis** (Kammer voll und Kolbenweg, Luft höchstens und am Ende —
+Gitter · Partikel · Kurve nebeneinander; Zeitregler, der Kolben fährt mit).
+Neue Maße setzen die Auflösung auf den Vorschlag zurück. Abbrechen,
+Ergebnisse und gemerkte Einstellungen wie bei der Angussfüllung; die
+Vorgaben stehen an EINER Stelle (`DEFAULTS` in `js/simulation/kammer.js`),
+v₁ = 0,5 m/s.
 
 Zwei Dinge brauchte der Kern dafür (`js/lbm/fslbm.js`, `gpu.js`, in
 beiden gleich):
@@ -1194,15 +1288,13 @@ Bilder danach: dann herrschen Anschnitte bzw. Laufkanal mit dem Zehn-
 fachen, und der ganze Weg davor wäre einfarbig blau. Was schneller ist,
 bleibt rot; die Leiste sagt es.
 
-## Angussfüllung und Kammerfüllung mit Partikeln (`angussfuellung-sph.html`, `kammerfuellung-sph.html`)
+## Das Verfahren „Partikel" (SPH)
 
-Dieselben zwei Fragen — wann kommt die Schmelze an den Anschnitten an,
-wie läuft die Welle in der Kammer — noch einmal gerechnet, mit
-Partikeln statt Gitter: **schwach kompressible SPH** (WCSPH nach
-Monaghan) in `js/sph/`. Beide Seiten sind Abbilder der Gitterseiten
-(gleiche Eingaben, gleiche Kurve, gleiche Ausgaben), damit man die
-Verfahren nebeneinander lesen kann; der einzige andere Regler ist der
-**Partikelabstand** statt der Zellkante.
+Dieselben zwei Fragen, mit Partikeln statt Gitter: **schwach kompressible
+SPH** (WCSPH nach Monaghan) in `js/sph/`. Beide Werkzeuge rechnen damit, wenn
+unter „Simulation" „Partikel" gewählt ist (oder die Seite mit `?engine=sph`
+geöffnet wird); der Regler heißt dann **Partikelabstand** statt Zellkante.
+Die alten Adressen `…-sph.html` leiten dorthin weiter.
 
 - `wcsph.js` — der JavaScript-Kern: Tait-Druck (p = B((ρ/ρ0)⁷ − 1), B =
   ρ0c0²/7, negative Drücke gekappt), Druckkraft und künstliche Zähigkeit
@@ -1303,8 +1395,32 @@ Dynamik nach den ersten Umwandlungen auseinanderläuft (Millimeter nach
 `tests/web/3d-studio/sph.test.mjs` prüft Kern (Normierung), Kammer
 (Ruhe unter Schwerkraft, Kolben bis Kammer voll, Luft), Anguss
 (Partikelsatz, Säule, Abstandsfeld, Melderzonen, Drossel, erste
-Schritte) und Bilder; `viewer.test.mjs` fährt beide Seiten ohne WebGPU
-durch (grob und kurz — Bilder, keine Ankunftszeiten).
+Schritte) und Bilder; `tools/angussfuellung.test.mjs` und
+`tools/kammerfuellung.test.mjs` fahren beide Verfahren ohne WebGPU durch
+(grob und kurz — Bilder, keine Ankunftszeiten).
+
+## Zwei Verfahren, ein Werkzeug (`js/simulation/`)
+
+`engines/lbm.js` und `engines/sph.js` haben dieselbe Gestalt — `label`,
+`cellLabel`, `suggest(problem)`, `estimate(problem, cell)`,
+`run(problem, { cell, signal, progress })`, `createDisplay()` — und wickeln die
+unveränderten Kerne ein; das Werkzeug weiß nie, welches Verfahren es fährt.
+`core.js` hält, was beiden Werkzeugen gemeinsam ist: den Schalter, den Lauf als
+Arbeit des Rahmens (`host.jobs`), je Verfahren ein Ergebnis zum selben Problem
+und das Bild. Der Abbruch erreicht den Kern im nächsten Schritt: die
+Laufschleifen fragen je Schritt nach der Kolbengeschwindigkeit, dort wirft der
+Adapter. In der Kammer fährt der Adapter das Zur-Ruhe-Kommen der Partikel
+selbst, mit Atempausen — `settle()` liefe am Stück. `engines/env.js` fragt
+einmal beim Start, ob WebGPU wirklich einen Adapter herausgibt (sonst gilt der
+Vorschlag für JavaScript), merkt sich das gemessene Tempo je Gerät und schätzt
+die Laufzeit.
+
+In JavaScript rechnen die Laufschleifen (`js/lbm/run.js`, `js/sph/run.js`) je
+40 ms und holen dann ein Bild lang Luft, damit die Seite nicht steht. Bis
+2026-09-19 stellten sie danach ihre Uhr nicht zurück und warteten ab den
+ersten 40 ms nach JEDEM Schritt auf das nächste Bild: ein Gitterlauf der
+Angussfüllung („zwei", 6 mm, 4 163 Schritte) dauerte in Firefox 66–75 s, seit
+der Korrektur 14 s — dieselben Schritte, dasselbe Ergebnis.
 
 ## Überlaufdesigner (`ueberlauf.html`)
 
@@ -1319,10 +1435,17 @@ sie hinaus kann.
 
 ### Setzen, ziehen, drehen, neu setzen
 
-Das Bauteil (Beispielteil oder eigene STL/GLB, dieselbe Quelle wie in der
-Entformungsanalyse) steht deckend im Viewport — hier wird auf die Wand
-geklickt, und die soll aussehen wie eine Wand; der Regler „Deckkraft"
-macht sie durchscheinend. **Eine Art wählen und auf das Bauteil
+Die Seite läuft im gemeinsamen Rahmen (`js/studio/`, siehe unten): das
+**Setzen** sitzt als vier Chips über dem Bild (Bohne · mit Entlüftung ·
+Waschbrett · Schlitz), das **Bearbeiten** im Auswahlfeld daneben, die
+Seitenleiste hat drei Modi — *Bauteil*, *Elemente* (was gesetzt ist, ein
+Klick wählt es; der Reiter zählt mit) und *Volumen*. Körper und Griffe sind
+der Plan selbst und stehen in jedem Modus im Bild.
+
+Das Bauteil (über den Bauteil-Chip der Kopfzeile: Beispielteil oder eigene
+STL/GLB) steht deckend im Viewport — hier wird auf die Wand geklickt, und
+die soll aussehen wie eine Wand; „Deckkraft Bauteil" unter *Darstellung ▾*
+macht sie durchscheinend. **Einen Chip wählen und auf das Bauteil
 klicken:** dort sitzt das Element. Ort ist der getroffene Punkt, die nach
 außen gerichtete Flächennormale seine Hochachse — der Pfeil im Viewport
 zeigt sie. Das Element selbst **liegt in der Wandebene**: Steg, Bohne und
@@ -1342,8 +1465,13 @@ dem Zeiger, Fehlklick benannt, Esc bricht ab. Danach:
   Punkt rutscht auf ihr entlang; mit Alt von ihr weg;
 - **den Pfeil anklicken** setzt das Element an eine andere Stelle des
   Bauteils, samt neuer Achse — die Drehung bleibt;
-- jedes **Maß** der Art steht im Auswahlfeld; die Art lässt sich
-  wechseln, Maße, die beide Arten haben, bleiben dabei.
+- jedes **Maß** der Art steht im Auswahlfeld, in Gruppen (Steg · Bohne ·
+  Vorkammer · Kanal · Details), von denen immer EINE offen steht — so
+  scrollt das Feld nie, gleich welche Art gewählt ist; die Art lässt sich
+  wechseln, Maße, die beide Arten haben, bleiben dabei;
+- **Entf** entfernt die Auswahl ohne Nachfrage — ein Toast nennt, was weg
+  ist, und bietet „Rückgängig"; **Strg+Z / Strg+Y** gehen durch den ganzen
+  Verlauf. Ein Zug am Griff ist EIN Schritt, ein Dreh am Regler auch.
 
 Vier Arten: **Überlaufbohne** (Steg und Tasche), **Überlauf mit
 Entlüftung** (dazu ein flacher Kanal, der ab dem Ende der Bohne
@@ -1404,17 +1532,23 @@ Wandfläche und wachsen von dort in die Tiefe.
 
 ### Zahlen und Dateien
 
-Die Seitenleiste nennt, worum es geht: Elemente, das **Volumen des
-Bauteils**, das der **Überläufe** und die **Summe** — das ist das
-Gussvolumen, das der Angussdesigner unter „Prozess" braucht. Eine
-Prüfliste gibt es hier nicht; das Auswahlfeld nennt Volumen, Steg- und
-Kanalquerschnitt und die Achse des Elements.
+Der Modus *Volumen* nennt, worum es geht: das **Volumen des Bauteils**,
+das der **Überläufe** und die **Summe** — das ist das Gussvolumen, das der
+Angussdesigner unter „Prozess" braucht. Eine Prüfliste gibt es hier nicht;
+das Auswahlfeld nennt unter „Details" Volumen, Steg- und Kanalquerschnitt
+und die Achse des Elements.
 
-- **JSON** — der Plan: je Element Art, Ort, Achse, Drehung, Maße, beim
+Ein Element sitzt auf der Wand EINES Bauteils: ein neues Bauteil beginnt mit
+einem leeren Plan. Der bisherige geht dabei nicht verloren — der Browser
+hebt je Bauteil einen **Entwurf** auf und bietet ihn beim nächsten Mal an
+(nie still übernommen); solange der Plan in keiner Datei steht, ist
+„Speichern" der gefüllte Knopf, und die Seite fragt vor dem Verlassen.
+
+- **Speichern** (JSON) — der Plan: je Element Art, Ort, Achse, Drehung, Maße, beim
   Überlauf mit Entlüftung dazu die Kanalpunkte in der Wandebene
   (`dielogic-luft`, Fassung 3; eine Datei der Fassung 2 mit bloßer
   Kanallänge wird zu einem Punkt in Längsrichtung).
-- **STL** — die Körper aller Elemente.
+- **Exportieren ▾ → Körper als STL** — die Körper aller Elemente.
 
 Die Griffe (`js/handles.js`) sind dieselben wie im Angussdesigner: was
 ein Griff ist, sagt jede Seite selbst (Ort, Farbe, Richtung, Ebene), wie
@@ -1425,44 +1559,89 @@ er gezeichnet, gezogen und gezielt wird, steht einmal.
 Die dritte Seite, die Geometrie erzeugt: Kühlstiche und Kanäle um das
 Bauteil. Was bei der Temperierung zählt, ist der Abstand zur Kavität — zu
 nah heißt Durchbruchgefahr und Risse, zu weit heißt, die Kühlung greift
-nicht. Deshalb werden die Elemente auf der **Abstandsfläche** gesetzt:
-der Fläche gleichen Abstands (voreingestellt 20 mm), die aus demselben
-Rasterfeld kommt wie die Wandstärkenanalyse (`js/part/field.js`,
-`js/part/surfacenets.js`) und beim Laden des Bauteils gerechnet wird;
-der Regler „Abstand" leitet sie neu ab, nur ein Abstand jenseits des
-Bandes kostet ein neues Feld. Wie fein das Feld ist, sagt die
-**Kantenlänge** der Zellen in mm — wie auf den anderen Seiten; die
-Vorgabe beim Laden ist ein 64stel der längsten Bauteilkante (nicht die
-halbe Wanddicke: hier zählt die Fläche außen, nicht die Wand innen), ein
-selbst gesetzter Wert bleibt auch für das nächste Bauteil stehen. Sie
-liegt durchscheinend um das Bauteil und
-ist das Ziel des Zielmodus; das Häkchen „Durchscheinend" macht sie
-deckend — dann zeigt sie ihre Form, wo sie eng wird und wo sie Rippen
-nachzeichnet, und die Stiche und Kanäle davor, ohne dass das Bauteil
-durchscheint. „Abstandsfläche zeigen" blendet sie ganz aus.
+nicht. Deshalb werden die Elemente auf der **Abstandsfläche** gesetzt: der
+Fläche gleichen Abstands (voreingestellt 20 mm) aus dem Abstandsfeld des
+Gastgebers (`host.field`, `js/part/field.js`, `js/part/surfacenets.js`).
+
+### Modi
+
+Die Seite läuft im gemeinsamen Rahmen (`js/studio/`, Werkzeug
+`js/cooling/tool.js`): das Setzen sitzt als zwei Chips über dem Bild
+(Kühlstich · Kanal (2 Punkte)), das Bearbeiten im Auswahlfeld daneben, die
+Seitenleiste hat vier Modi:
+
+- *Bauteil* — Kennzahlen und Netz, wie überall.
+- *Fläche* — die Abstandsfläche: **Achsabstand zur Kavität** (5–60 mm),
+  **Zellkante** in mm (Vorgabe ein 64stel der längsten Bauteilkante — hier
+  zählt die Fläche außen, nicht die Wand innen; ein selbst gesetzter Wert
+  bleibt auch für das nächste Bauteil), **Mindest-Wandabstand** mit „Auto"
+  (siehe unten); zugeklappt das Raster. Der Reiter heißt kurz „Fläche",
+  sonst passen die vier nicht in eine Zeile.
+- *Setzen* — Richtung, Vorgaben für neue Elemente (Kühlstich Ø × Länge,
+  Kanal Ø) und die Automatik; Hauptknopf „Kühlstiche automatisch setzen".
+  Hier beginnt die Seite.
+- *Prüfung* — Kennzahlen mit Urteil und die Liste derer unter dem
+  Mindest-Wandabstand.
+
+Die Fläche wird beim Laden des Bauteils gerechnet — als Rechnung mit
+Fortschritt; der Hauptknopf heißt solange „Abbrechen", ein neues Bauteil
+bricht eine laufende ab und beginnt von vorn. Ein Achsabstand innerhalb des
+gerechneten Bandes kostet nur das Ableiten, ein größerer oder eine andere
+Zellkante ein neues Feld, sobald der Regler steht. Was absehbar länger als
+20 s dauert (Aufwand ≈ Dreiecke × (2·Band/Zellkante + 1)³ × 17 ns, gemessen
+am Getriebedeckel: 6,5 mm 1,5 s, 3 mm 10 s, 2 mm 33 s), beginnt nicht von
+selbst: die Zeile am Knopf nennt die Dauer, „Abstandsfläche berechnen"
+startet. Nach einem Abbruch bleibt die vorige Fläche stehen und gilt als
+veraltet.
+
+Die Fläche gehört den Modi „Fläche" und „Setzen" (auf ihr wird gezielt — ein
+Chip oder der Pfeil aus einem anderen Modus führt nach „Setzen"); Bauteil
+und Bohrungen stehen in jedem Modus. Unter *Darstellung ▾*: „Deckkraft
+Bauteil" und „Abstandsfläche durchscheinend" — abgewählt ist sie deckend und
+zeigt ihre Form, wo sie eng wird und wo sie Rippen nachzeichnet, und die
+Stiche und Kanäle davor. „Einpassen" (F) nimmt Bauteil, Bohrungen und die
+sichtbare Fläche.
 
 ### Kühlstiche und Kanäle
 
-- **Kühlstich** — ein Klick auf die Abstandsfläche. Die Spitze sitzt am
-  Punkt (dort hat sie genau den Abstand der Fläche), der Stich läuft um
-  seine **Länge** vom Bauteil weg, mit seinem **Durchmesser** (Vorgaben
-  20 mm und 200 mm, im Abschnitt „Kühlstiche" einstellbar); die
-  Spitze ist eine Halbkugel wie das Ende eines Bohrers. Die **Richtung**
-  wählt man vorher: die Flächennormale (senkrecht zur Abstandsfläche,
-  nach außen), der Blick (auf die Kamera zu — so, wie man gerade schaut)
-  oder X, Y, Z, jeweils mit dem Vorzeichen, das vom Bauteil weg zeigt.
-  Der Pfeil am Stich setzt ihn an eine andere Stelle.
-- **Kanal** — zwei Klicks, ein Ende hier, das andere dort; ein gerader
-  Zylinder mit ebenen Enden und seinem Durchmesser.
+- **Kühlstich** — Chip, dann ein Klick auf die Abstandsfläche. Die Spitze
+  sitzt am Punkt, der Stich läuft um seine **Länge** vom Bauteil weg, mit
+  seinem **Durchmesser** (Vorgaben 20 × 200 mm); die Spitze ist eine
+  Halbkugel wie das Ende eines Bohrers. Die **Richtung** wählt man vorher:
+  Normale (senkrecht zur Fläche, nach außen), Blick (auf die Kamera zu) oder
+  X, Y, Z, jeweils mit dem Vorzeichen vom Bauteil weg. Der Pfeil am Stich
+  setzt ihn neu.
+- **Kanal (2 Punkte)** — zwei Klicks, ein Ende hier, das andere dort; Esc
+  dazwischen bricht ab.
 
-Danach werden die Enden **frei im Raum** bewegt. Eine Arbeitsebene gibt
-es hier nicht, deshalb trägt das gewählte Ende drei **Achsenpfeile**
-(X rot, Y grün, Z blau; `js/handles.js`): am Pfeil gezogen, bewegt sich
-der Punkt genau entlang dieser Achse — der Mausstrahl wird dafür auf die
-Achse gelotet (nächster Punkt zweier Geraden). Am Punkt selbst gezogen,
-rutscht er in der Bildebene durch die Kamera. „Beide Enden bewegen"
-nimmt beim Kanal das andere Ende mit demselben Versatz mit: der Kanal
-behält Länge und Richtung.
+Danach werden die Enden **frei im Raum** bewegt: das gewählte Ende trägt
+drei **Achsenpfeile** (X rot, Y grün, Z blau; `js/handles.js`) und bewegt
+sich am Pfeil genau entlang dieser Achse, am Punkt selbst gezogen in der
+Bildebene. „Beide Enden bewegen" nimmt beim Kanal das andere Ende mit. Das
+Auswahlfeld zeigt oben das Urteil über den Wandabstand, darunter zwei
+Reiter: *Maße* (Ø, beim Kühlstich Länge und Richtung, Lage, beim Kanal
+„Beide Enden bewegen") und *Details* (Länge, Wasserinhalt,
+Mindest-Wandabstand). **Entf** entfernt ohne Nachfrage, ein Toast bietet
+„Rückgängig"; **Strg+Z / Strg+Y** gehen durch den Verlauf. Ein Zug am Griff
+ist EIN Schritt, der Achsabstand-Regler auch.
+
+### Mindest-Wandabstand und Prüfung
+
+Der **Wandabstand** eines Elements ist der kleinste Abstand der
+Bohrungswand zur Kavität: der Feldwert entlang der Achse abgetastet, minus
+Radius (`wallClearance`, `js/cooling/geom.js`). Geprüft wird er gegen den
+**Mindest-Wandabstand**. Mit „Auto" ist das Achsabstand − Ø/2 der dicksten
+Vorgabe, mindestens 1 mm (`autoMinWall`, `js/cooling/model.js`): eine
+Bohrung mit Vorgabemaßen, deren Achse auf der Fläche sitzt, hält ihn gerade
+ein. (Früher wurde gegen „Abstand − Zellkante" geprüft — jede Bohrung, die
+das Werkzeug mit seinen eigenen Vorgaben setzte, warnte.) Um ein Viertel der
+Zellkante darf ein Wert darunter liegen, so genau ist das Feld. Urteile
+(`wallVerdict`): eingehalten · unter dem Mindest-Wandabstand · Durchbruch
+(die Bohrung schneidet das Bauteil). Wer darunter liegt, steht in der
+Warnfarbe im Bild — in jedem Modus, auch während man zieht; der Reiter
+„Prüfung" zählt sie, ihre Liste (das engste zuerst) wählt per Klick und holt
+das Element ins Bild (beim Kanal das Ende näher an der Kavität). Ohne Haken
+„Auto" gehört der Wert dem Plan.
 
 ### Automatisch setzen
 
@@ -1483,22 +1662,27 @@ eine zweite steht) und ein **Verfeinern** wie k-means auf der Fläche
 (jede Zelle gehört zur nächsten Bohrung, jede Bohrung rückt an den
 Kandidaten, der dem gewichteten Schwerpunkt ihrer Zellen am nächsten
 liegt, bis nichts mehr wandert). Kandidaten näher als der
-**Mindestabstand** an einer gesetzten Bohrung scheiden aus. Die Richtung
-folgt der Wahl unter „Kühlstiche"; bei „Normale" ist es der Feldgradient
-an der Stelle. Die Kennzahlen nennen den gewichteten mittleren und den
-größten Abstand einer Bauteilzelle zur nächsten Bohrung. Automatisch
-gesetzte Stiche sind als solche markiert; der nächste Lauf ersetzt sie
-(abschaltbar), von Hand gesetzte bleiben.
+**Stichabstand min.** an einer gesetzten Bohrung scheiden aus — nie enger als
+1,5 × Ø, zwei Bohrungen, die sich berühren, sind eine; die Vorgabe steht
+deshalb auf 30 mm, und liegt der Regler darunter, sagt die Zeile unter dem
+Knopf, womit gerechnet wird. Die Richtung folgt der Wahl unter „Richtung";
+bei „Normale" ist es der Feldgradient an der Stelle — dann kann ein Stich
+durch eine Tasche des Bauteils laufen; die Prüfung zeigt es. Die Zeile nennt
+auch, wie viele gesetzt wurden und ob automatische zu nah stehen; „Letzter
+Lauf der Automatik" (Prüfung, zugeklappt) nennt den gewichteten mittleren
+und den größten Abstand einer Bauteilzelle zur nächsten Bohrung. Automatisch
+gesetzte Stiche sind markiert; der nächste Lauf ersetzt sie (abschaltbar),
+von Hand gesetzte bleiben. Ein Lauf ist ein Schritt im Verlauf.
 
-### Zahlen und Dateien
+### Dateien
 
-Das Auswahlfeld nennt Länge, Volumen und den **Wandabstand**: den
-kleinsten Abstand der Bohrungswand zur Kavität, aus dem Feld entlang der
-Achse abgetastet, minus Radius — liegt er unter dem gewählten Abstand,
-steht ein ⚠ davor. Die Übersicht zählt Stiche und Kanäle, die
-Gesamtlänge und den kleinsten Wandabstand. Dateien: **JSON** ist der Plan
-(`dielogic-temperier`, Fassung 1, mit dem Abstand), **STL** sind die
-Bohrungen als Körper.
+**Speichern**: JSON `dielogic-temperier`, Fassung 1 — Achsabstand und
+Elemente, dazu ein selbst eingetragener Mindest-Wandabstand als optionaler
+Schlüssel `minWall` (fehlt er, gilt Auto; ältere Dateien laden unverändert).
+**Exportieren ▾ → Bohrungen als STL**. Solange nichts gespeichert ist, hebt
+der Browser einen Entwurf je Bauteil auf und bietet ihn beim nächsten Mal
+an; ein neues Bauteil beginnt mit leerem Plan, Achsabstand und ein eigener
+Mindest-Wandabstand bleiben.
 
 ## Füllabschätzung (`fuellung.html`)
 
@@ -1512,29 +1696,43 @@ das steht auch auf der Seite.
 
 ### Raster und Anschnitte
 
-Beim Laden wird das Bauteil gerastert — dasselbe Abstandsfeld wie in der
-Wandstärkenanalyse (`js/part/field.js`), mit schmalem Band nach außen
-und vollständigem Kern nach innen. Wie fein, sagt die **Kantenlänge**
-der Zellen in Millimetern — nicht eine Zellenzahl: der Anwender kennt
-die Wanddicke seines Teils, und die muss das Raster auflösen, mit
-mindestens zwei Zellen über die Dicke. Beim Laden wird deshalb die halbe
-Wanddicke 2 V/A des Bauteils vorgeschlagen; eine eigene Kante gilt, bis
-man sie ändert, „Neu rastern" übernimmt sie. Nach unten ist nur der
-Speicher die Grenze (16 Mio. Rasterpunkte; darüber hebt die Seite die
-Kante an und sagt es). Das Raster liegt eng um das Bauteil, zwei Zellen
-Rand — die Wandstärkenanalyse braucht außen ein breites Band für die
-Offsetfläche, hier zählt nur das Innere, und bei einem flachen Teil
-wäre ein breiter Rand mehr Luft als Metall.
+Die Seite läuft im gemeinsamen Rahmen (`js/studio/`, siehe unten) mit vier
+Modi in Arbeitsreihenfolge: *Bauteil* · *Anschnitte* · *Füllung* ·
+*Ergebnis*. Anschnitte und ihre Griffe sind der Plan selbst und stehen in
+jedem Modus im Bild; das Bild der Füllung gehört dem Modus *Ergebnis*.
 
-**Anschnitte** sind Rechtecke auf der Wand (`js/fill/model.js`): Klick auf
-„Anschnitt setzen", dann auf das Bauteil — Ort ist der getroffene Punkt,
-die Hochachse die nach außen gerichtete Flächennormale, das Rechteck
-liegt in der Wandebene mit **Breite** quer und **Höhe** längs, gedreht um
-die Normale. Ziehen am Punkt verschiebt in der Wandebene, der Pfeil setzt
-neu — dieselben Griffe wie im Anguss- und Überlaufdesigner
-(`js/handles.js`). Jeder Anschnitt hat einen **Anteil** am Schmelzestrom:
-ohne Angabe nach seiner Fläche, sonst die eingetragene Zahl (der Rest
-verteilt sich nach Fläche auf die übrigen).
+**Anschnitte** sind Rechtecke auf der Wand (`js/fill/model.js`): der Chip
+„Anschnitt setzen" über dem Bild, dann ein Klick aufs Bauteil — Ort ist der
+getroffene Punkt, die Hochachse die nach außen gerichtete Flächennormale,
+das Rechteck liegt in der Wandebene mit **Breite** quer und **Höhe** längs.
+Die Vorgaben für neue Anschnitte stehen im Modus *Anschnitte*, darunter die
+Liste des Gesetzten (Maße, Anteil am Strom, nach dem Rechnen „füllt … %";
+ein Klick wählt). Bearbeitet wird im Auswahlfeld neben dem Bild, in drei
+Gruppen: *Maße* (Breite, Höhe, **Anteil** — leer heißt „aus der Fläche",
+der Platzhalter nennt den Wert), *Lage* (x/y/z, Drehung um die Normale) und
+*Details*; darunter „füllt … % des Volumens" und Entfernen. Ziehen am Punkt
+verschiebt in der Wandebene (ein Zug ist ein Schritt), der Pfeil setzt neu —
+dieselben Griffe wie im Anguss- und Überlaufdesigner (`js/handles.js`).
+Entf entfernt ohne Nachfrage, der Toast und Strg+Z holen zurück.
+
+Das **Raster** ist das Abstandsfeld des Gastgebers (`host.field`,
+`js/part/field.js`) — eng um das Bauteil, zwei Zellen Rand, vollständiger
+Kern. Wie fein, sagt die **Zellkante** in Millimetern (Vorschlag beim Laden:
+halbe Wanddicke 2 V/A; eine eigene gilt, bis man sie ändert). Gerastert wird
+beim ersten **Rechnen** im Modus *Füllung*, zusammen mit der Front — eine
+Rechnung mit Fortschritt, der Knopf heißt solange **Abbrechen**, und der
+Abbruch reicht in Raster und Frontausbreitung hinein. Eine andere Zellkante
+macht daraus **Neu rastern**; bis dahin zeigt das Bild das vorige Raster.
+Mehr als 16 Mio. Rasterpunkte gibt es nicht — die Zeile unter dem Feld sagt
+schon beim Eintippen, mit welcher Kante dann gerastert wird. Was das Raster
+kostet (Raster, Rasterpunkte, Speicher, Zellen, Rechenzeiten), steht
+zugeklappt unter „Raster".
+
+Im Modus *Füllung* stehen die Kennzahlen mit Urteil: **längster Fließweg**,
+**Wanddicke 2 V/A** und **Fließweg / Wanddicke** (über etwa 300 : 1 gelb);
+nicht erreichte Zellen (abgetrennter Bereich) rot. Nach dem ersten Lauf
+rechnet jede Änderung am Plan von selbst nach — nach einem Abbruch wieder
+erst auf Knopfdruck.
 
 ### Die Rechnung
 
@@ -1562,34 +1760,44 @@ entferntesten Zelle) und **Fließweg / Wanddicke** mit der Wanddicke
 2 V/A des Bauteils; über etwa 300 : 1 steht ein ⚠. Je Anschnitt steht,
 welchen Anteil des Volumens er tatsächlich füllt — die Naht zwischen zwei
 Anschnitten liegt dort, wo beide Fronten zugleich ankommen. Nach dem
-ersten Anschnitt rechnet jede Änderung am Plan von selbst nach.
+ersten „Rechnen" rechnet jede Änderung am Plan von selbst nach — ohne
+Schleier über dem Bild, sie dauert Zehntelsekunden.
 
 ### Drei Ansichten
 
-Voreingestellt ist der **Füllkörper bei 50 %** — die Front mitten im
-Teil sagt auf einen Blick, wohin die Schmelze zuerst kommt.
+Im Modus *Ergebnis*; voreingestellt ist der **Füllkörper bei 50 %** — die
+Front mitten im Teil sagt auf einen Blick, wohin die Schmelze zuerst kommt.
 
-- **Füllgrad** — das Bauteil nach Füllgrad gefärbt (Turbo: früh blau,
-  spät rot; der Wert an der Oberfläche kommt aus den Innenzellen daneben).
-  Was über dem Regler **Füllgrad** liegt, bleibt grau: so wandert die
-  Front mit dem Regler über die Oberfläche.
-- **Füllkörper** — die Schmelze beim eingestellten Füllgrad als Fläche
-  aus dem Raster gezogen (`js/part/surfacenets.js` auf dem Feld
-  max(Abstand, (Füllgrad − q)·Band)), das Bauteil durchscheinend. Der
-  Körper lässt sich als STL speichern.
-- **Zuletzt gefüllte Stellen** — die Innenzellen, deren Füllgrad keinen
-  größeren Nachbarn hat, als rote Kugeln (Anzahl einstellbar). Dort
-  sammelt sich die Luft; dort gehören die Überläufe hin, die der
-  Überlaufdesigner setzt.
+- **Füllgrad** — das Bauteil nach Füllgrad gefärbt (Turbo: früh blau, spät
+  rot; der Wert an der Oberfläche kommt aus den Innenzellen daneben). Was
+  über dem Regler **Füllgrad** liegt, bleibt grau: so wandert die Front mit
+  dem Regler über die Oberfläche. Die Skala steht unten rechts.
+- **Füllkörper** — die Schmelze beim eingestellten Füllgrad als Fläche aus
+  dem Raster gezogen (`js/part/surfacenets.js` auf dem Feld
+  max(Abstand, (Füllgrad − q)·Band)), das Bauteil durchscheinend.
+- **Bauteil** — nur das Bauteil und die Anschnitte.
 
-Dateien: **JSON** ist der Plan (`dielogic-fuellung`, Fassung 1: Anschnitte
-mit Ort, Normale, Drehung, Maßen und Anteil, dazu α).
+Dazu die **letzten Stellen**: die Innenzellen, deren Füllgrad keinen
+größeren Nachbarn hat, als rote Kugeln — der Regler sagt wie viele, 0 heißt
+keine. Dort sammelt sich die Luft; dort gehören die Überläufe hin, die der
+Überlaufdesigner setzt. „Deckkraft Bauteil" steht unter *Darstellung ▾*.
+
+Ein Anschnitt sitzt auf der Wand EINES Bauteils: ein neues Bauteil beginnt
+mit leerem Plan (α bleibt). Der bisherige Plan bleibt als **Entwurf** bei
+seinem Bauteil und wird beim nächsten Mal angeboten, nie still übernommen.
+
+- **Speichern** (JSON) — der Plan (`dielogic-fuellung`, Fassung 1:
+  Anschnitte mit Ort, Normale, Drehung, Maßen und Anteil, dazu α).
+- **Exportieren ▾ → Füllkörper als STL** — der Füllkörper beim eingestellten
+  Füllgrad.
 
 ## Der gemeinsame Rahmen (`js/studio/`)
 
 Alle Werkzeugseiten bekommen dasselbe Gerüst und denselben Ablauf.
-Wandstärken-, Entformungs- und Abstandsanalyse laufen schon darin, die übrigen ziehen
-nach (bis dahin tragen sie `css/viewer.css` und ihre eigene Seitenleiste).
+Die drei Analysen (Wandstärke, Entformung, Abstand), die vier Designer
+(Anguss, Überlauf, Temperierung, Füllabschätzung) und die beiden Simulationen
+(Anguss- und Kammerfüllung) laufen darin; Formaufbau und Werkbank ziehen nach
+(bis dahin tragen sie `css/viewer.css` und ihre eigene Seitenleiste).
 
 ```
 Kopfzeile     Werkzeug · Bauteil-Chip (Beispielteil, Datei öffnen) · ↶ ↷ ·
@@ -1599,7 +1807,8 @@ Seitenleiste  Reiter = MODI (links → rechts = Arbeitsfolge) · eine Zeile
               mit Fortschritt und Zustandszeile
 Viewport      Ansichtsleiste (X Y Z Iso · Einpassen · Persp/Parallel ·
               Darstellung ▾) · Aktions-Chips und Auswahlfeld oben links ·
-              Farbskala und Legende unten rechts · Hinweiszeile unten links
+              Farbskala und Legende unten rechts · unten links die
+              Hinweiszeile, darüber — wenn es etwas zu melden gibt — der Toast
 Hilfe         eine Lade von rechts, je Werkzeug ein Text mit Ankern (ⓘ)
 ```
 
@@ -1616,6 +1825,28 @@ Die Regeln, die der Rahmen durchsetzt — und die Tests, die sie halten:
   dem Finger und mit aufgeklappten Details): Kennzahlen, die selten
   interessieren, liegen in einem zugeklappten „Details", Erklärungen in
   der Hilfe. Nichts im Viewport überdeckt einander (`[data-dock]`).
+- **Setzen über dem Bild, Bearbeiten daneben.** Ein Designer setzt mit
+  *Chips* über dem Viewport (kurze Bezeichnung; ein Chip, der gerade nicht
+  geht, sagt beim Antippen warum) und bearbeitet die Auswahl im *Auswahlfeld*
+  daneben. Das Feld scrollt so wenig wie die Seitenleiste: viele Maße stehen
+  hinter einer *Reiterzeile* (`.st-grouptabs`, zuletzt „Details" mit den
+  abgeleiteten Zahlen), darunter nur die Zeilen der gewählten Gruppe.
+  Zugeklappte Kästen kosteten je Gruppe eine Zeile — bei 720 px Fensterhöhe
+  scrollte das Feld. **Entf** fragt nicht: ein Toast nennt, was weg ist, und
+  bietet „Rückgängig" (`host.toastUndo`). Der Toast gehört zu GENAU diesem
+  Schritt und verschwindet, sobald sich der Verlauf bewegt — sonst nähme sein
+  Knopf später einen ganz anderen Schritt zurück als den, von dem er spricht.
+  Was durch Rückgängig wiederkommt, ist gewählt. Ein Zug am Griff ist EIN
+  Schritt, ein Dreh am Regler auch (`history.coalesce`); ein bloßer Klick auf
+  einen Griff ist keiner. Beim **Zielen** (ein Chip, dann ein Klick aufs
+  Bauteil) steht der Hinweis in der Spalte oben links, und das Auswahlfeld
+  weicht auf seine Kopfzeile zurück — es läge sonst dort, wo man hinklicken
+  will.
+- **Einpassen** (F, Knopf, Doppelklick ins Leere) legt das Modell in den
+  FREIEN Teil des Bildes: neben das Auswahlfeld oder darunter, je nachdem, wo
+  mehr Platz ist, und nur so klein wie nötig. Was eingepasst wird, fragt der
+  Rahmen jedes Mal beim Werkzeug nach (`shell.setFitTarget`) — der Körper
+  eines Designers wächst.
 - **Plan oder Einstellungen.** Ein Designer hat einen *Plan*: jeder Schritt
   landet im Verlauf (`history.js`, Strg+Z/Y) und als Entwurf im Browser
   (`store.js`, je Werkzeug und Bauteil); ein Entwurf wird angeboten, nie
@@ -1636,8 +1867,13 @@ Die Regeln, die der Rahmen durchsetzt — und die Tests, die sie halten:
   125 % Skalierung (768 px), auf dem Tablett hochkant. Erst darunter ist sie
   eine Lade über dem Bild. ☰ in der Kopfzeile nimmt sie bei jeder Breite weg
   und holt sie wieder; ein Klick ins Bild schließt sie nicht. Passt die
-  Ansichtsleiste nicht in ein schmales Bild, bricht sie um. Unter 600 px
-  gestapelt: Bild, dann Felder.
+  Ansichtsleiste nicht in ein schmales Bild, bricht sie um — und Chips und
+  Auswahlfeld rücken dann UNTER sie. Wie weit, wird gemessen, nicht geraten
+  (`--bar-bottom`, ein `ResizeObserver` im Rahmen): die Leiste ist je nach
+  Schrift, Zeiger und Bildbreite ein- oder zweizeilig. In einem sehr schmalen
+  Bild weicht die Legende, solange etwas gewählt ist; in der Kopfzeile weicht
+  der Bauteilname, nie wird etwas überdeckt. Unter 600 px gestapelt: Bild,
+  dann Felder.
 - **Nichts wird abgeschnitten.** Die Seite hat keine eigene Schrift, sie
   nimmt die des Systems — und die ist je Browser verschieden breit (Firefox
   setzt hier Noto Sans, deutlich breiter als Chromiums Wahl). Reiter, die
@@ -1689,15 +1925,15 @@ js/handles.js         Griffe im Viewport: auswählen, in der Ebene ziehen, Pfeil
 js/ui/axes.js         das Achsenkreuz (SVG über dem Bild)
 js/vents/model.js     der Überlaufplan: Arten, Maße, Dreibein, Datei, Prüfregeln
 js/vents/geom.js      Prismen aus dem Plan: Steg, Bohne, Kanal, Waschbrett
-js/vents/app.js       Einstieg Überlaufdesigner
+js/vents/tool.js      Überlaufdesigner im Rahmen (dazu panel.js: Felder je Modus, help.js: Hilfetexte)
 js/cooling/model.js   der Temperierplan: Kühlstiche, Kanäle, Richtungen, Datei
 js/cooling/geom.js    Rotationskörper: Stich mit Halbkugelspitze, Kanal; Wandabstand aus dem Feld
 js/cooling/auto.js    Kühlstiche automatisch: gewichtete Überdeckung des Bauteils (k-center + k-means)
-js/cooling/app.js     Einstieg Temperierkanal-Designer
+js/cooling/tool.js    Temperierkanal-Designer im Rahmen (dazu panel.js: Felder je Modus, help.js: Hilfetexte)
 js/fill/model.js      der Füllplan: rechteckige Anschnitte, Dreibein, Anteile, Datei
 js/fill/solve.js      Frontausbreitung (Dijkstra, Dünnwand-Bremse, Anteile), Füllgrad, Füllkörper, letzte Stellen
 js/fill/geom.js       Anschnitte als flache Quader für die Anzeige
-js/fill/app.js        Einstieg Füllabschätzung
+js/fill/tool.js       Füllabschätzung im Rahmen (dazu panel.js: Felder je Modus, help.js: Hilfetexte)
 js/clipcaps.js        Schnittebene mit geschlossenen Schnittflächen (Stencil)
 js/die.js             Einstieg Formaufbau-Viewer
 js/ui/sidebar.js      Baugruppen-Schalter und Regler des Formaufbaus
@@ -1744,7 +1980,10 @@ js/runner/sizing.js   Querschnitte von den Anschnitten rückwärts abstufen
 js/runner/rules.js    gießtechnische Prüfregeln
 js/runner/chart.js    Flussschema als SVG
 js/runner/editor.js   Griffe im Viewport: auswählen, in der Ebene ziehen
-js/runner/app.js      Einstieg Angussdesigner
+js/runner/tool.js     Angussdesigner im Rahmen (dazu panel.js: Felder je Modus, help.js: Hilfetexte)
+js/simulation/        Angussfüllung (anguss.js) und Kammerfüllung (kammer.js) im Rahmen; core.js: Schalter, Lauf, Ergebnisse, Bild
+js/simulation/engines/ die Verfahren als Adapter: lbm.js (Gitter), sph.js (Partikel), env.js (WebGPU, Tempo, Zeitschätzung)
+js/lbm/, js/sph/      die Kerne: Lattice-Boltzmann und SPH, je auf der Grafikkarte (WGSL) und in JavaScript
 vendor/three/         three.module.js 0.160, OrbitControls, GLTFLoader/-Exporter, LICENSE (MIT)
 vendor/utils/         BufferGeometryUtils, TextureUtils (von den Loadern gebraucht)
 ```

@@ -1,6 +1,6 @@
 /* Schritt 3 — Füllung: die Front von den Anschnitten des Angusses.
 
-   Die Füllabschätzung (js/fill/app.js, js/fill/solve.js) mit einem
+   Die Füllabschätzung (js/fill/tool.js, js/fill/solve.js) mit einem
    Unterschied: die Anschnitte setzt hier niemand von Hand. Sie SIND die
    Mündungen des Angusssystems aus Schritt 2 — Ort und Richtung der
    Mündung, Breite und Höhe des Anschnitts, der Anteil am Strom aus der

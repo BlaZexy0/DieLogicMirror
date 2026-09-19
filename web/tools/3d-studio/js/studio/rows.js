@@ -47,11 +47,12 @@ export function selectRow({ ui, label, options = [], value, help = '' }) {
 /** Kennzahlen mit Urteil: ein Block, der später mit kpis() gefüllt wird. */
 export const kpiBlock = ui => '<div class="krows" data-ui="' + ui + '"></div>';
 
-/** Kennzahlen füllen: rows = [{ label, value, verdict: 'ok'|'warn'|'bad'|'', note }] */
+/** Kennzahlen füllen: rows = [{ label, value, verdict: 'ok'|'warn'|'bad'|'', note, help }]
+    — `help` hängt ein ⓘ an die Bezeichnung (der Rahmen öffnet die Hilfe dort). */
 export function kpis(el, rows) {
   if (!el) return;
   el.innerHTML = rows.map(r =>
-    '<div class="krow' + (r.verdict ? ' ' + r.verdict : '') + '"><span class="klbl">' + r.label + '</span>'
+    '<div class="krow' + (r.verdict ? ' ' + r.verdict : '') + '"><span class="klbl">' + r.label + info(r.help) + '</span>'
     + '<span class="kval">' + r.value + '</span>' + (r.note ? '<span class="knote">' + r.note + '</span>' : '') + '</div>').join('');
 }
 
@@ -68,8 +69,8 @@ export const warnLine = ui => '<div class="warn-line" data-ui="' + ui + '"></div
 /** Eine Zwischenüberschrift in der Seitenleiste. */
 export const heading = text => '<h2>' + text + '</h2>';
 
-/** Ein Hinweis in einer Zeile. */
-export const hintLine = text => '<div class="st-hintline">' + text + '</div>';
+/** Ein Hinweis in einer Zeile — mit `help` hängt ein ⓘ an, das die Hilfe dort öffnet. */
+export const hintLine = (text, help = '') => '<div class="st-hintline">' + text + info(help) + '</div>';
 
 /** Ein Knopf in Blockbreite (Sekundäraktion in der Seitenleiste). */
 export const blockButton = ({ ui, label, primary = false, title = '' }) =>

@@ -3,122 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Angussfüllung (SPH) · 3D-Studio · DieLogic</title>
-<meta name="description" content="Wie füllt sich der Anguss? Die Schmelze als Partikel (SPH) auf der Grafikkarte: der Pressrest voll, der Kolben schiebt mit der DieLogic-Schusskurve, und die Partikel laufen durch die Laufkanäle bis zu den Anschnitten — Ankunft je Anschnitt, Partikel zu jeder Zeit, nach Geschwindigkeit gefärbt.">
-<meta name="theme-color" content="#002733">
-<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
-<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<title>Angussfüllung · 3D-Studio · DieLogic</title>
+<meta name="robots" content="noindex">
+<!-- Die Partikelrechnung ist kein eigenes Werkzeug mehr, sondern ein Verfahren
+     der Angussfüllung: diese Adresse bleibt für alte Lesezeichen und leitet weiter. -->
+<meta http-equiv="refresh" content="0; url=angussfuellung.html?engine=sph">
+<link rel="canonical" href="angussfuellung.html">
 <link rel="stylesheet" href="/shared/shared.css">
-<link rel="stylesheet" href="css/viewer.css">
-<script src="/shared/version.js"></script>
-<script src="/shared/palette.js"></script>
-<script src="/shared/nav.js" data-footer="none"></script>
-<!-- Die Schusskurve der Auslegung: Maschine und Thermik aus dem Projekt. -->
-<script src="/shared/examples/machines.js"></script>
-<script src="/shared/examples/alloys.js"></script>
-<script src="/shared/examples/parts.js"></script>
-<script src="/shared/project.js"></script>
-<script type="importmap">
-  { "imports": { "three": "./vendor/three/three.module.js" } }
+<script>
+  /* Was an der Adresse hing (?demo=…), geht mit — das schafft die Meta-Weiterleitung nicht. */
+  (function () {
+    var q = new URLSearchParams(location.search);
+    q.set('engine', 'sph');
+    location.replace('angussfuellung.html?' + q.toString() + location.hash);
+  })();
 </script>
 </head>
-<body class="viewer designer angussfuellung-sph">
-
-<section class="page-hero compact">
-  <div class="inner">
-    <h1>Angussfüllung · Partikel</h1>
-    <p class="subtitle">Die Schmelze vom Pressrest bis zu den Anschnitten — als Partikel (SPH) statt als Gitter, auf der Grafikkarte, mit der DieLogic-Schusskurve. Die Gitterrechnung: <a href="angussfuellung.html">Angussfüllung</a>.</p>
-  </div>
-</section>
-
-<div class="layout">
-  <aside>
-    <h2>Angusssystem</h2>
-    <div class="row">
-      <span>Beispiel</span>
-      <select id="demo-select"></select>
-    </div>
-    <input type="file" id="json-input" accept=".json,application/json" hidden>
-    <button type="button" class="btn btn-outline block-btn" id="json-btn">Angussdatei (JSON) laden</button>
-    <div class="hint" id="graph-note"></div>
-    <div class="warn-line" id="graph-warn"></div>
-    <div class="facts" id="graph-facts"></div>
-
-    <h2>Prozess</h2>
-    <div class="row">
-      <span>Legierung</span>
-      <select id="alloy"></select>
-    </div>
-    <div class="row">
-      <span title="Gussvolumen einschließlich Überläufen — bestimmt die zweite Phase der Kurve.">Gussvolumen</span>
-      <input type="text" id="vol" inputmode="decimal" value="420" spellcheck="false">
-      <span class="val">cm³</span>
-    </div>
-    <div class="row">
-      <span title="Länge der Füllkammer; mit dem Pressrest-Ø als Kolben-Ø folgt daraus der Füllgrad und damit die erste Phase.">Füllkammerlänge</span>
-      <input type="text" id="chamber-len" inputmode="decimal" value="450" spellcheck="false">
-      <span class="val">mm</span>
-    </div>
-    <div class="facts" id="curve-facts"></div>
-    <div class="warn-line" id="curve-warn"></div>
-    <div class="hint">Die Rechnung beginnt bei „Kammer voll": die Schmelze steht im Pressrest, und der
-      Kolben schiebt mit der DieLogic-Kurve — erst v<sub>krit</sub>, dann die Rampe der zweiten
-      Phase. Maschine und Thermik kommen aus dem aktuellen Projekt.</div>
-
-    <h2>Simulation</h2>
-    <div class="row">
-      <span title="Abstand der Partikel im Pressrest und in der Säule des Zustroms. Ein Kanal braucht wenigstens vier Partikel über seine Tiefe, sonst klemmt die Front darin; enger heißt mehr Partikel und kleinere Zeitschritte.">Partikelabstand</span>
-      <input type="text" id="spacing" inputmode="decimal" value="3" spellcheck="false">
-      <span class="val">mm</span>
-    </div>
-    <div class="hint" id="grid-note"></div>
-    <div class="warn-line" id="engine-note"></div>
-    <button type="button" class="btn btn-primary block-btn" id="run">Simulieren</button>
-    <div class="run-note" id="run-note"></div>
-    <div class="facts" id="result-facts"></div>
-    <div class="hint">Schwach kompressible SPH: die Schmelze als Partikel mit Dichte und Druck (Tait),
-      künstlicher Zähigkeit und δ-Diffusion der Dichte; die Wände als Abstandsfeld, an dem die Partikel
-      gleiten (keine Haftung), der Kolben als Säule von Zustrompartikeln hinter dem Pressrest. Keine
-      Schwerkraft, keine Oberflächenspannung — eine <b>schnelle</b> Rechnung für Reihenfolge und Zeiten,
-      keine Gießsimulation. Die Ankunft steht neben der 1D-Rechnung und neben der Gitterrechnung.</div>
-
-    <h2>Darstellung</h2>
-    <div class="seg" id="show-seg">
-      <button type="button" data-value="schmelze" class="active" title="Die Partikel der Schmelze zur Zeit des Reglers, nach Geschwindigkeit gefärbt, der Anguss durchscheinend">Schmelze</button>
-      <button type="button" data-value="anguss" title="Nur Anguss und Pressrest">Anguss</button>
-    </div>
-    <div class="row disabled" id="t-row">
-      <span title="Zeit ab „Kammer voll" — die Front wandert mit dem Regler.">Zeit</span>
-      <input type="range" id="t-slider" min="0" max="0" step="1" value="0">
-      <span class="val" id="t-val"></span>
-    </div>
-    <button type="button" class="btn btn-outline block-btn" id="play" disabled>▶ Abspielen</button>
-    <div class="row">
-      <span>Deckkraft Anguss</span>
-      <input type="range" id="opacity" min="5" max="100" value="30">
-      <span class="val" id="opacity-val"></span>
-    </div>
-  </aside>
-
-  <div id="viewport">
-    <div id="status">
-      <b>Leer</b>: drehen &nbsp;·&nbsp; <b>rechts</b>: verschieben &nbsp;·&nbsp; <b>Rad</b>: zoomen &nbsp;·&nbsp;
-      Angussdatei hier ablegen
-    </div>
-    <div class="drop-hint">Angussdatei (JSON) hier ablegen</div>
-    <div class="colorbar" id="colorbar">
-      <div class="cb-title" id="cb-title"></div>
-      <div class="cb-body">
-        <div class="cb-scale" id="cb-scale"></div>
-        <div class="cb-ticks" id="cb-ticks"></div>
-      </div>
-      <div class="cb-extra" id="cb-extra"></div>
-    </div>
-    <div id="busy"></div>
-  </div>
-</div>
-
-<script type="module" src="js/sph/app.js"></script>
+<body>
+<p style="font-family: system-ui, sans-serif; margin: 2rem;">Die Angussfüllung mit Partikeln ist jetzt ein Verfahren der Angussfüllung:
+<a href="angussfuellung.html?engine=sph">weiter zur Angussfüllung (Partikel)</a>.</p>
 </body>
 </html>

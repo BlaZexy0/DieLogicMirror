@@ -21,8 +21,13 @@ export function createViewport(container, sceneOpts = {}) {
   const setClearRect = fn => { clearRectFn = fn; };
 
   let lastBox = null;
+  let fitTargetFn = null;
+  /** Das Ziel des Einpassens als Funktion: ohne Angabe (F, Knopf, Doppelklick)
+      wird gefragt, was JETZT im Bild steht — ein gemerkter Quader wäre bei
+      einem Designer, dessen Körper wächst, der von vorhin. */
+  const setFitTarget = fn => { fitTargetFn = fn; };
   function fit(boxOrObject, margin = 1.25) {
-    const target = boxOrObject || lastBox;
+    const target = boxOrObject || (fitTargetFn && fitTargetFn()) || lastBox;
     if (!target) return null;
     const box = target.isBox3 ? target : new T.Box3().setFromObject(target);
     if (box.isEmpty()) return null;
@@ -36,13 +41,35 @@ export function createViewport(container, sceneOpts = {}) {
          und Ziel um den Versatz der Mitten verschieben (in Weltmaß am
          Ziel) und den Abstand so vergrößern, dass es hineinpasst. */
       const cam = view.camera, ctl = view.controls;
-      const scale = Math.max(w / Math.max(clear.width, 1), h / Math.max(clear.height, 1));
+      /* Wie viel kleiner muss das Modell werden? Maß ist, was das MODELL im
+         Bild belegt, nicht das Verhältnis der Rechtecke: ein flaches, breites
+         Modell in einem hochkant stehenden Bild ist durch die BREITE begrenzt —
+         steht das freie Rechteck unter dem Auswahlfeld und ist so breit wie
+         das Bild, muss gar nichts schrumpfen. Mit dem Verhältnis der Höhen
+         gerechnet, wurde es dort auf ein Drittel verkleinert. Nie größer als
+         ohne Aufsätze (scale ≥ 1): sonst spränge das Bild beim Wählen. */
+      cam.updateMatrixWorld(true);
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      const corner = new T.Vector3();
+      for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
+        corner.set(x, y, z).project(cam);
+        x0 = Math.min(x0, corner.x); x1 = Math.max(x1, corner.x);
+        y0 = Math.min(y0, corner.y); y1 = Math.max(y1, corner.y);
+      }
+      const pw = (x1 - x0) / 2 * w * margin, ph = (y1 - y0) / 2 * h * margin;   // belegte Bildpunkte samt Rand
+      const byRect = Math.max(w / Math.max(clear.width, 1), h / Math.max(clear.height, 1));
+      const byModel = Math.max(pw / Math.max(clear.width, 1), ph / Math.max(clear.height, 1));
+      const scale = Number.isFinite(byModel) && byModel > 0 ? Math.min(byRect, Math.max(1, byModel)) : byRect;
       const cx = clear.left + clear.width / 2, cy = clear.top + clear.height / 2;
       const dx = (cx - w / 2), dy = (cy - h / 2);
       if (cam.isOrthographicCamera) cam.zoom = cam.zoom / scale;
       else {
         const dir = cam.position.clone().sub(ctl.target);
-        cam.position.copy(ctl.target).addScaledVector(dir.normalize(), dir.length() * scale);
+        /* Erst die Länge, DANN normieren: normalize() ändert dir selbst — in
+           einem Ausdruck stand die Länge schon auf 1, und die Kamera landete
+           `scale` Millimeter vor dem Ziel (Einpassen mit offenem Auswahlfeld). */
+        const dist = dir.length();
+        cam.position.copy(ctl.target).addScaledVector(dir.normalize(), dist * scale);
       }
       cam.updateProjectionMatrix();
       /* Weltmaß je Bildpunkt in der Zielebene. */
@@ -67,5 +94,5 @@ export function createViewport(container, sceneOpts = {}) {
   /* Doppelklick ins Leere: einpassen. */
   view.renderer.domElement.addEventListener('dblclick', () => fit());
 
-  return { view, fit, setClearRect, container, invalidate: view.invalidate };
+  return { view, fit, setClearRect, setFitTarget, container, invalidate: view.invalidate };
 }

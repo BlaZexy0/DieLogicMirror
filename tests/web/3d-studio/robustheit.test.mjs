@@ -284,14 +284,25 @@ test('Lesefehler und fehlende GLB-Knoten melden sich', () => {
 
 /* ── Der gemeinsame Rahmen (js/studio/) ───────────────────────────────── */
 
-/* Die Module des Rahmens und die Werkzeuge darin (Ordner mit tool.js und
-   panel.js). */
+/* Die Module des Rahmens und die OBERFLÄCHE der Werkzeuge darin: je Ordner
+   mit tool.js und panel.js genau diese beiden und help.js. Im selben Ordner
+   liegen bei den Designern auch die Fachmodule (graph.js, model.js, geom.js …),
+   und die runden beim Schreiben ihrer Dateien mit +x.toFixed(4) — das ist
+   Arithmetik, keine Anzeige, und js/runner/graph.js bleibt ohnehin unberührt. */
+const SURFACE = ['tool.js', 'panel.js', 'help.js'];
 function shellSources() {
   const js = resolve(ROOT, 'js');
   const out = [];
   const take = dir => { for (const f of readdirSync(dir, { withFileTypes: true })) { const p = join(dir, f.name); if (f.isDirectory()) take(p); else if (f.name.endsWith('.js')) out.push(p); } };
   take(join(js, 'studio'));
-  for (const d of readdirSync(js)) if (existsSync(join(js, d, 'tool.js')) && existsSync(join(js, d, 'panel.js'))) take(join(js, d));
+  for (const d of readdirSync(js)) {
+    if (!existsSync(join(js, d, 'tool.js')) || !existsSync(join(js, d, 'panel.js'))) continue;
+    for (const f of SURFACE) if (existsSync(join(js, d, f))) out.push(join(js, d, f));
+  }
+  /* Die beiden Simulationen (js/simulation/) sind ganz Oberfläche — auch die
+     Adapter schreiben Text (die Kostenzeile „grob 2 min"); ihre Felder heißen
+     anguss-panel.js, kammer-panel.js, panel-common.js. */
+  take(join(js, 'simulation'));
   return out;
 }
 
@@ -306,8 +317,8 @@ test('Rahmen: Zahlen gehen durch format.js — kein toFixed in der Oberfläche',
 });
 
 test('Rahmen: Erklärungen stehen in der Hilfe (ⓘ, data-help), nicht in einem title der Felder', () => {
-  const panels = shellSources().filter(f => f.endsWith('panel.js'));
-  assert.ok(panels.length >= 1);
+  const panels = shellSources().filter(f => /panel[^/]*\.js$/.test(f));
+  assert.ok(panels.some(f => f.endsWith('panel-common.js')) && panels.some(f => f.endsWith('kammer-panel.js')), 'auch die Felder der Simulationen: ' + panels.length);
   const hits = [];
   for (const f of panels) {
     readFileSync(f, 'utf8').split('\n').forEach((line, i) => { if (/\btitle\s*[:=]/.test(line)) hits.push(f.slice(ROOT.length + 1) + ':' + (i + 1)); });

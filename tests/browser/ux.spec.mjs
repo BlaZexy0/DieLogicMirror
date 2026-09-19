@@ -14,6 +14,10 @@
    Rechnung lässt sich abbrechen, Einstellungen kommen nach dem Neuladen
    zurück, die Hilfe öffnet an ihrem Anker, „Speichern" liefert eine Datei,
    und unter dem Finger sind die Ziele 44 px groß.
+   Ein DESIGNER (art: 'plan') hat statt Einstellungen einen Plan: der wird
+   nie still übernommen, sondern als Entwurf angeboten; die Seite fragt,
+   bevor er verloren geht; Entf fragt nicht und lässt sich zurücknehmen —
+   und sein Auswahlfeld scrollt so wenig wie die Seitenleiste.
 
    Eine Seite, die in den Rahmen umzieht, kommt in SEITEN dazu. */
 
@@ -27,6 +31,30 @@ const feld = async (page, s, zelle) => {
   await page.evaluate(h => window[h].shell.setMode('feld'), s.hook);
   await page.fill('[data-ui="cell"]', zelle);
   await page.press('[data-ui="cell"]', 'Enter');
+};
+/* Designer: ein Chip, dann ein echter Klick aufs Bauteil — rechts der Mitte,
+   wo weder Auswahlfeld noch Legende liegen. */
+const setzen = async (page, s, chip) => {
+  const vorher = await zustand(page, s, s.plan.anzahl);
+  await page.click('[data-chip="' + chip + '"]');
+  const c = await page.locator('#viewport canvas').boundingBox();
+  await page.mouse.click(c.x + c.width * 0.6, c.y + c.height * 0.5);
+  await expect.poll(() => zustand(page, s, s.plan.anzahl), { message: 'der Klick aufs Bauteil setzt ein Element' }).toBe(vorher + 1);
+};
+/* Angussdesigner: gewählt wird mit einem ECHTEN Klick auf den Griff — er liegt
+   dort, wohin die Kamera ihn projiziert. */
+const griffKlick = async (page, s, wahl) => {
+  const at = await page.evaluate(([h, f]) => {
+    const v = window[h];
+    const id = new Function('v', 'return (' + f + ')(v)')(v);
+    const m = v.editor.group.children.find(c => c.userData && c.userData.id === id);
+    v.view.camera.updateMatrixWorld(true);
+    const q = m.position.clone().project(v.view.camera);
+    const r = v.view.renderer.domElement.getBoundingClientRect();
+    return { id, x: r.left + (q.x + 1) / 2 * r.width, y: r.top + (1 - q.y) / 2 * r.height };
+  }, [s.hook, wahl.toString()]);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => zustand(page, s, v => v.editor.selected), { message: 'der Klick auf den Griff wählt ' + at.id }).toBe(at.id);
 };
 const SEITEN = [
   {
@@ -78,6 +106,129 @@ const SEITEN = [
       gemerkt: doc => doc.color === 'both',
       wert: page => page.evaluate(() => document.querySelector('[data-ui="color-seg"] button.active').dataset.value), soll: 'both'
     }
+  },
+  {
+    page: 'ueberlauf.html', query: '', hook: '__ueberlauf', datei: /-ueberlauf\.json$/, art: 'plan',
+    /* Ein Waschbrett (die Art mit den meisten Maßen) per Chip und Klick aufs Bauteil — gewählt bleibt es. */
+    ergebnis: (page, s) => setzen(page, s, 'waschbrett'),
+    plan: { aendern: (page, s) => setzen(page, s, 'bohne'), anzahl: v => Object.keys(v.state.plan.items).length }
+  },
+  {
+    /* ?demo=oelwanne: das Beispiel bringt sein Bauteil mit — so misst die Spec auch das Einpassen (partMesh). */
+    page: 'anguss.html', query: '?demo=oelwanne', hook: '__anguss', datei: /-anguss\.json$/, art: 'plan',
+    /* Ein Anschnitt hat die meisten Gruppen im Auswahlfeld (Lage · Querschnitt · Anschnitt · Mündung · Details). */
+    ergebnis: (page, s) => griffKlick(page, s, v => Object.values(v.state.graph.nodes).find(n => n.type === 'gate' && !n.follower).id),
+    plan: {
+      /* Ersten Punkt hinter dem Pressrest wählen, „Davor einfügen": EIN Punkt mehr
+         (vor der Spiegelung — dahinter kämen zwei); er ist gewählt, Entf träfe ihn. */
+      aendern: async (page, s) => {
+        const vorher = await zustand(page, s, s.plan.anzahl);
+        await griffKlick(page, s, v => v.state.graph.nodes[v.state.graph.rootId].children[0]);
+        await page.click('[data-chip="insert-point"]');
+        await expect.poll(() => zustand(page, s, s.plan.anzahl)).toBe(vorher + 1);
+      },
+      anzahl: v => Object.keys(v.state.graph.nodes).length
+    }
+  },
+  {
+    page: 'temperier.html', query: '', hook: '__temperier', datei: /-temperier\.json$/, art: 'plan',
+    /* Der vollste Stand, mit echter Eingabe: ein Kanal per Chip und zwei Klicks, die Automatik über den
+       Hauptknopf, ein eigener Mindest-Wandabstand, der die Liste der Prüfung füllt — zuletzt ein Kühlstich
+       per Chip und Klick, der gewählt bleibt (sein Auswahlfeld hat die Reiter Maße · Details). */
+    ergebnis: async (page, s) => {
+      const c = await page.locator('#viewport canvas').boundingBox();
+      await page.click('[data-chip="kanal"]');
+      await page.mouse.click(c.x + c.width * 0.5, c.y + c.height * 0.45);
+      await page.mouse.click(c.x + c.width * 0.62, c.y + c.height * 0.58);
+      await expect.poll(() => zustand(page, s, s.plan.anzahl), { message: 'zwei Klicks setzen einen Kanal' }).toBe(1);
+      await page.click('[data-ui="tabs"] [data-mode="setzen"]');
+      await page.click('[data-ui="primary"]');
+      await expect.poll(() => zustand(page, s, s.plan.anzahl), { message: 'die Automatik setzt acht Kühlstiche' }).toBe(9);
+      await page.click('[data-ui="tabs"] [data-mode="flaeche"]');
+      await page.click('[data-ui="min-wall-auto"]');
+      await page.fill('[data-ui="min-wall"]', '14');
+      await page.press('[data-ui="min-wall"]', 'Enter');
+      await expect.poll(() => zustand(page, s, v => v.offenders().length), { message: 'unter 14 mm stehen die meisten' }).toBeGreaterThan(5);
+      await setzen(page, s, 'stich');
+    },
+    /* Eine feinere Zellkante rastert das Feld neu: bei 2,5 mm rund 17 s — lang genug zum Abbrechen und
+       kurz genug, dass es von selbst beginnt (über 20 s wartet die Seite auf den Knopf). */
+    lang: async page => {
+      await page.click('[data-ui="tabs"] [data-mode="flaeche"]');
+      await page.fill('[data-ui="cell"]', '2,5');
+      await page.press('[data-ui="cell"]', 'Enter');
+    },
+    nachAbbruch: { offen: v => v.state.stale === true && v.state.field.h > 3.5 && v.state.shellDist === 20, knopf: 'Abstandsfläche berechnen' },
+    plan: { aendern: (page, s) => setzen(page, s, 'stich'), anzahl: v => Object.keys(v.state.plan.items).length }
+  },
+  {
+    page: 'fuellung.html', query: '', hook: '__fuellung', datei: /-fuellung\.json$/, art: 'plan',
+    /* Ein Anschnitt per Chip und Klick aufs Bauteil (gewählt bleibt er), dann im
+       Reiter „Füllung" rechnen — bis das Ergebnis steht (die Seite geht dabei von
+       selbst zum Ergebnis). */
+    ergebnis: async (page, s) => {
+      await setzen(page, s, 'anschnitt');
+      await page.click('[data-ui="tabs"] [data-mode="fuellung"]');
+      await page.click('[data-ui="primary"]');
+      await page.waitForFunction(h => { const st = window[h].state; return st.result && !st.running && !st.stale; }, s.hook, { timeout: 120_000 });
+    },
+    /* Eine feine Zellkante macht schon das Rastern lang genug zum Abbrechen. */
+    lang: async (page, s) => {
+      await setzen(page, s, 'anschnitt');
+      await page.click('[data-ui="tabs"] [data-mode="fuellung"]');
+      await page.fill('[data-ui="cell"]', '1');
+      await page.press('[data-ui="cell"]', 'Enter');
+      await page.click('[data-ui="primary"]');
+    },
+    nachAbbruch: { offen: v => v.state.result === null, knopf: 'Rechnen' },
+    plan: { aendern: (page, s) => setzen(page, s, 'anschnitt'), anzahl: v => Object.keys(v.state.plan.items).length }
+  },
+  {
+    page: 'angussfuellung.html', query: '', hook: '__angussfuellung', datei: /-angussfuellung\.json$/,
+    /* Beide Verfahren mit echten Klicks. Ohne WebGPU rechnet JavaScript;
+       state.tMax (der Testgriff) kürzt die Laufzeit auf 12 ms. */
+    ergebnis: async (page, s) => {
+      await page.evaluate(h => { window[h].state.tMax = 0.012; }, s.hook);
+      for (const [engine, zelle] of [['lbm', '6'], ['sph', '8']]) {
+        await page.click('[data-ui="tabs"] [role="tab"][data-mode="simulation"]');
+        await page.click(`[data-ui="engine-seg"] button[data-value="${engine}"]`);
+        await page.fill('[data-ui="cell"]', zelle);
+        await page.press('[data-ui="cell"]', 'Enter');
+        await page.click('[data-ui="primary"]');
+        await page.waitForFunction(([h, e]) => window[h].state.results[e] && !window[h].state.running, [s.hook, engine], { timeout: 180_000 });
+      }
+    },
+    /* Der Vorschlag ohne WebGPU rechnet Minuten — lang genug zum Abbrechen. */
+    lang: async page => { await page.click('[data-ui="tabs"] [role="tab"][data-mode="simulation"]'); await page.click('[data-ui="primary"]'); },
+    nachAbbruch: { offen: v => v.state.result === null, knopf: 'Simulieren' },
+    merken: {
+      setzen: async page => { await page.click('[data-ui="tabs"] [role="tab"][data-mode="simulation"]'); await page.click('[data-ui="engine-seg"] button[data-value="sph"]'); },
+      gemerkt: doc => doc.engine === 'sph',
+      wert: page => page.evaluate(() => document.querySelector('[data-ui="engine-seg"] button.active').dataset.value), soll: 'sph'
+    }
+  },
+  {
+    page: 'kammerfuellung.html', query: '', hook: '__kammerfuellung', datei: /-kammerfuellung\.json$/,
+    ergebnis: async (page, s) => {
+      const tab = m => page.click(`[data-ui="tabs"] [role="tab"][data-mode="${m}"]`);
+      const tippen = async (n, w) => { await page.fill(`[data-ui="${n}"]`, w); await page.press(`[data-ui="${n}"]`, 'Enter'); };
+      await tab('kammer'); await tippen('sl-d', '40'); await tippen('sl-len', '120');
+      await tab('kurve'); await page.click('[data-ui="curve-seg"] button[data-value="v1v2"]');
+      for (const engine of ['lbm', 'sph']) {
+        await tab('simulation');
+        await page.click(`[data-ui="engine-seg"] button[data-value="${engine}"]`);
+        await tippen('cell', '5');
+        await page.click('[data-ui="primary"]');
+        await page.waitForFunction(([h, e]) => window[h].state.results[e] && !window[h].state.running, [s.hook, engine], { timeout: 120_000 });
+      }
+    },
+    lang: async page => { await page.click('[data-ui="tabs"] [role="tab"][data-mode="simulation"]'); await page.click('[data-ui="primary"]'); },
+    nachAbbruch: { offen: v => v.state.result === null, knopf: 'Simulieren' },
+    merken: {
+      setzen: async page => { await page.click('[data-ui="tabs"] [role="tab"][data-mode="kurve"]'); await page.click('[data-ui="curve-seg"] button[data-value="v1v2"]'); },
+      gemerkt: doc => doc.curveMode === 'v1v2',
+      wert: page => page.evaluate(() => document.querySelector('[data-ui="curve-seg"] button.active').dataset.value), soll: 'v1v2'
+    }
   }
 ];
 /* 1280 × 720 und 1024 × 768 sind die Maße des Plans; 960 × 1000 ist das
@@ -108,7 +259,7 @@ const messen = page => page.evaluate(() => {
     return r.width > 0 && r.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0.01;
   };
   const docks = [...document.querySelectorAll('[data-dock]')]
-    .filter(e => !['tl', 'br'].includes(e.dataset.dock) && sichtbar(e) && (e.textContent.trim() || e.children.length));
+    .filter(e => !['tl', 'br', 'bl'].includes(e.dataset.dock) && sichtbar(e) && (e.textContent.trim() || e.children.length));
   const ueber = [];
   for (let i = 0; i < docks.length; i++) for (let j = i + 1; j < docks.length; j++) {
     const a = docks[i].getBoundingClientRect(), b = docks[j].getBoundingClientRect();
@@ -136,7 +287,9 @@ const messen = page => page.evaluate(() => {
     }
   }
   if (body.scrollWidth > body.clientWidth + 1) knapp.push('Seitenleiste läuft seitlich über (' + body.scrollWidth + ' > ' + body.clientWidth + ')');
+  const feld = q('inspector-body');
   return {
+    feld: feld && sichtbar(feld) ? feld.scrollHeight - feld.clientHeight : 0,
     body: body.scrollHeight - body.clientHeight, panel: panel.scrollHeight - panel.clientHeight,
     seite: document.documentElement.scrollHeight - innerHeight, ueber, knapp
   };
@@ -150,7 +303,7 @@ for (const s of SEITEN) {
       const errors = watch(page);
       await page.goto(url(s));
       await ready(page, s.hook);
-      const modi = await page.evaluate(() => [...document.querySelectorAll('[role="tab"]')].map(b => b.dataset.mode));
+      const modi = await page.evaluate(() => [...document.querySelectorAll('[data-ui="tabs"] [role="tab"]')].map(b => b.dataset.mode));
       expect(modi.length).toBeGreaterThan(1);
 
       const pruefen = async wann => {
@@ -161,6 +314,7 @@ for (const s of SEITEN) {
           const r = await messen(page);
           expect(r.body, `${m} (${wann}): Inhalt der Seitenleiste läuft über`).toBeLessThanOrEqual(0);
           expect(r.panel, `${m} (${wann}): Seitenleiste läuft über`).toBeLessThanOrEqual(0);
+          expect(r.feld, `${m} (${wann}): das Auswahlfeld scrollt`).toBeLessThanOrEqual(0);
           expect(r.seite, `${m} (${wann}): die Seite selbst scrollt`).toBeLessThanOrEqual(0);
           expect(r.ueber, `${m} (${wann}): Aufsätze überdecken sich`).toEqual([]);
           expect(r.knapp, `${m} (${wann}): abgeschnitten`).toEqual([]);
@@ -186,11 +340,21 @@ for (const s of SEITEN) {
       expect(rand, 'das Modell ragt aus dem Bild').toBeLessThanOrEqual(1.0);
       await s.ergebnis(page, s);
       await pruefen('mit Ergebnis');
+      /* Das Auswahlfeld eines Designers: jede seiner Gruppen einmal aufgeklappt. */
+      const schalter = '[data-ui="inspector"]:not([hidden]) :is([data-group-tab], details > summary)';
+      const gruppen = await page.locator(schalter).count();
+      for (let i = 0; i < gruppen; i++) {
+        await page.locator(schalter).nth(i).click();
+        const r = await messen(page);
+        expect(r.feld, `Auswahlfeld, Gruppe ${i + 1}: scrollt`).toBeLessThanOrEqual(0);
+        expect(r.ueber, `Auswahlfeld, Gruppe ${i + 1}: Aufsätze überdecken sich`).toEqual([]);
+        expect(r.knapp, `Auswahlfeld, Gruppe ${i + 1}: abgeschnitten`).toEqual([]);
+      }
       expect(errors).toEqual([]);
     });
   }
 
-  test(`${s.page}: eine laufende Rechnung lässt sich abbrechen`, async ({ page }) => {
+  if (s.lang) test(`${s.page}: eine laufende Rechnung lässt sich abbrechen`, async ({ page }) => {
     const errors = watch(page);
     await page.goto(url(s));
     await ready(page, s.hook);
@@ -206,7 +370,7 @@ for (const s of SEITEN) {
     expect(errors).toEqual([]);
   });
 
-  test(`${s.page}: Einstellungen kommen nach dem Neuladen zurück — und lassen sich zurücksetzen`, async ({ page }) => {
+  if (s.merken) test(`${s.page}: Einstellungen kommen nach dem Neuladen zurück — und lassen sich zurücksetzen`, async ({ page }) => {
     await page.goto(url(s));
     await ready(page, s.hook);
     const vorgabe = await s.merken.wert(page);          // was die Seite von sich aus vorschlägt
@@ -227,6 +391,51 @@ for (const s of SEITEN) {
     await toast.locator('.st-toast-act').click();
     expect(await s.merken.wert(page)).toBe(vorgabe);
     expect(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('studio:')))).toEqual([]);
+  });
+
+  if (s.plan) test(`${s.page}: der Plan wird als Entwurf angeboten, nie still übernommen; Entf fragt nicht, Strg+Z holt zurück`, async ({ page }) => {
+    const errors = watch(page);
+    await page.goto(url(s));
+    await ready(page, s.hook);
+    const leer = await zustand(page, s, s.plan.anzahl);
+    await expect(page.locator('[data-ui="undo"]')).toBeDisabled();
+    await s.plan.aendern(page, s);
+    await expect(page.locator('[data-ui="undo"]')).toBeEnabled();
+    await expect(page.locator('[data-ui="save"]')).toHaveClass(/dirty/);
+    await page.waitForFunction(() => Object.keys(localStorage).some(k => k.startsWith('studio:')), null, { timeout: 8_000 });
+
+    /* Verlassen mit ungespeichertem Plan: die Seite fragt. */
+    let gefragt = '';
+    page.on('dialog', d => { gefragt = d.type(); d.accept(); });
+    await page.reload();
+    await ready(page, s.hook);
+    expect(gefragt, 'beim Verlassen wird gefragt').toBe('beforeunload');
+    expect(await zustand(page, s, s.plan.anzahl), 'der Entwurf wird NICHT still übernommen').toBe(leer);
+    const streifen = page.locator('[data-ui="banner"]');
+    await expect(streifen).toBeVisible();
+    await expect(streifen).toContainText('Entwurf');
+    expect((await messen(page)).body, 'auch mit dem Streifen scrollt die Seitenleiste nicht').toBeLessThanOrEqual(0);
+    await streifen.getByRole('button', { name: 'Wiederherstellen' }).click();
+    await expect.poll(() => zustand(page, s, s.plan.anzahl)).toBe(leer + 1);
+    await expect(streifen).toBeHidden();
+
+    /* Entf: ohne Nachfrage weg, der Toast bietet den Rückweg, Strg+Z geht ihn auch. */
+    await s.plan.aendern(page, s);
+    const voll = await zustand(page, s, s.plan.anzahl);
+    const c = await page.locator('#viewport canvas').boundingBox();
+    await page.mouse.move(c.x + c.width - 24, c.y + c.height * 0.5);
+    await page.keyboard.press('Delete');
+    await expect.poll(() => zustand(page, s, s.plan.anzahl)).toBe(voll - 1);
+    const toast = page.locator('[data-ui="toast"]');
+    await expect(toast).toBeVisible();
+    await expect(toast).toContainText('entfernt');
+    expect((await messen(page)).ueber, 'der Toast überdeckt nichts').toEqual([]);
+    await page.keyboard.press('Control+z');
+    await expect.poll(() => zustand(page, s, s.plan.anzahl)).toBe(voll);
+    await page.keyboard.press('Delete');
+    await toast.locator('.st-toast-act').click();
+    await expect.poll(() => zustand(page, s, s.plan.anzahl), { message: '„Rückgängig" im Toast' }).toBe(voll);
+    expect(errors).toEqual([]);
   });
 
   test(`${s.page}: die Hilfe öffnet an ihrem Anker, Escape schließt sie; Speichern liefert eine Datei`, async ({ page }) => {
@@ -315,7 +524,7 @@ test.describe('grober Zeiger', () => {
       await ready(page, s.hook);
       expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'die Emulation meldet einen groben Zeiger').toBe(true);
       await s.ergebnis(page, s);
-      const modi = await page.evaluate(() => [...document.querySelectorAll('[role="tab"]')].map(b => b.dataset.mode));
+      const modi = await page.evaluate(() => [...document.querySelectorAll('[data-ui="tabs"] [role="tab"]')].map(b => b.dataset.mode));
       const klein = [];
       for (const m of modi) {
         await page.evaluate(([hk, id]) => window[hk].shell.setMode(id), [s.hook, m]);

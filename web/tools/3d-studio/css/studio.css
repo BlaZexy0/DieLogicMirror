@@ -61,9 +61,9 @@ body.studio { display: flex; flex-direction: column; height: 100vh; overflow: hi
 .st-bar .btn-sm.dirty:hover { background: var(--primary2); }
 
 /* Der Bauteil-Chip und seine Klappe. */
-.st-part { position: relative; min-width: 0; }
+.st-part { position: relative; min-width: 0; flex: 0 1 auto; display: flex; }
 .st-chip {
-  display: inline-flex; align-items: center; gap: 6px; max-width: 46vw;
+  display: inline-flex; align-items: center; gap: 6px; max-width: min(46vw, 100%); min-width: 0;
   padding: 5px 10px; border: 1px solid rgba(255,255,255,.28); border-radius: 20px;
   background: rgba(255,255,255,.08); color: #fff; cursor: pointer; font-family: var(--sans); font-size: .8rem;
 }
@@ -277,13 +277,26 @@ select { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--bo
 .st-list-row .val { font-family: var(--mono); font-size: .76rem; color: var(--muted); white-space: nowrap; }
 .st-list-row.warn .val { color: var(--note-text); }
 .st-list-row.bad .val { color: var(--bad); }
+/* Allgemein: eine Listenzeile, die ein <button> ist, zeichnet der Browser
+   sonst grau und mittig — Firefox wie Chromium. studio.css setzt Rand und
+   Abstand, aber weder Grund noch Ausrichtung. */
+button.st-list-row { background: transparent; color: var(--text); font-family: inherit; text-align: left; width: 100%; }
+button.st-list-row:hover { background: var(--surface2); }
+button.st-list-row.active { background: var(--pale); }
 
 /* ── Viewport ──────────────────────────────────────────────── */
 .st-viewport { position: relative; overflow: hidden; background: var(--bg); min-width: 0; container-type: inline-size; }
 .st-viewport canvas { display: block; }
+/* Unten links: die Hinweiszeile, darüber — wenn es etwas zu melden gibt — der
+   Toast. Eine Spalte, damit sich beide nie überdecken; rechts daneben bleibt
+   die Spalte von Legende und Farbskala frei. */
+.st-dock-bl {
+  position: absolute; left: 12px; bottom: 10px; z-index: 9; max-width: calc(100% - 330px);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px; pointer-events: none;
+}
+.st-dock-bl > * { pointer-events: auto; }
 .st-status, #status {
-  position: absolute; left: 12px; bottom: 10px; padding: 6px 11px; max-width: calc(100% - 330px);
-  background: rgba(255,255,255,.88); border: 1px solid var(--border-light);
+  padding: 6px 11px; background: rgba(255,255,255,.88); border: 1px solid var(--border-light);
   border-radius: 7px; color: var(--muted); pointer-events: none; font-size: .74rem; line-height: 1.4;
 }
 #status:empty { display: none; }
@@ -335,12 +348,27 @@ select { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--bo
   .st-intro-long { display: none; }
   .st-intro-short { display: inline; }
   /* Neben der Legende (bis gut 220 px breit) bleibt der Hinweiszeile der Rest. */
-  #status { max-width: calc(100% - 256px); }
+  .st-dock-bl { max-width: calc(100% - 256px); }
 }
 .view-pop ~ .axis-gizmo, .st-viewport:has(.view-pop:not([hidden])) .axis-gizmo { opacity: .35; }
 
-/* Oben links: Chips und Auswahlfeld in einer Spalte. */
-.st-dock-tl { position: absolute; left: 12px; top: 12px; z-index: 3; display: flex; flex-direction: column; gap: 8px; max-height: calc(100% - 70px); max-width: calc(100% - 340px); pointer-events: none; }
+/* Oben links: Chips und Auswahlfeld in einer Spalte. Neben der Ansichtsleiste
+   (gut 540 px) bleibt den Chips der Rest der Zeile — reicht er nicht, brechen
+   sie um. In einem schmalen Bild (gemessen am Bild, nicht am Fenster) passt
+   beides nicht mehr nebeneinander: die Spalte rückt UNTER die Leiste, und
+   dort, wo die Leiste selbst zweizeilig wird, noch eine Zeile tiefer. */
+.st-dock-tl {
+  --tl-top: 12px;
+  position: absolute; left: 12px; top: var(--tl-top); z-index: 3; display: flex; flex-direction: column; gap: 8px;
+  max-height: calc(100% - var(--tl-top) - 58px); max-width: max(300px, calc(100% - 580px)); pointer-events: none;
+}
+@container (max-width: 899px) { .st-dock-tl { --tl-top: var(--bar-bottom, 56px); max-width: calc(100% - 104px); } }
+@container (max-width: 590px) {
+  .st-dock-tl { --tl-top: var(--bar-bottom, 96px); }
+  /* Auswahlfeld und Legende teilen sich kein 450 px breites Bild: solange
+     etwas gewählt ist, weicht die Legende. */
+  .st-viewport:has(.st-inspector:not([hidden])) .pt-legend { display: none; }
+}
 .st-dock-tl > * { pointer-events: auto; }
 .st-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .st-chipbtn {
@@ -355,7 +383,7 @@ select { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--bo
 .st-chipbtn.off:hover { border-color: var(--border); color: var(--muted); cursor: help; }
 .st-chip-icon { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(0,39,51,.25); }
 .st-inspector {
-  width: var(--st-inspector); max-height: 60vh; display: flex; flex-direction: column; min-height: 0;
+  width: var(--st-inspector); max-width: 100%; flex: 0 1 auto; display: flex; flex-direction: column; min-height: 0;
   background: rgba(255,255,255,.95); border: 1px solid var(--border-light); border-radius: var(--radius);
   box-shadow: 0 4px 16px rgba(0,39,51,.12);
 }
@@ -433,7 +461,11 @@ select { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--bo
 .chart-empty { color: var(--muted); font-size: .82rem; margin: 6px 2px; }
 
 /* Zielhinweis oben, zwischen Auswahlfeld und Ansichtsleiste. */
-.aim-banner { position: absolute; left: calc(var(--st-inspector) + 24px); right: 130px; top: 60px; z-index: 5; display: flex; justify-content: center; pointer-events: none; }
+/* Der Zielhinweis ist ein Glied der Spalte oben links, zwischen Chips und
+   Auswahlfeld — so überdeckt er nichts, gleich wie breit das Bild ist und in
+   wie vielen Reihen die Chips stehen. */
+.aim-banner { position: static; display: flex; justify-content: flex-start; pointer-events: none; }
+.st-dock-tl > .aim-banner .aim-pill { pointer-events: auto; align-items: flex-start; line-height: 1.4; }
 .aim-banner.hidden { display: none; }
 .aim-banner .aim-pill {
   display: flex; align-items: center; gap: 12px; padding: 7px 8px 7px 13px;
@@ -449,8 +481,7 @@ select { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--bo
 
 /* Toast unten in der Mitte. */
 .st-toast {
-  position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); z-index: 9;
-  display: flex; align-items: center; gap: 12px; padding: 9px 14px; max-width: calc(100% - 48px);
+  display: flex; align-items: center; gap: 12px; padding: 9px 14px; max-width: 100%;
   background: var(--dark); color: #fff; border-radius: 9px; font-size: .82rem; box-shadow: 0 6px 20px rgba(0,39,51,.3);
 }
 .st-toast-act {
@@ -488,6 +519,7 @@ select { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--bo
   .st-chip { min-height: 44px; padding: 0 14px; }
   .st-menu-list button { min-height: 44px; }
   .st-toast-act, .st-banner-actions .btn, .aim-banner button { min-height: 44px; }
+  .st-grouptabs button { min-height: 44px; }
   .st-root .block-btn, .st-root select { min-height: 44px; }
   .st-info { min-width: 36px; min-height: 44px; margin: -10px 0 -10px -4px; font-size: .95rem; }
   .row input[type="range"] { min-height: 44px; }
@@ -509,9 +541,14 @@ select { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--bo
 }
 @media (max-width: 1023px) {
   :root { --st-inspector: 260px; }
-  .st-chip { max-width: 30vw; }
+  .st-chip { max-width: min(30vw, 100%); }
   .st-bar { gap: 10px; }
+  /* Ein Designer hat rechts mehr stehen (Rückgängig, Speicherstand): das Wort
+     „Bauteil" weicht dem Namen, und unter 900 px sagt der gefüllte
+     Speichern-Knopf allein, dass etwas ungespeichert ist. */
+  .st-chip-label { display: none; }
 }
+@media (max-width: 899px) { .st-save-state { display: none; } }
 @media (max-width: 719px) {
   .st-layout, .st-layout.panel-closed { grid-template-columns: minmax(0, 1fr); }
   .st-panel, .st-layout.panel-closed > .st-panel {
@@ -521,7 +558,6 @@ select { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--bo
   .st-layout.panel-closed > .st-panel { transform: translateX(-100%); box-shadow: none; }
   .st-inspector { position: fixed; left: 0; right: 0; bottom: 0; width: auto; max-height: 45vh; border-radius: 12px 12px 0 0; }
   .st-dock-tl { max-width: calc(100% - 24px); }
-  .aim-banner { left: 12px; right: 12px; top: 60px; }
   .st-chip { max-width: 40vw; }
 }
 /* Telefon: gestapelt — Kopfzeile in zwei Reihen, das Bild zuerst, die
@@ -545,8 +581,178 @@ select { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--bo
   .view-bar button { flex: 0 0 auto; }
   .view-pop { top: 52px; right: 8px; }
   .axis-gizmo { top: 52px; }
-  .st-status, #status { max-width: calc(100% - 24px); white-space: normal; }
+  .st-dock-bl { max-width: calc(100% - 24px); }
+  .st-status, #status { white-space: normal; }
   .st-dock-br { bottom: 64px; }
   .cb-scale { height: 88px; }
   .st-help { position: fixed; top: 56px; width: 100%; }
 }
+
+/* Eine Liste, die mit dem Plan wächst (gesetzte Elemente, Anschnitte,
+   Kühlstiche), scrollt in SICH — die Seitenleiste selbst scrollt nie. */
+.st-list[data-scroll] { max-height: 38vh; overflow-y: auto; }
+.st-danger { color: var(--bad); border-color: var(--bad); }
+.st-danger:hover { background: var(--bad-bg); }
+.st-danger:disabled { color: var(--muted); border-color: var(--border); }
+
+/* Die Gruppen des Auswahlfelds als Reiterzeile: EINE Zeile, darunter nur die
+   Zeilen der gewählten Gruppe — zugeklappte Kästen kosteten je Gruppe eine
+   Zeile Höhe, und das Feld scrollte bei 720 px Fensterhöhe. */
+.st-grouptabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 4px; }
+.st-grouptabs button {
+  flex: 1 1 auto; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+  font-family: var(--sans); font-size: .76rem; color: var(--muted); cursor: pointer; min-height: 26px;
+}
+.st-grouptabs button:hover { border-color: var(--primary); color: var(--primary-deep); }
+.st-grouptabs button.active { background: var(--pale); border-color: var(--primary); color: var(--primary-deep); font-weight: 600; }
+
+/* Unter dem Finger gilt dasselbe für das Auswahlfeld und die Listen wie für
+   die Seitenleiste: 44 px je Ziel. Steht am Ende, damit es die Grundregeln
+   darüber (Zeilenhöhe im Auswahlfeld, Gruppenreiter, Listenzeilen) schlägt. */
+@media (pointer: coarse) {
+  .st-inspector .row { min-height: 44px; }
+  .st-inspector .row input[type="text"], .triple input[type="text"] { min-height: 40px; }
+  .st-inspector .row select { min-height: 44px; }
+  .st-inspector .st-icon { width: 44px; height: 44px; }
+  .st-grouptabs button { min-height: 44px; }
+  .st-list-row { min-height: 44px; }
+  .st-inspector .btn { min-height: 44px; }
+}
+
+/* ── Angussdesigner ────────────────────────────────────────────
+   Der Prüfbalken, die aufklappbare Regelliste, die in SICH scrollt, und die
+   Ankunftszeile im Auswahlfeld. */
+
+/* Die Prüfung füllt die Seitenleiste bis zum Hauptknopf: oben Kennzahl und
+   Balken, darunter die Liste — sie bekommt den Rest und scrollt in sich,
+   die Seitenleiste selbst nie. */
+.st-mode[data-mode="pruefung"]:not([hidden]) { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.st-mode[data-mode="pruefung"] > .krows, .an-checkbar { flex: 0 0 auto; }
+.an-rules { flex: 1 1 0; min-height: 0; overflow-y: auto; margin-top: 8px; padding-right: 2px; }
+.st-list[data-scroll].an-rules, .an-rules[data-scroll] { max-height: none; }
+
+/* Ein Feld je Regel, das Verletzte vorn. */
+.an-checkbar { display: flex; gap: 3px; margin: 6px 0 0; }
+.an-checkbar span { flex: 1 1 0; height: 6px; border-radius: 3px; background: var(--primary); opacity: .55; }
+.an-checkbar span.warn { background: var(--gold); opacity: 1; }
+.an-checkbar span.bad { background: var(--bad); opacity: 1; }
+.an-checkbar span.note { background: var(--muted-light); }
+
+/* Eine Regel klappt auf: Erfülltes ist eine Zeile, Verletztes steht offen. */
+details.rule { padding: 0; }
+details.rule > summary { cursor: pointer; list-style: none; padding: 6px 9px; display: flex; align-items: baseline; gap: 6px; }
+details.rule > summary::-webkit-details-marker { display: none; }
+details.rule > summary::before { content: '▸'; color: var(--muted-light); font-size: .7rem; flex: 0 0 auto; }
+details.rule[open] > summary::before { content: '▾'; }
+details.rule > summary b { display: inline; margin: 0; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+details.rule.ok > summary b { font-weight: 500; color: var(--text-body); }
+details.rule > span { display: block; padding: 0 9px 7px 24px; }
+
+/* Im Auswahlfeld: die Ankunft am Anschnitt — eine Zeile über den Gruppen. */
+.an-arrive { color: var(--text-body); padding: 6px 0 0; }
+.an-arrive:empty { display: none; }
+.st-inspector .st-grouptabs { margin-top: 6px; }
+.st-inspector input.inherited { color: var(--muted); font-style: italic; }
+.st-inspector .block-btn + .block-btn { margin-top: 6px; }
+
+/* Das Flussschema liegt über Chips und Ansichtsleiste; der Schließknopf ist
+   groß genug für den Finger. */
+.chart-head button { min-width: 32px; min-height: 32px; }
+@media (pointer: coarse) { .chart-head button { min-width: 44px; min-height: 44px; } }
+
+/* Vier Reiter, einer davon mit Zähler: über die Breite verteilt passen sie
+   in EINE Zeile — eine zweite kostete jeden Modus 40 px. */
+.st-root[data-tool="anguss"] .seg.tabs { justify-content: space-between; gap: 0 4px; }
+
+/* Unter dem Finger ist auch die Zeile einer Regel 44 px hoch. */
+@media (pointer: coarse) { details.rule > summary { min-height: 44px; align-items: center; } }
+
+/* ── Angussfüllung und Kammerfüllung ───────────────────────────
+   Was der übrige Rahmen nicht kennt: die Vergleichstabelle Gitter · Partikel · Vergleichsrechnung,
+   die Zeitzeile mit Abspielen, zwei Maße in einer Zeile. Alles gilt nur für
+   die beiden Werkzeuge (data-tool am Rahmen, js/studio/host.js). */
+
+/* Die Tabelle wächst mit der Zahl der Anschnitte und scrollt dann in SICH —
+   die Seitenleiste selbst scrollt nie. Der Kopf bleibt stehen. */
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table { margin: 6px 0 6px; max-height: 24vh; overflow-y: auto; border: 1px solid var(--border-light); border-radius: var(--radius); }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table:empty { display: none; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table caption { text-align: left; caption-side: top; color: var(--muted); font-size: .72rem; line-height: 1.4; padding: 5px 8px 3px; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table th {
+  position: sticky; top: 0; background: var(--surface2); color: var(--muted); font-weight: 600; font-size: .72rem;
+  text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--border);
+}
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table td { font-family: var(--mono); text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--border-light); white-space: nowrap; color: var(--text); }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table tr:last-child td { border-bottom: 0; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table th:first-child, .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table td:first-child { text-align: left; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table td:first-child { font-family: var(--sans); color: var(--text-body); white-space: normal; overflow-wrap: anywhere; }
+/* Kein Lauf mit diesem Verfahren. */
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table .off { color: var(--muted-light); font-weight: 400; }
+/* Die Spalte, deren Bild gerade im Viewport steht. */
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table th.shown { color: var(--primary-deep); box-shadow: inset 0 -2px 0 var(--primary); }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table tr.sum td { border-top: 1px solid var(--border); background: var(--surface2); font-weight: 600; }
+
+/* Die Zeitzeile: Bezeichnung · Abspielen · Regler · Zeit. Die Bezeichnung ist
+   hier nur so breit wie ihr Text (sonst bliebe dem Regler nichts), und
+   „123,4 ms" ist breiter als die Prozentanzeige, für die .val gemacht ist. */
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .row.sim-time { flex-wrap: nowrap; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .row.sim-time > span:first-child { width: auto; white-space: nowrap; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .row.sim-time .val { width: auto; min-width: 58px; white-space: nowrap; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-play {
+  flex: 0 0 auto; width: 30px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--primary-deep); line-height: 1; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-play:hover { background: var(--pale); border-color: var(--pale-border); }
+
+/* Der Zusatz unter der Geschwindigkeitsskala bricht um, statt die Skala breit
+   zu machen — sonst trifft sie im schmalen Bild die Hinweiszeile. */
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .cb-extra .sim-cb-note { display: block; max-width: 176px; line-height: 1.35; }
+
+@media (pointer: coarse) {
+  .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table th, .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table td { padding-top: 7px; padding-bottom: 7px; }
+  .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-play { width: 44px; height: 44px; }
+  .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-play svg { width: 16px; height: 16px; }
+}
+
+/* „m/s²" braucht mehr als die 30 px der Einheitenspalte. */
+.st-root[data-tool="kammerfuellung"] .st-mode[data-mode="kurve"] .row .unit { width: 38px; }
+/* Zwei Maße in einer Zeile (Laufkanal: Breite × Tiefe). */
+.st-root[data-tool="kammerfuellung"] .row .sim-pair { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+.st-root[data-tool="kammerfuellung"] .row .sim-pair input[type="text"] { flex: 1; min-width: 0; width: 100%; }
+.st-root[data-tool="kammerfuellung"] .row .sim-pair .x { color: var(--muted); font-size: .78rem; }
+
+/* ── Füllabschätzung ─────────────────────────────────────────────
+   Die Zeile eines Anschnitts in der Liste trägt eine zweite
+   Zeile — Anteil am Strom und, sobald gerechnet ist, was er füllt. */
+.st-root[data-tool="fuellung"] .st-list-row.fu-row { flex-wrap: wrap; row-gap: 1px; text-align: left; width: 100%; background: none; font-family: var(--sans); color: var(--text); }
+.st-root[data-tool="fuellung"] .st-list-row.fu-row:hover { background: var(--surface2); }
+.st-root[data-tool="fuellung"] .st-list-row.fu-row.active { background: var(--pale); }
+.st-root[data-tool="fuellung"] .st-list-row.fu-row .sub {
+  flex: 1 0 100%; padding-left: 18px; font-size: .72rem; line-height: 1.35; color: var(--muted);
+  white-space: normal; overflow-wrap: anywhere;
+}
+.st-root[data-tool="fuellung"] .st-list-row.fu-row.warn .sub { color: var(--note-text); }
+/* Der Verweis auf den Überlaufdesigner in der Hinweiszeile — in der Farbe der Seite. */
+.st-root[data-tool="fuellung"] .st-hintline a { color: var(--primary-deep); }
+/* Die Zahl der gesetzten Anschnitte in der Überschrift der Liste. */
+.st-root[data-tool="fuellung"] .fu-count { font-weight: 400; color: var(--muted); letter-spacing: 0; }
+
+/* ── Temperierkanal-Designer ──────────────────────────────────── */
+
+/* „Ø × Länge" der Kühlstich-Vorgabe in EINER Zeile: zwei Felder mit dem
+   Malzeichen dazwischen, gebaut wie die drei Felder der Lage (.triple). */
+.st-root[data-tool="temperier"] .tc-pair { align-items: center; }
+.st-root[data-tool="temperier"] .tc-pair .tc-x { flex: 0 0 auto; color: var(--muted); font-size: .8rem; }
+
+/* Die Lage im Auswahlfeld: die Einheit steht unter der Bezeichnung statt
+   hinter den Feldern — so fasst jedes der drei Felder auch „−195,8", wenn das
+   Auswahlfeld im schmalen Bild nur 260 px breit ist. */
+.st-root[data-tool="temperier"] .tc-lage > span:first-child small { display: block; font-family: var(--mono); font-size: .7rem; color: var(--muted); line-height: 1; }
+
+/* Die Richtung des gewählten Kühlstichs: ein Wert, kein Feld. */
+.st-root[data-tool="temperier"] .tc-dir { flex: 1; min-width: 0; text-align: right; font-family: var(--mono); font-size: .78rem; color: var(--text); }
+
+/* Die Liste derer unter dem Mindest-Wandabstand steht UNTER vier Kennzahlen —
+   sie scrollt in sich und lässt der Seitenleiste auch bei 44-px-Zeilen Luft. */
+.st-root[data-tool="temperier"] .st-list[data-ui="offender-list"][data-scroll] { max-height: 24vh; }

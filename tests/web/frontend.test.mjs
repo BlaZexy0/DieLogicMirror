@@ -305,9 +305,13 @@ test('nav: Auslegung und 3D-Studio sind Spaltenmenüs — Werkzeuge · Diagramme
   assert.match(studio, /title: 'Werkbank'/, 'Spalte Werkbank');
   assert.match(studio, /title: 'Einzeltools', wide: true/, 'Spalte Einzeltools, zweispaltig wie die Diagramme');
   for (const l of ['Werkbank', 'Übersicht', 'Formaufbau', 'Entformungsanalyse', 'Wandstärkenanalyse', 'Abstandsanalyse',
-    'Angussdesigner', 'Überlaufdesigner', 'Temperierkanal-Designer', 'Füllabschätzung']) {
+    'Angussdesigner', 'Überlaufdesigner', 'Temperierkanal-Designer', 'Füllabschätzung', 'Angussfüllung', 'Kammerfüllung']) {
     assert.ok(studio.includes("label: '" + l + "'"), l + ' gehört zum Studio');
   }
+  /* Zehn Werkzeuge und die Werkbank: Gitter und Partikel sind EIN Werkzeug mit
+     einem Schalter, nicht zwei Seiten — die -sph-Seiten leiten nur noch weiter. */
+  assert.equal((studio.match(/href: '\/tools\/3d-studio\/[a-z-]+\.html'/g) || []).length, 11, 'zehn Werkzeuge und die Werkbank');
+  assert.ok(!/-sph\.html|\(LBM\)|\(SPH\)/.test(studio), 'kein eigener Eintrag je Rechenverfahren');
   assert.ok(!/children:/.test(studio), 'keine flache Liste mehr');
   assert.match(src, /dl-nav-dropdown--cols/, 'das Spaltenmenü hat seinen Stil');
   assert.match(src, /dl-nav-group-label\$\{activeGroup\}/, 'die Gruppe trägt den Reiter-Strich der aktiven Seite');

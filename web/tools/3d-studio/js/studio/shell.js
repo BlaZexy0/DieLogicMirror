@@ -82,6 +82,7 @@ const SKELETON = (title) => `
   <div id="viewport" class="st-viewport" data-ui="viewport">
     <div class="st-dock-tl" data-dock="tl">
       <div class="st-chips" data-ui="chips" data-dock="chips" hidden></div>
+      <div class="aim-banner hidden" id="aim-banner" data-dock="aim"><div class="aim-pill"><span id="aim-text"></span><button type="button" id="aim-cancel">Abbrechen</button></div></div>
       <div class="st-inspector" data-ui="inspector" data-dock="inspector" hidden>
         <div class="st-inspector-head">
           <span class="st-inspector-title" data-ui="inspector-title"></span>
@@ -99,11 +100,12 @@ const SKELETON = (title) => `
       </div>
       <div class="pt-legend" id="pt-legend" data-dock="legend"></div>
     </div>
-    <div id="status" class="st-status" data-dock="status"></div>
+    <div class="st-dock-bl" data-dock="bl">
+      <div class="st-toast" data-ui="toast" data-dock="toast" hidden role="status"></div>
+      <div id="status" class="st-status" data-dock="status"></div>
+    </div>
     <div id="busy"></div>
     <div class="drop-hint" data-ui="drop-hint">Datei hier ablegen</div>
-    <div class="aim-banner hidden" id="aim-banner" data-dock="aim"><div class="aim-pill"><span id="aim-text"></span><button type="button" id="aim-cancel">Abbrechen</button></div></div>
-    <div class="st-toast" data-ui="toast" hidden role="status"></div>
   </div>
   <aside class="st-help" data-ui="help" hidden aria-label="Hilfe">
     <div class="st-help-head"><span data-ui="help-title">Hilfe</span><button type="button" class="st-icon" data-ui="help-close" title="Hilfe schließen" aria-label="Hilfe schließen">✕</button></div>
@@ -120,6 +122,23 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   const view = vp.view;
   const viewbar = mountViewBar(viewport, view, { fit: () => vp.fit(), popover: true });
   const aim = createAimUI();
+  /* Solange gezielt wird, weicht das Auswahlfeld auf seine Kopfzeile zurück:
+     es läge sonst gerade dort über dem Bauteil, wo man hinklicken will. Der
+     Zielhinweis selbst ist ein Glied der Spalte oben links (zwischen Chips und
+     Auswahlfeld) — frei im Bild überdeckte er Chips und Ansichtsleiste, sobald
+     die Chips in mehreren Reihen stehen. */
+  let foldedForAim = false;
+  const aimShow = aim.show;
+  aim.show = (on, msg) => {
+    aimShow(on, msg);
+    const el = mount.querySelector('[data-ui="inspector"]');
+    if (!el) return;
+    if (on && !el.hidden && !el.classList.contains('collapsed')) { el.classList.add('collapsed'); foldedForAim = true; }
+    else if (!on && foldedForAim) { el.classList.remove('collapsed'); foldedForAim = false; }
+    const t = mount.querySelector('[data-ui="inspector-toggle"]');
+    if (t) t.textContent = el.classList.contains('collapsed') ? '▸' : '▾';
+  };
+  aim.hide = () => aim.show(false);
   const helpApi = mountHelp({ drawer: ui('help'), body: ui('help-body'), closeBtn: ui('help-close'), html: help });
   ui('help-title').textContent = 'Hilfe · ' + title;
 
@@ -134,10 +153,6 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     tabs.innerHTML = list.map(m => '<button type="button" role="tab" data-mode="' + m.id + '" aria-selected="false" title="' + esc(m.hint || '') + '">'
       + '<span class="st-tab-label">' + m.label + '</span><span class="st-tab-badge" data-badge="' + m.id + '" hidden></span></button>').join('');
     body.innerHTML = list.map(m => '<section class="st-mode" data-mode="' + m.id + '" role="tabpanel" hidden>' + (m.html || '') + '</section>').join('');
-    /* ⓘ-Knöpfe öffnen die Hilfe an ihrem Anker. */
-    for (const b of body.querySelectorAll('[data-help]')) {
-      b.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); helpApi.show(b.getAttribute('data-help')); });
-    }
     current = null;
   }
   tabs.addEventListener('click', ev => {
@@ -207,11 +222,16 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     syncActions();
   }
   const busyEl = mount.querySelector('#busy');
-  function setBusy(on, text, onCancel) {
+  /* veil: der Schleier über dem Bild. Eine kurze Nachrechnung, die das
+     Werkzeug von selbst startet (nach einem Zug am Griff), braucht ihn nicht —
+     er blitzte sonst bei jedem Zug auf und sperrte das Auswahlfeld. */
+  let veil = true;
+  function setBusy(on, text, onCancel, opts = {}) {
     busy = !!on;
+    veil = on ? opts.veil !== false : true;
     busyClick = on ? (onCancel || busyClick) : null;
     if (text !== undefined && on) busyEl.textContent = text;
-    busyEl.classList.toggle('on', busy);
+    busyEl.classList.toggle('on', busy && veil);
     renderPrimary();
     syncActions();
   }
@@ -222,7 +242,7 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     if (text) { setNote(text, 'busy'); busyEl.textContent = text; }
     /* js/part/partsource.js nimmt dem Schleier nach dem Laden die Klasse —
        läuft währenddessen eine Rechnung, steht er mit dem nächsten Schritt wieder. */
-    if (busy) busyEl.classList.add('on');
+    if (busy && veil) busyEl.classList.add('on');
     syncActions();
   }
 
@@ -277,17 +297,40 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     onClose(fn) { onInspectorClose = fn; }
   };
   ui('inspector-toggle').addEventListener('click', () => inspector.collapse());
+  /* ⓘ-Knöpfe öffnen die Hilfe an ihrem Anker — in der Seitenleiste, im
+     Auswahlfeld und unter „Darstellung", auch in Kennzahlen und Feldern, die ein Werkzeug erst später
+     schreibt: EIN Zuhörer je Kasten statt einer je Knopf beim Einsetzen. */
+  for (const box of [body, inspBody, viewbar.pop].filter(Boolean)) {
+    box.addEventListener('click', ev => {
+      const b = ev.target.closest && ev.target.closest('[data-help]');
+      if (!b) return;
+      ev.preventDefault(); ev.stopPropagation();
+      helpApi.show(b.getAttribute('data-help'));
+    });
+  }
   ui('inspector-close').addEventListener('click', () => { if (onInspectorClose) onInspectorClose(); else inspector.hide(); });
 
-  /* Freies Rechteck für das Einpassen: rechts vom Auswahlfeld. */
+  /* Freies Rechteck für das Einpassen: rechts vom Auswahlfeld — oder, in
+     einem hochkant stehenden Bild, UNTER der Spalte oben links, wenn dort mehr
+     Platz ist. Bei 768 px Fensterbreite blieb rechts ein Streifen von 150 px:
+     das Modell wurde winzig, während die untere Bildhälfte leer stand. */
   vp.setClearRect(() => {
     const w = viewport.clientWidth, h = viewport.clientHeight;
     const dock = mount.querySelector('[data-dock="tl"]');
     const r = dock ? dock.getBoundingClientRect() : null;
     const vr = viewport.getBoundingClientRect();
-    let left = 0;
-    if (!inspectorEl.hidden && r && r.width > 0) left = Math.min(w * 0.5, r.right - vr.left + 12);
-    return { left, top: 0, width: w - left, height: h };
+    if (inspectorEl.hidden || !r || r.width <= 0) return { left: 0, top: 0, width: w, height: h };
+    const left = Math.min(w * 0.7, r.right - vr.left + 12);
+    const top = Math.min(h * 0.7, r.bottom - vr.top + 12);
+    const beside = { left, top: 0, width: w - left, height: h };
+    /* Unter der Spalte endet das Freie an der Hinweiszeile unten links — in
+       einem schmalen Bild ist sie mehrzeilig und läge sonst auf dem Modell. */
+    const bl = mount.querySelector('[data-dock="bl"]');
+    const br = bl ? bl.getBoundingClientRect() : null;
+    const foot = br && br.height > 0 ? Math.max(0, vr.bottom - br.top + 8) : 0;
+    const below = { left: 0, top, width: w, height: Math.max(1, h - top - foot) };
+    /* Maß ist die kürzere Seite: in sie muss das Modell passen. */
+    return Math.min(below.width, below.height) > Math.min(beside.width, beside.height) ? below : beside;
   });
 
   /* ── Legende, Farbskala, Hinweise ────────────────────────── */
@@ -306,7 +349,9 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   const INTRO_SHORT = coarse ? 'Ein Finger dreht · zwei zoomen' : 'Ziehen dreht · Rad zoomt · F passt ein';
   let intro = true;
   statusEl.innerHTML = '<span class="st-intro-long">' + INTRO + '</span><span class="st-intro-short">' + INTRO_SHORT + '</span>';
-  const status = html => { intro = false; statusEl.classList.remove('seen'); statusEl.innerHTML = html || ''; };
+  /* Ein leerer Status zum Einstieg (ein Werkzeug räumt beim Einbau auf) nimmt
+     den Bedienhinweis nicht weg — erst, wenn ein Werkzeug wirklich etwas sagt. */
+  const status = html => { if (!html && intro) return; intro = false; statusEl.classList.remove('seen'); statusEl.innerHTML = html || ''; };
   const introSeen = () => { if (intro) statusEl.classList.add('seen'); };
   viewport.addEventListener('pointerdown', introSeen);
   viewport.addEventListener('wheel', introSeen, { passive: true });
@@ -320,6 +365,19 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   };
   darstellung('');
 
+  /* Wo die Ansichtsleiste endet, MISST der Rahmen: sie ist je nach Schrift
+     (Firefox setzt breiter), Zeiger (44 px unter dem Finger) und Bildbreite ein-
+     oder zweizeilig. Chips und Auswahlfeld rücken in einem schmalen Bild genau
+     darunter (css/studio.css, --bar-bottom) — geraten statt gemessen lagen sie
+     unter dem Finger wieder unter der Leiste. */
+  if (typeof ResizeObserver === 'function') {
+    const measureBar = () => viewport.style.setProperty('--bar-bottom', (viewbar.offsetTop + viewbar.offsetHeight + 8) + 'px');
+    const ro = new ResizeObserver(measureBar);
+    ro.observe(viewbar);
+    ro.observe(viewport);
+    measureBar();
+  }
+
   /* ── Toast und Streifen ──────────────────────────────────── */
   const toastEl = ui('toast');
   let toastTimer = 0;
@@ -331,6 +389,7 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     if (act) act.addEventListener('click', () => { toastEl.hidden = true; if (onAction) onAction(); });
     toastTimer = setTimeout(() => { toastEl.hidden = true; }, ms);
   }
+  const hideToast = () => { clearTimeout(toastTimer); toastEl.hidden = true; };
   const bannerEl = ui('banner');
   function banner(spec) {
     if (!spec) { bannerEl.hidden = true; bannerEl.innerHTML = ''; return; }
@@ -427,12 +486,15 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   return {
     root: mount, ui, viewport, view, vp, viewbar, aim, help: helpApi,
     fit: (box, margin) => vp.fit(box, margin),
+    /** Worauf F, „Einpassen" und der Doppelklick einpassen: eine Funktion, die
+        den Hüllquader JETZT liefert — der Körper eines Designers wächst. */
+    setFitTarget: fn => vp.setFitTarget(fn),
     setModes, setMode, get mode() { return current; }, onMode(fn) { modeListeners.push(fn); }, modeSection, setTabBadge,
     setPrimary, setNote, setBusy, progress: setProgress, get busy() { return busy; },
     setChips, renderChips,
     inspector,
     legend, status, colorbar: setColorbar, darstellung,
-    toast, banner,
+    toast, hideToast, banner,
     header,
     onKey(fn) { keyListeners.push(fn); },
     busyEl

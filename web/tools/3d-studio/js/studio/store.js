@@ -27,6 +27,7 @@ export function createStore({ tool, debounce = 1000 } = {}) {
   let dirty = false;          // geändert seit dem letzten Speichern/Export
   let lastSaved = 0;          // Zeitpunkt des letzten Entwurfs
   let onState = null;
+  let pending = null;         // wartet noch auf den entprellten Schreibvorgang
   const key = () => PREFIX + tool + ':' + (partKey || '-');
   const notify = () => { if (onState) onState(api); };
 
@@ -43,11 +44,13 @@ export function createStore({ tool, debounce = 1000 } = {}) {
         die bloß Einstellungen haben (kein Plan, der verloren gehen könnte). */
     save(getDoc, { quiet = false } = {}) {
       if (!quiet) { dirty = true; notify(); }
+      pending = getDoc;
       clearTimeout(timer);
       timer = setTimeout(() => api.flush(getDoc), debounce);
     },
     flush(getDoc) {
       clearTimeout(timer);
+      pending = null;
       const s = storage();
       if (!s) return false;
       let text;
@@ -84,6 +87,7 @@ export function createStore({ tool, debounce = 1000 } = {}) {
     },
     discard() {
       clearTimeout(timer);
+      pending = null;
       const s = storage();
       if (s) try { s.removeItem(key()); } catch { /* egal */ }
       dirty = false;
@@ -101,6 +105,9 @@ export function createStore({ tool, debounce = 1000 } = {}) {
         ev.preventDefault();
         ev.returnValue = '';
       });
+      /* Wer innerhalb der Entprellzeit geht, nähme die letzte Änderung sonst
+         nicht mit: beim Verlassen wird geschrieben, was noch wartet. */
+      window.addEventListener('pagehide', () => { if (pending) api.flush(pending); });
     }
   };
   return api;

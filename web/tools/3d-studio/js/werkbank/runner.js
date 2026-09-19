@@ -1,6 +1,6 @@
 /* Schritt 2 — Anguss: das Angusssystem am Bauteil.
 
-   Die Portierung des Angussdesigners (js/runner/app.js) in die Werkbank.
+   Die Portierung des Angussdesigners (js/runner/tool.js) in die Werkbank.
    Dieselbe Kette bei jeder Änderung — Graph → Anschnittbreiten →
    Abtasten → Strömung → Anzeige —, dieselben Griffe (js/runner/editor.js),
    dasselbe Flussschema und dieselben Prüfregeln. Anders ist der Rahmen:

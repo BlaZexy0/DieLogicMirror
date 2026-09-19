@@ -147,3 +147,55 @@ test('Abbruch: die Simulation meldet „abgebrochen" über das Signal', async ()
   assert.equal(run.reason, 'abgebrochen');
   assert.ok(run.steps < 1000);
 });
+
+/* Einpassen neben Aufsätzen: das Modell steht danach GANZ im freien Rechteck —
+   und nicht kleiner als nötig. Ein flaches, breites Modell unter einem
+   Auswahlfeld, das die obere Hälfte des Bildes belegt, ist durch die BREITE
+   begrenzt; mit dem Verhältnis der Rechteckhöhen gerechnet wurde es auf ein
+   Drittel verkleinert (gemessen bei 768 px: 144 statt 320 px breit). */
+test('Einpassen: ganz im freien Rechteck, aber nicht kleiner als nötig', async () => {
+  const { buildDocument, installGlobals } = await import('./stubs/dom.mjs');
+  const { doc } = buildDocument('<!DOCTYPE html><html><body><div id="vp"></div></body></html>');
+  installGlobals(doc);
+  const T = await import('three');
+  const { createViewport } = await import('../../../web/tools/3d-studio/js/studio/viewport.js');
+  const W = 800, H = 600;                                   // so groß ist jedes Element im Platzhalter
+  const vp = createViewport(doc.getElementById('vp'), { cameraStart: [0, 0, 900], target: [0, 0, 0] });
+  const cam = vp.view.camera;
+  const box = new T.Box3(new T.Vector3(-200, -8, -100), new T.Vector3(200, 8, 100));   // flach und breit
+  const onScreen = () => {
+    cam.updateMatrixWorld(true);
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
+      const q = new T.Vector3(x, y, z).project(cam);
+      const sx = (q.x + 1) / 2 * W, sy = (1 - q.y) / 2 * H;
+      x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
+    }
+    return { x0, x1, y0, y1 };
+  };
+  const inside = (r, c) => r.x0 >= c.left - 1 && r.x1 <= c.left + c.width + 1 && r.y0 >= c.top - 1 && r.y1 <= c.top + c.height + 1;
+
+  /* Unter dem Auswahlfeld: die untere Hälfte, so breit wie das Bild. */
+  const below = { left: 0, top: H / 2, width: W, height: H / 2 };
+  vp.setClearRect(() => below);
+  vp.fit(box);
+  const a = onScreen();
+  assert.ok(inside(a, below), 'ganz in der unteren Hälfte: ' + JSON.stringify(a));
+  assert.ok(a.x1 - a.x0 > 0.5 * W, 'und breit genug, um es zu sehen: ' + Math.round(a.x1 - a.x0) + ' px');
+
+  /* Rechts daneben: die rechte Hälfte, so hoch wie das Bild. */
+  const beside = { left: W / 2, top: 0, width: W / 2, height: H };
+  vp.setClearRect(() => beside);
+  vp.fit(box);
+  const b = onScreen();
+  assert.ok(inside(b, beside), 'ganz in der rechten Hälfte: ' + JSON.stringify(b));
+
+  /* F ohne Angabe fragt das Werkzeug, was JETZT da ist. */
+  const grown = box.clone().expandByPoint(new T.Vector3(600, 0, 0));
+  vp.setFitTarget(() => grown);
+  vp.setClearRect(() => null);
+  vp.fit();
+  cam.updateMatrixWorld(true);
+  const tip = new T.Vector3(600, 0, 0).project(cam);
+  assert.ok(Math.abs(tip.x) <= 1 && Math.abs(tip.y) <= 1, 'das neue Ende steht im Bild');
+});

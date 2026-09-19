@@ -16,6 +16,9 @@ const PAGES = [
   ['fuellung.html', () => window.__fuellung?.state?.ready],
   ['angussfuellung.html', () => window.__angussfuellung?.state?.ready],
   ['kammerfuellung.html', () => window.__kammerfuellung?.state?.ready],
+  /* Die früheren Partikelseiten leiten weiter — auf dasselbe Werkzeug, mit „Partikel" gewählt. */
+  ['angussfuellung-sph.html', () => window.__angussfuellung?.state?.ready && window.__angussfuellung.state.engine === 'sph'],
+  ['kammerfuellung-sph.html', () => window.__kammerfuellung?.state?.ready && window.__kammerfuellung.state.engine === 'sph'],
   ['werkbank.html', () => window.__werkbank?.ctx?.ready]
 ];
 
@@ -55,7 +58,7 @@ test('Überlaufdesigner: eine Bohne landet auf der Wand', async ({ page }) => {
   await page.waitForFunction(() => window.__ueberlauf?.state?.ready, null, { timeout: 60_000 });
   /* Kamera von +X waagerecht auf die Bauteilmitte, dann Art wählen und in die Bildmitte klicken. */
   await page.evaluate(() => {
-    const v = window.__ueberlauf; const b = v.state.model.bounds;
+    const v = window.__ueberlauf; const b = v.host.part.model.bounds;
     const c = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
     v.view.controls.target.set(c[0], c[1], c[2]);
     v.view.camera.position.set(b.max[0] + 400, c[1], c[2]);
@@ -63,7 +66,7 @@ test('Überlaufdesigner: eine Bohne landet auf der Wand', async ({ page }) => {
     v.view.invalidate();
   });
   await page.waitForTimeout(300);
-  await page.click('#add-bohne');
+  await page.click('[data-chip="bohne"]');
   await expect(page.locator('#aim-banner')).toBeVisible();
   const box = await page.locator('#viewport canvas').boundingBox();
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
@@ -71,7 +74,11 @@ test('Überlaufdesigner: eine Bohne landet auf der Wand', async ({ page }) => {
   const it = await page.evaluate(() => Object.values(window.__ueberlauf.state.plan.items)[0]);
   expect(it.type).toBe('bohne');
   expect(it.dir[0]).toBeGreaterThan(0.9);
-  await expect(page.locator('#plan-facts')).toContainText('Gesamt');
+  /* Gewählt ist sie auch: das Auswahlfeld steht neben dem Bild, der Reiter zählt mit. */
+  await expect(page.locator('[data-ui="inspector"]')).toBeVisible();
+  await expect(page.locator('[data-badge="elemente"]')).toHaveText('1');
+  await page.click('[role="tab"][data-mode="volumen"]');
+  await expect(page.locator('[data-ui="plan-kpis"]')).toContainText('Gesamt');
 });
 
 test('Werkbank: alle sechs Schritte kommen ohne Fehler hoch und hängen zusammen', async ({ page }) => {

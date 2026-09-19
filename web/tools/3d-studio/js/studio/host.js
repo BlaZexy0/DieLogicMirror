@@ -38,6 +38,7 @@ const MAX_SAMPLES = 16e6;
 
 export function createHost({ mount, id, title, help = '', start = null, sceneOpts = {}, part = true }) {
   const shell = createShell({ mount, title, help, sceneOpts });
+  mount.setAttribute('data-tool', id);      // css/studio.css: Regeln, die nur EIN Werkzeug betreffen
   const listeners = {};
   const host = {
     id, shell, ui: shell.ui, view: shell.view, viewport: shell.viewport, aim: shell.aim,
@@ -68,7 +69,10 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
     setCell(v) {
       field.h = Math.max(CELL_RANGE[0], Math.min(CELL_RANGE[1], v));
       field.hAuto = false;
-      if (field.data && Math.abs(field.data.h - field.h) > 1e-9) { field.stale = true; host.emit('field-stale'); }
+      /* Veraltet ist das Feld genau dann, wenn seine Kante von der gewählten
+         abweicht — wer zur Kante des Feldes zurückkehrt, braucht kein neues. */
+      const stale = !!(field.data && Math.abs(field.data.h - field.h) > 1e-9);
+      if (stale !== field.stale) { field.stale = stale; host.emit('field-stale', stale); }
       return field.h;
     },
     /** Was das Feld kosten würde. */
@@ -118,9 +122,25 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
 
   /** Das Werkzeug meldet eine Änderung: Verlauf, Entwurf, Kopfzeile. */
   host.changed = (label = '', opts = {}) => {
-    if (history && !opts.silent) history.commit(label);
+    /* Eine Meldung ohne Änderung ist keine: ein bloßer Klick auf einen Griff
+       endet bei js/handles.js mit „drop", und die Seite stand danach auf
+       „Ungespeichert", ohne dass sich etwas getan hätte. */
+    if (history && !opts.silent && !history.commit(label)) return;
+    host.dropUndoToast();
     store.save(() => host.tool.toJSON(), { quiet: settingsOnly() });
   };
+
+  /** Einen Schritt zurück oder wieder vor — Kopfzeile, Strg+Z/Y und das
+      „Rückgängig" im Toast nach dem Entfernen gehen alle hier durch. */
+  host.undo = () => { host.dropUndoToast(); if (!history || !history.undo()) return false; store.save(() => host.tool.toJSON()); return true; };
+  host.redo = () => { host.dropUndoToast(); if (!history || !history.redo()) return false; store.save(() => host.tool.toJSON()); return true; };
+  /** „… entfernt · Rückgängig": der Toast gehört zu GENAU dem Schritt, der
+      eben gemeldet wurde. Bewegt sich der Verlauf danach (Strg+Z, ein neuer
+      Schritt), verschwindet er — sonst nähme sein Knopf später einen ganz
+      anderen Schritt zurück als den, von dem er spricht. Nach host.changed(). */
+  let undoToast = false;
+  host.toastUndo = text => { shell.toast(text, { action: 'Rückgängig', onAction: () => { undoToast = false; host.undo(); } }); undoToast = true; };
+  host.dropUndoToast = () => { if (undoToast) { undoToast = false; shell.hideToast(); } };
 
   /** Für Werkzeuge ohne das Bauteil des Gastgebers: zu welchem Schlüssel
       (etwa dem Dateipaar) die Einstellungen gehören — und gleich nachsehen,
@@ -145,7 +165,7 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       return;
     }
     shell.banner({
-      text: 'Entwurf vom ' + fmtWhen(d.when) + ' für dieses Bauteil wiederherstellen?',
+      text: 'Entwurf vom ' + fmtWhen(d.when) + (store.partKey ? ' für dieses Bauteil' : '') + ' wiederherstellen?',
       actions: [
         { label: 'Wiederherstellen', primary: true, onClick: () => { tool.fromJSON(d.doc); if (history) history.reset(); shell.toast('Entwurf wiederhergestellt.'); } },
         { label: 'Verwerfen', onClick: () => store.discard() }
@@ -205,6 +225,10 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
     shell.onMode((id, prev) => {
       const from = tool.modes.find(m => m.id === prev), to = tool.modes.find(m => m.id === id);
       if (from && from.leave) from.leave();
+      /* Die Zeile unter dem Hauptknopf gehört dem Modus: ein Modus, der keine
+         eigene setzt, erbte sonst die des vorigen. Läuft eine Rechnung,
+         schreibt ihr Fortschritt sie gleich wieder. */
+      shell.setNote('');
       if (to && to.enter) to.enter();
       host.refreshActions();
     });
@@ -217,8 +241,8 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       history = createHistory({ serialize: tool.serialize, restore: doc => { tool.restore(doc); host.refreshActions(); } });
       host.history = history;
       history.on(h => shell.header.setUndo({ visible: true, canUndo: h.canUndo, canRedo: h.canRedo, undoLabel: h.undoLabel, redoLabel: h.redoLabel }));
-      shell.header.onUndo(() => { if (history.undo()) store.save(() => tool.toJSON()); });
-      shell.header.onRedo(() => { if (history.redo()) store.save(() => tool.toJSON()); });
+      shell.header.onUndo(() => host.undo());
+      shell.header.onRedo(() => host.redo());
       history.reset();
     } else shell.header.setUndo({ visible: false });
     const docName = () => (host.part ? host.part.name : (tool.docName ? tool.docName() : ''));
@@ -230,8 +254,8 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
     shell.header.setExports(tool.exports || []);
     shell.onKey((ev, ctx) => {
       if ((ev.ctrlKey || ev.metaKey) && !ctx.inInput && history) {
-        if (ev.key === 'z' || ev.key === 'Z') { if (ev.shiftKey) history.redo(); else history.undo(); store.save(() => tool.toJSON()); return true; }
-        if (ev.key === 'y' || ev.key === 'Y') { history.redo(); store.save(() => tool.toJSON()); return true; }
+        if (ev.key === 'z' || ev.key === 'Z') { if (ev.shiftKey) host.redo(); else host.undo(); return true; }
+        if (ev.key === 'y' || ev.key === 'Y') { host.redo(); return true; }
       }
       if (ev.key === 'Escape') {
         if (shell.aim && host.cancelAim && host.cancelAim()) return true;

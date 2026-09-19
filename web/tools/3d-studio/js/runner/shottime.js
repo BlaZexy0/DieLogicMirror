@@ -23,7 +23,7 @@
    hier für das Modell erzeugt — Maschine, Kammer, Legierung und Thermik
    aus dem Auslegungszustand, die Massen aus den Volumen des Modells —,
    unabhängig davon, welche Kurve das Dashboard gerade zeigt. Der
-   Angussdesigner (js/runner/app.js) und der Anguss-Schritt der Werkbank
+   Angussdesigner (js/runner/tool.js) und der Anguss-Schritt der Werkbank
    (js/werkbank/runner.js) benutzen es gleich.
    Kein DOM: die Tests rechnen es unter Node nach. */
 

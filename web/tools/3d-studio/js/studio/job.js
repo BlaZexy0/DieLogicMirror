@@ -16,13 +16,15 @@ export function createJobRunner(shell) {
      * spec.run     async (signal, progress) → Ergebnis; progress(p, text)
      * spec.note    erste Fortschrittszeile
      * spec.onCancel  nach dem Abbruch (z. B. Hinweis „das Bild zeigt noch …")
+     * spec.quiet   ohne Schleier über dem Bild — für kurze Nachrechnungen, die
+     *              das Werkzeug selbst anstößt; Knopf und Fortschritt bleiben
      */
     async run(spec) {
       if (current) return null;
       const ac = new AbortController();
       current = { ac, label: spec.label || '' };
       /* Der Hauptknopf heißt jetzt „Abbrechen" — und er bricht auch ab. */
-      shell.setBusy(true, spec.note || (spec.label ? spec.label + ' …' : 'Rechnet …'), () => api.cancel());
+      shell.setBusy(true, spec.note || (spec.label ? spec.label + ' …' : 'Rechnet …'), () => api.cancel(), { veil: !spec.quiet });
       shell.progress(0, spec.note || '');
       const progress = (p, text) => { if (current && current.ac === ac) shell.progress(p, text); };
       try {
