@@ -222,7 +222,13 @@ const SEITEN = [
         await page.waitForFunction(([h, e]) => window[h].state.results[e] && !window[h].state.running, [s.hook, engine], { timeout: 120_000 });
       }
     },
-    lang: async page => { await page.click('[data-ui="tabs"] [role="tab"][data-mode="simulation"]'); await page.click('[data-ui="primary"]'); },
+    /* Die Vorgabe ist das Metamodell und in Sekunden fertig — zum Abbrechen
+       braucht es das Gitter, das ohne WebGPU Minuten rechnet. */
+    lang: async page => {
+      await page.click('[data-ui="tabs"] [role="tab"][data-mode="simulation"]');
+      await page.click('[data-ui="engine-seg"] button[data-value="lbm"]');
+      await page.click('[data-ui="primary"]');
+    },
     nachAbbruch: { offen: v => v.state.result === null, knopf: 'Simulieren' },
     merken: {
       setzen: async page => { await page.click('[data-ui="tabs"] [role="tab"][data-mode="kurve"]'); await page.click('[data-ui="curve-seg"] button[data-value="v1v2"]'); },

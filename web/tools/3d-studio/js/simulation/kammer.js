@@ -8,15 +8,19 @@
    voll", gegen die Kurve), wie viel Luft die Welle einschließt, und das Bild
    zu jeder Zeit am Regler, die Schmelze nach Geschwindigkeit gefärbt.
 
-   Gerechnet wird mit dem Gitter (js/lbm/) oder mit Partikeln (js/sph/) —
-   früher zwei Seiten, jetzt ein Schalter (core.js, engines/). Das Werkzeug
-   hat kein Bauteil und keine Datei als Quelle: createHost({ part: false }),
-   die Einstellungen gehören zu EINEM Schlüssel („kammer").
+   Gerechnet wird mit dem Gitter (js/lbm/), mit Partikeln (js/sph/) oder mit
+   dem Metamodell (js/meta/) — ein Schalter, drei Verfahren (core.js,
+   engines/). Das Werkzeug hat kein Bauteil und keine Datei als Quelle:
+   createHost({ part: false }), die Einstellungen gehören zu EINEM Schlüssel
+   („kammer").
 
    Die Modi: Kammer · Kurve · Simulation · Ergebnis. Kammer, Kolben und
    Laufkanal stehen immer im Bild, dazu die ruhende Schmelze bis zum Stand
-   des Füllgrads; nur „Ergebnis" zeigt stattdessen die gerechnete Schmelze
-   und fährt den Kolben mit dem Zeitregler — sonst steht er in Startlage. */
+   des Füllgrads. „Simulieren" und der Zeitregler stehen unten unter dem
+   Knopf und gelten in JEDEM Modus: steht ein Lauf, zeigt das Bild die
+   gerechnete Schmelze und der Kolben fährt mit dem Regler — wer an der
+   Kammer dreht, sieht sein Ergebnis dabei (und verliert es, wenn die
+   Änderung ein anderes Problem stellt). */
 
 import * as T from 'three';
 import { segButtons, segButtonSet, slider, numberInput } from '../ui/controls.js';
@@ -28,7 +32,7 @@ import { shotTimeline } from '../runner/shottime.js';
 import { state as design } from '../../../auslegung/js/core/state.js';
 import { generateCurve } from '../../../auslegung/js/core/curvegen.js';
 import { buildProfile, rhoSolidus, vCrit } from '../../../auslegung/js/core/physics.js';
-import { createSimCore, ENGINES, ENGINE_IDS, engineFromUrl } from './core.js';
+import { createSimCore, ENGINES, engineFromUrl } from './core.js';
 import { env, probeGpu } from './engines/env.js';
 import { compareTable } from './table.js';
 import { MODES, DARSTELLUNG } from './kammer-panel.js';
@@ -130,13 +134,17 @@ export function createKammerfuellungTool(host) {
     blocked: () => 'Keine Kurve: ' + state.curveError,
     frameText: snap => ({
       time: fmtUnit(snap.t * 1000, 'ms', 0),
-      info: 'Kolben bei ' + fmtUnit(snap.s, 'mm', 0) + ' · eingeschlossene Luft ' + fmtUnit(snap.air, 'cm³')
-        + (snap.bubbles > 0 ? ' in ' + fmtPlain(snap.bubbles, 0) + (snap.bubbles === 1 ? ' Blase' : ' Blasen') : '')
+      /* Kurz: die Zeile steht fest unter dem Regler und soll nicht umbrechen —
+         zwei Zeilen schöben den Hauptknopf, sobald eine Blase dazukommt. */
+      info: 'Kolben ' + fmtUnit(snap.s, 'mm', 0) + ' · Luft ' + fmtUnit(snap.air, 'cm³')
+        + (snap.bubbles > 0 ? ' (' + fmtPlain(snap.bubbles, 0) + (snap.bubbles === 1 ? ' Blase)' : ' Blasen)') : '')
     }),
     meltVisible: () => true,
+    /* Der Zeitregler steht unter dem Hauptknopf — also gehört das Bild des
+       Laufs in jeden Modus, nicht nur in „Ergebnis". */
+    resultEverywhere: true,
     /* Der Kolben wandert mit dem Bild; ohne Bild steht er in Startlage. */
     onFrame: snap => { placePlunger(snap ? snap.s : 0); restMesh.visible = !snap; applyLook(); },
-    resultNote: () => 'Zeiten ab Kolbenstart.',
     render: renderTable
   });
 
@@ -201,14 +209,14 @@ export function createKammerfuellungTool(host) {
   /* ── Ergebnis: Kammer voll und Luft, beide Verfahren und die Kurve ─ */
   function renderTable() {
     const cv = state.curve;
-    const res = ENGINE_IDS.map(id => state.results[id]);
+    const res = core.ids.map(id => state.results[id]);
     const shownNow = core.shown();
     const last = r => r.snapshots[r.snapshots.length - 1];
     const cell = (fn, digits) => res.map(r => { if (!r) return '—'; const v = fn(r); return Number.isFinite(v) ? fmtFixed(v, digits) : 'nie'; });
     compareTable(ui('result-table'), {
       caption: 'Zeiten ab Kolbenstart',
       cols: [
-        ...ENGINE_IDS.map((id, i) => ({ label: ENGINES[id].label, off: !res[i], shown: !!shownNow && shownNow.engine === id && !!res[i] })),
+        ...core.ids.map((id, i) => ({ label: ENGINES[id].short || ENGINES[id].label, off: !res[i], shown: !!shownNow && shownNow.engine === id && !!res[i] })),
         { label: 'Kurve' }
       ],
       rows: [
@@ -306,7 +314,7 @@ export function createKammerfuellungTool(host) {
     host.refreshActions();
   }
   const resetSettings = () => fromJSON({
-    format: FORMAT, version: FORMAT_VERSION, engine: urlEngine || 'lbm', cell: { lbm: null, sph: null },
+    format: FORMAT, version: FORMAT_VERSION, engine: urlEngine || core.defaultEngine, cell: {},
     ...DEFAULTS, spec: { ...DEFAULTS.spec }
   });
 

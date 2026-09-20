@@ -22,7 +22,7 @@ Gestaltungsregeln — steht in `docs/3d-studio-grundlagen.md`.
 | `abstand.html`  | **Abstandsanalyse** — kürzester Abstand zwischen zwei Dateien, eingefärbt auf einer selbst gesetzten Skala (die Frage nach *außen*) |
 | `anguss.html`   | **Angussdesigner** — das Angusssystem als Graph entwerfen: Pressrest, Laufkanäle als Splines, Verzweigungen mit Zwickelradius, Anschnitte mit geradem Steg — als ein geschlossener Körper; dazu Querschnitt, Krümmung, Bernoulli-Verluste und Füllbalance, Ankunft nach der Schusskurve mit der Füllkammer von hier |
 | `angussfuellung.html` | **Angussfüllung** — die Schmelze vom Pressrest bis zu den Anschnitten, gerechnet mit dem Gitter (Lattice-Boltzmann mit freier Oberfläche) oder mit Partikeln (SPH), auf der Grafikkarte oder in JavaScript; Ankunft je Anschnitt Gitter · Partikel · 1D nebeneinander; `?engine=sph` wählt die Partikel vor; Code in `js/simulation/`, Kerne in `js/lbm/` und `js/sph/` |
-| `kammerfuellung.html` | **Kammerfüllung** — die Welle in der Füllkammer: Durchmesser, Länge, Füllgrad, Schusskurve (DieLogic oder v₁/v₂), Gitter oder Partikel; Kammer voll gegen die Kurve, eingeschlossene Luft, beide Verfahren nebeneinander |
+| `kammerfuellung.html` | **Kammerfüllung** — die Welle in der Füllkammer: Durchmesser, Länge, Füllgrad, Schusskurve (DieLogic oder v₁/v₂), **Metamodell** (die Vorgabe: trainiert auf OpenFOAM-Rechnungen, `js/meta/`, `models/`), Gitter oder Partikel; Kammer voll gegen die Kurve, eingeschlossene Luft, die Verfahren nebeneinander; `?engine=meta` wählt das Modell vor |
 | `ueberlauf.html` | **Überlaufdesigner** — Überläufe und Entlüftungen aufs Bauteil setzen: Bohne, Bohne mit Entlüftungskanal, Waschbrett (Chill-Vent), Entlüftungsschlitz; das Volumen fürs Schussgewicht |
 | `temperier.html` | **Temperierkanal-Designer** — Kühlstiche und Kanäle auf der Abstandsfläche im gewählten Abstand zur Kavität, Automatik für die Stiche, Wandabstand aus dem Feld |
 | `fuellung.html` | **Füllabschätzung** — die Schmelzefront von rechteckigen Anschnitten durch das gerasterte Bauteil: Füllgrad, Füllkörper, zuletzt gefüllte Stellen |
@@ -33,9 +33,13 @@ Gestaltungsregeln — steht in `docs/3d-studio-grundlagen.md`.
 Erreichbar über den Reiter **3D-Studio** in der Navigation oder direkt
 unter `/tools/3d-studio/`.
 
-Three.js liegt lokal in `vendor/` (MIT, LICENSE dort) — es ist die
-einzige Fremdbibliothek des Studios und wird von keiner anderen Seite der
-Website gebraucht, deshalb steht sie hier und nicht in `/shared/vendor/`.
+Three.js liegt lokal in `vendor/` (MIT, LICENSE dort) und wird von keiner
+anderen Seite der Website gebraucht, deshalb steht es hier und nicht in
+`/shared/vendor/`. Daneben liegt `vendor/onnxruntime/` (onnxruntime-web 1.30.0, MIT) für das eine
+trainierte Modell des Studios — das Metamodell der Kammerfüllung in
+`models/`. Beides zusammen sind 26 MB; geladen wird es erst, wenn jemand
+wirklich mit dem Metamodell rechnet (`js/meta/model.js`), nie beim
+Seitenaufbau.
 
 Vier Werkzeuge *messen* an vorhandener Geometrie (Entformung,
 Wandstärke, Abstand, Füllung), drei *erzeugen* welche (Anguss, Überläufe,
@@ -1226,10 +1230,20 @@ am Ende der Kurve.
 Vier Modi: **Kammer** (Durchmesser, Länge, Füllgrad, Laufkanal Breite × Tiefe
 — die ruhende Schmelze steht bis zum Spiegel im Bild), **Kurve** (DieLogic
 oder v₁ / v₂ mit Beschleunigung, Legierung, die Kennzahlen der Kurve),
-**Simulation** (Verfahren, Zellkante bzw. Partikelabstand, Aufwand) und
-**Ergebnis** (Kammer voll und Kolbenweg, Luft höchstens und am Ende —
-Gitter · Partikel · Kurve nebeneinander; Zeitregler, der Kolben fährt mit).
-Neue Maße setzen die Auflösung auf den Vorschlag zurück. Abbrechen,
+**Simulation** (Verfahren, Zellkante bzw. Partikelabstand — das Metamodell
+hat keine —, Aufwand) und **Ergebnis** (Kammer voll und Kolbenweg, Luft
+höchstens und am Ende — Modell · Gitter · Partikel · Kurve nebeneinander).
+**Simulieren** steht dabei in JEDEM Modus unten im Streifen des Rahmens,
+und darunter der **Zeitregler**: der Lauf gehört zum Werkzeug, nicht zu
+einem Reiter — wer an der Kammer oder der Kurve dreht, rechnet gleich dort
+neu und sieht das gerechnete Bild dabei (`shell.setActionsExtra`). Der
+Kolben fährt mit dem Regler, in jedem Modus. Der Streifen STEHT: Regler,
+Fortschritt und Zustandszeile halten ihre Höhe frei, auch wenn sie nichts
+zeigen (`.st-actions.steady`), sonst schöbe jeder Lauf den Hauptknopf nach
+oben. Was das Bild gerade zeigt — Zeit, Kolbenweg, eingeschlossene Luft —
+steht unten links IM Viewport (`shell.status`), neben der Welle und nicht
+in der Seitenleiste. Neue Maße setzen die Auflösung
+auf den Vorschlag zurück. Abbrechen,
 Ergebnisse und gemerkte Einstellungen wie bei der Angussfüllung; die
 Vorgaben stehen an EINER Stelle (`DEFAULTS` in `js/simulation/kammer.js`),
 v₁ = 0,5 m/s.
@@ -1403,15 +1417,66 @@ Schritte) und Bilder; `tools/angussfuellung.test.mjs` und
 `tools/kammerfuellung.test.mjs` fahren beide Verfahren ohne WebGPU durch
 (grob und kurz — Bilder, keine Ankunftszeiten).
 
-## Zwei Verfahren, ein Werkzeug (`js/simulation/`)
+## Das Verfahren „Metamodell" (`js/meta/`, nur Kammerfüllung)
 
-`engines/lbm.js` und `engines/sph.js` haben dieselbe Gestalt — `label`,
-`cellLabel`, `suggest(problem)`, `estimate(problem, cell)`,
-`run(problem, { cell, signal, progress })`, `createDisplay()` — und wickeln die
-unveränderten Kerne ein; das Werkzeug weiß nie, welches Verfahren es fährt.
+Kein Löser, sondern ein **trainiertes Modell**: ein Netz, das in
+`~/DieLogic_OF/incompressible/metamodel` aus über tausend
+OpenFOAM-Rechnungen derselben Kammer gelernt hat, wie die Welle aussieht
+(Sobol-Plan über λ = Länge/Durchmesser 5 … 20, Füllgrad 0,3 … 0,7,
+Durchmesser 60 … 300 mm, dazu eine Familie von Schusskurven bis knapp über
+die kritische Geschwindigkeit). Es liegt als ONNX in `models/` (12 MB, dazu
+die Beilage `.json` mit Eingabekonvention, Zellflächen und Zellmitten) und
+rechnet mit onnxruntime-web in WebAssembly — auch ohne Grafikkarte, für die
+Vorgabekammer in rund **drei Sekunden** statt Minuten.
+
+- **Eingabe** je Kolbenstellung: λ, Füllgrad, log₁₀ D, die Stellung s ∈ [0, 1]
+  und die Schusskurve als Froude-Zahl Fr(s) = v/√(gD) auf 64 Punkten (aus
+  demselben Profil, das Gitter und Partikel fahren). **Ausgabe** je
+  Kammerschicht das 30 × 30 Bild des Querschnitts: Schmelzeanteil,
+  Geschwindigkeit (in √(gD)) und Druck. 101 Stellungen in Paketen zu sechs,
+  mit Atempausen und Abbruch dazwischen (`js/meta/model.js`).
+- **Keine Auflösung.** Das Gitter ist das der Rechnungen — ein O-Gitter mit
+  Kernblock und vier Ringblöcken, eine Schicht D · 3/30 hoch. Die Zeile
+  „Zellkante" verschwindet für dieses Verfahren, und `estimate()` sagt
+  stattdessen, was das Gitter IST.
+- **Die Fläche** entsteht direkt auf diesem Gitter (`js/meta/ogrid.js`, aus
+  der Standalone-Seite des Modells übernommen): Surface Nets auf den
+  Dualzellen der Zellmitten, die vier Diagonalnähte der Ringblöcke als eigene
+  Dualzellen ergänzt, Wand, Kolben und Stirnplatte durch gespiegelte
+  Geisterknoten geschlossen — geprüft geschlossen und orientiert, eingeschlossenes
+  Volumen = Zellvolumen ± 2 %.
+- **Eingeschlossene Luft** wird gezählt wie beim Gitter (`js/meta/air.js`):
+  zusammenhängende Lufträume, alles außer dem größten ist eingeschlossen. Nur
+  zählt hier das Volumen statt der Zellzahl (die Zellen sind verschieden groß)
+  und die Schichthöhe stauchen sich mit dem Kolben.
+- **Grenzen.** Außerhalb der Trainingsbox rechnet es nicht: der Knopf bleibt
+  aus und sagt, welche Größe wie weit daneben liegt. Der **Laufkanal** geht
+  nicht ein — alle Rechnungen hatten dasselbe Auslassfenster in der
+  Stirnplatte (Sehne bei 0,42 R), „Kammer voll" heißt hier, die Schmelze
+  erreicht dieses Fenster; Breite und Tiefe gelten für Gitter und Partikel.
+  Und es kennt keine Legierung: gerechnet wurde dimensionslos.
+- Geprüft im Browser, nicht unter Node: `tests/browser/studio.spec.mjs`
+  („das Metamodell rechnet die Welle in Sekunden"). Die Node-Tests prüfen
+  seine Wahl, das fehlende Feld und seine Grenzen.
+
+## Drei Verfahren, ein Werkzeug (`js/simulation/`)
+
+`engines/lbm.js`, `engines/sph.js` und `engines/meta.js` haben dieselbe
+Gestalt — `label`, `cellLabel` (null: keine Auflösung), `suggest(problem)`,
+`estimate(problem, cell)`, `run(problem, { cell, signal, progress })`,
+`createDisplay()` — und wickeln die unveränderten Kerne bzw. das Modell ein;
+das Werkzeug weiß nie, welches Verfahren es fährt. Welche zur Wahl stehen,
+sagt `engineIds(kind)`: das Metamodell kennt nur die Kammer (`kinds`). Die
+Reihenfolge dieser Liste ist die der Schalter und der Tabellenspalten, und ihr
+erstes Verfahren ist die **Vorgabe** — für die Kammerfüllung das Metamodell,
+für die Angussfüllung das Gitter.
 `core.js` hält, was beiden Werkzeugen gemeinsam ist: den Schalter, den Lauf als
 Arbeit des Rahmens (`host.jobs`), je Verfahren ein Ergebnis zum selben Problem
-und das Bild. Der Abbruch erreicht den Kern im nächsten Schritt: die
+und das Bild. **Der Hauptknopf steht in jedem Modus**, und der Zeitregler
+darunter im Streifen des Rahmens (`shell.setActionsExtra`) statt im Modus
+„Ergebnis" — die Kammerfüllung zeigt ihr gerechnetes Bild deshalb überall
+(`resultEverywhere: true`), die Angussfüllung behält es bei „Ergebnis", wo auch die
+Ankunftsfarben wohnen. Der Abbruch erreicht den Kern im nächsten Schritt: die
 Laufschleifen fragen je Schritt nach der Kolbengeschwindigkeit, dort wirft der
 Adapter. In der Kammer fährt der Adapter das Zur-Ruhe-Kommen der Partikel
 selbst, mit Atempausen — `settle()` liefe am Stück. `engines/env.js` fragt

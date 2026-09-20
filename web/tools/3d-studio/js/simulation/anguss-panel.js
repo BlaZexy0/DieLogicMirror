@@ -5,7 +5,10 @@
    steht unter „Darstellung" in der Ansichtsleiste. */
 
 import { numberRow, selectRow, segRow, sliderRow, kpiBlock, warnLine } from '../studio/rows.js';
-import { SIMULATION_ROWS, resultRows } from './panel-common.js';
+import { simulationRows, resultRows } from './panel-common.js';
+import { ENGINES, engineIds } from './core.js';
+
+const ENGINE_OPTIONS = engineIds('anguss').map(id => [id, ENGINES[id].label]);
 
 export const MODES = [
   {
@@ -24,13 +27,13 @@ export const MODES = [
   {
     id: 'simulation', label: 'Simulation',
     hint: 'Zwei Verfahren für dieselbe Frage: eine schnelle Rechnung für Reihenfolge und Zeiten, keine Gießsimulation.',
-    html: SIMULATION_ROWS
+    html: simulationRows(ENGINE_OPTIONS)
   },
   {
     id: 'ergebnis', label: 'Ergebnis',
     hint: 'Wann die Schmelze an jedem Anschnitt ankommt, neben der 1D-Rechnung des Angussdesigners.',
     /* „Zeigen" steht nur da, wenn es etwas zu wählen gibt: Ankunftsfarben kennt nur das Gitter. */
-    html: resultRows('<div data-ui="show-row">'
+    html: resultRows(ENGINE_OPTIONS, '<div data-ui="show-row">'
       + segRow({ ui: 'show-seg', label: 'Zeigen', value: 'schmelze', options: [['schmelze', 'Schmelze'], ['ankunft', 'Ankunft']], help: 'anzeige' })
       + '</div>')
   }

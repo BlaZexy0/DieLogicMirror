@@ -1,9 +1,15 @@
 /* Die Felder der Kammerfüllung — je Modus ein Abschnitt: Kammer (der
    liegende Zylinder) · Schusskurve (was der Kolben fährt) · Simulation ·
-   Ergebnis. „Deckkraft Kammer" steht unter „Darstellung". */
+   Ergebnis. „Deckkraft Kammer" steht unter „Darstellung", der Zeitregler
+   unter dem Hauptknopf (panel-common.js, PLAYBACK_ROWS). */
 
 import { numberRow, selectRow, segRow, sliderRow, kpiBlock, warnLine } from '../studio/rows.js';
-import { SIMULATION_ROWS, resultRows, info } from './panel-common.js';
+import { simulationRows, resultRows, info } from './panel-common.js';
+import { ENGINES, engineIds } from './core.js';
+
+/* Die Verfahren dieses Werkzeugs, in der Reihenfolge von core.js: Gitter,
+   Partikel, Metamodell. */
+const ENGINE_OPTIONS = engineIds('kammer').map(id => [id, ENGINES[id].label]);
 
 const field = (name, label) => '<input type="text" inputmode="decimal" data-ui="' + name + '" aria-label="' + label + '" spellcheck="false" autocomplete="off">';
 
@@ -34,13 +40,13 @@ export const MODES = [
   },
   {
     id: 'simulation', label: 'Simulation',
-    hint: 'Zwei Verfahren für dieselbe Welle: vom Kolbenstart, bis die Schmelze den Laufkanal erreicht.',
-    html: SIMULATION_ROWS
+    hint: 'Drei Verfahren für dieselbe Welle: vom Kolbenstart, bis die Schmelze den Laufkanal erreicht.',
+    html: simulationRows(ENGINE_OPTIONS)
   },
   {
     id: 'ergebnis', label: 'Ergebnis',
     hint: '„Kammer voll" gegen die Kurve, dazu die eingeschlossene Luft.',
-    html: resultRows('', 'zeit')
+    html: resultRows(ENGINE_OPTIONS)
   }
 ];
 

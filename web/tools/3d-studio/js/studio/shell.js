@@ -8,7 +8,9 @@
      Seitenleiste  Reiter = MODI (einer sichtbar, jeder besitzt, was er
                  im Viewport zeigt), darunter eine Hinweiszeile, der
                  Inhalt des Modus, unten fest der Hauptknopf mit
-                 Fortschritt und Zustandszeile
+                 Fortschritt, Zustandszeile und dem, was in JEDEM Modus
+                 unter dem Knopf bleibt (setActionsExtra — der Zeitregler
+                 der Simulationen)
      Viewport    Ansichtsleiste (mit Einpassen und Darstellung ▾), oben
                  links die Aktions-Chips und das Auswahlfeld, unten rechts
                  Legende und Farbskala, unten links die Bedienhinweise,
@@ -77,6 +79,7 @@ const SKELETON = (title) => `
       <button type="button" class="btn btn-primary block-btn" data-ui="primary" hidden></button>
       <div class="st-progress" data-ui="progress" hidden><div class="st-progress-bar" data-ui="progress-bar"></div></div>
       <div class="st-note" data-ui="note"></div>
+      <div class="st-actions-extra" data-ui="actions-extra" hidden></div>
     </div>
   </aside>
   <div id="viewport" class="st-viewport" data-ui="viewport">
@@ -186,9 +189,9 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
 
   /* ── Hauptknopf, Fortschritt, Zustandszeile ──────────────── */
   const primary = ui('primary'), note = ui('note'), progress = ui('progress'), progressBar = ui('progress-bar');
-  const actions = ui('actions');
-  /* Ohne Knopf, Fortschritt und Zeile bleibt kein leerer Streifen stehen. */
-  const syncActions = () => { actions.hidden = primary.hidden && note.hidden && progress.hidden; };
+  const actions = ui('actions'), actionsExtra = ui('actions-extra');
+  /* Ohne Knopf, Fortschritt, Zeile und Zusatz bleibt kein leerer Streifen stehen. */
+  const syncActions = () => { actions.hidden = primary.hidden && note.hidden && progress.hidden && actionsExtra.hidden; };
   let lastPrimary = null, busy = false, busyClick = null;
   let primaryHandler = null;
   primary.addEventListener('click', () => { if (busy) { if (busyClick) busyClick(); } else if (primaryHandler) primaryHandler(); });
@@ -244,6 +247,22 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
        läuft währenddessen eine Rechnung, steht er mit dem nächsten Schritt wieder. */
     if (busy && veil) busyEl.classList.add('on');
     syncActions();
+  }
+
+  /** Was unter dem Hauptknopf STEHEN BLEIBT, gleich in welchem Modus und
+      gleich ob es gerade etwas zu tun gibt: der Zeitregler der Simulationen
+      (js/simulation/panel-common.js). Er verschwindet NICHT, wenn nichts
+      abzuspielen ist — sonst schöbe er den Hauptknopf bei jedem Lauf nach
+      oben; er ist dann nur nicht scharf. */
+  function setActionsExtra(html) {
+    actionsExtra.innerHTML = html || '';
+    actionsExtra.hidden = !html;
+    /* „steady": ein Streifen mit festem Zusatz hält auch die Höhe von
+       Fortschritt und Zeilen frei (css/studio.css) — sonst wandert der
+       Hauptknopf bei jedem Lauf und bei jeder Meldung. */
+    actions.classList.toggle('steady', !!html);
+    syncActions();
+    return actionsExtra;
   }
 
   /* ── Aktions-Chips ───────────────────────────────────────── */
@@ -541,6 +560,7 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     setFitTarget: fn => vp.setFitTarget(fn),
     setModes, setMode, get mode() { return current; }, onMode(fn) { modeListeners.push(fn); }, modeSection, setTabBadge,
     setPrimary, setNote, setBusy, progress: setProgress, get busy() { return busy; },
+    setActionsExtra, actionsExtra,
     setChips, renderChips,
     inspector,
     legend, status, colorbar: setColorbar, darstellung,

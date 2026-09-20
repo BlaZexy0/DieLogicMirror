@@ -110,10 +110,13 @@ Erweiterungen, nur Dreiecke). Exporte sind binäre STL und die GLB oben.
   Boolesche Operationen, ohne Raster.
 - Deckungsgleiche Flächen überlappender Körper löst das Material
   (Polygon-Offset), nicht das Beschneiden der Geometrie.
-- Gezeichnet wird mit WebGL über Three.js — der einzigen Fremdbibliothek,
-  in `vendor/` mitgeliefert. WebGPU rechnet nur, wo es sich lohnt: die
-  Gitter-Boltzmann- und Partikel-Kerne von Anguss- und Kammerfüllung, jeweils
-  mit JavaScript als Rückfall.
+- Gezeichnet wird mit WebGL über Three.js. WebGPU rechnet nur, wo es sich
+  lohnt: die Gitter-Boltzmann- und Partikel-Kerne von Anguss- und
+  Kammerfüllung, jeweils mit JavaScript als Rückfall.
+- Fremdbibliotheken liegen in `vendor/`: Three.js überall, dazu
+  onnxruntime-web für das eine trainierte Modell (`models/`, das Metamodell
+  der Kammerfüllung, `js/meta/`). Beides lädt die Kammerfüllung erst beim
+  ersten Lauf mit dem Metamodell — 26 MB gehören auf keine andere Seite.
 - `mesh.js`, `solids.js`, `csg.js`, `part/glbio.js`, `part/stlio.js`
   importieren Three.js nicht und laufen deshalb unter Node in den Tests.
 - Oberfläche und Dokumentation des Studios sind deutsch.

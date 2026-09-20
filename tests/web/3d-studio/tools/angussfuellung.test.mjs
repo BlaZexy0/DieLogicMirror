@@ -48,17 +48,18 @@ test('Vier Modi, der Anguss-Chip statt des Bauteils, Kurve und Aufwand stehen', 
   assert.match(ui('estimate').textContent, /Gitter \d+ × \d+ × \d+ = [\d.,]+ (Mio\.|Tsd\.) Zellen · .* MB · (grob .*|Stunden) · JavaScript/);
   assert.match(ui('engine-note').textContent, /Kein WebGPU/, 'die Seite sagt es');
   assert.equal(ui('engine-warn').textContent, '');
-  /* In System und Prozess gibt es nichts zu starten. */
-  assert.equal(ui('primary').hidden, true);
+  /* „Simulieren" steht in JEDEM Modus — der Lauf gehört zum Werkzeug, nicht zu einem Reiter. */
+  assert.equal(ui('primary').hidden, false);
+  assert.equal(ui('primary').textContent, 'Simulieren');
   shell.setMode('simulation');
   assert.equal(ui('primary').textContent, 'Simulieren');
   assert.equal(ui('primary').disabled, false);
   /* Ergebnis ohne Lauf: die 1D-Rechnung steht schon da, die Verfahren fehlen; nichts Totes. */
   shell.setMode('ergebnis');
   assert.match(ui('result-table').textContent, /Gitter.*Partikel.*1D.*Anschnitt k\d+.*—.*—.*\d,\d/);
-  assert.equal(ui('playback').hidden, true, 'kein Regler ohne Bild');
+  assert.equal(ui('result-extra').hidden, true, 'kein „Zeigen" ohne Bild');
   assert.equal(ui('primary').textContent, 'Simulieren', 'im Ergebnis ohne Lauf wird er angeboten');
-  assert.match(ui('note').textContent, /noch nicht gerechnet/);
+  assert.equal(ui('note').textContent, 'Noch nicht gerechnet.', 'die Zeile bleibt besetzt — leer wandert der Knopf');
   /* Anzeigeoptionen stehen unter „Darstellung". */
   assert.equal(doc.getElementById('viewport').querySelector('.view-bar [data-darstellung]').hidden, false);
   assert.ok(ui('opacity'));
@@ -96,8 +97,11 @@ test('Gitter: ein Lauf in JavaScript bis zur Ankunft — Tabelle, Bild, Regler, 
   assert.ok(r.snapshots.length > 3, 'Bilder des Füllstands');
   assert.ok(r.filled > 0.5, 'der Anguss ist am Ende weitgehend voll: ' + r.filled);
   assert.equal(shell.mode, 'ergebnis', 'wer simuliert, landet beim Ergebnis');
-  assert.equal(ui('primary').hidden, true, 'aktuell — kein Knopf');
-  assert.match(ui('note').textContent, /ab „Kammer voll"/);
+  /* Steht das Ergebnis, lädt der Knopf nicht mehr ein: Umriss statt Farbe, und die Zeile sagt,
+     was der Lauf gekostet hat. */
+  assert.equal(ui('primary').hidden, false);
+  assert.ok(ui('primary').className.includes('btn-outline'), 'Umriss: ' + ui('primary').className);
+  assert.match(ui('note').textContent, /^Gerechnet mit [\d,]+ mm in [\d,]+ s\.$/, 'kurz: die Zeile steht in jedem Modus');
   /* Die Tabelle: Gitter mit Zahlen, Partikel noch leer, 1D daneben, unten die Spreizung. */
   const rows = ui('result-table').querySelectorAll('tbody tr').map(tr => tr.querySelectorAll('td').map(td => td.textContent));
   assert.equal(rows.length, 3);
@@ -120,7 +124,7 @@ test('Gitter: ein Lauf in JavaScript bis zur Ankunft — Tabelle, Bild, Regler, 
   assert.ok(doc.getElementById('colorbar').classList.contains('on'), 'mit Skala');
   assert.match(doc.getElementById('cb-title').textContent, /Geschwindigkeit/);
   assert.match(doc.getElementById('cb-ticks').innerHTML, /m\/s/);
-  assert.equal(ui('playback').hidden, false);
+  assert.equal(ui('result-extra').hidden, false);
   assert.equal(ui('t-slider').max, String(r.snapshots.length - 1));
   /* Regler zurück: am Anfang steht die Schmelze im Pressrest. */
   const sl = ui('t-slider');
@@ -128,14 +132,14 @@ test('Gitter: ein Lauf in JavaScript bis zur Ankunft — Tabelle, Bild, Regler, 
   sl.dispatch('input');
   assert.equal(s.frame, 0);
   assert.match(ui('t-slider-val').textContent, /^0 ms/);
-  assert.match(ui('t-info').textContent, /gefüllt/);
+  assert.match(doc.getElementById('status').textContent, /Anguss zu .* gefüllt/, 'der Stand steht im Bild');
   /* Ankunftsfarben: das Netz des Angusses trägt Farben, die Skala gehört der Ankunft. */
   seg(ui('show-seg'), 'ankunft').dispatch('click');
   assert.equal(s.show, 'ankunft');
   assert.ok(v.runnerMesh.geometry.getAttribute('color'), 'je Ecke eine Farbe');
   assert.equal(v.meltMesh.visible, false);
   assert.match(doc.getElementById('cb-title').textContent, /Ankunft/);
-  assert.equal(ui('time-row').hidden, true, 'ohne Schmelze kein Zeitregler — er bewegte nichts');
+  assert.equal(ui('t-slider').disabled, true, 'ohne Schmelze ist der Zeitregler stumpf — er bewegte nichts');
   /* Der Modus besitzt sein Bild: woanders steht nur der Anguss, ohne Skala. */
   shell.setMode('prozess');
   assert.ok(!doc.getElementById('colorbar').classList.contains('on'), 'außerhalb des Ergebnisses keine Skala');
@@ -145,7 +149,7 @@ test('Gitter: ein Lauf in JavaScript bis zur Ankunft — Tabelle, Bild, Regler, 
   seg(ui('show-seg'), 'schmelze').dispatch('click');
   assert.match(doc.getElementById('cb-title').textContent, /Geschwindigkeit/);
   assert.ok(v.meltMesh.visible);
-  assert.equal(ui('time-row').hidden, false);
+  assert.equal(ui('t-slider').disabled, false);
 });
 
 test('Abbruch: der Knopf ist während des Laufs zu erreichen, danach gibt es kein Ergebnis — das andere Verfahren behält seines', async () => {
@@ -272,7 +276,7 @@ test('Ein anderes Problem verwirft beide Ergebnisse', () => {
   same(s.results.lbm, null, 'Gitter');
   same(s.results.sph, null, 'Partikel');
   shell.setMode('ergebnis');
-  assert.equal(ui('playback').hidden, true);
+  assert.equal(ui('result-extra').hidden, true);
   assert.equal(ui('bild-row').hidden, true);
   assert.equal(v.points.visible, false);
   assert.ok(!doc.getElementById('colorbar').classList.contains('on'));

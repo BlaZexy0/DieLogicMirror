@@ -84,12 +84,20 @@ ASSET_SUFFIXES = {".png", ".ico", ".svg", ".webmanifest", ".stl", ".woff", ".wof
 # Externe ist ohnehin mitgeliefert (KaTeX unter /shared/vendor/), deshalb
 # reicht überall 'self'.
 #
+# 'wasm-unsafe-eval' kam mit dem Metamodell der Kammerfüllung dazu
+# (onnxruntime-web unter /tools/3d-studio/vendor/): OHNE das Schlüsselwort
+# lehnen Chrome UND Firefox jedes WebAssembly.instantiate() ab
+# ("blocked by CSP"), und das Verfahren scheitert beim ersten Lauf. Es
+# erlaubt genau das Übersetzen von WebAssembly — nicht eval() von
+# JavaScript ('unsafe-eval' wäre das und bleibt draußen); woher die Bytes
+# kommen dürfen, regelt weiter 'self'.
+#
 # Referrer-Policy ist hier nicht Kosmetik: der Einladungslink trägt sein
 # Token in der Adresszeile; ohne die Regel stünde es im Referrer jeder
 # fremden Seite, die von dort aus geöffnet wird.
 CSP = "; ".join([
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
+    "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",

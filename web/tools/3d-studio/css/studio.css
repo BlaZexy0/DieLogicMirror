@@ -676,9 +676,16 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
    die Zeitzeile mit Abspielen, zwei Maße in einer Zeile. Alles gilt nur für
    die beiden Werkzeuge (data-tool am Rahmen, js/studio/host.js). */
 
-/* Die Tabelle wächst mit der Zahl der Anschnitte und scrollt dann in SICH —
-   die Seitenleiste selbst scrollt nie. Der Kopf bleibt stehen. */
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table { margin: 6px 0 6px; max-height: 24vh; overflow-y: auto; border: 1px solid var(--border-light); border-radius: var(--radius); }
+/* Der Modus „Ergebnis" füllt die Seitenleiste von oben nach unten, und die
+   Tabelle nimmt darin, was übrig bleibt: Sie wächst mit der Zahl der
+   Anschnitte (und mit jedem Verfahren um eine Spalte) und scrollt dann in
+   SICH — die Seitenleiste selbst scrollt nie. Eine feste Höhe (24vh) ging
+   nicht mehr auf, seit der Zeitregler unten im Streifen steht: Was er dem
+   Kasten nimmt, fehlte der letzten Zeile der Tabelle. Der Kopf bleibt stehen. */
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .st-mode[data-mode="ergebnis"] {
+  display: flex; flex-direction: column; min-height: 0; max-height: 100%;
+}
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table { margin: 6px 0 6px; flex: 0 1 auto; min-height: 76px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: var(--radius); }
 .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table:empty { display: none; }
 .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table table { width: 100%; border-collapse: collapse; font-size: .78rem; }
 .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table caption { text-align: left; caption-side: top; color: var(--muted); font-size: .72rem; line-height: 1.4; padding: 5px 8px 3px; }
@@ -689,12 +696,33 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
 .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table td { font-family: var(--mono); text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--border-light); white-space: nowrap; color: var(--text); }
 .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table tr:last-child td { border-bottom: 0; }
 .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table th:first-child, .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table td:first-child { text-align: left; }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table td:first-child { font-family: var(--sans); color: var(--text-body); white-space: normal; overflow-wrap: anywhere; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table td:first-child { font-family: var(--sans); color: var(--text-body); white-space: normal; overflow-wrap: break-word; }
 /* Kein Lauf mit diesem Verfahren. */
 .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table .off { color: var(--muted-light); font-weight: 400; }
 /* Die Spalte, deren Bild gerade im Viewport steht. */
 .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table th.shown { color: var(--primary-deep); box-shadow: inset 0 -2px 0 var(--primary); }
 .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table tr.sum td { border-top: 1px solid var(--border); background: var(--surface2); font-weight: 600; }
+
+/* Der Zeitregler steht unter dem Hauptknopf (shell.setActionsExtra) und gehört
+   damit keinem Reiter: eine feine Linie trennt ihn von der Zustandszeile. Er
+   steht DAUERND da, auch ohne Lauf — sonst schöbe er den Knopf bei jedem
+   Ergebnis nach oben; ohne etwas abzuspielen ist er blass und stumpf (.off).
+   Die Zeile darunter hält ihre Höhe frei, damit auch sie nichts verschiebt. */
+.st-actions-extra { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-light); }
+.st-actions-extra .row { margin: 0; }
+/* Ein Streifen mit festem Zusatz STEHT: Fortschrittsbalken, Zustandszeile und
+   die Zeile unter dem Regler halten ihre Höhe frei, auch wenn sie gerade
+   nichts zeigen. Sonst schöbe jeder Lauf den Hauptknopf nach oben und beim
+   Ergebnis wieder zurück. (Das globale [hidden] gewinnt sonst, darum wichtig.) */
+.st-actions.steady .st-progress[hidden] { display: block !important; visibility: hidden; }
+.st-actions.steady .st-note[hidden] { display: block !important; }
+.st-actions.steady .st-hintline:empty { display: block; }
+/* Eine leere Zustandszeile hält ihre Höhe mit einem geschützten Leerzeichen,
+   nicht mit min-height: das Polster zählt bei border-box mit, und die Zeile
+   fiele um genau diese acht Pixel zu kurz aus. */
+.st-actions.steady .st-note[hidden]::before, .st-actions.steady .st-hintline:empty::before { content: "\00a0"; }
+.st-actions-extra .off { opacity: .45; }
+.st-actions-extra .off input[type="range"], .st-actions-extra .off .sim-play { cursor: default; }
 
 /* Die Zeitzeile: Bezeichnung · Abspielen · Regler · Zeit. Die Bezeichnung ist
    hier nur so breit wie ihr Text (sonst bliebe dem Regler nichts), und

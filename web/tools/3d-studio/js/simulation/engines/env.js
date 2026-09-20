@@ -37,7 +37,8 @@ export async function probeGpu() {
 }
 
 const KEY = 'dielogic-sim-tempo';
-const START = { 'lbm-gpu': 6e-6, 'lbm-cpu': 1.2e-4, 'sph-gpu': 4e-5, 'sph-cpu': 3e-3 };
+/* Das Metamodell zählt anders: ms je Kolbenstellung und Schicht (es rechnet nicht in Schritten). */
+const START = { 'lbm-gpu': 6e-6, 'lbm-cpu': 1.2e-4, 'sph-gpu': 4e-5, 'sph-cpu': 3e-3, 'meta-wasm': 0.38 };
 const IN_BROWSER = typeof navigator !== 'undefined' && /Mozilla/.test(navigator.userAgent || '');
 
 /** Ein Bild in ms, auf das JavaScript im Browser wartet — siehe oben. */
@@ -99,7 +100,7 @@ export function roughTime(ms) {
   return 'Stunden';
 }
 
-export const kernelName = k => (k === 'gpu' ? 'WebGPU' : 'JavaScript');
+export const kernelName = k => (k === 'gpu' ? 'WebGPU' : k === 'wasm' ? 'WebAssembly' : 'JavaScript');
 
 export const tick = () => new Promise(r => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(() => r()) : setTimeout(r, 0)));
 
