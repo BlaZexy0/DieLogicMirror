@@ -131,7 +131,7 @@ test('Gitter: ein Lauf in JavaScript bis zur Ankunft — Tabelle, Bild, Regler, 
   sl.value = '0';
   sl.dispatch('input');
   assert.equal(s.frame, 0);
-  assert.match(ui('t-slider-val').textContent, /^0 ms/);
+  assert.match(doc.getElementById('status').textContent, /0 ms/, 'die Zeit steht im Bild');
   assert.match(doc.getElementById('status').textContent, /Anguss zu .* gefüllt/, 'der Stand steht im Bild');
   /* Ankunftsfarben: das Netz des Angusses trägt Farben, die Skala gehört der Ankunft. */
   seg(ui('show-seg'), 'ankunft').dispatch('click');

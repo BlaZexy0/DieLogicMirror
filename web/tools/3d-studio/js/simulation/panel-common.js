@@ -57,4 +57,4 @@ export const resultRows = (options, between = '') =>
 export const PLAYBACK_ROWS =
   '<div data-ui="time-row" class="off"><div class="row sim-time"><span>Zeit' + info('zeit') + '</span>'
   + '<button type="button" class="sim-play" data-ui="play" aria-label="Abspielen" disabled>' + PLAY + '</button>'
-  + '<input type="range" data-ui="t-slider" aria-label="Zeit" min="0" max="0" step="1" value="0" disabled><span class="val" data-ui="t-slider-val"></span></div></div>';
+  + '<input type="range" data-ui="t-slider" aria-label="Zeit" min="0" max="0" step="1" value="0" disabled></div></div>';

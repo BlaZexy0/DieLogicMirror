@@ -187,7 +187,6 @@ export function createSimCore(opts) {
 
   /* ── Das Bild ────────────────────────────────────────────── */
   const clampFrame = r => Math.max(0, Math.min(r.snapshots.length - 1, state.frame));
-  const timeText = r => (r ? opts.frameText(r.snapshots[clampFrame(r)], r).time : '');
 
   function applyView() {
     const r = resultShown() ? shown() : null;
@@ -212,7 +211,6 @@ export function createSimCore(opts) {
       ui('play').disabled = !spielbar;
       ui('time-row').classList.toggle('off', !spielbar);
       if (!melt) stopPlay();
-      ui('t-slider-val').textContent = melt ? timeText(r) : '';
       /* Was das Bild zeigt, steht IM Bild (unten links) — nicht in der
          Seitenleiste: dort nähme es den Modi eine Zeile, und gelesen wird es
          neben der Welle, nicht neben den Feldern. */
@@ -246,7 +244,10 @@ export function createSimCore(opts) {
     if (state.frame >= r.snapshots.length - 1) state.frame = 0;
     state.playing = setInterval(() => {
       const now = shown();
-      if (!now || shell.mode !== 'ergebnis') { stopPlay(); return; }
+      /* Abgespielt wird, wo das Bild steht — seit der Regler unter dem Knopf
+         sitzt, ist das jeder Modus (resultShown). Die alte Prüfung auf
+         „ergebnis" hielt das Abspielen überall sonst sofort wieder an. */
+      if (!now || !resultShown()) { stopPlay(); return; }
       state.frame++;
       if (state.frame >= now.snapshots.length) { state.frame = now.snapshots.length - 1; stopPlay(); }
       ui('t-slider').value = String(state.frame);
@@ -319,7 +320,8 @@ export function createSimCore(opts) {
       return v;
     }, { min: range[0], max: range[1], unit: 'mm' });
     segButtons(ui('bild-seg'), v => { state.bild = v; stopPlay(); renderResults(); });
-    slider(ui('t-slider'), v => { if (wired) { stopPlay(); showFrame(v); } }, () => timeText(shown()), ui('t-slider-val'));
+    /* Ohne Anzeige dahinter: die Zeit steht unten links im Bild. */
+    slider(ui('t-slider'), v => { if (wired) { stopPlay(); showFrame(v); } });
     ui('play').addEventListener('click', togglePlay);
     wired = true;
     setPlayButton(false);

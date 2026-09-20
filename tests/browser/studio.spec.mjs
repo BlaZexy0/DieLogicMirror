@@ -83,8 +83,16 @@ test('Kammerfüllung: das Metamodell rechnet die Welle in Sekunden — Bild, Zei
   await expect(page.locator('[data-ui="time-row"]')).toBeVisible();
   await page.locator('[data-ui="t-slider"]').fill('0');
   await page.locator('[data-ui="t-slider"]').dispatchEvent('input');
-  await expect(page.locator('[data-ui="t-slider-val"]')).toHaveText(/^0 ms/);
+  /* Zeit, Kolbenweg, Kolbengeschwindigkeit und Luft stehen IM Bild. */
   await expect(page.locator('#status')).toContainText('Kolben 0 mm');
+  await expect(page.locator('#status')).toContainText('m/s');
+  /* ▶ spielt ab, auch hier — und ein zweiter Klick hält an. */
+  await page.click('[data-ui="play"]');
+  await expect.poll(() => page.evaluate(() => window.__kammerfuellung.state.frame), { timeout: 10_000 }).toBeGreaterThan(0);
+  await page.click('[data-ui="play"]');
+  const halt = await page.evaluate(() => window.__kammerfuellung.state.frame);
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => window.__kammerfuellung.state.frame)).toBe(halt);
 });
 
 test('Angussdesigner: der Pfeil eines Anschnitts schaltet den Zielmodus scharf', async ({ page }) => {

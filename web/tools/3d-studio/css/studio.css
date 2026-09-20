@@ -724,12 +724,11 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
 .st-actions-extra .off { opacity: .45; }
 .st-actions-extra .off input[type="range"], .st-actions-extra .off .sim-play { cursor: default; }
 
-/* Die Zeitzeile: Bezeichnung · Abspielen · Regler · Zeit. Die Bezeichnung ist
-   hier nur so breit wie ihr Text (sonst bliebe dem Regler nichts), und
-   „123,4 ms" ist breiter als die Prozentanzeige, für die .val gemacht ist. */
+/* Die Zeitzeile: Bezeichnung · Abspielen · Regler. Die Bezeichnung ist hier
+   nur so breit wie ihr Text, sonst bliebe dem Regler nichts. Eine Zahl steht
+   nicht dahinter: Zeit, Kolbenweg und Luft stehen unten links IM Bild. */
 .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .row.sim-time { flex-wrap: nowrap; }
 .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .row.sim-time > span:first-child { width: auto; white-space: nowrap; }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .row.sim-time .val { width: auto; min-width: 58px; white-space: nowrap; }
 .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-play {
   flex: 0 0 auto; width: 30px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--surface); color: var(--primary-deep); line-height: 1; cursor: pointer;

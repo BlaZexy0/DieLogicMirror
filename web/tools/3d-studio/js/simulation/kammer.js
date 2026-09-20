@@ -134,9 +134,11 @@ export function createKammerfuellungTool(host) {
     blocked: () => 'Keine Kurve: ' + state.curveError,
     frameText: snap => ({
       time: fmtUnit(snap.t * 1000, 'ms', 0),
-      /* Kurz: die Zeile steht fest unter dem Regler und soll nicht umbrechen —
-         zwei Zeilen schöben den Hauptknopf, sobald eine Blase dazukommt. */
-      info: 'Kolben ' + fmtUnit(snap.s, 'mm', 0) + ' · Luft ' + fmtUnit(snap.air, 'cm³')
+      /* Was im Bild steht (unten links): wo der Kolben ist, wie schnell er dort
+         fährt — die Kurve sagt es zu jeder Zeit — und was die Welle einschließt. */
+      info: 'Kolben ' + fmtUnit(snap.s, 'mm', 0)
+        + (state.curve ? ' · v ' + fmtUnit(state.curve.profile.atTime(snap.t).v, 'm/s') : '')
+        + ' · Luft ' + fmtUnit(snap.air, 'cm³')
         + (snap.bubbles > 0 ? ' (' + fmtPlain(snap.bubbles, 0) + (snap.bubbles === 1 ? ' Blase)' : ' Blasen)') : '')
     }),
     meltVisible: () => true,

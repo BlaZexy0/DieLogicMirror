@@ -71,7 +71,7 @@ test('Vier Modi, kein Bauteil-Chip, die Vorgaben stehen in den Feldern, die DieL
   assert.equal(ui('actions-extra').hidden, false, 'der Zeitregler steht von Anfang an da');
   assert.equal(ui('t-slider').disabled, true, '… nur stumpf, solange es nichts abzuspielen gibt');
   assert.equal(ui('play').disabled, true);
-  assert.equal(ui('t-slider-val').textContent, '');
+  assert.equal(ui('t-slider-val'), null, 'keine Zahl hinter dem Regler — die Zeit steht im Bild');
   shell.setMode('kammer');
   assert.equal(ui('primary').textContent, 'Simulieren', '„Simulieren" steht in jedem Modus');
   assert.equal(ui('primary').hidden, false);
@@ -174,11 +174,11 @@ test('Kleine Kammer, zweistufige Kurve — Gitter: ein Lauf in JavaScript bis Ka
   sl.value = '0';
   sl.dispatch('input');
   assert.equal(s.frame, 0);
-  assert.match(ui('t-slider-val').textContent, /^0 ms/);
-  /* Was das Bild zeigt, steht IM Bild (unten links), nicht in der Seitenleiste. */
+  /* Was das Bild zeigt, steht IM Bild (unten links), nicht in der Seitenleiste:
+     Zeit, Kolbenweg, seine Geschwindigkeit aus der Kurve und die Luft. */
   const stand = doc.getElementById('status').textContent;
-  assert.match(stand, /Kolben 0 mm · Luft [\d,]+ cm³/, 'Stand im Bild: ' + stand);
-  assert.match(stand, /\b0 ms/, 'mit der Zeit: ' + stand);
+  assert.match(stand, /Kolben 0 mm · v [\d,]+ m\/s · Luft [\d,]+ cm³/, 'Stand im Bild: ' + stand);
+  assert.match(stand, /0 ms/, 'mit der Zeit: ' + stand);
   assert.ok(Math.abs(xMax()) < 1e-6, 'Bild 0: Kolben in Startlage');
   /* Der Lauf gehört keinem Reiter: in „Kammer" steht dasselbe Bild, und der
      Regler unter dem Knopf bewegt es dort genauso. */
@@ -192,8 +192,24 @@ test('Kleine Kammer, zweistufige Kurve — Gitter: ein Lauf in JavaScript bis Ka
   assert.equal(ui('primary').textContent, 'Simulieren');
   sl.value = '0'; sl.dispatch('input');
   assert.ok(Math.abs(xMax()) < 1e-6, 'Bild 0 auch in „Kammer"');
+  /* ▶ läuft DORT, wo der Regler steht — nicht nur unter „Ergebnis". (Solange
+     das Abspielen an shell.mode === 'ergebnis' hing, hielt es in jedem anderen
+     Modus sofort wieder an: der Knopf tat scheinbar nichts.) */
+  ui('play').dispatch('click');
+  assert.ok(s.playing, 'es läuft, obwohl „Kammer" offen ist');
+  await wait(() => s.frame > 0, 100, 20);
+  const gelaufen = s.frame;
+  ui('play').dispatch('click');
+  assert.equal(s.playing, null, 'ein zweiter Klick hält an');
+  await new Promise(r => setTimeout(r, 120));
+  assert.equal(s.frame, gelaufen, 'und es bleibt stehen');
+  /* Vom Ende aus fängt ▶ wieder vorn an, sonst bewegte sich nichts. */
   sl.value = sl.max; sl.dispatch('input');
+  ui('play').dispatch('click');
+  assert.ok(s.frame < +sl.max, 'vom Ende springt es zurück an den Anfang');
+  ui('play').dispatch('click');
   shell.setMode('ergebnis');
+  sl.value = sl.max; sl.dispatch('input');
   assert.ok(v.meltMesh.visible && doc.getElementById('colorbar').classList.contains('on'));
 });
 
@@ -259,7 +275,7 @@ test('Partikel: ein Lauf bis Kammer voll — danach stehen Gitter, Partikel und 
   assert.equal(sl.max, String(r.snapshots.length - 1));
   sl.value = '0';
   sl.dispatch('input');
-  assert.match(ui('t-slider-val').textContent, /^0 ms/);
+  assert.match(doc.getElementById('status').textContent, /\b0 ms/);
   seg(ui('bild-seg'), 'lbm').dispatch('click');
   assert.ok(v.meltMesh.visible && !v.points.visible);
   seg(ui('bild-seg'), 'sph').dispatch('click');
