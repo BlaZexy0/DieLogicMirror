@@ -527,8 +527,14 @@ button.st-list-row.active { background: var(--pale); }
   .st-root .block-btn, .st-root select { min-height: 44px; }
   .st-info { min-width: 36px; min-height: 44px; margin: -10px 0 -10px -4px; font-size: .95rem; }
   .row input[type="range"] { min-height: 44px; }
-  .st-details summary { padding: 12px 10px; }
+  .st-details summary { padding: 12px 10px; min-height: 44px; }
   .row input[type="text"], select { padding: .45rem .5rem; }
+  /* Kennzahlen sind Text, kein Ziel: enger gesetzt, damit die Zeilen der
+     Bedienung ihre 44 px behalten können, ohne dass die Leiste überläuft. */
+  .krows { margin: 4px 0 0; gap: 2px; }
+  .krow { padding: 3px 9px; gap: 3px 10px; }
+  .st-actions { padding: 6px 16px 8px; }
+  .st-actions-extra { margin-top: 2px; padding-top: 0; }
   label.inline input[type="checkbox"] { width: 20px; height: 20px; }
 }
 
@@ -714,7 +720,17 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
    die Zeile unter dem Regler halten ihre Höhe frei, auch wenn sie gerade
    nichts zeigen. Sonst schöbe jeder Lauf den Hauptknopf nach oben und beim
    Ergebnis wieder zurück. (Das globale [hidden] gewinnt sonst, darum wichtig.) */
-.st-actions.steady .st-progress[hidden] { display: block !important; visibility: hidden; }
+/* Der Fortschritt steckt hier IM Knopf (shell.js setzt --progress): ein eigener
+   Balken bräuchte zwölf Pixel, die der Seitenleiste unter dem Finger fehlen. */
+.st-actions.steady .st-progress { display: none !important; }
+.st-actions.steady [data-ui="primary"] { position: relative; }
+.st-actions.steady [data-ui="primary"]::after {
+  content: ""; position: absolute; left: 0; bottom: 0; height: 3px; width: var(--progress, 0%);
+  background: currentColor; opacity: .55; border-bottom-left-radius: inherit; pointer-events: none;
+}
+/* Kein Hintergrundbild: „Abbrechen" setzt im Hover die Kurzform `background`
+   mit !important und löschte es mit. Ein Pseudoelement in der Textfarbe
+   (weiß auf dem gefüllten Knopf, rot auf dem Umriss) überlebt das. */
 .st-actions.steady .st-note[hidden] { display: block !important; }
 .st-actions.steady .st-hintline:empty { display: block; }
 /* Eine leere Zustandszeile hält ihre Höhe mit einem geschützten Leerzeichen,
@@ -746,12 +762,12 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
   .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-play svg { width: 16px; height: 16px; }
 }
 
-/* „m/s²" braucht mehr als die 30 px der Einheitenspalte. */
-.st-root[data-tool="kammerfuellung"] .st-mode[data-mode="kurve"] .row .unit { width: 38px; }
 /* Zwei Maße in einer Zeile (Laufkanal: Breite × Tiefe). */
 .st-root[data-tool="kammerfuellung"] .row .sim-pair { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
 .st-root[data-tool="kammerfuellung"] .row .sim-pair input[type="text"] { flex: 1; min-width: 0; width: 100%; }
 .st-root[data-tool="kammerfuellung"] .row .sim-pair .x { color: var(--muted); font-size: .78rem; }
+/* „m/s²" braucht mehr als die 30 px der Einheitenspalte. */
+.st-root[data-tool="kammerfuellung"] .st-mode[data-mode="kurve"] .row .unit { width: 38px; }
 
 /* ── Füllabschätzung ─────────────────────────────────────────────
    Die Zeile eines Anschnitts in der Liste trägt eine zweite

@@ -239,9 +239,19 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     syncActions();
   }
   function setProgress(p, text) {
-    if (p === null || p === undefined) { progress.hidden = true; progressBar.style.width = '0%'; syncActions(); return; }
+    if (p === null || p === undefined) {
+      progress.hidden = true; progressBar.style.width = '0%';
+      primary.style.removeProperty('--progress');
+      syncActions();
+      return;
+    }
     progress.hidden = false;
-    progressBar.style.width = Math.round(Math.max(0, Math.min(1, p)) * 100) + '%';
+    const pct = Math.round(Math.max(0, Math.min(1, p)) * 100) + '%';
+    progressBar.style.width = pct;
+    /* In einem festen Streifen (steady) zeichnet der KNOPF den Fortschritt —
+       als Füllung in sich selbst. Ein eigener Balken bräuchte dort zwölf Pixel,
+       die der Seitenleiste unter dem Finger fehlen (css/studio.css). */
+    primary.style.setProperty('--progress', pct);
     if (text) { setNote(text, 'busy'); busyEl.textContent = text; }
     /* js/part/partsource.js nimmt dem Schleier nach dem Laden die Klasse —
        läuft währenddessen eine Rechnung, steht er mit dem nächsten Schritt wieder. */
