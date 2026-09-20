@@ -4,25 +4,21 @@
    unter dem Hauptknopf (panel-common.js, PLAYBACK_ROWS). */
 
 import { numberRow, selectRow, segRow, sliderRow, kpiBlock, warnLine } from '../studio/rows.js';
-import { simulationRows, resultRows, info } from './panel-common.js';
+import { simulationRows, resultRows } from './panel-common.js';
 import { ENGINES, engineIds } from './core.js';
 
 /* Die Verfahren dieses Werkzeugs, in der Reihenfolge von core.js: Gitter,
    Partikel, Metamodell. */
 const ENGINE_OPTIONS = engineIds('kammer').map(id => [id, ENGINES[id].label]);
 
-const field = (name, label) => '<input type="text" inputmode="decimal" data-ui="' + name + '" aria-label="' + label + '" spellcheck="false" autocomplete="off">';
-
 export const MODES = [
   {
     id: 'kammer', label: 'Kammer',
-    hint: 'Die Füllkammer als liegender Zylinder: Die Schmelze steht beim Start ruhig unten, der Laufkanal sitzt oben in der Stirnfläche.',
+    hint: 'Die Füllkammer als liegender Zylinder: Die Schmelze steht beim Start ruhig unten, der Auslass sitzt oben in der Stirnfläche.',
     html: numberRow({ ui: 'sl-d', label: 'Durchmesser', unit: 'mm', value: '90', help: 'kammer' })
       + numberRow({ ui: 'sl-len', label: 'Länge', unit: 'mm', value: '450', help: 'kammer' })
       + sliderRow({ ui: 'sl-fill', label: 'Füllgrad', min: 10, max: 90, step: 1, value: 40, help: 'fuellgrad' })
-      /* Zwei Maße, eine Zeile — kein <label>, das gehörte nur zum ersten Feld. */
-      + '<div class="row"><span>Laufkanal' + info('laufkanal') + '</span><div class="sim-pair">'
-      + field('sl-ow', 'Laufkanal Breite') + '<span class="x">×</span>' + field('sl-oh', 'Laufkanal Tiefe') + '</div><span class="unit">mm</span></div>'
+      /* Der Auslass ist keine Eingabe: er folgt dem Durchmesser (kammer.js). */
       + kpiBlock('sleeve-kpis')
   },
   {
@@ -40,7 +36,7 @@ export const MODES = [
   },
   {
     id: 'simulation', label: 'Simulation',
-    hint: 'Drei Verfahren für dieselbe Welle: vom Kolbenstart, bis die Schmelze den Laufkanal erreicht.',
+    hint: 'Drei Verfahren für dieselbe Welle: vom Kolbenstart, bis die Schmelze den Auslass erreicht.',
     html: simulationRows(ENGINE_OPTIONS)
   },
   {

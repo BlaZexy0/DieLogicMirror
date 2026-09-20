@@ -41,8 +41,10 @@ test('Vier Modi, kein Bauteil-Chip, die Vorgaben stehen in den Feldern, die DieL
   assert.equal(ui('sl-len').value, '450');
   assert.equal(ui('sl-fill').value, '40');
   assert.equal(ui('sl-fill-val').textContent, '40 %');
-  assert.equal(ui('sl-ow').value, '30');
-  assert.equal(ui('sl-oh').value, '15');
+  /* Der Auslass ist keine Eingabe mehr: er folgt dem Durchmesser und steht nicht im Bild. */
+  assert.equal(ui('sl-ow'), null, 'kein Feld für den Laufkanal');
+  assert.equal(ui('sl-oh'), null);
+  assert.equal(v.state.spec.outletW, undefined, 'auch nicht im Zustand');
   assert.equal(s.v1, 0.5);
   assert.equal(ui('sl-v1').value, '0,5', 'v₁: 0,5 m/s — im Feld wie im Zustand');
   assert.equal(ui('sl-v2').value, '2');
@@ -319,7 +321,7 @@ test('Einstellungen: gemerkt, zurückzusetzen auf die eine Vorgabe', async () =>
   assert.equal(doc.curveMode, 'v1v2');
   assert.equal(doc.v1, 0.6);
   v.tool.resetSettings();
-  assert.deepEqual(s.spec, { d: 90, length: 450, fill: 0.4, outletW: 30, outletH: 15 });
+  assert.deepEqual(s.spec, { d: 90, length: 450, fill: 0.4 });
   assert.equal(s.curveMode, 'dielogic');
   assert.equal(s.v1, 0.5);
   assert.equal(ui('sl-v1').value, '0,5');

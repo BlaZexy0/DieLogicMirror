@@ -1217,18 +1217,26 @@ Füllkammer — den liegenden Zylinder, in dem die Schmelze vor dem Schuss
 ruhig unten steht und die Welle entsteht, um die es in der ersten Phase
 geht. Durchmesser, Länge und Füllgrad wählen (der Stand der Schmelze
 folgt aus dem Kreissegment, `fillLevel` in `js/lbm/sleeve.js`), dazu den
-Laufkanal oben in der Stirnfläche (Breite × Tiefe) und die Schusskurve:
+die Schusskurve:
 die DieLogic-Kurve des Projekts, mit Kolben-Ø, Länge und Füllgrad von
 hier — die Massen werden so gesetzt, dass die Kurve den gewählten
 Füllgrad rechnet —, oder zweistufig v₁/v₂ mit einer Beschleunigung.
 Ein Knopf; die Rechnung beginnt beim Kolbenstart und endet, wenn die
-Schmelze den Laufkanal erreicht (plus ein Stück für das Bild), spätestens
+Schmelze den Auslass erreicht (plus ein Stück für das Bild), spätestens
 am Ende der Kurve.
+
+Der **Auslass** oben in der Stirnfläche ist keine Eingabe: er folgt dem
+Durchmesser (Breite D/3, Tiefe D/6 — bei Ø 90 die 30 × 15 mm, mit denen die
+Seite immer gerechnet hat) und steht auch nicht im Bild. Er ist
+Randbedingung der Rechnung, kein Entwurf; ausgelegt wird der Laufkanal im
+Angussdesigner. Das Metamodell kennt ohnehin nur das Fenster seiner
+Rechnungen. Dateien älterer Fassungen tragen noch `outletW`/`outletH`; sie
+werden beim Laden übergangen.
 
 ### Bedienung
 
-Vier Modi: **Kammer** (Durchmesser, Länge, Füllgrad, Laufkanal Breite × Tiefe
-— die ruhende Schmelze steht bis zum Spiegel im Bild), **Kurve** (DieLogic
+Vier Modi: **Kammer** (Durchmesser, Länge, Füllgrad — die ruhende Schmelze
+steht bis zum Spiegel im Bild), **Kurve** (DieLogic
 oder v₁ / v₂ mit Beschleunigung, Legierung, die Kennzahlen der Kurve),
 **Simulation** (Verfahren, Zellkante bzw. Partikelabstand — das Metamodell
 hat keine —, Aufwand) und **Ergebnis** (Kammer voll und Kolbenweg, Luft

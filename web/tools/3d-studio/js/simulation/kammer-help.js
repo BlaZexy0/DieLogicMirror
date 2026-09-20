@@ -18,9 +18,12 @@ die es in der ersten Phase geht.</p>
 der Schmelze folgt aus dem Kreissegment.</p>
 </section>
 <section data-help-anchor="laufkanal">
-<h3>Laufkanal</h3>
-<p>Der Laufkanal oben in der Stirnfläche: Breite × Tiefe. Was dort ankommt, verlässt die Kammer; die Zellen
-davor melden „Kammer voll".</p>
+<h3>Der Auslass</h3>
+<p>Oben in der Stirnfläche sitzt der Auslass: Was dort ankommt, verlässt die Kammer, und die Zellen davor
+melden „Kammer voll". Er ist <b>keine Eingabe</b>, sondern Randbedingung der Rechnung und folgt dem
+Durchmesser (Breite D/3, Tiefe D/6); das Metamodell rechnet ohnehin mit dem Fenster seiner Rechnungen
+(Sehne bei 0,42 R). Ausgelegt wird der Laufkanal im Angussdesigner, nicht hier — deshalb steht er auch
+nicht im Bild.</p>
 </section>
 <section data-help-anchor="kurve">
 <h3>Schusskurve</h3>
@@ -54,7 +57,7 @@ es nur da, wo gelernt wurde: Länge/Durchmesser 5 … 20, Füllgrad 30 … 70 %,
 außerhalb sagt der Knopf, woran es liegt, und rechnet nicht. Es hat KEINE Zellkante: das Gitter ist das
 der Rechnungen (30 × 30 je Schicht, eine Schicht D · 0,1 hoch). Und es kennt den Laufkanal nicht: alle
 Rechnungen hatten dasselbe Auslassfenster in der Stirnplatte (Sehne bei 0,42 R), „Kammer voll" heißt hier,
-die Schmelze erreicht dieses Fenster. Breite und Tiefe des Laufkanals gelten für Gitter und Partikel.
+die Schmelze erreicht dieses Fenster: eine Sehne bei 0,42 R statt des Auslasses, mit dem Gitter und Partikel rechnen.
 Beim ersten Lauf lädt die Seite das Modell (12 MB) und sein Rechenwerk nach.</p>
 <p>Gitter und Partikel rechnen auf der Grafikkarte (WebGPU) oder, ohne sie, in JavaScript, dann grob, und
 die erste Phase dauert Minuten; das Metamodell rechnet in WebAssembly, auch ohne Grafikkarte. Die Zeile

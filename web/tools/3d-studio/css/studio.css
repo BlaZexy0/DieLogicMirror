@@ -762,10 +762,6 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
   .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-play svg { width: 16px; height: 16px; }
 }
 
-/* Zwei Maße in einer Zeile (Laufkanal: Breite × Tiefe). */
-.st-root[data-tool="kammerfuellung"] .row .sim-pair { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
-.st-root[data-tool="kammerfuellung"] .row .sim-pair input[type="text"] { flex: 1; min-width: 0; width: 100%; }
-.st-root[data-tool="kammerfuellung"] .row .sim-pair .x { color: var(--muted); font-size: .78rem; }
 /* „m/s²" braucht mehr als die 30 px der Einheitenspalte. */
 .st-root[data-tool="kammerfuellung"] .st-mode[data-mode="kurve"] .row .unit { width: 38px; }
 
