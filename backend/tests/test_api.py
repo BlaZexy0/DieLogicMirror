@@ -46,7 +46,9 @@ def test_security_headers_on_every_response():
     # Die CSP muss die mitgelieferten Inline-Blöcke zulassen — sonst wäre die
     # Seite mit einem strengen Kopf schlicht kaputt statt sicher.
     csp = client.get("/api/health").headers["content-security-policy"]
-    assert "script-src 'self' 'unsafe-inline'" in csp
+    assert "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'" in csp
+    # WebAssembly ja (das Metamodell der Kammerfüllung), eval() nein.
+    assert "'unsafe-eval'" not in csp.replace("'wasm-unsafe-eval'", "")
     assert "connect-src 'self'" in csp and "object-src 'none'" in csp
 
 

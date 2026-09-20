@@ -43,6 +43,58 @@ for (const [page, readyFn] of PAGES) {
   });
 }
 
+/* Das Metamodell rechnet nur im Browser: 12 MB ONNX und onnxruntime-web
+   (WebAssembly) — die Node-Tests prüfen nur seine Wahl und seine Grenzen. */
+test('Kammerfüllung: das Metamodell rechnet die Welle in Sekunden — Bild, Zeiten und Luft', async ({ page }) => {
+  await page.goto('/tools/3d-studio/kammerfuellung.html');
+  await page.waitForFunction(() => window.__kammerfuellung?.state?.ready);
+  await page.click('[role="tab"][data-mode="simulation"]');
+  await page.click('[data-ui="engine-seg"] button[data-value="meta"]');
+  /* Das Gitter des Modells steht — kein Feld für die Auflösung. */
+  await expect(page.locator('[data-ui="cell-row"]')).toBeHidden();
+  await expect(page.locator('[data-ui="estimate"]')).toContainText('WebAssembly');
+  await page.click('[data-ui="primary"]');
+  await page.waitForFunction(() => !window.__kammerfuellung.state.running, null, { timeout: 120_000 });
+
+  const r = await page.evaluate(() => {
+    const v = window.__kammerfuellung, s = v.state, res = s.results.meta;
+    return {
+      failed: s.failed,
+      frames: res && res.snapshots.length,
+      fullMs: res && res.full && res.full.t * 1000,
+      curveMs: s.curve.tFull * 1000,
+      air: res && res.airMax.air,
+      vScale: res && res.vScale,
+      verts: v.core.displays.meta.object.geometry.getAttribute('position').count
+    };
+  });
+  expect(r.failed).toBe('');
+  expect(r.frames).toBe(101);
+  /* „Kammer voll" trifft die Kurve auf ein Viertel genau, die Fläche steht im Bild. */
+  expect(r.fullMs).toBeGreaterThan(0.6 * r.curveMs);
+  expect(r.fullMs).toBeLessThan(1.2 * r.curveMs);
+  expect(r.air).toBeGreaterThanOrEqual(0);
+  expect(r.vScale).toBeGreaterThan(0.2);
+  expect(r.verts).toBeGreaterThan(500);
+
+  /* Knopf und Zeitregler gehören keinem Reiter: beides steht auch unter „Kammer". */
+  await page.click('[role="tab"][data-mode="kammer"]');
+  await expect(page.locator('[data-ui="primary"]')).toHaveText('Simulieren');
+  await expect(page.locator('[data-ui="time-row"]')).toBeVisible();
+  await page.locator('[data-ui="t-slider"]').fill('0');
+  await page.locator('[data-ui="t-slider"]').dispatchEvent('input');
+  /* Zeit, Kolbenweg, Kolbengeschwindigkeit und Luft stehen IM Bild. */
+  await expect(page.locator('#status')).toContainText('Kolben 0 mm');
+  await expect(page.locator('#status')).toContainText('m/s');
+  /* ▶ spielt ab, auch hier — und ein zweiter Klick hält an. */
+  await page.click('[data-ui="play"]');
+  await expect.poll(() => page.evaluate(() => window.__kammerfuellung.state.frame), { timeout: 10_000 }).toBeGreaterThan(0);
+  await page.click('[data-ui="play"]');
+  const halt = await page.evaluate(() => window.__kammerfuellung.state.frame);
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => window.__kammerfuellung.state.frame)).toBe(halt);
+});
+
 test('Angussdesigner: der Pfeil eines Anschnitts schaltet den Zielmodus scharf', async ({ page }) => {
   await page.goto('/tools/3d-studio/anguss.html?demo=zwei');
   await page.waitForFunction(() => window.__anguss?.state?.ready);

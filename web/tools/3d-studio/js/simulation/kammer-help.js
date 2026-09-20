@@ -18,9 +18,12 @@ die es in der ersten Phase geht.</p>
 der Schmelze folgt aus dem Kreissegment.</p>
 </section>
 <section data-help-anchor="laufkanal">
-<h3>Laufkanal</h3>
-<p>Der Laufkanal oben in der Stirnfläche: Breite × Tiefe. Was dort ankommt, verlässt die Kammer; die Zellen
-davor melden „Kammer voll".</p>
+<h3>Der Auslass</h3>
+<p>Oben in der Stirnfläche sitzt der Auslass: Was dort ankommt, verlässt die Kammer, und die Zellen davor
+melden „Kammer voll". Er ist <b>keine Eingabe</b>, sondern Randbedingung der Rechnung und folgt dem
+Durchmesser (Breite D/3, Tiefe D/6); das Metamodell rechnet ohnehin mit dem Fenster seiner Rechnungen
+(Sehne bei 0,42 R). Ausgelegt wird der Laufkanal im Angussdesigner, nicht hier — deshalb steht er auch
+nicht im Bild.</p>
 </section>
 <section data-help-anchor="kurve">
 <h3>Schusskurve</h3>
@@ -33,7 +36,9 @@ gilt für beide Rampen.</p>
 ein Stück für das Bild), spätestens am Ende der Kurve. Alle Zeiten zählen ab Kolbenstart.</p>
 </section>
 <section data-help-anchor="verfahren">
-<h3>Zwei Verfahren</h3>
+<h3>Drei Verfahren</h3>
+<p>Die Kammerfüllung beginnt beim <b>Metamodell</b>: Es antwortet in Sekunden, wo Gitter und Partikel Minuten
+rechnen. Wer außerhalb seines Trainings liegt oder den Laufkanal braucht, wechselt auf Gitter oder Partikel.</p>
 <p><b>Gitter</b>: Lattice-Boltzmann D3Q19 mit freier Oberfläche nach Körner, Schwerkraft als
 Volumenkraft, der Kolben als wandernde Zellschicht. Zähigkeit auf das Stabile angehoben, keine
 Oberflächenspannung, kein Gasdruck. <b>Eingeschlossene Luft</b> sind Gaszellen, die nicht mehr mit der
@@ -45,12 +50,23 @@ Partikel gleiten, der Kolben als Ebene, die die Kurve fährt. Keine Oberflächen
 über der Schmelze: die Zahl, um die es in der ersten Phase geht. Vor dem Start kommt die Schmelze zur
 Ruhe (20 ms mit hoher Zähigkeit, dann v = 0): die hydrostatische Vorgabe passt an der freien Oberfläche nie
 ganz, und der Schwapp davon soll nicht in die Welle.</p>
-<p>Beide rechnen auf der Grafikkarte (WebGPU) oder, ohne sie, in JavaScript, dann grob, und die erste
-Phase dauert Minuten; die Zeile unter dem Feld sagt vorher, womit und wie lange ungefähr.
-<b>Abbrechen</b> beendet einen Lauf sofort; danach gibt es kein Ergebnis.</p>
+<p><b>Metamodell</b>: kein Löser, sondern ein trainiertes Modell. Es hat aus über tausend
+OpenFOAM-Rechnungen derselben Kammer gelernt, wie die Welle aussieht, und gibt sie in Sekunden statt in
+Minuten wieder: für 101 Kolbenstellungen je Kammerschicht Schmelzeanteil und Geschwindigkeit. Dafür gilt
+es nur da, wo gelernt wurde: Länge/Durchmesser 5 … 20, Füllgrad 30 … 70 %, Durchmesser 60 … 300 mm;
+außerhalb sagt der Knopf, woran es liegt, und rechnet nicht. Es hat KEINE Zellkante: das Gitter ist das
+der Rechnungen (30 × 30 je Schicht, eine Schicht D · 0,1 hoch). Und es kennt den Laufkanal nicht: alle
+Rechnungen hatten dasselbe Auslassfenster in der Stirnplatte (Sehne bei 0,42 R), „Kammer voll" heißt hier,
+die Schmelze erreicht dieses Fenster: eine Sehne bei 0,42 R statt des Auslasses, mit dem Gitter und Partikel rechnen.
+Beim ersten Lauf lädt die Seite das Modell (12 MB) und sein Rechenwerk nach.</p>
+<p>Gitter und Partikel rechnen auf der Grafikkarte (WebGPU) oder, ohne sie, in JavaScript, dann grob, und
+die erste Phase dauert Minuten; das Metamodell rechnet in WebAssembly, auch ohne Grafikkarte. Die Zeile
+unter dem Feld sagt vorher, womit und wie lange ungefähr. <b>Abbrechen</b> beendet einen Lauf sofort;
+danach gibt es kein Ergebnis.</p>
 </section>
 <section data-help-anchor="aufloesung">
 <h3>Zellkante und Partikelabstand</h3>
+<p>Das Metamodell hat kein solches Feld: es rechnet auf dem Gitter, das es gelernt hat.</p>
 <p><b>Zellkante</b>: die Kante einer Gitterzelle, in Millimetern. Die Welle braucht wenigstens zwanzig Zellen über den
 Durchmesser.</p>
 <p><b>Partikelabstand</b>: Abstand der Partikel in der ruhenden Schmelze. Die Welle braucht wenigstens
@@ -65,10 +81,10 @@ Zehntausende Schritte. Der Vorschlag für die Zellkante zielt auf 150 000 Zellen
 2 000.</p>
 </section>
 <section data-help-anchor="vergleich">
-<h3>Gitter und Partikel nebeneinander</h3>
-<p>Sind beide Verfahren für dieselbe Kammer und dieselbe Kurve gerechnet, stehen „Kammer voll" und die
-eingeschlossene Luft beider in einer Tabelle neben der Kurve; „Bild" wählt, wessen Schmelze im Viewport zu
-sehen ist. Ändern sich Kammer, Kurve oder Legierung, gehören beide Ergebnisse zum alten Problem und
+<h3>Die Verfahren nebeneinander</h3>
+<p>Ist mehr als ein Verfahren für dieselbe Kammer und dieselbe Kurve gerechnet, stehen „Kammer voll" und
+die eingeschlossene Luft aller in einer Tabelle neben der Kurve; „Bild" wählt, wessen Schmelze im Viewport
+zu sehen ist. Ändern sich Kammer, Kurve oder Legierung, gehören alle Ergebnisse zum alten Problem und
 verschwinden.</p>
 <p>Zum Vergleich, im kopflosen Chromium mit WebGPU (SwiftShader): die Kammer Ø 60 × 200 mm, 45 %, v₁/v₂
 0,6/2 m/s, 3 mm Partikel: Kammer voll bei 190 ms und 113 mm (Kurve 186 ms, 110 mm; Gitter 3 mm: 179 ms,
@@ -76,7 +92,10 @@ verschwinden.</p>
 </section>
 <section data-help-anchor="zeit">
 <h3>Zeit und Bild</h3>
-<p>Zeit ab Kolbenstart. Welle und Kolben wandern mit dem Regler. Die Schmelze ist nach Geschwindigkeit
+<p>Zeit ab Kolbenstart. Der Regler steht unter „Simulieren" und gilt in jedem Modus: Welle und Kolben
+wandern mit ihm, gleich ob gerade Kammer, Kurve oder Ergebnis vor einem liegt. Er steht auch vor dem
+ersten Lauf da, nur blass; unten links im Bild stehen Zeit, Kolbenweg und die eingeschlossene Luft zum
+gezeigten Bild. Die Schmelze ist nach Geschwindigkeit
 gefärbt, die Kammer durchscheinend (ihre Deckkraft steht unter „Darstellung"). Die Skala gilt für den
 ganzen Lauf; ihr Ende ist das 99. Perzentil über die Bilder bis „Kammer voll". Danach herrscht der
 Laufkanal, und die Welle wäre einfarbig blau. Was schneller ist, bleibt rot.</p>

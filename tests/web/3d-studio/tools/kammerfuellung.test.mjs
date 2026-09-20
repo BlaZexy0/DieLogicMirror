@@ -1,9 +1,13 @@
-/* Kammerfüllung im gemeinsamen Rahmen: EIN Werkzeug, zwei Rechenverfahren
-   (Gitter, Partikel). Eine kleine Kammer mit zweistufiger Kurve, in
-   JavaScript: Kolben, Welle, Kammer voll, Luft, Regler. Die Fälle stammen aus
-   viewer.test.mjs („Kammerfüllung …" und „Kammerfüllung · Partikel …"); neu
-   sind der erreichbare Abbruch, beide Verfahren nebeneinander, die
+/* Kammerfüllung im gemeinsamen Rahmen: EIN Werkzeug, drei Rechenverfahren
+   (Gitter, Partikel, Metamodell). Eine kleine Kammer mit zweistufiger Kurve,
+   in JavaScript: Kolben, Welle, Kammer voll, Luft, Regler. Die Fälle stammen
+   aus viewer.test.mjs („Kammerfüllung …" und „Kammerfüllung · Partikel …");
+   neu sind der erreichbare Abbruch, die Verfahren nebeneinander, die
    Einstellungen und ?engine=sph.
+
+   Das Metamodell RECHNET hier nicht (es braucht onnxruntime und 12 MB Modell,
+   beides gibt es nur im Browser — tests/browser/studio.spec.mjs): geprüft
+   sind seine Wahl, sein fehlendes Auflösungsfeld und seine Grenzen.
 
      systemd-run --user --scope -q -p MemoryMax=4G node --import ./tests/web/3d-studio/stubs/register.mjs --test tests/web/3d-studio/tools/kammerfuellung.test.mjs */
 
@@ -37,8 +41,10 @@ test('Vier Modi, kein Bauteil-Chip, die Vorgaben stehen in den Feldern, die DieL
   assert.equal(ui('sl-len').value, '450');
   assert.equal(ui('sl-fill').value, '40');
   assert.equal(ui('sl-fill-val').textContent, '40 %');
-  assert.equal(ui('sl-ow').value, '30');
-  assert.equal(ui('sl-oh').value, '15');
+  /* Der Auslass ist keine Eingabe mehr: er folgt dem Durchmesser und steht nicht im Bild. */
+  assert.equal(ui('sl-ow'), null, 'kein Feld für den Laufkanal');
+  assert.equal(ui('sl-oh'), null);
+  assert.equal(v.state.spec.outletW, undefined, 'auch nicht im Zustand');
   assert.equal(s.v1, 0.5);
   assert.equal(ui('sl-v1').value, '0,5', 'v₁: 0,5 m/s — im Feld wie im Zustand');
   assert.equal(ui('sl-v2').value, '2');
@@ -52,12 +58,51 @@ test('Vier Modi, kein Bauteil-Chip, die Vorgaben stehen in den Feldern, die DieL
   shell.fit();
   assert.ok(Math.abs(v.view.controls.target.x - 225) < 200 && Math.abs(v.view.controls.target.y) < 200, 'zurück bei der Kammer: ' + v.view.controls.target.x);
   shell.setMode('simulation');
-  assert.match(ui('estimate').textContent, /Gitter .* (Mio\.|Tsd\.) Zellen · \d+ Zellen über den Durchmesser · .* MB · (grob .*|Stunden) · JavaScript/);
-  assert.match(ui('engine-note').textContent, /Kein WebGPU/);
+  /* Die Vorgabe der Kammerfüllung ist das Metamodell: Sekunden statt Minuten. */
+  assert.equal(s.engine, 'meta');
+  assert.match(ui('estimate').textContent, /Modellgitter 30 × 30 je Schicht .* · WebAssembly/);
   assert.equal(ui('primary').textContent, 'Simulieren');
   shell.setMode('ergebnis');
-  assert.match(ui('result-table').textContent, /Gitter.*Partikel.*Kurve.*Kammer voll, ms.*—.*—.*\d+/);
-  assert.equal(ui('playback').hidden, true);
+  /* Die Spalten stehen wie die Schalter, die Vorgabe zuerst; in der engen
+     Spalte heißt das Metamodell „Modell" (ENGINES.meta.short). */
+  assert.match(ui('result-table').textContent, /Modell.*Gitter.*Partikel.*Kurve.*Kammer voll, ms.*—.*—.*—.*\d+/);
+  assert.equal(ui('result-extra').hidden, true);
+  /* Der Zeitregler gehört keinem Reiter: er steht im Streifen unter dem Hauptknopf. */
+  assert.equal(ui('t-slider').closest('[data-ui="actions"]') !== null, true, 'Zeitregler unter dem Knopf');
+  /* Der Streifen STEHT, auch ohne Lauf: ein Kasten, der erst danach erscheint, schöbe den Knopf. */
+  assert.equal(ui('actions-extra').hidden, false, 'der Zeitregler steht von Anfang an da');
+  assert.equal(ui('t-slider').disabled, true, '… nur stumpf, solange es nichts abzuspielen gibt');
+  assert.equal(ui('play').disabled, true);
+  assert.equal(ui('t-slider-val'), null, 'keine Zahl hinter dem Regler — die Zeit steht im Bild');
+  shell.setMode('kammer');
+  assert.equal(ui('primary').textContent, 'Simulieren', '„Simulieren" steht in jedem Modus');
+  assert.equal(ui('primary').hidden, false);
+});
+
+test('Das Metamodell ist die Vorgabe: kein Feld für die Auflösung, und außerhalb des Trainings rechnet es nicht', () => {
+  const { ui, shell, v } = P;
+  const s = v.state;
+  shell.setMode('simulation');
+  assert.deepEqual(ui('engine-seg').querySelectorAll('button').map(b => b.textContent), ['Metamodell', 'Gitter', 'Partikel']);
+  assert.equal(seg(ui('engine-seg'), 'meta').classList.contains('active'), true, 'ohne Zutun gewählt');
+  assert.equal(s.engine, 'meta');
+  /* Das Gitter des Modells STEHT — es gibt nichts einzustellen. */
+  assert.equal(ui('cell-row').hidden, true, 'keine Zellkante beim Metamodell');
+  assert.match(ui('estimate').textContent, /Modellgitter 30 × 30 je Schicht · 50 Schichten · 101 Kolbenstellungen .* · WebAssembly/);
+  assert.equal(ui('engine-warn').textContent, '', 'Ø 90 × 450 mm bei 40 % liegt im Trainingsbereich');
+  assert.equal(ui('primary').disabled, false);
+  /* Eine Kammer außerhalb der Trainingsbox: der Knopf sagt, woran es liegt, statt zu raten. */
+  shell.setMode('kammer');
+  set(ui('sl-len'), '1900');                       // λ = 21,1 — das Modell hat bis 20 gesehen
+  assert.match(ui('note').textContent, /Außerhalb des Trainings.*Länge\/Durchmesser 21,1 \(gelernt: 5 … 20\).*Gitter oder mit Partikeln/);
+  assert.equal(ui('primary').disabled, true);
+  set(ui('sl-len'), '450');
+  assert.equal(ui('primary').disabled, false);
+  /* Zurück zum Gitter: das Feld ist wieder da, mit dem Wert dieses Verfahrens. */
+  shell.setMode('simulation');
+  seg(ui('engine-seg'), 'lbm').dispatch('click');
+  assert.equal(ui('cell-row').hidden, false);
+  assert.equal(ui('cell-label').textContent, 'Zellkante');
   shell.setMode('kammer');
 });
 
@@ -81,6 +126,9 @@ test('Kleine Kammer, zweistufige Kurve — Gitter: ein Lauf in JavaScript bis Ka
   assert.ok(s.curve && s.curve.sFill > 0, 'die zweistufige Kurve steht');
   assert.ok(Math.abs(s.curve.sFill - 0.55 * 120) < 1e-9, 'Kammer voll nach (1 − Füllgrad) · Länge');
   shell.setMode('simulation');
+  /* Die Vorgabe ist das Metamodell — für diesen Lauf das Gitter wählen. */
+  seg(ui('engine-seg'), 'lbm').dispatch('click');
+  assert.equal(s.engine, 'lbm');
   set(ui('cell'), '5');
   assert.equal(s.h, 5);
   assert.equal(ui('primary').disabled, false);
@@ -101,14 +149,17 @@ test('Kleine Kammer, zweistufige Kurve — Gitter: ein Lauf in JavaScript bis Ka
   assert.equal(shell.mode, 'ergebnis');
   const t = cells(ui('result-table'));
   assert.match(t[0][0], /Kammer voll, ms/);
-  assert.match(t[0][1], /^\d+$/, 'Gitter: ' + t[0][1]);
-  assert.equal(t[0][2], '—', 'Partikel: noch nicht gerechnet');
-  assert.match(t[0][3], /^\d+$/, 'die Kurve daneben');
+  assert.equal(t[0][1], '—', 'Metamodell: im Knotentest nicht gerechnet');
+  assert.match(t[0][2], /^\d+$/, 'Gitter: ' + t[0][2]);
+  assert.equal(t[0][3], '—', 'Partikel: noch nicht gerechnet');
+  assert.match(t[0][4], /^\d+$/, 'die Kurve daneben');
   assert.match(t[2][0], /Luft höchstens/);
-  assert.match(t[2][1], /^\d+,\d$/);
+  assert.match(t[2][2], /^\d+,\d$/, 'die Luft steht in der Gitterspalte');
   assert.match(t[3][0], /Luft am Ende/);
   assert.match(ui('run-facts').innerHTML, /Ende<\/span><span>Kammer voll/);
-  assert.match(ui('note').textContent, /ab Kolbenstart/);
+  assert.match(ui('note').textContent, /^Gerechnet mit [\d,]+ mm in [\d,]+ s\.$/, 'kurz: die Zeile steht in jedem Modus');
+  assert.equal(ui('t-slider').disabled, false, 'jetzt gibt es etwas abzuspielen');
+  assert.equal(ui('play').disabled, false);
   assert.ok(v.meltMesh.visible, 'die Schmelze ist zu sehen');
   assert.equal(v.restMesh.visible, false, 'die ruhende Schmelze weicht dem Bild des Laufs');
   /* … nach Geschwindigkeit gefärbt: die Skala des Laufs liegt in der Größenordnung des Kolbens. */
@@ -125,17 +176,42 @@ test('Kleine Kammer, zweistufige Kurve — Gitter: ein Lauf in JavaScript bis Ka
   sl.value = '0';
   sl.dispatch('input');
   assert.equal(s.frame, 0);
-  assert.match(ui('t-slider-val').textContent, /^0 ms/);
-  assert.match(ui('t-info').textContent, /Kolben bei 0 mm · eingeschlossene Luft/);
+  /* Was das Bild zeigt, steht IM Bild (unten links), nicht in der Seitenleiste:
+     Zeit, Kolbenweg, seine Geschwindigkeit aus der Kurve und die Luft. */
+  const stand = doc.getElementById('status').textContent;
+  assert.match(stand, /Kolben 0 mm · v [\d,]+ m\/s · Luft [\d,]+ cm³/, 'Stand im Bild: ' + stand);
+  assert.match(stand, /0 ms/, 'mit der Zeit: ' + stand);
   assert.ok(Math.abs(xMax()) < 1e-6, 'Bild 0: Kolben in Startlage');
-  /* Der Modus besitzt das Bild: woanders keine Schmelze, keine Skala, Kolben in Startlage. */
+  /* Der Lauf gehört keinem Reiter: in „Kammer" steht dasselbe Bild, und der
+     Regler unter dem Knopf bewegt es dort genauso. */
   sl.value = sl.max; sl.dispatch('input');
+  const xEnde = xMax();
   shell.setMode('kammer');
-  assert.equal(v.meltMesh.visible, false);
-  assert.equal(v.restMesh.visible, true, 'außerhalb des Ergebnisses steht wieder die ruhende Schmelze');
-  assert.ok(!doc.getElementById('colorbar').classList.contains('on'), 'ohne Schmelze keine Skala');
-  assert.ok(Math.abs(xMax()) < 1e-6);
+  assert.ok(v.meltMesh.visible, 'die gerechnete Schmelze bleibt sichtbar');
+  assert.equal(v.restMesh.visible, false, 'die ruhende Schmelze weicht ihr auch hier');
+  assert.ok(doc.getElementById('colorbar').classList.contains('on'), 'mit ihrer Skala');
+  assert.ok(Math.abs(xMax() - xEnde) < 1e-6, 'der Kolben steht, wo der Regler steht');
+  assert.equal(ui('primary').textContent, 'Simulieren');
+  sl.value = '0'; sl.dispatch('input');
+  assert.ok(Math.abs(xMax()) < 1e-6, 'Bild 0 auch in „Kammer"');
+  /* ▶ läuft DORT, wo der Regler steht — nicht nur unter „Ergebnis". (Solange
+     das Abspielen an shell.mode === 'ergebnis' hing, hielt es in jedem anderen
+     Modus sofort wieder an: der Knopf tat scheinbar nichts.) */
+  ui('play').dispatch('click');
+  assert.ok(s.playing, 'es läuft, obwohl „Kammer" offen ist');
+  await wait(() => s.frame > 0, 100, 20);
+  const gelaufen = s.frame;
+  ui('play').dispatch('click');
+  assert.equal(s.playing, null, 'ein zweiter Klick hält an');
+  await new Promise(r => setTimeout(r, 120));
+  assert.equal(s.frame, gelaufen, 'und es bleibt stehen');
+  /* Vom Ende aus fängt ▶ wieder vorn an, sonst bewegte sich nichts. */
+  sl.value = sl.max; sl.dispatch('input');
+  ui('play').dispatch('click');
+  assert.ok(s.frame < +sl.max, 'vom Ende springt es zurück an den Anfang');
+  ui('play').dispatch('click');
   shell.setMode('ergebnis');
+  sl.value = sl.max; sl.dispatch('input');
   assert.ok(v.meltMesh.visible && doc.getElementById('colorbar').classList.contains('on'));
 });
 
@@ -184,9 +260,10 @@ test('Partikel: ein Lauf bis Kammer voll — danach stehen Gitter, Partikel und 
   assert.ok(r.vScale > 0.1 && r.vScale < 20, 'Skala ' + r.vScale);
   assert.equal(shell.mode, 'ergebnis');
   const t = cells(ui('result-table'));
-  assert.match(t[0][1], /^\d+$/, 'Gitter');
-  assert.match(t[0][2], /^\d+$/, 'Partikel');
-  assert.match(t[0][3], /^\d+$/, 'Kurve');
+  assert.equal(t[0][1], '—', 'Metamodell: im Knotentest nicht gerechnet');
+  assert.match(t[0][2], /^\d+$/, 'Gitter');
+  assert.match(t[0][3], /^\d+$/, 'Partikel');
+  assert.match(t[0][4], /^\d+$/, 'Kurve');
   /* Beide Verfahren treffen „Kammer voll" in der Nähe der Kurve. */
   const curve = s.curve.tFull;
   for (const id of ['lbm', 'sph']) assert.ok(Math.abs(s.results[id].full.t - curve) < 0.4 * curve, id + ': ' + s.results[id].full.t + ' gegen ' + curve);
@@ -200,7 +277,7 @@ test('Partikel: ein Lauf bis Kammer voll — danach stehen Gitter, Partikel und 
   assert.equal(sl.max, String(r.snapshots.length - 1));
   sl.value = '0';
   sl.dispatch('input');
-  assert.match(ui('t-slider-val').textContent, /^0 ms/);
+  assert.match(doc.getElementById('status').textContent, /\b0 ms/);
   seg(ui('bild-seg'), 'lbm').dispatch('click');
   assert.ok(v.meltMesh.visible && !v.points.visible);
   seg(ui('bild-seg'), 'sph').dispatch('click');
@@ -221,7 +298,7 @@ test('Ein anderes Problem verwirft beide Ergebnisse — auch die Legierung gehö
   same(s.results.lbm, null);
   same(s.results.sph, null);
   shell.setMode('ergebnis');
-  assert.equal(ui('playback').hidden, true);
+  assert.equal(ui('result-extra').hidden, true);
   assert.equal(v.points.visible, false);
   /* Neue Maße: die Auflösung folgt wieder dem Vorschlag. */
   shell.setMode('kammer');
@@ -244,14 +321,14 @@ test('Einstellungen: gemerkt, zurückzusetzen auf die eine Vorgabe', async () =>
   assert.equal(doc.curveMode, 'v1v2');
   assert.equal(doc.v1, 0.6);
   v.tool.resetSettings();
-  assert.deepEqual(s.spec, { d: 90, length: 450, fill: 0.4, outletW: 30, outletH: 15 });
+  assert.deepEqual(s.spec, { d: 90, length: 450, fill: 0.4 });
   assert.equal(s.curveMode, 'dielogic');
   assert.equal(s.v1, 0.5);
   assert.equal(ui('sl-v1').value, '0,5');
   assert.equal(ui('sl-d').value, '90');
   assert.equal(ui('v1v2-block').hidden, true);
-  assert.equal(s.engine, 'lbm');
-  assert.equal(ui('cell-label').textContent, 'Zellkante');
+  assert.equal(s.engine, 'meta', 'zurückgesetzt wird auf die Vorgabe');
+  assert.equal(ui('cell-row').hidden, true, '… und die hat kein Auflösungsfeld');
   v.tool.fromJSON(doc);
   assert.equal(s.spec.d, 20);
   assert.equal(s.curveMode, 'v1v2');

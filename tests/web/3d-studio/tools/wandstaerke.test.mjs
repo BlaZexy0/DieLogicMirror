@@ -204,8 +204,11 @@ test('Speichern und Entwurf: die Einstellungen als Datei, ein Entwurf im Browser
   assert.equal(doc.format, 'dielogic-wandstaerke');
   assert.equal(doc.cell, s.cell);
   assert.equal(doc.hot.shape, 'kreise');
-  await wait(() => !!globalThis.localStorage.getItem('studio:wandstaerke:gearbox_cover'), 200);
-  const draft = JSON.parse(globalThis.localStorage.getItem('studio:wandstaerke:gearbox_cover'));
+  /* Auf den STAND warten, nicht nur auf den Schlüssel: der Entwurf wird
+     verzögert geschrieben, und unter Last stand hier der vorige drin. */
+  const key = 'studio:wandstaerke:gearbox_cover';
+  await wait(() => { const d = globalThis.localStorage.getItem(key); return d && JSON.parse(d).doc.cell === s.cell; }, 200);
+  const draft = JSON.parse(globalThis.localStorage.getItem(key));
   assert.equal(draft.doc.cell, s.cell, 'die Einstellungen sind gemerkt');
   /* Nur Einstellungen, kein Plan: nichts gilt als ungesichert, die Seite
      fragt beim Verlassen nicht, und „Speichern" bleibt ruhig. */

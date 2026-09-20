@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>3D-Studio · DieLogic</title>
-<meta name="description" content="Zehn 3D-Werkzeuge für die Druckgießform und die Werkbank, alle im Browser: die Werkbank mit allen Schritten an einem Bauteil, die Form als Schnittmodell, Formteilung, Wandstärke und Abstand aus Abstandsfeldern, die Füllabschätzung, Anguss- und Kammerfüllung als Gitter oder mit Partikeln, der Angussdesigner für Laufkanäle und Anschnitte, der Überlaufdesigner für Überläufe und Entlüftungen und der Temperierkanal-Designer.">
+<meta name="description" content="Zehn 3D-Werkzeuge für die Druckgießform und die Werkbank, alle im Browser: die Werkbank mit allen Schritten an einem Bauteil, die Form als Schnittmodell, Formteilung, Wandstärke und Abstand aus Abstandsfeldern, die Füllabschätzung, die Angussfüllung als Gitter oder mit Partikeln, die Kammerfüllung dazu aus dem Metamodell, der Angussdesigner für Laufkanäle und Anschnitte, der Überlaufdesigner für Überläufe und Entlüftungen und der Temperierkanal-Designer.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
@@ -25,7 +25,7 @@
       Druckgießform aufgebaut ist. Vier beantworten Fragen an das Bauteil: wo die Form geteilt
       wird, wie dick die Wände sind, wie weit die Nachbarn entfernt liegen, in welcher
       Reihenfolge es sich füllt. Zwei rechnen die Schmelze selbst: im Anguss und in der
-      Füllkammer, als Gitter oder mit Partikeln. Drei entwerfen, was
+      Füllkammer, aus dem Metamodell, als Gitter oder mit Partikeln. Drei entwerfen, was
       um das Bauteil herum in die Form kommt: das Angusssystem, die Überläufe mit ihren
       Entlüftungen und die Temperierkanäle. Bauteile kommen als STL oder GLB, es geht nichts an
       einen Server.</p>
@@ -356,13 +356,16 @@
         <h3>Kammerfüllung</h3>
         <p>Die Welle in der Füllkammer: liegender Zylinder mit Durchmesser, Länge und Füllgrad, der
           Kolben fährt die Schusskurve (die DieLogic-Kurve des Projekts oder zweistufig v₁/v₂), und
-          die Schmelze wird mit Schwerkraft gerechnet: als <b>Gitter</b> (Lattice-Boltzmann mit freier
-          Oberfläche) oder als <b>Partikel</b> (SPH), auf derselben Seite.</p>
+          die Schmelze wird mit Schwerkraft gerechnet: als <b>Metamodell</b> (einem Netz, das aus über
+          tausend OpenFOAM-Rechnungen derselben Kammer gelernt hat und in Sekunden antwortet), als
+          <b>Gitter</b> (Lattice-Boltzmann mit freier Oberfläche) oder als <b>Partikel</b> (SPH), auf
+          derselben Seite.</p>
         <ul>
-          <li>Kammer voll: wann die Schmelze den Laufkanal erreicht, gegen die Kurve</li>
+          <li>Kammer voll: wann die Schmelze den Auslass erreicht, gegen die Kurve</li>
           <li>Eingeschlossene Luft über die Zeit, was die erste Phase entscheidet</li>
           <li>Füllstand und Kolben zu jeder Zeit am Regler</li>
           <li>Auf der Grafikkarte (WebGPU), ohne sie in JavaScript gröber, jederzeit abzubrechen</li>
+          <li>Das Metamodell steht vorn: Sekunden statt Minuten, innerhalb dessen, was es gelernt hat</li>
         </ul>
         <div class="card-btns">
           <a href="kammerfuellung.html" class="btn btn-primary">Öffnen</a>

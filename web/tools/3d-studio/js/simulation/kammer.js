@@ -1,22 +1,26 @@
 /* Kammerfüllung — das Werkzeug im gemeinsamen Rahmen.
 
-   Die Füllkammer als liegender Zylinder: Durchmesser, Länge, Füllgrad und
-   der Laufkanal in der Stirnfläche; der Kolben fährt die Schusskurve — die
+   Die Füllkammer als liegender Zylinder: Durchmesser, Länge und Füllgrad;
+   der Kolben fährt die Schusskurve — die
    DieLogic-Kurve des Projekts oder zweistufig v₁/v₂. Beim Start steht die
    Schmelze ruhig unten in der Kammer; dann schiebt der Kolben, und die Welle
    läuft. Heraus kommt: wann die Schmelze den Laufkanal erreicht („Kammer
    voll", gegen die Kurve), wie viel Luft die Welle einschließt, und das Bild
    zu jeder Zeit am Regler, die Schmelze nach Geschwindigkeit gefärbt.
 
-   Gerechnet wird mit dem Gitter (js/lbm/) oder mit Partikeln (js/sph/) —
-   früher zwei Seiten, jetzt ein Schalter (core.js, engines/). Das Werkzeug
-   hat kein Bauteil und keine Datei als Quelle: createHost({ part: false }),
-   die Einstellungen gehören zu EINEM Schlüssel („kammer").
+   Gerechnet wird mit dem Gitter (js/lbm/), mit Partikeln (js/sph/) oder mit
+   dem Metamodell (js/meta/) — ein Schalter, drei Verfahren (core.js,
+   engines/). Das Werkzeug hat kein Bauteil und keine Datei als Quelle:
+   createHost({ part: false }), die Einstellungen gehören zu EINEM Schlüssel
+   („kammer").
 
    Die Modi: Kammer · Kurve · Simulation · Ergebnis. Kammer, Kolben und
-   Laufkanal stehen immer im Bild, dazu die ruhende Schmelze bis zum Stand
-   des Füllgrads; nur „Ergebnis" zeigt stattdessen die gerechnete Schmelze
-   und fährt den Kolben mit dem Zeitregler — sonst steht er in Startlage. */
+   Kolben stehen immer im Bild, dazu die ruhende Schmelze bis zum Stand
+   des Füllgrads. „Simulieren" und der Zeitregler stehen unten unter dem
+   Knopf und gelten in JEDEM Modus: steht ein Lauf, zeigt das Bild die
+   gerechnete Schmelze und der Kolben fährt mit dem Regler — wer an der
+   Kammer dreht, sieht sein Ergebnis dabei (und verliert es, wenn die
+   Änderung ein anderes Problem stellt). */
 
 import * as T from 'three';
 import { segButtons, segButtonSet, slider, numberInput } from '../ui/controls.js';
@@ -28,7 +32,7 @@ import { shotTimeline } from '../runner/shottime.js';
 import { state as design } from '../../../auslegung/js/core/state.js';
 import { generateCurve } from '../../../auslegung/js/core/curvegen.js';
 import { buildProfile, rhoSolidus, vCrit } from '../../../auslegung/js/core/physics.js';
-import { createSimCore, ENGINES, ENGINE_IDS, engineFromUrl } from './core.js';
+import { createSimCore, ENGINES, engineFromUrl } from './core.js';
 import { env, probeGpu } from './engines/env.js';
 import { compareTable } from './table.js';
 import { MODES, DARSTELLUNG } from './kammer-panel.js';
@@ -39,12 +43,20 @@ export const FORMAT_VERSION = 1;
 /* Die Vorgaben an EINER Stelle: die Felder der Seitenleiste werden daraus
    beschrieben (syncFields), „Zurücksetzen" führt hierher zurück. Die beiden
    alten Seiten trugen v₁ doppelt — „0,5" als Text im HTML, 0.5 im Skript. */
+/* Der Auslass in der Stirnfläche ist keine Eingabe: Er folgt dem Durchmesser
+   (Breite D/3, Tiefe D/6 — bei Ø 90 die 30 × 15 mm, mit denen die Seite immer
+   gerechnet hat). Er ist Randbedingung der Rechnung, kein Entwurf: der
+   Laufkanal wird im Angussdesigner ausgelegt, und das Metamodell kennt
+   ohnehin nur sein eigenes Fenster (engines/meta.js). Darum steht er auch
+   nicht im Bild. */
+const outletFor = d => ({ outletW: d / 3, outletH: d / 6 });
+
 const DEFAULTS = {
-  spec: { d: 90, length: 450, fill: 0.4, outletW: 30, outletH: 15 },
+  spec: { d: 90, length: 450, fill: 0.4 },
   curveMode: 'dielogic', v1: 0.5, v2: 2, a: 100, alloy: 'al', opacity: 0.25
 };
 const LIMITS = {
-  d: [20, 300], length: [50, 2000], fill: [0.1, 0.9], outletW: [2, 300], outletH: [1, 150],
+  d: [20, 300], length: [50, 2000], fill: [0.1, 0.9],
   v1: [0.05, 5], v2: [0.1, 12], a: [5, 2000]
 };
 const clampTo = (v, [lo, hi]) => Math.max(lo, Math.min(hi, v));
@@ -60,14 +72,12 @@ export function createKammerfuellungTool(host) {
     opacity: DEFAULTS.opacity, ready: false
   };
 
-  /* ── Szene: Kammer als Zylinder entlang x, Kolben als Scheibe, Laufkanal
-        als Klotz oben in der Stirnfläche ─────────────────────── */
+  /* ── Szene: Kammer als Zylinder entlang x, Kolben als Scheibe ─── */
   const group = new T.Group();
   view.scene.add(group);
   const sleeveMat = new T.MeshStandardMaterial({ color: 0x93a6b0, roughness: 0.55, metalness: 0.1, side: T.DoubleSide, transparent: true, opacity: 0.25, depthWrite: false });
   const sleeveMesh = new T.Mesh(new T.BufferGeometry(), sleeveMat);
   const plungerMesh = new T.Mesh(new T.BufferGeometry(), new T.MeshStandardMaterial({ color: 0x557786, roughness: 0.5, metalness: 0.3, side: T.DoubleSide }));
-  const outletMesh = new T.Mesh(new T.BufferGeometry(), new T.MeshStandardMaterial({ color: 0x008c82, roughness: 0.5, metalness: 0.05, side: T.DoubleSide }));
   /* Die ruhende Schmelze vor dem Schuss: ohne sie änderte der Regler
      „Füllgrad" nur Zahlen. Orange wie die Welle im Bild der Übersicht — in
      der Farbe der Geschwindigkeit null (Turbo) stand sie als schwarzer Klotz
@@ -75,10 +85,10 @@ export function createKammerfuellungTool(host) {
   const restMesh = new T.Mesh(new T.BufferGeometry(), new T.MeshStandardMaterial({
     color: 0xd8862a, roughness: 0.5, metalness: 0.05, side: T.DoubleSide, transparent: true, opacity: 0.85
   }));
-  group.add(sleeveMesh, plungerMesh, outletMesh, restMesh);
+  group.add(sleeveMesh, plungerMesh, restMesh);
 
   function rebuildScene() {
-    const { d, length, outletW, outletH } = state.spec;
+    const { d, length } = state.spec;
     const R = d / 2;
     const cyl = new T.CylinderGeometry(R, R, length, 64, 1, true);
     cyl.rotateZ(-Math.PI / 2);
@@ -86,10 +96,6 @@ export function createKammerfuellungTool(host) {
     sleeveMesh.geometry.dispose();
     sleeveMesh.geometry = cyl;
     placePlunger(0);
-    const box = new T.BoxGeometry(6, outletH, outletW);
-    box.translate(length + 3, R - outletH / 2, 0);
-    outletMesh.geometry.dispose();
-    outletMesh.geometry = box;
     /* Das Kreissegment unter dem Spiegel (fillLevel aus js/lbm/sleeve.js),
        über die Länge gezogen; ein Haar kleiner als die Kammer, damit die
        Flächen nicht flimmern. */
@@ -117,8 +123,8 @@ export function createKammerfuellungTool(host) {
     plungerMesh.geometry.dispose();
     plungerMesh.geometry = disc;
   }
-  /* Eingepasst werden Kammer und Laufkanal — F, „Einpassen" und Doppelklick fragen hier. */
-  const sceneBox = () => new T.Box3().setFromObject(sleeveMesh).union(new T.Box3().setFromObject(outletMesh));
+  /* Eingepasst wird die Kammer — F, „Einpassen" und Doppelklick fragen hier. */
+  const sceneBox = () => new T.Box3().setFromObject(sleeveMesh);
   shell.setFitTarget(sceneBox);
   const fitScene = () => shell.fit(sceneBox());
 
@@ -126,17 +132,26 @@ export function createKammerfuellungTool(host) {
   const core = createSimCore({
     host, state, group, kind: 'kammer',
     until: 'bis Kammer voll',
-    problem: () => (state.curve ? { kind: 'kammer', spec: state.spec, curve: state.curve, alloy: F.ALLOYS[state.alloy] || F.ALLOYS.al } : null),
+    /* Die Kerne wollen den Auslass im spec — sie bekommen den abgeleiteten. */
+    problem: () => (state.curve
+      ? { kind: 'kammer', spec: { ...state.spec, ...outletFor(state.spec.d) }, curve: state.curve, alloy: F.ALLOYS[state.alloy] || F.ALLOYS.al }
+      : null),
     blocked: () => 'Keine Kurve: ' + state.curveError,
     frameText: snap => ({
       time: fmtUnit(snap.t * 1000, 'ms', 0),
-      info: 'Kolben bei ' + fmtUnit(snap.s, 'mm', 0) + ' · eingeschlossene Luft ' + fmtUnit(snap.air, 'cm³')
-        + (snap.bubbles > 0 ? ' in ' + fmtPlain(snap.bubbles, 0) + (snap.bubbles === 1 ? ' Blase' : ' Blasen') : '')
+      /* Was im Bild steht (unten links): wo der Kolben ist, wie schnell er dort
+         fährt — die Kurve sagt es zu jeder Zeit — und was die Welle einschließt. */
+      info: 'Kolben ' + fmtUnit(snap.s, 'mm', 0)
+        + (state.curve ? ' · v ' + fmtUnit(state.curve.profile.atTime(snap.t).v, 'm/s') : '')
+        + ' · Luft ' + fmtUnit(snap.air, 'cm³')
+        + (snap.bubbles > 0 ? ' (' + fmtPlain(snap.bubbles, 0) + (snap.bubbles === 1 ? ' Blase)' : ' Blasen)') : '')
     }),
     meltVisible: () => true,
+    /* Der Zeitregler steht unter dem Hauptknopf — also gehört das Bild des
+       Laufs in jeden Modus, nicht nur in „Ergebnis". */
+    resultEverywhere: true,
     /* Der Kolben wandert mit dem Bild; ohne Bild steht er in Startlage. */
     onFrame: snap => { placePlunger(snap ? snap.s : 0); restMesh.visible = !snap; applyLook(); },
-    resultNote: () => 'Zeiten ab Kolbenstart.',
     render: renderTable
   });
 
@@ -201,14 +216,14 @@ export function createKammerfuellungTool(host) {
   /* ── Ergebnis: Kammer voll und Luft, beide Verfahren und die Kurve ─ */
   function renderTable() {
     const cv = state.curve;
-    const res = ENGINE_IDS.map(id => state.results[id]);
+    const res = core.ids.map(id => state.results[id]);
     const shownNow = core.shown();
     const last = r => r.snapshots[r.snapshots.length - 1];
     const cell = (fn, digits) => res.map(r => { if (!r) return '—'; const v = fn(r); return Number.isFinite(v) ? fmtFixed(v, digits) : 'nie'; });
     compareTable(ui('result-table'), {
       caption: 'Zeiten ab Kolbenstart',
       cols: [
-        ...ENGINE_IDS.map((id, i) => ({ label: ENGINES[id].label, off: !res[i], shown: !!shownNow && shownNow.engine === id && !!res[i] })),
+        ...core.ids.map((id, i) => ({ label: ENGINES[id].short || ENGINES[id].label, off: !res[i], shown: !!shownNow && shownNow.engine === id && !!res[i] })),
         { label: 'Kurve' }
       ],
       rows: [
@@ -244,7 +259,6 @@ export function createKammerfuellungTool(host) {
   function syncFields() {
     const s = state.spec;
     ui('sl-d').value = fmtPlain(s.d); ui('sl-len').value = fmtPlain(s.length);
-    ui('sl-ow').value = fmtPlain(s.outletW); ui('sl-oh').value = fmtPlain(s.outletH);
     ui('sl-fill').value = String(Math.round(s.fill * 100));
     ui('sl-fill-val').textContent = Math.round(s.fill * 100) + ' %';
     ui('sl-v1').value = fmtPlain(state.v1); ui('sl-v2').value = fmtPlain(state.v2); ui('sl-a').value = fmtPlain(state.a);
@@ -264,8 +278,6 @@ export function createKammerfuellungTool(host) {
     numberInput(ui('sl-d'), v => { state.spec.d = v; resized('Durchmesser'); return v; }, { min: LIMITS.d[0], max: LIMITS.d[1], unit: 'mm' });
     numberInput(ui('sl-len'), v => { state.spec.length = v; resized('Länge'); return v; }, { min: LIMITS.length[0], max: LIMITS.length[1], unit: 'mm' });
     slider(ui('sl-fill'), v => { if (!wired) return; state.spec.fill = v / 100; updateProblem(); changed('Füllgrad'); }, v => v + ' %');
-    numberInput(ui('sl-ow'), v => { state.spec.outletW = v; updateProblem(); changed('Laufkanal'); return v; }, { min: LIMITS.outletW[0], max: LIMITS.outletW[1], unit: 'mm' });
-    numberInput(ui('sl-oh'), v => { state.spec.outletH = v; updateProblem(); changed('Laufkanal'); return v; }, { min: LIMITS.outletH[0], max: LIMITS.outletH[1], unit: 'mm' });
     segButtons(ui('curve-seg'), v => { state.curveMode = v; ui('v1v2-block').hidden = v !== 'v1v2'; updateProblem(); changed('Schusskurve'); });
     numberInput(ui('sl-v1'), v => { state.v1 = v; updateProblem(); changed('v₁'); return v; }, { min: LIMITS.v1[0], max: LIMITS.v1[1], unit: 'm/s' });
     numberInput(ui('sl-v2'), v => { state.v2 = v; updateProblem(); changed('v₂'); return v; }, { min: LIMITS.v2[0], max: LIMITS.v2[1], unit: 'm/s' });
@@ -292,7 +304,8 @@ export function createKammerfuellungTool(host) {
     const before = JSON.stringify([state.spec, state.curveMode, state.v1, state.v2, state.a, state.alloy]);
     const sizeBefore = state.spec.d + '×' + state.spec.length;
     const s = obj.spec || {};
-    for (const k of ['d', 'length', 'fill', 'outletW', 'outletH']) if (Number.isFinite(s[k])) state.spec[k] = clampTo(s[k], LIMITS[k]);
+    /* Ältere Dateien tragen noch outletW/outletH: sie werden nicht mehr gelesen. */
+    for (const k of ['d', 'length', 'fill']) if (Number.isFinite(s[k])) state.spec[k] = clampTo(s[k], LIMITS[k]);
     state.curveMode = obj.curveMode === 'v1v2' ? 'v1v2' : 'dielogic';
     for (const k of ['v1', 'v2', 'a']) if (Number.isFinite(obj[k])) state[k] = clampTo(obj[k], LIMITS[k]);
     if (F.ALLOYS[obj.alloy]) state.alloy = obj.alloy;
@@ -306,7 +319,7 @@ export function createKammerfuellungTool(host) {
     host.refreshActions();
   }
   const resetSettings = () => fromJSON({
-    format: FORMAT, version: FORMAT_VERSION, engine: urlEngine || 'lbm', cell: { lbm: null, sph: null },
+    format: FORMAT, version: FORMAT_VERSION, engine: urlEngine || core.defaultEngine, cell: {},
     ...DEFAULTS, spec: { ...DEFAULTS.spec }
   });
 
@@ -327,7 +340,7 @@ export function createKammerfuellungTool(host) {
     state, group
   };
   tool.__viewer = {
-    state, view, shell, host, tool, core, group, sleeveMesh, plungerMesh, outletMesh, restMesh,
+    state, view, shell, host, tool, core, group, sleeveMesh, plungerMesh, restMesh,
     simulate: core.simulate, showFrame: core.showFrame,
     get meltMesh() { return core.displays.lbm.object; },
     get points() { return core.displays.sph.points; },

@@ -34,7 +34,7 @@ import * as F from '../runner/flow.js';
 import { shotTimeline, flowOnCurve } from '../runner/shottime.js';
 import { pistonCurve } from '../lbm/piston.js';
 import { state as design } from '../../../auslegung/js/core/state.js';
-import { createSimCore, ENGINES, ENGINE_IDS, engineFromUrl } from './core.js';
+import { createSimCore, ENGINES, engineFromUrl } from './core.js';
 import { env, probeGpu } from './engines/env.js';
 import { compareTable } from './table.js';
 import { MODES, DARSTELLUNG } from './anguss-panel.js';
@@ -92,7 +92,6 @@ export function createAngussfuellungTool(host) {
     frameText: snap => ({ time: fmtUnit(snap.t * 1000, 'ms', 1), info: 'Anguss zu ' + fmtUnit(snap.filled * 100, '%') + ' gefüllt' }),
     meltVisible: () => showNow() === 'schmelze',
     onFrame: (snap, r) => applyLook(r),
-    resultNote: () => 'Zeiten ab „Kammer voll".',
     render: renderTable
   });
 
@@ -197,7 +196,7 @@ export function createAngussfuellungTool(host) {
     const t1d = id => { const r = one.find(x => x.id === id); return r && Number.isFinite(r.tArrive) ? r.tArrive - state.timeline.tFull : NaN; };
     const ids = G.allNodes(state.graph).filter(n => n.type === 'gate').map(n => n.id);
     const shownNow = core.shown();
-    const res = ENGINE_IDS.map(id => state.results[id]);
+    const res = core.ids.map(id => state.results[id]);
     const tSim = (r, id) => { const gt = r && r.gates.find(x => x.id === id); return gt ? gt.tSim : NaN; };
     /* Die 1D-Zeit steht auch im Ergebnis des Laufs — für Testgriffe und Skripte. */
     for (const r of res) if (r) for (const gt of r.gates) gt.t1d = t1d(gt.id);
@@ -205,7 +204,7 @@ export function createAngussfuellungTool(host) {
     compareTable(ui('result-table'), {
       caption: 'Ankunft in ms ab „Kammer voll"',
       cols: [
-        ...ENGINE_IDS.map((id, i) => ({ label: ENGINES[id].label, off: !res[i], shown: !!shownNow && shownNow.engine === id && !!res[i] })),
+        ...core.ids.map((id, i) => ({ label: ENGINES[id].short || ENGINES[id].label, off: !res[i], shown: !!shownNow && shownNow.engine === id && !!res[i] })),
         { label: '1D' }
       ],
       rows: [
@@ -355,7 +354,7 @@ export function createAngussfuellungTool(host) {
     host.refreshActions();
   }
   const resetSettings = () => fromJSON({
-    format: FORMAT, version: FORMAT_VERSION, engine: urlEngine || 'lbm', cell: { lbm: null, sph: null },
+    format: FORMAT, version: FORMAT_VERSION, engine: urlEngine || core.defaultEngine, cell: {},
     proc: state.sourceProc, show: 'schmelze', opacity: 0.3
   });
 
