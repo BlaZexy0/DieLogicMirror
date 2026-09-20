@@ -22,7 +22,7 @@ der Schmelze folgt aus dem Kreissegment.</p>
 <p>Oben in der Stirnfläche sitzt der Auslass: Was dort ankommt, verlässt die Kammer, und die Zellen davor
 melden „Kammer voll". Er ist <b>keine Eingabe</b>, sondern Randbedingung der Rechnung und folgt dem
 Durchmesser (Breite D/3, Tiefe D/6); das Metamodell rechnet ohnehin mit dem Fenster seiner Rechnungen
-(Sehne bei 0,42 R). Ausgelegt wird der Laufkanal im Angussdesigner, nicht hier — deshalb steht er auch
+(Sehne bei 0,42 R). Ausgelegt wird der Laufkanal im Angussdesigner, nicht hier; deshalb steht er auch
 nicht im Bild.</p>
 </section>
 <section data-help-anchor="kurve">
