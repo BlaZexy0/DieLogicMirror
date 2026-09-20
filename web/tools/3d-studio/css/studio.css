@@ -762,6 +762,18 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
   .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-play svg { width: 16px; height: 16px; }
 }
 
+/* Angussdesigner, Modus „Prozess": aufgeklappt braucht der Kasten „Details"
+   mehr, als die Leiste hat (474 statt 455 px bei 1280 × 720). Wie die
+   Ergebnistabelle der Simulationen scrollt er deshalb in SICH — die
+   Seitenleiste scrollt nie. Zugeklappt ändert sich nichts. */
+.st-root[data-tool="anguss"] .st-mode[data-mode="prozess"] {
+  display: flex; flex-direction: column; min-height: 0; max-height: 100%;
+}
+.st-root[data-tool="anguss"] .st-mode[data-mode="prozess"] .st-details {
+  display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0;
+}
+.st-root[data-tool="anguss"] .st-mode[data-mode="prozess"] .st-details-body { overflow-y: auto; min-height: 0; }
+
 /* „m/s²" braucht mehr als die 30 px der Einheitenspalte. */
 .st-root[data-tool="kammerfuellung"] .st-mode[data-mode="kurve"] .row .unit { width: 38px; }
 
