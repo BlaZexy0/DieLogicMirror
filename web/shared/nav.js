@@ -4,6 +4,9 @@
  * alle Nav-/Footer-Styles werden mit injiziert (feste Farbwerte, keine
  * CSS-Variablen) — dadurch funktioniert die Navigation auch auf den
  * Dashboard-Seiten (app/), die nur ihr eigenes main.css laden.
+ * Die Werte kommen aus shared/palette.js; wechselt das Farbschema
+ * (shared/schemes.js, Ereignis „dielogic:scheme"), wird das Stylesheet neu
+ * gebaut — deshalb darf keine Farbe im Markup stehen, nur in navCss().
  * Läuft über file:// und http(s).
  *
  * Einbindung von der Startseite:
@@ -20,8 +23,12 @@
  */
 
 (function () {
-  /* Farben: shared/palette.js, Version: version.js — beide vor nav.js geladen. */
+  /* Farben: shared/palette.js, Version: version.js — beide vor nav.js geladen.
+     `ton` macht aus einer Palettenfarbe ein rgba: Tönungen und Leuchten der
+     Leiste sollen dem Farbschema folgen, nicht als festes Teal stehenbleiben. */
   const C = window.__PALETTE__;
+  const ton = (hex, a) => 'rgba(' + parseInt(hex.slice(1, 3), 16) + ',' + parseInt(hex.slice(3, 5), 16)
+    + ',' + parseInt(hex.slice(5, 7), 16) + ',' + a + ')';
   const VERSION = 'v' + (window.__DL_VERSION__ || '?');
 
   /* ── Diagramm-Einzelseiten (Reihenfolge = js/charts/registry.js) ── */
@@ -134,9 +141,15 @@
      die Schmelze als Pfeil durch den Spalt. Die Silhouette bleibt ein H, aber
      die Blöcke lesen sich als Werkzeug und nicht als Buchstabe im Wort
      (dasselbe Zeichen trägt die Kachel in assets/logo.svg). Es ist
-     dekorativ — vorgelesen bleibt der Name „DieLogic". */
-  const H_GLYPH = `<svg class="dl-h-glyph" viewBox="0 0 100 100" aria-hidden="true"><path d="M0 0 H34 V34 H22 V66 H34 V100 H0 Z" fill="${C.surface}"/><path d="M100 0 H66 V34 H78 V66 H66 V100 H100 Z" fill="${C.surface}"/><path d="M22 40 L57 40 L57 27 L80 50 L57 73 L57 60 L22 60 Z" fill="${C.primaryLight}"/></svg>`;
-  const WORDMARK = `Die${H_GLYPH}<span style="color:${C.primaryLight}">Logic</span>`;
+     dekorativ — vorgelesen bleibt der Name „DieLogic".
+     Die Farben stehen als Klasse im Stylesheet, nicht als fill-Attribut:
+     wechselt das Farbschema (shared/schemes.js), wird nur das Stylesheet
+     neu gesetzt — das Markup bleibt stehen und färbt sich mit. */
+  const H_GLYPH = '<svg class="dl-h-glyph" viewBox="0 0 100 100" aria-hidden="true">'
+    + '<path class="dl-h-form" d="M0 0 H34 V34 H22 V66 H34 V100 H0 Z"/>'
+    + '<path class="dl-h-form" d="M100 0 H66 V34 H78 V66 H66 V100 H100 Z"/>'
+    + '<path class="dl-h-strahl" d="M22 40 L57 40 L57 27 L80 50 L57 73 L57 60 L22 60 Z"/></svg>';
+  const WORDMARK = `Die${H_GLYPH}<span class="dl-word-logic">Logic</span>`;
 
   /* ── Nav-Links bauen ──────────────────────────────────────── */
   const linkHtml = child => {
@@ -186,7 +199,7 @@
       <span class="dl-footer-wordmark">${WORDMARK}</span>
     </div>
     <p class="dl-footer-desc">Gießtechnische Auslegung für den Druckguss (HPDC): Schusskurve, PQ², Füllkammer, Zyklus und Teilekosten: ein Projekt, alle Werkzeuge.</p>
-    <p class="dl-footer-desc" style="margin-top:1rem;color:${C.ondark2};">© 2026 DieLogic</p>
+    <p class="dl-footer-desc dl-footer-copy">© 2026 DieLogic</p>
   </div>
 
   <div class="dl-footer-col">
@@ -230,14 +243,18 @@
 
   <div class="dl-footer-bottom">
     DieLogic: Auslegungsrechnung und Visualisierung im Browser. Für Gießerei-Ingenieure gebaut.
-    &nbsp;·&nbsp; <a href="${r('/recht/impressum.html')}" style="color:${C.ondark2};">Impressum</a>
-    &nbsp;·&nbsp; <a href="${r('/recht/datenschutz.html')}" style="color:${C.ondark2};">Datenschutz</a>
+    &nbsp;·&nbsp; <a href="${r('/recht/impressum.html')}">Impressum</a>
+    &nbsp;·&nbsp; <a href="${r('/recht/datenschutz.html')}">Datenschutz</a>
   </div>
 </footer>`;
   }
 
-  /* ── Styles (selbstversorgend, feste Farbwerte) ───────────── */
-  const NAV_CSS = `
+  /* ── Styles (selbstversorgend, feste Farbwerte) ─────────────
+     Als Funktion, nicht als Konstante: beim Wechsel des Farbschemas
+     (shared/schemes.js) liest sie die neuen Werte aus __PALETTE__ und
+     injectStyles() ersetzt das Stylesheet. */
+  function navCss() {
+    return `
 .dl-nav {
   height: 56px;
   background: ${C.dark};
@@ -259,6 +276,9 @@
   text-decoration: none;
 }
 .dl-h-glyph { height: 0.86em; width: auto; display: inline-block; margin: 0 0.17em; }
+.dl-h-form { fill: ${C.surface}; }
+.dl-h-strahl { fill: ${C.primaryLight}; }
+.dl-word-logic { color: ${C.primaryLight}; }
 .dl-nav-logo-text {
   font-size: 1.1rem;
   font-weight: 700;
@@ -322,7 +342,7 @@
   white-space: nowrap;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
 }
-.dl-nav-cta a:hover { background: ${C.primary2}; box-shadow: 0 4px 14px -4px rgba(0,140,130,.7), inset 0 1px 0 rgba(255,255,255,.14); }
+.dl-nav-cta a:hover { background: ${C.primary2}; box-shadow: 0 4px 14px -4px ${ton(C.primary, .7)}, inset 0 1px 0 rgba(255,255,255,.14); }
 
 .dl-nav-group { position: relative; display: inline-block; }
 .dl-nav-group > .dl-nav-group-label {
@@ -385,7 +405,7 @@
 .dl-nav-dropdown a:hover { color: white; background: rgba(255,255,255,.07); }
 .dl-nav-dropdown a.active {
   color: white;
-  background: rgba(0,140,130,.18);
+  background: ${ton(C.primary, .18)};
 }
 
 .dl-footer {
@@ -408,6 +428,7 @@
   margin-bottom: 0.5rem;
 }
 .dl-footer-desc { font-size: 0.8rem; line-height: 1.6; max-width: 240px; margin: 0; }
+.dl-footer-copy { margin-top: 1rem; color: ${C.ondark2}; }
 .dl-footer-col h4 {
   font-size: 0.72rem;
   font-weight: 700;
@@ -434,6 +455,7 @@
   color: ${C.ondark2};
   text-align: center;
 }
+.dl-footer-bottom a { color: ${C.ondark2}; }
 
 /* ── Schmale Leiste: Burger-Knopf und Klapp-Panel ───────────────────
    Passen die Links nicht mehr neben Logo und „Anmelden", schaltet
@@ -639,12 +661,17 @@
   .dl-nav-version { display: none; }
 }
 `;
+  }
 
+  /* Einmal setzen, beim Schemawechsel ersetzen — dasselbe <style>-Element. */
   function injectStyles() {
-    const style = document.createElement('style');
-    style.id = 'dielogic-nav-styles';
-    style.textContent = NAV_CSS;
-    document.head.appendChild(style);
+    let style = document.getElementById('dielogic-nav-styles');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'dielogic-nav-styles';
+      document.head.appendChild(style);
+    }
+    style.textContent = navCss();
   }
 
   function injectNav() {
@@ -919,6 +946,10 @@
     injectNav();
     if (wantFooter) injectFooter();
     showAccount();
+    /* Farbschema gewechselt (shared/schemes.js): Leiste und Footer stehen
+       schon im Dokument — nur ihr Stylesheet wird neu gebaut, aus den
+       inzwischen geänderten Werten in __PALETTE__. */
+    document.addEventListener('dielogic:scheme', injectStyles);
   }
 
   if (document.readyState === 'loading') {

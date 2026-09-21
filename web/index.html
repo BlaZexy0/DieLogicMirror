@@ -12,14 +12,15 @@
   <link rel="stylesheet" href="/shared/shared.css">
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
   <style>
     /* ── Hero ───────────────────────────────────────────────── */
     .hero {
       min-height: 82vh;
       background:
-        radial-gradient(1100px 520px at 50% 115%, rgba(63,194,182,.22), transparent 60%),
-        radial-gradient(700px 400px at 90% -10%, rgba(0,140,130,.25), transparent 60%),
+        radial-gradient(1100px 520px at 50% 115%, rgba(var(--primary-light-rgb), .22), transparent 60%),
+        radial-gradient(700px 400px at 90% -10%, rgba(var(--primary-rgb), .25), transparent 60%),
         linear-gradient(135deg, var(--dark) 0%, var(--dark2) 55%, var(--primary-deep) 100%);
       display: flex;
       flex-direction: column;
@@ -36,8 +37,8 @@
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
-      background: rgba(0,140,130,.15);
-      border: 1px solid rgba(0,140,130,.5);
+      background: rgba(var(--primary-rgb), .15);
+      border: 1px solid rgba(var(--primary-rgb), .5);
       color: var(--primary-light);
       font-size: 0.78rem;
       font-weight: 600;
@@ -140,7 +141,7 @@
     .tools-section {
       padding: 6rem 2rem;
       background:
-        radial-gradient(900px 500px at 10% 0%, rgba(0,140,130,.18), transparent 60%),
+        radial-gradient(900px 500px at 10% 0%, rgba(var(--primary-rgb), .18), transparent 60%),
         var(--dark);
     }
     .tools-inner { max-width: 1100px; margin: 0 auto; }
@@ -160,13 +161,13 @@
     .tool-card:hover {
       transform: translateY(-3px);
       background: rgba(255,255,255,.06);
-      border-color: rgba(63,194,182,.45);
+      border-color: rgba(var(--primary-light-rgb), .45);
       box-shadow: 0 20px 40px -18px rgba(0,0,0,.6);
     }
     .tool-card.featured {
       grid-column: span 3;
-      border-color: rgba(63,194,182,.55);
-      background: linear-gradient(135deg, rgba(0,140,130,.16), rgba(255,255,255,.03) 60%);
+      border-color: rgba(var(--primary-light-rgb), .55);
+      background: linear-gradient(135deg, rgba(var(--primary-rgb), .16), rgba(255,255,255,.03) 60%);
     }
     .tool-card-icon {
       width: 46px; height: 46px;
@@ -186,9 +187,9 @@
     .badge-live {
       font-size: 0.65rem;
       font-weight: 700;
-      background: rgba(0,140,130,.15);
+      background: rgba(var(--primary-rgb), .15);
       color: var(--primary-light);
-      border: 1px solid rgba(0,140,130,.5);
+      border: 1px solid rgba(var(--primary-rgb), .5);
       padding: 0.1rem 0.45rem;
       border-radius: 10px;
       letter-spacing: 0.05em;
@@ -269,7 +270,7 @@
     .pricing-section {
       padding: 6rem 2rem;
       background:
-        radial-gradient(800px 400px at 50% 100%, rgba(0,140,130,.2), transparent 60%),
+        radial-gradient(800px 400px at 50% 100%, rgba(var(--primary-rgb), .2), transparent 60%),
         var(--dark);
     }
     .pricing-inner { max-width: 1000px; margin: 0 auto; }
@@ -285,9 +286,9 @@
       position: relative;
     }
     .pricing-card.featured {
-      border-color: rgba(63,194,182,.6);
-      background: linear-gradient(160deg, rgba(0,140,130,.2), rgba(255,255,255,.04) 65%);
-      box-shadow: 0 30px 60px -30px rgba(0,140,130,.6);
+      border-color: rgba(var(--primary-light-rgb), .6);
+      background: linear-gradient(160deg, rgba(var(--primary-rgb), .2), rgba(255,255,255,.04) 65%);
+      box-shadow: 0 30px 60px -30px rgba(var(--primary-rgb), .6);
       transform: scale(1.03);
     }
     .most-popular {
@@ -530,7 +531,7 @@
 
       <!-- Dashboard (featured) -->
       <div class="tool-card featured">
-        <div class="tool-card-icon" style="background:rgba(0,140,130,.15);">
+        <div class="tool-card-icon" style="background:rgba(var(--primary-rgb), .15);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-dashboard"/></svg>
         </div>
         <h3>DieLogic Dashboard <span class="badge-live">LIVE</span></h3>
@@ -569,7 +570,7 @@
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(0,140,130,.12);">
+        <div class="tool-card-icon" style="background:rgba(var(--primary-rgb), .12);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-pq2"/></svg>
         </div>
         <h3>PQ²-Diagramm <span class="badge-live">EINZELSEITE</span></h3>
@@ -652,7 +653,7 @@
       </div>
 
       <div class="tool-card featured">
-        <div class="tool-card-icon" style="background:rgba(0,140,130,.12);">
+        <div class="tool-card-icon" style="background:rgba(var(--primary-rgb), .12);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-3dstudio"/></svg>
         </div>
         <h3>3D-Studio <span class="badge-live">NEU</span></h3>

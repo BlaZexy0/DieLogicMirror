@@ -11,7 +11,7 @@
 .hero-content { position: relative; max-width: 780px; margin: 0 auto; }
 .hero-pill {
   display: inline-flex; align-items: center; gap: .4rem;
-  background: rgba(0,140,130,.15); border: 1px solid rgba(0,140,130,.5);
+  background: rgba(var(--primary-rgb), .15); border: 1px solid rgba(var(--primary-rgb), .5);
   color: var(--primary-light); font-size: .78rem; font-weight: 600;
   padding: .3rem .8rem; border-radius: 20px; margin-bottom: 1.4rem;
 }
@@ -40,7 +40,7 @@
 .tool-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,20,27,.35); border-color: var(--primary); }
 .tool-card-icon {
   width: 46px; height: 46px; border-radius: 11px; margin-bottom: 1.1rem;
-  display: flex; align-items: center; justify-content: center; background: rgba(0,140,130,.15);
+  display: flex; align-items: center; justify-content: center; background: rgba(var(--primary-rgb), .15);
 }
 /* Wozu die Karte gehört — Verstehen, Analysieren, Entwerfen — als kleine
    Zeile über dem Namen; dieselben drei Worte wie im Weg durch das Studio. */
@@ -56,7 +56,7 @@
 /* Der zweite Knopf einer Karte (ein Beispiel) ist auf dem dunklen Grund
    sonst dunkel auf dunkel — hier hell umrandet. */
 .tool-card .btn-ghost { color: var(--ondark); border: 1px solid rgba(255,255,255,.28); background: transparent; }
-.tool-card .btn-ghost:hover { color: #fff; border-color: var(--primary-light); background: rgba(0,140,130,.16); }
+.tool-card .btn-ghost:hover { color: #fff; border-color: var(--primary-light); background: rgba(var(--primary-rgb), .16); }
 
 /* ── Schritte ──────────────────────────────────────────────── */
 .how-section { padding: 4.5rem 2rem; background: var(--bg); }
@@ -71,7 +71,7 @@
 .step-num { font-size: .7rem; font-weight: 700; color: var(--primary); letter-spacing: .08em; text-transform: uppercase; margin-bottom: .4rem; }
 .step h3 { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .5rem; }
 .step p { font-size: .86rem; color: var(--muted); line-height: 1.65; }
-.step p a { color: var(--primary-deep); font-weight: 600; text-decoration: none; border-bottom: 1px solid rgba(0,140,130,.35); }
+.step p a { color: var(--primary-deep); font-weight: 600; text-decoration: none; border-bottom: 1px solid rgba(var(--primary-rgb), .35); }
 .step p a:hover { color: var(--primary); border-bottom-color: var(--primary); }
 
 /* ── Hinweiskasten + Fußzeile ──────────────────────────────── */

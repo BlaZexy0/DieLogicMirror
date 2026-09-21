@@ -61,6 +61,8 @@ dielogic/
 │   │   ├── vendor/katex/    KaTeX (lokal, MIT) — rendert alle Formeln der Site; siehe README dort
 │   │   ├── palette.js       DIE Farbquelle (window.__PALETTE__; shared.css spiegelt sie,
 │   │   │                    Test prüft Gleichheit + WCAG-Kontrast)
+│   │   ├── schemes.js       Farbschemata als Abweichung davon (Umschalter auf der
+│   │   │                    Konto-Seite; lädt direkt nach palette.js, vor nav.js)
 │   │   ├── shared.css       Basis-Styles + :root-Tokens
 │   │   ├── nav.js           injiziert Site-Navigation + Footer (selbstversorgend)
 │   │   ├── version.js       Versionsnummer (Nav-Badge + /api/health)
@@ -209,6 +211,18 @@ eine Rechnung auf den Server legt, muss sie dort ergänzen.
 - **Farbschema:** `web/shared/palette.js` (einzige Quelle; `shared/shared.css`
   spiegelt sie als Tokens, Test prüft Gleichheit). Diagrammfarben:
   `web/shared/theme.js`. Farbtafel: `web/assets/palette.svg`.
+  Zwölf Schemata stehen in `web/shared/schemes.js` — je Schema nur die
+  Abweichungen von der Palette, in zwei Gruppen: `zweck` löst eine Aufgabe
+  (Hochkontrast für die Halle, Rot-Grün-sicher, Abendschicht, Graphit fürs
+  Studio), `farbe` ist eine andere Farbwelt (Stahlblau, Blaupause,
+  Anlassfarbe, Aluminium, Messing, Kupfer, Olivgrün). Gewählt wird auf der
+  Konto-Seite, gemerkt im localStorage dieses Browsers.
+  Zwei Regeln dabei: Farben mit Alpha als `rgba(var(--primary-rgb), .25)`
+  schreiben (feste `rgba(0,140,130,…)` bleiben beim Wechsel teal stehen), und
+  wer Styles ins Dokument injiziert (nav.js, projectbar.js), baut sie auf das
+  Ereignis `dielogic:scheme` neu. Nicht erfasst: die fertigen SVG-Bilder unter
+  `web/assets/theorie/` — als `<img>` eingebunden erreichen CSS-Variablen sie
+  nicht, sie bleiben in den Standardfarben.
 - **Version:** `web/shared/version.js` (Nav-Badge und `/api/health`).
 - **Presets (Beispielwerte):** `web/shared/examples/*.js` — produktiv
   pflegt jede Organisation ihre eigenen als Stammdaten auf der Konto-Seite.

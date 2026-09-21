@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/shared/shared.css">
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
   <style>
     .kt-wrap { max-width: 1100px; margin: 0 auto; padding: 1.6rem 1.5rem 3.5rem; }
@@ -70,7 +71,7 @@
        oder unterdrücken, und es fragt gleich Beschreibung, Kunde und
        Teilenummer mit ab. */
     .kt-dialog { border: 0; border-radius: var(--radius); padding: 0; max-width: 32rem; width: calc(100% - 2rem); box-shadow: var(--shadow-lg); color: var(--text); }
-    .kt-dialog::backdrop { background: rgba(0,39,51,.45); }
+    .kt-dialog::backdrop { background: rgba(var(--dark-rgb), .45); }
     .kt-dialog form { padding: 1.3rem 1.5rem 1.4rem; }
     .kt-dialog h3 { margin: 0 0 .6rem; font-size: 1.1rem; letter-spacing: -.01em; }
     .kt-dialog label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted); margin: .7rem 0 .25rem; }
@@ -104,8 +105,8 @@
       padding: 1rem 1.1rem .8rem; display: flex; flex-direction: column; gap: .5rem; position: relative;
       transition: transform .12s ease, box-shadow .12s ease;
     }
-    .pj:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,39,51,.12); }
-    .pj.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0,140,130,.14), var(--shadow); }
+    .pj:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(var(--dark-rgb), .12); }
+    .pj.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(var(--primary-rgb), .14), var(--shadow); }
     .pj .top { display: flex; align-items: flex-start; gap: .6rem; }
     .pj .title { font-weight: 700; font-size: 1rem; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; flex: 1; }
     .pj .desc { font-size: .8rem; color: var(--muted); line-height: 1.45; }
@@ -121,7 +122,7 @@
       min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem;
       cursor: pointer; font: inherit; font-size: .85rem; font-weight: 600; transition: border-color .12s, color .12s, background .12s;
     }
-    .pj-new:hover, .pj-new:focus-visible { border-color: var(--primary); color: var(--primary); background: rgba(0,140,130,.03); outline: none; }
+    .pj-new:hover, .pj-new:focus-visible { border-color: var(--primary); color: var(--primary); background: rgba(var(--primary-rgb), .03); outline: none; }
     .pj-new .plus { font-size: 1.9rem; line-height: 1; font-weight: 400; }
     .pj-empty { grid-column: 1 / -1; font-size: .85rem; color: var(--muted); padding: .4rem 0; }
 
@@ -152,7 +153,7 @@
     .sd-meta .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
     table.sd { width: 100%; border-collapse: collapse; font-size: .78rem; }
     table.sd th, table.sd td { padding: .3rem .35rem; border-bottom: 1px solid var(--border-light); text-align: left; vertical-align: middle; white-space: nowrap; }
-    table.sd tbody tr:nth-child(even) td { background: rgba(0,39,51,.025); }
+    table.sd tbody tr:nth-child(even) td { background: rgba(var(--dark-rgb), .025); }
     table.sd th { font-size: .64rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; padding-bottom: .4rem; }
     table.sd th small { display: block; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted-light); }
     table.sd input { width: 6.2rem; font: inherit; font-family: var(--mono); font-size: .76rem; padding: .28rem .4rem; border: 1px solid transparent; border-radius: 6px; text-align: right; background: transparent; }
@@ -195,6 +196,43 @@
     .mem-list .e { font-size: .75rem; color: var(--muted); overflow-wrap: anywhere; }
     .mem-list .right { margin-left: auto; display: flex; align-items: center; gap: .6rem; flex: none; }
     .mem-empty { font-size: .82rem; color: var(--muted); padding: .4rem 0; }
+
+    /* ── Farbschema ───────────────────────────────────────── */
+    /* Jede Kachel zeigt das Schema, das sie schaltet: Kopfleiste, Karte,
+       Text und Knopf in seinen Farben. Ein Wort über die Farben zu sagen
+       hilft hier weniger als sie zu zeigen — die Farben in den Kacheln
+       setzt das Skript aus shared/schemes.js, damit hier keine zweite
+       Liste von Werten entsteht. */
+    .sch-grid { display: flex; flex-direction: column; gap: .5rem; }
+    .sch-gruppe { font-size: .66rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+      color: var(--muted); margin: .5rem 0 0; }
+    .sch-gruppe:first-child { margin-top: 0; }
+    .sch-reihe { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .8rem; }
+    .sch-tile { display: block; position: relative; cursor: pointer; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: .55rem; background: var(--surface); transition: border-color .12s var(--ease), box-shadow .12s var(--ease); }
+    .sch-tile:hover { border-color: var(--primary); }
+    .sch-tile:focus-within { box-shadow: var(--ring); }
+    .sch-tile input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .sch-tile.on { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; }
+    /* Die gewählte Kachel trägt ihren Rand UND den Fokusring, sonst sieht
+       man beim Hineintabben nicht, wo die Tastatur steht. */
+    .sch-tile.on:focus-within { box-shadow: 0 0 0 1px var(--primary) inset, var(--ring); }
+    /* Die Vorschau: Kopfleiste, Grund, Karte mit zwei Textzeilen und Knopf. */
+    .sch-prev { display: block; border-radius: 7px; overflow: hidden; border: 1px solid var(--border-light); }
+    .sch-prev .bar { height: 14px; }
+    .sch-prev .body { padding: 8px; }
+    .sch-prev .card { border-radius: 5px; padding: 7px; display: flex; flex-direction: column; gap: 5px; }
+    .sch-prev .line { height: 5px; border-radius: 3px; }
+    .sch-prev .line.short { width: 55%; }
+    .sch-prev .row { display: flex; align-items: center; gap: 5px; margin-top: 1px; }
+    .sch-prev .btn-dot { height: 11px; width: 34px; border-radius: 4px; }
+    .sch-prev .tag { height: 11px; width: 22px; border-radius: 4px; }
+    .sch-prev .ampel { height: 9px; width: 9px; border-radius: 50%; margin-left: auto; }
+    .sch-prev .ampel + .ampel { margin-left: 3px; }
+    .sch-name { display: flex; align-items: center; gap: .4rem; font-size: .85rem; font-weight: 700; margin: .5rem 0 .1rem; }
+    .sch-name .mark { font-size: .7rem; font-weight: 700; color: var(--primary); }
+    .sch-note { font-size: .72rem; color: var(--muted); line-height: 1.45; }
+    .sch-hint { font-size: .75rem; color: var(--muted); margin-top: .8rem; }
   </style>
 </head>
 <body>
@@ -382,6 +420,25 @@
       </div>
     </section>
   </div>
+
+  <!-- ── Darstellung ─────────────────────────────────────────
+       Steht außerhalb von #account: das Farbschema gehört zum Browser,
+       nicht zum Konto — es lässt sich also auch abgemeldet wählen. -->
+  <section class="kt-section" id="darstellung">
+    <div class="kt-section-head">
+      <div>
+        <span class="eyebrow">Darstellung</span>
+        <h2>Farbschema</h2>
+        <p>Gilt für die ganze Seite: Kopfleiste, Werkzeuge und Diagramme. Die Wahl liegt in diesem Browser,
+          nicht im Konto — auf einem anderen Rechner wird sie neu getroffen. Alle Schemata halten dieselben
+          Kontrastregeln ein.</p>
+      </div>
+    </div>
+    <div class="kt-card">
+      <div class="sch-grid" id="sch-grid"></div>
+      <p class="sch-hint" id="sch-hint">Lade …</p>
+    </div>
+  </section>
 </div>
 
 <script src="/shared/project.js"></script>
@@ -982,6 +1039,117 @@ async function load(m) {
 }
 window.addEventListener('konto:account', e => load(e.detail));
 if (window.__KONTO_ME__) load(window.__KONTO_ME__);
+</script>
+
+<!-- ── Farbschema wählen (shared/schemes.js) ────────────────────
+     Die Kacheln zeigen jedes Schema in seinen eigenen Farben; ein Klick
+     schaltet sofort um — ohne Neuladen, auch die Kopfleiste oben. -->
+<script>
+(function () {
+  'use strict';
+  var S = window.__SCHEMES__;
+  var grid = document.getElementById('sch-grid');
+  var hint = document.getElementById('sch-hint');
+  if (!S || !grid) return;
+
+  /* Ein Feld der Vorschau: nur Farben, kein Text — das Muster steht im CSS. */
+  function box(cls, styles) {
+    var d = document.createElement('span');
+    d.className = cls;
+    for (var k in styles) d.style.setProperty(k, styles[k]);
+    return d;
+  }
+
+  function vorschau(c) {
+    var prev = box('sch-prev', { background: c.bg });
+    prev.appendChild(box('bar', { background: c.dark }));
+    var body = box('body', {});
+    var card = box('card', { background: c.surface, border: '1px solid ' + c.border });
+    card.appendChild(box('line', { background: c.text }));
+    card.appendChild(box('line short', { background: c.muted }));
+    var row = box('row', {});
+    row.appendChild(box('btn-dot', { background: c.primary }));
+    row.appendChild(box('tag', { background: c.pale, border: '1px solid ' + c.paleBorder }));
+    row.appendChild(box('tag', { background: c.accent }));
+    /* Die Ampel gehört in die Vorschau: „Rot-Grün-sicher" unterscheidet sich
+       vom Standard NUR hier, und in dieser Anwendung trägt sie das Urteil. */
+    row.appendChild(box('ampel', { background: c.ok }));
+    row.appendChild(box('ampel', { background: c.bad }));
+    card.appendChild(row);
+    body.appendChild(card);
+    prev.appendChild(body);
+    return prev;
+  }
+
+  var tiles = {};
+
+  /* Zwei Gruppen mit Überschrift: „Für eine Aufgabe" und „Farbwelt". Welche
+     es gibt, sagt schemes.js — hier steht keine zweite Liste. */
+  var ziele = {};
+  S.groups.forEach(function (g) {
+    var titel = document.createElement('h3');
+    titel.className = 'sch-gruppe';
+    titel.textContent = g.label;
+    grid.appendChild(titel);
+    var reihe = document.createElement('div');
+    reihe.className = 'sch-reihe';
+    grid.appendChild(reihe);
+    ziele[g.id] = reihe;
+  });
+
+  S.list.forEach(function (s) {
+    var c = S.colors(s.id);
+    var tile = document.createElement('label');
+    tile.className = 'sch-tile';
+
+    var input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'sch';
+    input.value = s.id;
+    tile.appendChild(input);
+    tile.appendChild(vorschau(c));
+
+    var name = document.createElement('span');
+    name.className = 'sch-name';
+    name.appendChild(document.createTextNode(s.name));
+    if (s.id === S.default) {
+      var mark = document.createElement('span');
+      mark.className = 'mark';
+      mark.textContent = 'Standard';
+      name.appendChild(mark);
+    }
+    tile.appendChild(name);
+
+    var note = document.createElement('span');
+    note.className = 'sch-note';
+    note.textContent = s.note;
+    tile.appendChild(note);
+
+    input.addEventListener('change', function () { if (input.checked) S.set(s.id); });
+    (ziele[s.group] || grid).appendChild(tile);
+    tiles[s.id] = { tile: tile, input: input, name: s.name };
+  });
+
+  function markieren() {
+    var id = S.current();
+    for (var k in tiles) {
+      tiles[k].tile.classList.toggle('on', k === id);
+      tiles[k].input.checked = k === id;
+    }
+    /* „Sofort" gilt für alles, was die CSS-Tokens liest, und für die
+       Leisten, die ihr Stylesheet neu bauen — ein bereits gezeichnetes
+       Diagramm in einer anderen Registerkarte nimmt die Farben erst beim
+       nächsten Zeichnen an. Das soll hier stehen, statt zu viel zu
+       versprechen. */
+    hint.textContent = 'Gewählt: ' + (tiles[id] ? tiles[id].name : id)
+      + '. Gilt sofort auf allen Seiten dieses Browsers — gerechnete Bilder in anderen'
+      + ' Registerkarten beim nächsten Neuzeichnen.';
+  }
+
+  /* Auch auf den Wechsel aus einem anderen Tab hören. */
+  document.addEventListener('dielogic:scheme', markieren);
+  markieren();
+})();
 </script>
 
 </body>

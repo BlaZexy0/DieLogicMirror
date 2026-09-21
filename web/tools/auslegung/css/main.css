@@ -88,7 +88,7 @@ h2 { margin: 4px 0; }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 5px 18px #00273312;
+  box-shadow: 0 5px 18px rgba(var(--dark-rgb), .07);
 }
 .panel { padding: 14px; }
 
@@ -179,12 +179,12 @@ select {
 /* Hervorhebung der Diagramm-Eingaben */
 .field.hl input {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(0,140,130,.25);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), .25);
 }
 .field.hl label { color: var(--primary); }
 .group.hl {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(0,140,130,.18);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), .18);
 }
 
 /* ── Füllkammer-Karte: Schema, Kolbenweg-Lineal, Kennwerte und Prüfungen

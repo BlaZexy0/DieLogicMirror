@@ -70,3 +70,9 @@ window.__THEME__ = {
     [122, 4, 3]
   ]
 };
+
+/* Ein anderes Farbschema als der Standard? Dann bekommen die Diagramme
+   seine Farben (shared/schemes.js). Die Datei wird vor dieser geladen, das
+   Objekt hier gibt es aber erst jetzt — darum der Rückruf. Der Standard
+   lässt die Werte oben unangetastet. */
+if (typeof window !== 'undefined' && window.__SCHEMES__) window.__SCHEMES__.applyChart(window.__THEME__);

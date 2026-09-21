@@ -34,7 +34,7 @@ body.werkbank { font-family: var(--sans); font-size: 14px; }
 .wb-step svg { width: 24px; height: 24px; flex-shrink: 0; }
 .wb-step span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wb-step:hover { color: #fff; background: rgba(255,255,255,.06); }
-.wb-step.active { color: #fff; background: rgba(0,140,130,.22); border-left-color: var(--primary-light); }
+.wb-step.active { color: #fff; background: rgba(var(--primary-rgb), .22); border-left-color: var(--primary-light); }
 .wb-step .wb-num {
   position: absolute; top: 4px; left: 6px;
   font-family: var(--mono); font-size: .58rem; font-weight: 600; color: var(--ondark2);

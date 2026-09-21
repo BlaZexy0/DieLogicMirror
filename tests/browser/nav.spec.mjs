@@ -107,3 +107,60 @@ test('Kopfleiste: Klick hält fest, zweiter Klick schließt, Escape auch', async
   await page.waitForTimeout(300);
   expect(await openMenus(page)).toEqual([]);
 });
+
+/* ── Farbschema (shared/schemes.js) ─────────────────────────────────
+   Die Kopfleiste bringt ihre Farben als eingespritztes Stylesheet mit,
+   nicht als CSS-Variablen — sie muss beim Umschalten also aktiv neu
+   gebaut werden. Genau das prüft dieser Test: Ein Klick auf die Kachel
+   färbt die Leiste sofort um, ohne Neuladen, und die Wahl überlebt den
+   Seitenwechsel. */
+
+const leiste = page => page.evaluate(() => ({
+  scheme: document.documentElement.getAttribute('data-scheme'),
+  nav: getComputedStyle(document.querySelector('.dl-nav')).backgroundColor,
+  logic: getComputedStyle(document.querySelector('.dl-word-logic')).color,
+  primary: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim(),
+  palette: window.__PALETTE__.primary,
+  gespeichert: localStorage.getItem('dielogic-scheme-v1')
+}));
+
+test('Farbschema: die Kachel färbt Seite und Kopfleiste sofort um', async ({ page }) => {
+  await page.goto('/konto/');
+  const vorher = await leiste(page);
+  expect(vorher.scheme).toBe('teal');
+  expect(vorher.primary).toBe('#008c82');
+
+  await page.locator('#sch-grid label:has(input[value="kupfer"])').click();
+  const nachher = await leiste(page);
+  expect(nachher.scheme).toBe('kupfer');
+  expect(nachher.gespeichert).toBe('kupfer');
+  expect(nachher.primary).toBe('#a25325');
+  expect(nachher.palette).toBe('#a25325');
+  expect(nachher.nav).not.toBe(vorher.nav);      // Leiste ohne Neuladen umgefärbt
+  expect(nachher.logic).not.toBe(vorher.logic);  // auch die Wortmarke
+
+  /* Und der Hinweis nennt, was gilt. */
+  await expect(page.locator('#sch-hint')).toContainText('Kupfer');
+
+  /* Über den Seitenwechsel hinaus — auch dort, wo es kein shared.css gibt. */
+  await page.goto('/tools/auslegung/');
+  const dashboard = await leiste(page);
+  expect(dashboard.scheme).toBe('kupfer');
+  expect(dashboard.nav).toBe(nachher.nav);
+  /* Die Diagramme rechnen mit denselben Farben. */
+  expect(await page.evaluate(() => window.__THEME__.chart.series2)).toBe('#a25325');
+});
+
+test('Farbschema: ohne Wahl bleibt der Standard, und er lässt sich zurückwählen', async ({ page }) => {
+  await page.goto('/konto/');
+  await page.locator('#sch-grid label:has(input[value="kontrast"])').click();
+  expect((await leiste(page)).scheme).toBe('kontrast');
+  await page.locator('#sch-grid label:has(input[value="teal"])').click();
+  const zurück = await leiste(page);
+  expect(zurück.scheme).toBe('teal');
+  expect(zurück.primary).toBe('#008c82');
+  expect(zurück.nav).toBe('rgb(0, 39, 51)');
+  /* Der Standard schreibt keine Diagrammfarben um. */
+  await page.goto('/theorie/pq2.html');
+  expect(await page.evaluate(() => window.__THEME__.chart.event)).toBe('#9aacb2');
+});

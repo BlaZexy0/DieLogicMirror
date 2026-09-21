@@ -288,7 +288,7 @@ select {
 .drop-hint {
   position: absolute; inset: 10px; border: 2px dashed var(--primary); border-radius: 12px;
   display: none; align-items: center; justify-content: center; pointer-events: none;
-  background: rgba(0,140,130,.06); color: var(--primary-deep); font-weight: 600; z-index: 4;
+  background: rgba(var(--primary-rgb), .06); color: var(--primary-deep); font-weight: 600; z-index: 4;
 }
 #viewport.dragover .drop-hint { display: flex; }
 
@@ -335,7 +335,7 @@ select {
 .cb-body { display: flex; gap: 7px; }
 .cb-scale {
   width: 13px; height: 132px; border-radius: 3px;
-  border: 1px solid rgba(0,39,51,.18);
+  border: 1px solid rgba(var(--dark-rgb), .18);
 }
 .cb-ticks {
   display: flex; flex-direction: column; justify-content: space-between;
@@ -475,7 +475,7 @@ select {
 }
 .pt-legend .dot {
   width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
-  border: 1px solid rgba(0,39,51,.25);
+  border: 1px solid rgba(var(--dark-rgb), .25);
 }
 /* „gewählt": im Viewport ein Ring um den Griff, hier ein Ring um nichts. */
 .pt-legend .dot.ring { background: transparent; border-width: 2px; }
@@ -490,7 +490,7 @@ select {
    und Körper im Viewport. */
 .pt-menu button .dot {
   display: inline-block; width: 10px; height: 10px; border-radius: 50%;
-  margin-right: 7px; vertical-align: -1px; border: 1px solid rgba(0,39,51,.25);
+  margin-right: 7px; vertical-align: -1px; border: 1px solid rgba(var(--dark-rgb), .25);
 }
 .pt-menu button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
 /* Der Entlüftungskanal im Auswahlfeld: eine Zeile Stand, zwei Knöpfe. */
@@ -520,7 +520,7 @@ select {
   position: absolute; inset: 12px; z-index: 6;
   display: none; min-height: 0; flex-direction: column;
   background: #fff; border: 1px solid var(--border);
-  border-radius: var(--radius); box-shadow: 0 6px 24px rgba(0,39,51,.14);
+  border-radius: var(--radius); box-shadow: 0 6px 24px rgba(var(--dark-rgb), .14);
 }
 .chart-panel.on { display: flex; }
 .chart-body { flex: 1; display: flex; align-items: flex-start; justify-content: center; }
@@ -533,7 +533,7 @@ select {
   padding: .55rem 1.2rem; border: 1px solid var(--primary-deep); border-radius: 8px;
   background: var(--primary); color: #fff; cursor: pointer;
   font-family: var(--sans); font-size: .92rem; font-weight: 600; letter-spacing: .01em;
-  box-shadow: 0 2px 8px rgba(0,39,51,.18);
+  box-shadow: 0 2px 8px rgba(var(--dark-rgb), .18);
 }
 .chart-btn:hover { background: var(--primary2); }
 .chart-btn.active { background: var(--primary-deep); }
@@ -583,7 +583,7 @@ select {
 .aim-banner .aim-pill {
   display: flex; align-items: center; gap: 12px; padding: 7px 8px 7px 13px;
   background: var(--primary); color: #fff; border-radius: 8px; font-size: .8rem;
-  box-shadow: 0 2px 10px rgba(0, 39, 51, .28); pointer-events: auto; max-width: 100%;
+  box-shadow: 0 2px 10px rgba(var(--dark-rgb), .28); pointer-events: auto; max-width: 100%;
 }
 .aim-banner.miss .aim-pill { background: var(--bad); }
 .aim-banner button {

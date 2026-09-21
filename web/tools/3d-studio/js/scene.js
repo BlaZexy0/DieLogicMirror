@@ -30,7 +30,10 @@ const VIEWS = {
 
 export function initScene(container, opts = {}) {
   const {
-    background = 0xe8eef0,
+    /* Die Fläche hinter dem Körper. Neutral hell — aber sie folgt dem
+       Farbschema (shared/schemes.js), sonst steht ein kühles Grau mitten
+       in einer warmen Seite. Der Standard behält genau diesen Wert. */
+    background = (typeof window !== 'undefined' && window.__SCHEMES__ && window.__SCHEMES__.viewport()) || 0xe8eef0,
     /* Kein Bodenraster: ein Körper, den man frei von allen Seiten ansieht,
        hat kein „unten" — das Raster lag bei jeder schrägen Ansicht im Bild
        und von unten davor. Wer es will, verlangt grid: true. */
