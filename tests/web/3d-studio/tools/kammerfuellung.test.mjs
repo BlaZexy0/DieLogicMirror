@@ -106,6 +106,54 @@ test('Das Metamodell ist die Vorgabe: kein Feld für die Auflösung, und außerh
   shell.setMode('kammer');
 });
 
+test('Wegpunkte wie im Dashboard: die Kurve des Projekts kommt mit, Zeilen lassen sich ändern, anhängen, entfernen', () => {
+  const { ui, shell, v } = P;
+  const s = v.state;
+  shell.setMode('kurve');
+  assert.deepEqual(ui('curve-seg').querySelectorAll('button').map(b => b.textContent), ['DieLogic', 'v₁ / v₂', 'Punkte']);
+  seg(ui('curve-seg'), 'punkte').dispatch('click');
+  assert.equal(s.curveMode, 'punkte');
+  assert.equal(ui('punkte-block').hidden, false);
+  assert.equal(ui('v1v2-block').hidden, true);
+  /* Beim ersten Umschalten stehen die Punkte des Projekts da. */
+  assert.deepEqual(s.points, [[60, 0.4], [475, 0.4], [640, 4.5], [834, 4.5]]);
+  const zeilen = () => ui('punkte-liste').querySelectorAll('.kf-punkt');
+  assert.equal(zeilen().length, 4);
+  assert.ok(s.curve, 'die Kurve steht: ' + s.curveError);
+  const vorher = s.curve.tFull;
+
+  /* Eine Geschwindigkeit ändern — deutsch geschrieben. */
+  const feld = ui('punkte-liste').querySelectorAll('input').find(i => i.getAttribute('data-punkt') === '1' && i.getAttribute('data-feld') === '1');
+  feld.value = '0,9';
+  feld.dispatch('change');
+  assert.equal(s.points[1][1], 0.9);
+  assert.ok(s.curve.tFull < vorher, 'schneller gefüllt: ' + s.curve.tFull + ' gegen ' + vorher);
+
+  /* Anhängen: 50 mm weiter, dieselbe Geschwindigkeit — wie im Dashboard. */
+  ui('punkt-plus').dispatch('click');
+  assert.equal(zeilen().length, 5);
+  assert.deepEqual(s.points[4], [884, 4.5]);
+  /* Entfernen. */
+  ui('punkte-liste').querySelectorAll('button').find(b => b.getAttribute('data-loesch') === '4').dispatch('click');
+  assert.equal(zeilen().length, 4);
+
+  /* Ein Weg, der nicht zunimmt, ist keine Kurve — und sagt es. */
+  const weg = ui('punkte-liste').querySelectorAll('input').find(i => i.getAttribute('data-punkt') === '2' && i.getAttribute('data-feld') === '0');
+  weg.value = '10';
+  weg.dispatch('change');
+  assert.equal(s.curve, null);
+  assert.match(ui('curve-warn').textContent, /Weg muss von Punkt zu Punkt zunehmen/);
+  weg.value = '640';
+  weg.dispatch('change');
+  assert.ok(s.curve);
+
+  /* Zurück zur DieLogic-Kurve: die Punkte bleiben gemerkt. */
+  seg(ui('curve-seg'), 'dielogic').dispatch('click');
+  assert.equal(ui('punkte-block').hidden, true);
+  assert.equal(s.points.length, 4);
+  shell.setMode('kammer');
+});
+
 test('Kleine Kammer, zweistufige Kurve — Gitter: ein Lauf in JavaScript bis Kammer voll, Luft, Regler, der Kolben wandert mit', async () => {
   const { doc, v, ui, shell } = P;
   const s = v.state;

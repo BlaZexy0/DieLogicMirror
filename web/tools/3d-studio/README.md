@@ -1220,7 +1220,11 @@ folgt aus dem Kreissegment, `fillLevel` in `js/lbm/sleeve.js`), dazu den
 die Schusskurve:
 die DieLogic-Kurve des Projekts, mit Kolben-Ø, Länge und Füllgrad von
 hier — die Massen werden so gesetzt, dass die Kurve den gewählten
-Füllgrad rechnet —, oder zweistufig v₁/v₂ mit einer Beschleunigung.
+Füllgrad rechnet —, zweistufig v₁/v₂ mit einer Beschleunigung, oder
+**eigene Wegpunkte** (Weg s [mm] / Geschwindigkeit v [m/s], höchstens
+zehn) wie im Dashboard: dieselbe Semantik (`buildProfile`, konstante
+Beschleunigung zwischen den Punkten, Ursprung ergänzt), und beim ersten
+Umschalten stehen die Punkte des Projekts da.
 Ein Knopf; die Rechnung beginnt beim Kolbenstart und endet, wenn die
 Schmelze den Auslass erreicht (plus ein Stück für das Bild), spätestens
 am Ende der Kurve.
@@ -1236,8 +1240,9 @@ werden beim Laden übergangen.
 ### Bedienung
 
 Vier Modi: **Kammer** (Durchmesser, Länge, Füllgrad — die ruhende Schmelze
-steht bis zum Spiegel im Bild), **Kurve** (DieLogic
-oder v₁ / v₂ mit Beschleunigung, Legierung, die Kennzahlen der Kurve),
+steht bis zum Spiegel im Bild), **Kurve** (DieLogic,
+v₁ / v₂ mit Beschleunigung oder eigene Wegpunkte, Legierung, die
+Kennzahlen der Kurve),
 **Simulation** (Verfahren, Zellkante bzw. Partikelabstand — das Metamodell
 hat keine —, Aufwand) und **Ergebnis** (Kammer voll und Kolbenweg, Luft
 höchstens und am Ende — Modell · Gitter · Partikel · Kurve nebeneinander).

@@ -32,6 +32,12 @@ Kammer voll, Rampe auf v₂. Sie nimmt Maschine und Thermik aus dem aktuellen Pr
 von hier; die Massen werden so gesetzt, dass die Kurve den gewählten Füllgrad rechnet.</p>
 <p><b>v₁ / v₂</b>: zweistufig: Rampe auf v₁, Plateau bis Kammer voll, Rampe auf v₂. Die Beschleunigung
 gilt für beide Rampen.</p>
+<p><b>Punkte</b>: eigene Wegpunkte, wie im Dashboard: je Zeile der Kolbenweg s in mm und die
+Kolbengeschwindigkeit v in m/s. Zwischen zwei Punkten wird konstant beschleunigt, der Ursprung
+(0 mm, 0 m/s) kommt von selbst dazu; der Weg muss von Zeile zu Zeile zunehmen. Beim ersten Umschalten
+stehen die Punkte des Projekts da — dieselbe Kurve wie im Dashboard, von dort aus weiterzueditieren.
+Endet die Kurve vor „Kammer voll", sagt es die Warnzeile: Die Rechnung braucht die Kurve bis dorthin.
+Höchstens zehn Punkte; die Liste scrollt in sich.</p>
 <p>Die Rechnung beginnt beim Kolbenstart und endet, wenn die Schmelze den Laufkanal erreicht hat (plus
 ein Stück für das Bild), spätestens am Ende der Kurve. Alle Zeiten zählen ab Kolbenstart.</p>
 </section>

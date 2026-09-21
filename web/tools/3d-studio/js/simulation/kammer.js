@@ -23,7 +23,7 @@
    Änderung ein anderes Problem stellt). */
 
 import * as T from 'three';
-import { segButtons, segButtonSet, slider, numberInput } from '../ui/controls.js';
+import { segButtons, segButtonSet, slider, numberInput, parseNumber } from '../ui/controls.js';
 import { kpis } from '../studio/rows.js';
 import { fmtPlain, fmtUnit, fmtFixed } from '../studio/format.js';
 import { fillLevel } from '../lbm/sleeve.js';
@@ -53,7 +53,10 @@ const outletFor = d => ({ outletW: d / 3, outletH: d / 6 });
 
 const DEFAULTS = {
   spec: { d: 90, length: 450, fill: 0.4 },
-  curveMode: 'dielogic', v1: 0.5, v2: 2, a: 100, alloy: 'al', opacity: 0.25
+  curveMode: 'dielogic', v1: 0.5, v2: 2, a: 100, alloy: 'al', opacity: 0.25,
+  /* Wegpunkte wie im Dashboard: [Weg mm, v m/s]. Beim ersten Wechsel auf
+     „Punkte" kommen die des Projekts, sonst diese. */
+  points: [[100, 0.5], [270, 0.5], [340, 2]]
 };
 const LIMITS = {
   d: [20, 300], length: [50, 2000], fill: [0.1, 0.9],
@@ -68,6 +71,7 @@ export function createKammerfuellungTool(host) {
   const state = {
     spec: { ...DEFAULTS.spec },
     curveMode: DEFAULTS.curveMode, v1: DEFAULTS.v1, v2: DEFAULTS.v2, a: DEFAULTS.a, alloy: DEFAULTS.alloy,
+    points: DEFAULTS.points.map(pt => pt.slice()), punkteGeholt: false,
     curve: null, curveError: '',      // curve: { profile, tFull, sFill, vcrit, v2, A, warn }
     opacity: DEFAULTS.opacity, ready: false
   };
@@ -184,6 +188,17 @@ export function createKammerfuellungTool(host) {
         const tl = shotTimeline(v, volumes, { diam: d, length });
         if (tl.error) throw new Error(tl.error);
         profile = tl.shot.profile; tFull = tl.tFull; warn = tl.warn; v2 = tl.v2;
+      } else if (state.curveMode === 'punkte') {
+        /* Die eigenen Wegpunkte: genau wie im Dashboard gelesen — zwischen den
+           Punkten konstant beschleunigt, der Ursprung kommt von selbst dazu. */
+        const pts = state.points.filter(pt => Number.isFinite(pt[0]) && Number.isFinite(pt[1]));
+        if (pts.length < 1) throw new Error('Mindestens ein Wegpunkt.');
+        for (let i = 1; i < pts.length; i++) if (pts[i][0] <= pts[i - 1][0]) throw new Error('Der Weg muss von Punkt zu Punkt zunehmen (Zeile ' + (i + 1) + ').');
+        profile = buildProfile(pts);
+        tFull = profile.atPos(sFill / 1000).t;
+        v2 = pts[pts.length - 1][1];
+        const ende = pts[pts.length - 1][0];
+        warn = ende < sFill ? 'Die Kurve endet bei ' + fmtUnit(ende, 'mm', 0) + ', vor „Kammer voll" bei ' + fmtUnit(sFill, 'mm', 0) + '.' : '';
       } else {
         for (const k of ['part', 'runner', 'overflow', 'biscuit']) v[k] = volumes[k] * 1e-9 * rhoSolidus(v);
         const gen = generateCurve(v, { mode: 'v1v2', v1: state.v1, a1: state.a, v2: state.v2, a2: state.a });
@@ -244,6 +259,32 @@ export function createKammerfuellungTool(host) {
     view.invalidate();
   }
 
+  /* ── Die Wegpunkte (Modus „Punkte") ─────────────────────── */
+  const MAX_PUNKTE = 10;
+
+  function renderPunkte() {
+    ui('punkte-liste').innerHTML = state.points.map((pt, i) =>
+      '<div class="kf-punkt">'
+      + '<input type="text" inputmode="decimal" data-punkt="' + i + '" data-feld="0" value="' + fmtPlain(pt[0]) + '" aria-label="Weg des ' + (i + 1) + '. Punktes" spellcheck="false" autocomplete="off">'
+      + '<span class="unit">mm</span>'
+      + '<input type="text" inputmode="decimal" data-punkt="' + i + '" data-feld="1" value="' + fmtPlain(pt[1]) + '" aria-label="Geschwindigkeit des ' + (i + 1) + '. Punktes" spellcheck="false" autocomplete="off">'
+      + '<span class="unit">m/s</span>'
+      + (state.points.length > 1
+        ? '<button type="button" class="kf-weg" data-loesch="' + i + '" title="Punkt entfernen" aria-label="Punkt entfernen">✕</button>'
+        : '<span></span>')
+      + '</div>').join('');
+    ui('punkt-plus').disabled = state.points.length >= MAX_PUNKTE;
+  }
+
+  /* Beim ersten Mal die Kurve des Projekts übernehmen — dieselben Punkte wie
+     im Dashboard, von dort aus weiterzueditieren. */
+  function punkteHolen() {
+    if (state.punkteGeholt) return;
+    state.punkteGeholt = true;
+    const ausProjekt = Array.isArray(design.curve) ? design.curve.filter(pt => Number.isFinite(pt[0]) && Number.isFinite(pt[1])) : [];
+    if (ausProjekt.length) state.points = ausProjekt.slice(0, MAX_PUNKTE).map(pt => [pt[0], pt[1]]);
+  }
+
   /* ── Modi ────────────────────────────────────────────────── */
   const modes = MODES.map(m => ({ ...m }));
   for (const m of modes) { m.primary = core.primary; m.enter = () => core.applyView(); m.leave = () => core.stopPlay(); }
@@ -265,6 +306,8 @@ export function createKammerfuellungTool(host) {
     ui('alloy').value = state.alloy;
     segButtonSet(ui('curve-seg'), state.curveMode);
     ui('v1v2-block').hidden = state.curveMode !== 'v1v2';
+    ui('punkte-block').hidden = state.curveMode !== 'punkte';
+    renderPunkte();
     if (opacityEl) {
       opacityEl.value = String(Math.round(state.opacity * 100));
       opacityEl.parentNode.querySelector('.val').textContent = opacityEl.value + ' %';
@@ -278,7 +321,42 @@ export function createKammerfuellungTool(host) {
     numberInput(ui('sl-d'), v => { state.spec.d = v; resized('Durchmesser'); return v; }, { min: LIMITS.d[0], max: LIMITS.d[1], unit: 'mm' });
     numberInput(ui('sl-len'), v => { state.spec.length = v; resized('Länge'); return v; }, { min: LIMITS.length[0], max: LIMITS.length[1], unit: 'mm' });
     slider(ui('sl-fill'), v => { if (!wired) return; state.spec.fill = v / 100; updateProblem(); changed('Füllgrad'); }, v => v + ' %');
-    segButtons(ui('curve-seg'), v => { state.curveMode = v; ui('v1v2-block').hidden = v !== 'v1v2'; updateProblem(); changed('Schusskurve'); });
+    segButtons(ui('curve-seg'), v => {
+      state.curveMode = v;
+      if (v === 'punkte') punkteHolen();
+      ui('v1v2-block').hidden = v !== 'v1v2';
+      ui('punkte-block').hidden = v !== 'punkte';
+      renderPunkte();
+      updateProblem();
+      changed('Schusskurve');
+    });
+    /* Die Punktliste wächst und schrumpft: EIN Zuhörer für alle Zeilen. */
+    ui('punkte-liste').addEventListener('change', e => {
+      const el = e.target.closest ? e.target.closest('[data-punkt]') : null;
+      if (!el) return;
+      const i = +el.getAttribute('data-punkt'), f = +el.getAttribute('data-feld');
+      const wert = parseNumber(el.value);
+      if (wert !== null && state.points[i]) state.points[i][f] = wert;
+      renderPunkte();
+      updateProblem();
+      changed('Wegpunkt');
+    });
+    ui('punkte-liste').addEventListener('click', e => {
+      const b = e.target.closest ? e.target.closest('[data-loesch]') : null;
+      if (!b || state.points.length < 2) return;
+      state.points.splice(+b.getAttribute('data-loesch'), 1);
+      renderPunkte();
+      updateProblem();
+      changed('Wegpunkt entfernt');
+    });
+    ui('punkt-plus').addEventListener('click', () => {
+      if (state.points.length >= MAX_PUNKTE) return;
+      const letzt = state.points[state.points.length - 1] || [0, 0];
+      state.points.push([letzt[0] + 50, letzt[1]]);
+      renderPunkte();
+      updateProblem();
+      changed('Wegpunkt');
+    });
     numberInput(ui('sl-v1'), v => { state.v1 = v; updateProblem(); changed('v₁'); return v; }, { min: LIMITS.v1[0], max: LIMITS.v1[1], unit: 'm/s' });
     numberInput(ui('sl-v2'), v => { state.v2 = v; updateProblem(); changed('v₂'); return v; }, { min: LIMITS.v2[0], max: LIMITS.v2[1], unit: 'm/s' });
     numberInput(ui('sl-a'), v => { state.a = v; updateProblem(); changed('Beschleunigung'); return v; }, { min: LIMITS.a[0], max: LIMITS.a[1], unit: 'm/s²' });
@@ -296,7 +374,7 @@ export function createKammerfuellungTool(host) {
   const toJSON = () => ({
     format: FORMAT, version: FORMAT_VERSION, ...core.settings(),
     spec: { ...state.spec }, curveMode: state.curveMode, v1: state.v1, v2: state.v2, a: state.a, alloy: state.alloy,
-    opacity: state.opacity
+    points: state.points.map(pt => pt.slice()), opacity: state.opacity
   });
   function fromJSON(obj) {
     if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Datei der Kammerfüllung.');
@@ -306,7 +384,11 @@ export function createKammerfuellungTool(host) {
     const s = obj.spec || {};
     /* Ältere Dateien tragen noch outletW/outletH: sie werden nicht mehr gelesen. */
     for (const k of ['d', 'length', 'fill']) if (Number.isFinite(s[k])) state.spec[k] = clampTo(s[k], LIMITS[k]);
-    state.curveMode = obj.curveMode === 'v1v2' ? 'v1v2' : 'dielogic';
+    state.curveMode = ['v1v2', 'punkte'].includes(obj.curveMode) ? obj.curveMode : 'dielogic';
+    if (Array.isArray(obj.points)) {
+      const pts = obj.points.filter(pt => Array.isArray(pt) && Number.isFinite(pt[0]) && Number.isFinite(pt[1]));
+      if (pts.length) { state.points = pts.slice(0, MAX_PUNKTE).map(pt => [pt[0], pt[1]]); state.punkteGeholt = true; }
+    }
     for (const k of ['v1', 'v2', 'a']) if (Number.isFinite(obj[k])) state[k] = clampTo(obj[k], LIMITS[k]);
     if (F.ALLOYS[obj.alloy]) state.alloy = obj.alloy;
     state.opacity = Number.isFinite(obj.opacity) ? clampTo(obj.opacity, [0.05, 1]) : DEFAULTS.opacity;

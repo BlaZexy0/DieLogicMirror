@@ -774,6 +774,29 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
 }
 .st-root[data-tool="anguss"] .st-mode[data-mode="prozess"] .st-details-body { overflow-y: auto; min-height: 0; }
 
+/* Der Modus „Kurve" füllt die Leiste; die Punktliste nimmt, was übrig bleibt,
+   und scrollt in SICH — zehn Wegpunkte passen sonst in keine Seitenleiste. */
+.st-root[data-tool="kammerfuellung"] .st-mode[data-mode="kurve"] {
+  display: flex; flex-direction: column; min-height: 0; max-height: 100%;
+}
+.st-root[data-tool="kammerfuellung"] [data-ui="punkte-block"] {
+  display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto;
+}
+.st-root[data-tool="kammerfuellung"] [data-ui="punkte-liste"] { overflow-y: auto; min-height: 44px; }
+
+/* Die Wegpunkte der Schusskurve (Modus „Punkte"): Weg, Geschwindigkeit, ✕. */
+.st-root[data-tool="kammerfuellung"] .kf-punkt {
+  display: grid; grid-template-columns: 1fr 26px 1fr 30px 24px; align-items: center; gap: 4px; margin: 3px 0;
+}
+.st-root[data-tool="kammerfuellung"] .kf-punkt input { width: 100%; min-width: 0; text-align: right; }
+.st-root[data-tool="kammerfuellung"] .kf-punkt .unit { color: var(--muted); font-size: .72rem; }
+.st-root[data-tool="kammerfuellung"] .kf-kopf { color: var(--muted); font-size: .72rem; margin-top: 4px; }
+.st-root[data-tool="kammerfuellung"] .kf-weg {
+  border: 0; background: none; color: var(--muted); font-size: 1rem; line-height: 1; cursor: pointer; padding: 2px;
+}
+.st-root[data-tool="kammerfuellung"] .kf-weg:hover { color: var(--bad); }
+.st-root[data-tool="kammerfuellung"] .kf-plus { margin-top: 6px; }
+
 /* „m/s²" braucht mehr als die 30 px der Einheitenspalte. */
 .st-root[data-tool="kammerfuellung"] .st-mode[data-mode="kurve"] .row .unit { width: 38px; }
 
