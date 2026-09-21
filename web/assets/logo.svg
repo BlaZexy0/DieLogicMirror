@@ -1,22 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- DieLogic Logo — Füllkammer mit Kolben, Schmelze-Pfeil und Schusskurve.
-       Vektor-Nachbau des ursprünglichen Logo-Konzepts (PNG) in den
-       DieLogic-Farben: Petrol #002733, Teal #008c82. -->
-  <!-- Kachel -->
+  <!-- DieLogic — das Zeichen zwischen „Die" und „Logic": zwei Formhälften mit
+       Teilungsspalt, dazwischen schießt die Schmelze als Pfeil. Die Silhouette
+       bleibt ein H. Farben: Petrol #002733, Teal hell #3fc2b6. -->
   <rect x="56" y="56" width="400" height="400" rx="92" fill="#002733"/>
-  <!-- Schusskurve mit Endpunkt -->
-  <path d="M150 238 C 232 230, 302 192, 378 120" fill="none" stroke="#008c82" stroke-width="20" stroke-linecap="round"/>
-  <circle cx="386" cy="112" r="21" fill="#008c82"/>
-  <!-- Flanschplatten -->
-  <rect x="42" y="246" width="52" height="30" rx="7" fill="#ffffff"/>
-  <rect x="42" y="354" width="52" height="30" rx="7" fill="#ffffff"/>
-  <!-- Füllkammer (rechts offen) -->
-  <rect x="78" y="250" width="198" height="130" rx="16" fill="#ffffff"/>
-  <rect x="98" y="270" width="196" height="90" rx="8" fill="#002733"/>
-  <!-- Kolben -->
-  <rect x="116" y="284" width="116" height="62" rx="10" fill="#ffffff"/>
-  <line x1="152" y1="284" x2="152" y2="346" stroke="#002733" stroke-width="7"/>
-  <line x1="176" y1="284" x2="176" y2="346" stroke="#002733" stroke-width="7"/>
-  <!-- Schmelze wird zum Pfeil -->
-  <path d="M266 286 C 296 292, 302 303, 324 303 L324 262 L452 315 L324 368 L324 327 C 302 327, 296 338, 266 344 Z" fill="#008c82"/>
+  <g transform="translate(136 136) scale(2.4)">
+    <!-- linke Formhälfte, zur Teilung hin abgesetzt -->
+    <path d="M0 0 H34 V34 H22 V66 H34 V100 H0 Z" fill="#ffffff"/>
+    <!-- rechte Formhälfte -->
+    <path d="M100 0 H66 V34 H78 V66 H66 V100 H100 Z" fill="#ffffff"/>
+    <!-- die Schmelze im Spalt -->
+    <path d="M22 40 L57 40 L57 27 L80 50 L57 73 L57 60 L22 60 Z" fill="#3fc2b6"/>
+  </g>
 </svg>

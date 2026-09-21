@@ -129,11 +129,13 @@
   }
 
   /* ── Logo (assets/logo.svg — Füllkammer + Schusskurve) ────── */
-  /* Wortmarke „DiehLogic": zwischen „Die" und „Logic" steht ein H, dessen
-     Stämme die Kammerwände sind und dessen Querbalken die Schmelze ist, die
-     als Pfeil durch den Anschnitt schießt (Motiv der Logo-Kachel). Das H
-     ist dekorativ — vorgelesen bleibt der Name „DieLogic". */
-  const H_GLYPH = `<svg class="dl-h-glyph" viewBox="0 0 100 100" aria-hidden="true"><rect x="0" y="0" width="17" height="100" rx="3" fill="${C.surface}"/><rect x="83" y="0" width="17" height="100" rx="3" fill="${C.surface}"/><path d="M17 38 L60 38 L60 26 L83 50 L60 74 L60 62 L17 62 Z" fill="${C.primary}"/></svg>`;
+  /* Wortmarke „DiehLogic": zwischen „Die" und „Logic" steht das Zeichen der
+     Marke — zwei Formhälften, zur Teilung hin abgesetzt, dazwischen schießt
+     die Schmelze als Pfeil durch den Spalt. Die Silhouette bleibt ein H, aber
+     die Blöcke lesen sich als Werkzeug und nicht als Buchstabe im Wort
+     (dasselbe Zeichen trägt die Kachel in assets/logo.svg). Es ist
+     dekorativ — vorgelesen bleibt der Name „DieLogic". */
+  const H_GLYPH = `<svg class="dl-h-glyph" viewBox="0 0 100 100" aria-hidden="true"><path d="M0 0 H34 V34 H22 V66 H34 V100 H0 Z" fill="${C.surface}"/><path d="M100 0 H66 V34 H78 V66 H66 V100 H100 Z" fill="${C.surface}"/><path d="M22 40 L57 40 L57 27 L80 50 L57 73 L57 60 L22 60 Z" fill="${C.primaryLight}"/></svg>`;
   const WORDMARK = `Die${H_GLYPH}<span style="color:${C.primaryLight}">Logic</span>`;
 
   /* ── Nav-Links bauen ──────────────────────────────────────── */
@@ -256,7 +258,7 @@
   align-items: center;
   text-decoration: none;
 }
-.dl-h-glyph { height: 0.78em; width: auto; display: inline-block; margin: 0 0.1em; }
+.dl-h-glyph { height: 0.86em; width: auto; display: inline-block; margin: 0 0.17em; }
 .dl-nav-logo-text {
   font-size: 1.1rem;
   font-weight: 700;
