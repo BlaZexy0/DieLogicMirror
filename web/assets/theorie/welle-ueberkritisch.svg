@@ -21,9 +21,9 @@
   <path d="M64 37 L150 37 C182 39 204 52 202 76 C200 96 182 106 166 98 C156 92 156 80 166 76 C158 84 162 92 172 92 C184 92 190 82 188 72 C186 58 170 52 152 56 C160 76 158 100 170 114 C182 126 200 131 224 133 L330 135 L330 174 L64 174 Z"
         fill="#008c82" fill-opacity="0.3" stroke="#008c82" stroke-width="1.5" stroke-linejoin="round" class="f-melt s-melt"/>
   <!-- eingeschlagene Luftblasen: Luft in der Rolle `air` -->
-  <circle cx="176" cy="84" r="7" fill="#60a7d6" fill-opacity="0.55" stroke="#60a7d6" stroke-width="1" class="f-air s-air"/>
-  <circle cx="196" cy="148" r="4.5" fill="#60a7d6" fill-opacity="0.55" stroke="#60a7d6" stroke-width="1" class="f-air s-air"/>
-  <circle cx="222" cy="158" r="3" fill="#60a7d6" fill-opacity="0.55" stroke="#60a7d6" stroke-width="1" class="f-air s-air"/>
+  <circle cx="176" cy="84" r="7" fill="#68a7cc" fill-opacity="0.55" stroke="#68a7cc" stroke-width="1" class="f-air s-air"/>
+  <circle cx="196" cy="148" r="4.5" fill="#68a7cc" fill-opacity="0.55" stroke="#68a7cc" stroke-width="1" class="f-air s-air"/>
+  <circle cx="222" cy="158" r="3" fill="#68a7cc" fill-opacity="0.55" stroke="#68a7cc" stroke-width="1" class="f-air s-air"/>
   <!-- Kolben -->
   <rect x="0" y="96" width="30" height="18" fill="#36545d" fill-opacity="0.55" stroke="#36545d" stroke-width="1.2" class="f-piston s-piston"/>
   <rect x="30" y="38" width="34" height="134" fill="#36545d" stroke="#36545d" stroke-width="1.2" class="f-piston s-piston"/>

@@ -38,7 +38,9 @@ function makeCtx() {
 }
 
 globalThis.document = {
-  createElement: () => ({ width: 0, height: 0, getContext: () => makeCtx() }),
+  /* Ein Canvas behält seinen Kontext: die Schraffur-Kachel wird einmal
+     bemalt und später als Pattern gelesen (Test „Sperrbereiche"). */
+  createElement: () => { const g = makeCtx(); return { width: 0, height: 0, getContext: () => g }; },
   documentElement: {},
   body: {},
 };
@@ -160,6 +162,35 @@ test('ramp(): die feste Leiste heat, von Dunkelviolett nach Dunkelrot', async ()
     const q = charts.find(c => c.id === id).calc(values, { shot });
     assert.equal(q.ramp, undefined, id + ': keine eigene Skala je Diagramm');
   }
+});
+
+/* Sperrbereiche sehen in jedem Diagramm gleich aus (Rückmeldung vom
+   23.09.: die Fläche über v_krit war in der Schusskurve braun, im Füllgrad
+   die der Schmelze, in der Nachdruckaufbauzeit wieder anders). Jede
+   Schraffur, die ein Diagramm legt, trägt die Farbe `zone`, gleich welche
+   Grenze sie zieht. */
+test('Sperrbereiche: jede Schraffur in derselben Farbe, gleich welche Grenze', () => {
+  const kacheln = new Set();
+  let flaechen = 0;
+  const ctx = () => {
+    const g = makeCtx();
+    g.createPattern = kachel => { kacheln.add(kachel); flaechen++; return {}; };
+    return g;
+  };
+  for (const def of charts) {
+    const tabs = [undefined, ...((def.tabs || []).map(t => t.id || t))];
+    for (const tab of tabs) {
+      if (tab !== undefined) def.tab = tab;
+      const d = def.calc(values, { shot });
+      if (!d || d.err) continue;
+      d.title = d.title || def.title;
+      drawAny(ctx(), 1000, 800, d, def);
+    }
+  }
+  assert.ok(flaechen > 10, 'es sollten Sperrbereiche gezeichnet worden sein: ' + flaechen);
+  const farben = new Set([...kacheln].map(k => k.getContext('2d').strokeStyle));
+  assert.deepEqual([...farben], [theme.chart.zone], 'Schraffurfarben: ' + [...farben].join(', '));
+  assert.equal(theme.chart.zone, globalThis.__PALETTE__.bad, 'ein Sperrbereich ist ein Urteil: „schlecht"');
 });
 
 /* Zusammenfallende Grenzenpaare: gateMin = gateMax, dmin = dmax,

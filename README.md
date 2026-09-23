@@ -227,6 +227,12 @@ eine Rechnung auf den Server legt, muss sie dort ergänzen.
     Zeit (`process`), Stahl, Kolben, das Bauteil im 3D-Studio, die Achsen.
     Keine Sachfarbe liegt nahe am Ampelverlauf; Gelb, Orange, Rot und Grün
     gehören der Ampel, darum sind die Sachfarben kühl.
+  In den Diagrammen ist jeder **Sperrbereich** (die Seite, die eine harte
+  Grenze ausschließt) gleich gezeichnet: deckend, rot schraffiert
+  (`theme.chart.zone` = Ampel „schlecht"); die Grenzlinie an der Kante trägt
+  die Farbe ihrer Herkunft. Farben, die im selben Diagramm als Linien
+  stehen (PQ²: Maschine, Werkzeug, Luft, Prozess; Schusskurve und
+  Luftblase: Luft, Vakuum, Prozess, Schrift), liegen weit auseinander.
   Keine Rollen sind die **Farbleisten** (`LEISTEN` in palette.js,
   `P.scale(name, t)`, `P.lut`, `P.gradient`): die Skalen, an denen man einen
   Wert abliest. Sie sind in jedem Schema gleich: `heat` für die Heatmaps der
@@ -253,7 +259,10 @@ eine Rechnung auf den Server legt, muss sie dort ergänzen.
   jeden Farbwert ohne Rolle, jeden alten Namen und jedes Theorie-Bild ohne
   Rollenklassen; `tests/web/schemes.test.mjs` rechnet für jedes Schema
   Kontrast, Trennung der Ampel und Abstand der Sachfarben zur Ampel und
-  untereinander nach und dass kein Schema eine Farbleiste verändert;
+  untereinander nach, dazu die Abstände der Linien, die im selben Diagramm
+  stehen, und dass kein Schema eine Farbleiste verändert;
+  `tests/web/render-smoke.test.mjs` prüft, dass jede Schraffur jedes
+  Diagramms dieselbe Sperrbereichsfarbe trägt;
   `tests/web/palette.test.mjs` die Spiegelung in shared.css, die
   Rechenhilfen und die Farbleisten. Farbtafel des Standards:
   `web/assets/palette.svg` (`scripts/gen-palette.mjs`).

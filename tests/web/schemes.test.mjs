@@ -184,6 +184,29 @@ test('die Sachfarben sind untereinander unterscheidbar', () => {
   }
 });
 
+/* Diagramme: was im selben Diagramm als Linie steht, muss man
+   auseinanderhalten (Rückmeldung vom 23.09.: im PQ² lagen Maschine und
+   Werkzeug so nah, dass unklar war, was wofür gilt; „ohne" und „mit Vakuum"
+   in der Luftblase ebenso). Die Paare stammen aus den Diagrammen selbst:
+   PQ² Maschine, Werkzeug, Luft, Prozess; Schusskurve und Luftblase Kolben
+   (Schrift), Luft, Vakuum, Prozess; Auslegungsfenster Maschine, Pressrest,
+   Prozess. Der Arbeitspunkt (mark) steht in allen. */
+test('Diagramme: Linien, die zusammen stehen, sind klar verschieden', () => {
+  const PAARE = { 'machine/die': 21, 'air/vacuum': 22, 'machine/air': 18, 'die/air': 18, 'machine/process': 18,
+    'die/process': 18, 'air/process': 18, 'vacuum/process': 15, 'machine/biscuit': 16, 'biscuit/process': 16,
+    'vacuum/text': 16, 'air/text': 16, 'die/text': 16, 'process/text': 16 };
+  for (const s of S.list) {
+    const c = farben(s.id);
+    for (const [paar, min] of Object.entries(PAARE)) {
+      const [a, b] = paar.split('/'), d = dE(c[a], c[b]);
+      assert.ok(d >= min, `${s.id}: ${paar} nur ΔE ${d.toFixed(1)}, im Diagramm verlangt ${min}`);
+    }
+    for (const k of ['machine', 'die', 'air', 'process', 'vacuum']) {
+      assert.ok(dE(c.mark, c[k]) >= 15, `${s.id}: Arbeitspunkt/${k} nur ΔE ${dE(c.mark, c[k]).toFixed(1)}`);
+    }
+  }
+});
+
 /* Teal ist die Farbe des Standards. In Stahlblau und Graphit wirkte die
    Schmelze in Teal wie ein vergessener Rest (Rückmeldung vom 23.09.): dort
    trägt sie ein Stahlblau, und keine andere Rolle darf ins Teal rutschen.

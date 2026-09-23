@@ -69,9 +69,12 @@ export default {
     /* Mit Vakuum ist die Kurve mit Vakuum die, um die es geht (`ink`), die
        ohne Vakuum steht als Vergleich daneben (`ref`). Ohne Vakuum-Daten
        ist sie selbst die Hauptkurve. */
-    const ys = [series('ohne Vakuum (p_vor 1013 mbar)', pVac !== null ? 'ref' : 'ink', x, p => ratio(v, p))];
+    /* Mit dem Vergleich trägt jede Kurve die Sache, die in der Kammer steht:
+       Luft bei Atmosphärendruck, Vakuum bei abgesaugter Kammer. Allein ist
+       die Kurve ohne Vakuum die Hauptgröße des Diagramms (Schrift). */
+    const ys = [series('ohne Vakuum (p_vor 1013 mbar)', pVac !== null ? 'air' : 'ink', x, p => ratio(v, p))];
     if (pVac !== null) {
-      ys.push(series('mit Vakuum (p_vor ' + fmt(pVac * 1000) + ' mbar, Simulation)', 'ink', x, p => ratio(v, p, pVac)));
+      ys.push(series('mit Vakuum (p_vor ' + fmt(pVac * 1000) + ' mbar, Simulation)', 'vacuum', x, p => ratio(v, p, pVac)));
     }
     const q = line(x, ys,
       'Nachdruck p_N in bar', 'Blasen-Ø-Verhältnis D_vor/D_nach',

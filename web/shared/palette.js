@@ -79,17 +79,17 @@
     overflow:      '#8bbfb8',   // Überlauf (Schmelze, hell)
     biscuit:       '#82979f',   // Pressrest (grau: der Rest in der Kammer)
     die:           '#2e65a0',   // Werkzeug: Werkzeuglinie, Anschnitt, Formhälften
-    machine:       '#846cd1',   // Maschine: Maschinenlinie, Maschinengrenzen
-    air:           '#60a7d6',   // Luft: Luftdruck, Entlüftung
-    vacuum:        '#377090',   // Vakuum: Tankdruck, Vakuumweg
+    machine:       '#ac6eef',   // Maschine: Maschinenlinie, Maschinengrenzen
+    air:           '#68a7cc',   // Luft: Luftdruck, Entlüftung
+    vacuum:        '#296485',   // Vakuum: Tankdruck, Vakuumweg
     cool:          '#1e3a71',   // Temperierung: Kühlstich, Kanal, Kreise
     process:       '#5c3824',   // Prozess und Zeit: Füllzeit, v_krit, Nachdruck
     steel:         '#dae1e2',   // Stahl als Fläche (Kammer, Form)
     steelDark:     '#7b9096',   // Stahl als Kante, Schnitt, Schraffur
     piston:        '#36545d',   // Kolben und Kolbenstange
     part:          '#bec9cc',   // das Bauteil im 3D-Studio (neutral, trägt die Analysefarben)
-    axisX:         '#846cd1',   // Achse X (= Maschine)
-    axisY:         '#60a7d6',   // Achse Y (= Luft)
+    axisX:         '#ac6eef',   // Achse X (= Maschine)
+    axisY:         '#68a7cc',   // Achse Y (= Luft)
     axisZ:         '#2e65a0'    // Achse Z, die Formöffnung (= Werkzeug)
   };
 

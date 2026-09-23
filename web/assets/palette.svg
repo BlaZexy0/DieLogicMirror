@@ -260,25 +260,25 @@
 <text x="96" y="1773" font-size="10.5" fill="#2a3f4a">Werkzeug: Werkzeuglinie, Anschnitt,</text>
 <text x="96" y="1786" font-size="10.5" fill="#2a3f4a">Formhälften</text>
 <text x="96" y="1802" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 6,0:1 T   auf dark 2,6:1 –</text>
-<rect x="328" y="1726" width="56" height="56" rx="8" fill="#846cd1" stroke="none"/>
-<text x="356" y="1760" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<rect x="328" y="1726" width="56" height="56" rx="8" fill="#ac6eef" stroke="none"/>
+<text x="356" y="1760" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
 <text x="396" y="1741" font-size="13.5" font-weight="700" fill="#002733">machine</text>
-<text x="396" y="1757" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--machine · #846cd1</text>
+<text x="396" y="1757" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--machine · #ac6eef</text>
 <text x="396" y="1773" font-size="10.5" fill="#2a3f4a">Maschine: Maschinenlinie,</text>
 <text x="396" y="1786" font-size="10.5" fill="#2a3f4a">Maschinengrenzen</text>
-<text x="396" y="1802" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 4,2:1 t   auf dark 3,8:1 t</text>
-<rect x="628" y="1726" width="56" height="56" rx="8" fill="#60a7d6" stroke="none"/>
+<text x="396" y="1802" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 3,4:1 t   auf dark 4,7:1 T</text>
+<rect x="628" y="1726" width="56" height="56" rx="8" fill="#68a7cc" stroke="none"/>
 <text x="656" y="1760" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
 <text x="696" y="1741" font-size="13.5" font-weight="700" fill="#002733">air</text>
-<text x="696" y="1757" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--air · #60a7d6</text>
+<text x="696" y="1757" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--air · #68a7cc</text>
 <text x="696" y="1773" font-size="10.5" fill="#2a3f4a">Luft: Luftdruck, Entlüftung</text>
 <text x="696" y="1802" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 2,6:1 –   auf dark 6,0:1 T</text>
-<rect x="928" y="1726" width="56" height="56" rx="8" fill="#377090" stroke="none"/>
+<rect x="928" y="1726" width="56" height="56" rx="8" fill="#296485" stroke="none"/>
 <text x="956" y="1760" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
 <text x="996" y="1741" font-size="13.5" font-weight="700" fill="#002733">vacuum</text>
-<text x="996" y="1757" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--vacuum · #377090</text>
+<text x="996" y="1757" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--vacuum · #296485</text>
 <text x="996" y="1773" font-size="10.5" fill="#2a3f4a">Vakuum: Tankdruck, Vakuumweg</text>
-<text x="996" y="1802" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 5,4:1 T   auf dark 2,9:1 –</text>
+<text x="996" y="1802" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 6,4:1 T   auf dark 2,4:1 –</text>
 <rect x="28" y="1844" width="56" height="56" rx="8" fill="#1e3a71" stroke="none"/>
 <text x="56" y="1878" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
 <text x="96" y="1859" font-size="13.5" font-weight="700" fill="#002733">cool</text>
@@ -317,16 +317,16 @@
 <text x="396" y="2009" font-size="10.5" fill="#2a3f4a">das Bauteil im 3D-Studio (neutral,</text>
 <text x="396" y="2022" font-size="10.5" fill="#2a3f4a">trägt die Analysefarben)</text>
 <text x="396" y="2038" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 1,7:1 –   auf dark 9,3:1 T</text>
-<rect x="628" y="1962" width="56" height="56" rx="8" fill="#846cd1" stroke="none"/>
-<text x="656" y="1996" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<rect x="628" y="1962" width="56" height="56" rx="8" fill="#ac6eef" stroke="none"/>
+<text x="656" y="1996" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
 <text x="696" y="1977" font-size="13.5" font-weight="700" fill="#002733">axisX</text>
-<text x="696" y="1993" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--axis-x · #846cd1</text>
+<text x="696" y="1993" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--axis-x · #ac6eef</text>
 <text x="696" y="2009" font-size="10.5" fill="#2a3f4a">Achse X (= Maschine)</text>
-<text x="696" y="2038" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 4,2:1 t   auf dark 3,8:1 t</text>
-<rect x="928" y="1962" width="56" height="56" rx="8" fill="#60a7d6" stroke="none"/>
+<text x="696" y="2038" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 3,4:1 t   auf dark 4,7:1 T</text>
+<rect x="928" y="1962" width="56" height="56" rx="8" fill="#68a7cc" stroke="none"/>
 <text x="956" y="1996" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
 <text x="996" y="1977" font-size="13.5" font-weight="700" fill="#002733">axisY</text>
-<text x="996" y="1993" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--axis-y · #60a7d6</text>
+<text x="996" y="1993" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--axis-y · #68a7cc</text>
 <text x="996" y="2009" font-size="10.5" fill="#2a3f4a">Achse Y (= Luft)</text>
 <text x="996" y="2038" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 2,6:1 –   auf dark 6,0:1 T</text>
 <rect x="28" y="2080" width="56" height="56" rx="8" fill="#2e65a0" stroke="none"/>

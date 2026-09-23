@@ -24,7 +24,7 @@
       <path d="M0 0 L8 4 L0 8 Z" fill="#008c82" class="f-melt"/>
     </marker>
     <marker id="arr-oil" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
-      <path d="M0 0 L8 4 L0 8 Z" fill="#846cd1" class="f-machine"/>
+      <path d="M0 0 L8 4 L0 8 Z" fill="#ac6eef" class="f-machine"/>
     </marker>
   </defs>
 
@@ -37,22 +37,22 @@
   <text x="650" y="378" font-size="13" fill="#4c6870" class="f-muted" text-anchor="middle">Druckgießform</text>
 
   <!-- ── ① Druckspeicher: Flasche, Gaspolster über Öl ── -->
-  <path d="M60 132 L60 76 Q60 54 105 54 Q150 54 150 76 L150 132 Q128 139 105 132 Q82 125 60 132 Z" fill="#60a7d6" fill-opacity="0.16" class="f-air"/>
-  <path d="M60 132 Q82 125 105 132 T150 132 L150 194 L60 194 Z" fill="#846cd1" fill-opacity="0.24" class="f-machine"/>
+  <path d="M60 132 L60 76 Q60 54 105 54 Q150 54 150 76 L150 132 Q128 139 105 132 Q82 125 60 132 Z" fill="#68a7cc" fill-opacity="0.16" class="f-air"/>
+  <path d="M60 132 Q82 125 105 132 T150 132 L150 194 L60 194 Z" fill="#ac6eef" fill-opacity="0.24" class="f-machine"/>
   <path d="M60 76 Q60 54 105 54 Q150 54 150 76 L150 194 L60 194 Z" fill="none" stroke="#7b9096" stroke-width="2.5" class="s-steel-dark"/>
   <path d="M60 132 Q82 125 105 132 T150 132" fill="none" stroke="#7b9096" stroke-width="1" class="s-steel-dark"/>
   <text x="105" y="100" font-size="13" fill="#4c6870" class="f-muted" text-anchor="middle">Gaspolster</text>
   <text x="105" y="170" font-size="13.5" font-weight="700" fill="#002733" class="f-text" text-anchor="middle">Öl</text>
 
   <!-- Leitung mit Drossel: aus dem Speicher senkrecht hinunter in den Zylinderboden -->
-  <rect x="98" y="194" width="14" height="48" fill="#846cd1" fill-opacity="0.24" class="f-machine"/>
+  <rect x="98" y="194" width="14" height="48" fill="#ac6eef" fill-opacity="0.24" class="f-machine"/>
   <path d="M98 194 L98 242 M112 194 L112 242" fill="none" stroke="#7b9096" stroke-width="2" class="s-steel-dark"/>
   <path d="M88 209 L88 227 L105 218 Z M122 209 L122 227 L105 218 Z" fill="#7b9096" class="f-steel-dark"/>
-  <line x1="105" y1="229" x2="105" y2="240" stroke="#846cd1" stroke-width="1.5" class="s-machine" marker-end="url(#arr-oil)"/>
+  <line x1="105" y1="229" x2="105" y2="240" stroke="#ac6eef" stroke-width="1.5" class="s-machine" marker-end="url(#arr-oil)"/>
   <text x="82" y="223" font-size="13" fill="#4c6870" class="f-muted" text-anchor="end">Drossel</text>
 
   <!-- ── ② Antriebszylinder unter dem Speicher: großer Kolben, Fläche A_h ── -->
-  <rect x="32" y="244" width="118" height="92" fill="#846cd1" fill-opacity="0.24" class="f-machine"/>
+  <rect x="32" y="244" width="118" height="92" fill="#ac6eef" fill-opacity="0.24" class="f-machine"/>
   <rect x="150" y="244" width="16" height="92" fill="#36545d" class="f-piston"/>
   <rect x="166" y="282" width="184" height="16" fill="#36545d" fill-opacity="0.4" stroke="#36545d" stroke-width="1" class="f-piston s-piston"/>
   <path d="M98 242 L30 242 L30 338 L240 338 L240 298 M240 282 L240 242 L112 242" fill="none" stroke="#7b9096" stroke-width="2.5" class="s-steel-dark"/>

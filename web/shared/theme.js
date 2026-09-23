@@ -15,7 +15,9 @@
      Urteil (Ampel)       ok, caution, bad, okText, cautionText, badText
      Flächen des Urteils  feasible (machbar), feasibleAlt (machbar mit anderem
                           Kolben), target (Zielband) + targetLine, mask
-                          (unerreichbar)
+                          (unerreichbar), zone (Sperrbereich: die Schraffur
+                          jeder Fläche, die eine Grenze ausschließt, in
+                          jedem Diagramm dieselbe)
      Punkte und Linien    mark (Arbeitspunkt, Ist-Wert), ref (Referenzpunkt
                           und -linie), event (Prozessereignisse), chip
                           (Nummern der Ereignisse)
@@ -74,6 +76,9 @@
     C.target = P.rgba('ok', 0.14);
     C.targetLine = P.rgba('ok', 0.75);
     C.mask = P.rgba('borderLight', 0.93);
+    /* Ein Sperrbereich ist ein Urteil („hier nicht"): rot schraffiert, gleich,
+       welche Grenze ihn zieht. Die Grenzlinie selbst trägt ihre Herkunft. */
+    C.zone = P.bad;
     C.mark = P.mark; C.ref = P.muted; C.event = P.mutedLight; C.chip = P.primary;
     C.areaFill = P.rgba('text', 0.07);
     C.isoLine = P.rgba('muted', 0.6);

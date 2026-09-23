@@ -24,8 +24,8 @@
    (js/part/colors.js); keine davon ist eine Ampelfarbe, X ist also kein
    Fehler und Y kein „gut". */
 const AXES = [
-  { label: 'X', dir: [1, 0, 0], color: 'var(--axis-x, #846cd1)' },
-  { label: 'Y', dir: [0, 1, 0], color: 'var(--axis-y, #60a7d6)' },
+  { label: 'X', dir: [1, 0, 0], color: 'var(--axis-x, #ac6eef)' },
+  { label: 'Y', dir: [0, 1, 0], color: 'var(--axis-y, #68a7cc)' },
   { label: 'Z', dir: [0, 0, 1], color: 'var(--axis-z, #2e65a0)' }
 ];
 

@@ -228,11 +228,15 @@ ein Objekt pro Restriktion in `q.limits = [ … ]` (Erzeuger in
 
 Linien- und Heatmap-Renderer zeichnen daraus Linien, Schraffuren und die
 Legende (render/limits.js); der Heatmap-Hover meldet verletzte Grenzen am
-Mauspunkt. Die Farbe kommt aus `theme.limits[id]` (/shared/theme.js): die
-Familie, aus der die Grenze stammt (Maschine, Werkzeug, Prozess, Luft,
-Schmelze), gleiche id = gleiche Farbe in jedem Diagramm. Glieder einer
-Familie unterscheidet das Strichmuster (`limitDash` in render/limits.js)
-und die Seite der Schraffur, die auch der Legendeneintrag zeigt. Für
+Mauspunkt. Die Linie einer Grenze trägt die Farbe aus `theme.limits[id]`
+(/shared/theme.js): die Familie, aus der die Grenze stammt (Maschine,
+Werkzeug, Prozess, Luft, Schmelze), gleiche id = gleiche Farbe in jedem
+Diagramm. Glieder einer Familie unterscheidet das Strichmuster
+(`limitDash` in render/limits.js). Die ausgeschlossene Seite ist ein
+Sperrbereich und sieht in jedem Diagramm gleich aus: deckend in der
+Fläche, darüber rot schraffiert (`theme.chart.zone`, die Ampel
+„schlecht"), auch über einer Heatmap; der Legendeneintrag zeigt dieselbe
+Schraffur mit der Grenzlinie an der Kante. Für
 machbare Bänder zwischen mehreren Kurvenschranken (wie im (φ, λ)-Fenster) liefert
 `feasibleBand()` aus `js/core/limits.js` die Polygone samt bindender
 Grenze je Stützstelle. Eine neue Restriktion ist damit ein weiterer

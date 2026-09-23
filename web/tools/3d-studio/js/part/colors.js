@@ -54,21 +54,21 @@ export const ROLE = Object.freeze({
   get bad() { return pal('bad', '#b42318'); },
   get mark() { return pal('mark', '#b23797'); },
   /* Sachfarben */
-  get machine() { return pal('machine', '#846cd1'); },
+  get machine() { return pal('machine', '#ac6eef'); },
   get melt() { return pal('melt', '#008c82'); },
   get runner() { return pal('runner', '#006665'); },
   get overflow() { return pal('overflow', '#8bbfb8'); },
   get biscuit() { return pal('biscuit', '#82979f'); },
   get die() { return pal('die', '#2e65a0'); },
-  get air() { return pal('air', '#60a7d6'); },
-  get vacuum() { return pal('vacuum', '#377090'); },
+  get air() { return pal('air', '#68a7cc'); },
+  get vacuum() { return pal('vacuum', '#296485'); },
   get cool() { return pal('cool', '#1e3a71'); },
   get steel() { return pal('steel', '#dae1e2'); },
   get steelDark() { return pal('steelDark', '#7b9096'); },
   get piston() { return pal('piston', '#36545d'); },
   get part() { return pal('part', '#bec9cc'); },
-  get axisX() { return pal('axisX', '#846cd1'); },
-  get axisY() { return pal('axisY', '#60a7d6'); },
+  get axisX() { return pal('axisX', '#ac6eef'); },
+  get axisY() { return pal('axisY', '#68a7cc'); },
   get axisZ() { return pal('axisZ', '#2e65a0'); }
 });
 

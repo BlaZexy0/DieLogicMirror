@@ -6,9 +6,9 @@
        Kammer; der Betriebspunkt in der Hervorhebung (mark). Der Hex-Rückfall
        ist der Standardwert der Rolle, für die Ansicht außerhalb der Seite. -->
   <symbol id="icon" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 3.5 V22.5 H23" stroke="var(--air, #60a7d6)" stroke-width="1.4" opacity=".7"/>
-    <path d="M5 18.5 H10.5 C13 18.5 13 7 16 7 H21.5" stroke="var(--air, #60a7d6)" stroke-width="1.8"/>
-    <line x1="11.5" y1="21" x2="11.5" y2="5" stroke="var(--air, #60a7d6)" stroke-width="1.2" stroke-dasharray="1.6 1.8" opacity=".8"/>
+    <path d="M3 3.5 V22.5 H23" stroke="var(--air, #68a7cc)" stroke-width="1.4" opacity=".7"/>
+    <path d="M5 18.5 H10.5 C13 18.5 13 7 16 7 H21.5" stroke="var(--air, #68a7cc)" stroke-width="1.8"/>
+    <line x1="11.5" y1="21" x2="11.5" y2="5" stroke="var(--air, #68a7cc)" stroke-width="1.2" stroke-dasharray="1.6 1.8" opacity=".8"/>
     <circle cx="18.5" cy="7" r="1.9" fill="var(--mark, #b23797)"/>
   </symbol>
   <use href="#icon"/>

@@ -56,17 +56,17 @@
   --overflow: #8bbfb8;
   --biscuit: #82979f;
   --die: #2e65a0;
-  --machine: #846cd1;
-  --air: #60a7d6;
-  --vacuum: #377090;
+  --machine: #ac6eef;
+  --air: #68a7cc;
+  --vacuum: #296485;
   --cool: #1e3a71;
   --process: #5c3824;
   --steel: #dae1e2;
   --steel-dark: #7b9096;
   --piston: #36545d;
   --part: #bec9cc;
-  --axis-x: #846cd1;
-  --axis-y: #60a7d6;
+  --axis-x: #ac6eef;
+  --axis-y: #68a7cc;
   --axis-z: #2e65a0;
   /* Dieselben drei Farben noch einmal als Kanäle: überall dort, wo eine
      Farbe mit Alpha gebraucht wird (Tönung, Ring, Schatten, Verlauf), steht

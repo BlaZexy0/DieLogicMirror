@@ -7,8 +7,8 @@
        Hervorhebung (mark). Der Hex-Rückfall ist der Standardwert der Rolle,
        für die Ansicht außerhalb der Seite. -->
   <symbol id="icon" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 3.5 V22.5 H23" stroke="var(--machine, #846cd1)" stroke-width="1.4" opacity=".7"/>
-    <path d="M5 5.5 C13 5.5 17.5 11 21 22" stroke="var(--machine, #846cd1)" stroke-width="1.8"/>
+    <path d="M3 3.5 V22.5 H23" stroke="var(--machine, #ac6eef)" stroke-width="1.4" opacity=".7"/>
+    <path d="M5 5.5 C13 5.5 17.5 11 21 22" stroke="var(--machine, #ac6eef)" stroke-width="1.8"/>
     <path d="M5 22 C9 22 14.5 17 17.5 5" stroke="var(--die, #2e65a0)" stroke-width="1.8"/>
     <circle cx="15.7" cy="10.8" r="1.9" fill="var(--mark, #b23797)"/>
   </symbol>

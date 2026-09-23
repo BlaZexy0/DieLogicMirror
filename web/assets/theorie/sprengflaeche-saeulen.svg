@@ -18,10 +18,10 @@
       <path d="M0 0 L10 5 L0 10 Z" fill="#002733" class="f-text"/>
     </marker>
     <marker id="achseX" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-      <path d="M0 0 L10 5 L0 10 Z" fill="#846cd1" class="f-axis-x"/>
+      <path d="M0 0 L10 5 L0 10 Z" fill="#ac6eef" class="f-axis-x"/>
     </marker>
     <marker id="achseY" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-      <path d="M0 0 L10 5 L0 10 Z" fill="#60a7d6" class="f-axis-y"/>
+      <path d="M0 0 L10 5 L0 10 Z" fill="#68a7cc" class="f-axis-y"/>
     </marker>
   </defs>
 
@@ -94,9 +94,9 @@
   <text x="80" y="214" font-size="11.5" font-weight="700" fill="#4c6870" class="f-muted" text-anchor="middle" transform="rotate(-90 80 214)">a<tspan dy="2.5" font-size="9">y</tspan></text>
 
   <!-- Koordinatenrichtungen -->
-  <line x1="168" y1="352" x2="204" y2="352" stroke="#846cd1" stroke-width="1.4" class="s-axis-x" marker-end="url(#achseX)"/>
+  <line x1="168" y1="352" x2="204" y2="352" stroke="#ac6eef" stroke-width="1.4" class="s-axis-x" marker-end="url(#achseX)"/>
   <text x="210" y="356" font-size="10.5" fill="#4c6870" class="f-muted">x</text>
-  <line x1="168" y1="352" x2="168" y2="336" stroke="#60a7d6" stroke-width="1.4" class="s-axis-y" marker-end="url(#achseY)"/>
+  <line x1="168" y1="352" x2="168" y2="336" stroke="#68a7cc" stroke-width="1.4" class="s-axis-y" marker-end="url(#achseY)"/>
   <text x="164" y="330" font-size="10.5" fill="#4c6870" class="f-muted">y</text>
 
   <!-- Beschriftung Platte -->

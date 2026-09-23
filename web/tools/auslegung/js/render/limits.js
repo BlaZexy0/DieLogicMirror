@@ -5,10 +5,15 @@
    Grenzen überall gleich aussehen.
 
    Farben (alle aus dem Theme, gelesen beim Zeichnen):
-     harte Grenze   die Farbe ihrer Herkunft (theme.limits[id]): Maschine,
-                    Werkzeug und Anschnitt, Prozess, Luft, Schmelze. Glieder
-                    einer Familie unterscheidet das Strichmuster (STRICH)
-                    und die Seite der Schraffur, die auch die Legende zeigt.
+     harte Grenze   die Linie in der Farbe ihrer Herkunft (theme.limits[id]):
+                    Maschine, Werkzeug und Anschnitt, Prozess, Luft,
+                    Schmelze. Glieder einer Familie unterscheidet das
+                    Strichmuster (STRICH).
+     Sperrbereich   die Seite, die eine harte Grenze ausschließt: in JEDEM
+                    Diagramm gleich, `zone` (die Ampel „schlecht")
+                    schraffiert auf einem deckenden Schleier der Fläche, auch
+                    über einer Heatmap. Die Farbe sagt „hier nicht", nicht,
+                    welche Grenze es ist; das sagt die Linie an der Kante.
      Zielband       `target` + gestrichelte Ränder in `targetLine` — eine
                     Empfehlung, heller als das machbare Band. Ein Band, das
                     kein Ziel ist (eine Streuung), nennt seine Rollen selbst:
@@ -39,16 +44,18 @@ export function limitDash(l) {
   return (l.severity || 'hard') === 'ref' ? STRICH_REF : STRICH_HART;
 }
 
-/* Diagonale Schraffur als Canvas-Pattern, je Farbe gecacht. */
+/* Diagonale Schraffur der Sperrbereiche als Canvas-Pattern, gecacht je
+   Farbe (die Farbe folgt dem Schema). */
 const patterns = new Map();
-function hatch(color) {
+function hatch() {
+  const color = theme.chart.zone;
   if (patterns.has(color)) return patterns.get(color);
   const c = document.createElement('canvas');
   c.width = c.height = 8;
   const g = c.getContext('2d');
   g.strokeStyle = color;
-  g.globalAlpha = 0.5;
-  g.lineWidth = 1.4;
+  g.globalAlpha = 0.55;
+  g.lineWidth = 1.1;
   g.beginPath();
   g.moveTo(-2, 6); g.lineTo(6, -2);
   g.moveTo(2, 10); g.lineTo(10, 2);
@@ -57,14 +64,17 @@ function hatch(color) {
   return c;
 }
 
-/* Ausschlussfläche füllen: leichter Schleier in der Fläche (dämpft
-   Heatmap-Farben, auf leerem Grund unsichtbar) + Schraffur in der
-   Grenzfarbe. */
-function fillExcluded(x, path, color) {
+/* Sperrbereich füllen: die Fläche deckend, dann die Schraffur. So sieht ein
+   Sperrbereich über einer Heatmap genau aus wie auf leerem Grund; ein
+   halber Schleier ließ die Skala durchscheinen und färbte jeden Bereich
+   anders (über Dunkelrot rosa, über Blau grau). Im Sperrbereich gibt es
+   keinen gültigen Wert abzulesen. */
+const SCHLEIER = 1;
+function fillExcluded(x, path) {
   x.save();
-  x.fillStyle = surfaceA(.45);
+  x.fillStyle = surfaceA(SCHLEIER);
   x.fill(path);
-  x.fillStyle = x.createPattern(hatch(color), 'repeat');
+  x.fillStyle = x.createPattern(hatch(), 'repeat');
   x.fill(path);
   x.restore();
 }
@@ -257,7 +267,7 @@ export function drawLimits(x, f, X, Y, d) {
           path.lineTo(px[px.length - 1][0], edge);
           path.lineTo(px[0][0], edge);
           path.closePath();
-          fillExcluded(x, path, col);
+          fillExcluded(x, path);
           if (l.note) {
             const m = px[Math.floor(px.length / 2)];
             notes.push({ px: m[0], py: (m[1] + edge) / 2, l: l.note });
@@ -286,7 +296,7 @@ export function drawLimits(x, f, X, Y, d) {
         if (b - a > 1) {
           const path = new Path2D();
           path.rect(a, top, b - a, f.ph);
-          fillExcluded(x, path, col);
+          fillExcluded(x, path);
           if (l.note && b - a > 68) notes.push({ px: (a + b) / 2, py: top + 13, l: l.note });
         }
       }
@@ -307,7 +317,7 @@ export function drawLimits(x, f, X, Y, d) {
         if (b - a > 1) {
           const path = new Path2D();
           path.rect(left, a, f.pw, b - a);
-          fillExcluded(x, path, col);
+          fillExcluded(x, path);
           if (l.note && b - a > 26) notes.push({ px: left + f.pw / 2, py: (a + b) / 2 + 4, l: l.note });
         }
       }
@@ -410,9 +420,9 @@ export function drawLegendSwatch(x, item, lx, ly) {
     x.strokeRect(lx, t, w, h);
     x.setLineDash([]);
   } else if (item.sev === 'hard') {
-    x.fillStyle = surfaceA(.45);
+    x.fillStyle = surfaceA(SCHLEIER);
     x.fillRect(lx, t, w, h);
-    x.fillStyle = x.createPattern(hatch(item.color), 'repeat');
+    x.fillStyle = x.createPattern(hatch(), 'repeat');
     x.fillRect(lx, t, w, h);
     /* Die Grenzlinie an der Kante zum erlaubten Bereich */
     const s = item.side || 'top';
