@@ -3,7 +3,6 @@
 import { series, line, limit } from './helpers.js';
 import { seq, fmt, subHTML } from '../core/format.js';
 import { pMaxMachine } from '../core/physics.js';
-import { theme } from '../core/theme.js';
 import { eq, tex } from './mathfmt.js';
 
 /* Kraftbilanz F = 100·p·A·S·k aus shared/clampmodel.js — eine Umrechnung für
@@ -17,14 +16,14 @@ export default {
   inputs: ['area', 'safety', 'injForce', 'pAcc', 'pAccOp', 'dmin', 'psel', 'force'],
 
   calc(v) {
-    const C = theme.chart;
     /* Druckachse 0 … max. spezifischer Gießdruck der Maschine (Ø dmin) */
     const pMax = pMaxMachine(v);
     if (!(pMax > 0) || !isFinite(pMax)) return { err: 'Gießkraft und Kolben-Ø min. müssen > 0 sein.' };
     const x = seq(0, pMax, 140);
+    /* Dieselbe Größe bei zwei Sicherheiten: das Minimum S = 1 blass */
     const q = line(x, [
-      series('S=1,00', C.series1, x, p => CLAMP.forceKN(p, v.area, 1, 1)),
-      series('S=' + fmt(v.safety), C.series2, x, p => CLAMP.forceKN(p, v.area, v.safety, 1))
+      series('S=1,00', 'ink', x, p => CLAMP.forceKN(p, v.area, 1, 1), { alpha: 0.4 }),
+      series('S=' + fmt(v.safety), 'ink', x, p => CLAMP.forceKN(p, v.area, v.safety, 1))
     ], 'Druck in bar', 'Maschinengröße in kN', 'Fläche ' + fmt(v.area) + ' m² · S=' + fmt(v.safety));
     /* y knapp über Maschinenkraft und Betriebspunkt kappen — sonst dominiert
        bei großem pMax die Schraffur „über Maschinenkraft" das ganze Bild. */

@@ -48,7 +48,7 @@ aside h2:first-child { margin-top: 4px; }
   cursor: pointer; padding: 3px 2px 1px; border-radius: 4px; min-width: 0; align-self: flex-start; max-width: 100%;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.group-head .group-meta { padding: 0 2px 2px; font-size: .66rem; color: var(--muted-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.group-head .group-meta { padding: 0 2px 2px; font-size: .66rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .group-head .group-title:hover { color: var(--primary-deep); background: var(--pale); }
 .group-head.hl { background: var(--pale); box-shadow: inset 3px 0 0 var(--primary); }
 .group-head.hl h3 { color: var(--primary-deep); }
@@ -58,11 +58,11 @@ aside h2:first-child { margin-top: 4px; }
 .group-head { cursor: pointer; }
 .group-head.folded { margin-bottom: 0; }
 .group-head .fold-btn {
-  border: 0; background: none; color: var(--muted-light); width: 22px; height: 24px; padding: 0;
+  border: 0; background: none; color: var(--muted); width: 22px; height: 24px; padding: 0;
   font-size: .95rem; line-height: 1; cursor: pointer; border-radius: 5px; flex-shrink: 0; font-family: var(--sans);
 }
 .group-head .fold-btn:hover { background: var(--pale); color: var(--primary-deep); }
-.group-head .count { font-size: .66rem; color: var(--muted-light); white-space: nowrap; }
+.group-head .count { font-size: .66rem; color: var(--muted); white-space: nowrap; }
 .group-body.folded { display: none; }
 /* Glühbirne als Gruppenschalter: leuchtet, solange etwas sichtbar ist. */
 .bulb-btn {
@@ -74,10 +74,12 @@ aside h2:first-child { margin-top: 4px; }
 .bulb-btn .glass { fill: none; stroke: var(--muted-light); stroke-width: 1.5; }
 .bulb-btn .socket { fill: none; stroke: var(--muted-light); stroke-width: 1.5; stroke-linecap: round; }
 .bulb-btn .rays { display: none; }
-.bulb-btn.on .glass { fill: var(--gold); stroke: var(--warn-border); }
+/* An: die Gruppe ist zu sehen. Ein Zustand der Bedienung, kein Urteil: die
+   helle Marke. */
+.bulb-btn.on .glass { fill: var(--primary-light); stroke: var(--primary); }
 .bulb-btn.on .socket { stroke: var(--muted); }
 .bulb-btn.on .rays {
-  display: block; fill: none; stroke: var(--gold); stroke-width: 1.6; stroke-linecap: round;
+  display: block; fill: none; stroke: var(--primary-light); stroke-width: 1.6; stroke-linecap: round;
 }
 
 /* Untergruppe (z. B. die Temperierkreise je Hälfte).
@@ -118,18 +120,18 @@ aside h2:first-child { margin-top: 4px; }
 .swatch:hover .dot { border-color: var(--primary); box-shadow: 0 0 0 2px var(--pale); }
 
 /* Bearbeitbare Baugruppe: „⋯" je Kopf und Zeile, Menü darunter. */
-.group-head .side-tag { font-size: .66rem; color: var(--muted-light); margin: 0; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.group-head .side-tag { font-size: .66rem; color: var(--muted); margin: 0; text-transform: none; letter-spacing: 0; white-space: nowrap; }
 .row-btn {
   border: 1px solid var(--border); background: var(--surface2); border-radius: 5px;
   padding: 0 5px; min-width: 20px; line-height: 1.35; font-size: .78rem; cursor: pointer;
   color: var(--muted); font-family: var(--sans);
 }
 .row-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-deep); background: var(--pale); }
-.row-btn.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
+.row-btn.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad-text); background: var(--bad-bg); }
 .row-btn:disabled { opacity: .35; cursor: default; }
 .row-btn.more {
   min-width: 28px; height: 24px; font-size: 1rem; line-height: 1; letter-spacing: -.02em;
-  border-color: transparent; background: none; color: var(--muted-light); flex-shrink: 0;
+  border-color: transparent; background: none; color: var(--muted); flex-shrink: 0;
 }
 .row-btn.more:hover { border-color: var(--border); background: var(--surface2); color: var(--muted); }
 .row-menu {
@@ -142,7 +144,7 @@ aside h2:first-child { margin-top: 4px; }
   padding: 4px 9px; font-size: .78rem; cursor: pointer; color: var(--text-body); font-family: var(--sans);
 }
 .menu-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-deep); background: var(--pale); }
-.menu-btn.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
+.menu-btn.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad-text); background: var(--bad-bg); }
 .menu-btn:disabled { opacity: .35; cursor: default; }
 .menu-move, .menu-color { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .menu-color input[type="color"] { width: 26px; height: 22px; padding: 0 2px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); cursor: pointer; }
@@ -154,7 +156,7 @@ aside h2:first-child { margin-top: 4px; }
   width: 100%; min-width: 0; font: inherit; padding: 1px 4px;
   border: 1px solid var(--primary); border-radius: 4px; background: var(--surface);
 }
-.comp-empty { font-size: .73rem; color: var(--muted-light); font-style: italic; padding: 2px 2px 4px 30px; }
+.comp-empty { font-size: .73rem; color: var(--muted); font-style: italic; padding: 2px 2px 4px 30px; }
 
 /* Die Schnellknöpfe über der Liste. */
 .quick { display: flex; gap: 6px; margin: 2px 0 6px; }
@@ -235,8 +237,8 @@ select {
 
 /* Hinweiszeile unter dem Rechnen-Knopf */
 .run-note { font-size: .76rem; color: var(--muted); line-height: 1.45; padding: 5px 2px 0; }
-.run-note.stale { color: var(--note-text); background: var(--note-bg);
-  border: 1px solid var(--note-border); border-radius: 6px; padding: 5px 8px; margin-top: 6px; }
+.run-note.stale { color: var(--caution-text); background: var(--caution-bg);
+  border: 1px solid var(--caution-border); border-radius: 6px; padding: 5px 8px; margin-top: 6px; }
 .run-note:empty { display: none; }
 
 /* ── Legende und Kennzahlen ────────────────────────────────── */
@@ -263,7 +265,7 @@ select {
 .hint code { font-family: var(--mono); font-size: .95em; }
 .hint b { color: var(--text-body); }
 
-.warn-line { font-size: .79rem; color: var(--bad); padding: 4px 2px; line-height: 1.45; }
+.warn-line { font-size: .79rem; color: var(--bad-text); padding: 4px 2px; line-height: 1.45; }
 .warn-line:empty { display: none; }
 
 /* ── Viewport ──────────────────────────────────────────────── */
@@ -271,7 +273,7 @@ select {
 #viewport canvas { display: block; }
 #status {
   position: absolute; left: 12px; bottom: 10px; padding: 6px 11px;
-  background: rgba(255,255,255,.88); border: 1px solid var(--border-light);
+  background: rgba(var(--surface-rgb), .88); border: 1px solid var(--border-light);
   border-radius: 7px; color: var(--muted); pointer-events: none; font-size: .8rem;
 }
 /* Der Angussdesigner hat vier Griffe für die Maus, nicht einen — als
@@ -282,7 +284,7 @@ select {
 .designer #status b { color: var(--text-body); font-weight: 600; }
 #busy {
   position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
-  background: rgba(243,246,246,.72); z-index: 3; font-size: .9rem; color: var(--primary-deep); font-weight: 600;
+  background: rgba(var(--bg-rgb), .72); z-index: 3; font-size: .9rem; color: var(--primary-deep); font-weight: 600;
 }
 #busy.on { display: flex; }
 .drop-hint {
@@ -294,7 +296,7 @@ select {
 
 .view-bar {
   position: absolute; right: 12px; top: 12px; z-index: 2;
-  display: flex; gap: 6px; background: rgba(255,255,255,.9);
+  display: flex; gap: 6px; background: rgba(var(--surface-rgb), .9);
   border: 1px solid var(--border-light); border-radius: var(--radius); padding: 4px;
 }
 .view-bar button {
@@ -327,7 +329,7 @@ select {
   position: absolute; left: 12px; bottom: 46px; z-index: 2;
   display: none; flex-direction: column; gap: 5px;
   padding: 8px 10px 9px;
-  background: rgba(255,255,255,.9); border: 1px solid var(--border-light);
+  background: rgba(var(--surface-rgb), .9); border: 1px solid var(--border-light);
   border-radius: 7px; pointer-events: none;
 }
 .colorbar.on { display: flex; }
@@ -389,7 +391,7 @@ select {
   border: none; background: none; cursor: pointer; padding: 0 3px;
   font-size: 1.05rem; line-height: 1; color: var(--muted);
 }
-.loaded-file button:hover { color: var(--bad); }
+.loaded-file button:hover { color: var(--bad-text); }
 
 /* Drei Koordinaten in einer Zeile — X, Y, Z gehören zusammen und sollen
    nicht drei Zeilen Seitenleiste kosten. */
@@ -413,11 +415,11 @@ select {
 }
 .rule b { display: block; color: var(--text); font-size: .8rem; margin-bottom: 1px; }
 .rule span { color: var(--muted); }
-.rule.ok { border-left-color: var(--primary); }
+.rule.ok { border-left-color: var(--ok); }
 .rule.note { border-left-color: var(--muted-light); }
-.rule.warn { border-left-color: var(--gold); background: var(--note-bg); }
+.rule.warn { border-left-color: var(--caution); background: var(--caution-bg); }
 .rule.bad { border-left-color: var(--bad); background: var(--bad-bg); }
-.rule.bad b { color: var(--bad); }
+.rule.bad b { color: var(--bad-text); }
 
 /* ── Punktmenü im Viewport ─────────────────────────────────────
    Der gewählte Punkt wird DORT bearbeitet, wo er liegt: Lage, Maße,
@@ -430,12 +432,12 @@ select {
   position: absolute; left: 12px; top: 12px; z-index: 2;
   width: 316px; max-height: calc(100% - 62px); overflow-y: auto;
   display: flex; flex-direction: column; gap: 3px; padding: 8px 11px 10px;
-  background: rgba(255,255,255,.94); border: 1px solid var(--border-light);
+  background: rgba(var(--surface-rgb), .94); border: 1px solid var(--border-light);
   border-radius: var(--radius);
 }
 .pt-legend {
   display: flex; flex-direction: column; gap: 4px; padding: 7px 9px;
-  background: rgba(255,255,255,.92); border: 1px solid var(--border-light);
+  background: rgba(var(--surface-rgb), .92); border: 1px solid var(--border-light);
   border-radius: var(--radius); min-width: 142px;
 }
 .pt-menu-title {
@@ -492,7 +494,7 @@ select {
   display: inline-block; width: 10px; height: 10px; border-radius: 50%;
   margin-right: 7px; vertical-align: -1px; border: 1px solid rgba(var(--dark-rgb), .25);
 }
-.pt-menu button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
+.pt-menu button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad-text); background: var(--bad-bg); }
 /* Der Entlüftungskanal im Auswahlfeld: eine Zeile Stand, zwei Knöpfe. */
 .pt-menu #vent-block .pt-menu-title { margin-top: 6px; }
 .pt-menu .pt-note { font-size: .74rem; color: var(--muted); padding: 0 2px 2px; }
@@ -519,7 +521,7 @@ select {
 .chart-panel {
   position: absolute; inset: 12px; z-index: 6;
   display: none; min-height: 0; flex-direction: column;
-  background: #fff; border: 1px solid var(--border);
+  background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: 0 6px 24px rgba(var(--dark-rgb), .14);
 }
 .chart-panel.on { display: flex; }
@@ -547,7 +549,7 @@ select {
   border: none; background: none; cursor: pointer; font-size: 1.1rem; line-height: 1;
   color: var(--muted); padding: 0 2px;
 }
-.chart-head button:hover { color: var(--bad); }
+.chart-head button:hover { color: var(--bad-text); }
 /* Kennzahlen als Streifen unter dem Kopf: sie gehören zum Schema, sollen
    aber nicht mit ihm scrollen. */
 .chart-facts {

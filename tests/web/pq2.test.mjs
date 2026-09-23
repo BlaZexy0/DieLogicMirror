@@ -42,7 +42,7 @@ test('pq2: v_p-Achse endet bei v_max und zeigt nur den montierten Kolben', () =>
     assert.ok(Math.abs(maskOf(q).fn(v.vmax)) < 1e-6, 'Maske endet bei v_max auf 0');
     assert.equal(q.feasibleSplit, undefined, 'kein „anderer Kolben-Ø" auf der v_p-Achse');
     const m = q.ys.find(s => /^Maschine/.test(s.n));
-    assert.ok(m && m.c === theme.chart.series4, 'Maschinenlinie bleibt eine Serie in Serienfarbe');
+    assert.ok(m && m.c === 'machine', 'Maschinenlinie bleibt eine Serie in der Sachfarbe der Maschine');
     /* Arbeitspunkt liegt im Bild */
     assert.ok(q.pt[0] > 0 && q.pt[0] <= v.vmax);
   }

@@ -5,8 +5,10 @@
    sofort beim Laden, ohne Regler. Die Wandstärke kommt aus dem
    Abstandsfeld, das die Werkbank für alle Schritte EINMAL rechnet
    (js/werkbank/app.js, ctx.field): Wärmezentren als Kugeln, ein Schnitt
-   durch das Feld als Rasterbild — die Offsetfläche und der Turbo-Schnitt
-   der Wandstärkenseite (js/wandstaerke/tool.js) in verkürzter Form.
+   durch das Feld als Rasterbild — die Offsetfläche und der Schnitt der
+   Wandstärkenseite (js/wandstaerke/tool.js) in verkürzter Form. Die Farben
+   sind dieselben wie dort (js/part/colors.js): die Rollen folgen dem
+   Farbschema, die Farbleisten sind in jedem Schema dieselben.
 
    Das Bauteil selbst (Laden, Netz, Kennzahlen) verwaltet app.js; dieser
    Schritt bekommt es über das Ereignis „part". */
@@ -16,12 +18,16 @@ import { computeVisibility, DIRS } from '../part/visibility.js';
 import { segment, UNDERCUT } from '../part/segment.js';
 import { draftAngles, draftStats, dirNames } from '../part/draft.js';
 import { thickMaxima } from '../part/field.js';
-import { $, fmt, fmtPlain, rgbCss, facts, segButtons, slider, numberInput, colorbar, gradient, chip } from '../ui/controls.js';
+import { $, fmt, fmtPlain, facts, segButtons, slider, numberInput, colorbar, gradient, chip } from '../ui/controls.js';
 import * as C from '../part/colors.js';
+import { onScheme, VIEW } from '../part/colors.js';
 import { frame } from '../part/partsource.js';
 import { createDieView } from '../part/dieviewer.js';
 
 const IDLE = 'Ziehen: drehen · Rechte Maustaste: verschieben · Rad: zoomen';
+/* Die Wandstärke auf der Farbleiste `turbo`, wie auf der Wandstärkenseite:
+   dünn blau, dick rot, das Stück von sattem Blau bis sattem Rot. */
+const turboT = t => 0.08 + 0.84 * Math.max(0, Math.min(1, t));
 const SUBTITLE = 'Bauteil: Formteilung nach festen Regeln, Wandstärke und Wärmezentren aus dem Abstandsfeld.';
 
 export function createPartStage(ctx) {
@@ -39,15 +45,17 @@ export function createPartStage(ctx) {
   /* ── Szene: Trennlinie, Wärmezentren, Feldschnitt ─────────── */
   const group = new T.Group();
   view.scene.add(group);
-  const partingLines = new T.LineSegments(new T.BufferGeometry(), new T.LineBasicMaterial({ color: 0x002733 }));
+  const partingLines = new T.LineSegments(new T.BufferGeometry(), new T.LineBasicMaterial({ color: VIEW.lines }));
   group.add(partingLines);
 
+  /* Die Wärmezentren wie auf der Wandstärkenseite: jede Kugel in der Farbe
+     ihrer Wandstärke (Farbleiste `turbo`, turboT), kein Urteil. */
   const hotGroup = new T.Group();
   hotGroup.visible = false;
   group.add(hotGroup);
   const hotGeo = new T.SphereGeometry(1, 24, 16);
-  const hotMat = new T.MeshStandardMaterial({
-    color: 0xb42318, roughness: 0.5, metalness: 0.05, transparent: true, opacity: 0.6, depthWrite: false
+  const hotMat = color => new T.MeshStandardMaterial({
+    color, roughness: 0.5, metalness: 0.05, transparent: true, opacity: 0.6, depthWrite: false
   });
 
   const sliceMat = new T.MeshBasicMaterial({ side: T.DoubleSide });
@@ -138,7 +146,11 @@ export function createPartStage(ctx) {
 
   function paintPlain() {
     const col = ctx.part.mesh.geometry.getAttribute('color');
-    if (col) { col.array.fill(0.75); col.needsUpdate = true; }
+    if (col) {
+      const g = C.linRgb(VIEW.noData), arr = col.array;
+      for (let i = 0; i < arr.length; i += 3) { arr[i] = g[0]; arr[i + 1] = g[1]; arr[i + 2] = g[2]; }
+      col.needsUpdate = true;
+    }
     view.invalidate();
   }
 
@@ -152,11 +164,13 @@ export function createPartStage(ctx) {
     if (mode === 'plain') { ctx.part.usePlain(); return; }
     const col = ctx.part.mesh.geometry.getAttribute('color');
     const arr = col.array;
+    const regions = [0, 1, 2, 3, 4, 5].map(l => C.linRgb(C.regionColor(l)));
+    const under = C.linRgb(mode === 'draft' ? C.undercutDark() : C.undercutColor());
     for (let f = 0; f < model.faceCount; f++) {
       let rgb;
-      if (seg.label[f] === UNDERCUT) rgb = C.hex2rgb(mode === 'draft' ? C.UNDERCUT_DARK : C.UNDERCUT_COLOR);
+      if (seg.label[f] === UNDERCUT) rgb = under;
       else if (mode === 'draft') rgb = C.draftColor(draft[f], state.draftLimit);
-      else rgb = C.hex2rgb(C.REGION_COLORS[seg.label[f]]);
+      else rgb = regions[seg.label[f]];
       for (let e = 0; e < 3; e++) {
         arr[f * 9 + e * 3] = rgb[0];
         arr[f * 9 + e * 3 + 1] = rgb[1];
@@ -201,19 +215,19 @@ export function createPartStage(ctx) {
     if (mode === 'draft') {
       const st = draftStats(model, state.draft, seg.label, state.draftLimit);
       const rows = [
-        ['unter ' + fmt(state.draftLimit) + '°', C.draftColor(0, state.draftLimit), st.below / A],
-        [fmt(state.draftLimit) + '° … ' + fmt(3 * state.draftLimit) + '°', C.draftColor(state.draftLimit * 1.4, state.draftLimit), null],
-        ['über ' + fmt(3 * state.draftLimit) + '°', C.draftColor(state.draftLimit * 4, state.draftLimit), null],
-        ['Hinterschnitt', C.hex2rgb(C.UNDERCUT_DARK), st.undercut / A]
+        ['unter ' + fmt(state.draftLimit) + '°', C.draftHex(0, state.draftLimit), st.below / A],
+        [fmt(state.draftLimit) + '° … ' + fmt(3 * state.draftLimit) + '°', C.draftHex(state.draftLimit * 1.4, state.draftLimit), null],
+        ['über ' + fmt(3 * state.draftLimit) + '°', C.draftHex(state.draftLimit * 4, state.draftLimit), null],
+        ['Hinterschnitt', C.undercutDark(), st.undercut / A]
       ];
-      el.innerHTML = rows.map(([n, rgb, frac]) =>
-        '<div class="legend-row">' + chip(rgbCss(rgb)) + '<span class="name">' + n + '</span><span class="pct">'
+      el.innerHTML = rows.map(([n, color, frac]) =>
+        '<div class="legend-row">' + chip(color) + '<span class="name">' + n + '</span><span class="pct">'
         + (frac === null ? '' : (100 * frac).toFixed(1) + ' %') + '</span></div>').join('');
       return;
     }
     if (mode === 'plain') { el.innerHTML = '<div class="legend-row"><span class="name">Ohne Einfärbung.</span></div>'; return; }
-    const rows = names.map((d, i) => ({ name: d.name, color: C.REGION_COLORS[i], frac: seg.areaByLabel[i] / A }));
-    rows.push({ name: 'Hinterschnitt (keine Richtung)', color: C.UNDERCUT_COLOR, frac: seg.areaByLabel[6] / A });
+    const rows = names.map((d, i) => ({ name: d.name, color: C.regionColor(i), frac: seg.areaByLabel[i] / A }));
+    rows.push({ name: 'Hinterschnitt (keine Richtung)', color: C.undercutColor(), frac: seg.areaByLabel[6] / A });
     el.innerHTML = rows.map(r =>
       '<div class="legend-row' + (r.frac < 0.0005 ? ' off' : '') + '">' + chip(r.color)
       + '<span class="name">' + r.name + '</span><span class="pct">' + (100 * r.frac).toFixed(1) + ' %</span></div>').join('');
@@ -226,9 +240,9 @@ export function createPartStage(ctx) {
     const lim = state.draftLimit, top = 3 * lim;
     colorbar({
       title: 'Entformschräge',
-      stops: gradient(t => rgbCss(C.draftColor(top * t, lim))),
+      stops: gradient(t => C.draftHex(top * t, lim)),
       ticks: [top, 2 * lim, lim, 0].map(v => fmt(v) + '°'),
-      extra: chip(C.UNDERCUT_DARK) + 'Hinterschnitt'
+      extra: chip(C.undercutDark()) + 'Hinterschnitt'
     });
   }
 
@@ -284,7 +298,7 @@ export function createPartStage(ctx) {
   }
 
   function updateHotspots() {
-    for (const c of hotGroup.children.slice()) hotGroup.remove(c);
+    for (const c of hotGroup.children.slice()) { c.material.dispose(); hotGroup.remove(c); }
     const f = ctx.field.data;
     const on = state.active && state.hot.on && !!f && !!ctx.field.stats;
     hotGroup.visible = on;
@@ -294,8 +308,9 @@ export function createPartStage(ctx) {
       state.hot.field = f;
       state.hot.minUsed = state.hot.min;
     }
+    const maxIn = Math.max(ctx.field.stats.maxIn, 1e-6);
     for (const m of state.hot.list) {
-      const mesh = new T.Mesh(hotGeo, hotMat);
+      const mesh = new T.Mesh(hotGeo, hotMat(C.scale('turbo', turboT(m.r / maxIn))));
       mesh.position.set(m.x, m.y, m.z);
       mesh.scale.setScalar(m.r);
       mesh.renderOrder = 4;
@@ -310,10 +325,9 @@ export function createPartStage(ctx) {
     view.invalidate();
   }
 
-  /* Der Feldschnitt: innen die Wandstärke in Turbo (dick = rot), außen
-     hellgrau, die Bauteilkontur dunkel. */
-  const OUTSIDE = [0.87, 0.9, 0.91];
-  const turbo = t => C.turbo(0.08 + 0.84 * Math.max(0, Math.min(1, t)));
+  /* Der Feldschnitt: innen die Wandstärke in Turbo (dünn blau, dick rot),
+     außen das Grau des Bauteils (keine Daten), die Bauteilkontur in der
+     Tinte. Die Textur trägt die Werte der Leiste und ist sRGB. */
   function updateSlice() {
     const f = ctx.field.data;
     if (!f || !state.slice.on || !state.active) { sliceMesh.visible = false; view.invalidate(); return; }
@@ -328,18 +342,25 @@ export function createPartStage(ctx) {
     const w = f.dims[ua], hgt = f.dims[va];
     const px = new Uint8Array(w * hgt * 4);
     const at = (i, j, kk) => f.data[(kk * ny + j) * nx + i];
+    const tab = C.lut('turbo');
+    const none = C.hex2rgb(VIEW.noData).map(x => x * 255), ink = C.hex2rgb(VIEW.lines).map(x => x * 255);
     for (let vv = 0; vv < hgt; vv++) {
       for (let uu = 0; uu < w; uu++) {
         const idx = [0, 0, 0];
         idx[a] = k; idx[ua] = uu; idx[va] = vv;
         const v = at(idx[0], idx[1], idx[2]);
-        let rgb = v >= 0 ? OUTSIDE : turbo(-v / maxIn);
-        if (Math.abs(v) < f.h * 0.6) rgb = [0.08, 0.13, 0.16];
         const o = (vv * w + uu) * 4;
-        px[o] = rgb[0] * 255; px[o + 1] = rgb[1] * 255; px[o + 2] = rgb[2] * 255; px[o + 3] = 255;
+        const c = Math.abs(v) < f.h * 0.6 ? ink : v >= 0 ? none : null;
+        if (c) { px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; }
+        else {
+          const q = 3 * Math.round(turboT(-v / maxIn) * 255);
+          px[o] = tab[q]; px[o + 1] = tab[q + 1]; px[o + 2] = tab[q + 2];
+        }
+        px[o + 3] = 255;
       }
     }
     const tex = new T.DataTexture(px, w, hgt, T.RGBAFormat);
+    tex.colorSpace = T.SRGBColorSpace;
     tex.magFilter = T.NearestFilter;
     tex.minFilter = T.LinearFilter;
     tex.needsUpdate = true;
@@ -361,9 +382,9 @@ export function createPartStage(ctx) {
     const maxIn = Math.max(ctx.field.stats ? ctx.field.stats.maxIn : 1, 1e-6);
     colorbar({
       title: 'Wandstärke',
-      stops: gradient(t => rgbCss(turbo(t))),
+      stops: gradient(t => C.scale('turbo', turboT(t))),
       ticks: [1, 0.75, 0.5, 0.25, 0].map(q => fmt(2 * maxIn * q) + ' mm'),
-      extra: chip('#14212a') + 'Bauteilkontur'
+      extra: chip(VIEW.lines) + 'Bauteilkontur'
     });
   }
 
@@ -479,6 +500,17 @@ export function createPartStage(ctx) {
     updateHotspots();
     updateSlice();
     runAnalysis();
+  });
+  /* Ein Wechsel des Farbschemas: Linien umfärben, das Bauteil, Legende,
+     Skala, Marken und Schnitt neu malen — solange der Schritt zu sehen ist
+     (beim Betreten malt er ohnehin neu). */
+  onScheme(() => {
+    partingLines.material.color.set(VIEW.lines);
+    if (!state.active) return;
+    if (state.seg) { updateColors(); updateLegend(); }
+    updateHotspots();
+    updateSlice();
+    updateColorbar();
   });
   ctx.on('field', () => {
     $('bt-cell-h').value = fmtPlain(ctx.field.h, 2);

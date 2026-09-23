@@ -1,10 +1,19 @@
 /* Gemeinsame Canvas-Bausteine: Rahmen, Achsen, Überschrift, Betriebspunkt-
-   Marker, Turbo-Farbrampe und Konturlinien. Alle Farben kommen aus dem Theme. */
+   Marker, Farbskala der Heatmaps und Konturlinien. Alle Farben sind Rollen
+   aus dem Theme (core/theme.js), gelesen zur Zeichenzeit. */
 
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 
 const PI = Math.PI;
+
+/* Die Fläche des Diagramms mit Alpha: Beschriftungskästen, Aufhellungen,
+   Konturlinien. Sie folgt dem Farbschema (theme.chart.surface); ein festes
+   Weiß stand sonst als heller Fleck auf dem warmen Papier der Abendschicht. */
+export function surfaceA(a) {
+  const h = /^#[0-9a-f]{6}$/i.test(theme.chart.surface || '') ? theme.chart.surface : '#ffffff';
+  return 'rgba(' + parseInt(h.slice(1, 3), 16) + ',' + parseInt(h.slice(3, 5), 16) + ',' + parseInt(h.slice(5, 7), 16) + ',' + a + ')';
+}
 
 export function frame(w, h, heatmap) {
   return { L: 75, R: heatmap ? 92 : 50, T: 92, B: 58, pw: w - 75 - (heatmap ? 92 : 50), ph: h - 150 };
@@ -122,7 +131,10 @@ export function axes(x, w, h, f, x0, x1, y0, y1, d) {
   x.save(); x.translate(14, f.T + f.ph / 2); x.rotate(-PI / 2); text(x, d.yl, 0, 0); x.restore();
 }
 
-/* Roter Betriebspunkt-Marker mit Führungslinien und Label. */
+/* Betriebspunkt-Marker mit Führungslinien und Label: der Arbeitspunkt in
+   der Rolle `mark` (Hervorhebung, kein Urteil: er ist auch dann derselbe
+   Punkt, wenn er in einer verbotenen Fläche liegt), ein Referenzpunkt
+   (opts.ref, z. B. der ungedrosselte Schnittpunkt) gedämpft in `ref`. */
 export function marker(x, f, px, py, label, opts) {
   /* Liegt der Betriebspunkt außerhalb des Rahmens, verschwand er bisher
      kommentarlos — das Diagramm sah aus, als gäbe es keinen. Statt ihn zu
@@ -131,7 +143,7 @@ export function marker(x, f, px, py, label, opts) {
   if (außen) { offMarker(x, f, px, py, label, opts); return; }
   /* opts.ref: Referenzpunkt (z. B. Schnittpunkt) — gedämpft, Ring gestrichelt */
   const ref = !!(opts && opts.ref);
-  const MC = ref ? (theme.chart.iso || theme.chart.muted) : theme.chart.marker;
+  const MC = ref ? theme.chart.ref : theme.chart.mark;
   x.save();
   x.strokeStyle = MC; x.lineWidth = 1; x.setLineDash([4, 3]);
   x.beginPath(); x.moveTo(f.L, py); x.lineTo(px, py); x.moveTo(px, f.T + f.ph); x.lineTo(px, py); x.stroke();
@@ -145,7 +157,7 @@ export function marker(x, f, px, py, label, opts) {
     let lx = px + 11, ly = py - 9;
     if (lx + tw + 6 > f.L + f.pw) lx = px - tw - 19;
     if (ly < f.T + 12) ly = py + 22;
-    x.fillStyle = 'rgba(255,255,255,.88)';
+    x.fillStyle = surfaceA(.88);
     x.fillRect(lx - 4, ly - 11, tw + 8, 15);
     x.fillStyle = MC; fillRich(x, label, lx, ly);
   }
@@ -156,7 +168,7 @@ export function marker(x, f, px, py, label, opts) {
    mit dem Hinweis, dass er außerhalb der Skala liegt. */
 function offMarker(x, f, px, py, label, opts) {
   const ref = !!(opts && opts.ref);
-  const MC = ref ? (theme.chart.iso || theme.chart.muted) : theme.chart.marker;
+  const MC = ref ? theme.chart.ref : theme.chart.mark;
   const cx = Math.min(Math.max(px, f.L + 8), f.L + f.pw - 8);
   const cy = Math.min(Math.max(py, f.T + 8), f.T + f.ph - 8);
   const dx = px - cx, dy = py - cy;
@@ -176,34 +188,57 @@ function offMarker(x, f, px, py, label, opts) {
     const tw = x.measureText(txt).width;
     let lx = cx + 12, ly = cy + 4;
     if (lx + tw + 6 > f.L + f.pw) lx = cx - tw - 12;
-    x.fillStyle = 'rgba(255,255,255,.88)';
+    x.fillStyle = surfaceA(.88);
     x.fillRect(lx - 4, ly - 11, tw + 8, 15);
     x.fillStyle = MC; fillRich(x, txt, lx, ly);
   }
   x.restore();
 }
 
-/* Farbrampe für Heatmaps; Stützstellen aus theme.heatStops. */
-export function turbo(t) {
-  /* NaN überlebt beide Klemmungen und macht k[NaN] undefined — der Wurf riss
-     bisher jede Karte nach der werfenden mit. Ein Feld ohne Wert bleibt
-     durchsichtig: sichtbar leer statt einer plausiblen Farbe. */
-  if (!Number.isFinite(t)) return 'rgba(0,0,0,0)';
+/* Farbskala der Heatmaps: die feste Farbleiste `heat` der Palette
+   (theme.heatStops, sieben Stützstellen aus Turbo), in jedem Schema
+   dieselbe. Eine Farbleiste ist ein Maßstab; sie folgt dem Schema nicht. */
+export function rampRgb(t) {
+  if (!Number.isFinite(t)) return null;
   t = Math.max(0, Math.min(1, t));
   const k = theme.heatStops;
   const u = t * (k.length - 1), i = Math.min(k.length - 2, Math.floor(u)), q = u - i;
   const a = k[i], b = k[i + 1];
-  return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * q) + ',' + Math.round(a[1] + (b[1] - a[1]) * q) + ',' + Math.round(a[2] + (b[2] - a[2]) * q) + ')';
+  return [0, 1, 2].map(j => Math.round(a[j] + (b[j] - a[j]) * q));
 }
 
-/* Marching-Squares-Konturen mit Wertelabels. */
+/* Dieselbe Skala als CSS-Farbe. NaN überlebt beide Klemmungen und machte
+   k[NaN] undefined — der Wurf riss bisher jede Karte nach der werfenden mit.
+   Ein Feld ohne Wert bleibt durchsichtig: sichtbar leer statt einer
+   plausiblen Farbe. */
+export function ramp(t) {
+  const c = rampRgb(t);
+  return c ? 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')' : 'rgba(0,0,0,0)';
+}
+
+/* Relative Leuchtdichte (WCAG) eines RGB-Tripels 0 … 255. */
+function leuchte(c) {
+  const v = c.map(u => { u /= 255; return u <= 0.03928 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4); });
+  return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+}
+
+/* Marching-Squares-Konturen mit Wertelabels. Die Skala ist an den Enden
+   dunkel und in der Mitte hell (Grün, Gelb); eine Linie in der Farbe der
+   Fläche verschwände dort. Jede Kontur liegt auf genau einem Wert, also
+   kennt sie ihren Grund: auf hellen Stufen zeichnet sie in Schrift, auf
+   dunklen in der Fläche. Die Labels stehen auf einem Kästchen der Fläche. */
 export function contours(ctx, f, d, skipLabel) {
   const nx = d.x.length, ny = d.y.length, cw = f.pw / (nx - 1), ch = f.ph / (ny - 1);
+  const C = theme.chart;
   ctx.save();
-  ctx.lineWidth = 1.15; ctx.strokeStyle = 'rgba(255,255,255,.95)';
+  ctx.lineWidth = 1.15;
   ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center';
   for (let li = 0; li < d.levels.length; li++) {
     const L = d.levels[li];
+    const grund = rampRgb((L - d.lo) / (d.hi - d.lo));
+    const hell = grund && leuchte(grund) > 0.2;
+    ctx.strokeStyle = hell ? C.text : surfaceA(.95);
+    ctx.globalAlpha = hell ? 0.45 : 1;
     ctx.beginPath();
     let label = null;
     for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
@@ -222,10 +257,11 @@ export function contours(ctx, f, d, skipLabel) {
       }
     }
     ctx.stroke();
+    ctx.globalAlpha = 1;
     if (label) {
-      ctx.fillStyle = 'rgba(255,255,255,.92)';
+      ctx.fillStyle = surfaceA(.92);
       ctx.fillRect(label[0] - 14, label[1] - 8, 28, 14);
-      ctx.fillStyle = theme.chart.text;
+      ctx.fillStyle = C.text;
       ctx.fillText(fmt(L), label[0], label[1] + 3);
     }
   }

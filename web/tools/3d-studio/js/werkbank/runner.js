@@ -25,7 +25,8 @@ import * as F from '../runner/flow.js';
 import { checkRules } from '../runner/rules.js';
 import { autoTaper, DEFAULT_SIZING } from '../runner/sizing.js';
 import { flowChart } from '../runner/chart.js';
-import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from '../runner/editor.js';
+import { createEditor, SELECTED_RING, followerColor } from '../runner/editor.js';
+import { onScheme, ROLE, VIEW } from '../part/colors.js';
 import { rotate, norm, cross, dot, sub, add } from '../runner/vec.js';
 import { proposeRunner, gateRays } from './propose.js';
 import { shotTimeline, flowOnCurve } from '../runner/shottime.js';
@@ -52,20 +53,35 @@ export function createRunnerStage(ctx) {
   /* ── Szene ────────────────────────────────────────────────── */
   const group = new T.Group();
   view.scene.add(group);
+  /* Anguss, Pressrest und Mittellinien in ihren Rollen (js/part/colors.js),
+     wie im Angussdesigner. */
   const runnerMat = new T.MeshStandardMaterial({
-    color: 0x008c82, roughness: 0.52, metalness: 0.04, side: T.DoubleSide, flatShading: true
+    color: ROLE.runner, roughness: 0.52, metalness: 0.04, side: T.DoubleSide, flatShading: true
   });
   const runnerMesh = new T.Mesh(new T.BufferGeometry(), runnerMat);
   group.add(runnerMesh);
   const biscMat = new T.MeshStandardMaterial({
-    color: 0x93a6b0, roughness: 0.6, metalness: 0.06, side: T.DoubleSide,
+    color: ROLE.biscuit, roughness: 0.6, metalness: 0.06, side: T.DoubleSide,
     polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
   });
   const biscMesh = new T.Mesh(new T.BufferGeometry(), biscMat);
   group.add(biscMesh);
-  const lineMat = new T.LineBasicMaterial({ color: 0x002733, transparent: true, opacity: 0.55 });
+  const lineMat = new T.LineBasicMaterial({ color: VIEW.lines, transparent: true, opacity: 0.55 });
   const lineGroup = new T.Group();
   group.add(lineGroup);
+  /* Ein Wechsel des Farbschemas: Körper umfärben; ist der Schritt zu sehen,
+     auch Legende, Auswahlfeld und Schema. Die Griffe gleicht js/handles.js
+     selbst ab. */
+  onScheme(() => {
+    runnerMat.color.set(ROLE.runner);
+    biscMat.color.set(ROLE.biscuit);
+    lineMat.color.set(VIEW.lines);
+    if (!state.active) return;
+    $('pt-legend').innerHTML = legendHTML();
+    syncSelection();
+    updateChart();
+    view.invalidate();
+  });
 
   const editor = createEditor({
     view,
@@ -283,7 +299,7 @@ export function createRunnerStage(ctx) {
     const rows = Object.values(G.TYPES).map(t =>
       '<div class="lg-row"><span class="dot" style="background:' + t.color + '"></span>' + t.label + '</div>');
     rows.push('<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>');
-    rows.push('<div class="lg-row"><span class="dot" style="background:' + FOLLOWER_COLOR + '"></span>gespiegelt (folgt)</div>');
+    rows.push('<div class="lg-row"><span class="dot" style="background:' + followerColor() + ';opacity:.6"></span>gespiegelt (folgt)</div>');
     return '<div class="pt-menu-title">Punktarten</div>' + rows.join('');
   }
 

@@ -26,17 +26,20 @@ import { draftAngles, draftStats, dirNames } from '../part/draft.js';
 import { diePieces, pieceProjections } from '../part/dieview.js';
 import { gripPerFace, ejectorMaps } from '../part/ejector.js';
 import { createDieView } from '../part/dieviewer.js';
-import { rgbCss, facts, segButtons, segButtonSet, slider, colorbar, gradient, chip } from '../ui/controls.js';
+import { facts, segButtons, segButtonSet, slider, colorbar, gradient, chip } from '../ui/controls.js';
 import { fmt, fmtUnit, fmtFixed } from '../studio/format.js';
 import { kpis } from '../studio/rows.js';
 import * as C from '../part/colors.js';
+import { onScheme, VIEW } from '../part/colors.js';
 import { MODES, DARSTELLUNG } from './panel.js';
 
 export const FORMAT = 'dielogic-entformung';
 export const FORMAT_VERSION = 1;
 
 const RUN = 'Entformung rechnen';
-const GRIP_NONE = [0.84, 0.87, 0.88];
+/* Die Haftung auf der Farbleiste `turbo`, wie die Wandstärke: benutzt wird
+   das Stück von sattem Blau bis sattem Rot, ohne die fast schwarzen Enden. */
+const turboT = t => 0.08 + 0.84 * Math.max(0, Math.min(1, t));
 const pct = x => fmtFixed(100 * x, 1) + ' %';
 const DEFAULTS = { axis: 'auto', movSign: 1, mode: 'regions', draftLimit: 1.5, showParting: true, showEdges: false,
   die: { skirt: 8, part: true }, projView: { alpha: 0.6 }, ej: { mu: 0.3, alpha: 0.7 } };
@@ -74,14 +77,26 @@ export function createEntformungTool(host) {
   /* ── Körper ──────────────────────────────────────────────── */
   const group = new T.Group();
   view.scene.add(group);
-  const partingLines = new T.LineSegments(new T.BufferGeometry(), new T.LineBasicMaterial({ color: 0x002733 }));
+  /* Die Trennlinie in der Tinte des Farbschemas, die Netzkanten in seiner
+     Nebenschrift. */
+  const partingLines = new T.LineSegments(new T.BufferGeometry(), new T.LineBasicMaterial({ color: VIEW.lines }));
   group.add(partingLines);
   const edgeLines = new T.LineSegments(new T.BufferGeometry(),
-    new T.LineBasicMaterial({ color: 0x4c6870, transparent: true, opacity: 0.35 }));
+    new T.LineBasicMaterial({ color: VIEW.edges, transparent: true, opacity: 0.35 }));
   edgeLines.visible = false;
   group.add(edgeLines);
   const dieView = createDieView(view);
   let dieBuiltFor = null;                          // die Stücke, aus denen die Formteile gebaut sind
+
+  /* Ein Wechsel des Farbschemas: Linien umfärben, Bauteil, Legende, Skala
+     und die Farbfelder der Listen neu malen. Die Formteile, Silhouetten und
+     Karten färbt die Formansicht selbst um (js/part/dieviewer.js). */
+  onScheme(() => {
+    partingLines.material.color.set(VIEW.lines);
+    edgeLines.material.color.set(VIEW.edges);
+    if (state.seg) { updatePieceRows(); updateProjKpis(); }
+    applyMode();
+  });
 
   /* ── Bauteil gewechselt: danach sofort rechnen ───────────── */
   function onPart(model) {
@@ -89,6 +104,9 @@ export function createEntformungTool(host) {
     state.pieces = null; state.proj = null; state.grip = null; state.ejMaps = null;
     state.analysed = false; state.cancelled = false; state.ready = false;
     dieBuiltFor = null;
+    /* Die Schalter der Formteile gehören zu DIESEM Teil: ein neues zeigt
+       wieder alle. */
+    showAllPieces();
     /* Kantenbild nur bei überschaubaren Netzen — sonst kostet es mehr, als es zeigt. */
     edgeLines.geometry.dispose();
     const edgesOk = model.faceCount <= 60000;
@@ -96,15 +114,19 @@ export function createEntformungTool(host) {
     edgesBox().disabled = !edgesOk;
     if (!edgesOk) { edgesBox().checked = false; state.showEdges = false; }
     clearAnalysis();
-    /* Abstände folgen der Bauteilgröße, solange niemand sie gesetzt hat. */
+    /* Abstände folgen der Bauteilgröße, solange niemand sie gesetzt hat. Ein
+       gesetzter Wert bleibt — höchstens bis zum neuen Ende des Reglers, und
+       die Anzeige daneben sagt, was jetzt gilt (sie nannte sonst noch die
+       Zahl vom größeren Teil). */
     const longest = Math.max(...model.bounds.size);
-    ui('die-dist').max = String(Math.max(50, Math.round(longest * 1.2)));
-    if (!state.die.distTouched) setSlider('die-dist', Math.max(10, Math.round(longest * 0.25)), ' mm');
-    state.die.dist = +ui('die-dist').value;
+    const fit = (name, max, auto, touched) => {
+      ui(name).max = String(max);
+      setSlider(name, touched ? Math.min(max, +ui(name).value) : auto, ' mm');
+      return +ui(name).value;
+    };
+    state.die.dist = fit('die-dist', Math.max(50, Math.round(longest * 1.2)), Math.max(10, Math.round(longest * 0.25)), state.die.distTouched);
     for (const [name, st] of [['proj-gap', state.projView], ['ej-gap', state.ej]]) {
-      ui(name).max = String(Math.max(50, Math.round(longest)));
-      if (!st.gapTouched) setSlider(name, Math.max(10, Math.round(longest * 0.08)), ' mm');
-      st.gap = +ui(name).value;
+      st.gap = fit(name, Math.max(50, Math.round(longest)), Math.max(10, Math.round(longest * 0.08)), st.gapTouched);
     }
     /* Erst nach dem Laden: js/part/partsource.js räumt seinen Schleier weg,
        sobald onLoad zurückkehrt — die Rechnung setzt ihren danach. */
@@ -177,7 +199,14 @@ export function createEntformungTool(host) {
     const model = part.model;
     if (!model || !state.vis) return;
     const t0 = performance.now();
+    const before = state.seg;
     state.seg = segment(model, state.vis, { mainAxis: state.axis, movingSign: state.movSign });
+    /* Die Schalter hängen an der Richtung (0 … 5), die Rolle an der Achse:
+       mit einer anderen Formöffnung wird aus „Schieber +X" eine Formhälfte —
+       ein ausgeblendeter Schieber wäre danach eine ausgeblendete Hälfte.
+       Also wieder alle zeigen. (Die bewegliche Seite zu tauschen benennt nur
+       um: dasselbe Stück, derselbe Schalter.) */
+    if (before && before.mainAxis !== state.seg.mainAxis) showAllPieces();
     state.draft = draftAngles(model, state.vis, state.seg.label);
     state.pieces = diePieces(model, state.seg, { skirt: state.die.skirt });
     state.proj = pieceProjections(state.pieces, model, state.seg);
@@ -220,6 +249,13 @@ export function createEntformungTool(host) {
     applyOpacity();
   }
 
+  /* Alle sechs Formteile wieder zeigen — im Zustand und in der Formansicht,
+     die sich ausgeblendete über Neubauten hinweg merkt. */
+  function showAllPieces() {
+    state.die.show = {};
+    for (let l = 0; l < 6; l++) dieView.setVisible(l, true);
+  }
+
   /* Die Formteile aus den aktuellen Stücken — einmal je Zuordnung, dann nur
      noch ein- und ausblenden. */
   function ensureDie() {
@@ -257,6 +293,20 @@ export function createEntformungTool(host) {
     view.invalidate();
   }
 
+  /* Einpassen (F, Knopf, Doppelklick) rahmt, was der Modus zeigt: bei den
+     Formteilen die herausgefahrenen Stücke — beim größten Abstand lagen sie
+     sonst weit neben dem Bild —, bei Flächen und Haftung dazu die Ebenen
+     jenseits des Bauteils, sonst das Bauteil. Ausgeblendetes zählt nicht. */
+  function fitTarget() {
+    if (!part.model) return null;
+    const box = new T.Box3().setFromObject(part.mesh);
+    const m = shell.mode;
+    if (m === 'formteile' && dieView.group.visible) for (const h of dieView.holders) { if (h.visible) box.expandByObject(h); }
+    if (m === 'flaechen' || m === 'haftung') for (const o of dieView.overlays.children) { if (o.visible) box.expandByObject(o); }
+    return box;
+  }
+  shell.setFitTarget(fitTarget);
+
   /** Das Formteil der Hälfte: sign +1 die bewegliche, −1 die feste Seite —
       welche das auf der Achse ist, sagt state.movSign. */
   function halfLabel(sign) {
@@ -265,18 +315,26 @@ export function createEntformungTool(host) {
   }
 
   /* ── Farben ──────────────────────────────────────────────── */
+  /* Nach Regionen trägt jede Fläche die Farbe ihrer Richtung, der
+     Hinterschnitt „schlecht"; nach Schräge die Farbleiste `draft`, der
+     Hinterschnitt dunkler; nach Haftung die Leiste `turbo`. Die Rollen
+     kommen aus dem Schema von jetzt, die Leisten sind in jedem Schema
+     dieselben (js/part/colors.js); als Punktfarben linear. */
   function updateColors() {
     const model = part.model, { seg, draft } = state;
     const mode = colouring();
     const col = part.colors();
     if (!col || !model || !seg || mode === 'plain') return;      // grau: das Material des Gastgebers
     const arr = col.array;
+    const regions = [0, 1, 2, 3, 4, 5].map(l => C.linRgb(C.regionColor(l)));
+    const under = C.linRgb(mode === 'draft' ? C.undercutDark() : C.undercutColor());
+    const grip = mode === 'grip' ? gripPainter() : null;
     for (let f = 0; f < model.faceCount; f++) {
       let rgb;
-      if (mode === 'grip') rgb = gripColor(f);
-      else if (seg.label[f] === UNDERCUT) rgb = C.hex2rgb(mode === 'draft' ? C.UNDERCUT_DARK : C.UNDERCUT_COLOR);
+      if (grip) rgb = grip(f);
+      else if (seg.label[f] === UNDERCUT) rgb = under;
       else if (mode === 'draft') rgb = C.draftColor(draft[f], state.draftLimit);
-      else rgb = C.hex2rgb(C.REGION_COLORS[seg.label[f]]);
+      else rgb = regions[seg.label[f]];
       for (let e = 0; e < 3; e++) {
         arr[f * 9 + e * 3] = rgb[0];
         arr[f * 9 + e * 3 + 1] = rgb[1];
@@ -286,12 +344,13 @@ export function createEntformungTool(host) {
     col.needsUpdate = true;
   }
 
-  /* Haftung: Turbo nach dem Haftmaß je Fläche; was nicht haftet (Außenwand,
-     waagerecht, Schieber, Hinterschnitt), bleibt hellgrau. */
-  function gripColor(f) {
-    const g = state.grip;
-    if (!g || !(g.intensity[f] > 0) || !(g.maxIntensity > 0)) return GRIP_NONE;
-    return C.turbo(0.08 + 0.84 * Math.min(1, g.intensity[f] / g.maxIntensity));
+  /* Haftung: die Leiste `turbo` nach dem Haftmaß je Fläche, blau = schwach,
+     rot = stark (turboT); was nicht haftet (Außenwand, waagerecht, Schieber,
+     Hinterschnitt), trägt das Grau des Bauteils: dort gibt es keinen Wert. */
+  function gripPainter() {
+    const g = state.grip, none = C.linRgb(VIEW.noData), turbo = C.scaleFn('turbo');
+    return f => (!g || !(g.intensity[f] > 0) || !(g.maxIntensity > 0) ? none
+      : turbo(turboT(g.intensity[f] / g.maxIntensity)));
   }
 
   function updatePartingLine() {
@@ -324,8 +383,8 @@ export function createEntformungTool(host) {
     if (!seg || !model || shell.mode !== 'entformung' || state.mode !== 'regions') { shell.legend(''); return; }
     const A = model.totalArea || 1;
     const names = dirNames(seg.mainAxis, state.movSign);
-    const rows = names.map((d, i) => ({ name: d.name, color: C.REGION_COLORS[i], frac: seg.areaByLabel[i] / A }));
-    rows.push({ name: 'Hinterschnitt', color: C.UNDERCUT_COLOR, frac: seg.areaByLabel[6] / A });
+    const rows = names.map((d, i) => ({ name: d.name, color: C.regionColor(i), frac: seg.areaByLabel[i] / A }));
+    rows.push({ name: 'Hinterschnitt', color: C.undercutColor(), frac: seg.areaByLabel[6] / A });
     shell.legend('<div class="st-title">Flächenanteil</div>' + rows.filter(r => r.frac >= 0.0005).map(r =>
       '<div class="lg-row">' + chip(r.color) + '<span>' + r.name + '</span><span class="pct">' + pct(r.frac) + '</span></div>').join(''));
   }
@@ -335,24 +394,24 @@ export function createEntformungTool(host) {
     if (mode === 'grip') {
       return colorbar({
         title: 'Haftung',
-        stops: gradient(t => rgbCss(C.turbo(0.08 + 0.84 * t))),
+        stops: gradient(t => C.scale('turbo', turboT(t))),
         ticks: ['stark', '', '', '', 'schwach'],
-        extra: chip(rgbCss(GRIP_NONE)) + 'haftet nicht'
+        extra: chip(VIEW.noData) + 'haftet nicht'
       });
     }
     if (mode !== 'draft') return colorbar(null);
     const lim = state.draftLimit, top = 3 * lim;
     colorbar({
       title: 'Entformschräge',
-      stops: gradient(t => rgbCss(C.draftColor(top * t, lim))),
+      stops: gradient(t => C.draftHex(top * t, lim)),
       ticks: [top, 2 * lim, lim, 0].map(v => fmt(v) + '°'),
-      extra: chip(C.UNDERCUT_DARK) + 'Hinterschnitt'
+      extra: chip(C.undercutDark()) + 'Hinterschnitt'
     });
   }
 
   /* Die Bilanz: nach Regionen Hälften / Schieber / Hinterschnitt, nach
      Schräge kleinste Schräge / unter Grenzwert / Hinterschnitt. Ein
-     Hinterschnitt lässt sich nicht entformen — das Urteil ist rot. */
+     Hinterschnitt lässt sich nicht entformen — das Urteil ist „schlecht". */
   function updateSegKpis() {
     const model = part.model, { seg } = state;
     if (!seg || !model) return;
@@ -398,11 +457,11 @@ export function createEntformungTool(host) {
       const on = has && state.die.show[l] !== false;
       return '<label class="inline piece-row' + (has ? '' : ' off') + '">'
         + '<input type="checkbox" data-label="' + l + '"' + (on ? ' checked' : '') + (has ? '' : ' disabled') + '>'
-        + chip(C.REGION_COLORS[l]) + '<span class="name">' + names[l].name + '</span>'
+        + chip(C.regionColor(l)) + '<span class="name">' + names[l].name + '</span>'
         + '<span class="pct">' + (has ? pct(area / A) : 'nicht in der Form') + '</span></label>';
     }).join('');
     if (seg.areaByLabel[6] > 0) {
-      html += '<div class="legend-row">' + chip(C.UNDERCUT_COLOR) + '<span class="name">Hinterschnitt: bleibt rot am Ort</span>'
+      html += '<div class="legend-row">' + chip(C.undercutColor()) + '<span class="name">Hinterschnitt: bleibt am Ort</span>'
         + '<span class="pct">' + pct(seg.areaByLabel[6] / A) + '</span></div>';
     }
     el.innerHTML = html;
@@ -414,7 +473,7 @@ export function createEntformungTool(host) {
     if (!seg || !proj) return;
     const names = dirNames(seg.mainAxis, state.movSign);
     const cm2 = a => fmtFixed(a / 100, 1) + ' cm²';
-    const rows = proj.pieces.map(q => ({ label: chip(C.REGION_COLORS[q.label]) + ' ' + names[q.label].name, value: cm2(q.area) }));
+    const rows = proj.pieces.map(q => ({ label: chip(C.regionColor(q.label)) + ' ' + names[q.label].name, value: cm2(q.area) }));
     rows.push({ label: 'Bauteil auf die Trennebene', value: cm2(proj.total.area) });
     kpis(ui('proj-kpis'), rows);
   }
@@ -480,7 +539,12 @@ export function createEntformungTool(host) {
     slider(ui('die-skirt'), v => {
       state.die.skirt = v;
       clearTimeout(skirtTimer);
-      if (state.seg) skirtTimer = setTimeout(() => {
+      /* Nachgebaut wird für die Zuordnung von JETZT. Kam inzwischen ein
+         neues Teil (ohne Zuordnung: TypeError) oder eine neue Zuordnung
+         (die schon mit diesem Rand gebaut ist), gibt es nichts zu tun. */
+      const seg = state.seg;
+      if (seg) skirtTimer = setTimeout(() => {
+        if (state.seg !== seg) return;
         state.pieces = diePieces(part.model, state.seg, { skirt: state.die.skirt });
         dieBuiltFor = null;
         dieView.setPieces(state.pieces);

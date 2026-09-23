@@ -6,10 +6,12 @@
 
      id, label ('Gitter'), cellLabel ('Zellkante'), range [min, max] mm
      suggest(problem)                 Vorschlag für die Zellkante, mm
-     estimate(problem, cell, opts)    → { text, note, blocked, count, kernel }
+     estimate(problem, cell, opts)    → { text, note, blocked, blockedShort, count, kernel }
                                       text: die Zeile unter dem Feld (Zellen,
                                       Speicher, grobe Zeit, Rechenwerk);
-                                      blocked: warum so nicht gerechnet wird
+                                      blocked: warum so nicht gerechnet wird,
+                                      blockedShort: dasselbe in EINER Zeile
+                                      für unter den Knopf (core.js, primary)
      run(problem, { cell, signal, progress, forceCpu }) → Ergebnis
      createDisplay()                  → { object, show(ergebnis, bild), hide() }
      paintArrival(ergebnis, netz)     Ankunftsfarben (nur das Gitter kennt sie)
@@ -24,13 +26,19 @@
    Die Kerne bleiben unberührt. Der Abbruch erreicht sie trotzdem sofort:
    run.js fragt das Signal nur zwischen zwei Bildern, aber es ruft je
    SCHRITT nach der Kolbengeschwindigkeit — dort wirft der Adapter den
-   Abbruch, und der Lauf endet mitten im Paket statt Sekunden später. */
+   Abbruch, und der Lauf endet mitten im Paket statt Sekunden später.
+
+   Umgekehrt ist nicht jeder AbortError ein Abbruch: eine verlorene
+   Grafikkarte meldet sich beim Lesen genau so, und der Rahmen (js/studio/
+   job.js) zeigte dann „Abgebrochen", als hätte man gedrückt. Was nicht vom
+   Signal kommt, verlässt den Adapter als gewöhnlicher Fehler (env.js,
+   gpuFailure). */
 
 import * as T from 'three';
 import { abortError } from '../../abort.js';
 import { setTris } from '../../ui/common.js';
 import { surfaceNets } from '../../part/surfacenets.js';
-import { turbo } from '../../part/colors.js';
+import { scaleFn, linRgb, VIEW } from '../../part/colors.js';
 import { fmt, fmtUnit } from '../../studio/format.js';
 import { buildDomain, suggestCell as suggestRunner, cellCount as countRunner, runnerMask, MAX_CELLS, MAX_CELLS_CPU } from '../../lbm/domain.js';
 import { buildSleeveDomain, suggestCell as suggestSleeve, cellCount as countSleeve, hydrostatic, enclosedGas } from '../../lbm/sleeve.js';
@@ -40,7 +48,7 @@ import { createGpuSolver } from '../../lbm/gpu.js';
 import { runSimulation } from '../../lbm/run.js';
 import { paintMelt, speedScale } from '../../lbm/paint.js';
 import { NEVER } from '../../lbm/lattice.js';
-import { env, tempo, runTime, learnTempo, roughTime, kernelName, fmtCount, fmtMB, tick } from './env.js';
+import { env, tempo, runTime, learnTempo, runClock, gpuFailure, roughTime, kernelName, fmtCount, fmtMB, tick } from './env.js';
 
 /* Byte je Zelle auf der Grafikkarte: zwei Sätze Verteilungen, Zellwerte
    doppelt, Flaggen und Melder — die Kammer führt ein Feld mehr (Kolben). */
@@ -96,7 +104,8 @@ export const lbm = {
       text: parts.join(' · '), count, kernel,
       note: env.gpu ? '' : 'Kein WebGPU in diesem Browser: gerechnet wird in JavaScript, auf grobem Gitter (bis ' + fmt(MAX_CELLS_CPU / 1e3, 0)
         + ' Tsd. Zellen)' + (problem.kind === 'kammer' ? ', und die erste Phase dauert Minuten' : '') + '. Chrome oder Edge rechnen auf der Grafikkarte.',
-      blocked: count > limit ? 'Zu fein: höchstens ' + fmt(limit / 1e6, 2) + ' Mio. Zellen. Die Zellkante vergrößern.' : ''
+      blocked: count > limit ? 'Zu fein: höchstens ' + fmt(limit / 1e6, 2) + ' Mio. Zellen. Die Zellkante vergrößern.' : '',
+      blockedShort: count > limit ? 'Zu fein: höchstens ' + fmt(limit / 1e6, 2) + ' Mio. Zellen.' : ''
     };
   },
 
@@ -104,14 +113,15 @@ export const lbm = {
     const { cell, signal, progress = () => {} } = opts;
     const check = () => { if (signal && signal.aborted) throw abortError(); };
     const kernel = kernelOf(opts);
-    const t0 = performance.now();
+    const t0 = performance.now(), clock = runClock();
     let solver = null;
     try {
       progress(0, 'Gitter …');
       await tick();
-      return problem.kind === 'kammer'
-        ? await runSleeve(problem, cell, kernel, { check, progress, signal, t0, own: s => { solver = s; } })
-        : await runRunner(problem, cell, kernel, { check, progress, signal, t0, own: s => { solver = s; } });
+      const ctx = { check, progress, signal, t0, clock, own: s => { solver = s; } };
+      return problem.kind === 'kammer' ? await runSleeve(problem, cell, kernel, ctx) : await runRunner(problem, cell, kernel, ctx);
+    } catch (err) {
+      throw gpuFailure(err, signal);
     } finally {
       if (solver && solver.dispose) solver.dispose();
     }
@@ -143,7 +153,9 @@ export const lbm = {
   /* Der Anguss nach Ankunft gefärbt: je Ecke des Netzes die früheste
      Ankunft der 27 umliegenden Zellen (die Ecke liegt auf der Wand; die
      nächsten Zellen sind oft Stahl, und auf der Deckfläche liegt die erste
-     Schmelzezelle eine ganze Zelle tiefer). → Ende der Skala in s. */
+     Schmelzezelle eine ganze Zelle tiefer). Die Ankunft auf der ganzen
+     Farbleiste `turbo`, früh blau, spät rot; nie erreicht trägt das Grau
+     des Bauteils (keine Daten). → Ende der Skala in s. */
   paintArrival(result, mesh) {
     const d = result.domain;
     const pos = mesh.geometry.getAttribute('position');
@@ -154,7 +166,7 @@ export const lbm = {
     let tMax = 0;
     for (const gt of result.gates) if (Number.isFinite(gt.tSim)) tMax = Math.max(tMax, gt.tSim);
     if (!(tMax > 0)) tMax = result.snapshots[result.snapshots.length - 1].t || 1;
-    const grey = [0.72, 0.76, 0.78];
+    const grey = linRgb(VIEW.noData), turbo = scaleFn('turbo');
     for (let v = 0; v < n; v++) {
       const i0 = Math.round((pos.getX(v) - d.origin[0]) / d.h), j0 = Math.round((pos.getY(v) - d.origin[1]) / d.h), k0 = Math.round((pos.getZ(v) - d.origin[2]) / d.h);
       let best = NEVER;
@@ -172,10 +184,12 @@ export const lbm = {
   }
 };
 
-/* Was beide Läufe am Ende gleich zusammenstellen. */
-function finish(problem, cell, kernel, run, units, domain, t0, until) {
+/* Was beide Läufe am Ende gleich zusammenstellen. Die Rechenzeit ist der
+   ganze Lauf (so lange hat man gewartet); gelernt wird nur das Rechnen der
+   Schritte, ab clock.start() — so zählt auch die Schätzung. */
+function finish(problem, cell, kernel, run, units, domain, t0, clock, until) {
   const ms = performance.now() - t0;
-  learnTempo('lbm', kernel, ms, run.steps, domain.N, run.snapshots.length);
+  if (clock.fair()) learnTempo('lbm', kernel, clock.ms(), run.steps, domain.N, run.snapshots.length);
   /* Die Skala aus den Bildern bis zur ersten Ankunft — danach herrschen
      Anschnitte bzw. Laufkanal, und der Weg davor wäre einfarbig blau. */
   const before = run.snapshots.filter(s => s.step <= until);
@@ -196,7 +210,7 @@ function finish(problem, cell, kernel, run, units, domain, t0, until) {
 }
 
 /* ── Anguss: vom Pressrest zu den Anschnitten ────────────────── */
-async function runRunner(problem, cell, kernel, { check, progress, signal, t0, own }) {
+async function runRunner(problem, cell, kernel, { check, progress, signal, t0, clock, own }) {
   const domain = await buildDomain(problem.graph, cell, {
     onProgress: (p, what) => { check(); progress(0.1 * p, 'Gitter · ' + what + ' … ' + Math.round(p * 100) + ' %'); }
   });
@@ -205,6 +219,7 @@ async function runRunner(problem, cell, kernel, { check, progress, signal, t0, o
   const units = latticeUnits({ h: cell, vMax: piston.vMax, A: piston.A, aMin: minRunnerArea(domain.net), nu: problem.alloy.nu });
   const solver = kernel === 'gpu' ? await createGpuSolver(domain) : createSolver(domain);
   own(solver);
+  clock.start();
   /* Wie lange: bis alle Anschnitte gemeldet sind — dann noch ein Stück für
      das Bild —, spätestens bei problem.tMax (Ende der Kurve oder das
      Dreifache der 1D-Schätzung). */
@@ -230,7 +245,7 @@ async function runRunner(problem, cell, kernel, { check, progress, signal, t0, o
   const { snapshots, gateDone } = run;
   snapshots[0].t = 0; snapshots[0].filled = filledOf(snapshots[0].fill);
   const first = Math.min(...gateDone.filter(a => a !== NEVER), Infinity);
-  const out = finish(problem, cell, kernel, run, units, domain, t0, first);
+  const out = finish(problem, cell, kernel, run, units, domain, t0, clock, first);
   out.reason = run.reason === 'Schrittgrenze erreicht' ? (tMax >= piston.tEnd - 1e-9 ? 'die Kurve endet' : 'Zeitgrenze erreicht') : run.reason;
   out.facts.unshift(['Ende', out.reason]);
   out.gates = domain.gates.map((gt, k) => ({ id: gt.id, step: gateDone[k], tSim: gateDone[k] === NEVER ? NaN : gateDone[k] * units.dt }));
@@ -239,7 +254,7 @@ async function runRunner(problem, cell, kernel, { check, progress, signal, t0, o
 }
 
 /* ── Kammer: die Welle vor dem Kolben ────────────────────────── */
-async function runSleeve(problem, cell, kernel, { check, progress, signal, t0, own }) {
+async function runSleeve(problem, cell, kernel, { check, progress, signal, t0, clock, own }) {
   const domain = buildSleeveDomain(problem.spec, cell);
   check();
   const cv = problem.curve;
@@ -249,6 +264,7 @@ async function runSleeve(problem, cell, kernel, { check, progress, signal, t0, o
   const params = { g: [0, -gLat, 0] };
   const solver = kernel === 'gpu' ? await createGpuSolver(domain, params) : createSolver(domain, params);
   own(solver);
+  clock.start();
   const { tEnd } = sleeveEnd(problem, cell);
   const stepsMax = Math.max(10, Math.ceil(tEnd / units.dt));
   const snapEvery = Math.max(1, Math.ceil(stepsMax / 100));
@@ -273,7 +289,7 @@ async function runSleeve(problem, cell, kernel, { check, progress, signal, t0, o
   if (run.reason === 'abgebrochen') throw abortError();
   const { snapshots, gateDone } = run;
   Object.assign(snapshots[0], { t: 0, s: 0, air: 0, bubbles: 0 });
-  const out = finish(problem, cell, kernel, run, units, domain, t0, gateDone[0] === NEVER ? Infinity : gateDone[0]);
+  const out = finish(problem, cell, kernel, run, units, domain, t0, clock, gateDone[0] === NEVER ? Infinity : gateDone[0]);
   out.reason = run.reason === 'Schrittgrenze erreicht' ? 'der Kolben ist am Ende der Kurve' : run.reason;
   out.full = gateDone[0] !== NEVER ? { t: gateDone[0] * units.dt, s: sAt(gateDone[0]) } : null;
   out.facts.unshift(['Ende', out.full ? 'Kammer voll' : 'Ende der Kurve']);

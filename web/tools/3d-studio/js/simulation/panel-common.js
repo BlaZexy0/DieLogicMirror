@@ -8,7 +8,7 @@
    die Kammerfüllung hat neben Gitter und Partikeln das Metamodell, die
    Angussfüllung nicht. Deshalb bekommen die Zeilen die Liste übergeben. */
 
-import { segRow, detailsBlock, factsBlock, warnLine } from '../studio/rows.js';
+import { segRow, detailsBlock, factsBlock, warnLine, info } from '../studio/rows.js';
 
 /* Gezeichnet, nicht geschrieben: „▶" und „⏸" zeigen Firefox und Chrome je nach
    Schrift als buntes Emoji — auch mit U+FE0E dahinter. */
@@ -16,9 +16,9 @@ const icon = d => '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="
 export const PLAY = icon('M2.5 1l8.5 5-8.5 5z');
 export const PAUSE = icon('M2 1h3v10H2zM7 1h3v10H7z');
 
-/* Das ⓘ wie in js/studio/rows.js — für die Zeilen, die es dort nicht gibt
+/* Das ⓘ aus js/studio/rows.js — auch für die Zeilen, die es dort nicht gibt
    (Bezeichnung wechselt, Abspielen in der Zeile, zwei Felder). */
-export const info = help => ' <button type="button" class="st-info" data-help="' + help + '" aria-label="Erklärung">ⓘ</button>';
+export { info };
 
 /* Die Bezeichnung des Felds wechselt mit dem Verfahren (Zellkante oder
    Partikelabstand) — deshalb eine eigene Zeile statt numberRow. Das Metamodell

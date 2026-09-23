@@ -1,14 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" width="26" height="26" fill="none">
-  <!-- Teilekosten — Münze, Kostenaufteilung, Hebel.
-       Raster: Motiv innerhalb 2…24, Strich 1,6 (Hilfslinien 1,4 · 70 %), Marker in der Warnfarbe (warn).
-       Farben aus der Palette (shared.css), Fallback für die Ansicht außerhalb der Seite. -->
+  <!-- Teilekosten: Münze, Kostenaufteilung, Hebel.
+       Raster: Motiv innerhalb 2…24, Strich 1,6 (Hilfslinien 1,4 · 70 %).
+       Farben sind Rollen der Palette (shared/palette.js): das Werkzeug in der
+       Hervorhebung (mark), die Kosten je Teil sind der eine Kennwert, um den
+       es dort geht. Die Deckkraft der Balken ist Zeichnung, keine Skala. Der
+       Hex-Rückfall ist der Standardwert der Rolle, für die Ansicht außerhalb
+       der Seite. -->
   <symbol id="icon" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="10" cy="10" r="7.2" stroke="var(--warn, #c2447e)" stroke-width="1.6"/>
-    <path d="M12.6 7.6 C12 7 11.2 6.8 10.5 6.8 C8.7 6.8 7.7 8.2 7.7 10 C7.7 11.8 8.7 13.2 10.5 13.2 C11.2 13.2 12 13 12.6 12.4 M6.6 9.1 H11.2 M6.6 10.9 H11.2" stroke="var(--warn, #c2447e)" stroke-width="1.4"/>
-    <rect x="3" y="20" width="9.5" height="3.2" rx="1" fill="var(--warn, #c2447e)" opacity=".9"/>
-    <rect x="13.5" y="20" width="5.5" height="3.2" rx="1" fill="var(--warn, #c2447e)" opacity=".55"/>
-    <rect x="20" y="20" width="3" height="3.2" rx="1" fill="var(--warn, #c2447e)" opacity=".3"/>
-    <path d="M19 8.5 L23 8.5 M23 8.5 L21 6.5 M23 8.5 L21 10.5" stroke="var(--warn, #c2447e)" stroke-width="1.4" opacity=".7"/>
+    <circle cx="10" cy="10" r="7.2" stroke="var(--mark, #b23797)" stroke-width="1.6"/>
+    <path d="M12.6 7.6 C12 7 11.2 6.8 10.5 6.8 C8.7 6.8 7.7 8.2 7.7 10 C7.7 11.8 8.7 13.2 10.5 13.2 C11.2 13.2 12 13 12.6 12.4 M6.6 9.1 H11.2 M6.6 10.9 H11.2" stroke="var(--mark, #b23797)" stroke-width="1.4"/>
+    <rect x="3" y="20" width="9.5" height="3.2" rx="1" fill="var(--mark, #b23797)" opacity=".9"/>
+    <rect x="13.5" y="20" width="5.5" height="3.2" rx="1" fill="var(--mark, #b23797)" opacity=".55"/>
+    <rect x="20" y="20" width="3" height="3.2" rx="1" fill="var(--mark, #b23797)" opacity=".3"/>
+    <path d="M19 8.5 L23 8.5 M23 8.5 L21 6.5 M23 8.5 L21 10.5" stroke="var(--mark, #b23797)" stroke-width="1.4" opacity=".7"/>
   </symbol>
   <use href="#icon"/>
 </svg>

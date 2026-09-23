@@ -52,14 +52,26 @@ zugehörige Feldgruppe ausgeblendet und eine Zusammenfassung unter dem Select
 zeigt die übernommenen Werte; Handänderung eines Preset-Felds springt zurück
 auf „manuell". Eine neue Domäne = Eintrag in `PRESET_DOMAINS`, Feldgruppe mit
 `preset: '<id>'`, config-Datei und Select in beiden HTML-Seiten.
-- **`/shared/palette.js`** — UI-Farben (einzige Quelle, siehe ../../README).
-- **`/shared/theme.js`** — Diagrammfarben (`window.__THEME__`): Serien, Marker,
-  Grenzlinien, Zielbänder, Farben/Linienfarben des (φ, λ)-Fensters und die
-  Heatmap-Farbrampe. Bei eigenen Farben auf Kontrast und unterscheidbare
-  Helligkeit der Serienfarben achten (Farbfehlsichtigkeit).
+- **`/shared/palette.js`** — alle Farben als Rollen (einzige Quelle, siehe
+  ../../README): Ampel (gut, knapp, schlecht) nur für Urteile, `mark` für
+  den Arbeitspunkt, Sachfarben für Dinge (Schmelze, Anguss, Werkzeug,
+  Maschine, Luft, Vakuum …). Dazu die festen Farbleisten (`LEISTEN`), in
+  jedem Schema gleich: `heat` für die Heatmaps.
+- **`/shared/theme.js`** — Diagrammfarben (`window.__THEME__`), aus der
+  Palette abgeleitet, keine eigenen Werte: `chart` (Rollen wie `ink`,
+  `die`, `machine`, `feasible`, `target`, `mask`, `mark`, `ref`),
+  `limits` (Farbe einer Grenze = ihre Familie: Maschine, Werkzeug, Prozess,
+  Luft, Schmelze), `map`/`mapLines` fürs (φ, λ)-Fenster, `heatStops`
+  (die feste Leiste `heat`, sieben Stützstellen aus Turbo) für die Heatmaps.
+- **`/shared/schemes.js`** — das Farbschema. Beim Wechsel füllt
+  `__THEME__.derive()` diese Objekte an Ort und Stelle neu und feuert
+  `dielogic:scheme`; `main.js`/`single.js` zeichnen darauf Diagramme und
+  Füllkammer neu (die Diagrammdaten tragen Rollennamen, `farbe()` in
+  `core/theme.js` löst sie beim Zeichnen auf). Varianten derselben Größe
+  unterscheiden Strichmuster (`dash`) und Deckkraft (`alpha`), nie
+  Mischfarben: aus diesen Diagrammen entstehen die Theorie-Bilder.
 
-Beide Dateien sind JSON-Daten in einer `window.__…`-Zuweisung und werden als
-klassische `<script>`-Tags geladen — ohne Build direkt editierbar.
+Alle drei Dateien sind klassische `<script>`-Tags und laufen ohne Build.
 
 ## Funktionen pro Diagrammkarte
 
@@ -120,11 +132,11 @@ js/
     domain.js          die Eingabedomäne, angewandt (welche Werte überhaupt rechnen dürfen)
     limits.js          Grenzen (Ungleichungs-Restriktionen) als Daten
     state.js           zentraler Zustand + subscribe/notify
-    theme.js           übernimmt window.__THEME__
+    theme.js           dieselben Objekte wie window.__THEME__ + farbe(Rolle)
     airsim/            Luftsimulation der Füllkammer (siehe unten)
     simstore.js        hält ihr Ergebnis; rechnet bei jeder Eingabe synchron neu
   render/            Canvas-Renderer (theme-gesteuert)
-    base.js            Rahmen, Achsen, Marker, Farbrampe, Konturen
+    base.js            Rahmen, Achsen, Marker, Farbskala (ramp), Konturen
     limits.js          zeichnet Grenzen: Schraffuren, Zielbänder, Legende
     line.js / heat.js / map.js / donut.js / draw.js / hover.js
   charts/            EIN Modul pro Diagramm
@@ -200,12 +212,12 @@ ein Objekt pro Restriktion in `q.limits = [ … ]` (Erzeuger in
   (Band zwischen Kurven, z. B. das v_a-Fenster im Prozessfenster).
 - `refline(id, label, on, value)` — reine Referenzlinie ohne Fläche.
 - Maske: `limit(…, fn, { mask: true })` (Kurvenschranke auf `y`) — die
-  Ausschlussseite ist prinzipiell unerreichbar und wird deckend grau
-  gefüllt (`theme.chart.maskFill`), die Frontlinie durchgezogen gezeichnet;
+  Ausschlussseite ist prinzipiell unerreichbar und wird deckend gefüllt
+  (`theme.chart.mask`), die Frontlinie durchgezogen gezeichnet;
   alle anderen Grenzen des Diagramms werden auf die erreichbare Seite
   geclippt (z. B. die Hüllkurve im PQ²).
 - `q.feasible = 'Label'` — füllt die Schnittmenge der erlaubten Seiten
-  aller harten Grenzen grün (`theme.chart.okFill`, wie das machbare Band
+  aller harten Grenzen (`theme.chart.feasible`, wie das machbare Band
   im (φ, λ)-Fenster) und setzt einen Legendeneintrag. Optional teilt
   `q.feasibleSplit = { fn, label }` das Band an einer Kurve: oberhalb
   heller gefüllt (z. B. Maschinenlinie im PQ² — Fenster erfüllt, aber
@@ -216,9 +228,12 @@ ein Objekt pro Restriktion in `q.limits = [ … ]` (Erzeuger in
 
 Linien- und Heatmap-Renderer zeichnen daraus Linien, Schraffuren und die
 Legende (render/limits.js); der Heatmap-Hover meldet verletzte Grenzen am
-Mauspunkt. Die Farbe kommt aus `theme.limits[id]` (/shared/theme.js) —
-gleiche id = gleiche Farbe in jedem Diagramm. Für machbare Bänder zwischen
-mehreren Kurvenschranken (wie im (φ, λ)-Fenster) liefert
+Mauspunkt. Die Farbe kommt aus `theme.limits[id]` (/shared/theme.js): die
+Familie, aus der die Grenze stammt (Maschine, Werkzeug, Prozess, Luft,
+Schmelze), gleiche id = gleiche Farbe in jedem Diagramm. Glieder einer
+Familie unterscheidet das Strichmuster (`limitDash` in render/limits.js)
+und die Seite der Schraffur, die auch der Legendeneintrag zeigt. Für
+machbare Bänder zwischen mehreren Kurvenschranken (wie im (φ, λ)-Fenster) liefert
 `feasibleBand()` aus `js/core/limits.js` die Polygone samt bindender
 Grenze je Stützstelle. Eine neue Restriktion ist damit ein weiterer
 Eintrag im Array — Zeichnung, Legende und Hover kommen automatisch.

@@ -18,7 +18,7 @@
                  Flächen folgen als zusammenhängender Fleck der Mehrheit
                  ihrer Nachbarn (Kantenlänge), damit die Trennlinie nicht
                  über die Wand zackt; bei Gleichstand der beweglichen
-                 Hälfte. Die Schrägen-Ansicht zeigt sie rot (0°).
+                 Hälfte. Die Schrägen-Ansicht zeigt sie als „schlecht" (0°).
    3. SCHIEBER   Was keine Hälfte sieht, bekommt ein Schieber, der es
                  frei sieht. Eine Fläche PARALLEL zur Schieberrichtung
                  (0°) ist erlaubt: eine Querbohrung wird von einem Kern

@@ -34,9 +34,10 @@
    (host.changed): Rückgängig, Entwurf, „Ungespeichert". */
 
 import * as T from 'three';
+import { onScheme, ROLE, VIEW } from '../part/colors.js';
 import { facts, segButtons, slider, numberInput } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit } from '../studio/format.js';
-import { kpis } from '../studio/rows.js';
+import { kpis, esc } from '../studio/rows.js';
 import { baseName } from '../studio/files.js';
 import { sampleField, CELL_RANGE } from '../part/field.js';
 import { surfaceNets } from '../part/surfacenets.js';
@@ -45,22 +46,23 @@ import { createHandles, SELECTED_RING } from '../handles.js';
 import { setTris, download, safeName, dirText } from '../ui/common.js';
 import * as M from './model.js';
 import { buildItem, buildAll, volumeOf, wallClearance, wallVerdict } from './geom.js';
-import { planCooling } from './auto.js';
+import { planCooling, outwardNormal, SPACING_FACTOR } from './auto.js';
 import { MODES, INSPECTOR, GROUPS, DARSTELLUNG } from './panel.js';
 
-const SHELL_COLOR = '#3fc2b6';
+/* Die Abstandsfläche ist ein Hilfsbild, kein Bauteil: die Rolle der
+   Hilfsflächen (js/part/colors.js), durchscheinend. */
+const shellColor = () => VIEW.helper;
 const SHELL_OPACITY = 0.22;
-/* Wer den Mindest-Wandabstand unterschreitet: ein Rot, das sich vom Orange
-   der Kühlstiche und vom Blau der Kanäle gleich weit absetzt. */
-const TIGHT_COLOR = '#c2185b';
+/* Wer den Mindest-Wandabstand unterschreitet, trägt das Urteil der Prüfung:
+   darunter „knapp", eine Bohrung, die das Bauteil schneidet, „schlecht" —
+   dieselben Stufen wie in der Liste und den Kennzahlen. */
+const TIGHT = { warn: { color: () => ROLE.caution, text: 'zu nah an der Kavität' },
+  bad: { color: () => ROLE.bad, text: 'Durchbruch' } };
 /* Was das Feld nicht besser weiß: der Feldwert ist zwischen den
    Rasterpunkten interpoliert, die Abstandsfläche liegt als Dreiecksnetz
    darin. Ein Viertel der Zellkante deckt beides — gemessen am Beispielteil
    liegen Spitzen auf der Fläche um weniger als ein Zehntel daneben. */
 const TOL_CELLS = 0.25;
-/* Zwei Bohrungen, die sich berühren, sind eine: enger als 1,5 × Ø setzt die
-   Automatik nicht, gleich was der Regler sagt — und sagt es dazu. */
-const SPACING_FACTOR = 1.5;
 /* Was das Feld kostet: je Dreieck werden die Zellen im Band um es herum
    besucht, (2·Band/Zellkante + 1)³ Stück, rund 17 ns je Besuch (gemessen am
    Getriebedeckel, 60 000 Dreiecke: 6,5 mm → 1,5 s, 3 mm → 10 s, 2 mm → 33 s).
@@ -100,7 +102,9 @@ export function createTemperierTool(host) {
   const state = {
     plan: M.emptyPlan(), field: null, fieldH: 0, shellDist: null, shellCount: 0, lifted: null,
     h: 6, hAuto: true, dirMode: 'normal', both: false, shellClear: true,
-    defaults: { d: 20, len: 200, kd: 10 },
+    /* Die Vorgaben für neue Elemente stehen im Plan (js/cooling/model.js):
+       mit „Auto" hängt der Mindest-Wandabstand an ihnen. */
+    get defaults() { return state.plan.defaults; },
     /* 30 mm: die Vorgabe liegt AUF dem Boden von 1,5 × Ø 20 — früher stand der
        Regler auf 25 und es wurde still mit 30 gerechnet. */
     auto: { count: 8, spacing: 30, replace: true, stats: null, last: null },
@@ -124,7 +128,7 @@ export function createTemperierTool(host) {
      Deckend (Darstellung) zeigt sie ihre Form — Taschen, Rippenschatten,
      wo die Fläche eng wird — und die Stiche und Kanäle davor. */
   const shellMat = new T.MeshStandardMaterial({
-    color: SHELL_COLOR, roughness: 0.6, metalness: 0.02, transparent: true, opacity: SHELL_OPACITY,
+    color: shellColor(), roughness: 0.6, metalness: 0.02, transparent: true, opacity: SHELL_OPACITY,
     depthWrite: false, side: T.DoubleSide, flatShading: true
   });
   function setShellClear(on) {
@@ -139,12 +143,22 @@ export function createTemperierTool(host) {
   shellMesh.visible = false;
   group.add(shellMesh);
 
-  /* Je Art ein Körper in der Artfarbe — und einer für alle, die zu nah
-     an der Kavität stehen. */
+  /* Je Art ein Körper in der Artfarbe — und je Urteil einer für alle, die
+     zu nah an der Kavität stehen. */
   const bodyMat = color => new T.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.1, side: T.DoubleSide });
-  const meshes = { tight: new T.Mesh(new T.BufferGeometry(), bodyMat(TIGHT_COLOR)) };
+  const meshes = {};
   for (const [type, meta] of Object.entries(M.TYPES)) meshes[type] = new T.Mesh(new T.BufferGeometry(), bodyMat(meta.color));
+  for (const [v, t] of Object.entries(TIGHT)) meshes[v] = new T.Mesh(new T.BufferGeometry(), bodyMat(t.color()));
   for (const m of Object.values(meshes)) group.add(m);
+  /* Ein Wechsel des Farbschemas: Körper und Fläche umfärben, Liste,
+     Auswahlfeld und Legende neu. Die Griffe gleicht js/handles.js selbst ab. */
+  onScheme(() => {
+    for (const [type, meta] of Object.entries(M.TYPES)) meshes[type].material.color.set(meta.color);
+    for (const [v, t] of Object.entries(TIGHT)) meshes[v].material.color.set(t.color());
+    shellMat.color.set(shellColor());
+    if (wired) syncSelection();
+    view.invalidate();
+  });
 
   const hasShell = () => state.shellDist !== null;
 
@@ -163,7 +177,8 @@ export function createTemperierTool(host) {
   const handles = createHandles({
     view,
     getRefMesh: () => shellMesh,
-    markColor: M.TYPES.stich.color,
+    /* Die Marke beim Zielen in der Farbe der Art, die gesetzt wird. */
+    markColor: () => M.TYPES[state.placing || 'stich'].color,
     items: () => {
       const out = [];
       for (const it of M.allItems(state.plan)) {
@@ -184,6 +199,8 @@ export function createTemperierTool(host) {
     onSelect: () => { cancelAim(); syncSelection(); },
     onChange: what => {
       if (what === 'drag') { rebuild('drag'); return; }
+      /* Esc mitten im Zug: zurück zum Stand davor — der Zug war nie ein Schritt. */
+      if (what === 'cancel') { if (!host.revert()) { rebuild(); syncSelection(); } return; }
       rebuild();
       if (what !== 'drop') return;
       syncSelection();
@@ -199,7 +216,9 @@ export function createTemperierTool(host) {
   /* ── Prüfen: Wandabstand gegen den Mindest-Wandabstand ───── */
   const minWall = () => M.minWallOf(state.plan, state.defaults.d, state.defaults.kd);
   const tolerance = () => (state.field ? TOL_CELLS * state.field.h : 0);
-  const clearanceOf = it => (state.field ? wallClearance(it, (x, y, z) => sampleField(state.field, x, y, z)) : null);
+  /* Abgetastet je halbe Zellkante (js/cooling/geom.js): was dazwischen
+     entgeht, liegt in der Toleranz. */
+  const clearanceOf = it => (state.field ? wallClearance(it, (x, y, z) => sampleField(state.field, x, y, z), state.field.h / 2) : null);
   function judge() {
     state.checks.clear();
     const min = minWall(), tol = tolerance();
@@ -225,9 +244,9 @@ export function createTemperierTool(host) {
   /* ── Kette: Plan → Anzeige ───────────────────────────────── */
   function rebuild(mode) {
     judge();
-    const by = { tight: [] };
-    for (const type of Object.keys(M.TYPES)) by[type] = [];
-    for (const it of M.allItems(state.plan)) by[isTight(it.id) ? 'tight' : it.type].push(buildItem(it));
+    const by = {};
+    for (const key of Object.keys(meshes)) by[key] = [];
+    for (const it of M.allItems(state.plan)) by[isTight(it.id) ? verdictOf(it.id) : it.type].push(buildItem(it));
     for (const key of Object.keys(meshes)) setTris(meshes[key], [].concat(...by[key]), true);
     handles.refresh();
     view.invalidate();
@@ -262,9 +281,9 @@ export function createTemperierTool(host) {
     const cur = sel();
     ui('offender-list').innerHTML = off.map(it => {
       const ch = state.checks.get(it.id);
-      return '<button type="button" class="st-list-row ' + ch.verdict + (cur && cur.it.id === it.id ? ' active' : '') + '" data-item="' + it.id + '">'
+      return '<button type="button" class="st-list-row ' + ch.verdict + (cur && cur.it.id === it.id ? ' active' : '') + '" data-item="' + esc(it.id) + '">'
         + '<span class="dot" style="background:' + M.TYPES[it.type].color + '"></span>'
-        + '<span class="name">' + label(it) + (it.auto ? ' · automatisch' : '') + '</span>'
+        + '<span class="name">' + esc(label(it)) + (it.auto ? ' · automatisch' : '') + '</span>'
         + '<span class="val">' + (ch.verdict === 'bad' ? 'Durchbruch' : fmtUnit(ch.c, 'mm')) + '</span></button>';
     }).join('');
     ui('offender-note').textContent = off.length ? 'Ein Klick wählt es und holt es heran.'
@@ -392,6 +411,10 @@ export function createTemperierTool(host) {
     ui('dist').value = String(state.plan.dist);
     ui('dist-val').textContent = fmt(state.plan.dist, 0) + ' mm';
   }
+  function syncDefaults() {
+    if (!wired) return;
+    for (const [name, key] of [['def-d', 'd'], ['def-len', 'len'], ['def-kd', 'kd']]) ui(name).value = fmtPlain(state.defaults[key], 2);
+  }
 
   /* ── Auswahl ─────────────────────────────────────────────── */
   const sel = () => {
@@ -424,7 +447,7 @@ export function createTemperierTool(host) {
     const meta = M.TYPES[it.type];
     const stich = it.type === 'stich';
     shell.inspector.show({
-      title: '<span class="dot" style="background:' + meta.color + '"></span>' + meta.label + ' <code>' + it.id + '</code>'
+      title: '<span class="dot" style="background:' + meta.color + '"></span>' + meta.label + ' <code>' + esc(it.id) + '</code>'
         + (stich ? '' : ' <em>Ende ' + end.toUpperCase() + '</em>') + (it.auto ? ' <em>automatisch</em>' : '')
     });
     shell.status('<b>Achsenpfeil</b>: je Achse · <b>Punkt</b>: in der Bildebene · '
@@ -493,6 +516,9 @@ export function createTemperierTool(host) {
     return was;
   }
   host.cancelAim = cancelAim;
+  /* Esc mitten im Zug (js/handles.js): für den Rahmen, der Esc zuerst hier
+     anbieten kann — auch wenn noch ein Eingabefeld den Fokus hat. */
+  host.cancelDrag = () => !!handles.cancelDrag();
   const noShellReason = () => (!part.model ? NEEDS_PART
     : state.running ? 'Die Abstandsfläche wird gerade gerechnet. Gleich lässt sich setzen.'
       : 'Noch keine Abstandsfläche: im Modus „Abstandsfläche" berechnen.');
@@ -500,9 +526,17 @@ export function createTemperierTool(host) {
     const c = view.camera.position;
     return [c.x - point[0], c.y - point[1], c.z - point[2]];
   };
-  /* Der Strahl liefert die nach INNEN gerichtete Normale der Fläche, also
-     zum Bauteil hin; der Stich läuft nach außen. */
-  const dirAt = hit => M.directionFor(state.dirMode, [-hit.dir[0], -hit.dir[1], -hit.dir[2]], toCamera(hit.point));
+  /* „Vom Bauteil weg" sagt das Feld, nicht das Dreieck: der Strahl liefert
+     die Flächennormale vom Betrachter weg, und die zeigt nur dann zum
+     Bauteil, wenn man von außen auf die Fläche schaut. Steht die Kamera
+     zwischen Fläche und Bauteil (in einer Tasche, nah herangefahren), lief
+     der Stich ins Bauteil. Der Feldgradient ist die Normale der Automatik;
+     nur wo er keine Richtung weiß, gilt das Dreieck. */
+  const dirAt = hit => {
+    const face = [-hit.dir[0], -hit.dir[1], -hit.dir[2]];
+    const n = state.field ? outwardNormal(state.field, hit.point, face) : face;
+    return M.directionFor(state.dirMode, n, toCamera(hit.point));
+  };
   /* Gezielt wird auf die Abstandsfläche, und die steht im Modus „Setzen" im Bild. */
   const toSetzen = () => { if (shell.mode !== 'setzen') shell.setMode('setzen'); };
 
@@ -581,7 +615,7 @@ export function createTemperierTool(host) {
     ['stich', 'Kühlstich', 'Ein Klick auf die Abstandsfläche: dort sitzt die Spitze.'],
     ['kanal', 'Kanal (2 Punkte)', 'Zwei Klicks auf die Abstandsfläche: die beiden Enden.']
   ].map(([type, text, title]) => ({
-    id: type, label: text, icon: M.TYPES[type].color, title,
+    id: type, label: text, icon: () => M.TYPES[type].color, title,
     enabled: () => hasShell() && !state.running, reason: noShellReason,
     active: () => state.placing === type,
     onClick: () => startPlace(type)
@@ -591,7 +625,13 @@ export function createTemperierTool(host) {
   /* N Kühlstiche auf der Abstandsfläche, so verteilt, dass jede Stelle im
      Bauteil — dicke eher als dünne — eine Bohrung in der Nähe hat
      (js/cooling/auto.js). Die Richtung folgt der Wahl unter „Richtung";
-     bei „Normale" ist es der Feldgradient an der Stelle. */
+     bei „Normale" ist es der Feldgradient an der Stelle.
+
+     Was gesetzt wird, besteht die Prüfung: jede Stelle wird vorher mit
+     genau dem Urteil gemessen, das der Modus „Prüfung" fällt, auf der
+     ganzen Länge des Stichs. Was schon steht (von Hand gesetzt, Kanäle, ohne
+     „Ersetzen" auch die automatischen von vorhin), bleibt und wird auf
+     Abstand gehalten. Passen nicht so viele, werden es weniger. */
   const spacingUsed = () => {
     const floor = state.defaults.d * SPACING_FACTOR;
     return { value: Math.max(state.auto.spacing, floor), floored: state.auto.spacing < floor };
@@ -603,13 +643,22 @@ export function createTemperierTool(host) {
     if (!pos || !pos.array.length) return;
     if (state.auto.replace) M.removeAuto(state.plan);
     const sp = spacingUsed();
-    const res = planCooling(state.field, pos.array, { count: state.auto.count, minSpacing: sp.value });
-    for (const site of res.sites) {
-      const dir = M.directionFor(state.dirMode, site.n, toCamera(site.p));
-      M.addStich(state.plan, site.p, dir, { d: state.defaults.d, len: state.defaults.len, auto: true });
-    }
+    const { d, len } = state.defaults;
+    const min = minWall(), tol = tolerance();
+    const res = planCooling(state.field, pos.array, {
+      count: state.auto.count, minSpacing: sp.value, d, length: len,
+      direction: (p, n) => M.directionFor(state.dirMode, n, toCamera(p)),
+      fits: (p, dir) => wallVerdict(clearanceOf({ type: 'stich', p, dir, d, len }), min, tol) === 'ok',
+      fixed: M.allItems(state.plan).map(it => ({ ...M.axisOf(it), d: it.d, line: it.type === 'kanal' }))
+    });
+    for (const site of res.sites) M.addStich(state.plan, site.p, site.dir, { d, len, auto: true });
     state.auto.stats = res.stats;
-    state.auto.last = { placed: res.sites.length, wanted: state.auto.count, spacing: sp.value };
+    /* Hält keine Stelle die Prüfung, sagt die Zeile warum: schon an der
+       Spitze (ein eigener Mindest-Wandabstand über Achsabstand − Ø/2) oder
+       erst auf dem Weg nach außen. */
+    const tip = state.plan.dist - d / 2;
+    state.auto.last = { placed: res.sites.length, wanted: state.auto.count, spacing: sp.value, usable: res.usable,
+      tip: !res.usable && tip < min - tol ? { tip, min } : null };
     handles.select(null);
     updateAutoFacts();
     rebuild();
@@ -637,7 +686,12 @@ export function createTemperierTool(host) {
     const last = state.auto.last;
     if (last) {
       notes.push(fmt(last.placed, 0) + (last.placed === 1 ? ' Kühlstich' : ' Kühlstiche') + ' gesetzt');
-      if (last.placed < last.wanted) { warn = true; notes.push('nur so viele Stellen halten den Mindestabstand: Abstand kleiner wählen oder weniger Bohrungen'); }
+      if (last.placed < last.wanted) {
+        warn = true;
+        notes.push(last.usable ? 'nur so viele Stellen halten den Stichabstand: Abstand kleiner wählen oder weniger Bohrungen'
+          : last.tip ? 'keine Stelle hält den Mindest-Wandabstand von ' + fmtUnit(last.tip.min, 'mm') + ': an der Spitze bleiben nur Achsabstand − Ø/2 = ' + fmtUnit(last.tip.tip, 'mm')
+            : 'keine Stelle, an der ein Stich dieser Länge und Richtung den Mindest-Wandabstand hält: kürzere Stiche oder eine andere Richtung wählen');
+      }
     }
     const tight = M.allItems(state.plan).filter(it => it.auto && isTight(it.id)).length;
     if (tight) { warn = true; notes.push(fmt(tight, 0) + ' automatische unter dem Mindest-Wandabstand (siehe „Prüfung")'); }
@@ -664,13 +718,14 @@ export function createTemperierTool(host) {
     updateLegend();
     view.invalidate();
   }
-  /* Die Legende nennt nur, was im Bild ist: die Warnfarbe, solange etwas zu
+  /* Die Legende nennt nur, was im Bild ist: die Urteile, solange etwas zu
      nah steht, die Fläche in den Modi, die sie zeigen. */
   function updateLegend() {
     const row = (color, text, extra = '') => '<div class="lg-row"><span class="dot" style="background:' + color + extra + '"></span>' + text + '</div>';
+    const off = offenders();
     shell.legend(Object.values(M.TYPES).map(t => row(t.color, t.label)).join('')
-      + (offenders().length ? row(TIGHT_COLOR, 'zu nah an der Kavität') : '')
-      + (shellMesh.visible ? row(SHELL_COLOR, 'Abstandsfläche', ';opacity:.5') : '')
+      + Object.entries(TIGHT).map(([v, t]) => (off.some(it => verdictOf(it.id) === v) ? row(t.color(), t.text) : '')).join('')
+      + (shellMesh.visible ? row(shellColor(), 'Abstandsfläche', ';opacity:.5') : '')
       + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>');
   }
   const modes = MODES.map(m => ({ ...m, enter: applyMode, leave() {}, primary: () => null }));
@@ -738,20 +793,23 @@ export function createTemperierTool(host) {
       host.changed(e.target.checked ? 'Mindest-Wandabstand: Auto' : 'Mindest-Wandabstand von Hand');
     });
 
-    /* Setzen: Richtung, Vorgaben, Automatik — Einstellungen der Seite. Die
-       Durchmesser bestimmen mit „Auto" den Mindest-Wandabstand. */
+    /* Setzen: Richtung und Automatik sind Einstellungen der Seite. Die
+       Vorgaben gehören zum Plan: ihre Durchmesser bestimmen mit „Auto" den
+       Mindest-Wandabstand, also das Urteil über jedes Element — eine
+       Änderung ist ein Schritt und kommt mit in die Datei. */
     segButtons(ui('dir-seg'), v => { if (M.DIRECTIONS[v]) state.dirMode = v; });
-    const vorgabe = (name, key, meta) => numberInput(ui(name), v => {
+    const vorgabe = (name, key, what) => numberInput(ui(name), v => {
       if (same(v, state.defaults[key])) return v;
       state.defaults[key] = v;
       syncMinWall();
       rebuild();
       syncSelection();
+      host.changed(what + ' geändert');
       return v;
-    }, { min: meta.min, max: meta.max, unit: 'mm' });
-    vorgabe('def-d', 'd', M.PARAM_META.d);
-    vorgabe('def-len', 'len', M.PARAM_META.len);
-    vorgabe('def-kd', 'kd', M.PARAM_META.d);
+    }, { min: M.DEFAULT_META[key].min, max: M.DEFAULT_META[key].max, unit: 'mm' });
+    vorgabe('def-d', 'd', 'Vorgabe Kühlstich-Ø');
+    vorgabe('def-len', 'len', 'Vorgabe Kühlstich-Länge');
+    vorgabe('def-kd', 'kd', 'Vorgabe Kanal-Ø');
     slider(ui('auto-count'), v => { state.auto.count = v; }, v => fmt(v, 0), ui('auto-count-val'));
     slider(ui('auto-spacing'), v => { state.auto.spacing = v; if (wired) host.refreshActions(); }, v => fmt(v, 0) + ' mm', ui('auto-spacing-val'));
     ui('auto-replace').addEventListener('change', e => { state.auto.replace = e.target.checked; });
@@ -812,6 +870,7 @@ export function createTemperierTool(host) {
 
     wired = true;
     syncDist();
+    syncDefaults();
     syncMinWall();
     updateShellFacts();
     updateAutoFacts();
@@ -826,6 +885,7 @@ export function createTemperierTool(host) {
     state.auto.last = null; state.auto.stats = null;
     handles.select(null);
     syncDist();
+    syncDefaults();
     syncMinWall();
     updateAutoFacts();
     rebuild();
@@ -841,10 +901,11 @@ export function createTemperierTool(host) {
 
   function onPart(model) {
     /* Ein Element sitzt vor der Wand EINES Bauteils: ein neues beginnt leer —
-       mit dem Achsabstand und dem Mindest-Wandabstand, die gerade gelten. Der
-       bisherige Plan bleibt als Entwurf bei seinem Bauteil. */
+       mit dem Achsabstand, den Vorgaben und dem Mindest-Wandabstand, die
+       gerade gelten. Der bisherige Plan bleibt als Entwurf bei seinem Bauteil. */
     const fresh = M.emptyPlan();
     fresh.dist = state.plan.dist;
+    fresh.defaults = { ...state.plan.defaults };
     if (Number.isFinite(state.plan.minWall)) fresh.minWall = state.plan.minWall;
     state.field = null; state.fieldH = 0; state.shellDist = null; state.shellCount = 0; state.lifted = null;
     state.cancelled = false; state.held = false; state.ready = false;
@@ -882,6 +943,7 @@ export function createTemperierTool(host) {
       const still = it && (it.type === 'stich' ? end === 'p' : end === 'a' || end === 'b');
       handles.select(still ? keep : back.length === 1 ? back[0].id + (back[0].type === 'kanal' ? ':a' : '') : null);
       syncDist();
+      syncDefaults();
       syncMinWall();
       rebuild();
       syncSelection();
@@ -894,7 +956,14 @@ export function createTemperierTool(host) {
     }],
     keys: {
       Delete: () => removeSelected(),
-      Escape: () => { if (!handles.selected) return false; handles.select(null); return true; }
+      /* Esc bricht zuerst einen Zug ab (der Griff springt zurück), sonst hebt
+         es die Auswahl auf. */
+      Escape: () => {
+        if (handles.cancelDrag()) return true;
+        if (!handles.selected) return false;
+        handles.select(null);
+        return true;
+      }
     },
     onPartStart() { state.ready = false; },
     onPart,

@@ -3,7 +3,6 @@
 import { series, line, target } from './helpers.js';
 import { seq, fmt, subHTML } from '../core/format.js';
 import { total } from '../core/physics.js';
-import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
 const PI = Math.PI;
@@ -16,7 +15,7 @@ export default {
 
   calc(v) {
     const x = seq(v.dmin, v.dmax, 140);
-    const q = line(x, [series('Füllgrad', theme.chart.series1, x,
+    const q = line(x, [series('Füllgrad', 'ink', x,
       d => 100e9 * ((total(v) + v.biscuit) / v.density) / (v.length * 0.25 * PI * d * d))],
       'Kolben-Ø in mm', 'Füllgrad in %',
       'Dosiert ' + fmt(total(v) + v.biscuit) + ' kg (inkl. Pressrest) · Kammer ' + fmt(v.length) + ' mm');

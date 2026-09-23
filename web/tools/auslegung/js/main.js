@@ -11,7 +11,7 @@ import { initPresetSelects } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
 import { renderKpis } from './ui/kpis.js';
 import { buildChamberCard, renderChamber } from './ui/chamber.js';
-import { buildCard, renderCard } from './ui/cards.js';
+import { buildCard, renderCard, paintCard } from './ui/cards.js';
 import { initSim } from './core/simstore.js';
 
 const cards = {};
@@ -79,6 +79,16 @@ async function init() {
 
   let rt;
   window.onresize = () => { clearTimeout(rt); rt = setTimeout(render, 120); };
+
+  /* Farbschema gewechselt (shared/schemes.js): was selbst malt, neu
+     zeichnen: die Diagramme aus ihren Daten (sie tragen Rollen, keine
+     Farbwerte; gerechnet wird nichts, auch nicht bei ungültigen Eingaben)
+     und die Füllkammer, deren SVG die Farbwerte selbst trägt. Kennzahlen,
+     Leisten und Lineal sind CSS-Tokens und folgen von allein. */
+  document.addEventListener('dielogic:scheme', () => {
+    charts.forEach(def => paintCard(cards[def.id], def));
+    if (chamberCard && chamberCard._v) renderChamber(chamberCard, chamberCard._v);
+  });
 
   subscribe(render);
   requestAnimationFrame(() => requestAnimationFrame(render));

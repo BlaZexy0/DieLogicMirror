@@ -12,7 +12,11 @@
    und Rechenwerk. Die Startwerte für JavaScript sind gemessen, die für
    WebGPU geschätzt — jeder fertige Lauf verbessert sie für DIESES Gerät und
    legt sie im Browser ab. Die Zeile „grob … s" unter der Zellkante ist damit
-   nach dem ersten Lauf ehrlich.
+   nach dem ersten Lauf ehrlich. Gemessen wird mit runClock(): erst ab dem
+   ersten Schritt (Gitter aufbauen, Pipelines übersetzen, Zur-Ruhe-Kommen
+   gehören nicht dazu; die Schätzung zählt sie ebenso wenig), und ein Lauf,
+   während dessen die Seite verborgen war, lehrt nichts: der Browser drosselt
+   dann, und das Gelernte machte jede spätere Schätzung zu lang.
 
    Dazu die Bilder, auf die JavaScript im Browser wartet (frameMs): die
    Laufschleifen (js/lbm/run.js, js/sph/run.js) geben nach je 40 ms Rechnen
@@ -23,6 +27,11 @@
    JEDEM Schritt — ein Gitterlauf dauerte 66 s statt 28 s.) */
 
 import { fmt } from '../../studio/format.js';
+import { isAbort } from '../../abort.js';
+import { tick } from '../../lbm/run.js';
+
+/* Luft holen, auch in einem Reiter im Hintergrund (js/lbm/run.js). */
+export { tick };
 
 const hasGpuObject = () => typeof navigator !== 'undefined' && !!navigator.gpu;
 
@@ -36,7 +45,10 @@ export async function probeGpu() {
   return env.gpu;
 }
 
-const KEY = 'dielogic-sim-tempo';
+/* Seit 2026-09-22 lernt das Tempo nur das Rechnen der Schritte und nur aus Läufen, die zu sehen
+   waren (runClock); was vorher gelernt war, zählte Aufbau und Hintergrund mit und machte jede
+   Schätzung zu lang — es gilt nicht mehr und geht. */
+const KEY = 'dielogic-sim-tempo-2', OLD_KEY = 'dielogic-sim-tempo';
 /* Das Metamodell zählt anders: ms je Kolbenstellung und Schicht (es rechnet nicht in Schritten). */
 const START = { 'lbm-gpu': 6e-6, 'lbm-cpu': 1.2e-4, 'sph-gpu': 4e-5, 'sph-cpu': 3e-3, 'meta-wasm': 0.38 };
 const IN_BROWSER = typeof navigator !== 'undefined' && /Mozilla/.test(navigator.userAgent || '');
@@ -64,7 +76,9 @@ function load() {
   if (learned) return learned;
   learned = {};
   try {
-    const raw = globalThis.localStorage && globalThis.localStorage.getItem(KEY);
+    const ls = globalThis.localStorage;
+    if (ls && ls.removeItem) ls.removeItem(OLD_KEY);
+    const raw = ls && ls.getItem(KEY);
     const obj = raw ? JSON.parse(raw) : null;
     if (obj && typeof obj === 'object') for (const k of Object.keys(START)) if (obj[k] > 0 && Number.isFinite(obj[k])) learned[k] = obj[k];
   } catch { /* kein Speicher: es bleibt bei den Startwerten */ }
@@ -89,6 +103,31 @@ export function learnTempo(engine, kernel, ms, steps, count, packets = 0) {
   try { globalThis.localStorage.setItem(KEY, JSON.stringify(t)); } catch { /* egal */ }
 }
 
+/* Wie oft die Seite verborgen wurde — ein Lauf merkt sich den Stand beim
+   Start. Gezählt wird am Dokument, das gerade gilt (die Tests bauen mehrere). */
+let hiddenCount = 0, watched = null;
+const pageHidden = () => typeof document !== 'undefined' && !!document.hidden;
+function watchVisibility() {
+  const doc = typeof document !== 'undefined' ? document : null;
+  if (!doc || doc === watched || typeof doc.addEventListener !== 'function') return;
+  watched = doc;
+  doc.addEventListener('visibilitychange', () => { if (doc.hidden) hiddenCount++; });
+}
+
+/** Die Uhr eines Laufs. start() stellt sie auf null, sobald der Aufbau fertig
+    ist; ms() ist die Zeit seitdem. fair(): taugt der Lauf zum Lernen — nicht,
+    wenn die Seite zwischendurch (oder beim Start) verborgen war. */
+export function runClock() {
+  watchVisibility();
+  const seen = hiddenCount, hiddenAtStart = pageHidden();
+  let t0 = performance.now();
+  return {
+    start() { t0 = performance.now(); },
+    ms: () => performance.now() - t0,
+    fair: () => !hiddenAtStart && !pageHidden() && hiddenCount === seen
+  };
+}
+
 /** „grob 8 s", „grob 3 min" — mehr Stellen hätte die Schätzung nicht verdient. */
 export function roughTime(ms) {
   if (!Number.isFinite(ms)) return '';
@@ -102,7 +141,14 @@ export function roughTime(ms) {
 
 export const kernelName = k => (k === 'gpu' ? 'WebGPU' : k === 'wasm' ? 'WebAssembly' : 'JavaScript');
 
-export const tick = () => new Promise(r => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(() => r()) : setTimeout(r, 0)));
+/** Ein AbortError, den niemand verlangt hat (das Signal steht nicht), ist
+    kein Abbruch: eine verlorene Grafikkarte meldet sich beim Lesen genau so,
+    und der Rahmen (js/studio/job.js) zeigte „Abgebrochen", als hätte man
+    gedrückt. Er verlässt das Verfahren als gewöhnlicher Fehler. */
+export function gpuFailure(err, signal) {
+  if (!isAbort(err) || (signal && signal.aborted)) return err;
+  return new Error('Die Grafikkarte ist ausgestiegen (' + ((err && err.message) || 'AbortError') + '). Noch einmal simulieren, sonst die Seite neu laden.');
+}
 
 /** Zellen und Partikel lesbar: „1,25 Mio.", „120 Tsd.", „4,0 Tsd.", „512". */
 export const fmtCount = n => (n >= 1e6 ? fmt(n / 1e6, 2) + ' Mio.' : n >= 1e4 ? fmt(n / 1e3, 0) + ' Tsd.' : n >= 1e3 ? fmt(n / 1e3, 1) + ' Tsd.' : fmt(n, 0));

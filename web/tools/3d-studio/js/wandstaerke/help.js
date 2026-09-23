@@ -17,7 +17,9 @@ die Temperierung, rechnet der Temperierkanal-Designer selbst.</p>
 <p>Die Kantenlänge einer Rasterzelle in Millimetern. Vorgabe ist die halbe Wanddicke (2V/A des
 Bauteils), damit jede Wand mindestens zwei Zellen über ihre Dicke hat. Feiner heißt genauer und
 langsamer: Der Speicher wächst mit der dritten Potenz. Was das Raster kosten wird, steht unter dem
-Feld, <em>bevor</em> gerechnet wird; ein selbst gesetzter Wert überlebt ein neues Bauteil.</p>
+Feld, <em>bevor</em> gerechnet wird; ein selbst gesetzter Wert überlebt ein neues Bauteil. Mehr als
+16 Mio. Rasterpunkte rechnet die Seite nicht: Wären es mehr, vergrößert sie die Zelle in Schritten von
+zehn Prozent, und die Zeile unter den Kosten nennt die Zelle, mit der gerastert wird.</p>
 </section>
 <section data-help-anchor="isoflaeche">
 <h3>Isofläche</h3>
@@ -32,10 +34,10 @@ sich unter <b>Exportieren</b> als STL speichern.</p>
 <section data-help-anchor="schnitt">
 <h3>Feldschnitt</h3>
 <p>Ein Schnitt durch das Feld als Rasterbild: innen zeigt die Turbo-Skala die Wandstärke (blau an der
-Oberfläche, rot an der dicksten Stelle), außen bleibt es grau, die Bauteilkontur liegt als dunkle
-Linie darüber. Achse und Lage sind Regler. Im Schnitt steht nur das Bauteil, durchscheinend: Die
-Isofläche verdeckte die Schnittebene sonst. Das Bild ist bewusst ungeglättet: man soll das Raster
-sehen, aus dem die Fläche entsteht.</p>
+Oberfläche, rot an der dicksten Stelle, die Werte stehen an der Skala), außen steht das Grau des
+Bauteils, die Bauteilkontur liegt als Linie in der Farbe der Schrift darüber. Achse und Lage sind
+Regler. Im Schnitt steht nur das Bauteil, durchscheinend: Die Isofläche verdeckte die Schnittebene
+sonst. Das Bild ist bewusst ungeglättet: man soll das Raster sehen, aus dem die Fläche entsteht.</p>
 </section>
 <section data-help-anchor="waermezentren">
 <h3>Wärmezentren</h3>

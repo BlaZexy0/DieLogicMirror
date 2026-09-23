@@ -12,7 +12,8 @@ import { buildModel } from '../../../web/tools/3d-studio/js/part/model.js';
 import { buildField } from '../../../web/tools/3d-studio/js/part/field.js';
 import { surfaceNets } from '../../../web/tools/3d-studio/js/part/surfacenets.js';
 import * as M from '../../../web/tools/3d-studio/js/fill/model.js';
-import { solveFill, seedCells, fillBodyField, lastSpots, fracToSurface, sampleFrac } from '../../../web/tools/3d-studio/js/fill/solve.js';
+import { inletBody } from '../../../web/tools/3d-studio/js/fill/geom.js';
+import { solveFill, seedCells, fillBodyField, lastSpots, fracToSurface, sampleFrac, gateGap, GAP_CELLS } from '../../../web/tools/3d-studio/js/fill/solve.js';
 
 const cellAt = (f, idx) => {
   const [nx, ny] = f.dims;
@@ -151,4 +152,76 @@ test('Füllkörper: bei q = 1 das ganze Bauteil, bei q = 0,5 ein Teil, geschloss
   const surf = fracToSurface(f, r.frac);
   assert.ok(sampleFrac(f, surf, -50, 0, 10) < 0.2, 'Oberfläche am Anschnitt');
   assert.ok(sampleFrac(f, surf, 50, 0, 10) > 0.85, 'Oberfläche am Ende');
+});
+
+test('Anschnittkörper: nach außen gewickelt — das Volumen ist positiv, wie ein STL es braucht', () => {
+  const plan = M.emptyPlan();
+  for (const [n, rot] of [[[0, 1, 0], 0], [[1, 0, 0], 35], [[0.3, -0.2, 0.9], -70]]) {
+    const a = M.addInlet(plan, [3, -4, 5], n, { w: 30, h: 4 });
+    M.setRot(plan, a.id, rot);
+    const v = volume(inletBody(a));
+    assert.ok(Math.abs(v - 30 * 4 * 6) < 1e-6, 'w × h × 2 · 3 mm = 720, nicht −720: ' + v + ' (Normale ' + n + ')');
+  }
+});
+
+test('Datei: Kennungen geprüft, fehlende eindeutig, Werte in den Grenzen der Felder', () => {
+  const base = { format: M.FORMAT, version: 1 };
+  for (const id of ['<img src=x onerror=alert(1)>', 'a1"><b>', '7']) {
+    assert.throws(() => M.fromJSON({ ...base, items: [{ id, pos: [0, 0, 0], n: [1, 0, 0] }] }), /keine gültige Kennung/, id);
+  }
+  assert.throws(() => M.fromJSON({ ...base, items: [{ id: 'a1', pos: 'da', n: [1, 0, 0] }] }), /Lage fehlt/);
+  const plan = M.fromJSON({ ...base, alpha: 2, items: [
+    { pos: [0, 0, 0], n: [1, 0, 0], w: 9999, h: 0, share: 0 },
+    { pos: [1, 0, 0], n: [1, 0, 0], share: 250, rot: -999 },
+    { id: 'a1', pos: [2, 0, 0], n: [1, 0, 0], share: '' }
+  ] });
+  assert.equal(plan.alpha, M.ALPHA_RANGE[1], 'α wie der Regler: höchstens 1');
+  const it = M.allItems(plan);
+  assert.equal(it.length, 3);
+  assert.equal(new Set(it.map(x => x.id)).size, 3, 'drei verschiedene Kennungen: ' + it.map(x => x.id));
+  assert.equal(it[0].w, M.PARAM_META.w.max);
+  assert.equal(it[0].h, M.PARAM_META.h.min);
+  assert.equal(it[0].share, M.PARAM_META.share.min, 'ein Anteil liegt zwischen 1 und 100 %');
+  assert.equal(it[1].share, M.PARAM_META.share.max);
+  assert.equal(it[1].rot, -180);
+  assert.equal(plan.items.a1.share, null, 'leer heißt: aus der Fläche');
+});
+
+test('Anschnitte, die nichts füllen: neben dem Bauteil oder ohne Anteil am Strom — und die Rechnung sagt es', async () => {
+  const m = buildModel(S.box(120, 30, 10));
+  const f = await buildField(m, { res: 60, band: 5 });
+  const plan = M.emptyPlan();
+  const a = M.addInlet(plan, [-60, 0, 0], [-1, 0, 0], { w: 20, h: 4 });
+  const off = M.addInlet(plan, [60, 0, 0], [1, 0, 0], { w: 20, h: 4 });
+  /* Auf der Wand: kein Abstand. Daneben: mehr als zwei Zellkanten. */
+  assert.ok(gateGap(f, a) < 0.5 * f.h, 'auf der Wand: ' + gateGap(f, a));
+  off.pos = [60 + 3 * f.h, 0, 0];
+  assert.ok(gateGap(f, off) > GAP_CELLS * f.h, 'daneben: ' + gateGap(f, off));
+  assert.equal(gateGap(f, { pos: [500, 0, 0] }), Infinity, 'außerhalb des Rasters');
+  const r = await solveFill(f, plan, { alpha: 0 });
+  const st = id => r.stats.inlets.find(i => i.id === id);
+  assert.equal(st(off.id).closed, 'off');
+  assert.equal(st(off.id).cells, 0, 'füllt nichts — früher begann seine Front an der nächsten Zelle im Bauteil');
+  assert.equal(st(off.id).seeds, 0);
+  assert.equal(st(a.id).closed, null);
+  assert.equal(st(a.id).cells, r.cells, 'der andere füllt alles');
+  assert.equal(r.stats.unreached, 0);
+  /* 60 % + 60 % fest, ein dritter aus der Fläche: für ihn bleibt nichts. Früher
+     lief er mit dem Boden des Tempos trotzdem und füllte ein paar Prozent. */
+  off.pos = [60, 0, 0];
+  const b = M.addInlet(plan, [0, 15, 0], [0, 1, 0], { w: 20, h: 4 });
+  a.share = 60; off.share = 60;
+  assert.equal(M.shares(plan)[b.id], 0);
+  const r2 = await solveFill(f, plan, { alpha: 0 });
+  const st2 = id => r2.stats.inlets.find(i => i.id === id);
+  assert.equal(st2(b.id).closed, 'share');
+  assert.equal(st2(b.id).cells, 0);
+  assert.equal(st2(a.id).cells + st2(off.id).cells, r2.cells, 'die beiden mit Anteil füllen alles');
+  /* Sitzt keiner auf dem Bauteil, gibt es keine Füllung — ohne Absturz. */
+  const lone = M.emptyPlan();
+  M.addInlet(lone, [0, 500, 0], [0, 1, 0]);
+  const r3 = await solveFill(f, lone, {});
+  assert.equal(r3.stats.inlets[0].closed, 'off');
+  assert.equal(r3.stats.unreached, r3.cells);
+  assert.equal(lastSpots(f, r3.frac).length, 0);
 });

@@ -52,6 +52,7 @@ export class TrackballControls {
     this._last = { x: 0, y: 0 };
     this._pointers = new Map();
     this._pinch = 0;
+    this._mid = null;           // Mitte der zwei Finger beim letzten Schritt
 
     this._onDown = e => this._down(e);
     this._onMove = e => this._move(e);
@@ -79,12 +80,17 @@ export class TrackballControls {
   }
 
   /* ── Zeigergeräte ──────────────────────────────────────────── */
+  /* Zwei Finger tun zweierlei zugleich: der Abstand zoomt (auseinander =
+     näher heran, wie auf jedem Tablett), die Mitte verschiebt. Hebt sich
+     einer, dreht der andere weiter — von SEINEM Ort aus, sonst spränge das
+     Bild um den ganzen Weg, den er inzwischen gemacht hat. */
   _down(e) {
     if (!this.enabled) return;
     this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this._pointers.size === 2) {
       this._mode = PAN;
       this._pinch = this._pinchDistance();
+      this._mid = this._midpoint();
       return;
     }
     this._mode = (e.button === 0 && !e.shiftKey) ? ROTATE : PAN;
@@ -98,11 +104,14 @@ export class TrackballControls {
     if (!this.enabled || this._mode < 0) return;
     if (this._pointers.has(e.pointerId)) this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this._pointers.size === 2) {
-      const d = this._pinchDistance();
-      if (this._pinch > 0) this.dolly(Math.pow(0.995, (d - this._pinch)));
+      const d = this._pinchDistance(), mid = this._midpoint();
+      if (this._pinch > 0 && d > 0) this.dolly(Math.pow(0.995, this._pinch - d));
+      if (this._mid) this.panByPixels(mid.x - this._mid.x, mid.y - this._mid.y);
       this._pinch = d;
+      this._mid = mid;
       return;
     }
+    if (!this._pointers.has(e.pointerId) && this._pointers.size) return;   // ein Zeiger, der nicht mehr zählt
     const dx = e.clientX - this._last.x, dy = e.clientY - this._last.y;
     this._last = { x: e.clientX, y: e.clientY };
     if (this._mode === ROTATE) this.rotateByPixels(dx, dy);
@@ -112,6 +121,13 @@ export class TrackballControls {
   _up(e) {
     this._pointers.delete(e.pointerId);
     if (this._pointers.size < 1) this._mode = -1;
+    else if (this._pointers.size === 1) {
+      const [rest] = this._pointers.values();
+      this._last = { x: rest.x, y: rest.y };
+      this._mode = ROTATE;
+      this._pinch = 0;
+      this._mid = null;
+    }
     if (this.domElement.releasePointerCapture && this.domElement.hasPointerCapture
         && this.domElement.hasPointerCapture(e.pointerId)) {
       this.domElement.releasePointerCapture(e.pointerId);
@@ -121,6 +137,11 @@ export class TrackballControls {
   _pinchDistance() {
     const p = [...this._pointers.values()];
     return p.length === 2 ? Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) : 0;
+  }
+
+  _midpoint() {
+    const p = [...this._pointers.values()];
+    return p.length === 2 ? { x: (p[0].x + p[1].x) / 2, y: (p[0].y + p[1].y) / 2 } : null;
   }
 
   _wheel(e) {

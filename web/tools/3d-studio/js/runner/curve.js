@@ -277,6 +277,42 @@ export function sampleEdge(g, from, to) {
   return { fromId: from.id, toId: to.id, from, to, length: L, sections };
 }
 
+/* Wo der Weg den Pressrest verlässt. Der erste Kanal beginnt in dessen
+   Mitte — bis zum Mantel ist er aber kein Kanal, sondern Pressrest: dort
+   steht bei „Kammer voll" schon Schmelze, im Körper ist das Stück
+   abgeschnitten (js/runner/sweep.js), und in den Volumen zählt es als
+   Pressrest. `s0` ist die Bogenlänge, ab der eine Kante draußen liegt: 0,
+   wenn sie draußen beginnt, ihre Länge, wenn sie den Pressrest nicht
+   verlässt (dann beginnt auch die nächste drinnen). Gemessen wird wie
+   beim Beschnitt quer zur Achse; die Höhe zählt nicht. */
+function markBiscuit(g, net) {
+  for (const e of net.edges) e.s0 = 0;
+  const b = g.biscuit;
+  const axis = G.AXES[b.axis] || G.AXES['+y'];
+  const R = Math.max(1, b.d / 2);
+  const radial = p => { const d = sub(p, b.pos); return len(addScaled(d, axis, -dot(d, axis))); };
+  const byFrom = new Map();
+  for (const e of net.edges) { if (!byFrom.has(e.fromId)) byFrom.set(e.fromId, []); byFrom.get(e.fromId).push(e); }
+  const inside = id => {
+    for (const e of byFrom.get(id) || []) {
+      const secs = e.sections;
+      let s0 = e.length;
+      for (let i = 0; i < secs.length; i++) {
+        const r = radial(secs[i].p);
+        if (r < R) continue;
+        if (i === 0) { s0 = 0; break; }
+        const r0 = radial(secs[i - 1].p);
+        const f = clamp((R - r0) / Math.max(r - r0, 1e-12), 0, 1);
+        s0 = secs[i - 1].s + (secs[i].s - secs[i - 1].s) * f;
+        break;
+      }
+      e.s0 = s0;
+      if (s0 >= e.length) inside(e.toId);
+    }
+  };
+  inside(g.rootId);
+}
+
 /** Das ganze Netz abtasten. */
 export function sampleNetwork(g) {
   /* Kanalform mitgeben: der Sweep rechnet an den Gabelungen eigene
@@ -292,6 +328,7 @@ export function sampleNetwork(g) {
     out.edges.push(s);
     out.points += s.sections.length;
   }
+  markBiscuit(g, out);
   /* Querschnitt am Knoten selbst — für die Regelprüfung und die Anzeige. */
   out.nodeArea = {};
   for (const n of G.allNodes(g)) {

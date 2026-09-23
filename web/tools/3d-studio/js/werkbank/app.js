@@ -39,6 +39,7 @@ import { createFillStage } from './fill.js';
 import { createVentStage } from './vents.js';
 import { createCoolingStage } from './cooling.js';
 import { createDesignStage } from './design.js';
+import { ROLE, linRgb, onScheme } from '../part/colors.js';
 
 export const FORMAT = 'dielogic-werkbank';
 export const FORMAT_VERSION = 1;
@@ -55,7 +56,9 @@ mountViewBar(container, view);
 /* Grau für alle, die auf die Wand klicken; mit Punktfarben für die
    Analyse und die Füllung — dieselbe Geometrie, das Farb-Attribut ist
    der Malgrund, den der aktive Schritt beschreibt. */
-const plainMat = new T.MeshStandardMaterial({ color: 0xb5c0c4, roughness: 0.7, metalness: 0.05, side: T.DoubleSide, flatShading: true });
+const plainMat = new T.MeshStandardMaterial({ color: ROLE.part, roughness: 0.7, metalness: 0.05, side: T.DoubleSide, flatShading: true });
+/* Das Grau des Bauteils ist eine Rolle des Farbschemas und folgt ihm. */
+onScheme(() => { plainMat.color.set(ROLE.part); view.invalidate(); });
 const colorMat = new T.MeshStandardMaterial({ vertexColors: true, color: 0xffffff, roughness: 0.62, metalness: 0.08, side: T.DoubleSide, flatShading: true });
 const partMesh = new T.Mesh(new T.BufferGeometry(), plainMat);
 partMesh.visible = false;
@@ -208,7 +211,9 @@ const source = mountPartSource({
     part.demoId = sel.selectedIndex >= 0 && sel.value ? sel.value : null;
     const geo = new T.BufferGeometry();
     geo.setAttribute('position', new T.BufferAttribute(Float32Array.from(model.tris), 3));
-    geo.setAttribute('color', new T.BufferAttribute(new Float32Array(model.tris.length).fill(0.75), 3));
+    const grey = linRgb(ROLE.part), cols = new Float32Array(model.tris.length);
+    for (let i = 0; i < cols.length; i += 3) { cols[i] = grey[0]; cols[i + 1] = grey[1]; cols[i + 2] = grey[2]; }
+    geo.setAttribute('color', new T.BufferAttribute(cols, 3));
     geo.computeVertexNormals();
     partMesh.geometry.dispose();
     partMesh.geometry = geo;

@@ -96,7 +96,17 @@ export function renderCard(card, def, v, shot, blockMsg) {
   d.title = def.title;
   card.data = d;
   card.shot = shot;
+  paintCard(card, def);
 
+  if (def.renderExtras) { try { def.renderExtras(card, shot, v); } catch (e) { /* Karte bleibt lesbar */ } }
+}
+
+/* card.data auf die Leinwand zeichnen, ohne zu rechnen. Auch nach einem
+   Wechsel des Farbschemas (main.js, single.js): die Daten tragen Rollen,
+   keine Farbwerte, und die Renderer lesen die Werte beim Zeichnen. */
+export function paintCard(card, def) {
+  const d = card && card.data;
+  if (!d) return;
   const wrap = card.querySelector('.canvas-wrap');
   const w = Math.max(340, Math.floor(wrap.clientWidth || 600));
   let h = Math.round(w * (def.aspect || 0.8));
@@ -121,6 +131,4 @@ export function renderCard(card, def, v, shot, blockMsg) {
   x.setTransform(pr, 0, 0, pr, 0, 0);
   try { drawAny(x, w, h, d, def); }
   catch (e) { drawAny(x, w, h, { err: (e && e.message) || String(e), title: d.title }, def); }
-
-  if (def.renderExtras) { try { def.renderExtras(card, shot, v); } catch (e) { /* Karte bleibt lesbar */ } }
 }

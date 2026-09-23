@@ -1,9 +1,16 @@
 /* (φ, λ)-Auslegungskarte, geometrisch: das machbare Band wird als Polygon
    gefüllt, die Grenzen als analytische Kurven mit Beschriftung gezeichnet.
    Labels werden kollisionsfrei platziert: Grenzkurven-Labels haben Vorrang,
-   Iso-Labels weichen aus oder entfallen. */
+   Iso-Labels weichen aus oder entfallen.
 
-import { frame, heading, axes, marker, fillRich } from './base.js';
+   Farben (theme.map, theme.mapLines): das Band in `feasible` wie im PQ²;
+   Kolben-Ø und Kammerlänge kommen beide aus dem Maschinen-Preset und tragen
+   darum die Farbe der Maschine, der Ø durchgezogen, die Länge gestrichelt;
+   die Pressrest-Grenze in der Farbe des Pressrests, v_krit in der des
+   Prozesses. Das Füllgrad-Ziel hat die gestrichelten Ränder eines
+   Zielbands, der Ist-Punkt ist der Arbeitspunkt (`mark`). */
+
+import { frame, heading, axes, marker, fillRich, surfaceA } from './base.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
 
@@ -26,9 +33,11 @@ const LEGEND = [
   ['crit', 'v_krit-Grenze (1. Phase)']
 ];
 
-const LINE_FALLBACK = { bore: '#123a6b', len: '#7b5cd6', bisc: '#b28000', crit: '#c2447e' };
+/* Strichmuster je Grenzart: die Kammerlänge gestrichelt neben dem
+   gleichfarbigen, durchgezogenen Kolben-Ø. */
+const STRICH = { len: [7, 4] };
 
-function lineColor(t) { return (theme.mapLines && theme.mapLines[t]) || LINE_FALLBACK[t]; }
+function lineColor(t) { return theme.mapLines[t]; }
 
 export function drawMap(x, w, h, d) {
   heading(x, w, h, d);
@@ -98,10 +107,13 @@ export function drawMap(x, w, h, d) {
   });
   x.globalAlpha = 1;
 
-  /* Grenzkurven mit Beschriftung (Vorrang bei der Platzierung) */
+  /* Grenzkurven mit Beschriftung (Vorrang bei der Platzierung). Die
+     Beschriftung steht in Schrift auf einem Kästchen direkt an der Kurve:
+     die Linienfarben tragen als Text nicht überall 4,5:1. */
   d.curves.forEach((c, idx) => {
     const col = lineColor(c.t);
     x.strokeStyle = col; x.lineWidth = 1.8;
+    x.setLineDash(STRICH[c.t] || []);
     x.beginPath();
     let started = false;
     for (let i = 0; i < c.p.length; i++) {
@@ -110,6 +122,7 @@ export function drawMap(x, w, h, d) {
       started = true;
     }
     x.stroke();
+    x.setLineDash([]);
 
     const visPts = c.p.filter(p => p[1] > y0 + 0.1 && p[1] < y1 - 0.1);
     if (visPts.length > 3) {
@@ -121,9 +134,9 @@ export function drawMap(x, w, h, d) {
         const at = visPts[Math.max(0, Math.min(visPts.length - 1, Math.floor(visPts.length * fr)))];
         const pos = tryLabel(X(at[0]) - tw / 2 - 3, Y(at[1]) - 16, tw + 6, 13);
         if (pos) {
-          x.fillStyle = 'rgba(255,255,255,.88)';
+          x.fillStyle = surfaceA(.88);
           x.fillRect(pos[0], pos[1], tw + 6, 13);
-          x.fillStyle = col; x.textAlign = 'left';
+          x.fillStyle = C.text; x.textAlign = 'left';
           fillRich(x, c.l, pos[0] + 3, pos[1] + 10);
           break;
         }
@@ -132,7 +145,7 @@ export function drawMap(x, w, h, d) {
   });
 
   /* Iso-Labels in die verbleibenden Lücken */
-  x.font = '9.5px Arial'; x.fillStyle = C.iso; x.globalAlpha = 0.8;
+  x.font = '9.5px Arial'; x.fillStyle = C.muted; x.globalAlpha = 0.8;
   isoLabels.forEach(il => {
     const tw = x.measureText(il.l).width;
     for (const a2 of il.cands) {
@@ -142,14 +155,14 @@ export function drawMap(x, w, h, d) {
   });
   x.globalAlpha = 1;
 
-  /* Füllgrad-Zielband */
-  x.strokeStyle = C.series1; x.setLineDash([5, 4]); x.lineWidth = 1.2;
+  /* Füllgrad-Zielband: Ränder wie jedes Zielband (render/limits.js) */
+  x.strokeStyle = C.targetLine; x.setLineDash([4, 4]); x.lineWidth = 1.2;
   [d.fillMin, d.fillMax].forEach(fv => {
     if (fv > 0 && fv < 100) { x.beginPath(); x.moveTo(X(fv), f.T); x.lineTo(X(fv), f.T + f.ph); x.stroke(); }
   });
   x.setLineDash([]);
   if (zielRect) {
-    x.fillStyle = C.series1; x.font = '10px Arial'; x.textAlign = 'center';
+    x.fillStyle = C.text; x.font = '10px Arial'; x.textAlign = 'center';
     fillRich(x, zielRect.l, zielRect.x, zielRect.y);
   }
 
@@ -164,10 +177,12 @@ export function drawMap(x, w, h, d) {
     const tw = x.measureText(lab).width;
     if (lx + tw + 22 > w - f.R) { lx = f.L; ly += 13; }
     if (key === 'ok') {
-      x.fillStyle = theme.map.ok; x.fillRect(lx, ly - 8, 11, 9);
-      x.strokeStyle = C.axis; x.strokeRect(lx, ly - 8, 11, 9);
+      x.fillStyle = MAPC.ok; x.fillRect(lx, ly - 8, 11, 9);
+      x.strokeStyle = C.axis; x.lineWidth = 1; x.strokeRect(lx, ly - 8, 11, 9);
     } else {
-      x.fillStyle = lineColor(key); x.fillRect(lx, ly - 6, 11, 3);
+      x.strokeStyle = lineColor(key); x.lineWidth = 1.8; x.setLineDash(STRICH[key] ? [4, 2] : []);
+      x.beginPath(); x.moveTo(lx, ly - 4.5); x.lineTo(lx + 11, ly - 4.5); x.stroke();
+      x.setLineDash([]);
     }
     x.fillStyle = C.text; x.textAlign = 'left'; fillRich(x, lab, lx + 15, ly);
     lx += tw + 30;

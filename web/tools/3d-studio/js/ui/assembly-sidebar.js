@@ -28,7 +28,13 @@
    jeder Änderung ganz neu gezeichnet — sie ist klein, das ist billiger
    als jede Zeile einzeln nachzuziehen. Nur der Farbwähler zeichnet
    während des Ziehens nicht neu: ein neu gebautes Eingabefeld unter dem
-   Finger schlösse den Wähler. */
+   Finger schlösse den Wähler.
+
+   Namen und Schlüssel der Gruppen kommen aus der GLB (glTF-extras), also
+   von irgendwem: in HTML nur durch esc(). */
+
+import { esc } from '../studio/rows.js';
+import { classColor } from '../materials.js';
 
 const BULB = '<svg class="bulb" viewBox="0 0 24 24" aria-hidden="true">'
   + '<g class="rays"><path d="M12 1v1.8M4.4 4.4l1.3 1.3M19.6 4.4l-1.3 1.3M1.4 12h1.8M20.8 12h1.8"/></g>'
@@ -168,7 +174,7 @@ export function mountAssemblySidebar(el, asm, {
       const colorIn = document.createElement('input');
       colorIn.setAttribute('type', 'color');
       colorIn.setAttribute('data-act', 'group-color');
-      colorIn.value = g.color || '#8d9aa1';
+      colorIn.value = g.color || classColor(g.mat);
       colorWrap.append(colorIn, span('', 'Farbe für alle'));
       const del = button('menu-btn danger', '&times; Gruppe entfernen',
         mine.length ? 'Nur eine leere Gruppe lässt sich entfernen' : 'Gruppe entfernen', 'remove-group');
@@ -273,7 +279,7 @@ export function mountAssemblySidebar(el, asm, {
     move.className = 'row-move';
     move.title = 'In eine andere Gruppe verschieben';
     move.setAttribute('data-act', 'move');
-    move.innerHTML = asm.groups.map(g => '<option value="' + g.key + '"' + (g.key === it.group ? ' selected' : '') + '>' + g.title + '</option>').join('');
+    move.innerHTML = asm.groups.map(g => '<option value="' + esc(g.key) + '"' + (g.key === it.group ? ' selected' : '') + '>' + esc(g.title) + '</option>').join('');
     move.value = it.group;
     moveWrap.append(span('', 'Verschieben nach'), move);
     const del = button('menu-btn danger', '&times; Entfernen', 'Teil entfernen', 'remove');
@@ -296,8 +302,8 @@ export function mountAssemblySidebar(el, asm, {
   function syncTargets() {
     if (!targetSelect) return;
     const keep = targetSelect.value;
-    targetSelect.innerHTML = asm.groups.map(g => '<option value="' + g.key + '">' + g.title + '</option>').join('');
-    targetSelect.value = asm.groups.some(g => g.key === keep) ? keep : asm.groups[0].key;
+    targetSelect.innerHTML = asm.groups.map(g => '<option value="' + esc(g.key) + '">' + esc(g.title) + '</option>').join('');
+    targetSelect.value = asm.groups.some(g => g.key === keep) ? keep : (asm.groups[0] ? asm.groups[0].key : '');
   }
 
   const api = { render, closeMenus };

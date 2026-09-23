@@ -4,7 +4,6 @@
 
 import { series, line } from './helpers.js';
 import { seq, fmt, subHTML } from '../core/format.js';
-import { theme } from '../core/theme.js';
 import { pistonArea } from '../core/physics.js';
 import { sim } from '../core/simstore.js';
 import { eq } from './mathfmt.js';
@@ -67,10 +66,12 @@ export default {
     if (!(v.Tliq > v.Tdie) || !(v.Tdie > -K)) return { err: 'braucht Liquidus- über Formtemperatur.' };
     const x = seq(P_ATM, p0, 200);
     const pVac = vacPressure(v);
-    const C = theme.chart;
-    const ys = [series('ohne Vakuum (p_vor 1013 mbar)', pVac !== null ? C.muted : C.series1, x, p => ratio(v, p))];
+    /* Mit Vakuum ist die Kurve mit Vakuum die, um die es geht (`ink`), die
+       ohne Vakuum steht als Vergleich daneben (`ref`). Ohne Vakuum-Daten
+       ist sie selbst die Hauptkurve. */
+    const ys = [series('ohne Vakuum (p_vor 1013 mbar)', pVac !== null ? 'ref' : 'ink', x, p => ratio(v, p))];
     if (pVac !== null) {
-      ys.push(series('mit Vakuum (p_vor ' + fmt(pVac * 1000) + ' mbar, Simulation)', C.series1, x, p => ratio(v, p, pVac)));
+      ys.push(series('mit Vakuum (p_vor ' + fmt(pVac * 1000) + ' mbar, Simulation)', 'ink', x, p => ratio(v, p, pVac)));
     }
     const q = line(x, ys,
       'Nachdruck p_N in bar', 'Blasen-Ø-Verhältnis D_vor/D_nach',

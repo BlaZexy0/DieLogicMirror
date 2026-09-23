@@ -93,9 +93,11 @@ export function showHover(card, ev) {
     if (L * 1000 < P.lmin || L * 1000 > P.lmax) bad.push('len');
     if (b < P.biscuitMin) bad.push('bisc');
     if (P.v1 > vc) bad.push('crit');
+    /* Urteil als Klasse: die Farbe (Textstufe der Ampel) kommt aus dem CSS
+       und folgt dem Farbschema von selbst. */
     const verdict = bad.length
-      ? '<b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + bad.map(k => MAP_LABELS[k]).join(', ') + '</b>'
-      : '<b style="color:' + window.__PALETTE__.ok + '">MACHBAR</b>';
+      ? '<b class="hv-bad">verletzt: ' + bad.map(k => MAP_LABELS[k]).join(', ') + '</b>'
+      : '<b class="hv-ok">MACHBAR</b>';
     box.innerHTML = '<b>φ:</b> ' + fmt(xv) + ' % · <b>λ:</b> ' + fmt(yv) + ' → <b>Ø</b> ' + fmt(D * 1000) + ' mm · <b>L</b> ' + fmt(L * 1000) + ' mm · <b>Pressrest</b> ' + fmt(b) + ' mm · <b>v<sub>krit</sub></b> ' + fmt(vc) + ' m/s · ' + verdict;
     return;
   }
@@ -109,7 +111,7 @@ export function showHover(card, ev) {
       + ' · <b>' + subHTML(nameOf(d.yl)) + ':</b> ' + vu(yv, unitOf(d.yl))
       + ' · <b>' + subHTML(nameOf(d.cl)) + ':</b> ' + vu(heatVal(d, xv, yv), unitOf(d.cl));
     const bad = (d.limits || []).filter(l => violates(l, xv, yv));
-    if (bad.length) msg += ' · <b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + subHTML(bad.map(l => l.label).join(', ')) + '</b>';
+    if (bad.length) msg += ' · <b class="hv-bad">verletzt: ' + subHTML(bad.map(l => l.label).join(', ')) + '</b>';
     box.innerHTML = msg;
   } else {
     let msg = '<b>' + subHTML(nameOf(d.xl)) + ':</b> ' + vu(xv, unitOf(d.xl));
@@ -124,7 +126,7 @@ export function showHover(card, ev) {
     if (d.ys.length === 1 && d.limits && d.limits.length) {
       const val = interp(d.x, d.ys[0].y, xv);
       const bad = d.limits.filter(l => violates(l, xv, val));
-      if (bad.length) msg += ' · <b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + subHTML(bad.map(l => l.label).join(', ')) + '</b>';
+      if (bad.length) msg += ' · <b class="hv-bad">verletzt: ' + subHTML(bad.map(l => l.label).join(', ')) + '</b>';
     }
     box.innerHTML = msg;
   }

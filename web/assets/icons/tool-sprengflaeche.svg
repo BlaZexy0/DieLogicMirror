@@ -1,13 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" width="26" height="26" fill="none">
-  <!-- Sprengflächenanalyse — STL-Körper und Projektion in Formöffnungsrichtung.
-       Raster: Motiv innerhalb 2…24, Strich 1,6 (Hilfslinien 1,4 · 70 %), Marker in der Warnfarbe (warn).
-       Farben aus der Palette (shared.css), Fallback für die Ansicht außerhalb der Seite. -->
+  <!-- Sprengflächenanalyse: STL-Körper und Projektion in Formöffnungsrichtung.
+       Raster: Motiv innerhalb 2…24, Strich 1,6 (Hilfslinien 1,4 · 70 %).
+       Farben sind Rollen der Palette (shared/palette.js): Körper und
+       Projektion in der Farbe des Werkzeugs (die), die Sprengfläche drückt
+       die Formhälften auseinander. Der Hex-Rückfall ist der Standardwert der
+       Rolle, für die Ansicht außerhalb der Seite. -->
   <symbol id="icon" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M13 2.5 L20.5 6.2 L20.5 12.5 L13 16.2 L5.5 12.5 L5.5 6.2 Z" stroke="var(--gold, #d4a908)" stroke-width="1.6"/>
-    <path d="M5.5 6.2 L13 9.9 L20.5 6.2 M13 9.9 V16.2" stroke="var(--gold, #d4a908)" stroke-width="1.4"/>
-    <line x1="5.5" y1="13.5" x2="5.5" y2="19.5" stroke="var(--gold, #d4a908)" stroke-width="1.1" stroke-dasharray="1.4 1.6" opacity=".8"/>
-    <line x1="20.5" y1="13.5" x2="20.5" y2="19.5" stroke="var(--gold, #d4a908)" stroke-width="1.1" stroke-dasharray="1.4 1.6" opacity=".8"/>
-    <path d="M3 21.5 L13 24.3 L23 21.5 L13 19.2 Z" fill="var(--gold, #d4a908)" opacity=".4" stroke="var(--gold, #d4a908)" stroke-width="1.2"/>
+    <path d="M13 2.5 L20.5 6.2 L20.5 12.5 L13 16.2 L5.5 12.5 L5.5 6.2 Z" stroke="var(--die, #2e65a0)" stroke-width="1.6"/>
+    <path d="M5.5 6.2 L13 9.9 L20.5 6.2 M13 9.9 V16.2" stroke="var(--die, #2e65a0)" stroke-width="1.4"/>
+    <line x1="5.5" y1="13.5" x2="5.5" y2="19.5" stroke="var(--die, #2e65a0)" stroke-width="1.1" stroke-dasharray="1.4 1.6" opacity=".8"/>
+    <line x1="20.5" y1="13.5" x2="20.5" y2="19.5" stroke="var(--die, #2e65a0)" stroke-width="1.1" stroke-dasharray="1.4 1.6" opacity=".8"/>
+    <path d="M3 21.5 L13 24.3 L23 21.5 L13 19.2 Z" fill="var(--die, #2e65a0)" opacity=".3" stroke="var(--die, #2e65a0)" stroke-width="1.2"/>
   </symbol>
   <use href="#icon"/>
 </svg>

@@ -1,90 +1,104 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 420" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Blick auf die Trennebene: Aufspannplatte mit vier Säulen, Sprengfläche aus Bauteil, Anguss, Überläufen und Pressrest mit Schwerpunkt S und Außermittigkeit zu Maschinenmitte 0">
+  <!-- Farben sind Rollen der Palette (shared/palette.js): die Klasse nennt
+       die Rolle, der Wert daneben ist ihr Standard (shared/svgfarben.js färbt
+       das Bild nach dem Schema). Die Teile der Sprengfläche in ihren
+       Sachfarben wie in der Sprengflächenanalyse: Bauteil `melt`, Anguss
+       `runner`, Überläufe `overflow`, Pressrest `biscuit`. Platte und Säulen
+       Stahl (`steel`, Kanten `steel-dark`), der Schwerpunkt S in `mark`
+       (Kennpunkt), die Achsen x und y wie im 3D-Studio (`axis-x`, `axis-y`),
+       Maße und Beschriftung `text`/`muted`, Mittellinien `muted-light`. -->
   <defs>
     <marker id="dimA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-      <path d="M0 0 L10 5 L0 10 Z" fill="#4c6870"/>
+      <path d="M0 0 L10 5 L0 10 Z" fill="#4c6870" class="f-muted"/>
     </marker>
     <marker id="dimB" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-      <path d="M10 0 L0 5 L10 10 Z" fill="#4c6870"/>
+      <path d="M10 0 L0 5 L10 10 Z" fill="#4c6870" class="f-muted"/>
     </marker>
     <marker id="dimE" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-      <path d="M0 0 L10 5 L0 10 Z" fill="#00534d"/>
+      <path d="M0 0 L10 5 L0 10 Z" fill="#002733" class="f-text"/>
+    </marker>
+    <marker id="achseX" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#846cd1" class="f-axis-x"/>
+    </marker>
+    <marker id="achseY" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#60a7d6" class="f-axis-y"/>
     </marker>
   </defs>
 
   <!-- Aufspannplatte -->
-  <rect x="60" y="50" width="440" height="320" rx="10" fill="#eef1f2" stroke="#9aacb4" stroke-width="1.4"/>
+  <rect x="60" y="50" width="440" height="320" rx="10" fill="#dae1e2" fill-opacity="0.5" stroke="#7b9096" stroke-opacity="0.7" stroke-width="1.4" class="f-steel s-steel-dark"/>
 
   <!-- Mittellinien durch die Maschinenmitte 0 -->
-  <line x1="68" y1="210" x2="492" y2="210" stroke="#9aacb4" stroke-width="1" stroke-dasharray="7 5"/>
-  <line x1="280" y1="58" x2="280" y2="362" stroke="#9aacb4" stroke-width="1" stroke-dasharray="7 5"/>
+  <line x1="68" y1="210" x2="492" y2="210" stroke="#9aacb4" stroke-width="1" stroke-dasharray="7 5" class="s-muted-light"/>
+  <line x1="280" y1="58" x2="280" y2="362" stroke="#9aacb4" stroke-width="1" stroke-dasharray="7 5" class="s-muted-light"/>
 
   <!-- Sprengfläche: Silhouette aus Bauteil, Anguss, Überläufen und Pressrest.
        Flächen (Bauteil 130×100, Anguss 26×58, drei Überläufe 22×18, Pressrest r=22)
        ergeben den Schwerpunkt S ≈ (350, 178). -->
-  <rect x="280" y="114" width="130" height="100" rx="8" fill="#cfe7e4" stroke="#00534d" stroke-width="1.6"/>
-  <rect x="360" y="214" width="26" height="58" fill="#cfe7e4" stroke="#00534d" stroke-width="1.6"/>
-  <circle cx="373" cy="292" r="22" fill="#cfe7e4" stroke="#00534d" stroke-width="1.6"/>
-  <rect x="296" y="96" width="22" height="18" fill="#cfe7e4" stroke="#00534d" stroke-width="1.6"/>
-  <rect x="332" y="96" width="22" height="18" fill="#cfe7e4" stroke="#00534d" stroke-width="1.6"/>
-  <rect x="368" y="96" width="22" height="18" fill="#cfe7e4" stroke="#00534d" stroke-width="1.6"/>
-  <text x="418" y="150" font-size="12" fill="#00534d" font-weight="700">A</text>
-  <text x="418" y="164" font-size="10" fill="#4c6870">Sprengfläche</text>
-  <text x="336" y="91" font-size="10" fill="#4c6870">Überläufe</text>
-  <text x="276" y="180" font-size="10" fill="#4c6870" text-anchor="end">Bauteil</text>
-  <text x="392" y="247" font-size="10" fill="#4c6870">Anguss</text>
-  <text x="373" y="330" font-size="10" fill="#4c6870" text-anchor="middle">Pressrest</text>
+  <rect x="280" y="114" width="130" height="100" rx="8" fill="#008c82" fill-opacity="0.22" stroke="#008c82" stroke-width="1.6" class="f-melt s-melt"/>
+  <rect x="360" y="214" width="26" height="58" fill="#006665" fill-opacity="0.22" stroke="#006665" stroke-width="1.6" class="f-runner s-runner"/>
+  <circle cx="373" cy="292" r="22" fill="#82979f" fill-opacity="0.22" stroke="#82979f" stroke-width="1.6" class="f-biscuit s-biscuit"/>
+  <rect x="296" y="96" width="22" height="18" fill="#8bbfb8" fill-opacity="0.35" stroke="#8bbfb8" stroke-width="1.6" class="f-overflow s-overflow"/>
+  <rect x="332" y="96" width="22" height="18" fill="#8bbfb8" fill-opacity="0.35" stroke="#8bbfb8" stroke-width="1.6" class="f-overflow s-overflow"/>
+  <rect x="368" y="96" width="22" height="18" fill="#8bbfb8" fill-opacity="0.35" stroke="#8bbfb8" stroke-width="1.6" class="f-overflow s-overflow"/>
+  <text x="418" y="150" font-size="12" fill="#002733" class="f-text" font-weight="700">A</text>
+  <text x="418" y="164" font-size="10" fill="#4c6870" class="f-muted">Sprengfläche</text>
+  <text x="336" y="91" font-size="10" fill="#4c6870" class="f-muted">Überläufe</text>
+  <text x="276" y="180" font-size="10" fill="#4c6870" class="f-muted" text-anchor="end">Bauteil</text>
+  <text x="392" y="247" font-size="10" fill="#4c6870" class="f-muted">Anguss</text>
+  <text x="373" y="330" font-size="10" fill="#4c6870" class="f-muted" text-anchor="middle">Pressrest</text>
 
   <!-- Säulen an (±a_x/2, ±a_y/2) -->
-  <g fill="#ccd4d6" stroke="#4c6870" stroke-width="1.4">
+  <g fill="#dae1e2" stroke="#7b9096" stroke-width="1.4" class="f-steel s-steel-dark">
     <circle cx="120" cy="110" r="17"/><circle cx="440" cy="110" r="17"/>
     <circle cx="120" cy="310" r="17"/><circle cx="440" cy="310" r="17"/>
   </g>
-  <g fill="#f8fafa" stroke="#4c6870" stroke-width="1">
+  <g fill="#7b9096" fill-opacity="0.25" stroke="#7b9096" stroke-width="1" class="f-steel-dark s-steel-dark">
     <circle cx="120" cy="110" r="7"/><circle cx="440" cy="110" r="7"/>
     <circle cx="120" cy="310" r="7"/><circle cx="440" cy="310" r="7"/>
   </g>
-  <g font-size="12.5" font-weight="700" fill="#002733">
+  <g font-size="12.5" font-weight="700" fill="#002733" class="f-text">
     <text x="462" y="102">F<tspan dy="3" font-size="9.5">1</tspan></text>
     <text x="78" y="102" text-anchor="end">F<tspan dy="3" font-size="9.5">2</tspan></text>
     <text x="78" y="326" text-anchor="end">F<tspan dy="3" font-size="9.5">3</tspan></text>
     <text x="462" y="326">F<tspan dy="3" font-size="9.5">4</tspan></text>
   </g>
-  <text x="120" y="90" font-size="10" fill="#4c6870" text-anchor="middle">Säule</text>
+  <text x="120" y="90" font-size="10" fill="#4c6870" class="f-muted" text-anchor="middle">Säule</text>
 
   <!-- Maschinenmitte 0 -->
-  <circle cx="280" cy="210" r="3.2" fill="#002733"/>
-  <text x="269" y="228" font-size="12" font-weight="700" fill="#002733">0</text>
+  <circle cx="280" cy="210" r="3.2" fill="#002733" class="f-text"/>
+  <text x="269" y="228" font-size="12" font-weight="700" fill="#002733" class="f-text">0</text>
 
   <!-- Schwerpunkt S mit Kraft aus der Ebene heraus -->
-  <circle cx="350" cy="178" r="7" fill="#ffffff" stroke="#002733" stroke-width="1.6"/>
-  <circle cx="350" cy="178" r="2" fill="#002733"/>
-  <text x="362" y="174" font-size="12" font-weight="700" fill="#002733">S</text>
-  <text x="362" y="188" font-size="10.5" fill="#4c6870">F = p·A (aus der Ebene)</text>
+  <circle cx="350" cy="178" r="7" fill="#ffffff" stroke="#b23797" stroke-width="1.6" class="f-surface s-mark"/>
+  <circle cx="350" cy="178" r="2" fill="#b23797" class="f-mark"/>
+  <text x="362" y="174" font-size="12" font-weight="700" fill="#b23797" class="f-mark">S</text>
+  <text x="362" y="188" font-size="10.5" fill="#4c6870" class="f-muted">F = p·A (aus der Ebene)</text>
 
-  <!-- Außermittigkeit e_x, e_y -->
-  <line x1="280" y1="210" x2="344" y2="210" stroke="#00534d" stroke-width="1.6" marker-end="url(#dimE)"/>
-  <text x="312" y="226" font-size="11.5" font-weight="700" fill="#00534d" text-anchor="middle">e<tspan dy="2.5" font-size="9">x</tspan></text>
-  <line x1="350" y1="210" x2="350" y2="190" stroke="#00534d" stroke-width="1.6" marker-end="url(#dimE)"/>
-  <text x="357" y="204" font-size="11.5" font-weight="700" fill="#00534d">e<tspan dy="2.5" font-size="9">y</tspan></text>
+  <!-- Außermittigkeit e_x, e_y: das Maß, auf das es ankommt, kräftiger als a_x, a_y -->
+  <line x1="280" y1="210" x2="344" y2="210" stroke="#002733" stroke-width="1.6" class="s-text" marker-end="url(#dimE)"/>
+  <text x="312" y="226" font-size="11.5" font-weight="700" fill="#002733" class="f-text" text-anchor="middle">e<tspan dy="2.5" font-size="9">x</tspan></text>
+  <line x1="350" y1="210" x2="350" y2="190" stroke="#002733" stroke-width="1.6" class="s-text" marker-end="url(#dimE)"/>
+  <text x="357" y="204" font-size="11.5" font-weight="700" fill="#002733" class="f-text">e<tspan dy="2.5" font-size="9">y</tspan></text>
 
   <!-- Maß a_x (Säulenabstand horizontal) -->
-  <line x1="120" y1="88" x2="120" y2="70" stroke="#4c6870" stroke-width="0.9"/>
-  <line x1="440" y1="88" x2="440" y2="70" stroke="#4c6870" stroke-width="0.9"/>
-  <line x1="126" y1="74" x2="434" y2="74" stroke="#4c6870" stroke-width="1" marker-start="url(#dimB)" marker-end="url(#dimA)"/>
-  <text x="280" y="68" font-size="11.5" font-weight="700" fill="#4c6870" text-anchor="middle">a<tspan dy="2.5" font-size="9">x</tspan></text>
+  <line x1="120" y1="88" x2="120" y2="70" stroke="#4c6870" stroke-width="0.9" class="s-muted"/>
+  <line x1="440" y1="88" x2="440" y2="70" stroke="#4c6870" stroke-width="0.9" class="s-muted"/>
+  <line x1="126" y1="74" x2="434" y2="74" stroke="#4c6870" stroke-width="1" class="s-muted" marker-start="url(#dimB)" marker-end="url(#dimA)"/>
+  <text x="280" y="68" font-size="11.5" font-weight="700" fill="#4c6870" class="f-muted" text-anchor="middle">a<tspan dy="2.5" font-size="9">x</tspan></text>
 
   <!-- Maß a_y (Säulenabstand vertikal) -->
-  <line x1="98" y1="110" x2="82" y2="110" stroke="#4c6870" stroke-width="0.9"/>
-  <line x1="98" y1="310" x2="82" y2="310" stroke="#4c6870" stroke-width="0.9"/>
-  <line x1="86" y1="116" x2="86" y2="304" stroke="#4c6870" stroke-width="1" marker-start="url(#dimB)" marker-end="url(#dimA)"/>
-  <text x="80" y="214" font-size="11.5" font-weight="700" fill="#4c6870" text-anchor="middle" transform="rotate(-90 80 214)">a<tspan dy="2.5" font-size="9">y</tspan></text>
+  <line x1="98" y1="110" x2="82" y2="110" stroke="#4c6870" stroke-width="0.9" class="s-muted"/>
+  <line x1="98" y1="310" x2="82" y2="310" stroke="#4c6870" stroke-width="0.9" class="s-muted"/>
+  <line x1="86" y1="116" x2="86" y2="304" stroke="#4c6870" stroke-width="1" class="s-muted" marker-start="url(#dimB)" marker-end="url(#dimA)"/>
+  <text x="80" y="214" font-size="11.5" font-weight="700" fill="#4c6870" class="f-muted" text-anchor="middle" transform="rotate(-90 80 214)">a<tspan dy="2.5" font-size="9">y</tspan></text>
 
   <!-- Koordinatenrichtungen -->
-  <line x1="168" y1="352" x2="204" y2="352" stroke="#9aacb4" stroke-width="1.4" marker-end="url(#dimA)"/>
-  <text x="210" y="356" font-size="10.5" fill="#4c6870">x</text>
-  <line x1="168" y1="352" x2="168" y2="336" stroke="#9aacb4" stroke-width="1.4" marker-end="url(#dimA)"/>
-  <text x="164" y="330" font-size="10.5" fill="#4c6870">y</text>
+  <line x1="168" y1="352" x2="204" y2="352" stroke="#846cd1" stroke-width="1.4" class="s-axis-x" marker-end="url(#achseX)"/>
+  <text x="210" y="356" font-size="10.5" fill="#4c6870" class="f-muted">x</text>
+  <line x1="168" y1="352" x2="168" y2="336" stroke="#60a7d6" stroke-width="1.4" class="s-axis-y" marker-end="url(#achseY)"/>
+  <text x="164" y="330" font-size="10.5" fill="#4c6870" class="f-muted">y</text>
 
   <!-- Beschriftung Platte -->
-  <text x="490" y="364" font-size="10" fill="#9aacb4" text-anchor="end">Blick auf die Trennebene</text>
+  <text x="490" y="364" font-size="10" fill="#4c6870" class="f-muted" text-anchor="end">Blick auf die Trennebene</text>
 </svg>

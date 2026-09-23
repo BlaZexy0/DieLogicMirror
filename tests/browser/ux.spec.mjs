@@ -58,7 +58,7 @@ const griffKlick = async (page, s, wahl) => {
 };
 const SEITEN = [
   {
-    page: 'wandstaerke.html', query: '?part=cover', hook: '__wandstaerke', datei: /-wandstaerke\.json$/,
+    page: 'wandstaerke.html', query: '?part=gearbox_cover', hook: '__wandstaerke', datei: /-wandstaerke\.json$/,
     ergebnis: async (page, s) => {
       await feld(page, s, '6');
       await page.click('[data-ui="primary"]');
@@ -73,7 +73,7 @@ const SEITEN = [
     }
   },
   {
-    page: 'entformungsanalyse.html', query: '?part=cover', hook: '__entformung', datei: /-entformung\.json$/,
+    page: 'entformungsanalyse.html', query: '?part=gearbox_cover', hook: '__entformung', datei: /-entformung\.json$/,
     ergebnis: (page, s) => page.waitForFunction(h => window[h].state.analysed && !window[h].state.running, s.hook, { timeout: 120_000 }),
     /* Ein anderes Beispielteil wählen: es wird geladen und sofort gerechnet. */
     lang: async page => { await page.click('[data-ui="part-chip"]'); await page.selectOption('#demo-select', 'oil_pan'); },
@@ -540,7 +540,7 @@ test.describe('grober Zeiger', () => {
         expect(r.knapp, `${m}: abgeschnitten`).toEqual([]);
         klein.push(...await page.evaluate(mode => {
           const out = [];
-          for (const el of document.querySelectorAll('.st-root button, .st-root select, .st-root input, .st-root summary')) {
+          for (const el of document.querySelectorAll('.st-root button, .st-root [role="button"], .st-root select, .st-root input, .st-root summary')) {
             if (el.hidden || el.closest('[hidden]') || el.type === 'file') continue;
             const r = el.getBoundingClientRect();
             if (r.width <= 0 || r.height <= 0) continue;
@@ -554,4 +554,54 @@ test.describe('grober Zeiger', () => {
       expect([...new Set(klein)]).toEqual([]);
     });
   }
+});
+
+/* Was nur ein echter Browser zeigt (Prüfung vom 22.09.): ein Label gehört
+   seinem Feld, nicht dem ⓘ davor; ein Doppelklick auf den Hauptknopf ist
+   kein Abbruch; der Entwurfsstreifen geht mit seinem Bauteil. */
+test.describe('Rahmen, echte Eingaben', () => {
+  test('ein Klick auf die Bezeichnung setzt den Fokus ins Feld und öffnet NICHT die Hilfe', async ({ page }) => {
+    await page.goto('/tools/3d-studio/wandstaerke.html');
+    await ready(page, '__wandstaerke');
+    const wort = page.locator('.st-mode:not([hidden]) label.row > span', { hasText: 'Zellkante' }).first();
+    const box = await wort.boundingBox();
+    await page.mouse.click(box.x + 6, box.y + box.height / 2);
+    await expect(page.locator('[data-ui="help"]')).toBeHidden();
+    expect(await page.evaluate(() => document.activeElement && document.activeElement.dataset.ui)).toBe('cell');
+    /* Das ⓘ selbst öffnet sie, auch mit der Tastatur. */
+    const i = page.locator('.st-mode:not([hidden]) .st-info').first();
+    await i.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('[data-ui="help"]')).toBeVisible();
+  });
+
+  test('ein Doppelklick auf den Hauptknopf startet die Rechnung und bricht sie nicht gleich wieder ab', async ({ page }) => {
+    await page.goto('/tools/3d-studio/wandstaerke.html');
+    await ready(page, '__wandstaerke');
+    await page.dblclick('[data-ui="primary"]');
+    await page.waitForFunction(() => window.__wandstaerke.state.field && !window.__wandstaerke.shell.busy, null, { timeout: 120_000 });
+    await expect(page.locator('[data-ui="note"]')).not.toContainText('Abgebrochen');
+  });
+
+  test('der Entwurfsstreifen gehört seinem Bauteil: ein Wechsel nimmt ihn mit', async ({ page }) => {
+    await page.goto('/tools/3d-studio/ueberlauf.html');
+    await ready(page, '__ueberlauf');
+    await page.click('[data-chip="bohne"]');
+    const c = await page.locator('#viewport canvas').boundingBox();
+    await page.mouse.click(c.x + c.width * 0.6, c.y + c.height * 0.5);
+    await expect.poll(() => page.evaluate(() => Object.keys(window.__ueberlauf.state.plan.items).length)).toBe(1);
+    const teil = async id => {
+      await page.click('[data-ui="part-chip"]');
+      await page.selectOption('#demo-select', id);
+      await page.waitForFunction(i => window.__ueberlauf.state.ready && window.__ueberlauf.host.part.demoId === i, id, { timeout: 60_000 });
+      await page.keyboard.press('Escape');
+    };
+    const streifen = page.locator('[data-ui="banner"]');
+    await teil('oil_pan');
+    await expect(streifen).toBeHidden();
+    await teil('gearbox_cover');
+    await expect(streifen).toBeVisible();
+    await teil('oil_pan');
+    await expect(streifen, 'das Angebot wandert nicht mit').toBeHidden();
+  });
 });

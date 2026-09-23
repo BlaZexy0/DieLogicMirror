@@ -18,20 +18,33 @@
 
    Das Modul kennt kein Three.js; die Körper baut js/cooling/geom.js. */
 
-import { add, sub, norm, len, addScaled } from '../runner/vec.js';
+import { add, sub, norm, len, addScaled, clamp } from '../runner/vec.js';
+import { ELEMENT } from '../part/colors.js';
 
 export const FORMAT = 'dielogic-temperier';
 export const FORMAT_VERSION = 1;
 
+/* Beide Arten sind Temperierung und tragen deren Sachfarbe
+   (js/part/colors.js), der Kanal die hellere. */
 export const TYPES = {
-  stich: { label: 'Kühlstich', color: '#e07b39', params: { d: 20, len: 200 } },
-  kanal: { label: 'Kanal', color: '#2e6da4', params: { d: 10 } }
+  stich: { label: 'Kühlstich', get color() { return ELEMENT.stich; }, params: { d: 20, len: 200 } },
+  kanal: { label: 'Kanal', get color() { return ELEMENT.kanal; }, params: { d: 10 } }
 };
 
 export const PARAM_META = {
   d: { label: 'Durchmesser', min: 2, max: 60, unit: 'mm' },
   len: { label: 'Länge', min: 5, max: 1000, unit: 'mm' }
 };
+
+/** Der Regler des Achsabstands (js/cooling/panel.js) — und was eine Datei darf. */
+export const DIST_RANGE = [5, 60];
+
+/** Die Vorgaben für neue Elemente: Ø und Länge eines Kühlstichs, Ø eines
+    Kanals. Sie gehören zum Plan: mit „Auto" folgt ihnen der Mindest-
+    Wandabstand und damit das Urteil über jedes Element — ein gespeicherter
+    Plan muss nach dem Laden dasselbe sagen wie vorher. */
+export const DEFAULTS = { d: TYPES.stich.params.d, len: TYPES.stich.params.len, kd: TYPES.kanal.params.d };
+export const DEFAULT_META = { d: PARAM_META.d, len: PARAM_META.len, kd: PARAM_META.d };
 
 /** Wie die Richtung eines Kühlstichs beim Setzen bestimmt wird. */
 export const DIRECTIONS = {
@@ -43,7 +56,7 @@ export const DIRECTIONS = {
 };
 
 export function emptyPlan() {
-  return { format: FORMAT, version: FORMAT_VERSION, dist: 20, items: {}, seq: 0 };
+  return { format: FORMAT, version: FORMAT_VERSION, dist: 20, defaults: { ...DEFAULTS }, items: {}, seq: 0 };
 }
 
 export const allItems = plan => Object.values(plan.items);
@@ -163,30 +176,84 @@ export function toJSON(plan) {
     /* Nur wer einen eigenen Mindest-Wandabstand eingetragen hat, bekommt den
        Schlüssel — ohne ihn gilt „Auto", auch für alle älteren Dateien. */
     ...(Number.isFinite(plan.minWall) ? { minWall: plan.minWall } : {}),
+    defaults: { ...plan.defaults },
     items: allItems(plan).map(it => (it.type === 'stich'
       ? { id: it.id, type: 'stich', p: it.p.map(r4), dir: it.dir.map(v => +v.toFixed(6)), d: it.d, len: it.len, ...(it.auto ? { auto: true } : {}) }
       : { id: it.id, type: 'kanal', a: it.a.map(r4), b: it.b.map(r4), d: it.d }))
   };
 }
 
+/* Kennungen aus einer Datei: vorn ein Buchstabe, dann Buchstaben, Ziffern,
+   _ oder -, höchstens 32 Zeichen. Sie stehen im Auswahlfeld und in der
+   Liste — eine Datei mit anderen stammt nicht von hier und wird abgelehnt.
+   Wer keine Kennung hat (oder eine, die schon vergeben ist), bekommt eine
+   neue, die keiner anderen gleicht: früher wurde jedes Element ohne
+   Kennung zu „t1" und überschrieb das vorige. */
+const ID = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
+export function fileIds(list, prefix) {
+  const ids = [], taken = new Set();
+  let seq = 0;
+  list.forEach((raw, i) => {
+    if (!raw || typeof raw !== 'object') throw new Error('Element ' + (i + 1) + ' der Datei ist unlesbar.');
+    const id = raw.id !== undefined && raw.id !== null && raw.id !== '' ? String(raw.id) : null;
+    if (id !== null && !ID.test(id)) {
+      throw new Error('Element ' + (i + 1) + ' der Datei hat keine gültige Kennung: erlaubt sind Buchstaben, Ziffern, _ und -, vorn ein Buchstabe, höchstens 32 Zeichen.');
+    }
+    ids.push(id !== null && !taken.has(id) ? id : null);
+    if (id === null) return;
+    taken.add(id);
+    const num = +id.replace(/\D/g, '');
+    if (Number.isSafeInteger(num)) seq = Math.max(seq, num);
+  });
+  for (let i = 0; i < ids.length; i++) {
+    if (ids[i]) continue;
+    let id;
+    do id = prefix + (++seq); while (taken.has(id));
+    taken.add(id);
+    ids[i] = id;
+  }
+  return { ids, seq };
+}
+
+/** Ein Punkt aus der Datei: drei Zahlen — sonst ist die Datei beschädigt. */
+function filePoint(v, what) {
+  const p = Array.isArray(v) && v.length >= 3 ? v.slice(0, 3).map(Number) : null;
+  if (!p || !p.every(Number.isFinite)) throw new Error(what + ': Die Lage fehlt oder ist keine Zahl.');
+  return p;
+}
+
+/** Eine Zahl aus der Datei in den Grenzen ihres Feldes — oder die Vorgabe. */
+const fileNumber = (v, meta, fallback) => {
+  const x = v === null || v === '' || v === undefined ? NaN : Number(v);
+  return Number.isFinite(x) ? clamp(x, meta.min, meta.max) : fallback;
+};
+
 export function fromJSON(obj) {
   if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Temperierdatei (Kennung „' + FORMAT + '" fehlt).');
   if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
   const plan = emptyPlan();
-  if (Number.isFinite(obj.dist)) plan.dist = Math.max(1, Math.min(200, Number(obj.dist)));
-  if (Number.isFinite(obj.minWall)) plan.minWall = Math.max(MIN_WALL_RANGE[0], Math.min(MIN_WALL_RANGE[1], Number(obj.minWall)));
-  for (const raw of Array.isArray(obj.items) ? obj.items : []) {
-    const num = +String(raw.id || '').replace(/\D/g, '');
-    const id = raw.id ? String(raw.id) : 't' + (plan.seq + 1);
-    const n = v => (Array.isArray(v) ? v.map(Number) : [0, 0, 0]);
+  /* Werte in den Grenzen der Felder: was dort nicht einzustellen wäre (der
+     Regler des Achsabstands reicht von 5 bis 60 mm), soll auch aus einer
+     Datei nicht kommen. */
+  plan.dist = fileNumber(obj.dist, { min: DIST_RANGE[0], max: DIST_RANGE[1] }, plan.dist);
+  if (Number.isFinite(obj.minWall)) plan.minWall = clamp(Number(obj.minWall), MIN_WALL_RANGE[0], MIN_WALL_RANGE[1]);
+  /* Ältere Dateien kennen keine Vorgaben: für sie gelten die, mit denen die
+     Seite startet — nicht, was gerade im Feld steht, sonst hinge das Urteil
+     über einen geladenen Plan an einer Eingabe, die nirgends gespeichert ist. */
+  const def = obj.defaults && typeof obj.defaults === 'object' ? obj.defaults : {};
+  for (const k of Object.keys(DEFAULTS)) plan.defaults[k] = fileNumber(def[k], DEFAULT_META[k], DEFAULTS[k]);
+  const list = Array.isArray(obj.items) ? obj.items : [];
+  const { ids, seq } = fileIds(list, 't');
+  list.forEach((raw, i) => {
+    const id = ids[i], what = 'Element ' + id;
     if (raw.type === 'kanal') {
-      plan.items[id] = { id, type: 'kanal', a: n(raw.a), b: n(raw.b), d: Number(raw.d) || TYPES.kanal.params.d };
+      plan.items[id] = { id, type: 'kanal', a: filePoint(raw.a, what), b: filePoint(raw.b, what), d: fileNumber(raw.d, PARAM_META.d, TYPES.kanal.params.d) };
     } else {
-      plan.items[id] = { id, type: 'stich', p: n(raw.p), dir: unit(n(raw.dir)),
-        d: Number(raw.d) || TYPES.stich.params.d, len: Number(raw.len) || TYPES.stich.params.len };
+      plan.items[id] = { id, type: 'stich', p: filePoint(raw.p, what), dir: unit((Array.isArray(raw.dir) ? raw.dir : [0, 0, 1]).map(Number)),
+        d: fileNumber(raw.d, PARAM_META.d, TYPES.stich.params.d), len: fileNumber(raw.len, PARAM_META.len, TYPES.stich.params.len) };
       if (raw.auto) plan.items[id].auto = true;
     }
-    if (Number.isFinite(num)) plan.seq = Math.max(plan.seq, num);
-  }
+  });
+  plan.seq = seq;
   return plan;
 }

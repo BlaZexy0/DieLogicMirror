@@ -2,7 +2,6 @@
 
 import { series, line, limit } from './helpers.js';
 import { seq, fmt, subHTML } from '../core/format.js';
-import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
 export default {
@@ -22,7 +21,7 @@ export default {
     }
     const x = seq(v.wallMin, v.wallMax, 140);
     const f = s => v.kfill * s * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / (v.Tflow - v.Tdie);
-    const q = line(x, [series('Empf. Füllzeit', theme.chart.series1, x, f)],
+    const q = line(x, [series('Empf. Füllzeit', 'ink', x, f)],
       'Wandstärke in mm', 'Füllzeit in ms', 'Tguss ' + fmt(v.Tcast) + ' °C · Tform ' + fmt(v.Tdie) + ' °C');
     q.y0 = 0;
     q.limits = [limit('tmax', 't_f max ' + fmt(v.tmax) + ' ms', 'y', 'max', v.tmax, { note: 'Füllzeit zu lang' })];

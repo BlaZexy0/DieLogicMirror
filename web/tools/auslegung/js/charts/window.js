@@ -16,8 +16,8 @@ export default {
   calc(v, o) {
     const Ap = pistonArea(v);
     /* Ohne Anschnittfläche hat das Feld die Breite null und jede Zelle wird
-       0·Ap/0 = NaN. inputs.js markiert die leere Eingabe nur rot, es blockiert
-       sie nicht — hier ist der Ort, an dem das auffallen muss. */
+       0·Ap/0 = NaN. inputs.js markiert die leere Eingabe nur als ungültig, es
+       blockiert sie nicht — hier ist der Ort, an dem das auffallen muss. */
     if (!(v.gate > 0)) return { err: 'Anschnittfläche muss > 0 mm² sein.' };
     if (!(v.vmax > 0)) return { err: 'Kolbengeschw. max. muss > 0 sein.' };
     if (!(Ap > 0)) return { err: 'Kolben-Ø muss > 0 sein.' };
@@ -57,9 +57,10 @@ export default {
 <p class="math-note">Anschnittgeschwindigkeit lässt sich über zwei Hebel stellen: schneller fahren (v<sub>p</sub>)
 oder den Anschnitt verengen (A<sub>a</sub>). Dieses Feld zeigt beide Hebel gleichzeitig: dieselbe
 Kontinuitätsbeziehung wie beim Anschnittflächen-Diagramm, ausgewertet über der (v<sub>p</sub>, A<sub>a</sub>)-Ebene;
-das weiße Band ist das Ziel, alles außerhalb verlangt einen anderen Kompromiss aus Geschwindigkeit und Fläche:</p>
+das Band mit den gestrichelten Rändern ist das Ziel, alles außerhalb verlangt einen anderen Kompromiss aus
+Geschwindigkeit und Fläche:</p>
 ${eq('v_{a}(v_{p}, A_{a}) = v_{p} \\cdot \\frac{A_{K}}{A_{a}}')}
-<p class="math-note">Die weißen Konturen sind Linien konstanter Anschnittgeschwindigkeit; das Zielband ist
+<p class="math-note">Die Konturen sind Linien konstanter Anschnittgeschwindigkeit, je dunkler das Feld, desto schneller; das Zielband ist
 v<sub>a</sub> = <span data-m="band"></span>. Aktuell: v<sub>a</sub>(v₂ = <span data-m="vsel"></span>,
 A<sub>a</sub> = <span data-m="Ag"></span>) = <b data-m="va"></b>; v₂ ist das Mittel nach Anschnitt aus der Schusskurve.</p>`;
   },

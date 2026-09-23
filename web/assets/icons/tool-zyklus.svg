@@ -1,14 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" width="26" height="26" fill="none">
-  <!-- Zyklusanalyse — Phasenring mit Laufrichtung, Wärmebilanz.
-       Raster: Motiv innerhalb 2…24, Strich 1,6 (Hilfslinien 1,4 · 70 %), Marker in der Warnfarbe (warn).
-       Farben aus der Palette (shared.css), Fallback für die Ansicht außerhalb der Seite. -->
+  <!-- Zyklusanalyse: Phasenring mit Laufrichtung, Zeiger.
+       Raster: Motiv innerhalb 2…24, Strich 1,6 (Hilfslinien 1,4 · 70 %).
+       Farben sind Rollen der Palette (shared/palette.js): der Ring in der
+       Farbe von Prozess und Zeit (process), der Zeiger in der Hervorhebung
+       (mark), wie die Zykluszeit in der Zeitleiste. Die Deckkraft der
+       Ringstücke ist Zeichnung, keine Skala. Der Hex-Rückfall ist der
+       Standardwert der Rolle, für die Ansicht außerhalb der Seite. -->
   <symbol id="icon" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M13 3.5 A9.5 9.5 0 0 1 22.3 11" stroke="var(--cat-green, #4c9f70)" stroke-width="2.2"/>
-    <path d="M22.3 15 A9.5 9.5 0 0 1 16 22" stroke="var(--cat-green, #4c9f70)" stroke-width="2.2" opacity=".7"/>
-    <path d="M10 22 A9.5 9.5 0 0 1 3.7 15" stroke="var(--cat-green, #4c9f70)" stroke-width="2.2" opacity=".5"/>
-    <path d="M3.7 11 A9.5 9.5 0 0 1 9.5 4.2" stroke="var(--cat-green, #4c9f70)" stroke-width="2.2" opacity=".35"/>
-    <path d="M7.6 2.6 L9.8 4.3 L7.8 6.4" stroke="var(--cat-green, #4c9f70)" stroke-width="1.6"/>
-    <path d="M13 9 V14.5 M11.2 16.3 A1.8 1.8 0 1 0 14.8 16.3 A1.8 1.8 0 1 0 11.2 16.3" stroke="var(--warn, #c2447e)" stroke-width="1.5"/>
+    <path d="M13 3.5 A9.5 9.5 0 0 1 22.3 11" stroke="var(--process, #5c3824)" stroke-width="2.2"/>
+    <path d="M22.3 15 A9.5 9.5 0 0 1 16 22" stroke="var(--process, #5c3824)" stroke-width="2.2" opacity=".7"/>
+    <path d="M10 22 A9.5 9.5 0 0 1 3.7 15" stroke="var(--process, #5c3824)" stroke-width="2.2" opacity=".5"/>
+    <path d="M3.7 11 A9.5 9.5 0 0 1 9.5 4.2" stroke="var(--process, #5c3824)" stroke-width="2.2" opacity=".35"/>
+    <path d="M7.6 2.6 L9.8 4.3 L7.8 6.4" stroke="var(--process, #5c3824)" stroke-width="1.6"/>
+    <path d="M13 9 V14.5 M11.2 16.3 A1.8 1.8 0 1 0 14.8 16.3 A1.8 1.8 0 1 0 11.2 16.3" stroke="var(--mark, #b23797)" stroke-width="1.5"/>
   </symbol>
   <use href="#icon"/>
 </svg>

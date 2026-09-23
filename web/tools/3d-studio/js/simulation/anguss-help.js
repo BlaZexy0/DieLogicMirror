@@ -44,7 +44,9 @@ Oberflächenspannung: eine <b>schnelle</b> Rechnung für Reihenfolge und Zeiten,
 Ankunft steht neben der 1D-Rechnung und neben der Gitterrechnung.</p>
 <p>Beide rechnen auf der Grafikkarte (WebGPU) oder, ohne sie, in JavaScript, dann grob und in Minuten
 statt Sekunden; die Zeile unter dem Feld sagt vorher, womit und wie lange ungefähr. <b>Abbrechen</b> beendet
-einen Lauf sofort; danach gibt es kein Ergebnis.</p>
+einen Lauf sofort; danach gibt es kein Ergebnis. Ändert sich während eines Laufs der Prozess oder das
+Angusssystem, bricht er ebenso ab, und die Zeile unter dem Knopf nennt, was sich geändert hat. Ein Lauf
+rechnet auch weiter, wenn die Seite im Hintergrund liegt.</p>
 </section>
 <section data-help-anchor="aufloesung">
 <h3>Zellkante und Partikelabstand</h3>
@@ -90,7 +92,8 @@ Füllstands), bei den Partikeln als Kugeln vom Partikelabstand, nach Geschwindig
 durchscheinend. Die Skala gilt für den ganzen Lauf; ihr Ende ist das 99. Perzentil über die Bilder bis zur
 ersten Ankunft. Danach herrschen die Anschnitte, und der Weg davor wäre einfarbig blau. Was schneller
 ist, bleibt rot.</p>
-<p><b>Ankunft</b>: der Anguss nach der Ankunft der Front gefärbt (Turbo, nie erreicht grau). Diese Farben
+<p><b>Ankunft</b>: der Anguss nach der Ankunft der Front gefärbt (Turbo: früh blau, spät rot; was die
+Front nie erreicht, im Grau des Bauteils). Diese Farben
 gibt es nur aus der Gitterrechnung. Steht das Bild der Partikel da, fehlt die Wahl.</p>
 <p>Die Rechnung endet, wenn alle Anschnitte gemeldet sind (plus fünf Prozent für das Bild), spätestens am
 Ende der Kurve oder beim Dreifachen der 1D-Schätzung. Unter „Rechnung" stehen Schritte, Zellen bzw.

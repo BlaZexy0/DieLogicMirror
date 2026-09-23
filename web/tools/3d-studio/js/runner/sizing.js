@@ -20,7 +20,7 @@
         js/runner/profile.js). */
 
 import * as G from './graph.js';
-import { dimsForArea } from './profile.js';
+import { dimsForArea, section, area } from './profile.js';
 import { flowRate, nominalShares } from './flow.js';
 
 export const DEFAULT_SIZING = {
@@ -70,5 +70,22 @@ export function autoTaper(g, proc, opts = {}) {
     r.w = Math.round(r.w * f * 10) / 10;
     r.h = Math.round(r.h * f * 10) / 10;
   }
+  /* Und von dort nach unten: kein Kanal größer als das, womit seine Kante
+     beginnt — bei einer Gabelung ist das der Anteil am Zulauf, so teilt
+     ihn js/runner/curve.js (startDims). Ohne das wuchs der Querschnitt
+     hinter einem geklemmten Pressrest wieder auf (bei 4000 cm³ und Ø 90:
+     4025 mm² am Pressrest, 4878 am Punkt dahinter), und ein Ast mit
+     tieferem Teilbaum bekam mehr, als ihm die Aufteilung ließ. Abgerundet
+     wird hier auf das Zehntel, damit die Rundung nicht selbst wachsen lässt. */
+  const areaOf = n => area(section(n.w, n.h, g.draft, g.radius));
+  G.walk(g, n => {
+    if (!n.parent) return;
+    const p = g.nodes[n.parent];
+    const cap = areaOf(p) * G.branchShare(g, p, n.id);
+    if (areaOf(n) <= cap) return;
+    const d = dimsForArea(cap, n.h / Math.max(n.w, 1e-6), g.draft, g.radius);
+    n.w = Math.floor(d.w * 10) / 10;
+    n.h = Math.floor(d.h * 10) / 10;
+  });
   return G.normalizeMirrors(g);
 }

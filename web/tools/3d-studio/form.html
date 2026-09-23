@@ -40,15 +40,16 @@
     <div id="components"></div>
     <button type="button" class="btn btn-outline block-btn" id="group-new">+ Gruppe anlegen</button>
     <div id="group-form" class="hidden">
-      <div class="row"><span>Name</span><input type="text" id="group-title" placeholder="z. B. Schieber −X"></div>
+      <div class="row"><span>Name</span><input type="text" id="group-title" placeholder="z. B. Schieber −X" autocomplete="off"></div>
       <div class="row"><span>Seite</span>
-        <select id="group-side">
+        <select id="group-side" autocomplete="off">
           <option value="fix">feste Hälfte (bleibt stehen)</option>
           <option value="mov" selected>bewegliche Hälfte (fährt mit)</option>
         </select></div>
-      <div class="row"><span>Werkstoffklasse</span><select id="group-mat"></select></div>
-      <div class="row"><span>Schieber</span><select id="group-slide"></select></div>
-      <div class="row"><span>Schieberweg</span><input type="text" id="group-travel" value="120"><span class="val">mm</span></div>
+      <div class="row"><span>Werkstoffklasse</span><select id="group-mat" autocomplete="off"></select></div>
+      <div class="row"><span>Schieber</span><select id="group-slide" autocomplete="off"></select></div>
+      <div class="row"><span>Schieberweg</span><input type="text" id="group-travel" value="120" inputmode="decimal" autocomplete="off"><span class="val">mm</span></div>
+      <div class="warn-line" id="group-warn"></div>
       <div class="btn-pair">
         <button type="button" class="btn btn-primary" id="group-add">Anlegen</button>
         <button type="button" class="btn btn-outline" id="group-cancel">Abbrechen</button>
@@ -57,18 +58,18 @@
 
     <h2>Darstellung</h2>
     <div class="row">
-      <span>Stahl-Transparenz</span>
-      <input type="range" id="opacity" min="10" max="100" value="40">
+      <span>Deckkraft Stahl</span>
+      <input type="range" id="opacity" min="10" max="100" value="40" autocomplete="off">
       <span class="val" id="opacity-val"></span>
     </div>
     <div class="row">
       <span>Form öffnen</span>
-      <input type="range" id="open" min="0" max="100" value="0">
+      <input type="range" id="open" min="0" max="100" value="0" autocomplete="off">
       <span class="val" id="open-val"></span>
     </div>
 
     <h2>Schnitt</h2>
-    <label class="inline"><input type="checkbox" id="clip-on"> Schnittebene zeigen</label>
+    <label class="inline"><input type="checkbox" id="clip-on" autocomplete="off"> Schnittebene zeigen</label>
     <div id="clip-detail" class="disabled">
       <div class="row">
         <span>Achse</span>
@@ -80,18 +81,18 @@
       </div>
       <div class="row">
         <span>Position</span>
-        <input type="range" id="clip-pos" min="-100" max="100" value="0">
+        <input type="range" id="clip-pos" min="-100" max="100" value="0" autocomplete="off">
         <span class="val" id="clip-pos-val"></span>
       </div>
-      <label class="inline"><input type="checkbox" id="clip-flip"> Seite umkehren</label>
+      <label class="inline"><input type="checkbox" id="clip-flip" autocomplete="off"> Seite umkehren</label>
     </div>
 
     <h2>Dateien</h2>
-    <div class="row"><span>STL laden in</span><select id="stl-target"></select></div>
+    <div class="row"><span>STL laden in</span><select id="stl-target" autocomplete="off"></select></div>
     <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" multiple hidden>
     <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ STL-Dateien laden</button>
     <input type="file" id="glb-input" accept=".glb,model/gltf-binary" hidden>
-    <div class="row"><span>Dateiname</span><input type="text" id="glb-name" value="formaufbau"><span class="val">.glb</span></div>
+    <div class="row"><span>Dateiname</span><input type="text" id="glb-name" value="formaufbau" autocomplete="off"><span class="val">.glb</span></div>
     <div class="btn-pair">
       <button type="button" class="btn btn-outline" id="glb-btn">GLB laden</button>
       <button type="button" class="btn btn-primary" id="glb-save">Als GLB speichern</button>
@@ -102,15 +103,18 @@
 
     <div class="hint">
       <b>Heizkühlplan:</b> „Temperierung" hebt alle Kreise hervor, ein Tipp auf einen Kreis
-      nur diesen. Der Rest der Form wird blass, Stahl-Transparenz und Schnitt bleiben.
+      nur diesen. Der Rest der Form wird blass, Deckkraft Stahl und Schnitt bleiben.
       Farben und Namen der Teile werden mit in die GLB geschrieben, die Hervorhebung nicht.
+      Die voreingestellten Farben sind die des Farbschemas und folgen ihm; eine selbst gewählte
+      Farbe bleibt, wie sie ist.
       <p style="margin-top:.7rem">Der Schnitt zeigt die Körper <b>geschlossen</b>: je
+      Teil zeichnet ein Stencil-Durchgang eine massive Schnittfläche in der Farbe des Teils;
+      bei einer Hervorhebung verblassen die Schnittflächen der anderen Teile. Die
       Werkstoffklasse (Stahl, Gussteil, Anguss, Überläufe, Temperierung, Kolben, Stifte)
-      zeichnet ein Stencil-Durchgang eine massive Schnittfläche in Klassenfarbe; bei einer
-      Hervorhebung verblassen die Schnittflächen der anderen Klassen. Die Klasse eines
-      geladenen Teils kommt aus seiner Gruppe; beim Verschieben wechselt sie mit. Gruppen,
-      Seiten und Schieberwege stehen als glTF-<code>extras</code> in der GLB; eine GLB ohne
-      diese Angaben wird über die Namen aus <code>js/registry.js</code> einsortiert.</p>
+      eines geladenen Teils kommt aus seiner Gruppe; beim Verschieben wechselt sie mit.
+      Gruppen, Seiten und Schieberwege stehen als glTF-<code>extras</code> in der GLB; eine
+      GLB ohne diese Angaben wird über die Namen aus <code>js/registry.js</code> einsortiert,
+      Teile mit anderen Namen kommen in „Sonstige Teile".</p>
     </div>
   </aside>
 

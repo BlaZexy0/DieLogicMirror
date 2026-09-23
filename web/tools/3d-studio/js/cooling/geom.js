@@ -112,9 +112,19 @@ export const volumeOf = item => volume(buildItem(item));
  * Kleinster Abstand der Bohrungswand zum Bauteil: entlang der Achse
  * abgetastet, Feldwert (Abstand der Achse zur Bauteiloberfläche) minus
  * Radius. `sample(x, y, z)` liefert den Feldwert, außen positiv.
+ *
+ * Wie dicht: `spacing` mm zwischen zwei Proben, mindestens 24 Stücke. Mit
+ * fester Zahl sah ein langes Element zwischen zwei Proben eine dünne Wand
+ * nicht: ein Kanal Ø 10 quer durch eine 4-mm-Platte war bei 480 mm Länge
+ * „unter dem Mindest-Wandabstand" statt Durchbruch, bei 960 mm eingehalten.
+ * Das Werkzeug nimmt die halbe Zellkante: der Feldwert ändert sich je mm
+ * Weg um höchstens einen mm, zwischen zwei Proben entgeht also höchstens
+ * eine Viertel-Zellkante — so genau kennt das Feld den Abstand ohnehin.
  */
-export function wallClearance(item, sample, steps = 24) {
+export function wallClearance(item, sample, spacing = 0) {
   const { a, b } = axisOf(item);
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+  const steps = Math.max(24, spacing > 0 ? Math.ceil(L / spacing) : 0);
   let min = Infinity;
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;

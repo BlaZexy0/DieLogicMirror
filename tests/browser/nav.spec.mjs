@@ -130,37 +130,82 @@ test('Farbschema: die Kachel färbt Seite und Kopfleiste sofort um', async ({ pa
   expect(vorher.scheme).toBe('teal');
   expect(vorher.primary).toBe('#008c82');
 
-  await page.locator('#sch-grid label:has(input[value="kupfer"])').click();
+  await page.locator('#sch-grid label:has(input[value="graphit"])').click();
   const nachher = await leiste(page);
-  expect(nachher.scheme).toBe('kupfer');
-  expect(nachher.gespeichert).toBe('kupfer');
-  expect(nachher.primary).toBe('#a25325');
-  expect(nachher.palette).toBe('#a25325');
+  expect(nachher.scheme).toBe('graphit');
+  expect(nachher.gespeichert).toBe('graphit');
+  expect(nachher.primary).toBe('#4d5760');
+  expect(nachher.palette).toBe('#4d5760');
   expect(nachher.nav).not.toBe(vorher.nav);      // Leiste ohne Neuladen umgefärbt
   expect(nachher.logic).not.toBe(vorher.logic);  // auch die Wortmarke
 
   /* Und der Hinweis nennt, was gilt. */
-  await expect(page.locator('#sch-hint')).toContainText('Kupfer');
+  await expect(page.locator('#sch-hint')).toContainText('Graphit');
 
   /* Über den Seitenwechsel hinaus — auch dort, wo es kein shared.css gibt. */
   await page.goto('/tools/auslegung/');
   const dashboard = await leiste(page);
-  expect(dashboard.scheme).toBe('kupfer');
+  expect(dashboard.scheme).toBe('graphit');
   expect(dashboard.nav).toBe(nachher.nav);
-  /* Die Diagramme rechnen mit denselben Farben. */
-  expect(await page.evaluate(() => window.__THEME__.chart.series2)).toBe('#a25325');
+  /* Die Diagramme rechnen mit denselben Rollen: theme.js leitet sie aus
+     der Palette ab, Schrift wie Sachfarben (seit 22.09. belegt jedes Schema
+     alle Rollen, die Werkzeuglinie hat in Graphit ihr eigenes Blau). */
+  const chart = await page.evaluate(() => ({
+    text: window.__THEME__.chart.text, die: window.__THEME__.chart.die,
+    graphit: window.__SCHEMES__.colors('graphit'), standard: window.__SCHEMES__.colors('teal')
+  }));
+  expect(chart.text).toBe(chart.graphit.text);
+  expect(chart.die).toBe(chart.graphit.die);
+  expect(chart.die).not.toBe(chart.standard.die);
+});
+
+/* Gezeichnete Bilder (SVG-Strings, Canvas) erreicht keine CSS-Variable:
+   die Werkzeuge malen sie auf „dielogic:scheme" neu und lesen die Rollen
+   dabei frisch. In den SVGs steht jede Farbe als Wert, nie als var(): der
+   PNG-Export rastert das SVG außerhalb der Seite, dort wäre var() schwarz. */
+test('Farbschema: Zeitleiste, Kostenkurve und Projektion färben beim Umschalten um', async ({ page }) => {
+  for (const [url, sel] of [['/tools/zyklus/', '#chart svg'], ['/tools/teilekosten/', '#viz-curve svg']]) {
+    await page.goto(url);
+    await page.waitForSelector(sel);
+    const bild = () => page.evaluate(s => ({ svg: document.querySelector(s).outerHTML, mark: window.__PALETTE__.mark }), sel);
+    const vorher = await bild();
+    expect(vorher.svg).toContain(vorher.mark);
+    await page.evaluate(() => window.__SCHEMES__.set('graphit'));
+    const nachher = await bild();
+    expect(nachher.mark).not.toBe(vorher.mark);
+    expect(nachher.svg).toContain(nachher.mark);
+    expect(nachher.svg).not.toContain(vorher.mark);
+    expect(nachher.svg).not.toMatch(/="[^"]*var\(/);
+    await page.evaluate(() => window.__SCHEMES__.set('teal'));
+  }
+
+  /* Sprengfläche: der Schwerpunkt S trägt die Hervorhebung, im Canvas
+     gezählt als Pixel in dieser Farbe. */
+  await page.goto('/tools/sprengflaeche/');
+  await page.waitForFunction(() => document.querySelectorAll('#result-body tr').length >= 4);
+  const pixel = () => page.evaluate(() => {
+    const c = document.getElementById('proj-canvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    const [r, g, b] = window.__PALETTE__.hexRgb(window.__PALETTE__.mark).map(v => Math.round(v * 255));
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - r) + Math.abs(d[i + 1] - g) + Math.abs(d[i + 2] - b) < 12) n++;
+    return n;
+  });
+  expect(await pixel()).toBeGreaterThan(20);
+  await page.evaluate(() => window.__SCHEMES__.set('graphit'));
+  expect(await pixel()).toBeGreaterThan(20);
 });
 
 test('Farbschema: ohne Wahl bleibt der Standard, und er lässt sich zurückwählen', async ({ page }) => {
   await page.goto('/konto/');
-  await page.locator('#sch-grid label:has(input[value="kontrast"])').click();
-  expect((await leiste(page)).scheme).toBe('kontrast');
+  await page.locator('#sch-grid label:has(input[value="stahl"])').click();
+  expect((await leiste(page)).scheme).toBe('stahl');
   await page.locator('#sch-grid label:has(input[value="teal"])').click();
   const zurück = await leiste(page);
   expect(zurück.scheme).toBe('teal');
   expect(zurück.primary).toBe('#008c82');
   expect(zurück.nav).toBe('rgb(0, 39, 51)');
-  /* Der Standard schreibt keine Diagrammfarben um. */
+  /* Zurück im Standard sind auch die Diagrammrollen wieder die der Palette. */
   await page.goto('/theorie/pq2.html');
-  expect(await page.evaluate(() => window.__THEME__.chart.event)).toBe('#9aacb2');
+  const chart = await page.evaluate(() => ({ event: window.__THEME__.chart.event, mutedLight: window.__SCHEMES__.base.mutedLight }));
+  expect(chart.event).toBe(chart.mutedLight);
 });

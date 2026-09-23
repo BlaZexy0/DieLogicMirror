@@ -1,6 +1,9 @@
-/* Farbsystem: web/shared/palette.js ist die Quelle — shared.css, main.css,
-   theme.js (ui) sowie die Konstanten in nav.js/projectbar.js müssen
-   dieselben Werte tragen. Dazu WCAG-Kontrast der Textfarben.
+/* Farbsystem: web/shared/palette.js ist die Quelle. shared.css spiegelt
+   jede Rolle als Token; theme.js und alles andere leiten ab. Dazu der
+   WCAG-Kontrast der Textfarben, die Rechenhilfen der Palette (mix, rgba)
+   und die festen Farbleisten (scale, lut, gradient). Dass nirgends sonst
+   ein Farbwert steht, prüft tests/web/farbrollen.test.mjs; die Regeln je
+   Schema schemes.test.mjs.
      node --test tests/web/palette.test.mjs */
 
 import { test } from 'node:test';
@@ -26,13 +29,50 @@ function rootTokens(css) {
 }
 const cssKey = k => k.replace(/[A-Z]/g, c => '-' + c.toLowerCase());
 
-test('palette: Werte sind 6-stellige Kleinbuchstaben-Hex, keine Dubletten bis auf text = dark', () => {
+/* Gewollte Gleichstände im Standard: eine Rolle, die dort einer anderen
+   gleicht, in anderen Schemata aber nicht (die Schmelze ist im Standard die
+   Marke, die Achsen sind die Sachfarben von Maschine, Luft und Werkzeug). */
+const GLEICH = { text: 'dark', melt: 'primary', badText: 'bad', axisX: 'machine', axisY: 'air', axisZ: 'die' };
+
+test('palette: Werte sind 6-stellige Kleinbuchstaben-Hex, keine Dubletten außer den gewollten', () => {
   const seen = {};
   for (const [k, v] of Object.entries(P.colors)) {
     assert.match(v, /^#[0-9a-f]{6}$/, k);
-    if (seen[v] && !(k === 'text' && seen[v] === 'dark')) assert.fail(`${k} und ${seen[v]} haben denselben Wert ${v}`);
-    seen[v] = k;
+    if (seen[v] && GLEICH[k] !== seen[v]) assert.fail(`${k} und ${seen[v]} haben denselben Wert ${v}`);
+    if (!seen[v]) seen[v] = k;
   }
+});
+
+test('palette: die Rechenhilfen mischen im OK-Lab-Raum und folgen den Rollen', () => {
+  assert.equal(P.mix('ok', 'ok', 0.5), P.ok);
+  assert.equal(P.mix('#000000', '#ffffff', 0), '#000000');
+  assert.equal(P.mix('#000000', '#ffffff', 1), '#ffffff');
+  assert.equal(P.rgba('ok', 0.5), 'rgba(21,154,76,0.5)');
+});
+
+/* Die Farbleisten von vorher (Stand vor dem Umbau der Farbrollen), fest
+   und ohne Rolle: Turbo als Polynom fürs 3D-Studio, sieben Stützstellen
+   für die Heatmaps der Auslegung, die Entformschräge mit ihrer Stufe am
+   Grenzwert, das Flussschema des Angussdesigners. */
+test('palette: die Farbleisten sind die von vorher', () => {
+  assert.equal(P.scale('heat', 0), '#30123b');
+  assert.equal(P.scale('heat', 0.5), '#67eb73');
+  assert.equal(P.scale('heat', 1), '#7a0403');
+  assert.equal(P.scale('turbo', 0.5), '#96fa50', 'Turbo nach Popov bei der Hälfte');
+  assert.equal(P.scale('draft', 0), '#b42318', 'unter 0° und bei 0°: Rot');
+  assert.equal(P.scale('draft', 1 / 3 - 1e-9), '#d4a908', 'knapp unter dem Grenzwert: Gold');
+  assert.equal(P.scale('draft', 1 / 3), '#7cc4a0', 'am Grenzwert: die Stufe ins helle Grün');
+  assert.equal(P.scale('draft', 1), '#0d7a3c', 'beim Dreifachen: sattes Grün');
+  assert.equal(P.scale('speed', 0), '#2e6da4');
+  assert.equal(P.scale('speed', 1), '#b42318');
+  assert.equal(P.scale('turbo', NaN), null, 'ohne Wert keine Farbe');
+  assert.equal(P.scale('heat', -1), P.scale('heat', 0), 'geklemmt');
+  const t = P.lut('heat', 7);
+  assert.equal(t.length, 21);
+  assert.deepEqual([...t], [48, 18, 59, 55, 117, 197, 29, 172, 213, 103, 235, 115, 245, 194, 37, 250, 126, 29, 122, 4, 3]);
+  assert.match(P.gradient('turbo'), /^linear-gradient\(90deg, #/);
+  /* Keine Rolle: kein Token, kein Schlüssel in colors. */
+  for (const n of Object.keys(P.leisten)) assert.ok(!(n in P.colors), n);
 });
 
 test('shared.css :root spiegelt die Palette vollständig', () => {
@@ -50,20 +90,6 @@ test('theme.js hat keinen ui-Block mehr (UI-Farben = palette.js)', () => {
   assert.equal(THEME.ui, undefined);
 });
 
-test('keine losen Hex-Literale mehr in Seiten-Styles und nav/projectbar', () => {
-  const pages = ['index.html', 'shared/shared.css', 'tools/teilekosten/index.html', 'tools/zyklus/index.html',
-    'tools/sprengflaeche/index.html', 'konto/index.html', 'recht/ueber-uns.html', 'theorie/pq2.html', 'theorie/kreissegmente.html'];
-  for (const f of pages) {
-    const body = read(f).replace(/:root \{[^}]*\}/, '').replace(/<meta[^>]*theme-color[^>]*>/g, '');
-    const hits = [...body.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
-    assert.deepEqual(hits, [], `${f}: ${hits.join(', ')}`);
-  }
-  for (const [f, name] of [['shared/nav.js', 'const C'], ['shared/projectbar.js', 'var C']]) {
-    const body = read(f).replace(new RegExp(name + ' = \\{[^}]*\\}'), '');
-    assert.deepEqual([...body.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]), [], f);
-  }
-});
-
 /* ── Kontrast (WCAG 2.x) ── */
 function lum(hex) {
   const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
@@ -76,14 +102,14 @@ export function contrast(a, b) {
 }
 
 test('Kontrast: Textfarben auf Weiß ≥ 4.5:1 (primary ≥ 4 für große/fette Schrift)', () => {
-  const onWhite = ['dark', 'dark2', 'dark3', 'primary2', 'primaryDeep', 'textBody', 'muted', 'warn', 'warnText', 'ok', 'bad', 'catSlate'];
+  const onWhite = ['dark', 'dark2', 'dark3', 'primary2', 'primaryDeep', 'textBody', 'muted', 'okText', 'cautionText', 'badText', 'mark'];
   for (const k of onWhite) assert.ok(contrast(P[k], P.surface) >= 4.5, `${k} auf Weiß: ${contrast(P[k], P.surface).toFixed(2)}`);
   assert.ok(contrast(P.primary, P.surface) >= 4.0);
-  assert.ok(contrast(P.noteText, P.noteBg) >= 4.5);
+  for (const l of ['ok', 'caution', 'bad']) assert.ok(contrast(P[l + 'Text'], P[l + 'Bg']) >= 4.5, l + 'Text auf ' + l + 'Bg');
 });
 
 test('Kontrast: Text auf dunklem Grund ≥ 4.5:1', () => {
-  for (const k of ['ondark', 'ondark2', 'primaryLight', 'surface', 'gold', 'warnSoft'])
+  for (const k of ['ondark', 'ondark2', 'primaryLight', 'surface', 'caution'])
     assert.ok(contrast(P[k], P.dark) >= 4.5, `${k} auf dark: ${contrast(P[k], P.dark).toFixed(2)}`);
   assert.ok(contrast(P.surface, P.primary) >= 4.0, 'weiß auf primary (Buttons)');
 });

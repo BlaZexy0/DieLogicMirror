@@ -9,7 +9,36 @@
 
 import { NEVER, NO_PLUNGER, FLAG } from './lattice.js';
 
-const tick = () => new Promise(r => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(() => r()) : setTimeout(r, 0)));
+/** Eine Aufgabe später, ungedrosselt: eine Nachricht an sich selbst. Anders
+    als setTimeout, das der Browser in einem verborgenen Reiter auf eine
+    Sekunde (nach Minuten auf eine je Minute) streckt. Unter Node ohne
+    MessageChannel: setTimeout. */
+export function nextTask() {
+  if (typeof MessageChannel !== 'function') return new Promise(r => setTimeout(r, 0));
+  return new Promise(resolve => {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = () => { ch.port1.close(); resolve(); };
+    ch.port2.postMessage(0);
+  });
+}
+
+/** Dem Browser Luft lassen: ein Bild lang (requestAnimationFrame), damit er
+    Fortschritt und Bild zeichnet — solange die Seite zu sehen ist. In einem
+    Reiter im Hintergrund kommt dieses Bild NIE, und bis 2026-09-22 stand der
+    Lauf dort still, bis man zurückkam. Verborgen geht es deshalb mit
+    nextTask() weiter, und wird die Seite verborgen, während das Bild noch
+    aussteht, ebenso. Ohne Seite (Node): setTimeout. */
+export function tick() {
+  const doc = typeof document !== 'undefined' ? document : null;
+  if (typeof requestAnimationFrame !== 'function' || !doc) return new Promise(r => setTimeout(r, 0));
+  if (doc.hidden) return nextTask();
+  return new Promise(resolve => {
+    let done = false;
+    const go = () => { if (done) return; done = true; doc.removeEventListener('visibilitychange', go); resolve(); };
+    requestAnimationFrame(go);
+    doc.addEventListener('visibilitychange', go);
+  });
+}
 
 /**
  * Den Lauf fahren.
@@ -22,14 +51,14 @@ const tick = () => new Promise(r => (typeof requestAnimationFrame === 'function'
  *   ipAt(step) Kolbenschicht (wahlweise), sonst NO_PLUNGER
  *   onSnapshot(snap, gateDone)   nach jedem Bild; liefert einen Grund zum
  *              Aufhören (Text) oder nichts
- *   isCancelled()
+ *   signal     AbortSignal: abgebrochen wird zwischen zwei Bildern
  * → { snapshots: [{ step, fill: Uint8Array, speed: Uint8Array, uMax }], arrival, gateDone, steps, reason }
  *   speed ist |u| je Schmelzezelle als Byte, 255 = uMax dieses Bildes
  *   (Gittereinheiten); Gaszellen tragen 0.
  */
 export async function runSimulation(opts) {
   const { solver, engine, domain, stepsMax, snapEvery, uAt, ipAt, onSnapshot, signal } = opts;
-  const isCancelled = () => (opts.isCancelled && opts.isCancelled()) || (signal && signal.aborted);
+  const isCancelled = () => !!(signal && signal.aborted);
   const N = domain.N;
   const snapshots = [];
   const gateDone = new Array((domain.gates || []).length).fill(NEVER);
@@ -63,7 +92,7 @@ export async function runSimulation(opts) {
   snapshots.push({ step: 0, fill: toBytes(initial), speed: new Uint8Array(N), uMax: 0 });
   let step = 0, stopAt = Infinity, reason = '';
   const ip = s => (ipAt ? ipAt(s) : NO_PLUNGER);
-  while (step < stepsMax && step < stopAt && !(isCancelled && isCancelled())) {
+  while (step < stepsMax && step < stopAt && !isCancelled()) {
     const n = Math.min(snapEvery, stepsMax - step, stopAt - step);
     let fill, vel;
     if (engine === 'gpu') {
@@ -99,7 +128,7 @@ export async function runSimulation(opts) {
     }
     await tick();
   }
-  if (isCancelled && isCancelled()) reason = 'abgebrochen';
+  if (isCancelled()) reason = 'abgebrochen';
   else if (!reason) reason = 'Schrittgrenze erreicht';
   const arrival = engine === 'gpu' ? await solver.readArrival() : solver.arrival().slice();
   return { snapshots, arrival, gateDone, steps: step, reason };

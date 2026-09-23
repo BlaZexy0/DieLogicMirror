@@ -22,7 +22,7 @@ der Schmelze folgt aus dem Kreissegment.</p>
 <p>Oben in der Stirnfläche sitzt der Auslass: Was dort ankommt, verlässt die Kammer, und die Zellen davor
 melden „Kammer voll". Er ist <b>keine Eingabe</b>, sondern Randbedingung der Rechnung und folgt dem
 Durchmesser (Breite D/3, Tiefe D/6); das Metamodell rechnet ohnehin mit dem Fenster seiner Rechnungen
-(Sehne bei 0,42 R). Ausgelegt wird der Laufkanal im Angussdesigner, nicht hier — deshalb steht er auch
+(Sehne bei 0,42 R). Ausgelegt wird der Laufkanal im Angussdesigner, nicht hier; deshalb steht er auch
 nicht im Bild.</p>
 </section>
 <section data-help-anchor="kurve">
@@ -34,10 +34,12 @@ von hier; die Massen werden so gesetzt, dass die Kurve den gewählten Füllgrad 
 gilt für beide Rampen.</p>
 <p><b>Punkte</b>: eigene Wegpunkte, wie im Dashboard: je Zeile der Kolbenweg s in mm und die
 Kolbengeschwindigkeit v in m/s. Zwischen zwei Punkten wird konstant beschleunigt, der Ursprung
-(0 mm, 0 m/s) kommt von selbst dazu; der Weg muss von Zeile zu Zeile zunehmen. Beim ersten Umschalten
-stehen die Punkte des Projekts da — dieselbe Kurve wie im Dashboard, von dort aus weiterzueditieren.
-Endet die Kurve vor „Kammer voll", sagt es die Warnzeile: Die Rechnung braucht die Kurve bis dorthin.
-Höchstens zehn Punkte; die Liste scrollt in sich.</p>
+(0 mm, 0 m/s) kommt von selbst dazu; der Weg muss von Zeile zu Zeile zunehmen. Die Felder begrenzen
+sich wie v₁ und v₂: der Weg auf 0 … 2000 mm, die Geschwindigkeit auf 0 … 12 m/s. Beim ersten Umschalten
+stehen die Punkte des Projekts da: dieselbe Kurve wie im Dashboard, von dort aus weiterzueditieren.
+Endet die Kurve vor „Kammer voll", wird es nie erreicht, und gerechnet wird nicht: die Rechnung fragt
+nach genau diesem Punkt und braucht die Kurve bis dorthin. Höchstens zehn Punkte; die Liste scrollt in
+sich.</p>
 <p>Die Rechnung beginnt beim Kolbenstart und endet, wenn die Schmelze den Laufkanal erreicht hat (plus
 ein Stück für das Bild), spätestens am Ende der Kurve. Alle Zeiten zählen ab Kolbenstart.</p>
 </section>
@@ -56,19 +58,27 @@ Partikel gleiten, der Kolben als Ebene, die die Kurve fährt. Keine Oberflächen
 über der Schmelze: die Zahl, um die es in der ersten Phase geht. Vor dem Start kommt die Schmelze zur
 Ruhe (20 ms mit hoher Zähigkeit, dann v = 0): die hydrostatische Vorgabe passt an der freien Oberfläche nie
 ganz, und der Schwapp davon soll nicht in die Welle.</p>
-<p><b>Metamodell</b>: kein Löser, sondern ein trainiertes Modell. Es hat aus über tausend
+<p><b>Metamodell</b>: kein Löser, sondern ein trainiertes Modell. Es hat aus 285
 OpenFOAM-Rechnungen derselben Kammer gelernt, wie die Welle aussieht, und gibt sie in Sekunden statt in
 Minuten wieder: für 101 Kolbenstellungen je Kammerschicht Schmelzeanteil und Geschwindigkeit. Dafür gilt
-es nur da, wo gelernt wurde: Länge/Durchmesser 5 … 20, Füllgrad 30 … 70 %, Durchmesser 60 … 300 mm;
-außerhalb sagt der Knopf, woran es liegt, und rechnet nicht. Es hat KEINE Zellkante: das Gitter ist das
-der Rechnungen (30 × 30 je Schicht, eine Schicht D · 0,1 hoch). Und es kennt den Laufkanal nicht: alle
+es nur da, wo gelernt wurde: Länge/Durchmesser 5 … 20, Füllgrad 30 … 70 %, Durchmesser 60 … 300 mm, und
+Kurven wie die der Rechnungen. Bis „Kammer voll" fährt der Kolben aus dem Stand an, wird nie langsamer,
+beschleunigt höchstens mit 0,5 g (4,9 m/s²) und bleibt unter 1,05 Fr<sub>c</sub>, der kritischen
+Froude-Zahl der Rechnungen (bei Ø 90 mm und 40 % sind das 0,79 m/s); ab 5 % des Wegs fährt er wenigstens
+ein Zehntel davon, und bis „Kammer voll" vergeht höchstens t·√(g/D) = 60. Außerhalb sagt der Knopf, was
+und wie weit, und rechnet nicht. Die zweistufige Kurve mit ihrer Vorgabe von 100 m/s² rechnen deshalb
+nur Gitter und Partikel, mit einer Beschleunigung bis 4,9 m/s² auch das Metamodell. Es hat KEINE
+Zellkante: das Gitter ist das der Rechnungen (30 × 30 je Schicht, eine Schicht D · 0,1 hoch). Und es
+kennt den Laufkanal nicht: alle
 Rechnungen hatten dasselbe Auslassfenster in der Stirnplatte (Sehne bei 0,42 R), „Kammer voll" heißt hier,
 die Schmelze erreicht dieses Fenster: eine Sehne bei 0,42 R statt des Auslasses, mit dem Gitter und Partikel rechnen.
-Beim ersten Lauf lädt die Seite das Modell (12 MB) und sein Rechenwerk nach.</p>
+Beim ersten Lauf lädt die Seite das Modell (3,6 MB) und sein Rechenwerk (14 MB) nach.</p>
 <p>Gitter und Partikel rechnen auf der Grafikkarte (WebGPU) oder, ohne sie, in JavaScript, dann grob, und
 die erste Phase dauert Minuten; das Metamodell rechnet in WebAssembly, auch ohne Grafikkarte. Die Zeile
-unter dem Feld sagt vorher, womit und wie lange ungefähr. <b>Abbrechen</b> beendet einen Lauf sofort;
-danach gibt es kein Ergebnis.</p>
+unter dem Feld sagt vorher, womit und wie lange ungefähr. <b>Abbrechen</b> beendet einen Lauf sofort,
+beim Metamodell auch, während es noch lädt (das Laden geht im Hintergrund weiter); danach gibt es kein
+Ergebnis. Ändern sich während eines Laufs Kammer, Kurve oder Legierung, bricht er ebenso ab, und die
+Zeile unter dem Knopf nennt das Feld. Ein Lauf rechnet auch weiter, wenn die Seite im Hintergrund liegt.</p>
 </section>
 <section data-help-anchor="aufloesung">
 <h3>Zellkante und Partikelabstand</h3>
@@ -104,6 +114,7 @@ ersten Lauf da, nur blass; unten links im Bild stehen Zeit, Kolbenweg und die ei
 gezeigten Bild. Die Schmelze ist nach Geschwindigkeit
 gefärbt, die Kammer durchscheinend (ihre Deckkraft steht unter „Darstellung"). Die Skala gilt für den
 ganzen Lauf; ihr Ende ist das 99. Perzentil über die Bilder bis „Kammer voll". Danach herrscht der
-Laufkanal, und die Welle wäre einfarbig blau. Was schneller ist, bleibt rot.</p>
+Laufkanal, und die Welle wäre einfarbig blau. Was schneller ist, bleibt rot. Beim Metamodell zählt
+dafür nur die Schmelze (was mehr als halb voll ist): die Luft trägt dort eigene Geschwindigkeiten.</p>
 </section>
 `;

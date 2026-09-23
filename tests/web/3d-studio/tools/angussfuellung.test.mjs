@@ -241,9 +241,22 @@ test('Partikel: ein Lauf in JavaScript — danach stehen Gitter und Partikel neb
   assert.equal(ui('show-row').hidden, true, 'Ankunftsfarben kennt nur das Gitter — beim Bild der Partikel gibt es nichts zu wählen');
   const sl = ui('t-slider');
   assert.equal(sl.max, String(r.snapshots.length - 1));
+  /* Der Platz reicht für das größte Bild und wird EINMAL angelegt: gezeichnet
+     wird, was das Bild hat (setDrawRange). Vorher kam je Bild mit anderer
+     Partikelzahl ein neues Feld, und das alte blieb auf der Karte liegen. */
+  const most = r.snapshots.reduce((m, sn) => Math.max(m, sn.n), 0);
+  const platz = v.points.geometry.getAttribute('position');
+  assert.equal(platz.count, most, 'Platz für das größte Bild');
   sl.value = '0';
   sl.dispatch('input');
-  assert.equal(v.points.geometry.getAttribute('position').count, r.nFluid, 'am Anfang nur der Pressrest');
+  same(v.points.geometry.getAttribute('position'), platz, 'dasselbe Feld, auch bei weniger Partikeln');
+  assert.equal(v.points.geometry.drawRange.count, r.nFluid, 'am Anfang nur der Pressrest');
+  for (const k of [1, 2, r.snapshots.length - 1]) {
+    sl.value = String(k); sl.dispatch('input');
+    same(v.points.geometry.getAttribute('position'), platz, 'Bild ' + k + ': kein neues Feld');
+    assert.equal(v.points.geometry.drawRange.count, r.snapshots[k].n, 'Bild ' + k + ': gezeichnet wird, was es hat');
+  }
+  sl.value = '0'; sl.dispatch('input');
   /* „Bild": zum Gitter und zurück. */
   seg(ui('bild-seg'), 'lbm').dispatch('click');
   assert.ok(v.meltMesh.visible && !v.points.visible, 'jetzt die Fläche der Gitterrechnung');
@@ -286,8 +299,8 @@ test('Ein anderes Problem verwirft beide Ergebnisse', () => {
   seg(ui('engine-seg'), 'lbm').dispatch('click');
   set(ui('cell'), '0,5');
   assert.equal(ui('primary').disabled, true);
-  assert.match(ui('note').textContent, /Zu fein/);
-  assert.match(ui('engine-warn').textContent, /Zu fein/);
+  assert.match(ui('note').textContent, /^Zu fein: höchstens [\d,]+ Mio\. Zellen\.$/, 'unter dem Knopf in einer Zeile');
+  assert.match(ui('engine-warn').textContent, /^Zu fein: .* Die Zellkante vergrößern\.$/, 'hier mit dem Rat');
   set(ui('cell'), '6');
   assert.equal(ui('primary').disabled, false);
 });
@@ -316,6 +329,101 @@ test('Eine Angussdatei als Quelle; Fremdes wird abgewiesen', async () => {
   assert.equal(s.proc.volume, 420);
   assert.equal(ui('vol').value, '420');
   assert.match(ui('toast').textContent, /Einstellungen vom .* übernommen/);
+});
+
+/* Was aus einer Datei kommt, ist Text. Eine Angussdatei mit dem Anschnitt
+   „<img src=x onerror=…>" lief am 2026-09-22 in Firefox als Skript: die Zeile
+   „Anschnitt …" der Tabelle ging roh in innerHTML. js/runner/graph.js weist
+   solche Namen inzwischen ab — hier wird der Graph deshalb von Hand gebaut. */
+test('Namen aus der Datei sind Text: ein Anschnitt „<img …>" steht als Text in der Tabelle', async () => {
+  const { v, ui, host } = P;
+  const s = v.state;
+  const { DEMOS } = await import(pathToFileURL(resolve(ROOT, 'js/runner/presets.js')));
+  const { compareTable } = await import(pathToFileURL(resolve(ROOT, 'js/simulation/table.js')));
+  const boese = '<img src=x onerror="globalThis.__xss = 1">';
+  const g = DEMOS.find(d => d.id === 'zwei').build();
+  const gate = Object.values(g.nodes).find(n => n.type === 'gate');
+  const alt = gate.id;
+  delete g.nodes[alt];
+  gate.id = boese;
+  g.nodes[boese] = gate;
+  for (const n of Object.values(g.nodes)) n.children = n.children.map(c => (c === alt ? boese : c));
+  v.adoptGraph(g, 'boese', null, 'test-boese');
+  const tab = ui('result-table');
+  assert.equal(tab.querySelectorAll('img').length, 0, 'kein Bild, kein Skript');
+  assert.ok(tab.innerHTML.includes('&lt;img src=x onerror=&quot;'), 'maskiert: ' + tab.innerHTML.slice(0, 200));
+  assert.ok(tab.textContent.includes('Anschnitt ' + boese), 'der Name steht, wie er heißt');
+  assert.equal(globalThis.__xss, undefined);
+  /* Die Tabelle selbst nimmt nur Text — Bezeichnung, Spalte, Zelle, Überschrift. */
+  const el = globalThis.document.createElement('div');
+  compareTable(el, { caption: '<b>c</b>', cols: [{ label: '<i>x</i>' }], rows: [{ label: 'a & b', cells: ['<script>1</script>'] }] });
+  assert.equal(el.querySelectorAll('b, i, script').length, 0);
+  assert.match(el.innerHTML, /&lt;b&gt;c&lt;\/b&gt;.*&lt;i&gt;x&lt;\/i&gt;.*a &amp; b.*&lt;script&gt;1&lt;\/script&gt;/);
+  /* Der Dateiname steht nur als Text (Hinweiszeile, Chip). */
+  const G = await import(pathToFileURL(resolve(ROOT, 'js/runner/graph.js')));
+  host.openJSON(G.toJSON(DEMOS.find(d => d.id === 'zwei').build()), '<img src=y>.json');
+  assert.equal(ui('graph-note').querySelectorAll('img').length, 0);
+  assert.equal(ui('graph-note').textContent, 'Geladen: <img src=y>.json');
+  assert.equal(ui('part-name').querySelectorAll('img').length, 0);
+  v.pickDemo('zwei');
+  assert.equal(s.name, DEMOS.find(d => d.id === 'zwei').label);
+});
+
+test('Eine Änderung während des Laufs bricht ihn ab — und die Zeile sagt, warum', async () => {
+  const { v, ui, shell } = P;
+  const s = v.state;
+  shell.setMode('simulation');
+  seg(ui('engine-seg'), 'lbm').dispatch('click');
+  set(ui('cell'), '6');
+  ui('primary').dispatch('click');
+  await wait(() => s.running, 100, 5);
+  await wait(() => /Rechnet/.test(ui('note').textContent), 2400);
+  shell.setMode('prozess');
+  const vorher = s.proc.volume;
+  set(ui('vol'), '500');
+  await wait(() => !s.running, 400);
+  same(s.results.lbm, null, 'kein Ergebnis zum alten Problem');
+  assert.equal(ui('note').textContent, 'Abgebrochen: „Gussvolumen" wurde geändert.');
+  assert.equal(ui('primary').textContent, 'Simulieren');
+  /* „Abbrechen" gedrückt heißt weiter nur so. */
+  ui('primary').dispatch('click');
+  await wait(() => s.running, 100, 5);
+  await wait(() => /Rechnet/.test(ui('note').textContent), 2400);
+  ui('primary').dispatch('click');
+  await wait(() => !s.running, 400);
+  assert.equal(ui('note').textContent, 'Abgebrochen: es gibt kein Ergebnis.');
+  set(ui('vol'), String(vorher));
+});
+
+/* Im Hintergrund kommt requestAnimationFrame nie: bis 2026-09-22 stand ein
+   Lauf dort still, bis man zurückkam, und lernte danach die Wartezeit als
+   Tempo (engines/env.js). Hier ruft die Attrappe ihre Bilder nie auf. */
+test('Im verborgenen Reiter rechnet der Lauf weiter — und lehrt kein Tempo', async () => {
+  const { v, ui, shell, doc } = P;
+  const s = v.state;
+  const env = await import(pathToFileURL(resolve(ROOT, 'js/simulation/engines/env.js')));
+  const tempo = env.tempo('lbm', 'cpu');
+  const raf = globalThis.requestAnimationFrame, liegen = [];
+  globalThis.requestAnimationFrame = fn => { liegen.push(fn); return liegen.length; };
+  doc.hidden = true; doc.visibilityState = 'hidden';
+  doc.dispatch('visibilitychange');
+  try {
+    shell.setMode('simulation');
+    seg(ui('engine-seg'), 'lbm').dispatch('click');
+    set(ui('cell'), '6');
+    s.tMax = 0.006;
+    ui('primary').dispatch('click');
+    await wait(() => s.running, 100, 5);
+    await wait(() => !s.running, 800);
+    assert.ok(s.results.lbm, 'fertig, obwohl kein Bild kam: ' + (s.failed || ui('note').textContent));
+    assert.ok(s.results.lbm.steps > 10, 'Schritte: ' + s.results.lbm.steps);
+    assert.equal(env.tempo('lbm', 'cpu'), tempo, 'verborgen gelernt wird nichts');
+  } finally {
+    doc.hidden = false; doc.visibilityState = 'visible';
+    doc.dispatch('visibilitychange');
+    globalThis.requestAnimationFrame = raf;
+    for (const fn of liegen) raf(fn);
+  }
 });
 
 test('Einstellungen: je Angusssystem gemerkt, still übernommen, zurückzusetzen', async () => {

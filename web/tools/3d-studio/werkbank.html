@@ -115,7 +115,7 @@
         <div class="seg" id="bt-mode-seg">
           <button type="button" data-value="regions" class="active">Regionen</button>
           <button type="button" data-value="draft">Schräge</button>
-          <button type="button" data-value="plain">Grau</button>
+          <button type="button" data-value="plain">Ohne</button>
         </div>
       </div>
       <div id="bt-draft-block" class="disabled">
@@ -190,7 +190,7 @@
       </div>
       <div class="hint">Jede Marke ist die größte Kugel, die an dieser Stelle ins Bauteil passt: ihr
         Durchmesser ist die Wandstärke. Dort erstarrt das Teil zuletzt; bis dorthin muss der
-        Nachdruck reichen. Im Schnitt ist innen die Wandstärke gefärbt (dick = rot).</div>
+        Nachdruck reichen. Im Schnitt ist innen die Wandstärke gefärbt (dünn blau, dick rot).</div>
 
       <h2>Darstellung</h2>
       <div class="row">
@@ -520,8 +520,9 @@
 
       <h2>Eingaben</h2>
       <div id="groups" class="groups"></div>
-      <div class="hint">🔴 Roter Marker = aktueller Betriebspunkt in jedem Diagramm. Rot umrandete Felder
-        liegen außerhalb ihrer Grenzen. <span id="error"></span></div>
+      <div class="hint"><span class="hint-mark" aria-hidden="true">◉</span> <b>Arbeitspunkt</b>: der Ring mit
+        Führungslinien zeigt in jedem Diagramm den aktuellen Betriebspunkt. Ein markiertes Eingabefeld (Rahmen
+        und Wert hervorgehoben) liegt außerhalb seiner Grenzen. <span id="error"></span></div>
     </section>
 
   </aside>
@@ -669,10 +670,10 @@
         <div class="facts" id="ue-sel-facts"></div>
       </div>
       <div class="pt-menu-title">Überlauf setzen</div>
-      <button type="button" id="ue-add-bohne" title="Tasche am Ende des Fließwegs: sammelt die erste, kalte und oxidhaltige Schmelze."><span class="dot" style="background:#e07b39"></span>Überlaufbohne</button>
-      <button type="button" id="ue-add-entlueftet" title="Bohne mit flachem Entlüftungskanal."><span class="dot" style="background:#2e6da4"></span>Überlauf mit Entlüftung</button>
-      <button type="button" id="ue-add-waschbrett" title="Gewellter Kanal: die Schmelze erstarrt in den Wellen, die Luft kommt hindurch."><span class="dot" style="background:#9a77e8"></span>Waschbrett (Chill-Vent)</button>
-      <button type="button" id="ue-add-schlitz" title="Nur der flache Kanal, ohne Bohne."><span class="dot" style="background:#4c9f70"></span>Entlüftungsschlitz</button>
+      <button type="button" id="ue-add-bohne" title="Tasche am Ende des Fließwegs: sammelt die erste, kalte und oxidhaltige Schmelze."><span class="dot"></span>Überlaufbohne</button>
+      <button type="button" id="ue-add-entlueftet" title="Bohne mit flachem Entlüftungskanal."><span class="dot"></span>Überlauf mit Entlüftung</button>
+      <button type="button" id="ue-add-waschbrett" title="Gewellter Kanal: die Schmelze erstarrt in den Wellen, die Luft kommt hindurch."><span class="dot"></span>Waschbrett (Chill-Vent)</button>
+      <button type="button" id="ue-add-schlitz" title="Nur der flache Kanal, ohne Bohne."><span class="dot"></span>Entlüftungsschlitz</button>
       <button type="button" id="ue-del-item" class="danger" title="Auswahl entfernen (Entf)">Löschen</button>
     </div>
 
@@ -708,8 +709,8 @@
         <div class="facts" id="te-sel-facts"></div>
       </div>
       <div class="pt-menu-title">Setzen</div>
-      <button type="button" id="te-add-stich" disabled title="Ein Klick auf die Abstandsfläche: dort sitzt die Spitze."><span class="dot" style="background:#e07b39"></span>Kühlstich</button>
-      <button type="button" id="te-add-kanal" disabled title="Zwei Klicks auf die Abstandsfläche: die beiden Enden."><span class="dot" style="background:#2e6da4"></span>Kanal (2 Punkte)</button>
+      <button type="button" id="te-add-stich" disabled title="Ein Klick auf die Abstandsfläche: dort sitzt die Spitze."><span class="dot"></span>Kühlstich</button>
+      <button type="button" id="te-add-kanal" disabled title="Zwei Klicks auf die Abstandsfläche: die beiden Enden."><span class="dot"></span>Kanal (2 Punkte)</button>
       <button type="button" id="te-del-item" class="danger" title="Auswahl entfernen (Entf)">Löschen</button>
     </div>
 

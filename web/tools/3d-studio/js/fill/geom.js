@@ -15,16 +15,20 @@ export function inletBody(item, depth = INLET_DEPTH) {
     f.o[1] + f.u[1] * a + f.v[1] * b + f.n[1] * c,
     f.o[2] + f.u[2] * a + f.v[2] * b + f.n[2] * c
   ];
-  /* Acht Ecken: Bit 0 = u, Bit 1 = v, Bit 2 = n. */
+  /* Acht Ecken: Bit 0 = u, Bit 1 = v, Bit 2 = n. Das Dreibein des Anschnitts
+     ist LINKShändig (u = n × v, also u × v = −n): die Vierecke stehen hier so,
+     dass die Wicklung darin nach außen zeigt — in einem rechtshändigen
+     Dreibein wäre dieselbe Liste nach innen gewickelt, und die STL eines
+     solchen Körpers hätte ein negatives Volumen. */
   const c = [];
   for (let i = 0; i < 8; i++) c.push(P(i & 1 ? hw : -hw, i & 2 ? hh : -hh, i & 4 ? depth : -depth));
   const quads = [
-    [0, 2, 3, 1],   // innen (−n), Wicklung nach außen
-    [4, 5, 7, 6],   // außen (+n)
-    [0, 1, 5, 4],   // −v
-    [2, 6, 7, 3],   // +v
-    [0, 4, 6, 2],   // −u
-    [1, 3, 7, 5]    // +u
+    [0, 1, 3, 2],   // innen (−n)
+    [4, 6, 7, 5],   // außen (+n)
+    [0, 4, 5, 1],   // −v
+    [2, 3, 7, 6],   // +v
+    [0, 2, 6, 4],   // −u
+    [1, 5, 7, 3]    // +u
   ];
   const out = [];
   for (const [a, b, cc, d] of quads) out.push(...c[a], ...c[b], ...c[cc], ...c[a], ...c[cc], ...c[d]);

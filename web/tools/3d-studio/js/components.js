@@ -8,8 +8,8 @@
    die GLB neu erzeugen (README).
 
    Material-NAMEN sind das Vertragsstück mit dem Viewer: sie überleben den
-   GLB-Roundtrip und steuern dort Transparenz ('steel') und die Farbe der
-   Schnitt-Deckflächen (eine Klasse je Name). */
+   GLB-Roundtrip und steuern dort die Deckkraft ('steel') und den Versatz
+   der Schnitt-Deckflächen (Stahl hinter dem Inhalt). */
 
 import * as T from 'three';
 import { COMPONENTS, BY_ID } from './registry.js';
@@ -19,9 +19,10 @@ import { makeMaterial } from './materials.js';
 
 const col = id => parseInt(BY_ID[id].color.slice(1), 16);
 
-/* Eine Materialinstanz je (Name, Farbe) — die Sidebar-Farbe der Baugruppe
-   für alles Gegossene, ein gemeinsames Grau für Stahl; die Tabelle der
-   Klassen steht in js/materials.js. */
+/* Eine Materialinstanz je (Name, Farbe) — die Farbe des Teils aus der
+   Registry (seine Rolle im Standardschema, js/registry.js); die Tabelle der
+   Klassen steht in js/materials.js. Der Viewer färbt die Teile beim Laden
+   ohnehin nach ihren Rollen und dem gewählten Schema (js/assembly.js). */
 const materialFor = (name, compId) => makeMaterial(name, col(compId));
 
 /** Dreieckssuppe → indizierte BufferGeometry mit weichen Normalen

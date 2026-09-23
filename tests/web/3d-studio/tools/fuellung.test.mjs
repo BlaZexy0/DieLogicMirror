@@ -157,9 +157,11 @@ test('Rechnen: Raster und Front als eine Rechnung — danach steht das Ergebnis,
   assert.match(ui('grid-facts').innerHTML, /Rechenzeit Füllung/);
   assert.match(ui('item-list').textContent, /füllt 100 % des Volumens/);
   assert.match(kpiText(ui('sel-kpis')), /füllt.*100 % des Volumens/);
-  /* Das Bild: Füllkörper bei 50 % ist die Vorgabe. */
-  assert.ok(doc.getElementById('colorbar').classList.contains('on'), 'die Skala steht');
-  assert.ok(!/ms/.test(doc.getElementById('colorbar').innerHTML), 'und trägt Prozent, keine Millisekunden');
+  /* Das Bild: Füllkörper bei 50 % ist die Vorgabe. Er trägt die Farbe der
+     Schmelze, und die Legende nennt sie; die Skala gehört zum gefärbten
+     Bauteil (Ansicht „Füllgrad"). */
+  assert.match(doc.getElementById('pt-legend').textContent, /Schmelze bis 50 %/, 'die Legende nennt den Füllkörper');
+  assert.ok(!doc.getElementById('colorbar').classList.contains('on'), 'ohne gefärbtes Bauteil keine Skala');
   assert.ok(v.spotGroup.visible && v.spotGroup.children.length >= 1 && v.spotGroup.children.length <= 5, 'letzte Stellen: ' + v.spotGroup.children.length);
   assert.ok(s.spots.list[0].frac > 0.9, 'die erste liegt ganz am Ende');
   assert.ok(s.spots.list[0].x < c[0], 'am −X-Ende, nicht am Anschnitt: ' + s.spots.list[0].x);
@@ -191,6 +193,8 @@ test('Ergebnis besitzt sein Bild: Füllkörper, Füllgrad, letzte Stellen — un
   ui('show-seg').querySelectorAll('button').find(x => x.dataset.value === 'farbe').dispatch('click');
   assert.ok(!v.bodyMesh.visible);
   same(v.partMesh.material, host.part.colorMat, 'das Bauteil trägt seine Punktfarben');
+  assert.ok(doc.getElementById('colorbar').classList.contains('on'), 'die Skala steht');
+  assert.ok(!/ms/.test(doc.getElementById('colorbar').innerHTML), 'und trägt Prozent, keine Millisekunden');
   assert.ok(!v.partMesh.material.transparent, 'und ist wieder deckend');
   const col = host.part.colors().array;
   let bunt = 0;
@@ -405,6 +409,96 @@ test('Datei hin und zurück; Entfernen fragt nicht und lässt sich zurückholen'
   await settled();
 });
 
+test('Esc mitten im Zug: der Anschnitt springt zurück — kein Schritt, und die Füllung gilt weiter', async () => {
+  const { v, host } = P;
+  const s = v.state;
+  await settled();
+  v.handles.select(a1.id);
+  schauAuf([a1.pos[0] + 300, a1.pos[1] + 300, a1.pos[2]], a1.pos);
+  v.rebuild();
+  v.view.scene.updateMatrixWorld(true);
+  const p0 = a1.pos.slice(), tiefe = host.history.depth, result = s.result;
+  const [hx, hy] = px(a1.pos);
+  zeiger('pointerdown', hx, hy);
+  assert.ok(v.handles.dragging, 'der Zug beginnt');
+  zeiger('pointermove', hx + 60, hy);
+  await pause(30);
+  const weit = q => Math.hypot(q[0] - p0[0], q[1] - p0[1], q[2] - p0[2]);
+  assert.ok(weit(s.plan.items[a1.id].pos) > 5, 'der Anschnitt wandert');
+  taste('Escape');
+  assert.ok(!v.handles.dragging, 'Esc beendet den Zug');
+  a1 = s.plan.items[a1.id]; a2 = s.plan.items[a2.id];
+  assert.ok(weit(a1.pos) < 1e-3, 'und der Anschnitt steht, wo er war');
+  assert.equal(host.history.depth, tiefe, 'kein Schritt');
+  assert.equal(v.handles.selected, a1.id);
+  zeiger('pointerup', hx + 60, hy);
+  assert.equal(host.history.depth, tiefe, 'das Loslassen danach ist kein Zug mehr');
+  await pause(300);
+  assert.ok(s.result === result && !s.stale && !s.running, 'nichts rechnet nach: der Plan ist der, zu dem die Füllung gehört');
+});
+
+test('Anschnitte, die nichts füllen: neben dem Bauteil oder ohne Anteil — die Seite sagt es', async () => {
+  const { v, ui, tool, host } = P;
+  const s = v.state;
+  await settled();
+  const json = JSON.parse(JSON.stringify(tool.toJSON()));
+  const [g1, g2] = json.items;
+  /* 60 % + 60 % fest und ein dritter aus der Fläche: für ihn bleibt nichts.
+     Früher stand da „0 % Strom · füllt 2,5 %". */
+  tool.fromJSON({ ...json, items: [{ ...g1, share: 60 }, { ...g2, share: 60 }, { ...g1, id: 'a9', share: undefined }] });
+  await settled();
+  const row = id => ui('item-list').querySelector('[data-item="' + id + '"]');
+  assert.match(row('a9').textContent, /0 % Strom · füllt nichts ⚠/);
+  assert.ok(row('a9').classList.contains('warn'));
+  assert.equal(s.result.stats.inlets.find(i => i.id === 'a9').cells, 0);
+  v.handles.select('a9');
+  assert.match(kpiText(ui('sel-kpis')), /füllt\s*nichts.*kein Strom: die festen Anteile der anderen ergeben schon 100 %/);
+  assert.ok(ui('sel-kpis').querySelector('.krow.warn'));
+  assert.match(kpiText(ui('fill-kpis')), /füllt nichts\s*a9/, 'unter „Füllung" steht es auch');
+  v.handles.select(null);
+  /* Ein Anschnitt 300 mm neben dem Bauteil: früher füllte er von der nächsten
+     Zelle aus mit, und die Seite sagte nur „trifft kaum eine Rasterzelle". */
+  const weg = { ...g2, pos: g2.pos.map((x, k) => x + 300 * g2.n[k]) };
+  tool.fromJSON({ ...json, items: [g1, weg] });
+  await settled();
+  assert.match(row(g2.id).textContent, /füllt nichts ⚠/);
+  v.handles.select(g2.id);
+  assert.match(kpiText(ui('sel-kpis')), /füllt\s*nichts.*liegt neben dem Bauteil/);
+  assert.doesNotMatch(kpiText(ui('sel-kpis')), /Rasterzelle/);
+  assert.equal(s.result.stats.inlets.find(i => i.id === g1.id).cells, s.result.cells, 'der andere füllt alles');
+  /* Sitzt keiner auf dem Bauteil, gibt es keine Füllung — und kein „ok". */
+  tool.fromJSON({ ...json, items: [weg] });
+  await settled();
+  assert.match(kpiText(ui('fill-kpis')), /keine Füllung/);
+  assert.ok(ui('fill-kpis').querySelector('.krow.bad'));
+  assert.ok(!ui('fill-kpis').querySelector('.krow.ok'), 'kein Urteil „ok" über eine Füllung, die es nicht gibt');
+  v.handles.select(null);
+  tool.fromJSON(json);
+  host.history.reset();
+  await settled();
+  a1 = s.plan.items[a1.id]; a2 = s.plan.items[a2.id];
+  assert.equal(s.result.stats.inlets.filter(i => i.closed).length, 0);
+});
+
+test('Kennungen aus Dateien: geprüft beim Laden, maskiert in Liste und Auswahlfeld', async () => {
+  const { v, ui, tool } = P;
+  const s = v.state;
+  const json = tool.toJSON();
+  assert.throws(() => tool.fromJSON({ ...json, items: [{ id: '<img src=x onerror=alert(1)>', pos: [0, 0, 0], n: [1, 0, 0] }] }), /keine gültige Kennung/);
+  assert.equal(items().length, 2, 'eine abgelehnte Datei lässt den Plan stehen');
+  const evil = '<img src=x onerror=alert(1)>';
+  s.plan.items[evil] = { ...a1, pos: a1.pos.slice(), n: a1.n.slice(), id: evil };
+  v.rebuild();
+  v.handles.select(evil);
+  for (const el of [ui('item-list'), ui('inspector-title')]) {
+    assert.ok(!el.innerHTML.includes('<img') && el.innerHTML.includes('&lt;img'), 'maskiert: ' + el.innerHTML.slice(0, 160));
+    assert.equal(el.querySelector('img'), null);
+  }
+  v.handles.select(null);
+  delete s.plan.items[evil];
+  v.rebuild();
+});
+
 test('Neu rastern: nur wenn die Zellkante sich geändert hat — und das Ergebnis folgt', async () => {
   const { v, ui, shell, host } = P;
   const s = v.state;
@@ -460,6 +554,32 @@ test('Abbruch beim Rastern: das vorige Raster und sein Ergebnis bleiben', async 
   assert.match(ui('note').textContent, /Abgebrochen/);
   assert.equal(ui('primary').textContent, 'Neu rastern');
   ch.value = String(field.h).replace('.', ','); ch.dispatch('change');
+});
+
+test('Zellkante während des Rasterns: die neue gilt, gerastert wird mit ihr — ohne falsche Meldung', async () => {
+  const { v, ui, shell } = P;
+  const s = v.state;
+  shell.setMode('fuellung');
+  const ch = ui('cell');
+  const h0 = s.field.h;
+  ch.value = '2'; ch.dispatch('change');
+  assert.equal(ui('primary').textContent, 'Neu rastern');
+  ui('primary').dispatch('click');
+  await wait(() => s.running && s.phase === 'raster', 400, 5);
+  /* Mitten im Rastern eine andere Kante: früher lief das Raster mit 2 mm zu
+     Ende, die Eingabe sprang auf 2 zurück, und die Zeile behauptete „Feiner
+     geht hier nicht: 16 Mio. Rasterpunkte …". */
+  const neu = String(2 * h0).replace('.', ',');
+  ch.value = neu; ch.dispatch('change');
+  assert.equal(s.h, 2 * h0, 'die neue Kante gilt sofort');
+  await settled();
+  assert.equal(s.h, 2 * h0, 'und bleibt');
+  assert.equal(s.field.h, 2 * h0, 'gerastert ist mit ihr');
+  assert.equal(ch.value, neu);
+  assert.doesNotMatch(ui('cell-note').textContent, /Feiner geht hier nicht/);
+  assert.ok(!s.cancelled && !/Abgebrochen/.test(ui('note').textContent), 'kein Abbruch, den der Anwender sähe');
+  assert.equal(s.result.stats.inlets.length, 2, 'und gefüllt');
+  ch.value = String(h0).replace('.', ','); ch.dispatch('change');
 });
 
 test('Ein neues Bauteil beginnt leer; Abbruch des ersten Laufs: kein Ergebnis, nichts rechnet von selbst', async () => {

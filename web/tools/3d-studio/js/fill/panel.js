@@ -6,7 +6,7 @@
    Anschnitte setzen, rechnen, das Ergebnis lesen. */
 
 import { numberRow, sliderRow, segRow, kpiBlock, factsBlock, detailsBlock, warnLine, heading, hintLine } from '../studio/rows.js';
-import { DEFAULTS } from './model.js';
+import { DEFAULTS, ALPHA_RANGE } from './model.js';
 
 const de = v => String(v).replace('.', ',');
 
@@ -29,7 +29,7 @@ export const MODES = [
     hint: 'Das Bauteil wird gerastert, die Front läuft von den Anschnitten durch die Zellen: eine Abschätzung, keine Strömung.',
     html: numberRow({ ui: 'cell', label: 'Zellkante', unit: 'mm', value: '3', help: 'zellkante' })
       + warnLine('cell-note')
-      + sliderRow({ ui: 'alpha', label: 'Dünnwand-Bremse α', min: 0, max: 1, step: 0.1, value: 0.5, help: 'alpha' })
+      + sliderRow({ ui: 'alpha', label: 'Dünnwand-Bremse α', min: ALPHA_RANGE[0], max: ALPHA_RANGE[1], step: 0.1, value: 0.5, help: 'alpha' })
       + kpiBlock('fill-kpis')
       + warnLine('fill-warn')
       + detailsBlock('grid-details', 'Raster', factsBlock('grid-facts'))

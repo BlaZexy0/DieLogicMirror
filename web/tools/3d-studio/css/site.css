@@ -37,7 +37,7 @@
   padding: 1.6rem 1.7rem 1.5rem; display: flex; flex-direction: column;
   transition: transform .15s, box-shadow .15s, border-color .15s;
 }
-.tool-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,20,27,.35); border-color: var(--primary); }
+.tool-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(var(--dark-rgb), .35); border-color: var(--primary); }
 .tool-card-icon {
   width: 46px; height: 46px; border-radius: 11px; margin-bottom: 1.1rem;
   display: flex; align-items: center; justify-content: center; background: rgba(var(--primary-rgb), .15);
@@ -71,8 +71,11 @@
 .step-num { font-size: .7rem; font-weight: 700; color: var(--primary); letter-spacing: .08em; text-transform: uppercase; margin-bottom: .4rem; }
 .step h3 { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .5rem; }
 .step p { font-size: .86rem; color: var(--muted); line-height: 1.65; }
-.step p a { color: var(--primary-deep); font-weight: 600; text-decoration: none; border-bottom: 1px solid rgba(var(--primary-rgb), .35); }
-.step p a:hover { color: var(--primary); border-bottom-color: var(--primary); }
+/* Links im Fließtext der Übersicht: wie in den Schritten — der Werkbank-Link
+   im Untertitel und die Links im Hinweiskasten standen sonst im Blau (und
+   besucht im Violett) des Browsers, in jedem Farbschema. */
+.step p a, .how-section .section-sub a, .note-box a { color: var(--primary-deep); font-weight: 600; text-decoration: none; border-bottom: 1px solid rgba(var(--primary-rgb), .35); }
+.step p a:hover, .how-section .section-sub a:hover, .note-box a:hover { color: var(--primary); border-bottom-color: var(--primary); }
 
 /* ── Hinweiskasten + Fußzeile ──────────────────────────────── */
 .note-section { padding: 0 2rem 4rem; background: var(--bg); }

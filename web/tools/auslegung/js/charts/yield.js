@@ -1,7 +1,6 @@
 /* Materialausbeute als Ringdiagramm (Anteile am Dosiergewicht). */
 
 import { fmt, subHTML } from '../core/format.js';
-import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
 export default {
@@ -11,12 +10,12 @@ export default {
   inputs: ['part', 'runner', 'overflow', 'biscuit'],
 
   calc(v) {
-    const C = theme.chart;
+    /* Die vier Anteile in ihren Sachfarben (render/donut.js) */
     const segs = [
-      { n: 'Bauteil',   kg: v.part,     c: C.series2 },
-      { n: 'Anguss',    kg: v.runner,   c: C.series1 },
-      { n: 'Überlauf',  kg: v.overflow, c: C.series3 },
-      { n: 'Pressrest', kg: v.biscuit,  c: C.series4 }
+      { n: 'Bauteil',   kg: v.part,     c: 'melt' },
+      { n: 'Anguss',    kg: v.runner,   c: 'runner' },
+      { n: 'Überlauf',  kg: v.overflow, c: 'overflow' },
+      { n: 'Pressrest', kg: v.biscuit,  c: 'biscuit' }
     ].filter(s => s.kg > 0);
     let tot = 0;
     segs.forEach(s => { tot += s.kg; });

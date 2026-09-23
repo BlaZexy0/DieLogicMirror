@@ -4,11 +4,22 @@
    seinem <label>, ist also für Hilfstechnik beschriftet, ohne dass ids
    nötig wären (auf der Werkbank leben mehrere Werkzeuge auf einer Seite).
    Ein ⓘ hinter der Bezeichnung öffnet die Hilfe an der Stelle — Erklärungen
-   stehen DORT, nicht in einem title: den gibt es auf dem Tablett nicht. */
+   stehen DORT, nicht in einem title: den gibt es auf dem Tablett nicht.
 
-const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+   Das ⓘ ist KEIN <button>: ein Knopf ist „beschriftbar", und das <label>
+   gehört dem ersten beschriftbaren Element in sich. Stand das ⓘ vor dem
+   Eingabefeld, öffnete ein Klick auf das Wort „Zellkante" die Hilfe statt
+   das Feld, und das Feld hatte für Hilfstechnik gar keinen Namen. Als
+   <span role="button"> gehört das Label wieder dem Feld; Klick und
+   Tastatur (Eingabe, Leertaste) bedient der Rahmen (js/studio/shell.js). */
 
-const info = help => (help ? ' <button type="button" class="st-info" data-help="' + esc(help) + '" title="Erklärung" aria-label="Erklärung">ⓘ</button>' : '');
+/** Text für HTML: alles, was aus einer Datei, einem Dateinamen oder vom
+    Anwender kommt, geht hier durch, bevor es in innerHTML landet. */
+export const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+/** Das ⓘ hinter einer Bezeichnung — öffnet die Hilfe am Anker `help`. */
+export const info = help => (help ? ' <span role="button" tabindex="0" class="st-info" data-help="' + esc(help) + '" title="Erklärung" aria-label="Erklärung">ⓘ</span>' : '');
 
 /** Zahleneingabe. */
 export function numberRow({ ui, label, unit = '', value = '', help = '' }) {

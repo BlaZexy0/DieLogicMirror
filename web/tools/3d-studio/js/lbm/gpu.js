@@ -17,7 +17,13 @@
    Zwischenpuffer, der auf den Hauptspeicher abgebildet wird.
 
    Gibt es kein WebGPU (navigator.gpu fehlt), meldet createGpuSolver das
-   mit einem Fehler; die Seite fällt dann auf den JavaScript-Kern zurück. */
+   mit einem Fehler; die Seite fällt dann auf den JavaScript-Kern zurück.
+
+   Geht die Karte mitten im Lauf verloren (Treiber, Ruhezustand), sagt es
+   device.lost — und das Lesen danach scheitert mit einem AbortError, den der
+   Rahmen als „Abbrechen" läse. Beides wird zu EINER gewöhnlichen Meldung
+   (lostError). Scheitert das Anlegen nach requestDevice (ein Shader, eine
+   Pipeline), gehen Gerät und Puffer gleich wieder, statt liegen zu bleiben. */
 
 import { Q, C, W, OPP, FLAG, NEVER, NO_PLUNGER, FF, FU } from './lattice.js';
 import { PARAMS } from './fslbm.js';
@@ -317,6 +323,22 @@ fn pass5(@builtin(global_invocation_id) gid: vec3<u32>) {
 /** Gibt es WebGPU? */
 export const hasWebGPU = () => typeof navigator !== 'undefined' && !!navigator.gpu;
 
+/** Die Karte ist weg (`info` aus device.lost, `err` vom Lesen): eine
+    gewöhnliche Meldung, kein AbortError. Auch für js/sph/gpu.js. */
+export function lostError(info, err) {
+  const why = (info && info.message) || (err && err.message) || 'Gerät verloren';
+  return new Error('Die Grafikkarte ist ausgestiegen (' + why + '). Noch einmal simulieren, sonst die Seite neu laden.');
+}
+
+/** Was nach requestDevice scheitert, nimmt Gerät und Puffer mit — und
+    kommt nie als AbortError heraus (er hieße „Abgebrochen"). */
+export function failedSetup(device, buffers, err) {
+  for (const b of buffers) b.destroy();
+  device.destroy();
+  if (err && err.name === 'Error') return err;
+  return new Error('WebGPU: der Kern ließ sich nicht anlegen (' + ((err && err.message) || err) + ').');
+}
+
 /** Der Shader-Quelltext — für Tests und die Fehlersuche. */
 export const wgslSource = (nx, ny) => wgsl(nx, ny);
 
@@ -347,6 +369,21 @@ export async function createGpuSolver(domain, params = {}) {
     limits.maxBufferSize = Math.max(need, adapter.limits.maxBufferSize >= need ? need : 0);
   }
   const device = await adapter.requestDevice({ requiredLimits: limits });
+  const buffers = [];
+  try {
+    return await buildSolver(device, buffers, domain, P);
+  } catch (err) {
+    throw failedSetup(device, buffers, err);
+  }
+}
+
+/* Alles nach requestDevice: Puffer, Shader, Pipelines — und der Kern. Was
+   hier angelegt wird, steht in `buffers` (failedSetup, dispose). */
+async function buildSolver(device, buffers, domain, P) {
+  const N = domain.N;
+  /* „destroyed" meldet das eigene dispose() — das ist kein Verlust. */
+  let lost = null;
+  device.lost.then(info => { if (info.reason !== 'destroyed') lost = info; });
   const [nx, ny] = domain.dims;
   const { WALL, GAS, INTERFACE, FLUID, INLET } = FLAG;
 
@@ -368,14 +405,14 @@ export async function createGpuSolver(domain, params = {}) {
   }
   void WALL; void GAS;
 
-  const mk = (size, usage) => device.createBuffer({ size: Math.max(16, Math.ceil(size / 4) * 4), usage });
+  const mk = (size, usage) => { const b = device.createBuffer({ size: Math.max(16, Math.ceil(size / 4) * 4), usage }); buffers.push(b); return b; };
   const ST = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST;
   const bufA = mk(f0.byteLength, ST), bufB = mk(f0.byteLength, ST);
   const bufCA = mk(cf.byteLength, ST), bufCB = mk(cf.byteLength, ST);
   const bufU = mk(cu.byteLength, ST);
   const gates = new Uint32Array(Math.max(1, (domain.gates || []).length)).fill(NEVER);
   const bufG = mk(gates.byteLength, ST);
-  const bufUni = device.createBuffer({ size: UNIFORM_STRIDE * BATCH, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const bufUni = mk(UNIFORM_STRIDE * BATCH, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
   device.queue.writeBuffer(bufA, 0, f0); device.queue.writeBuffer(bufB, 0, f0);
   device.queue.writeBuffer(bufCA, 0, cf); device.queue.writeBuffer(bufCB, 0, cf);
   device.queue.writeBuffer(bufU, 0, cu);
@@ -385,10 +422,7 @@ export async function createGpuSolver(domain, params = {}) {
   /* Ein Shader, der nicht übersetzt, soll sagen, warum — nicht nur „invalid". */
   const info = await module.getCompilationInfo();
   const errors = info.messages.filter(m => m.type === 'error');
-  if (errors.length) {
-    device.destroy();
-    throw new Error('WGSL: ' + errors.map(m => m.lineNum + ':' + m.linePos + ' ' + m.message).join(' | '));
-  }
+  if (errors.length) throw new Error('WGSL: ' + errors.map(m => m.lineNum + ':' + m.linePos + ' ' + m.message).join(' | '));
   const layout = device.createBindGroupLayout({
     entries: [
       { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform', hasDynamicOffset: true } },
@@ -442,11 +476,13 @@ export async function createGpuSolver(domain, params = {}) {
   }
 
   async function read(buf, byteOffset, byteLength, Ctor) {
+    if (lost) throw lostError(lost);
     const staging = device.createBuffer({ size: byteLength, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
     const enc = device.createCommandEncoder();
     enc.copyBufferToBuffer(buf, byteOffset, staging, 0, byteLength);
     device.queue.submit([enc.finish()]);
-    await staging.mapAsync(GPUMapMode.READ);
+    try { await staging.mapAsync(GPUMapMode.READ); }
+    catch (err) { staging.destroy(); throw lostError(lost, err); }
     const out = new Ctor(staging.getMappedRange().slice(0));
     staging.unmap();
     staging.destroy();
@@ -470,6 +506,6 @@ export async function createGpuSolver(domain, params = {}) {
     readGates: () => read(bufG, 0, gates.byteLength, Uint32Array),
     /** Warten, bis die Karte alles abgearbeitet hat. */
     sync: () => device.queue.onSubmittedWorkDone(),
-    dispose() { for (const b of [bufA, bufB, bufCA, bufCB, bufU, bufG, bufUni]) b.destroy(); device.destroy(); }
+    dispose() { for (const b of buffers) b.destroy(); device.destroy(); }
   };
 }

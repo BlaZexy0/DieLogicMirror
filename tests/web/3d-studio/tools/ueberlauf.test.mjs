@@ -315,3 +315,131 @@ test('Ohne Bauteil sagt der Chip, was fehlt — und ein neues Bauteil beginnt le
   assert.equal(anzahl(), 0, 'ein Element sitzt auf der Wand EINES Bauteils');
   assert.ok(!host.history.canUndo, 'und der Verlauf beginnt neu');
 });
+
+test('Rückgängig nimmt die Art zurück: die Auswahl am Bohnenende geht ans Element', () => {
+  const { v, ui, host } = P;
+  const e = G.addItem(v.state.plan, 'bohne', [0, 0, 0], [0, 0, 1]);
+  v.rebuild();
+  v.handles.select(e.id);
+  host.changed('gesetzt');
+  ui('sel-type').value = 'entlueftet';
+  ui('sel-type').dispatch('change');
+  v.handles.select(e.id + ':v0');
+  assert.match(ui('inspector-title').innerHTML, /Bohnenende/);
+  host.undo();
+  assert.equal(v.state.plan.items[e.id].type, 'bohne', 'die Art ist zurück');
+  /* Früher blieb die Auswahl am Bohnenende hängen, das es nicht mehr gab:
+     kein Ring, Lage und Entfernen gesperrt, Entf ohne Wirkung. */
+  assert.equal(v.handles.selected, e.id, 'die Auswahl geht ans Element');
+  assert.doesNotMatch(ui('inspector-title').innerHTML, /Bohnenende/);
+  assert.ok(!ui('sel-x').disabled && !ui('del-item').disabled);
+  taste('Delete');
+  assert.ok(!v.state.plan.items[e.id], 'Entf trifft es');
+});
+
+test('Lage eines Kanalpunkts: das Feld zeigt, wo der Punkt gelandet ist — nicht den getippten Wert', () => {
+  const { v, ui, host } = P;
+  /* Wandnormale (0,6; 0; 0,8): X allein lässt sich in der Wandebene nicht
+     setzen, der Punkt wird in sie gelotet. */
+  const e = G.addItem(v.state.plan, 'entlueftet', [0, 0, 0], [0.6, 0, 0.8]);
+  v.rebuild();
+  host.changed('gesetzt');
+  v.handles.select(e.id + ':v1');
+  const x = ui('sel-x');
+  x.value = '100';
+  x.dispatch('change');
+  const real = G.ventWorld(v.state.plan.items[e.id]).points[0];
+  assert.ok(Math.abs(real[0] - 100) > 1, 'der Punkt liegt nicht bei 100: ' + real);
+  assert.equal(x.value, real[0].toFixed(1).replace('.', ',').replace(/,0$/, ''), 'das Feld sagt, wo er ist');
+  assert.equal(ui('sel-z').value, real[2].toFixed(1).replace('.', ',').replace(/,0$/, ''));
+  host.undo(); host.undo();
+  assert.ok(!v.state.plan.items[e.id]);
+});
+
+test('Esc mitten im Zug: der Punkt springt zurück, und es gibt keinen Schritt', async () => {
+  const { v, host } = P;
+  schauAuf([b.max[0] + 400, c[1], c[2]], c);
+  chip('bohne').dispatch('click');
+  klick(400, 300);
+  const e = v.state.plan.items[v.handles.selected];
+  assert.ok(e, 'gesetzt und gewählt');
+  schauAuf([e.pos[0] + 300, e.pos[1] + 300, e.pos[2]], e.pos);
+  v.rebuild();
+  v.view.scene.updateMatrixWorld(true);
+  const p0 = e.pos.slice(), tiefe = host.history.depth;
+  const [hx, hy] = px(e.pos);
+  zeiger('pointerdown', hx, hy);
+  assert.ok(v.handles.dragging, 'der Zug beginnt');
+  zeiger('pointermove', hx + 60, hy);
+  await new Promise(r => setTimeout(r, 30));
+  const weit = q => Math.hypot(q[0] - p0[0], q[1] - p0[1], q[2] - p0[2]);
+  assert.ok(weit(v.state.plan.items[e.id].pos) > 5, 'der Punkt wandert');
+  taste('Escape');
+  assert.ok(!v.handles.dragging, 'Esc beendet den Zug');
+  assert.ok(weit(v.state.plan.items[e.id].pos) < 1e-3, 'und der Punkt steht, wo er war');
+  assert.equal(host.history.depth, tiefe, 'kein Schritt');
+  assert.equal(v.handles.selected, e.id, 'die Auswahl bleibt');
+  zeiger('pointerup', hx + 60, hy);
+  assert.equal(host.history.depth, tiefe, 'das Loslassen danach ist kein Zug mehr');
+  assert.ok(weit(v.state.plan.items[e.id].pos) < 1e-3);
+});
+
+test('Export: <bauteil>-ueberlaeufe.stl, ohne die Endung des Bauteils mitten im Namen', () => {
+  const { host, tool } = P;
+  const name0 = host.part.name;
+  host.part.name = 'deckel.stl';
+  let a = null;
+  const make = P.doc.createElement;
+  P.doc.createElement = tag => { const el = make(tag); if (tag === 'a') a = el; return el; };
+  try { tool.exports[0].run(); } finally { P.doc.createElement = make; host.part.name = name0; }
+  assert.equal(a && a.download, 'deckel-ueberlaeufe.stl');
+});
+
+test('Kennungen aus Dateien: geprüft beim Laden, maskiert in Liste und Auswahlfeld', () => {
+  const { v, ui, tool } = P;
+  const vorher = anzahl();
+  const json = tool.toJSON();
+  assert.throws(() => tool.fromJSON({ ...json, items: [{ id: '<img src=x onerror=alert(1)>', type: 'bohne', pos: [0, 0, 0], dir: [1, 0, 0] }] }), /keine gültige Kennung/);
+  assert.equal(anzahl(), vorher, 'eine abgelehnte Datei lässt den Plan stehen');
+  /* Und käme eine doch an der Prüfung vorbei: maskiert. */
+  const evil = '<img src=x onerror=alert(1)>';
+  v.state.plan.items[evil] = { ...G.addItem(G.emptyPlan(), 'bohne', [0, 0, 0], [1, 0, 0]), id: evil };
+  v.rebuild();
+  v.handles.select(evil);
+  for (const el of [ui('item-list'), ui('inspector-title')]) {
+    assert.ok(!el.innerHTML.includes('<img') && el.innerHTML.includes('&lt;img'), 'maskiert: ' + el.innerHTML.slice(0, 160));
+    assert.equal(el.querySelector('img'), null);
+  }
+  v.handles.select(null);
+  delete v.state.plan.items[evil];
+  v.rebuild();
+});
+
+test('Farbschema: ein Wechsel färbt Fläche, Bauteil, Körper, Griffe, Chips und Legende sofort um', async () => {
+  const { v, doc } = P;
+  /* Wie im Browser: Palette und Schemata; der Wechsel meldet sich am Dokument. */
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  globalThis.window = globalThis;
+  require('../../../../web/shared/palette.js');
+  const S = require('../../../../web/shared/schemes.js');
+  const hexOf = col => '#' + col.getHexString();
+  const near = (a, x) => [1, 3, 5].every(i => Math.abs(parseInt(a.slice(i, i + 2), 16) - parseInt(x.slice(i, i + 2), 16)) <= 1);
+  const el = G.addItem(v.state.plan, 'bohne', c, [1, 0, 0]);
+  v.rebuild();
+  try {
+    S.set('graphit');
+    const k = S.colors('graphit'), t = S.colors('teal');
+    assert.ok(k.viewport !== t.viewport && k.part !== t.part && k.mark !== t.mark, 'Graphit hat eigene Werte');
+    assert.ok(near(hexOf(v.view.scene.background), k.viewport), 'die Fläche hinter dem Körper: ' + hexOf(v.view.scene.background));
+    assert.ok(near(hexOf(v.partMesh.material.color), k.part), 'das Bauteil im Grau des Schemas');
+    assert.ok(v.group.children.some(m => m.material && near(hexOf(m.material.color), k.mark)), 'die Bohne in der Hervorhebung');
+    assert.ok(griff(el.id) && near(hexOf(griff(el.id).material.color), k.mark), 'ihr Griff auch');
+    assert.equal(chip('bohne').querySelector('.st-chip-icon').style.background, k.mark, 'der Chip');
+    assert.ok(doc.getElementById('pt-legend').innerHTML.includes(k.mark), 'die Legende');
+  } finally {
+    S.set('teal');
+    delete v.state.plan.items[el.id];
+    v.rebuild();
+  }
+});

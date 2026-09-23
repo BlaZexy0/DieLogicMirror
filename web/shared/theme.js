@@ -1,78 +1,101 @@
-/* Farbschema des Dashboards — hier direkt editieren, kein Build nötig.
-   UI-Farben liegen in shared/palette.js; 'chart' wird von den
-   Canvas-Renderern gelesen, 'limits' färbt die Grenzen/Restriktionen der
-   Diagramme (Schlüssel = limit-id, Fallback chart.limit),
-   'map'/'mapLines' färben das (φ, λ)-Auslegungsfenster, 'heatStops' ist
-   die Farbrampe der Heatmaps (RGB-Stützstellen von niedrig nach hoch).
-   Hinweis: bei eigenen Farben auf ausreichenden Kontrast und
-   unterscheidbare Helligkeit der Serienfarben achten (Farbfehlsichtigkeit). */
+/* DieLogic – web/shared/theme.js
+   Die Farben der Diagramme, abgeleitet aus der Palette (shared/palette.js)
+   und damit aus dem gewählten Farbschema. Hier steht keine einzige feste
+   Farbe: derive() liest __PALETTE__ und schreibt die Rollen der Diagramme.
+   shared/schemes.js ruft derive() bei jedem Wechsel des Schemas; wer
+   zeichnet, zeichnet auf das Ereignis „dielogic:scheme" neu und liest die
+   Werte dabei frisch.
 
-window.__THEME__ = {
-  "name": "DieLogic Teal (Standard)",
-  "chart": {
-    "surface": "#ffffff",
-    "text": "#002733",
-    "grid": "#e5e9eb",
-    "axis": "#ccd4d6",
-    "series1": "#002733",
-    "series2": "#008c82",
-    "series3": "#8cbee6",
-    "series4": "#e0a400",
-    "marker": "#b42318",
-    "limit": "#8c5a00",
-    "crit": "#c2447e",
-    "event": "#9aacb2",
-    "areaFill": "rgba(0,39,51,.07)",
-    "band": "rgba(0,140,130,.30)",
-    "bandLine": "rgba(0,140,130,.65)",
-    "iso": "#4c6870",
-    "isoLine": "rgba(76,104,112,.6)",
-    "maskFill": "rgba(226,231,233,.93)",
-    "okFill": "rgba(0,140,130,.30)"
-  },
-  "limits": {
-    "gateMin": "#7b5cd6",
-    "gateMax": "#c2447e",
-    "atom": "#4b2ea3",
-    "atomMax": "#8a5cf6",
-    "tmax": "#b28000",
-    "vent": "#4c6870",
-    "vAirMax": "#4c6870",
-    "hydr": "#a34d1c",
-    "vmax": "#8c5a00",
-    "vcrit": "#c2447e",
-    "mpe": "#000000",
-    "fill100": "#557786",
-    "force": "#8c5a00",
-    "intTime": "#8c5a00",
-    "ventAvail": "#8c5a00"
-  },
-  "map": {
-    "ok": "rgba(0,140,130,.30)",
-    "bore": "rgba(18,58,107,.34)",
-    "len": "rgba(154,119,232,.34)",
-    "bisc": "rgba(224,164,0,.36)",
-    "crit": "rgba(194,68,126,.34)"
-  },
-  "mapLines": {
-    "bore": "#123a6b",
-    "len": "#7b5cd6",
-    "bisc": "#b28000",
-    "crit": "#c2447e"
-  },
-  "heatStops": [
-    [48, 18, 59],
-    [55, 117, 197],
-    [29, 172, 213],
-    [103, 235, 115],
-    [245, 194, 37],
-    [250, 126, 29],
-    [122, 4, 3]
-  ]
-};
+   Die Schlüssel sind Rollen, keine Plätze (früher series1 … series4, die je
+   Diagramm etwas anderes bedeuteten):
+     Fläche und Schrift   surface, text, muted, grid, axis
+     Hauptkurve           ink — die eine Größe, um die es im Diagramm geht
+     Sachfarben           die (Werkzeug), machine, air, vacuum, melt, runner,
+                          overflow, biscuit, piston, cool, process
+     Urteil (Ampel)       ok, caution, bad, okText, cautionText, badText
+     Flächen des Urteils  feasible (machbar), feasibleAlt (machbar mit anderem
+                          Kolben), target (Zielband) + targetLine, mask
+                          (unerreichbar)
+     Punkte und Linien    mark (Arbeitspunkt, Ist-Wert), ref (Referenzpunkt
+                          und -linie), event (Prozessereignisse), chip
+                          (Nummern der Ereignisse)
+     Nebenflächen         areaFill, isoLine
+   `limits` färbt die Grenzen nach ihrer Herkunft (Maschine, Werkzeug und
+   Anschnitt, Prozess, Luft, Schmelze): die Farbe sagt, woher eine Grenze
+   kommt. `mapLines` dasselbe für das (φ, λ)-Fenster. `heatStops` sind die
+   Stützstellen der Heatmaps (RGB 0 … 255, von niedrig nach hoch): die feste
+   Farbleiste `heat` der Palette, in jedem Schema dieselbe.
 
-/* Ein anderes Farbschema als der Standard? Dann bekommen die Diagramme
-   seine Farben (shared/schemes.js). Die Datei wird vor dieser geladen, das
-   Objekt hier gibt es aber erst jetzt — darum der Rückruf. Der Standard
-   lässt die Werte oben unangetastet. */
-if (typeof window !== 'undefined' && window.__SCHEMES__) window.__SCHEMES__.applyChart(window.__THEME__);
+   Klassisches Script; lädt nach palette.js und schemes.js. */
+(function (root) {
+  'use strict';
+
+  var T = root.__THEME__ = root.__THEME__ || {};
+  T.name = 'aus der Palette';
+  T.chart = T.chart || {};
+  T.limits = T.limits || {};
+  T.map = T.map || {};
+  T.mapLines = T.mapLines || {};
+
+  /* Welche Grenze zu welcher Familie gehört. */
+  var FAMILIE = {
+    machine: ['hydr', 'vmax', 'force', 'mpe'],
+    die: ['gateMin', 'gateMax', 'atom', 'atomMax'],
+    process: ['tmax', 'vcrit', 'intTime'],
+    air: ['vent', 'vAirMax', 'ventAvail'],
+    melt: ['fill100']
+  };
+
+  /* Die Felder werden an Ort und Stelle gefüllt, nicht ersetzt: wer eine
+     Referenz auf T.chart hält (core/theme.js der Auslegung), sieht nach
+     einem Wechsel die neuen Werte. */
+  function stuetzen(P, name, out) {
+    out.length = 0;
+    P.leisten[name].forEach(function (s) {
+      out.push(P.hexRgb(s[1]).map(function (v) { return Math.round(v * 255); }));
+    });
+    return out;
+  }
+
+  function derive() {
+    var P = root.__PALETTE__;
+    if (!P) return T;
+    var C = T.chart;
+    C.surface = P.surface; C.text = P.text; C.muted = P.muted;
+    C.grid = P.borderLight; C.axis = P.border;
+    C.ink = P.text;
+    C.die = P.die; C.machine = P.machine; C.air = P.air; C.vacuum = P.vacuum;
+    C.melt = P.melt; C.runner = P.runner; C.overflow = P.overflow; C.biscuit = P.biscuit;
+    C.piston = P.piston; C.cool = P.cool; C.process = P.process;
+    C.ok = P.ok; C.caution = P.caution; C.bad = P.bad;
+    C.okText = P.okText; C.cautionText = P.cautionText; C.badText = P.badText;
+    C.feasible = P.rgba('ok', 0.26);
+    C.feasibleAlt = P.rgba('ok', 0.11);
+    C.target = P.rgba('ok', 0.14);
+    C.targetLine = P.rgba('ok', 0.75);
+    C.mask = P.rgba('borderLight', 0.93);
+    C.mark = P.mark; C.ref = P.muted; C.event = P.mutedLight; C.chip = P.primary;
+    C.areaFill = P.rgba('text', 0.07);
+    C.isoLine = P.rgba('muted', 0.6);
+
+    for (var fam in FAMILIE) {
+      for (var i = 0; i < FAMILIE[fam].length; i++) T.limits[FAMILIE[fam][i]] = P[fam];
+    }
+    /* Glieder einer Familie (v_a min und max, Zerstäubung) unterscheidet
+       der Renderer über Strichart und Schraffurseite, nicht über
+       Mischfarben: jede Farbe hier ist genau eine Rolle der Palette, auch
+       in den Theorie-Bildern, die aus diesen Diagrammen entstehen. */
+
+    T.map.ok = C.feasible;
+    T.mapLines.bore = P.machine;       // Kolben-Ø: aus der Maschine
+    T.mapLines.len = P.machine;        // Kammerlänge: auch (gestrichelt)
+    T.mapLines.bisc = P.biscuit;       // Pressrest
+    T.mapLines.crit = P.process;       // v_krit
+
+    stuetzen(P, 'heat', T.heatStops = T.heatStops || []);
+    return T;
+  }
+
+  T.derive = derive;
+  derive();
+})(typeof window !== 'undefined' ? window : globalThis);

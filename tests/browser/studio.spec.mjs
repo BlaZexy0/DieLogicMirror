@@ -43,8 +43,10 @@ for (const [page, readyFn] of PAGES) {
   });
 }
 
-/* Das Metamodell rechnet nur im Browser: 12 MB ONNX und onnxruntime-web
-   (WebAssembly) — die Node-Tests prüfen nur seine Wahl und seine Grenzen. */
+/* Das Metamodell im echten Browser: 3,6 MB ONNX plus 14 MB Rechenwerk
+   (onnxruntime-web, WebAssembly). Unter Node rechnen meta.test.mjs und
+   tools/kammerfuellung.test.mjs dasselbe Modell; hier zählt, dass die Seite
+   es lädt, rechnet und zeigt. */
 test('Kammerfüllung: das Metamodell rechnet die Welle in Sekunden — Bild, Zeiten und Luft', async ({ page }) => {
   await page.goto('/tools/3d-studio/kammerfuellung.html');
   await page.waitForFunction(() => window.__kammerfuellung?.state?.ready);

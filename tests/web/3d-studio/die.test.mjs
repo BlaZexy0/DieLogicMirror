@@ -131,7 +131,7 @@ test('Registry und Geometrie passen zusammen', () => {
   for (const c of COMPONENTS) assert.ok(parts[c.id], 'kein Bauteil für ' + c.id);
   const mats = new Set();
   for (const c of COMPONENTS) for (const p of parts[c.id]) mats.add(p.mat);
-  /* Diese Namen steuern im Viewer Transparenz und Schnittflächen-Farbe. */
+  /* Diese Namen steuern im Viewer die Deckkraft und die Schnittflächen. */
   for (const n of ['steel', 'plunger', 'pins', 'castPart', 'castRunner', 'castOverflow', 'coolFix', 'coolMov']) {
     assert.ok(mats.has(n), 'Materialname fehlt: ' + n);
   }
@@ -169,7 +169,7 @@ test('assets/die.glb enthält alle Namen, über die der Viewer sucht', { skip: !
   const withExtras = g.nodes.filter(n => n.extras && n.extras.compId);
   assert.ok(withExtras.length >= COMPONENTS.length, 'compId in den extras');
 
-  /* Materialnamen steuern Transparenz und Schnittflächen-Farbe. */
+  /* Materialnamen steuern die Deckkraft und die Schnittflächen. */
   const mats = new Set(g.materials.map(m => m.name));
   for (const n of ['steel', 'plunger', 'pins', 'castPart', 'castRunner', 'castOverflow', 'coolFix', 'coolMov']) {
     assert.ok(mats.has(n), 'Material fehlt: ' + n);

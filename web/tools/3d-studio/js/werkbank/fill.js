@@ -12,10 +12,10 @@
    Schritt stehen, wo die Überläufe gesetzt werden. */
 
 import * as T from 'three';
-import { $, fmt, facts, segButtons, slider, colorbar, gradient, rgbCss } from '../ui/controls.js';
+import { $, fmt, facts, segButtons, slider, colorbar, gradient } from '../ui/controls.js';
 import { surfaceNets } from '../part/surfacenets.js';
 import { writeSTL } from '../part/stlio.js';
-import { turbo } from '../part/colors.js';
+import { scale, scaleFn, linRgb, onScheme, ROLE, VIEW } from '../part/colors.js';
 import * as M from '../fill/model.js';
 import { buildAll } from '../fill/geom.js';
 import { solveFill, fracToSurface, sampleFrac, fillBodyField, lastSpots } from '../fill/solve.js';
@@ -25,7 +25,6 @@ import { setTris, download, safeName } from '../ui/common.js';
 
 const SUBTITLE = 'Füllung: die Schmelzefront läuft von den Anschnitten des Angusses durch das gerasterte Bauteil; Füllgrad, Füllkörper, die letzten Stellen.';
 const IDLE = 'Ziehen: drehen · Rechte Maustaste: verschieben · Rad: zoomen';
-const GREY = [0.71, 0.75, 0.77];
 
 export function createFillStage(ctx) {
   const { view, busy } = ctx;
@@ -41,7 +40,11 @@ export function createFillStage(ctx) {
   /* ── Szene ────────────────────────────────────────────────── */
   const group = new T.Group();
   view.scene.add(group);
-  const bodyMat = new T.MeshStandardMaterial({ color: 0xd8a23a, roughness: 0.35, metalness: 0.45, side: T.DoubleSide, flatShading: true });
+  /* Die Farben wie in der Füllabschätzung (js/fill/tool.js): der Füllkörper
+     ist Schmelze, der Anschnitt Werkzeug, die letzten Stellen Kennpunkte
+     (Hervorhebung), der Füllgrad auf dem Bauteil die Farbleiste `turbo`
+     (früh blau, spät rot). */
+  const bodyMat = new T.MeshStandardMaterial({ color: ROLE.melt, roughness: 0.35, metalness: 0.45, side: T.DoubleSide, flatShading: true });
   const bodyMesh = new T.Mesh(new T.BufferGeometry(), bodyMat);
   bodyMesh.visible = false;
   group.add(bodyMesh);
@@ -50,11 +53,29 @@ export function createFillStage(ctx) {
   inletMesh.visible = false;
   group.add(inletMesh);
   const spotGeo = new T.SphereGeometry(1, 20, 14);
-  const spotMat = new T.MeshBasicMaterial({ color: 0xb42318, depthTest: false, transparent: true, opacity: 0.9 });
+  const spotMat = new T.MeshBasicMaterial({ color: VIEW.lastFilled, depthTest: false, transparent: true, opacity: 0.9 });
   const spotGroup = new T.Group();
   spotGroup.renderOrder = 5;
   spotGroup.visible = false;
   group.add(spotGroup);
+  /* Ein Wechsel des Farbschemas: Körper und Marken umfärben; ist der Schritt
+     zu sehen, das Bauteil, Legende und Skala neu. */
+  onScheme(() => {
+    bodyMat.color.set(ROLE.melt);
+    inletMat.color.set(M.COLOR);
+    spotMat.color.set(VIEW.lastFilled);
+    if (!state.active) return;
+    paintPart();
+    legend();
+    applyVisibility();
+  });
+  function legend() {
+    const row = (color, text) => '<div class="lg-row"><span class="dot" style="background:' + color + '"></span>' + text + '</div>';
+    $('pt-legend').innerHTML = '<div class="pt-menu-title">Zeichen</div>'
+      + row(M.COLOR, 'Anschnitt (aus dem Anguss)')
+      + (state.show === 'koerper' ? row(ROLE.melt, 'Schmelze (Füllkörper)') : '')
+      + row(VIEW.lastFilled, 'zuletzt gefüllt');
+  }
 
   /* ── Der Plan aus dem Anguss ──────────────────────────────── */
   function planFromRunner() {
@@ -207,9 +228,10 @@ export function createFillStage(ctx) {
     const arr = col.array;
     if (!state.result || state.show !== 'farbe') { ctx.part.usePlain(); return; }
     const p = pos.array, f = state.field, s = state.surf, q = state.q;
+    const turbo = scaleFn('turbo'), grey = linRgb(VIEW.noData);
     for (let i = 0; i < pos.count; i++) {
       const v = sampleFrac(f, s, p[3 * i], p[3 * i + 1], p[3 * i + 2]);
-      if (Number.isNaN(v) || v > q + 1e-6) { arr.set(GREY, 3 * i); continue; }
+      if (Number.isNaN(v) || v > q + 1e-6) { arr.set(grey, 3 * i); continue; }
       arr.set(turbo(v), 3 * i);
     }
     col.needsUpdate = true;
@@ -220,7 +242,6 @@ export function createFillStage(ctx) {
     if (!state.result || state.show !== 'koerper' || !state.active) { bodyMesh.visible = false; return; }
     const tris = surfaceNets(fillBodyField(state.field, state.result.frac, state.q), 0);
     setTris(bodyMesh, tris, true);
-    bodyMat.color.setRGB(...turbo(Math.min(1, state.q)));
   }
 
   function updateSpots() {
@@ -257,9 +278,9 @@ export function createFillStage(ctx) {
     $('fu-q-row').classList.toggle('disabled', !state.result);
     if (state.active) {
       const tm = state.timing;
-      colorbar(state.result && state.show !== 'grau' ? {
+      colorbar(state.result && state.show === 'farbe' ? {
         title: 'Füllgrad',
-        stops: gradient(t => rgbCss(turbo(t))),
+        stops: gradient(t => scale('turbo', t)),
         ticks: [100, 75, 50, 25, 0].map(v => v + ' %'),
         extra: tm ? fmt(tm.tFirst * 1000, 0) + '–' + (tm.tEnd === null ? '?' : fmt(tm.tEnd * 1000, 0)) + ' ms ab Kolbenstart' : ''
       } : null);
@@ -320,7 +341,7 @@ export function createFillStage(ctx) {
   /* ── Regler ───────────────────────────────────────────────── */
   slider('fu-alpha', v => { state.alpha = v; state.plan.alpha = v; if (state.active && state.result) { state.stale = true; compute(); } }, v => fmt(v, 1));
   $('fu-run').addEventListener('click', compute);
-  segButtons('fu-show-seg', v => { state.show = v; paintPart(); updateBody(); applyVisibility(); });
+  segButtons('fu-show-seg', v => { state.show = v; paintPart(); updateBody(); applyVisibility(); if (state.active) legend(); });
   /* Der Regler nennt zum Füllgrad die Zeit ab Kolbenstart, wenn es eine gibt. */
   function qLabel(v) {
     const tm = state.timing;
@@ -358,9 +379,7 @@ export function createFillStage(ctx) {
       state.active = true;
       ctx.subtitle(SUBTITLE);
       ctx.status(IDLE);
-      $('pt-legend').innerHTML = '<div class="pt-menu-title">Zeichen</div>'
-        + '<div class="lg-row"><span class="dot" style="background:' + M.COLOR + '"></span>Anschnitt (aus dem Anguss)</div>'
-        + '<div class="lg-row"><span class="dot" style="background:#b42318"></span>zuletzt gefüllt</div>';
+      legend();
       $('fu-menu').classList.remove('wb-off');
       rebuild();
       if (M.allItems(state.plan).length) compute();

@@ -12,15 +12,12 @@
      · vor dem Kolben und hinter der Stirnplatte liegt je eine Geisterschicht (Luft), gespiegelt an der
        jeweiligen Fläche.
    Weil nur die Werte je Bild wechseln, wird die Topologie einmal je Schichtzahl gebaut und dann je
-   Kolbenstellung ausgewertet. Ausgabe: indiziertes Netz mit Farben (Geschwindigkeit, Turbo-Skala).
+   Kolbenstellung ausgewertet. Ausgabe: indiziertes Netz mit Farben (Geschwindigkeit, Turbo-Skala, linear für three.js).
 
    Koordinaten der Seite: Kammer entlang +x, Kolben bei x = xKolben, Stirnplatte bei x = L, y nach oben;
    die Modellschicht 0 liegt an der Stirnplatte. Bildzeile = y, Bildspalte = z. */
 
-import { turbo } from '../part/colors.js';
-
-const LUT = new Float32Array(256 * 3);
-for (let k = 0; k < 256; k++) LUT.set(turbo(k / 255), 3 * k);
+import { lutLinear } from '../part/colors.js';
 
 /* Die vier Nähte: A(rad) und B(rad) sind über die Diagonale Nachbarn (wie metrics.py), C die Kernecke.
    Im Bild sind A und B KEINE Nachbarn — weder die Fläche noch das Zählen der Luft dürfen sie übersehen. */
@@ -162,6 +159,7 @@ const EDGE_B = [1, 3, 5, 7, 2, 3, 6, 7, 4, 5, 6, 7];
 
 export function extractSurface(vol, vScale) {
   const { topo, NP, f, pos, speed, hexV, vpos, vcol } = vol, { NS, NQ, quads, edges, nodeQuads } = topo;
+  const LUT = lutLinear('turbo');
   hexV.fill(-1);
   let nv = 0;
   const node = new Int32Array(8), g = new Float64Array(8);

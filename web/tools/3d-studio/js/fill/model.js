@@ -9,12 +9,18 @@
    Das Modul kennt kein Three.js; was daraus wird, rechnet
    js/fill/solve.js. */
 
-import { add, cross, norm, dot, rotate, rad } from '../runner/vec.js';
+import { add, cross, norm, dot, rotate, rad, clamp } from '../runner/vec.js';
+import { ELEMENT, onScheme } from '../part/colors.js';
 
 export const FORMAT = 'dielogic-fuellung';
 export const FORMAT_VERSION = 1;
 
-export const COLOR = '#e07b39';
+/* Die Farbe des Anschnitts: der Anschnitt gehört zum Werkzeug (Sachfarbe
+   `die`, js/part/colors.js), wie in den Diagrammen der Auslegung. Sie
+   folgt dem Schema: der Wert wird bei einem Wechsel neu gelesen, bevor die
+   Werkzeuge neu malen (dieses Modul hört zuerst hin). */
+export let COLOR = ELEMENT.anschnitt;
+onScheme(() => { COLOR = ELEMENT.anschnitt; });
 export const DEFAULTS = { w: 30, h: 2 };
 
 export const PARAM_META = {
@@ -22,6 +28,9 @@ export const PARAM_META = {
   h: { label: 'Höhe', min: 0.3, max: 40, unit: 'mm' },
   share: { label: 'Anteil', min: 1, max: 100, unit: '%' }
 };
+
+/** Der Regler der Dünnwand-Bremse (js/fill/panel.js) — und was eine Datei darf. */
+export const ALPHA_RANGE = [0, 1];
 
 /* Keine Füllzeit im Plan: die Rechnung kennt keine Zeit, und eine
    Umrechnung des Füllgrads in Millisekunden sagte nichts, was der
@@ -113,22 +122,69 @@ export function toJSON(plan) {
   };
 }
 
+/* Kennungen aus einer Datei: vorn ein Buchstabe, dann Buchstaben, Ziffern,
+   _ oder -, höchstens 32 Zeichen. Sie stehen im Auswahlfeld und in der
+   Liste — eine Datei mit anderen stammt nicht von hier und wird abgelehnt.
+   Wer keine Kennung hat (oder eine, die schon vergeben ist), bekommt eine
+   neue, die keiner anderen gleicht: sonst überschrieben sich die Anschnitte. */
+const ID = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
+export function fileIds(list, prefix) {
+  const ids = [], taken = new Set();
+  let seq = 0;
+  list.forEach((raw, i) => {
+    if (!raw || typeof raw !== 'object') throw new Error('Anschnitt ' + (i + 1) + ' der Datei ist unlesbar.');
+    const id = raw.id !== undefined && raw.id !== null && raw.id !== '' ? String(raw.id) : null;
+    if (id !== null && !ID.test(id)) {
+      throw new Error('Anschnitt ' + (i + 1) + ' der Datei hat keine gültige Kennung: erlaubt sind Buchstaben, Ziffern, _ und -, vorn ein Buchstabe, höchstens 32 Zeichen.');
+    }
+    ids.push(id !== null && !taken.has(id) ? id : null);
+    if (id === null) return;
+    taken.add(id);
+    const num = +id.replace(/\D/g, '');
+    if (Number.isSafeInteger(num)) seq = Math.max(seq, num);
+  });
+  for (let i = 0; i < ids.length; i++) {
+    if (ids[i]) continue;
+    let id;
+    do id = prefix + (++seq); while (taken.has(id));
+    taken.add(id);
+    ids[i] = id;
+  }
+  return { ids, seq };
+}
+
+/** Ein Punkt aus der Datei: drei Zahlen — sonst ist die Datei beschädigt. */
+function filePoint(v, what) {
+  const p = Array.isArray(v) && v.length >= 3 ? v.slice(0, 3).map(Number) : null;
+  if (!p || !p.every(Number.isFinite)) throw new Error(what + ': Die Lage fehlt oder ist keine Zahl.');
+  return p;
+}
+
+/** Eine Zahl aus der Datei in den Grenzen ihres Feldes — oder die Vorgabe. */
+const fileNumber = (v, meta, fallback) => {
+  const x = v === null || v === '' || v === undefined ? NaN : Number(v);
+  return Number.isFinite(x) ? clamp(x, meta.min, meta.max) : fallback;
+};
+
 export function fromJSON(obj) {
   if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Fülldatei (Kennung „' + FORMAT + '" fehlt).');
   if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
   const plan = emptyPlan();
-  if (Number.isFinite(obj.alpha)) plan.alpha = Math.max(0, Math.min(2, Number(obj.alpha)));
-  for (const raw of Array.isArray(obj.items) ? obj.items : []) {
-    const id = raw.id ? String(raw.id) : 'a' + (plan.seq + 1);
-    const n = v => (Array.isArray(v) ? v.map(Number) : [0, 0, 0]);
+  /* Werte in den Grenzen der Felder: der Regler von α reicht von 0 bis 1,
+     ein Anteil von 1 bis 100 % — mehr soll auch aus einer Datei nicht kommen. */
+  plan.alpha = fileNumber(obj.alpha, { min: ALPHA_RANGE[0], max: ALPHA_RANGE[1] }, plan.alpha);
+  const list = Array.isArray(obj.items) ? obj.items : [];
+  const { ids, seq } = fileIds(list, 'a');
+  list.forEach((raw, i) => {
+    const id = ids[i];
     plan.items[id] = {
-      id, pos: n(raw.pos), n: unit(n(raw.n)), rot: Number(raw.rot) || 0,
-      w: Number(raw.w) || DEFAULTS.w, h: Number(raw.h) || DEFAULTS.h,
-      share: Number.isFinite(Number(raw.share)) && raw.share !== undefined && raw.share !== null ? Number(raw.share) : null
+      id, pos: filePoint(raw.pos, 'Anschnitt ' + id), n: unit((Array.isArray(raw.n) ? raw.n : [1, 0, 0]).map(Number)),
+      rot: clamp(Number(raw.rot) || 0, -180, 180),
+      w: fileNumber(raw.w, PARAM_META.w, DEFAULTS.w), h: fileNumber(raw.h, PARAM_META.h, DEFAULTS.h),
+      share: fileNumber(raw.share, PARAM_META.share, null)
     };
-    const num = +id.replace(/\D/g, '');
-    if (Number.isFinite(num)) plan.seq = Math.max(plan.seq, num);
-  }
+  });
+  plan.seq = seq;
   return plan;
 }
 

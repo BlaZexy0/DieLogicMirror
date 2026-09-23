@@ -1,11 +1,12 @@
 /* Überlaufdesigner — das Werkzeug im gemeinsamen Rahmen.
 
    Wer oben im Bild eine Art wählt und auf das Bauteil klickt, setzt dort
-   ein Element: Ort ist der getroffene Punkt, Achse die nach außen
-   gerichtete Flächennormale — dorthin wachsen Steg, Bohne und Kanal.
-   Danach: am Punkt ziehen (in der Tangentialebene, also auf der Wand
-   entlang; mit Alt von ihr weg), am Pfeil neu setzen, im Auswahlfeld um
-   die Achse drehen und bemaßen.
+   ein Element: Ort ist der getroffene Punkt, Hochachse die nach außen
+   gerichtete Flächennormale — Steg, Bohne und Kanal liegen in der
+   Wandebene (js/vents/model.js). Danach: am Punkt ziehen (in der
+   Tangentialebene, also auf der Wand entlang; mit Alt von ihr weg; Esc
+   bricht den Zug ab), am Pfeil neu setzen, im Auswahlfeld um die Achse
+   drehen und bemaßen.
 
    Der Überlauf mit Entlüftung trägt eine zweite Kugel am Ende der Bohne
    und dahinter je Kanalpunkt eine weitere: die Griffe heißen „<id>:v0"
@@ -26,16 +27,17 @@
 
 import * as T from 'three';
 import { facts, slider, numberInput } from '../ui/controls.js';
-import { fmt, fmtPlain, fmtUnit } from '../studio/format.js';
-import { kpis } from '../studio/rows.js';
+import { fmt, fmtPlain, fmtUnit, parseNumber } from '../studio/format.js';
+import { kpis, esc } from '../studio/rows.js';
 import { writeSTL } from '../part/stlio.js';
 import { createHandles, SELECTED_RING } from '../handles.js';
+import { onScheme, ELEMENT } from '../part/colors.js';
 import { setTris, download, safeName, dirText, outward } from '../ui/common.js';
+import { baseName } from '../studio/files.js';
 import * as M from './model.js';
 import { buildByType, buildAll, volumeOf } from './geom.js';
 import { MODES, INSPECTOR, DARSTELLUNG } from './panel.js';
 
-const VENT_POINT_COLOR = '#6f9bc9';
 const NEEDS_PART = 'Zuerst ein Bauteil laden; der Klick setzt das Element auf seine Wand.';
 const HANDLE_HINT = '<b>Punkt</b> ziehen: auf der Wand · <b>Alt</b>: von ihr weg · <b>Pfeil</b>: neu setzen · <b>Entf</b>: entfernen';
 
@@ -76,6 +78,14 @@ export function createUeberlaufTool(host) {
     meshes[type] = new T.Mesh(new T.BufferGeometry(), mat);
     group.add(meshes[type]);
   }
+  /* Die Artfarben folgen dem Farbschema (js/part/colors.js): die Körper
+     umfärben, Liste, Auswahlfeld und Legende neu. Die Griffe gleicht
+     js/handles.js selbst ab, die Chips der Rahmen. */
+  onScheme(() => {
+    for (const [type, meta] of Object.entries(M.TYPES)) meshes[type].material.color.set(meta.color);
+    if (wired) { syncSelection(); updateLegend(); }
+    view.invalidate();
+  });
 
   /* ── Griffe ──────────────────────────────────────────────── */
   function handleItems() {
@@ -86,7 +96,7 @@ export function createUeberlaufTool(host) {
       if (it.type !== 'entlueftet') continue;
       const vw = M.ventWorld(it);
       out.push({ id: it.id + ':v0', pos: vw.exit, color, planeSize: Math.max(24, it.p.ventW * 2) });
-      vw.points.forEach((pos, i) => out.push({ id: it.id + ':v' + (i + 1), pos, color: VENT_POINT_COLOR, planeSize: Math.max(24, it.p.ventW * 2) }));
+      vw.points.forEach((pos, i) => out.push({ id: it.id + ':v' + (i + 1), pos, color: ELEMENT.kanalpunkt, planeSize: Math.max(24, it.p.ventW * 2) }));
     }
     return out;
   }
@@ -94,7 +104,9 @@ export function createUeberlaufTool(host) {
   const handles = createHandles({
     view,
     getRefMesh: () => host.part.mesh,
-    markColor: M.TYPES.bohne.color,
+    /* Die Marke beim Zielen in der Farbe der Art, die gesetzt oder
+       versetzt wird. */
+    markColor: () => M.TYPES[state.placing || (sel() ? sel().type : 'bohne')].color,
     items: handleItems,
     /* Gezogen wird in der Tangentialebene der Wand: der Punkt rutscht auf
        ihr entlang. Mit Alt entlang der Normalen, von der Wand weg. Die
@@ -116,6 +128,8 @@ export function createUeberlaufTool(host) {
     onSelect: () => { cancelAim(); syncSelection(); },
     onChange: what => {
       if (what === 'drag') { rebuild('drag'); return; }
+      /* Esc mitten im Zug: zurück zum Stand davor — der Zug war nie ein Schritt. */
+      if (what === 'cancel') { if (!host.revert()) { rebuild(); syncSelection(); } return; }
       rebuild();
       if (what === 'drop') { syncSelection(); host.changed(selPart().k === null ? 'Element verschoben' : 'Kanalpunkt verschoben'); }
     },
@@ -154,9 +168,9 @@ export function createUeberlaufTool(host) {
     const items = M.allItems(state.plan);
     const cur = selPart().base;
     ui('item-list').innerHTML = items.map(it =>
-      '<button type="button" class="st-list-row' + (it.id === cur ? ' active' : '') + '" data-item="' + it.id + '">'
+      '<button type="button" class="st-list-row' + (it.id === cur ? ' active' : '') + '" data-item="' + esc(it.id) + '">'
       + '<span class="dot" style="background:' + M.TYPES[it.type].color + '"></span>'
-      + '<span class="name">' + label(it) + '</span><span class="val">' + fmtUnit(volumeOf(it) / 1000, 'cm³') + '</span></button>').join('');
+      + '<span class="name">' + esc(label(it)) + '</span><span class="val">' + fmtUnit(volumeOf(it) / 1000, 'cm³') + '</span></button>').join('');
     ui('item-empty').hidden = items.length > 0;
   }
   /* ── Auswahl ─────────────────────────────────────────────── */
@@ -170,7 +184,7 @@ export function createUeberlaufTool(host) {
     const meta = M.TYPES[it.type];
     const part = selPart();
     const sub = part.k === null ? '' : part.k === 0 ? 'Bohnenende' : 'Kanalpunkt ' + part.k;
-    shell.inspector.show({ title: '<span class="dot" style="background:' + meta.color + '"></span>' + meta.label + ' <code>' + it.id + '</code>' + (sub ? ' <em>' + sub + '</em>' : '') });
+    shell.inspector.show({ title: '<span class="dot" style="background:' + meta.color + '"></span>' + meta.label + ' <code>' + esc(it.id) + '</code>' + (sub ? ' <em>' + sub + '</em>' : '') });
     shell.status(HANDLE_HINT);
     ui('sel-type').value = it.type;
     /* Lage: das Element — oder, bei einem Kanalpunkt, der Punkt selbst. */
@@ -291,6 +305,9 @@ export function createUeberlaufTool(host) {
     return was;
   }
   host.cancelAim = cancelAim;
+  /* Esc mitten im Zug (js/handles.js): für den Rahmen, der Esc zuerst hier
+     anbieten kann — auch wenn noch ein Eingabefeld den Fokus hat. */
+  host.cancelDrag = () => !!handles.cancelDrag();
 
   /** Ein neues Element der Art `type`: der nächste Klick aufs Bauteil setzt es.
       Der Strahl liefert die nach INNEN gerichtete Normale; das Element wächst nach außen. */
@@ -337,7 +354,7 @@ export function createUeberlaufTool(host) {
   }
 
   shell.setChips(Object.entries(M.TYPES).map(([type, meta]) => ({
-    id: type, label: CHIP_LABEL[type] || meta.label, icon: meta.color, title: meta.label + ': ' + meta.hint,
+    id: type, label: CHIP_LABEL[type] || meta.label, icon: () => meta.color, title: meta.label + ': ' + meta.hint,
     enabled: () => !!host.part.model, reason: NEEDS_PART,
     active: () => state.placing === type,
     onClick: () => startPlace(type)
@@ -384,7 +401,12 @@ export function createUeberlaufTool(host) {
         rebuild();
         syncSelection();
         host.changed('Lage geändert');
-        return undefined;                                          // syncSelection hat das Feld schon gesetzt
+        /* Ins Feld gehört, wo der Punkt jetzt IST: ein Kanalpunkt wird in die
+           Wandebene gelotet und landet selten beim eingetippten Wert — und
+           numberInput schriebe sonst den getippten zurück. Mit einer Stelle
+           wie in syncSelection. */
+        const now = part.k === null ? it.pos : M.ventWorld(it).points[part.k - 1];
+        return parseNumber(fmtPlain(now[axis], 1));
       });
     }
     ui('vent-add').addEventListener('click', () => {
@@ -410,13 +432,17 @@ export function createUeberlaufTool(host) {
     /* ── Darstellung, Legende ────────────────────────────────── */
     const pop = shell.darstellung(DARSTELLUNG);
     slider(pop.querySelector('[data-ui="opacity"]'), v => host.part.setOpacity(v / 100), v => v + ' %', pop.querySelector('[data-ui="opacity-val"]'));
-    shell.legend(Object.values(M.TYPES).map(t => '<div class="lg-row"><span class="dot" style="background:' + t.color + '"></span>' + t.label + '</div>').join('')
-      + '<div class="lg-row"><span class="dot" style="background:' + VENT_POINT_COLOR + '"></span>Kanalpunkt</div>'
-      + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>');
+    updateLegend();
 
     rebuild();
     syncSelection();
     wired = true;
+  }
+
+  function updateLegend() {
+    shell.legend(Object.values(M.TYPES).map(t => '<div class="lg-row"><span class="dot" style="background:' + t.color + '"></span>' + t.label + '</div>').join('')
+      + '<div class="lg-row"><span class="dot" style="background:' + ELEMENT.kanalpunkt + '"></span>Kanalpunkt</div>'
+      + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>');
   }
 
   /* ── Plan laden, Bauteil ─────────────────────────────────── */
@@ -427,6 +453,10 @@ export function createUeberlaufTool(host) {
     rebuild();
     syncSelection();
   }
+
+  /* <bauteil>-<was>.stl wie bei den anderen Werkzeugen — ohne die Endung des
+     Bauteils mitten im Namen („deckel-stl-ueberlaeufe.stl"). */
+  const stlName = () => safeName((baseName(host.part.name) || 'bauteil') + '-ueberlaeufe') + '.stl';
 
   const tool = {
     id: 'ueberlauf',
@@ -448,19 +478,30 @@ export function createUeberlaufTool(host) {
       const back = Object.keys(state.plan.items).filter(id => !before.has(id));
       const { base, k } = splitId(keep);
       const it = base ? state.plan.items[base] : null;
-      const still = it && (k === null || k === 0 || k <= M.ventPoints(it).length);
-      handles.select(still ? keep : back.length === 1 ? back[0] : null);
+      /* Einen Kanalpunkt — auch das Bohnenende — gibt es nur beim Überlauf mit
+         Entlüftung: nahm Rückgängig die Art oder den Punkt zurück, geht die
+         Auswahl ans Element selbst. Früher blieb sie an einem Griff hängen,
+         den es nicht mehr gab (kein Ring, Lage und Entfernen gesperrt). */
+      const still = it && (k === null || (it.type === 'entlueftet' && k <= M.ventPoints(it).length));
+      handles.select(still ? keep : it ? base : back.length === 1 ? back[0] : null);
       rebuild();
       syncSelection();
     },
     exports: [{
       label: 'Körper als STL',
       enabled: () => M.allItems(state.plan).length > 0, reason: 'Noch nichts gesetzt.',
-      run: () => download(new Blob([writeSTL(buildAll(state.plan), 'DieLogic Überläufe')], { type: 'model/stl' }), safeName((host.part.name || 'ueberlaeufe') + '-ueberlaeufe') + '.stl')
+      run: () => download(new Blob([writeSTL(buildAll(state.plan), 'DieLogic Überläufe')], { type: 'model/stl' }), stlName())
     }],
     keys: {
       Delete: () => removeSelected(),
-      Escape: () => { if (!handles.selected) return false; handles.select(null); return true; }
+      /* Esc bricht zuerst einen Zug ab (der Griff springt zurück), sonst hebt
+         es die Auswahl auf. */
+      Escape: () => {
+        if (handles.cancelDrag()) return true;
+        if (!handles.selected) return false;
+        handles.select(null);
+        return true;
+      }
     },
     onPartStart() { state.ready = false; },
     onPart() {

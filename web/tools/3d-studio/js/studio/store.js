@@ -27,16 +27,55 @@ export function createStore({ tool, debounce = 1000 } = {}) {
   let dirty = false;          // geändert seit dem letzten Speichern/Export
   let lastSaved = 0;          // Zeitpunkt des letzten Entwurfs
   let onState = null;
-  let pending = null;         // wartet noch auf den entprellten Schreibvorgang
-  const key = () => PREFIX + tool + ':' + (partKey || '-');
+  /* Was noch auf den entprellten Schreibvorgang wartet — als ABZUG von dem
+     Moment, in dem es gemeldet wurde, samt Bauteil: wer später schreibt
+     (Wecker, neues Bauteil, Verlassen), schreibt genau das, auch wenn das
+     Werkzeug inzwischen längst für ein anderes Bauteil steht. */
+  let pending = null;         // { part, doc } oder null
+  const keyOf = k => PREFIX + tool + ':' + (k || '-');
+  const key = () => keyOf(partKey);
   const notify = () => { if (onState) onState(api); };
+  function write(part, doc) {
+    const s = storage();
+    if (!s) return false;
+    let text;
+    try { text = JSON.stringify({ v: 1, when: Date.now(), part, doc }); }
+    catch { return false; }
+    if (text.length > MAX_BYTES) return false;
+    try { s.setItem(keyOf(part), text); } catch { return false; }
+    lastSaved = Date.now();
+    notify();
+    return true;
+  }
 
   const api = {
     get available() { return !!storage(); },
     get dirty() { return dirty; },
     get partKey() { return partKey; },
     get lastSaved() { return lastSaved; },
-    setPart(k) { partKey = String(k || ''); },
+    /** Ein anderes Bauteil: was noch wartet, gehört dem bisherigen und wird
+        JETZT unter dessen Schlüssel geschrieben — der Wecker schrieb es sonst
+        eine Sekunde später unter den neuen, und das frische, leere Blatt des
+        neuen Bauteils überschrieb dessen Entwurf. Das neue Bauteil beginnt
+        ohne Ungesichertes: der bisherige Stand liegt sicher im Entwurf. */
+    setPart(k) {
+      const next = String(k || '');
+      api.flushPending();
+      if (next === partKey) return;
+      partKey = next;
+      dirty = false;
+      lastSaved = 0;
+      notify();
+    },
+    /** Was noch wartet, sofort schreiben (der Rahmen tut es, bevor ein neues
+        Bauteil zu laden beginnt und das Werkzeug seinen Stand wegräumt). */
+    flushPending() {
+      clearTimeout(timer);
+      if (!pending) return false;
+      const { part, doc } = pending;
+      pending = null;
+      return write(part, doc);
+    },
     onState(fn) { onState = fn; },
 
     /** Entwurf ablegen — entprellt, damit ein Regler nicht hundertmal schreibt.
@@ -44,23 +83,19 @@ export function createStore({ tool, debounce = 1000 } = {}) {
         die bloß Einstellungen haben (kein Plan, der verloren gehen könnte). */
     save(getDoc, { quiet = false } = {}) {
       if (!quiet) { dirty = true; notify(); }
-      pending = getDoc;
+      let doc;
+      try { doc = getDoc(); } catch { return; }
+      pending = { part: partKey, doc };
       clearTimeout(timer);
-      timer = setTimeout(() => api.flush(getDoc), debounce);
+      timer = setTimeout(() => api.flushPending(), debounce);
     },
+    /** Sofort schreiben, was `getDoc` JETZT liefert (für dieses Bauteil). */
     flush(getDoc) {
       clearTimeout(timer);
       pending = null;
-      const s = storage();
-      if (!s) return false;
-      let text;
-      try { text = JSON.stringify({ v: 1, when: Date.now(), part: partKey, doc: getDoc() }); }
-      catch { return false; }
-      if (text.length > MAX_BYTES) return false;
-      try { s.setItem(key(), text); } catch { return false; }
-      lastSaved = Date.now();
-      notify();
-      return true;
+      let doc;
+      try { doc = getDoc(); } catch { return false; }
+      return write(partKey, doc);
     },
     /** Gibt es einen Entwurf für dieses Werkzeug und Bauteil? */
     peek() {
@@ -107,7 +142,7 @@ export function createStore({ tool, debounce = 1000 } = {}) {
       });
       /* Wer innerhalb der Entprellzeit geht, nähme die letzte Änderung sonst
          nicht mit: beim Verlassen wird geschrieben, was noch wartet. */
-      window.addEventListener('pagehide', () => { if (pending) api.flush(pending); });
+      window.addEventListener('pagehide', () => api.flushPending());
     }
   };
   return api;

@@ -20,7 +20,9 @@ nichts zu interpolieren.</p>
 dessen, was gemessen werden kann (ein Wert an der Grenze heißt „mindestens so weit"). Die Rechenzeit
 wächst steil mit der Suchgrenze: gemessen an 235 000 Dreiecken 20 mm → 90 ms, 300 mm → 50 s. Ist sie
 groß gegenüber den Teilen, warnt die Zeile unter dem Knopf, bevor gerechnet wird; die Rechnung lässt
-sich jederzeit abbrechen. Die Suchgrenze gehört zur <em>Rechnung</em>: Wer sie ändert, rechnet neu.</p>
+sich jederzeit abbrechen. Die Suchgrenze gehört zur <em>Rechnung</em>: Wer sie ändert, rechnet neu.
+Eine neue Datei, A oder B, verwirft die Messwerte beider Seiten: Sie waren gegen das alte Gegenstück
+gemessen.</p>
 <p>Die Kennzahlen nennen je Richtung den kleinsten und größten gemessenen Abstand und das Mittel; das
 Mittel ist <b>flächengewichtet</b>: Ein fein vernetzter Bereich zählt nicht mehr als ein grober.</p>
 </section>
@@ -28,15 +30,17 @@ Mittel ist <b>flächengewichtet</b>: Ein fein vernetzter Bereich zählt nicht me
 <h3>Farbskala</h3>
 <p>Alles unter dem Minimum bekommt die Farbe des unteren Endes (rot, nah, kritisch), alles über dem
 Maximum die des oberen (blau, fern). Nach jeder Rechnung reicht die Skala vom kleinsten zum größten
-gemessenen Abstand; von Hand lässt sie sich danach einengen; das färbt nur um. Ungefärbt bleibt ein
-Netz schlicht grau, sonst konkurrieren zwei Karten um dieselbe Aufmerksamkeit.</p>
+gemessenen Abstand; von Hand lässt sie sich danach einengen; das färbt nur um. Das Minimum bleibt
+unter dem Maximum: Wer eines über das andere hinaus setzt, schiebt das andere mit, und dessen Zeile
+sagt es. Ungefärbt bleibt ein Netz schlicht im Grau des Bauteils (B etwas dunkler), sonst
+konkurrieren zwei Karten um dieselbe Aufmerksamkeit.</p>
 </section>
 <section data-help-anchor="durchdringung">
 <h3>Innen oder außen</h3>
 <p>Der Abstand ist vorzeichenlos: ein Kanal 5 mm <em>unter</em> der Oberfläche und einer 5 mm
 <em>innen</em> im Bauteil liefern denselben Wert. Für Gussteil ↔ Temperierung ist das die gefährliche
 Verwechslung. Deshalb wird der Anteil der Punkte gemessen, die <b>innerhalb</b> des anderen Netzes
-liegen, und rot gemeldet: dort durchdringen sich die Teile, der Abstand ist kein Freiraum.</p>
+liegen, und als „schlecht" gemeldet: dort durchdringen sich die Teile, der Abstand ist kein Freiraum.</p>
 </section>
 <section data-help-anchor="bedienung">
 <h3>Bedienung</h3>

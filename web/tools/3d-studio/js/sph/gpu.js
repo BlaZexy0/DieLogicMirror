@@ -20,10 +20,15 @@
    Geschwindigkeiten je zweimal, das Gitter (Zähler und Fächer in
    einem), die Melder, das Abstandsfeld und die Rollen (Flag und Melder
    in einem Wort). Gibt es kein WebGPU, meldet createGpuSphSolver das
-   mit einem Fehler; die Seite fällt auf den JavaScript-Kern zurück. */
+   mit einem Fehler; die Seite fällt auf den JavaScript-Kern zurück.
+
+   Verlorene Karte und gescheitertes Anlegen wie beim Gitter (js/lbm/gpu.js):
+   eine gewöhnliche Meldung statt eines AbortError, und Gerät und Puffer
+   gehen wieder. */
 
 import { SUPPORT } from './kernel.js';
 import { PARAMS, NEVER, KIND } from './wcsph.js';
+import { lostError, failedSetup } from '../lbm/gpu.js';
 
 const WG = 64;
 const UNIFORM_STRIDE = 512;
@@ -285,8 +290,20 @@ export async function createGpuSphSolver(setup, params = {}) {
   }
   if (need > 134217728) { limits.maxStorageBufferBindingSize = need; limits.maxBufferSize = need; }
   const device = await adapter.requestDevice({ requiredLimits: limits });
+  const buffers = [];
+  try {
+    return await buildSolver(device, buffers, setup, P, { n, cellSize, gdims, cells, gridWords });
+  } catch (err) {
+    throw failedSetup(device, buffers, err);
+  }
+}
 
-  const mk = (size, usage) => device.createBuffer({ size: Math.max(16, Math.ceil(size / 4) * 4), usage });
+/* Alles nach requestDevice — wie im Gitter: was angelegt wird, steht in `buffers`. */
+async function buildSolver(device, buffers, setup, P, { n, cellSize, gdims, cells, gridWords }) {
+  /* „destroyed" meldet das eigene dispose() — das ist kein Verlust. */
+  let lost = null;
+  device.lost.then(info => { if (info.reason !== 'destroyed') lost = info; });
+  const mk = (size, usage) => { const b = device.createBuffer({ size: Math.max(16, Math.ceil(size / 4) * 4), usage }); buffers.push(b); return b; };
   const ST = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST;
   const bufPA = mk(16 * n, ST), bufPB = mk(16 * n, ST), bufVA = mk(16 * n, ST), bufVB = mk(16 * n, ST);
   const bufGrid = mk(gridWords * 4, ST);
@@ -305,7 +322,7 @@ export async function createGpuSphSolver(setup, params = {}) {
     for (let i = 0; i < roles.length; i++) roles[i] = (bnd.flags.data[i] & 0xFFFF) | ((bnd.flags.sensor ? bnd.flags.sensor[i] : 0) << 16);
   }
   const bufR = mk(roles.byteLength, ST);
-  const bufUni = device.createBuffer({ size: UNIFORM_STRIDE * BATCH, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const bufUni = mk(UNIFORM_STRIDE * BATCH, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
   device.queue.writeBuffer(bufPA, 0, setup.pos, 0, 4 * n); device.queue.writeBuffer(bufPB, 0, setup.pos, 0, 4 * n);
   device.queue.writeBuffer(bufVA, 0, setup.vel, 0, 4 * n); device.queue.writeBuffer(bufVB, 0, setup.vel, 0, 4 * n);
   device.queue.writeBuffer(bufG, 0, gates);
@@ -315,10 +332,7 @@ export async function createGpuSphSolver(setup, params = {}) {
   const module = device.createShaderModule({ code: wgsl() });
   const info = await module.getCompilationInfo();
   const errors = info.messages.filter(m => m.type === 'error');
-  if (errors.length) {
-    device.destroy();
-    throw new Error('WGSL: ' + errors.map(m => m.lineNum + ':' + m.linePos + ' ' + m.message).join(' | '));
-  }
+  if (errors.length) throw new Error('WGSL: ' + errors.map(m => m.lineNum + ':' + m.linePos + ' ' + m.message).join(' | '));
   const layout = device.createBindGroupLayout({
     entries: [
       { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform', hasDynamicOffset: true } },
@@ -398,11 +412,13 @@ export async function createGpuSphSolver(setup, params = {}) {
   }
 
   async function read(buf, byteLength, Ctor) {
+    if (lost) throw lostError(lost);
     const staging = device.createBuffer({ size: byteLength, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
     const enc = device.createCommandEncoder();
     enc.copyBufferToBuffer(buf, 0, staging, 0, byteLength);
     device.queue.submit([enc.finish()]);
-    await staging.mapAsync(GPUMapMode.READ);
+    try { await staging.mapAsync(GPUMapMode.READ); }
+    catch (err) { staging.destroy(); throw lostError(lost, err); }
     const out = new Ctor(staging.getMappedRange().slice(0));
     staging.unmap();
     staging.destroy();
@@ -432,6 +448,6 @@ export async function createGpuSphSolver(setup, params = {}) {
       device.queue.writeBuffer(bufG, 0, gates);
     },
     sync: () => device.queue.onSubmittedWorkDone(),
-    dispose() { for (const b of [bufPA, bufPB, bufVA, bufVB, bufGrid, bufG, bufS, bufR, bufUni]) b.destroy(); device.destroy(); }
+    dispose() { for (const b of buffers) b.destroy(); device.destroy(); }
   };
 }

@@ -3,7 +3,6 @@
 
 import { series, line, limit, refline } from './helpers.js';
 import { fmt, subHTML } from '../core/format.js';
-import { theme } from '../core/theme.js';
 import { sim } from '../core/simstore.js';
 import { eq } from './mathfmt.js';
 
@@ -38,14 +37,13 @@ export default {
 
   calc(v, { shot }) {
     if (shot.error) return { err: shot.error, title: this.title };
-    const C = theme.chart;
     const sm = shot.samples, tb = this.tab;
     let x, y, xl, yl;
     if (tb === 'tv') { x = sm.t; y = sm.v; xl = 'Zeit in s'; yl = 'Kolbengeschwindigkeit in m/s'; }
     else if (tb === 'ts') { x = sm.t; y = sm.s; xl = 'Zeit in s'; yl = 'Weg in mm'; }
     else { x = sm.s; y = sm.v; xl = 'Weg in mm'; yl = 'Kolbengeschwindigkeit in m/s'; }
 
-    const q = line(x, [series('Kolben', C.series1, x, (_, i) => y[i])], xl, yl,
+    const q = line(x, [series('Kolben', 'ink', x, (_, i) => y[i])], xl, yl,
       'Dosiert ' + fmt(shot.Vdose * 1e6) + ' cm³ · Füllgrad ' + fmt(shot.phi * 100) + ' % · Kammer voll bei ' + fmt(shot.sFill * 1000) + ' mm');
     q.ys[0].y = y;
     q.area = 1;
@@ -68,6 +66,8 @@ export default {
         q.limits.push(limit('vmax', 'v_max Maschine ' + fmt(v.vmax) + ' m/s', 'y', 'max', v.vmax));
       q.y1 = Math.max(Math.max.apply(null, q.ys[0].y), shot.vcrit) * 1.12;
     } else {
+      /* Füllende und Endlage sind Bezugsmarken des Kolbenwegs, keine
+         Grenzen: Referenzlinien in `ref`. */
       q.limits = [refline('stroke', 'Füllende ' + fmt(shot.totalStroke * 1000) + ' mm', 'y', shot.totalStroke * 1000),
         refline('endpos', 'Endlage ' + fmt((shot.totalStroke + shot.intens) * 1000) + ' mm (nach Nachverdichtung + Schwindung)', 'y', (shot.totalStroke + shot.intens) * 1000)];
     }
@@ -98,14 +98,14 @@ export default {
       const [sx, sp] = pick(sd.samples.p_air_mbar);
       if (sx.length > 1) {
         q.ys.push({
-          n: 'Luftdruck Kammer (Simulation)', u: 'mbar', c: C.series4,
+          n: 'Luftdruck Kammer (Simulation)', u: 'mbar', c: 'air',
           axis: 'right', y: x.map(xv => interpSim(sx, sp, xv))
         });
         q.rl = 'Luftdruck in mbar (Anzeige ≤ ' + fmt(P_CLIP_MBAR) + ')';
         const [tx, tp] = pick(sd.samples.p_tank_mbar);
         if (tx.length > 1) {
           q.ys.push({
-            n: 'Tankdruck (Simulation)', u: 'mbar', c: C.series2,
+            n: 'Tankdruck (Simulation)', u: 'mbar', c: 'vacuum',
             axis: 'right', y: x.map(xv => interpSim(tx, tp, xv))
           });
         }

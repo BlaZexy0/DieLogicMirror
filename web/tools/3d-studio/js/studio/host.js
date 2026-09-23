@@ -51,7 +51,11 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
   if (!part) shell.header.hidePart();
   host.part = !part ? null : createPart({
     shell, start,
-    onStart: () => { host.ready = false; if (host.tool && host.tool.onPartStart) host.tool.onPartStart(); },
+    /* Was vom bisherigen Bauteil noch nicht geschrieben ist, jetzt — bevor
+       das Werkzeug seinen Stand für das neue wegräumt. */
+    onStart: () => { host.ready = false; store.flushPending(); if (host.tool && host.tool.onPartStart) host.tool.onPartStart(); },
+    /* Gescheitert, nachdem es angelaufen war: das bisherige Teil gilt weiter. */
+    onFail: () => { host.ready = !!host.part.model; },
     onLoad: async (model, name) => {
       field.data = null; field.stats = null; field.stale = false; field.promise = null;
       if (field.hAuto) field.h = suggestCell(model);
@@ -64,6 +68,7 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
   });
 
   /* ── Das Abstandsfeld: einmal je Bauteil und Zellkante ──── */
+  const asked = f => (f.hAsked ?? f.h);
   const field = {
     data: null, stats: null, h: 3, hAuto: true, stale: false, promise: null, ms: 0,
     setCell(v) {
@@ -71,7 +76,7 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       field.hAuto = false;
       /* Veraltet ist das Feld genau dann, wenn seine Kante von der gewählten
          abweicht — wer zur Kante des Feldes zurückkehrt, braucht kein neues. */
-      const stale = !!(field.data && Math.abs(field.data.h - field.h) > 1e-9);
+      const stale = !!(field.data && Math.abs(asked(field.data) - field.h) > 1e-9);
       if (stale !== field.stale) { field.stale = stale; host.emit('field-stale', stale); }
       return field.h;
     },
@@ -88,7 +93,10 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       if (!m) return null;
       const h = opts.h || field.h;
       const band = opts.band ?? 3 * h, pad = opts.pad ?? 2 * h;
-      const fits = f => f && Math.abs(f.h - h) < 1e-9 && f.band >= band - 1e-6 && f.padCells >= Math.round(pad / h) - 1e-6;
+      /* Verglichen wird mit dem, was BESTELLT war: ein Feld, das über 16 Mio.
+         Punkten gröber gerastert wurde, passte sonst nie und galt nach jedem
+         Blick auf die Zellkante als veraltet. */
+      const fits = f => f && Math.abs(asked(f) - h) < 1e-9 && f.band >= band - 1e-6 && (f.padAsked ?? f.padCells * f.h) >= pad - 1e-6;
       if (!opts.force && !field.stale && fits(field.data)) return field.data;
       const t0 = performance.now();
       let size = fieldSize(m, 0, band, { h, pad });
@@ -96,6 +104,8 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       while (size.samples > MAX_SAMPLES) { hh = Math.round(hh * 110) / 100; size = fieldSize(m, 0, band, { h: hh, pad }); }
       const f = await buildField(m, { h: hh, band, pad, onProgress: opts.onProgress, signal: opts.signal });
       f.padCells = Math.round(pad / hh);
+      f.hAsked = h;
+      f.padAsked = pad;
       if (host.part.model !== m) return null;
       field.data = f;
       field.stats = fieldExtrema(f);
@@ -134,6 +144,9 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       „Rückgängig" im Toast nach dem Entfernen gehen alle hier durch. */
   host.undo = () => { host.dropUndoToast(); if (!history || !history.undo()) return false; store.save(() => host.tool.toJSON()); return true; };
   host.redo = () => { host.dropUndoToast(); if (!history || !history.redo()) return false; store.save(() => host.tool.toJSON()); return true; };
+  /** Zum zuletzt eingetragenen Stand zurück, ohne Schritt — für den Zug am
+      Griff, den Esc abbricht (js/handles.js, onChange('cancel')). */
+  host.revert = () => !!(history && history.revert());
   /** „… entfernt · Rückgängig": der Toast gehört zu GENAU dem Schritt, der
       eben gemeldet wurde. Bewegt sich der Verlauf danach (Strg+Z, ein neuer
       Schritt), verschwindet er — sonst nähme sein Knopf später einen ganz
@@ -147,9 +160,15 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       ob dafür welche gemerkt sind. */
   host.settingsFor = key => { store.setPart(key); offerDraft(); };
 
+  /* Ein Angebot gilt für GENAU den Schlüssel, für den es gemacht wurde: ein
+     neues Bauteil nimmt es mit weg, auch wenn es selbst keinen Entwurf hat —
+     vorher blieb der Streifen stehen, sprach weiter von „diesem Bauteil" und
+     setzte beim Klick den Plan des vorigen aufs neue. */
   function offerDraft() {
     const tool = host.tool;
     if (!tool) return;
+    shell.banner(null);
+    const key = store.partKey;
     const d = store.peek();
     if (!d) return;
     let same = false;
@@ -160,17 +179,36 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       try { tool.fromJSON(d.doc); } catch { store.discard(); return; }
       shell.toast('Einstellungen vom ' + fmtWhen(d.when) + ' übernommen.', {
         action: 'Zurücksetzen',
-        onAction: () => { store.discard(); if (tool.resetSettings) tool.resetSettings(); }
+        onAction: () => { if (store.partKey !== key) return; store.discard(); if (tool.resetSettings) tool.resetSettings(); }
       });
       return;
     }
     shell.banner({
-      text: 'Entwurf vom ' + fmtWhen(d.when) + (store.partKey ? ' für dieses Bauteil' : '') + ' wiederherstellen?',
+      text: 'Entwurf vom ' + fmtWhen(d.when) + (key ? ' für dieses Bauteil' : '') + ' wiederherstellen?',
       actions: [
-        { label: 'Wiederherstellen', primary: true, onClick: () => { tool.fromJSON(d.doc); if (history) history.reset(); shell.toast('Entwurf wiederhergestellt.'); } },
-        { label: 'Verwerfen', onClick: () => store.discard() }
+        { label: 'Wiederherstellen', primary: true, onClick: () => restoreDraft(d, key) },
+        /* Verworfen wird nur, was angeboten wurde: hat man inzwischen weiter-
+           gearbeitet, liegt unter dem Schlüssel schon der neue Stand. */
+        { label: 'Verwerfen', onClick: () => { const now = store.peek(); if (store.partKey === key && now && now.when === d.when) store.discard(); } }
       ]
     });
+  }
+  /* Wiederherstellen ist ein SCHRITT: wer inzwischen weitergearbeitet hat,
+     holt seinen Stand mit Rückgängig zurück. Danach ist der Plan ein Entwurf,
+     keine gespeicherte Datei — die Kopfzeile sagt es, und Verlassen fragt. */
+  function restoreDraft(d, key) {
+    const tool = host.tool;
+    if (!tool || store.partKey !== key) return;
+    try { tool.fromJSON(d.doc); }
+    catch (err) {
+      shell.toast('Der Entwurf lässt sich nicht wiederherstellen: ' + err.message, { ms: 8000 });
+      console.error(err);
+      return;
+    }
+    if (history) history.commit('Entwurf wiederhergestellt');
+    host.refreshActions();
+    store.save(() => tool.toJSON());
+    shell.toast('Entwurf wiederhergestellt.');
   }
 
   /* ── Dateien ─────────────────────────────────────────────── */
@@ -182,17 +220,24 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
           if (tool && tool.accepts && tool.accepts.includes(obj.format)) {
             tool.fromJSON(obj);
             if (history) history.reset();
+            /* Einstellungen aus einer Datei gelten wie selbst gesetzte: gemerkt. */
+            if (tool.settingsOnly) store.save(() => tool.toJSON(), { quiet: true });
             store.markSaved();
             shell.toast('„' + name + '" geladen.');
           } else if (host.openJSON) host.openJSON(obj, name);
           else throw new Error('„' + name + '" gehört zu einem anderen Werkzeug (Kennung „' + obj.format + '").');
         },
-        part: (tris, name, note) => {
+        part: async (tris, name, note) => {
           if (host.dropPart) return host.dropPart(tris, name, note);
           if (!host.part) throw new Error('Dieses Werkzeug nimmt hier kein Bauteil entgegen.');
+          /* Das Beispielteil gilt erst als abgewählt, wenn die Datei geladen
+             ist — ein zu kleines Netz ließ die Liste sonst leer zurück. */
           const sel = document.getElementById('demo-select');
+          const before = sel ? sel.selectedIndex : -1;
           if (sel) sel.selectedIndex = -1;
-          return host.part.load(tris, name, note);
+          const ok = await host.part.load(tris, name, note);
+          if (!ok && sel && sel.selectedIndex === -1) sel.selectedIndex = before;
+          return ok;
         }
       });
     } catch (err) {
@@ -253,12 +298,21 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
     });
     shell.header.setExports(tool.exports || []);
     shell.onKey((ev, ctx) => {
-      if ((ev.ctrlKey || ev.metaKey) && !ctx.inInput && history) {
+      /* Im Textfeld gehört Strg+Z dem Text; überall sonst (auch nach einem
+         Zug am Regler, dessen Fokus noch steht) dem Plan. */
+      if ((ev.ctrlKey || ev.metaKey) && !ctx.inText && history) {
         if (ev.key === 'z' || ev.key === 'Z') { if (ev.shiftKey) host.redo(); else host.undo(); return true; }
         if (ev.key === 'y' || ev.key === 'Y') { host.redo(); return true; }
       }
       if (ev.key === 'Escape') {
+        /* Ein laufender Zug am Griff zuerst — auch wenn ein Feld noch den
+           Fokus hat: js/handles.js verhindert beim Griff das Wegnehmen des
+           Fokus, und Esc verließe sonst nur das Feld. */
+        if (host.cancelDrag && host.cancelDrag()) return true;
         if (shell.aim && host.cancelAim && host.cancelAim()) return true;
+        /* Esc im Feld verlässt das Feld — und nimmt NICHT die Auswahl weg:
+           das Auswahlfeld, in dem man tippt, verschwände sonst samt Eingabe. */
+        if (ctx.inInput) { if (ev.target && ev.target.blur) ev.target.blur(); return true; }
         if (tool.keys && tool.keys.Escape) return tool.keys.Escape(ev) !== false;
         return false;
       }

@@ -36,7 +36,11 @@ export function download(blob, name) {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
-export const safeName = s => (s || 'werkbank').replace(/\.(stl|glb|json)$/i, '').replace(/[^\w-]+/g, '-').toLowerCase();
+/* Umlaute werden umschrieben, nicht verschluckt: aus „Ölwanne" wurde
+   sonst „-lwanne", aus „Kühlkörper" „k-hlk-rper". */
+const UMLAUT = { ä: 'ae', ö: 'oe', ü: 'ue', Ä: 'Ae', Ö: 'Oe', Ü: 'Ue', ß: 'ss' };
+export const safeName = s => (s || 'werkbank').replace(/\.(stl|glb|json)$/i, '').replace(/[äöüÄÖÜß]/g, c => UMLAUT[c])
+  .normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'datei';
 
 /** Die nächstliegende Achse als Text — drei Dezimalzahlen sagen niemandem etwas. */
 export function dirText(d) {

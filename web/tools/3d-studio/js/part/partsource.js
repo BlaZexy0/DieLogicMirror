@@ -10,7 +10,15 @@
 
    Beispielteile kommen als fertige GLB aus assets/parts/ — genauso wie
    eine hochgeladene Datei. Erkannt wird am Dateikopf, nicht an der
-   Endung: eine GLB liest js/part/glbio.js, alles andere js/part/stlio.js. */
+   Endung: eine GLB liest js/part/glbio.js, alles andere js/part/stlio.js.
+
+   Wer schnell hintereinander wählt, bekommt das ZULETZT Gewählte: jede
+   Wahl zieht eine Nummer, und ein Laden, das überholt wurde, gibt auf.
+   Vorher gewann das langsamere Beispielteil — das Bild zeigte die
+   Ölwanne, Chip und Entwurfsschlüssel den Kühlkörper.
+   Scheitert ein Laden, sagt es onError(text) (der Rahmen zeigt einen
+   Toast): die Zeile model-warn steht in der zugeklappten Bauteil-Klappe,
+   dort las sie niemand. */
 
 import { buildModel, openEdgeRatio } from './model.js';
 import { DEMO_PARTS, loadDemo } from './demoparts.js';
@@ -22,11 +30,18 @@ import { $, fmt, facts } from '../ui/controls.js';
    Fortschrittstext erst da, wenn die Rechnung schon vorbei ist. */
 export const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-export function mountPartSource({ busy, viewport, onStart, onLoad, suffix = '',
+export function mountPartSource({ busy, viewport, onStart, onLoad, onError = null, suffix = '',
                                   filter = p => !p.pairOnly, start: startId = null }) {
   const id = name => name + suffix;
   const list = DEMO_PARTS.filter(filter);
   const sel = $(id('demo-select'));
+  /* Die Nummer der jüngsten Wahl (Beispielteil, Datei, Ablegen). */
+  let seq = 0;
+  /* Eine Meldung, die jemand sehen soll: in die Klappe UND nach außen. */
+  const fail = text => {
+    $(id('model-warn')).textContent = text;
+    if (onError) onError(text);
+  };
   sel.innerHTML = list.map(p => '<option value="' + p.id + '">' + p.label + '</option>').join('');
   sel.addEventListener('change', () => pickDemo(sel.value));
 
@@ -47,37 +62,48 @@ export function mountPartSource({ busy, viewport, onStart, onLoad, suffix = '',
   }
 
   function readFile(file) {
+    const my = ++seq;
     const fr = new FileReader();
     fr.onload = () => {
+      if (my !== seq) return;                                     // inzwischen anders gewählt
       const glb = isGLB(fr.result);
+      let tris;
       try {
-        const tris = glb ? readGLB(fr.result) : parseSTL(fr.result);
-        sel.selectedIndex = -1;
-        load(tris, file.name,
-          (glb ? 'GLB-Datei · ' : 'STL-Datei · ') + (fr.result.byteLength / 1024).toFixed(0) + ' kB');
+        tris = glb ? readGLB(fr.result) : parseSTL(fr.result);
       } catch (err) {
         busy.classList.remove('on');
-        $(id('model-warn')).textContent = (glb ? 'GLB' : 'STL')
-          + ' konnte nicht gelesen werden: ' + err.message;
+        fail((glb ? 'GLB' : 'STL') + ' konnte nicht gelesen werden: ' + err.message);
+        return;
       }
+      /* Das Beispielteil gilt erst als abgewählt, wenn die Datei wirklich
+         geladen wird — ein zu kleines Netz ließ die Liste sonst leer zurück. */
+      const before = sel.selectedIndex;
+      sel.selectedIndex = -1;
+      load(tris, file.name, (glb ? 'GLB-Datei · ' : 'STL-Datei · ') + fmt(fr.result.byteLength / 1024, 0) + ' kB', my)
+        .then(ok => { if (!ok && my === seq) sel.selectedIndex = before; });
     };
     /* Ohne onerror blieb ein gescheiterter Lesevorgang (Datei entfernt,
        Rechte, Lesefehler) völlig stumm — die Busy-Anzeige lief weiter und
        nichts sagte, warum nichts passiert. */
     fr.onerror = () => {
       busy.classList.remove('on');
-      $(id('model-warn')).textContent = 'Die Datei „' + file.name + '" konnte nicht gelesen werden'
-        + (fr.error && fr.error.name ? ' (' + fr.error.name + ')' : '') + '.';
+      fail('Die Datei „' + file.name + '" konnte nicht gelesen werden'
+        + (fr.error && fr.error.name ? ' (' + fr.error.name + ')' : '') + '.');
     };
     fr.onabort = fr.onerror;
     fr.readAsArrayBuffer(file);
   }
 
-  async function load(tris, name, note) {
+  /** Ein Netz übernehmen → true, wenn es geladen wurde. `token`: die Nummer
+      der Wahl, die hierher führte (sonst zieht load() eine eigene). */
+  async function load(tris, name, note, token) {
+    const my = token || ++seq;
     if (!tris || tris.length < 36) {
-      $(id('model-warn')).textContent = 'Das Netz enthält weniger als vier Dreiecke.';
-      return;
+      busy.classList.remove('on');
+      fail('Das Netz enthält weniger als vier Dreiecke.');
+      return false;
     }
+    if (my !== seq) return false;
     if (onStart) onStart(name);
     /* Nicht jede Seite will die Beschreibung des Beispielteils sehen. */
     const pn = $(id('part-note'));
@@ -95,15 +121,19 @@ export function mountPartSource({ busy, viewport, onStart, onLoad, suffix = '',
       : 'Netz aufbereiten …';
     busy.classList.add('on');
     await frame();
+    /* Während des Bildes kann schon die nächste Wahl gekommen sein. */
+    if (my !== seq) return false;
     try {
       const model = buildModel(tris);
       showFacts(model, id);
       await onLoad(model, name);
+      return true;
     } catch (err) {
-      $(id('model-warn')).textContent = 'Das Netz konnte nicht aufbereitet werden: ' + err.message;
+      fail('Das Netz konnte nicht aufbereitet werden: ' + err.message);
       console.error(err);
+      return false;
     } finally {
-      busy.classList.remove('on');
+      if (my === seq) busy.classList.remove('on');
     }
   }
 
@@ -113,15 +143,19 @@ export function mountPartSource({ busy, viewport, onStart, onLoad, suffix = '',
      fehlgeschlagenes Beispielteil warf dann einen TypeError, statt die
      Meldung zu zeigen: die Seite blieb tot. */
   async function pickDemo(partId) {
+    const my = ++seq;
     busy.textContent = 'Beispielteil laden …';
     busy.classList.add('on');
     try {
       const p = await loadDemo(partId);
-      await load(p.tris, p.label, p.note);
+      if (my !== seq) return false;                               // inzwischen anders gewählt
+      return await load(p.tris, p.label, p.note, my);
     } catch (err) {
+      if (my !== seq) return false;
       busy.classList.remove('on');
-      $(id('model-warn')).textContent = 'Beispielteil „' + partId + '" konnte nicht geladen werden: ' + err.message;
+      fail('Beispielteil „' + partId + '" konnte nicht geladen werden: ' + err.message);
       console.error(err);
+      return false;
     }
   }
 
@@ -163,7 +197,7 @@ function showFacts(m, id) {
   }
   const openFrac = openEdgeRatio(m);
   if (openFrac > 0.005) {
-    notes.push('Achtung: ' + (100 * openFrac).toFixed(1)
+    notes.push('Achtung: ' + fmt(100 * openFrac, 1)
       + ' % der Kanten haben keinen Nachbarn: das Netz ist offen oder nicht mannigfaltig.');
   }
   if (m.volume <= 0 && openFrac <= 0.005) {

@@ -91,8 +91,18 @@ export function createViewport(container, sceneOpts = {}) {
     return res;
   }
 
-  /* Doppelklick ins Leere: einpassen. */
-  view.renderer.domElement.addEventListener('dblclick', () => fit());
+  /* Doppelklick ins LEERE: einpassen. Wer auf einen Griff oder das Bauteil
+     doppelklickt, wählt aus — und die Kamera bleibt, wo sie ist (js/handles.js:
+     „Anklicken lässt die Kamera in Ruhe"). */
+  const blank = new T.Raycaster(), ndc = new T.Vector2();
+  const isShown = o => { for (let x = o; x; x = x.parent) if (!x.visible) return false; return true; };
+  view.renderer.domElement.addEventListener('dblclick', ev => {
+    const r = view.renderer.domElement.getBoundingClientRect();
+    ndc.set((ev.clientX - r.left) / Math.max(r.width, 1) * 2 - 1, -((ev.clientY - r.top) / Math.max(r.height, 1)) * 2 + 1);
+    blank.setFromCamera(ndc, view.camera);
+    const hits = blank.intersectObjects(view.scene.children, true).filter(h => h.object.visible && h.object.isMesh && isShown(h.object));
+    if (!hits.length) fit();
+  });
 
   return { view, fit, setClearRect, setFitTarget, container, invalidate: view.invalidate };
 }

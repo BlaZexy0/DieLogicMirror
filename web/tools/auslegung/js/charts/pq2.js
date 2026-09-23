@@ -16,7 +16,6 @@
 import { series, line, limit } from './helpers.js';
 import { seq, fmt, subHTML } from '../core/format.js';
 import { pistonArea, afterGate, total, injForceEff, cavityVolume } from '../core/physics.js';
-import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
 const PI = Math.PI, S3 = Math.sqrt(3);
@@ -54,7 +53,7 @@ export function pqCore(v) {
     const r = Q / (A * v.vmax);
     /* Der montierte Kolben zählt immer zur Erreichbarkeit — auch wenn sein Ø
        außerhalb dmin–dmax liegt; sonst liefe seine Maschinenlinie in die
-       graue Maske hinein. */
+       Maske hinein. */
     const rc = Q / Qmax;
     const pA = FG * 1e3 / (A * 1e5) * (1 - r * r), pM = p0 * (1 - rc * rc);
     return pM >= pA ? { p: Math.max(pM, 0), A: Ap } : { p: Math.max(pA, 0), A };
@@ -91,7 +90,6 @@ export default {
   calc(v, o) {
     const c = pqCore(v);
     if (!c) return { err: 'Anschnittfläche, Cd, v_max und Gießkraft müssen > 0 sein.' };
-    const C = theme.chart;
     const { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, tVent } = c;
     const tb = this.tab, yb = this.tab2 || 'pm';
 
@@ -153,16 +151,18 @@ export default {
     const x = Qarr.map(fx);
 
     /* Hüllkurve/Erreichbarkeitsgrenze ist keine Serie mehr, sondern die
-       Masken-Grenze unten (graue Deckfläche oberhalb, schwarze Frontlinie). */
+       Masken-Grenze unten (deckende Fläche oberhalb, durchgezogene
+       Frontlinie in der Farbe der Maschine). */
     const machineLine = Q => p0 * (1 - (Q / Qmax) * (Q / Qmax));
     const ys = [
       /* Maschinenlinie endet bei Q_dry des gewählten Kolbens (NaN dahinter).
          Im v_p-Modus fällt sie mit der Maskengrenze zusammen — sie bleibt
-         trotzdem eine Serie, damit sie in jedem Modus dieselbe Farbe hat
-         (Serien werden über den Grenzen gezeichnet). */
-      series('Maschine (Ø ' + fmt(v.diam) + ' mm)', C.series4, Qarr,
+         trotzdem eine Serie, damit sie in jedem Modus gleich aussieht
+         (Serien werden über den Grenzen gezeichnet). Die Farben sind die
+         Sachfarben: Maschine und Werkzeug, wie ihre Grenzen. */
+      series('Maschine (Ø ' + fmt(v.diam) + ' mm)', 'machine', Qarr,
         Q => Q <= Qmax ? fy(machineLine(Q), Q) : NaN),
-      series('Werkzeug', C.series2, Qarr, Q => fy(Cdie * Q * Q, Q))
+      series('Werkzeug', 'die', Qarr, Q => fy(Cdie * Q * Q, Q))
     ];
 
     const q = line(x, ys, xl, yl,
@@ -202,8 +202,8 @@ export default {
     if (isFinite(c.vaAtom)) ylim('atom', 'Zerstäubung J ≥ ' + fmt(v.JatomMin) + ': v_a ≥ ' + fmt(c.vaAtom) + ' m/s', 'min', Pg(c.vaAtom), 'keine Zerstäubung');
     if (isFinite(c.vaAtomMax)) ylim('atomMax', 'Zerstäubung J ≤ ' + fmt(v.JatomMax) + ': v_a ≤ ' + fmt(c.vaAtomMax) + ' m/s', 'max', Pg(c.vaAtomMax), 'Überzerstäubung / Erosion');
 
-    /* Erreichbarkeitsgrenze als Maske: oberhalb grau (für keinen Kolben-Ø
-       erreichbar), alle anderen Grenzen werden darauf gestutzt. Im
+    /* Erreichbarkeitsgrenze als Maske: oberhalb deckend (für keinen
+       Kolben-Ø erreichbar), alle anderen Grenzen werden darauf gestutzt. Im
        Leistungsmodus wird die Hüllkurve dabei zur Horizontalen y = a. */
     if (pistonOnly) {
       q.limits.push(limit('mpe', 'darüber unerreichbar (Ø ' + fmt(v.diam) + ')', 'y', 'max',
@@ -213,11 +213,12 @@ export default {
         xv => { const Q = ix(xv); return fy(c.pReach(Q), Q, c.aReach(Q)); }, { mask: true, note: 'unerreichbar (alle Ø)' }));
     }
 
-    /* Grünes machbares Band (wie im (φ, λ)-Fenster): Schnittmenge aller
-       harten Grenzen. Oberhalb der Maschinenlinie des aktuellen Kolbens
-       heller — Fenster erfüllt, aber nur mit anderem Ø erreichbar (entfällt
-       im v_p-Modus, der nur den montierten Kolben zeigt).
-       Grenzen sind nur in der Legende benannt (kein Text im Diagramm). */
+    /* Machbares Band (wie im (φ, λ)-Fenster): Schnittmenge aller harten
+       Grenzen, in der Ampelfarbe „gut". Oberhalb der Maschinenlinie des
+       aktuellen Kolbens heller — Fenster erfüllt, aber nur mit anderem Ø
+       erreichbar (entfällt im v_p-Modus, der nur den montierten Kolben
+       zeigt). Grenzen sind nur in der Legende benannt (kein Text im
+       Diagramm). */
     q.feasible = 'machbares Band';
     if (!pistonOnly) q.feasibleSplit = {
       fn: xv => fy(machineLine(ix(xv)), ix(xv)),
@@ -242,7 +243,7 @@ export default {
       q.ptl2 = 'Schnittpunkt ungedrosselt ' + fmt(sx) + unit + ' / ' + fmt(sy) + yUnit;
       if (Qop < Qmax) {
         const pM = machineLine(Qop);
-        if (pM > pOp) q.segs = [{ x1: ox, y1: oy, x2: ox, y2: fy(pM, Qop), c: C.event || C.axis,
+        if (pM > pOp) q.segs = [{ x1: ox, y1: oy, x2: ox, y2: fy(pM, Qop), c: 'ref',
           label: 'gedrosselt Δp ' + fmt(fy(pM, Qop) - oy) + yUnit }];
       }
     } else {
@@ -296,16 +297,16 @@ Einsetzen liefert dieselbe Hyperbel. Jede Kolbenparabel berührt die Hüllkurve 
 v<sub>p</sub> = v<sub>dry</sub>/√3 ≈ 0,577·v<sub>dry</sub> und P = ⅔·p₀(D). Die Hüllkurve ist eine reine
 Maschineneigenschaft (unabhängig von Kolben und Werkzeug); a hat die Dimension einer Leistung: die
 Energie, die der Akkumulator während der Einspritzphase an die Schmelze abgibt.</p>
-<p class="math-note">Im Diagramm ist die Fläche <b>oberhalb</b> der Erreichbarkeitsgrenze grau
-maskiert: zwischen den Berührpunkten Q<sub>t</sub> = A<sub>K</sub>·v<sub>dry</sub>/√3 von Ø<sub>min</sub> und
+<p class="math-note">Im Diagramm ist die Fläche <b>oberhalb</b> der Erreichbarkeitsgrenze
+abgedeckt (Legende „Hüllkurve"): zwischen den Berührpunkten Q<sub>t</sub> = A<sub>K</sub>·v<sub>dry</sub>/√3 von Ø<sub>min</sub> und
 Ø<sub>max</sub> ist das die Hüllkurve a/Q, außerhalb die Parabel des Grenz-Kolbens; dort kommt kein
 Betriebspunkt hin, egal welcher Kolben montiert ist; alle anderen Grenzflächen sind darauf gestutzt. Aktuell:
 a = <b data-m="aMPE"></b> · gültig für Q = <b data-m="Qt"></b> · Berührpunkt aktueller Kolben bei
 <b data-m="Qtcur"></b> · optimaler Kolben-Ø am Arbeitspunkt: <b data-m="Dopt"></b></p>
 <p class="math-note"><b>Achsen mit Kolbenbezug:</b> Die x-Achse v<sub>p</sub> = Q/A<sub>K</sub> ist die
 Geschwindigkeit des <em>montierten</em> Kolbens; ein anderer Ø hätte bei gleichem Q eine andere v<sub>p</sub>.
-Dieser Modus zeigt deshalb nur den montierten Kolben: die Achse endet bei v<sub>max</sub>, die graue Grenze ist
-seine Maschinenlinie, das hellere Band „anderer Kolben-Ø" entfällt. Auf der Hydraulikdruck-Achse wird jeder Punkt
+Dieser Modus zeigt deshalb nur den montierten Kolben: die Achse endet bei v<sub>max</sub>, die Grenze der abgedeckten
+Fläche ist seine Maschinenlinie, das hellere Band „anderer Kolben-Ø" entfällt. Auf der Hydraulikdruck-Achse wird jeder Punkt
 mit der Fläche des Kolbens umgerechnet, der ihn erreicht (P<sub>h</sub> = P·A/A<sub>h</sub>,
 A<sub>h</sub> = F<sub>G</sub>/P<sub>acc</sub>); die Antriebsseite bleibt so immer ≤ P<sub>acc</sub>, auch entlang
 der Hüllkurve.</p>

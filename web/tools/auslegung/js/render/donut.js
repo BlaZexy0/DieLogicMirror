@@ -1,8 +1,11 @@
-/* Ringdiagramm (Materialausbeute). */
+/* Ringdiagramm (Materialausbeute). Die Anteile tragen ihre Sachfarben als
+   Rolle (s.c = 'melt', 'runner', 'overflow', 'biscuit'): Bauteil,
+   Anguss, Überlauf und Pressrest sind überall dieselben Farben, hier wie
+   im Kolbenweg-Lineal und in der Füllkammer. */
 
 import { heading, fillRich } from './base.js';
 import { fmt } from '../core/format.js';
-import { theme } from '../core/theme.js';
+import { theme, farbe } from '../core/theme.js';
 
 const PI = Math.PI;
 
@@ -34,20 +37,20 @@ export function drawDonut(x, w, h, d) {
     x.arc(g.cx, g.cy, g.R, a0, a1);
     x.arc(g.cx, g.cy, g.r0, a1, a0, true);
     x.closePath();
-    x.fillStyle = s.c; x.fill();
+    x.fillStyle = farbe(s.c); x.fill();
     x.strokeStyle = C.surface; x.lineWidth = 2; x.stroke();
     a0 = a1;
   }
   x.fillStyle = C.text; x.textAlign = 'center'; x.font = 'bold 26px Arial';
   fillRich(x, fmt(d.share) + ' %', g.cx, g.cy + 2);
-  x.fillStyle = window.__PALETTE__.muted; x.font = '11px Arial';
+  x.fillStyle = C.muted; x.font = '11px Arial';
   fillRich(x, 'Ausbeute', g.cx, g.cy + 20);
 
   let lx = g.cx + g.R + 24, ly = g.cy - (d.segs.length - 1) * 13;
   x.font = '11.5px Arial';
   for (let i = 0; i < d.segs.length; i++) {
     const s = d.segs[i];
-    x.fillStyle = s.c; x.fillRect(lx, ly - 9, 11, 11);
+    x.fillStyle = farbe(s.c); x.fillRect(lx, ly - 9, 11, 11);
     x.strokeStyle = C.surface; x.strokeRect(lx, ly - 9, 11, 11);
     x.fillStyle = C.text; x.textAlign = 'left';
     fillRich(x, s.n + '  ' + fmt(s.kg) + ' kg · ' + fmt(100 * s.kg / tot) + ' %', lx + 17, ly);

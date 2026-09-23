@@ -10,6 +10,7 @@
 /* Farb-Tokens: Spiegel von shared/palette.js (dort dokumentiert,
    Test palette.test.mjs hält beide gleich). Hier nichts von Hand ändern. */
 :root {
+  /* Marke */
   --dark: #002733;
   --dark2: #0a3945;
   --dark3: #1b4a57;
@@ -20,35 +21,53 @@
   --pale: #e5f3f2;
   --pale-border: #b8ddd2;
   --accent: #8cbee6;
-  --ok: #0d7a3c;
-  --ok-border: #12a150;
-  --ok-bg: #dcefe3;
-  --warn: #c2447e;
-  --warn-soft: #eec3d4;
-  --warn-bg: #fdf2f6;
-  --warn-text: #8a6d00;
-  --warn-border: #e0a400;
-  --gold: #d4a908;
-  --note-bg: #fff8e1;
-  --note-border: #e6c34a;
-  --note-text: #6b5307;
-  --bad: #b42318;
-  --bad-bg: #fff2f0;
+  /* Flächen & Linien */
   --bg: #f3f6f6;
   --surface: #ffffff;
   --surface2: #f8fafa;
   --border: #ccd4d6;
   --border-light: #e5e9eb;
+  --viewport: #e8eef0;
+  /* Text */
   --text: #002733;
   --text-body: #2a3f4a;
   --muted: #4c6870;
   --muted-light: #9aacb4;
   --ondark: #8fb8c4;
   --ondark2: #7a9aa6;
-  --cat-purple: #9a77e8;
-  --cat-green: #4c9f70;
-  --cat-slate: #557786;
-  --cat-orange: #e07b39;
+  /* Ampel: gut, knapp, schlecht — nur für Urteile */
+  --ok: #159a4c;
+  --ok-text: #0d7a3c;
+  --ok-bg: #dcefe3;
+  --ok-border: #99cda4;
+  --caution: #e0a400;
+  --caution-text: #8a6d00;
+  --caution-bg: #fff8e1;
+  --caution-border: #e6c34a;
+  --bad: #b42318;
+  --bad-text: #b42318;
+  --bad-bg: #fff2f0;
+  --bad-border: #e2988c;
+  /* Hervorhebung: Arbeitspunkt, Ist-Wert */
+  --mark: #b23797;
+  /* Sachfarben: überall dieselben Dinge in derselben Farbe */
+  --melt: #008c82;
+  --runner: #006665;
+  --overflow: #8bbfb8;
+  --biscuit: #82979f;
+  --die: #2e65a0;
+  --machine: #846cd1;
+  --air: #60a7d6;
+  --vacuum: #377090;
+  --cool: #1e3a71;
+  --process: #5c3824;
+  --steel: #dae1e2;
+  --steel-dark: #7b9096;
+  --piston: #36545d;
+  --part: #bec9cc;
+  --axis-x: #846cd1;
+  --axis-y: #60a7d6;
+  --axis-z: #2e65a0;
   /* Dieselben drei Farben noch einmal als Kanäle: überall dort, wo eine
      Farbe mit Alpha gebraucht wird (Tönung, Ring, Schatten, Verlauf), steht
      rgba(var(--primary-rgb), .25) statt eines festen rgba(). Sonst bliebe
@@ -57,6 +76,15 @@
   --dark-rgb: 0,39,51;
   --primary-rgb: 0,140,130;
   --primary-light-rgb: 63,194,182;
+  /* … und die Flächen: halbdurchsichtige Aufsätze (Legenden, Klappen im
+     3D-Viewport, Beschriftungskästen) sind rgba(var(--surface-rgb), .92),
+     kein festes Weiß, das auf dem warmen Papier der Abendschicht leuchtet. */
+  --surface-rgb: 255,255,255;
+  --bg-rgb: 243,246,246;
+  /* Der Verlauf der dunklen Kopfleisten — EINER für alle Seiten: Inhaltsseiten,
+     Werkzeugköpfe, Dashboard, 3D-Studio. Vorher gab es fünf Rezepte. */
+  --head-grad: radial-gradient(900px 420px at 85% -20%, rgba(var(--primary-rgb), .28), transparent 60%),
+    linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
   --mono: 'JetBrains Mono','Fira Code','Courier New',monospace;
   --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   /* Rundungen: Karten und Flächen (--radius), Bedienelemente (--radius-sm),
@@ -218,9 +246,7 @@ input::placeholder, textarea::placeholder { color: var(--muted-light); }
 
 /* ── Inhaltsseiten (Impressum, Datenschutz, AGB, Widerruf, Kontakt) ── */
 .page-hero {
-  background:
-    radial-gradient(900px 420px at 85% -20%, rgba(var(--primary-rgb), .28), transparent 60%),
-    linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
+  background: var(--head-grad);
   padding: 3.5rem 2rem 3rem;
   color: white;
 }
@@ -383,10 +409,11 @@ input::placeholder, textarea::placeholder { color: var(--muted-light); }
 }
 .insight-box p { font-size: 0.88rem; line-height: 1.65; color: var(--ondark); margin: 0; }
 
+/* Warnkasten der Theorie: „Achtung" ist die Stufe „knapp" der Ampel. */
 .warning-box {
-  background: var(--warn-bg);
-  border: 1px solid var(--warn-soft);
-  border-left: 3px solid var(--warn);
+  background: var(--caution-bg);
+  border: 1px solid var(--caution-border);
+  border-left: 3px solid var(--caution);
   border-radius: var(--radius);
   padding: 1rem 1.2rem;
   margin: 1.2rem 0;
@@ -438,6 +465,9 @@ body .katex { font-size: 1.05em; }
    Kasten (.eq) oder skaliert (Bilder). */
 .content-cols > * { min-width: 0; }
 .theory-article img, .theory-article svg, .theory-article canvas { max-width: 100%; height: auto; }
+/* Theorie-Bilder, die shared/svgfarben.js als SVG eingesetzt hat: sie
+   verhalten sich wie das <img>, das sie ersetzen. */
+svg.svg-bild { display: block; width: 100%; height: auto; }
 
 @media (max-width: 960px) {
   .content-cols { grid-template-columns: 1fr; }
@@ -446,7 +476,7 @@ body .katex { font-size: 1.05em; }
 
 /* Platzhalter-Markierung: [Eckige Klammern] vor Veröffentlichung ersetzen */
 .ph {
-  background: var(--note-bg);
+  background: var(--caution-bg);
   border-radius: 3px;
   padding: 0 0.2rem;
   font-family: var(--mono);
@@ -455,14 +485,14 @@ body .katex { font-size: 1.05em; }
 
 /* Hinweiskasten „Mustertext" — nach dem Ausfüllen löschen */
 .draft-note {
-  background: var(--note-bg);
-  border: 1px solid var(--note-border);
-  border-left: 4px solid var(--gold);
+  background: var(--caution-bg);
+  border: 1px solid var(--caution-border);
+  border-left: 4px solid var(--caution);
   border-radius: var(--radius);
   padding: 0.9rem 1.2rem;
   margin: 0 0 1.8rem;
   font-size: 0.85rem;
   line-height: 1.6;
-  color: var(--note-text);
+  color: var(--caution-text);
 }
 

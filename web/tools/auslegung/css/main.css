@@ -1,14 +1,15 @@
-/* Grundlayout und Komponenten. Die Farbwerte hier sind nur Fallbacks —
-   /shared/theme.js überschreibt die CSS-Variablen beim Laden (js/core/theme.js). */
-
-/* Farb-Tokens kommen aus /shared/shared.css (Spiegel von /shared/palette.js) —
-   die Seiten laden shared.css vor dieser Datei. */
+/* Grundlayout und Komponenten. Farben stehen hier nur als Tokens aus
+   /shared/shared.css (Rollen von /shared/palette.js): das Farbschema
+   (shared/schemes.js) setzt sie auf <html> um, und alles hier folgt ohne
+   Neuladen. Die Seiten laden shared.css vor dieser Datei.
+   Urteile nehmen die Ampel: Linien, Flächen und Punkte in --ok / --caution
+   / --bad, Schrift in deren Textstufe (--ok-text …). */
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
   background: var(--bg);
-  color: var(--dark);
+  color: var(--text);
   font: 14px/1.45 var(--sans);
   overflow: hidden;
 }
@@ -20,7 +21,7 @@ header {
   z-index: 20;
   height: 82px;
   padding: 20px 28px;
-  background: linear-gradient(120deg, var(--dark), var(--primary-deep));
+  background: var(--head-grad);
   color: var(--surface);
   display: flex;
   align-items: center;
@@ -52,7 +53,7 @@ header .header-actions { display: flex; align-items: center; gap: 10px; flex-shr
   font-weight: bold;
   max-width: 320px;
 }
-.nav-select option { color: var(--dark); }
+.nav-select option { color: var(--text); }
 
 /* ── Grundraster ── */
 .layout {
@@ -129,7 +130,7 @@ input {
 input.invalid, select.invalid {
   border-color: var(--bad);
   background: var(--bad-bg);
-  color: var(--bad);
+  color: var(--bad-text);
   font-weight: bold;
 }
 select {
@@ -139,7 +140,7 @@ select {
   border-radius: 6px;
   font: inherit;
   background: var(--surface);
-  color: var(--dark);
+  color: var(--text);
 }
 .chamber-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .input-column { padding-left: 10px; border-left: 3px solid var(--pale); }
@@ -153,8 +154,10 @@ select {
   color: var(--muted);
 }
 .group-note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+/* Zeichen für den Arbeitspunkt im Hinweis: dieselbe Rolle wie der Marker */
+.hint-mark { color: var(--mark); font-weight: bold; }
 /* Preset setzt ein Feld seiner Gruppe nicht — es gilt der Standardwert. */
-.preset-gap { display: inline-block; margin-top: 4px; color: var(--warn-text, #8a5a00); font-weight: 600; }
+.preset-gap { display: inline-block; margin-top: 4px; color: var(--caution-text); font-weight: 600; }
 .adv-fields { margin-top: 8px; }
 .adv-fields summary {
   cursor: pointer;
@@ -173,8 +176,8 @@ select {
   gap: 8px;
   margin-bottom: 8px;
 }
-.cgen-error { color: var(--bad); font-weight: bold; }
-#error { color: var(--bad); font-weight: bold; }
+.cgen-error { color: var(--bad-text); font-weight: bold; }
+#error { color: var(--bad-text); font-weight: bold; }
 
 /* Hervorhebung der Diagramm-Eingaben */
 .field.hl input {
@@ -206,7 +209,7 @@ select {
 #chamber-ruler .kruler.aligned { padding: 0 0 10px; border-bottom: 0; }
 /* Ausgerichtetes Lineal: Spur nur über der aktiven Länge, nicht über die Kartenbreite */
 .kruler.aligned .kr-track, .kruler.aligned .kr-vtrack { background: transparent; }
-.kruler.aligned .kr-track .seg.base { background: var(--pale); border-radius: 3px; }
+.kruler.aligned .kr-track .seg.base { background: var(--border-light); border-radius: 3px; }
 .kruler.aligned .kr-vtrack .base { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: var(--border-light); }
 #chamber-kpis { container-type: inline-size; border-top: 1px solid var(--border-light); }
 #chamber-kpis .kvs { border-top: 0; }
@@ -299,11 +302,11 @@ select {
   white-space: nowrap;
   color: var(--text);
 }
-.krow.ok > b { color: var(--ok); }
-.krow.warn > b { color: var(--warn-text); }
-.krow.bad > b { color: var(--bad); }
+.krow.ok > b { color: var(--ok-text); }
+.krow.warn > b { color: var(--caution-text); }
+.krow.bad > b { color: var(--bad-text); }
 .krow.bad { background: var(--bad-bg); }
-.krow.warn { background: var(--note-bg); }
+.krow.warn { background: var(--caution-bg); }
 .krow.nodata > b { color: var(--muted); }
 .kbar { min-width: 0; }
 
@@ -319,35 +322,36 @@ select {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.krow.ok .tag { background: var(--ok-bg); color: var(--ok); }
-.krow.warn .tag { background: var(--note-bg); color: var(--warn-text); border: 1px solid var(--note-border); }
-.krow.bad .tag { background: var(--bad-bg); color: var(--bad); border: 1px solid var(--warn-soft); }
-/* „Keine Daten": neutral (grau, gestrichelt) — keine Warnung. */
+.krow.ok .tag { background: var(--ok-bg); color: var(--ok-text); }
+.krow.warn .tag { background: var(--caution-bg); color: var(--caution-text); border: 1px solid var(--caution-border); }
+.krow.bad .tag { background: var(--bad-bg); color: var(--bad-text); border: 1px solid var(--bad-border); }
+/* „Keine Daten": neutral (gedämpft, gestrichelt) — keine Warnung. */
 .krow.nodata .tag { background: var(--bg); color: var(--muted); border: 1px dashed var(--border); }
 
-/* Bullet: Track = plausibler Bereich, Band = Ziel, Marker = Ist. */
+/* Bullet: Track = plausibler Bereich (neutral), Band = Ziel (wie das
+   Zielband der Diagramme in der Ampelfarbe „gut", zart), Marker = Ist in
+   der Farbe des Arbeitspunkts. Das Urteil trägt die Zeile (Wert, Tag,
+   Hintergrund), nicht der Marker. */
 .kpi-bullet {
   position: relative;
   height: 10px;
   border-radius: 5px;
-  background: var(--pale);
+  background: var(--border-light);
 }
 .kpi-bullet .band {
   position: absolute;
   top: 0; bottom: 0;
   border-radius: 5px;
-  background: var(--primary);
-  opacity: .26;
+  background: color-mix(in srgb, var(--ok) 26%, transparent);
 }
 .kpi-bullet .mark {
   position: absolute;
   top: -2px; bottom: -2px;
   width: 3px;
   border-radius: 2px;
-  background: var(--dark);
+  background: var(--mark);
   transform: translateX(-50%);
 }
-.krow.bad .kpi-bullet .mark { background: var(--bad); }
 .kpi-scale {
   display: flex;
   justify-content: space-between;
@@ -360,27 +364,28 @@ select {
   overflow: hidden;
 }
 
-/* Meter: Füllung = Auslastung, Farbe trägt die Bewertung; Limit-Marke. */
+/* Meter: Füllung = Auslastung, Farbe trägt die Bewertung (Ampel: erfüllt,
+   knapp ab 80 %, verletzt über 100 %); Limit-Marke neutral. */
 .kpi-meter {
   position: relative;
   height: 10px;
   border-radius: 5px;
-  background: var(--pale);
+  background: var(--border-light);
   overflow: hidden;
 }
 .kpi-meter .fill {
   position: absolute;
   top: 0; bottom: 0; left: 0;
   border-radius: 5px;
-  background: var(--primary);
+  background: var(--ok);
 }
-.krow.warn .kpi-meter .fill { background: var(--warn-border); }
+.krow.warn .kpi-meter .fill { background: var(--caution); }
 .krow.bad .kpi-meter .fill { background: var(--bad); }
 .kpi-meter .limit {
   position: absolute;
   top: 0; bottom: 0;
   width: 2px;
-  background: var(--dark);
+  background: var(--text);
   opacity: .55;
 }
 .meter-row {
@@ -404,27 +409,32 @@ select {
   margin-bottom: 4px;
 }
 .kr-head span:last-child { font-family: var(--mono); color: var(--text); }
-/* Zweite Spur über dem Lineal: Vakuumbereich und „Einfüllöffnung dicht" */
+/* Zweite Spur über dem Lineal: Vakuumbereich (Sachfarbe Vakuum) und
+   „Einfüllöffnung dicht" */
 .kr-vac { margin: 0 0 8px; }
-.kr-vac .vl { display: block; font-size: 10px; color: var(--primary2); margin-bottom: 2px; }
+.kr-vac .vl { display: block; font-size: 10px; color: var(--text); margin-bottom: 2px; }
 .kr-vac.off .vl { color: var(--muted); }
 .kr-vtrack { position: relative; height: 4px; border-radius: 2px; background: var(--border-light); }
-.kr-vtrack .seg { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: var(--primary); }
-.kr-vtrack .tick { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--dark); opacity: .7; }
+.kr-vtrack .seg { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: var(--vacuum); }
+.kr-vtrack .tick { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--text); opacity: .7; }
+/* Die Schmelzesäule in ihren Sachfarben, wie im Ringdiagramm und in der
+   Füllkammer: Anguss, Bauteil + Überlauf (Schmelze), Pressrest; der Hub für
+   Nachverdichtung + Schwindung als Schraffur der Schmelze auf ihrer eigenen
+   Tönung. Ein Überlauf der Kammer (.over) ist ein Urteil: --bad. */
 .kr-track {
   position: relative;
   height: 10px;
   border-radius: 3px;
-  background: var(--pale);
+  background: var(--border-light);
 }
 .kr-track .seg { position: absolute; top: 0; bottom: 0; }
-.kr-track .seg.run, .kr-legend i.run { background: var(--gold); }
-.kr-track .seg.part, .kr-legend i.part { background: var(--cat-orange); }
-.kr-track .seg.bisc, .kr-legend i.bisc { background: var(--cat-slate); }
+.kr-track .seg.run, .kr-legend i.run { background: var(--runner); }
+.kr-track .seg.part, .kr-legend i.part { background: var(--melt); }
+.kr-track .seg.bisc, .kr-legend i.bisc { background: var(--biscuit); }
 .kr-track .seg.nv, .kr-legend i.nv {
-  background: repeating-linear-gradient(135deg, var(--primary) 0 3px, var(--pale) 3px 6px);
+  background: repeating-linear-gradient(135deg, var(--melt) 0 3px, color-mix(in srgb, var(--melt) 18%, var(--surface)) 3px 6px);
 }
-.kr-track .tick { position: absolute; top: -5px; bottom: -5px; width: 1px; background: var(--dark); }
+.kr-track .tick { position: absolute; top: -5px; bottom: -5px; width: 1px; background: var(--text); }
 .kr-track .tick.lim { background: var(--bad); width: 2px; }
 .kruler.over .kr-track .seg.part { background: var(--bad); }
 .kr-lbl { position: relative; height: 13px; font-size: 10px; white-space: nowrap; }
@@ -461,14 +471,14 @@ select {
   padding: 0;
   border: 0;
   border-radius: 3px;
-  background: var(--ok-border);
+  background: var(--ok);
   cursor: pointer;
 }
-.dot.warn { background: var(--warn-border); }
+.dot.warn { background: var(--caution); }
 .dot.bad { background: var(--bad); }
 .dot:hover, .dot:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 .checkbar .calls { display: grid; gap: 2px; justify-items: end; font-size: 12.5px; color: var(--muted); text-align: right; }
-.checkbar .allok { color: var(--ok); font-weight: bold; }
+.checkbar .allok { color: var(--ok-text); font-weight: bold; }
 .ck-link {
   background: none;
   border: none;
@@ -478,10 +488,10 @@ select {
   cursor: pointer;
   text-decoration: underline;
 }
-.checkbar .fails { color: var(--bad); }
-.checkbar .tights { color: var(--warn-text); }
-.checkbar .fails .ck-link { color: var(--bad); }
-.checkbar .tights .ck-link { color: var(--warn-text); }
+.checkbar .fails { color: var(--bad-text); }
+.checkbar .tights { color: var(--caution-text); }
+.checkbar .fails .ck-link { color: var(--bad-text); }
+.checkbar .tights .ck-link { color: var(--caution-text); }
 .krow.flash { outline: 2px solid var(--primary); outline-offset: -2px; }
 
 /* Schmale Panels (< 600 px): Leiste in eine zweite Zeile unter Name und Wert;
@@ -549,7 +559,7 @@ button {
   border: 1px solid var(--border);
   color: var(--muted);
 }
-.hl-btn:hover { color: var(--dark); border-color: var(--primary); }
+.hl-btn:hover { color: var(--text); border-color: var(--primary); }
 .hl-btn.active { background: var(--primary); border-color: var(--primary); color: var(--surface); }
 .single-link {
   background: var(--surface2);
@@ -559,7 +569,7 @@ button {
   font-weight: bold;
   font-size: 16px;
 }
-.single-link:hover { color: var(--dark); border-color: var(--primary); }
+.single-link:hover { color: var(--text); border-color: var(--primary); }
 .tabs {
   display: inline-flex;
   flex-wrap: wrap;
@@ -596,7 +606,7 @@ button {
 }
 .tabs button:last-child { border-right: 0; }
 .tabs button.active { background: var(--primary); color: var(--surface); }
-.tabs button:not(.active):hover { color: var(--dark); }
+.tabs button:not(.active):hover { color: var(--text); }
 .csv-btn { padding: 8px 11px; font-size: 12px; border-radius: 8px; white-space: nowrap; }
 .csv-btn:hover { background: var(--primary2); }
 .body { padding: 10px; }
@@ -613,7 +623,10 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
   font-size: 12px;
   line-height: 1.35;
 }
-.hover-value b { color: var(--dark); }
+.hover-value b { color: var(--text); }
+/* Urteil im Hover (render/hover.js): Textstufe der Ampel */
+.hover-value b.hv-ok { color: var(--ok-text); }
+.hover-value b.hv-bad { color: var(--bad-text); }
 
 /* ── Schusskurven-Tabelle ── */
 .ctab { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
@@ -635,7 +648,7 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
   padding: 0 4px;
   font-weight: bold;
 }
-.row-del:hover { color: var(--bad); }
+.row-del:hover { color: var(--bad-text); }
 .row-add {
   display: inline-flex;
   align-items: center;
@@ -699,8 +712,8 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
 }
 .checks li:last-child { border-bottom: 0; }
 .ck { flex-shrink: 0; width: 16px; text-align: center; font-weight: bold; }
-.ck.ok { color: var(--ok); }
-.ck.bad { color: var(--bad); }
+.ck.ok { color: var(--ok-text); }
+.ck.bad { color: var(--bad-text); }
 
 /* ── Mathe-Erklärung (Einzelseite) ── */
 .math-body { padding: 14px 18px; font-size: 13px; line-height: 1.55; }
@@ -723,10 +736,10 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
 .eq .katex-display > .katex { text-align: left; white-space: nowrap; }
 .eq code.tex { font-family: var(--mono); font-size: 0.85em; white-space: pre-wrap; }
 .math-note { color: var(--muted); font-size: 12.5px; margin: 4px 0 8px; }
-.math-note b, .math-corners b { color: var(--dark); }
+.math-note b, .math-corners b { color: var(--text); }
 .math-corners ul { margin: 4px 0; padding-left: 20px; }
 .math-corners li { padding: 2px 0; font-variant-numeric: tabular-nums; }
-.math-out { color: var(--bad); font-weight: bold; }
+.math-out { color: var(--bad-text); font-weight: bold; }
 
 /* ── Responsiv ── */
 /* Schmale Desktops/Tablets quer: eine Diagramm-Spalte, damit die Canvases

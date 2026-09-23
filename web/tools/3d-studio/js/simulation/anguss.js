@@ -21,9 +21,9 @@
    Ankunftsfarben; in den anderen Modi steht der Anguss durchscheinend da. */
 
 import * as T from 'three';
-import { segButtons, segButtonSet, slider, numberInput, colorbar, gradient, rgbCss } from '../ui/controls.js';
+import { segButtons, segButtonSet, slider, numberInput, colorbar, gradient, chip } from '../ui/controls.js';
 import { setTris } from '../ui/common.js';
-import { turbo } from '../part/colors.js';
+import { scale, onScheme, ROLE, VIEW } from '../part/colors.js';
 import { kpis } from '../studio/rows.js';
 import { fmt, fmtPlain, fmtUnit, fmtFixed } from '../studio/format.js';
 import * as G from '../runner/graph.js';
@@ -61,8 +61,11 @@ export function createAngussfuellungTool(host) {
   /* ── Szene ───────────────────────────────────────────────── */
   const group = new T.Group();
   view.scene.add(group);
+  /* Der Anguss als durchscheinender Behälter um die Schmelze, der Pressrest
+     ebenso — in ihren Sachfarben (js/part/colors.js), die einem Wechsel des
+     Farbschemas folgen. */
   const runnerMat = new T.MeshStandardMaterial({
-    color: 0x008c82, roughness: 0.55, metalness: 0.05, side: T.DoubleSide, flatShading: true,
+    color: ROLE.runner, roughness: 0.55, metalness: 0.05, side: T.DoubleSide, flatShading: true,
     transparent: true, opacity: 0.3, depthWrite: false
   });
   const colorMat = new T.MeshStandardMaterial({ vertexColors: true, color: 0xffffff, roughness: 0.6, metalness: 0.05, side: T.DoubleSide, flatShading: true });
@@ -70,7 +73,7 @@ export function createAngussfuellungTool(host) {
   /* flatShading: setTris() legt keine Normalen an — ohne sie bliebe der Pressrest
      unbeleuchtet, ein dunkler Klotz statt eines durchscheinenden Körpers (so
      stand er auf den alten Seiten). */
-  const biscMat = new T.MeshStandardMaterial({ color: 0x93a6b0, roughness: 0.6, metalness: 0.06, side: T.DoubleSide, flatShading: true, transparent: true, opacity: 0.3, depthWrite: false });
+  const biscMat = new T.MeshStandardMaterial({ color: ROLE.biscuit, roughness: 0.6, metalness: 0.06, side: T.DoubleSide, flatShading: true, transparent: true, opacity: 0.3, depthWrite: false });
   const biscMesh = new T.Mesh(new T.BufferGeometry(), biscMat);
   group.add(runnerMesh, biscMesh);
   /* Eingepasst werden Anguss und Pressrest — F, „Einpassen" und Doppelklick fragen hier. */
@@ -78,6 +81,15 @@ export function createAngussfuellungTool(host) {
   shell.setFitTarget(sceneBox);
   /* Für welches Ergebnis der Anguss gerade Ankunftsfarben trägt. */
   let paintedFor = null;
+  /* Ein Wechsel des Farbschemas: Behälter umfärben, Ankunft und Schmelze
+     neu malen (das Grau für „nie erreicht" ist eine Rolle des Schemas; die
+     Farbleiste ist in jedem Schema dieselbe). */
+  onScheme(() => {
+    runnerMat.color.set(ROLE.runner);
+    biscMat.color.set(ROLE.biscuit);
+    paintedFor = null;
+    core.applyView();
+  });
 
   /* ── Gemeinsamer Teil: Verfahren, Lauf, Bild ─────────────── */
   const core = createSimCore({
@@ -109,13 +121,15 @@ export function createAngussfuellungTool(host) {
     state.graph = g;
     state.name = name;
     state.sourceKey = key || name;
-    /* Eine Werkbankdatei bringt ihren Prozess mit; sonst bleibt, was eingestellt ist. */
-    if (proc) for (const k of PROC_KEYS) if (proc[k] !== undefined) state.proc[k] = proc[k];
+    /* Eine Werkbankdatei bringt ihren Prozess mit; sonst bleibt, was eingestellt ist.
+       Übernommen wird nur, was eine Zahl ist (die Legierung: eine, die es gibt) —
+       ein Text an ihrer Stelle rechnete sonst still als NaN weiter. */
+    if (proc) for (const k of PROC_KEYS) if (k === 'alloy' ? Object.hasOwn(F.ALLOYS, proc[k]) : Number.isFinite(proc[k])) state.proc[k] = proc[k];
     state.sourceProc = { ...state.proc };
     syncProcFields();
     setTris(biscMesh, biscuitMesh(g.biscuit));
     core.autoCell();
-    updateCurve();
+    updateCurve('Angusssystem');
     setSourceChip(name);
     shell.fit(sceneBox());
     state.ready = true;
@@ -139,8 +153,9 @@ export function createAngussfuellungTool(host) {
   }
 
   /* Die Schusskurve mit der Kammer von hier — wie im Angussdesigner. Jede
-     Änderung daran ist ein anderes Problem: beide Ergebnisse gehen. */
-  function updateCurve() {
+     Änderung daran ist ein anderes Problem: beide Ergebnisse gehen. `why` ist
+     die Bezeichnung des Felds (core.invalidate nennt es, bricht ein Lauf ab). */
+  function updateCurve(why = '') {
     const g = state.graph;
     F.applyAutoGates(g, state.proc);
     state.net = sampleNetwork(g);
@@ -164,7 +179,7 @@ export function createAngussfuellungTool(host) {
     }
     renderSystem();
     renderCurve();
-    core.invalidate();
+    core.invalidate(why);
   }
 
   function renderSystem() {
@@ -239,9 +254,9 @@ export function createAngussfuellungTool(host) {
     if (arrival) {
       colorbar({
         title: 'Ankunft ab Kammer voll',
-        stops: gradient(t => rgbCss(turbo(t))),
+        stops: gradient(t => scale('turbo', t)),
         ticks: [fmtUnit(r.tArrivalMax * 1000, 'ms', 1), fmtUnit(r.tArrivalMax * 500, 'ms', 1), '0 ms'],
-        extra: '<span class="chip" style="background:rgb(184,194,199)"></span> nie erreicht'
+        extra: chip(VIEW.noData) + ' nie erreicht'
       });
     }
     view.invalidate();
@@ -315,9 +330,10 @@ export function createAngussfuellungTool(host) {
     mountSource();
     host.openJSON = openJSON;
     ui('alloy').innerHTML = Object.entries(F.ALLOYS).map(([k, v]) => '<option value="' + k + '">' + v.label + '</option>').join('');
-    ui('alloy').addEventListener('change', e => { state.proc.alloy = e.target.value; updateCurve(); changed('Legierung'); });
-    numberInput(ui('vol'), v => { state.proc.volume = v; updateCurve(); changed('Gussvolumen'); return v; }, { min: VOLUME[0], max: VOLUME[1], unit: 'cm³' });
-    numberInput(ui('chamber-len'), v => { state.proc.chamberLen = v; updateCurve(); changed('Füllkammerlänge'); return v; }, { min: CHAMBER[0], max: CHAMBER[1], unit: 'mm' });
+    const edit = label => { updateCurve(label); changed(label); };
+    ui('alloy').addEventListener('change', e => { state.proc.alloy = e.target.value; edit('Legierung'); });
+    numberInput(ui('vol'), v => { state.proc.volume = v; edit('Gussvolumen'); return v; }, { min: VOLUME[0], max: VOLUME[1], unit: 'cm³' });
+    numberInput(ui('chamber-len'), v => { state.proc.chamberLen = v; edit('Füllkammerlänge'); return v; }, { min: CHAMBER[0], max: CHAMBER[1], unit: 'mm' });
     segButtons(ui('show-seg'), v => { state.show = v; core.applyView(); changed('Zeigen'); });
     const pop = shell.darstellung(DARSTELLUNG);
     opacityEl = pop.querySelector('[data-ui="opacity"]');
@@ -337,7 +353,7 @@ export function createAngussfuellungTool(host) {
     if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
     const p = obj.proc || {};
     const before = JSON.stringify([state.proc.alloy, state.proc.volume, state.proc.chamberLen]);
-    if (F.ALLOYS[p.alloy]) state.proc.alloy = p.alloy;
+    if (Object.hasOwn(F.ALLOYS, p.alloy)) state.proc.alloy = p.alloy;
     if (Number.isFinite(p.volume)) state.proc.volume = Math.max(VOLUME[0], Math.min(VOLUME[1], p.volume));
     if (Number.isFinite(p.chamberLen)) state.proc.chamberLen = Math.max(CHAMBER[0], Math.min(CHAMBER[1], p.chamberLen));
     syncProcFields();

@@ -16,6 +16,7 @@ import * as T from 'three';
 import { OrbitControls } from '../vendor/three/OrbitControls.js';
 import { TrackballControls } from './trackball.js';
 import { mountAxes } from './ui/axes.js';
+import { ROLE, onScheme } from './part/colors.js';
 
 /* Blickrichtung = Standort der Kamera relativ zum Ziel. Ein zweiter Klick
    auf denselben Knopf dreht das Vorzeichen um (X → −X). Die Draufsicht
@@ -30,10 +31,10 @@ const VIEWS = {
 
 export function initScene(container, opts = {}) {
   const {
-    /* Die Fläche hinter dem Körper. Neutral hell — aber sie folgt dem
-       Farbschema (shared/schemes.js), sonst steht ein kühles Grau mitten
-       in einer warmen Seite. Der Standard behält genau diesen Wert. */
-    background = (typeof window !== 'undefined' && window.__SCHEMES__ && window.__SCHEMES__.viewport()) || 0xe8eef0,
+    /* Die Fläche hinter dem Körper: ohne Angabe die Rolle `viewport` des
+       Farbschemas, und sie folgt einem Wechsel sofort (unten). Wer eine
+       eigene Farbe übergibt, behält sie. */
+    background = null,
     /* Kein Bodenraster: ein Körper, den man frei von allen Seiten ansieht,
        hat kein „unten" — das Raster lag bei jeder schrägen Ansicht im Bild
        und von unten davor. Wer es will, verlangt grid: true. */
@@ -73,7 +74,7 @@ export function initScene(container, opts = {}) {
   container.appendChild(renderer.domElement);
 
   const scene = new T.Scene();
-  scene.background = new T.Color(background);
+  scene.background = new T.Color(background === null ? ROLE.viewport : background);
 
   const persp = new T.PerspectiveCamera(40, 1, 5, 40000);
   persp.position.set(...cameraStart);
@@ -97,12 +98,15 @@ export function initScene(container, opts = {}) {
   api.controls = controls;
 
   /* Mit mitgeführtem Licht tragen die ortsfesten nur noch die Grundform;
-     sonst wäre die zugewandte Seite überstrahlt. */
-  scene.add(new T.HemisphereLight(0xffffff, headlight ? 0xc6d2d7 : 0x8fa3ad, headlight ? 0.85 : 1.0));
+     sonst wäre die zugewandte Seite überstrahlt. Alle Lichter sind weiß,
+     der Boden des Himmelslichts ein neutrales Grau: ein getöntes Licht
+     färbte jeden Körper mit, auch die Sachfarben und die Skalen. */
+  const neutral = k => new T.Color(0xffffff).multiplyScalar(k);
+  scene.add(new T.HemisphereLight(0xffffff, neutral(headlight ? 0.8 : 0.58), headlight ? 0.85 : 1.0));
   const key = new T.DirectionalLight(0xffffff, headlight ? 0.5 : 1.4);
   key.position.set(700, 1000, 900);
   scene.add(key);
-  const fill = new T.DirectionalLight(0xdfeaee, headlight ? 0.22 : 0.5);
+  const fill = new T.DirectionalLight(0xffffff, headlight ? 0.2 : 0.46);
   fill.position.set(-800, 300, -700);
   scene.add(fill);
 
@@ -129,11 +133,30 @@ export function initScene(container, opts = {}) {
   }
 
   let grid = null;
+  const makeGrid = () => new T.GridHelper(gridSize, 30, ROLE.border, ROLE.borderLight);
   if (wantGrid) {
-    grid = new T.GridHelper(gridSize, 30, 0xb8c4c9, 0xd3dcdf);
+    grid = makeGrid();
     grid.position.y = gridY;
     scene.add(grid);
   }
+
+  /* Ein Wechsel des Farbschemas: die Fläche dahinter sofort nachziehen,
+     nicht erst beim nächsten Laden; das Raster färbt über Punktfarben und
+     wird mit Lage und Maßstab neu gebaut. */
+  onScheme(() => {
+    if (background === null) scene.background.set(ROLE.viewport);
+    if (grid) {
+      const next = makeGrid();
+      next.position.copy(grid.position);
+      next.scale.copy(grid.scale);
+      scene.remove(grid);
+      grid.geometry.dispose();
+      grid.material.dispose();
+      grid = next;
+      scene.add(grid);
+    }
+    invalidate();
+  });
 
   /* Halbe Bildhöhe in Modelleinheiten — die gemeinsame Größe beider
      Projektionen. Bei der Parallelprojektion steckt sie im Frustum, bei

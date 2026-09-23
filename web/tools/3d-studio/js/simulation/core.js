@@ -28,9 +28,9 @@ import { lbm } from './engines/lbm.js';
 import { sph } from './engines/sph.js';
 import { meta } from './engines/meta.js';
 import { env } from './engines/env.js';
-import { segButtons, segButtonSet, slider, numberInput, facts, colorbar } from '../ui/controls.js';
+import { segButtons, segButtonSet, slider, numberInput, clampNote, facts, colorbar } from '../ui/controls.js';
 import { speedColorbar } from '../lbm/paint.js';
-import { fmtPlain, fmtUnit } from '../studio/format.js';
+import { fmtPlain, fmtUnit, rangeText } from '../studio/format.js';
 import { PLAY, PAUSE, PLAYBACK_ROWS } from './panel-common.js';
 
 export const ENGINES = { lbm, sph, meta };
@@ -91,13 +91,19 @@ export function createSimCore(opts) {
   const memo = (key, make) => (key in cache ? cache[key] : (cache[key] = make()));
   const suggestion = id => { const p = opts.problem(); return p ? memo('s:' + id + env.gpu, () => ENGINES[id].suggest(p)) : 3; };
   function cellOf(id) { return state.cell[id] ?? suggestion(id); }
+  /* Gemerkt je Problem — und nach jedem Lauf vergessen (simulate): der Lauf
+     hat das Tempo dieses Geräts gelernt, und das Metamodell ist geladen. Bis
+     2026-09-22 stand danach noch „wird beim ersten Lauf geladen" da, und
+     „grob … s" kannte das Gelernte nicht. */
   function estimateNow() {
     const p = opts.problem();
     if (!p) return null;
     const id = state.engine, c = cellOf(id);
     return memo('e:' + id + c + state.forceCpu + env.gpu, () => ENGINES[id].estimate(p, c, { forceCpu: state.forceCpu }));
   }
-  const range = lbm.range({ kind });
+  /* Die Grenzen des Felds gehören dem Verfahren, dessen Feld gerade dasteht
+     (Zellkante oder Partikelabstand); das Metamodell hat keins. */
+  const rangeOf = id => ENGINES[id].range({ kind });
 
   let wired = false;
   const changed = label => { if (wired) host.changed(label); };
@@ -135,11 +141,22 @@ export function createSimCore(opts) {
       Angussfüllung behält ihr Ergebnis im Modus „Ergebnis", wo auch die Ankunftsfarben wohnen. */
   const resultShown = () => (opts.resultEverywhere ? true : shell.mode === 'ergebnis');
 
-  /** Das Problem hat sich geändert: beide Ergebnisse gehören zum alten. */
-  function invalidate() {
+  /* Warum ein Lauf ohne Ergebnis endete: null heißt „Abbrechen" gedrückt,
+     sonst hat ihn eine Änderung überholt — dann die Bezeichnung des Felds
+     (oder '', wenn das Werkzeug keine nennt). Bis 2026-09-22 hieß beides
+     nur „Abgebrochen", und wer am Füllgrad gedreht hatte, rätselte. Kurz:
+     die Zeile steht in jedem Modus, und „Beschleunigung" ist lang. */
+  let stoppedBy = null;
+  const cancelNote = () => (stoppedBy === null ? 'Abgebrochen: es gibt kein Ergebnis.'
+    : stoppedBy ? 'Abgebrochen: „' + stoppedBy + '" wurde geändert.'
+      : 'Abgebrochen: die Eingaben wurden geändert.');
+
+  /** Das Problem hat sich geändert: beide Ergebnisse gehören zum alten.
+      `why`: welches Feld — ein laufender Lauf endet, und die Zeile sagt es. */
+  function invalidate(why = '') {
     state.stamp++;
     cache = {};
-    if (state.running) host.jobs.cancel();
+    if (state.running) { stoppedBy = why; host.jobs.cancel(); }
     for (const id of IDS) state.results[id] = null;
     state.frame = 0; state.cancelled = false; state.failed = '';
     stopPlay();
@@ -155,6 +172,7 @@ export function createSimCore(opts) {
        nicht aussehen wie ein fertiger von vorhin. */
     state.results[id] = null;
     state.running = true; state.ready = false; state.cancelled = false; state.failed = '';
+    stoppedBy = null;
     state.progressText = ENGINES[id].label + ' …';
     stopPlay();
     renderResults();
@@ -177,7 +195,10 @@ export function createSimCore(opts) {
       state.results[id] = result;
       state.bild = id;
       state.frame = result.snapshots.length - 1;
-    }
+    } else if (result) state.cancelled = true;          // fertig, aber zum alten Problem: wie überholt
+    /* Neu schätzen: gelerntes Tempo, geladenes Modell (siehe estimateNow). */
+    cache = {};
+    syncEngine();
     renderResults();
     host.refreshActions();
     /* Wer simuliert, will das Ergebnis sehen — wer inzwischen woanders ist, bleibt dort. */
@@ -194,7 +215,7 @@ export function createSimCore(opts) {
     for (const id of IDS) if (!melt || r.engine !== id) displays[id].hide();
     if (melt) {
       displays[r.engine].show(r, clampFrame(r));
-      /* Der Zusatz darf umbrechen (css/studio-simulation.css): einzeilig macht er
+      /* Der Zusatz darf umbrechen (css/studio.css): einzeilig macht er
          die Skala so breit, dass sie im schmalen Bild (halbes Fenster, Tablett
          hochkant) die Hinweiszeile unten links trifft. */
       const bar = speedColorbar(r.vScale, opts.until);
@@ -289,11 +310,13 @@ export function createSimCore(opts) {
        nicht zu einem Reiter — wer an der Kammer oder der Kurve dreht, rechnet
        gleich dort neu, statt erst nach „Simulation" zu wechseln. */
     if (!opts.problem()) return { label: RUN, disabled: true, reason: opts.blocked() };
+    /* Die Zeile unter dem Knopf steht in jedem Modus: das Verfahren sagt es dort
+       in EINER Zeile (blockedShort), der Modus „Simulation" ausführlich. */
     const est = estimateNow();
-    if (est.blocked) return { label: RUN, disabled: true, reason: est.blocked };
+    if (est.blocked) return { label: RUN, disabled: true, reason: est.blockedShort || est.blocked };
     const id = state.engine, r = state.results[id];
     if (state.failed) return { label: RUN, onClick: simulate, noteKind: 'bad', reason: 'Die Rechnung ist gescheitert: ' + state.failed };
-    if (state.cancelled && !r) return { label: RUN, onClick: simulate, noteKind: 'warn', reason: 'Abgebrochen: es gibt kein Ergebnis.' };
+    if (state.cancelled && !r) return { label: RUN, onClick: simulate, noteKind: 'warn', reason: cancelNote() };
     /* Steht das Ergebnis dieses Verfahrens, lädt der Knopf nicht mehr ein: er
        wird zum Umriss, und die Zeile sagt, was dieser Lauf gekostet hat — kurz:
        sie steht in jedem Modus da und nähme der Seitenleiste sonst zwei Zeilen
@@ -311,14 +334,19 @@ export function createSimCore(opts) {
        Hauptknopf: das Bild des Laufs ist da, gleich wo man gerade einstellt. */
     shell.setActionsExtra(PLAYBACK_ROWS);
     segButtons(ui('engine-seg'), v => { setEngine(v); changed('Rechenverfahren'); });
+    /* Geklemmt wird hier, nicht in numberInput: dessen Grenzen stehen beim
+       Anlegen fest, dieses Feld gehört aber dem gewählten Verfahren. */
     numberInput(ui('cell'), v => {
-      state.cell[state.engine] = v;
+      if (!ENGINES[state.engine].cellLabel) return v;       // das Metamodell hat keins (die Zeile ist verborgen)
+      const [lo, hi] = rangeOf(state.engine), use = Math.max(lo, Math.min(hi, v));
+      if (use !== v) clampNote(ui('cell'), 'auf ' + fmtPlain(use) + ' mm begrenzt (' + rangeText(lo, hi, 'mm') + ')');
+      state.cell[state.engine] = use;
       cache = {};
       syncEngine();
       host.refreshActions();
       changed(ENGINES[state.engine].cellLabel);
-      return v;
-    }, { min: range[0], max: range[1], unit: 'mm' });
+      return use;
+    }, { unit: 'mm' });
     segButtons(ui('bild-seg'), v => { state.bild = v; stopPlay(); renderResults(); });
     /* Ohne Anzeige dahinter: die Zeit steht unten links im Bild. */
     slider(ui('t-slider'), v => { if (wired) { stopPlay(); showFrame(v); } });
@@ -339,9 +367,9 @@ export function createSimCore(opts) {
     /** … und zurück. `keepEngine`: die Adresse (?engine=…) hat das Verfahren
         schon bestimmt — gemerkte Einstellungen überstimmen sie nicht. */
     applySettings(obj, { keepEngine = false } = {}) {
-      const num = v => (Number.isFinite(v) ? Math.max(range[0], Math.min(range[1], v)) : null);
+      const num = (id, v) => { if (!Number.isFinite(v)) return null; const [lo, hi] = rangeOf(id); return Math.max(lo, Math.min(hi, v)); };
       const c = obj && obj.cell ? obj.cell : {};
-      for (const id of IDS) state.cell[id] = ENGINES[id].cellLabel ? num(c[id]) : null;
+      for (const id of IDS) state.cell[id] = ENGINES[id].cellLabel ? num(id, c[id]) : null;
       cache = {};
       if (!keepEngine && obj && IDS.includes(obj.engine)) state.engine = obj.engine;
       if (wired) { syncEngine(); host.refreshActions(); }

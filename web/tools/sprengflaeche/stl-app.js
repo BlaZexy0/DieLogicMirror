@@ -13,12 +13,29 @@
     Z: { u: 0, v: 1, uName: 'X', vName: 'Y' },
   };
   const PAL = window.__PALETTE__;
-  const COLORS = [PAL.primary, PAL.catGreen, PAL.catOrange, PAL.catPurple, PAL.warn, PAL.accent, PAL.gold, PAL.catSlate];
+  /* Die Farbe einer Datei ist die Sachfarbe dessen, was sie zeigt: das
+     Bauteil in der Farbe der Schmelze, Anguss, Überlauf und Pressrest in
+     ihren Tönen daneben, dieselben wie im Dashboard und im 3D-Studio.
+     Dateien ohne Zuordnung bekommen reihum eine Sachfarbe AUSSERHALB der
+     Schmelze-Familie, damit sie nicht wie ein Teil des Gusses aussehen.
+     Gemerkt wird der NAME der Rolle, der Wert wird erst beim Zeichnen
+     gelesen: so folgt das Bild einem Wechsel des Farbschemas. */
+  const ROLLENFARBE = { part: 'melt', runner: 'runner', overflow: 'overflow', biscuit: 'biscuit' };
+  const FREIE_FARBEN = ['die', 'machine', 'air', 'process', 'cool', 'piston'];
   const PAD = 36;
 
-  const models = [];      // { name, tris, color, volume, area, role, proj: {X,Y,Z} }
+  const models = [];      // { name, tris, farbe, volume, area, role, proj: {X,Y,Z} }
   let dir = 'Z';
-  let colorIdx = 0;
+  let freiIdx = 0;
+
+  /* Rolle der Palette, in der eine Datei gezeichnet wird. Wer keine
+     Zuordnung hat (auch nach dem Löschen einer), behält seine Ersatzfarbe
+     aus der Reihe; vergeben wird sie beim ersten Bedarf. */
+  function farbeVon(m) {
+    if (ROLLENFARBE[m.role]) return ROLLENFARBE[m.role];
+    if (!m.farbe) m.farbe = FREIE_FARBEN[freiIdx++ % FREIE_FARBEN.length];
+    return m.farbe;
+  }
 
   const canvas = document.getElementById('proj-canvas');
   const fileInput = document.getElementById('file-input');
@@ -123,7 +140,7 @@
         models.push({
           name: file.name,
           tris,
-          color: COLORS[colorIdx++ % COLORS.length],
+          farbe: null,          // Ersatzfarbe (Rollenname), vergeben von farbeVon()
           volume: Math.abs(meshVolume(tris)),
           volumeSigned: meshVolume(tris),
           area: meshArea(tris),
@@ -161,8 +178,8 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
 
-    /* dezentes Raster */
-    ctx.strokeStyle = 'rgba(0,39,51,0.06)';
+    /* dezentes Raster in der Schrift des Farbschemas */
+    ctx.strokeStyle = PAL.rgba('text', 0.06);
     ctx.lineWidth = 1;
     for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
     for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
@@ -187,7 +204,7 @@
     for (const m of models) {
       ctx.setTransform(dpr * s, 0, 0, -dpr * s, dpr * tx, dpr * ty);
       ctx.globalAlpha = 0.55;
-      ctx.fillStyle = m.color;
+      ctx.fillStyle = PAL[farbeVon(m)];
       ctx.fill(getProjection(m, dir).path, 'nonzero');
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -204,8 +221,11 @@
       ctx.beginPath(); ctx.moveTo(toX(0), toY(0)); ctx.lineTo(toX(cog.cu), toY(cog.cv)); ctx.stroke();
       ctx.setLineDash([]);
     }
-    ctx.strokeStyle = PAL.dark;
-    ctx.fillStyle = PAL.dark;
+    /* Der Ursprung ist die Werkzeugmitte, ein Bezug, kein Urteil: in der
+       Schrift. Der Schwerpunkt S ist der Kennpunkt des Bildes, er trägt die
+       Hervorhebung (mark), wie der Betriebspunkt in den Diagrammen. */
+    ctx.strokeStyle = PAL.text;
+    ctx.fillStyle = PAL.text;
     ctx.lineWidth = 1.4;
     ctx.font = font;
     ctx.beginPath(); ctx.arc(toX(0), toY(0), 4, 0, 2 * Math.PI); ctx.stroke();
@@ -217,7 +237,7 @@
     ctx.fillText('0', toX(0) + 7, toY(0) + 7);
     if (cog) {
       const gx = toX(cog.cu), gy = toY(cog.cv);
-      ctx.fillStyle = PAL.warn;
+      ctx.fillStyle = PAL.mark;
       ctx.beginPath(); ctx.arc(gx, gy, 5, 0, 2 * Math.PI); ctx.fill();
       ctx.strokeStyle = PAL.surface;
       ctx.lineWidth = 1.5;
@@ -438,7 +458,7 @@
       const opts = '<option value="">– wählen –</option>' + LOGIC.ROLES.map(([key, label]) =>
         `<option value="${key}"${m.role === key ? ' selected' : ''}>${label}</option>`).join('');
       return `<tr>
-        <td class="name" title="${escapeHtml(m.name)}"><span class="dot" style="background:${m.color}"></span>${escapeHtml(m.name)}</td>
+        <td class="name" title="${escapeHtml(m.name)}"><span class="dot" style="background:var(${PAL.cssName(farbeVon(m))})"></span>${escapeHtml(m.name)}</td>
         <td style="text-align:left"><select class="role-sel" data-idx="${i}" aria-label="Zuordnung für ${escapeHtml(m.name)}">${opts}</select></td>
         <td>${fmt(vol)} mm³ <span class="sub">(${fmt(vol / 1000)} cm³)</span></td>
         <td>${fmt(LOGIC.massKg(vol, density))} kg</td>
@@ -560,7 +580,8 @@
      (tools/auslegung/js/ui/export.js): in die Zwischenablage kopieren, ohne
      Clipboard-API oder bei verweigerter Berechtigung als Download —
      Quittung ist in beiden Fällen das Häkchen. Die Zeichenfläche ist
-     transparent, daher vor dem Export auf weißen Grund zusammensetzen. */
+     transparent, daher vor dem Export auf die Fläche des Blatts (surface
+     des Farbschemas) zusammensetzen. */
   const copyBtn = document.getElementById('copy-img-btn');
   const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 
@@ -650,7 +671,13 @@
     const sel = e.target.closest('.role-sel');
     if (!sel) return;
     const m = models[Number(sel.dataset.idx)];
-    if (m) m.role = sel.value;
+    if (m) {
+      m.role = sel.value;
+      /* Die Farbe hängt an der Rolle: Punkt in der Zeile und Bild folgen. */
+      const dot = sel.closest('tr').querySelector('.dot');
+      if (dot) dot.style.background = 'var(' + PAL.cssName(farbeVon(m)) + ')';
+      draw();
+    }
     pruefeGefolgtVon(renderMachines)();
   });
 
@@ -686,6 +713,9 @@
   document.getElementById('shrink-toggle').addEventListener('change', renderAll);
 
   window.addEventListener('resize', draw);
+  /* Anderes Farbschema: das Bild neu malen. Die Punkte der Tabelle stehen
+     als CSS-Token und folgen von selbst. */
+  document.addEventListener('dielogic:scheme', draw);
 
   /* ── Beispieldateien aus assets/ als Startbelegung ───────────
      Minimaler Gießlauf mit fertiger Zuordnung: Pressrest — Anguss —

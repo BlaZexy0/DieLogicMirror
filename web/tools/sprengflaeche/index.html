@@ -45,8 +45,10 @@
     .seg button.active { background: var(--primary); color: white; }
     .seg-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
     .stl-hint { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
-    .stl-status { font-size: 0.8rem; color: var(--warn); margin-top: 0.4rem; }
+    .stl-status { font-size: 0.8rem; color: var(--bad-text); margin-top: 0.4rem; }
     .stl-status:empty { display: none; }
+    /* Zurückgelesene Einstellungen: ein Hinweis, kein Fehler. */
+    .stl-status.stl-restored { color: var(--muted); border-left: 3px solid var(--primary); padding-left: 0.6rem; }
     .stl-note {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -172,7 +174,7 @@
       padding: 0.15rem 0.35rem;
       border-radius: 4px;
     }
-    .stl-table .remove-btn:hover { color: var(--warn); background: var(--warn-bg); }
+    .stl-table .remove-btn:hover { color: var(--bad-text); background: var(--bad-bg); }
     .table-empty { padding: 1.4rem 1.2rem; font-size: 0.85rem; color: var(--muted); }
     .stl-footnote { font-size: 0.75rem; color: var(--muted); margin-top: 0.8rem; line-height: 1.6; }
 
@@ -232,7 +234,7 @@
       border-bottom: 1px solid var(--border);
     }
     .machine-info:empty { display: none; }
-    .warn-lift { color: var(--warn); font-weight: 700; }
+    .warn-lift { color: var(--bad-text); font-weight: 700; }
 
     /* ── Zuordnung + Dashboard-Übernahme ───────────────────── */
     .stl-toolbar label { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 600; color: var(--muted); }
@@ -255,8 +257,11 @@
       color: var(--text);
       cursor: pointer;
     }
-    .stl-table tr.row-pref td { background: var(--pale); }
-    .stl-table tr.row-toosmall td { background: var(--warn-bg); color: var(--muted); }
+    /* Die Maschinentabelle urteilt: „empfohlen" ist gut, „zu klein" ist
+       schlecht, in den Stufen der Ampel. Die Marken stehen hell auf der
+       getönten Zeile, mit Schrift und Rand ihrer Stufe. */
+    .stl-table tr.row-pref td { background: var(--ok-bg); }
+    .stl-table tr.row-toosmall td { background: var(--bad-bg); color: var(--muted); }
     .badge {
       display: inline-block;
       padding: 0.1rem 0.55rem;
@@ -268,8 +273,8 @@
       vertical-align: middle;
       white-space: nowrap;
     }
-    .badge-pref { background: var(--primary); color: var(--surface); }
-    .badge-toosmall { background: var(--warn); color: var(--surface); }
+    .badge-pref { background: var(--surface); color: var(--ok-text); border: 1px solid var(--ok-border); }
+    .badge-toosmall { background: var(--surface); color: var(--bad-text); border: 1px solid var(--bad-border); }
     .dash-btn {
       padding: 0.3rem 0.75rem;
       border: 1px solid var(--primary);
@@ -288,8 +293,8 @@
 
     /* Eingaben außerhalb der Domäne (shared/felddomaene.js): es wird nicht
        weitergerechnet, der letzte gültige Stand bleibt abgeblendet stehen. */
-    .input-warn { font-size: 0.78rem; line-height: 1.5; color: var(--bad); background: var(--bad-bg);
-      border: 1px solid var(--bad); border-radius: 6px; padding: 0.5rem 0.7rem; margin: 0 0 0.6rem; }
+    .input-warn { font-size: 0.78rem; line-height: 1.5; color: var(--bad-text); background: var(--bad-bg);
+      border: 1px solid var(--bad-border); border-radius: 6px; padding: 0.5rem 0.7rem; margin: 0 0 0.6rem; }
     .input-warn.hidden { display: none; }
     input.bad { border-color: var(--bad); background: var(--bad-bg); }
     body.inputs-invalid #machine-body,
@@ -320,7 +325,7 @@
   </div>
   <div class="stl-status" id="status"></div>
   <!-- Einstellungen aus dem geometry-Abschnitt des Projekts zurückgelesen. -->
-  <div class="stl-status hidden" id="restored-note" style="border-left:3px solid var(--primary);"></div>
+  <div class="stl-status stl-restored hidden" id="restored-note"></div>
 
   <div class="stl-note"><strong>Konvention und Schwindung:</strong> Der Ursprung des
     STL-Koordinatensystems (<strong>0</strong>) gilt als Werkzeugmitte (Mitte des Säulenfelds); die

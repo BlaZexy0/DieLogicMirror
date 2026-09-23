@@ -18,7 +18,8 @@ export default {
   calc(v, o) {
     if (!(v.vmax > 0)) return { err: 'Kolbengeschw. max. muss > 0 sein.' };
     /* Farbskala endet bei v_max der Maschine — schnellere Bereiche sind
-       mit dieser Maschine nicht fahrbar und werden grau dargestellt.
+       mit dieser Maschine nicht fahrbar und werden schraffiert (Grenze in
+       der Farbe der Maschine).
        Eine Stufe je 1 m/s, aber höchstens MAX_LEVELS: bis v_max = 40 m/s
        (jede reale Maschine) ändert das nichts, ein vertippter Wert legt aber
        sonst den Tab mit einer Milliarden-Allokation lahm. */
@@ -54,7 +55,7 @@ Anschnitt V<sub>a</sub> (Kavität von Bauteil + Überlauf, ohne Anguss und Press
 t<sub>f</sub> ist der nötige Volumenstrom, und der ist Kolbenfläche mal Kolbengeschwindigkeit:</p>
 ${eq('V_{a} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Überlauf}}}{\\rho } \\qquad Q = \\frac{V_{a}}{t_{f}} = A_{K} \\cdot v_{p}')}
 ${eq('\\Rightarrow \\quad v_{p}(t_{f}, D) = \\frac{V_{a}}{t_{f} \\cdot A_{K}} = \\frac{4 \\cdot V_{a}}{t_{f} \\cdot \\pi \\cdot D^{2}}')}
-<p class="math-note">Die Heatmap zeigt v<sub>p</sub> über (t<sub>f</sub>, D); die weißen Konturen sind Linien
+<p class="math-note">Die Heatmap zeigt v<sub>p</sub> über (t<sub>f</sub>, D), je dunkler, desto schneller; die Konturen sind Linien
 konstanter Kolbengeschwindigkeit. Die Farbskala endet bei v<sub>max</sub> der Maschine: schraffierte Bereiche
 verlangen mehr Kolbengeschwindigkeit, als die Maschine kann; die Grenzkurve ist D(t) = √(4·V<sub>a</sub>/(π·t·v<sub>max</sub>)). Aktuell: V<sub>a</sub> = <b data-m="Va"></b> ·
 bei Ø <span data-m="D"></span> und v₂ = <span data-m="vsel"></span> (Mittel nach Anschnitt, aus der Schusskurve): t<sub>f</sub> = <b data-m="tf"></b></p>`;

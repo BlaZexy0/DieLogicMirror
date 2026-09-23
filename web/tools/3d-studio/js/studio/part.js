@@ -11,10 +11,15 @@
 import * as T from 'three';
 import { mountPartSource } from '../part/partsource.js';
 import { suggestCell } from '../part/field.js';
+import { ROLE, hex2rgb, onScheme } from '../part/colors.js';
 
-export function createPart({ shell, onStart, onLoad, start = null, fit = true }) {
+export function createPart({ shell, onStart, onLoad, onFail = null, start = null, fit = true }) {
+  let loading = null;     // ein Laden läuft: { name } des Teils davor
   const { view } = shell;
-  const plainMat = new T.MeshStandardMaterial({ color: 0xb5c0c4, roughness: 0.7, metalness: 0.05, side: T.DoubleSide, flatShading: true });
+  /* Das Bauteil im Grau seiner Rolle (part): es trägt die Farben der
+     Analysen, selbst ist es neutral — und folgt dem Farbschema. */
+  const plainMat = new T.MeshStandardMaterial({ color: ROLE.part, roughness: 0.7, metalness: 0.05, side: T.DoubleSide, flatShading: true });
+  onScheme(() => { plainMat.color.set(ROLE.part); view.invalidate(); });
   const colorMat = new T.MeshStandardMaterial({ vertexColors: true, color: 0xffffff, roughness: 0.62, metalness: 0.08, side: T.DoubleSide, flatShading: true });
   const mesh = new T.Mesh(new T.BufferGeometry(), plainMat);
   mesh.visible = false;
@@ -50,15 +55,26 @@ export function createPart({ shell, onStart, onLoad, start = null, fit = true })
 
   const source = mountPartSource({
     busy: shell.busyEl, viewport: null, start,
-    onStart: name => { part.ready = false; part.name = name; if (onStart) onStart(name); },
+    /* Die Meldung steht auch in der Klappe — gesehen wird sie im Toast. Ist
+       ein Laden schon angelaufen und scheitert dann, gilt wieder das Teil, das
+       noch da ist: Name und „bereit" stünden sonst auf dem gescheiterten. */
+    onError: text => {
+      shell.toast(text, { ms: 8000 });
+      if (loading) { part.name = loading.name; part.ready = !!part.model; loading = null; if (onFail) onFail(); }
+    },
+    onStart: name => { loading = { name: part.name }; part.ready = false; part.name = name; if (onStart) onStart(name); },
     onLoad: async (model, name) => {
+      loading = null;
       part.model = model;
       part.name = name;
       const sel = document.getElementById('demo-select');
       part.demoId = sel && sel.selectedIndex >= 0 && sel.value ? sel.value : null;
       const geo = new T.BufferGeometry();
       geo.setAttribute('position', new T.BufferAttribute(Float32Array.from(model.tris), 3));
-      geo.setAttribute('color', new T.BufferAttribute(new Float32Array(model.tris.length).fill(0.75), 3));
+      /* Vor dem ersten Bemalen trägt jede Ecke das Grau des Bauteils. */
+      const grey = hex2rgb(ROLE.part), cols = new Float32Array(model.tris.length);
+      for (let i = 0; i < cols.length; i += 3) { cols[i] = grey[0]; cols[i + 1] = grey[1]; cols[i + 2] = grey[2]; }
+      geo.setAttribute('color', new T.BufferAttribute(cols, 3));
       geo.computeVertexNormals();
       mesh.geometry.dispose();
       mesh.geometry = geo;

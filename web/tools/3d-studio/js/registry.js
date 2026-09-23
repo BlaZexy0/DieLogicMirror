@@ -7,7 +7,36 @@
 
    sub: optionale Untergruppe innerhalb einer Seite. Die Temperierung
    steht so je Hälfte eingerückt unter einer eigenen Überschrift mit
-   eigenem Schalter — ein Kreis lässt sich damit allein betrachten. */
+   eigenem Schalter — ein Kreis lässt sich damit allein betrachten.
+
+   role: die Farbe als ROLLE des Farbschemas (js/part/colors.js), kein
+   Wert. `color` nennt den Wert des Schemas von jetzt. So hat die
+   Beispielform die Sachfarben jedes Werkzeugs: das Gussteil ist Schmelze,
+   Anguss und Pressrest der Anguss, die Überläufe Überlauf, die Kreise
+   Temperierung (die feste Hälfte dunkel, die bewegliche hell), die
+   Stahlteile Stahl, jedes in einer eigenen Stufe, damit Nachbarn sich
+   trennen. Eine Rolle schreibt sich
+     'melt'          die Sachfarbe selbst,
+     'steel:0.45'    Stahl, Stufe 0,45 zwischen Fläche und Kante,
+     'cool:0.22'     Temperierung, um 0,22 zur Fläche hin aufgehellt. */
+
+import { ROLE, mixHex, steelShade } from './part/colors.js';
+
+/* Welche Rollen ein Teil tragen darf: die Sachfarben, keine Ampel und keine
+   Bedienung — ein Teil der Form ist kein Urteil. */
+const PART_ROLES = new Set(['melt', 'runner', 'overflow', 'biscuit', 'die', 'air', 'vacuum', 'cool', 'steel', 'steelDark', 'piston', 'part']);
+
+/** Der Wert einer Rolle im Schema von jetzt — null, wenn es keine ist (eine
+    Datei kann alles hineinschreiben). */
+export function roleColor(role) {
+  const m = /^([a-zA-Z]+)(?::(0(?:\.\d+)?|1(?:\.0+)?))?$/.exec(typeof role === 'string' ? role : '');
+  if (!m || !PART_ROLES.has(m[1])) return null;
+  if (m[2] === undefined) return ROLE[m[1]];
+  const t = Number(m[2]);
+  return m[1] === 'steel' ? steelShade(t) : mixHex(m[1], 'surface', t);
+}
+
+const comp = (id, label, side, role, sub) => ({ id, label, side, ...(sub ? { sub } : {}), role, get color() { return roleColor(this.role); } });
 
 export const GROUPS = [
   { key: 'fix',  title: 'Feste Seite' },
@@ -16,26 +45,26 @@ export const GROUPS = [
 ];
 
 export const COMPONENTS = [
-  { id: 'fixHalf',      label: 'Feste Formhälfte',          side: 'fix',  color: '#9aa7ad' },
-  { id: 'fixInsert',    label: 'Formeinsatz fest',          side: 'fix',  color: '#7d8a91' },
-  { id: 'sleeve',       label: 'Füllkammer + Gießkolben',   side: 'fix',  color: '#8b979e' },
-  { id: 'guidePillars', label: 'Führungssäulen',            side: 'fix',  color: '#8d9aa1' },
-  { id: 'ventBlockFix', label: 'Entlüftung (feste Hälfte)',   side: 'fix',  color: '#7f8c93' },
-  { id: 'coolFixL',     label: 'Kreis links',   side: 'fix', sub: 'Temperierung', color: '#c0392b' },
-  { id: 'coolFixR',     label: 'Kreis rechts',  side: 'fix', sub: 'Temperierung', color: '#e07055' },
+  comp('fixHalf',      'Feste Formhälfte',          'fix', 'steel:0.45'),
+  comp('fixInsert',    'Formeinsatz fest',          'fix', 'steel:0.84'),
+  comp('sleeve',       'Füllkammer + Gießkolben',   'fix', 'steel:0.62'),
+  comp('guidePillars', 'Führungssäulen',            'fix', 'steel:0.56'),
+  comp('ventBlockFix', 'Entlüftung (feste Hälfte)', 'fix', 'steel:0.74'),
+  comp('coolFixL',     'Kreis links',   'fix', 'cool', 'Temperierung'),
+  comp('coolFixR',     'Kreis rechts',  'fix', 'cool:0.22', 'Temperierung'),
 
-  { id: 'movHalf',      label: 'Bewegliche Formhälfte',     side: 'mov',  color: '#a7b3b9' },
-  { id: 'movInsert',    label: 'Formeinsatz beweglich',     side: 'mov',  color: '#86939a' },
-  { id: 'ejBox',        label: 'Auswerferkasten + Aufspannplatte', side: 'mov', color: '#94a1a8' },
-  { id: 'ejector',      label: 'Auswerferpaket (Platten + Stifte)', side: 'mov', color: '#6f7c83' },
-  { id: 'guideBushings', label: 'Führungsbuchsen',          side: 'mov',  color: '#77848b' },
-  { id: 'ventBlockMov', label: 'Entlüftung (bewegl. Hälfte)', side: 'mov',  color: '#7f8c93' },
-  { id: 'coolMovL',     label: 'Kreis links',   side: 'mov', sub: 'Temperierung', color: '#2e6da4' },
-  { id: 'coolMovR',     label: 'Kreis rechts',  side: 'mov', sub: 'Temperierung', color: '#5a95c9' },
+  comp('movHalf',      'Bewegliche Formhälfte',     'mov', 'steel:0.35'),
+  comp('movInsert',    'Formeinsatz beweglich',     'mov', 'steel:0.68'),
+  comp('ejBox',        'Auswerferkasten + Aufspannplatte', 'mov', 'steel:0.5'),
+  comp('ejector',      'Auswerferpaket (Platten + Stifte)', 'mov', 'steel:1'),
+  comp('guideBushings', 'Führungsbuchsen',          'mov', 'steel:0.9'),
+  comp('ventBlockMov', 'Entlüftung (bewegl. Hälfte)', 'mov', 'steel:0.78'),
+  comp('coolMovL',     'Kreis links',   'mov', 'cool:0.45', 'Temperierung'),
+  comp('coolMovR',     'Kreis rechts',  'mov', 'cool:0.6', 'Temperierung'),
 
-  { id: 'castPart',     label: 'Bauteil',                   side: 'cast', color: '#d4a908' },
-  { id: 'castRunner',   label: 'Anguss + Pressrest',        side: 'cast', color: '#dfbc3f' },
-  { id: 'castOverflow', label: 'Überläufe + Entlüftungskanal', side: 'cast', color: '#ecd27f' }
+  comp('castPart',     'Bauteil',                   'cast', 'melt'),
+  comp('castRunner',   'Anguss + Pressrest',        'cast', 'runner'),
+  comp('castOverflow', 'Überläufe + Entlüftungskanal', 'cast', 'overflow')
 ];
 
 export const BY_ID = Object.fromEntries(COMPONENTS.map(c => [c.id, c]));

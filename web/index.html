@@ -169,12 +169,18 @@
       border-color: rgba(var(--primary-light-rgb), .55);
       background: linear-gradient(135deg, rgba(var(--primary-rgb), .16), rgba(255,255,255,.03) 60%);
     }
+    /* Die Kachel trägt die Kennfarbe des Werkzeugs (--kenn am Element): die
+       Marke für das Dashboard, sonst eine Sachfarbe (Maschine, Luft,
+       Werkzeug …), nie eine Farbe der Ampel. Sie ist hell, nicht dunkel wie
+       die Karte: die Sachfarben sind für hellen Grund gemacht, und die
+       dunklen unter ihnen (Prozess, Kolben, Werkzeug) verschwänden sonst auf
+       dem dunklen Grund der Sektion. */
     .tool-card-icon {
       width: 46px; height: 46px;
       border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
       margin-bottom: 1rem;
-      border: 1px solid rgba(255,255,255,.08);
+      background: color-mix(in oklab, var(--kenn, var(--primary)) 14%, var(--surface));
     }
     .tool-card h3 {
       font-size: 1rem;
@@ -197,7 +203,7 @@
     .tool-card p { font-size: 0.84rem; color: var(--ondark); line-height: 1.6; margin-bottom: 0.5rem; }
     .tool-card .physics-note {
       font-size: 0.76rem;
-      color: var(--cat-slate);
+      color: var(--ondark2);
       font-style: italic;
       margin-bottom: 1rem;
       line-height: 1.5;
@@ -256,6 +262,8 @@
       border-radius: var(--radius);
       padding: 1.5rem 1.5rem 1.4rem;
       background: var(--surface);
+      /* Die Farbe des oberen Rands setzt jede Karte selbst: die Sachfarbe
+         ihres Themas (Maschine, Schmelze, Kolben, Prozess, Luft, Werkzeug). */
       border-top: 3px solid transparent;
       box-shadow: var(--shadow);
       transition: box-shadow 0.18s var(--ease), transform 0.18s var(--ease);
@@ -316,7 +324,7 @@
       font-variant-numeric: tabular-nums;
     }
     .plan-price span { font-size: 0.85rem; font-weight: 400; color: var(--ondark); }
-    .plan-alt { font-size: 0.78rem; color: var(--cat-slate); margin-bottom: 1.2rem; }
+    .plan-alt { font-size: 0.78rem; color: var(--ondark2); margin-bottom: 1.2rem; }
     .plan-features { list-style: none; margin-bottom: 1.5rem; }
     .plan-features li {
       font-size: 0.84rem;
@@ -331,7 +339,7 @@
       grid-column: 1 / -1;
       text-align: center;
       font-size: 0.75rem;
-      color: var(--cat-slate);
+      color: var(--ondark2);
       margin-top: 0.5rem;
     }
     .pricing-legal a { color: var(--ondark); }
@@ -384,11 +392,11 @@
     <line x1="20" y1="9" x2="20" y2="19" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/>
   </symbol>
   <symbol id="icon-tool-3dstudio" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M13 2.6 L22.4 8 L22.4 18 L13 23.4 L3.6 18 L3.6 8 Z" stroke="var(--primary)" stroke-width="1.8"/>
-    <path d="M3.6 8 L13 13.4 L22.4 8" stroke="var(--primary)" stroke-width="1.5" opacity=".55"/>
-    <path d="M13 13.4 V23.4" stroke="var(--primary)" stroke-width="1.5" opacity=".55"/>
-    <path d="M2.2 13.4 H23.8" stroke="var(--cat-slate)" stroke-width="1.4" stroke-dasharray="2.6 2.2" opacity=".75"/>
-    <path d="M13 10.2 L16.2 12 L16.2 15.4 L13 17.2 L9.8 15.4 L9.8 12 Z" fill="var(--gold)" opacity=".92"/>
+    <path d="M13 2.6 L22.4 8 L22.4 18 L13 23.4 L3.6 18 L3.6 8 Z" stroke="var(--steel-dark)" stroke-width="1.8"/>
+    <path d="M3.6 8 L13 13.4 L22.4 8" stroke="var(--steel-dark)" stroke-width="1.5" opacity=".55"/>
+    <path d="M13 13.4 V23.4" stroke="var(--steel-dark)" stroke-width="1.5" opacity=".55"/>
+    <path d="M2.2 13.4 H23.8" stroke="var(--die)" stroke-width="1.4" stroke-dasharray="2.6 2.2" opacity=".75"/>
+    <path d="M13 10.2 L16.2 12 L16.2 15.4 L13 17.2 L9.8 15.4 L9.8 12 Z" fill="var(--melt)" opacity=".92"/>
   </symbol>
   <symbol id="icon-tool-dashboard" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
     <rect x="2" y="2.5" width="22" height="21" rx="2.5" stroke="var(--primary)" stroke-width="1.6"/>
@@ -397,51 +405,51 @@
     <line x1="4.5" y1="11" x2="7" y2="11" stroke="var(--primary)" stroke-width="1.6"/>
     <line x1="4.5" y1="15" x2="7" y2="15" stroke="var(--primary)" stroke-width="1.6"/>
     <path d="M12.5 14 L15 10.5 L17.5 12 L21 6.5" stroke="var(--primary)" stroke-width="1.6"/>
-    <circle cx="17.5" cy="12" r="1.7" fill="var(--warn)"/>
+    <circle cx="17.5" cy="12" r="1.7" fill="var(--mark)"/>
     <rect x="12.5" y="17.5" width="5" height="2.2" rx="1.1" fill="var(--primary)"/>
     <rect x="12.5" y="17.5" width="9" height="2.2" rx="1.1" stroke="var(--primary)" stroke-width="1" opacity=".55"/>
   </symbol>
   <symbol id="icon-tool-phild" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 3.5 V22.5 H23" stroke="var(--cat-purple)" stroke-width="1.4" opacity=".7"/>
-    <path d="M5 20.5 C9 13 13 8.5 22 6 V11 C15 12.5 11 16.5 9 22 H5 Z" fill="var(--cat-purple)" opacity=".32"/>
-    <path d="M5 20.5 C9 13 13 8.5 22 6" stroke="var(--cat-purple)" stroke-width="1.6"/>
-    <path d="M9 22 C11 16.5 15 12.5 22 11" stroke="var(--cat-purple)" stroke-width="1.6"/>
-    <circle cx="13.5" cy="13.2" r="1.9" fill="var(--warn)"/>
+    <path d="M3 3.5 V22.5 H23" stroke="var(--piston)" stroke-width="1.4" opacity=".7"/>
+    <path d="M5 20.5 C9 13 13 8.5 22 6 V11 C15 12.5 11 16.5 9 22 H5 Z" fill="var(--piston)" opacity=".22"/>
+    <path d="M5 20.5 C9 13 13 8.5 22 6" stroke="var(--piston)" stroke-width="1.6"/>
+    <path d="M9 22 C11 16.5 15 12.5 22 11" stroke="var(--piston)" stroke-width="1.6"/>
+    <circle cx="13.5" cy="13.2" r="1.9" fill="var(--mark)"/>
   </symbol>
   <symbol id="icon-tool-pq2" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 3.5 V22.5 H23" stroke="var(--primary)" stroke-width="1.4" opacity=".7"/>
-    <path d="M5 5.5 C13 5.5 17.5 11 21 22" stroke="var(--primary)" stroke-width="1.8"/>
-    <path d="M5 22 C9 22 14.5 17 17.5 5" stroke="var(--primary)" stroke-width="1.8" opacity=".55"/>
-    <circle cx="15.7" cy="10.8" r="1.9" fill="var(--warn)"/>
+    <path d="M3 3.5 V22.5 H23" stroke="var(--machine)" stroke-width="1.4" opacity=".7"/>
+    <path d="M5 5.5 C13 5.5 17.5 11 21 22" stroke="var(--machine)" stroke-width="1.8"/>
+    <path d="M5 22 C9 22 14.5 17 17.5 5" stroke="var(--die)" stroke-width="1.8"/>
+    <circle cx="15.7" cy="10.8" r="1.9" fill="var(--mark)"/>
   </symbol>
   <symbol id="icon-tool-schusskurve" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 3.5 V22.5 H23" stroke="var(--accent)" stroke-width="1.4" opacity=".7"/>
-    <path d="M5 18.5 H10.5 C13 18.5 13 7 16 7 H21.5" stroke="var(--accent)" stroke-width="1.8"/>
-    <line x1="11.5" y1="21" x2="11.5" y2="5" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="1.6 1.8" opacity=".8"/>
-    <circle cx="18.5" cy="7" r="1.9" fill="var(--warn)"/>
+    <path d="M3 3.5 V22.5 H23" stroke="var(--air)" stroke-width="1.4" opacity=".7"/>
+    <path d="M5 18.5 H10.5 C13 18.5 13 7 16 7 H21.5" stroke="var(--air)" stroke-width="1.8"/>
+    <line x1="11.5" y1="21" x2="11.5" y2="5" stroke="var(--air)" stroke-width="1.2" stroke-dasharray="1.6 1.8" opacity=".8"/>
+    <circle cx="18.5" cy="7" r="1.9" fill="var(--mark)"/>
   </symbol>
   <symbol id="icon-tool-sprengflaeche" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M13 2.5 L20.5 6.2 L20.5 12.5 L13 16.2 L5.5 12.5 L5.5 6.2 Z" stroke="var(--gold)" stroke-width="1.6"/>
-    <path d="M5.5 6.2 L13 9.9 L20.5 6.2 M13 9.9 V16.2" stroke="var(--gold)" stroke-width="1.4"/>
-    <line x1="5.5" y1="13.5" x2="5.5" y2="19.5" stroke="var(--gold)" stroke-width="1.1" stroke-dasharray="1.4 1.6" opacity=".8"/>
-    <line x1="20.5" y1="13.5" x2="20.5" y2="19.5" stroke="var(--gold)" stroke-width="1.1" stroke-dasharray="1.4 1.6" opacity=".8"/>
-    <path d="M3 21.5 L13 24.3 L23 21.5 L13 19.2 Z" fill="var(--gold)" opacity=".4" stroke="var(--gold)" stroke-width="1.2"/>
+    <path d="M13 2.5 L20.5 6.2 L20.5 12.5 L13 16.2 L5.5 12.5 L5.5 6.2 Z" stroke="var(--die)" stroke-width="1.6"/>
+    <path d="M5.5 6.2 L13 9.9 L20.5 6.2 M13 9.9 V16.2" stroke="var(--die)" stroke-width="1.4"/>
+    <line x1="5.5" y1="13.5" x2="5.5" y2="19.5" stroke="var(--die)" stroke-width="1.1" stroke-dasharray="1.4 1.6" opacity=".8"/>
+    <line x1="20.5" y1="13.5" x2="20.5" y2="19.5" stroke="var(--die)" stroke-width="1.1" stroke-dasharray="1.4 1.6" opacity=".8"/>
+    <path d="M3 21.5 L13 24.3 L23 21.5 L13 19.2 Z" fill="var(--die)" opacity=".3" stroke="var(--die)" stroke-width="1.2"/>
   </symbol>
   <symbol id="icon-tool-teilekosten" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="10" cy="10" r="7.2" stroke="var(--warn)" stroke-width="1.6"/>
-    <path d="M12.6 7.6 C12 7 11.2 6.8 10.5 6.8 C8.7 6.8 7.7 8.2 7.7 10 C7.7 11.8 8.7 13.2 10.5 13.2 C11.2 13.2 12 13 12.6 12.4 M6.6 9.1 H11.2 M6.6 10.9 H11.2" stroke="var(--warn)" stroke-width="1.4"/>
-    <rect x="3" y="20" width="9.5" height="3.2" rx="1" fill="var(--warn)" opacity=".9"/>
-    <rect x="13.5" y="20" width="5.5" height="3.2" rx="1" fill="var(--warn)" opacity=".55"/>
-    <rect x="20" y="20" width="3" height="3.2" rx="1" fill="var(--warn)" opacity=".3"/>
-    <path d="M19 8.5 L23 8.5 M23 8.5 L21 6.5 M23 8.5 L21 10.5" stroke="var(--warn)" stroke-width="1.4" opacity=".7"/>
+    <circle cx="10" cy="10" r="7.2" stroke="var(--mark)" stroke-width="1.6"/>
+    <path d="M12.6 7.6 C12 7 11.2 6.8 10.5 6.8 C8.7 6.8 7.7 8.2 7.7 10 C7.7 11.8 8.7 13.2 10.5 13.2 C11.2 13.2 12 13 12.6 12.4 M6.6 9.1 H11.2 M6.6 10.9 H11.2" stroke="var(--mark)" stroke-width="1.4"/>
+    <rect x="3" y="20" width="9.5" height="3.2" rx="1" fill="var(--mark)" opacity=".9"/>
+    <rect x="13.5" y="20" width="5.5" height="3.2" rx="1" fill="var(--mark)" opacity=".55"/>
+    <rect x="20" y="20" width="3" height="3.2" rx="1" fill="var(--mark)" opacity=".3"/>
+    <path d="M19 8.5 L23 8.5 M23 8.5 L21 6.5 M23 8.5 L21 10.5" stroke="var(--mark)" stroke-width="1.4" opacity=".7"/>
   </symbol>
   <symbol id="icon-tool-zyklus" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M13 3.5 A9.5 9.5 0 0 1 22.3 11" stroke="var(--cat-green)" stroke-width="2.2"/>
-    <path d="M22.3 15 A9.5 9.5 0 0 1 16 22" stroke="var(--cat-green)" stroke-width="2.2" opacity=".7"/>
-    <path d="M10 22 A9.5 9.5 0 0 1 3.7 15" stroke="var(--cat-green)" stroke-width="2.2" opacity=".5"/>
-    <path d="M3.7 11 A9.5 9.5 0 0 1 9.5 4.2" stroke="var(--cat-green)" stroke-width="2.2" opacity=".35"/>
-    <path d="M7.6 2.6 L9.8 4.3 L7.8 6.4" stroke="var(--cat-green)" stroke-width="1.6"/>
-    <path d="M13 9 V14.5 M11.2 16.3 A1.8 1.8 0 1 0 14.8 16.3 A1.8 1.8 0 1 0 11.2 16.3" stroke="var(--warn)" stroke-width="1.5"/>
+    <path d="M13 3.5 A9.5 9.5 0 0 1 22.3 11" stroke="var(--process)" stroke-width="2.2"/>
+    <path d="M22.3 15 A9.5 9.5 0 0 1 16 22" stroke="var(--process)" stroke-width="2.2" opacity=".7"/>
+    <path d="M10 22 A9.5 9.5 0 0 1 3.7 15" stroke="var(--process)" stroke-width="2.2" opacity=".5"/>
+    <path d="M3.7 11 A9.5 9.5 0 0 1 9.5 4.2" stroke="var(--process)" stroke-width="2.2" opacity=".35"/>
+    <path d="M7.6 2.6 L9.8 4.3 L7.8 6.4" stroke="var(--process)" stroke-width="1.6"/>
+    <path d="M13 9 V14.5 M11.2 16.3 A1.8 1.8 0 1 0 14.8 16.3 A1.8 1.8 0 1 0 11.2 16.3" stroke="var(--mark)" stroke-width="1.5"/>
   </symbol>
 </svg>
 <!-- ICON-SPRITE:END -->
@@ -460,8 +468,8 @@
     <h1>Gießtechnische Auslegung für den Druckguss in einem Dashboard</h1>
     <p class="subtitle">DieLogic rechnet die komplette HPDC-Auslegung live im Browser: Massenbilanz,
       Füllkammer, Schusskurve, PQ²-Arbeitspunkt, Prozessfenster und Maschinengrenzen, mit
-      19 gekoppelten Diagrammen, Prüfpanels mit Gesamturteil und einem roten Betriebspunkt-Marker
-      in jedem Bild. Keine Installation. Jede Änderung landet im Projekt Ihres Teams.</p>
+      19 gekoppelten Diagrammen, Prüfpanels mit Gesamturteil und demselben markierten
+      Betriebspunkt in jedem Bild. Keine Installation. Jede Änderung landet im Projekt Ihres Teams.</p>
     <div class="hero-ctas">
       <a href="/tools/auslegung/" class="btn btn-lg btn-primary">→ Dashboard öffnen</a>
       <a href="#diagramme" class="btn btn-lg btn-ghost btn-ghost-ondark">Alle Diagramme ansehen</a>
@@ -531,7 +539,7 @@
 
       <!-- Dashboard (featured) -->
       <div class="tool-card featured">
-        <div class="tool-card-icon" style="background:rgba(var(--primary-rgb), .15);">
+        <div class="tool-card-icon" style="--kenn:var(--primary);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-dashboard"/></svg>
         </div>
         <h3>DieLogic Dashboard <span class="badge-live">LIVE</span></h3>
@@ -557,7 +565,7 @@
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(140,190,230,.12);">
+        <div class="tool-card-icon" style="--kenn:var(--air);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-schusskurve"/></svg>
         </div>
         <h3>Schusskurve <span class="badge-live">EINZELSEITE</span></h3>
@@ -570,20 +578,20 @@
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(var(--primary-rgb), .12);">
+        <div class="tool-card-icon" style="--kenn:var(--machine);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-pq2"/></svg>
         </div>
         <h3>PQ²-Diagramm <span class="badge-live">EINZELSEITE</span></h3>
         <p>Maschinenlinie gegen Formwiderstand mit dem Arbeitspunkt, Anschnittgeschwindigkeit
-          und Füllzeit: umschaltbare Achsenmodi, roter Betriebspunkt-Marker und die Eingaben,
-          die genau dieses Diagramm beeinflussen, direkt daneben.</p>
+          und Füllzeit: umschaltbare Achsenmodi, ein Marker für den Betriebspunkt und die
+          Eingaben, die genau dieses Diagramm beeinflussen, direkt daneben.</p>
         <div class="tool-card-btns">
           <a href="/tools/auslegung/chart.html?id=pq2" class="btn btn-sm btn-primary">Öffnen →</a>
         </div>
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(154,119,232,.12);">
+        <div class="tool-card-icon" style="--kenn:var(--piston);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-phild"/></svg>
         </div>
         <h3>Auslegungsfenster (φ, λ) <span class="badge-live">EINZELSEITE</span></h3>
@@ -596,7 +604,7 @@
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(212,169,8,.12);">
+        <div class="tool-card-icon" style="--kenn:var(--die);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-sprengflaeche"/></svg>
         </div>
         <h3>Sprengflächenanalyse <span class="badge-live">NEU</span></h3>
@@ -615,7 +623,7 @@
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(194,68,126,.12);">
+        <div class="tool-card-icon" style="--kenn:var(--mark);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-teilekosten"/></svg>
         </div>
         <h3>Teilekosten-Kalkulation <span class="badge-live">NEU</span></h3>
@@ -634,7 +642,7 @@
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(76,159,112,.12);">
+        <div class="tool-card-icon" style="--kenn:var(--process);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-zyklus"/></svg>
         </div>
         <h3>Zyklusanalyse <span class="badge-live">NEU</span></h3>
@@ -653,17 +661,18 @@
       </div>
 
       <div class="tool-card featured">
-        <div class="tool-card-icon" style="background:rgba(var(--primary-rgb), .12);">
+        <div class="tool-card-icon" style="--kenn:var(--melt);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-3dstudio"/></svg>
         </div>
         <h3>3D-Studio <span class="badge-live">NEU</span></h3>
-        <p>Acht Werkzeuge in 3D und die Werkbank, die sie als Schritte an einem Bauteil
+        <p>Zehn Werkzeuge in 3D und die Werkbank, die sie als Schritte an einem Bauteil
           aneinanderreiht: die Druckgießform als Schnittmodell mit echter Kavität;
           die Entformungsanalyse, die jedem Dreieck die Formhälfte oder den Schieber zuordnet, samt
           Trennlinie, Hinterschnitten und Entformschrägen; zwei Messwerkzeuge: nach innen
           die Wandstärke (wo das Bauteil am dicksten ist, erstarrt es zuletzt), nach außen der
           Abstand zum Temperierkanal; die Füllabschätzung, die die Schmelzefront von den
-          Anschnitten durch das gerasterte Bauteil laufen lässt; und drei Designer für das,
+          Anschnitten durch das gerasterte Bauteil laufen lässt; zwei Simulationen, die die
+          Schmelze selbst rechnen, im Anguss und in der Füllkammer; und drei Designer für das,
           was um das Bauteil in die Form kommt: Angusssystem, Überläufe mit Entlüftung,
           Temperierkanäle.</p>
         <div class="tool-tags">
@@ -673,6 +682,7 @@
           <span class="tool-tag">Abstandsanalyse</span>
           <span class="tool-tag">Angussdesigner</span>
           <span class="tool-tag">Füllabschätzung</span>
+          <span class="tool-tag">Füllsimulation</span>
         </div>
         <div class="tool-card-btns">
           <a href="/tools/3d-studio/" class="btn btn-sm btn-primary">Öffnen →</a>
@@ -724,40 +734,40 @@
     <h2 class="section-title">Theorie</h2>
     <p class="section-sub">Die Physik hinter den Diagrammen: hergeleitet, nicht behauptet.</p>
     <div class="theory-grid">
-      <div class="theory-card" style="border-top-color:var(--primary);">
+      <div class="theory-card" style="border-top-color:var(--machine);">
         <h4>Das PQ²-Diagramm</h4>
         <p>Maschinenlinie, Werkzeuglinie und Hüllkurve, das machbare Band mit seinen vier
           Grenzen (Entlüftung, Erstarrung, Zerstäubung, Erosion) und der Spielraum für den
           Anschnitt, mit den Original-Diagrammen aus dem Dashboard.</p>
         <a href="theorie/pq2.html" class="link-primary">Lesen →</a>
       </div>
-      <div class="theory-card" style="border-top-color:var(--accent);">
+      <div class="theory-card" style="border-top-color:var(--melt);">
         <h4>Kritische Kolbengeschwindigkeit</h4>
         <p>Von den Flachwassergleichungen über Charakteristiken und Kolbenwelle zum
           Deckenkriterium, samt numerischer Prüfung, wie gut das Nogowizin-Polynom die exakte
           Kreisquerschnitts-Lösung trifft.</p>
         <a href="/theorie/kritische-geschwindigkeit.html" class="link-primary">Lesen →</a>
       </div>
-      <div class="theory-card" style="border-top-color:var(--accent);">
+      <div class="theory-card" style="border-top-color:var(--piston);">
         <h4>Kreissegmente der Füllkammer</h4>
         <p>Wie eine einzige zweidimensionale Figur Füllgrad, freie Oberfläche, benetzten Bogen
           und das (φ, λ)-Auslegungsdiagramm der Füllkammer bestimmt.</p>
         <a href="/theorie/kreissegmente.html" class="link-primary">Lesen →</a>
       </div>
-      <div class="theory-card" style="border-top-color:var(--warn);">
+      <div class="theory-card" style="border-top-color:var(--process);">
         <h4>Nebenbedingungen der Auslegung</h4>
         <p>Alle Nebenbedingungen N1–N20 der gießtechnischen Auslegung, von Anschnitt und
           Füllzeit bis Schusskurve, mit Formeln, Grenzwert-Logik und Quellen.</p>
         <a href="/theorie/nebenbedingungen.html" class="link-primary">Lesen →</a>
       </div>
-      <div class="theory-card" style="border-top-color:var(--gold);">
+      <div class="theory-card" style="border-top-color:var(--air);">
         <h4>Entlüftung, Vakuum und die Restblase</h4>
         <p>Wohin mit mehreren Litern Luft in Millisekunden? Entlüftungsbedarf, Drosselströmung
           mit Choking, die Vakuummodelle der Simulation, und warum der Nachdruck Poren nur
           mit der Kubikwurzel schrumpft.</p>
         <a href="/theorie/entlueftung-vakuum.html" class="link-primary">Lesen →</a>
       </div>
-      <div class="theory-card" style="border-top-color:var(--cat-slate);">
+      <div class="theory-card" style="border-top-color:var(--die);">
         <h4>Zuhaltung und Sprengfläche</h4>
         <p>Von der projizierten Fläche zur Kraft auf jede einzelne Säule: die Statik der
           Zuhaltung, der Hebelfaktor aus Außermittigkeit und Schiebern, und warum eine Form

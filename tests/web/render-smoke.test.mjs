@@ -135,14 +135,31 @@ for (const [label, bad] of DEGENERATE) {
   }
 }
 
-test('turbo(): nicht endliche Werte werfen nicht, sondern bleiben leer', async () => {
-  const { turbo } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/base.js')));
+test('ramp(): nicht endliche Werte werfen nicht, sondern bleiben leer', async () => {
+  const { ramp } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/base.js')));
   for (const t of [NaN, Infinity, -Infinity, undefined, null]) {
-    assert.doesNotThrow(() => turbo(t), `turbo(${t}) wirft`);
+    assert.doesNotThrow(() => ramp(t), `ramp(${t}) wirft`);
   }
-  assert.equal(turbo(NaN), 'rgba(0,0,0,0)');
-  assert.match(turbo(0), /^rgb\(/);
-  assert.match(turbo(1), /^rgb\(/);
+  assert.equal(ramp(NaN), 'rgba(0,0,0,0)');
+  assert.match(ramp(0), /^rgb\(/);
+  assert.match(ramp(1), /^rgb\(/);
+});
+
+/* Die Heatmaps färben mit der festen Farbleiste `heat` der Palette, alle,
+   auch v_krit: eine Farbleiste ist ein Maßstab und folgt dem Schema nicht
+   (die Leisten von vorher, Wunsch vom 23.09.). */
+test('ramp(): die feste Leiste heat, von Dunkelviolett nach Dunkelrot', async () => {
+  const { ramp } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/base.js')));
+  const P = globalThis.__PALETTE__;
+  const rgb = hex => 'rgb(' + P.hexRgb(hex).map(u => Math.round(u * 255)).join(',') + ')';
+  const heat = P.leisten.heat;
+  assert.equal(ramp(0), 'rgb(48,18,59)');
+  assert.equal(ramp(1), 'rgb(122,4,3)');
+  heat.forEach(([t, hex]) => assert.equal(ramp(t), rgb(hex), 'Stützstelle bei ' + t.toFixed(3)));
+  for (const id of ['fill', 'filltime', 'window', 'slowshot']) {
+    const q = charts.find(c => c.id === id).calc(values, { shot });
+    assert.equal(q.ramp, undefined, id + ': keine eigene Skala je Diagramm');
+  }
 });
 
 /* Zusammenfallende Grenzenpaare: gateMin = gateMax, dmin = dmax,

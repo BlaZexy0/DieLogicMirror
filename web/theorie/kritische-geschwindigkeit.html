@@ -11,11 +11,12 @@
   <link rel="stylesheet" href="/shared/shared.css">
   <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
   <script defer src="/shared/vendor/katex/katex.min.js"></script>
-  <script defer src="/shared/vendor/katex/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore'})"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,errorColor:'var(--bad-text)',strict:'ignore'})"></script>
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
   <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
   <style>
     .fig-wrap {
       background: var(--surface2);
@@ -23,14 +24,16 @@
       border-radius: var(--radius);
       margin: 1.25rem 0;
     }
-    .fig-wrap img { display: block; width: 100%; border-radius: 6px 6px 0 0; }
+    /* Die Bilder setzt shared/svgfarben.js als <svg class="svg-bild"> ein
+       (dann folgen sie dem Farbschema); ohne Script bleibt das <img>. */
+    .fig-wrap img, .fig-wrap .svg-bild { display: block; width: 100%; border-radius: 6px 6px 0 0; }
     .fig-row {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 0.5rem;
       padding: 0.75rem 0.75rem 0.25rem;
     }
-    .fig-row img { width: 100%; border-radius: 0; }
+    .fig-row img, .fig-row .svg-bild { width: 100%; border-radius: 0; }
     @media (max-width: 640px) { .fig-row { grid-template-columns: 1fr; } }
     .fig-cap {
       font-size: 0.8rem;
@@ -280,14 +283,15 @@
       <div class="eq">$$f(\varphi) = (1 - \varphi)^{5/6} \cdot ( 2{,}3173 - 2{,}4762 \cdot \varphi ^{1/3} + 1{,}3404 \cdot \varphi ^{2/3} - 0{,}3552 \cdot \varphi)$$</div>
       <div class="fig-wrap">
         <img src="/assets/theorie/vkrit-fits.svg" alt="Alle Fits in einem Bild: exakte Lösung, Nogowizin-Polynom, Segment-Fit und OpenFOAM-CFD" loading="lazy">
-        <div class="fig-cap"><b>Alle Fits in einem Bild:</b> exakte Lösung des Deckenkriteriums
-          (dunkel), das Nogowizin-Polynom (karmin) und der Segment-Fit (türkis, deckungsgleich
-          auf der exakten Kurve), alles als v<sub>krit</sub>/√(g·D) über dem Füllgrad. Im
-          markierten Füllgrad-Zielband (40–60&nbsp;%) liegen alle drei fast aufeinander; an den
-          Rändern trennt sich das Polynom. Gold dazu die OpenFOAM-CFD aus dem Realitäts-Check
-          unten (Mittel über alle Bohrungen, Band = Spanne): links von φ ≈ 0,25 ist die
-          Flachwassertheorie konservativ, rechts davon zunehmend optimistisch; ab φ ≈ 0,8
-          fächert die Spanne auf: der Klein-Ø-Abschlag.</div>
+        <div class="fig-cap"><b>Alle Fits in einem Bild:</b> die exakte Lösung des
+          Deckenkriteriums (breite, helle Linie), das Nogowizin-Polynom (punktiert) und der
+          Segment-Fit (gestrichelt, deckungsgleich auf der exakten Kurve), alles als
+          v<sub>krit</sub>/√(g·D) über dem Füllgrad. Im markierten Füllgrad-Zielband
+          (40–60&nbsp;%) liegen alle drei fast aufeinander; an den Rändern trennt sich das
+          Polynom. Dazu die OpenFOAM-CFD aus dem Realitäts-Check unten, mit der das Dashboard
+          rechnet (Mittel über alle Bohrungen, das Band darum ist die Spanne):
+          links von φ ≈ 0,25 ist die Flachwassertheorie konservativ, rechts davon zunehmend
+          optimistisch; ab φ ≈ 0,8 fächert die Spanne auf: der Klein-Ø-Abschlag.</div>
       </div>
       <div class="table-scroll">
       <table class="th-table">
@@ -326,7 +330,7 @@
         <p><b>Die Skalierung stimmt, die Grenze nicht.</b> Der Ansatz v<sub>krit</sub> = √(g·D)·f
           kollabiert die CFD-Daten bis φ ≈ 0,75 auf eine einzige Kurve (Streuung ≤ 3 %); die
           Schwerewellen-Skalierung der Theorie ist also richtig. Aber die Kurve selbst liegt
-          anders (gold in der Abbildung oben): Bei kleinen Füllgraden erlaubt die
+          anders (die CFD-Kurve in der Abbildung oben): Bei kleinen Füllgraden erlaubt die
           3D-Rechnung <em>mehr</em> als das
           Deckenkriterium (+17 % bei φ = 0,1: viel Luftraum, die Welle darf die Decke berühren,
           bevor sie Luft einschlägt). Ab φ ≈ 0,3 kippt es: Die reale Welle <b>bricht, bevor sie

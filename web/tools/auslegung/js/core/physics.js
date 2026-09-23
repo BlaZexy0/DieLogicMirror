@@ -266,7 +266,7 @@ export function computeShot(v, curvePoints) {
   check('endlage', prof.travel <= L - biscLen + 2e-3, 'Kurvenende ' + fmt(prof.travel * 1000) + ' mm bleibt vor der Endlage (Kammer ' + fmt(v.length) + ' mm − Pressrest fest ' + fmt(biscLen * 1000) + ' mm).');
   check('biscuit', biscLen * 1000 >= v.biscuitMin, 'Pressrest fest ' + fmt(biscLen * 1000) + ' mm ' + (biscLen * 1000 >= v.biscuitMin ? '≥' : '<') + ' Minimum ' + fmt(v.biscuitMin) + ' mm (Hub Nachverdichtung + Schwindung ' + fmt(intens * 1000) + ' mm).');
   /* Eigene Prüfung: die Pressrest-Zeile oben prüft nur die feste Länge und
-     blieb deshalb grün, während der Hub negativ war — ein Schuss, bei dem
+     blieb deshalb erfüllt, während der Hub negativ war — ein Schuss, bei dem
      Kavität und Pressrest fest mehr Platz brauchen, als die Dosierung
      flüssig hergibt. */
   check('intens', intens >= -1e-9, 'Nachverdichtung + Schwindung ' + fmt(intens * 1000) + ' mm '

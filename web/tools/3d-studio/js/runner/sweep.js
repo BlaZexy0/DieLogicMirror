@@ -786,7 +786,6 @@ function planJunctions(net) {
       need[i] = Math.max(need[i], d);
       need[i + 1] = Math.max(need[i + 1], d);
     }
-    const inl = at(inlet);
     const bIn = lastBelow(inlet.sections, inlet.length - Math.min(0.75 * w0, 0.45 * inlet.length));
     const parts = sorted.map((k, i) => {
       const a = firstAbove(k.e.sections, Math.min(need[i], 0.45 * k.e.length));
@@ -799,11 +798,29 @@ function planJunctions(net) {
       const Pa = addScaled(ra.p, ra.u, -ra.sec.halfTop), Pb = addScaled(rb.p, rb.u, rb.sec.halfTop);
       if (dot(sub(Pa, Pb), R.u) <= 0.02 * w0) clear = false;
     }
-    const jn = { node: inlet.to, inlet, ring: inlet.sections[bIn], kids: parts, rho, degenerate: !clear };
-    junctions.push(jn);
-    if (!clear) continue;
-    inl.b = Math.min(inl.b, bIn);
-    for (const k of parts) at(k.edge).a = Math.max(at(k.edge).a, k.a);
+    junctions.push({ node: inlet.to, inlet, bIn, ring: inlet.sections[bIn], kids: parts, rho, degenerate: !clear });
+  }
+  /* EINE KURZE KANTE ZWISCHEN ZWEI GABELUNGEN. Die obere Gabelung nimmt
+     sich bis zu 45 % der Kante für ihr Hosenstück, die untere ebenso vom
+     anderen Ende her. Liegt zwischen beiden Marken kein Schnitt (der
+     Abtastschritt ist größer als die Lücke, bei 16 bis 30 mm langen
+     Kanten ab 2 mm), begann das Stück der oberen HINTER dem Ring, an dem
+     das der unteren schon anfing: der Schlauch dazwischen hatte keine
+     Länge und fiel weg, und zwischen den beiden Ringen stand ein Loch
+     (104 offene Kanten, keine Prüfregel sagte etwas). Dann teilen sich
+     beide Stücke EINEN Ring — den der oberen: ihr Zwickel ist an ihm
+     geprüft; das Hosenstück der unteren wird dafür um einen Schritt kürzer. */
+  const upper = new Map();
+  for (const jn of junctions) if (!jn.degenerate) for (const k of jn.kids) upper.set(k.edge, k);
+  for (const jn of junctions) {
+    const up = upper.get(jn.inlet);
+    if (!jn.degenerate && up && up.a > jn.bIn) { jn.bIn = up.a; jn.ring = up.ring; }
+  }
+  for (const jn of junctions) {
+    if (jn.degenerate) continue;
+    const inl = at(jn.inlet);
+    inl.b = Math.min(inl.b, jn.bIn);
+    for (const k of jn.kids) at(k.edge).a = Math.max(at(k.edge).a, k.a);
   }
   return { cut, junctions };
 }

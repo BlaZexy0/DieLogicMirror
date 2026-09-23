@@ -40,13 +40,15 @@ body.werkbank { font-family: var(--sans); font-size: 14px; }
   font-family: var(--mono); font-size: .58rem; font-weight: 600; color: var(--ondark2);
 }
 .wb-step.active .wb-num { color: var(--primary-light); }
-/* Der Punkt sagt, ob der Schritt schon etwas hat: Ergebnis (grün), rechnet (gold). */
+/* Der Punkt sagt, ob der Schritt schon etwas hat: ein Ergebnis (die helle
+   Marke) oder eine laufende Rechnung (der zweite Akzent). Beides ist
+   Bedienung, kein Urteil. */
 .wb-step .wb-dot {
   position: absolute; top: 7px; right: 8px; width: 7px; height: 7px; border-radius: 50%;
   background: transparent; transition: background .2s;
 }
 .wb-step.done .wb-dot { background: var(--primary-light); }
-.wb-step.busy .wb-dot { background: var(--gold); }
+.wb-step.busy .wb-dot { background: var(--accent); }
 .wb-rail-foot {
   margin-top: auto; display: flex; flex-direction: column; gap: 4px;
   padding: 8px 6px 8px; border-top: 1px solid var(--dark3);

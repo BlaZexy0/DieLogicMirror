@@ -29,8 +29,9 @@
      Nur so lassen sich zwei aufeinanderfolgende Schnitte ohne Verdrehen
      zu Vierecken verbinden (js/runner/sweep.js).
    - `sdf2d()` ist derselbe Umriss als vorzeichenbehafteter Abstand. Ihn
-     braucht die Verschmelzung (js/runner/sdf.js), die aus allen Kanälen
-     EINEN dichten Körper mit weichen Übergängen macht.
+     brauchte die Verschmelzung aller Kanäle zu einem gerasterten Körper;
+     seit der Sweep die Gabelungen als Hosenstücke baut, rechnet damit
+     nichts mehr — er bleibt als zweite, unabhängige Beschreibung der Form.
 
    Beide beschreiben dieselbe Form; `tests/web/3d-studio/runner.test.mjs`
    prüft sie gegeneinander. */
@@ -230,12 +231,12 @@ export function widthForArea(target, h, draftDeg, radius) {
 /* ── Dieselbe Form als Abstandsfunktion ──────────────────────────
    Der „Kern" ist der um r nach innen versetzte Keil aus Flanke und
    Boden. Er ist nach oben OFFEN — die Trennebene schneidet ihn erst
-   danach ab. Diese Trennung ist kein Selbstzweck: beim Verschmelzen
-   mehrerer Kanäle (js/runner/sdf.js) wird nur der Kern weich vereinigt,
-   und der Schnitt an der Trennebene kommt zuletzt und scharf. Täte man
-   es andersherum, zöge der Übergangsradius den Körper über die
-   Trennebene hinaus — gemessen 1,2 mm bei 3 mm Übergang, und ein Anguss,
-   der über die Trennebene ragt, passt in keine Formhälfte.
+   danach ab. Diese Trennung war kein Selbstzweck: beim Verschmelzen
+   mehrerer Kanäle wurde nur der Kern weich vereinigt, und der Schnitt an
+   der Trennebene kam zuletzt und scharf. Andersherum zöge ein
+   Übergangsradius den Körper über die Trennebene hinaus — gemessen 1,2 mm
+   bei 3 mm Übergang, und ein Anguss, der über die Trennebene ragt, passt
+   in keine Formhälfte.
 
    Innen ist der Wert exakt. Außen ist er in der Nähe der oberen Kante
    um weniger als eine Rasterzelle zu klein (Maximum zweier konvexer

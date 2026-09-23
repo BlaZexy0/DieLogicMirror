@@ -3,7 +3,6 @@
 import { series, line, target } from './helpers.js';
 import { seq, fmt, subHTML } from '../core/format.js';
 import { pistonArea } from '../core/physics.js';
-import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
 export default {
@@ -14,15 +13,14 @@ export default {
   usesCurve: true,
 
   calc(v, o) {
-    const C = theme.chart;
     const A = pistonArea(v);
     const x = seq(0, v.vmax, 140);
-    /* Kurvenfarben = Fensterfarben von v_a min/max (wie im PQ²/Prozessfenster) */
-    const cMin = (theme.limits && theme.limits.gateMin) || C.series1;
-    const cMax = (theme.limits && theme.limits.gateMax) || C.series2;
+    /* Die nötige Anschnittfläche gehört zum Werkzeug: beide Kurven in
+       dessen Farbe, wie die v_a-Grenzen im PQ²; die Fläche für v_a,min
+       durchgezogen, die für v_a,max gestrichelt. */
     const q = line(x, [
-      series('A bei ' + fmt(v.gateMin) + ' m/s', cMin, x, s => s * A / v.gateMin),
-      series('A bei ' + fmt(v.gateMax) + ' m/s', cMax, x, s => s * A / v.gateMax)
+      series('A bei ' + fmt(v.gateMin) + ' m/s', 'die', x, s => s * A / v.gateMin),
+      series('A bei ' + fmt(v.gateMax) + ' m/s', 'die', x, s => s * A / v.gateMax, { dash: [7, 4] })
     ], 'Kolbengeschwindigkeit in m/s', 'Anschnittfläche in mm²',
       'Ø ' + fmt(v.diam) + ' mm · Auswahl ' + fmt(v.gate) + ' mm²');
     /* Zulässiges Fenster zwischen den beiden Kurven als Zielband */

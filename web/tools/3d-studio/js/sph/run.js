@@ -9,8 +9,8 @@
    Bild — sie ist die Füllkammer, nicht der Anguss. */
 
 import { NEVER, KIND } from './wcsph.js';
-
-const tick = () => new Promise(r => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(() => r()) : setTimeout(r, 0)));
+/* Luft holen wie die Gitterrechnung — auch in einem Reiter im Hintergrund. */
+import { tick } from '../lbm/run.js';
 
 /** Ein Bild aus Orten und Geschwindigkeiten (Float32Array 4·n): nur
     die Schmelze, Orte in mm, Geschwindigkeit als Byte. */
@@ -40,20 +40,18 @@ export function snapshotOf(pos, vel, n, step) {
  *   stepsMax, snapEvery
  *   ctrlAt(step) → { uIn, piston }
  *   gates        Zahl der Melder (sonst die des Kerns)
- *   settleSteps  Schritte zum Zur-Ruhe-Kommen vor dem Start (wahlweise)
  *   onSnapshot(snap, gateDone, step) → Grund zum Aufhören oder nichts
- *   onWork(step), isCancelled()
+ *   onWork(step), signal (AbortSignal)
  * → { snapshots, gateDone, steps, reason }
+ *
+ * Zur Ruhe kommt die Kammer VOR dem Lauf (engines/sph.js): dort lässt es
+ * sich unterbrechen, und die Uhr des Tempos läuft erst danach.
  */
 export async function runSph(opts) {
-  const { solver, engine, dt, stepsMax, snapEvery, ctrlAt, onSnapshot, onWork, signal, settleSteps = 0 } = opts;
-  const isCancelled = () => (opts.isCancelled && opts.isCancelled()) || (signal && signal.aborted);
+  const { solver, engine, dt, stepsMax, snapEvery, ctrlAt, onSnapshot, onWork, signal } = opts;
+  const isCancelled = () => !!(signal && signal.aborted);
   const n = solver.n;
   const gateDone = new Array(opts.gates || solver.gates || (solver.gateArrival ? solver.gateArrival.length : 1)).fill(NEVER);
-  if (settleSteps > 0) {
-    if (engine === 'gpu') await solver.settle(settleSteps, dt);
-    else solver.settle(settleSteps, dt);
-  }
   const snapshots = [];
   const first = engine === 'gpu'
     ? snapshotOf(await solver.readPositions(), await solver.readVelocities(), n, 0)
@@ -61,7 +59,7 @@ export async function runSph(opts) {
   first.uMax = 0; first.speed.fill(0);
   snapshots.push(first);
   let step = 0, stopAt = Infinity, reason = '';
-  while (step < stepsMax && step < stopAt && !(isCancelled && isCancelled())) {
+  while (step < stepsMax && step < stopAt && !isCancelled()) {
     const m = Math.min(snapEvery, stepsMax - step, stopAt - step);
     let snap;
     if (engine === 'gpu') {
@@ -96,7 +94,7 @@ export async function runSph(opts) {
     }
     await tick();
   }
-  if (isCancelled && isCancelled()) reason = 'abgebrochen';
+  if (isCancelled()) reason = 'abgebrochen';
   else if (!reason) reason = 'Schrittgrenze erreicht';
   return { snapshots, gateDone, steps: step, reason };
 }

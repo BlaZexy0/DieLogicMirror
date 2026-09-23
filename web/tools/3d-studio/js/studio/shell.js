@@ -25,13 +25,13 @@
    genau eines. */
 
 import { colorbar as setColorbar } from '../ui/controls.js';
+import { onScheme } from '../part/colors.js';
 import { mountViewBar } from '../ui/viewbar.js';
 import { createAimUI } from '../ui/common.js';
 import { createViewport } from './viewport.js';
 import { mountHelp } from './help.js';
 import { fmtTime } from './format.js';
-
-const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+import { esc } from './rows.js';
 
 const SKELETON = (title) => `
 <header class="st-bar" data-ui="bar">
@@ -71,7 +71,7 @@ const SKELETON = (title) => `
 </header>
 <div class="st-layout" data-ui="layout">
   <aside class="st-panel" data-ui="panel" aria-label="Einstellungen">
-    <div class="st-banner" data-ui="banner" hidden></div>
+    <div class="st-banner" data-ui="banner" role="status" hidden></div>
     <div class="st-tabs seg tabs" role="tablist" data-ui="tabs"></div>
     <div class="st-hint" data-ui="hint"></div>
     <div class="st-body" data-ui="body"></div>
@@ -116,7 +116,10 @@ const SKELETON = (title) => `
   </aside>
 </div>`;
 
+let shells = 0;
+
 export function createShell({ mount, title, help = '', sceneOpts = {} }) {
+  const shellNo = ++shells;
   mount.innerHTML = SKELETON(title);
   mount.classList.add('st-root');
   const ui = name => mount.querySelector('[data-ui="' + name + '"]');
@@ -153,14 +156,30 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
 
   function setModes(list) {
     modes = list;
-    tabs.innerHTML = list.map(m => '<button type="button" role="tab" data-mode="' + m.id + '" aria-selected="false" title="' + esc(m.hint || '') + '">'
+    /* ids nur für aria-controls/-labelledby, mit einer Nummer je Rahmen:
+       auf einer Seite könnten mehrere Werkzeuge dieselben Modusnamen haben. */
+    const tid = m => 'st' + shellNo + '-tab-' + m.id, pid = m => 'st' + shellNo + '-mode-' + m.id;
+    tabs.innerHTML = list.map(m => '<button type="button" role="tab" id="' + tid(m) + '" aria-controls="' + pid(m) + '" data-mode="' + m.id + '" aria-selected="false" tabindex="-1" title="' + esc(m.hint || '') + '">'
       + '<span class="st-tab-label">' + m.label + '</span><span class="st-tab-badge" data-badge="' + m.id + '" hidden></span></button>').join('');
-    body.innerHTML = list.map(m => '<section class="st-mode" data-mode="' + m.id + '" role="tabpanel" hidden>' + (m.html || '') + '</section>').join('');
+    body.innerHTML = list.map(m => '<section class="st-mode" id="' + pid(m) + '" aria-labelledby="' + tid(m) + '" data-mode="' + m.id + '" role="tabpanel" hidden>' + (m.html || '') + '</section>').join('');
     current = null;
   }
   tabs.addEventListener('click', ev => {
     const b = ev.target.closest('[data-mode]');
     if (b) setMode(b.getAttribute('data-mode'));
+  });
+  /* Reiter mit den Pfeiltasten wie jede Reiterleiste: links/rechts wechselt
+     (und wählt gleich, die Modi sind billig), Pos1/Ende springen. */
+  tabs.addEventListener('keydown', ev => {
+    const list = [...tabs.querySelectorAll('[data-mode]')];
+    const i = list.indexOf(ev.target.closest && ev.target.closest('[data-mode]'));
+    if (i < 0) return;
+    const j = ev.key === 'ArrowRight' ? (i + 1) % list.length : ev.key === 'ArrowLeft' ? (i - 1 + list.length) % list.length
+      : ev.key === 'Home' ? 0 : ev.key === 'End' ? list.length - 1 : -1;
+    if (j < 0) return;
+    ev.preventDefault();
+    setMode(list[j].getAttribute('data-mode'));
+    list[j].focus();
   });
   function setMode(id) {
     const m = modes.find(x => x.id === id);
@@ -171,6 +190,7 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
       const on = b.getAttribute('data-mode') === id;
       b.classList.toggle('active', on);
       b.setAttribute('aria-selected', on ? 'true' : 'false');
+      b.setAttribute('tabindex', on ? '0' : '-1');
     }
     for (const s of body.querySelectorAll('.st-mode')) s.hidden = s.getAttribute('data-mode') !== id;
     hint.textContent = m.hint || '';
@@ -194,7 +214,16 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   const syncActions = () => { actions.hidden = primary.hidden && note.hidden && progress.hidden && actionsExtra.hidden; };
   let lastPrimary = null, busy = false, busyClick = null;
   let primaryHandler = null;
-  primary.addEventListener('click', () => { if (busy) { if (busyClick) busyClick(); } else if (primaryHandler) primaryHandler(); });
+  /* Ein Doppelklick auf „Simulieren" war Start UND Abbruch: der erste Klick
+     macht den Knopf synchron zu „Abbrechen", der zweite traf ihn schon. Der
+     zweite Klick eines Doppelklicks (detail > 1, auch beim doppelten Tippen)
+     bricht deshalb nichts ab — wer abbrechen will, klickt eigens. */
+  primary.addEventListener('click', ev => {
+    if (busy) {
+      if (ev && ev.detail > 1) return;
+      if (busyClick) busyClick();
+    } else if (primaryHandler) primaryHandler();
+  });
   function renderPrimary() {
     const spec = lastPrimary;
     if (busy) {
@@ -278,13 +307,24 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   /* ── Aktions-Chips ───────────────────────────────────────── */
   const chipsEl = ui('chips');
   let chips = [];
+  /* Das Farbfeld eines Chips ist die Farbe der Art, die er setzt: eine
+     Farbe oder eine Funktion, die sie beim Zeichnen nennt — dann folgt es
+     einem Wechsel des Farbschemas (unten). */
+  const iconOf = c => (typeof c.icon === 'function' ? c.icon() : c.icon);
   function setChips(list) {
     chips = list || [];
     chipsEl.hidden = !chips.length;
     chipsEl.innerHTML = chips.map(c => '<button type="button" class="st-chipbtn" data-chip="' + c.id + '">'
-      + (c.icon ? '<span class="st-chip-icon" style="background:' + c.icon + '"></span>' : '') + '<span>' + c.label + '</span></button>').join('');
+      + (c.icon ? '<span class="st-chip-icon" style="background:' + iconOf(c) + '"></span>' : '') + '<span>' + c.label + '</span></button>').join('');
     renderChips();
   }
+  onScheme(() => {
+    for (const c of chips) {
+      const b = c.icon && chipsEl.querySelector('[data-chip="' + c.id + '"]');
+      const dot = b && b.querySelector('.st-chip-icon');
+      if (dot) dot.style.background = iconOf(c);
+    }
+  });
   function renderChips() {
     for (const c of chips) {
       const b = chipsEl.querySelector('[data-chip="' + c.id + '"]');
@@ -333,6 +373,18 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     box.addEventListener('click', ev => {
       const b = ev.target.closest && ev.target.closest('[data-help]');
       if (!b) return;
+      /* preventDefault ist hier nötig: das ⓘ sitzt im <label> seiner Zeile,
+         und ohne Abbruch setzte das Label danach noch den Fokus ins Feld
+         (oder schaltete ein Häkchen um). */
+      ev.preventDefault(); ev.stopPropagation();
+      helpApi.show(b.getAttribute('data-help'));
+    });
+    /* Das ⓘ ist ein <span role="button"> (rows.js) — Eingabe und Leertaste
+       lösen es aus wie einen Knopf. */
+    box.addEventListener('keydown', ev => {
+      if (ev.key !== 'Enter' && ev.key !== ' ') return;
+      const b = ev.target.closest && ev.target.closest('[data-help]');
+      if (!b || b !== ev.target) return;
       ev.preventDefault(); ev.stopPropagation();
       helpApi.show(b.getAttribute('data-help'));
     });
@@ -422,6 +474,16 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   const bannerEl = ui('banner');
   function banner(spec) {
     if (!spec) { bannerEl.hidden = true; bannerEl.innerHTML = ''; return; }
+    /* Der Streifen steht in der Seitenleiste: ist sie weggenommen (☰), holt
+       er sie zurück — sonst fragte die Abstandsanalyse beim Ablegen einer
+       Datei („als A oder als B?") ins Leere. */
+    const lay = ui('layout');
+    if (lay && lay.classList.contains('panel-closed')) {
+      lay.classList.remove('panel-closed');
+      const t = ui('panel-toggle');
+      if (t) t.setAttribute('aria-expanded', 'true');
+      view.invalidate();
+    }
     bannerEl.innerHTML = '<div class="st-banner-text">' + esc(spec.text) + '</div><div class="st-banner-actions">'
       + (spec.actions || []).map((a, i) => '<button type="button" class="btn btn-sm ' + (a.primary ? 'btn-primary' : 'btn-outline') + '" data-banner="' + i + '">' + esc(a.label) + '</button>').join('') + '</div>';
     bannerEl.hidden = false;
@@ -435,8 +497,17 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
      daneben schließt sie. */
   const closers = [];
   const closeAll = except => { for (const c of closers) if (c !== except) c(false); };
+  /* Eine Klappe hängt links an ihrem Chip — auf dem Telefon reichte sie damit
+     bis zu 140 px über den rechten Rand. Beim Öffnen gemessen und, wenn
+     nötig, nach links gerückt. */
+  const keepInside = pop => {
+    pop.style.left = '';
+    const r = pop.getBoundingClientRect(), over = r.right - (innerWidth - 8);
+    if (r.width > 0 && over > 0) pop.style.left = -Math.min(over, Math.max(0, r.left - 8)) + 'px';
+  };
   function popover(chip, pop) {
-    const open = on => { pop.hidden = !on; chip.setAttribute('aria-expanded', on ? 'true' : 'false'); chip.classList.toggle('active', on); };
+    const open = on => { pop.hidden = !on; chip.setAttribute('aria-expanded', on ? 'true' : 'false'); chip.classList.toggle('active', on); if (on) keepInside(pop); };
+    open.isOpen = () => !pop.hidden;
     closers.push(open);
     chip.addEventListener('click', ev => { ev.stopPropagation(); const on = pop.hidden; closeAll(open); open(on); });
     pop.addEventListener('click', ev => ev.stopPropagation());
@@ -446,6 +517,7 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   const partOpen = popover(partChip, ui('part-pop'));
   const exportBtn = ui('export'), exportList = ui('export-list');
   const exportOpen = on => { exportList.hidden = !on; exportBtn.setAttribute('aria-expanded', on ? 'true' : 'false'); };
+  exportOpen.isOpen = () => !exportList.hidden;
   closers.push(exportOpen);
   exportBtn.addEventListener('click', ev => { ev.stopPropagation(); const on = exportList.hidden; closeAll(exportOpen); exportOpen(on); });
   document.addEventListener('click', () => closeAll(null));
@@ -554,12 +626,22 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
 
   /* ── Tastatur: ein Zuhörer, das Werkzeug bekommt die Taste ─ */
   const keyListeners = [];
+  /* Wer TIPPT, dem gehören die Tasten: Textfelder (dort machen Strg+Z und
+     Entf, was sie im Text tun) und Auswahllisten (Buchstaben springen dort
+     zu Einträgen). Ein Regler, ein Häkchen oder ein Knopf mit Fokus ist kein
+     Tippen: nach einem Zug am Regler gingen Strg+Z und Entf sonst ins
+     Leere, bis man irgendwo anders hinklickte. */
+  const TEXT_TYPES = new Set(['text', 'search', 'number', 'email', 'password', 'tel', 'url', '']);
   document.addEventListener('keydown', ev => {
     const t = ev.target;
     const tag = t && t.tagName ? t.tagName : '';
-    const inInput = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || (t && t.isContentEditable);
+    const inText = (tag === 'INPUT' && TEXT_TYPES.has(String(t.type || '').toLowerCase())) || tag === 'TEXTAREA' || !!(t && t.isContentEditable);
+    const inSelect = tag === 'SELECT';
+    const inInput = inText || inSelect;
     if (ev.key === 'Escape' && helpApi.open) { helpApi.hide(); return; }
-    for (const fn of keyListeners) { if (fn(ev, { inInput }) === true) { ev.preventDefault(); return; } }
+    /* Eine offene Klappe der Kopfzeile schließt Esc zuerst. */
+    if (ev.key === 'Escape' && closers.some(c => c.isOpen && c.isOpen())) { closeAll(null); return; }
+    for (const fn of keyListeners) { if (fn(ev, { inInput, inText, inSelect }) === true) { ev.preventDefault(); return; } }
   });
 
   return {

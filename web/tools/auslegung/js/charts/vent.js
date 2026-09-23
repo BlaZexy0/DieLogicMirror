@@ -3,7 +3,6 @@
 import { series, line, limit } from './helpers.js';
 import { seq, fmt, subHTML } from '../core/format.js';
 import { pistonArea } from '../core/physics.js';
-import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
 export default {
@@ -16,7 +15,7 @@ export default {
   calc(v, o) {
     const A = pistonArea(v);
     const x = seq(0, v.vmax, 140);
-    const q = line(x, [series('Entlüftung', theme.chart.series1, x, s => s * A / v.vent)],
+    const q = line(x, [series('Entlüftung', 'ink', x, s => s * A / v.vent)],
       'Kolbengeschwindigkeit in m/s', 'Entlüftungsgeschwindigkeit in m/s',
       'Ø ' + fmt(v.diam) + ' mm · Entlüftung ' + fmt(v.vent) + ' mm²');
     if (v.vAirMax > 0)

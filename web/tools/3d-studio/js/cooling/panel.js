@@ -3,7 +3,7 @@
    der Seitenleiste und in den title-Attributen standen, liegen in help.js. */
 
 import { numberRow, sliderRow, segRow, checkRow, kpiBlock, factsBlock, detailsBlock, heading, hintLine, warnLine } from '../studio/rows.js';
-import { DIRECTIONS } from './model.js';
+import { DIRECTIONS, DIST_RANGE } from './model.js';
 
 export const MODES = [
   {
@@ -13,7 +13,7 @@ export const MODES = [
        darunter sagt, welche Fläche. */
     id: 'flaeche', label: 'Fläche',
     hint: 'Die Abstandsfläche: überall derselbe Abstand zur Kavität; auf ihr sitzen die Spitzen der Kühlstiche und die Achsen der Kanäle.',
-    html: sliderRow({ ui: 'dist', label: 'Achsabstand zur Kavität', min: 5, max: 60, step: 1, value: 20, help: 'achsabstand' })
+    html: sliderRow({ ui: 'dist', label: 'Achsabstand zur Kavität', min: DIST_RANGE[0], max: DIST_RANGE[1], step: 1, value: 20, help: 'achsabstand' })
       + numberRow({ ui: 'cell', label: 'Zellkante', unit: 'mm', value: '6', help: 'zellkante' })
       + numberRow({ ui: 'min-wall', label: 'Mindest-Wandabstand', unit: 'mm', value: '10', help: 'mindestabstand' })
       + checkRow({ ui: 'min-wall-auto', label: 'Auto: Achsabstand − Ø/2', checked: true })

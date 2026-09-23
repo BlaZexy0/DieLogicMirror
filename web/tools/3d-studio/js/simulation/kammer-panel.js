@@ -7,8 +7,8 @@ import { numberRow, selectRow, segRow, sliderRow, kpiBlock, warnLine } from '../
 import { simulationRows, resultRows } from './panel-common.js';
 import { ENGINES, engineIds } from './core.js';
 
-/* Die Verfahren dieses Werkzeugs, in der Reihenfolge von core.js: Gitter,
-   Partikel, Metamodell. */
+/* Die Verfahren dieses Werkzeugs, in der Reihenfolge von core.js (ALL_IDS):
+   Metamodell, Gitter, Partikel — das erste ist die Vorgabe. */
 const ENGINE_OPTIONS = engineIds('kammer').map(id => [id, ENGINES[id].label]);
 
 export const MODES = [
@@ -24,7 +24,7 @@ export const MODES = [
   {
     /* „Kurve", nicht „Schusskurve": vier Reiter sollen in EINE Zeile passen — auch in Firefox' breiterer Schrift. */
     id: 'kurve', label: 'Kurve',
-    hint: 'Die Schusskurve: die DieLogic-Kurve des Projekts mit Kammer und Füllgrad von hier, zweistufig v₁ / v₂, oder eigene Wegpunkte wie im Dashboard.',
+    hint: 'Die Schusskurve: aus dem Projekt, zweistufig v₁ / v₂ oder eigene Wegpunkte.',
     html: segRow({ ui: 'curve-seg', label: 'Kurve', value: 'dielogic', options: [['dielogic', 'DieLogic'], ['v1v2', 'v₁ / v₂'], ['punkte', 'Punkte']], help: 'kurve' })
       /* Wegpunkte wie im Dashboard: Weg s [mm] und Kolbengeschwindigkeit v [m/s],
          dazwischen konstant beschleunigt; (0 mm, 0 m/s) kommt von selbst dazu. */

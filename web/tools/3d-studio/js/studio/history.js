@@ -57,7 +57,17 @@ export function createHistory({ serialize, restore, limit = 100 } = {}) {
       clearTimeout(coalesceTimer);
       coalesceTimer = setTimeout(() => { coalesceKey = null; }, ms);
     },
+    /** Zum zuletzt eingetragenen Stand zurück, ohne Eintrag: was seitdem
+        geschah, war nie ein Schritt (ein Zug am Griff, den Esc abbricht). */
+    revert() {
+      if (present === null || snap() === present) { open = null; return false; }
+      open = null;
+      restore(JSON.parse(present));
+      emit();
+      return true;
+    },
     undo() {
+      coalesceKey = null; clearTimeout(coalesceTimer);
       if (!past.length) return false;
       const entry = past.pop();
       future.push({ state: present, label: entry.label });
@@ -67,6 +77,7 @@ export function createHistory({ serialize, restore, limit = 100 } = {}) {
       return true;
     },
     redo() {
+      coalesceKey = null; clearTimeout(coalesceTimer);
       if (!future.length) return false;
       const entry = future.pop();
       past.push({ state: present, label: entry.label });

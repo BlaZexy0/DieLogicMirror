@@ -17,7 +17,8 @@
    Normale. Was daraus an Geometrie wird, rechnet js/vents/geom.js;
    dieses Modul kennt kein Three.js und läuft in den Tests unter Node. */
 
-import { add, cross, norm, dot, rotate, rad } from '../runner/vec.js';
+import { add, addScaled, cross, norm, dot, rotate, rad, clamp } from '../runner/vec.js';
+import { ELEMENT } from '../part/colors.js';
 
 export const FORMAT = 'dielogic-luft';
 export const FORMAT_VERSION = 3;
@@ -31,7 +32,9 @@ export const FORMAT_VERSION = 3;
 export const VENT_DEFAULT = [[50, 0]];
 export const VENT_STEP = 50;
 
-/** Die Arten — Farbe für Griff, Pfeil und Körper; Vorgaben in mm.
+/** Die Arten — Farbe für Griff, Pfeil und Körper (js/part/colors.js,
+    ELEMENT: Bohne = Hervorhebung, mit Entlüftung = Luft, Waschbrett =
+    Violett der Maschine, Schlitz = die hellere Luft); Vorgaben in mm.
     Die Vorgaben passen zu den Beispielteilen: Aluminium-Gussteile der
     1200-bis-1600-t-Klasse mit 4 mm Wand. Bohnen 28 × 40 × 10 mm an
     einem 20 mm breiten, 1,2 mm dicken Steg; Entlüftungskanäle 25 mm
@@ -40,22 +43,22 @@ export const VENT_STEP = 50;
     80 mm breit. Kleinere Teile bekommen kleinere Maße im Auswahlfeld. */
 export const TYPES = {
   bohne: {
-    label: 'Überlaufbohne', color: '#e07b39',
+    label: 'Überlaufbohne', get color() { return ELEMENT.bohne; },
     hint: 'Tasche am Ende des Fließwegs: sammelt die erste, kalte und oxidhaltige Schmelze.',
     params: { stegW: 20, stegH: 1.2, stegL: 4, wellW: 28, wellL: 40, wellD: 10, draft: 5, wellR: 2.5 }
   },
   entlueftet: {
-    label: 'Überlauf mit Entlüftung', color: '#2e6da4',
+    label: 'Überlauf mit Entlüftung', get color() { return ELEMENT.entlueftet; },
     hint: 'Bohne mit flachem Entlüftungskanal: ab der Kugel am Bohnenende Punkt für Punkt in der Wandebene gezogen.',
     params: { stegW: 20, stegH: 1.2, stegL: 4, wellW: 28, wellL: 40, wellD: 10, draft: 5, wellR: 2.5, ventW: 25, ventH: 0.15 }
   },
   waschbrett: {
-    label: 'Waschbrett (Chill-Vent)', color: '#9a77e8',
+    label: 'Waschbrett (Chill-Vent)', get color() { return ELEMENT.waschbrett; },
     hint: 'Gewellter Kanal: die Schmelze erstarrt in den Wellen, die Luft kommt hindurch.',
     params: { stegW: 60, stegH: 1.0, stegL: 4, poolL: 15, poolH: 3.5, ventW: 80, ventH: 0.6, waves: 9, amp: 4, waveL: 9 }
   },
   schlitz: {
-    label: 'Entlüftungsschlitz', color: '#4c9f70',
+    label: 'Entlüftungsschlitz', get color() { return ELEMENT.schlitz; },
     hint: 'Nur der flache Kanal, ohne Bohne: wo Luft hinaus muss, aber nichts gesammelt wird.',
     params: { ventW: 25, ventH: 0.15, ventL: 50 }
   }
@@ -237,31 +240,96 @@ export function toJSON(plan) {
   };
 }
 
+/* Kennungen aus einer Datei: vorn ein Buchstabe, dann Buchstaben, Ziffern,
+   _ oder -, höchstens 32 Zeichen. Sie stehen im Auswahlfeld und in der
+   Liste — eine Datei mit anderen stammt nicht von hier und wird abgelehnt.
+   Wer keine Kennung hat (oder eine, die schon vergeben ist), bekommt eine
+   neue, die keiner anderen gleicht: sonst überschrieben sich die Elemente. */
+const ID = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
+export function fileIds(list, prefix) {
+  const ids = [], taken = new Set();
+  let seq = 0;
+  list.forEach((raw, i) => {
+    if (!raw || typeof raw !== 'object') throw new Error('Element ' + (i + 1) + ' der Datei ist unlesbar.');
+    const id = raw.id !== undefined && raw.id !== null && raw.id !== '' ? String(raw.id) : null;
+    if (id !== null && !ID.test(id)) {
+      throw new Error('Element ' + (i + 1) + ' der Datei hat keine gültige Kennung: erlaubt sind Buchstaben, Ziffern, _ und -, vorn ein Buchstabe, höchstens 32 Zeichen.');
+    }
+    ids.push(id !== null && !taken.has(id) ? id : null);
+    if (id === null) return;
+    taken.add(id);
+    const num = +id.replace(/\D/g, '');
+    if (Number.isSafeInteger(num)) seq = Math.max(seq, num);
+  });
+  for (let i = 0; i < ids.length; i++) {
+    if (ids[i]) continue;
+    let id;
+    do id = prefix + (++seq); while (taken.has(id));
+    taken.add(id);
+    ids[i] = id;
+  }
+  return { ids, seq };
+}
+
+/** Ein Punkt aus der Datei: drei Zahlen — sonst ist die Datei beschädigt. */
+function filePoint(v, what) {
+  const p = Array.isArray(v) && v.length >= 3 ? v.slice(0, 3).map(Number) : null;
+  if (!p || !p.every(Number.isFinite)) throw new Error(what + ': Die Lage fehlt oder ist keine Zahl.');
+  return p;
+}
+
+/* Fassung 1 kannte eine Trennebene: `axis` (±x, ±y, ±z) war die
+   Ausstoßachse, `dir` die Richtung IN dieser Ebene, vom Bauteil weg, und
+   `rot` drehte um die Achse. Das ist dasselbe Dreibein wie heute, mit der
+   Ausstoßachse als Hochachse — die Achse wird `dir`, und die Drehung ist
+   die, mit der frameOf dieselbe Längsrichtung liefert. Als Wandnormale
+   gelesen, lag jedes Element um 90° gekippt. */
+const AXES_V1 = { '+x': [1, 0, 0], '-x': [-1, 0, 0], '+y': [0, 1, 0], '-y': [0, -1, 0], '+z': [0, 0, 1], '-z': [0, 0, -1] };
+function fromVersion1(axis, dir, rotDeg) {
+  const n = AXES_V1[axis] || AXES_V1['+y'];
+  let d = norm(addScaled(dir, n, -dot(dir, n)));
+  if (!(d[0] || d[1] || d[2])) d = norm(cross(n, Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]));
+  d = norm(rotate(d, n, rad(rotDeg)));
+  const d0 = frameOf({ pos: [0, 0, 0], dir: n, rot: 0 }).d;
+  const rot = Math.atan2(dot(cross(d0, d), n), dot(d0, d)) * 180 / Math.PI;
+  return { dir: n.slice(), rot: Math.round(rot * 1e6) / 1e6 };
+}
+
 export function fromJSON(obj) {
   if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Überlaufdatei (Kennung „' + FORMAT + '" fehlt).');
   if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
   const plan = emptyPlan();
-  for (const raw of Array.isArray(obj.items) ? obj.items : []) {
+  const list = Array.isArray(obj.items) ? obj.items : [];
+  const { ids, seq } = fileIds(list, 'l');
+  list.forEach((raw, i) => {
     const type = TYPES[raw.type] ? raw.type : 'bohne';
     const it = {
-      id: String(raw.id || ('l' + (plan.seq + 1))), type,
-      pos: (raw.pos || [0, 0, 0]).map(Number), dir: unit((raw.dir || [1, 0, 0]).map(Number)),
-      rot: Number(raw.rot) || 0,
+      id: ids[i], type,
+      pos: filePoint(raw.pos, 'Element ' + ids[i]), dir: unit((Array.isArray(raw.dir) ? raw.dir : [1, 0, 0]).map(Number)),
+      rot: clamp(Number(raw.rot) || 0, -180, 180),
       p: { ...TYPES[type].params }
     };
-    for (const k of Object.keys(it.p)) if (raw.p && Number.isFinite(Number(raw.p[k]))) it.p[k] = Number(raw.p[k]);
+    if (obj.version === 1) Object.assign(it, fromVersion1(obj.axis, it.dir, Number(raw.rot) || 0));
+    /* Maße in den Grenzen der Felder: was dort nicht einzugeben wäre, soll
+       auch aus einer Datei nicht kommen. */
+    for (const k of Object.keys(it.p)) {
+      const v = raw.p ? Number(raw.p[k]) : NaN;
+      if (raw.p && raw.p[k] !== null && raw.p[k] !== '' && Number.isFinite(v)) {
+        const m = PARAM_META[k];
+        it.p[k] = m ? clamp(m.step === 1 ? Math.round(v) : v, m.min, m.max) : v;
+      }
+    }
     if (type === 'entlueftet') {
       const pts = Array.isArray(raw.vent)
-        ? raw.vent.map(q => [Number(q[0]), Number(q[1])]).filter(q => Number.isFinite(q[0]) && Number.isFinite(q[1]))
+        ? raw.vent.filter(Array.isArray).map(q => [Number(q[0]), Number(q[1])]).filter(q => Number.isFinite(q[0]) && Number.isFinite(q[1]))
         : [];
-      /* Fassung 2 kannte nur eine Kanallänge längs der Bohne. */
-      const oldL = raw.p && Number.isFinite(Number(raw.p.ventL)) ? Number(raw.p.ventL) : VENT_STEP;
+      /* Fassung 2 (und 1) kannte nur eine Kanallänge längs der Bohne. */
+      const oldL = raw.p && Number.isFinite(Number(raw.p.ventL)) ? clamp(Number(raw.p.ventL), PARAM_META.ventL.min, PARAM_META.ventL.max) : VENT_STEP;
       it.vent = pts.length ? pts : [[oldL, 0]];
     }
     plan.items[it.id] = it;
-    const num = +it.id.replace(/\D/g, '');
-    if (Number.isFinite(num)) plan.seq = Math.max(plan.seq, num);
-  }
+  });
+  plan.seq = seq;
   return plan;
 }
 

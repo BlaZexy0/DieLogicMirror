@@ -226,7 +226,10 @@ export async function buildField(model, opts = {}) {
     }
     check();
   }
-  if (onProgress) { onProgress(0.96, 'Kern'); await tick(); }
+  /* Die Anzeige sagt, was gerechnet wird: die Tiefe im Inneren, jenseits des
+     Bandes (fillInterior). Nicht „Kern" — das Wort gehört in der Form dem
+     Formkern, und die Wandstärkenanalyse zeigt diese Zeile. */
+  if (onProgress) { onProgress(0.96, 'Tiefe innen'); await tick(); }
   check();
   fillInterior(f);
   return f;

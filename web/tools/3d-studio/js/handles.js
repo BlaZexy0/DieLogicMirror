@@ -33,12 +33,18 @@
    kostet die Übersicht, die man gerade gewonnen hat. */
 
 import * as T from 'three';
+import { onScheme, axisColors, VIEW } from './part/colors.js';
 
 const HANDLE_PX = 9;
 
 /** Ring um den gewählten Griff — dunkel, weil Weiß auf dem hellen
-    Viewport unsichtbar ist und die Artfarbe erhalten bleiben soll. */
-export const SELECTED_RING = '#002733';
+    Viewport unsichtbar ist und die Artfarbe erhalten bleiben soll. Er ist
+    die Tinte des Farbschemas (js/part/colors.js, VIEW), die Arbeitsebene
+    und der angefahrene Pfeil sind seine Marke. Alles hier folgt einem
+    Wechsel (dielogic:scheme): auch die Griffe, deren Farben die Werkzeuge
+    bei jedem Abgleich neu nennen. */
+export let SELECTED_RING = VIEW.selected;
+onScheme(() => { SELECTED_RING = VIEW.selected; });
 
 /* Ein Pfeil in Griff-Einheiten (eine Einheit sind HANDLE_PX Bildpunkte,
    wie die Kugeln); er beginnt außerhalb der Kugel, damit beide getrennt
@@ -60,9 +66,12 @@ const ZAXIS = new T.Vector3(0, 0, 1);
  * @param opts.move        (id, pos:[3], alt:boolean) → void — beim Ziehen
  * @param opts.getRefMesh  () → Mesh | null — das Referenzbauteil für den Zielmodus
  * @param opts.onSelect    id | null
- * @param opts.onChange    ('drag' | 'drop', id)
+ * @param opts.onChange    ('drag' | 'drop' | 'cancel', id) — 'cancel': Esc hat den Zug
+ *                         abgebrochen (cancelDrag), das Werkzeug kehrt zum Stand davor zurück
  * @param opts.onHover     id | null
  * @param opts.onAim       id — der Pfeil wurde angeklickt
+ * @param opts.aimPicksHandles  im Zielmodus wählt ein Klick auf einen Griff diesen
+ *                         (und beendet das Zielen), statt die Stelle dahinter zu nehmen
  */
 export function createHandles(opts) {
   const { view, items, plane, move, getRefMesh, onSelect, onChange, onHover, onAim } = opts;
@@ -106,14 +115,14 @@ export function createHandles(opts) {
 
   /* Arbeitsebene der Auswahl. */
   const planeMesh = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({
-    color: 0x3fc2b6, transparent: true, opacity: 0.07, side: T.DoubleSide, depthWrite: false
+    color: VIEW.plane, transparent: true, opacity: 0.07, side: T.DoubleSide, depthWrite: false
   }));
   planeMesh.visible = false;
   planeMesh.userData.size = 0;
   group.add(planeMesh);
   const planeEdge = new T.LineSegments(
     new T.EdgesGeometry(new T.PlaneGeometry(1, 1)),
-    new T.LineBasicMaterial({ color: 0x008c82, transparent: true, opacity: 0.55 }));
+    new T.LineBasicMaterial({ color: VIEW.planeEdge, transparent: true, opacity: 0.55 }));
   planeEdge.visible = false;
   group.add(planeEdge);
 
@@ -126,16 +135,17 @@ export function createHandles(opts) {
     hit: along(new T.CylinderGeometry(ARROW.hitR, ARROW.hitR, ARROW.len + ARROW.tipLen + 0.4, 8))
       .translate(0, 0, ARROW.gap + (ARROW.len + ARROW.tipLen) / 2)
   };
+  /* Der angefahrene Pfeil in der Marke: er ist Bedienung, keine Sache. */
   const arrowMats = new Map();
   const arrowMat = (color, hot) => {
     const key = color + (hot ? ':hot' : '');
-    if (!arrowMats.has(key)) arrowMats.set(key, ghost(hot ? '#9c4a12' : color, hot ? 1 : 0.95));
+    if (!arrowMats.has(key)) arrowMats.set(key, ghost(hot ? VIEW.hot : color, hot ? 1 : 0.95));
     return arrowMats.get(key);
   };
 
-  /* Die drei Achsenpfeile der Auswahl (X rot, Y grün, Z blau), immer
-     obenauf; sie beginnen wie die Richtungspfeile außerhalb der Kugel. */
-  const AXIS_COLORS = ['#b42318', '#4c9f70', '#2e6da4'];
+  /* Die drei Achsenpfeile der Auswahl in den Achsenfarben, immer obenauf;
+     sie beginnen wie die Richtungspfeile außerhalb der Kugel. */
+  const AXIS_COLORS = axisColors();
   const AXIS_DIRS = [new T.Vector3(1, 0, 0), new T.Vector3(0, 1, 0), new T.Vector3(0, 0, 1)];
   const gizmo = new T.Group();
   gizmo.visible = false;
@@ -399,19 +409,42 @@ export function createHandles(opts) {
      Gezeichnetes, eine Gruppe nie. */
   const aimMark = new T.Group();
   aimMark.visible = false;
-  const markColor = opts.markColor || '#e07b39';
-  const aimRing = new T.Mesh(new T.RingGeometry(1.1, 1.6, 32), ghost(markColor, 0.95));
+  /* In der Farbe dessen, was gesetzt wird: opts.markColor ist eine Farbe
+     oder eine Funktion, die sie beim Zielen nennt (die Art, die gerade
+     gesetzt wird); ohne Angabe die Marke. Gefragt wird erst beim Zielen —
+     beim Anlegen steht das Werkzeug, das fragt, selbst noch nicht. */
+  const markColor = () => (typeof opts.markColor === 'function' ? opts.markColor() : opts.markColor) || VIEW.hot;
+  const aimRing = new T.Mesh(new T.RingGeometry(1.1, 1.6, 32), ghost(VIEW.hot, 0.95));
   aimRing.material.side = T.DoubleSide;
   aimRing.renderOrder = 9;
   const aimLineGeo = new T.BufferGeometry();
   aimLineGeo.setAttribute('position', new T.BufferAttribute(new Float32Array([0, 0, -5, 0, 0, 0]), 3));
   const aimLine = new T.Line(aimLineGeo, new T.LineBasicMaterial({
-    color: markColor, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false
+    color: VIEW.hot, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false
   }));
   aimLine.renderOrder = 9;
   aimMark.add(aimRing, aimLine);
   aimRing.onBeforeRender = (renderer, scene, camera) => { aimMark.scale.setScalar(pixelSize(camera)); };
   group.add(aimMark);
+  const paintAimMark = () => { const c = markColor(); aimRing.material.color.set(c); aimLine.material.color.set(c); };
+
+  /* Ein Wechsel des Farbschemas: Ring, Ebene, Achsenpfeile und Marke neu
+     einfärben, die Materialien der Griffe und Pfeile vergessen (sie hängen
+     an der Farbe) und abgleichen — die Werkzeuge nennen dabei ihre Farben
+     neu (items). */
+  onScheme(() => {
+    planeMesh.material.color.set(VIEW.plane);
+    planeEdge.material.color.set(VIEW.planeEdge);
+    for (const m of ringMats) m.color.set(VIEW.selected);
+    axisColors().forEach((c, i) => { gizmoAxes[i].mat.color.set(c); gizmoAxes[i].hot.color.set(c); });
+    paintAimMark();
+    for (const m of matCache.values()) { m.solid.dispose(); m.ghost.dispose(); }
+    matCache.clear();
+    for (const m of arrowMats.values()) m.dispose();
+    arrowMats.clear();
+    for (const a of arrows.values()) a.color = null;          // refresh() setzt Farbe und Material neu
+    refresh();
+  });
 
   function showAimMark(hit) {
     if (!hit) { if (aimMark.visible) { aimMark.visible = false; redraw(); } return; }
@@ -432,10 +465,14 @@ export function createHandles(opts) {
     state.aimRaf = raf(() => {
       state.aimRaf = 0;
       if (!state.aim || !state.aimMove) return;
-      if (state.aimPickMs > 40) { showAimMark(null); return; }
+      /* Zu langsam: diesmal keine Vorschau — und der Wert klingt ab, damit
+         nach ein paar Bildern neu gemessen wird. */
+      if (state.aimPickMs > 40) { state.aimPickMs *= 0.9; showAimMark(null); return; }
       const t0 = performance.now();
       const hit = pickRef(state.aimMove, state.aim.plane && state.aim.plane());
-      state.aimPickMs = performance.now() - t0;
+      /* Gleitender Mittelwert: EIN Ausreißer schaltet nichts ab. */
+      const ms = performance.now() - t0;
+      state.aimPickMs = state.aimPickMs ? state.aimPickMs * 0.7 + ms * 0.3 : ms;
       showAimMark(hit);
     });
   }
@@ -447,6 +484,11 @@ export function createHandles(opts) {
     const a = typeof o === 'function' ? { onHit: o } : (o || {});
     state.aim = { onHit: a.onHit || (() => {}), onMiss: a.onMiss || (() => {}), plane: a.plane || null };
     state.aimDown = null;
+    paintAimMark();
+    /* Jedes Zielen misst neu, ob die Vorschau sich leisten lässt: ein
+       einziger langsamer Strahl (eine Müllabfuhr, ein großes Netz) schaltete
+       sie sonst für den Rest der Sitzung ab. */
+    state.aimPickMs = 0;
     dom.style.cursor = 'crosshair';
   }
   function cancelAim() {
@@ -462,6 +504,19 @@ export function createHandles(opts) {
   /* ── Maus ──────────────────────────────────────────────────── */
   function onDown(ev) {
     if (state.aim && ev.button === 0 && !ev.shiftKey) {
+      /* Mit `aimPicksHandles` wählt ein Klick auf einen GRIFF diesen Punkt und
+         beendet das Zielen (onSelect räumt den Zielmodus weg) — im
+         Angussdesigner gewann sonst der Treffer auf dem Bauteil dahinter, und
+         die Mündung sprang dorthin. Beim SETZEN (Überläufe, Stiche,
+         Anschnitte) gilt der Klick dagegen der Stelle, auch über einem Griff. */
+      const onHandle = opts.aimPicksHandles && state.enabled ? pick(ev) : null;
+      if (onHandle && !onHandle.arrow && onHandle.gizmo === undefined) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        state.aimDown = null;
+        select(onHandle.id);
+        return;
+      }
       /* Getroffen beim Drücken, ÜBERNOMMEN beim Loslassen — und nur, wenn
          die Maus stehen blieb: wer auf dem Bauteil zu drehen beginnt, will
          drehen. Auch ein Druck daneben wird gemerkt, damit ein Fehlklick
@@ -484,7 +539,7 @@ export function createHandles(opts) {
       const a = AXIS_DIRS[hit.gizmo];
       const s0 = axisParam(ev, it.pos, a);
       if (s0 === null) return;
-      state.drag = { id: hit.id, axis: a, s0, start: it.pos.slice(), last: null, raf: 0 };
+      state.drag = { id: hit.id, axis: a, s0, start: it.pos.slice(), last: null, raf: 0, pointerId: ev.pointerId };
       for (const g of gizmoAxes) g.shaft.material = g.tip.material = (g.hit.userData.gizmo === hit.gizmo ? g.hot : g.mat);
       view.controls.enabled = false;
       try { dom.setPointerCapture(ev.pointerId); } catch { /* Zeiger schon wieder los — dann ohne Fang */ }
@@ -495,7 +550,7 @@ export function createHandles(opts) {
     state.drag = {
       id: hit.id, alt: ev.altKey,
       grab: start.clone().sub(new T.Vector3(it.pos[0], it.pos[1], it.pos[2])),
-      last: null, raf: 0
+      last: null, raf: 0, pointerId: ev.pointerId
     };
     view.controls.enabled = false;
     try { dom.setPointerCapture(ev.pointerId); } catch { /* Zeiger schon wieder los — dann ohne Fang */ }
@@ -565,6 +620,21 @@ export function createHandles(opts) {
     onChange('drop', id);
   }
 
+  /** Esc während eines Zugs: der Zug endet OHNE „drop" — es gibt keinen
+      Schritt, und das Werkzeug erfährt mit onChange('cancel', id), dass es
+      zum Stand vor dem Zug zurück soll (host.revert()). → id oder null. */
+  function cancelDrag() {
+    const d = state.drag;
+    if (!d) return null;
+    if (d.raf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(d.raf);
+    state.drag = null;
+    for (const g of gizmoAxes) g.shaft.material = g.tip.material = g.mat;
+    view.controls.enabled = true;
+    try { if (dom.hasPointerCapture && dom.hasPointerCapture(d.pointerId)) dom.releasePointerCapture(d.pointerId); } catch { /* schon los */ }
+    onChange('cancel', d.id);
+    return d.id;
+  }
+
   function select(id) {
     state.selected = id;
     refresh();
@@ -596,7 +666,7 @@ export function createHandles(opts) {
   dom.addEventListener('pointercancel', onUp);
 
   return {
-    refresh, select, group, armAim, cancelAim, pickRef, aimFor, arrowTip, gizmoTip,
+    refresh, select, group, armAim, cancelAim, cancelDrag, pickRef, aimFor, arrowTip, gizmoTip,
     get aiming() { return !!state.aim; },
     get aimMark() { return aimMark.visible ? aimMark.position.toArray() : null; },
     get selected() { return state.selected; },

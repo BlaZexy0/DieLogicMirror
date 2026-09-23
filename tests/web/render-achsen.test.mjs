@@ -87,15 +87,16 @@ function contrast(a, b) {
 
 test('Beschriftung der rechten Achse erfüllt den WCAG-Textkontrast', () => {
   const C = theme.chart;
-  /* Die Vorbedingung des Befunds: die Serienfarben allein reichen nicht. */
-  assert.ok(contrast(C.series4, C.surface) < 4.5,
-    'series4 wäre als Textfarbe kontrastschwach — sonst prüft dieser Test nichts');
+  /* Die Vorbedingung des Befunds: die Sachfarbe der Luft (rechte Achse der
+     Schusskurve) reicht als Schrift nicht. */
+  assert.ok(contrast(C.air, C.surface) < 4.5,
+    'die Luft wäre als Textfarbe kontrastschwach — sonst prüft dieser Test nichts');
 
   const x = rec();
   drawLine(x, 900, 700, {
     title: 'T', x: [0, 1, 2], xl: 'x', yl: 'links', rl: 'rechts',
-    ys: [{ n: 'a', c: C.series1, y: [1, 2, 3] },
-         { n: 'b', c: C.series4, y: [10, 20, 30], axis: 'right' }]
+    ys: [{ n: 'a', c: 'ink', y: [1, 2, 3] },
+         { n: 'b', c: 'air', y: [10, 20, 30], axis: 'right' }]
   });
   const schwach = x.log.texts.filter(t => contrast(t.fill, C.surface) < 4.5);
   assert.deepEqual(schwach.map(t => t.s + ' (' + t.fill + ')'), [],
@@ -105,10 +106,9 @@ test('Beschriftung der rechten Achse erfüllt den WCAG-Textkontrast', () => {
 /* ── H-16 ─────────────────────────────────────────────────────────────── */
 
 test('Legende wächst mit, statt still abzubrechen', () => {
-  const C = theme.chart;
   const many = n => ({
     title: 'T', x: [0, 1, 2], xl: 'x', yl: 'y', limitText: 'legend',
-    ys: Array.from({ length: n }, (_, i) => ({ n: 'Eine ziemlich lange Serienbezeichnung ' + i, c: C.series1, y: [1, 2, 3] }))
+    ys: Array.from({ length: n }, (_, i) => ({ n: 'Eine ziemlich lange Serienbezeichnung ' + i, c: 'ink', y: [1, 2, 3] }))
   });
 
   const d2 = many(2), d12 = many(12);

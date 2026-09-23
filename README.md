@@ -59,10 +59,12 @@ dielogic/
 │   ├── index.html       Landingpage (Hero, Schritte, Werkzeuge, Katalog, Theorie, Preise)
 │   ├── shared/          Laufzeit-Bausteine aller Seiten (klassische Scripts, vor den Modulen):
 │   │   ├── vendor/katex/    KaTeX (lokal, MIT) — rendert alle Formeln der Site; siehe README dort
-│   │   ├── palette.js       DIE Farbquelle (window.__PALETTE__; shared.css spiegelt sie,
-│   │   │                    Test prüft Gleichheit + WCAG-Kontrast)
-│   │   ├── schemes.js       Farbschemata als Abweichung davon (Umschalter auf der
+│   │   ├── palette.js       DIE Farbquelle: Rollen statt Farben (window.__PALETTE__,
+│   │   │                    mix/rgba; feste Farbleisten scale/lut; shared.css spiegelt die Rollen)
+│   │   ├── schemes.js       drei Farbschemata: jedes belegt alle Rollen (Umschalter auf der
 │   │   │                    Konto-Seite; lädt direkt nach palette.js, vor nav.js)
+│   │   ├── theme.js         Diagrammfarben, aus der Palette abgeleitet (derive())
+│   │   ├── svgfarben.js     setzt die Theorie-Bilder als SVG ein, damit sie dem Schema folgen
 │   │   ├── shared.css       Basis-Styles + :root-Tokens
 │   │   ├── nav.js           injiziert Site-Navigation + Footer (selbstversorgend)
 │   │   ├── version.js       Versionsnummer (Nav-Badge + /api/health)
@@ -208,21 +210,53 @@ eine Rechnung auf den Server legt, muss sie dort ergänzen.
 
 - **Navigation/Footer:** `web/shared/nav.js` — Linkliste (`NAV_LINKS`),
   Diagrammliste (`CHARTS`, Reihenfolge = `web/tools/auslegung/js/charts/registry.js`).
-- **Farbschema:** `web/shared/palette.js` (einzige Quelle; `shared/shared.css`
-  spiegelt sie als Tokens, Test prüft Gleichheit). Diagrammfarben:
-  `web/shared/theme.js`. Farbtafel: `web/assets/palette.svg`.
-  Zwölf Schemata stehen in `web/shared/schemes.js` — je Schema nur die
-  Abweichungen von der Palette, in zwei Gruppen: `zweck` löst eine Aufgabe
-  (Hochkontrast für die Halle, Rot-Grün-sicher, Abendschicht, Graphit fürs
-  Studio), `farbe` ist eine andere Farbwelt (Stahlblau, Blaupause,
-  Anlassfarbe, Aluminium, Messing, Kupfer, Olivgrün). Gewählt wird auf der
-  Konto-Seite, gemerkt im localStorage dieses Browsers.
-  Zwei Regeln dabei: Farben mit Alpha als `rgba(var(--primary-rgb), .25)`
-  schreiben (feste `rgba(0,140,130,…)` bleiben beim Wechsel teal stehen), und
-  wer Styles ins Dokument injiziert (nav.js, projectbar.js), baut sie auf das
-  Ereignis `dielogic:scheme` neu. Nicht erfasst: die fertigen SVG-Bilder unter
-  `web/assets/theorie/` — als `<img>` eingebunden erreichen CSS-Variablen sie
-  nicht, sie bleiben in den Standardfarben.
+- **Farben:** Jede Farbe der Website ist eine ROLLE der Palette
+  (`web/shared/palette.js`, einzige Quelle; `shared/shared.css` spiegelt sie
+  als Tokens). Der Code nennt nur Rollen: ein Token (`var(--melt)`), einen
+  Schlüssel von `window.__PALETTE__` (`P.melt`) oder eine Diagrammrolle
+  (`theme.chart.die`, abgeleitet in `web/shared/theme.js`). Die Familien:
+  · **Marke und Flächen** für die Bedienung (Knöpfe, Links, Auswahl, Fokus).
+  · **Ampel** `ok` / `caution` / `bad` (gut, knapp, schlecht) nur für Urteile:
+    Prüfungen, machbare Bereiche, Verstöße, Hinterschnitt, Fehler; je Stufe
+    Signalfarbe, Text (`okText` …), Grund und Rand.
+  · **Hervorhebung** `mark`: Arbeitspunkt, Ist-Wert, Kennpunkt.
+  · **Sachfarben**: dieselbe Sache hat überall dieselbe Farbe, im Diagramm, im
+    3D-Studio und in den Bildern der Theorie: Schmelze und was aus ihr wird
+    (`melt`, `runner`, `overflow`, `biscuit`), Werkzeug (`die`), Maschine und
+    Hydraulik (`machine`), Luft und Vakuum, Temperierung (`cool`), Prozess und
+    Zeit (`process`), Stahl, Kolben, das Bauteil im 3D-Studio, die Achsen.
+    Keine Sachfarbe liegt nahe am Ampelverlauf; Gelb, Orange, Rot und Grün
+    gehören der Ampel, darum sind die Sachfarben kühl.
+  Keine Rollen sind die **Farbleisten** (`LEISTEN` in palette.js,
+  `P.scale(name, t)`, `P.lut`, `P.gradient`): die Skalen, an denen man einen
+  Wert abliest. Sie sind in jedem Schema gleich: `heat` für die Heatmaps der
+  Auslegung, `turbo` für die Felder im 3D-Studio (Wandstärke, Abstand,
+  Füllgrad, Ankunft, Geschwindigkeit, Haftung), `draft` für die
+  Entformschräge, `speed` für das Flussschema des Angussdesigners.
+  Drei Schemata in `web/shared/schemes.js` belegen jede Rolle mit eigenen
+  Werten: DieLogic Teal (Standard), Stahlblau und Graphit. Wer eines der
+  früheren gewählt hatte (Hochkontrast, Rot-Grün-sicher, Abendschicht,
+  Anlassfarbe, Kupfer, Oliv, davor Blaupause, Aluminium, Messing), landet
+  über `ALIAS` beim nächsten der drei. Gewählt wird unter „Projekte & Konto",
+  gemerkt im localStorage dieses Browsers. Ein Wechsel schreibt die Tokens,
+  ändert `__PALETTE__` an Ort und Stelle, leitet die Diagrammfarben neu ab und
+  meldet `dielogic:scheme`: wer selbst zeichnet (Diagramme, 3D-Studio,
+  Zyklus, Sprengfläche, Hero), zeichnet darauf neu und liest die Werte frisch.
+  Die Theorie-Bilder tragen zu jeder Farbe ihre Rolle als Klasse (`f-melt`,
+  `s-steel-dark`) neben dem Standardwert; `web/shared/svgfarben.js` setzt sie
+  als SVG in die Seite, dann greifen die Tokens. Die aus Diagrammen erzeugten
+  Bilder schreibt `scripts/gen-theory-svgs.mjs` (rendert mit Platzhalterfarben
+  und ordnet jede Farbe ihrer Rolle zu).
+  Die Werte der Schemata kommen aus einem Rechenskript (wenige Anker je
+  Schema, der Rest abgeleitet) und stehen ausgeschrieben in schemes.js.
+  Geprüft wird das an drei Stellen: `tests/web/farbrollen.test.mjs` findet
+  jeden Farbwert ohne Rolle, jeden alten Namen und jedes Theorie-Bild ohne
+  Rollenklassen; `tests/web/schemes.test.mjs` rechnet für jedes Schema
+  Kontrast, Trennung der Ampel und Abstand der Sachfarben zur Ampel und
+  untereinander nach und dass kein Schema eine Farbleiste verändert;
+  `tests/web/palette.test.mjs` die Spiegelung in shared.css, die
+  Rechenhilfen und die Farbleisten. Farbtafel des Standards:
+  `web/assets/palette.svg` (`scripts/gen-palette.mjs`).
 - **Version:** `web/shared/version.js` (Nav-Badge und `/api/health`).
 - **Presets (Beispielwerte):** `web/shared/examples/*.js` — produktiv
   pflegt jede Organisation ihre eigenen als Stammdaten auf der Konto-Seite.

@@ -1,6 +1,6 @@
 /* Die Formansicht im Viewport: die Stücke aus js/part/dieview.js als
-   Meshes, jedes in seiner Regionsfarbe, der Rand dunkler, die Trennlinie
-   als Linie — und jedes um denselben Abstand entlang seiner
+   Meshes, jedes in der Farbe seiner Richtung (js/part/colors.js), der Rand
+   dunkler, die Trennlinie als Linie — und jedes um denselben Abstand entlang seiner
    Entformrichtung verschoben, damit die Form aufgeht wie beim Öffnen.
 
    Dazu der Blick VON DER TRENNEBENE in eine Hälfte: dort steht man, wenn
@@ -23,7 +23,7 @@
 
 import * as T from 'three';
 import { diePieces, maskOutline } from './dieview.js';
-import { REGION_COLORS, UNDERCUT_COLOR, turbo } from './colors.js';
+import { regionColor, undercutColor, mixHex, hex2rgb, lut, VIEW, onScheme } from './colors.js';
 import { UNDERCUT } from './segment.js';
 
 export function createDieView(view) {
@@ -33,7 +33,7 @@ export function createDieView(view) {
   /* Silhouetten und Haftkarte: eigene Gruppe, sichtbar auch ohne Formansicht. */
   const overlays = new T.Group();
   view.scene.add(overlays);
-  const lineMat = new T.LineBasicMaterial({ color: 0x002733, transparent: true, opacity: 0.7 });
+  const lineMat = new T.LineBasicMaterial({ color: VIEW.lines, transparent: true, opacity: 0.7 });
   let holders = [];
   let pieces = [];
   let dist = 0;
@@ -44,11 +44,16 @@ export function createDieView(view) {
   let alpha = 0.6;                               // Deckkraft der Silhouetten und der Karte
   const hidden = new Set();                      // Formteile, die der Nutzer ausgeblendet hat
 
+  /* Die Farbe eines Stücks: seine Richtung, der Hinterschnitt „schlecht";
+     der Rand dieselbe Farbe dunkler. Gelesen beim Bauen und bei jedem
+     Wechsel des Farbschemas (recolor). */
+  const pieceColor = p => (p.label === UNDERCUT ? undercutColor() : regionColor(p.label));
+  const skirtColor = color => mixHex(color, 'text', 0.3);
   const surfMat = color => new T.MeshStandardMaterial({
     color, roughness: 0.6, metalness: 0.08, side: T.DoubleSide, flatShading: true
   });
   const skirtMat = color => new T.MeshStandardMaterial({
-    color: new T.Color(color).multiplyScalar(0.72), roughness: 0.7, metalness: 0.05, side: T.DoubleSide, flatShading: true
+    color: skirtColor(color), roughness: 0.7, metalness: 0.05, side: T.DoubleSide, flatShading: true
   });
 
   function disposeObject(o) {
@@ -87,18 +92,22 @@ export function createDieView(view) {
     const changed = next !== pieces;
     pieces = next;
     for (const p of pieces) {
-      const color = p.label === UNDERCUT ? UNDERCUT_COLOR : REGION_COLORS[p.label];
+      const color = pieceColor(p);
       const h = new T.Group();
       h.userData.piece = p;
       const g = new T.BufferGeometry();
       g.setAttribute('position', new T.BufferAttribute(p.tris, 3));
       g.computeVertexNormals();
-      h.add(new T.Mesh(g, surfMat(color)));
+      const surf = new T.Mesh(g, surfMat(color));
+      surf.userData.surf = true;
+      h.add(surf);
       if (p.skirt.length) {
         const s = new T.BufferGeometry();
         s.setAttribute('position', new T.BufferAttribute(p.skirt, 3));
         s.computeVertexNormals();
-        h.add(new T.Mesh(s, skirtMat(color)));
+        const skirt = new T.Mesh(s, skirtMat(color));
+        skirt.userData.skirt = true;
+        h.add(skirt);
       }
       if (p.edges.length) {
         const e = new T.BufferGeometry();
@@ -205,7 +214,7 @@ export function createDieView(view) {
     for (const o of overlays.children.slice()) { disposeObject(o); overlays.remove(o); }
     for (const p of pieces) {
       if (p.axis < 0) continue;
-      const color = REGION_COLORS[p.label];
+      const color = regionColor(p.label);
       const pr = projections && projections.pieces.find(q => q.label === p.label);
       const em = ejectors.find(q => q.label === p.label) || null;
       if (pr) {
@@ -213,20 +222,23 @@ export function createDieView(view) {
         og.userData.overlay = 'proj';
         og.userData.piece = p;
         {
-          /* Die Füllung heller als das Stück, der Umriss dunkler. */
+          /* Die Füllung heller als das Stück, der Umriss dunkler. Die
+             Textur trägt Werte der Palette: sRGB, sonst stünde sie blasser
+             da als das Stück. */
           const rgba = new Uint8Array(pr.frame.nu * pr.frame.nv * 4);
-          const c = new T.Color(color).lerp(new T.Color(0xffffff), 0.45);
+          const c = hex2rgb(mixHex(color, 'surface', 0.45));
           for (let i = 0; i < pr.mask.length; i++) {
-            rgba[i * 4] = c.r * 255; rgba[i * 4 + 1] = c.g * 255; rgba[i * 4 + 2] = c.b * 255;
+            rgba[i * 4] = c[0] * 255; rgba[i * 4 + 1] = c[1] * 255; rgba[i * 4 + 2] = c[2] * 255;
             rgba[i * 4 + 3] = pr.mask[i] ? 255 : 0;
           }
           const tex = new T.DataTexture(rgba, pr.frame.nu, pr.frame.nv, T.RGBAFormat);
+          tex.colorSpace = T.SRGBColorSpace;
           tex.needsUpdate = true;
           const plane = framePlane(pr.frame, new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: alpha, side: T.DoubleSide, depthWrite: false }));
           plane.userData.plane = true;
           og.add(plane);
         }
-        const ol = outlineLines(pr.frame, pr.mask, new T.Color(color).multiplyScalar(0.55));
+        const ol = outlineLines(pr.frame, pr.mask, mixHex(color, 'text', 0.45));
         ol.userData.lift = 0.3;
         og.add(ol);
         overlays.add(og);
@@ -235,15 +247,21 @@ export function createDieView(view) {
         const eg = new T.Group();
         eg.userData.overlay = 'ejector';
         eg.userData.piece = p;
+        /* Die Karte auf der Farbleiste `turbo` (in jedem Farbschema
+           dieselbe), blau = wenig, rot = viel, ohne die fast schwarzen Enden
+           (0,05 … 0,95); was kaum haftet, ist zudem durchscheinend. Die
+           Textur trägt die Werte der Leiste: sRGB. */
         const { nu, nv } = em.frame;
         const rgba = new Uint8Array(nu * nv * 4);
+        const tab = lut('turbo');
         for (let i = 0; i < em.map.length; i++) {
           const v = em.map[i];
-          const rgb = turbo(0.05 + 0.9 * v);
-          rgba[i * 4] = rgb[0] * 255; rgba[i * 4 + 1] = rgb[1] * 255; rgba[i * 4 + 2] = rgb[2] * 255;
+          const k = 3 * Math.round(Math.max(0, Math.min(1, 0.05 + 0.9 * v)) * 255);
+          rgba[i * 4] = tab[k]; rgba[i * 4 + 1] = tab[k + 1]; rgba[i * 4 + 2] = tab[k + 2];
           rgba[i * 4 + 3] = v > 0.01 ? 150 + 105 * Math.min(1, v * 2) : 0;
         }
         const tex = new T.DataTexture(rgba, nu, nv, T.RGBAFormat);
+        tex.colorSpace = T.SRGBColorSpace;
         tex.needsUpdate = true;
         const plane = framePlane(em.frame, new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: alpha, side: T.DoubleSide, depthWrite: false }));
         plane.userData.plane = true;
@@ -254,6 +272,21 @@ export function createDieView(view) {
     placeOverlays();
     view.invalidate();
   }
+
+  /* Ein Wechsel des Farbschemas: die Stücke umfärben, Silhouetten und
+     Karte neu bauen (ihre Farben stecken in Texturen). */
+  function recolor() {
+    lineMat.color.set(VIEW.lines);
+    for (const h of holders) {
+      const color = pieceColor(h.userData.piece);
+      for (const c of h.children) {
+        if (c.userData.surf) c.material.color.set(color);
+        else if (c.userData.skirt) c.material.color.set(skirtColor(color));
+      }
+    }
+    rebuildOverlays();
+  }
+  onScheme(recolor);
 
   /** Projizierte Flächen (pieceProjections) hinterlegen — null löscht;
       dieselben noch einmal ändern nichts. */

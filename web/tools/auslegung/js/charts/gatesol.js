@@ -2,7 +2,6 @@
 
 import { series, line, limit } from './helpers.js';
 import { seq, fmt, subHTML } from '../core/format.js';
-import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
 export default {
@@ -14,7 +13,7 @@ export default {
   calc(v) {
     const x = seq(0.5, v.gateTh * 2.5, 140);
     const f = s => v.solK * s * s;
-    const q = line(x, [series('Erstarrungszeit', theme.chart.series1, x, f)],
+    const q = line(x, [series('Erstarrungszeit', 'ink', x, f)],
       'Anschnittdicke in mm', 'Erstarrungszeit in ms', 'Konstante ' + fmt(v.solK) + ' ms/mm²');
     q.y0 = 0;
     q.limits = [limit('intTime', 'Nachdruckaufbauzeit ' + fmt(v.intTime) + ' ms', 'y', 'min', v.intTime, { note: 'Anschnitt erstarrt vor dem Nachdruckaufbau' })];

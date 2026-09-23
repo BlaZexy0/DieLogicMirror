@@ -17,11 +17,11 @@ import { createHandles, SELECTED_RING } from '../handles.js';
 import * as M from '../vents/model.js';
 import { buildByType, buildAll, volumeOf } from '../vents/geom.js';
 import { setTris, download, safeName, dirText, outward } from '../ui/common.js';
+import { onScheme, ELEMENT, VIEW } from '../part/colors.js';
 
 const SUBTITLE = 'Überläufe: vier Arten aufs Bauteil setzen, dort, wo die Füllung zuletzt ankommt; ihr Volumen gehört zum Schussgewicht.';
 const STATUS = '<b>Art</b> wählen, dann aufs Bauteil klicken &nbsp;·&nbsp; <b>Punkt</b> ziehen: auf der Wand &nbsp;·&nbsp; '
   + '<b>Alt</b>: von der Wand weg &nbsp;·&nbsp; <b>Pfeil</b>: neu setzen &nbsp;·&nbsp; <b>Leer</b>: drehen &nbsp;·&nbsp; <b>rechts</b>: verschieben &nbsp;·&nbsp; <b>Rad</b>: zoomen';
-const VENT_POINT_COLOR = '#6f9bc9';
 
 export function createVentStage(ctx) {
   const { view } = ctx;
@@ -44,6 +44,34 @@ export function createVentStage(ctx) {
   spotGroup.visible = false;
   group.add(spotGroup);
 
+  /* Die Farben der Arten wie im Überlaufdesigner (js/vents/model.js): an
+     den Körpern, an den Knöpfen zum Setzen und in der Legende. Bei einem
+     Wechsel des Farbschemas neu; die Griffe gleicht js/handles.js selbst ab. */
+  function paintButtons() {
+    for (const [type, meta] of Object.entries(M.TYPES)) {
+      const dot = $('ue-add-' + type) && $('ue-add-' + type).querySelector('.dot');
+      if (dot) dot.style.background = meta.color;
+    }
+  }
+  paintButtons();
+  onScheme(() => {
+    for (const [type, meta] of Object.entries(M.TYPES)) meshes[type].material.color.set(meta.color);
+    paintButtons();
+    if (!state.active) return;
+    legend();
+    syncSelection();
+    view.invalidate();
+  });
+  function legend() {
+    const row = (color, text) => '<div class="lg-row"><span class="dot" style="background:' + color + '"></span>' + text + '</div>';
+    $('pt-legend').innerHTML = '<div class="pt-menu-title">Arten</div>'
+      + Object.values(M.TYPES).map(t => row(t.color, t.label)).join('')
+      + row(ELEMENT.kanalpunkt, 'Kanalpunkt (in der Wandebene)')
+      + row(VIEW.lastFilled, 'zuletzt gefüllt (Schritt 3)')
+      + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>';
+  }
+  let markType = 'bohne';                    // welche Art gerade gesetzt wird: die Farbe der Zielmarke
+
   /* ── Griffe ───────────────────────────────────────────────── */
   const splitId = id => {
     const m = /^(.+?):v(\d+)$/.exec(id || '');
@@ -57,14 +85,14 @@ export function createVentStage(ctx) {
       if (it.type !== 'entlueftet') continue;
       const vw = M.ventWorld(it);
       out.push({ id: it.id + ':v0', pos: vw.exit, color, planeSize: Math.max(24, it.p.ventW * 2) });
-      vw.points.forEach((pos, i) => out.push({ id: it.id + ':v' + (i + 1), pos, color: VENT_POINT_COLOR, planeSize: Math.max(24, it.p.ventW * 2) }));
+      vw.points.forEach((pos, i) => out.push({ id: it.id + ':v' + (i + 1), pos, color: ELEMENT.kanalpunkt, planeSize: Math.max(24, it.p.ventW * 2) }));
     }
     return out;
   }
   const handles = createHandles({
     view,
     getRefMesh: () => ctx.part.mesh,
-    markColor: M.TYPES.bohne.color,
+    markColor: () => M.TYPES[markType].color,
     items: handleItems,
     plane: id => {
       const { base, k } = splitId(id);
@@ -275,6 +303,7 @@ export function createVentStage(ctx) {
     if (!M.TYPES[type]) return;
     if (!ctx.part.model) { ctx.aim.note('Zuerst ein Bauteil laden (Schritt 1). Dann setzt der Klick den Überlauf dorthin.'); return; }
     handles.select(null);
+    markType = type;
     ctx.aim.show(true, M.TYPES[type].label + ': die Stelle am Bauteil anklicken, wo sie sitzen soll. Ziehen dreht die Ansicht, Esc bricht ab.');
     ctx.aim.onCancel = cancelAim;
     handles.armAim({
@@ -291,6 +320,7 @@ export function createVentStage(ctx) {
     const it = state.plan.items[id];
     if (!it) return;
     if (!ctx.part.model) { ctx.aim.note('Zuerst ein Bauteil laden (Schritt 1).'); return; }
+    markType = it.type;
     ctx.aim.show(true, M.TYPES[it.type].label + ' ' + id + ': die neue Stelle am Bauteil anklicken. Esc bricht ab.');
     ctx.aim.onCancel = cancelAim;
     handles.armAim({
@@ -357,11 +387,7 @@ export function createVentStage(ctx) {
       state.active = true;
       ctx.subtitle(SUBTITLE);
       ctx.statusHTML(STATUS);
-      $('pt-legend').innerHTML = '<div class="pt-menu-title">Arten</div>'
-        + Object.values(M.TYPES).map(t => '<div class="lg-row"><span class="dot" style="background:' + t.color + '"></span>' + t.label + '</div>').join('')
-        + '<div class="lg-row"><span class="dot" style="background:' + VENT_POINT_COLOR + '"></span>Kanalpunkt (in der Wandebene)</div>'
-        + '<div class="lg-row"><span class="dot" style="background:#b42318"></span>zuletzt gefüllt (Schritt 3)</div>'
-        + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>';
+      legend();
       $('ue-menu').classList.remove('wb-off');
       handles.setEnabled(true);
       handles.group.visible = true;

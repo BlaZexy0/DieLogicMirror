@@ -12,7 +12,7 @@ import { PRESET_KEYS, PRESET_DOMAINS } from './config/fields.js';
 import { buildInputs, validate, refreshAuto, updateFieldVisibility } from './ui/inputs.js';
 import { initPresetSelect } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
-import { buildCard, renderCard } from './ui/cards.js';
+import { buildCard, renderCard, paintCard } from './ui/cards.js';
 import { initSim } from './core/simstore.js';
 
 const id = new URLSearchParams(location.search).get('id');
@@ -95,6 +95,10 @@ async function init() {
 
   let rt;
   window.onresize = () => { clearTimeout(rt); rt = setTimeout(render, 120); };
+
+  /* Farbschema gewechselt: das Diagramm aus seinen Daten neu zeichnen
+     (Rollen statt Farbwerten, siehe ui/cards.js paintCard). */
+  document.addEventListener('dielogic:scheme', () => paintCard(card, def));
 
   if (def.usesSim) initSim();
   subscribe(render);

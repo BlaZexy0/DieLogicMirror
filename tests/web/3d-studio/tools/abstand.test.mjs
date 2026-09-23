@@ -11,6 +11,10 @@ import { mountPage, wait, kpiText } from './fixture.mjs';
 
 /* Messwerte nie mit assert.equal vergleichen (siehe wandstaerke.test.mjs). */
 const same = (a, b, msg) => assert.ok(a === b, msg);
+/* Ungefärbt steht ein Netz im Grau des Bauteils (Rolle part, als Punktfarbe
+   linear), B eine Stufe dunkler — ohne Palette die Standardwerte. */
+const C = await import('../../../../web/tools/3d-studio/js/part/colors.js');
+const plainOf = key => C.linRgb(key === 'a' ? C.ROLE.part : C.mixHex(C.ROLE.part, 'text', 0.25));
 let P;
 
 before(async () => {
@@ -122,8 +126,8 @@ test('Skala, Einfärben, Darstellung, Farbskala — und die Suchgrenze verlangt 
   const seg = ui('color-seg').querySelectorAll('button');
   seg.find(b => b.dataset.value === 'b').dispatch('click');
   assert.equal(s.color, 'b');
-  const cA = colorAt(v.meshA, 0).split(',');
-  assert.ok(cA[0] === cA[1] && cA[1] === cA[2], 'A ist jetzt grau: ' + cA.join(','));
+  assert.equal(colorAt(v.meshA, 0), plainOf('a').map(x => +x.toFixed(3)).join(','), 'A steht jetzt im Grau des Bauteils');
+  assert.equal(colorAt(v.meshA, 7), colorAt(v.meshA, 0), 'einfarbig');
   seg.find(b => b.dataset.value === 'both').dispatch('click');
 
   /* Ausblenden und Deckkraft: unter „Darstellung". */
@@ -209,4 +213,148 @@ test('Ablegen fragt, ob A oder B; Einstellungen als Datei und zurücksetzen', as
   assert.equal(s.reach, 50);
   assert.equal(v.meshB.visible, true);
   assert.equal(v.tool.settingsOnly, true);
+});
+
+/* Eine Datei als A oder B ablegen — wie der Anwender: ins Bild ziehen, im
+   Streifen die Seite wählen. */
+async function loadAs(key, name, tris) {
+  const { doc, v, ui } = P;
+  const { writeSTL } = await import('../../../../web/tools/3d-studio/js/part/stlio.js');
+  const buf = writeSTL(tris, 'test');
+  doc.getElementById('viewport').dispatch('drop', { dataTransfer: { files: [{ name, arrayBuffer: () => Promise.resolve(buf), byteLength: buf.byteLength }] } });
+  await wait(() => !ui('banner').hidden, 80, 10);
+  ui('banner').querySelectorAll('button')[key === 'a' ? 0 : 1].dispatch('click');
+  await wait(() => v.state.ready && v.state[key].name === name && !v.state.running, 400);
+}
+const solids = () => import('../../../../web/tools/3d-studio/js/solids.js');
+
+test('Eine neue Datei während der Rechnung: die Rechnung des alten Paares endet still', async () => {
+  const { doc, v, ui, host } = P;
+  const s = v.state;
+  const S = await solids();
+  /* Ein Paar, das Sekunden rechnet: die Ölwanne gegen die Temperierung. */
+  const sel = doc.getElementById('demo-select-b');
+  sel.value = 'coolfix'; sel.dispatch('change');
+  await wait(() => s.ready && /Temperierung fest/.test(s.b.name), 400);
+  ui('reach').value = '50'; ui('reach').dispatch('change');
+  ui('primary').dispatch('click');
+  await wait(() => s.running, 200, 5);
+  await loadAs('b', 'klotz-neu.stl', S.box(40, 30, 20));
+  await new Promise(r => setTimeout(r, 30));
+  assert.equal(host.jobs.running, false, 'die Rechnung des alten Paares ist beendet, nicht erst nach Sekunden');
+  assert.equal(s.running, false);
+  assert.equal(s.cancelled, false, 'das war kein Abbruch des Anwenders');
+  assert.equal(s.analysed, false, 'für das neue Paar ist noch nichts gerechnet');
+  same(s.a.dist, null, 'und nichts vom alten steht auf A');
+  assert.equal(ui('primary').textContent, 'Abstand berechnen');
+  assert.match(ui('note').textContent, /Noch nicht gerechnet/);
+});
+
+test('Eine neue Datei: nichts bleibt vom alten Paar stehen, auch nicht auf der anderen Seite', async () => {
+  const { doc, v, ui, shell } = P;
+  const s = v.state;
+  const S = await solids();
+  /* Würfel von 20 mm (grobe Netze werden verfeinert — größere Teile kosten
+     hier nur Zeit). B steckt zu einem Viertel in A: eine Durchdringung. */
+  await loadAs('a', 'wuerfel-a.stl', S.box(20, 20, 20));
+  await loadAs('b', 'wuerfel-b.stl', S.translate(S.box(20, 20, 20), 15, 0, 0));
+  shell.setMode('abstand');
+  ui('primary').dispatch('click');
+  await wait(() => s.analysed && !s.running, 1600);
+  ui('color-seg').querySelectorAll('button').find(b => b.dataset.value === 'both').dispatch('click');
+  const bar = doc.getElementById('colorbar');
+  assert.ok(bar.classList.contains('on'), 'gerechnet: die Skala steht');
+  assert.match(kpiText(ui('dist-kpis')), /A → B/);
+  assert.match(ui('dist-warn').textContent, /INNERHALB/, 'die Teile durchdringen sich');
+  assert.ok(ui('dist-facts').innerHTML.includes('Rechenzeit'));
+
+  await loadAs('b', 'wuerfel-c.stl', S.translate(S.box(20, 20, 20), 0, 80, 0));
+  assert.equal(s.analysed, false);
+  same(s.a.dist, null, 'A war gegen das alte B gemessen: seine Werte gelten nicht mehr');
+  same(s.b.dist, null);
+  assert.ok(!s.a.stats && !s.b.stats && s.a.inside === 0 && s.b.inside === 0);
+  const plain = plainOf('a').map(x => Math.fround(x));
+  const colA = v.meshA.geometry.getAttribute('color').array;
+  let coloured = 0;
+  for (let i = 0; i < colA.length; i += 7) if (colA[i] !== plain[i % 3]) coloured++;
+  assert.equal(coloured, 0, 'A ist wieder im Grau des Bauteils, nicht nach Abständen zum alten B gefärbt');
+  assert.ok(!bar.classList.contains('on'), 'keine Skala ohne Messwerte');
+  assert.equal(kpiText(ui('dist-kpis')), '', 'keine Kennzahlen des alten Paares');
+  assert.equal(ui('dist-warn').textContent, '', 'keine Warnung des alten Paares');
+  assert.ok(!ui('dist-facts').innerHTML.includes('Rechenzeit'), 'keine Rechenzeit des alten Paares');
+  assert.match(ui('note').textContent, /Noch nicht gerechnet/);
+});
+
+test('Suchgrenze während der Rechnung geändert: veraltet, und „≥" bleibt bei der Grenze der Rechnung', async () => {
+  const { v, ui, shell } = P;
+  const s = v.state;
+  const S = await solids();
+  /* A reicht bis x = 10, B beginnt bei x = 40: A misst 30 bis über 50 mm. */
+  await loadAs('b', 'wuerfel-d.stl', S.translate(S.box(20, 20, 20), 50, 0, 0));
+  shell.setMode('abstand');
+  const reach = ui('reach');
+  reach.value = '40'; reach.dispatch('change');
+  ui('primary').dispatch('click');
+  assert.equal(s.running, true);
+  reach.value = '100'; reach.dispatch('change');          // umentschieden, während gerechnet wird
+  await wait(() => s.analysed && !s.running, 1600);
+  assert.equal(s.measuredReach, 40, 'gerechnet wurde mit der Grenze vom Start');
+  assert.equal(s.stale, true, 'das Ergebnis passt nicht mehr zur Eingabe');
+  assert.equal(ui('primary').textContent, 'Abstand neu berechnen');
+  assert.match(ui('note').textContent, /Suchgrenze geändert/);
+  assert.ok(s.a.stats.max >= 40 - 1e-6, 'A stößt an die Grenze: ' + s.a.stats.max);
+  assert.match(kpiText(ui('dist-kpis')), /A → B.*≥ 40,0 mm/, 'an der Grenze der Rechnung steht „≥" (nicht an der Eingabe 100)');
+  /* Zurück zur Grenze der Rechnung: wieder aktuell, ohne neu zu rechnen. */
+  reach.value = '40'; reach.dispatch('change');
+  assert.equal(s.stale, false);
+  assert.match(ui('note').textContent, /Abstand ist aktuell/);
+});
+
+test('Skala: die Grenzen bleiben in ihrer Reihenfolge, das geschobene Feld sagt es', () => {
+  const { doc, v, ui, shell } = P;
+  const s = v.state;
+  shell.setMode('skala');
+  const mn = ui('scale-min'), mx = ui('scale-max');
+  const note = el => el.closest('.row').querySelector('.clamp-note').textContent;
+  mn.value = '0'; mn.dispatch('change');
+  mx.value = '20'; mx.dispatch('change');
+  /* Das Minimum über das Maximum: das Maximum geht mit — nicht das ganze Netz in einer Farbe. */
+  mn.value = '30'; mn.dispatch('change');
+  assert.equal(s.scale.min, 30, 'das Getippte gilt');
+  assert.ok(Math.abs(s.scale.max - 30.1) < 1e-9, 'das Maximum ist mitgegangen: ' + s.scale.max);
+  assert.equal(mx.value, '30,1');
+  assert.match(note(mx), /30,1 mm angehoben \(über dem Minimum\)/);
+  mx.value = '40'; mx.dispatch('change');
+  assert.deepEqual([s.scale.min, s.scale.max], [30, 40], 'in dieser Reihenfolge getippt: 30 bis 40');
+  /* Umgekehrt: das Maximum unter das Minimum schiebt das Minimum. */
+  mx.value = '10'; mx.dispatch('change');
+  assert.equal(s.scale.max, 10);
+  assert.ok(Math.abs(s.scale.min - 9.9) < 1e-9);
+  assert.equal(mn.value, '9,9');
+  assert.match(note(mn), /9,9 mm gesenkt \(unter dem Maximum\)/);
+  mn.value = '5'; mn.dispatch('change');
+  assert.deepEqual([s.scale.min, s.scale.max], [5, 10]);
+  /* Die Skala liest sich richtig herum: oben „≥" das Maximum, unten „≤" das Minimum. */
+  const ticks = doc.getElementById('cb-ticks').innerHTML;
+  assert.ok(ticks.indexOf('≥ 10,0') >= 0 && ticks.indexOf('≤ 5,0') > ticks.indexOf('≥ 10,0'), ticks);
+  ui('scale-auto').dispatch('click');
+  shell.setMode('abstand');
+});
+
+test('Eine Datei, die sich nicht laden lässt, meldet sich im Bild; das vorige Netz bleibt', async () => {
+  const { doc, v, ui } = P;
+  const s = v.state;
+  const { writeSTL } = await import('../../../../web/tools/3d-studio/js/part/stlio.js');
+  const buf = writeSTL(new Float64Array([0, 0, 0, 10, 0, 0, 0, 10, 0, 0, 0, 0, 0, 10, 0, 0, 0, 10]), 'flaeche');
+  const before = s.b.model;
+  const chip = ui('part-name-b').textContent;
+  ui('toast').hidden = true;
+  const input = doc.getElementById('stl-input-b');
+  input.files = [{ name: 'flaeche.stl', arrayBuffer: () => Promise.resolve(buf), byteLength: buf.byteLength }];
+  input.dispatch('change');
+  await wait(() => !ui('toast').hidden, 80, 10);
+  assert.match(ui('toast').textContent, /weniger als vier Dreiecke/, 'die Meldung steht im Bild, nicht nur in der zugeklappten Klappe');
+  same(s.b.model, before, 'das vorige Netz bleibt');
+  assert.equal(ui('part-name-b').textContent, chip, 'und der Chip nennt es weiter');
+  assert.equal(s.ready, true);
 });

@@ -58,7 +58,7 @@
     }
     .zk-card svg { display: block; width: 100%; height: auto; }
 
-    .zk-errors { padding: 0 1.2rem 0.6rem; font-size: 0.8rem; color: var(--warn); }
+    .zk-errors { padding: 0 1.2rem 0.6rem; font-size: 0.8rem; color: var(--bad-text); }
     .zk-errors:empty { display: none; }
 
     /* Ansichts-Umschalter (Muster der STL-Seite) */
@@ -150,7 +150,7 @@
       border: none; background: transparent; color: var(--muted); cursor: pointer;
       font-size: 1rem; line-height: 1; padding: 0.15rem 0.35rem; border-radius: 4px;
     }
-    .zk-table .remove-btn:hover { color: var(--warn); background: var(--warn-bg); }
+    .zk-table .remove-btn:hover { color: var(--bad-text); background: var(--bad-bg); }
 
     .zk-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; padding: 0.8rem 1.2rem; }
     .zk-btn {
@@ -190,7 +190,7 @@
     .zk-kpi .v { font-family: var(--mono); font-size: 1.05rem; font-weight: 600; color: var(--primary2); }
     .zk-kpi.hero { border-left: 3px solid var(--primary); }
     .zk-kpi.hero .v { color: var(--primary); font-size: 1.25rem; }
-    .zk-kpi.bad .v { color: var(--warn); }
+    .zk-kpi.bad .v { color: var(--bad-text); }
     .zk-kpi .s { font-size: 0.7rem; color: var(--muted); }
     .zk-links { font-size: 0.76rem; color: var(--muted); padding: 0 1.2rem 0.9rem; line-height: 1.6; }
     .zk-links a { color: var(--primary); }
@@ -335,9 +335,9 @@
     Versatz endet es, bevor die Form schließt). Bauteilhandling, Sprühroboter und Kühlung sind
     freie Parallelvorgänge auf festen Zeilen; der Bereich ergibt sich aus der Tabelle, eine
     Spur-Auswahl gibt es nicht. Das Zustandsband oben zeigt geschlossen → öffnet →
-    <strong>offen</strong> → schließt → geschlossen; die offene Zeit ist rosa hinterlegt, und die
-    Ansicht lässt sich auf „Form zu" (Dosieren bis Öffnungsbeginn) oder „Form offen" (Öffnen bis
-    Schließen-Ende) einschränken. Die Zykluszeit ist das späteste Ende über alle Vorgänge und geht als τ<sub>z</sub> in die
+    <strong>offen</strong> → schließt → geschlossen; die offene Zeit ist über alle Zeilen hinterlegt
+    und gestrichelt begrenzt, und die Ansicht lässt sich auf „Form zu" (Dosieren bis
+    Öffnungsbeginn) oder „Form offen" (Öffnen bis Schließen-Ende) einschränken. Die Zykluszeit ist das späteste Ende über alle Vorgänge und geht als τ<sub>z</sub> in die
     Wärmebilanz ein (Formzuhaltezeit = Schuss + Erstarren, Nebenzeit = Rest, Blasphase = „Sprühen &amp;
     Ausblasen"). Noch nicht modelliert: physikalische Mindestdauern (z.&nbsp;B. Erstarrungszeit aus
     k·s²) und die Rückwirkung der Kühlleistung auf die Haltezeit; sie folgen als nächste Ausbaustufe.</p>
@@ -357,29 +357,58 @@
   var P = window.__PALETTE__;
   var PR = window.__PROJECT__;
 
-  /* Farben des Hauptzyklus je Phase (Balken, Punkte in der Liste). */
+  /* Farben: Rollen der Palette (shared/palette.js). Gemerkt wird der NAME
+     der Rolle, gelesen wird der Wert erst beim Zeichnen: ein Wechsel des
+     Farbschemas malt die Zeitleiste neu (unten, „dielogic:scheme").
+     Jede Phase trägt die Sachfarbe dessen, was in ihr geschieht, dieselbe
+     wie in den anderen Werkzeugen: die Phasen des Gießens sind Töne der
+     Schmelze (Dosieren im Ton des Überlaufs, der Schuss in der Schmelze,
+     Erstarren & Halten im Ton des Angusses), Öffnen und Schließen sind das
+     Werkzeug, Sprühen die Luft, die Entnahme der Kolben, die Nebenzeit
+     neutral. Keine Phase trägt eine Farbe der Ampel: hier wird nicht
+     geurteilt. */
   var MAIN_STYLE = {
-    dosieren:   { fill: P.primaryLight, text: P.dark },
-    schuss:     { fill: P.primary, text: P.surface },
-    halten:     { fill: P.primary2, text: P.surface },
-    oeffnen:    { fill: P.catSlate, text: P.surface },
-    entnahme:   { fill: P.accent, text: P.dark },
-    spruehen:   { fill: P.gold, text: P.dark },
-    schliessen: { fill: P.catSlate, text: P.surface },
-    neben:      { fill: P.mutedLight, text: P.dark }
+    dosieren:   'overflow',
+    schuss:     'melt',
+    halten:     'runner',
+    oeffnen:    'die',
+    entnahme:   'piston',
+    spruehen:   'air',
+    schliessen: 'die',
+    neben:      'mutedLight'
   };
   /* MAIN_STYLE ist eine zweite, handgepflegte Liste neben MAIN_PHASES. Eine
      dort ergänzte Phase ließ die Seite abstürzen (MAIN_STYLE[id].fill auf
      undefined). Jetzt gibt es einen Rückfall statt eines Absturzes. */
-  var STYLE_FALLBACK = { fill: P.mutedLight, text: P.dark };
+  var STYLE_FALLBACK = 'mutedLight';
   function mainStyle(id) { return MAIN_STYLE[id] || STYLE_FALLBACK; }
-  /* Balkenfarbe je Gruppe der Parallelzeilen. */
+  /* Rolle je Gruppe der Parallelzeilen: Kernzüge sind Maschine, Handling
+     der Kolben, Sprühen die Luft, Kühlung die Temperierung. */
   var GROUP_STYLE = {
-    kern:     { fill: P.catPurple, text: P.surface },
-    handling: { fill: P.accent, text: P.dark },
-    spray:    { fill: P.gold, text: P.dark },
-    cooling:  { fill: P.catGreen, text: P.surface }
+    kern:     'machine',
+    handling: 'piston',
+    spray:    'air',
+    cooling:  'cool'
   };
+  function groupStyle(g) { return GROUP_STYLE[g] || STYLE_FALLBACK; }
+
+  /* Schrift auf einer farbigen Fläche (Balken, Band): die dunkle Schrift
+     oder die helle Fläche des Blatts, je nachdem, was besser liest (WCAG).
+     Reicht keine der beiden für 4,5:1 (Töne mittlerer Helligkeit wie die
+     Schmelze), dann reines Schwarz oder Weiß. */
+  function leucht(hex) {
+    var c = P.hexRgb(hex).map(function (x) { return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function kontrast(a, b) {
+    var la = leucht(a), lb = leucht(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+  function schriftAuf(fill) {
+    var dunkel = kontrast(fill, P.text), hell = kontrast(fill, P.surface);
+    if (Math.max(dunkel, hell) >= 4.5) return dunkel >= hell ? P.text : P.surface;
+    return kontrast(fill, '#000000') >= kontrast(fill, '#ffffff') ? '#000000' : '#ffffff';
+  }
 
   var SECTION_META = LOGIC.SECTION_META;
 
@@ -458,13 +487,17 @@
     var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" aria-label="Zyklus-Zeitleiste" font-family="Arial">';
     s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="' + P.surface + '"/>';
 
-    /* Offene Form über den ganzen Körper hinterlegen */
+    /* Offene Form über den ganzen Körper hinterlegen: ein Zustand, kein
+       Urteil, also neutral (die zweite Fläche des Blatts), gestrichelt
+       begrenzt. Farben stehen als Wert im Attribut, nie als var(): das Bild
+       wird auch außerhalb der Seite gerastert (PNG), und dort gibt es keine
+       CSS-Variablen. */
     if (r.die.closeStart > r.die.open && clip(r.die.closeStart) > clip(r.die.open)) {
       var ox = X(clip(r.die.open)), ow = X(clip(r.die.closeStart)) - ox;
-      s += '<rect x="' + ox.toFixed(1) + '" y="' + TY + '" width="' + ow.toFixed(1) + '" height="' + bodyH + '" fill="rgba(194,68,126,0.06)"/>';
+      s += '<rect x="' + ox.toFixed(1) + '" y="' + TY + '" width="' + ow.toFixed(1) + '" height="' + bodyH + '" fill="' + P.surface2 + '"/>';
       [r.die.open, r.die.closeStart].forEach(function (t) {
         if (t < w0 || t > w1) return;
-        s += '<line x1="' + X(t).toFixed(1) + '" y1="' + TY + '" x2="' + X(t).toFixed(1) + '" y2="' + (TY + bodyH) + '" stroke="' + P.warn + '" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>';
+        s += '<line x1="' + X(t).toFixed(1) + '" y1="' + TY + '" x2="' + X(t).toFixed(1) + '" y2="' + (TY + bodyH) + '" stroke="' + P.muted + '" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>';
       });
     }
 
@@ -476,29 +509,33 @@
     }
     s += '<text x="' + ((L + W - R) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11.5" fill="' + P.muted + '">Zeit im Zyklus in s</text>';
 
-    /* Zustandsband des Werkzeugs */
+    /* Zustandsband des Werkzeugs: geschlossen in der Farbe des Werkzeugs,
+       die Bewegung heller, offen neutral mit Rand (ein Zustand, keine
+       Warnung). */
+    var bewegt = P.mix('die', 'surface', 0.45);
     var segs = [
-      [0, r.die.openStart, 'geschlossen', P.dark3],
-      [r.die.openStart, r.die.open, 'öffnet', P.catSlate],
-      [r.die.open, r.die.closeStart, 'Form offen', P.warn],
-      [r.die.closeStart, r.die.closed, 'schließt', P.catSlate],
-      [r.die.closed, r.total, 'geschlossen', P.dark3]
+      [0, r.die.openStart, 'geschlossen', P.die],
+      [r.die.openStart, r.die.open, 'öffnet', bewegt],
+      [r.die.open, r.die.closeStart, 'Form offen', P.surface2, P.border],
+      [r.die.closeStart, r.die.closed, 'schließt', bewegt],
+      [r.die.closed, r.total, 'geschlossen', P.die]
     ];
     s += '<text x="' + (L - 12) + '" y="' + (RIB_Y + RIB_H / 2 + 4) + '" text-anchor="end" font-size="11" font-weight="600" fill="' + P.muted + '">Werkzeug</text>';
     segs.forEach(function (sg) {
       var a = clip(sg[0]), b = clip(sg[1]);
       if (b - a <= 1e-9) return;
       var x = X(a), w = X(b) - x;
-      s += '<rect x="' + x.toFixed(1) + '" y="' + RIB_Y + '" width="' + w.toFixed(1) + '" height="' + RIB_H + '" fill="' + sg[3] + '"/>';
+      s += '<rect x="' + x.toFixed(1) + '" y="' + RIB_Y + '" width="' + w.toFixed(1) + '" height="' + RIB_H + '" fill="' + sg[3] + '"'
+        + (sg[4] ? ' stroke="' + sg[4] + '" stroke-width="1"' : '') + '/>';
       if (w > sg[2].length * 6 + 8)
-        s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (RIB_Y + RIB_H / 2 + 3.5) + '" text-anchor="middle" font-size="10" font-weight="700" fill="' + P.surface + '">' + sg[2] + '</text>';
+        s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (RIB_Y + RIB_H / 2 + 3.5) + '" text-anchor="middle" font-size="10" font-weight="700" fill="' + schriftAuf(sg[3]) + '">' + sg[2] + '</text>';
     });
 
     /* Zeilen */
     var y = TY;
     rows.forEach(function (row) {
       if (row.type === 'header') {
-        s += '<rect x="0" y="' + y + '" width="' + W + '" height="' + HEAD_H + '" fill="rgba(var(--dark-rgb), 0.05)"/>';
+        s += '<rect x="0" y="' + y + '" width="' + W + '" height="' + HEAD_H + '" fill="' + P.text + '" fill-opacity="0.05"/>';
         s += '<text x="10" y="' + (y + 14) + '" font-size="10.5" font-weight="700" letter-spacing="1" fill="' + P.muted + '">' + row.label.toUpperCase() + '</text>';
         y += HEAD_H;
         return;
@@ -513,19 +550,20 @@
         if (!it || it.end <= w0 || it.start >= w1) return;
         var a = clip(it.start), b = clip(it.end);
         var x = X(a), w = Math.max(X(b) - x, 1.5);
-        var style = row.main ? mainStyle(it.id) : (GROUP_STYLE[row.group] || STYLE_FALLBACK);
-        s += '<rect x="' + x.toFixed(1) + '" y="' + (y + BAR_Y) + '" width="' + w.toFixed(1) + '" height="' + BAR_H + '" rx="3" fill="' + style.fill + '"/>';
+        var fill = P[row.main ? mainStyle(it.id) : groupStyle(row.group)];
+        var schrift = schriftAuf(fill);
+        s += '<rect x="' + x.toFixed(1) + '" y="' + (y + BAR_Y) + '" width="' + w.toFixed(1) + '" height="' + BAR_H + '" rx="3" fill="' + fill + '"/>';
         var label = row.main
           ? escapeHtml(it.label) + ' · ' + fmt(it.dur) + ' s'
           : (it.short ? it.short + ' · ' : '') + fmt(it.dur) + ' s';
         var estW = label.length * 6.2;
         if (w >= estW + 8) {
-          s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (y + BAR_Y + BAR_H / 2 + 3.5) + '" text-anchor="middle" font-size="11" font-weight="600" fill="' + style.text + '">' + label + '</text>';
+          s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (y + BAR_Y + BAR_H / 2 + 3.5) + '" text-anchor="middle" font-size="11" font-weight="600" fill="' + schrift + '">' + label + '</text>';
         } else if (row.main) {
           /* Nummer der Phase (passend zur Liste darunter) statt Namen */
           var num = String(LOGIC.MAIN_PHASES.findIndex(function (p) { return p.id === it.id; }) + 1);
           if (w >= 16)
-            s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (y + BAR_Y + BAR_H / 2 + 3.5) + '" text-anchor="middle" font-size="10.5" font-weight="700" fill="' + style.text + '">' + num + '</text>';
+            s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (y + BAR_Y + BAR_H / 2 + 3.5) + '" text-anchor="middle" font-size="10.5" font-weight="700" fill="' + schrift + '">' + num + '</text>';
         } else {
           /* Beschriftung ins freie Band über dem Balken */
           var lx = Math.min(x, W - R - estW);
@@ -535,10 +573,10 @@
       y += LANE_H;
     });
 
-    /* Zyklusende */
+    /* Zyklusende: der Kennwert des Bildes, in der Hervorhebung */
     if (r.total >= w0 && r.total <= w1) {
-      s += '<line x1="' + X(r.total) + '" y1="' + (RIB_Y - 4) + '" x2="' + X(r.total) + '" y2="' + (TY + bodyH) + '" stroke="' + P.warn + '" stroke-width="1.6" stroke-dasharray="5 4"/>';
-      s += '<text x="' + Math.min(X(r.total), W - R - 4) + '" y="' + (RIB_Y - 8) + '" text-anchor="end" font-size="11.5" font-weight="700" fill="' + P.warn + '" paint-order="stroke" stroke="' + P.surface + '" stroke-width="3.5">Zykluszeit ' + fmt(r.total) + ' s</text>';
+      s += '<line x1="' + X(r.total) + '" y1="' + (RIB_Y - 4) + '" x2="' + X(r.total) + '" y2="' + (TY + bodyH) + '" stroke="' + P.mark + '" stroke-width="1.6" stroke-dasharray="5 4"/>';
+      s += '<text x="' + Math.min(X(r.total), W - R - 4) + '" y="' + (RIB_Y - 8) + '" text-anchor="end" font-size="11.5" font-weight="700" fill="' + P.mark + '" paint-order="stroke" stroke="' + P.surface + '" stroke-width="3.5">Zykluszeit ' + fmt(r.total) + ' s</text>';
     }
 
     return s + '</svg>';
@@ -548,6 +586,12 @@
 
   function renderChart() {
     persist();
+    zeichnen();
+  }
+
+  /* Rechnen und malen, ohne zu speichern: auch für den Wechsel des
+     Farbschemas, der am Projekt nichts ändert. */
+  function zeichnen() {
     var extras = buildExtras();
     var r = LOGIC.layoutCycle(st.durs, extras);
     document.getElementById('k-total').textContent = fmt(r.total);
@@ -556,10 +600,14 @@
     renderHeat(r);
   }
 
+  /* Die Punkte vor den Zeilen stehen als CSS-Token im Markup: sie folgen
+     einem Wechsel des Farbschemas ohne Neuaufbau (der die Eingaben träfe). */
+  function farbToken(rolle) { return 'var(' + P.cssName(rolle) + ')'; }
+
   function renderMainGrid() {
     document.getElementById('main-grid').innerHTML = LOGIC.MAIN_PHASES.map(function (p, i) {
       return '<label class="main-field">' +
-        '<span><span class="num">' + (i + 1) + '.</span><span class="track-dot" style="background:' + mainStyle(p.id).fill + '"></span>' + p.label + '</span>' +
+        '<span><span class="num">' + (i + 1) + '.</span><span class="track-dot" style="background:' + farbToken(mainStyle(p.id)) + '"></span>' + p.label + '</span>' +
         '<span class="inp"><input type="number" data-id="' + p.id + '" step="0.5" min="0" value="' + st.durs[p.id] + '" aria-label="Dauer ' + p.label + ' in Sekunden"> s</span>' +
       '</label>';
     }).join('');
@@ -568,7 +616,7 @@
   function renderKern() {
     document.getElementById('kern-body').innerHTML = st.schieber.map(function (sch, i) {
       return '<tr data-idx="' + i + '">' +
-        '<td><span class="track-dot" style="background:' + GROUP_STYLE.kern.fill + '"></span>' +
+        '<td><span class="track-dot" style="background:' + farbToken(groupStyle('kern')) + '"></span>' +
           '<input type="text" data-k="name" value="' + escapeHtml(sch.name) + '" aria-label="Name des Schiebers"></td>' +
         '<td class="r"><input type="number" data-k="pullLag" step="0.5" value="' + sch.pullLag + '" aria-label="Versatz Ziehen"></td>' +
         '<td class="r"><input type="number" data-k="pullDur" step="0.5" min="0" value="' + sch.pullDur + '" aria-label="Dauer Ziehen"></td>' +
@@ -594,7 +642,7 @@
         '<td class="sect"><button class="zk-btn" data-add="' + m[0] + '" style="padding:0.15rem 0.6rem;">+</button></td></tr>';
       st.sections[m[0]].forEach(function (e, i) {
         html += '<tr data-sec="' + m[0] + '" data-idx="' + i + '">' +
-          '<td><span class="track-dot" style="background:' + GROUP_STYLE[m[0]].fill + '"></span>' +
+          '<td><span class="track-dot" style="background:' + farbToken(groupStyle(m[0])) + '"></span>' +
             '<input type="text" data-k="label" value="' + escapeHtml(e.label) + '" aria-label="Name des Vorgangs"></td>' +
           '<td><select data-k="anchor" aria-label="Bezugspunkt">' + anchorOpts(e.anchor) + '</select></td>' +
           '<td class="r"><input type="number" data-k="lag" step="0.5" value="' + e.lag + '" aria-label="Versatz in Sekunden"></td>' +
@@ -655,13 +703,21 @@
 
 
   /* ── Wärmebilanz ────────────────────────────────────────── */
-  var LOSS_STYLE = [
-    ['Qkon',  'Konvektion + Strahlung', P.catSlate],
-    ['Qpl',   'Aufspannplatten',        P.dark3],
-    ['Qluft', 'Luft (offene Form)',     P.accent],
-    ['Qbl',   'Ausblasen',              P.gold],
-    ['Qspr',  'Formtrennstoff',         P.catPurple]
-  ];
+  /* Wohin die Wärme geht, jeder Posten in der Sachfarbe seines Weges:
+     Konvektion und Strahlung über die Stahlfläche der Form, die
+     Aufspannplatten als Stahl im Schnitt, die Luft zwischen den offenen
+     Hälften; Ausblasen und Trennstoff aus der Familie der Luft (heller und
+     dunkler, der Farbton bleibt), der Rest ist die Aufgabe der Temperierung.
+     Als Funktion: die Werte liest erst das Zeichnen. */
+  function lossStyle() {
+    return [
+      ['Qkon',  'Konvektion + Strahlung', P.steel],
+      ['Qpl',   'Aufspannplatten',        P.steelDark],
+      ['Qluft', 'Luft (offene Form)',     P.air],
+      ['Qbl',   'Ausblasen',              P.mix('air', 'surface', 0.5)],
+      ['Qspr',  'Formtrennstoff',         P.mix('air', 'text', 0.4)]
+    ];
+  }
   var heatCard = document.getElementById('heat-card');
 
   /* Eingaben für computeHeat() aus Projekt, Zeitleiste und cycle.heat.
@@ -713,31 +769,34 @@
   function svgBalance(r) {
     var W = 600, H = 112, L = 8, R = 8, BAR_Y = 26, BAR_H = 30;
     var Q = r.input.Qdie, l = r.losses;
-    var segs = LOSS_STYLE.map(function (s) { return { label: s[1], v: l[s[0]], c: s[2] }; });
+    var segs = lossStyle().map(function (s) { return { label: s[1], v: l[s[0]], c: s[2] }; });
     var total = Math.max(Q, l.QU, 1e-9);
-    if (r.QT > 0) segs.push({ label: 'Temperiersystem', v: r.QT, c: P.primary2 });
+    if (r.QT > 0) segs.push({ label: 'Temperiersystem', v: r.QT, c: P.cool });
     var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" font-family="Arial" aria-label="Wärmebilanz je Zyklus">';
     s += '<text x="' + L + '" y="15" font-size="11.5" font-weight="700" fill="' + P.muted + '">Wärme in die Form Q = ' + fmt(Q, 0) + ' kJ je Zyklus</text>';
-    s += '<text x="' + (W - R) + '" y="15" font-size="11" text-anchor="end" fill="' + (r.deficit ? P.warn : P.muted) + '">' + (r.deficit ? 'Verluste > Eintrag: Form muss beheizt werden' :'Temperiersystem ' + fmt(r.k * 100, 0) + ' %') + '</text>';
+    /* Das Defizit ist ein Urteil (schlecht), in der Schrift dieser Stufe. */
+    s += '<text x="' + (W - R) + '" y="15" font-size="11" text-anchor="end" fill="' + (r.deficit ? P.badText : P.muted) + '">' + (r.deficit ? 'Verluste > Eintrag: Form muss beheizt werden' :'Temperiersystem ' + fmt(r.k * 100, 0) + ' %') + '</text>';
     var x = L;
     segs.forEach(function (sg) {
       if (!(sg.v > 0)) return;
       var w = sg.v / total * (W - L - R);
-      s += '<rect x="' + x.toFixed(1) + '" y="' + BAR_Y + '" width="' + w.toFixed(1) + '" height="' + BAR_H + '" fill="' + sg.c + '"/>';
+      /* Eine Fuge in der Farbe des Blatts zwischen den Posten: benachbarte
+         Töne einer Familie (Luft, Stahl) bleiben so getrennt lesbar. */
+      s += '<rect x="' + x.toFixed(1) + '" y="' + BAR_Y + '" width="' + Math.max(w - 1, 0.5).toFixed(1) + '" height="' + BAR_H + '" fill="' + sg.c + '"/>';
       var lab = fmt(sg.v, 0);
       if (w > lab.length * 7 + 6)
-        s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (BAR_Y + BAR_H / 2 + 4) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + P.surface + '">' + lab + '</text>';
+        s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (BAR_Y + BAR_H / 2 + 4) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + schriftAuf(sg.c) + '">' + lab + '</text>';
       x += w;
     });
     if (r.deficit) {
       var xq = L + Q / total * (W - L - R);
-      s += '<line x1="' + xq + '" y1="' + (BAR_Y - 4) + '" x2="' + xq + '" y2="' + (BAR_Y + BAR_H + 4) + '" stroke="' + P.warn + '" stroke-width="2"/>';
+      s += '<line x1="' + xq + '" y1="' + (BAR_Y - 4) + '" x2="' + xq + '" y2="' + (BAR_Y + BAR_H + 4) + '" stroke="' + P.bad + '" stroke-width="2"/>';
     }
     var lx = L, ly = BAR_Y + BAR_H + 28;
     segs.forEach(function (sg) {
       var tw = sg.label.length * 6.2 + 22;
       if (lx + tw > W - R) { lx = L; ly += 16; }
-      s += '<rect x="' + lx + '" y="' + (ly - 9) + '" width="10" height="10" rx="2" fill="' + sg.c + '"/>';
+      s += '<rect x="' + lx + '" y="' + (ly - 9) + '" width="10" height="10" rx="2" fill="' + sg.c + '" stroke="' + P.border + '" stroke-width="0.6"/>';
       s += '<text x="' + (lx + 14) + '" y="' + ly + '" font-size="10.5" fill="' + P.muted + '">' + sg.label + '</text>';
       lx += tw;
     });
@@ -897,6 +956,10 @@
   });
 
   copyBtn.addEventListener('click', copyChartImage);
+
+  /* Anderes Farbschema: Zeitleiste und Wärmebilanz neu malen. Die Punkte
+     vor den Zeilen folgen als CSS-Token von selbst. */
+  document.addEventListener('dielogic:scheme', zeichnen);
 
   document.getElementById('reset-btn').addEventListener('click', function () {
     st = LOGIC.defaultState();

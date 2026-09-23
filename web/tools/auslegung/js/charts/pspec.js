@@ -5,7 +5,6 @@
 
 import { series, line, target } from './helpers.js';
 import { seq, fmt, subHTML } from '../core/format.js';
-import { theme } from '../core/theme.js';
 import { injForceEff } from '../core/physics.js';
 import { eq } from './mathfmt.js';
 
@@ -28,7 +27,7 @@ export default {
     const F = injForceEff(v);
     const f = d => F * 1e4 / (0.25 * PI * d * d);
     const pClamp = clampMax(v);
-    const q = line(x, [series('Gießdruck', theme.chart.series1, x, f)],
+    const q = line(x, [series('Gießdruck', 'ink', x, f)],
       'Kolben-Ø in mm', 'Spez. Gießdruck in bar', 'Gießkraft ' + fmt(F) + ' kN bei ' + fmt(Math.min(v.pAccOp, v.pAcc)) + ' bar Akkumulatordruck');
     if (v.psel > 0 && isFinite(pClamp)) {
       const lo = Math.min(v.psel, pClamp), hi = Math.max(v.psel, pClamp);

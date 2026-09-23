@@ -15,6 +15,7 @@ import * as M from '../cooling/model.js';
 import { buildByType, buildAll, volumeOf, wallClearance } from '../cooling/geom.js';
 import { planCooling } from '../cooling/auto.js';
 import { setTris, download, safeName, dirText } from '../ui/common.js';
+import { onScheme, VIEW } from '../part/colors.js';
 
 const SUBTITLE = 'Temperierung: Kühlstiche und Kanäle auf der Abstandsfläche zur Kavität, die Enden frei bewegen, der Wandabstand aus dem Feld.';
 const STATUS = '<b>Setzen</b>: Art wählen, dann auf die Abstandsfläche klicken &nbsp;·&nbsp; <b>Punkt</b> ziehen: in der Bildebene &nbsp;·&nbsp; '
@@ -34,8 +35,11 @@ export function createCoolingStage(ctx) {
   /* ── Szene ────────────────────────────────────────────────── */
   const group = new T.Group();
   view.scene.add(group);
+  /* Die Farben wie im Temperierkanal-Designer (js/cooling/tool.js): die
+     Abstandsfläche ist eine Hilfsfläche, die Arten tragen die Farbe der
+     Temperierung. */
   const shellMat = new T.MeshStandardMaterial({
-    color: 0x3fc2b6, roughness: 0.6, metalness: 0.02, transparent: true, opacity: SHELL_OPACITY,
+    color: VIEW.helper, roughness: 0.6, metalness: 0.02, transparent: true, opacity: SHELL_OPACITY,
     depthWrite: false, side: T.DoubleSide, flatShading: true
   });
   function shellClear(on) {
@@ -55,13 +59,41 @@ export function createCoolingStage(ctx) {
     meshes[type].visible = false;
     group.add(meshes[type]);
   }
+  /* Die Knöpfe zum Setzen tragen die Farbe ihrer Art. */
+  function paintButtons() {
+    for (const type of Object.keys(M.TYPES)) {
+      const dot = $('te-add-' + type) && $('te-add-' + type).querySelector('.dot');
+      if (dot) dot.style.background = M.TYPES[type].color;
+    }
+  }
+  paintButtons();
+  function legend() {
+    const row = (color, text, extra = '') => '<div class="lg-row"><span class="dot" style="background:' + color + extra + '"></span>' + text + '</div>';
+    $('pt-legend').innerHTML = '<div class="pt-menu-title">Arten</div>'
+      + Object.values(M.TYPES).map(t => row(t.color, t.label)).join('')
+      + row(VIEW.helper, 'Abstandsfläche', ';opacity:.5')
+      + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>';
+  }
+  /* Ein Wechsel des Farbschemas: Körper, Fläche und Knöpfe umfärben; ist der
+     Schritt zu sehen, Legende und Auswahlfeld neu. Die Griffe gleicht
+     js/handles.js selbst ab. */
+  onScheme(() => {
+    for (const [type, meta] of Object.entries(M.TYPES)) meshes[type].material.color.set(meta.color);
+    shellMat.color.set(VIEW.helper);
+    paintButtons();
+    if (!state.active) return;
+    legend();
+    syncSelection();
+    view.invalidate();
+  });
+  let markType = 'stich';                    // welche Art gerade gesetzt wird: die Farbe der Zielmarke
 
   /* ── Griffe ───────────────────────────────────────────────── */
   const splitId = id => { const i = id.indexOf(':'); return i < 0 ? [id, 'p'] : [id.slice(0, i), id.slice(i + 1)]; };
   const handles = createHandles({
     view,
     getRefMesh: () => shellMesh,
-    markColor: M.TYPES.stich.color,
+    markColor: () => M.TYPES[markType].color,
     items: () => {
       const out = [];
       for (const it of M.allItems(state.plan)) {
@@ -257,6 +289,7 @@ export function createCoolingStage(ctx) {
   }
   function startPlace(type) {
     if (!state.shellDist) { noShell(); return; }
+    markType = type;
     handles.select(null);
     state.pending = null;
     ctx.aim.onCancel = cancelAim;
@@ -297,6 +330,7 @@ export function createCoolingStage(ctx) {
     const it = state.plan.items[splitId(id)[0]];
     if (!it || it.type !== 'stich') return;
     if (!state.shellDist) { noShell(); return; }
+    markType = 'stich';
     ctx.aim.show(true, 'Kühlstich ' + it.id + ': die neue Stelle auf der Abstandsfläche anklicken. Esc bricht ab.');
     ctx.aim.onCancel = cancelAim;
     handles.armAim({
@@ -403,10 +437,7 @@ export function createCoolingStage(ctx) {
       state.active = true;
       ctx.subtitle(SUBTITLE);
       ctx.statusHTML(STATUS);
-      $('pt-legend').innerHTML = '<div class="pt-menu-title">Arten</div>'
-        + Object.values(M.TYPES).map(t => '<div class="lg-row"><span class="dot" style="background:' + t.color + '"></span>' + t.label + '</div>').join('')
-        + '<div class="lg-row"><span class="dot" style="background:#3fc2b6;opacity:.5"></span>Abstandsfläche</div>'
-        + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>';
+      legend();
       $('te-menu').classList.remove('wb-off');
       handles.setEnabled(true);
       handles.group.visible = true;

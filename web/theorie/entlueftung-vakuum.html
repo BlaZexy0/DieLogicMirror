@@ -11,11 +11,12 @@
   <link rel="stylesheet" href="/shared/shared.css">
   <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
   <script defer src="/shared/vendor/katex/katex.min.js"></script>
-  <script defer src="/shared/vendor/katex/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore'})"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,errorColor:'var(--bad-text)',strict:'ignore'})"></script>
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
   <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
   <style>
     .fig-wrap {
       background: var(--surface2);
@@ -23,7 +24,9 @@
       border-radius: var(--radius);
       margin: 1.25rem 0;
     }
-    .fig-wrap img { display: block; width: 100%; border-radius: 6px 6px 0 0; }
+    /* Die Bilder setzt shared/svgfarben.js als <svg class="svg-bild"> ein
+       (dann folgen sie dem Farbschema); ohne Script bleibt das <img>. */
+    .fig-wrap img, .fig-wrap .svg-bild { display: block; width: 100%; border-radius: 6px 6px 0 0; }
     .fig-cap {
       font-size: 0.8rem;
       color: var(--muted);
@@ -126,7 +129,7 @@
           A<sub>ent,erf</sub>(t<sub>f</sub>) mit den Standardwerten (V<sub>luft</sub> ≈ 6,4 l,
           v<sub>luft,max</sub> = 150 m/s). Gestrichelt die vorhandene Entlüftung (800 mm²) und
           als Referenz die Anschnittfläche; schraffiert der Bereich, in dem der Bedarf die
-          vorhandene Fläche übersteigt. Der rote Punkt ist die Füllzeit der aktuellen
+          vorhandene Fläche übersteigt. Der Arbeitspunkt markiert die Füllzeit der aktuellen
           Schusskurve.</div>
       </div>
 
@@ -149,7 +152,7 @@
         <img src="/assets/theorie/vent.svg" alt="Entlüftungsgeschwindigkeit über der Kolbengeschwindigkeit" loading="lazy">
         <div class="fig-cap"><b>Die Übersetzung als Gerade:</b> v<sub>ent</sub> über
           v<sub>p</sub> mit der Steigung A<sub>K</sub>/A<sub>ent</sub> ≈ 22. Schraffiert der
-          Bereich über v<sub>luft,max</sub> = 150 m/s; der rote Punkt markiert v₂ der aktuellen
+          Bereich über v<sub>luft,max</sub> = 150 m/s; der Arbeitspunkt markiert v₂ der aktuellen
           Schusskurve.</div>
       </div>
 
@@ -282,8 +285,8 @@
         <img src="/assets/theorie/bubble.svg" alt="Blasen-Durchmesserverhältnis über dem Nachdruck" loading="lazy">
         <div class="fig-cap"><b>Blasen-Ø-Verhältnis über dem Nachdruck</b> (ohne Vakuum,
           p<sub>vor</sub> = 1013 mbar): flach ansteigende Kubikwurzel bis zum maximalen
-          Nachdruck des montierten Kolbens; der rote Marker ist der gewählte metallseitige
-          Nachdruck (600 bar → Ø-Verhältnis ≈ 10,7). Im Dashboard kommt mit aktiver
+          Nachdruck des montierten Kolbens; der Arbeitspunkt ist der gewählte metallseitige
+          Nachdruck (600 bar → Ø-Verhältnis ≈ 10,3). Im Dashboard kommt mit aktiver
           Vakuum-Simulation eine zweite, höhere Kurve für den simulierten Restdruck
           p<sub>vor</sub> dazu; dieselbe Blase wird dann mehr als doppelt so stark
           komprimiert.</div>

@@ -76,7 +76,7 @@ export function slider(id, onChange, format, out) {
 
 /** Zahleneingabe: übernommen wird mit der Eingabetaste oder beim
     Verlassen. apply(wert) gibt den tatsächlich gesetzten Wert zurück
-    (geklemmt o. ä.), unlesbare Eingaben werden rot markiert und der
+    (geklemmt o. ä.), unlesbare Eingaben werden als „schlecht" markiert und der
     letzte gültige Wert bleibt stehen. Mit `min`/`max` klemmt der Helfer
     selbst und sagt es kurz dazu („auf 30 mm begrenzt"). */
 export function numberInput(id, apply, opts = {}) {
@@ -152,7 +152,12 @@ export function colorbar(spec) {
   if (!spec) { e.classList.remove('on'); return; }
   e.classList.add('on');
   $('cb-title').textContent = spec.title;
-  $('cb-scale').style.background = 'linear-gradient(to top, ' + spec.stops.join(', ') + ')';
+  const scale = $('cb-scale');
+  scale.style.background = 'linear-gradient(to top, ' + spec.stops.join(', ') + ')';
+  /* Der Verlauf reicht unter den Rahmen: sonst wiederholt er sich dort, und
+     oben stünde ein Streifen vom unteren Ende (bei der Schräge ein Strich
+     „schlecht" über „gut"). */
+  scale.style.backgroundOrigin = 'border-box';
   $('cb-ticks').className = 'cb-ticks' + (spec.bands ? ' bands' : '');
   $('cb-ticks').innerHTML = spec.ticks.map(t => '<span>' + t + '</span>').join('');
   $('cb-extra').innerHTML = spec.extra || '';

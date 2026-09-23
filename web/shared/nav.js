@@ -24,11 +24,10 @@
 
 (function () {
   /* Farben: shared/palette.js, Version: version.js — beide vor nav.js geladen.
-     `ton` macht aus einer Palettenfarbe ein rgba: Tönungen und Leuchten der
-     Leiste sollen dem Farbschema folgen, nicht als festes Teal stehenbleiben. */
+     Tönungen und Schatten der Leiste nimmt C.rgba(rolle, deckkraft) aus der
+     Palette: sie folgen dem Farbschema, statt in einem festen Ton stehen
+     zu bleiben. */
   const C = window.__PALETTE__;
-  const ton = (hex, a) => 'rgba(' + parseInt(hex.slice(1, 3), 16) + ',' + parseInt(hex.slice(3, 5), 16)
-    + ',' + parseInt(hex.slice(5, 7), 16) + ',' + a + ')';
   const VERSION = 'v' + (window.__DL_VERSION__ || '?');
 
   /* ── Diagramm-Einzelseiten (Reihenfolge = js/charts/registry.js) ── */
@@ -267,7 +266,7 @@
   z-index: 100;
   font-family: 'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   -webkit-font-smoothing: antialiased;
-  box-shadow: 0 1px 0 rgba(255,255,255,.06), 0 8px 24px -12px rgba(0,20,27,.5);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06), 0 8px 24px -12px ${C.rgba('dark', .5)};
 }
 .dl-nav-logo {
   display: flex;
@@ -342,7 +341,7 @@
   white-space: nowrap;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
 }
-.dl-nav-cta a:hover { background: ${C.primary2}; box-shadow: 0 4px 14px -4px ${ton(C.primary, .7)}, inset 0 1px 0 rgba(255,255,255,.14); }
+.dl-nav-cta a:hover { background: ${C.primary2}; box-shadow: 0 4px 14px -4px ${C.rgba('primary', .7)}, inset 0 1px 0 rgba(255,255,255,.14); }
 
 .dl-nav-group { position: relative; display: inline-block; }
 .dl-nav-group > .dl-nav-group-label {
@@ -375,7 +374,7 @@
   overflow-y: auto;
   display: none;
   z-index: 200;
-  box-shadow: 0 16px 40px -8px rgba(0,20,27,.55), 0 0 0 1px rgba(0,0,0,.2);
+  box-shadow: 0 16px 40px -8px ${C.rgba('dark', .55)}, 0 0 0 1px rgba(0,0,0,.2);
 }
 /* Offen ist ein Menü genau dann, wenn es .open trägt — Maus, Klick,
    Touch und Tastatur setzen die Klasse in wireDropdowns(), nicht :hover.
@@ -405,7 +404,7 @@
 .dl-nav-dropdown a:hover { color: white; background: rgba(255,255,255,.07); }
 .dl-nav-dropdown a.active {
   color: white;
-  background: ${ton(C.primary, .18)};
+  background: ${C.rgba('primary', .18)};
 }
 
 .dl-footer {
@@ -512,7 +511,7 @@
   padding: 0.25rem 0 0.6rem;
   background: ${C.dark2};
   border-top: 1px solid ${C.dark3};
-  box-shadow: 0 12px 28px rgba(0,20,27,.45);
+  box-shadow: 0 12px 28px ${C.rgba('dark', .45)};
   max-height: calc(100vh - 56px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;

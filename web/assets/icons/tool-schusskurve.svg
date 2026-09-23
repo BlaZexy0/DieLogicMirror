@@ -1,12 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" width="26" height="26" fill="none">
-  <!-- Schusskurve — s–v-Profil mit Rampe, Ereignislinie „Kammer voll".
-       Raster: Motiv innerhalb 2…24, Strich 1,6 (Hilfslinien 1,4 · 70 %), Marker in der Warnfarbe (warn).
-       Farben aus der Palette (shared.css), Fallback für die Ansicht außerhalb der Seite. -->
+  <!-- Schusskurve: s-v-Profil mit Rampe, Ereignislinie „Kammer voll".
+       Raster: Motiv innerhalb 2…24, Strich 1,6 (Hilfslinien 1,4 · 70 %).
+       Farben sind Rollen der Palette (shared/palette.js): das Werkzeug in der
+       Farbe der Luft (air), die Schusskurve ist das Werkzeug der Luft in der
+       Kammer; der Betriebspunkt in der Hervorhebung (mark). Der Hex-Rückfall
+       ist der Standardwert der Rolle, für die Ansicht außerhalb der Seite. -->
   <symbol id="icon" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 3.5 V22.5 H23" stroke="var(--accent, #8cbee6)" stroke-width="1.4" opacity=".7"/>
-    <path d="M5 18.5 H10.5 C13 18.5 13 7 16 7 H21.5" stroke="var(--accent, #8cbee6)" stroke-width="1.8"/>
-    <line x1="11.5" y1="21" x2="11.5" y2="5" stroke="var(--accent, #8cbee6)" stroke-width="1.2" stroke-dasharray="1.6 1.8" opacity=".8"/>
-    <circle cx="18.5" cy="7" r="1.9" fill="var(--warn, #c2447e)"/>
+    <path d="M3 3.5 V22.5 H23" stroke="var(--air, #60a7d6)" stroke-width="1.4" opacity=".7"/>
+    <path d="M5 18.5 H10.5 C13 18.5 13 7 16 7 H21.5" stroke="var(--air, #60a7d6)" stroke-width="1.8"/>
+    <line x1="11.5" y1="21" x2="11.5" y2="5" stroke="var(--air, #60a7d6)" stroke-width="1.2" stroke-dasharray="1.6 1.8" opacity=".8"/>
+    <circle cx="18.5" cy="7" r="1.9" fill="var(--mark, #b23797)"/>
   </symbol>
   <use href="#icon"/>
 </svg>

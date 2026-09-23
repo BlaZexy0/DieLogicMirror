@@ -1,8 +1,15 @@
 /* Farbtafel aus web/shared/palette.js → web/assets/palette.svg
    (deterministisch; CI prüft, dass die eingecheckte Datei aktuell ist):
      node scripts/gen-palette.mjs
-   Je Farbe: Quadrat, Name, CSS-Variable, Hex, Rolle, Kontrast auf Weiß und
-   auf Petrol (WCAG), mit Markierung, ob die Farbe als Text taugt. */
+   Dokumentiert die ROLLEN der Palette im Standardschema (DieLogic Teal):
+   je Rolle ein Quadrat, Name, CSS-Token, Wert, wofür sie steht und der
+   Kontrast auf surface und auf dark (WCAG), mit Markierung, ob die Farbe
+   als Text taugt. Die Familien (Marke, Flächen, Text, Ampel, Hervorhebung,
+   Sachfarben) sind die Blockkommentare in palette.js, die Rollen die
+   Kommentare hinter den Werten. Am Ende die festen Farbleisten (LEISTEN):
+   keine Rollen, in jedem Schema dieselben. Andere Schemata belegen die
+   Rollen anders (shared/schemes.js); sie zeigt die Seite „Projekte &
+   Konto" als Kacheln. */
 
 import { writeFileSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -14,17 +21,32 @@ const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'web'
 globalThis.window = globalThis;
 const P = require(path.join(site, 'shared/palette.js'));
 
-/* Rollen-Kommentare aus der Quelle lesen (// hinter dem Wert) */
+/* Rollen-Kommentare aus der Quelle lesen (// hinter dem Wert). Ein
+   Gedankenstrich im Kommentar wird zum Doppelpunkt: die Tafel ist
+   sichtbarer Text. */
 const src = readFileSync(path.join(site, 'shared/palette.js'), 'utf8');
 const roles = {};
-for (const [, k, note] of src.matchAll(/^\s*(\w+):\s*'#[0-9a-f]{6}',?\s*\/\/\s*(.*)$/gm)) roles[k] = note.trim();
+for (const [, k, note] of src.matchAll(/^\s*(\w+):\s*'#[0-9a-f]{6}',?\s*\/\/\s*(.*)$/gm))
+  roles[k] = note.trim().replace(/\s+[—–]\s+/g, ': ');
+/* Rollen ohne eigenen Kommentar (die Stufen der Ampel) aus ihrem Namen:
+   Schrift, Grund und Rand einer Ampelstufe. */
+const STUFE = { ok: '„gut"', caution: '„knapp"', bad: '„schlecht"' };
+function rolleAusName(k) {
+  let m = k.match(/^(ok|caution|bad)(Text|Bg|Border)$/);
+  if (m) return STUFE[m[1]] + (m[2] === 'Text' ? ' als Text' : m[2] === 'Bg' ? ': Grund eines Kastens' : ': Rand eines Kastens');
+  return '';
+}
+
+/* Familien: die einzeiligen Blockkommentare im Objekt der Farben. Nur
+   Gruppen mit Farben zählen (weiter unten stehen Kommentare zum Rechnen). */
 const groups = [];
 for (const line of src.split('\n')) {
   const g = line.match(/^\s*\/\* (.+?) \*\/\s*$/);
-  if (g && !/Zuordnung|DIE Farbquelle/.test(g[1])) groups.push({ title: g[1], keys: [] });
+  if (g && !/Zuordnung|DIE Farbquelle/.test(g[1])) groups.push({ title: g[1].replace(/\s+[—–]\s+/g, ': '), keys: [] });
   const k = line.match(/^\s*(\w+):\s*'#[0-9a-f]{6}'/);
   if (k && groups.length) groups[groups.length - 1].keys.push(k[1]);
 }
+const familien = groups.filter(g => g.keys.length);
 
 function lum(hex) {
   const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
@@ -34,21 +56,30 @@ function lum(hex) {
 const contrast = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const cssName = k => '--' + k.replace(/[A-Z]/g, c => '-' + c.toLowerCase());
+const zahl = x => x.toFixed(1).replace('.', ',');
 
-const COLS = 4, CW = 300, CH = 118, SQ = 56, PAD = 28, HEAD = 64, GAP = 34;
-const rows = groups.reduce((n, g) => n + Math.ceil(g.keys.length / COLS), 0);
+const COLS = 4, CW = 300, CH = 118, SQ = 56, PAD = 28, HEAD = 78, GAP = 34;
+const VERLAEUFE = [
+  ['heat', 'Heatmaps der Auslegung: sieben Stützstellen aus Turbo', 'scale(\'heat\', t), theme.heatStops'],
+  ['turbo', 'Felder im 3D-Studio: Wandstärke, Abstand, Füllgrad, Ankunft, Geschwindigkeit, Haftung', 'scale(\'turbo\', t), Polynom nach Popov'],
+  ['draft', 'Entformschräge: bis zum Grenzwert (t = 1/3) Rot nach Gold, darüber hell- nach sattgrün', 'scale(\'draft\', t), t = Winkel / 3·Grenzwert'],
+  ['speed', 'Geschwindigkeit im Flussschema des Angussdesigners', 'scale(\'speed\', t)']
+];
+const VH = 58;                                     // Höhe je Verlauf
+const rows = familien.reduce((n, g) => n + Math.ceil(g.keys.length / COLS), 0);
 const W = PAD * 2 + COLS * CW;
-const H = HEAD + PAD + groups.length * GAP + rows * CH + PAD;
+const H = HEAD + PAD + familien.length * GAP + rows * CH + GAP + VERLAEUFE.length * VH + PAD;
 const font = 'font-family="-apple-system,Inter,Segoe UI,Helvetica,Arial,sans-serif"';
 const mono = 'font-family="JetBrains Mono,Fira Code,Menlo,monospace"';
 
-let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" ${font} role="img" aria-label="DieLogic Farbpalette">
+let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" ${font} role="img" aria-label="DieLogic Farbrollen">
 <rect width="${W}" height="${H}" fill="${P.surface}"/>
-<text x="${PAD}" y="38" font-size="22" font-weight="700" fill="${P.dark}">DieLogic — Farbpalette</text>
-<text x="${PAD}" y="56" font-size="11.5" fill="${P.muted}">Quelle: web/shared/palette.js · Spiegel in shared/shared.css, tools/auslegung/css/main.css (:root) und shared/theme.js (ui) · Kontrast nach WCAG 2.x, T = als Text geeignet (≥ 4,5:1), t = nur groß/fett (≥ 3:1)</text>
+<text x="${PAD}" y="38" font-size="22" font-weight="700" fill="${P.text}">DieLogic: Farbrollen im Standardschema „DieLogic Teal"</text>
+<text x="${PAD}" y="56" font-size="11.5" fill="${P.muted}">Quelle: web/shared/palette.js · CSS-Tokens in shared/shared.css (:root) · Diagrammrollen abgeleitet in shared/theme.js · die anderen Schemata belegen dieselben Rollen (shared/schemes.js)</text>
+<text x="${PAD}" y="71" font-size="11.5" fill="${P.muted}">Kontrast nach WCAG 2.x auf surface und auf dark: T = als Text geeignet (≥ 4,5:1), t = nur groß oder fett (≥ 3:1). Ampel nur für Urteile, Sachfarben für Dinge, mark für den Betriebspunkt.</text>
 `;
 let y = HEAD + PAD;
-for (const g of groups) {
+for (const g of familien) {
   s += `<text x="${PAD}" y="${y + 14}" font-size="11" font-weight="700" letter-spacing="1.2" fill="${P.muted}">${esc(g.title.toUpperCase())}</text>\n`;
   y += GAP;
   g.keys.forEach((k, i) => {
@@ -58,18 +89,36 @@ for (const g of groups) {
     const tag = c => (c >= 4.5 ? 'T' : c >= 3 ? 't' : '–');
     const stroke = lum(hex) > 0.85 ? P.border : 'none';
     s += `<rect x="${x}" y="${yy}" width="${SQ}" height="${SQ}" rx="8" fill="${hex}" stroke="${stroke}"/>\n`;
-    /* Textprobe auf dem Quadrat: Aa in Weiß und in Petrol, je nach Helligkeit */
+    /* Textprobe auf dem Quadrat: Aa in surface oder in dark, je nachdem, was liest */
     s += `<text x="${x + SQ / 2}" y="${yy + SQ / 2 + 6}" text-anchor="middle" font-size="17" font-weight="700" fill="${cw >= cd ? P.surface : P.dark}">Aa</text>\n`;
     const tx = x + SQ + 12;
-    s += `<text x="${tx}" y="${yy + 15}" font-size="13.5" font-weight="700" fill="${P.dark}">${esc(k)}</text>\n`;
+    s += `<text x="${tx}" y="${yy + 15}" font-size="13.5" font-weight="700" fill="${P.text}">${esc(k)}</text>\n`;
     s += `<text x="${tx}" y="${yy + 31}" font-size="11" ${mono} fill="${P.muted}">${esc(cssName(k))} · ${esc(hex)}</text>\n`;
-    const role = roles[k] || '';
+    const role = roles[k] || rolleAusName(k);
     const lines = role.length > 38 ? [role.slice(0, role.lastIndexOf(' ', 38)), role.slice(role.lastIndexOf(' ', 38) + 1)] : [role];
     lines.forEach((ln, j) => { s += `<text x="${tx}" y="${yy + 47 + j * 13}" font-size="10.5" fill="${P.textBody}">${esc(ln)}</text>\n`; });
-    s += `<text x="${tx}" y="${yy + 76}" font-size="10" ${mono} fill="${P.muted}">auf Weiß ${cw.toFixed(1)}:1 ${tag(cw)}   auf Petrol ${cd.toFixed(1)}:1 ${tag(cd)}</text>\n`;
+    s += `<text x="${tx}" y="${yy + 76}" font-size="10" ${mono} fill="${P.muted}">auf surface ${zahl(cw)}:1 ${tag(cw)}   auf dark ${zahl(cd)}:1 ${tag(cd)}</text>\n`;
   });
   y += Math.ceil(g.keys.length / COLS) * CH;
 }
+
+/* Die Farbleisten: eine Leiste aus Stützstellen mit genau diesen (zwei an
+   einer Stelle sind die Stufe der Entformschräge), Turbo als Polynom mit
+   dichten Stützen, zwischen denen die lineare Mischung nicht auffällt. */
+s += `<text x="${PAD}" y="${y + 14}" font-size="11" font-weight="700" letter-spacing="1.2" fill="${P.muted}">FARBLEISTEN (FEST, IN JEDEM SCHEMA GLEICH, KEINE ROLLEN)</text>\n`;
+y += GAP;
+const N = 33, BW = COLS * CW - 40;
+for (const [name, was, wie] of VERLAEUFE) {
+  const l = P.leisten[name];
+  const stuetzen = Array.isArray(l) ? l : Array.from({ length: N }, (_, i) => [i / (N - 1), P.scale(name, i / (N - 1))]);
+  s += `<linearGradient id="verlauf-${name}" x1="0" y1="0" x2="1" y2="0">`;
+  for (const [t, hex] of stuetzen) s += `<stop offset="${t.toFixed(4)}" stop-color="${hex}"/>`;
+  s += '</linearGradient>\n';
+  s += `<rect x="${PAD}" y="${y}" width="${BW}" height="22" rx="4" fill="url(#verlauf-${name})"/>\n`;
+  s += `<text x="${PAD}" y="${y + 38}" font-size="12" font-weight="700" fill="${P.text}">${esc(name)}</text>\n`;
+  s += `<text x="${PAD + 60}" y="${y + 38}" font-size="11" fill="${P.textBody}">${esc(was)} · <tspan ${mono} fill="${P.muted}">${esc(wie)}</tspan></text>\n`;
+  y += VH;
+}
 s += '</svg>\n';
 writeFileSync(path.join(site, 'assets/palette.svg'), s);
-console.log(`assets/palette.svg: ${Object.keys(P.colors).length} Farben in ${groups.length} Gruppen`);
+console.log(`assets/palette.svg: ${Object.keys(P.colors).length} Rollen in ${familien.length} Familien, ${VERLAEUFE.length} Farbleisten`);

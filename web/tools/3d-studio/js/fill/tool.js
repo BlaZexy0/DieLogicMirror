@@ -30,14 +30,14 @@
    Plan (Format dielogic-fuellung, Fassung 1 — unverändert). */
 
 import * as T from 'three';
-import { facts, segButtons, slider, numberInput, clampNote, gradient, rgbCss } from '../ui/controls.js';
+import { facts, segButtons, slider, numberInput, clampNote, gradient } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit, parseNumber, clamp, rangeText } from '../studio/format.js';
-import { kpis } from '../studio/rows.js';
+import { kpis, esc } from '../studio/rows.js';
 import { download, safeName, baseName } from '../studio/files.js';
 import { CELL_RANGE } from '../part/field.js';
 import { surfaceNets } from '../part/surfacenets.js';
 import { writeSTL } from '../part/stlio.js';
-import { turbo } from '../part/colors.js';
+import { scale, scaleFn, linRgb, onScheme, ROLE, VIEW } from '../part/colors.js';
 import { createHandles, SELECTED_RING } from '../handles.js';
 import { setTris, dirText, outward } from '../ui/common.js';
 import * as M from './model.js';
@@ -49,8 +49,10 @@ const RUN = 'Rechnen';
 const NEEDS_PART = 'Zuerst ein Bauteil laden; der Klick setzt den Anschnitt auf seine Wand.';
 const NO_GATE = 'Noch kein Anschnitt: oben im Bild „Anschnitt setzen", dann aufs Bauteil klicken.';
 const HANDLE_HINT = '<b>Punkt</b> ziehen: auf der Wand · <b>Pfeil</b>: neu setzen · <b>Entf</b>: entfernen';
-const SPOT_COLOR = '#b42318';
-const GREY = [0.71, 0.75, 0.77];
+/* Die letzten Stellen: wo die Front zuletzt ankommt. Sie sind Kennpunkte
+   der Füllung, kein Urteil (jedes Teil hat eine letzte Stelle, dort
+   gehören die Überläufe hin): die Hervorhebung des Schemas. */
+const spotColor = () => VIEW.lastFilled;
 /* So lange wartet das Nachrechnen auf die nächste Änderung: wer an einem
    Regler dreht, stößt einen Lauf an, nicht einen je Schritt. */
 const RESOLVE_MS = 180;
@@ -63,9 +65,11 @@ const FLOW_LIMIT = 300;
 /* Mehr Rasterpunkte rechnet host.field nicht: es hebt die Zellkante an
    (js/studio/host.js, dieselbe Grenze, derselbe Schritt von 10 %). */
 const MAX_SAMPLES = 16e6;
-/* Ein ⓘ in einer Kennzahl, die das Werkzeug selbst schreibt (die der festen
-   Zeilen setzt js/studio/rows.js). */
-const INFO = anchor => ' <button type="button" class="st-info" data-help="' + anchor + '" title="Erklärung" aria-label="Erklärung">ⓘ</button>';
+/* Warum ein Anschnitt nichts füllt (js/fill/solve.js, closed). */
+const CLOSED_NOTE = {
+  off: 'liegt neben dem Bauteil: auf die Wand setzen',
+  share: 'kein Strom: die festen Anteile der anderen ergeben schon 100 %'
+};
 
 export function createFuellungTool(host) {
   const { shell, view, part, field: hostField } = host;
@@ -92,8 +96,10 @@ export function createFuellungTool(host) {
   let epoch = 0;               // zählt die Bauteile: ein Lauf für ein altes fasst nichts mehr an
   let silent = false;          // der laufende Abbruch kommt von der Seite, nicht vom Anwender
   let queuedRegrid = false;
+  let rasterH = 0;             // mit welcher Zellkante das laufende Raster gerechnet wird
   let timer = 0;
   let dragFrom = null;         // wo der gezogene Anschnitt vor dem Zug stand
+  let reverting = false;       // Esc hat einen Zug abgebrochen: der Plan ist wieder, wie er war
   const refresh = () => { if (host.refreshActions) host.refreshActions(); };
   const dauer = ms => (ms >= 1000 ? fmtUnit(ms / 1000, 's') : fmtUnit(ms, 'ms', 0));
 
@@ -105,19 +111,31 @@ export function createFuellungTool(host) {
   const inletMesh = new T.Mesh(new T.BufferGeometry(), inletMat);
   group.add(inletMesh);
 
-  /* Der Füllkörper: die Schmelze bis zum Füllgrad, in der Turbo-Farbe der Front. */
-  const bodyMat = new T.MeshStandardMaterial({ color: 0xd8a23a, roughness: 0.35, metalness: 0.45, side: T.DoubleSide, flatShading: true });
+  /* Der Füllkörper: die Schmelze bis zum Füllgrad, in der Farbe der
+     Schmelze. Wie weit sie ist, sagt seine Form, nicht seine Farbe. */
+  const bodyMat = new T.MeshStandardMaterial({ color: ROLE.melt, roughness: 0.35, metalness: 0.45, side: T.DoubleSide, flatShading: true });
   const bodyMesh = new T.Mesh(new T.BufferGeometry(), bodyMat);
   bodyMesh.visible = false;
   group.add(bodyMesh);
 
   /* Die zuletzt gefüllten Stellen als Kugeln, Größe im Bild konstant. */
   const spotGeo = new T.SphereGeometry(1, 20, 14);
-  const spotMat = new T.MeshBasicMaterial({ color: SPOT_COLOR, depthTest: false, transparent: true, opacity: 0.9 });
+  const spotMat = new T.MeshBasicMaterial({ color: spotColor(), depthTest: false, transparent: true, opacity: 0.9 });
   const spotGroup = new T.Group();
   spotGroup.renderOrder = 5;
   spotGroup.visible = false;
   group.add(spotGroup);
+
+  /* Ein Wechsel des Farbschemas: Körper umfärben, das Bauteil neu bemalen,
+     Legende, Skala, Liste und Auswahlfeld mit den neuen Farben. */
+  onScheme(() => {
+    inletMat.color.set(M.COLOR);
+    bodyMat.color.set(ROLE.melt);
+    spotMat.color.set(spotColor());
+    shown.paintFor = null;
+    applyMode();
+    if (wired) { updateList(); if (handles.selected) syncSelection(); }
+  });
 
   /* Eingepasst wird, was JETZT im Bild steht: das Bauteil samt Anschnitten
      (die ragen ein paar Millimeter aus der Wand). Füllkörper und Marken liegen
@@ -134,7 +152,7 @@ export function createFuellungTool(host) {
   const handles = createHandles({
     view,
     getRefMesh: () => part.mesh,
-    markColor: M.COLOR,
+    markColor: () => M.COLOR,
     items: () => M.allItems(state.plan).map(it => ({
       id: it.id, pos: it.pos, color: M.COLOR, dir: it.n, planeSize: Math.max(24, it.w * 1.5)
     })),
@@ -151,6 +169,14 @@ export function createFuellungTool(host) {
     onSelect: () => { cancelAim(); syncSelection(); },
     onChange: (what, id) => {
       if (what === 'drag') { rebuild('drag'); return; }
+      /* Esc mitten im Zug: zurück zum Stand davor — der Zug war nie ein
+         Schritt, und die Füllung dazu gilt weiter. */
+      if (what === 'cancel') {
+        dragFrom = null;
+        reverting = true;
+        try { if (!host.revert()) { rebuild(); syncSelection(); } } finally { reverting = false; }
+        return;
+      }
       rebuild();
       if (what !== 'drop') return;
       /* Ein bloßer Klick auf den Griff endet ebenfalls mit „drop" — gerechnet
@@ -187,11 +213,12 @@ export function createFuellungTool(host) {
     const cur = handles.selected;
     ui('item-list').innerHTML = items.map(it => {
       const inf = inletInfo(it.id);
-      const thin = !!inf && inf.seeds <= 1;
-      return '<button type="button" class="st-list-row fu-row' + (it.id === cur ? ' active' : '') + (thin ? ' warn' : '') + '" data-item="' + it.id + '">'
+      const thin = !!inf && !inf.closed && inf.seeds <= 1;
+      const fills = !inf ? '' : inf.closed ? ' · füllt nichts ⚠' : ' · füllt ' + fillsText(inf) + ' des Volumens' + (thin ? ' ⚠' : '');
+      return '<button type="button" class="st-list-row fu-row' + (it.id === cur ? ' active' : '') + (thin || (inf && inf.closed) ? ' warn' : '') + '" data-item="' + esc(it.id) + '">'
         + '<span class="dot" style="background:' + M.COLOR + '"></span>'
-        + '<span class="name">' + label(it) + '</span><span class="val">' + fmt(it.w, 1) + ' × ' + fmt(it.h, 1) + ' mm</span>'
-        + '<span class="sub">' + fmtUnit(100 * (sh[it.id] || 0), '%') + ' Strom' + (inf ? ' · füllt ' + fillsText(inf) + ' des Volumens' + (thin ? ' ⚠' : '') : '') + '</span></button>';
+        + '<span class="name">' + esc(label(it)) + '</span><span class="val">' + fmt(it.w, 1) + ' × ' + fmt(it.h, 1) + ' mm</span>'
+        + '<span class="sub">' + fmtUnit(100 * (sh[it.id] || 0), '%') + ' Strom' + fills + '</span></button>';
     }).join('');
     ui('item-empty').hidden = items.length > 0;
     ui('item-count').textContent = items.length ? '· ' + fmt(items.length, 0) : '';
@@ -214,17 +241,25 @@ export function createFuellungTool(host) {
   const gridParams = () => ({ h: state.h, band: Math.max(2.5 * state.h, 1.5), pad: 2 * state.h });
   const cellChanged = () => !!state.field && Math.abs(state.field.h - state.h) > 1e-9;
 
-  function adoptField(f, ms) {
+  /* `asked`: die Kante, mit der dieses Raster bestellt wurde. Anders kommt es
+     nur zurück, wenn host.field sie angehoben hat (mehr als 16 Mio.
+     Rasterpunkte) — dann gilt die angehobene, und die Zeile sagt es. Wer
+     während des Rasterns eine andere Kante eingetippt hat, behält sie: für
+     die wird gleich neu gerastert (siehe das Feld „cell" unten). Früher galt
+     jeder Unterschied zur Kante im Feld als die Grenze, und die neue Eingabe
+     sprang mit einer falschen Meldung zurück. */
+  function adoptField(f, ms, asked) {
     state.field = f;
     state.gridMs = ms;
     let cells = 0;
     for (let i = 0; i < f.data.length; i++) if (f.data[i] < 0) cells++;
     state.cells = cells;
-    if (Math.abs(f.h - state.h) > 1e-9) {
+    const lifted = Math.abs(f.h - asked) > 1e-9;
+    if (lifted && Math.abs(state.h - asked) < 1e-9) {
       state.h = f.h;
       ui('cell').value = fmtPlain(f.h);
       ui('cell-note').textContent = 'Feiner geht hier nicht: 16 Mio. Rasterpunkte sind die Grenze, die Zellkante steht auf ' + fmtUnit(f.h, 'mm', 2) + '.';
-    } else ui('cell-note').textContent = '';
+    } else if (!lifted) ui('cell-note').textContent = '';
     /* Ein Ergebnis gehört zu SEINEM Raster: mit dem neuen ist das alte weg. */
     dropResult();
   }
@@ -304,9 +339,11 @@ export function createFuellungTool(host) {
         if (!f || regrid) {
           state.phase = 'raster';
           const t0 = performance.now();
-          f = await hostField.ensure({ ...gridParams(), signal, onProgress: (p, what) => progress(p, 'Raster · ' + what + ' … ' + pct(p)) });
+          const grid = gridParams();
+          rasterH = grid.h;
+          f = await hostField.ensure({ ...grid, signal, onProgress: (p, what) => progress(p, 'Raster · ' + what + ' … ' + pct(p)) });
           if (!f) return null;                                         // das Bauteil hat gewechselt
-          if (f !== state.field) adoptField(f, performance.now() - t0);
+          if (f !== state.field) adoptField(f, performance.now() - t0, grid.h);
         }
         state.phase = 'fill';
         /* Der Plan, wie er JETZT ist — während des Rasterns darf er sich ändern. */
@@ -339,7 +376,9 @@ export function createFuellungTool(host) {
     if (state.running) {
       state.queued = true;
       if (regrid) queuedRegrid = true;
-      if (state.phase === 'fill') { silent = true; host.jobs.cancel(); }
+      /* Ein neues Raster verlangt, während das alte noch läuft: das ist
+         verlorene Zeit — abbrechen und mit der neuen Kante von vorn. */
+      if (state.phase === 'fill' || (regrid && state.phase === 'raster')) { silent = true; host.jobs.cancel(); }
       return;
     }
     const my = epoch;
@@ -396,13 +435,21 @@ export function createFuellungTool(host) {
     if (!r) { kpis(ui('fill-kpis'), []); return; }
     const s = r.stats;
     const tight = s.flowRatio > FLOW_LIMIT;
-    const rows = [
+    /* Ein Anschnitt, der nichts füllt, steht hier, wo man nach dem Rechnen
+       hinschaut — nicht nur in der Liste. Füllt keiner, gibt es keine Füllung. */
+    const idle = s.inlets.filter(i => i.closed);
+    const none = s.inlets.length > 0 && idle.length === s.inlets.length;
+    const rows = none ? [] : [
       { label: 'längster Fließweg', value: fmtUnit(s.maxPath, 'mm', 0) },
       { label: 'Wanddicke 2V/A', value: fmtUnit(s.wallThickness, 'mm') },
-      { label: 'Fließweg / Wanddicke' + INFO('kennzahlen'), value: fmt(s.flowRatio, 0) + ' : 1', verdict: tight ? 'warn' : 'ok',
+      { label: 'Fließweg / Wanddicke', help: 'kennzahlen', value: fmt(s.flowRatio, 0) + ' : 1', verdict: tight ? 'warn' : 'ok',
         note: tight ? 'über etwa ' + FLOW_LIMIT + ' : 1 wird es eng' : '' }
     ];
-    if (s.unreached) rows.push({ label: 'nicht erreicht', value: fmt(s.unreached, 0) + ' Zellen', verdict: 'bad', note: 'abgetrennter Bereich?' });
+    if (idle.length) {
+      rows.push({ label: none ? 'keine Füllung' : 'füllt nichts', value: esc(idle.map(i => i.id).join(', ')), verdict: none ? 'bad' : 'warn',
+        note: [...new Set(idle.map(i => CLOSED_NOTE[i.closed]))].join(' · ') });
+    }
+    if (s.unreached && !none) rows.push({ label: 'nicht erreicht', value: fmt(s.unreached, 0) + ' Zellen', verdict: 'bad', note: 'abgetrennter Bereich?' });
     kpis(ui('fill-kpis'), rows);
   }
 
@@ -418,10 +465,14 @@ export function createFuellungTool(host) {
     const pos = part.mesh.geometry.getAttribute('position');
     if (!col || !pos) return;
     const arr = col.array, p = pos.array, f = state.field, s = state.surf, q = state.q;
+    /* Der Füllgrad auf der ganzen Farbleiste `turbo` (in jedem Farbschema
+       dieselbe): früh blau, spät rot. */
+    const turbo = scaleFn('turbo'), grey = linRgb(VIEW.noData);
     for (let i = 0; i < pos.count; i++) {
       const v = sampleFrac(f, s, p[3 * i], p[3 * i + 1], p[3 * i + 2]);
-      /* Was über dem Regler liegt, bleibt grau — so wandert die Front über die Oberfläche. */
-      if (Number.isNaN(v) || v > q + 1e-6) { arr.set(GREY, 3 * i); continue; }
+      /* Was über dem Regler liegt, bleibt im Grau des Bauteils — so wandert
+         die Front über die Oberfläche. */
+      if (Number.isNaN(v) || v > q + 1e-6) { arr.set(grey, 3 * i); continue; }
       arr.set(turbo(v), 3 * i);
     }
     col.needsUpdate = true;
@@ -431,7 +482,6 @@ export function createFuellungTool(host) {
   function updateBody() {
     if (shown.bodyFor === state.result && shown.bodyQ === state.q) return;
     setTris(bodyMesh, surfaceNets(fillBodyField(state.field, state.result.frac, state.q), 0), true);
-    bodyMat.color.setRGB(...turbo(Math.min(1, state.q)));
     shown.bodyFor = state.result; shown.bodyQ = state.q;
   }
 
@@ -482,13 +532,17 @@ export function createFuellungTool(host) {
     });
     bodyMesh.visible = body;
     spotGroup.visible = on && state.spots.count > 0;
-    shell.colorbar(on && state.show !== 'grau' ? {
+    /* Die Skala gehört zum gefärbten Bauteil; der Füllkörper trägt die Farbe
+       der Schmelze und steht in der Legende. */
+    shell.colorbar(on && state.show === 'farbe' ? {
       title: 'Füllgrad',
-      stops: gradient(t => rgbCss(turbo(t))),
+      stops: gradient(t => scale('turbo', t)),
       ticks: [100, 75, 50, 25, 0].map(v => v + ' %')
     } : null);
-    shell.legend('<div class="lg-row"><span class="dot" style="background:' + M.COLOR + '"></span>Anschnitt</div>'
-      + (spotGroup.visible ? '<div class="lg-row"><span class="dot" style="background:' + SPOT_COLOR + '"></span>zuletzt gefüllt</div>' : '')
+    const row = (color, text) => '<div class="lg-row"><span class="dot" style="background:' + color + '"></span>' + text + '</div>';
+    shell.legend(row(M.COLOR, 'Anschnitt')
+      + (body ? row(ROLE.melt, 'Schmelze bis ' + fmt(100 * state.q, 0) + ' %') : '')
+      + (spotGroup.visible ? row(spotColor(), 'zuletzt gefüllt') : '')
       + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>');
     if (wired) updateResultKpis();
     view.invalidate();
@@ -513,7 +567,7 @@ export function createFuellungTool(host) {
     const it = sel();
     updateList();
     if (!it) { shell.inspector.hide(); shell.status(''); return; }
-    shell.inspector.show({ title: '<span class="dot" style="background:' + M.COLOR + '"></span>Anschnitt <code>' + it.id + '</code>' });
+    shell.inspector.show({ title: '<span class="dot" style="background:' + M.COLOR + '"></span>Anschnitt <code>' + esc(it.id) + '</code>' });
     shell.status(HANDLE_HINT);
     ui('sel-w').value = fmtPlain(it.w);
     ui('sel-h').value = fmtPlain(it.h);
@@ -546,11 +600,13 @@ export function createFuellungTool(host) {
     const it = sel();
     if (!it || !wired) return;
     const inf = inletInfo(it.id);
-    const thin = !!inf && inf.seeds <= 1;
-    kpis(ui('sel-kpis'), [inf
-      ? { label: 'füllt', value: fillsText(inf) + ' des Volumens', verdict: thin ? 'warn' : '',
-        note: thin ? 'trifft kaum eine Rasterzelle: feiner rastern oder höher machen' : '' }
-      : { label: 'füllt', value: '—', note: state.running || (state.auto && state.result) ? 'rechnet nach …' : 'noch nicht gerechnet' }]);
+    const thin = !!inf && !inf.closed && inf.seeds <= 1;
+    kpis(ui('sel-kpis'), [inf && inf.closed
+      ? { label: 'füllt', value: 'nichts', verdict: 'warn', note: CLOSED_NOTE[inf.closed] }
+      : inf
+        ? { label: 'füllt', value: fillsText(inf) + ' des Volumens', verdict: thin ? 'warn' : '',
+          note: thin ? 'trifft kaum eine Rasterzelle: feiner rastern oder höher machen' : '' }
+        : { label: 'füllt', value: '—', note: state.running || (state.auto && state.result) ? 'rechnet nach …' : 'noch nicht gerechnet' }]);
     const rows = [
       ['Fläche', fmtUnit(M.areaOf(it), 'mm²')],
       ['Anteil am Strom', fmtUnit(100 * (M.shares(state.plan)[it.id] || 0), '%')],
@@ -586,6 +642,9 @@ export function createFuellungTool(host) {
     return was;
   }
   host.cancelAim = cancelAim;
+  /* Esc mitten im Zug (js/handles.js): für den Rahmen, der Esc zuerst hier
+     anbieten kann — auch wenn noch ein Eingabefeld den Fokus hat. */
+  host.cancelDrag = () => !!handles.cancelDrag();
 
   /** Ein neuer Anschnitt: der nächste Klick aufs Bauteil setzt ihn. Der Strahl
       liefert die nach INNEN gerichtete Normale; der Anschnitt trägt die nach außen. */
@@ -633,7 +692,7 @@ export function createFuellungTool(host) {
   }
 
   shell.setChips([{
-    id: 'anschnitt', label: 'Anschnitt setzen', icon: M.COLOR,
+    id: 'anschnitt', label: 'Anschnitt setzen', icon: () => M.COLOR,
     title: 'Die Stelle am Bauteil anklicken, an der die Schmelze eintritt.',
     enabled: () => !!part.model, reason: NEEDS_PART,
     active: () => state.placing,
@@ -762,6 +821,11 @@ export function createFuellungTool(host) {
       if (!cellChanged()) ui('cell-note').textContent = '';
       /* Zurück auf der Kante des Rasters: das Ergebnis gilt wieder ganz. */
       if (!cellChanged() && state.result && !state.stale) state.auto = true;
+      /* Wird gerade mit einer anderen Kante gerastert, gilt die neue: das
+         laufende Raster bricht still ab, und es beginnt mit ihr von vorn. Ist
+         das Raster schon fertig, rechnet die Front darauf zu Ende — wie ohne
+         Rechnung steht danach „Neu rastern" da. */
+      if (state.running && state.phase === 'raster' && Math.abs(state.h - rasterH) > 1e-9) compute({ regrid: true });
       updateGridFacts();
       refresh();
       return state.h;
@@ -828,7 +892,9 @@ export function createFuellungTool(host) {
       syncAlpha();
       rebuild();
       syncSelection();
-      planChanged();
+      /* Nach einem abgebrochenen Zug ist der Plan der, zu dem die Füllung
+         gehört: nichts nachzurechnen. */
+      if (reverting) { updateResult(); refresh(); } else planChanged();
     },
     exports: [{
       label: 'Füllkörper als STL',
@@ -841,7 +907,14 @@ export function createFuellungTool(host) {
     }],
     keys: {
       Delete: () => removeSelected(),
-      Escape: () => { if (!handles.selected) return false; handles.select(null); return true; }
+      /* Esc bricht zuerst einen Zug ab (der Griff springt zurück), sonst hebt
+         es die Auswahl auf. */
+      Escape: () => {
+        if (handles.cancelDrag()) return true;
+        if (!handles.selected) return false;
+        handles.select(null);
+        return true;
+      }
     },
     onPartStart() {
       state.ready = false;

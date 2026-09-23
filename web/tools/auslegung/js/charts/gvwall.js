@@ -2,7 +2,6 @@
 
 import { series, line, target } from './helpers.js';
 import { seq, fmt, subHTML } from '../core/format.js';
-import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
 export default {
@@ -14,7 +13,7 @@ export default {
   calc(v) {
     const x = seq(v.wallMin, v.wallMax, 140);
     const f = s => v.gateMax - (v.gateMax - v.gateMin) * (s - v.wallMin) / (v.wallMax - v.wallMin);
-    const q = line(x, [series('Empfehlung', theme.chart.series1, x, f)],
+    const q = line(x, [series('Empfehlung', 'ink', x, f)],
       'Wandstärke in mm', 'Anschnittgeschwindigkeit in m/s', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s');
     q.limits = [target('gateBand', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s', 'y', v.gateMin, v.gateMax)];
     q.y0 = 0;

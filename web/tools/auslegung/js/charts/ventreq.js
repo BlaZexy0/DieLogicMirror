@@ -3,7 +3,6 @@
 import { series, line, limit, refline } from './helpers.js';
 import { seq, fmt, subHTML } from '../core/format.js';
 import { total, afterGate, pistonArea, cavityVolume } from '../core/physics.js';
-import { theme } from '../core/theme.js';
 import { eq } from './mathfmt.js';
 
 export default {
@@ -14,7 +13,6 @@ export default {
   usesCurve: true,
 
   calc(v, o) {
-    const C = theme.chart;
     const Vm = cavityVolume(total(v), v);
     const f = t => Vm / (t / 1000) / v.vAirMax * 1e6;
     /* y-Achse knapp über der größten Referenz (Anschnittfläche / Ist-Entlüftung /
@@ -25,7 +23,7 @@ export default {
     let t0 = 0.95 * 1e9 * Vm / (v.vAirMax * yCap);
     if (!isFinite(t0) || t0 < 1 || t0 >= v.tmax) t0 = 1;
     const x = seq(t0, v.tmax, 140);
-    const q = line(x, [series('Erf. Entlüftung', C.series1, x, f)],
+    const q = line(x, [series('Erf. Entlüftung', 'ink', x, f)],
       'Füllzeit in ms', 'Erf. Entlüftungsfläche in mm²',
       'Luftvolumen ' + fmt(Vm * 1e6) + ' cm³ · ' + fmt(v.vAirMax) + ' m/s');
     q.y0 = 0;
@@ -35,7 +33,8 @@ export default {
          vorhandene Entlüftung tatsächlich übersteigt (links vom Schnittpunkt) */
       limit('ventAvail', 'Ist Entlüftung ' + fmt(v.vent) + ' mm²', 'y', 'max',
         t => f(t) > v.vent ? v.vent : Infinity, { note: 'Bedarf über vorhandener Entlüftung' }),
-      refline('gateRef', 'Anschnittfläche ' + fmt(v.gate) + ' mm²', 'y', v.gate, { c: C.series2 })
+      /* Die Anschnittfläche ist eine Größe des Werkzeugs: Referenz in dessen Farbe */
+      refline('gateRef', 'Anschnittfläche ' + fmt(v.gate) + ' mm²', 'y', v.gate, { c: 'die' })
     ];
     const v2 = o && o.shot && !o.shot.error ? o.shot.v2 : null;
     if (v2 > 0) {

@@ -15,7 +15,10 @@
      der Ankunft je Ort (paintArrival fehlt — das Werkzeug fragt danach).
 
    Der Abbruch erreicht den Lauf wie beim Gitter über die Rückfrage nach
-   der Kolbengeschwindigkeit je Schritt. */
+   der Kolbengeschwindigkeit je Schritt — und wie dort ist ein AbortError,
+   den niemand verlangt hat, eine Panne der Grafikkarte (env.js, gpuFailure).
+   Das Tempo lernt nur aus den Schritten des Laufs, die Ruhe davor zählt
+   nicht (sie steht nicht in run.steps). */
 
 import * as T from 'three';
 import { abortError } from '../../abort.js';
@@ -30,7 +33,7 @@ import { createSphSolver, suggestDt, PARAMS, NEVER } from '../../sph/wcsph.js';
 import { createGpuSphSolver } from '../../sph/gpu.js';
 import { runSph } from '../../sph/run.js';
 import { createPoints, showParticles, speedScaleParticles } from '../../sph/points.js';
-import { env, tempo, runTime, learnTempo, roughTime, kernelName, fmtCount, fmtMB, tick } from './env.js';
+import { env, tempo, runTime, learnTempo, runClock, gpuFailure, roughTime, kernelName, fmtCount, fmtMB, tick } from './env.js';
 
 const kernelOf = opts => (env.gpu && !(opts && opts.forceCpu) ? 'gpu' : 'cpu');
 
@@ -93,7 +96,8 @@ export const sph = {
       text: parts.join(' · '), count, kernel,
       note: env.gpu ? '' : 'Kein WebGPU in diesem Browser: gerechnet wird in JavaScript, mit wenigen Partikeln (bis ' + fmt(MAX_PARTICLES_CPU / 1e3, 0)
         + ' Tsd.), und das dauert Minuten. Chrome oder Edge rechnen auf der Grafikkarte.',
-      blocked: count > limit ? 'Zu fein: höchstens ' + fmt(limit / 1e3, 0) + ' Tsd. Partikel. Den Abstand vergrößern.' : ''
+      blocked: count > limit ? 'Zu fein: höchstens ' + fmt(limit / 1e3, 0) + ' Tsd. Partikel. Den Abstand vergrößern.' : '',
+      blockedShort: count > limit ? 'Zu fein: höchstens ' + fmt(limit / 1e3, 0) + ' Tsd. Partikel.' : ''
     };
   },
 
@@ -101,13 +105,15 @@ export const sph = {
     const { cell, signal, progress = () => {} } = opts;
     const check = () => { if (signal && signal.aborted) throw abortError(); };
     const kernel = kernelOf(opts);
-    const t0 = performance.now();
+    const t0 = performance.now(), clock = runClock();
     let solver = null;
     try {
       progress(0, 'Partikel …');
       await tick();
-      const ctx = { check, progress, signal, t0, own: s => { solver = s; }, openGates: opts.openGates !== false };
+      const ctx = { check, progress, signal, t0, clock, own: s => { solver = s; }, openGates: opts.openGates !== false };
       return problem.kind === 'kammer' ? await runSleeve(problem, cell, kernel, ctx) : await runRunner(problem, cell, kernel, ctx);
+    } catch (err) {
+      throw gpuFailure(err, signal);
     } finally {
       if (solver && solver.dispose) solver.dispose();
     }
@@ -129,7 +135,10 @@ export const sph = {
           size = result.cell;
           holder.add(points);
         }
-        showParticles(points, result.snapshots[Math.max(0, Math.min(result.snapshots.length - 1, k))], result.vScale);
+        /* Platz für das größte Bild des Laufs: die Zahl der Partikel ändert sich
+           fast mit jedem Bild (die Säule wird zu Schmelze, der Auslass nimmt). */
+        const most = result.snapshots.reduce((m, sn) => Math.max(m, sn.n), 0);
+        showParticles(points, result.snapshots[Math.max(0, Math.min(result.snapshots.length - 1, k))], result.vScale, most);
       },
       hide() { if (points) points.visible = false; }
     };
@@ -138,9 +147,10 @@ export const sph = {
   paintArrival: null
 };
 
-function finish(problem, cell, kernel, run, t0, setup, dt, c0, until) {
+/* Die Rechenzeit ist der ganze Lauf; gelernt wird ab clock.start() — wie beim Gitter. */
+function finish(problem, cell, kernel, run, t0, clock, setup, dt, c0, until) {
   const ms = performance.now() - t0;
-  learnTempo('sph', kernel, ms, run.steps, setup.n, run.snapshots.length);
+  if (clock.fair()) learnTempo('sph', kernel, clock.ms(), run.steps, setup.n, run.snapshots.length);
   const before = run.snapshots.filter(s => s.step <= until);
   return {
     engine: 'sph', kernel, kind: problem.kind, cell, snapshots: run.snapshots, steps: run.steps, ms,
@@ -157,7 +167,7 @@ function finish(problem, cell, kernel, run, t0, setup, dt, c0, until) {
 }
 
 /* ── Anguss ──────────────────────────────────────────────────── */
-async function runRunner(problem, cell, kernel, { check, progress, signal, t0, own, openGates }) {
+async function runRunner(problem, cell, kernel, { check, progress, signal, t0, clock, own, openGates }) {
   const piston = problem.piston;
   const { c0, vRef } = timing(problem, cell);
   const setup = await runnerSetup(problem.graph, cell, {
@@ -171,6 +181,7 @@ async function runRunner(problem, cell, kernel, { check, progress, signal, t0, o
   const dt = suggestDt({ h: setup.h, c0, vRef });
   const solver = kernel === 'gpu' ? await createGpuSphSolver(setup) : createSphSolver(setup);
   own(solver);
+  clock.start();
   const tMax = problem.tMax;
   const stepsMax = Math.max(10, Math.ceil(tMax / dt));
   const snapEvery = Math.max(1, Math.ceil(stepsMax / 80));
@@ -192,7 +203,7 @@ async function runRunner(problem, cell, kernel, { check, progress, signal, t0, o
   const { snapshots, gateDone } = run;
   snapshots[0].t = 0; snapshots[0].filled = runnerFillFraction(snapshots[0].pos, snapshots[0].n, setup, 1e-3);
   const first = Math.min(...gateDone.filter(a => a !== NEVER), Infinity);
-  const out = finish(problem, cell, kernel, run, t0, setup, dt, c0, first);
+  const out = finish(problem, cell, kernel, run, t0, clock, setup, dt, c0, first);
   out.reason = run.reason === 'Schrittgrenze erreicht' ? (tMax >= piston.tEnd - 1e-9 ? 'die Kurve endet' : 'Zeitgrenze erreicht') : run.reason;
   out.facts.unshift(['Ende', out.reason]);
   out.gates = setup.lbm.gates.map((gt, k) => ({ id: gt.id, step: gateDone[k], tSim: gateDone[k] === NEVER ? NaN : gateDone[k] * dt }));
@@ -203,7 +214,7 @@ async function runRunner(problem, cell, kernel, { check, progress, signal, t0, o
 }
 
 /* ── Kammer ──────────────────────────────────────────────────── */
-async function runSleeve(problem, cell, kernel, { check, progress, signal, t0, own }) {
+async function runSleeve(problem, cell, kernel, { check, progress, signal, t0, clock, own }) {
   const cv = problem.curve;
   const { c0, vRef } = timing(problem, cell);
   const setup = sleeveSetup(problem.spec, cell, { rho0: problem.alloy.rho, c0 });
@@ -229,6 +240,7 @@ async function runSleeve(problem, cell, kernel, { check, progress, signal, t0, o
     for (let i = 0; i < solver.n; i++) { vel[4 * i] = 0; vel[4 * i + 1] = 0; vel[4 * i + 2] = 0; }
   }
   check();
+  clock.start();
   const sAt = step => cv.profile.atTime(step * dt).s;                   // m
   const ctrlAt = step => { check(); const p = cv.profile.atTime(step * dt); return { uIn: p.v, piston: p.s }; };
   const run = await runSph({
@@ -247,7 +259,7 @@ async function runSleeve(problem, cell, kernel, { check, progress, signal, t0, o
   if (run.reason === 'abgebrochen') throw abortError();
   const { snapshots, gateDone } = run;
   Object.assign(snapshots[0], { t: 0, s: 0, air: 0, bubbles: 0 });
-  const out = finish(problem, cell, kernel, run, t0, setup, dt, c0, gateDone[0] === NEVER ? Infinity : gateDone[0]);
+  const out = finish(problem, cell, kernel, run, t0, clock, setup, dt, c0, gateDone[0] === NEVER ? Infinity : gateDone[0]);
   out.reason = run.reason === 'Schrittgrenze erreicht' ? 'der Kolben ist am Ende der Kurve' : run.reason;
   out.full = gateDone[0] !== NEVER ? { t: gateDone[0] * dt, s: sAt(gateDone[0]) * 1000 } : null;
   out.airMax = snapshots.reduce((a, s) => (s.air > a.air ? s : a), snapshots[0]);

@@ -23,7 +23,12 @@
    werden; einzeln gemalt wird nur, was noch warm ist (meist ein paar
    Dutzend Stränge). Nach dem Erstarren hält die Schleife an — die Seite
    rechnet nichts mehr, während jemand liest. Wer die Hero nicht sieht oder
-   weniger Bewegung wünscht, bekommt das Ergebnis in einem Rutsch. */
+   weniger Bewegung wünscht, bekommt das Ergebnis in einem Rutsch.
+
+   Die Farben sind die der Schmelze im gewählten Farbschema (Rolle `melt`,
+   shared/palette.js), nach Temperatur aufgehellt oder abgedunkelt: so hat
+   die Schmelze hier dieselbe Farbe wie in den Werkzeugen. Wechselt das
+   Schema, malt die Hero den Stand neu, an dem der Guss gerade ist. */
 
 (() => {
   const canvas = document.getElementById('hero-guss');
@@ -43,12 +48,22 @@
   const V_WARM = 115;         // darunter schiebt der Zulauf keine Wärme mehr nach
   const KLEIN = 640;          // schmaler als das: nur das ruhende Gitter
 
-  const GIESS = [255, 156, 64], LIQ = [240, 104, 38], SOL = [188, 58, 26];
-  const FEST = (() => {
-    const v = getComputedStyle(document.documentElement).getPropertyValue('--primary-light').trim();
-    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(v);
-    return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [63, 194, 182];
-  })();
+  /* Der Temperaturverlauf der Schmelze, alles aus der Rolle `melt`: bei
+     Gießhitze zur Glut hin aufgehellt, flüssig die Schmelze selbst, nahe
+     Solidus zum Dunkel der Seite hin, erstarrt gedämpft zum Ton der Schrift
+     auf dunklem Grund. Als Kanäle [r, g, b], weil der Verlauf dazwischen je
+     Strang gemischt wird; gelesen beim Start und bei jedem Schemawechsel. */
+  const P = window.__PALETTE__;
+  if (!P) return;
+  const kanaele = h => P.hexRgb(h).map(v => Math.round(v * 255));
+  let GIESS, LIQ, SOL, FEST;
+  function farbenLesen() {
+    GIESS = kanaele(P.mix('melt', '#ffffff', 0.55));
+    LIQ = kanaele(P.melt);
+    SOL = kanaele(P.mix('melt', 'dark', 0.35));
+    FEST = kanaele(P.mix('melt', 'ondark', 0.5));
+  }
+  farbenLesen();
 
   /* ── Zustand ─────────────────────────────────────────────────── */
   let W = 0, H = 0, knoten = [], kanten = [], fronten = [], warm = [];
@@ -179,7 +194,8 @@
     for (const e of warm) {
       const k = kanten[e];
       /* Abgekühlt wird immer — auch nach dem Erstarren, sonst bliebe die Farbe
-         bei Solidus stehen (rot) und der Strang ewig in der gezeichneten Liste. */
+         bei Solidus stehen (der dunkle Ton) und der Strang ewig in der
+         gezeichneten Liste. */
       const tau = (TAU_DUENN + (TAU_DICK - TAU_DUENN) * k.q) * (k.ruht ? 1 : 5);
       k.T += (T_FORM - k.T) * (1 - Math.exp(-dt / tau));
       if (!k.fest && k.T < T_SOL) k.fest = true;
@@ -252,13 +268,15 @@
     ctx.restore();
     ctx.globalCompositeOperation = 'source-over';
 
-    for (const f of fronten) {                              // die Köpfe: wenige, mit weichem Rand
+    /* Die Köpfe: wenige, mit weichem Rand, ihr Leuchten aus der Glut. */
+    const kern = GIESS.join(','), hof = misch(GIESS, LIQ, 0.5).join(','), rand = LIQ.join(',');
+    for (const f of fronten) {
       const k = kanten[f.e], [, , x, y] = enden(k);
       const r = (3 + 4 * Math.pow(Math.min(1, k.q), 0.25)) * 2.2;
       const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, 'rgba(255,190,110,.9)');
-      g.addColorStop(0.35, 'rgba(255,140,50,.45)');
-      g.addColorStop(1, 'rgba(255,110,30,0)');
+      g.addColorStop(0, 'rgba(' + kern + ',.9)');
+      g.addColorStop(0.35, 'rgba(' + hof + ',.45)');
+      g.addColorStop(1, 'rgba(' + rand + ',0)');
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
     }
@@ -299,6 +317,14 @@
     letzte = performance.now();
     if (!laeuft) { laeuft = true; requestAnimationFrame(bild); }
   }
+
+  /* Anderes Farbschema: neue Farben, und der Stand wird einmal neu gemalt.
+     Läuft der Guss noch, übernimmt das nächste Bild ohnehin die neuen
+     Farben; ist er fertig, bliebe ohne dies das alte Bild stehen. */
+  document.addEventListener('dielogic:scheme', () => {
+    farbenLesen();
+    if (gitter && W && H) zeichnen();
+  });
 
   const ruhig = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let warFertig = false, timer = 0;

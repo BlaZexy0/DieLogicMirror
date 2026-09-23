@@ -9,12 +9,8 @@
    Prüfung. */
 
 import {
-  numberRow, sliderRow, segRow, selectRow, checkRow, kpiBlock, factsBlock, detailsBlock, warnLine, heading
+  numberRow, sliderRow, segRow, selectRow, checkRow, kpiBlock, factsBlock, detailsBlock, warnLine, heading, info
 } from '../studio/rows.js';
-
-/* Ein ⓘ hinter einer Zwischenüberschrift — wie das der Zeilen (rows.js), nur
-   ohne Feld davor. */
-const info = anchor => ' <button type="button" class="st-info" data-help="' + anchor + '" aria-label="Erklärung">ⓘ</button>';
 
 export const MODES = [
   {
@@ -97,6 +93,8 @@ export const INSPECTOR = '<div class="st-hintline an-arrive" data-ui="sel-arrive
   + '<div data-group="Verzweigung">'
   + sliderRow({ ui: 'sel-ratio', label: 'Aufteilung', min: 10, max: 90, step: 1, value: 50, help: 'aufteilung' })
   + checkRow({ ui: 'sel-mirror', label: 'Äste spiegelsymmetrisch halten', help: 'spiegel' })
+  /* Warum Regler oder Häkchen gesperrt sind (js/runner/tool.js, forkNote). */
+  + '<div class="st-hintline" data-ui="sel-ratio-note"></div>'
   + '</div>'
   + '<div data-group="Anschnitt">'
   + num('sel-gh', 'Höhe', 'mm', 'anschnitthoehe')
