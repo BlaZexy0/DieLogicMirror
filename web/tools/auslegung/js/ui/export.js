@@ -1,7 +1,11 @@
-/* Export: PNG in die Zwischenablage, Schusskurven-CSV. */
+/* Export: PNG in die Zwischenablage, Schusskurven-CSV. Der PNG-Weg (Symbol,
+   Kopieren, Rückfall auf Download, Rückmeldung am Knopf) gilt für die
+   Diagrammkarten (ui/cards.js) und die Füllkammer (ui/chamber.js). */
 
 import { drawAny } from '../render/draw.js';
 
+/* Knopfsymbol „Als PNG kopieren" und die kurze Bestätigung danach. */
+export const COPY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 
 function download(blob, name) {
@@ -14,9 +18,21 @@ function download(blob, name) {
   URL.revokeObjectURL(a.href);
 }
 
-/* Diagramm als PNG kopieren (Fallback: Download). Gezeichnet wird in der
-   logischen Größe des Bildschirm-Canvas mit 2× Auflösung — der Export sieht
-   exakt aus wie die Karte auf dem Bildschirm, nur schärfer. */
+/* Ein fertiges PNG in die Zwischenablage (ohne Clipboard-API oder bei
+   Ablehnung: Download unter name); der Knopf zeigt 1,4 s lang ✓. */
+export function copyPngBlob(blob, btn, name) {
+  const old = btn.innerHTML;
+  const ok = () => { btn.classList.add('copied'); btn.innerHTML = CHECK_SVG; };
+  if (navigator.clipboard && window.ClipboardItem)
+    navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+      .then(ok, () => { download(blob, name); ok(); });
+  else { download(blob, name); ok(); }
+  setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = old; }, 1400);
+}
+
+/* Diagramm als PNG kopieren. Gezeichnet wird in der logischen Größe des
+   Bildschirm-Canvas mit 2× Auflösung — der Export sieht exakt aus wie die
+   Karte auf dem Bildschirm, nur schärfer. */
 export function copyChart(card, def) {
   const d = card.data;
   const cv = card.querySelector('canvas');
@@ -27,16 +43,8 @@ export function copyChart(card, def) {
   o.width = W * S; o.height = H * S;
   const x = o.getContext('2d');
   x.setTransform(S, 0, 0, S, 0, 0);
-  drawAny(x, W, H, d, def);
-  o.toBlob(blob => {
-    const b = card.querySelector('.png-btn'), old = b.innerHTML;
-    const ok = () => { b.classList.add('copied'); b.innerHTML = CHECK_SVG; };
-    if (navigator.clipboard && window.ClipboardItem)
-      navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-        .then(ok, () => { download(blob, 'DieLogic_' + def.id + '.png'); ok(); });
-    else { download(blob, 'DieLogic_' + def.id + '.png'); ok(); }
-    setTimeout(() => { b.classList.remove('copied'); b.innerHTML = old; }, 1400);
-  }, 'image/png');
+  drawAny(x, W, H, d);
+  o.toBlob(blob => copyPngBlob(blob, card.querySelector('.png-btn'), 'DieLogic_' + def.id + '.png'), 'image/png');
 }
 
 /* Schusskurven-Samples + Ereignisse als CSV. */

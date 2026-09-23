@@ -2,7 +2,7 @@
    Marker, Farbskala der Heatmaps und Konturlinien. Alle Farben sind Rollen
    aus dem Theme (core/theme.js), gelesen zur Zeichenzeit. */
 
-import { fmt } from '../core/format.js';
+import { fmt, subParts } from '../core/format.js';
 import { theme } from '../core/theme.js';
 
 const PI = Math.PI;
@@ -48,25 +48,36 @@ export const LEGEND_ROW = 13;
 export const LEGEND_MAX_ROWS = 5;
 export const LEGEND_TOP = 70;
 
+/* Daten → Pixel im Rahmen f: X über [x0, x1] nach rechts, Y über [y0, y1]
+   nach oben — für Achsen, Serien, Grenzen und Marker aller Renderer. Eine
+   Null-Spanne rechnet mit 1, damit keine Koordinate NaN wird. */
+export function scales(f, x0, x1, y0, y1) {
+  const sx = (x1 - x0) || 1, sy = (y1 - y0) || 1;
+  return { X: a => f.L + (a - x0) / sx * f.pw, Y: a => f.T + (y1 - a) / sy * f.ph };
+}
+
+/* Beschriftung auf einem Kästchen der Diagrammfläche, lesbar über Linien,
+   Schraffuren und Heatmaps: Text an (tx, ty) in color, tw seine gemessene
+   Breite; pad und h bemessen das Kästchen (Standard für 10-px-Schrift). */
+export function boxedText(x, s, tx, ty, tw, color, pad = 3, h = 13) {
+  x.fillStyle = surfaceA(.88);
+  x.fillRect(tx - pad, ty - (h - pad), tw + 2 * pad, h);
+  x.fillStyle = color;
+  fillRich(x, s, tx, ty);
+}
+
 /* Beschriftung mit Indizes: „v_a", „t_f max", „Q_dry", „P_{acc}" — der
-   Teil nach „_" (Wort oder {…}) wird als Tiefindex gezeichnet (78 % Größe,
-   abgesenkt). Ohne „_" ein normales fillText. Respektiert x.textAlign, indem
-   die Gesamtbreite vorab gemessen wird. Wird von allen Renderern statt
-   fillText benutzt — so sehen Canvas und Theorie-SVGs dieselben Indizes. */
+   Teil nach „_" (Wort oder {…}, core/format.js subParts) wird als
+   Tiefindex gezeichnet (78 % Größe, abgesenkt). Ohne „_" ein normales
+   fillText. Respektiert x.textAlign, indem die Gesamtbreite vorab gemessen
+   wird. Wird von allen Renderern statt fillText benutzt — so sehen Canvas,
+   HTML (subHTML) und Theorie-SVGs dieselben Indizes. */
 export function fillRich(x, s, px, py) {
   s = String(s);
   if (s.indexOf('_') < 0) { x.fillText(s, px, py); return; }
   /* Ein Kontext mit eigener Index-Ausgabe (SVG-Generator: <tspan>) übernimmt */
   if (typeof x.fillRich === 'function') { x.fillRich(s, px, py); return; }
-  const parts = [];
-  const re = /_(?:\{([^}]*)\}|([A-Za-z0-9]+(?:,[A-Za-z0-9]+)*))/g;
-  let last = 0, m;
-  while ((m = re.exec(s))) {
-    if (m.index > last) parts.push({ t: s.slice(last, m.index), sub: false });
-    parts.push({ t: m[1] != null ? m[1] : m[2], sub: true });
-    last = re.lastIndex;
-  }
-  if (last < s.length) parts.push({ t: s.slice(last), sub: false });
+  const parts = subParts(s);
   const font = x.font, ms = /([\d.]+)px/.exec(font), size = ms ? parseFloat(ms[1]) : 11;
   const subFont = font.replace(/([\d.]+)px/, (Math.round(size * 0.78 * 10) / 10) + 'px');
   const widths = parts.map(q => { x.font = q.sub ? subFont : font; return x.measureText(q.t).width; });
@@ -117,8 +128,7 @@ export function axes(x, w, h, f, x0, x1, y0, y1, d) {
   /* Rahmen des Zeichenfelds — vorher kamen seine Kanten von den Gitter-
      linien an den Enden der Fünfteilung. */
   x.beginPath(); x.rect(f.L, f.T, f.pw, f.ph); x.stroke();
-  const X = a => f.L + (a - x0) / ((x1 - x0) || 1) * f.pw;
-  const Y = a => f.T + (y1 - a) / ((y1 - y0) || 1) * f.ph;
+  const { X, Y } = scales(f, x0, x1, y0, y1);
   for (const t of ticks(x0, x1)) {
     x.beginPath(); x.moveTo(X(t), f.T); x.lineTo(X(t), h - f.B); x.stroke();
     text(x, fmt(t), X(t), h - f.B + 18);
@@ -157,9 +167,7 @@ export function marker(x, f, px, py, label, opts) {
     let lx = px + 11, ly = py - 9;
     if (lx + tw + 6 > f.L + f.pw) lx = px - tw - 19;
     if (ly < f.T + 12) ly = py + 22;
-    x.fillStyle = surfaceA(.88);
-    x.fillRect(lx - 4, ly - 11, tw + 8, 15);
-    x.fillStyle = MC; fillRich(x, label, lx, ly);
+    boxedText(x, label, lx, ly, tw, MC, 4, 15);
   }
   x.restore();
 }
@@ -188,9 +196,7 @@ function offMarker(x, f, px, py, label, opts) {
     const tw = x.measureText(txt).width;
     let lx = cx + 12, ly = cy + 4;
     if (lx + tw + 6 > f.L + f.pw) lx = cx - tw - 12;
-    x.fillStyle = surfaceA(.88);
-    x.fillRect(lx - 4, ly - 11, tw + 8, 15);
-    x.fillStyle = MC; fillRich(x, txt, lx, ly);
+    boxedText(x, txt, lx, ly, tw, MC, 4, 15);
   }
   x.restore();
 }

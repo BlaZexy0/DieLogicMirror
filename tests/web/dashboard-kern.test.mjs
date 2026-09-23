@@ -12,23 +12,12 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import path from 'node:path';
+import { ladeSkripte, SKRIPTE, auslegung, defaults, kpiZiele } from './stubs/dashboard.mjs';
 
-const require = createRequire(import.meta.url);
-const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
+ladeSkripte([...SKRIPTE, 'shared/examples/alloys.js']);
 
-globalThis.window = globalThis;
-globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-for (const f of ['shared/palette.js', 'shared/theme.js', 'shared/examples/machines.js',
-  'shared/examples/alloys.js', 'shared/project.js', 'shared/clampmodel.js']) require(path.join(site, f));
-
-const { allFields, groups, PRESET_DOMAINS, DEFAULT_CURVE } =
-  await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
-const Ph = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
-
-const defaults = () => { const v = {}; for (const f of allFields()) v[f.key] = f.def; return v; };
+const { groups, PRESET_DOMAINS, DEFAULT_CURVE } = await auslegung('config/fields.js');
+const Ph = await auslegung('core/physics.js');
 
 /* ── H-14 ─────────────────────────────────────────────────────────────── */
 
@@ -68,21 +57,16 @@ test('biscLiquid: Schmelzerest am Füllende ist nicht die Säule der Pressrestma
 });
 
 test('die Kammer-KPI zeigt den Schmelzerest, nicht die Pressrestsäule (H-12)', async () => {
-  /* renderKpis schreibt innerHTML — ein Objekt mit dieser einen Eigenschaft
-     genügt, um den erzeugten Text zu lesen. */
-  const stubs = [];
-  globalThis.document = {
-    getElementById: () => null,
-    querySelectorAll: () => [],
-  };
-  const { renderKpis } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/ui/kpis.js')));
+  /* renderKpis schreibt innerHTML — Objekte mit dieser einen Eigenschaft
+     genügen, um den erzeugten Text zu lesen. */
+  const { renderKpis } = await auslegung('ui/kpis.js');
 
   const v = defaults();
   const shot = Ph.computeShot(v, DEFAULT_CURVE.map(p => p.slice()));
-  const el = { innerHTML: '', closest: () => null, querySelectorAll: () => [] };
-  renderKpis(el, v, shot, null);
+  const z = kpiZiele();
+  renderKpis(z.el, v, shot, z.chamberEl);
 
-  const m = el.innerHTML.match(/flüssig am Füllende ([\d.,]+) mm/);
+  const m = z.chamberEl.innerHTML.match(/flüssig am Füllende ([\d.,]+) mm/);
   assert.ok(m, 'die KPI-Zeile fehlt im gerenderten Text');
   const shown = Number(m[1].replace(/\./g, '').replace(',', '.'));
   const rest = shot.biscLiquid * 1000;
@@ -90,7 +74,6 @@ test('die Kammer-KPI zeigt den Schmelzerest, nicht die Pressrestsäule (H-12)', 
     `angezeigt ${shown} mm, richtig wäre der Schmelzerest ${rest.toFixed(2)} mm`);
   assert.ok(Math.abs(shown - Ph.travel(v.biscuit, v)) > 1,
     'angezeigt wurde vorher die Flüssigsäule der Pressrestmasse');
-  stubs.length = 0;
 });
 
 /* ── H-13 ─────────────────────────────────────────────────────────────── */

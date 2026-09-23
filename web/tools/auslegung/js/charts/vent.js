@@ -1,9 +1,9 @@
 /* Entlüftungsgeschwindigkeit über Kolbengeschwindigkeit. */
 
 import { series, line, limit } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { pistonArea } from '../core/physics.js';
-import { eq } from './mathfmt.js';
+import { seq, fmt } from '../core/format.js';
+import { pistonArea, shotSpeed } from '../core/physics.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 export default {
   id: 'vent',
@@ -21,7 +21,7 @@ export default {
     if (v.vAirMax > 0)
       q.limits = [limit('vAirMax', 'v_luft max ' + fmt(v.vAirMax) + ' m/s', 'y', 'max', v.vAirMax,
         { note: 'über zulässiger Luftgeschwindigkeit' })];
-    const v2 = o && o.shot && !o.shot.error ? o.shot.v2 : null;
+    const v2 = shotSpeed(o && o.shot, 'v2');
     if (v2 > 0) {
       q.pt = [v2, v2 * A / v.vent];
       q.ptl = 'v₂ ' + fmt(v2) + ' m/s → ' + fmt(v2 * A / v.vent) + ' m/s';
@@ -43,9 +43,9 @@ bei v₂ = <span data-m="vsel"></span> (Mittel nach Anschnitt, aus der Schusskur
   },
 
   renderMath(el, v, shot) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
+    const set = mathSetter(el);
     const A = pistonArea(v);
-    const v2 = shot && !shot.error && shot.v2 != null ? shot.v2 : NaN;
+    const v2 = shotSpeed(shot, 'v2');
     set('AK', fmt(A) + ' mm²');
     set('ratio', v.vent > 0 ? fmt(A / v.vent) : '—');
     set('vsel', fmt(v2) + ' m/s');

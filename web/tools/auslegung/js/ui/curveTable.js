@@ -2,10 +2,13 @@
    V₁/V₂-Parameterfelder und die Wegpunkt-Tabelle. In den generierten Modi
    ist die Tabelle schreibgeschützt — die Punkte kommen aus core/curvegen.js. */
 
-import { state, notify } from '../core/state.js';
+import { state, notify, CURVE_MODES } from '../core/state.js';
 import { subHTML } from '../core/format.js';
 
-const MODES = [['points', 'Punkte'], ['lopez', 'DieLogic'], ['v1v2', 'V₁ / V₂']];
+/* Die Modi selbst stehen in core/state.js (CURVE_MODES); hier ihre
+   Beschriftung und je ein Hinweis, der den leeren Absatz .curve-note der
+   Seite füllt. */
+const LABELS = { points: 'Punkte', lopez: 'DieLogic', v1v2: 'V₁ / V₂' };
 
 const NOTES = {
   points: 'Wegpunkte als Weg s [mm] / Kolbengeschwindigkeit v [m/s]. Zwischen den Punkten wird konstant beschleunigt; der Ursprung (0 mm, 0 m/s) wird automatisch ergänzt.',
@@ -26,10 +29,10 @@ function ensureModeUI() {
   const tabs = document.createElement('div');
   tabs.className = 'tabs cgen-tabs';
   tabs.id = 'curveModeTabs';
-  MODES.forEach(([m, label]) => {
+  CURVE_MODES.forEach(m => {
     const b = document.createElement('button');
     b.dataset.mode = m;
-    b.textContent = label;
+    b.textContent = LABELS[m];
     b.onclick = () => {
       state.curveGen.mode = m;
       renderCurveTable();

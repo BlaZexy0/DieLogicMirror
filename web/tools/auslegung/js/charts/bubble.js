@@ -3,10 +3,10 @@
    Formtemperatur ein). */
 
 import { series, line } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { pistonArea, injForceEff } from '../core/physics.js';
+import { seq, fmt } from '../core/format.js';
+import { specPressure } from '../core/physics.js';
 import { sim } from '../core/simstore.js';
-import { eq } from './mathfmt.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 const P_ATM = 1.01325;                                  // Umgebungsdruck bar
 const K = 273.15;
@@ -51,8 +51,8 @@ export function vacPressure(v) {
    einem Arbeitsdruck unter dem Nenndruck endete die Achse dann bei einem
    Druck, den PQ² und spezifischer Gießdruck gar nicht zeigen. */
 function pMax(v) {
-  const A = pistonArea(v), F = injForceEff(v);
-  return F > 0 && A > 0 ? F * 1e4 / A : NaN;
+  const p = specPressure(v);
+  return isFinite(p) ? p : NaN;
 }
 
 export default {
@@ -119,7 +119,7 @@ beim gewählten Nachdruck p<sub>N</sub> = <span data-m="psel"></span>: D<sub>vor
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
+    const set = mathSetter(el);
     const p0 = pMax(v);
     set('D', fmt(v.diam) + ' mm');
     set('pmax', isFinite(p0) ? fmt(p0) + ' bar' : '—');

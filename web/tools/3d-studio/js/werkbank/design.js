@@ -15,18 +15,12 @@
    automatisch nachgeführt, sobald sich im Modell etwas ändert. */
 
 import { loadTheme } from '../../../auslegung/js/core/theme.js';
-import { state as design, subscribe, notify } from '../../../auslegung/js/core/state.js';
+import { state as design, notify } from '../../../auslegung/js/core/state.js';
 import { computeShot, rhoSolidus } from '../../../auslegung/js/core/physics.js';
-import { applyCurveGen } from '../../../auslegung/js/core/curvegen.js';
-import { applyAuto } from '../../../auslegung/js/core/autofit.js';
-import { charts } from '../../../auslegung/js/charts/registry.js';
-import { buildInputs, validate, highlightInputs, clearHighlights, refreshAuto, applyValues } from '../../../auslegung/js/ui/inputs.js';
+import { buildInputs, applyValues } from '../../../auslegung/js/ui/inputs.js';
 import { initPresetSelects } from '../../../auslegung/js/ui/presets.js';
 import { renderCurveTable, wireAddPoint } from '../../../auslegung/js/ui/curveTable.js';
-import { renderKpis } from '../../../auslegung/js/ui/kpis.js';
-import { buildChamberCard, renderChamber } from '../../../auslegung/js/ui/chamber.js';
-import { buildCard, renderCard } from '../../../auslegung/js/ui/cards.js';
-import { initSim } from '../../../auslegung/js/core/simstore.js';
+import { createRender, buildDashboard, startPage } from '../../../auslegung/js/ui/page.js';
 import { PRESET_KEYS, PRESET_DOMAINS } from '../../../auslegung/js/config/fields.js';
 import { $, fmt } from '../ui/controls.js';
 import { sweepRunner, biscuitMesh } from '../runner/sweep.js';
@@ -51,19 +45,22 @@ const ROWS = [
 export function createDesignStage(ctx) {
   const state = { active: false, built: false, auto: false, values: {}, shot: null, dirty: true, checked: {} };
   for (const r of ROWS) state.checked[r.k] = r.k !== 'wallMax';
-  const cards = {};
-  let chamberCard = null, activeHl = null, letzterGueltigerStand = false;
+  let renderDash = null;                            // ui/page.js createRender, nach dem Aufbau
 
   /* ── Übernahme ────────────────────────────────────────────── */
+  /* Die Zeilen tragen data-t, nicht data-k: data-k ist in der Auslegung das
+     Eingabefeld eines Werts (ui/inputs.js), und dieselbe Seite fand sonst
+     beim Übernehmen die Checkbox statt des Felds in der Seitenleiste — die
+     zeigte weiter den alten Wert. */
   function buildTransfer() {
     const el = $('au-transfer');
     el.innerHTML = ROWS.map(r =>
-      '<input type="checkbox" data-k="' + r.k + '"' + (state.checked[r.k] ? ' checked' : '') + ' title="' + r.label + ' übernehmen">'
-      + '<span class="k" data-k="' + r.k + '">' + r.label + '</span>'
+      '<input type="checkbox" data-t="' + r.k + '"' + (state.checked[r.k] ? ' checked' : '') + ' title="' + r.label + ' übernehmen">'
+      + '<span class="k" data-t="' + r.k + '">' + r.label + '</span>'
       + '<span class="v na" data-v="' + r.k + '">—</span><span class="u">' + r.unit + '</span>'
       + '<small>' + r.src + '</small>').join('');
-    for (const cb of el.querySelectorAll('input[data-k]')) {
-      cb.addEventListener('change', () => { state.checked[cb.dataset.k] = cb.checked; });
+    for (const cb of el.querySelectorAll('input[data-t]')) {
+      cb.addEventListener('change', () => { state.checked[cb.dataset.t] = cb.checked; });
     }
   }
 
@@ -172,6 +169,11 @@ export function createDesignStage(ctx) {
   $('au-auto').addEventListener('change', e => { state.auto = e.target.checked; if (state.auto) { ensureBuilt(); apply(); } });
 
   /* ── Das Dashboard ────────────────────────────────────────── */
+  /* Dieselbe Pipeline wie das Dashboard selbst (auslegung/js/ui/page.js):
+     prüfen, dann rechnen; ungültige Eingaben lassen den letzten gültigen
+     Stand stehen; die Vakuum-Felder folgen dem Modell, und ein Wechsel des
+     Farbschemas malt Diagramme und Füllkammer neu. Gezeichnet wird nur,
+     solange der Schritt offen ist — beim Betreten rechnet enter() neu. */
   async function ensureBuilt() {
     if (state.built) return;
     state.built = true;
@@ -181,11 +183,17 @@ export function createDesignStage(ctx) {
       buildInputs($('groups'));
       renderCurveTable();
       wireAddPoint($('addPoint'));
-      chamberCard = buildChamberCard($('chamber'));
-      const chartsEl = $('charts');
-      charts.forEach(def => { cards[def.id] = buildCard(def, chartsEl, { link: true, onHighlight }); });
-      initSim();
-      subscribe(() => { state.dirty = true; if (state.active) render(); refreshTransfer(); ctx.emit('design'); });
+      const dash = buildDashboard({ chamber: $('chamber'), summary: $('summary'), charts: $('charts') });
+      renderDash = createRender({
+        blocked: dash.block,
+        draw: (v, shot) => {
+          state.shot = shot;
+          dash.draw(v, shot);
+          ctx.markDone('auslegung', true);
+        }
+      });
+      startPage(() => { state.dirty = true; if (state.active) render(); refreshTransfer(); ctx.emit('design'); },
+        { resize: false, repaint: () => { if (state.active) dash.repaint(); } });
       refreshTransfer();
     } catch (err) {
       $('au-warn').textContent = 'Die Auslegung konnte nicht aufgebaut werden: ' + err.message;
@@ -193,44 +201,10 @@ export function createDesignStage(ctx) {
     }
   }
 
-  function onHighlight(def, btn) {
-    document.querySelectorAll('.hl-btn.active').forEach(b => { if (b !== btn) b.classList.remove('active'); });
-    if (activeHl === def) {
-      activeHl = null;
-      btn.classList.remove('active');
-      clearHighlights();
-      return;
-    }
-    activeHl = def;
-    btn.classList.add('active');
-    highlightInputs(def.inputs, { curve: def.usesCurve });
-  }
-
-  /* Wie main.js: prüfen, dann rechnen; ungültige Eingaben lassen den
-     letzten gültigen Stand stehen. */
   function render() {
-    if (!state.built || !state.active) return;
+    if (!state.built || !state.active || !renderDash) return;
     state.dirty = false;
-    const v = design.values;
-    const genErr = applyCurveGen(v);
-    applyAuto(v);
-    refreshAuto();
-    if (design.curveGen.mode !== 'points') renderCurveTable(genErr);
-    const urteil = validate(v);
-    document.body.classList.toggle('inputs-invalid', !urteil.ok);
-    if (!urteil.ok) {
-      if (letzterGueltigerStand) return;
-      const grund = 'Eingaben außerhalb des zulässigen Bereichs: ' + (urteil.msgs[0] || 'siehe Seitenleiste') + '.';
-      charts.forEach(def => renderCard(cards[def.id], def, v, null, grund));
-      return;
-    }
-    letzterGueltigerStand = true;
-    const shot = computeShot(v, design.curve);
-    state.shot = shot;
-    renderChamber(chamberCard, v);
-    renderKpis($('summary'), v, shot, $('chamber-kpis'));
-    charts.forEach(def => renderCard(cards[def.id], def, v, shot));
-    ctx.markDone('auslegung', true);
+    renderDash();
   }
 
   /* Die Karten messen ihre Breite beim Zeichnen — ändert sich die des

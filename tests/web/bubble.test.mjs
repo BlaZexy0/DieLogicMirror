@@ -7,22 +7,13 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+import { ladeSkripte, auslegung } from './stubs/dashboard.mjs';
 
-const require = createRequire(import.meta.url);
-const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
-
-globalThis.window = globalThis;
 /* Die klassischen Globals, die die ES-Module des Dashboards voraussetzen. */
-require(path.join(site, 'shared/palette.js'));
-require(path.join(site, 'shared/theme.js'));
-require(path.join(site, 'shared/examples/machines.js'));
-require(path.join(site, 'shared/project.js'));
+ladeSkripte();
 
-const { vacPressure, ratio } = await import('../../web/tools/auslegung/js/charts/bubble.js');
-const { sim } = await import('../../web/tools/auslegung/js/core/simstore.js');
+const { vacPressure, ratio } = await auslegung('charts/bubble.js');
+const { sim } = await auslegung('core/simstore.js');
 
 /* Gemessene Endprobe der Dashboard-Defaults mit conductance-Modell. */
 const SAMPLES = {
@@ -66,8 +57,8 @@ test('ratio: mit dem korrekten p_vor schrumpft die Blase spürbar stärker', () 
    p₀ im PQ² (pqCore). Bis zum 23.09. nahm die Luftblase die volle Kraft und
    endete bei einem Druck, den PQ² und spezifischer Gießdruck nicht zeigen. */
 test('Luftblase: die Achse endet beim statischen Druck des PQ² (wirksame Gießkraft)', async () => {
-  const bubble = (await import('../../web/tools/auslegung/js/charts/bubble.js')).default;
-  const { pistonArea, injForceEff } = await import('../../web/tools/auslegung/js/core/physics.js');
+  const bubble = (await auslegung('charts/bubble.js')).default;
+  const { pistonArea, injForceEff } = await auslegung('core/physics.js');
   const v = { injForce: 1300, pAcc: 190, pAccOp: 140, diam: 150, psel: 600, Tliq: 593, Tdie: 200, vacModel: 'aus' };
   assert.ok(bubble.inputs.includes('pAcc') && bubble.inputs.includes('pAccOp'), 'die Akkudrücke sind Eingaben');
   const q = bubble.calc(v);

@@ -15,7 +15,7 @@
    Diagramm dagegen wehren. Siehe docs/eingabegrenzen.md.                  */
 
 import { PAIRS, domainFields, hiddenFields } from '../config/fields.js';
-import { pMaxMachine, pistonArea, intensStroke } from './physics.js';
+import { pMaxMachine, pistonArea, fillRatio, intensStroke } from './physics.js';
 
 /* null = in Ordnung, sonst der Grund im Klartext. */
 export function checkField(f, x) {
@@ -70,16 +70,14 @@ export function checkValues(v, opt) {
     msgs.push('Nachdruck über dem Maschinenmaximum (' + Math.round(pM) + ' bar)');
   }
   /* Zwei abgeleitete Grenzen. Sie hängen an vier bis sechs Eingaben und
-     lassen sich deshalb nicht als Feldgrenze schreiben. Eingeführt, als die
-     Simulation noch auf dem Server lief (bis 19.09.): dort wies sie diese
-     Werte mit einem nackten HTTP 422 ab; seither rechnet sie im Browser,
-     und die Prüfung hier sagt es vorher in Worten. */
+     lassen sich deshalb nicht als Feldgrenze schreiben. Die Luftsimulation
+     (core/airsim/config.js) weist dieselben Fälle ab; die Prüfung hier sagt
+     es vorher in Worten. */
   if (opt && opt.abgeleitet === false) return { ok: bad.size === 0, bad, msgs };
 
   const A = pistonArea(v), L = v.length;                 // mm², mm
   if (isFinite(A) && A > 0 && isFinite(L) && L > 0 && v.density > 0) {
-    const Vdose = (v.runner + v.part + v.overflow + v.biscuit) / v.density;   // m³
-    const phi = Vdose * 1e9 / (A * L);
+    const phi = fillRatio(v);
     if (phi >= 1) {
       ['part', 'runner', 'overflow', 'biscuit', 'diam', 'length'].forEach(k => bad.add(k));
       msgs.push('Dosiervolumen übersteigt das Kammervolumen (Füllgrad ' +

@@ -1,69 +1,12 @@
-/* Einstieg Dashboard-Seite (index.html): alle Diagramme + KPIs + volle Sidebar. */
+/* Einstieg Dashboard-Seite (index.html): alle Diagramme + KPIs + volle Sidebar.
+   Rechnen und Zeichnen: ui/page.js, dieselbe Pipeline wie Einzelseite und
+   Werkbank. */
 
 import { loadTheme } from './core/theme.js';
-import { state, subscribe } from './core/state.js';
-import { computeShot } from './core/physics.js';
-import { applyCurveGen } from './core/curvegen.js';
-import { applyAuto } from './core/autofit.js';
-import { charts } from './charts/registry.js';
-import { buildInputs, validate, highlightInputs, clearHighlights, refreshAuto, updateFieldVisibility } from './ui/inputs.js';
+import { buildInputs } from './ui/inputs.js';
 import { initPresetSelects } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
-import { renderKpis } from './ui/kpis.js';
-import { buildChamberCard, renderChamber } from './ui/chamber.js';
-import { buildCard, renderCard, paintCard } from './ui/cards.js';
-import { initSim } from './core/simstore.js';
-
-const cards = {};
-let chamberCard = null;
-let activeHl = null;
-
-function onHighlight(def, btn) {
-  document.querySelectorAll('.hl-btn.active').forEach(b => { if (b !== btn) b.classList.remove('active'); });
-  if (activeHl === def) {
-    activeHl = null;
-    btn.classList.remove('active');
-    clearHighlights();
-    return;
-  }
-  activeHl = def;
-  btn.classList.add('active');
-  highlightInputs(def.inputs, { curve: def.usesCurve });
-}
-
-let letzterGueltigerStand = false;
-
-function render() {
-  const v = state.values;
-  /* Generierte Kurvenmodi: Wegpunkte aus den aktuellen Eingaben neu erzeugen */
-  const genErr = applyCurveGen(v);
-  applyAuto(v);
-  refreshAuto();
-  updateFieldVisibility();
-  if (state.curveGen.mode !== 'points') renderCurveTable(genErr);
-  /* Erst prüfen, dann rechnen. Liegt eine Eingabe außerhalb der Domäne, wird
-     NICHT gerechnet: die Zahlen kämen sonst in computeShot und in alle 19
-     Diagramme, die sich dann jede für sich dagegen wehren müssten. */
-  const urteil = validate(v);
-  document.body.classList.toggle('inputs-invalid', !urteil.ok);
-  if (!urteil.ok) {
-    /* Beim Tippen ist eine Eingabe kurzzeitig ungültig — dann bleibt der
-       letzte gültige Stand stehen (sichtbar abgeblendet), statt zu flackern.
-       Nur wenn es noch keinen gibt (Projekt mit ungültigen Werten geladen),
-       wird der Grund in die Karten geschrieben. */
-    if (letzterGueltigerStand) return;
-    const grund = 'Eingaben außerhalb des zulässigen Bereichs: ' +
-      (urteil.msgs[0] || 'siehe Seitenleiste') + '.';
-    charts.forEach(def => renderCard(cards[def.id], def, v, null, grund));
-    return;
-  }
-  letzterGueltigerStand = true;
-
-  const shot = computeShot(v, state.curve);
-  renderChamber(chamberCard, v);
-  renderKpis(document.getElementById('summary'), v, shot, document.getElementById('chamber-kpis'));
-  charts.forEach(def => renderCard(cards[def.id], def, v, shot));
-}
+import { createRender, buildDashboard, startPage } from './ui/page.js';
 
 async function init() {
   await loadTheme();
@@ -72,25 +15,13 @@ async function init() {
   renderCurveTable();
   wireAddPoint(document.getElementById('addPoint'));
 
-  chamberCard = buildChamberCard(document.getElementById('chamber'));
-  const chartsEl = document.getElementById('charts');
-  charts.forEach(def => { cards[def.id] = buildCard(def, chartsEl, { link: true, onHighlight }); });
-  initSim();
-
-  let rt;
-  window.onresize = () => { clearTimeout(rt); rt = setTimeout(render, 120); };
-
-  /* Farbschema gewechselt (shared/schemes.js): was selbst malt, neu
-     zeichnen: die Diagramme aus ihren Daten (sie tragen Rollen, keine
-     Farbwerte; gerechnet wird nichts, auch nicht bei ungültigen Eingaben)
-     und die Füllkammer, deren SVG die Farbwerte selbst trägt. Kennzahlen,
-     Leisten und Lineal sind CSS-Tokens und folgen von allein. */
-  document.addEventListener('dielogic:scheme', () => {
-    charts.forEach(def => paintCard(cards[def.id], def));
-    if (chamberCard && chamberCard._v) renderChamber(chamberCard, chamberCard._v);
+  const dash = buildDashboard({
+    chamber: document.getElementById('chamber'),
+    summary: document.getElementById('summary'),
+    charts: document.getElementById('charts')
   });
-
-  subscribe(render);
+  const render = createRender({ blocked: dash.block, draw: dash.draw });
+  startPage(render, { repaint: dash.repaint });
   requestAnimationFrame(() => requestAnimationFrame(render));
 }
 

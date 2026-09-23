@@ -3,6 +3,8 @@
    ES-Modulen geladen). Ohne KaTeX (Tests, Generatoren) bleibt die TeX-
    Quelle als <code> stehen, damit nichts bricht. */
 
+import { subHTML } from '../core/format.js';
+
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 /* Inline-Formel als HTML-Fragment. */
@@ -18,4 +20,13 @@ export function eq(src) {
   const body = k ? k.renderToString(src, { throwOnError: false, displayMode: true, strict: 'ignore' })
     : '<code class="tex">' + esc(src) + '</code>';
   return '<div class="eq">' + body + '</div>';
+}
+
+/* Die Live-Werte einer Erklärung: set(k, text) füllt den Platzhalter
+   <… data-m="k"> in el; Indizes („v_a") laufen durch subHTML. */
+export function mathSetter(el) {
+  return (k, val) => {
+    const s = el.querySelector('[data-m="' + k + '"]');
+    if (s) s.innerHTML = subHTML(val);
+  };
 }

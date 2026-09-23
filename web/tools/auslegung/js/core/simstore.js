@@ -8,9 +8,9 @@
    `sim.data` null und `sim.error` die Meldung für den Anwender.
 
    Reihenfolge: initSim() abonniert den Zustand und muss VOR dem render()
-   der Seite abonnieren (main.js, single.js, Werkbank) — notify() ruft die
-   Abonnenten der Reihe nach, und die Diagramme sollen das frische Ergebnis
-   sehen. */
+   der Seite abonnieren (ui/page.js startPage, für Dashboard, Einzelseite
+   und Werkbank) — notify() ruft die Abonnenten der Reihe nach, und die
+   Diagramme sollen das frische Ergebnis sehen. */
 
 import { state, subscribe } from './state.js';
 import { simulateAir, SimError } from './airsim/simulate.js';

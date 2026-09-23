@@ -105,7 +105,7 @@ h2 { margin: 4px 0; }
 .group.wide { grid-column: span 6; }
 .sidebar .groups { display: block; }
 .sidebar .group, .sidebar .group.wide { margin-bottom: 11px; }
-.sidebar .fields, .sidebar .chamber-grid { grid-template-columns: 1fr; }
+.sidebar .fields { grid-template-columns: 1fr; }
 .group h3 { margin: 0 0 9px; }
 .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .field label {
@@ -142,10 +142,6 @@ select {
   background: var(--surface);
   color: var(--text);
 }
-.chamber-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.input-column { padding-left: 10px; border-left: 3px solid var(--pale); }
-.input-column h4 { margin: 0 0 7px; color: var(--primary); }
-.input-column .field { margin-bottom: 7px; }
 .hint {
   margin-top: 11px;
   padding: 8px;
@@ -206,18 +202,14 @@ select {
   width: 100%;
   height: auto;
 }
-#chamber-ruler .kruler.aligned { padding: 0 0 10px; border-bottom: 0; }
-/* Ausgerichtetes Lineal: Spur nur über der aktiven Länge, nicht über die Kartenbreite */
-.kruler.aligned .kr-track, .kruler.aligned .kr-vtrack { background: transparent; }
-.kruler.aligned .kr-track .seg.base { background: var(--border-light); border-radius: 3px; }
-.kruler.aligned .kr-vtrack .base { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: var(--border-light); }
 #chamber-kpis { container-type: inline-size; border-top: 1px solid var(--border-light); }
 #chamber-kpis .kvs { border-top: 0; }
 .chamber-card .head .kverdict { margin-right: 8px; }
 
 /* ── Kennzahlen: Prüfpanels ──
-   Panel = Kopf (Titel + Gruppenurteil) · Kennwertstreifen · optional
-   Kolbenweg-Lineal · Prüfzeilen (Name · Wert · Leiste · Urteil). */
+   Panel = Kopf (Titel + Gruppenurteil) · Kennwertstreifen · Prüfzeilen
+   (Name · Wert · Leiste · Urteil). Das Kolbenweg-Lineal steht in der
+   Kammerkarte (oben). */
 .summary { margin: 14px 0 26px; }
 .kpanel-grid {
   display: grid;
@@ -225,7 +217,6 @@ select {
   gap: 12px;
 }
 .kpanel { overflow: hidden; container-type: inline-size; }
-.kpanel.wide { grid-column: 1 / -1; }
 .kpanel.tall { grid-row: span 2; }
 .kpanel-head {
   display: flex;
@@ -397,24 +388,18 @@ select {
 .meter-row + .meter-row { margin-top: 3px; }
 .meter-row .kpi-meter { height: 7px; }
 .meter-row .mlbl { color: var(--muted); font-size: 10px; }
-.meter-row .mval { display: none; }
 
-/* Kolbenweg-Lineal im Füllkammer-Panel */
-.kruler { padding: 8px 12px 10px; border-bottom: 1px solid var(--border-light); }
-.kr-head {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10.5px;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-.kr-head span:last-child { font-family: var(--mono); color: var(--text); }
+/* Kolbenweg-Lineal in der Kammerkarte (#chamber-ruler), an der aktiven
+   Länge des Schemas ausgerichtet: die Spuren (.base) liegen nur über der
+   aktiven Länge, nicht über der Kartenbreite. */
+.kruler { padding: 0 0 10px; }
 /* Zweite Spur über dem Lineal: Vakuumbereich (Sachfarbe Vakuum) und
    „Einfüllöffnung dicht" */
 .kr-vac { margin: 0 0 8px; }
 .kr-vac .vl { display: block; font-size: 10px; color: var(--text); margin-bottom: 2px; }
 .kr-vac.off .vl { color: var(--muted); }
-.kr-vtrack { position: relative; height: 4px; border-radius: 2px; background: var(--border-light); }
+.kr-vtrack { position: relative; height: 4px; border-radius: 2px; }
+.kr-vtrack .base { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: var(--border-light); }
 .kr-vtrack .seg { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: var(--vacuum); }
 .kr-vtrack .tick { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--text); opacity: .7; }
 /* Die Schmelzesäule in ihren Sachfarben, wie im Ringdiagramm und in der
@@ -425,9 +410,9 @@ select {
   position: relative;
   height: 10px;
   border-radius: 3px;
-  background: var(--border-light);
 }
 .kr-track .seg { position: absolute; top: 0; bottom: 0; }
+.kr-track .seg.base { background: var(--border-light); border-radius: 3px; }
 .kr-track .seg.run, .kr-legend i.run { background: var(--runner); }
 .kr-track .seg.part, .kr-legend i.part { background: var(--melt); }
 .kr-track .seg.bisc, .kr-legend i.bisc { background: var(--biscuit); }
@@ -494,17 +479,13 @@ select {
 .checkbar .tights .ck-link { color: var(--caution-text); }
 .krow.flash { outline: 2px solid var(--primary); outline-offset: -2px; }
 
-/* Schmale Panels (< 600 px): Leiste in eine zweite Zeile unter Name und Wert;
-   breites Panel unter 900 px: Prüfzeilen einspaltig. */
+/* Schmale Panels (< 600 px): Leiste in eine zweite Zeile unter Name und Wert. */
 @container (max-width: 600px) {
   .krow { grid-template-columns: minmax(0, 1fr) auto auto; row-gap: 3px; }
   .krow .klbl { grid-row: 1; grid-column: 1; }
   .krow > b { grid-row: 1; grid-column: 2; }
   .krow .tag, .krow > span:last-child { grid-row: 1; grid-column: 3; justify-self: end; }
   .krow .kbar { grid-row: 2; grid-column: 1 / -1; }
-}
-@container (min-width: 1880px) {
-  .kpanel.wide .krows { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (max-width: 1000px) {
   .kpanel-grid { grid-template-columns: 1fr; }
@@ -763,7 +744,7 @@ canvas { display: block; width: 100%; height: 100%; background: var(--surface); 
 }
 @media (max-width: 680px) {
   .group, .group.wide { grid-column: span 12; }
-  .fields, .chamber-grid { grid-template-columns: 1fr; }
+  .fields { grid-template-columns: 1fr; }
   h1 { font-size: 22px; }
 }
 

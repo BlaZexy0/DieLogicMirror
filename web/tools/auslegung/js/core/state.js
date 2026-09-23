@@ -1,6 +1,7 @@
 /* Zentraler Zustand: Eingabewerte, Schusskurve, gewähltes Maschinen-Preset.
-   UI-Module schreiben in den Zustand und rufen notify(); die Seiten-Einstiege
-   (main.js / single.js) abonnieren mit subscribe() und rendern neu.
+   UI-Module schreiben in den Zustand und rufen notify(); die Seiten
+   (ui/page.js: Dashboard, Einzelseite, Werkbank) abonnieren mit subscribe()
+   und rendern neu.
 
    Der Zustand ist der design-Abschnitt des aktuellen Projekts
    (shared/project.js, als klassisches Script vor den Modulen geladen):
@@ -71,12 +72,15 @@ const preparers = [];
 export function subscribe(fn) { subscribers.push(fn); }
 
 /* Preparer laufen vor persist() und den Subscribern: abgeleiteter Zustand
-   (z. B. generierte Schusskurven, core/curvegen.js) wird zuerst aktuell,
-   damit localStorage und alle Subscriber denselben Stand sehen. */
+   (generierte Schusskurven, core/curvegen.js; Auto-Flächen, core/autofit.js)
+   wird zuerst aktuell, damit localStorage und alle Subscriber denselben
+   Stand sehen. prepare() allein braucht nur der Seitenstart (ui/page.js):
+   der geladene Zustand kommt ohne notify() herein. */
 export function addPreparer(fn) { preparers.push(fn); }
+export function prepare() { preparers.forEach(fn => fn()); }
 
 export function notify() {
-  preparers.forEach(fn => fn());
+  prepare();
   persist();
   subscribers.forEach(fn => fn());
 }
@@ -90,9 +94,9 @@ function loadPersisted() {
   }
 }
 
-/* Zustandsdaten aus einer externen Quelle (localStorage, Share-Link,
-   JSON-Datei) geprüft in den Zustand übernehmen. Unbekannte Schlüssel
-   werden ignoriert, Typen erzwungen — die Quelle ist nicht vertrauenswürdig. */
+/* Den gespeicherten Auslegungsabschnitt des Projekts geprüft in den Zustand
+   übernehmen. Unbekannte Schlüssel werden ignoriert, Typen erzwungen — die
+   Quelle ist nicht vertrauenswürdig (Import, ältere Projekte, fremde Hand). */
 export function applyData(data) {
   if (!data || typeof data !== 'object') return;
   if (data.values) {

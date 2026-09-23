@@ -1,8 +1,9 @@
 /* Empfohlene Füllzeit nach NADCA über Wandstärke. */
 
 import { series, line, limit } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { eq } from './mathfmt.js';
+import { seq, fmt } from '../core/format.js';
+import { nadcaReserve, nadcaFillMs } from '../core/physics.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 export default {
   id: 'ftwall',
@@ -11,16 +12,19 @@ export default {
   inputs: ['wallMin', 'wallMax', 'kfill', 'Tcast', 'Tflow', 'Tdie', 'Sfrac', 'Zconst', 'tmax', 'wall'],
 
   calc(v) {
-    /* Der Nenner ist die Temperaturspanne zwischen Fließ- und Formtemperatur.
-       Ohne Prüfung lieferte die NADCA-Formel bei Gleichheit ±Infinity (und
-       NaN bei s = 0) und das Diagramm zeichnete es. Dieselbe Formel steht an
-       vier Stellen im Repo mit drei verschiedenen Nullschutz-Varianten —
-       hier fehlte sie ganz. */
+    /* Die Formel steht einmal, mit einem Nullschutz (core/physics.js
+       nadcaFillMs): ohne Gefälle zur Form oder ohne positive Reserve gibt es
+       keine Empfehlung. Hier wird dazu der Grund genannt, statt eine leere
+       Achse zu zeigen — vorher lief die Kurve bei negativer Reserve
+       unsichtbar unter der Nulllinie. */
     if (!(v.Tflow > v.Tdie)) {
       return { err: 'Min. Fließtemperatur muss über der Formtemperatur liegen (' + fmt(v.Tflow) + ' °C ≤ ' + fmt(v.Tdie) + ' °C).' };
     }
+    if (!(nadcaReserve(v) > 0)) {
+      return { err: 'Keine Empfehlung: Gießtemperatur − Fließtemperatur + zul. Erstarrung · Z muss über 0 °C liegen (' + fmt(nadcaReserve(v)) + ' °C).' };
+    }
     const x = seq(v.wallMin, v.wallMax, 140);
-    const f = s => v.kfill * s * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / (v.Tflow - v.Tdie);
+    const f = s => nadcaFillMs(v, s);
     const q = line(x, [series('Empf. Füllzeit', 'ink', x, f)],
       'Wandstärke in mm', 'Füllzeit in ms', 'Tguss ' + fmt(v.Tcast) + ' °C · Tform ' + fmt(v.Tdie) + ' °C');
     q.y0 = 0;
@@ -48,13 +52,12 @@ t<sub>f</sub>(s = <span data-m="s"></span>) = <b data-m="tf"></b> · Limit t<sub
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
-    const num = v.Tcast - v.Tflow + v.Sfrac * v.Zconst;
-    const den = v.Tflow - v.Tdie;
-    set('num', fmt(num) + ' °C');
-    set('den', fmt(den) + ' °C');
+    const set = mathSetter(el);
+    const tf = nadcaFillMs(v);
+    set('num', fmt(nadcaReserve(v)) + ' °C');
+    set('den', fmt(v.Tflow - v.Tdie) + ' °C');
     set('s', fmt(v.wall) + ' mm');
-    set('tf', den !== 0 ? fmt(v.kfill * v.wall * num / den) + ' ms' : '—');
+    set('tf', isFinite(tf) ? fmt(tf) + ' ms' : '—');
     set('tmax', fmt(v.tmax) + ' ms');
   }
 };

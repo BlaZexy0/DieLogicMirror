@@ -1,4 +1,8 @@
-/* Dispatcher: wählt anhand der Diagrammdaten den passenden Renderer. */
+/* Dispatcher: die Diagrammdaten sagen selbst, welcher Renderer sie zeichnet —
+   ein Feld z (charts/helpers.js heat()) ist eine Heatmap, kind 'map' das
+   (φ, λ)-Fenster, kind 'donut' der Ring, alles andere ein Liniendiagramm.
+   Hover (render/hover.js) und Grenzen (render/limits.js) lesen dieselben
+   Merkmale. */
 
 import { drawLine } from './line.js';
 import { drawHeat } from './heat.js';
@@ -7,9 +11,9 @@ import { drawDonut } from './donut.js';
 import { text, fillRich } from './base.js';
 import { theme } from '../core/theme.js';
 
-export function drawAny(x, w, h, d, def) {
+export function drawAny(x, w, h, d) {
   if (d.err) { errCanvas(x, w, h, d); return; }
-  if ((def && def.heat) || d.z) drawHeat(x, w, h, d);
+  if (d.z) drawHeat(x, w, h, d);
   else if (d.kind === 'map') drawMap(x, w, h, d);
   else if (d.kind === 'donut') drawDonut(x, w, h, d);
   else drawLine(x, w, h, d);

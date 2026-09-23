@@ -1,8 +1,14 @@
 /* Empfohlene Anschnittgeschwindigkeit über Wandstärke mit Zielband. */
 
 import { series, line, target } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { eq } from './mathfmt.js';
+import { seq, fmt } from '../core/format.js';
+import { eq, mathSetter } from './mathfmt.js';
+
+/* Die Empfehlung bei der Wandstärke s: linear von v_a,max bei s_min auf
+   v_a,min bei s_max — für die Kurve und die Erklärung dieselbe Zeile. */
+function vaAt(v, s) {
+  return v.gateMax - (v.gateMax - v.gateMin) * (s - v.wallMin) / (v.wallMax - v.wallMin);
+}
 
 export default {
   id: 'gvwall',
@@ -12,7 +18,7 @@ export default {
 
   calc(v) {
     const x = seq(v.wallMin, v.wallMax, 140);
-    const f = s => v.gateMax - (v.gateMax - v.gateMin) * (s - v.wallMin) / (v.wallMax - v.wallMin);
+    const f = s => vaAt(v, s);
     const q = line(x, [series('Empfehlung', 'ink', x, f)],
       'Wandstärke in mm', 'Anschnittgeschwindigkeit in m/s', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s');
     q.limits = [target('gateBand', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s', 'y', v.gateMin, v.gateMax)];
@@ -37,9 +43,9 @@ Zielband <span data-m="band"></span></p>`;
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
-    const span = v.wallMax - v.wallMin;
-    const va = span !== 0 ? v.gateMax - (v.gateMax - v.gateMin) * (v.wall - v.wallMin) / span : NaN;
+    const set = mathSetter(el);
+    /* Ohne Spanne (s_min = s_max) ist die Empfehlung nicht bestimmt: dann „—" */
+    const va = vaAt(v, v.wall);
     set('s', fmt(v.wall) + ' mm');
     set('va', isFinite(va) ? fmt(va) + ' m/s' : '—');
     set('band', fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s');

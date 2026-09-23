@@ -1,9 +1,9 @@
 /* Entlüftungsbedarf über Füllzeit. */
 
 import { series, line, limit, refline } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { total, afterGate, pistonArea, cavityVolume } from '../core/physics.js';
-import { eq } from './mathfmt.js';
+import { seq, fmt } from '../core/format.js';
+import { total, cavityVolume, fillTimeAt, ventAreaFor, shotSpeed } from '../core/physics.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 export default {
   id: 'ventreq',
@@ -14,7 +14,7 @@ export default {
 
   calc(v, o) {
     const Vm = cavityVolume(total(v), v);
-    const f = t => Vm / (t / 1000) / v.vAirMax * 1e6;
+    const f = t => ventAreaFor(v, t);
     /* y-Achse knapp über der größten Referenz (Anschnittfläche / Ist-Entlüftung /
        Bedarf bei t_max) kappen — die Hyperbel explodiert sonst bei kleinen t
        und drückt den lesbaren Bereich zusammen. x beginnt, wo die Kurve ins
@@ -36,9 +36,9 @@ export default {
       /* Die Anschnittfläche ist eine Größe des Werkzeugs: Referenz in dessen Farbe */
       refline('gateRef', 'Anschnittfläche ' + fmt(v.gate) + ' mm²', 'y', v.gate, { c: 'die' })
     ];
-    const v2 = o && o.shot && !o.shot.error ? o.shot.v2 : null;
+    const v2 = shotSpeed(o && o.shot, 'v2');
     if (v2 > 0) {
-      const tOp = 1e9 * cavityVolume(afterGate(v), v) / (v2 * pistonArea(v));
+      const tOp = fillTimeAt(v, v2);
       q.pt = [tOp, f(tOp)];
       q.ptl = fmt(tOp) + ' ms → ' + fmt(f(tOp)) + ' mm²';
     }
@@ -62,12 +62,10 @@ zeigen die vorhandene Entlüftungsfläche und als Referenz die Anschnittfläche;
   },
 
   renderMath(el, v, shot) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
-    const Vm = cavityVolume(total(v), v);
-    const v2 = shot && !shot.error && shot.v2 != null ? shot.v2 : NaN;
-    const tOp = 1e9 * cavityVolume(afterGate(v), v) / (v2 * pistonArea(v));
-    const Areq = v.vAirMax > 0 && tOp > 0 ? Vm / (tOp / 1000) / v.vAirMax * 1e6 : NaN;
-    set('V', fmt(Vm * 1e6) + ' cm³');
+    const set = mathSetter(el);
+    const tOp = fillTimeAt(v, shotSpeed(shot, 'v2'));
+    const Areq = ventAreaFor(v, tOp);
+    set('V', fmt(cavityVolume(total(v), v) * 1e6) + ' cm³');
     set('tf', isFinite(tOp) ? fmt(tOp) + ' ms' : '—');
     set('Areq', isFinite(Areq) ? fmt(Areq) + ' mm²' : '—');
     set('Avail', fmt(v.vent) + ' mm²');

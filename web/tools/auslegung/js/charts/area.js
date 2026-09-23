@@ -3,14 +3,11 @@
    Implementierung wie in der STL-Analyse). */
 
 import { series, line, refline } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { pMaxMachine } from '../core/physics.js';
-import { eq } from './mathfmt.js';
+import { seq, fmt } from '../core/format.js';
+import { pMaxMachine, leverFactor } from '../core/physics.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 const CLAMP = window.__CLAMP_MODEL__;
-function leverK(v) {
-  return (v.tieX > 0 && v.tieY > 0) ? CLAMP.leverK(v.eccX, v.eccY, v.tieX, v.tieY) : 1;
-}
 
 export default {
   id: 'area',
@@ -19,7 +16,7 @@ export default {
   inputs: ['force', 'safety', 'injForce', 'pAcc', 'pAccOp', 'dmin', 'psel', 'area', 'eccX', 'eccY', 'tieX', 'tieY'],
 
   calc(v) {
-    const k = leverK(v);
+    const k = leverFactor(v);
     const lift = k - 1 >= 1;
     /* Druckachse bis zum max. spezifischen Gießdruck der Maschine; die
        Hyperbeln A(p) = F/(100·S·k·p) laufen für p → 0 gegen unendlich —
@@ -86,8 +83,8 @@ gewählt: A = <b data-m="asel"></b></p>`;
   },
 
   renderMath(el, v) {
-    const set = (key, val) => { const s = el.querySelector('[data-m="' + key + '"]'); if (s) s.innerHTML = subHTML(val); };
-    const k = leverK(v);
+    const set = mathSetter(el);
+    const k = leverFactor(v);
     const ok = v.psel > 0 && v.safety > 0;
     set('k', fmt(k));
     set('k2', fmt(k));

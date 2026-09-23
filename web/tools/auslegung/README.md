@@ -30,9 +30,10 @@ eingebundene KaTeX gerendert (`/shared/vendor/katex`, Helfer `eq()`/`tex()` in
 - **`chart.html?id=<diagramm-id>`** — Einzelseite pro Diagramm. Zeigt nur die
   Eingaben, die dieses Diagramm beeinflussen. Über das ↗-Symbol auf jeder
   Diagrammkarte bzw. das Auswahlmenü im Kopf erreichbar.
-  Gültige IDs: `shotcurve`, `pq2`, `phild`, `area`, `machine`, `clamp`,
-  `filltime`, `fill`, `vent`, `sleeve`, `gate`, `slowshot`, `pspec`, `window`,
-  `ftwall`, `gvwall`, `ventreq`, `yield`, `gatesol`.
+  Gültige IDs (Reihenfolge wie in `js/charts/registry.js`): `shotcurve`,
+  `pq2`, `phild`, `fill`, `sleeve`, `slowshot`, `gate`, `window`, `gvwall`,
+  `gatesol`, `bubble`, `filltime`, `ftwall`, `vent`, `ventreq`, `area`,
+  `machine`, `pspec`, `yield`.
 
 ## Konfiguration (ohne Code-Änderung, ohne Build)
 
@@ -65,8 +66,9 @@ auf „manuell". Eine neue Domäne = Eintrag in `PRESET_DOMAINS`, Feldgruppe mit
   (die feste Leiste `heat`, sieben Stützstellen aus Turbo) für die Heatmaps.
 - **`/shared/schemes.js`** — das Farbschema. Beim Wechsel füllt
   `__THEME__.derive()` diese Objekte an Ort und Stelle neu und feuert
-  `dielogic:scheme`; `main.js`/`single.js` zeichnen darauf Diagramme und
-  Füllkammer neu (die Diagrammdaten tragen Rollennamen, `farbe()` in
+  `dielogic:scheme`; die Seiten (`js/ui/page.js`: Dashboard, Einzelseite,
+  Werkbank) zeichnen darauf Diagramme und Füllkammer neu (die
+  Diagrammdaten tragen Rollennamen, `farbe()` in
   `core/theme.js` löst sie beim Zeichnen auf). Varianten derselben Größe
   unterscheiden Strichmuster (`dash`) und Deckkraft (`alpha`), nie
   Mischfarben: aus diesen Diagrammen entstehen die Theorie-Bilder.
@@ -124,8 +126,10 @@ css/main.css       Layout/Komponenten (Farb-Tokens aus /shared/shared.css)
 js/
   config/fields.js   Eingabegruppen: Keys, Labels, Einheiten, Defaults, Grenzen
   core/              Logik ohne DOM
-    format.js          Zahlformat (de-DE), seq()
-    physics.js         HPDC-Mathematik: Profil, Schussmodell, v_krit, Prüfungen
+    format.js          Zahlformat (de-DE), seq(), Indizes (subParts/subHTML)
+    physics.js         HPDC-Mathematik: Profil, Schussmodell, v_krit, Prüfungen —
+                       und jede abgeleitete Größe genau einmal (Füllgrad,
+                       NADCA-Füllzeit, spez. Gießdruck, Zuhaltung, Entlüftungsbedarf …)
     vkritTable.js      CFD-Tabelle der kritischen Geschwindigkeit (GENERIERT)
     curvegen.js        Schusskurven-Generatoren (Wegpunkte aus v₁/a₁/v₂/a₂)
     autofit.js         Auto-Schalter: ideale Anschnitt- und Entlüftungsfläche
@@ -143,13 +147,15 @@ js/
     registry.js        Liste aller Diagramme (Reihenfolge = Anordnung)
     shotcurve.js …     je: id, Titel, inputs-Liste, calc(v, {shot})
   ui/                DOM-Aufbau und Interaktion
+    page.js            die Seitenpipeline: prüfen → rechnen → zeichnen, Dashboard-
+                       Aufbau, Seitenstart — für main.js, single.js und die Werkbank
     inputs.js          Sidebar, Validierung, Eingabe-Hervorhebung
     chamber.js         Füllkammer-Schema über den Kennwerten
     presets.js         Maschinen-Preset-Auswahl
     curveTable.js      Schusskurven-Editor
     kpis.js            Prüfpanels (Kennwerte, Prüfzeilen, Kolbenweg-Lineal, Prüfleiste)
     cards.js           Diagrammkarten (Tabs, Buttons, Zeichnen)
-    export.js          PNG / CSV / JSON-Speichern+Laden
+    export.js          PNG in die Zwischenablage (Diagramme, Füllkammer), Schusskurven-CSV
   main.js            Einstieg Dashboard (index.html)
   single.js          Einstieg Einzelseite (chart.html)
 ```
@@ -185,11 +191,12 @@ Eingabe: kein Ladezustand, kein veraltetes Ergebnis.
 
 ## Mathe-Erklärung auf Einzelseiten
 
-Ein Diagrammmodul kann optional `mathHTML()` (statisches Gleichungs-Markup) und
-`renderMath(el, v)` (füllt `data-m`-Platzhalter mit live berechneten Werten)
-exportieren. `chart.html` zeigt diesen Abschnitt dann als Karte
-„Mathematik & Herleitung" unter dem Diagramm — derzeit beim
-(φ, λ)-Auslegungsfenster umgesetzt. Das Auslegungsfenster wird geometrisch
+Jedes Diagrammmodul liefert `mathHTML()` (statisches Gleichungs-Markup, TeX
+über `eq()`/`tex()`) und `renderMath(el, v, shot)` (füllt die
+`data-m`-Platzhalter über `mathSetter(el)` aus `js/charts/mathfmt.js` mit
+live berechneten Werten — aus denselben Funktionen wie das Diagramm).
+`chart.html` zeigt diesen Abschnitt als Karte „Mathematik & Herleitung"
+unter dem Diagramm. Das (φ, λ)-Auslegungsfenster wird geometrisch
 gezeichnet: das machbare Band ist ein analytisch berechnetes Polygon
 (r_lo(φ) ≤ r ≤ r_hi(φ)), die Grenzen sind beschriftete Kurven, der Hover wertet
 die Formeln exakt aus.
@@ -262,6 +269,9 @@ dann nicht mehr im Diagramm-Modul. Ausnahmen blieben ohnehin lokal
    `id`, `title`, `desc`, `inputs` (Feld-Keys für die Hervorhebung) und
    `calc(v, {shot})`, das eine Linien-/Heat-/Map-/Donut-Spezifikation liefert
    (siehe bestehende Module und `js/charts/helpers.js`); Grenzen als
-   `q.limits` (siehe oben).
+   `q.limits` (siehe oben). Größen wie Füllgrad oder Füllzeit kommen aus
+   `js/core/physics.js`, nicht neu hergeleitet; wer die Schusskurve liest
+   (`shotSpeed(shot, 'v2')` …), setzt `usesCurve: true`. Dazu `mathHTML()`
+   und `renderMath()` (siehe oben).
 2. In `js/charts/registry.js` importieren und in die Liste aufnehmen.
    Dashboard-Karte und Einzelseite entstehen automatisch.

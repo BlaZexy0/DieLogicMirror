@@ -5,8 +5,9 @@
 
 /* Preset-Domänen: jede hat ein Select in der Sidebar, einen Zustands-Schlüssel
    (state[stateKey]) und eine Feldgruppe (groups[].preset === id), die bei
-   gewähltem Preset ausgeblendet ist. Die Listen kommen aus config/<config>
-   (klassisches Script, setzt window[global]). 'def' ist das beim ersten
+   gewähltem Preset ausgeblendet ist. Die Listen kommen aus der Datei
+   `config` (klassisches Script, setzt window[global]; produktiv überlagern
+   die Stammdaten der Organisation sie). 'def' ist das beim ersten
    Besuch (und nach Reset) vorausgewählte Preset — die Feldgruppen sind
    dadurch standardmäßig eingeklappt, „manuell" zeigt sie wieder. */
 export const PRESET_DOMAINS = [
@@ -177,9 +178,6 @@ export const groups = [
   },
 ];
 
-/* Felder, die von einem Preset gesetzt werden: key → Domänen-id. Handänderung
-   eines dieser Felder setzt die jeweilige Preset-Auswahl auf „manuell" zurück.
-   Abgeleitet aus den Feldgruppen mit preset-Domäne. */
 /* Felder mit Auto-Schalter: { key: Erklärung } */
 export const AUTO_KEYS = {};
 for (const f of allFields()) if (f.auto) AUTO_KEYS[f.key] = f.auto;
@@ -188,25 +186,22 @@ for (const f of allFields()) if (f.auto) AUTO_KEYS[f.key] = f.auto;
 export const FOLLOWS = {};
 for (const f of allFields()) if (f.follows) FOLLOWS[f.key] = f.follows;
 
+/* Felder, die von einem Preset gesetzt werden: key → Domänen-id. Handänderung
+   eines dieser Felder setzt die jeweilige Preset-Auswahl auf „manuell" zurück.
+   Abgeleitet aus den Feldgruppen mit preset-Domäne. */
 export const PRESET_KEYS = {};
 for (const g of groups) {
   if (g.preset) for (const f of g.fields) PRESET_KEYS[f.key] = g.preset;
 }
 
-/* Standard-Schusskurve: Wegpunkte [s in mm, v in m/s] — abgestimmt auf die
-   Default-Geometrie (Ø 150 × L 1000: „Kammer voll" ≈ 574 mm, Gesamthub ≈ 972 mm). */
-/* Startkurve für den frischen Zustand mit den Default-Presets (HCC-1600,
+/* Standard-Schusskurve, Wegpunkte [s in mm, v in m/s]: die Startkurve für
+   den frischen Zustand mit den Default-Presets (HCC-1600,
    AlSi9Cu3): Plateau 0,4 m/s bis „Kammer voll" (474,4 mm), Rampe ≤ a_max,
    Ende hinter dem Füllende beider Default-Welten (Preset 830 mm, Feld-Defaults 833 mm). */
 export const DEFAULT_CURVE = [[60, 0.4], [475, 0.4], [640, 4.5], [834, 4.5]];
 
 export function allFields() {
-  const a = [];
-  for (const g of groups) {
-    if (g.columns) g.columns.forEach(c => a.push(...c.fields));
-    else a.push(...g.fields);
-  }
-  return a;
+  return groups.flatMap(g => g.fields);
 }
 
 /* ---------------------------------------------------------------------------

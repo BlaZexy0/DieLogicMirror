@@ -9,51 +9,19 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import path from 'node:path';
+import {
+  ladeSkripte, themeLaden, auslegung, defaults as values, canvasGlobals, zeichnenderKontext as rec
+} from './stubs/dashboard.mjs';
 
-const require = createRequire(import.meta.url);
-const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
+/* Aufzeichnender 2D-Kontext (tests/web/stubs/dashboard.mjs): merkt sich jede
+   Koordinate und jeden Text samt der Farbe, mit der er gesetzt wurde. */
+canvasGlobals(rec);
+ladeSkripte();
+const theme = await themeLaden();
 
-globalThis.window = globalThis;
-globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-globalThis.Path2D = class { moveTo() {} lineTo() {} closePath() {} rect() {} arc() {} addPath() {} };
-globalThis.document = { createElement: () => ({ getContext: () => rec() }), documentElement: {}, body: {} };
-globalThis.getComputedStyle = () => ({ fontFamily: 'Arial', getPropertyValue: () => '' });
-
-for (const f of ['shared/palette.js', 'shared/theme.js', 'shared/examples/machines.js',
-  'shared/project.js', 'shared/clampmodel.js']) require(path.join(site, f));
-const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
-Object.assign(theme, globalThis.__THEME__);
-
-const { drawLine } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/line.js')));
-const { lineFrame, LEGEND_MAX_ROWS } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/base.js')));
-const { allFields } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
-const windowChart = (await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/window.js')))).default;
-
-/* Aufzeichnender 2D-Kontext: merkt sich jede Koordinate und jeden Text
-   samt der Farbe, mit der er gesetzt wurde. */
-function rec() {
-  const state = { fillStyle: '#000', strokeStyle: '#000', font: '11px Arial', textAlign: 'left' };
-  const log = { coords: [], texts: [] };
-  const num = (...xs) => { for (const x of xs) if (typeof x === 'number') log.coords.push(x); };
-  const api = {
-    log, save() {}, restore() {}, beginPath() {}, closePath() {}, stroke() {}, fill() {}, clip() {},
-    setLineDash() {}, translate: num, rotate() {}, scale() {}, setTransform() {},
-    moveTo: num, lineTo: num, arc: num, rect: num, fillRect: num, strokeRect: num,
-    createPattern: () => ({}), createLinearGradient: () => ({ addColorStop() {} }),
-    getImageData: (a, b, w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }),
-    putImageData() {}, drawImage() {},
-    measureText: s => ({ width: String(s).length * 6 }),
-    fillText(s, x, y) { log.texts.push({ s: String(s), x, y, fill: api.fillStyle, font: api.font }); num(x, y); },
-    strokeText(s, x, y) { num(x, y); }
-  };
-  Object.assign(api, state);
-  return api;
-}
-
-const values = () => { const v = {}; for (const f of allFields()) v[f.key] = f.def; return v; };
+const { drawLine } = await auslegung('render/line.js');
+const { lineFrame, LEGEND_MAX_ROWS } = await auslegung('render/base.js');
+const windowChart = (await auslegung('charts/window.js')).default;
 
 /* ── H-17 ─────────────────────────────────────────────────────────────── */
 
@@ -70,6 +38,21 @@ test('Null-Spanne auf der linken y-Achse liefert keine NaN-Koordinaten', () => {
     assert.equal(bad.length, 0, `${name}: ${bad.length} nicht-endliche Koordinaten von ${x.log.coords.length}`);
     assert.ok(x.log.coords.length > 20, name + ': es wurde praktisch nichts gezeichnet');
   }
+});
+
+test('Null-Spanne in der Heatmap (Ø min = Ø max) liefert keine NaN-Koordinaten', async () => {
+  /* Die Heatmap rechnete ihre Pixelachsen ohne den Schutz, den axes() und
+     die Linien hatten: mit Ø min = Ø max wurden Grenzkurve und Marker
+     ±Infinity/NaN. Seit alle Renderer render/base.js scales() nehmen, gilt
+     der Schutz überall (die Domäne sperrt den Fall auf den Seiten ohnehin). */
+  const { drawAny } = await auslegung('render/draw.js');
+  const fill = (await auslegung('charts/fill.js')).default;
+  const d = fill.calc(Object.assign(values(), { dmin: 120, dmax: 120, diam: 120 }));
+  d.title = fill.title;
+  const x = rec();
+  assert.doesNotThrow(() => drawAny(x, 900, 700, d));
+  const bad = x.log.coords.filter(c => !Number.isFinite(c));
+  assert.equal(bad.length, 0, `${bad.length} nicht-endliche Koordinaten von ${x.log.coords.length}`);
 });
 
 /* ── H-19 ─────────────────────────────────────────────────────────────── */
@@ -125,6 +108,38 @@ test('Legende wächst mit, statt still abzubrechen', () => {
   assert.ok(d40._legendRows > LEGEND_MAX_ROWS, 'Testaufbau: 40 Einträge müssen die Obergrenze reißen');
   assert.ok(x40.log.texts.some(t => /^\+ \d+ weitere$/.test(t.s)),
     'der Rest muss ausgewiesen werden: ' + x40.log.texts.map(t => t.s).slice(-3).join(' | '));
+});
+
+/* Eine Legende für alle Renderer (render/limits.js drawLegend): die Heatmap
+   brach nach zwei Zeilen still ab, das (φ, λ)-Fenster lief ohne Grenze in
+   den Plot hinein. */
+test('Legende der Heatmap: was nicht passt, wird gezählt statt verschwiegen', async () => {
+  const { drawAny } = await auslegung('render/draw.js');
+  const { limit } = await auslegung('charts/helpers.js');
+  const fill = (await auslegung('charts/fill.js')).default;
+  const d = fill.calc(values());
+  d.title = fill.title;
+  d.limits = Array.from({ length: 12 }, (_, i) => limit('x' + i, 'Eine ziemlich lange Grenzbezeichnung ' + i, 'y', 'min', 100 + i));
+  const x = rec();
+  drawAny(x, 700, 600, d);
+  assert.ok(x.log.texts.some(t => /^\+ \d+ weitere$/.test(t.s)), 'der Rest muss ausgewiesen werden');
+});
+
+test('Legende des (φ, λ)-Fensters: wie bei den Liniendiagrammen rückt der Plot ab', async () => {
+  const { drawAny } = await auslegung('render/draw.js');
+  const phild = (await auslegung('charts/phild.js')).default;
+  const { computeShot } = await auslegung('core/physics.js');
+  const { DEFAULT_CURVE } = await auslegung('config/fields.js');
+  const v = values();
+  const d = phild.calc(v, { shot: computeShot(v, DEFAULT_CURVE.map(p => p.slice())) });
+  d.title = phild.title;
+  const x = rec();
+  drawAny(x, 340, 520, d);
+  assert.ok(d._legendRows > 2, 'Testaufbau: auf der schmalsten Karte braucht die Legende mehr als zwei Zeilen');
+  const f = lineFrame(340, 520, d);
+  const eintraege = x.log.texts.filter(t => ['machbares Band', 'Kolben-Ø-Grenzen', 'Kammerlängen-Grenzen'].includes(t.s));
+  assert.equal(eintraege.length, 3);
+  assert.ok(eintraege.every(t => t.y < f.T - 5), 'eine Legendenzeile liegt im Plot: ' + eintraege.map(t => t.y) + ' / ' + f.T);
 });
 
 /* ── H-18 ─────────────────────────────────────────────────────────────── */

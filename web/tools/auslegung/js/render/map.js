@@ -10,13 +10,13 @@
    Prozesses. Das Füllgrad-Ziel hat die gestrichelten Ränder eines
    Zielbands, der Ist-Punkt ist der Arbeitspunkt (`mark`). */
 
-import { frame, heading, axes, marker, fillRich, surfaceA } from './base.js';
+import { lineFrame, heading, axes, marker, fillRich, scales, boxedText, LEGEND_TOP, LEGEND_MAX_ROWS } from './base.js';
 import { fmt } from '../core/format.js';
 import { theme } from '../core/theme.js';
+import { legendRows, drawLegend } from './limits.js';
 
-/* Texte der Verletzungsarten — auch vom Hover verwendet. */
-/* Kurzlabels für den Hover (render/hover.js) — dort steht „verletzt:"
-   davor, die Labels selbst nennen nur die Grenze. */
+/* Kurzlabels der Verletzungsarten für den Hover (render/hover.js) — dort
+   steht „verletzt:" davor, die Labels selbst nennen nur die Grenze. */
 export const MAP_LABELS = {
   ok: 'machbar',
   bore: 'Kolben-Ø-Bereich',
@@ -39,13 +39,29 @@ const STRICH = { len: [7, 4] };
 
 function lineColor(t) { return theme.mapLines[t]; }
 
+/* Die Einträge der Legende im Format der übrigen Diagramme (render/
+   limits.js): das Band als Fläche, die Grenzarten als Linien — Pressrest
+   und v_krit nur, wenn das Diagramm sie zeigt. */
+function legendEntries(d) {
+  return LEGEND
+    .filter(([key]) => (key !== 'bisc' && key !== 'crit') || d.curves.some(c => c.t === key))
+    .map(([key, label]) => key === 'ok'
+      ? { label, sev: 'feasible', color: theme.map.ok }
+      : { label, sev: 'series', color: lineColor(key), dash: STRICH[key] ? [4, 2] : [] });
+}
+
 export function drawMap(x, w, h, d) {
   heading(x, w, h, d);
   const C = theme.chart, MAPC = theme.map;
-  const f = frame(w, h, false);
+  /* Die Legende steht über dem Plot wie bei den Liniendiagrammen: braucht
+     sie mehr als zwei Zeilen, rückt der Plot ab (lineFrame), statt dass sie
+     in ihn hineinläuft. Der Hover liest denselben Rahmen. */
+  const items = legendEntries(d);
+  const f0 = lineFrame(w, h, d);
+  d._legendRows = legendRows(x, items, f0.L, w - f0.R);
+  const f = lineFrame(w, h, d);
   const x0 = 0, x1 = 100, y0 = d.rMin, y1 = d.rMax;
-  const X = a => f.L + (a - x0) / (x1 - x0) * f.pw;
-  const Y = a => f.T + (y1 - a) / (y1 - y0) * f.ph;
+  const { X, Y } = scales(f, x0, x1, y0, y1);
   axes(x, w, h, f, x0, x1, y0, y1, d);
 
   /* Kollisionsfreie Label-Platzierung: belegte Rechtecke merken; ein Label,
@@ -134,10 +150,8 @@ export function drawMap(x, w, h, d) {
         const at = visPts[Math.max(0, Math.min(visPts.length - 1, Math.floor(visPts.length * fr)))];
         const pos = tryLabel(X(at[0]) - tw / 2 - 3, Y(at[1]) - 16, tw + 6, 13);
         if (pos) {
-          x.fillStyle = surfaceA(.88);
-          x.fillRect(pos[0], pos[1], tw + 6, 13);
-          x.fillStyle = C.text; x.textAlign = 'left';
-          fillRich(x, c.l, pos[0] + 3, pos[1] + 10);
+          x.textAlign = 'left';
+          boxedText(x, c.l, pos[0] + 3, pos[1] + 10, tw, C.text);
           break;
         }
       }
@@ -168,25 +182,7 @@ export function drawMap(x, w, h, d) {
 
   x.restore();
 
-  /* Legende */
-  let lx = f.L, ly = 64;
-  x.font = '10.5px Arial';
-  for (const [key, lab] of LEGEND) {
-    if (key === 'bisc' && !d.curves.some(c => c.t === 'bisc')) continue;
-    if (key === 'crit' && !d.curves.some(c => c.t === 'crit')) continue;
-    const tw = x.measureText(lab).width;
-    if (lx + tw + 22 > w - f.R) { lx = f.L; ly += 13; }
-    if (key === 'ok') {
-      x.fillStyle = MAPC.ok; x.fillRect(lx, ly - 8, 11, 9);
-      x.strokeStyle = C.axis; x.lineWidth = 1; x.strokeRect(lx, ly - 8, 11, 9);
-    } else {
-      x.strokeStyle = lineColor(key); x.lineWidth = 1.8; x.setLineDash(STRICH[key] ? [4, 2] : []);
-      x.beginPath(); x.moveTo(lx, ly - 4.5); x.lineTo(lx + 11, ly - 4.5); x.stroke();
-      x.setLineDash([]);
-    }
-    x.fillStyle = C.text; x.textAlign = 'left'; fillRich(x, lab, lx + 15, ly);
-    lx += tw + 30;
-  }
+  drawLegend(x, items, f.L, w - f.R, LEGEND_TOP, LEGEND_MAX_ROWS);
 
   if (d.cur) marker(x, f, X(d.cur.phi), Y(d.cur.r), d.cur.l);
 }

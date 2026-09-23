@@ -7,26 +7,23 @@
    Schranke r(φ) — das machbare Gebiet ist das Band r_lo(φ) ≤ r ≤ r_hi(φ)
    und wird als ein geschlossenes Polygon gefüllt statt pixelweise. */
 
-import { seq, fmt, subHTML } from '../core/format.js';
-import { total, vCrit, cavityVolume } from '../core/physics.js';
+import { seq, fmt } from '../core/format.js';
+import { doseVolume, fillRatio, vCrit, critDiameter, cavityVolume, shotSpeed } from '../core/physics.js';
 import { feasibleBand } from '../core/limits.js';
-import { eq } from './mathfmt.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 const PI = Math.PI;
 const R_MIN = 1, R_MAX = 12;
+const D_LO = 0.01, D_HI = 2;                    // Suchbereich des Grenz-Ø in m
 
-/* Grenz-Ø der kritischen Geschwindigkeit: v₁ ≤ v_krit(D, φ) ⇔ D ≥ D_c(φ).
-   v_krit kommt aus der CFD-Tabelle (core/physics.js) und ist in D monoton —
-   D_c per Bisektion. */
-function DcritFor(v1, phi) {
-  let lo = 0.01, hi = 2;                        // m
-  if (vCrit(hi, phi) < v1) return Infinity;     // selbst Ø 2 m zu langsam
-  if (vCrit(lo, phi) >= v1) return lo;
-  for (let i = 0; i < 50; i++) {
-    const m = (lo + hi) / 2;
-    if (vCrit(m, phi) < v1) lo = m; else hi = m;
-  }
-  return (lo + hi) / 2;
+/* Kerngrößen für calc() und renderMath(): Dosiervolumen V (flüssig), das
+   Pressrestvolumen V_b (fest, ρ_sol, geprüft gegen die Mindestlänge) und
+   der größte Ø D_b in m, bei dem der Pressrest sie noch hält (ohne
+   Mindestlänge unbeschränkt). */
+function kern(v) {
+  const V = doseVolume(v), Vb = cavityVolume(v.biscuit, v);
+  const bmin = v.biscuitMin / 1000;
+  return { V, Vb, Db: bmin > 0 ? Math.sqrt(4 * Vb / (PI * bmin)) : Infinity };
 }
 
 export default {
@@ -37,25 +34,23 @@ export default {
   usesCurve: true,
 
   calc(v, o) {
-    const rho = v.density;
     /* Dosierung flüssig; der Pressrest wird fest (ρ_sol) gegen das Minimum geprüft */
-    const V = (total(v) + v.biscuit) / rho, Vb = cavityVolume(v.biscuit, v);
+    const { V, Vb, Db } = kern(v);
     const k = 4 * V / PI;
     const Dmin = v.dmin / 1000, Dmax = v.dmax / 1000;
     const Lmin = v.lmin / 1000, Lmax = v.lmax / 1000;
-    const bmin = v.biscuitMin / 1000;
-    const Db = bmin > 0 ? Math.sqrt(4 * Vb / (PI * bmin)) : Infinity; // max. Ø aus Pressrest
     const DmaxEff = Math.min(Dmax, Db);
-    /* v1 = max. Kolbengeschwindigkeit bis „Kammer voll" aus der Schusskurve */
-    const v1 = o && o.shot && !o.shot.error && o.shot.v1 > 0 ? o.shot.v1 : 0;
+    /* v1 = max. Kolbengeschwindigkeit bis „Kammer voll" aus der Schusskurve
+       (NaN ohne Kurve: dann gibt es keine v_krit-Grenze) */
+    const v1 = shotSpeed(o && o.shot, 'v1');
 
     /* Grenzkurven als r(φ) */
     const rD = (phi, D) => k / (phi * D * D * D);                    // konst. Ø: Hyperbel
     const rL = (phi, L) => Math.sqrt(PI * L * L * L * phi / (4 * V)); // konst. L: Wurzelkurve
     const rCrit = phi => {                                            // v1 ≤ v_krit ⇔ D ≥ Dc(φ)
       if (!(v1 > 0)) return Infinity;
-      const Dc = DcritFor(v1, phi);
-      return isFinite(Dc) ? rD(phi, Dc) : 0;
+      const Dc = critDiameter(v1, phi, D_LO, D_HI);                   // Infinity: selbst Ø 2 m zu langsam
+      return isFinite(Dc) ? rD(phi, Dc) : Dc < 0 ? rD(phi, D_LO) : 0;
     };
 
     /* Machbares Band: Polygon(e) zwischen r_lo(φ) und r_hi(φ) — Scanline-
@@ -106,8 +101,7 @@ export default {
     });
 
     /* Ist-Punkt */
-    const Acur = 0.25 * PI * Math.pow(v.diam / 1000, 2);
-    const phiCur = V / (Acur * (v.length / 1000)), rCur = v.length / v.diam;
+    const phiCur = fillRatio(v), rCur = v.length / v.diam;
     let cur = null;
     if (phiCur > 0 && phiCur < 1)
       cur = { phi: phiCur * 100, r: rCur, l: 'Ist: Ø ' + fmt(v.diam) + ' · L ' + fmt(v.length) + ' · φ ' + fmt(phiCur * 100) + ' %' };
@@ -116,7 +110,21 @@ export default {
       kind: 'map', rMin: R_MIN, rMax: R_MAX,
       band, curves, iso, cur,
       fillMin: v.fillMin, fillMax: v.fillMax,
-      params: { V, Vb, dmin: v.dmin, dmax: v.dmax, lmin: v.lmin, lmax: v.lmax, Db: Db * 1000, biscuitMin: v.biscuitMin, v1 },
+      /* Ein Punkt (φ als Anteil, r = λ) exakt aus den Formeln: die Kammer,
+         die er festlegt, und die Grenzen, die sie verletzt (Schlüssel wie
+         render/map.js MAP_LABELS) — für den Hover (render/hover.js). */
+      classify(phi, r) {
+        const D = Math.cbrt(4 * V / (PI * phi * r));      // m
+        const L = r * D;                                  // m
+        const b = 4 * Vb / (PI * D * D) * 1000;           // mm Pressrest fest
+        const vc = vCrit(D, phi);                         // m/s
+        const bad = [];
+        if (D * 1000 < v.dmin || D * 1000 > v.dmax) bad.push('bore');
+        if (L * 1000 < v.lmin || L * 1000 > v.lmax) bad.push('len');
+        if (b < v.biscuitMin) bad.push('bisc');
+        if (v1 > vc) bad.push('crit');
+        return { D, L, b, vc, bad };
+      },
       xl: 'Anfangs-Füllgrad φ in %', yl: 'Kammerverhältnis λ = L/D',
       info: 'Dosiert ' + fmt(V * 1e6) + ' cm³ (inkl. Pressrest) · jedes (φ, λ) legt genau eine Kammer (Ø, L) fest'
     };
@@ -166,16 +174,13 @@ und die v<sub>krit</sub>-Kurve. Seine Ecken sind die vier Grenzkombinationen:</p
   },
 
   renderMath(el, v) {
-    const rho = v.density;
-    const V = (v.part + v.runner + v.overflow + v.biscuit) / rho, Vb = cavityVolume(v.biscuit, v);
-    const bmin = v.biscuitMin / 1000;
-    const Db = bmin > 0 ? Math.sqrt(4 * Vb / (PI * bmin)) : Infinity;
-    const set = (key, val) => { const s = el.querySelector('[data-m="' + key + '"]'); if (s) s.innerHTML = subHTML(val); };
+    const { V, Vb, Db } = kern(v);
+    const set = mathSetter(el);
     set('V', fmt(V * 1e6) + ' cm³');
     set('Vb', fmt(Vb * 1e6) + ' cm³');
     set('Db', isFinite(Db) ? fmt(Db * 1000) + ' mm' : '(kein Mindest-Pressrest gesetzt)');
     const corner = (Dmm, Lmm) => {
-      const phi = 4 * V / (PI * Math.pow(Dmm / 1000, 2) * (Lmm / 1000));
+      const phi = fillRatio(v, Dmm, Lmm);
       const r = Lmm / Dmm;
       const out = phi >= 1 ? ' · <span class="math-out">außerhalb (φ ≥ 100 %, Kammer zu klein)</span>' : '';
       return '<li>Ø ' + fmt(Dmm) + ' × L ' + fmt(Lmm) + ' mm → φ = ' + fmt(phi * 100) + ' %, λ = ' + fmt(r) + out + '</li>';

@@ -35,10 +35,10 @@ const MACHINES = globalThis.__MACHINES__.machines;
 
 const { allFields, groups, PRESET_KEYS } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
 
-/* inputs.js/curvegen.js ziehen core/state.js mit — der braucht das Projekt-Modul
+/* curvegen.js zieht core/state.js mit — der braucht das Projekt-Modul
    (project.js fällt ohne localStorage auf einen Leerspeicher zurück). */
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-const { checkValues, checkField } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/ui/inputs.js')));
+const { checkValues, checkField } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/domain.js')));
 const { generateCurve, fillTimeMs } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/curvegen.js')));
 const { computeShot, cavityVolume } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
 const { state, applyData } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/state.js')));
@@ -153,7 +153,7 @@ test('autofit: ideale Anschnitt- und Entlüftungsfläche aus Schusskurve bzw. NA
   closeTo(vp * 0.25 * Math.PI * v.diam ** 2 / Ag, 40, 0.6);
   /* dieselbe Größe, die die Prüfung bewertet: Anschnittgeschwindigkeit bei Bauteilfüllung im Band */
   const s2 = computeShot(Object.assign({}, v, { gate: Ag }), DEFAULT_CURVE.map(p => p.slice()));
-  assert.ok(s2.checks.find(c => /Anschnittgeschwindigkeit/.test(c[1]))[0], 'Prüfung muss bestehen');
+  assert.ok(s2.checks.find(c => c.id === 'gatev').ok, 'Prüfung muss bestehen');
   /* Entlüftung: Bedarf bei der Füllzeit der Kurve (Diagramm Entlüftungsbedarf), aufgerundet */
   const Vm = cavityVolume(v.part + v.runner + v.overflow, v);   // Kavität fest (ρ_sol), nicht flüssig
   const need = Vm / (shot.fill / 1000) / v.vAirMax * 1e6;
@@ -838,9 +838,11 @@ test('physics: jede Prüfung trägt eine stabile id — die Liste ist es nicht',
   /* Genau das machte den Indexzugriff falsch: dieselbe Position, andere Prüfung. */
   assert.notEqual(mit.checks[2].id, ohne.checks[2].id);
 
-  /* Die alte Form [ok, text] bleibt erhalten — shotcurve.js liest sie so. */
+  /* Schlichte Objekte { id, ok, text }: die alte Array-Form [ok, text] las
+     zuletzt nur noch shotcurve.js, jetzt über ok/text. */
   for (const c of mit.checks) {
-    assert.equal(c[0], c.ok);
-    assert.equal(c[1], c.text);
+    assert.deepEqual(Object.keys(c), ['id', 'ok', 'text']);
+    assert.equal(typeof c.ok, 'boolean');
+    assert.ok(!Array.isArray(c));
   }
 });

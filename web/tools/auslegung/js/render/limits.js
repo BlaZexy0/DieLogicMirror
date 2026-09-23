@@ -25,7 +25,7 @@
    Flächen, keine Schrift. */
 
 import { theme, farbe } from '../core/theme.js';
-import { fillRich, surfaceA } from './base.js';
+import { fillRich, surfaceA, boxedText, LEGEND_ROW } from './base.js';
 
 /* Farbe einer Grenze: explizit als Rolle (l.c) → Familie der Grenze
    (theme.limits[id]) → Referenz. */
@@ -39,7 +39,6 @@ export function limitColor(l) {
 const STRICH = { atom: [2, 3], atomMax: [2, 3] };
 const STRICH_HART = [6, 4], STRICH_REF = [4, 3];
 export function limitDash(l) {
-  if (l.dash) return l.dash;
   if (STRICH[l.id]) return STRICH[l.id];
   return (l.severity || 'hard') === 'ref' ? STRICH_REF : STRICH_HART;
 }
@@ -105,6 +104,15 @@ function sidePath(pts, edge) {
   return p;
 }
 
+/* Beschriftung einer Kurve auf ~40 % ihres sichtbaren Laufs, auf einem
+   Kästchen der Fläche — nur, wo sie im Rahmen Platz hat. */
+function curveLabel(x, pts, label, top, bot) {
+  const at = pts[Math.floor(pts.length * 0.4)];
+  if (!at || !(at[1] > top + 8 && at[1] < bot - 4)) return;
+  x.font = '10px Arial'; x.textAlign = 'left';
+  boxedText(x, label, at[0] + 7, at[1] - 6, x.measureText(label).width, theme.chart.text);
+}
+
 /* Zusammenhängende endliche Abschnitte einer Kurvenschranke:
    [{ pts: [[x, y], …] }] in Datenkoordinaten. */
 function finiteRuns(xs, fn) {
@@ -137,11 +145,6 @@ export function drawLimits(x, f, X, Y, d) {
   x.save();
   x.beginPath(); x.rect(left, top, f.pw, f.ph); x.clip();
 
-  /* Maske (l.mask, Kurvenschranke on:'y'): die ausgeschlossene Seite ist
-     prinzipiell unerreichbar (z. B. oberhalb der Hüllkurve im PQ²). Alle
-     übrigen Grenzen werden auf die erreichbare Seite geclippt, die Maske
-     selbst wird zuletzt als deckende Fläche (`mask`) mit durchgezogener
-     Frontlinie gezeichnet. */
   /* Zulässiger Bereich (d.feasible): Schnittmenge der erlaubten Seiten
      aller harten Grenzen, gefüllt in `feasible` wie das machbare Band im
      (φ, λ)-Auslegungsfenster. Liegt unter Schraffuren und Linien. */
@@ -194,6 +197,11 @@ export function drawLimits(x, f, X, Y, d) {
     x.restore();
   }
 
+  /* Maske (l.mask, Kurvenschranke on:'y'): die ausgeschlossene Seite ist
+     prinzipiell unerreichbar (z. B. oberhalb der Hüllkurve im PQ²). Alle
+     übrigen Grenzen werden auf die erreichbare Seite geclippt, die Maske
+     selbst wird zuletzt als deckende Fläche (`mask`) mit durchgezogener
+     Frontlinie gezeichnet. */
   const mask = limits.find(l => l.mask && l.fn && l.on === 'y');
   const rest = mask ? limits.filter(l => l !== mask) : limits;
   let maskPts = null;
@@ -262,12 +270,7 @@ export function drawLimits(x, f, X, Y, d) {
         const px = run.map(([xv, yv]) => [X(xv), Y(yv)]);
         if (sev === 'hard') {
           const edge = l.kind === 'max' ? top : bot;
-          const path = new Path2D();
-          px.forEach(([a, b], i) => i ? path.lineTo(a, b) : path.moveTo(a, b));
-          path.lineTo(px[px.length - 1][0], edge);
-          path.lineTo(px[0][0], edge);
-          path.closePath();
-          fillExcluded(x, path);
+          fillExcluded(x, sidePath(px, edge));
           if (l.note) {
             const m = px[Math.floor(px.length / 2)];
             notes.push({ px: m[0], py: (m[1] + edge) / 2, l: l.note });
@@ -276,16 +279,7 @@ export function drawLimits(x, f, X, Y, d) {
         x.beginPath();
         px.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b));
         strokeLine(x, col, 1.4, dash, halo);
-        /* Label mit hellem Rücken auf ~40 % der sichtbaren Kurve */
-        const at = px[Math.floor(px.length * 0.4)];
-        if (showText && at && at[1] > top + 8 && at[1] < bot - 4) {
-          x.font = '10px Arial';
-          const tw = x.measureText(l.label).width;
-          x.fillStyle = surfaceA(.88);
-          x.fillRect(at[0] + 4, at[1] - 16, tw + 6, 13);
-          x.fillStyle = C.text; x.textAlign = 'left';
-          fillRich(x, l.label, at[0] + 7, at[1] - 6);
-        }
+        if (showText) curveLabel(x, px, l.label, top, bot);
       }
     } else if (l.on === 'x') {
       const px = X(l.value);
@@ -346,13 +340,8 @@ export function drawLimits(x, f, X, Y, d) {
     x.restore();                          // Clip auf die erreichbare Seite aufheben
     const col = limitColor(mask);
     const edgeEx = mask.kind === 'max' ? top : bot;
-    const p = new Path2D();
-    maskPts.forEach(([a, b], i) => i ? p.lineTo(a, b) : p.moveTo(a, b));
-    p.lineTo(maskPts[maskPts.length - 1][0], edgeEx);
-    p.lineTo(maskPts[0][0], edgeEx);
-    p.closePath();
     x.fillStyle = C.mask;
-    x.fill(p);
+    x.fill(sidePath(maskPts, edgeEx));
     x.beginPath();
     maskPts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b));
     strokeLine(x, col, 1.8, [], halo);
@@ -364,15 +353,7 @@ export function drawLimits(x, f, X, Y, d) {
         fillRich(x, mask.note, mid[0], py + 4);
       }
     }
-    const at = maskPts[Math.floor(maskPts.length * 0.4)];
-    if (showText && at && at[1] > top + 8 && at[1] < bot - 4) {
-      x.font = '10px Arial';
-      const tw = x.measureText(mask.label).width;
-      x.fillStyle = surfaceA(.88);
-      x.fillRect(at[0] + 4, at[1] - 16, tw + 6, 13);
-      x.fillStyle = C.text; x.textAlign = 'left';
-      fillRich(x, mask.label, at[0] + 7, at[1] - 6);
-    }
+    if (showText) curveLabel(x, maskPts, mask.label, top, bot);
   }
   x.restore();
 }
@@ -443,4 +424,45 @@ export function drawLegendSwatch(x, item, lx, ly) {
     x.restore();
   }
   return w;
+}
+
+/* Die Legende über dem Plot — für Linien, Heatmaps und das (φ, λ)-Fenster
+   dieselbe: Einträge (legendItems, Serien …) von links nach rechts ab
+   left, Umbruch vor right, Zeilen im Abstand LEGEND_ROW. legendRows zählt
+   nur die Zeilen: danach richtet sich der Rahmen (render/base.js
+   lineFrame), bevor gezeichnet wird. drawLegend zeichnet ab der Grundlinie
+   top höchstens maxRows Zeilen; was dann nicht passt, steht als
+   „+ n weitere" am Ende — gezählt, nicht verschwiegen. */
+function legendWalk(x, items, left, right, top, maxRows, draw) {
+  const C = theme.chart;
+  let lx = left, ly = top, row = 1, shown = 0;
+  x.font = '10.5px Arial';
+  for (const it of items) {
+    const tw = x.measureText(it.label).width;
+    if (lx > left && lx + 17 + tw > right) {
+      if (row >= maxRows) break;
+      lx = left; ly += LEGEND_ROW; row++;
+    }
+    if (draw) {
+      drawLegendSwatch(x, it, lx, ly);
+      x.fillStyle = C.text; x.textAlign = 'left'; x.font = '10.5px Arial';
+      fillRich(x, it.label, lx + 17, ly);
+    }
+    lx += 17 + tw + 14;
+    shown++;
+  }
+  if (draw && shown < items.length) {
+    x.fillStyle = C.text; x.textAlign = 'left'; x.font = 'bold 10.5px Arial';
+    fillRich(x, '+ ' + (items.length - shown) + ' weitere', lx, ly);
+  }
+  return row;
+}
+export function legendRows(x, items, left, right) {
+  x.save();
+  const rows = legendWalk(x, items, left, right, 0, Infinity, false);
+  x.restore();
+  return rows;
+}
+export function drawLegend(x, items, left, right, top, maxRows) {
+  legendWalk(x, items, left, right, top, maxRows, true);
 }

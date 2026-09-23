@@ -5,26 +5,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createRequire } from 'node:module';
+import { site, ladeSkripte, themeLaden, auslegung, defaults } from './stubs/dashboard.mjs';
 
-const require = createRequire(import.meta.url);
-const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
-globalThis.window = globalThis;
-globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-require(path.join(site, 'shared/palette.js'));
-require(path.join(site, 'shared/theme.js'));
-require(path.join(site, 'shared/examples/machines.js'));
-require(path.join(site, 'shared/project.js'));
-require(path.join(site, 'shared/clampmodel.js'));
-const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
-Object.assign(theme, globalThis.__THEME__);
-const { allFields } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
-const pq2 = (await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/pq2.js')))).default;
-const { pqCore } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/pq2.js')));
-const { injForceEff, pMaxMachine } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
+ladeSkripte();
+await themeLaden();
+const { default: pq2, pqCore } = await auslegung('charts/pq2.js');
+const { injForceEff, pMaxMachine, hydArea } = await auslegung('core/physics.js');
 
-const defaults = () => { const v = {}; for (const f of allFields()) v[f.key] = f.def; return v; };
 const calc = (v, tab, tab2) => { pq2.tab = tab; pq2.tab2 = tab2; return pq2.calc(v); };
 const maskOf = q => q.limits.find(l => l.mask);
 const closeTo = (a, b, tol = 1e-9) => assert.ok(Math.abs(a - b) <= tol * Math.max(1, Math.abs(b)), `${a} ≠ ${b}`);
@@ -120,7 +107,6 @@ test('pq2: eingestellter Akkumulatordruck skaliert Gießkraft, p₀, Hüllkurve 
   closeTo(pqCore(Object.assign({}, v, { pAccOp: 999 })).p0, c1.p0);
   closeTo(calc(Object.assign({}, v, { pAccOp: 999 }), 'q', 'ph').y1, 1.05 * v.pAcc);
   /* Antriebskolben aus dem Preset: 1300 kN / 190 bar ≈ 684,2 cm² (1 kN/bar = 100 cm²) */
-  const { hydArea } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
   closeTo(hydArea(v), 1300 / 190 * 100);
 });
 

@@ -1,11 +1,9 @@
 /* Füllkammer-Auswahl: Füllgrad über Kolben-Ø mit Zielband. */
 
 import { series, line, target } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { total } from '../core/physics.js';
-import { eq } from './mathfmt.js';
-
-const PI = Math.PI;
+import { seq, fmt } from '../core/format.js';
+import { doseMass, fillRatio, fillDiameter } from '../core/physics.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 export default {
   id: 'sleeve',
@@ -15,13 +13,12 @@ export default {
 
   calc(v) {
     const x = seq(v.dmin, v.dmax, 140);
-    const q = line(x, [series('Füllgrad', 'ink', x,
-      d => 100e9 * ((total(v) + v.biscuit) / v.density) / (v.length * 0.25 * PI * d * d))],
+    const q = line(x, [series('Füllgrad', 'ink', x, d => 100 * fillRatio(v, d))],
       'Kolben-Ø in mm', 'Füllgrad in %',
-      'Dosiert ' + fmt(total(v) + v.biscuit) + ' kg (inkl. Pressrest) · Kammer ' + fmt(v.length) + ' mm');
+      'Dosiert ' + fmt(doseMass(v)) + ' kg (inkl. Pressrest) · Kammer ' + fmt(v.length) + ' mm');
     q.limits = [target('fillBand', 'Ziel φ ' + fmt(v.fillMin) + '–' + fmt(v.fillMax) + ' %', 'y', v.fillMin, v.fillMax)];
     q.y0 = 0; q.y1 = 100;
-    const fOp = 100e9 * ((total(v) + v.biscuit) / v.density) / (v.length * 0.25 * PI * v.diam * v.diam);
+    const fOp = 100 * fillRatio(v);
     q.pt = [v.diam, fOp];
     q.ptl = 'Ø ' + fmt(v.diam) + ' mm → ' + fmt(fOp) + ' %';
     return q;
@@ -43,10 +40,9 @@ ${eq('D(\\varphi) = \\sqrt{\\frac{4 \\cdot V_{\\text{dos}}}{\\pi \\cdot \\varphi
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
-    const Vdos = (total(v) + v.biscuit) / v.density;
-    const phi = 100e9 * Vdos / (v.length * 0.25 * PI * v.diam * v.diam);
-    const Dof = phiPct => Math.sqrt(100e9 * Vdos / (v.length * 0.25 * PI * phiPct));
+    const set = mathSetter(el);
+    const phi = 100 * fillRatio(v);
+    const Dof = phiPct => fillDiameter(v, phiPct / 100);
     set('D', fmt(v.diam) + ' mm');
     set('phi', isFinite(phi) ? fmt(phi) + ' %' : '—');
     set('band', fmt(v.fillMin) + '–' + fmt(v.fillMax) + ' %');

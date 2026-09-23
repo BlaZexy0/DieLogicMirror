@@ -5,9 +5,8 @@ import { subHTML } from '../core/format.js';
 import { drawAny } from '../render/draw.js';
 import { showHover, HOVER_IDLE } from '../render/hover.js';
 import { notify } from '../core/state.js';
-import { copyChart, exportShotCSV } from './export.js';
+import { COPY_SVG, copyChart, exportShotCSV } from './export.js';
 
-const COPY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const TARGET_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/></svg>';
 
 /* opts: { link: Link zur Einzelseite anzeigen, forceWide: volle Breite,
@@ -81,7 +80,7 @@ export function buildCard(def, container, opts = {}) {
 
 export function renderCard(card, def, v, shot, blockMsg) {
   /* Fehler-Isolation je Diagramm: die Karten werden in einer Schleife
-     gerendert (main.js). Ein Wurf in calc() riss bisher alle folgenden mit —
+     gerendert (ui/page.js). Ein Wurf in calc() riss bisher alle folgenden mit —
      sie behielten still ihr altes Bild, während die Seitenleiste bereits neue
      Zahlen zeigte. Der Fehlerkanal d.err existiert (render/draw.js). */
   let d;
@@ -102,8 +101,8 @@ export function renderCard(card, def, v, shot, blockMsg) {
 }
 
 /* card.data auf die Leinwand zeichnen, ohne zu rechnen. Auch nach einem
-   Wechsel des Farbschemas (main.js, single.js): die Daten tragen Rollen,
-   keine Farbwerte, und die Renderer lesen die Werte beim Zeichnen. */
+   Wechsel des Farbschemas (ui/page.js): die Daten tragen Rollen, keine
+   Farbwerte, und die Renderer lesen die Werte beim Zeichnen. */
 export function paintCard(card, def) {
   const d = card && card.data;
   if (!d) return;
@@ -129,6 +128,6 @@ export function paintCard(card, def) {
   cv.style.width = w + 'px'; cv.style.height = h + 'px';
   const x = cv.getContext('2d');
   x.setTransform(pr, 0, 0, pr, 0, 0);
-  try { drawAny(x, w, h, d, def); }
-  catch (e) { drawAny(x, w, h, { err: (e && e.message) || String(e), title: d.title }, def); }
+  try { drawAny(x, w, h, d); }
+  catch (e) { drawAny(x, w, h, { err: (e && e.message) || String(e), title: d.title }); }
 }

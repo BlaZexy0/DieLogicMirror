@@ -7,29 +7,19 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+import { site, ladeSkripte, themeLaden, auslegung, defaults as values, kpiZiele } from './stubs/dashboard.mjs';
 
-const require = createRequire(import.meta.url);
-const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
+ladeSkripte();
+await themeLaden();
 
-globalThis.window = globalThis;
-globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-for (const f of ['shared/palette.js', 'shared/theme.js', 'shared/examples/machines.js',
-  'shared/project.js', 'shared/clampmodel.js']) require(path.join(site, f));
+const { DEFAULT_CURVE } = await auslegung('config/fields.js');
+const Ph = await auslegung('core/physics.js');
+const { seq } = await auslegung('core/format.js');
+const { fillTimeMs } = await auslegung('core/curvegen.js');
+const { feasibleBand } = await auslegung('core/limits.js');
 
-const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
-Object.assign(theme, globalThis.__THEME__);
-
-const { allFields, DEFAULT_CURVE } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
-const Ph = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
-const { seq } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/format.js')));
-const { fillTimeMs } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/curvegen.js')));
-const { feasibleBand } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/limits.js')));
-
-const values = () => { const v = {}; for (const f of allFields()) v[f.key] = f.def; return v; };
 const shot = over => Ph.computeShot(Object.assign(values(), over || {}), DEFAULT_CURVE.map(p => p.slice()));
 
 test('fillTimeMs: Rampenbeginn hinter dem Anschnitt', () => {
@@ -98,13 +88,17 @@ test('Nachverdichtungshub wird nicht auf 0 geklemmt und schlägt an', () => {
 });
 
 test('ftwall: gleiche Fließ- und Formtemperatur ist ein Fehler, keine Kurve', async () => {
-  const ftwall = (await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/ftwall.js')))).default;
+  const ftwall = (await auslegung('charts/ftwall.js')).default;
   const v = values();
   assert.ok(!ftwall.calc(v).err, 'mit den Defaults rechnet es durch');
   for (const bad of [{ Tflow: 200, Tdie: 200 }, { Tflow: 150, Tdie: 200 }]) {
     const q = ftwall.calc(Object.assign({}, v, bad));
     assert.ok(q.err, 'vorher entstanden ±Infinity und NaN: ' + JSON.stringify(bad));
   }
+  /* Ohne positive Reserve (Fließtemperatur über Gießtemperatur, keine zul.
+     Erstarrung) lief die Kurve bisher unsichtbar unter der Nulllinie. */
+  const q = ftwall.calc(Object.assign({}, v, { Tflow: 700, Sfrac: 0 }));
+  assert.match(q.err, /Keine Empfehlung/);
 });
 
 test('simstore: das Ergebnis gehört immer zur aktuellen Eingabe', async () => {
@@ -113,8 +107,8 @@ test('simstore: das Ergebnis gehört immer zur aktuellen Eingabe', async () => {
      während des Nachladens galt die Kurve der VORIGEN Eingabe als aktuell.
      Beides darf es nicht mehr geben — nach einem Fehler keine alten Daten,
      nach der Korrektur sofort wieder ein Ergebnis. */
-  const { state } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/state.js')));
-  const { sim, refreshSim } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/simstore.js')));
+  const { state } = await auslegung('core/state.js');
+  const { sim, refreshSim } = await auslegung('core/simstore.js');
   Object.assign(state.values, values());
   state.curve = DEFAULT_CURVE.map(p => p.slice());
 
@@ -153,17 +147,19 @@ test('orgpresets: Serverfehler ist nicht „keine Stammdaten"', () => {
    prüfen, läuft jede Prozentangabe durch EINE Funktion. */
 
 test('jede Prozentangabe der Kennzahlen ist endlich und in [0, 100]', async () => {
-  globalThis.document = { getElementById: () => null, querySelectorAll: () => [] };
-  const { renderKpis } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/ui/kpis.js')));
+  const { renderKpis } = await auslegung('ui/kpis.js');
   const keys = ['pAccOp', 'pAcc', 'injForce', 'diam', 'length', 'area', 'force',
     'psel', 'safety', 'density', 'part', 'gate', 'vmax', 'dmin', 'lmin', 'biscuit'];
 
   for (const k of keys) {
     for (const bad of [0, -1, NaN]) {
       const w = Object.assign(values(), { [k]: bad });
-      const el = { innerHTML: '', closest: () => null, querySelectorAll: () => [] };
-      assert.doesNotThrow(() => renderKpis(el, w, shot({ [k]: bad }), null), `${k} = ${bad}`);
-      const schlecht = el.innerHTML.match(/(width|left|margin-left):\s*(NaN|Infinity|-[\d.]+)/g);
+      /* Panels, Kammerkarte und Kolbenweg-Lineal: jedes Markup, das die
+         Kennzahlen schreiben, geht durch dieselbe Prüfung. */
+      const z = kpiZiele();
+      assert.doesNotThrow(() => renderKpis(z.el, w, shot({ [k]: bad }), z.chamberEl), `${k} = ${bad}`);
+      assert.ok(z.byId['chamber-ruler'].innerHTML.includes('kr-track'), 'das Lineal wurde geschrieben');
+      const schlecht = z.alle().match(/(width|left|margin-left):\s*(NaN|Infinity|-[\d.]+)/g);
       assert.equal(schlecht, null, `${k} = ${bad}: ${schlecht && schlecht.slice(0, 2)}`);
     }
   }

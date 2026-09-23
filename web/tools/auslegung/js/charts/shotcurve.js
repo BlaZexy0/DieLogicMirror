@@ -4,7 +4,7 @@
 import { series, line, limit, refline } from './helpers.js';
 import { fmt, subHTML } from '../core/format.js';
 import { sim } from '../core/simstore.js';
-import { eq } from './mathfmt.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 /* Anzeige der Simulations-Luftdruckkurve kappen: nahe der vollständigen
    Füllung divergiert das Modell (Restluftvolumen → 0). */
@@ -153,11 +153,11 @@ export default {
     });
     shot.checks.forEach(c => {
       const li = document.createElement('li'), ic = document.createElement('span');
-      ic.className = 'ck ' + (c[0] ? 'ok' : 'bad');
-      ic.textContent = c[0] ? '✓' : '✗';
+      ic.className = 'ck ' + (c.ok ? 'ok' : 'bad');
+      ic.textContent = c.ok ? '✓' : '✗';
       li.appendChild(ic);
       const sp = document.createElement('span');
-      sp.innerHTML = subHTML(c[1]);   // Prüftexte tragen Indizes (v_krit, a_max)
+      sp.innerHTML = subHTML(c.text);   // Prüftexte tragen Indizes (v_krit, a_max)
       li.appendChild(sp);
       cl.appendChild(li);
     });
@@ -196,7 +196,7 @@ v<sub>krit</sub> = <b data-m="vcrit"></b> · max. v der 1. Phase = <b data-m="vs
   },
 
   renderMath(el, v, shot) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
+    const set = mathSetter(el);
     if (!shot || shot.error) {
       ['tEnd', 'hub', 'vpk', 'apk', 'phi', 'sfill', 'stroke', 'intens', 'lb', 'ratio', 'tf', 'vcrit', 'vslow']
         .forEach(k => set(k, '—'));

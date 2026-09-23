@@ -8,7 +8,7 @@
    Farben: Rollen der Palette (shared/palette.js), beim Bauen gelesen und
    als Werte ins SVG geschrieben, nicht als var(--…): der PNG-Export rastert
    das SVG ohne die Seite und kennt deren Tokens nicht. Nach einem Wechsel
-   des Farbschemas baut main.js die Zeichnung neu.
+   des Farbschemas baut die Seite die Zeichnung neu (ui/page.js).
      Stahl       Kammerwand `steel` mit Schraffur und Kante in `steelDark`;
                  Formhälften dieselbe Rolle, heller (Deckkraft); der
                  Verdränger `steelDark`; die Trennebene gestrichelt.
@@ -20,10 +20,8 @@
                  Beschriftung, kein Messwert und kein Urteil). */
 
 import { fmt } from '../core/format.js';
-import { total, pistonArea } from '../core/physics.js';
-
-const COPY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+import { doseMass, fillRatio, segHeight } from '../core/physics.js';
+import { COPY_SVG, copyPngBlob } from './export.js';
 
 /* ── Zeichnungs-Konstanten (px im viewBox 1030×440) ── */
 const XP = 225;                 // Kolbenstirn (Startposition)
@@ -36,18 +34,6 @@ const VX = -216, VW = 1246;     // viewBox: x-Start und Breite
    Massenbilanz richtet sich daran aus (ui/kpis.js). */
 export const ACTIVE_SPAN = { x0: (XP - VX) / VW, x1: (XA - VX) / VW };
 
-/* Füllhöhe h/D eines Kreissegments mit Flächenanteil φ (Bisektion über den
-   Mittelpunktswinkel; siehe Theorie „Kreissegmente der Füllkammer"). */
-export function fillHeightFrac(phi) {
-  if (!(phi > 0)) return 0;
-  if (phi >= 1) return 1;
-  let lo = 0, hi = 2 * Math.PI;
-  for (let i = 0; i < 60; i++) {
-    const th = (lo + hi) / 2;
-    if ((th - Math.sin(th)) / (2 * Math.PI) < phi) lo = th; else hi = th;
-  }
-  return (1 - Math.cos((lo + hi) / 4)) / 2;
-}
 const YT = 130, YB = 290;       // Bohrung oben/unten
 const WT = 20;                  // Wandstärke
 
@@ -101,17 +87,19 @@ export function buildSvg(v, variantKey) {
     '<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="' + col
     + '" stroke-width="' + ((o && o.width) || 1) + '" marker-start="url(#' + marker + ')" marker-end="url(#' + marker + ')"/>'
     + lbl((x1 + x2) / 2, y - 6, text, { fill: col, anchor: 'middle', size: (o && o.size) || 11, bold: o && o.bold });
-  const A = pistonArea(v);
-  const mdos = total(v) + v.biscuit;
-  const phiRaw = 1e9 * (mdos / v.density) / (v.length * A);
+  const mdos = doseMass(v);
+  const phiRaw = fillRatio(v);
   const phi = isFinite(phiRaw) ? Math.min(Math.max(phiRaw, 0), 1) : 0;
   const sF = (1 - phi) * v.length;
+  /* Füllhöhe h/D der Schmelze: Kreissegment mit Flächenanteil φ (Theorie
+     „Kreissegmente der Füllkammer") — Seiten- und Frontansicht */
+  const hFrac = segHeight(phi);
 
   const tubeEnd = VARIANTS[va].tubeEnd;
   const part = tubeEnd;                          // Trennebene: das Rohr endet immer dort
   const XF0 = part - 110, DIE1 = part + 150;     // feste Hälfte (vom Rohr durchdrungen), Auswerferseite
   const ghost = Math.min(Math.max(XP + (1 - phi) * (XA - XP), XP + 2), XA - 2);
-  const meltH = fillHeightFrac(phi) * (YB - YT), mTop = YB - meltH;
+  const meltH = hFrac * (YB - YT), mTop = YB - meltH;
 
   /* px pro mm entlang der Kammer; Einfüllöffnung endet beim Verschluss-Hub.
      Nicht-finite Eingaben (leeres Feld, veralteter Zustand) fallen auf die
@@ -230,7 +218,6 @@ export function buildSvg(v, variantKey) {
   /* ── Frontansicht: Kreis mit Ø D und Füllhöhe h, gleiche Größe wie die
      Bohrung der Seitenansicht (Ø = YB − YT), links daneben ── */
   const FCX = -84, FCY = (YT + YB) / 2, FR = (YB - YT) / 2;   // Luft zwischen Ring und Kolbenstange
-  const hFrac = fillHeightFrac(phi);
   const hPx = hFrac * 2 * FR, yLevel = FCY + FR - hPx;
   const hMM = hFrac * v.diam;
   s += '<circle cx="' + FCX + '" cy="' + FCY + '" r="' + (FR + WT) + '" fill="url(#ch-steel)" stroke="' + C.steelDark + '" stroke-width="1"/>';
@@ -258,8 +245,8 @@ export function buildSvg(v, variantKey) {
   return s + '</svg>';
 }
 
-/* PNG-Export: SVG serialisieren, in 2× auf Canvas rastern, in die
-   Zwischenablage kopieren (Fallback: Download) — wie bei den Diagrammen. */
+/* PNG-Export: SVG serialisieren, in 2× auf Canvas rastern und über
+   denselben Weg wie die Diagramme kopieren (ui/export.js copyPngBlob). */
 function copyPng(card) {
   const svg = card.querySelector('.chamber-draw svg');
   if (!svg) return;
@@ -275,22 +262,7 @@ function copyPng(card) {
     x.fillStyle = themeColors().surface;
     x.fillRect(0, 0, o.width, o.height);
     x.drawImage(img, 0, 0, o.width, o.height);
-    o.toBlob(blob => {
-      const b = card.querySelector('.png-btn'), old = b.innerHTML;
-      const ok = () => { b.classList.add('copied'); b.innerHTML = CHECK_SVG; };
-      const fallback = () => {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'DieLogic_Fuellkammer.png';
-        document.body.appendChild(a); a.click(); a.remove();
-        URL.revokeObjectURL(a.href);
-      };
-      if (navigator.clipboard && window.ClipboardItem)
-        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-          .then(ok, () => { fallback(); ok(); });
-      else { fallback(); ok(); }
-      setTimeout(() => { b.classList.remove('copied'); b.innerHTML = old; }, 1400);
-    }, 'image/png');
+    o.toBlob(blob => copyPngBlob(blob, card.querySelector('.png-btn'), 'DieLogic_Fuellkammer.png'), 'image/png');
   };
   img.src = url;
 }

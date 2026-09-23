@@ -1,9 +1,9 @@
 /* Erforderliche Maschinengröße (Kraftbedarf über Druck). */
 
 import { series, line, limit } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { pMaxMachine } from '../core/physics.js';
-import { eq, tex } from './mathfmt.js';
+import { seq, fmt } from '../core/format.js';
+import { pMaxMachine, clampForceNeeded } from '../core/physics.js';
+import { eq, tex, mathSetter } from './mathfmt.js';
 
 /* Kraftbilanz F = 100·p·A·S·k aus shared/clampmodel.js — eine Umrechnung für
    Dashboard, KPI-Zeile und STL-Analyse. */
@@ -28,7 +28,7 @@ export default {
     /* y knapp über Maschinenkraft und Betriebspunkt kappen — sonst dominiert
        bei großem pMax die Schraffur „über Maschinenkraft" das ganze Bild. */
     q.y0 = 0;
-    const freq = CLAMP.forceKN(v.psel, v.area, v.safety, 1);
+    const freq = clampForceNeeded(v);
     q.y1 = Math.max(1.6 * v.force, 1.25 * freq) || undefined;
     q.pt = [v.psel, freq];
     q.ptl = 'Bedarf: ' + fmt(freq) + ' kN';
@@ -51,8 +51,8 @@ verfügbar = <b data-m="favail"></b> · Auslastung = <b data-m="util"></b></p>`;
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
-    const freq = CLAMP.forceKN(v.psel, v.area, v.safety, 1);
+    const set = mathSetter(el);
+    const freq = clampForceNeeded(v);
     set('psel', fmt(v.psel) + ' bar');
     set('freq', fmt(freq) + ' kN');
     set('favail', fmt(v.force) + ' kN');

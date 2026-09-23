@@ -12,37 +12,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createRequire } from 'node:module';
+import { site, ladeSkripte, themeLaden, auslegung, defaults, canvasGlobals } from './stubs/dashboard.mjs';
 
-const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../web');
-globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-/* inputs.js zieht über core/state.js das Projektmodul mit — wie in
-   frontend.test.mjs: window ist der globale Scope, dann findet der klassische
-   Script-Stil (window.__PROJECT__) sich selbst. */
-globalThis.window = globalThis;
+/* inputs.js zieht über core/state.js das Projektmodul mit (window.__PROJECT__);
+   renderCard zeichnet mit dem Theme (wie render-smoke.test.mjs). */
 globalThis.devicePixelRatio = 1;
-createRequire(import.meta.url)(path.join(site, 'shared/project.js'));
-globalThis.document = {
-  documentElement: { clientWidth: 900 }, body: {},
-  createElement: () => ({ width: 0, height: 0, getContext: () => null }),
-  querySelectorAll: () => [], getElementById: () => null,
-};
+canvasGlobals();
+Object.assign(globalThis.document, { querySelectorAll: () => [], getElementById: () => null });
+ladeSkripte();
+await themeLaden();
 
-const { allFields, PAIRS, domainFields } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
-const { checkValues, checkField, clampToDomain } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/domain.js')));
-/* Theme für den Zeichenpfad in renderCard (wie render-smoke.test.mjs). */
-globalThis.getComputedStyle = () => ({ fontFamily: 'Arial', getPropertyValue: () => '' });
-createRequire(import.meta.url)(path.join(site, 'shared/palette.js'));
-createRequire(import.meta.url)(path.join(site, 'shared/theme.js'));
-const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
-Object.assign(theme, globalThis.__THEME__);
-
-const defaults = () => {
-  const v = {};
-  for (const f of allFields()) v[f.key] = f.def;
-  return v;
-};
+const { allFields, PAIRS, domainFields } = await auslegung('config/fields.js');
+const { checkValues, checkField, clampToDomain } = await auslegung('core/domain.js');
 
 /* ── Die Sperre fängt genau das ab, wogegen sich die Diagramme wehrten ──── */
 
@@ -97,9 +78,7 @@ test('sperre: die Vorgabewerte kommen durch — sonst wäre die Anwendung tot', 
    erfüllen. Ein Preset, das die Sperre auslöst, wäre für den Anwender eine
    Sackgasse: er wählt es aus der Liste und das Dashboard friert ein. */
 test('sperre: jede Voreinstellung erfüllt die Domäne', () => {
-  const req = createRequire(import.meta.url);
-  for (const datei of ['alloys.js', 'machines.js', 'parts.js'])
-    req(path.join(site, 'shared/examples/', datei));
+  ladeSkripte(['alloys.js', 'machines.js', 'parts.js'].map(datei => 'shared/examples/' + datei));
   const quellen = [
     ['Legierung', globalThis.__ALLOYS__ && globalThis.__ALLOYS__.alloys],
     ['Maschine', globalThis.__MACHINES__ && globalThis.__MACHINES__.machines],
@@ -153,8 +132,7 @@ test('sperre: von der 400-kN-Zink- bis zur 44.000-kN-Anlage kommt alles durch', 
    aufgedeckt hat. Ohne das Nachführen rechnete das Dashboard auf einem
    Kammerquerschnitt, den die gewählte Maschine nicht hat. */
 test('nachführen: eine kleinere Maschine bringt den Kolben-Ø mit', () => {
-  const req = createRequire(import.meta.url);
-  req(path.join(site, 'shared/examples/machines.js'));
+  ladeSkripte(['shared/examples/machines.js']);
   const klein = globalThis.__MACHINES__.machines.find(m => m.id === 'hcc200');
   assert.ok(klein, 'Preset hcc200 fehlt');
 
@@ -207,7 +185,7 @@ test('nachführen: Zielbänder bleiben unangetastet', () => {
 });
 
 test('sperre: renderCard ruft calc() nicht auf, wenn gesperrt', async () => {
-  const { renderCard } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/ui/cards.js')));
+  const { renderCard } = await auslegung('ui/cards.js');
   let gerufen = 0;
   const def = { id: 'probe', title: 'Probe', calc: () => { gerufen++; return { series: [] }; } };
   const card = stubCard();
@@ -248,8 +226,8 @@ test('domäne: jede Paarregel nennt existierende Felder und einen Text', () => {
    eingetippt hat — und er könnte es nicht korrigieren, weil das Feld
    schreibgeschützt ist. Deshalb wird an der Quelle geklemmt. */
 test('auto: berechnete Werte bleiben in der Domäne', async () => {
-  const { state } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/state.js')));
-  const { applyAuto } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/autofit.js')));
+  const { state } = await auslegung('core/state.js');
+  const { applyAuto } = await auslegung('core/autofit.js');
   const felder = Object.fromEntries(allFields().map(f => [f.key, f]));
   state.auto.gate = true; state.auto.vent = true;
 
@@ -288,14 +266,15 @@ test('sperre: die Abblend-Regel trifft Elemente, die es gibt', async () => {
     assert.ok(css.includes('.' + c + ' ') || css.includes('.' + c + '{') || css.includes('.' + c + ','),
       `.inputs-invalid zeigt auf .${c} — die Klasse kommt sonst nirgends vor`);
 
-  /* Und main.js muss die Klasse auch setzen. */
-  const js = readFileSync(path.join(site, 'tools/auslegung/js/main.js'), 'utf8');
-  assert.match(js, /classList\.toggle\('inputs-invalid'/, 'main.js setzt die Klasse nicht');
+  /* Und die Seitenpipeline (Dashboard, Einzelseite, Werkbank) muss die
+     Klasse auch setzen. */
+  const js = readFileSync(path.join(site, 'tools/auslegung/js/ui/page.js'), 'utf8');
+  assert.match(js, /classList\.toggle\('inputs-invalid'/, 'ui/page.js setzt die Klasse nicht');
 });
 
 /* ── Felder, die zum gewählten Vakuum-Modell nicht gehören ─────────── */
 
-const { hiddenFields } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
+const { hiddenFields } = await auslegung('config/fields.js');
 
 test('hiddenFields: je Vakuum-Modell nur die Felder, die es braucht', () => {
   const v = defaults();
