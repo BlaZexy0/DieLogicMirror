@@ -2,23 +2,21 @@
    Evan Wallace, MIT — hier eigenständig implementiert, ohne Rekursion und
    ohne Three.js-Abhängigkeit).
 
-   Wozu: die Formhälften und -einsätze sollen die Kavität, die Füllkammer,
-   die Auswerferstifte und die Führungssäulen als echtes NEGATIV enthalten
-   statt sich mit ihnen zu überschneiden. Die Netze der Beispielform sind
-   klein (Quader, Zylinder mit 32–40 Segmenten), dafür reicht ein BSP-Baum
-   bequem aus; er läuft einmalig beim GLB-Export, nicht im Viewer.
+   Wozu: die Tests bauen sich damit Prüfteile aus Primitiven (js/solids.js),
+   etwa eine Platte mit Bohrung, Tasche oder Rippen. Keine Seite lädt das
+   Modul. Die Netze sind klein (Quader, Zylinder mit 32–40 Segmenten),
+   dafür reicht ein BSP-Baum bequem aus.
 
    Datenformat wie in js/mesh.js: Float32Array/Float64Array mit 9 Werten je
-   Dreieck. Ein- und Ausgabe sind Dreieckssuppen, damit das Modul unter
-   Node testbar bleibt.
+   Dreieck. Ein- und Ausgabe sind Dreieckssuppen.
 
    Voraussetzung: beide Netze sind geschlossen und konsistent orientiert
    (Normalen nach außen). Offene Netze liefern undefinierte Ergebnisse —
    genau wie bei jedem anderen BSP-CSG. */
 
-/* Toleranz in Modelleinheiten (mm). Die Form misst gut 800 mm; in
-   doppelter Genauigkeit liegt der Rechenfehler bei ~1e-13 mm, 1e-5 ist
-   also großzügig und trotzdem weit unter jedem echten Maß. */
+/* Toleranz in Modelleinheiten (mm). Ein Prüfteil misst höchstens einige
+   hundert mm; in doppelter Genauigkeit liegt der Rechenfehler bei ~1e-13 mm,
+   1e-5 ist also großzügig und trotzdem weit unter jedem echten Maß. */
 const EPS = 1e-5;
 
 const COPLANAR = 0, FRONT = 1, BACK = 2, SPANNING = 3;
@@ -216,7 +214,7 @@ function toTris(polys) {
 /* Bewusst werden hier KEINE dünnen Splitter weggeworfen: jedes entfernte
    Dreieck reißt drei Kanten auf, und ein fehlendes Dreieck lässt sich
    später nicht mehr als T-Stoß reparieren. Das Aufräumen (entartete
-   Dreiecke, T-Stöße) macht cleanMesh() in js/mesh.js — dort ist es
+   Dreiecke, T-Stöße) macht cleanMesh() in js/mesh.js, dort ist es
    topologisch sicher. */
 
 /* ── Öffentliche Operationen ─────────────────────────────────── */

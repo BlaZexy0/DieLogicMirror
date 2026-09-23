@@ -4,8 +4,7 @@
    GLTFExporter für den Binärblock erwartet. Beides gibt es im Browser
    von Haus aus.
 
-   Wird von build-glb.mjs (Formmodell) und build-parts.mjs
-   (Beispielteile) daneben benutzt. */
+   Wird von build-die-stl.mjs daneben benutzt. */
 
 import { register } from 'node:module';
 

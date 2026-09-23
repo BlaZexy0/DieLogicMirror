@@ -168,35 +168,6 @@ Zeilen, das Häufige sichtbar, das Seltene hinter „⋯"):
   gesucht wird höchstens einmal je Bild und nicht, solange eine Taste
   gedrückt ist.
 
-### Die Kavität ist ein echtes Negativ
-
-Die Stahlteile sind keine Quader mehr, die sich mit den Einbauteilen
-überschneiden. `js/csg.js` (BSP-Verfahren) schneidet heraus:
-
-- die **Kavität** aus beiden Formeinsätzen — mit `CFG.fit` Luftspalt, damit
-  Stahl und Gussteil nicht deckungsgleich aufeinanderliegen,
-- den **Kernstift**, der als Stahlsäule im beweglichen Einsatz stehen
-  bleibt und im festen Einsatz eine Auflage hat,
-- **Angusskanal, Anschnitt, Überläufe, Entlüftungskanal** als Nuten in der
-  beweglichen Hälfte,
-- die **Kammerbohrung** in der festen Hälfte, den **Angusskegel** im festen
-  Einsatz sowie Bohrung und **Gießloch** der Füllkammer selbst,
-- **Auswerfer- und Rückdrückstifte** (mit abgesetzter Kopfsenkung in der
-  Halteplatte), **Führungssäulen** und **Buchsensitze**,
-- die Lamellennuten des **Vakuumblocks** und den Durchbruch der
-  Aufspannplatte.
-
-Die Kavität hat ihren größten Querschnitt an der Trennebene und verjüngt
-sich mit `CFG.part.draft` in beide Hälften — das Gussteil ist also
-tatsächlich entformbar (in der Entformungsanalyse als Beispielteil nachprüfbar).
-
-**Bewusst nicht ausgeschnitten** sind die Temperierkanäle: das Rohrmodell
-*ist* die Bohrung samt Inhalt. Im Schnitt zeichnet die Deckfläche des
-Kreises (in seiner Farbe, vor der des Stahls) den Kanalquerschnitt
-korrekt, und bei durchscheinendem Stahl sieht man die Kreise wie in einer
-CAD-Ansicht. `tests/die.test.mjs` prüft alle anderen
-Paarungen auf gemeinsames Volumen — es muss null sein.
-
 ## Entformungsanalyse (`entformungsanalyse.html`)
 
 Für ein Bauteil (Beispielteil oder eine eigene **STL oder GLB** per
@@ -2396,12 +2367,8 @@ assets/die.glb        DAS Formmodell — binäres glTF, vom Viewer geladen
 assets/parts/*.glb    die Beispielteile — ebenfalls fertiges glTF
 
 js/solids.js          Primitive als Dreieckssuppen (Quader, Loft, Zylinder, Kugel, Rohr)
-js/csg.js             boolesche Operationen (BSP), ohne Three.js
 js/mesh.js            Netz-Werkzeuge: verschweißen, Nachbarschaft, T-Stöße, Normalen, Verfeinern
-js/config.js          alle Maße der Beispielform (mm) an einer Stelle
 js/registry.js        Baugruppen-Metadaten (id, Label, Seite, Farbe)
-js/diegeom.js         Geometrie der Form inkl. aller Negative — die Quelle des Modells
-js/components.js      Three.js-Adapter: Suppen → benannte Gruppen mit Materialien
 js/scene.js           Renderer, Kameras (Zentral + Parallel), Licht, Ansichten, Zeichnen auf Abruf, Achsenkreuz
 js/trackball.js       Quaternionen-Trackball: freies Drehen um einen Punkt
 js/handles.js         Griffe im Viewport: auswählen, in der Ebene ziehen, Pfeile, Zielmodus aufs Bauteil
@@ -2473,8 +2440,9 @@ vendor/utils/         BufferGeometryUtils, TextureUtils (von den Loadern gebrauc
 Außerhalb von `web/`, weil nicht ausgeliefert:
 
 ```
-scripts/3d-studio/    Generatoren der Formmodelle (build-glb, build-die-stl)
-tests/web/3d-studio/  Tests, laufen mit den übrigen Frontend-Tests
+scripts/3d-studio/    Zusammenbau der Beispielform aus den STL-Stücken (build-die-stl)
+tests/web/3d-studio/  Tests, laufen mit den übrigen Frontend-Tests (csg.mjs: boolesche
+                      Operationen für Prüfteile)
 ```
 
 
@@ -2496,24 +2464,22 @@ jeweiligen Quelle, aus dem Repo-Root:
 ```
 (in openscad_parts) ./render_die.sh --studio      # assets/die.glb ← dies/oil_pan_die.scad
 node scripts/3d-studio/build-die-stl.mjs <manifest> # dasselbe von Hand, aus den STL-Stücken
-node scripts/3d-studio/build-glb.mjs <ziel.glb>    # die ältere prozedurale Form aus js/diegeom.js
 ```
 
 Die Ölwannen-Form kommt als Satz von STL-Stücken aus `openscad_parts`
 (`dies/oil_pan_die.json` nennt je Stück Baugruppe und Material);
-`build-die-stl.mjs` setzt sie über denselben Adapter zusammen wie das
-prozedurale Modell (`js/components.js`), damit Namen, Normalen und
-Materialien identisch sind. `js/diegeom.js` und `js/config.js` beschreiben
-weiterhin die ältere prozedurale Beispielform; `CFG.openTravel` gilt
-für beide.
+`build-die-stl.mjs` setzt sie zusammen: Knoten nach der Registry, weiche
+Normalen, Materialien nach Klasse. Den Öffnungsweg des Schiebers „Form
+öffnen" nennt die Datei selbst (`formaufbau.openTravel`), sonst gilt
+`OPEN_TRAVEL` in `js/assembly.js`.
 
 Die vier Druckgussteile (Getriebedeckel, Ölwanne, Kühlkörper, U-Profil)
 kommen aus dem Schwesterprojekt `openscad_parts` (parametrische
 OpenSCAD-Quellen): dort `./render.sh --studio`, dann `build/glb/*.glb`
 nach `assets/parts/` kopieren; `source` in `demoparts.js` nennt die Quelle.
-Einen prozeduralen Generator für Beispielteile gibt es nicht mehr.
+Prozedurale Generatoren für Form und Beispielteile gibt es nicht mehr.
 
-Die Generatoren laufen ohne Browser: `scripts/3d-studio/three-resolver.mjs` löst
+Das Skript läuft ohne Browser: `scripts/3d-studio/three-resolver.mjs` löst
 den nackten Import `three` auf `vendor/` auf, und `glb-node.mjs` ergänzt
 den FileReader, den der GLTFExporter erwartet.
 
@@ -2537,7 +2503,7 @@ nichts. Die Dateien liegen unter `tests/web/3d-studio/`:
 | `part.test.mjs` | Sichtbarkeit und Teilung an Körpern mit bekannter Antwort (Würfel, gedrafteter Quader, Pilzkopf, Querbohrung), Entformschrägen, STL, und ob die ausgelieferten `assets/parts/*.glb` noch zur Quelle passen |
 | `field.test.mjs` | Abstandsfeld und Offsetfläche gegen die geschlossene Formel (Quader, Kugel), Untermaß, Geschlossenheit, verschmelzende Spalte |
 | `distance.test.mjs` | Punkt-Netz-Abstand gegen Fläche, Kante, Ecke und Innenraum, Symmetrie, Unabhängigkeit von der Rasterweite, Verfeinern |
-| `die.test.mjs` | jede Baugruppe geschlossen und richtig orientiert, **kein Bauteil steckt im Stahl eines anderen**, Kavität als Negativ mit Spalt, Kernstift, Füllkammer |
+| `die.test.mjs` | die ausgelieferte `assets/die.glb` trägt alle Knoten-, Baugruppen- und Materialnamen, über die der Viewer sucht, und indizierte Geometrie |
 | `imports.test.mjs` | jeder Import löst auf, jeder exportierte Name existiert, jede angesprochene HTML-id ist vorhanden — und für die Werkzeuge des Rahmens: jedes `ui('name')` steht als `data-ui` in den (dafür gebauten) Feldern oder im Gerüst |
 | `studio-core.test.mjs` | der Rahmen ohne Werkzeug: `parseNumber` (`1.500`, `1.5`, `0.500`, `1.234,5`, `−3`), Rundlauf mit `fmtPlain`, Verlauf (Zug = ein Eintrag, Zusammenfassen, Grenze), Entwurf (schreiben, finden, verwerfen, ohne Speicher), Abbruch erreicht `buildField` und `runSimulation` |
 | `tools/*.test.mjs` | je Werkzeug des Rahmens die Seite unter dem DOM-Platzhalter (`tools/fixture.mjs`): Modi besitzen ihren Viewport, Hauptknopf und Zustandszeile, Abbrechen, Einstellungen kommen zurück und lassen sich zurücksetzen, Datei; `tools/rahmen.test.mjs` hält am Überlaufdesigner, was der Rahmen jedem Werkzeug verspricht (Entwurf je Bauteil, Tasten und Esc, Klappen, Doppelklick, ⓘ, `cancelDrag`) |
@@ -2583,10 +2549,8 @@ Verknüpfungen, die noch nicht verdrahtet sind:
   übernehmen und den errechneten Druckbedarf als Formwiderstand ins
   PQ²-Diagramm zurückzugeben, wäre die naheliegendste Verbindung im
   ganzen Studio.
-- `js/config.js` aus dem Projektabschnitt `design` speisen (Kolben-Ø ↔
-  `sleeve.d`, Kammerlänge ↔ `sleeve.len`, Bauteil-/Anguss-Maße aus der
-  Massenbilanz) und die GLB pro Projekt erzeugen — oder direkt eine
-  CAD-GLB mit den vereinbarten Namen hinterlegen.
+- Je Projekt eine eigene Form hinterlegen: eine CAD-GLB mit den
+  vereinbarten Namen (Registry-ids, `fixedRoot`/`movingRoot`).
 - Die Entformungsanalyse liest dasselbe Dreiecksformat wie die
   [Sprengflächenanalyse](/tools/sprengflaeche/) (9 Werte je Dreieck): die
   STL aus dem Abschnitt `geometry` ließe sich unmittelbar übernehmen und

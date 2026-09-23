@@ -5,7 +5,8 @@
    Stahl ('steel') und den Versatz der Schnitt-Deckflächen: der Inhalt
    liegt vor dem Stahl (js/clipcaps.js). Die Farbe einer Deckfläche ist
    die ihres Teils, eine Deckfläche je Teil und Klasse. Hier steht die
-   Tabelle einmal — für den Zusammenbau aus Stücken (js/components.js) und
+   Tabelle einmal — für den Zusammenbau aus Stücken
+   (scripts/3d-studio/build-die-stl.mjs) und
    für Teile, die der Anwender im Viewer lädt (js/assembly.js). */
 
 import * as T from 'three';

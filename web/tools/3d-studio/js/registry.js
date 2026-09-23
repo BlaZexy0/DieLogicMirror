@@ -1,6 +1,6 @@
 /* Baugruppen-Registry: reine Metadaten, keine Three.js-Abhängigkeit.
    Gemeinsame Quelle für den Viewer (Sidebar, GLB-Zuordnung) und den
-   Geometrie-Generator (js/components.js, scripts/3d-studio/build-glb.mjs).
+   Zusammenbau der Beispielform (scripts/3d-studio/build-die-stl.mjs).
 
    side: 'fix' bleibt stehen, 'mov' und 'cast' fahren beim „Form öffnen"
    mit (das Gussteil bleibt beim Öffnen auf der beweglichen Hälfte).

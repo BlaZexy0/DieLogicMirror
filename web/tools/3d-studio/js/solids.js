@@ -1,13 +1,14 @@
 /* Primitive als Dreieckssuppen (Float64Array, 9 Werte je Dreieck) —
-   dieselbe Darstellung wie js/mesh.js und js/csg.js.
+   dieselbe Darstellung wie js/mesh.js.
 
-   Warum eigene Primitive statt BoxGeometry/CylinderGeometry: die Form
-   entsteht in js/components.js aus booleschen Operationen (Kavität,
-   Bohrungen, Taschen). Dafür braucht es geschlossene, konsistent
+   Warum eigene Primitive statt BoxGeometry/CylinderGeometry: der
+   Angussdesigner baut den Pressrest daraus (js/runner/sweep.js),
+   die Tests bauen Prüfteile, auch mit booleschen Operationen
+   (tests/web/3d-studio/csg.mjs). Dafür braucht es geschlossene, konsistent
    orientierte Netze und einen „aufgedickten" Zwilling jedes Körpers als
    Schneidwerkzeug (Parameter g = Luftspalt). Beides ist mit eigenen
-   Bausteinen einfacher als mit den Three.js-Generatoren — und es läuft
-   ohne Three.js, also auch in tests/ und scripts/3d-studio/build-glb.mjs.
+   Bausteinen einfacher als mit den Three.js-Generatoren, und es läuft
+   ohne Three.js, also auch unter Node.
 
    Konvention: alles wird entlang +z um den Ursprung gebaut und mit
    place() gedreht/verschoben. Normalen zeigen nach außen. */

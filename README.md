@@ -120,7 +120,7 @@ dielogic/
 ├── tests/web/       Node-Tests der Website (nicht ausgeliefert)
 ├── scripts/         Generatoren (nicht ausgeliefert): gen-theory-svgs, gen-vkrit-table,
 │   │                gen-palette, gen-icon-sprite, gen-domain-doc und 3d-studio/ (die
-│   │                glTF-Modelle des 3D-Studios); serve.py (statischer Server, npm run serve)
+│   │                Beispielform des 3D-Studios aus STL-Stücken); serve.py (statischer Server, npm run serve)
 ├── render.yaml      Render-Blueprint (Web Service: Build, Start, Healthcheck)
 └── .venv/           lokale Python-Umgebung (nicht einchecken)
 ```
@@ -278,9 +278,9 @@ eine Rechnung auf den Server legt, muss sie dort ergänzen.
 - **Neues Diagramm:** wie in `web/tools/auslegung/README.md`; danach in `web/shared/nav.js`
   (`CHARTS`) und im Katalog auf `web/index.html` verlinken.
 - **3D-Studio:** eigenes README unter `web/tools/3d-studio/`. Nach
-  Änderungen an der Geometrie die Modelle neu erzeugen:
-  `node scripts/3d-studio/build-glb.mjs` (Formmodell); die Beispielteile
-  kommen fertig aus dem Schwesterprojekt openscad_parts.
+  Änderungen an der Geometrie die Modelle neu erzeugen: Form und
+  Beispielteile kommen fertig aus dem Schwesterprojekt openscad_parts
+  (`./render_die.sh --studio` ruft `scripts/3d-studio/build-die-stl.mjs`).
   Der Angussdesigner braucht keine erzeugten Modelle — seine Beispiele
   entstehen im Code (`js/runner/presets.js`). Nach Änderungen an Kamera,
   Steuerwerk oder Sichtbarkeit einmal in einem echten Browser nachsehen:

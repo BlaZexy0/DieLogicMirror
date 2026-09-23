@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as S from '../../../web/tools/3d-studio/js/solids.js';
-import { subtract, union } from '../../../web/tools/3d-studio/js/csg.js';
+import { subtract, union } from './csg.mjs';
 import { volume } from '../../../web/tools/3d-studio/js/mesh.js';
 import { buildModel, openEdgeRatio } from '../../../web/tools/3d-studio/js/part/model.js';
 import { computeVisibility, DIRS } from '../../../web/tools/3d-studio/js/part/visibility.js';
@@ -20,14 +20,14 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'web', 'tools', '3d-studio');
 
-/* Die Tests arbeiten mit den AUSGELIEFERTEN Dateien, nicht mit der
-   prozeduralen Quelle — sonst prüften sie etwas anderes, als der Browser
-   lädt. Fehlt eine Datei, sagt der Test, wie sie entsteht. */
+/* Die Tests arbeiten mit den AUSGELIEFERTEN Dateien, nicht mit ihrer
+   Quelle in openscad_parts — sonst prüften sie etwas anderes, als der
+   Browser lädt. Fehlt eine Datei, sagt der Test, wie sie entsteht. */
 function demoTris(id) {
   const p = DEMO_PARTS.find(d => d.id === id) || DEMO_PARTS[0];
   const file = resolve(ROOT, p.file);
-  assert.ok(existsSync(file), p.file + ' fehlt — „node scripts/3d-studio/build-parts.mjs"'
-    + (p.source ? ' bzw. Export aus ' + p.source : ''));
+  assert.ok(existsSync(file), p.file + ' fehlt — in openscad_parts ./render.sh'
+    + (p.source ? ' (Quelle ' + p.source + ')' : ''));
   const buf = readFileSync(file);
   return readGLB(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
 }

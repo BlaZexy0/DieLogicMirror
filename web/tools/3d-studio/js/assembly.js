@@ -37,12 +37,15 @@
 
 import * as T from 'three';
 import { COMPONENTS, roleColor } from './registry.js';
-import { CFG } from './config.js';
 import { makeMaterial, CLASS_ROLE, FIXED_COLOR, classColor } from './materials.js';
 import { smoothNormals, indexTriangles } from './mesh.js';
 
 export const FORMAT = 'dielogic-formaufbau';
 export const VERSION = 1;
+
+/* Öffnungsweg der beweglichen Hälfte beim Schieber „Form öffnen" in mm,
+   solange die Datei keinen eigenen nennt (formaufbau.openTravel). */
+const OPEN_TRAVEL = 420;
 
 /* Standardgruppen. side: 'fix' bleibt stehen, 'mov' fährt mit der
    beweglichen Hälfte. mat: Werkstoffklasse neuer Teile. role: ihre Farbe
@@ -168,7 +171,7 @@ export function createAssembly(scene) {
   const meta = die.userData && die.userData.formaufbau;
   const groups = [];
   const items = [];
-  let openTravel = CFG.openTravel;
+  let openTravel = OPEN_TRAVEL;
   let openT = 0;
 
   const tag = (object, id) => object.traverse(o => { o.userData.compId = id; });

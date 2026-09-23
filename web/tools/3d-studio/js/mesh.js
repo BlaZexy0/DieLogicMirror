@@ -1,8 +1,8 @@
 /* Netz-Werkzeuge ohne Three.js-Abhängigkeit.
 
    Gemeinsame Grundlage von zwei sehr verschiedenen Stellen:
-   - js/components.js braucht nach einer CSG-Operation wieder weiche
-     Normalen (die Bool-Operation liefert nur Flächennormalen),
+   - Teile aus Dreieckssuppen brauchen weiche Normalen über den
+     Knickwinkel (js/assembly.js, scripts/3d-studio/build-die-stl.mjs),
    - js/part/* braucht Topologie (Nachbarschaft über Kanten) für die
      Formteilungs-Analyse.
 
@@ -10,7 +10,7 @@
    9 Werten je Dreieck (x0,y0,z0, x1,y1,z1, x2,y2,z2) — dasselbe Format,
    das auch die Sprengflächenanalyse in DieLogic aus STL-Dateien liest.
    Damit läuft dieses Modul unverändert im Browser und unter Node
-   (tests/, scripts/3d-studio/build-glb.mjs). */
+   (tests/, scripts/3d-studio/build-die-stl.mjs). */
 
 /** Bounding-Box + abgeleitete Maße. */
 export function bounds(tris) {
@@ -345,7 +345,7 @@ export function indexTriangles(tris, normals, qPos, qNrm = 1e-3) {
 }
 
 /* ── T-Stöße schließen ───────────────────────────────────────────
-   Boolesche Operationen (js/csg.js) und viele STL-Exporte hinterlassen
+   Boolesche Operationen und viele STL-Exporte hinterlassen
    T-Stöße: ein Punkt liegt MITTEN auf der Kante eines Nachbardreiecks,
    ohne dort ein Eckpunkt zu sein. Die Kante findet dann keinen Partner —
    das Netz ist zwar dicht, aber topologisch aufgerissen. Für die
