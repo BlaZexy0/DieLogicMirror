@@ -10,7 +10,7 @@
      2. je Partikel die Summen über die Nachbarn im Träger 2h:
         Druckkraft und künstliche Zähigkeit (α), die Kontinuitäts-
         gleichung für die Dichte mit δ-SPH-Diffusion (glättet das
-        Druckrauschen) und die XSPH-Korrektur der Bewegung (ε);
+        Druckrauschen);
      3. vorwärts: Geschwindigkeit, Dichte, Ort — dann die Wände.
    Wände sind KEINE Partikel, sondern Abstandsfelder: wer näher als
    d/2 an eine Wand kommt, wird auf d/2 zurückgesetzt und verliert die
@@ -33,9 +33,11 @@
    dabei kein Schmuck: ohne sie treibt die Dichte in Ruhe binnen
    Hunderten Schritten um zehn Prozent davon (der gestutzte Kern an
    der Oberfläche und an der Wand macht die Divergenz schief), mit ihr
-   findet sie zu ρ0 zurück. XSPH dagegen bewegt die Partikel mit einer
-   anderen Geschwindigkeit als der, die die Kontinuität sieht — darum
-   steht ε auf null. Der Zeitschritt folgt der Schallgeschwindigkeit:
+   findet sie zu ρ0 zurück. Eine XSPH-Korrektur der Bewegung (Partikel
+   mit dem gewichteten Mittel der Nachbargeschwindigkeit statt der
+   eigenen ziehen) wurde versucht und wieder entfernt: sie bewegt die
+   Partikel mit einer anderen Geschwindigkeit als der, die die
+   Kontinuität sieht. Der Zeitschritt folgt der Schallgeschwindigkeit:
    c0 = 10 · Bezugsgeschwindigkeit hält die Dichteschwankung unter
    einem Prozent, dt = CFL·h/(c0 + v); die Geschwindigkeit ist auf c0/2
    geklemmt, damit ein Partikel an einer Engstelle den Lauf nicht
@@ -47,7 +49,7 @@
    Einheiten: SI — Meter, Sekunden, kg/m³. Kein DOM; der GPU-Kern
    (js/sph/gpu.js) rechnet dieselben Formeln. */
 
-import { W, dW, SUPPORT } from './kernel.js';
+import { dW, SUPPORT } from './kernel.js';
 import { createGrid } from './grid.js';
 
 export const NEVER = 0xFFFFFFFF;
@@ -56,7 +58,6 @@ export const KIND = { DEAD: 0, FLUID: 1, INFLOW: 2 };
 export const PARAMS = {
   alpha: 0.1,        // künstliche Zähigkeit (Monaghan)
   delta: 0.1,        // δ-SPH: Diffusion der Dichte
-  eps: 0,            // XSPH: Glättung der Bewegung (aus, siehe oben)
   gamma: 7,          // Tait
   cfl: 0.25,
   cMach: 10,         // c0 = cMach · Bezugsgeschwindigkeit
@@ -98,7 +99,7 @@ export function sampleField(field, x, y, z) {
  *   setup.gates            Zahl der Melder
  *   setup.gateRate         je Anschnitt Partikel je Meter Kolbenweg, die der Auslass
  *                          ab seiner Ankunft durchlässt (Anguss; ohne: freier Auslass)
- * Schnittstelle: step(dt, { uIn, step, piston }), positions(), velocities(), alive(),
+ * Schnittstelle: step(dt, { uIn, step, piston }), positions(), velocities(),
  *   gateArrival (Uint32Array), gateS (Kolbenweg bei Ankunft), gateKilled, totals().
  */
 export function createSphSolver(setup, params = {}) {
@@ -112,7 +113,7 @@ export function createSphSolver(setup, params = {}) {
   const eta2 = 0.01 * h * h;
   const rb = 0.5 * d;
   const grid = createGrid(setup.box.min, setup.box.max, SUPPORT * h);
-  const acc = new Float32Array(3 * nMax), xs = new Float32Array(3 * nMax);
+  const acc = new Float32Array(3 * nMax);
   const drho = new Float32Array(nMax), press = new Float32Array(nMax);
   const gateArrival = new Uint32Array(Math.max(1, setup.gates || 0)).fill(NEVER);
   const gateS = new Float64Array(gateArrival.length).fill(Infinity);
@@ -225,7 +226,7 @@ export function createSphSolver(setup, params = {}) {
       const xi = pos[oi], yi = pos[oi + 1], zi = pos[oi + 2];
       const vxi = vel[oi], vyi = vel[oi + 1], vzi = vel[oi + 2], rhoi = vel[oi + 3];
       const pi = press[i], pr_i = pi / (rhoi * rhoi);
-      let ax = 0, ay = 0, az = 0, dr = 0, sx = 0, sy = 0, sz = 0;
+      let ax = 0, ay = 0, az = 0, dr = 0;
       const ci = Math.min(gnx - 1, Math.max(0, Math.floor((xi - gmin[0]) / gc)));
       const cj = Math.min(gny - 1, Math.max(0, Math.floor((yi - gmin[1]) / gc)));
       const ck = Math.min(gnz - 1, Math.max(0, Math.floor((zi - gmin[2]) / gc)));
@@ -241,7 +242,7 @@ export function createSphSolver(setup, params = {}) {
               const r2 = rx * rx + ry * ry + rz * rz;
               if (r2 >= H2 || r2 < 1e-30) continue;
               const r = Math.sqrt(r2);
-              const dw = dW(r, h), w = W(r, h);
+              const dw = dW(r, h);
               const gxx = dw * rx / r, gyy = dw * ry / r, gzz = dw * rz / r;
               const rhoj = vel[oj + 3];
               const pj = pos[oj + 3] === KIND.INFLOW ? pi : press[j];
@@ -254,14 +255,12 @@ export function createSphSolver(setup, params = {}) {
               dr += mass * (vijx * gxx + vijy * gyy + vijz * gzz);
               /* δ-SPH: r_ji·∇W = −r·dW ≥ 0, zieht ρ_i zu ρ_j. */
               dr += P.delta * h * c0 * 2 * (rhoj - rhoi) * (-dw * r) / (r2 + eta2) * mass / rhoj;
-              if (P.eps > 0) { const sw = mass / (0.5 * (rhoi + rhoj)) * w; sx -= sw * vijx; sy -= sw * vijy; sz -= sw * vijz; }
             }
           }
         }
       }
       acc[3 * i] = ax + g[0]; acc[3 * i + 1] = ay + g[1]; acc[3 * i + 2] = az + g[2];
       drho[i] = dr;
-      xs[3 * i] = sx; xs[3 * i + 1] = sy; xs[3 * i + 2] = sz;
     }
     for (let i = 0; i < n; i++) {
       const o = 4 * i;
@@ -271,9 +270,9 @@ export function createSphSolver(setup, params = {}) {
         const sp = Math.hypot(vel[o], vel[o + 1], vel[o + 2]);
         if (sp > vClamp) { const f = vClamp / sp; vel[o] *= f; vel[o + 1] *= f; vel[o + 2] *= f; }
         vel[o + 3] = Math.max(0.5 * rho0, vel[o + 3] + drho[i] * dt);
-        pos[o] += (vel[o] + P.eps * xs[3 * i]) * dt;
-        pos[o + 1] += (vel[o + 1] + P.eps * xs[3 * i + 1]) * dt;
-        pos[o + 2] += (vel[o + 2] + P.eps * xs[3 * i + 2]) * dt;
+        pos[o] += vel[o] * dt;
+        pos[o + 1] += vel[o + 1] * dt;
+        pos[o + 2] += vel[o + 2] * dt;
         walls(i, ctrl);
       } else if (kind === KIND.INFLOW) {
         const u = ctrl.uIn || 0;
@@ -293,19 +292,12 @@ export function createSphSolver(setup, params = {}) {
     for (let i = 0; i < setup.n; i++) { vel[4 * i] = 0; vel[4 * i + 1] = 0; vel[4 * i + 2] = 0; }
   }
 
-  function alive() {
-    let f = 0, q = 0;
-    for (let i = 0; i < setup.n; i++) { const k = pos[4 * i + 3]; if (k === KIND.FLUID) f++; else if (k === KIND.INFLOW) q++; }
-    return { fluid: f, inflow: q };
-  }
-
   return {
     get n() { return setup.n; },
     nMax, d, h, rho0, mass, c0, gateArrival, gateS, gateKilled, gates: gateArrival.length,
     step, settle,
     positions() { return pos; },
     velocities() { return vel; },
-    alive,
     /** Masse der Schmelze und mittlere Dichte — für die Tests. */
     totals() {
       let m = 0, r = 0, k = 0;

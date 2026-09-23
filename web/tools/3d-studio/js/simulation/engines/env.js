@@ -55,7 +55,7 @@ const IN_BROWSER = typeof navigator !== 'undefined' && /Mozilla/.test(navigator.
 
 /** Ein Bild in ms, auf das JavaScript im Browser wartet — siehe oben. */
 const FRAME = 16;
-export const frameMs = kernel => (kernel === 'cpu' && IN_BROWSER ? FRAME : 0);
+const frameMs = kernel => (kernel === 'cpu' && IN_BROWSER ? FRAME : 0);
 /** Was an Rechnen und Warten zusammenkommt: ein Bild je 40 ms Rechnen, eines je Paket. */
 const withWaits = (work, packets, f) => work + (work / 40) * f + packets * f;
 

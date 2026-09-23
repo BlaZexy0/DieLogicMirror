@@ -21,7 +21,6 @@
    nicht (sie steht nicht in run.steps). */
 
 import * as T from 'three';
-import { abortError } from '../../abort.js';
 import { fmt, fmtUnit } from '../../studio/format.js';
 import { minRunnerArea } from '../../lbm/piston.js';
 import {
@@ -33,9 +32,8 @@ import { createSphSolver, suggestDt, PARAMS, NEVER } from '../../sph/wcsph.js';
 import { createGpuSphSolver } from '../../sph/gpu.js';
 import { runSph } from '../../sph/run.js';
 import { createPoints, showParticles, speedScaleParticles } from '../../sph/points.js';
-import { env, tempo, runTime, learnTempo, runClock, gpuFailure, roughTime, kernelName, fmtCount, fmtMB, tick } from './env.js';
-
-const kernelOf = opts => (env.gpu && !(opts && opts.forceCpu) ? 'gpu' : 'cpu');
+import { env, tempo, runTime, learnTempo, roughTime, kernelName, fmtCount, fmtMB, tick } from './env.js';
+import { kernelOf, RANGE, FRAMES, kammerVref, sleeveEnd, withSolver, firstArrival, runnerOutcome, sleeveOutcome, tooFine, noWebGpuNote } from './common.js';
 
 /* Kolbenweg des Laufs in mm: so lang wird die Säule des Zustroms. */
 function travelOf(problem) {
@@ -51,21 +49,15 @@ function travelOf(problem) {
    c0 = 10·v hält die Dichte auf ein Prozent. */
 function timing(problem, cell) {
   let vRef;
-  if (problem.kind === 'kammer') vRef = Math.max(problem.curve.profile.vmax, 0.5);
+  if (problem.kind === 'kammer') vRef = kammerVref(problem);
   else { const p = problem.piston; vRef = Math.max(p.vMax * p.A / minRunnerArea(problem.net), p.vMax, 1e-3); }
   const c0 = PARAMS.cMach * vRef;
   return { vRef, c0, dt: suggestDt({ h: H_OVER_D * cell * 1e-3, c0, vRef }) };
 }
 
-function sleeveEnd(problem, cell) {
-  const { profile } = problem.curve;
-  const sEnd = Math.min(profile.travel * 1000, problem.spec.length - 3 * cell);
-  return { sEnd, tEnd: profile.atPos(sEnd / 1000).t };
-}
-
 export const sph = {
   id: 'sph', label: 'Partikel', cellLabel: 'Partikelabstand',
-  range: problem => (problem && problem.kind === 'kammer' ? [0.5, 30] : [0.5, 20]),
+  range: RANGE,
 
   suggest(problem) {
     return problem.kind === 'kammer'
@@ -91,32 +83,20 @@ export const sph = {
       tRun = problem.tExpect; tLimit = problem.tMax;
       parts.push(fmtCount(count) + ' Partikel (Pressrest und Säule für ' + fmtUnit(travel, 'mm', 0) + ' Kolbenweg)');
     }
-    parts.push(fmtMB(count * 64), roughTime(runTime({ steps: tRun / dt, stepsMax: tLimit / dt, frames: kammer ? 100 : 80, c: count * tempo('sph', kernel), kernel })), kernelName(kernel));
+    parts.push(fmtMB(count * 64), roughTime(runTime({ steps: tRun / dt, stepsMax: tLimit / dt, frames: FRAMES(problem.kind), c: count * tempo('sph', kernel), kernel })), kernelName(kernel));
     return {
       text: parts.join(' · '), count, kernel,
-      note: env.gpu ? '' : 'Kein WebGPU in diesem Browser: gerechnet wird in JavaScript, mit wenigen Partikeln (bis ' + fmt(MAX_PARTICLES_CPU / 1e3, 0)
-        + ' Tsd.), und das dauert Minuten. Chrome oder Edge rechnen auf der Grafikkarte.',
-      blocked: count > limit ? 'Zu fein: höchstens ' + fmt(limit / 1e3, 0) + ' Tsd. Partikel. Den Abstand vergrößern.' : '',
-      blockedShort: count > limit ? 'Zu fein: höchstens ' + fmt(limit / 1e3, 0) + ' Tsd. Partikel.' : ''
+      note: env.gpu ? '' : noWebGpuNote('mit wenigen Partikeln', MAX_PARTICLES_CPU, '', ', und das dauert Minuten'),
+      ...tooFine(count, limit, 'Partikel', 'Den Abstand vergrößern')
     };
   },
 
   async run(problem, opts) {
-    const { cell, signal, progress = () => {} } = opts;
-    const check = () => { if (signal && signal.aborted) throw abortError(); };
-    const kernel = kernelOf(opts);
-    const t0 = performance.now(), clock = runClock();
-    let solver = null;
-    try {
-      progress(0, 'Partikel …');
-      await tick();
-      const ctx = { check, progress, signal, t0, clock, own: s => { solver = s; }, openGates: opts.openGates !== false };
-      return problem.kind === 'kammer' ? await runSleeve(problem, cell, kernel, ctx) : await runRunner(problem, cell, kernel, ctx);
-    } catch (err) {
-      throw gpuFailure(err, signal);
-    } finally {
-      if (solver && solver.dispose) solver.dispose();
-    }
+    const { cell } = opts;
+    return withSolver('Partikel …', opts, (kernel, ctx) => {
+      const c = { ...ctx, openGates: opts.openGates !== false };
+      return problem.kind === 'kammer' ? runSleeve(problem, cell, kernel, c) : runRunner(problem, cell, kernel, c);
+    });
   },
 
   /* Die Partikel als beleuchtete Kugeln vom Partikelabstand (js/sph/points.js).
@@ -184,7 +164,7 @@ async function runRunner(problem, cell, kernel, { check, progress, signal, t0, c
   clock.start();
   const tMax = problem.tMax;
   const stepsMax = Math.max(10, Math.ceil(tMax / dt));
-  const snapEvery = Math.max(1, Math.ceil(stepsMax / 80));
+  const snapEvery = Math.max(1, Math.ceil(stepsMax / FRAMES(problem.kind)));
   /* Der Kolbenweg je Schritt — die Drossel der Anschnitte zählt damit. */
   const sTable = new Float64Array(stepsMax + 2);
   for (let k = 1; k < sTable.length; k++) sTable[k] = sTable[k - 1] + 0.5 * (piston.v((k - 1) * dt) + piston.v(k * dt)) * dt;
@@ -199,15 +179,10 @@ async function runRunner(problem, cell, kernel, { check, progress, signal, t0, c
       return gateDone.every(a => a !== NEVER) ? 'alle Anschnitte erreicht' : null;
     }
   });
-  if (run.reason === 'abgebrochen') throw abortError();
   const { snapshots, gateDone } = run;
   snapshots[0].t = 0; snapshots[0].filled = runnerFillFraction(snapshots[0].pos, snapshots[0].n, setup, 1e-3);
-  const first = Math.min(...gateDone.filter(a => a !== NEVER), Infinity);
-  const out = finish(problem, cell, kernel, run, t0, clock, setup, dt, c0, first);
-  out.reason = run.reason === 'Schrittgrenze erreicht' ? (tMax >= piston.tEnd - 1e-9 ? 'die Kurve endet' : 'Zeitgrenze erreicht') : run.reason;
-  out.facts.unshift(['Ende', out.reason]);
-  out.gates = setup.lbm.gates.map((gt, k) => ({ id: gt.id, step: gateDone[k], tSim: gateDone[k] === NEVER ? NaN : gateDone[k] * dt }));
-  out.filled = snapshots[snapshots.length - 1].filled;
+  const out = finish(problem, cell, kernel, run, t0, clock, setup, dt, c0, firstArrival(gateDone));
+  runnerOutcome(out, { run, gates: setup.lbm.gates, gateDone, dt, tMax, tEnd: piston.tEnd, snapshots });
   out.nFluid = setup.nFluid; out.nInflow = setup.nInflow;
   out.facts[out.facts.findIndex(f => f[0] === 'Partikel')] = ['Pressrest + Säule', fmtCount(setup.nFluid) + ' + ' + fmtCount(setup.nInflow) + ' · ' + fmtUnit(cell, 'mm')];
   return out;
@@ -224,7 +199,7 @@ async function runSleeve(problem, cell, kernel, { check, progress, signal, t0, c
   own(solver);
   const { tEnd } = sleeveEnd(problem, cell);
   const stepsMax = Math.max(10, Math.ceil(tEnd / dt));
-  const snapEvery = Math.max(1, Math.ceil(stepsMax / 100));
+  const snapEvery = Math.max(1, Math.ceil(stepsMax / FRAMES(problem.kind)));
   const settleSteps = Math.min(600, Math.round(0.02 / dt));
   progress(0, 'Zur Ruhe kommen …');
   await tick();
@@ -256,15 +231,11 @@ async function runSleeve(problem, cell, kernel, { check, progress, signal, t0, c
       return gateDone[0] !== NEVER ? 'Kammer voll: der Laufkanal ist erreicht' : null;
     }
   });
-  if (run.reason === 'abgebrochen') throw abortError();
   const { snapshots, gateDone } = run;
   Object.assign(snapshots[0], { t: 0, s: 0, air: 0, bubbles: 0 });
   const out = finish(problem, cell, kernel, run, t0, clock, setup, dt, c0, gateDone[0] === NEVER ? Infinity : gateDone[0]);
-  out.reason = run.reason === 'Schrittgrenze erreicht' ? 'der Kolben ist am Ende der Kurve' : run.reason;
-  out.full = gateDone[0] !== NEVER ? { t: gateDone[0] * dt, s: sAt(gateDone[0]) * 1000 } : null;
-  out.airMax = snapshots.reduce((a, s) => (s.air > a.air ? s : a), snapshots[0]);
+  sleeveOutcome(out, { run, gateDone, sAtMm: step => sAt(step) * 1000, dt, snapshots });
   out.settleSteps = settleSteps;
-  out.facts.unshift(['Ende', out.full ? 'Kammer voll' : 'Ende der Kurve']);
   out.facts.splice(2, 0, ['Zur Ruhe davor', fmt(settleSteps, 0) + ' Schritte']);
   return out;
 }

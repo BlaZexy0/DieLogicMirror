@@ -6,11 +6,18 @@
    der Gitterrechnung (js/lbm/run.js), nur je Partikel statt je Zelle.
    Melder auslesen, den Aufrufer zu Wort kommen lassen: Fortschritt,
    Abbruch, Ende. Die Zustromsäule hinter dem Pressrest ist nicht im
-   Bild — sie ist die Füllkammer, nicht der Anguss. */
+   Bild — sie ist die Füllkammer, nicht der Anguss.
 
-import { NEVER, KIND } from './wcsph.js';
-/* Luft holen wie die Gitterrechnung — auch in einem Reiter im Hintergrund. */
-import { tick } from '../lbm/run.js';
+   Die Schleife selbst (Pakete, Abbruch, wann aufgehört wird) kommt aus
+   js/lbm/run.js (runPackets) — dort beschrieben, mit dem Gitter geteilt;
+   was hier bleibt, ist EIN Paket weiter: auf der Grafikkarte ein
+   Befehlspuffer, in JavaScript die Schritte einzeln, dazu das Bild aus
+   Orten und Geschwindigkeiten (snapshotOf) statt aus Zellwerten. */
+
+import { KIND } from './wcsph.js';
+/* Der Rahmen der Schleife (Pakete, Abbruch) und die Atempausen kommen aus
+   der Gitterrechnung — siehe oben. */
+import { runPackets, stepClock } from '../lbm/run.js';
 
 /** Ein Bild aus Orten und Geschwindigkeiten (Float32Array 4·n): nur
     die Schmelze, Orte in mm, Geschwindigkeit als Byte. */
@@ -49,52 +56,38 @@ export function snapshotOf(pos, vel, n, step) {
  */
 export async function runSph(opts) {
   const { solver, engine, dt, stepsMax, snapEvery, ctrlAt, onSnapshot, onWork, signal } = opts;
-  const isCancelled = () => !!(signal && signal.aborted);
   const n = solver.n;
-  const gateDone = new Array(opts.gates || solver.gates || (solver.gateArrival ? solver.gateArrival.length : 1)).fill(NEVER);
-  const snapshots = [];
-  const first = engine === 'gpu'
+  const gateCount = opts.gates || solver.gates || (solver.gateArrival ? solver.gateArrival.length : 1);
+  const initial = engine === 'gpu'
     ? snapshotOf(await solver.readPositions(), await solver.readVelocities(), n, 0)
     : snapshotOf(solver.positions(), solver.velocities(), n, 0);
-  first.uMax = 0; first.speed.fill(0);
-  snapshots.push(first);
-  let step = 0, stopAt = Infinity, reason = '';
-  while (step < stepsMax && step < stopAt && !isCancelled()) {
-    const m = Math.min(snapEvery, stepsMax - step, stopAt - step);
-    let snap;
+  initial.uMax = 0; initial.speed.fill(0);
+
+  /* Ein Paket weiter: auf der Grafikkarte ein Befehlspuffer, in JavaScript die
+     Schritte einzeln (mit Atempausen, stepClock). */
+  const advance = async (step, m) => {
+    let snap, gate;
     if (engine === 'gpu') {
       const ctrls = [];
       for (let k = 1; k <= m; k++) { const c = ctrlAt(step + k); ctrls.push({ dt, uIn: c.uIn, piston: c.piston, step: step + k }); }
-      solver.run(ctrls, step + 1);
+      solver.run(ctrls);
       step += m;
       const [p, v, g] = await Promise.all([solver.readPositions(), solver.readVelocities(), solver.readGates()]);
-      for (let k = 0; k < gateDone.length; k++) gateDone[k] = g[k];
+      gate = g;
       snap = snapshotOf(p, v, n, step);
     } else {
-      /* Nach je 40 ms Rechnen ein Bild lang Luft holen — und die Uhr dann
-         NEU stellen: stand sie still, wartete die Schleife ab den ersten
-         40 ms nach JEDEM Schritt auf das nächste Bild (gemessen 15,8 ms je
-         Schritt bei 2,3 ms Rechnen, ein Gitterlauf 66 s statt 28 s). Die
-         Schritte selbst und ihre Reihenfolge bleiben dieselben. */
-      let t0 = performance.now();
+      const yieldMaybe = stepClock(onWork);
       for (let k = 1; k <= m; k++) {
         step++;
         const c = ctrlAt(step);
         solver.step(dt, { uIn: c.uIn, piston: c.piston, step });
-        if (performance.now() - t0 > 40 && onWork) { onWork(step); await tick(); t0 = performance.now(); }
+        await yieldMaybe(step);
       }
-      for (let k = 0; k < gateDone.length; k++) gateDone[k] = solver.gateArrival[k];
+      gate = solver.gateArrival;
       snap = snapshotOf(solver.positions(), solver.velocities(), n, step);
     }
-    snapshots.push(snap);
-    const why = onSnapshot ? onSnapshot(snap, gateDone, step) : null;
-    if (why && stopAt === Infinity) {
-      stopAt = Math.min(stepsMax, step + Math.max(snapEvery, Math.round(step * 0.05)));
-      reason = why;
-    }
-    await tick();
-  }
-  if (isCancelled()) reason = 'abgebrochen';
-  else if (!reason) reason = 'Schrittgrenze erreicht';
-  return { snapshots, gateDone, steps: step, reason };
+    return { step, gate, snap };
+  };
+
+  return runPackets({ stepsMax, snapEvery, signal, initial, gateCount, advance, onSnapshot });
 }

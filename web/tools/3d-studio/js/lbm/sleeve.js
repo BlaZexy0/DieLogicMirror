@@ -49,6 +49,12 @@ export function cellCount(spec, h) {
   return { dims: [nx, nyz, nyz], count: nx * nyz * nyz };
 }
 
+/** Der Auslass in der Stirnfläche, aus dem Durchmesser (Breite D/3, Tiefe D/6 — bei Ø 90 die
+    30 × 15 mm, mit denen die Seite immer gerechnet hat): Randbedingung der Rechnung, keine
+    Eingabe. Vorgabe für spec.outletW/outletH — hier UND in js/sph/domain.js (sleeveSetup); die
+    Werkzeugseite (kammer.js) legt sie schon beim Aufstellen des Problems fest. */
+export const outletFor = d => ({ outletW: d / 3, outletH: d / 6 });
+
 /**
  * Das Gitter der Kammer.
  *   spec  { d, length, fill (0…1), outletW, outletH }  in mm
@@ -72,7 +78,8 @@ export function buildSleeveDomain(spec, h) {
   const level = fillLevel(spec.fill, R);
   const yLevel = -R + level;
   let fluidCells = 0, cells = 0;
-  const ow = Math.max(h, spec.outletW || 30), oh = Math.max(h, spec.outletH || 15);
+  const def = outletFor(spec.d);
+  const ow = Math.max(h, spec.outletW || def.outletW), oh = Math.max(h, spec.outletH || def.outletH);
   let outlet = 0, sens = 0;
   for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
     const x = origin[0] + i * h, y = origin[1] + j * h, z = origin[2] + k * h;

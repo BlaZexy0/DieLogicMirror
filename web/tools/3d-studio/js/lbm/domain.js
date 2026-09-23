@@ -71,8 +71,8 @@ function lightModel(tris, box) {
  *   g     Angussgraph
  *   h     Zellkante in mm
  *   opts.onProgress(p, was)
- * → { dims, origin, h, N, flags, sensor, gates, inletDir, axis,
- *     runnerCells, biscuitCells, inletCells, field (Anguss-SDF fürs Bild) }
+ * → { dims, origin, h, N, flags, sensor, shape, gates, inletDir, axis,
+ *     runnerCells, biscuitCells, inletCells, net }
  */
 export async function buildDomain(g, h, opts = {}) {
   const net = sampleNetwork(g);

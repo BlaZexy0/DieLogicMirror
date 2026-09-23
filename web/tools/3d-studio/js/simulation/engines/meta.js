@@ -30,6 +30,7 @@ import {
 import { buildTopology, buildVolume, fillFrame, extractSurface } from '../../meta/ogrid.js';
 import { buildGraph, cellVolumes, enclosedAir } from '../../meta/air.js';
 import { tempo, learnTempo, runClock, roughTime, kernelName, fmtCount } from './env.js';
+import { airMaxOf } from './common.js';
 
 /* Die Unterkante des Auslassfensters der Rechnungen, × R über der Achse (case_ss, windowChord). */
 const WINDOW_CHORD = 0.42;
@@ -185,7 +186,7 @@ export const meta = {
     return {
       engine: 'meta', kernel: KERNEL, kind: 'kammer', cell: null, snapshots, steps: POSITIONS, ms,
       vScale, full, reason: full ? 'Kammer voll' : 'Ende des Kolbenwegs',
-      airMax: snapshots.reduce((a, s) => (s.air > a.air ? s : a), snapshots[0]),
+      airMax: airMaxOf(snapshots),
       /* Was das Bild braucht (createDisplay) und was die Rechnung erklärt. */
       model: meta_, topo, Z, spec: { ...spec }, travel, lam,
       facts: [

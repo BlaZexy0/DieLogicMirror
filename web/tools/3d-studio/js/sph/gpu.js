@@ -12,15 +12,18 @@
    sonst läse ein Thread den schon bewegten Nachbarn.
 
    Die Steuerwerte je Schritt (Zeitschritt, Kolben, Zähigkeit) stehen
-   in einem Uniform-Puffer mit 256 Byte je Schritt; ein Paket von
+   in einem Uniform-Puffer mit 512 Byte je Schritt; ein Paket von
    Schritten ist EIN Befehlspuffer. Gelesen wird nur für ein Bild:
    Orte, Geschwindigkeiten, Melder — über einen Zwischenpuffer.
 
    Acht Speicherpuffer, mehr erlaubt WebGPU je Shader nicht: Orte und
    Geschwindigkeiten je zweimal, das Gitter (Zähler und Fächer in
    einem), die Melder, das Abstandsfeld und die Rollen (Flag und Melder
-   in einem Wort). Gibt es kein WebGPU, meldet createGpuSphSolver das
-   mit einem Fehler; die Seite fällt auf den JavaScript-Kern zurück.
+   in einem Wort). Gibt es kein WebGPU, meldet createGpuSphSolver das mit
+   einem Fehler. Einen Rückfall auf den JavaScript-Kern gibt es dabei
+   nicht mehr: welcher Kern läuft, entscheidet sich vorher (probeGpu,
+   kernelOf in engines/sph.js), und scheitert die Grafikkarte doch, endet
+   der Lauf als „Rechnung gescheitert" (core.js).
 
    Verlorene Karte und gescheitertes Anlegen wie beim Gitter (js/lbm/gpu.js):
    eine gewöhnliche Meldung statt eines AbortError, und Gerät und Puffer
@@ -28,18 +31,14 @@
 
 import { SUPPORT } from './kernel.js';
 import { PARAMS, NEVER, KIND } from './wcsph.js';
-import { lostError, failedSetup } from '../lbm/gpu.js';
+import { failedSetup, openDevice, lostTracker, makeBuffer, compileShader, readBuffer } from '../lbm/webgpu.js';
 
 const WG = 64;
 const UNIFORM_STRIDE = 512;
 const BATCH = 32;
 /** Fächer je Zelle. Im Träger 2h = 2,4 d stehen in Ruhe rund 14
     Partikel je Zelle; gestaucht an einer Wand auch 25. */
-export const SLOTS = 48;
-
-export function hasWebGPU() {
-  return typeof navigator !== 'undefined' && !!navigator.gpu;
-}
+const SLOTS = 48;
 
 function wgsl() {
   return /* wgsl */`
@@ -47,7 +46,7 @@ struct U {
   n: u32, step: u32, k: u32, cells: u32,
   dt: f32, uin: f32, piston: f32, alpha: f32,
   h: f32, c0: f32, rho0: f32, mass: f32,
-  bt: f32, delta: f32, eps: f32, rb: f32,
+  bt: f32, delta: f32, pad0: f32, rb: f32,
   g: vec4<f32>,
   gmin: vec4<f32>,
   gdims: vec4<u32>,
@@ -58,7 +57,6 @@ struct U {
   bnd: vec4<f32>,
   bnd2: vec4<f32>,
   axis: vec4<f32>,
-  extra: vec4<f32>,
   rate0: vec4<f32>,
   rate1: vec4<f32>
 };
@@ -76,12 +74,6 @@ const DEAD = ${KIND.DEAD}u; const FLUID = ${KIND.FLUID}u; const INFLOW = ${KIND.
 const GAMMA = ${PARAMS.gamma}.0;
 const PI = 3.14159265358979;
 
-fn kernW(r: f32, h: f32) -> f32 {
-  let q = r / h;
-  if (q >= 2.0) { return 0.0; }
-  let t = 1.0 - 0.5 * q;
-  return 21.0 / (16.0 * PI * h * h * h) * t * t * t * t * (2.0 * q + 1.0);
-}
 fn kernDW(r: f32, h: f32) -> f32 {
   let q = r / h;
   if (q >= 2.0 || r <= 0.0) { return 0.0; }
@@ -148,8 +140,9 @@ fn update(@builtin(global_invocation_id) gid: vec3<u32>) {
   }
   let xi = pi4.xyz; let vi = vi4.xyz; let rhoi = vi4.w;
   let h = u.h; let H2 = (2.0 * h) * (2.0 * h); let eta2 = 0.01 * h * h;
-  let pri = tait(rhoi) / (rhoi * rhoi);
-  var acc = vec3<f32>(0.0); var dr = 0.0; var xs = vec3<f32>(0.0);
+  let taiRhoi = tait(rhoi);
+  let pri = taiRhoi / (rhoi * rhoi);
+  var acc = vec3<f32>(0.0); var dr = 0.0;
   let c = u.gmin.w;
   let ci = clamp(i32(floor((xi.x - u.gmin.x) / c)), 0, i32(u.gdims.x) - 1);
   let cj = clamp(i32(floor((xi.y - u.gmin.y) / c)), 0, i32(u.gdims.y) - 1);
@@ -170,12 +163,12 @@ fn update(@builtin(global_invocation_id) gid: vec3<u32>) {
           let r2 = dot(rij, rij);
           if (r2 >= H2 || r2 < 1e-30) { continue; }
           let r = sqrt(r2);
-          let dw = kernDW(r, h); let w = kernW(r, h);
+          let dw = kernDW(r, h);
           let gr = rij * (dw / r);
           let vj4 = velIn[j];
           let rhoj = vj4.w;
           /* Zustrompartikel tragen den Druck des Partikels, auf das sie wirken. */
-          var pj = tait(rhoi);
+          var pj = taiRhoi;
           if (u32(pj4.w) == FLUID) { pj = tait(rhoj); }
           let vij = vi - vj4.xyz;
           let vr = dot(vij, rij);
@@ -185,7 +178,6 @@ fn update(@builtin(global_invocation_id) gid: vec3<u32>) {
           acc += f * gr;
           dr += u.mass * dot(vij, gr);
           dr += u.delta * h * u.c0 * 2.0 * (rhoj - rhoi) * (-dw * r) / (r2 + eta2) * u.mass / rhoj;
-          xs -= (u.mass / (0.5 * (rhoi + rhoj)) * w) * vij;
         }
       }
     }
@@ -195,7 +187,7 @@ fn update(@builtin(global_invocation_id) gid: vec3<u32>) {
   let vcl = u.bnd2.y;
   if (sp > vcl) { v = v * (vcl / sp); }
   let rho = max(0.5 * u.rho0, rhoi + dr * dt);
-  var p = xi + (v + u.eps * xs) * dt;
+  var p = xi + v * dt;
   var kn = FLUID;
   let rb = u.rb;
   if (u.bnd2.w < 0.5) {
@@ -244,11 +236,11 @@ fn update(@builtin(global_invocation_id) gid: vec3<u32>) {
       if (sen > 0u) {
         let k = sen - 1u;
         atomicMin(&gate[3u * k], u.step);
-        atomicMin(&gate[3u * k + 1u], u32(u.extra.x * 1e6));
+        atomicMin(&gate[3u * k + 1u], u32(u.piston * 1e6));
         if (flag == u.fdims.w) {
           /* Der gedrosselte Auslass: Partikel je Meter Kolbenweg ab der Ankunft. */
           let sArr = f32(atomicLoad(&gate[3u * k + 1u])) * 1e-6;
-          let quota = u32(max(0.0, floor(rateOf(k) * (u.extra.x - sArr))));
+          let quota = u32(max(0.0, floor(rateOf(k) * (u.piston - sArr))));
           if (atomicLoad(&gate[3u * k + 2u]) < quota) { atomicAdd(&gate[3u * k + 2u], 1u); kn = DEAD; }
         }
       } else if (flag == u.fdims.w) { kn = DEAD; }
@@ -260,12 +252,9 @@ fn update(@builtin(global_invocation_id) gid: vec3<u32>) {
 `;
 }
 
-/** Der Shader-Quelltext — für Tests und die Fehlersuche. */
-export const wgslSource = wgsl;
-
 /**
  * Den GPU-Kern anlegen — gleiche Rolle wie createSphSolver, Lesen asynchron:
- *   run(ctrls, firstStep)   n Schritte mit ctrls[k] = { dt, uIn, piston, alpha? }
+ *   run(ctrls)              n Schritte mit ctrls[k] = { dt, uIn, piston, step, alpha? }
  *   readPositions()         Float32Array(4·n)  x y z Art
  *   readVelocities()        Float32Array(4·n)  vx vy vz ρ
  *   readGates()             Uint32Array
@@ -273,23 +262,14 @@ export const wgslSource = wgsl;
  *   dispose()
  */
 export async function createGpuSphSolver(setup, params = {}) {
-  if (!hasWebGPU()) throw new Error('Kein WebGPU in diesem Browser.');
   const P = { ...PARAMS, ...params };
-  const adapter = await navigator.gpu.requestAdapter();
-  if (!adapter) throw new Error('WebGPU: kein Adapter (Grafikkarte nicht freigegeben?).');
   const n = setup.n;
   const cellSize = SUPPORT * setup.h;
   const gdims = [0, 1, 2].map(a => Math.max(1, Math.ceil((setup.box.max[a] - setup.box.min[a]) / cellSize) + 1));
   const cells = gdims[0] * gdims[1] * gdims[2];
   const gridWords = cells + cells * SLOTS;
-  const limits = {};
   const need = Math.max(gridWords * 4, 16 * n);
-  if (need > adapter.limits.maxStorageBufferBindingSize) {
-    throw new Error('Der Partikelsatz braucht ' + (need / 1048576).toFixed(0) + ' MB je Puffer, die Grafikkarte erlaubt '
-      + (adapter.limits.maxStorageBufferBindingSize / 1048576).toFixed(0) + ' MB. Partikelabstand vergrößern.');
-  }
-  if (need > 134217728) { limits.maxStorageBufferBindingSize = need; limits.maxBufferSize = need; }
-  const device = await adapter.requestDevice({ requiredLimits: limits });
+  const device = await openDevice(need, 'Der Partikelsatz', 'Puffer', 'Partikelabstand vergrößern');
   const buffers = [];
   try {
     return await buildSolver(device, buffers, setup, P, { n, cellSize, gdims, cells, gridWords });
@@ -300,10 +280,8 @@ export async function createGpuSphSolver(setup, params = {}) {
 
 /* Alles nach requestDevice — wie im Gitter: was angelegt wird, steht in `buffers`. */
 async function buildSolver(device, buffers, setup, P, { n, cellSize, gdims, cells, gridWords }) {
-  /* „destroyed" meldet das eigene dispose() — das ist kein Verlust. */
-  let lost = null;
-  device.lost.then(info => { if (info.reason !== 'destroyed') lost = info; });
-  const mk = (size, usage) => { const b = device.createBuffer({ size: Math.max(16, Math.ceil(size / 4) * 4), usage }); buffers.push(b); return b; };
+  const getLost = lostTracker(device);
+  const mk = (size, usage) => makeBuffer(device, buffers, size, usage);
   const ST = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST;
   const bufPA = mk(16 * n, ST), bufPB = mk(16 * n, ST), bufVA = mk(16 * n, ST), bufVB = mk(16 * n, ST);
   const bufGrid = mk(gridWords * 4, ST);
@@ -329,10 +307,7 @@ async function buildSolver(device, buffers, setup, P, { n, cellSize, gdims, cell
   device.queue.writeBuffer(bufS, 0, sdfData);
   device.queue.writeBuffer(bufR, 0, roles);
 
-  const module = device.createShaderModule({ code: wgsl() });
-  const info = await module.getCompilationInfo();
-  const errors = info.messages.filter(m => m.type === 'error');
-  if (errors.length) throw new Error('WGSL: ' + errors.map(m => m.lineNum + ':' + m.linePos + ' ' + m.message).join(' | '));
+  const module = await compileShader(device, wgsl());
   const layout = device.createBindGroupLayout({
     entries: [
       { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform', hasDynamicOffset: true } },
@@ -361,14 +336,14 @@ async function buildSolver(device, buffers, setup, P, { n, cellSize, gdims, cell
   const B = setup.rho0 * setup.c0 * setup.c0 / P.gamma;
   const vClamp = 0.5 * setup.c0;
 
-  function encodeBatch(ctrls, firstStep) {
+  function encodeBatch(ctrls) {
     const m = ctrls.length;
     for (let k = 0; k < m; k++) {
       const o = k * UNIFORM_STRIDE / 4, c = ctrls[k];
-      u32[o] = n; u32[o + 1] = c.step !== undefined ? c.step : firstStep + k; u32[o + 2] = SLOTS; u32[o + 3] = cells;
+      u32[o] = n; u32[o + 1] = c.step; u32[o + 2] = SLOTS; u32[o + 3] = cells;
       f32[o + 4] = c.dt; f32[o + 5] = c.uIn || 0; f32[o + 6] = c.piston || 0; f32[o + 7] = c.alpha !== undefined ? c.alpha : P.alpha;
       f32[o + 8] = setup.h; f32[o + 9] = setup.c0; f32[o + 10] = setup.rho0; f32[o + 11] = setup.mass;
-      f32[o + 12] = B; f32[o + 13] = P.delta; f32[o + 14] = P.eps; f32[o + 15] = 0.5 * setup.d;
+      f32[o + 12] = B; f32[o + 13] = P.delta; f32[o + 15] = 0.5 * setup.d;
       const g = setup.g || [0, 0, 0];
       f32[o + 16] = g[0]; f32[o + 17] = g[1]; f32[o + 18] = g[2]; f32[o + 19] = 0;
       f32[o + 20] = setup.box.min[0]; f32[o + 21] = setup.box.min[1]; f32[o + 22] = setup.box.min[2]; f32[o + 23] = cellSize;
@@ -383,16 +358,15 @@ async function buildSolver(device, buffers, setup, P, { n, cellSize, gdims, cell
         f32[o + 48] = 0; f32[o + 49] = vClamp; f32[o + 50] = setup.inflow ? setup.inflow.plane : 0; f32[o + 51] = 1;
         const a = setup.inflow ? setup.inflow.axis : [0, 0, 0];
         f32[o + 52] = a[0]; f32[o + 53] = a[1]; f32[o + 54] = a[2]; f32[o + 55] = 0;
-        for (let q = 0; q < 8; q++) f32[o + 60 + q] = setup.gateRate && q < setup.gateRate.length ? setup.gateRate[q] : 1e30;
+        for (let q = 0; q < 8; q++) f32[o + 56 + q] = setup.gateRate && q < setup.gateRate.length ? setup.gateRate[q] : 1e30;
       } else {
-        for (let q = 0; q < 8; q++) f32[o + 60 + q] = 1e30;
+        for (let q = 0; q < 8; q++) f32[o + 56 + q] = 1e30;
         for (let q = 28; q < 44; q++) u32[o + q] = 0;
         f32[o + 31] = 1; f32[o + 39] = 1;
         f32[o + 44] = bnd.R; f32[o + 45] = bnd.L; f32[o + 46] = bnd.outletW; f32[o + 47] = bnd.outletH;
         f32[o + 48] = bnd.sensorDepth; f32[o + 49] = vClamp; f32[o + 50] = 0; f32[o + 51] = 0;
         f32[o + 52] = 1; f32[o + 53] = 0; f32[o + 54] = 0; f32[o + 55] = 0;
       }
-      f32[o + 56] = c.piston || 0; f32[o + 57] = 0; f32[o + 58] = 0; f32[o + 59] = 0;
     }
     device.queue.writeBuffer(bufUni, 0, uni, 0, m * UNIFORM_STRIDE);
     const enc = device.createCommandEncoder();
@@ -411,43 +385,28 @@ async function buildSolver(device, buffers, setup, P, { n, cellSize, gdims, cell
     device.queue.submit([enc.finish()]);
   }
 
-  async function read(buf, byteLength, Ctor) {
-    if (lost) throw lostError(lost);
-    const staging = device.createBuffer({ size: byteLength, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
-    const enc = device.createCommandEncoder();
-    enc.copyBufferToBuffer(buf, 0, staging, 0, byteLength);
-    device.queue.submit([enc.finish()]);
-    try { await staging.mapAsync(GPUMapMode.READ); }
-    catch (err) { staging.destroy(); throw lostError(lost, err); }
-    const out = new Ctor(staging.getMappedRange().slice(0));
-    staging.unmap();
-    staging.destroy();
-    return out;
-  }
+  const read = (buf, byteLength, Ctor) => readBuffer(device, getLost, buf, byteLength, Ctor);
 
   return {
-    n, nMax: n, device, d: setup.d, h: setup.h, rho0: setup.rho0, mass: setup.mass, c0: setup.c0, cells, gdims, gates: gates.length,
-    run(ctrls, firstStep) {
-      for (let s = 0; s < ctrls.length; s += BATCH) encodeBatch(ctrls.slice(s, s + BATCH), firstStep + s);
+    n, nMax: n, d: setup.d, h: setup.h, rho0: setup.rho0, mass: setup.mass, c0: setup.c0, cells, gdims, gates: gates.length,
+    run(ctrls) {
+      for (let s = 0; s < ctrls.length; s += BATCH) encodeBatch(ctrls.slice(s, s + BATCH));
     },
     /* Nach dem letzten Schritt hält der Puffer des NÄCHSTEN Eingangs die neuesten Werte. */
     readPositions: () => read(posBufs[parity], 16 * n, Float32Array),
     readVelocities: () => read(velBufs[parity], 16 * n, Float32Array),
     /** Ankunftsschritt je Anschnitt (NEVER = nie). */
     readGates: async () => { const g = await read(bufG, gates.byteLength, Uint32Array); const out = new Uint32Array(nGates); for (let k = 0; k < nGates; k++) out[k] = g[3 * k]; return out; },
-    /** Je Anschnitt: Ankunftsschritt, Kolbenweg bei Ankunft (m), Hinausgelassene. */
-    readGateInfo: async () => { const g = await read(bufG, gates.byteLength, Uint32Array); const out = []; for (let k = 0; k < nGates; k++) out.push({ step: g[3 * k], s: g[3 * k + 1] === NEVER ? Infinity : g[3 * k + 1] * 1e-6, killed: g[3 * k + 2] }); return out; },
     async settle(steps, dt) {
       const ctrls = [];
       for (let k = 0; k < steps; k++) ctrls.push({ dt, uIn: 0, piston: 0, alpha: P.settleAlpha, step: 0 });
-      this.run(ctrls, 0);
+      this.run(ctrls);
       const v = await this.readVelocities();
       for (let i = 0; i < n; i++) { v[4 * i] = 0; v[4 * i + 1] = 0; v[4 * i + 2] = 0; }
       device.queue.writeBuffer(velBufs[parity], 0, v);
       device.queue.writeBuffer(velBufs[parity ^ 1], 0, v);
       device.queue.writeBuffer(bufG, 0, gates);
     },
-    sync: () => device.queue.onSubmittedWorkDone(),
     dispose() { for (const b of buffers) b.destroy(); device.destroy(); }
   };
 }

@@ -299,7 +299,7 @@ test('Ein anderes Problem verwirft beide Ergebnisse', () => {
   seg(ui('engine-seg'), 'lbm').dispatch('click');
   set(ui('cell'), '0,5');
   assert.equal(ui('primary').disabled, true);
-  assert.match(ui('note').textContent, /^Zu fein: höchstens [\d,]+ Mio\. Zellen\.$/, 'unter dem Knopf in einer Zeile');
+  assert.match(ui('note').textContent, /^Zu fein: höchstens [\d.,]+ (Mio\.|Tsd\.) Zellen\.$/, 'unter dem Knopf in einer Zeile');
   assert.match(ui('engine-warn').textContent, /^Zu fein: .* Die Zellkante vergrößern\.$/, 'hier mit dem Rat');
   set(ui('cell'), '6');
   assert.equal(ui('primary').disabled, false);

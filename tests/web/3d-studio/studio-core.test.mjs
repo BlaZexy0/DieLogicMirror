@@ -230,18 +230,17 @@ test('Abbruch: das Feld hört an seinem Haltepunkt auf und wirft AbortError', as
   assert.ok(calls >= 2 && calls < 40, 'nach dem Abbruch keine weiteren Blöcke: ' + calls);
 });
 
-test('Abbruch: die Simulation meldet „abgebrochen" über das Signal', async () => {
+test('Abbruch: die Simulation verlässt runPackets als AbortError über das Signal', async () => {
   const N = 8;
   const solver = { step() {}, fill: () => new Float32Array(N), velocity: () => new Float32Array(3 * N), gateArrival: [], arrival: () => new Float32Array(N) };
   const ac = new AbortController();
   const domain = { N, flags: new Uint8Array(N), gates: [] };
   let snaps = 0;
-  const run = await runSimulation({
+  await assert.rejects(runSimulation({
     solver, engine: 'cpu', domain, stepsMax: 1000, snapEvery: 10, uAt: () => [0, 0, 0], signal: ac.signal,
     onSnapshot: () => { if (++snaps === 3) ac.abort(); return null; }
-  });
-  assert.equal(run.reason, 'abgebrochen');
-  assert.ok(run.steps < 1000);
+  }), err => isAbort(err));
+  assert.ok(snaps < 100, 'nach dem Abbruch kein weiteres Bild: ' + snaps);
 });
 
 /* Einpassen neben Aufsätzen: das Modell steht danach GANZ im freien Rechteck —

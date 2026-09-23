@@ -26,7 +26,7 @@ import * as T from 'three';
 import { segButtons, segButtonSet, slider, numberInput, parseNumber, clampNote } from '../ui/controls.js';
 import { kpis, esc } from '../studio/rows.js';
 import { fmtPlain, fmtUnit, fmtFixed, rangeText } from '../studio/format.js';
-import { fillLevel } from '../lbm/sleeve.js';
+import { fillLevel, outletFor } from '../lbm/sleeve.js';
 import * as F from '../runner/flow.js';
 import { shotTimeline } from '../runner/shottime.js';
 import { state as design } from '../../../auslegung/js/core/state.js';
@@ -44,13 +44,10 @@ export const FORMAT_VERSION = 1;
 /* Die Vorgaben an EINER Stelle: die Felder der Seitenleiste werden daraus
    beschrieben (syncFields), „Zurücksetzen" führt hierher zurück. Die beiden
    alten Seiten trugen v₁ doppelt — „0,5" als Text im HTML, 0.5 im Skript. */
-/* Der Auslass in der Stirnfläche ist keine Eingabe: Er folgt dem Durchmesser
-   (Breite D/3, Tiefe D/6 — bei Ø 90 die 30 × 15 mm, mit denen die Seite immer
-   gerechnet hat). Er ist Randbedingung der Rechnung, kein Entwurf: der
-   Laufkanal wird im Angussdesigner ausgelegt, und das Metamodell kennt
-   ohnehin nur sein eigenes Fenster (engines/meta.js). Darum steht er auch
-   nicht im Bild. */
-const outletFor = d => ({ outletW: d / 3, outletH: d / 6 });
+/* Der Auslass in der Stirnfläche ist keine Eingabe: outletFor (js/lbm/sleeve.js) legt ihn aus dem
+   Durchmesser fest. Er ist Randbedingung der Rechnung, kein Entwurf: der Laufkanal wird im
+   Angussdesigner ausgelegt, und das Metamodell kennt ohnehin nur sein eigenes Fenster
+   (engines/meta.js). Darum steht er auch nicht im Bild. */
 /** Reicht die Kurve bis „Kammer voll"? Sonst ist tFull NaN (updateProblem). */
 const reaches = cv => !!cv && Number.isFinite(cv.tFull);
 
