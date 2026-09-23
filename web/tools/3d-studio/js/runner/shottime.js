@@ -29,6 +29,26 @@
 
 import { generateCurve } from '../../../auslegung/js/core/curvegen.js';
 import { computeShot, pistonArea, rhoSolidus } from '../../../auslegung/js/core/physics.js';
+import { ALLOYS } from './flow.js';
+
+/* Die Legierung eines Werkzeugs gilt auch für seine Kurve: Angussdesigner
+   und Angussfüllung wählen sie selbst. Vorher rechnete die Kurve still mit
+   der des Projekts, und ein Zink-Anguss bekam die Füllzeit und die Dichten
+   von Aluminium (in der Angussfüllung noch bis zum 23.09.). Ist die
+   Legierung des Projekts dasselbe Metall (ihre Schmelzdichte liegt dieser
+   am nächsten), bleibt es bei ihr und ihren genaueren Werten; sonst gelten
+   die der Vorlage aus den Legierungen des Projekts
+   (shared/examples/alloys.js). */
+const CURVE_ALLOY = { al: 'alsi9cu3', mg: 'az91d', zn: 'zamak5' };
+const metalOf = rho => Object.keys(ALLOYS).reduce((a, k) => (Math.abs(Math.log(rho / ALLOYS[k].rho)) < Math.abs(Math.log(rho / ALLOYS[a].rho)) ? k : a));
+/** Die Werte der Auslegung (`values`) mit der Legierung `alloy` (al, mg, zn). */
+export function curveValues(values, alloy) {
+  if (values.density > 0 && metalOf(values.density) === alloy) return values;
+  const list = (globalThis.__ALLOYS__ && globalThis.__ALLOYS__.alloys) || [];
+  const preset = list.find(a => a.id === CURVE_ALLOY[alloy])
+    || list.find(a => a.fields && a.fields.density > 0 && metalOf(a.fields.density) === alloy);
+  return preset ? { ...values, ...preset.fields } : { ...values, density: ALLOYS[alloy].rho, densitySolid: 0 };
+}
 
 /**
  * Die Zeitachse des Schusses für ein Modell.

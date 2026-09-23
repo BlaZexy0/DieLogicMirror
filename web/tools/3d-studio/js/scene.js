@@ -9,11 +9,12 @@
    gleich groß bleibt. Das Steuerwerk bekommt die neue Kamera zugewiesen;
    object wird dort bei jedem update() gelesen.
 
-   Zwei Steuerwerke stehen zur Wahl (Option `orbit`): die OrbitControls
-   von Three.js und der Quaternionen-Trackball aus js/trackball.js. */
+   Gesteuert wird mit dem Quaternionen-Trackball aus js/trackball.js. Die
+   OrbitControls von Three.js standen als Option `orbit` daneben, gewählt
+   hat sie niemand; sie wurden auf jeder 3D-Seite trotzdem geladen (30 KB,
+   bis zum 23.09.). */
 
 import * as T from 'three';
-import { OrbitControls } from '../vendor/three/OrbitControls.js';
 import { TrackballControls } from './trackball.js';
 import { mountAxes } from './ui/axes.js';
 import { ROLE, onScheme } from './part/colors.js';
@@ -41,11 +42,6 @@ export function initScene(container, opts = {}) {
     gridSize = 3000, gridY = -470, grid: wantGrid = false,
     cameraStart = [1500, 680, -1350], target = [0, 0, 20],
     minDistance = 60, maxDistance = 8000,
-    /* 'trackball' dreht frei mit Quaternionen um den Zielpunkt
-       (js/trackball.js) — das ist seit dem Angussdesigner der Griff aller
-       Viewer: kein Pol, keine Sperre, von unten ansehen geht. 'orbit'
-       (Azimut und Höhenwinkel um eine feste Hochachse) bleibt wählbar. */
-    orbit = 'trackball',
     /* Mitgeführtes Licht. Ortsfeste Lichter setzen voraus, dass es ein
        „oben" und eine bevorzugte Blickrichtung gibt. Wer frei um einen
        Körper dreht, schaut ständig auf die abgewandte Seite, und die
@@ -85,12 +81,10 @@ export function initScene(container, opts = {}) {
   const invalidate = () => { dirty = true; warmUntil = performance.now() + 1000; };
   const api = { scene, renderer, camera: persp, projection: 'persp', invalidate };
 
-  const controls = orbit === 'trackball'
-    ? new TrackballControls(persp, renderer.domElement)
-    : new OrbitControls(persp, renderer.domElement);
+  /* Der Trackball dreht frei mit Quaternionen um den Zielpunkt: kein Pol,
+     keine Sperre, von unten ansehen geht. */
+  const controls = new TrackballControls(persp, renderer.domElement);
   controls.target.set(...target);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
   controls.minDistance = minDistance;
   controls.maxDistance = maxDistance;
   controls.minZoom = 0.02;

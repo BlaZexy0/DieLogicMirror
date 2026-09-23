@@ -1,6 +1,7 @@
 /* Definition aller Eingabefelder (Gruppen, Labels, Einheiten, Defaults).
    Die 'key'-Namen sind die kanonischen Feldnamen — Charts referenzieren sie
-   in ihrer inputs-Liste, Maschinen-Presets (config/machines.json) setzen sie. */
+   in ihrer inputs-Liste, die Presets (/shared/examples/*.js und die
+   Stammdaten der Organisation) setzen sie. */
 
 /* Preset-Domänen: jede hat ein Select in der Sidebar, einen Zustands-Schlüssel
    (state[stateKey]) und eine Feldgruppe (groups[].preset === id), die bei
@@ -119,7 +120,7 @@ export const groups = [
   },
   {
     id: 'vacuum', title: 'Vakuum und Entlüftung',
-    note: 'Die Entlüftungsfläche treibt die Entlüftungs-KPIs und -Diagramme. In den Drossel-Modellen der Simulation (Backend) ist sie mit Spalt und Kanallänge der Widerstand, durch den die Luft zur Pumpe bzw. in den Tank muss: bei großem Druckverhältnis chokt der Kanal (Schallgeschwindigkeit am Austritt), dazwischen begrenzt die Wandreibung, bei kleiner Druckdifferenz und niedrigem Druck fließt die Luft zäh (laminar). „Sofort-Enddruck" ignoriert Fläche und Kanal; der Druck springt beim Öffnen auf den Enddruck. Der Tank ist vor dem Schuss auf den Enddruck evakuiert; sein Druck steigt mit jeder abgesaugten Luftmasse. Schließt das Ventil vor dem Füllende, wird die Restluft danach verdichtet.',
+    note: 'Die Entlüftungsfläche treibt die Entlüftungs-KPIs und -Diagramme. In den Drossel-Modellen der Luftsimulation ist sie mit Spalt und Kanallänge der Widerstand, durch den die Luft zur Pumpe bzw. in den Tank muss: bei großem Druckverhältnis chokt der Kanal (Schallgeschwindigkeit am Austritt), dazwischen begrenzt die Wandreibung, bei kleiner Druckdifferenz und niedrigem Druck fließt die Luft zäh (laminar). „Sofort-Enddruck" ignoriert Fläche und Kanal; der Druck springt beim Öffnen auf den Enddruck. Der Tank ist vor dem Schuss auf den Enddruck evakuiert; sein Druck steigt mit jeder abgesaugten Luftmasse. Schließt das Ventil vor dem Füllende, wird die Restluft danach verdichtet.',
     fields: [
       { key: 'vacModel', label: 'Vakuum-Modell', unit: '', def: 'conductance', type: 'select',
         options: [['aus', 'ohne Vakuum'], ['ideal', 'Sofort-Enddruck (ideal, ohne Drossel)'], ['conductance', 'Drossel → Pumpe (Enddruck konstant)'], ['tank', 'Drossel → Vakuumtank (Druck steigt)']] },

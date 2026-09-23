@@ -47,12 +47,15 @@ import { createSolver } from '../../lbm/fslbm.js';
 import { createGpuSolver } from '../../lbm/gpu.js';
 import { runSimulation } from '../../lbm/run.js';
 import { paintMelt, speedScale } from '../../lbm/paint.js';
-import { NEVER } from '../../lbm/lattice.js';
+import { NEVER, Q, FF, FU } from '../../lbm/lattice.js';
 import { env, tempo, runTime, learnTempo, runClock, gpuFailure, roughTime, kernelName, fmtCount, fmtMB, tick } from './env.js';
 
-/* Byte je Zelle auf der Grafikkarte: zwei Sätze Verteilungen, Zellwerte
-   doppelt, Flaggen und Melder — die Kammer führt ein Feld mehr (Kolben). */
-const bytesPerCell = kind => 19 * 2 * 4 + 7 * 4 + (kind === 'kammer' ? 7 : 6) * 4;
+/* Byte je Zelle, wie beide Kerne sie anlegen (lbm/fslbm.js, lbm/gpu.js):
+   zwei Sätze Verteilungen, die Zellwerte doppelt (vor und nach dem
+   Schritt), dazu Flaggen, Melder und Form. Vorher fehlte der zweite Satz
+   Zellwerte, und die Anzeige lag rund 13 % unter dem, was wirklich belegt
+   wird. */
+const BYTES_PER_CELL = 4 * (2 * Q + 2 * FF.COUNT_F + FU.COUNT_U);
 
 const kernelOf = opts => (env.gpu && !(opts && opts.forceCpu) ? 'gpu' : 'cpu');
 const countOf = (problem, cell) => (problem.kind === 'kammer' ? countSleeve(problem.spec, cell) : countRunner(problem.graph, cell));
@@ -99,7 +102,7 @@ export const lbm = {
     const ms = runTime({ steps: tRun / units.dt, stepsMax: tLimit / units.dt, frames: kammer ? 100 : 80, c: count * tempo('lbm', kernel), kernel });
     const parts = ['Gitter ' + dims.join(' × ') + ' = ' + fmtCount(count) + ' Zellen'];
     if (problem.kind === 'kammer') parts.push(fmt(problem.spec.d / cell, 0) + ' Zellen über den Durchmesser');
-    parts.push(fmtMB(count * bytesPerCell(problem.kind)), roughTime(ms), kernelName(kernel));
+    parts.push(fmtMB(count * BYTES_PER_CELL), roughTime(ms), kernelName(kernel));
     return {
       text: parts.join(' · '), count, kernel,
       note: env.gpu ? '' : 'Kein WebGPU in diesem Browser: gerechnet wird in JavaScript, auf grobem Gitter (bis ' + fmt(MAX_CELLS_CPU / 1e3, 0)

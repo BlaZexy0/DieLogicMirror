@@ -23,6 +23,18 @@ function parseSTL(buffer) {
   throw new Error('Kein gültiges STL-Format erkannt');
 }
 
+/* Eine unlesbare Koordinate (ASCII: „1e", „-"; binär: NaN oder unendlich)
+   übernahm der Parser stumm. Volumen und Fläche wurden NaN, und die Seite
+   meldete ein „nach innen gewickeltes" Netz statt einer beschädigten
+   Datei. Dieselbe Meldung wie beim Laden im 3D-Studio (part/stlio.js). */
+function pruefeKoordinaten(vals, n) {
+  for (let i = 0; i < n; i++) {
+    if (!Number.isFinite(vals[i])) {
+      throw new Error('Unlesbare Koordinate in der STL (Punkt ' + (Math.floor(i / 3) + 1) + '): die Datei ist beschädigt.');
+    }
+  }
+}
+
 function parseBinarySTL(dv, n) {
   const tris = new Float32Array(n * 9);
   for (let i = 0; i < n; i++) {
@@ -31,6 +43,7 @@ function parseBinarySTL(dv, n) {
       tris[i * 9 + k] = dv.getFloat32(base + k * 4, true);
     }
   }
+  pruefeKoordinaten(tris, tris.length);
   return tris;
 }
 
@@ -43,6 +56,7 @@ function parseAsciiSTL(text) {
   }
   const nTri = Math.floor(vals.length / 9);
   if (nTri === 0) throw new Error('Keine Dreiecke in der ASCII-STL gefunden');
+  pruefeKoordinaten(vals, nTri * 9);
   return Float32Array.from(vals.slice(0, nTri * 9));
 }
 

@@ -522,33 +522,7 @@
 </div><!-- .content-wrap -->
 
 <script>
-/* ============================================================
-   Kreissegment-Löser (gemeinsame Basis)
-   ============================================================ */
-const PI = Math.PI, G = 9.81;
-
-/* ── Kernlöser ────────────────────────────────────────────── */
-function thetaOfPhi(phi) {
-  if (phi <= 0) return 1e-9;
-  if (phi >= 1) return 2*PI - 1e-9;
-  // Startwert über Kleinwinkel-Inversion
-  let th = phi < 0.5
-    ? Math.cbrt(12*PI*phi)
-    : 2*PI - Math.cbrt(12*PI*(1-phi));
-  for (let i = 0; i < 60; i++) {
-    const f  = th - Math.sin(th) - 2*PI*phi;
-    const fp = 1  - Math.cos(th);
-    if (Math.abs(fp) < 1e-15) break;
-    const dth = f / fp;
-    th -= dth;
-    if (Math.abs(dth) < 1e-13) break;
-  }
-  return th;
-}
-
-function etaOfTheta(theta) {
-  return (1 - Math.cos(theta/2)) / 2;
-}
+const PI = Math.PI;
 
 /* Farben: Rollen der Palette, gelesen bei jedem Zeichnen (window.__PALETTE__
    ist immer das aktuelle Schema; schemes.js belegt es beim Wechsel neu).

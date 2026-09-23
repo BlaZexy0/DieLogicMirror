@@ -37,9 +37,12 @@ def cmd_init(_args):
 
 def cmd_create_org(args):
     with SessionLocal() as db:
-        if db.scalar(select(Org).where(Org.slug == args.slug)):
-            sys.exit(f"Slug '{args.slug}' ist vergeben.")
-        org = Org(slug=args.slug.lower(), name=args.name)
+        # Geprüft wird, was gespeichert wird: vorher kam „ACME" neben
+        # „acme" durch die Prüfung und scheiterte dann an der Datenbank.
+        slug = args.slug.strip().lower()
+        if db.scalar(select(Org).where(Org.slug == slug)):
+            sys.exit(f"Slug '{slug}' ist vergeben.")
+        org = Org(slug=slug, name=args.name)
         db.add(org)
         db.commit()
         print(f"Organisation {org.slug} ({org.name}) angelegt.")
@@ -82,7 +85,7 @@ def _guard_last_admin(db, user, was: str, force: bool = False) -> None:
 
 def cmd_disable(args):
     with SessionLocal() as db:
-        user = db.scalar(select(User).where(User.email == args.email.lower()))
+        user = db.scalar(select(User).where(User.email == args.email.strip().lower()))
         if not user:
             sys.exit("Unbekannte E-Mail-Adresse.")
         _guard_last_admin(db, user, "deaktivieren", args.force)
@@ -95,7 +98,7 @@ def cmd_disable(args):
 
 def cmd_set_role(args):
     with SessionLocal() as db:
-        user = db.scalar(select(User).where(User.email == args.email.lower()))
+        user = db.scalar(select(User).where(User.email == args.email.strip().lower()))
         if not user:
             sys.exit("Unbekannte E-Mail-Adresse.")
         if args.role != "admin":

@@ -151,3 +151,17 @@ test('pq2: Arbeitspunkt aus der Schusskurve (Q = A_K·v₂ auf der Werkzeuglinie
   /* Erklärung: Live-Werte vorhanden */
   const el = { querySelector: () => null }; pq2.renderMath(el, v, { v2 });
 });
+
+/* v₂ des Arbeitspunkts kommt aus der Schusskurve: ohne usesCurve fehlte der
+   Einzelseite des PQ² der Kurveneditor, und 🎯 überging die Kurve. Jedes
+   Diagramm, das o.shot liest, sagt es (23.09.). */
+test('Diagramme, die die Schusskurve lesen, melden usesCurve', async () => {
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const dir = path.join(site, 'tools/auslegung/js/charts');
+  for (const f of readdirSync(dir).filter(n => n.endsWith('.js'))) {
+    const src = readFileSync(path.join(dir, f), 'utf8');
+    if (/\bo\.shot\b|\bo && o\.shot\b|\{ shot \}/.test(src) && /export default/.test(src)) {
+      assert.match(src, /usesCurve:\s*true/, f + ' liest die Schusskurve, meldet aber kein usesCurve');
+    }
+  }
+});

@@ -86,6 +86,9 @@ export default {
   tab2: 'pm',
   tabs2: [['pm', 'p<sub>m</sub>'], ['ph', 'p<sub>hyd</sub>'], ['pw', 'P·Q']],
   inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'densitySolid', 'shrink', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax', 'pAcc', 'pAccOp', 'gateTh', 'JatomMin', 'JatomMax'],
+  /* Der Arbeitspunkt der Schusskurve (v₂) kommt aus der Kurve: die
+     Einzelseite zeigt dafür den Kurveneditor, 🎯 markiert die Kurve mit. */
+  usesCurve: true,
 
   calc(v, o) {
     const c = pqCore(v);

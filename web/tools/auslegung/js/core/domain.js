@@ -37,8 +37,8 @@ export function checkValues(v, opt) {
   const bad = new Set(), msgs = [], grenzen = [];
 
   /* Ein Feld, das zum gewählten Modell nicht gehört (fields.js `when`),
-     ist ausgeblendet und darf die Rechnung nicht sperren — das Backend
-     liest es für dieses Modell ebenfalls nicht. */
+     ist ausgeblendet und darf die Rechnung nicht sperren; die
+     Luftsimulation liest es für dieses Modell ebenfalls nicht. */
   const versteckt = hiddenFields(v);
   for (const f of domainFields()) {
     if (versteckt.has(f.key)) continue;
@@ -69,11 +69,11 @@ export function checkValues(v, opt) {
     bad.add('psel');
     msgs.push('Nachdruck über dem Maschinenmaximum (' + Math.round(pM) + ' bar)');
   }
-  /* Zwei abgeleitete Grenzen, die das Backend ebenfalls zieht (convert.py).
-     Sie hängen an vier bis sechs Eingaben und lassen sich deshalb nicht als
-     Feldgrenze schreiben — hier zu prüfen erspart dem Anwender ein nacktes
-     HTTP 422 aus der Simulation. Gemessene Lücke vorher: 6 von 59 Feldern
-     hatten Werte, die der Browser durchließ und der Server abwies. */
+  /* Zwei abgeleitete Grenzen. Sie hängen an vier bis sechs Eingaben und
+     lassen sich deshalb nicht als Feldgrenze schreiben. Eingeführt, als die
+     Simulation noch auf dem Server lief (bis 19.09.): dort wies sie diese
+     Werte mit einem nackten HTTP 422 ab; seither rechnet sie im Browser,
+     und die Prüfung hier sagt es vorher in Worten. */
   if (opt && opt.abgeleitet === false) return { ok: bad.size === 0, bad, msgs };
 
   const A = pistonArea(v), L = v.length;                 // mm², mm

@@ -9,7 +9,6 @@
    lassen sich fest setzen, das rechnet nur die Zuordnung neu.
 
    Die Reiter sind MODI, und jeder bestimmt allein, was im Viewport steht:
-     Bauteil     das graue Netz (Netzkanten wahlweise)
      Entformung  nach Regionen oder Schräge gefärbt, Trennlinie; die Legende
                  der Regionen steht im Viewport
      Formteile   die Regionen als Formteile auseinandergezogen (dieviewer.js)
@@ -279,8 +278,8 @@ export function createEntformungTool(host) {
   }
 
   /* Das Bauteil: deckend — im Modus Formteile durchscheinend zwischen den
-     Formteilen oder ganz weg. Trennlinie nur in der Entformung, Netzkanten
-     nur im Modus Bauteil. */
+     Formteilen oder ganz weg. Trennlinie nur in der Entformung; die
+     Netzkanten schaltet die Darstellung. */
   function applyOpacity() {
     const ghost = shell.mode === 'formteile' && !!state.seg;
     const o = ghost ? (state.die.part ? 0.18 : 0) : 1;

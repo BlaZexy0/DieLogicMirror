@@ -206,6 +206,37 @@ test('markSaved: Serverbezug setzen, dirty zurücknehmen; put ersetzt gleiche id
   assert.equal(P.getSection('design').values.part, 2);
 });
 
+/* Serverprojekte kommen an fünf Stellen in den Cache (Projektleiste:
+   Konflikt lösen, Abgleich, erstes Projekt; Kontoseite: Öffnen und Anlegen).
+   Alle nehmen fromServer, und der Serverbezug trägt den Stempel des
+   Arbeitsstands: die Kontoseite vergaß ihn, das nächste Autosave schickte
+   base_draft_at: null, und der Server überging seine Kollisionsprüfung
+   (ein neuerer Stand eines Kollegen konnte still überschrieben werden). */
+test('fromServer/remoteOf: der Serverbezug trägt draftAt, auch nach put', () => {
+  fresh();
+  const full = { id: 'srv7', rev: 4, name: 'Vom Server', description: 'd', customer: 'K', part_no: 'T-1',
+    created_at: '2026-09-01T10:00:00Z', updated_at: '2026-09-02T10:00:00Z', draft_at: '2026-09-03T10:00:00Z',
+    data: { design: { values: { part: 5 } } } };
+  const doc = P.put(P.fromServer(full), true);
+  assert.deepEqual(doc.remote, { id: 'srv7', rev: 4, savedAt: '2026-09-02T10:00:00Z', draftAt: '2026-09-03T10:00:00Z' });
+  assert.equal(doc.partNo, 'T-1');
+  assert.equal(P.getSection('design').values.part, 5);
+  /* Beim Anlegen zählen die eigenen Abschnitte, nicht die der Antwort. */
+  const neu = P.fromServer({ id: 'srv8', rev: 1, name: 'Neu', updated_at: 'x', draft_at: null }, undefined, { design: { values: { part: 9 } } });
+  assert.equal(neu.design.values.part, 9);
+  assert.equal(neu.remote.draftAt, null);
+  assert.deepEqual(P.metaOf(doc), { name: 'Vom Server', description: 'd', customer: 'K', part_no: 'T-1' });
+});
+
+test('niemand baut den Serverbezug an fromServer/remoteOf vorbei', async () => {
+  const { readFileSync } = await import('node:fs');
+  for (const f of ['shared/projectbar.js', 'konto/index.html']) {
+    const src = readFileSync(path.join(site, f), 'utf8');
+    /* aus einer Serverantwort (r, res, full) von Hand gebaut */
+    assert.doesNotMatch(src, /\{\s*id:\s*(r|res|full)\.id\b/, f + ': Serverbezug von Hand gebaut');
+  }
+});
+
 test('kaputter Speicher → leer; unbekannte currentId → erstes Projekt', () => {
   fresh({ [P.STORE_KEY]: '{kaputt' });
   assert.equal(P.list().length, 0);

@@ -21,7 +21,7 @@ export function travel(m, v) { return 1e9 * (m / v.density) / pistonArea(v); }  
    flüssig dosierten Masse und dem, was die Kavität beim Füllende flüssig
    aufnimmt, schiebt der Kolben in der Nachverdichtung nach; der Pressrest
    ist am Ende fest und wird mit ρ_sol gegen das Minimum geprüft.
-   Ohne Feststoffdichte (alte Projekte, direkte API-Nutzung) fällt alles
+   Ohne Feststoffdichte (alte Projekte, Presets ohne den Wert) fällt alles
    auf die Flüssigdichte zurück. */
 export function rhoSolidus(v) {
   if (!(v.densitySolid > 0)) return v.density;

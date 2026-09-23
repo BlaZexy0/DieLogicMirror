@@ -93,5 +93,4 @@
 @media (max-width: 860px) {
   .steps-grid { grid-template-columns: 1fr; }
   .step:not(:last-child)::after { display: none; }
-  .f3-links a { padding: .35rem .55rem; }
 }

@@ -13,7 +13,7 @@
 
    Welche Rolle hinter einem Farbwert steht, verrät der Wert allein nicht:
    im Standard sind Schrift und Petrol dasselbe #002733, die Achse X und die
-   Maschine dasselbe #846cd1. Darum zeichnet der Generator mit Wächterfarben:
+   Maschine dasselbe #ac6eef. Darum zeichnet der Generator mit Wächterfarben:
    jede Rolle der Palette bekommt für die Dauer des Zeichnens einen eigenen
    Wert, den es sonst nirgends gibt, theme.derive() leitet daraus die Rollen
    der Diagramme ab, und jede Farbe, die ein Renderer setzt, führt eindeutig
@@ -475,8 +475,9 @@ const jobs = [
   { file: 'shotcurve-sv.svg', id: 'shotcurve', tab: 'sv' },
   { file: 'vkrit-fits.svg', build: vkritFits },
   /* Diagramme für den Entlüftungs-/Vakuum-Artikel (entlueftung-vakuum.html).
-     Blasendiagramm ohne Vakuum-Modell: die simulierte Restdruck-Kurve gibt
-     es nur mit Backend — die Theorieseite erklärt das in der Bildunterschrift. */
+     Blasendiagramm ohne Vakuum-Modell: die Restdruck-Kurve mit Vakuum kommt
+     aus der Luftsimulation des Dashboards und steht darum nicht im
+     statischen Bild; die Theorieseite erklärt das in der Bildunterschrift. */
   { file: 'vent.svg', id: 'vent' },
   { file: 'ventreq.svg', id: 'ventreq' },
   { file: 'bubble.svg', build: () => {

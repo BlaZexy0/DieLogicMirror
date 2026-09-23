@@ -7,7 +7,7 @@
    orientierte Netze und einen „aufgedickten" Zwilling jedes Körpers als
    Schneidwerkzeug (Parameter g = Luftspalt). Beides ist mit eigenen
    Bausteinen einfacher als mit den Three.js-Generatoren — und es läuft
-   ohne Three.js, also auch in tests/ und tools/build-glb.mjs.
+   ohne Three.js, also auch in tests/ und scripts/3d-studio/build-glb.mjs.
 
    Konvention: alles wird entlang +z um den Ursprung gebaut und mit
    place() gedreht/verschoben. Normalen zeigen nach außen. */

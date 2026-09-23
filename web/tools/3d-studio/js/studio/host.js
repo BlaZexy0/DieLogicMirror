@@ -39,12 +39,11 @@ const MAX_SAMPLES = 16e6;
 export function createHost({ mount, id, title, help = '', start = null, sceneOpts = {}, part = true }) {
   const shell = createShell({ mount, title, help, sceneOpts });
   mount.setAttribute('data-tool', id);      // css/studio.css: Regeln, die nur EIN Werkzeug betreffen
-  const listeners = {};
+  /* Ein Ereignisbus (on/emit) und host.ready standen hier nach dem Vorbild
+     der Werkbank; abonniert und gelesen hat sie niemand (entfernt 23.09.). */
   const host = {
     id, shell, ui: shell.ui, view: shell.view, viewport: shell.viewport, aim: shell.aim,
-    tool: null, ready: false,
-    on(ev, fn) { (listeners[ev] ||= []).push(fn); },
-    emit(ev, ...args) { for (const fn of listeners[ev] || []) { try { fn(...args); } catch (err) { console.error(ev, err); } } }
+    tool: null
   };
 
   /* ── Bauteil ─────────────────────────────────────────────── */
@@ -53,31 +52,27 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
     shell, start,
     /* Was vom bisherigen Bauteil noch nicht geschrieben ist, jetzt — bevor
        das Werkzeug seinen Stand für das neue wegräumt. */
-    onStart: () => { host.ready = false; store.flushPending(); if (host.tool && host.tool.onPartStart) host.tool.onPartStart(); },
-    /* Gescheitert, nachdem es angelaufen war: das bisherige Teil gilt weiter. */
-    onFail: () => { host.ready = !!host.part.model; },
+    onStart: () => { store.flushPending(); if (host.tool && host.tool.onPartStart) host.tool.onPartStart(); },
     onLoad: async (model, name) => {
-      field.data = null; field.stats = null; field.stale = false; field.promise = null;
+      field.data = null; field.stats = null; field.stale = false;
       if (field.hAuto) field.h = suggestCell(model);
       store.setPart(host.part.key);
-      host.emit('part', model, name);
       if (host.tool && host.tool.onPart) await host.tool.onPart(model, name);
       offerDraft();
-      host.ready = true;
     }
   });
 
   /* ── Das Abstandsfeld: einmal je Bauteil und Zellkante ──── */
   const asked = f => (f.hAsked ?? f.h);
   const field = {
-    data: null, stats: null, h: 3, hAuto: true, stale: false, promise: null, ms: 0,
+    data: null, stats: null, h: 3, hAuto: true, stale: false,
     setCell(v) {
       field.h = Math.max(CELL_RANGE[0], Math.min(CELL_RANGE[1], v));
       field.hAuto = false;
       /* Veraltet ist das Feld genau dann, wenn seine Kante von der gewählten
          abweicht — wer zur Kante des Feldes zurückkehrt, braucht kein neues. */
       const stale = !!(field.data && Math.abs(asked(field.data) - field.h) > 1e-9);
-      if (stale !== field.stale) { field.stale = stale; host.emit('field-stale', stale); }
+      field.stale = stale;
       return field.h;
     },
     /** Was das Feld kosten würde. */
@@ -98,7 +93,6 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
          Blick auf die Zellkante als veraltet. */
       const fits = f => f && Math.abs(asked(f) - h) < 1e-9 && f.band >= band - 1e-6 && (f.padAsked ?? f.padCells * f.h) >= pad - 1e-6;
       if (!opts.force && !field.stale && fits(field.data)) return field.data;
-      const t0 = performance.now();
       let size = fieldSize(m, 0, band, { h, pad });
       let hh = h;
       while (size.samples > MAX_SAMPLES) { hh = Math.round(hh * 110) / 100; size = fieldSize(m, 0, band, { h: hh, pad }); }
@@ -110,9 +104,6 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       field.data = f;
       field.stats = fieldExtrema(f);
       field.stale = false;
-      field.ms = performance.now() - t0;
-      field.lifted = hh !== h ? hh : null;
-      host.emit('field', f);
       return f;
     }
   };

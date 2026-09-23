@@ -3,8 +3,8 @@
    GLB-Modells (assets/die.glb).
 
    Der Viewer selbst benutzt dieses Modul NICHT; er lädt nur die GLB.
-   Gebraucht wird es von tools/export.html (Browser) und
-   tools/build-glb.mjs (Node). Nach Änderungen an diegeom.js/config.js
+   Gebraucht wird es von scripts/3d-studio/build-glb.mjs und
+   build-die-stl.mjs (Node). Nach Änderungen an diegeom.js/config.js
    die GLB neu erzeugen (README).
 
    Material-NAMEN sind das Vertragsstück mit dem Viewer: sie überleben den

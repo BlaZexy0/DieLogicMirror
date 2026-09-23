@@ -305,6 +305,21 @@ test('Ein anderes Problem verwirft beide Ergebnisse', () => {
   assert.equal(ui('primary').disabled, false);
 });
 
+/* Die Legierung von hier gilt auch für die Kurve, wie im Angussdesigner:
+   bis zum 23.09. rechnete die Angussfüllung die Kolbenkurve (und die
+   1D-Spalte) still mit der Legierung des Projekts. */
+test('Legierung: die Kurve rechnet mit der Legierung von hier, wie im Angussdesigner', () => {
+  const { v, ui, shell } = P;
+  const s = v.state;
+  shell.setMode('prozess');
+  const rho0 = s.timeline.v.density;
+  set(ui('alloy'), 'zn');
+  assert.ok(s.timeline && !s.timeline.error, 'Kurve: ' + s.curveError);
+  assert.equal(s.timeline.v.density, 6200, 'die Schmelzdichte von Zamak 5');
+  set(ui('alloy'), 'al');
+  assert.equal(s.timeline.v.density, rho0, 'Aluminium: es bleibt bei den Werten des Projekts');
+});
+
 test('Eine Angussdatei als Quelle; Fremdes wird abgewiesen', async () => {
   const { v, ui, host } = P;
   const s = v.state;

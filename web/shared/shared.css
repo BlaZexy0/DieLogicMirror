@@ -1,9 +1,9 @@
 /* ============================================================
    DieLogic – shared.css
    Design-Tokens + Basis-Styles der Website (Landing + Unterseiten).
-   Die Dashboard-App (app/) bringt ihr eigenes CSS mit und lädt diese
-   Datei NICHT — Nav und Footer stylen sich selbst (nav.js).
-   Palette = DieLogic Teal, identisch zu shared/theme.js.
+   Alle Seiten laden diese Datei, die Werkzeuge vor ihrem eigenen CSS.
+   Die Tokens spiegeln die Rollen von shared/palette.js; ein Farbschema
+   (shared/schemes.js) überschreibt sie am Wurzelelement.
    ============================================================ */
 
 /* ── Design-Tokens ─────────────────────────────────────────── */
@@ -78,7 +78,7 @@
   --primary-light-rgb: 63,194,182;
   /* … und die Flächen: halbdurchsichtige Aufsätze (Legenden, Klappen im
      3D-Viewport, Beschriftungskästen) sind rgba(var(--surface-rgb), .92),
-     kein festes Weiß, das auf dem warmen Papier der Abendschicht leuchtet. */
+     kein festes Weiß, das auf einem getönten Grund als heller Fleck stünde. */
   --surface-rgb: 255,255,255;
   --bg-rgb: 243,246,246;
   /* Der Verlauf der dunklen Kopfleisten — EINER für alle Seiten: Inhaltsseiten,

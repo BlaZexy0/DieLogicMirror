@@ -486,6 +486,29 @@ test('Graph: die Anschnitthöhe des Systems gilt für alle ohne eigene', () => {
   assert.equal(old.nodes[gates[0].id].gate.hAuto, false);
 });
 
+/* Eine Datei ist Eingabe: die Werte kommen in die Grenzen der Felder
+   (G.LIMITS). Vorher übernahm fromJSON Schrittweite 0,001, Neigung 89° oder
+   eine negative Kanalbreite ungeprüft (23.09.). */
+test('Graph: fromJSON klemmt die Werte der Datei in die Grenzen der Felder', () => {
+  const g = PRE.demoTwoGates();
+  const j = JSON.parse(JSON.stringify(G.toJSON(g)));
+  Object.assign(j, { step: 0.001, draft: 89, tension: -3, gateH: -1, radius: 1e6, branchR: -2 });
+  const knoten = j.nodes.find(n => n.id !== j.rootId && !n.gate);
+  knoten.w = -5; knoten.h = 1e5;
+  const tor = j.nodes.find(n => n.gate);
+  Object.assign(tor.gate, { h: 99, len: -1, w: 1e5 });
+  const back = G.fromJSON(j);
+  const L = G.LIMITS;
+  assert.equal(back.step, L.step[0]);
+  assert.equal(back.draft, L.draft[1]);
+  assert.equal(back.tension, L.tension[0]);
+  assert.equal(back.gateH, L.gateH[0]);
+  assert.equal(back.radius, L.radius[1]);
+  assert.equal(back.branchR, L.branchR[0]);
+  assert.deepEqual([back.nodes[knoten.id].w, back.nodes[knoten.id].h], [L.w[0], L.h[1]]);
+  assert.deepEqual([back.nodes[tor.id].gate.h, back.nodes[tor.id].gate.len, back.nodes[tor.id].gate.w], [L.gateH[1], L.gateLen[0], L.gateW[1]]);
+});
+
 test('Graph: JSON hin und zurück behält die gebundene Mündung', () => {
   const g = PRE.demoTwoGates();
   const lead = G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id));

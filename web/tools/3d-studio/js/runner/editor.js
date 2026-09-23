@@ -14,7 +14,7 @@
    (js/runner/graph.js, setPos). In der Arbeitsebene mit moveInPlane,
    mit Alt (aus der Ebene heraus) mit setPos. Zurück kommt die
    Schnittstelle von js/handles.js, wie sie ist — auch cancelDrag, mit dem
-   Esc einen Zug abbricht (js/runner/tool.js, keys.Escape). */
+   Esc einen Zug abbricht (der Rahmen über host.cancelDrag). */
 
 import * as G from './graph.js';
 import { createHandles, SELECTED_RING } from '../handles.js';

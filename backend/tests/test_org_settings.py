@@ -80,3 +80,23 @@ def test_settings_are_tenant_scoped():
     assert carol.put("/api/org/settings/alloys", json={"data": [{"id": "geheim", "name": "Geheimlegierung", "fields": {"density": 2400}}]}).status_code == 200
     admin = _admin()
     assert "alloys" not in admin.get("/api/org/settings").json()
+
+
+def test_settings_check_cost_bounds_and_preset_pairs():
+    """Kostensätze in den Grenzen der Teilekosten (vorher ließen sich 150 %
+    Ausschuss als Vorgabe speichern) und die Regeln zwischen zwei Feldern
+    eines Presets (vorher stand PAIRS in _domain.py und wurde nie angewandt:
+    Kolben-Ø min. über max. ließ sich speichern)."""
+    admin = _admin()
+    r = admin.put("/api/org/settings/kosten", json={"data": {"a": 150}})
+    assert r.status_code == 422 and "'a'" in r.text and "99" in r.text, r.text
+    r = admin.put("/api/org/settings/kosten", json={"data": {"a": 5, "oee": 85, "hMonth": 400, "altSatz": 1}})
+    assert r.status_code == 200, r.text            # unbekannte Sätze gehen weiter durch
+    r = admin.put("/api/org/settings/machines",
+                  json={"data": [{"id": "m-x", "name": "Verdreht", "fields": {"dmin": 150, "dmax": 90}}]})
+    assert r.status_code == 422 and "Kolben-Ø min." in r.text, r.text
+    r = admin.put("/api/org/settings/machines",
+                  json={"data": [{"id": "m-x", "name": "Richtig", "fields": {"dmin": 90, "dmax": 150}}]})
+    assert r.status_code == 200, r.text
+    admin.delete("/api/org/settings/machines")
+    admin.delete("/api/org/settings/kosten")

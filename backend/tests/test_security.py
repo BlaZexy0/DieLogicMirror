@@ -136,3 +136,35 @@ def test_organisation_cannot_lose_its_last_admin():
         assert owner.disabled
         owner.disabled = False                     # für die übrigen Tests zurück
         db.commit()
+
+
+def test_https_behind_chained_proxies_is_read_the_same_everywhere():
+    """Cookie (Secure) und HSTS lesen X-Forwarded-Proto gleich: der erste
+    Eintrag der Liste zählt. Vorher verglich das Cookie den ganzen Kopf, bei
+    „https, http" fehlte ihm Secure, während HSTS schon galt."""
+    from starlette.requests import Request
+    from backend.auth import request_is_https
+
+    def req(proto):
+        headers = [(b"x-forwarded-proto", proto.encode())] if proto is not None else []
+        return Request({"type": "http", "scheme": "http", "path": "/", "headers": headers,
+                        "server": ("test", 80), "query_string": b""})
+    assert request_is_https(req("https"))
+    assert request_is_https(req("https, http"))
+    assert request_is_https(req(" HTTPS "))
+    assert not request_is_https(req("http, https"))
+    assert not request_is_https(req(None))
+
+
+def test_create_org_checks_the_slug_it_stores():
+    """„ACME" neben „acme": die Prüfung sah die Großschreibung, gespeichert
+    wurde klein, und der Befehl scheiterte mit einem Traceback der Datenbank
+    statt der Meldung."""
+    from backend import manage
+    try:
+        manage.main(["create-org", "slug-test-acme", "Acme"])
+    except SystemExit:
+        pass                                       # aus einem früheren Lauf schon da
+    with pytest.raises(SystemExit) as exc:
+        manage.main(["create-org", "SLUG-TEST-ACME", "Acme 2"])
+    assert "vergeben" in str(exc.value)

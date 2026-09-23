@@ -18,8 +18,6 @@ export const $ = id => document.getElementById(id);
 /** Element oder id → Element. */
 export const el = x => (typeof x === 'string' ? $(x) : x);
 
-export const rgbCss = rgb => 'rgb(' + rgb.map(v => Math.round(v * 255)).join(',') + ')';
-
 /** Kennzahlenblock aus [Bezeichnung, Wert]-Paaren. Ohne das Element
     passiert nichts — nicht jede Seite zeigt jeden Block (die
     Abstandsanalyse verzichtet auf die Netz-Kennzahlen). Jede Zeile ist
@@ -79,10 +77,27 @@ export function slider(id, onChange, format, out) {
     (geklemmt o. ä.), unlesbare Eingaben werden als „schlecht" markiert und der
     letzte gültige Wert bleibt stehen. Mit `min`/`max` klemmt der Helfer
     selbst und sagt es kurz dazu („auf 30 mm begrenzt"). */
+/** Grenzen einer Lage im Auswahlfeld der Designer (mm): „12.500" liest sich
+    deutsch als 12 500 mm und läge ohne Hinweis zwölf Meter neben dem
+    Bauteil. */
+export const POS_LIMIT = { min: -5000, max: 5000, unit: 'mm' };
+
 export function numberInput(id, apply, opts = {}) {
   const e = el(id);
   const { min, max, unit = '' } = opts;
+  /* Derselbe Text ist keine Eingabe. Ein Feld zeigt gerundet (die Lage auf
+     das Zehntel); ein Enter ohne Änderung las die Rundung wieder ein,
+     verschob das Element und legte einen Schritt in den Verlauf (Überlauf-
+     und Füllungsdesigner, 23.09.). Gemerkt wird der Text, solange das Feld
+     den Fokus hat: beim Hineingehen und nach jedem Übernehmen, so übernimmt
+     auch das „change", das der Browser nach einem Enter noch schickt,
+     nichts zweimal. Beim Verlassen verfällt er; was danach von außen ins
+     Feld geschrieben wird (Auswahl, Rückgängig), zählt beim nächsten Mal. */
+  let held = null;
+  e.addEventListener('focus', () => { held = e.value; });
+  e.addEventListener('blur', () => { held = null; });
   const run = () => {
+    if (held !== null && e.value === held) return;
     const v = parseNumber(e.value);
     if (v === null) { e.classList.add('bad'); return; }
     e.classList.remove('bad');
@@ -96,6 +111,7 @@ export function numberInput(id, apply, opts = {}) {
        beim nächsten „change"/Enter wieder ein (der Zuhörer hängt an beiden). */
     const set = apply(use);
     e.value = fmtPlain(set === undefined ? use : set);
+    if (held !== null) held = e.value;
   };
   e.addEventListener('change', run);
   e.addEventListener('keydown', ev => { if (ev.key === 'Enter') { run(); ev.preventDefault(); } });
@@ -119,30 +135,12 @@ export function clampNote(input, text) {
   noteTimers.set(input, setTimeout(() => { note.classList.remove('on'); note.textContent = ''; }, 2500));
 }
 
-/** „Rechnen"-Knopf samt Hinweiszeile (die Seiten ohne Rahmen). Gibt eine
-    Funktion zurück, die den Zustand setzt: { label, note, outline,
-    disabled, warn }. */
-export function runControl(btnId, noteId) {
-  const btn = el(btnId), note = el(noteId);
-  return spec => {
-    btn.textContent = spec.label;
-    btn.disabled = !!spec.disabled;
-    btn.className = 'btn ' + (spec.outline ? 'btn-outline' : 'btn-primary') + ' block-btn';
-    note.textContent = spec.note || '';
-    note.className = 'run-note' + (spec.warn ? ' stale' : '');
-  };
-}
-
 /* ── Farbskala im Viewport ───────────────────────────────────── */
 
 /** Stetiger Verlauf: fn(t) mit t von 0 (unten) bis 1 (oben) liefert die
     Farbe als CSS-Zeichenkette. */
 export const gradient = (fn, n = 24) =>
   Array.from({ length: n + 1 }, (_, i) => fn(i / n) + ' ' + (100 * i / n).toFixed(1) + '%');
-
-/** Abgestufter Verlauf: harte Kanten zwischen gleich breiten Bändern. */
-export const steps = colors => colors.map((c, i) =>
-  c + ' ' + (100 * i / colors.length).toFixed(0) + '% ' + (100 * (i + 1) / colors.length).toFixed(0) + '%');
 
 /** Skala setzen — oder mit null ausblenden. ticks laufen von oben nach
     unten, extra ist eine Zeile darunter (z. B. „Hinterschnitt"). */

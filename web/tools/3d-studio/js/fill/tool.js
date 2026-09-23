@@ -8,7 +8,7 @@
    Innenzellen laufen. Heraus kommt je Zelle der FÜLLGRAD, bei dem sie voll
    wird.
 
-   Die Modi von links nach rechts sind die Arbeit: Bauteil · Anschnitte (die
+   Die Modi von links nach rechts sind die Arbeit: Anschnitte (die
    Vorgaben und was gesetzt ist) · Füllung (Zellkante, α, die Kennzahlen,
    „Rechnen") · Ergebnis. Die Anschnitte und ihre Griffe sind der Plan selbst
    und stehen in jedem Modus im Bild; das BILD der Füllung — Bauteil nach
@@ -30,7 +30,7 @@
    Plan (Format dielogic-fuellung, Fassung 1 — unverändert). */
 
 import * as T from 'three';
-import { facts, segButtons, slider, numberInput, clampNote, gradient } from '../ui/controls.js';
+import { facts, segButtons, slider, numberInput, clampNote, gradient, POS_LIMIT } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit, parseNumber, clamp, rangeText } from '../studio/format.js';
 import { kpis, esc } from '../studio/rows.js';
 import { download, safeName, baseName } from '../studio/files.js';
@@ -801,7 +801,7 @@ export function createFuellungTool(host) {
         host.changed('Lage geändert');
         planChanged();
         return v;
-      });
+      }, POS_LIMIT);
     }
     slider(ui('sel-rot'), v => {
       const it = sel();
@@ -907,10 +907,9 @@ export function createFuellungTool(host) {
     }],
     keys: {
       Delete: () => removeSelected(),
-      /* Esc bricht zuerst einen Zug ab (der Griff springt zurück), sonst hebt
-         es die Auswahl auf. */
+      /* Esc hebt die Auswahl auf. Einen laufenden Zug bricht der Rahmen
+         vorher ab (host.cancelDrag, js/studio/host.js). */
       Escape: () => {
-        if (handles.cancelDrag()) return true;
         if (!handles.selected) return false;
         handles.select(null);
         return true;

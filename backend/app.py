@@ -9,6 +9,7 @@ import os
 import re
 from pathlib import Path, PurePosixPath
 
+from contextlib import asynccontextmanager
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request
@@ -16,7 +17,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
-from .auth import bootstrap_demo, bootstrap_from_env, optional_user, router as auth_router
+from .auth import bootstrap_demo, bootstrap_from_env, optional_user, request_is_https, router as auth_router
 from .db import SessionLocal, init_db
 from .orgsettings import router as orgsettings_router
 from .projects import router as projects_router
@@ -38,7 +39,16 @@ VERSION = site_version()
 # solange ihn niemand ausdrücklich einschaltet.
 DOCS = os.environ.get("DIELOGIC_DOCS", "").strip() not in ("", "0", "false", "no")
 
-app = FastAPI(title="DieLogic Backend", version=VERSION,
+@asynccontextmanager
+async def _lifespan(_app):
+    # Start über lifespan: @app.on_event ist in FastAPI veraltet, und die
+    # Version ist nicht festgelegt (requirements.txt: >=0.110). Fiele es weg,
+    # liefen Schema und Bootstrap still nicht mehr an.
+    _startup()
+    yield
+
+
+app = FastAPI(title="DieLogic Backend", version=VERSION, lifespan=_lifespan,
               docs_url="/docs" if DOCS else None,
               redoc_url="/redoc" if DOCS else None,
               openapi_url="/openapi.json" if DOCS else None)
@@ -47,7 +57,6 @@ app.include_router(projects_router)
 app.include_router(orgsettings_router)
 
 
-@app.on_event("startup")
 def _startup():
     """Schema anlegen (create_all ist idempotent) und ggf. den ersten Admin
     per Umgebungsvariablen einladen — siehe auth.bootstrap_from_env.
@@ -191,8 +200,7 @@ async def cache_headers(request: Request, call_next):
     # HSTS nur, wenn die Verbindung wirklich über TLS kam (hinter dem Proxy
     # steht das in X-Forwarded-Proto) — sonst sperrt man die lokale
     # Entwicklung über http aus.
-    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
-    if proto.split(",")[0].strip() == "https":
+    if request_is_https(request):
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     return response
 

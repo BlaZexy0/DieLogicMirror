@@ -26,7 +26,7 @@
    Vorgaben gesetzt hatte. Wer ihn unterschreitet, steht in der Warnfarbe im
    Bild und im Modus „Prüfung" in der Liste.
 
-   Die Modi: Bauteil · Abstandsfläche · Setzen · Prüfung. Bohrungen und
+   Die Modi: Abstandsfläche · Setzen · Prüfung. Bohrungen und
    Griffe sind der Plan und stehen in jedem Modus im Bild; die
    Abstandsfläche gehört den Modi „Abstandsfläche" und „Setzen" (auf ihr
    wird gezielt — wer anderswo einen Chip oder den Pfeil wählt, landet in
@@ -35,7 +35,7 @@
 
 import * as T from 'three';
 import { onScheme, ROLE, VIEW } from '../part/colors.js';
-import { facts, segButtons, slider, numberInput } from '../ui/controls.js';
+import { facts, segButtons, slider, numberInput, POS_LIMIT } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit } from '../studio/format.js';
 import { kpis, esc } from '../studio/rows.js';
 import { baseName } from '../studio/files.js';
@@ -854,7 +854,7 @@ export function createTemperierTool(host) {
         syncSelection();
         host.changed('Lage geändert');
         return undefined;                                          // syncSelection hat das Feld schon gesetzt
-      });
+      }, POS_LIMIT);
     }
     ui('sel-both').addEventListener('change', e => { state.both = e.target.checked; });
     ui('del-item').addEventListener('click', () => removeSelected());
@@ -956,10 +956,9 @@ export function createTemperierTool(host) {
     }],
     keys: {
       Delete: () => removeSelected(),
-      /* Esc bricht zuerst einen Zug ab (der Griff springt zurück), sonst hebt
-         es die Auswahl auf. */
+      /* Esc hebt die Auswahl auf. Einen laufenden Zug bricht der Rahmen
+         vorher ab (host.cancelDrag, js/studio/host.js). */
       Escape: () => {
-        if (handles.cancelDrag()) return true;
         if (!handles.selected) return false;
         handles.select(null);
         return true;

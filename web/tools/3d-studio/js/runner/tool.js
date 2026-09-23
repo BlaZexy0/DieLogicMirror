@@ -33,7 +33,7 @@
 
 import * as T from 'three';
 import { onScheme, ROLE, VIEW } from '../part/colors.js';
-import { facts, slider, numberInput, segButtons, segButtonSet } from '../ui/controls.js';
+import { facts, slider, numberInput, segButtons, segButtonSet, POS_LIMIT } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit, parseNumber } from '../studio/format.js';
 import { kpis, esc } from '../studio/rows.js';
 import { baseName } from '../studio/files.js';
@@ -49,7 +49,7 @@ import { DEMOS } from './presets.js';
 import { flowChart } from './chart.js';
 import { createEditor, SELECTED_RING, followerColor } from './editor.js';
 import { rotate, norm, cross, dot, sub, add } from './vec.js';
-import { shotTimeline, flowOnCurve } from './shottime.js';
+import { shotTimeline, flowOnCurve, curveValues as curveValuesFor } from './shottime.js';
 import { state as design } from '../../../auslegung/js/core/state.js';
 import { download, safeName, dirText, setTris } from '../ui/common.js';
 import { MODES, INSPECTOR, DARSTELLUNG, CHART } from './panel.js';
@@ -64,9 +64,6 @@ const DETAILS = 'Details';
    durch sie hindurch müssen. */
 const PROC_RANGE = { volume: [1, 1e5], fillTime: [1, 5000], vGate: [1, 200], chamberLen: [50, 3000], cBranch: [0.1, 1.2] };
 const within = (v, [lo, hi]) => Math.max(lo, Math.min(hi, v));
-/* Die Lage eines Punktes, mm: fünf Meter in jede Richtung sind mehr, als
-   jede Druckgießform misst. */
-const POS_MAX = 5000;
 
 /* Das Bauteil, das ein Beispiel mitbringt, nennt presets.js als Datei; der
    Gastgeber lädt Beispielteile nach ihrer Kennung. */
@@ -160,7 +157,7 @@ export function createAngussTool(host) {
     onSelect: () => { cancelAim(); syncSelection(); },
     onChange: (what, id) => {
       if (what === 'drag') { dragged = true; rebuild('drag'); return; }
-      /* Esc mitten im Zug (keys.Escape): zurück zum Stand davor, ohne
+      /* Esc mitten im Zug (host.cancelDrag): zurück zum Stand davor, ohne
          Schritt. Hat sich nichts bewegt, gibt es nichts zurückzuholen — dann
          nur die Anzeige, die während des Zugs ohne Regeln lief. */
       if (what === 'cancel') {
@@ -241,22 +238,8 @@ export function createAngussTool(host) {
       tFirst: shift(fl.tFirst), tLast: shift(fl.tLast), tRunner: fl.tRunner === null ? null : fl.tRunner - t0
     };
   }
-  /* Die Legierung von hier gilt auch für die Kurve — vorher rechnete sie
-     still mit der des Projekts, und ein Zink-Anguss bekam die Füllzeit und
-     die Dichten von Aluminium. Ist die Legierung des Projekts dasselbe
-     Metall (ihre Schmelzdichte liegt dieser am nächsten), bleibt es bei ihr
-     und ihren genaueren Werten; sonst gelten die der Vorlage aus den
-     Legierungen des Projekts (shared/examples/alloys.js). */
-  const CURVE_ALLOY = { al: 'alsi9cu3', mg: 'az91d', zn: 'zamak5' };
-  const metalOf = rho => Object.keys(F.ALLOYS).reduce((a, k) => (Math.abs(Math.log(rho / F.ALLOYS[k].rho)) < Math.abs(Math.log(rho / F.ALLOYS[a].rho)) ? k : a));
-  function curveValues() {
-    const v = design.values, alloy = state.proc.alloy;
-    if (v.density > 0 && metalOf(v.density) === alloy) return v;
-    const list = (window.__ALLOYS__ && window.__ALLOYS__.alloys) || [];
-    const preset = list.find(a => a.id === CURVE_ALLOY[alloy])
-      || list.find(a => a.fields && a.fields.density > 0 && metalOf(a.fields.density) === alloy);
-    return preset ? { ...v, ...preset.fields } : { ...v, density: F.ALLOYS[alloy].rho, densitySolid: 0 };
-  }
+  /* Die Legierung von hier gilt auch für die Kurve (runner/shottime.js). */
+  const curveValues = () => curveValuesFor(design.values, state.proc.alloy);
   function updateTimeline() {
     state.timeline = null;
     state.flowShown = state.flow;
@@ -996,8 +979,9 @@ export function createAngussTool(host) {
     ui('preset').addEventListener('change', e => pickPreset(e.target.value));
     /* Der Pressrest ist Kolben und Füllkammer der Kurve: mit seinen Maßen
        ändern sich Füllgrad und Ankunft — auch die im offenen Auswahlfeld. */
-    numberInput(ui('bisc-d'), v => { state.graph.biscuit.d = v; rebuild(); syncSelection(); host.changed('Pressrest-Durchmesser geändert'); return v; }, { min: 10, max: 400, unit: 'mm' });
-    numberInput(ui('bisc-t'), v => { state.graph.biscuit.t = v; rebuild(); syncSelection(); host.changed('Pressrest-Dicke geändert'); return v; }, { min: 1, max: 300, unit: 'mm' });
+    const mm = k => ({ min: G.LIMITS[k][0], max: G.LIMITS[k][1], unit: 'mm' });
+    numberInput(ui('bisc-d'), v => { state.graph.biscuit.d = v; rebuild(); syncSelection(); host.changed('Pressrest-Durchmesser geändert'); return v; }, mm('biscuitD'));
+    numberInput(ui('bisc-t'), v => { state.graph.biscuit.t = v; rebuild(); syncSelection(); host.changed('Pressrest-Dicke geändert'); return v; }, mm('biscuitT'));
     segButtons(ui('axis-seg'), value => {
       const g = state.graph;
       const o = g.biscuit.pos.slice();
@@ -1028,11 +1012,11 @@ export function createAngussTool(host) {
     }, text, ui(name + '-val'));
     graphSlider('draft', v => { state.graph.draft = v; }, v => fmt(v) + '°', 'Entformschräge geändert');
     graphSlider('tension', v => { state.graph.tension = v / 100; }, v => fmt(v / 100, 2), 'Splinestraffheit geändert');
-    const graphNumber = (name, set, range, label) => numberInput(ui(name), v => { set(v); rebuild(); syncSelection(); host.changed(label); return v; }, { min: range[0], max: range[1], unit: 'mm' });
-    graphNumber('radius', v => { state.graph.radius = v; }, [0, 20], 'Bodenradius geändert');
-    graphNumber('branch-r', v => { state.graph.branchR = v; }, [0, 40], 'Zwickelradius geändert');
-    graphNumber('step', v => { state.graph.step = v; }, [0.2, 10], 'Abtastschritt geändert');
-    graphNumber('gate-h', v => { G.setGateHeight(state.graph, v); }, [0.3, 30], 'Anschnitthöhe geändert');
+    const graphNumber = (name, set, key, label) => numberInput(ui(name), v => { set(v); rebuild(); syncSelection(); host.changed(label); return v; }, mm(key));
+    graphNumber('radius', v => { state.graph.radius = v; }, 'radius', 'Bodenradius geändert');
+    graphNumber('branch-r', v => { state.graph.branchR = v; }, 'branchR', 'Zwickelradius geändert');
+    graphNumber('step', v => { state.graph.step = v; }, 'step', 'Abtastschritt geändert');
+    graphNumber('gate-h', v => { G.setGateHeight(state.graph, v); }, 'gateH', 'Anschnitthöhe geändert');
     /* Verjüngung und Seitenverhältnis wirken erst mit „Querschnitte abstufen". */
     slider(ui('taper'), v => { if (!wired) return; state.sizing.taper = v / 100; commit('Verjüngung geändert', 'taper'); }, v => fmt(v, 0) + ' %', ui('taper-val'));
     slider(ui('aspect'), v => { if (!wired) return; state.sizing.aspect = v / 100; commit('Seitenverhältnis geändert', 'aspect'); }, v => fmt(v / 100, 2), ui('aspect-val'));
@@ -1083,14 +1067,14 @@ export function createAngussTool(host) {
         syncFacts(n);
         host.changed(n.parent ? 'Lage geändert' : 'System verschoben');
         return v;
-      }, { min: -POS_MAX, max: POS_MAX, unit: 'mm' });
+      }, POS_LIMIT);
     }
     numberInput(ui('sel-w'), v => {
       const w = Math.min(state.graph.biscuit.d, v);
       editNode(x => { x.w = w; }, 'Kanalbreite geändert');
       return w;
-    }, { min: 1, max: 400, unit: 'mm' });
-    numberInput(ui('sel-h'), v => { editNode(x => { x.h = v; }, 'Kanaltiefe geändert'); return v; }, { min: 0.4, max: 200, unit: 'mm' });
+    }, mm('w'));
+    numberInput(ui('sel-h'), v => { editNode(x => { x.h = v; }, 'Kanaltiefe geändert'); return v; }, mm('h'));
     const nodeSlider = (name, set, text, label) => slider(ui(name), v => {
       if (!wired || !sel()) return;
       editNode(n => set(n, v), label, name + ':' + sel().id);
@@ -1110,9 +1094,9 @@ export function createAngussTool(host) {
       editNode(n => { n.gate.h = v; n.gate.hAuto = Math.abs(v - state.graph.gateH) < 1e-9; }, 'Anschnitthöhe geändert');
       syncSelection();
       return v;
-    }, { min: 0.3, max: 30, unit: 'mm' });
-    numberInput(ui('sel-glen'), v => { editNode(n => { n.gate.len = v; }, 'Anschnitttiefe geändert'); return v; }, { min: 0, max: 60, unit: 'mm' });
-    numberInput(ui('sel-gw'), v => { editNode(n => { n.gate.w = v; }, 'Anschnittbreite geändert'); return v; }, { min: 1, max: 600, unit: 'mm' });
+    }, mm('gateH'));
+    numberInput(ui('sel-glen'), v => { editNode(n => { n.gate.len = v; }, 'Anschnitttiefe geändert'); return v; }, mm('gateLen'));
+    numberInput(ui('sel-gw'), v => { editNode(n => { n.gate.w = v; }, 'Anschnittbreite geändert'); return v; }, mm('gateW'));
     ui('sel-gauto').addEventListener('change', e => {
       editNode(n => { n.gate.auto = e.target.checked; }, e.target.checked ? 'Anschnittbreite folgt der Zielgeschwindigkeit' : 'Anschnittbreite von Hand');
       syncSelection();
@@ -1270,10 +1254,9 @@ export function createAngussTool(host) {
     }],
     keys: {
       Delete: () => removeSelected(),
+      /* Einen laufenden Zug bricht der Rahmen vorher ab (host.cancelDrag,
+         js/studio/host.js); hier kommt Esc nur ohne Zug an. */
       Escape: () => {
-        /* Zuerst ein laufender Zug: Esc nimmt ihn zurück (js/handles.js
-           meldet 'cancel'), die Auswahl bleibt. */
-        if (editor.dragging) { editor.cancelDrag(); return true; }
         if (state.chartOpen) { openChart(false); return true; }
         if (!editor.selected) return false;
         editor.select(null);

@@ -384,6 +384,37 @@ test('Esc mitten im Zug: der Punkt springt zurück, und es gibt keinen Schritt',
   assert.ok(weit(v.state.plan.items[e.id].pos) < 1e-3);
 });
 
+/* Die Lage steht auf das Zehntel gerundet im Feld. Ein Enter ohne Änderung
+   las die Rundung wieder ein, verschob die Bohne um Hundertstel und legte
+   „Lage geändert" in den Verlauf (23.09.). Der Browser schickt vor dem
+   Tippen ein „focus"; ohne Änderung übernimmt das Feld nichts. */
+test('Lage im Auswahlfeld: Enter ohne Änderung verschiebt nichts; „12.500" wird begrenzt', () => {
+  const { v, ui, host } = P;
+  const it = G.addItem(v.state.plan, 'bohne', [12.345, 6.789, -3.456], [1, 0, 0]);
+  v.rebuild();
+  host.changed('Bohne gesetzt');
+  v.handles.select(it.id);
+  const x = ui('sel-x');
+  assert.equal(x.value, '12,3');
+  const tiefe = host.history.depth;
+  x.dispatch('focus');
+  x.dispatch('keydown', { key: 'Enter', preventDefault() {} });
+  x.dispatch('change');
+  assert.deepEqual(v.state.plan.items[it.id].pos, [12.345, 6.789, -3.456], 'die Rundung der Anzeige wird nicht eingelesen');
+  assert.equal(host.history.depth, tiefe, 'kein Schritt');
+  /* Getippt ist getippt, und „12.500" (deutsch zwölftausendfünfhundert) wird begrenzt. */
+  x.value = '12.500';
+  x.dispatch('keydown', { key: 'Enter', preventDefault() {} });
+  assert.equal(v.state.plan.items[it.id].pos[0], 5000);
+  assert.match(x.closest('.row').querySelector('.clamp-note').textContent, /auf 5000 mm begrenzt/);
+  x.dispatch('change');
+  assert.equal(host.history.depth, tiefe + 1, 'ein Schritt, nicht zwei (das „change" nach dem Enter übernimmt nichts)');
+  x.dispatch('blur');
+  G.removeItem(v.state.plan, it.id);
+  v.handles.select(null);
+  v.rebuild();
+});
+
 test('Export: <bauteil>-ueberlaeufe.stl, ohne die Endung des Bauteils mitten im Namen', () => {
   const { host, tool } = P;
   const name0 = host.part.name;

@@ -101,6 +101,29 @@ test('Tasten: Strg+Z wirkt auch mit Fokus auf einem Regler, im Textfeld gehört 
   assert.equal(v.handles.selected, null, 'Esc außerhalb hebt die Auswahl auf');
 });
 
+/* „Darstellung" ist eine Klappe des Rahmens wie die Bauteil-Klappe:
+   höchstens eine offen, Esc schließt sie und lässt die Auswahl stehen.
+   Vorher hatte sie eigene Zuhörer: Esc schloss sie und hob danach noch
+   die Auswahl auf (23.09.). */
+test('Darstellung: höchstens eine Klappe offen, Esc schließt sie und lässt die Auswahl', () => {
+  const { ui, v } = P;
+  const knopf = P.doc.querySelector('[data-darstellung]'), klappe = P.doc.querySelector('[data-ui="darstellung"]');
+  setzen();
+  const sel = v.handles.selected;
+  assert.ok(sel, 'etwas ist gewählt');
+  ui('part-chip').dispatch('click');
+  assert.equal(ui('part-pop').hidden, false);
+  knopf.dispatch('click');
+  assert.equal(klappe.hidden, false, 'Darstellung ist offen');
+  assert.equal(ui('part-pop').hidden, true, 'die Bauteil-Klappe ist zu');
+  P.doc.dispatch('keydown', { key: 'Escape', target: canvas, preventDefault() {} });
+  assert.equal(klappe.hidden, true, 'Esc schließt Darstellung');
+  assert.equal(v.handles.selected, sel, 'und lässt die Auswahl stehen');
+  P.doc.dispatch('keydown', { key: 'Escape', target: canvas, preventDefault() {} });
+  assert.equal(v.handles.selected, null, 'erst das nächste Esc hebt sie auf');
+  P.host.undo();                                   // die Bohne wieder heraus: die folgenden Tests greifen die erste
+});
+
 test('Kopfzeile: Esc schließt die offene Bauteil-Klappe; der Streifen holt die weggenommene Seitenleiste zurück', () => {
   const { ui, shell } = P;
   ui('part-chip').dispatch('click');

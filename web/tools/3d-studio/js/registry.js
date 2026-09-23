@@ -1,6 +1,6 @@
 /* Baugruppen-Registry: reine Metadaten, keine Three.js-Abhängigkeit.
    Gemeinsame Quelle für den Viewer (Sidebar, GLB-Zuordnung) und den
-   Geometrie-Generator (js/components.js, tools/export.html).
+   Geometrie-Generator (js/components.js, scripts/3d-studio/build-glb.mjs).
 
    side: 'fix' bleibt stehen, 'mov' und 'cast' fahren beim „Form öffnen"
    mit (das Gussteil bleibt beim Öffnen auf der beweglichen Hälfte).
@@ -37,12 +37,6 @@ export function roleColor(role) {
 }
 
 const comp = (id, label, side, role, sub) => ({ id, label, side, ...(sub ? { sub } : {}), role, get color() { return roleColor(this.role); } });
-
-export const GROUPS = [
-  { key: 'fix',  title: 'Feste Seite' },
-  { key: 'mov',  title: 'Bewegliche Seite' },
-  { key: 'cast', title: 'Gussteil' }
-];
 
 export const COMPONENTS = [
   comp('fixHalf',      'Feste Formhälfte',          'fix', 'steel:0.45'),

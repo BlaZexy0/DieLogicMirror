@@ -60,3 +60,18 @@ test('ratio: mit dem korrekten p_vor schrumpft die Blase spürbar stärker', () 
   assert.ok(mitVakuum > alsUmgebung * 2,
     `Vakuum muss durchschlagen: ${mitVakuum.toFixed(2)} vs. ${alsUmgebung.toFixed(2)}`);
 });
+
+/* Die x-Achse endet beim maximalen Nachdruck des montierten Kolbens, und
+   zwar mit der wirksamen Gießkraft beim eingestellten Akkumulatordruck, wie
+   p₀ im PQ² (pqCore). Bis zum 23.09. nahm die Luftblase die volle Kraft und
+   endete bei einem Druck, den PQ² und spezifischer Gießdruck nicht zeigen. */
+test('Luftblase: die Achse endet beim statischen Druck des PQ² (wirksame Gießkraft)', async () => {
+  const bubble = (await import('../../web/tools/auslegung/js/charts/bubble.js')).default;
+  const { pistonArea, injForceEff } = await import('../../web/tools/auslegung/js/core/physics.js');
+  const v = { injForce: 1300, pAcc: 190, pAccOp: 140, diam: 150, psel: 600, Tliq: 593, Tdie: 200, vacModel: 'aus' };
+  assert.ok(bubble.inputs.includes('pAcc') && bubble.inputs.includes('pAccOp'), 'die Akkudrücke sind Eingaben');
+  const q = bubble.calc(v);
+  const p0 = injForceEff(v) * 1e4 / pistonArea(v);
+  assert.ok(Math.abs(q.x[q.x.length - 1] - p0) < 1e-9, `Achsenende ${q.x[q.x.length - 1]} statt ${p0}`);
+  assert.ok(p0 < v.injForce * 1e4 / pistonArea(v), 'mit Arbeitsdruck unter Nenndruck kleiner als mit voller Kraft');
+});

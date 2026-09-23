@@ -11,7 +11,7 @@
 import * as T from 'three';
 import { mountPartSource } from '../part/partsource.js';
 import { suggestCell } from '../part/field.js';
-import { ROLE, hex2rgb, onScheme } from '../part/colors.js';
+import { ROLE, linRgb, onScheme } from '../part/colors.js';
 
 export function createPart({ shell, onStart, onLoad, onFail = null, start = null, fit = true }) {
   let loading = null;     // ein Laden läuft: { name } des Teils davor
@@ -27,8 +27,8 @@ export function createPart({ shell, onStart, onLoad, onFail = null, start = null
   view.scene.add(mesh);
 
   const part = {
-    model: null, name: '', note: '', warning: '', demoId: null, mesh, plainMat, colorMat,
-    opacity: 1, ready: false,
+    model: null, name: '', warning: '', demoId: null, mesh, plainMat, colorMat,
+    opacity: 1,
     /** Schlüssel für Entwürfe: Beispiel-id oder Dateiname. */
     get key() { return part.demoId || part.name || ''; },
     get cellSuggestion() { return part.model ? suggestCell(part.model) : 3; },
@@ -57,12 +57,12 @@ export function createPart({ shell, onStart, onLoad, onFail = null, start = null
     busy: shell.busyEl, viewport: null, start,
     /* Die Meldung steht auch in der Klappe — gesehen wird sie im Toast. Ist
        ein Laden schon angelaufen und scheitert dann, gilt wieder das Teil, das
-       noch da ist: Name und „bereit" stünden sonst auf dem gescheiterten. */
+       noch da ist: der Name stünde sonst auf dem gescheiterten. */
     onError: text => {
       shell.toast(text, { ms: 8000 });
-      if (loading) { part.name = loading.name; part.ready = !!part.model; loading = null; if (onFail) onFail(); }
+      if (loading) { part.name = loading.name; loading = null; if (onFail) onFail(); }
     },
-    onStart: name => { loading = { name: part.name }; part.ready = false; part.name = name; if (onStart) onStart(name); },
+    onStart: name => { loading = { name: part.name }; part.name = name; if (onStart) onStart(name); },
     onLoad: async (model, name) => {
       loading = null;
       part.model = model;
@@ -71,8 +71,9 @@ export function createPart({ shell, onStart, onLoad, onFail = null, start = null
       part.demoId = sel && sel.selectedIndex >= 0 && sel.value ? sel.value : null;
       const geo = new T.BufferGeometry();
       geo.setAttribute('position', new T.BufferAttribute(Float32Array.from(model.tris), 3));
-      /* Vor dem ersten Bemalen trägt jede Ecke das Grau des Bauteils. */
-      const grey = hex2rgb(ROLE.part), cols = new Float32Array(model.tris.length);
+      /* Vor dem ersten Bemalen trägt jede Ecke das Grau des Bauteils, als
+         Punktfarbe linear (js/part/colors.js). */
+      const grey = linRgb(ROLE.part), cols = new Float32Array(model.tris.length);
       for (let i = 0; i < cols.length; i += 3) { cols[i] = grey[0]; cols[i + 1] = grey[1]; cols[i + 2] = grey[2]; }
       geo.setAttribute('color', new T.BufferAttribute(cols, 3));
       geo.computeVertexNormals();
@@ -84,12 +85,10 @@ export function createPart({ shell, onStart, onLoad, onFail = null, start = null
       /* Was partsource.js zum Netz meldet (offen, gegenläufig, riesig), steht
          in der Klappe — das Bauteil trägt es weiter: ein ⚠ am Chip, die Zeile
          im Modus „Bauteil". */
-      const warnEl = document.getElementById('model-warn'), noteEl = document.getElementById('part-note');
+      const warnEl = document.getElementById('model-warn');
       part.warning = warnEl ? warnEl.textContent : '';
-      part.note = noteEl ? noteEl.textContent : '';
       shell.header.setPart(opt ? opt.textContent : name, null, part.warning);
       if (fit) shell.fit(mesh);
-      part.ready = true;
       if (onLoad) await onLoad(model, name);
     }
   });

@@ -343,6 +343,21 @@ const boundsEqual = (tris, min, max) => {
   for (let i = 0; i < 3; i++) { closeTo(b.min[i], min[i]); closeTo(b.max[i], max[i]); }
 };
 
+/* Eine unlesbare Koordinate ist eine beschädigte Datei, kein NaN-Volumen:
+   die Seite meldete sonst ein „nach innen gewickeltes" Netz. */
+test('stl-math: unlesbare Koordinaten werden abgewiesen, ASCII wie binär', () => {
+  const ascii = t => new TextEncoder().encode(t).buffer;
+  const kaputt = 'solid t\nfacet normal 0 0 1\nouter loop\nvertex - 0 0\nvertex 1 0 0\nvertex 0 1 0\nendloop\nendfacet\nendsolid t\n';
+  assert.throws(() => parseSTL(ascii(kaputt)), /Unlesbare Koordinate.*Punkt 1.*beschädigt/);
+  const heil = kaputt.replace('vertex - 0 0', 'vertex 0 0 0');
+  assert.equal(parseSTL(ascii(heil)).length, 9);
+  const bin = new ArrayBuffer(84 + 50);
+  const dv = new DataView(bin);
+  dv.setUint32(80, 1, true);
+  for (let k = 0; k < 9; k++) dv.setFloat32(84 + 12 + 4 * k, k === 4 ? NaN : k, true);
+  assert.throws(() => parseSTL(bin), /Unlesbare Koordinate.*Punkt 2/);
+});
+
 /* ── 1 · Beispiel-STLs gegen Sollwerte aus der Geometrie ─────── */
 /* Maße wie beim Erzeugen der Dateien: Quaderflächen/-volumina exakt,
    Zylinder als Prisma mit n = 48 Segmenten (r = 35, h = 25). */

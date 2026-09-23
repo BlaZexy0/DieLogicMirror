@@ -1,7 +1,7 @@
-/* Geometrie der Beispiel-Druckgießform als Dreieckssuppen — die QUELLE
-   des Modells (assets/die.glb). Bewusst ohne Three.js: dieselbe Datei
-   läuft im Browser (tools/export.html) und unter Node
-   (tools/build-glb.mjs, tests/).
+/* Geometrie der Beispiel-Druckgießform als Dreieckssuppen: die ältere,
+   prozedurale Form. assets/die.glb kommt heute aus den openscad-Teilen;
+   diese Datei nutzen nur noch scripts/3d-studio/build-glb.mjs und die
+   Tests. Bewusst ohne Three.js, damit sie unter Node läuft.
 
    Der Unterschied zur ersten Fassung: die Stahlteile sind keine Quader
    mehr, die sich mit Kavität, Füllkammer, Stiften und Säulen

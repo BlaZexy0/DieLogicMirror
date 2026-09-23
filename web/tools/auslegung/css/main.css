@@ -1,6 +1,6 @@
 /* Grundlayout und Komponenten. Farben stehen hier nur als Tokens aus
    /shared/shared.css (Rollen von /shared/palette.js): das Farbschema
-   (shared/schemes.js) setzt sie auf <html> um, und alles hier folgt ohne
+   (shared/schemes.js) setzt sie am Wurzelelement um, und alles hier folgt ohne
    Neuladen. Die Seiten laden shared.css vor dieser Datei.
    Urteile nehmen die Ampel: Linien, Flächen und Punkte in --ok / --caution
    / --bad, Schrift in deren Textstufe (--ok-text …). */

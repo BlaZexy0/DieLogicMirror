@@ -306,7 +306,7 @@
 
   /* ── Server: Sitzung, Synchronisation, Revisionen ─────────── */
 
-  function metaOf(p) { return { name: p.name, description: p.description, customer: p.customer, part_no: p.partNo }; }
+  var metaOf = P.metaOf;
 
   /* Fingerabdruck der Werkzeug-Abschnitte des aktuellen Projekts — die Daten,
      auf denen der Seitenzustand aufsetzt. Ändert er sich, ohne dass diese Seite
@@ -350,8 +350,8 @@
          verloren (Tab schließt, Reload), legt der nächste Versuch kein
          zweites Projekt an, sondern bekommt dasselbe zurück. */
       var res = await api('POST', '/api/projects', Object.assign({ id: p.id, data: P.sectionsOf(p) }, metaOf(p)), opts);
-      if (P.get(p.id) && P.get(p.id).updatedAt === stamp) P.markSaved(p.id, { id: res.id, rev: res.rev, draftAt: res.draft_at, savedAt: res.updated_at });
-      else { var q = P.get(p.id); if (q) { q.remote = { id: res.id, rev: res.rev, savedAt: res.updated_at, draftAt: res.draft_at || null }; P.put(q, q.id === P.current().id); } }
+      if (P.get(p.id) && P.get(p.id).updatedAt === stamp) P.markSaved(p.id, P.remoteOf(res));
+      else { var q = P.get(p.id); if (q) { q.remote = P.remoteOf(res); P.put(q, q.id === P.current().id); } }
     }
   }
 
@@ -432,10 +432,7 @@
     if (!cur.remote) return;
     var full = await api('GET', '/api/projects/' + cur.remote.id);
     delete conflicts[cur.id];
-    P.put(Object.assign({ id: cur.id, name: full.name, description: full.description,
-      customer: full.customer, partNo: full.part_no, createdAt: full.created_at, updatedAt: full.updated_at,
-      remote: { id: full.id, rev: full.rev, savedAt: full.updated_at, draftAt: full.draft_at }, dirty: false },
-      full.data || {}), true);
+    P.put(P.fromServer(full, cur.id), true);
     location.reload();
   }
 
@@ -477,14 +474,12 @@
       var r = remote[i], have = byRemote[r.id];
       if (have && (have.dirty || (have.remote.savedAt && have.remote.savedAt >= r.updated_at))) continue;
       var full = await api('GET', '/api/projects/' + r.id);
-      P.put(Object.assign({ id: have ? have.id : undefined, name: full.name, description: full.description,
-        customer: full.customer, partNo: full.part_no, createdAt: full.created_at, updatedAt: full.updated_at,
-        remote: { id: full.id, rev: full.rev, savedAt: full.updated_at, draftAt: full.draft_at }, dirty: false }, full.data || {}), false);
+      P.put(P.fromServer(full, have ? have.id : undefined), false);
     }
     /* Organisation ohne Projekt: das erste auf dem Server anlegen. */
     if (!remote.length && !P.list().length) {
       var res = await api('POST', '/api/projects', { name: 'Erstes Projekt', description: 'Angelegt beim ersten Öffnen der Werkzeuge.', data: {} });
-      P.put({ name: res.name, description: res.description, remote: { id: res.id, rev: res.rev, savedAt: res.updated_at, draftAt: res.draft_at }, dirty: false }, true);
+      P.put(P.fromServer(res, undefined, {}), true);
     }
     if (!P.current() && P.list().length) P.select(P.list()[0].id);
     /* Der localStorage trägt jetzt den fremden Stand — die laufende Seite hält

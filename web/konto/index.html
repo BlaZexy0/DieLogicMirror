@@ -566,9 +566,8 @@
     for (var i = 0; i < orphans.length; i++) {
       var o = orphans[i];
       try {
-        var r = await api('POST', '/api/projects', Object.assign({ id: o.id, data: P.sectionsOf(o) },
-          { name: o.name, description: o.description, customer: o.customer, part_no: o.partNo }));
-        P.markSaved(o.id, { id: r.id, rev: r.rev, savedAt: r.updated_at, draftAt: r.draft_at });
+        var r = await api('POST', '/api/projects', Object.assign({ id: o.id, data: P.sectionsOf(o) }, P.metaOf(o)));
+        P.markSaved(o.id, P.remoteOf(r));
       } catch (err) { console.warn('Übernahme fehlgeschlagen:', err.message); }
     }
     $('a-user').textContent = me.user.name || me.user.email;
@@ -621,13 +620,12 @@
   async function fetchDoc(id) {
     var full = await api('GET', '/api/projects/' + id);
     var have = P.list().filter(function (p) { return p.remote && p.remote.id === id; })[0];
-    return docFrom(full, full.data, have ? have.id : undefined);
+    return P.fromServer(full, have ? have.id : undefined);
   }
 
   async function createOnServer(meta, data, makeCurrent) {
     var r = await api('POST', '/api/projects', Object.assign({ data: data || {} }, meta));
-    P.put(Object.assign({ name: r.name, description: r.description, customer: r.customer, partNo: r.part_no,
-      remote: { id: r.id, rev: r.rev, savedAt: r.updated_at }, dirty: false }, data || {}), !!makeCurrent);
+    P.put(P.fromServer(r, undefined, data || {}), !!makeCurrent);
     return r;
   }
 
@@ -641,9 +639,7 @@
       await showRevisions(id, name);
     } else if (b.dataset.dup) {
       var doc = await fetchDoc(id);
-      var full = await api('GET', '/api/projects/' + id);
-      await createOnServer({ name: name + ' (Kopie)', description: full.description, customer: full.customer, part_no: full.part_no },
-        P.sectionsOf(doc), false);
+      await createOnServer(Object.assign(P.metaOf(doc), { name: name + ' (Kopie)' }), P.sectionsOf(doc), false);
     } else if (b.dataset.export) {
       var d = await fetchDoc(id);
       var tmp = P.put(d, false);
@@ -691,18 +687,12 @@
       try { p = P.importJSON(txt); }
       catch (err) { $('org-err').textContent = 'Import fehlgeschlagen: ' + err.message; return; }
       var before = P.list().filter(function (q) { return q.id !== p.id; })[0];
-      return createOnServer({ name: p.name, description: p.description, customer: p.customer, part_no: p.partNo }, P.sectionsOf(p), false)
+      return createOnServer(P.metaOf(p), P.sectionsOf(p), false)
         .then(function () { P.remove(p.id); if (before) P.select(before.id); loadProjects(); },
           function (err) { $('org-err').textContent = err.message; });
     });
     e.target.value = '';
   });
-
-  function docFrom(full, data, localId) {
-    return Object.assign({ id: localId, name: full.name, description: full.description, customer: full.customer,
-      partNo: full.part_no, createdAt: full.created_at, updatedAt: full.updated_at,
-      remote: { id: full.id, rev: full.rev, savedAt: full.updated_at }, dirty: false }, data || {});
-  }
 
   async function showRevisions(id, name) {
     show('rev-panel', true);

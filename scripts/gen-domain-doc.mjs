@@ -15,7 +15,7 @@
 
    Aufruf:  node scripts/gen-domain-doc.mjs                                   */
 
-import { writeFileSync, readFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
@@ -105,8 +105,6 @@ zeilen.push('hindern, in die Rechnung zu gelangen.');
 zeilen.push('');
 
 /* --- Paarregeln ------------------------------------------------------ */
-const byKey = Object.fromEntries(domainFields().map(f => [f.key, f]));
-const nm = k => (byKey[k] ? byKey[k].label : k);
 zeilen.push('## Regeln zwischen zwei Feldern');
 zeilen.push('');
 zeilen.push('Bedingungen, die eine Einzelgrenze nicht ausdrücken kann.');
@@ -250,17 +248,23 @@ for (const r of PAIRS) {
 }
 py.push(']');
 py.push('');
+/* Die Kostensätze der Organisation (Konto-Seite → Teilekosten): die Felder
+   der Teilekosten aus shared/felddomaene.js, dazu die Produktionsstunden je
+   Monat, die nur die Konto-Seite führt. Vorher prüfte der Server hier nur,
+   ob es Zahlen sind: 150 % Ausschuss ließen sich als Vorgabe speichern. */
+const KOSTEN = wz.FELDER.teilekosten.concat([{ key: 'hMonth', label: 'Produktionsstunden je Monat', min: 1, max: 744 }]);
+py.push('# Kostensätze der Organisation: key -> (lo_kind, lo, max, label)');
+py.push('KOSTEN: dict[str, tuple[str, float, float, str]] = {');
+for (const f of KOSTEN) {
+  const kind = f.gt !== undefined ? 'gt' : 'min';
+  const lo = f.gt !== undefined ? f.gt : f.min;
+  py.push('    ' + JSON.stringify(f.key) + ': (' + JSON.stringify(kind) + ', ' +
+    lo + ', ' + f.max + ', ' + JSON.stringify(f.label) + '),');
+}
+py.push('}');
 py.push('');
-py.push('def check_field(key: str, x) -> str | None:');
-py.push('    ' + Q + 'None = in Ordnung, sonst der Grund.');
 py.push('');
-py.push('    Ein unbekannter Schlüssel ist ein Fehler, kein Durchlass: ein');
-py.push('    vertipptes "forcee" ließ die Maschinenkraft bisher still auf dem');
-py.push('    Vorgabewert stehen (H-40).');
-py.push('    ' + Q);
-py.push('    spec = FIELDS.get(key)');
-py.push('    if spec is None:');
-py.push('        return "ist kein Eingabefeld"');
+py.push('def _check(spec, x) -> str | None:');
 py.push('    kind, lo, hi, _label = spec');
 py.push('    if isinstance(x, bool) or not isinstance(x, (int, float)):');
 py.push('        return "muss eine Zahl sein"');
@@ -272,6 +276,50 @@ py.push('    if kind == "min" and not x >= lo:');
 py.push('        return f"darf nicht unter {lo:g} liegen"');
 py.push('    if not x <= hi:');
 py.push('        return f"darf nicht über {hi:g} liegen"');
+py.push('    return None');
+py.push('');
+py.push('');
+py.push('def check_field(key: str, x) -> str | None:');
+py.push('    ' + Q + 'None = in Ordnung, sonst der Grund.');
+py.push('');
+py.push('    Ein unbekannter Schlüssel ist ein Fehler, kein Durchlass: ein');
+py.push('    vertipptes "forcee" ließ die Maschinenkraft bisher still auf dem');
+py.push('    Vorgabewert stehen (H-40).');
+py.push('    ' + Q);
+py.push('    spec = FIELDS.get(key)');
+py.push('    if spec is None:');
+py.push('        return "ist kein Eingabefeld"');
+py.push('    return _check(spec, x)');
+py.push('');
+py.push('');
+py.push('def check_kosten(key: str, x) -> str | None:');
+py.push('    ' + Q + 'Wie check_field für die Kostensätze. Ein unbekannter Schlüssel');
+py.push('    geht durch: gespeicherte Sätze älterer Stände sollen sich weiter');
+py.push('    speichern lassen; die bekannten prüft es wie das Werkzeug.');
+py.push('    ' + Q);
+py.push('    spec = KOSTEN.get(key)');
+py.push('    return None if spec is None else _check(spec, x)');
+py.push('');
+py.push('');
+py.push('def check_pairs(fields: dict) -> str | None:');
+py.push('    ' + Q + 'Die Regeln zwischen zwei Feldern, soweit ein Eintrag (ein Preset)');
+py.push('    beide trägt. None = in Ordnung, sonst der Text der Regel. Bis zum');
+py.push('    23.09. stand PAIRS nur hier und wurde nie angewandt: ein');
+py.push('    Maschinen-Preset mit Kolben-Ø min. über max. ließ sich speichern.');
+py.push('    ' + Q);
+py.push('    for r in PAIRS:');
+py.push('        if r[0] == "in":');
+py.push('            _, key, lo, hi, text = r');
+py.push('            if key in fields and lo in fields and not fields[lo] <= fields[key]:');
+py.push('                return text');
+py.push('            if key in fields and hi in fields and not fields[key] <= fields[hi]:');
+py.push('                return text');
+py.push('            continue');
+py.push('        a, b, op, text = r');
+py.push('        if a in fields and b in fields:');
+py.push('            ok = fields[a] < fields[b] if op == "<" else fields[a] <= fields[b]');
+py.push('            if not ok:');
+py.push('                return text');
 py.push('    return None');
 py.push('');
 writeFileSync(join(ROOT, 'backend/_domain.py'), py.join('\n'), 'utf8');

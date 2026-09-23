@@ -31,7 +31,7 @@ import { DEMOS } from '../runner/presets.js';
 import { sampleNetwork } from '../runner/curve.js';
 import { sweepRunner, biscuitMesh } from '../runner/sweep.js';
 import * as F from '../runner/flow.js';
-import { shotTimeline, flowOnCurve } from '../runner/shottime.js';
+import { shotTimeline, flowOnCurve, curveValues } from '../runner/shottime.js';
 import { pistonCurve } from '../lbm/piston.js';
 import { state as design } from '../../../auslegung/js/core/state.js';
 import { createSimCore, ENGINES, engineFromUrl } from './core.js';
@@ -152,9 +152,11 @@ export function createAngussfuellungTool(host) {
     };
   }
 
-  /* Die Schusskurve mit der Kammer von hier — wie im Angussdesigner. Jede
-     Änderung daran ist ein anderes Problem: beide Ergebnisse gehen. `why` ist
-     die Bezeichnung des Felds (core.invalidate nennt es, bricht ein Lauf ab). */
+  /* Die Schusskurve mit der Kammer und der Legierung von hier, wie im
+     Angussdesigner (curveValues: dieselbe Datei gibt in beiden dieselbe
+     Kurve). Jede Änderung daran ist ein anderes Problem: beide Ergebnisse
+     gehen. `why` ist die Bezeichnung des Felds (core.invalidate nennt es,
+     bricht ein Lauf ab). */
   function updateCurve(why = '') {
     const g = state.graph;
     F.applyAutoGates(g, state.proc);
@@ -163,7 +165,7 @@ export function createAngussfuellungTool(host) {
     setTris(runnerMesh, sweepRunner(state.net));
     paintedFor = null;
     state.flow = F.analyseFlow(g, state.net, state.proc);
-    const tl = shotTimeline(design.values, modelVolumes(), { diam: g.biscuit.d, length: state.proc.chamberLen });
+    const tl = shotTimeline(curveValues(design.values, state.proc.alloy), modelVolumes(), { diam: g.biscuit.d, length: state.proc.chamberLen });
     if (tl.error) {
       state.timeline = null; state.flowShown = null; state.piston = null; state.curveError = tl.error;
     } else {

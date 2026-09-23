@@ -38,6 +38,17 @@ import { ELEMENT } from '../part/colors.js';
 export const FORMAT = 'dielogic-anguss';
 export const FORMAT_VERSION = 1;
 
+/* Die Grenzen der Werte, die eine Angussdatei trägt, [min, max] in mm (die
+   Neigung in Grad, die Straffheit als Faktor). Dieselben gelten in den
+   Feldern und Reglern des Angussdesigners (runner/tool.js, panel.js); beim
+   Laden werden sie geklemmt. Vorher übernahm fromJSON die Werte einer Datei
+   ungeprüft: Schrittweite 0,001, Neigung 89°, eine negative Kanalbreite. */
+export const LIMITS = Object.freeze({
+  draft: [0, 15], radius: [0, 20], branchR: [0, 40], tension: [0.3, 1.8], step: [0.2, 10], gateH: [0.3, 30],
+  w: [1, 400], h: [0.4, 200], gateLen: [0, 60], gateW: [1, 600], biscuitD: [10, 400], biscuitT: [1, 300]
+});
+const within = (v, k) => clamp(v, LIMITS[k][0], LIMITS[k][1]);
+
 /** Die sechs Hauptrichtungen — dieselbe Schreibweise wie js/solids.js. */
 export const AXES = {
   '+x': [1, 0, 0], '-x': [-1, 0, 0],
@@ -638,10 +649,10 @@ export function fromJSON(obj) {
   const b = obj.biscuit && typeof obj.biscuit === 'object' ? obj.biscuit : {};
   g.biscuit.pos = vec(b.pos, 3, [0, 0, 0]);
   g.biscuit.axis = own(AXES, b.axis) ? b.axis : '+y';
-  g.biscuit.d = clamp(num(b.d, 90), 10, 400);
-  g.biscuit.t = clamp(num(b.t, 25), 1, 300);
+  g.biscuit.d = within(num(b.d, 90), 'biscuitD');
+  g.biscuit.t = within(num(b.t, 25), 'biscuitT');
   /* Ältere Dateien kennen den Zwickelradius nicht — dann gilt die Vorgabe. */
-  for (const k of ['draft', 'radius', 'branchR', 'tension', 'step', 'gateH']) if (Number.isFinite(obj[k])) g[k] = obj[k];
+  for (const k of ['draft', 'radius', 'branchR', 'tension', 'step', 'gateH']) if (Number.isFinite(obj[k])) g[k] = within(obj[k], k);
   const list = Array.isArray(obj.nodes) ? obj.nodes : [];
   if (!list.length) throw new Error('Die Datei enthält keine Knoten.');
   if (obj.rootId !== undefined && obj.rootId !== null && !validId(obj.rootId)) {
@@ -661,14 +672,14 @@ export function fromJSON(obj) {
       id: n.id, type: own(TYPES, n.type) ? n.type : 'point',
       parent, children: [...new Set(kids)],
       pos: vec(n.pos, 3, [0, 0, 0]), tilt: vec(n.tilt, 2, [0, 0]),
-      w: num(n.w, 0) || 10, h: num(n.h, 0) || 6
+      w: within(num(n.w, 0) || 10, 'w'), h: within(num(n.h, 0) || 6, 'h')
     };
     if (n.ratio !== undefined) node.ratio = clamp(num(n.ratio, 0.5) || 0.5, 0.05, 0.95);
     if (n.mirror !== undefined) node.mirror = !!n.mirror;
     if (n.gate && typeof n.gate === 'object') {
       const s = n.gate;
       const gate = {
-        h: num(s.h, g.gateH), len: num(s.len, 4), w: num(s.w, 20),
+        h: within(num(s.h, g.gateH), 'gateH'), len: within(num(s.len, 4), 'gateLen'), w: within(num(s.w, 20), 'gateW'),
         auto: s.auto === undefined ? true : !!s.auto,
         /* Auch der Übergang ist ein Wort aus der Datei: nur die bekannten. */
         transition: own(TRANSITIONS, s.transition) ? s.transition : 'ende'

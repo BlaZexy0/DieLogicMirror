@@ -515,6 +515,9 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   }
   const partChip = ui('part-chip');
   const partOpen = popover(partChip, ui('part-pop'));
+  /* Das Aufklappfeld „Darstellung" der Ansichtsleiste ist eine Klappe wie
+     diese (ui/viewbar.js baut nur Kasten und Knopf). */
+  if (viewbar.pop) popover(viewbar.popChip, viewbar.pop);
   const exportBtn = ui('export'), exportList = ui('export-list');
   const exportOpen = on => { exportList.hidden = !on; exportBtn.setAttribute('aria-expanded', on ? 'true' : 'false'); };
   exportOpen.isOpen = () => !exportList.hidden;

@@ -59,29 +59,23 @@ export function mountViewBar(container, view, opts = {}) {
   if (fitBtn) fitBtn.addEventListener('click', () => opts.fit());
 
   /* Das Aufklappfeld „Darstellung": ein Kasten unter der Leiste, den das
-     Werkzeug mit seinen Zeilen füllt (bar.popover). Zu, sobald man
-     daneben klickt oder Escape drückt. */
-  let popover = null;
+     Werkzeug mit seinen Zeilen füllt (bar.pop), und sein Knopf
+     (bar.popChip). Öffnen und Schließen verwaltet der Rahmen wie seine
+     übrigen Klappen (studio/shell.js, popover): höchstens eine offen, ein
+     Klick daneben und Esc schließen sie. Vorher hatte der Kasten eigene
+     Zuhörer; Esc schloss ihn und hob danach noch die Auswahl auf, und neben
+     ihm konnte die Bauteil-Klappe offen stehen. */
   bar.pop = null;
   const toggleBtn = bar.querySelector('[data-darstellung]');
   if (toggleBtn) {
-    popover = document.createElement('div');
+    const popover = document.createElement('div');
     popover.className = 'view-pop';
     popover.setAttribute('data-ui', 'darstellung');
     popover.setAttribute('data-dock', 'darstellung');
     popover.hidden = true;
     container.appendChild(popover);
-    const setOpen = on => {
-      popover.hidden = !on;
-      toggleBtn.classList.toggle('active', on);
-      toggleBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
-    };
-    toggleBtn.addEventListener('click', ev => { ev.stopPropagation(); setOpen(popover.hidden); });
-    popover.addEventListener('click', ev => ev.stopPropagation());
-    document.addEventListener('click', () => { if (!popover.hidden) setOpen(false); });
-    document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !popover.hidden) setOpen(false); });
     bar.pop = popover;
-    bar.openPop = setOpen;
+    bar.popChip = toggleBtn;
   }
   return bar;
 }

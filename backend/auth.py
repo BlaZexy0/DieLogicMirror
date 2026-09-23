@@ -63,9 +63,18 @@ DUMMY_HASH = hash_password(secrets.token_urlsafe(24))
 
 # ── Sitzungen ─────────────────────────────────────────────────────────
 
-def _secure_cookie(request: Request) -> bool:
+def request_is_https(request: Request) -> bool:
+    """Kam die Verbindung über TLS? Hinter dem Proxy steht das in
+    X-Forwarded-Proto, hinter mehreren als Liste; der erste Eintrag ist der
+    des Clients. Cookie (Secure) und HSTS (app.py) lesen es hier: bis zum
+    23.09. las das Cookie den ganzen Kopf, und bei „https, http" fehlte ihm
+    Secure, während HSTS schon galt."""
     proto = request.headers.get("x-forwarded-proto", request.url.scheme)
-    return proto == "https"
+    return proto.split(",")[0].strip().lower() == "https"
+
+
+def _secure_cookie(request: Request) -> bool:
+    return request_is_https(request)
 
 
 def start_session(db: Session, user: User, request: Request, response: Response) -> None:

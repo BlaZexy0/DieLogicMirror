@@ -42,7 +42,7 @@ def test_needs_login_meint_nur_die_seiten_unter_tools():
 
 
 def test_jede_werkzeugseite_wird_ohne_sitzung_zur_anmeldung_geschickt():
-    assert len(PAGES) >= 13, PAGES   # Dashboard (2), Sprengfläche, Teilekosten, Zyklus, 3D-Studio (9)
+    assert len(PAGES) >= 13, PAGES   # Dashboard (2), Sprengfläche, Teilekosten, Zyklus, 3D-Studio (14)
     c = _client()
     for url in PAGES:
         _redirects_to_login(c.get(url), url)

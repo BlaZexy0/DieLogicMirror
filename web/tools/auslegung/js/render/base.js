@@ -9,7 +9,7 @@ const PI = Math.PI;
 
 /* Die Fläche des Diagramms mit Alpha: Beschriftungskästen, Aufhellungen,
    Konturlinien. Sie folgt dem Farbschema (theme.chart.surface); ein festes
-   Weiß stand sonst als heller Fleck auf dem warmen Papier der Abendschicht. */
+   Weiß stünde sonst als heller Fleck auf einem getönten Grund. */
 export function surfaceA(a) {
   const h = /^#[0-9a-f]{6}$/i.test(theme.chart.surface || '') ? theme.chart.surface : '#ffffff';
   return 'rgba(' + parseInt(h.slice(1, 3), 16) + ',' + parseInt(h.slice(3, 5), 16) + ',' + parseInt(h.slice(5, 7), 16) + ',' + a + ')';

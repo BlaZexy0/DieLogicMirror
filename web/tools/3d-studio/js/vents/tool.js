@@ -19,14 +19,14 @@
    werden Rückgängig, Entwurf und „Ungespeichert". Ein Zug am Griff ist EIN
    Schritt (gemeldet beim Loslassen), ein Regler ebenso (coalesce).
 
-   Die Modi: Bauteil · Elemente (was gesetzt ist) · Volumen. Die Körper und
+   Die Modi: Elemente (was gesetzt ist) · Volumen. Die Körper und
    ihre Griffe sind der Plan selbst und stehen in jedem Modus im Bild; das
    Setzen sitzt als Chips über dem Viewport, das Bearbeiten im Auswahlfeld
    daneben. Ein neues Bauteil beginnt mit einem leeren Plan — der alte
    bleibt als Entwurf bei seinem Bauteil. */
 
 import * as T from 'three';
-import { facts, slider, numberInput } from '../ui/controls.js';
+import { facts, slider, numberInput, POS_LIMIT } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit, parseNumber } from '../studio/format.js';
 import { kpis, esc } from '../studio/rows.js';
 import { writeSTL } from '../part/stlio.js';
@@ -407,7 +407,7 @@ export function createUeberlaufTool(host) {
            wie in syncSelection. */
         const now = part.k === null ? it.pos : M.ventWorld(it).points[part.k - 1];
         return parseNumber(fmtPlain(now[axis], 1));
-      });
+      }, POS_LIMIT);
     }
     ui('vent-add').addEventListener('click', () => {
       const it = sel();
@@ -494,10 +494,9 @@ export function createUeberlaufTool(host) {
     }],
     keys: {
       Delete: () => removeSelected(),
-      /* Esc bricht zuerst einen Zug ab (der Griff springt zurück), sonst hebt
-         es die Auswahl auf. */
+      /* Esc hebt die Auswahl auf. Einen laufenden Zug bricht der Rahmen
+         vorher ab (host.cancelDrag, js/studio/host.js). */
       Escape: () => {
-        if (handles.cancelDrag()) return true;
         if (!handles.selected) return false;
         handles.select(null);
         return true;

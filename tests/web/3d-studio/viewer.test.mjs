@@ -1,13 +1,13 @@
 /* Verdrahtungstest beider Viewer.
 
    Die Viewer laufen im Browser; Node hat weder DOM noch WebGL. Beides
-   wird hier ersetzt (tests/stubs/): ein winziges DOM, das aus der
+   wird hier ersetzt (tests/web/3d-studio/stubs/): ein winziges DOM, das aus der
    ECHTEN HTML-Seite gebaut wird, und das echte Three.js mit einem
    Renderer-Platzhalter. Damit lässt sich prüfen, was ohne Browser sonst
    niemand prüft: dass jeder Regler, jeder Schalter und jede Legende
    wirklich am richtigen Element hängt und die Rückrufe durchlaufen.
 
-   Aufruf:  node --import ./tests/stubs/register.mjs --test tests/viewer.test.mjs
+   Aufruf:  node --import ./tests/web/3d-studio/stubs/register.mjs --test tests/web/3d-studio/viewer.test.mjs
    (der Sammellauf in package.json / README macht das automatisch) */
 
 import { test } from 'node:test';

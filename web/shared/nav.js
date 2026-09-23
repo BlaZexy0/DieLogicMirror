@@ -1,9 +1,8 @@
 /**
  * DieLogic – nav.js
- * Injiziert Site-Navigation und Footer. Vollständig selbstversorgend:
- * alle Nav-/Footer-Styles werden mit injiziert (feste Farbwerte, keine
- * CSS-Variablen) — dadurch funktioniert die Navigation auch auf den
- * Dashboard-Seiten (app/), die nur ihr eigenes main.css laden.
+ * Injiziert Site-Navigation und Footer samt ihrer Styles (navCss()). Die
+ * Styles stammen aus der Zeit, als die Dashboard-Seiten shared.css nicht
+ * luden; heute laden es alle Seiten, die Regeln könnten dorthin umziehen.
  * Die Werte kommen aus shared/palette.js; wechselt das Farbschema
  * (shared/schemes.js, Ereignis „dielogic:scheme"), wird das Stylesheet neu
  * gebaut — deshalb darf keine Farbe im Markup stehen, nur in navCss().
@@ -12,7 +11,7 @@
  * Einbindung von der Startseite:
  *   <script src="/shared/nav.js"></script>
  *
- * Einbindung aus app/ (eine Ebene tiefer, ohne Footer):
+ * Einbindung ohne Footer (die Werkzeugseiten):
  *   <script src="/shared/nav.js" data-footer="none"></script>
  *
  * Schmale Fenster (Tablet, Handy): passen die Links nicht mehr neben Logo
@@ -59,7 +58,7 @@
      Leiste; mit dem Studio daneben war das eine Reihe von neun, in der
      man die zwei Hälften nicht mehr sah. Beide Menüs haben dieselben
      Spalten: links das Ganze (Werkzeuge · Werkbank), rechts die vielen
-     Einzelnen (Diagramme · Einzeltools) — die 19 Diagramme und die acht
+     Einzelnen (Diagramme · Einzeltools) — die 19 Diagramme und die
      Werkzeuge des Studios in je zwei Spalten. */
   const NAV_LINKS = [
     { label: 'Auslegung', columns: [

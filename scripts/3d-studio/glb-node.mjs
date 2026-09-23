@@ -1,6 +1,6 @@
 /* GLB-Export unter Node — die zwei Kunstgriffe, die dafür nötig sind,
    an einer Stelle: ein Auflöser für den nackten Import 'three'
-   (tools/three-resolver.mjs) und ein winziger FileReader, den der
+   (scripts/3d-studio/three-resolver.mjs) und ein winziger FileReader, den der
    GLTFExporter für den Binärblock erwartet. Beides gibt es im Browser
    von Haus aus.
 

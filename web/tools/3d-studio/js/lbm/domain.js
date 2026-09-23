@@ -18,7 +18,7 @@ import { buildField } from '../part/field.js';
 import { sampleNetwork } from '../runner/curve.js';
 import { sweepRunner, biscuitMesh } from '../runner/sweep.js';
 import * as G from '../runner/graph.js';
-import { sub, dot, add, scale } from '../runner/vec.js';
+import { sub, dot, scale } from '../runner/vec.js';
 import { C, FLAG } from './lattice.js';
 
 /** Höchstzahl Zellen — die GPU bindet je Richtung ein Feld über alle
@@ -152,11 +152,12 @@ export async function buildDomain(g, h, opts = {}) {
   const shape = new Uint8Array(N);
   for (let idx = 0; idx < N; idx++) shape[idx] = flags[idx] === WALL ? 0 : 1;
   prog(1, 'fertig');
+  /* Dreiecke, Feld und Mitte des Körpers gab die Funktion früher mit
+     zurück; gelesen hat sie niemand, aber jedes Ergebnis hielt sie fest
+     (bis zu 6 MB je Lauf, 23.09.). */
   return {
     dims, origin, h, N, flags, sensor, shape, gates, inletDir, axis,
-    runnerCells, biscuitCells, inletCells,
-    net, runnerTris: runner, biscuitTris: bisc, field: fieldR,
-    center: add(box.min, scale(box.size, 0.5))
+    runnerCells, biscuitCells, inletCells, net
   };
 }
 

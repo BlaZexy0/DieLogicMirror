@@ -10,7 +10,7 @@
    9 Werten je Dreieck (x0,y0,z0, x1,y1,z1, x2,y2,z2) — dasselbe Format,
    das auch die Sprengflächenanalyse in DieLogic aus STL-Dateien liest.
    Damit läuft dieses Modul unverändert im Browser und unter Node
-   (tests/, tools/build-glb.mjs). */
+   (tests/, scripts/3d-studio/build-glb.mjs). */
 
 /** Bounding-Box + abgeleitete Maße. */
 export function bounds(tris) {
