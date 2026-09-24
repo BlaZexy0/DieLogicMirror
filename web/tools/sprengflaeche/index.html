@@ -307,15 +307,15 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Sprengflächenanalyse</h1>
-    <p class="subtitle">STL-Dateien im Browser auswerten (Volumen, Masse, projizierte Fläche, Maschinenwahl) und die Auslegung ins Projekt übernehmen.</p>
+    <p class="subtitle">STL- oder GLB-Dateien im Browser auswerten (Volumen, Masse, projizierte Fläche, Maschinenwahl) und die Auslegung ins Projekt übernehmen.</p>
   </div>
 </section>
 
 <div class="stl-wrap">
 
   <div class="stl-toolbar">
-    <input type="file" id="file-input" accept=".stl,model/stl,application/sla" multiple hidden>
-    <button class="btn btn-primary" id="upload-btn">+ STL-Dateien hinzufügen</button>
+    <input type="file" id="file-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" multiple hidden>
+    <button class="btn btn-primary" id="upload-btn">+ STL oder GLB hinzufügen</button>
     <span class="seg-label">Formöffnungsrichtung:</span>
     <div class="seg" id="dir-seg" role="group" aria-label="Formöffnungsrichtung">
       <button data-dir="X">X</button>
@@ -329,7 +329,7 @@
   <div class="stl-status stl-restored hidden" id="restored-note"></div>
 
   <div class="stl-note"><strong>Konvention und Schwindung:</strong> Der Ursprung des
-    STL-Koordinatensystems (<strong>0</strong>) gilt als Werkzeugmitte (Mitte des Säulenfelds); die
+    Koordinatensystems der Datei (<strong>0</strong>) gilt als Werkzeugmitte (Mitte des Säulenfelds); die
     Außermittigkeit des Schwerpunkts und damit Hebelfaktor k und Maschinenempfehlung werden direkt
     vom Ursprung gemessen; die Dateien also schon im CAD passend zur Werkzeugmitte exportieren,
     diese Seite verschiebt und dreht nichts. Der Schalter <strong>„Modelle auf Werkzeugmaß"</strong>
@@ -347,13 +347,13 @@
         <path d="M21 4 L37 12 L37 30 L21 38 L5 30 L5 12 Z" stroke="var(--muted)" stroke-width="1.5" stroke-linejoin="round"/>
         <path d="M5 12 L21 20 L37 12 M21 20 L21 38" stroke="var(--muted)" stroke-width="1.5" stroke-linejoin="round"/>
       </svg>
-      <div>Noch keine STL-Dateien geladen.<br>Dateien auswählen oder hierher ziehen.<br>
-        Der STL-Ursprung (0) gilt als Werkzeugmitte.</div>
+      <div>Noch keine Dateien geladen (STL oder GLB).<br>Dateien auswählen oder hierher ziehen.<br>
+        Der Ursprung der Datei (0) gilt als Werkzeugmitte.</div>
     </div>
     <div class="canvas-caption">
       <span id="proj-label"></span>
       <span id="cog-label"></span>
-      <span>Einheiten: STL ist einheitenlos, angenommen wird <strong>mm</strong>.</span>
+      <span>Einheiten: STL und GLB sind hier einheitenlos, angenommen wird <strong>mm</strong>. Eine GLB mit mehreren Netzen gibt je Netz eine Zeile.</span>
     </div>
   </div>
 
@@ -432,7 +432,7 @@
     <strong>vereinigte</strong> Silhouette aller Dateien; Überdeckungen, auch zwischen
     verschiedenen Dateien, zählen nur einfach.
     <strong>S</strong> markiert den flächengewichteten Gesamtschwerpunkt der projizierten Flächen,
-    <strong>0</strong> den Ursprung des STL-Koordinatensystems.
+    <strong>0</strong> den Ursprung des Koordinatensystems der Datei.
     Der maximale Nachdruck je Maschine folgt dem Zuhaltungs-Modell des Dashboards
     (Herleitung: <a href="/theorie/zuhaltung-sprengflaeche.html">Theorie: Zuhaltung und
     Sprengfläche</a>):

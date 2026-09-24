@@ -2,8 +2,9 @@
      node --test tests/web/frontend.test.mjs
 
    Geprüft werden:
-   1. stl-math.js gegen die Sollwerte der mitgelieferten Beispiel-STLs
-      (web/examples/{part,runner,biscuit,overflow}.stl)
+   1. stl-math.js gegen die Sollwerte kleiner Prüfkörper
+      (tests/web/fixtures/stl/{part,runner,biscuit,overflow}.stl) und das
+      Beispiel der Seite, die Gusstraube (web/examples/gusstraube.glb)
    2. das geteilte Zuhaltungs-Modell (shared/clampmodel.js)
    3. die Übernahme STL → Projekt (stl-logic.js handoffValues + project.mergeDesign)
    4. die Konsistenz von Felddefinition und Maschinen-Presets
@@ -435,7 +436,7 @@ test('KaTeX-Seiten laden /shared/katex-init.js, kein onload= mehr am Script-Tag'
 });
 
 function loadAsset(name) {
-  const buf = readFileSync(path.join(site, 'examples', name));
+  const buf = readFileSync(path.join(site, '..', 'tests', 'web', 'fixtures', 'stl', name));
   return parseSTL(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
 }
 
@@ -469,6 +470,35 @@ test('stl-math: unlesbare Koordinaten werden abgewiesen, ASCII wie binär', () =
 
 const DENSITY = 2700; // kg/m³, Default der Seite
 const massKg = (volMm3) => volMm3 * DENSITY * 1e-9;
+
+/* Das Beispiel der Seite: die Gusstraube der Beispielform (3D-Studio), vier
+   Netze, deren Knotennamen die Rolle sagen (stl-app.js ROLLE_AUS_NAME). Der
+   Pressrest ist der Zylinder aus der OpenSCAD-Quelle: 64-Eck r = 65 mm,
+   20 mm dick (dazu die 0,01-mm-Haut des Angusses über ihm); Anguss +
+   Pressrest sind zusammen das eine Stück der Form, und der Anguss reicht
+   nicht in den Kreis des Pressrests. */
+test('gusstraube.glb: vier Teile mit Rolle im Namen, Pressrest wie in der Quelle', async () => {
+  const { readGLBMeshes, isGLB } = await import(pathToFileURL(path.join(site, 'tools/3d-studio/js/part/glbio.js')));
+  const buf = readFileSync(path.join(site, 'examples', 'gusstraube.glb'));
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  assert.ok(isGLB(ab));
+  const netze = Object.fromEntries(readGLBMeshes(ab).map(m => [m.name, m.tris]));
+  assert.deepEqual(Object.keys(netze).sort(), ['Anguss', 'Bauteil', 'Pressrest', 'Überläufe']);
+  const cm3 = n => meshVolume(netze[n]) / 1000;
+  closeTo(cm3('Bauteil'), 1333.60, 1e-3);
+  closeTo(cm3('Überläufe'), 71.93, 1e-3);
+  closeTo(cm3('Anguss') + cm3('Pressrest'), 326.53, 1e-3);          // castRunner der Form
+  const vieleck = 32 * 65 * 65 * Math.sin(2 * Math.PI / 64);        // mm², Fläche des 64-Ecks
+  closeTo(meshVolume(netze.Pressrest), vieleck * 20, 2e-4);
+  const t = netze.Anguss;
+  for (let i = 0; i < t.length; i += 9) {
+    const cx = (t[i] + t[i + 3] + t[i + 6]) / 3, cy = (t[i + 1] + t[i + 4] + t[i + 7]) / 3;
+    assert.ok(Math.hypot(cx, cy + 280) > 64, 'Anguss-Dreieck im Kreis des Pressrests bei ' + cx.toFixed(1) + ', ' + cy.toFixed(1));
+  }
+  for (const n in netze) assert.ok(meshVolume(netze[n]) > 0, n + ': positives Volumen');
+  const stl = readFileSync(path.join(site, 'tools/sprengflaeche/stl-app.js'), 'utf8');
+  for (const n in netze) assert.match(stl, new RegExp("'?" + n + "'?: '"), n + ' fehlt in ROLLE_AUS_NAME');
+});
 
 test('part.stl: Platte 200×120×4 mit Aufsatz 60×40×10', () => {
   const tris = loadAsset('part.stl');

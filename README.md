@@ -103,7 +103,8 @@ dielogic/
 │   │                    team-mockup.svg, palette.svg (generiert), theorie/*.svg (generiert)
 │   │                    icons/*.svg: Piktogramme der Startseite (Schritte, Werkzeuge) —
 │   │                    per <use href="…svg#icon"> eingebunden, Farben var(--…, Fallback)
-│   └── examples/        Beispiel-STLs für die Sprengflächenanalyse (auch von Tests genutzt)
+│   └── examples/        gusstraube.glb: Beispiel der Sprengflächenanalyse, die Gusstraube
+│                        der Beispielform (scripts/3d-studio/build-gusstraube.mjs)
 ├── backend/         FastAPI: /api/auth (Einladung, Sitzung), /api/org (Mitglieder,
 │   │                Einladungen, Stammdaten), /api/projects (Revisionen)
 │   │                + statische Auslieferung von web/ (Werkzeugseiten nur mit Sitzung)

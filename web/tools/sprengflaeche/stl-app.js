@@ -1,12 +1,17 @@
 /* DieLogic – web/tools/sprengflaeche/stl-app.js
-   Seiten-Code der STL-Analyse: Dateien laden, Projektion zeichnen, Tabellen
-   rendern, Ereignisse. Rechenlogik liegt in stl-math.js (Netz-Kennwerte),
+   Seiten-Code der Sprengflächenanalyse: Dateien laden (STL oder GLB),
+   Projektion zeichnen, Tabellen rendern, Ereignisse. Gelesen wird mit
+   denselben Modulen wie im 3D-Studio: STL mit stl-math.js (das 3D-Studio
+   nutzt es auch), GLB mit dessen part/glbio.js (ohne three.js; die Seite
+   zeichnet nur 2D-Projektionen und braucht keine 3D-Bibliothek).
+   Rechenlogik liegt in stl-math.js (Netz-Kennwerte),
    stl-logic.js (Zuordnung/Maschinentabelle), shared/clampmodel.js und
    stl-logic.js (handoffValues) — dieses Script ist reine Ansicht und Verdrahtung.
    ES-Modul wegen des Imports aus stl-math.js (<script type="module">);
    stl-logic.js, clampmodel.js & Co. bleiben klassische Scripts und stehen
    wie zuvor auf window.__STL_LOGIC__ / window.__CLAMP_MODEL__ / … bereit. */
 import { parseSTL, meshVolume, meshArea } from './stl-math.js';
+import { readGLBMeshes, isGLB } from '../3d-studio/js/part/glbio.js';
 
 (function () {
   'use strict';
@@ -137,21 +142,40 @@ import { parseSTL, meshVolume, meshArea } from './stl-math.js';
 
   /* ── Dateien laden ─────────────────────────────────────────── */
 
+  /* Teile einer GLB, deren Knotenname die Rolle sagt — so heißen die Teile
+     der Gusstraube (web/examples/gusstraube.glb, wie in der Beispielform des
+     3D-Studios). Andere Namen bekommen keine Rolle, die wählt der Anwender. */
+  const ROLLE_AUS_NAME = { Bauteil: 'part', Anguss: 'runner', 'Überläufe': 'overflow', 'Überlauf': 'overflow', Pressrest: 'biscuit' };
+  const ROLLEN_REIHE = ['part', 'runner', 'overflow', 'biscuit'];
+
+  /* Eine Datei → ihre Teile { name, tris, role }: eine STL ist ein Teil,
+     eine GLB so viele, wie sie Netze hat (in der Reihenfolge der Rollen). */
+  function teileAus(file, buf) {
+    if (!isGLB(buf)) return [{ name: file.name, tris: parseSTL(buf), role: file.role || '' }];
+    const netze = readGLBMeshes(buf).filter(m => m.tris.length);
+    if (!netze.length) throw new Error('Die GLB enthält keine Dreiecke.');
+    const rang = m => { const i = ROLLEN_REIHE.indexOf(ROLLE_AUS_NAME[m.name]); return i < 0 ? ROLLEN_REIHE.length : i; };
+    return netze
+      .map((m, i) => ({ m, i })).sort((a, b) => rang(a.m) - rang(b.m) || a.i - b.i)
+      .map(({ m }) => ({ name: netze.length > 1 ? m.name : file.name, tris: m.tris, role: ROLLE_AUS_NAME[m.name] || '' }));
+  }
+
   async function addFiles(fileList) {
     const errors = [];
     for (const file of fileList) {
       try {
-        const tris = parseSTL(await file.arrayBuffer());
-        models.push({
-          name: file.name,
-          tris,
-          farbe: null,          // Ersatzfarbe (Rollenname), vergeben von farbeVon()
-          volume: Math.abs(meshVolume(tris)),
-          volumeSigned: meshVolume(tris),
-          area: meshArea(tris),
-          role: file.role || '',
-          proj: {},
-        });
+        for (const { name, tris, role } of teileAus(file, await file.arrayBuffer())) {
+          models.push({
+            name,
+            tris,
+            farbe: null,          // Ersatzfarbe (Rollenname), vergeben von farbeVon()
+            volume: Math.abs(meshVolume(tris)),
+            volumeSigned: meshVolume(tris),
+            area: meshArea(tris),
+            role,
+            proj: {},
+          });
+        }
       } catch (e) {
         errors.push(file.name + ': ' + e.message);
       }
@@ -700,7 +724,7 @@ import { parseSTL, meshVolume, meshArea } from './stl-math.js';
   card.addEventListener('drop', (e) => {
     e.preventDefault();
     card.classList.remove('dragover');
-    const files = [...e.dataTransfer.files].filter(f => /\.stl$/i.test(f.name));
+    const files = [...e.dataTransfer.files].filter(f => /\.(stl|glb)$/i.test(f.name));
     if (files.length) addFiles(files);
   });
 
@@ -721,26 +745,17 @@ import { parseSTL, meshVolume, meshArea } from './stl-math.js';
      als CSS-Token und folgen von selbst. */
   document.addEventListener('dielogic:scheme', draw);
 
-  /* ── Beispieldateien aus assets/ als Startbelegung ───────────
-     Minimaler Gießlauf mit fertiger Zuordnung: Pressrest — Anguss —
-     Bauteil — Überläufe, damit die Dashboard-Übernahme sofort geht. */
+  /* ── Beispiel als Startbelegung ──────────────────────────────
+     Die Gusstraube der Beispielform aus dem 3D-Studio (Ölwanne mit Anguss,
+     Überläufen und Pressrest, scripts/3d-studio/build-gusstraube.mjs), die
+     Rollen stehen in den Knotennamen: die Dashboard-Übernahme geht sofort. */
   async function loadDefaults() {
-    const defaults = [
-      ['/examples/biscuit.stl',  'biscuit'],
-      ['/examples/runner.stl',   'runner'],
-      ['/examples/part.stl',     'part'],
-      ['/examples/overflow.stl', 'overflow'],
-    ];
-    const files = [];
-    for (const [url, role] of defaults) {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        const buf = await res.arrayBuffer();
-        files.push({ name: url.split('/').pop(), role, arrayBuffer: async () => buf });
-      } catch (e) { /* z. B. file:// — dann ohne Beispieldateien starten */ }
-    }
-    if (files.length) addFiles(files);
+    try {
+      const res = await fetch('/examples/gusstraube.glb');
+      if (!res.ok) return;
+      const buf = await res.arrayBuffer();
+      addFiles([{ name: 'gusstraube.glb', arrayBuffer: async () => buf }]);
+    } catch (e) { /* z. B. file:// — dann ohne Beispiel starten */ }
   }
 
   /* ── Gespeicherten Stand zurücklesen ─────────────────────────
