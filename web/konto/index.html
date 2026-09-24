@@ -209,15 +209,15 @@
 
     /* ── Mitglieder / Einladungen ─────────────────────────── */
     .mem-list { list-style: none; margin: 0; padding: 0; }
-    .mem-list li { display: flex; align-items: center; gap: .75rem; padding: .55rem 0; border-bottom: 1px solid var(--border-light); }
+    .mem-list li { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; padding: .55rem 0; border-bottom: 1px solid var(--border-light); }
     .mem-list li:last-child { border-bottom: 0; }
     .mem-list .av { width: 34px; height: 34px; border-radius: 50%; background: var(--pale); color: var(--primary); font-weight: 700; font-size: .78rem; display: flex; align-items: center; justify-content: center; flex: none; }
     .mem-list .av.off { background: var(--bg); color: var(--muted); }
     .mem-list .av.inv { background: var(--bg); color: var(--muted); font-size: 1rem; }
-    .mem-list .who { min-width: 0; }
+    .mem-list .who { flex: 1 1 14rem; min-width: 0; }
     .mem-list .n { font-weight: 600; font-size: .86rem; }
     .mem-list .e { font-size: .75rem; color: var(--muted); overflow-wrap: anywhere; }
-    .mem-list .right { margin-left: auto; display: flex; align-items: center; gap: .6rem; flex: none; }
+    .mem-list .right { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .25rem .6rem; flex: 0 1 auto; }
     .mem-empty { font-size: .82rem; color: var(--muted); padding: .4rem 0; }
 
     /* ── Farbschema ───────────────────────────────────────── */
