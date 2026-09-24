@@ -76,13 +76,13 @@ const things = () => ({
 test('Standard: jede Elementart trägt ihre Farbe', () => {
   S.set('teal');
   const c = S.colors('teal');
-  /* Was ein Designer setzt, hebt sich vom Anguss ab: Hervorhebung und das
-     Violett der Maschine, der Spiegelpunkt die helle Hervorhebung. */
+  /* Was ein Designer setzt, hebt sich vom Anguss ab: die Hervorhebung und
+     ihre Geschwister Koralle (warm) und Himmelblau (kühl). */
   assert.equal(VENTS.TYPES.bohne.color, c.mark, 'die Bohne in der Hervorhebung');
-  assert.equal(VENTS.TYPES.waschbrett.color, c.machine, 'das Waschbrett im Violett der Maschine');
+  assert.equal(VENTS.TYPES.waschbrett.color, c.markWarm, 'das Waschbrett in Koralle');
   assert.equal(G.TYPES.point.color, c.mark, 'der Punkt in der Hervorhebung');
-  assert.equal(G.TYPES.branch.color, c.machine, 'die Verzweigung im Violett der Maschine');
-  assert.equal(G.TYPES.mirror.color, P.mix('mark', 'surface', 0.45), 'der Spiegelpunkt in der hellen Hervorhebung');
+  assert.equal(G.TYPES.branch.color, c.markWarm, 'die Verzweigung in Koralle');
+  assert.equal(G.TYPES.mirror.color, c.markCool, 'der Spiegelpunkt in Himmelblau');
   /* Die übrigen tragen die Sachfarbe ihrer Sache. */
   assert.equal(VENTS.TYPES.entlueftet.color, c.air);
   assert.equal(VENTS.TYPES.schlitz.color, P.mix('air', 'surface', 0.4), 'der Schlitz ist die hellere Luft');
@@ -139,11 +139,13 @@ test('In jedem Schema: Knoten, Bohne und Waschbrett liegen weit weg vom Anguss u
     const far = (a, b, min, text) => assert.ok(dE(a, b) >= min, s.id + ': ' + text + ' nur ΔE ' + dE(a, b).toFixed(1) + ' (' + a + ' / ' + b + ')');
     for (const k of ['punkt', 'verzweigung', 'spiegelpunkt']) far(E[k], runner, 18, 'Knoten ' + k + ' am Anguss');
     for (const k of ['bohne', 'waschbrett']) far(E[k], runner, 18, k + ' am Anguss');
-    far(E.bohne, E.waschbrett, 12, 'Bohne und Waschbrett');
+    far(E.bohne, E.waschbrett, 20, 'Bohne und Waschbrett');
     const nodes = ['pressrest', 'punkt', 'verzweigung', 'spiegelpunkt', 'anschnitt'];
     for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) far(E[nodes[i]], E[nodes[j]], 12, 'Knoten ' + nodes[i] + ' und ' + nodes[j]);
+      for (let j = i + 1; j < nodes.length; j++) far(E[nodes[i]], E[nodes[j]], 15, 'Knoten ' + nodes[i] + ' und ' + nodes[j]);
     }
+    /* Die drei Punktarten, die der Anwender setzt, klar getrennt (24.09.). */
+    for (const [a, b] of [['punkt', 'verzweigung'], ['punkt', 'spiegelpunkt'], ['verzweigung', 'spiegelpunkt']]) far(E[a], E[b], 20, a + ' und ' + b);
   }
   S.set('teal');
 });
@@ -153,7 +155,7 @@ test('Umschalten färbt Designer, Anguss, Richtungen und Achsen um', () => {
   const c = S.colors('stahl');
   assert.notEqual(c.mark, S.colors('teal').mark, 'Stahlblau hat eine eigene Hervorhebung');
   assert.equal(VENTS.TYPES.bohne.color, c.mark);
-  assert.equal(VENTS.TYPES.waschbrett.color, c.machine);
+  assert.equal(VENTS.TYPES.waschbrett.color, c.markWarm);
   assert.equal(VENTS.TYPES.entlueftet.color, c.air);
   assert.equal(COOL.TYPES.stich.color, c.cool);
   assert.equal(FILL.inletColor(), c.die, 'der Anschnitt der Füllung zieht mit dem Ereignis nach');

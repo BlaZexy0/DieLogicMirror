@@ -50,6 +50,11 @@
   --bad-border: #e2988c;
   /* Hervorhebung: Arbeitspunkt, Ist-Wert */
   --mark: #b23797;
+  /* Licht: die leuchtende Glühbirne (Sichtbarkeit an) */
+  --lamp: #f2b200;
+  /* Punktarten der 3D-Designer neben --mark: warm (Verzweigung, Waschbrett), kühl (Spiegelpunkt) */
+  --mark-warm: #f66e5c;
+  --mark-cool: #19bdfc;
   /* Sachfarben: überall dieselben Dinge in derselben Farbe */
   --melt: #008c82;
   --runner: #006665;

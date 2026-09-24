@@ -53,6 +53,8 @@ export const ROLE = Object.freeze({
   get caution() { return pal('caution', '#e0a400'); },
   get bad() { return pal('bad', '#b42318'); },
   get mark() { return pal('mark', '#b23797'); },
+  get markWarm() { return pal('markWarm', '#f66e5c'); },
+  get markCool() { return pal('markCool', '#19bdfc'); },
   /* Sachfarben */
   get machine() { return pal('machine', '#ac6eef'); },
   get melt() { return pal('melt', '#008c82'); },
@@ -231,14 +233,16 @@ export const draftColor = (deg, limit) => scaleRgb('draft', draftT(deg, limit)).
 /* Was ein Designer setzt, muss sich vom Anguss abheben (Rückmeldung vom
    23.09.: in den Tönen der Schmelze verschwanden Bohne, Waschbrett und
    die Knoten im Lauf). Diese Arten tragen darum nicht die Farbe der
-   Schmelze, sondern die zwei Farben, die in jedem Schema am weitesten von
-   ihr, vom Bauteil und von der Ampel liegen: die Hervorhebung und das
-   Violett der Maschine, dazu die helle Stufe der Hervorhebung.
-     Anguss     Punkt = Hervorhebung, Verzweigung = Violett, Spiegelpunkt =
-                helle Hervorhebung (seine nachgezogene Gegenseite ist blass,
+   Schmelze, sondern die Hervorhebung und ihre zwei Geschwister markWarm
+   (Koralle) und markCool (Himmelblau). Die Punktarten untereinander sollen
+   ebenso klar getrennt sein (Rückmeldung vom 24.09.: Punkt, Verzweigung
+   und Spiegelpunkt lagen in Magenta, Violett und hellem Magenta zu nah
+   beieinander); die drei liegen in jedem Schema paarweise bei ΔE ≥ 20.
+     Anguss     Punkt = Hervorhebung, Verzweigung = Koralle, Spiegelpunkt =
+                Himmelblau (seine nachgezogene Gegenseite ist blass,
                 VIEW.follower). Pressrest = Pressrest, Anschnitt = Werkzeug
                 (wie in den Diagrammen).
-     Überlauf   Bohne = Hervorhebung, Waschbrett = Violett. Die Entlüftung
+     Überlauf   Bohne = Hervorhebung, Waschbrett = Koralle. Die Entlüftung
                 ist Luft: Bohne mit Entlüftung = Luft, der Schlitz die
                 hellere Luft, die Kanalpunkte noch heller, damit sie nicht
                 wie ein Schlitz aussehen.
@@ -250,12 +254,12 @@ export const draftColor = (deg, limit) => scaleRgb('draft', draftT(deg, limit)).
 export const ELEMENT = Object.freeze({
   get pressrest() { return ROLE.biscuit; },
   get punkt() { return ROLE.mark; },
-  get verzweigung() { return ROLE.machine; },
-  get spiegelpunkt() { return mixHex('mark', 'surface', 0.45); },
+  get verzweigung() { return ROLE.markWarm; },
+  get spiegelpunkt() { return ROLE.markCool; },
   get anschnitt() { return ROLE.die; },
   get bohne() { return ROLE.mark; },
   get entlueftet() { return ROLE.air; },
-  get waschbrett() { return ROLE.machine; },
+  get waschbrett() { return ROLE.markWarm; },
   get schlitz() { return mixHex('air', 'surface', 0.4); },
   get kanalpunkt() { return mixHex('air', 'surface', 0.7); },
   get stich() { return ROLE.cool; },

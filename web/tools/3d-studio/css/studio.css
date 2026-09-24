@@ -970,9 +970,9 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
 .st-root[data-tool="formaufbau"] .bulb-btn .glass { fill: none; stroke: var(--muted-light); stroke-width: 1.5; }
 .st-root[data-tool="formaufbau"] .bulb-btn .socket { fill: none; stroke: var(--muted-light); stroke-width: 1.5; stroke-linecap: round; }
 .st-root[data-tool="formaufbau"] .bulb-btn .rays { display: none; }
-.st-root[data-tool="formaufbau"] .bulb-btn.on .glass { fill: var(--primary-light); stroke: var(--primary); }
+.st-root[data-tool="formaufbau"] .bulb-btn.on .glass { fill: color-mix(in srgb, var(--lamp) 70%, var(--surface)); stroke: color-mix(in srgb, var(--lamp) 70%, var(--text)); }
 .st-root[data-tool="formaufbau"] .bulb-btn.on .socket { stroke: var(--muted); }
-.st-root[data-tool="formaufbau"] .bulb-btn.on .rays { display: block; fill: none; stroke: var(--primary-light); stroke-width: 1.6; stroke-linecap: round; }
+.st-root[data-tool="formaufbau"] .bulb-btn.on .rays { display: block; fill: none; stroke: var(--lamp); stroke-width: 1.6; stroke-linecap: round; }
 
 /* Die Zeile eines Teils: Schalter · Farbfeld · Name · „⋯". */
 .st-root[data-tool="formaufbau"] .comp-row {
