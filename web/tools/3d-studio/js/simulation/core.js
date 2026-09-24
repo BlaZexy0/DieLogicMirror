@@ -135,10 +135,9 @@ export function createSimCore(opts) {
   /* ── Ergebnisse ──────────────────────────────────────────── */
   /** Wessen Bild zu sehen ist: das gewählte „Bild", sonst was es gibt. */
   const shown = () => state.results[state.bild] || IDS.map(id => state.results[id]).find(Boolean) || null;
-  /** Wo das Ergebnis zu sehen ist: die Kammerfüllung zeigt es in JEDEM Modus — ihr Zeitregler steht
-      unten unter dem Hauptknopf und gälte sonst für ein Bild, das gerade nicht da ist. Die
-      Angussfüllung behält ihr Ergebnis im Modus „Ergebnis", wo auch die Ankunftsfarben wohnen. */
-  const resultShown = () => (opts.resultEverywhere ? true : shell.mode === 'ergebnis');
+  /* Das Ergebnis steht in JEDEM Modus im Bild: der Zeitregler sitzt unten unter dem Hauptknopf
+     und gälte sonst für ein Bild, das gerade nicht da ist; wer an System, Prozess oder Rechnung
+     dreht, sieht den Lauf dazu (die Angussfüllung seit dem 24.09. wie die Kammerfüllung). */
 
   /* Warum ein Lauf ohne Ergebnis endete: null heißt „Abbrechen" gedrückt,
      sonst hat ihn eine Änderung überholt — dann die Bezeichnung des Felds
@@ -209,7 +208,7 @@ export function createSimCore(opts) {
   const clampFrame = r => Math.max(0, Math.min(r.snapshots.length - 1, state.frame));
 
   function applyView() {
-    const r = resultShown() ? shown() : null;
+    const r = shown();
     const melt = !!r && opts.meltVisible();
     for (const id of IDS) if (!melt || r.engine !== id) displays[id].hide();
     if (melt) {
@@ -264,10 +263,8 @@ export function createSimCore(opts) {
     if (state.frame >= r.snapshots.length - 1) state.frame = 0;
     state.playing = setInterval(() => {
       const now = shown();
-      /* Abgespielt wird, wo das Bild steht — seit der Regler unter dem Knopf
-         sitzt, ist das jeder Modus (resultShown). Die alte Prüfung auf
-         „ergebnis" hielt das Abspielen überall sonst sofort wieder an. */
-      if (!now || !resultShown()) { stopPlay(); return; }
+      /* Abgespielt wird in jedem Modus, das Bild steht überall. */
+      if (!now) { stopPlay(); return; }
       state.frame++;
       if (state.frame >= now.snapshots.length) { state.frame = now.snapshots.length - 1; stopPlay(); }
       ui('t-slider').value = String(state.frame);

@@ -137,10 +137,10 @@ test('Gitter: ein Lauf in JavaScript bis zur Ankunft — Tabelle, Bild, Regler, 
   assert.equal(v.meltMesh.visible, false);
   assert.match(doc.getElementById('cb-title').textContent, /Ankunft/);
   assert.equal(ui('t-slider').disabled, true, 'ohne Schmelze ist der Zeitregler stumpf — er bewegte nichts');
-  /* Der Modus besitzt sein Bild: woanders steht nur der Anguss, ohne Skala. */
+  /* Das Ergebnis steht in jedem Modus im Bild (24.09.), wie bei der Kammerfüllung. */
   shell.setMode('prozess');
-  assert.ok(!doc.getElementById('colorbar').classList.contains('on'), 'außerhalb des Ergebnisses keine Skala');
-  same(v.runnerMesh.material.vertexColors, false, 'und der Anguss ist wieder einfarbig');
+  assert.ok(doc.getElementById('colorbar').classList.contains('on'), 'auch im Prozess steht die Skala');
+  same(v.runnerMesh.material.vertexColors, true, 'und der Anguss trägt seine Ankunftsfarben');
   shell.setMode('ergebnis');
   assert.match(doc.getElementById('cb-title').textContent, /Ankunft/, 'zurück im Ergebnis: wie verlassen');
   seg(ui('show-seg'), 'schmelze').dispatch('click');

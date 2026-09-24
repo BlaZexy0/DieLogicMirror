@@ -166,9 +166,6 @@ export function createKammerfuellungTool(host) {
         + (snap.bubbles > 0 ? ' (' + fmtPlain(snap.bubbles, 0) + (snap.bubbles === 1 ? ' Blase)' : ' Blasen)') : '')
     }),
     meltVisible: () => true,
-    /* Der Zeitregler steht unter dem Hauptknopf — also gehört das Bild des
-       Laufs in jeden Modus, nicht nur in „Ergebnis". */
-    resultEverywhere: true,
     /* Der Kolben wandert mit dem Bild; ohne Bild steht er in Startlage. */
     onFrame: snap => { placePlunger(snap ? snap.s : 0); restMesh.visible = !snap; applyLook(); },
     render: renderTable
