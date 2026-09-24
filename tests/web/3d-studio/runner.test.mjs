@@ -3,7 +3,7 @@
 
    Alle Module unter js/runner/ außer app.js und editor.js kommen ohne
    DOM aus — das ist Absicht und der Grund, warum hier so viel prüfbar
-   ist. Die Verdrahtung der Seite prüft viewer.test.mjs.
+   ist. Die Verdrahtung der Seite prüft tools/anguss.test.mjs.
 
      node --import ./tests/web/3d-studio/stubs/register.mjs \
           --test tests/web/3d-studio/runner.test.mjs                    */
@@ -17,7 +17,7 @@ const G = await import(R + 'js/runner/graph.js');
 const PRE = await import(R + 'js/runner/presets.js');
 const { sampleNetwork, hermite, gateLand } = await import(R + 'js/runner/curve.js');
 const V = await import(R + 'js/runner/vec.js');
-const { sweepRunner, biscuitMesh } = await import(R + 'js/runner/sweep.js');
+const { sweepRunner, biscuitMesh, junctionPlan } = await import(R + 'js/runner/sweep.js');
 const F = await import(R + 'js/runner/flow.js');
 const { checkRules } = await import(R + 'js/runner/rules.js');
 const { autoTaper, DEFAULT_SIZING } = await import(R + 'js/runner/sizing.js');
@@ -486,6 +486,29 @@ test('Graph: die Anschnitthöhe des Systems gilt für alle ohne eigene', () => {
   assert.equal(old.nodes[gates[0].id].gate.hAuto, false);
 });
 
+/* Eine Datei ist Eingabe: die Werte kommen in die Grenzen der Felder
+   (G.LIMITS). Vorher übernahm fromJSON Schrittweite 0,001, Neigung 89° oder
+   eine negative Kanalbreite ungeprüft (23.09.). */
+test('Graph: fromJSON klemmt die Werte der Datei in die Grenzen der Felder', () => {
+  const g = PRE.demoTwoGates();
+  const j = JSON.parse(JSON.stringify(G.toJSON(g)));
+  Object.assign(j, { step: 0.001, draft: 89, tension: -3, gateH: -1, radius: 1e6, branchR: -2 });
+  const knoten = j.nodes.find(n => n.id !== j.rootId && !n.gate);
+  knoten.w = -5; knoten.h = 1e5;
+  const tor = j.nodes.find(n => n.gate);
+  Object.assign(tor.gate, { h: 99, len: -1, w: 1e5 });
+  const back = G.fromJSON(j);
+  const L = G.LIMITS;
+  assert.equal(back.step, L.step[0]);
+  assert.equal(back.draft, L.draft[1]);
+  assert.equal(back.tension, L.tension[0]);
+  assert.equal(back.gateH, L.gateH[0]);
+  assert.equal(back.radius, L.radius[1]);
+  assert.equal(back.branchR, L.branchR[0]);
+  assert.deepEqual([back.nodes[knoten.id].w, back.nodes[knoten.id].h], [L.w[0], L.h[1]]);
+  assert.deepEqual([back.nodes[tor.id].gate.h, back.nodes[tor.id].gate.len, back.nodes[tor.id].gate.w], [L.gateH[1], L.gateLen[0], L.gateW[1]]);
+});
+
 test('Graph: JSON hin und zurück behält die gebundene Mündung', () => {
   const g = PRE.demoTwoGates();
   const lead = G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id));
@@ -540,6 +563,183 @@ test('Graph: fremde oder beschädigte Dateien werden abgewiesen, nicht verschluc
   });
   assert.equal(G.allNodes(g).length, 2);
   assert.deepEqual(g.nodes.a.children, ['b']);
+});
+
+test('Graph: Kennungen aus der Datei — nur harmlose; eine Datei mit anderen wird abgewiesen', () => {
+  /* Die Kennungen landen in der Seite (Kopfzeile des Auswahlfelds, Prüfliste,
+     Tabelle der Angussfüllung). Eine präparierte lief dort als HTML. */
+  const good = () => JSON.parse(JSON.stringify(G.toJSON(PRE.demoTwoGates())));
+  const swap = (obj, from, to) => {
+    for (const n of obj.nodes) {
+      if (n.id === from) n.id = to;
+      if (n.parent === from) n.parent = to;
+      n.children = n.children.map(c => (c === from ? to : c));
+    }
+    if (obj.rootId === from) obj.rootId = to;
+    return obj;
+  };
+  const gateId = good().nodes.find(n => n.type === 'gate').id;
+  const evil = 'k3<img src=x onerror="window.__pwned=1">';
+  assert.throws(() => G.fromJSON(swap(good(), gateId, evil)), /der Datei .*ungültige Kennung/);
+  const o1 = good();
+  o1.nodes.find(n => n.id === gateId).id = evil;
+  assert.throws(() => G.fromJSON(o1), /Knoten Nr\. \d+ der Datei hat eine ungültige Kennung/);
+  /* Ein Verweis allein genügt: ein Kind, das so heißt. */
+  const o2 = good();
+  o2.nodes.find(n => n.children.length).children.push(evil);
+  assert.throws(() => G.fromJSON(o2), /verweist auf eine ungültige Kennung/);
+  const o3 = good();
+  o3.rootId = '<b>';
+  assert.throws(() => G.fromJSON(o3), /Wurzelknoten der Datei hat eine ungültige Kennung/);
+  /* Namen, die jedes Objekt mitbringt, und doppelte Kennungen ebenso. */
+  assert.throws(() => G.fromJSON(swap(good(), gateId, 'constructor')), /ungültige Kennung/);
+  const o4 = good();
+  o4.nodes.push({ ...o4.nodes[o4.nodes.length - 1] });
+  assert.throws(() => G.fromJSON(o4), /zweimal/);
+  /* Was ein Mensch sinnvoll hineinschreibt, geht. */
+  const ok = G.fromJSON(swap(good(), gateId, 'Anschnitt_links-2'));
+  assert.equal(ok.nodes['Anschnitt_links-2'].type, 'gate', 'Buchstaben, Ziffern, _ und -');
+  const neu = G.addChild(ok, ok.nodes['Anschnitt_links-2'].parent, 'point');
+  assert.ok(neu && !['Anschnitt_links-2'].includes(neu.id) && /^k\d+$/.test(neu.id), 'eine neue Kennung kollidiert mit nichts: ' + neu.id);
+
+  /* Die übrigen Werte der Datei: nur Bekanntes, nur Zahlen. */
+  const o5 = good();
+  const gate = o5.nodes.find(n => n.type === 'gate');
+  gate.gate.transition = '<img src=x>';
+  gate.gate.w = 'breit';
+  o5.nodes.find(n => n.type === 'point').type = 'constructor';
+  o5.biscuit.axis = 'toString';
+  o5.biscuit.d = '<90>';
+  const back = G.fromJSON(o5);
+  assert.equal(back.nodes[gate.id].gate.transition, 'ende', 'ein unbekannter Übergang wird der voreingestellte');
+  assert.equal(back.nodes[gate.id].gate.w, 20, 'keine Zahl: die Vorgabe');
+  assert.ok(G.allNodes(back).every(n => Object.hasOwn(G.TYPES, n.type)), 'nur bekannte Knotenarten');
+  assert.equal(back.biscuit.axis, '+y');
+  assert.equal(back.biscuit.d, 90);
+
+  /* Ein Kreis in der Datei legt nichts lahm: die Wurzel hat keinen Vorgänger. */
+  const ring = G.fromJSON({
+    format: 'dielogic-anguss', version: 1, rootId: 'a',
+    nodes: [
+      { id: 'a', type: 'root', parent: 'b', children: ['b'], pos: [0, 0, 0], w: 20, h: 10 },
+      { id: 'b', type: 'point', parent: 'a', children: ['a'], pos: [0, 0, 60], w: 18, h: 9 },
+      { id: 'c', type: 'point', parent: 'd', children: ['d'], pos: [0, 0, 90], w: 18, h: 9 },
+      { id: 'd', type: 'point', parent: 'c', children: ['c'], pos: [0, 0, 99], w: 18, h: 9 }
+    ]
+  });
+  assert.equal(ring.nodes.a.parent, null);
+  assert.deepEqual(Object.keys(ring.nodes).sort(), ['a', 'b'], 'was von der Wurzel aus nicht zu erreichen ist, fällt weg');
+  assert.ok(sampleNetwork(ring).edges.length === 1);
+});
+
+test('Graph: die Ausstoßrichtung umstellen dreht auch die gebundenen Mündungen mit', () => {
+  /* Vorher drehten Lagen und Bauteil, die Mündungen nicht: ein entlang seiner
+     Sehne gebundener Anschnitt zeigte nach „+y → +z" 90° aus seiner Ebene. */
+  const g = PRE.demoTwoGates();
+  const lead = G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id));
+  G.aimAt(g, lead.id, lead.pos, G.chordDir(g, lead));
+  assert.ok(G.aimTilt(g, g.nodes[lead.id]) < 1e-6, 'gebunden in der Ebene');
+  const before = G.allNodes(g).map(n => n.pos.slice());
+  const { ang } = G.turnSystem(g, '+z');
+  assert.ok(Math.abs(ang - Math.PI / 2) < 1e-12);
+  assert.equal(g.biscuit.axis, '+z');
+  for (const n of G.allNodes(g).filter(x => x.type === 'gate')) {
+    assert.ok(G.aimTilt(g, n) < 1e-6, n.id + ' bleibt in seiner Ebene: ' + G.aimTilt(g, n) + '°');
+    assert.ok(Math.abs(V.dot(n.aim, G.chordDir(g, n)) - 1) < 1e-9, n.id + ' zeigt weiter entlang der Sehne');
+  }
+  /* Und zurück: alles wie vorher. */
+  G.turnSystem(g, '+y');
+  G.allNodes(g).forEach((n, i) => assert.ok(V.dist(n.pos, before[i]) < 1e-9, n.id));
+  assert.equal(G.turnSystem(g, '+y').ang, 0, 'dieselbe Richtung: nichts zu drehen');
+});
+
+test('Graph: Spiegeln — eine neue Gabelung ist sofort auf beiden Seiten, ein wiederverwendeter Knoten behält nichts Altes', () => {
+  /* (a) Eine Verzweigung auf der führenden Seite: die Gegenseite hatte sie
+     erst nach der nächsten Änderung — und so wurde der Plan gespeichert. */
+  const g = PRE.demoTwoGates();
+  const b = G.allNodes(g).find(n => n.type === 'branch' && n.mirror);
+  const lead = G.allNodes(g).find(n => n.type === 'gate' && !G.isFollower(g, n.id));
+  const n0 = G.allNodes(g).length;
+  assert.ok(G.addChild(g, lead.parent, 'branch'));
+  assert.equal(G.allNodes(g).length, n0 + 6, 'Verzweigung und zwei Anschnitte auf jeder Seite');
+  /* Beide Seiten Knoten für Knoten: gleiche Art, gleiche Aufteilung. */
+  const pairs = (x, y, out = []) => {
+    out.push([x, y]);
+    x.children.forEach((c, i) => pairs(g.nodes[c], g.nodes[y.children[i]], out));
+    return out;
+  };
+  const same = () => {
+    const [l, f] = [b.children.find(id => !G.isFollower(g, id)), b.children.find(id => G.isFollower(g, id))].map(id => g.nodes[id]);
+    for (const [x, y] of pairs(l, f)) {
+      assert.equal(y.type, x.type, x.id + ' / ' + y.id);
+      assert.equal(y.children.length, x.children.length, x.id + ' / ' + y.id);
+      assert.equal(y.ratio, x.ratio, 'Aufteilung ' + x.id + ' / ' + y.id);
+      assert.equal(y.mirror, x.mirror, 'Spiegelung ' + x.id + ' / ' + y.id);
+    }
+  };
+  same();
+
+  /* (b) Der Weg aus der Oberfläche: davor einfügen, eine Verzweigung anhängen
+     und 80:20 stellen, einen ihrer Anschnitte entfernen, einen Punkt anfügen
+     — die Gegenseite teilte danach 80:20, die führende 50:50. */
+  const g2 = PRE.demoTwoGates();
+  const b2 = G.allNodes(g2).find(n => n.type === 'branch' && n.mirror);
+  const lead2 = G.allNodes(g2).find(n => n.type === 'gate' && !G.isFollower(g2, n.id));
+  const m = G.insertBefore(g2, lead2.id, 'point');
+  const nb = G.addChild(g2, m.id, 'branch');
+  G.setField(g2, nb.id, 'ratio', 0.8);
+  G.removeNode(g2, nb.children[0]);
+  assert.equal(g2.nodes[nb.id].type, 'point');
+  const twin = () => {
+    const l = g2.nodes[b2.children.find(id => !G.isFollower(g2, id))], f = g2.nodes[b2.children.find(id => G.isFollower(g2, id))];
+    const walkBoth = (x, y) => (x.id === nb.id ? y : x.children.map((c, i) => walkBoth(g2.nodes[c], g2.nodes[y.children[i]])).find(Boolean));
+    return walkBoth(l, f);
+  };
+  assert.equal(twin().ratio, undefined, 'die Gegenseite hat kein Verhältnis mehr');
+  G.addChild(g2, nb.id, 'point');
+  const t = twin();
+  assert.equal(t.type, g2.nodes[nb.id].type);
+  assert.equal(G.branchShare(g2, t, t.children[0]), G.branchShare(g2, g2.nodes[nb.id], g2.nodes[nb.id].children[0]), 'beide Seiten teilen gleich');
+});
+
+test('Graph: eine gespiegelte Gabelung bekommt keinen dritten Ast; ein Punkt mit zweitem Abgang wird Verzweigung', () => {
+  /* (c) Ein dritter Ast schaltete die Spiegelung still ab; entfernte man ihn
+     später, spiegelte sie wieder und überschrieb die Gegenseite. */
+  const g = PRE.demoTwoGates();
+  const b = G.allNodes(g).find(n => n.type === 'branch' && n.mirror);
+  assert.equal(G.addChild(g, b.id, 'gate'), null, 'verweigert');
+  assert.equal(b.children.length, 2);
+  assert.ok(G.isMirrorBranch(b), 'sie spiegelt weiter');
+  b.mirror = false;
+  assert.ok(G.addChild(g, b.id, 'gate'), 'ohne Spiegelung geht es');
+  assert.equal(b.children.length, 3);
+  /* Eine Datei mit „gespiegelter" Gabel aus drei Ästen spiegelt nicht — und
+     springt nicht zurück, wenn einer wegfällt. */
+  const o = JSON.parse(JSON.stringify(G.toJSON(g)));
+  o.nodes.find(n => n.id === b.id).mirror = true;
+  const back = G.fromJSON(o);
+  assert.equal(back.nodes[b.id].mirror, false);
+
+  /* Ein Punkt mit einem zweiten Abgang: geometrisch schon eine Gabelung —
+     jetzt auch mit Aufteilung und Spiegel-Häkchen. */
+  const s = straight(100);
+  const p = G.allNodes(s)[1];
+  G.addChild(s, p.id, 'gate');
+  assert.equal(p.type, 'point', 'ein Abgang: ein Punkt');
+  G.addChild(s, p.id, 'branch');
+  assert.equal(p.type, 'branch', 'zwei: eine Verzweigung');
+  assert.equal(p.ratio, 0.5);
+  assert.equal(p.mirror, false);
+  G.removeNode(s, p.children[1]);
+  assert.equal(p.type, 'point', 'und mit einem Abgang wieder ein Punkt');
+  /* Aus einer Datei ebenso. */
+  const f = JSON.parse(JSON.stringify(G.toJSON(s)));
+  const fp = f.nodes.find(n => n.id === p.id);
+  f.nodes.push({ id: 'z1', type: 'gate', parent: p.id, children: [], pos: [30, 0, 140], w: 8, h: 3, gate: { h: 2, len: 4, w: 20, auto: true, transition: 'ende' } });
+  fp.children.push('z1');
+  const fb = G.fromJSON(f);
+  assert.equal(fb.nodes[p.id].type, 'branch');
+  assert.equal(fb.nodes[p.id].ratio, 0.5);
 });
 
 test('Graph: die Arbeitsebene erbt vom Vorgänger und lässt sich kippen', () => {
@@ -782,6 +982,36 @@ test('Sweep: T-Stück, dreifache Gabelung, gerade abgehender Ast und Verzweigung
   assert.match(hint.text, /Zwickel/);
 });
 
+test('Sweep: eine kurze Kante zwischen zwei Gabelungen bleibt geschlossen, auch bei grobem Abtastschritt', () => {
+  /* Zwei gespiegelte Gabelungen 18 bis 29 mm auseinander, Abtastschritt ab
+     2,5 mm: zwischen den Trimmstellen beider Hosenstücke lag kein Schnitt,
+     der Schlauch dazwischen fiel weg — 104 offene Kanten, das STL war nicht
+     dicht, und keine Regel sagte etwas. */
+  const forks = (gap, deg) => {
+    const g = G.emptyGraph();
+    G.setBiscuit(g, { pos: [0, 0, 0], axis: '+y', d: 90, t: 25 });
+    const p1 = G.makeNode(g, 'point', G.root(g), [0, 0, 60]);
+    const b1 = G.makeNode(g, 'branch', p1, [0, 0, 110]);
+    b1.mirror = true;
+    const a = deg * Math.PI / 180;
+    const b2 = G.makeNode(g, 'branch', b1, [-gap * Math.sin(a), 0, 110 + gap * Math.cos(a)]);
+    b2.mirror = true;
+    const gt = G.makeNode(g, 'gate', b2, [b2.pos[0] - 45, 0, b2.pos[2] + 30]);
+    gt.gate = { h: 2.2, hAuto: false, len: 4, w: 26, auto: true, transition: 'ende' };
+    G.normalizeMirrors(g);
+    F.applyAutoGates(g, F.DEFAULT_PROCESS);
+    autoTaper(g, F.DEFAULT_PROCESS, DEFAULT_SIZING);
+    return g;
+  };
+  for (const [step, gap, deg] of [[2.5, 18, 40], [3, 22, 40], [3, 28, 30], [4, 20, 40], [4, 29, 30]]) {
+    const g = forks(gap, deg);
+    g.step = step;
+    const name = `Gabeln ${gap} mm auseinander, Schritt ${step} mm`;
+    assert.ok(!junctionPlan(sampleNetwork(g)).some(j => j.degenerate), name + ': Hosenstücke, keine Durchdringung');
+    oneBody(g, name);
+  }
+});
+
 test('Sweep: der Anguss ist am Pressrest beschnitten — nichts steckt im Zylinder, der Deckel liegt auf seinen Facetten', () => {
   /* Der Pressrest als 64-Eck, so wie biscuitMesh ihn baut: ein Punkt ist
      drinnen, wenn er innerhalb des Apothems liegt. */
@@ -923,6 +1153,44 @@ test('Strömung: die Anschnittbreite folgt der Zielgeschwindigkeit', () => {
   for (const r of fl.gates) assert.ok(Math.abs(r.vSoll - 30) / 30 < 0.05, r.vSoll.toFixed(1));
 });
 
+test('Strömung: das Stück im Pressrest ist Pressrest — kein Angussvolumen, keine Laufzeit', () => {
+  /* Der erste Kanal beginnt in der Mitte des Pressrests. Bis zu dessen
+     Mantel zählte er als Anguss (und in der Kurve ein zweites Mal als
+     Pressrest), und die Laufzeit begann dort, wo bei „Kammer voll" längst
+     Schmelze steht. Gerade Kante, 100 mm, Pressrest Ø 90: 55 mm zählen. */
+  const g = straight(100, 20, 10);
+  const net = sampleNetwork(g);
+  const e = net.edges[0];
+  assert.ok(Math.abs(e.s0 - 45) < 1e-9, 'der Weg verlässt den Pressrest bei 45 mm: ' + e.s0);
+  const A = P.area(P.section(20, 10, g.draft, g.radius));
+  const fl = F.analyseFlow(g, net, proc());
+  assert.ok(Math.abs(fl.runnerVolume - A * 55) < 1e-9 * A * 55, fl.runnerVolume + ' gegen ' + A * 55);
+  assert.ok(Math.abs(F.runnerVolume(net) - fl.runnerVolume) < 1e-12);
+  /* Der Körper sagt dasselbe: beschnitten am Mantel. */
+  assert.ok(Math.abs(volume(sweepRunner(net)) - fl.runnerVolume) / fl.runnerVolume < 0.01);
+  /* Die Laufzeit: 55 mm mit der Geschwindigkeit im Kanal. */
+  const l = fl.losses.get(e.toId);
+  const v = l.Q / (A * 1e-6);
+  assert.ok(Math.abs(fl.arrival[e.toId] - 0.055 / v) < 1e-9, fl.arrival[e.toId] + ' s gegen ' + 0.055 / v);
+
+  /* Eine Kante, die den Pressrest nicht verlässt: sie zählt gar nicht, und
+     die nächste beginnt drinnen. */
+  const s = straight(30, 20, 10);
+  const gate = G.addChild(s, G.allNodes(s)[1].id, 'gate');
+  gate.pos = [0, 0, 80];
+  const ns = sampleNetwork(s);
+  assert.equal(ns.edges[0].s0, ns.edges[0].length, 'ganz im Pressrest');
+  assert.ok(Math.abs(ns.edges[1].s0 - 15) < 0.05, 'die nächste tritt bei 45 mm aus: ' + ns.edges[1].s0);
+
+  /* Die Beispiele: Angussvolumen und Körper liegen jetzt beieinander (vorher
+     ein Viertel auseinander) — der Rest ist das Hosenstück. */
+  for (const d of PRE.DEMOS) {
+    const gd = d.build(), nd = sampleNetwork(gd);
+    const rv = F.analyseFlow(gd, nd, proc()).runnerVolume, body = volume(sweepRunner(nd));
+    assert.ok(Math.abs(rv - body) / body < 0.05, d.id + ': ' + (rv / 1000).toFixed(1) + ' gegen ' + (body / 1000).toFixed(1) + ' cm³');
+  }
+});
+
 test('Strömung: jeder Legierung ihre Dichte', () => {
   const g = PRE.demoTwoGates();
   const net = sampleNetwork(g);
@@ -962,6 +1230,97 @@ test('Regeln: alle Beispiele sind ohne Beanstandung', () => {
   }
 });
 
+test('Regeln: ein Querschnitt, der allmählich aufgeht, wächst — gemessen an der engsten Stelle davor', () => {
+  /* Auf 62 mm auf das Doppelte: je Schnitt kaum mehr als anderthalb
+     Prozent, und der Vergleich mit dem Nachbarn (2 %) sah es nie. */
+  const g = straight(100, 20, 10);
+  const p = G.allNodes(g)[1];
+  const q = G.addChild(g, p.id, 'point');
+  q.pos = [0, 0, 162];
+  const A = P.area(P.section(20, 10, g.draft, g.radius));
+  const d = P.dimsForArea(2 * A, 0.5, g.draft, g.radius);
+  q.w = d.w; q.h = d.h;
+  const net = sampleNetwork(g);
+  const e = net.edges.find(x => x.toId === q.id);
+  let step = 0;
+  for (let i = 1; i < e.sections.length; i++) step = Math.max(step, e.sections[i].area / e.sections[i - 1].area - 1);
+  assert.ok(step < 0.02, 'je Schnitt ' + (step * 100).toFixed(2) + ' %');
+  const hit = checkRules(g, net, F.analyseFlow(g, net, proc()), proc()).find(r => r.title === 'Der Querschnitt wächst');
+  assert.ok(hit && hit.level === 'bad', 'die Regel meldet sich');
+  assert.match(hit.text, /um 100 % größer als an der engsten Stelle davor/, hit.text);
+  /* Gleich dick bleiben ist kein Wachsen. */
+  q.w = 20; q.h = 10;
+  const net2 = sampleNetwork(g);
+  assert.ok(checkRules(g, net2, F.analyseFlow(g, net2, proc()), proc()).find(r => r.title === 'Der Querschnitt nimmt durchgehend ab'));
+});
+
+test('Regeln: die Summe der Abgänge einer Verzweigung — aufgehend, stark einschnürend, im Band', () => {
+  /* Die Regel summierte den ERSTEN Schnitt jedes Abgangs, und den baut
+     curve.js als Anteil am Zulauf: die Summe war immer genau der Zulauf.
+     Jetzt zählt der eigene Querschnitt jedes Abgangs. */
+  const pruefe = f => {
+    const g = PRE.demoTwoGates();
+    const b = G.allNodes(g).find(n => n.type === 'branch');
+    b.mirror = false;
+    const Ab = P.area(P.section(b.w, b.h, g.draft, g.radius));
+    for (const id of b.children) {
+      const k = g.nodes[id];
+      const d = P.dimsForArea(f * Ab, k.h / k.w, g.draft, g.radius);
+      k.w = d.w; k.h = d.h;
+    }
+    const net = sampleNetwork(g);
+    return checkRules(g, net, F.analyseFlow(g, net, proc()), proc()).find(r => /Verzweigung|Abgänge an/.test(r.title));
+  };
+  const auf = pruefe(1.5);
+  assert.equal(auf.title, 'Verzweigung öffnet sich');
+  assert.equal(auf.level, 'bad');
+  assert.match(auf.text, /300 % des Zulaufs/);
+  const eng = pruefe(0.3);
+  assert.equal(eng.title, 'Verzweigung schnürt stark ein');
+  assert.equal(eng.level, 'warn');
+  assert.match(eng.text, /nur 60 %/);
+  /* Das Beispiel, wie es abgestuft ist: 90 % gehen weiter — und der Titel
+     nennt die Art nur einmal. */
+  const g = PRE.demoTwoGates();
+  const net = sampleNetwork(g);
+  const ok = checkRules(g, net, F.analyseFlow(g, net, proc()), proc()).find(r => /Abgänge an/.test(r.title));
+  assert.equal(ok.level, 'ok');
+  assert.match(ok.title, /^Abgänge an Verzweigung k\d+$/);
+  assert.match(ok.text, /^90 % des Zulaufquerschnitts/);
+  for (const d of PRE.DEMOS) {
+    const gd = d.build(), nd = sampleNetwork(gd);
+    for (const r of checkRules(gd, nd, F.analyseFlow(gd, nd, proc()), proc())) {
+      const w = r.title.split(/\s+/);
+      assert.ok(!w.some((x, i) => i > 0 && x === w[i - 1]), d.id + ': ein Wort doppelt in „' + r.title + '"');
+    }
+  }
+});
+
+test('Auslegung: auch hinter einem geklemmten Pressrest wächst nichts — 4000 cm³ an Ø 90', () => {
+  /* Der Anschluss am Pressrest wird auf 0,9·Ø geklemmt; vorher schrumpfte
+     nur er (4025 mm²), der Punkt dahinter blieb bei 4878 mm². */
+  const g = PRE.demoTwoGates();
+  assert.equal(g.biscuit.d, 90);
+  const p = { ...proc(), volume: 4000 };
+  F.applyAutoGates(g, p);
+  autoTaper(g, p, DEFAULT_SIZING);
+  assert.ok(G.root(g).w <= g.biscuit.d * 0.9 + 1e-9, 'der Anschluss ist geklemmt: ' + G.root(g).w);
+  const net = sampleNetwork(g);
+  const walk = (id, min) => {
+    for (const e of net.edges.filter(x => x.fromId === id)) {
+      let m = min;
+      for (const s of e.sections) {
+        assert.ok(s.area <= m * 1.0001, `${e.fromId}→${e.toId} bei ${s.s.toFixed(1)} mm: ${s.area.toFixed(0)} nach ${m.toFixed(0)} mm²`);
+        m = Math.min(m, s.area);
+      }
+      walk(e.toId, m);
+    }
+  };
+  walk(g.rootId, Infinity);
+  const rules = checkRules(g, net, F.analyseFlow(g, net, p), p);
+  assert.ok(!rules.find(r => r.title === 'Der Querschnitt wächst'), 'die Prüfung sieht es genauso');
+});
+
 test('Auslegung: nach dem Abstufen nimmt der Querschnitt auf jedem Weg ab', () => {
   const g = PRE.demoFourGates();
   /* Erst absichtlich verderben … */
@@ -999,5 +1358,11 @@ test('Flussschema: SVG mit einem Knoten je Punkt und den Anschnitten beschriftet
   assert.equal((svg.match(/<circle /g) || []).length, G.allNodes(g).length);
   assert.equal((svg.match(/Soll /g) || []).length, 4, 'je Anschnitt eine Soll/Ist-Zeile');
   assert.match(svg, /Pressrest/);
+  /* Die Klassenregel im <style> schlägt ein fill-Attribut: „Soll/Ist
+     weicht ab" und „späteste Ankunft" blieben so grau. Rot kommt darum
+     über die Klasse, und die Schrift liest die Farben des Schemas. */
+  assert.doesNotMatch(svg, /<text class="c[ln][^"]*"[^>]*\sfill=/, 'keine fill-Attribute an Beschriftungen');
+  assert.match(svg, /\.cl\.bad\{fill:var\(--bad/);
+  assert.match(svg, /\.cl\{[^}]*fill:var\(--muted/);
   assert.match(flowChart(g, net, { gates: [], losses: new Map() }, {}), /chart-empty/);
 });

@@ -8,10 +8,13 @@
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
   <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
   <link rel="stylesheet" href="/shared/shared.css">
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/util.js"></script>
   <style>
     .stl-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 4rem; }
 
@@ -44,8 +47,10 @@
     .seg button.active { background: var(--primary); color: white; }
     .seg-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
     .stl-hint { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
-    .stl-status { font-size: 0.8rem; color: var(--warn); margin-top: 0.4rem; }
+    .stl-status { font-size: 0.8rem; color: var(--bad-text); margin-top: 0.4rem; }
     .stl-status:empty { display: none; }
+    /* Zurückgelesene Einstellungen: ein Hinweis, kein Fehler. */
+    .stl-status.stl-restored { color: var(--muted); border-left: 3px solid var(--primary); padding-left: 0.6rem; }
     .stl-note {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -171,7 +176,7 @@
       padding: 0.15rem 0.35rem;
       border-radius: 4px;
     }
-    .stl-table .remove-btn:hover { color: var(--warn); background: var(--warn-bg); }
+    .stl-table .remove-btn:hover { color: var(--bad-text); background: var(--bad-bg); }
     .table-empty { padding: 1.4rem 1.2rem; font-size: 0.85rem; color: var(--muted); }
     .stl-footnote { font-size: 0.75rem; color: var(--muted); margin-top: 0.8rem; line-height: 1.6; }
 
@@ -220,9 +225,8 @@
       cursor: pointer;
     }
     .machine-head label.check { cursor: pointer; }
-    .machine-head input.linked { border-color: var(--primary); background: rgba(0,140,130,.06); }
+    .machine-head input.linked { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, transparent); }
     .machine-head input#shrink-input { width: 76px; }
-    .hidden { display: none !important; }
     .machine-head input:focus, .machine-head select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
     .machine-info {
       padding: 0.55rem 1.2rem;
@@ -231,7 +235,7 @@
       border-bottom: 1px solid var(--border);
     }
     .machine-info:empty { display: none; }
-    .warn-lift { color: var(--warn); font-weight: 700; }
+    .warn-lift { color: var(--bad-text); font-weight: 700; }
 
     /* ── Zuordnung + Dashboard-Übernahme ───────────────────── */
     .stl-toolbar label { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 600; color: var(--muted); }
@@ -254,8 +258,11 @@
       color: var(--text);
       cursor: pointer;
     }
-    .stl-table tr.row-pref td { background: var(--pale); }
-    .stl-table tr.row-toosmall td { background: var(--warn-bg); color: var(--muted); }
+    /* Die Maschinentabelle urteilt: „empfohlen" ist gut, „zu klein" ist
+       schlecht, in den Stufen der Ampel. Die Marken stehen hell auf der
+       getönten Zeile, mit Schrift und Rand ihrer Stufe. */
+    .stl-table tr.row-pref td { background: var(--ok-bg); }
+    .stl-table tr.row-toosmall td { background: var(--bad-bg); color: var(--muted); }
     .badge {
       display: inline-block;
       padding: 0.1rem 0.55rem;
@@ -267,8 +274,8 @@
       vertical-align: middle;
       white-space: nowrap;
     }
-    .badge-pref { background: var(--primary); color: var(--surface); }
-    .badge-toosmall { background: var(--warn); color: var(--surface); }
+    .badge-pref { background: var(--surface); color: var(--ok-text); border: 1px solid var(--ok-border); }
+    .badge-toosmall { background: var(--surface); color: var(--bad-text); border: 1px solid var(--bad-border); }
     .dash-btn {
       padding: 0.3rem 0.75rem;
       border: 1px solid var(--primary);
@@ -287,8 +294,8 @@
 
     /* Eingaben außerhalb der Domäne (shared/felddomaene.js): es wird nicht
        weitergerechnet, der letzte gültige Stand bleibt abgeblendet stehen. */
-    .input-warn { font-size: 0.78rem; line-height: 1.5; color: var(--bad); background: var(--bad-bg);
-      border: 1px solid var(--bad); border-radius: 6px; padding: 0.5rem 0.7rem; margin: 0 0 0.6rem; }
+    .input-warn { font-size: 0.78rem; line-height: 1.5; color: var(--bad-text); background: var(--bad-bg);
+      border: 1px solid var(--bad-border); border-radius: 6px; padding: 0.5rem 0.7rem; margin: 0 0 0.6rem; }
     .input-warn.hidden { display: none; }
     input.bad { border-color: var(--bad); background: var(--bad-bg); }
     body.inputs-invalid #machine-body,
@@ -300,15 +307,15 @@
 <section class="page-hero compact">
   <div class="inner">
     <h1>Sprengflächenanalyse</h1>
-    <p class="subtitle">STL-Dateien im Browser auswerten (Volumen, Masse, projizierte Fläche, Maschinenwahl) und die Auslegung ins Projekt übernehmen.</p>
+    <p class="subtitle">STL- oder GLB-Dateien im Browser auswerten (Volumen, Masse, projizierte Fläche, Maschinenwahl) und die Auslegung ins Projekt übernehmen.</p>
   </div>
 </section>
 
 <div class="stl-wrap">
 
   <div class="stl-toolbar">
-    <input type="file" id="file-input" accept=".stl,model/stl,application/sla" multiple hidden>
-    <button class="btn btn-primary" id="upload-btn">+ STL-Dateien hinzufügen</button>
+    <input type="file" id="file-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" multiple hidden>
+    <button class="btn btn-primary" id="upload-btn">+ STL oder GLB hinzufügen</button>
     <span class="seg-label">Formöffnungsrichtung:</span>
     <div class="seg" id="dir-seg" role="group" aria-label="Formöffnungsrichtung">
       <button data-dir="X">X</button>
@@ -319,10 +326,10 @@
   </div>
   <div class="stl-status" id="status"></div>
   <!-- Einstellungen aus dem geometry-Abschnitt des Projekts zurückgelesen. -->
-  <div class="stl-status hidden" id="restored-note" style="border-left:3px solid var(--primary);"></div>
+  <div class="stl-status stl-restored hidden" id="restored-note"></div>
 
   <div class="stl-note"><strong>Konvention und Schwindung:</strong> Der Ursprung des
-    STL-Koordinatensystems (<strong>0</strong>) gilt als Werkzeugmitte (Mitte des Säulenfelds); die
+    Koordinatensystems der Datei (<strong>0</strong>) gilt als Werkzeugmitte (Mitte des Säulenfelds); die
     Außermittigkeit des Schwerpunkts und damit Hebelfaktor k und Maschinenempfehlung werden direkt
     vom Ursprung gemessen; die Dateien also schon im CAD passend zur Werkzeugmitte exportieren,
     diese Seite verschiebt und dreht nichts. Der Schalter <strong>„Modelle auf Werkzeugmaß"</strong>
@@ -340,13 +347,13 @@
         <path d="M21 4 L37 12 L37 30 L21 38 L5 30 L5 12 Z" stroke="var(--muted)" stroke-width="1.5" stroke-linejoin="round"/>
         <path d="M5 12 L21 20 L37 12 M21 20 L21 38" stroke="var(--muted)" stroke-width="1.5" stroke-linejoin="round"/>
       </svg>
-      <div>Noch keine STL-Dateien geladen.<br>Dateien auswählen oder hierher ziehen.<br>
-        Der STL-Ursprung (0) gilt als Werkzeugmitte.</div>
+      <div>Noch keine Dateien geladen (STL oder GLB).<br>Dateien auswählen oder hierher ziehen.<br>
+        Der Ursprung der Datei (0) gilt als Werkzeugmitte.</div>
     </div>
     <div class="canvas-caption">
       <span id="proj-label"></span>
       <span id="cog-label"></span>
-      <span>Einheiten: STL ist einheitenlos, angenommen wird <strong>mm</strong>.</span>
+      <span>Einheiten: STL und GLB sind hier einheitenlos, angenommen wird <strong>mm</strong>. Eine GLB mit mehreren Netzen gibt je Netz eine Zeile.</span>
     </div>
   </div>
 
@@ -425,7 +432,7 @@
     <strong>vereinigte</strong> Silhouette aller Dateien; Überdeckungen, auch zwischen
     verschiedenen Dateien, zählen nur einfach.
     <strong>S</strong> markiert den flächengewichteten Gesamtschwerpunkt der projizierten Flächen,
-    <strong>0</strong> den Ursprung des STL-Koordinatensystems.
+    <strong>0</strong> den Ursprung des Koordinatensystems der Datei.
     Der maximale Nachdruck je Maschine folgt dem Zuhaltungs-Modell des Dashboards
     (Herleitung: <a href="/theorie/zuhaltung-sprengflaeche.html">Theorie: Zuhaltung und
     Sprengfläche</a>):
@@ -468,9 +475,8 @@
 <script src="/shared/projectbar.js"></script>
 <script src="/shared/clampmodel.js"></script>
 <script src="/shared/felddomaene.js"></script>
-<script src="stl-math.js"></script>
 <script src="stl-logic.js"></script>
-<script src="stl-app.js"></script>
+<script type="module" src="stl-app.js"></script>
 
 </body>
 </html>

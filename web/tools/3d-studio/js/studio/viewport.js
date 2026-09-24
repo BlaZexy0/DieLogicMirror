@@ -3,17 +3,18 @@
    des Bildes (neben Auswahlfeld und Knöpfen), Zoomen zum Zeiger,
    Doppelklick ins Leere = Einpassen.
 
-   fitVisible: js/scene.js passt in den ganzen Viewport ein; hier wird
+   Einpassen: js/scene.js passt in den ganzen Viewport ein; hier wird
    das Ziel um den Versatz des freien Rechtecks verschoben und der Abstand
    um das Größenverhältnis vergrößert, sodass das Modell in der Lücke
    zwischen den Aufsätzen liegt. */
 
 import * as T from 'three';
 import { initScene } from '../scene.js';
+import { perPixel as worldPerPixel, cameraAxes, rayAt } from '../viewmath.js';
 
 export function createViewport(container, sceneOpts = {}) {
-  const view = initScene(container, { grid: false, ...sceneOpts });
-  if (view.controls && 'zoomToCursor' in view.controls) view.controls.zoomToCursor = true;
+  const view = initScene(container, sceneOpts);
+  view.controls.zoomToCursor = true;
 
   /* Wer belegt welchen Teil des Bildes? Der Rahmen meldet die Rechtecke
      seiner Aufsätze (Auswahlfeld, Knöpfe); frei ist der Rest rechts davon. */
@@ -73,12 +74,8 @@ export function createViewport(container, sceneOpts = {}) {
       }
       cam.updateProjectionMatrix();
       /* Weltmaß je Bildpunkt in der Zielebene. */
-      let perPx;
-      if (cam.isOrthographicCamera) perPx = (cam.top - cam.bottom) / cam.zoom / h;
-      else perPx = 2 * cam.position.distanceTo(ctl.target) * Math.tan(cam.fov * Math.PI / 360) / h;
-      const m = cam.matrixWorld.elements;
-      const right = new T.Vector3(m[0], m[1], m[2]).normalize();
-      const up = new T.Vector3(m[4], m[5], m[6]).normalize();
+      const perPx = worldPerPixel(cam, cam.position.distanceTo(ctl.target), h);
+      const { right, up } = cameraAxes(cam);
       /* Die Modellmitte soll zur Mitte des freien Rechtecks: also Ziel
          und Kamera entgegengesetzt verschieben. */
       const shift = right.multiplyScalar(-dx * perPx).add(up.multiplyScalar(dy * perPx));
@@ -91,8 +88,16 @@ export function createViewport(container, sceneOpts = {}) {
     return res;
   }
 
-  /* Doppelklick ins Leere: einpassen. */
-  view.renderer.domElement.addEventListener('dblclick', () => fit());
+  /* Doppelklick ins LEERE: einpassen. Wer auf einen Griff oder das Bauteil
+     doppelklickt, wählt aus — und die Kamera bleibt, wo sie ist (js/handles.js:
+     „Anklicken lässt die Kamera in Ruhe"). */
+  const blank = new T.Raycaster();
+  const isShown = o => { for (let x = o; x; x = x.parent) if (!x.visible) return false; return true; };
+  view.renderer.domElement.addEventListener('dblclick', ev => {
+    rayAt(blank, ev, view.renderer.domElement, view.camera);
+    const hits = blank.intersectObjects(view.scene.children, true).filter(h => h.object.visible && h.object.isMesh && isShown(h.object));
+    if (!hits.length) fit();
+  });
 
-  return { view, fit, setClearRect, setFitTarget, container, invalidate: view.invalidate };
+  return { view, fit, setClearRect, setFitTarget, invalidate: view.invalidate };
 }

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Projekte &amp; Konto · DieLogic</title>
   <meta name="description" content="DieLogic-Konto: Anmeldung auf Einladung, Projekte der Organisation, Mitglieder und Einladungen.">
+  <meta name="theme-color" content="#002733">
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
   <link rel="apple-touch-icon" href="/assets/icon-180.png">
@@ -12,10 +13,11 @@
   <link rel="stylesheet" href="/shared/shared.css">
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/util.js"></script>
   <style>
     .kt-wrap { max-width: 1100px; margin: 0 auto; padding: 1.6rem 1.5rem 3.5rem; }
-    .hidden { display: none !important; }
     .muted { color: var(--muted); }
 
     /* ── Identität (angemeldet) ───────────────────────────── */
@@ -64,13 +66,13 @@
     .kt-row > * { flex: 1; }
     .kt-row > .btn { flex: 0 0 auto; }
     .kt-actions { margin-top: 1rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
-    .kt-err { color: var(--warn); font-size: .82rem; min-height: 1.2em; margin-top: .5rem; }
+    .kt-err { color: var(--bad-text); font-size: .82rem; min-height: 1.2em; margin-top: .5rem; }
     /* Dialog „Neues Projekt": dieselbe Form wie in der Projektleiste. Ein
        echtes <dialog> statt window.prompt(): das kann kein Browser wegklicken
        oder unterdrücken, und es fragt gleich Beschreibung, Kunde und
        Teilenummer mit ab. */
     .kt-dialog { border: 0; border-radius: var(--radius); padding: 0; max-width: 32rem; width: calc(100% - 2rem); box-shadow: var(--shadow-lg); color: var(--text); }
-    .kt-dialog::backdrop { background: rgba(0,39,51,.45); }
+    .kt-dialog::backdrop { background: color-mix(in srgb, var(--dark) 45%, transparent); }
     .kt-dialog form { padding: 1.3rem 1.5rem 1.4rem; }
     .kt-dialog h3 { margin: 0 0 .6rem; font-size: 1.1rem; letter-spacing: -.01em; }
     .kt-dialog label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted); margin: .7rem 0 .25rem; }
@@ -79,11 +81,11 @@
     .kt-dialog .row { display: flex; gap: .6rem; }
     .kt-dialog .row > * { flex: 1; }
     .kt-dialog .actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.1rem; }
-    .kt-ok { color: var(--primary); font-size: .82rem; }
+    .kt-ok { color: var(--ok-text); font-size: .82rem; }
     .kt-note { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius); padding: .7rem 1.1rem; margin-bottom: 1.2rem; font-size: .82rem; color: var(--muted); line-height: 1.55; }
     .btn-link { background: none; border: 0; color: var(--primary); font: inherit; font-size: .78rem; font-weight: 600; cursor: pointer; padding: 0; }
     .btn-link:hover { text-decoration: underline; }
-    .btn-link.danger { color: var(--warn); }
+    .btn-link.danger { color: var(--bad-text); }
 
     /* Anmelden / Einladung: zentrierte Karte mit Logo */
     .kt-auth { max-width: 440px; margin: 1rem auto 0; }
@@ -104,8 +106,8 @@
       padding: 1rem 1.1rem .8rem; display: flex; flex-direction: column; gap: .5rem; position: relative;
       transition: transform .12s ease, box-shadow .12s ease;
     }
-    .pj:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,39,51,.12); }
-    .pj.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0,140,130,.14), var(--shadow); }
+    .pj:hover { transform: translateY(-1px); box-shadow: 0 6px 18px color-mix(in srgb, var(--dark) 12%, transparent); }
+    .pj.active { border-color: var(--primary); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 14%, transparent), var(--shadow); }
     .pj .top { display: flex; align-items: flex-start; gap: .6rem; }
     .pj .title { font-weight: 700; font-size: 1rem; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; flex: 1; }
     .pj .desc { font-size: .8rem; color: var(--muted); line-height: 1.45; }
@@ -121,7 +123,7 @@
       min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem;
       cursor: pointer; font: inherit; font-size: .85rem; font-weight: 600; transition: border-color .12s, color .12s, background .12s;
     }
-    .pj-new:hover, .pj-new:focus-visible { border-color: var(--primary); color: var(--primary); background: rgba(0,140,130,.03); outline: none; }
+    .pj-new:hover, .pj-new:focus-visible { border-color: var(--primary); color: var(--primary); background: color-mix(in srgb, var(--primary) 3%, transparent); outline: none; }
     .pj-new .plus { font-size: 1.9rem; line-height: 1; font-weight: 400; }
     .pj-empty { grid-column: 1 / -1; font-size: .85rem; color: var(--muted); padding: .4rem 0; }
 
@@ -152,9 +154,9 @@
     .sd-meta .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
     table.sd { width: 100%; border-collapse: collapse; font-size: .78rem; }
     table.sd th, table.sd td { padding: .3rem .35rem; border-bottom: 1px solid var(--border-light); text-align: left; vertical-align: middle; white-space: nowrap; }
-    table.sd tbody tr:nth-child(even) td { background: rgba(0,39,51,.025); }
+    table.sd tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--dark) 2.5%, transparent); }
     table.sd th { font-size: .64rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; padding-bottom: .4rem; }
-    table.sd th small { display: block; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted-light); }
+    table.sd th small { display: block; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted); }
     table.sd input { width: 6.2rem; font: inherit; font-family: var(--mono); font-size: .76rem; padding: .28rem .4rem; border: 1px solid transparent; border-radius: 6px; text-align: right; background: transparent; }
     table.sd tr:hover input:not(:disabled) { border-color: var(--border); background: var(--surface); }
     table.sd input:focus { outline: 2px solid var(--primary); outline-offset: -1px; background: var(--surface); }
@@ -178,7 +180,7 @@
       table.sd input { width: 5.4rem; }
     }
     table.sd input:disabled { color: var(--text); }
-    table.sd td.id { font-family: var(--mono); color: var(--muted-light); font-size: .68rem; }
+    table.sd td.id { font-family: var(--mono); color: var(--muted); font-size: .68rem; }
     .sd-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .6rem 1rem; margin-top: .6rem; }
     .sd-form label { margin: 0; }
     .sd-form input { text-align: right; font-family: var(--mono); }
@@ -195,6 +197,45 @@
     .mem-list .e { font-size: .75rem; color: var(--muted); overflow-wrap: anywhere; }
     .mem-list .right { margin-left: auto; display: flex; align-items: center; gap: .6rem; flex: none; }
     .mem-empty { font-size: .82rem; color: var(--muted); padding: .4rem 0; }
+
+    /* ── Farbschema ───────────────────────────────────────── */
+    /* Jede Kachel zeigt das Schema, das sie schaltet: Kopfleiste, Karte,
+       Text und Knopf in seinen Farben. Ein Wort über die Farben zu sagen
+       hilft hier weniger als sie zu zeigen — die Farben in den Kacheln
+       setzt das Skript aus shared/schemes.js, damit hier keine zweite
+       Liste von Werten entsteht. */
+    .sch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .8rem; }
+    .sch-tile { display: block; position: relative; cursor: pointer; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: .55rem; background: var(--surface); transition: border-color .12s var(--ease), box-shadow .12s var(--ease); }
+    .sch-tile:hover { border-color: var(--primary); }
+    .sch-tile:focus-within { box-shadow: var(--ring); }
+    .sch-tile input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .sch-tile.on { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; }
+    /* Die gewählte Kachel trägt ihren Rand UND den Fokusring, sonst sieht
+       man beim Hineintabben nicht, wo die Tastatur steht. */
+    .sch-tile.on:focus-within { box-shadow: 0 0 0 1px var(--primary) inset, var(--ring); }
+    /* Die Vorschau: Kopfleiste, Grund, Karte mit zwei Textzeilen, Knopf und
+       der Ampel (gut, knapp, schlecht); darunter ein Streifen mit den
+       Sachfarben Schmelze, Werkzeug, Maschine, Luft. Beides ändert sich mit
+       dem Schema, nicht nur die Marke. Die Farbleisten fehlen hier: sie sind
+       in jedem Schema gleich. */
+    .sch-prev { display: block; border-radius: 7px; overflow: hidden; border: 1px solid var(--border-light); }
+    .sch-prev .bar { height: 14px; }
+    .sch-prev .body { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .sch-prev .card { border-radius: 5px; padding: 7px; display: flex; flex-direction: column; gap: 5px; }
+    .sch-prev .line { height: 5px; border-radius: 3px; }
+    .sch-prev .line.short { width: 55%; }
+    .sch-prev .row { display: flex; align-items: center; gap: 5px; margin-top: 1px; }
+    .sch-prev .btn-dot { height: 11px; width: 34px; border-radius: 4px; }
+    .sch-prev .tag { height: 11px; width: 22px; border-radius: 4px; }
+    .sch-prev .ampel { height: 9px; width: 9px; border-radius: 50%; margin-left: auto; }
+    .sch-prev .ampel + .ampel { margin-left: 3px; }
+    .sch-prev .strip { display: flex; align-items: center; gap: 3px; }
+    .sch-prev .sach { height: 7px; flex: 1; border-radius: 2px; }
+    .sch-name { display: flex; align-items: center; gap: .4rem; font-size: .85rem; font-weight: 700; margin: .5rem 0 .1rem; }
+    .sch-name .mark { font-size: .7rem; font-weight: 700; color: var(--primary); }
+    .sch-note { font-size: .72rem; color: var(--muted); line-height: 1.45; }
+    .sch-hint { font-size: .75rem; color: var(--muted); margin-top: .8rem; }
   </style>
 </head>
 <body>
@@ -382,6 +423,26 @@
       </div>
     </section>
   </div>
+
+  <!-- ── Darstellung ─────────────────────────────────────────
+       Steht außerhalb von #account: das Farbschema gehört zum Browser,
+       nicht zum Konto — es lässt sich also auch abgemeldet wählen. -->
+  <section class="kt-section" id="darstellung">
+    <div class="kt-section-head">
+      <div>
+        <span class="eyebrow">Darstellung</span>
+        <h2>Farbschema</h2>
+        <p>Gilt für die ganze Seite: Kopfleiste, Werkzeuge und Diagramme. Die Farbleisten der Heatmaps und
+          der Felder im 3D-Studio bleiben in jedem Schema gleich, damit ein Wert überall dieselbe Farbe hat.
+          Die Wahl liegt in diesem Browser, nicht im Konto: auf einem anderen Rechner wird sie neu getroffen.
+          Alle Schemata halten dieselben Kontrastregeln ein.</p>
+      </div>
+    </div>
+    <div class="kt-card">
+      <div class="sch-grid" id="sch-grid"></div>
+      <p class="sch-hint" id="sch-hint">Lade …</p>
+    </div>
+  </section>
 </div>
 
 <script src="/shared/project.js"></script>
@@ -391,17 +452,13 @@
   var P = window.__PROJECT__;
   var me = null;
 
+  /* shared/util.js, vor diesem Script geladen. */
+  var esc = window.__DL_UTIL__.esc;
+  var api = window.__DL_UTIL__.api;
+  var fmt = window.__DL_UTIL__.fmtDatum;
+
   function $(id) { return document.getElementById(id); }
   function show(id, on) { $(id).classList.toggle('hidden', !on); }
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-  function fmt(iso) {
-    var d = new Date(iso);
-    return isNaN(d) ? '' : d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
-  }
   function initials(name, email) {
     var src = (name || '').trim() || (email || '').split('@')[0];
     var parts = src.split(/[\s._-]+/).filter(Boolean);
@@ -409,15 +466,6 @@
     return s.toUpperCase() || '·';
   }
   function setCount(id, n) { $(id).textContent = n == null ? '–' : String(n); }
-  async function api(method, path, body) {
-    var r = await fetch(path, { method: method, credentials: 'same-origin',
-      headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
-    if (r.status === 204) return null;
-    var data = null;
-    try { data = await r.json(); } catch (e) { /* keine JSON-Antwort */ }
-    if (!r.ok) { var err = new Error(data && typeof data.detail === 'string' ? data.detail : 'HTTP ' + r.status); err.status = r.status; throw err; }
-    return data;
-  }
 
   /* ── Einladung ── */
   var token = new URLSearchParams(location.search).get('token');
@@ -435,7 +483,9 @@
         + esc(inv.org.name) + '</strong> eingeladen' + (inv.role === 'admin' ? ' (Administrator)' : '') + '. Bitte Namen und Passwort festlegen.';
       show('register-form', true);
     } catch (err) {
-      $('invite-text').innerHTML = '<span style="color:' + window.__PALETTE__.warn + '">' + esc(err.message) + '</span>';
+      /* Ein Fehler wie jeder andere auf der Seite: in der Schrift von
+         „schlecht", als Token, damit er einen Wechsel des Schemas mitmacht. */
+      $('invite-text').innerHTML = '<span style="color:var(--bad-text)">' + esc(err.message) + '</span>';
     }
   }
 
@@ -447,7 +497,7 @@
       await api('POST', '/api/auth/register', { token: token, name: $('r-name').value.trim(), password: $('r-pw').value });
       if (goNext()) return;
       token = null;
-      start();
+      start(true);
     } catch (err) { $('register-err').textContent = err.message; }
   });
 
@@ -458,7 +508,7 @@
     try {
       await api('POST', '/api/auth/login', { email: $('l-email').value.trim(), password: $('l-pw').value });
       if (goNext()) return;
-      start();
+      start(true);
     } catch (err) { $('login-err').textContent = err.message; }
   });
 
@@ -473,7 +523,7 @@
       /* Über /auth/demo/login: das Passwort verlässt den Server nicht mehr. */
       $('demo-login').onclick = async function () {
         $('login-err').textContent = '';
-        try { await api('POST', '/api/auth/demo/login'); if (goNext()) return; start(); }
+        try { await api('POST', '/api/auth/demo/login'); if (goNext()) return; start(true); }
         catch (err) { $('login-err').textContent = err.message; }
       };
     } catch (e) { /* kein Demo */ }
@@ -487,7 +537,7 @@
     P.clearAll();
     try { localStorage.removeItem('dielogic-org-settings-v1'); } catch (e) { /* egal */ }
     me = null;
-    start();
+    start(true);
   });
 
   /* ── Konto ── */
@@ -504,9 +554,8 @@
     for (var i = 0; i < orphans.length; i++) {
       var o = orphans[i];
       try {
-        var r = await api('POST', '/api/projects', Object.assign({ id: o.id, data: P.sectionsOf(o) },
-          { name: o.name, description: o.description, customer: o.customer, part_no: o.partNo }));
-        P.markSaved(o.id, { id: r.id, rev: r.rev, savedAt: r.updated_at, draftAt: r.draft_at });
+        var r = await api('POST', '/api/projects', Object.assign({ id: o.id, data: P.sectionsOf(o) }, P.metaOf(o)));
+        P.markSaved(o.id, P.remoteOf(r));
       } catch (err) { console.warn('Übernahme fehlgeschlagen:', err.message); }
     }
     $('a-user').textContent = me.user.name || me.user.email;
@@ -559,13 +608,12 @@
   async function fetchDoc(id) {
     var full = await api('GET', '/api/projects/' + id);
     var have = P.list().filter(function (p) { return p.remote && p.remote.id === id; })[0];
-    return docFrom(full, full.data, have ? have.id : undefined);
+    return P.fromServer(full, have ? have.id : undefined);
   }
 
   async function createOnServer(meta, data, makeCurrent) {
     var r = await api('POST', '/api/projects', Object.assign({ data: data || {} }, meta));
-    P.put(Object.assign({ name: r.name, description: r.description, customer: r.customer, partNo: r.part_no,
-      remote: { id: r.id, rev: r.rev, savedAt: r.updated_at }, dirty: false }, data || {}), !!makeCurrent);
+    P.put(P.fromServer(r, undefined, data || {}), !!makeCurrent);
     return r;
   }
 
@@ -579,9 +627,7 @@
       await showRevisions(id, name);
     } else if (b.dataset.dup) {
       var doc = await fetchDoc(id);
-      var full = await api('GET', '/api/projects/' + id);
-      await createOnServer({ name: name + ' (Kopie)', description: full.description, customer: full.customer, part_no: full.part_no },
-        P.sectionsOf(doc), false);
+      await createOnServer(Object.assign(P.metaOf(doc), { name: name + ' (Kopie)' }), P.sectionsOf(doc), false);
     } else if (b.dataset.export) {
       var d = await fetchDoc(id);
       var tmp = P.put(d, false);
@@ -629,18 +675,12 @@
       try { p = P.importJSON(txt); }
       catch (err) { $('org-err').textContent = 'Import fehlgeschlagen: ' + err.message; return; }
       var before = P.list().filter(function (q) { return q.id !== p.id; })[0];
-      return createOnServer({ name: p.name, description: p.description, customer: p.customer, part_no: p.partNo }, P.sectionsOf(p), false)
+      return createOnServer(P.metaOf(p), P.sectionsOf(p), false)
         .then(function () { P.remove(p.id); if (before) P.select(before.id); loadProjects(); },
           function (err) { $('org-err').textContent = err.message; });
     });
     e.target.value = '';
   });
-
-  function docFrom(full, data, localId) {
-    return Object.assign({ id: localId, name: full.name, description: full.description, customer: full.customer,
-      partNo: full.part_no, createdAt: full.created_at, updatedAt: full.updated_at,
-      remote: { id: full.id, rev: full.rev, savedAt: full.updated_at }, dirty: false }, data || {});
-  }
 
   async function showRevisions(id, name) {
     show('rev-panel', true);
@@ -803,16 +843,29 @@
     return true;
   }
 
-  async function start() {
+  /* fresh: eine neue Anfrage erzwingen, statt die gemeinsame vom Laden der
+     Seite zu lesen — nötig nach jeder Änderung der Sitzung hier auf der
+     Seite selbst (Registrieren, Anmelden, Demo, Abmelden): das
+     Ergebnis von window.__DL_AUTH_ME__ ist sonst der Stand von VOR dieser
+     Änderung, gemerkt für die ganze Seitenlebensdauer. */
+  async function start(fresh) {
     ['invite', 'login', 'account', 'nobackend'].forEach(function (id) { show(id, false); });
     if (location.protocol === 'file:') { show('nobackend', true); return; }
-    try { me = await api('GET', '/api/auth/me'); }
-    catch (err) {
-      me = null;
-      if (err.status !== 401) { show('nobackend', true); return; }
+    var r;
+    if (!fresh && window.__DL_AUTH_ME__) {
+      /* nav.js (immer vor diesem Script geladen) legt eine gemeinsame
+         Anfrage für /api/auth/me ab — dieselbe Antwort, mit der nav.js oben
+         den Anmelde-Knopf beschriftet (samt recompute() der Leiste, was
+         diese Seite vorher mit einer eigenen, zweiten Anfrage versäumte). */
+      r = await window.__DL_AUTH_ME__;
+    } else {
+      r = await api('GET', '/api/auth/me').then(
+        function (m) { return { status: 200, ok: true, me: m }; },
+        function (err) { return { status: err.status || 0, ok: false, me: null }; }
+      );
     }
-    var navBtn = document.getElementById('dl-nav-account');
-    if (navBtn) navBtn.textContent = me ? '👤 ' + (me.user.name || me.user.email) : 'Anmelden';
+    me = r.ok ? r.me : null;
+    if (!r.ok && r.status !== 401) { show('nobackend', true); return; }
     if (me) showAccount();
     else if (token) showInvite();
     else { show('login', true); showDemo(); }
@@ -825,6 +878,7 @@
 <script src="/shared/examples/alloys.js"></script>
 <script src="/shared/examples/parts.js"></script>
 <script src="/shared/examples/kosten.js"></script>
+<script src="/shared/felddomaene.js"></script>
 <script type="module">
 /* Stammdaten-Editor: Listen (Maschinen/Legierungen/Bauteiltypen) mit den
    Feldern aus js/config/fields.js, Kosten & Sätze als Formular. Speichern
@@ -832,30 +886,49 @@
    Werte über shared/orgpresets.js beim nächsten Laden. */
 import { groups, PRESET_DOMAINS } from '/tools/auslegung/js/config/fields.js';
 
+/* shared/felddomaene.js, vor diesem Modul geladen: dieselbe Domäne wie die
+   Teilekosten-Seite (dort geprüft), plus H_MONTH (nur hier ein Feld). Vorher
+   hatten die Eingaben hier keine Grenzen: 150 % Ausschuss oder 0 % OEE
+   ließen sich als Vorgabe der Organisation speichern, die Teilekosten-Seite
+   wies sie dann zurück. */
+const DOMAENE = window.__DOMAENE__;
+const boundsOf = key => (key === 'hMonth' ? DOMAENE.H_MONTH : DOMAENE.feld('teilekosten', key));
+
 const DEFAULTS = {
   machines: window.__MACHINES__.machines, alloys: window.__ALLOYS__.alloys, parts: window.__PARTS__.parts,
   kosten: window.__KOSTEN__.defaults
 };
 const DOMAIN = { machines: 'machine', alloys: 'alloy', parts: 'part' };
+/* Eigene Beschriftung ([1]) statt boundsOf(key).label: „(Standard)"/
+   „(Fallback)" markiert, dass hier der Vorgabewert der Organisation steht,
+   nicht der Wert eines laufenden Projekts (Teilekosten führt dieselben
+   Schlüssel als Live-Eingabe). Grenzen und Einheit kommen aus der Domäne. */
 const KOSTEN_FIELDS = [
-  ['pAl', 'Legierungspreis', '€/kg'], ['pRe', 'Umschmelzkosten Kreislauf', '€/kg'], ['kr', 'Schmelzverlust / Krätze', '%'],
-  ['eKg', 'Schmelz- & Warmhalteenergie', 'kWh/kg'], ['pE', 'Strompreis', '€/kWh'], ['pM', 'Maschinenstundensatz Zelle', '€/h'],
-  ['pP', 'Personal', '€/h'], ['nP', 'Bediener je Zelle', '−'], ['wz', 'Werkzeugkosten (Standard)', '€'], ['st', 'Standmenge', 'Schüsse'],
-  ['a', 'Ausschuss (Standard)', '%'], ['oee', 'OEE / Verfügbarkeit', '%'], ['kav', 'Kavitäten (Standard)', '−'], ['tz', 'Zykluszeit (Fallback)', 's'],
-  ['hMonth', 'Produktionsstunden je Monat', 'h']
-];
-const $ = id => document.getElementById(id);
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const fmtDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }); };
-const slug = s => s.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'eintrag';
+  ['pAl', 'Legierungspreis'], ['pRe', 'Umschmelzkosten Kreislauf'], ['kr', 'Schmelzverlust / Krätze'],
+  ['eKg', 'Schmelz- & Warmhalteenergie'], ['pE', 'Strompreis'], ['pM', 'Maschinenstundensatz Zelle'],
+  ['pP', 'Personal'], ['nP', 'Bediener je Zelle'], ['wz', 'Werkzeugkosten (Standard)'], ['st', 'Standmenge'],
+  ['a', 'Ausschuss (Standard)'], ['oee', 'OEE / Verfügbarkeit'], ['kav', 'Kavitäten (Standard)'], ['tz', 'Zykluszeit (Fallback)'],
+  ['hMonth', 'Produktionsstunden je Monat']
+].map(([key, label]) => [key, label, boundsOf(key).unit]);
 
-async function api(method, path, body) {
-  const r = await fetch(path, { method, credentials: 'same-origin', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
-  if (r.status === 204) return null;
-  let data = null; try { data = await r.json(); } catch (e) { /* leer */ }
-  if (!r.ok) throw new Error(data && typeof data.detail === 'string' ? data.detail : 'HTTP ' + r.status);
-  return data;
+/* null = in Ordnung, sonst { bad: [Feldnamen], msgs: [Klartext] } — wie
+   DOMAENE.pruefe(), nur über KOSTEN_FIELDS (das schließt hMonth mit ein,
+   das FELDER.teilekosten nicht kennt: das ist kein Feld der
+   Teilekosten-Seite, siehe felddomaene.js). */
+function pruefeKosten(data) {
+  const bad = [], msgs = [];
+  for (const [key, label] of KOSTEN_FIELDS) {
+    const grund = DOMAENE.pruefeFeld(boundsOf(key), data[key]);
+    if (grund) { bad.push(key); msgs.push(label + ' ' + grund); }
+  }
+  return { ok: bad.length === 0, bad, msgs };
 }
+const $ = id => document.getElementById(id);
+/* shared/util.js, vor diesem Modul geladen (klassisches Script). */
+const esc = window.__DL_UTIL__.esc;
+const fmtDate = window.__DL_UTIL__.fmtDatum;
+const api = window.__DL_UTIL__.api;
+const slug = s => s.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'eintrag';
 
 function fieldsFor(key) {
   const dom = PRESET_DOMAINS.find(d => d.id === DOMAIN[key]);
@@ -915,8 +988,12 @@ function renderList(admin) {
 
 function renderKosten(admin) {
   const k = work.kosten;
-  $('sd-body').innerHTML = '<div class="sd-form">' + KOSTEN_FIELDS.map(([key, label, unit]) =>
-    '<label>' + esc(label) + ' <span class="muted">' + esc(unit) + '</span><input type="number" step="any" data-k="' + key + '" value="' + (k[key] ?? '') + '"' + (admin ? '' : ' disabled') + '></label>').join('') + '</div>';
+  $('sd-body').innerHTML = '<div class="sd-form">' + KOSTEN_FIELDS.map(([key, label, unit]) => {
+    const b = boundsOf(key), lo = b.gt !== undefined ? b.gt : b.min;
+    return '<label>' + esc(label) + ' <span class="muted">' + esc(unit) + '</span><input type="number" step="any"'
+      + (lo !== undefined ? ' min="' + lo + '"' : '') + (b.max !== undefined ? ' max="' + b.max + '"' : '')
+      + ' data-k="' + key + '" value="' + (k[key] ?? '') + '"' + (admin ? '' : ' disabled') + '></label>';
+  }).join('') + '</div>';
 }
 
 /* Eingaben → work */
@@ -956,6 +1033,10 @@ $('sd-save').addEventListener('click', async () => {
   $('sd-err').textContent = ''; $('sd-ok').textContent = '';
   const data = tab === 'kosten' ? work.kosten : work[tab].map(p => ({ id: p.id, name: p.name.trim(), fields: p.fields }));
   if (tab !== 'kosten' && data.some(p => !p.name)) { $('sd-err').textContent = 'Jeder Eintrag braucht einen Namen.'; return; }
+  if (tab === 'kosten') {
+    const check = pruefeKosten(data);
+    if (!check.ok) { $('sd-err').textContent = check.msgs.join(' · '); return; }
+  }
   try {
     settings[tab] = await api('PUT', '/api/org/settings/' + tab, { data });
     work[tab] = null;
@@ -982,6 +1063,108 @@ async function load(m) {
 }
 window.addEventListener('konto:account', e => load(e.detail));
 if (window.__KONTO_ME__) load(window.__KONTO_ME__);
+</script>
+
+<!-- ── Farbschema wählen (shared/schemes.js) ────────────────────
+     Die Kacheln zeigen jedes Schema in seinen eigenen Farben; ein Klick
+     schaltet sofort um — ohne Neuladen, auch die Kopfleiste oben. -->
+<script>
+(function () {
+  'use strict';
+  var S = window.__SCHEMES__;
+  var grid = document.getElementById('sch-grid');
+  var hint = document.getElementById('sch-hint');
+  if (!S || !grid) return;
+
+  /* Ein Feld der Vorschau: nur Farben, kein Text — das Muster steht im CSS. */
+  function box(cls, styles) {
+    var d = document.createElement('span');
+    d.className = cls;
+    for (var k in styles) d.style.setProperty(k, styles[k]);
+    return d;
+  }
+
+  function vorschau(c) {
+    var prev = box('sch-prev', { background: c.bg });
+    prev.appendChild(box('bar', { background: c.dark }));
+    var body = box('body', {});
+    var card = box('card', { background: c.surface, border: '1px solid ' + c.border });
+    card.appendChild(box('line', { background: c.text }));
+    card.appendChild(box('line short', { background: c.muted }));
+    var row = box('row', {});
+    row.appendChild(box('btn-dot', { background: c.primary }));
+    row.appendChild(box('tag', { background: c.pale, border: '1px solid ' + c.paleBorder }));
+    row.appendChild(box('tag', { background: c.accent }));
+    /* Die Ampel gehört in die Vorschau, alle drei Stufen: in dieser
+       Anwendung trägt sie das Urteil. */
+    row.appendChild(box('ampel', { background: c.ok }));
+    row.appendChild(box('ampel', { background: c.caution }));
+    row.appendChild(box('ampel', { background: c.bad }));
+    card.appendChild(row);
+    body.appendChild(card);
+    /* Die Sachfarben, die man am häufigsten sieht. */
+    var strip = box('strip', {});
+    ['melt', 'die', 'machine', 'air'].forEach(function (k) { strip.appendChild(box('sach', { background: c[k] })); });
+    body.appendChild(strip);
+    prev.appendChild(body);
+    return prev;
+  }
+
+  /* Welche Schemata es gibt, sagt schemes.js: hier steht keine zweite Liste. */
+  var tiles = {};
+
+  S.list.forEach(function (s) {
+    var c = S.colors(s.id);
+    var tile = document.createElement('label');
+    tile.className = 'sch-tile';
+
+    var input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'sch';
+    input.value = s.id;
+    tile.appendChild(input);
+    tile.appendChild(vorschau(c));
+
+    var name = document.createElement('span');
+    name.className = 'sch-name';
+    name.appendChild(document.createTextNode(s.name));
+    if (s.id === S.default) {
+      var mark = document.createElement('span');
+      mark.className = 'mark';
+      mark.textContent = 'Standard';
+      name.appendChild(mark);
+    }
+    tile.appendChild(name);
+
+    var note = document.createElement('span');
+    note.className = 'sch-note';
+    note.textContent = s.note;
+    tile.appendChild(note);
+
+    input.addEventListener('change', function () { if (input.checked) S.set(s.id); });
+    grid.appendChild(tile);
+    tiles[s.id] = { tile: tile, input: input, name: s.name };
+  });
+
+  function markieren() {
+    var id = S.current();
+    for (var k in tiles) {
+      tiles[k].tile.classList.toggle('on', k === id);
+      tiles[k].input.checked = k === id;
+    }
+    /* „Sofort" gilt für alles, was die CSS-Tokens liest, für die Leisten,
+       die ihr Stylesheet neu bauen, und seit dem Umbau der Farbrollen
+       (22.09.) auch für jedes gezeichnete Bild: Diagramme, Zeitleisten und
+       3D-Ansichten malen auf das Ereignis „dielogic:scheme" neu, auch in
+       einer anderen Registerkarte (schemes.js hört auf den Speicher). */
+    hint.textContent = 'Gewählt: ' + (tiles[id] ? tiles[id].name : id)
+      + '. Gilt sofort auf allen Seiten dieses Browsers, auch in anderen offenen Registerkarten.';
+  }
+
+  /* Auch auf den Wechsel aus einem anderen Tab hören. */
+  document.addEventListener('dielogic:scheme', markieren);
+  markieren();
+})();
 </script>
 
 </body>

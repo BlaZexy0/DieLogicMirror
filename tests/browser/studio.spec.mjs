@@ -1,12 +1,12 @@
 /* Jede Seite des 3D-Studios kommt im echten Browser hoch: Leinwand da,
-   Achsenkreuz da, kein Fehler in der Konsole — und die beiden
-   Entwurfsseiten melden sich bereit. Mehr prüfen die Node-Tests; hier
-   zählt, was nur der Browser weiß. */
+   Achsenkreuz da, kein Fehler in der Konsole — und die Werkzeuge melden
+   sich bereit. Mehr prüfen die Node-Tests; hier zählt, was nur der Browser
+   weiß. */
 
 import { test, expect } from '@playwright/test';
 
 const PAGES = [
-  ['form.html', null],
+  ['form.html', () => window.__formaufbau?.state?.ready],
   ['entformungsanalyse.html', () => window.__form3d?.state?.model],
   ['wandstaerke.html', () => window.__form3d?.state?.ready],
   ['abstand.html', null],
@@ -43,8 +43,54 @@ for (const [page, readyFn] of PAGES) {
   });
 }
 
-/* Das Metamodell rechnet nur im Browser: 12 MB ONNX und onnxruntime-web
-   (WebAssembly) — die Node-Tests prüfen nur seine Wahl und seine Grenzen. */
+/* Gezeichnet wird nur auf Abruf (js/scene.js): eine ruhende Seite zeichnet
+   nicht — bis zum 23.09. zeichnete ein Netz viermal je Sekunde „zur
+   Sicherheit" —, und was das Bild bewegt, zeichnet. view.frames zählt die
+   Bilder. Die weitergeleiteten Partikelseiten sind dieselben Werkzeuge. */
+for (const [page, readyFn] of PAGES.filter(([f]) => !/-sph\.html$/.test(f))) {
+  test('3D-Studio: ' + page + ' zeichnet nur auf Abruf', async ({ page: p }) => {
+    await p.goto('/tools/3d-studio/' + page);
+    if (readyFn) await p.waitForFunction(readyFn, null, { timeout: 60_000 });
+    const hook = page === 'werkbank.html' ? '__werkbank' : '__form3d';
+    await p.waitForFunction(h => window[h]?.view, hook);
+    const frames = () => p.evaluate(h => window[h].view.frames, hook);
+    /* Was die Seite nach dem Laden noch rechnet (Analysen, Felder, die
+       Schritte der Werkbank), zeichnet danach zu Recht ein Bild. */
+    const busy = () => p.evaluate(h => {
+      const v = window[h], jobs = v.host && v.host.jobs;
+      const states = [v.state, ...Object.values(v.stages || {}).map(st => st.state)].filter(Boolean);
+      return !!(jobs && jobs.running) || states.some(s => s.running || s.computing || s.queued || s.ready === false);
+    }, hook);
+    /* Zur Ruhe kommen: nichts rechnet, und eine Sekunde lang kein neues Bild. */
+    const ruhig = async () => {
+      let last = -1;
+      await expect.poll(async () => { const f = await frames(); const same = f === last && !(await busy()); last = f; return same; },
+        { intervals: [1000], timeout: 90_000, message: 'die Seite kommt zur Ruhe' }).toBe(true);
+    };
+    await ruhig();
+    /* Kein Takt mehr: ein spätes Bild (ein Ergebnis, das Layout nach dem
+       Laden der Schrift) darf kommen, ein Netz, das „zur Sicherheit"
+       zeichnet, brächte in drei Sekunden ein Dutzend. */
+    const f0 = await frames();
+    await p.waitForTimeout(3000);
+    expect(await frames() - f0, 'eine ruhende Seite zeichnet nicht').toBeLessThanOrEqual(1);
+
+    /* Drehen zeichnet, Bild für Bild — und danach ist wieder Ruhe. */
+    const box = await p.locator('#viewport canvas').boundingBox();
+    const x = box.x + box.width * 0.55, y = box.y + box.height * 0.55;
+    await p.mouse.move(x, y);
+    await p.mouse.down();
+    for (let i = 1; i <= 6; i++) await p.mouse.move(x + 8 * i, y + 4 * i);
+    await p.mouse.up();
+    await expect.poll(frames, { message: 'Drehen zeichnet' }).toBeGreaterThan(f0 + 1);
+    await ruhig();
+  });
+}
+
+/* Das Metamodell im echten Browser: 3,6 MB ONNX plus 14 MB Rechenwerk
+   (onnxruntime-web, WebAssembly). Unter Node rechnen meta.test.mjs und
+   tools/kammerfuellung.test.mjs dasselbe Modell; hier zählt, dass die Seite
+   es lädt, rechnet und zeigt. */
 test('Kammerfüllung: das Metamodell rechnet die Welle in Sekunden — Bild, Zeiten und Luft', async ({ page }) => {
   await page.goto('/tools/3d-studio/kammerfuellung.html');
   await page.waitForFunction(() => window.__kammerfuellung?.state?.ready);
@@ -142,31 +188,52 @@ test('Werkbank: alle sechs Schritte kommen ohne Fehler hoch und hängen zusammen
   });
   await page.goto('/tools/3d-studio/werkbank.html');
   await page.waitForFunction(() => window.__werkbank?.ctx?.ready, null, { timeout: 60_000 });
-  /* Anguss: der Vorschlag hat zwei Anschnitte an der Wand. */
+  /* Bauteil: Entformung und Wandstärke, ihre Modi in zwei Zeilen. */
+  await expect(page.locator('[data-ui="tabs"] [data-mode]')).toHaveCount(8);
+  /* Die Entformung rechnet auf Knopfdruck. */
+  await page.click('[data-ui="primary"]');
+  await page.waitForFunction(() => window.__werkbank.stages.entformung.state.analysed, null, { timeout: 90_000 });
+  /* Gröber rastern: das Feld ist hier Mittel, nicht Gegenstand. */
+  await page.click('[data-ui="tabs"] [data-mode="feld"]');
+  await page.fill('[data-owner="wandstaerke"] [data-ui="cell"]', '6');
+  await page.press('[data-owner="wandstaerke"] [data-ui="cell"]', 'Enter');
+  /* Anguss: der Vorschlag hat zwei Anschnitte an der Wand; die Chips des Angussdesigners stehen im Bild. */
   await page.click('[data-stage="anguss"]');
-  await expect(page.locator('#an-menu')).toBeVisible();
+  await expect(page.locator('[data-chip="add-point"]')).toBeVisible();
+  /* Der Vorschlag steht im Modus System: vier Reiter in EINER Zeile. */
+  await expect(page.locator('[data-ui="tabs"] [data-mode]')).toHaveCount(4);
+  const zeilen = await page.$$eval('[data-ui="tabs"] [data-mode]', els => new Set(els.map(e => Math.round(e.getBoundingClientRect().top))).size);
+  expect(zeilen).toBe(1);
+  await expect(page.locator('[data-ui="primary"]')).toHaveText('Anguss ans Bauteil legen');
   const gates = await page.evaluate(() => Object.values(window.__werkbank.stages.anguss.state.graph.nodes).filter(n => n.type === 'gate' && n.aim).length);
   expect(gates).toBe(2);
-  /* Füllung: rechnet auf dem gemeinsamen Feld mit genau diesen Anschnitten. */
+  /* Füllung: rechnet beim Betreten, auf dem gemeinsamen Feld, mit genau diesen Anschnitten. */
   await page.click('[data-stage="fuellung"]');
-  await page.waitForFunction(() => { const s = window.__werkbank.stages.fuellung.state; return s.result && !s.stale && !s.computing; }, null, { timeout: 90_000 });
+  await page.waitForFunction(() => { const s = window.__werkbank.stages.fuellung.state; return s.result && !s.stale && !s.running; }, null, { timeout: 90_000 });
   expect(await page.evaluate(() => Object.keys(window.__werkbank.stages.fuellung.state.plan.items).length)).toBe(2);
+  await page.click('[data-owner="fuellung"] [data-ui="show-seg"] button[data-value="farbe"]');
   await expect(page.locator('#colorbar')).toHaveClass(/on/);
-  /* Überläufe und Temperierung: Auswahlfelder da, Abstandsfläche aus demselben Feld. */
+  await expect(page.locator('#colorbar')).toContainText('ab Kammer voll');
+  /* Überläufe und Temperierung: ihre Chips, die Abstandsfläche aus demselben Feld. */
   await page.click('[data-stage="ueberlauf"]');
-  await expect(page.locator('#ue-menu')).toBeVisible();
+  await expect(page.locator('[data-chip="bohne"]')).toBeVisible();
   await page.click('[data-stage="temperier"]');
-  await page.waitForFunction(() => { const s = window.__werkbank.stages.temperier.state; return s.shellDist === 20 && !s.computing; }, null, { timeout: 90_000 });
-  await expect(page.locator('#te-add-stich')).toBeEnabled();
+  await page.waitForFunction(() => { const s = window.__werkbank.stages.temperier.state; return s.shellDist === 20 && !s.running; }, null, { timeout: 90_000 });
+  await expect(page.locator('[data-chip="stich"]')).not.toHaveClass(/off/);
+  expect(await page.evaluate(() => window.__werkbank.stages.temperier.state.field === window.__werkbank.field.data)).toBe(true);
   /* Auslegung: das Dashboard liegt über dem Viewport, die Übernahme hat Werte. */
   await page.click('[data-stage="auslegung"]');
-  await expect(page.locator('#au-dash')).toBeVisible();
+  await expect(page.locator('[data-ui="au-dash"]')).toBeVisible();
   await expect(page.locator('#charts .card')).not.toHaveCount(0);
   await expect(page.locator('#checkbar')).toContainText('Prüfungen');
   const vals = await page.evaluate(() => window.__werkbank.stages.auslegung.measure());
   expect(vals.part).toBeGreaterThan(3);
   expect(vals.gate).toBeGreaterThan(100);
   expect(vals.area).toBeGreaterThan(0.1);
+  /* Zurück zum Bauteil: das Dashboard geht, der Schritt steht, wie man ihn verließ. */
+  await page.click('[data-stage="bauteil"]');
+  await expect(page.locator('[data-ui="au-dash"]')).toBeHidden();
+  await expect(page.locator('[data-ui="tabs"] [data-mode="feld"]')).toHaveClass(/active/);
   await page.waitForTimeout(500);
   expect(errors, errors.join('\n')).toEqual([]);
 });

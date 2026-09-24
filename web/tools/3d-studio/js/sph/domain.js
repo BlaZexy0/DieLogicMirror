@@ -27,7 +27,7 @@
 
 import { buildDomain as buildLbmDomain } from '../lbm/domain.js';
 import { FLAG } from '../lbm/lattice.js';
-import { fillLevel, enclosedGas } from '../lbm/sleeve.js';
+import { fillLevel, enclosedGas, outletFor } from '../lbm/sleeve.js';
 import { KIND, PARAMS } from './wcsph.js';
 
 /** Höchstzahl Partikel — auf der Grafikkarte, und was JavaScript in
@@ -43,7 +43,7 @@ const roundSpacing = d => Math.max(1, Math.round(d * 2) / 2);
 /* ── Kammer ─────────────────────────────────────────────────── */
 
 /** Schmelzevolumen der Kammer in mm³. */
-export function sleeveMeltVolume(spec) {
+function sleeveMeltVolume(spec) {
   return Math.PI * spec.d * spec.d / 4 * spec.length * spec.fill;
 }
 
@@ -93,12 +93,13 @@ export function sleeveSetup(spec, d, opts = {}) {
     vel[4 * i + 3] = rho0 * Math.pow(rho0 * 9.81 * depth / B + 1, 1 / PARAMS.gamma);
   }
   const m = 2 * h;
+  const outDef = outletFor(spec.d);
   return {
     nMax: n, n, pos, vel,
     d: dm, h, rho0, mass: rho0 * dm * dm * dm, c0,
     box: { min: [-m, -R - m, -R - m], max: [L + m, R + m, R + m] },
     g: [0, -9.81, 0],
-    boundary: { type: 'sleeve', R, L, outletW: (spec.outletW || 30) * 1e-3, outletH: (spec.outletH || 15) * 1e-3, sensorDepth: 2.5 * dm },
+    boundary: { type: 'sleeve', R, L, outletW: (spec.outletW || outDef.outletW) * 1e-3, outletH: (spec.outletH || outDef.outletH) * 1e-3, sensorDepth: 2.5 * dm },
     inflow: null,
     gates: 1,
     level, yLevel, R, L, spec
@@ -183,7 +184,7 @@ function edt3(mask, dims) {
  * Wand) negativ, außen positiv, die Fläche eine halbe Zelle vor der
  * Wand; in Metern, wenn cell in Metern ist.
  */
-export function signedDistanceFromFlags(flags, dims, cell) {
+function signedDistanceFromFlags(flags, dims, cell) {
   const N = flags.length;
   const inside = new Uint8Array(N), wall = new Uint8Array(N);
   for (let i = 0; i < N; i++) { if (flags[i] === FLAG.WALL) wall[i] = 1; else inside[i] = 1; }
@@ -208,7 +209,7 @@ export function signedDistanceFromFlags(flags, dims, cell) {
    Melder. Die Ankunft ist damit die am Übergang zum Anschnitt, ein paar
    Millimeter vor der des Gitters; feinere Partikel rücken sie näher
    heran. Die Rollen der Gitterseite bleiben darunter erhalten. */
-export function gateZones(lbm, d, hFlags) {
+function gateZones(lbm, d, hFlags) {
   const flags = new Uint32Array(lbm.flags), sensor = new Uint32Array(lbm.sensor);
   const [nx, ny, nz] = lbm.dims;
   const cellsOf = (pMin, pMax, fn) => {

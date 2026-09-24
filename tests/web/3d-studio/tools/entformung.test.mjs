@@ -1,5 +1,5 @@
-/* Entformungsanalyse im gemeinsamen Rahmen: die Analyse läuft beim Laden als
-   abbrechbare Rechnung, die Reiter sind Modi, die Legende der Regionen steht
+/* Entformungsanalyse im gemeinsamen Rahmen: die Analyse läuft auf Knopfdruck
+   (nicht beim Laden, 24.09.) als abbrechbare Rechnung, die Reiter sind Modi, die Legende der Regionen steht
    im Viewport, die Bilanz als Kennzahlen mit Urteil. Die Fälle stammen aus
    viewer.test.mjs und wurden auf data-ui und die Modi des Rahmens übertragen.
 
@@ -12,11 +12,15 @@ import { mountPage, wait, kpiText } from './fixture.mjs';
 let P;
 const analysed = v => wait(() => !v.state.running && v.state.analysed && v.state.ready, 1200);
 const loaded = (v, name) => wait(() => v.state.ready && v.state.name === name, 1200);
+/* Die Analyse startet nur auf Knopfdruck: drücken, dann warten. */
+const rechne = async (ui, v) => { ui('primary').dispatch('click'); await analysed(v); };
 
 before(async () => {
   P = await mountPage('entformungsanalyse.html', 'js/studio/pages/entformung.js');
   assert.ok(P.v.state.model, 'Beispielteil wurde geladen');
-  await analysed(P.v);
+  assert.equal(P.v.state.analysed, false, 'beim Laden wird nicht gerechnet');
+  assert.equal(P.ui('primary').textContent, 'Entformung rechnen', 'der Knopf steht bereit');
+  await rechne(P.ui, P.v);
 });
 
 test('Ansichtsleiste und Viewport sind aufgebaut', () => {
@@ -64,7 +68,7 @@ test('Parallelprojektion behält den Bildausschnitt', () => {
   assert.ok(view.camera.isPerspectiveCamera);
 });
 
-test('Analyse läuft beim Laden: Legende im Viewport, Bilanz als Kennzahlen, kein Knopf', () => {
+test('Analyse auf Knopfdruck: Legende im Viewport, Bilanz als Kennzahlen, der Knopf bleibt', () => {
   const { doc, v, ui, shell } = P;
   const s = v.state;
   assert.ok(s.model.faceCount > 100, 'Netz vorhanden');
@@ -83,8 +87,8 @@ test('Analyse läuft beim Laden: Legende im Viewport, Bilanz als Kennzahlen, kei
   assert.ok(ui('analysis-state').textContent.includes('automatisch'), 'die Formöffnung wurde gewählt');
   assert.ok(+ui('parting-count').textContent.replace(/\D/g, '') > 0, 'Trennlinie gefunden');
   assert.ok(ui('seg-facts').innerHTML.includes('Rechenzeit'), 'die Rechenzeit steht in den Details');
-  assert.equal(ui('primary').hidden, true, 'gerechnet ist gerechnet — kein Knopf');
-  assert.equal(ui('actions').hidden, true);
+  assert.equal(ui('primary').hidden, false, 'der Knopf bleibt nach der Analyse stehen');
+  assert.equal(ui('primary').textContent, 'Neu rechnen');
   assert.equal(v.tool.settingsOnly, true);
 });
 
@@ -330,7 +334,7 @@ test('Beispielteile lassen sich wechseln', async () => {
   sel.value = 'oil_pan';
   sel.dispatch('change');
   await loaded(v, 'Ölwanne');
-  await analysed(v);
+  await rechne(ui, v);
   const s = v.state;
   assert.match(ui('part-name').textContent, /Ölwanne/, 'der Chip trägt das Teil');
   assert.equal(s.seg.mainAxis, 2);
@@ -339,7 +343,7 @@ test('Beispielteile lassen sich wechseln', async () => {
 });
 
 test('STL laden: Datei, Ziehen-und-Ablegen, kaputte Datei', async () => {
-  const { doc, v, host } = P;
+  const { doc, v, host, ui } = P;
   const { writeSTL } = await import('../../../../web/tools/3d-studio/js/part/stlio.js');
   const S = await import('../../../../web/tools/3d-studio/js/solids.js');
   const fileOf = (name, tris) => { const buf = writeSTL(tris, 'test'); return { name, arrayBuffer: () => Promise.resolve(buf), byteLength: buf.byteLength }; };
@@ -351,7 +355,7 @@ test('STL laden: Datei, Ziehen-und-Ablegen, kaputte Datei', async () => {
   input().files = [fileOf('pruefwuerfel.stl', S.box(40, 30, 20))];
   input().dispatch('change');
   await loaded(v, 'pruefwuerfel.stl');
-  await analysed(v);
+  await rechne(ui, v);
   assert.equal(v.state.model.faceCount, 12, 'Quader aus zwölf Dreiecken');
   const c = v.state.seg.counts;
   assert.equal(c.half + c.weak + c.slider, 12, 'jede Seite zugeordnet');
@@ -361,14 +365,16 @@ test('STL laden: Datei, Ziehen-und-Ablegen, kaputte Datei', async () => {
   assert.ok(v.partMesh.material === host.part.colorMat, 'nicht mehr grau');
 
   /* Ein zweites Teil, während das erste noch rechnet: die laufende Rechnung
-     bricht ab, das neue wird gerechnet — früher blieb es grau. */
+     bricht ab, das neue lässt sich rechnen — früher blieb es grau. */
   input().files = [fileOf('erstes.stl', S.box(20, 20, 20))];
   input().dispatch('change');
+  await loaded(v, 'erstes.stl');
+  ui('primary').dispatch('click');
   await wait(() => v.state.running && v.state.name === 'erstes.stl', 400, 5);
   input().files = [fileOf('zweites.stl', S.box(10, 30, 20))];
   input().dispatch('change');
   await loaded(v, 'zweites.stl');
-  await analysed(v);
+  await rechne(ui, v);
   assert.equal(v.state.name, 'zweites.stl');
   assert.ok(v.state.seg && v.state.seg.label.length === v.state.model.faceCount, 'das zweite ist gerechnet');
   assert.ok(doc.getElementById('pt-legend').innerHTML.includes('%'), 'und hat eine Legende');
@@ -380,7 +386,7 @@ test('STL laden: Datei, Ziehen-und-Ablegen, kaputte Datei', async () => {
   vp.dispatch('drop', { dataTransfer: { files: [fileOf('zylinder.stl', S.cyl(20, 0, 50, 24))] } });
   assert.ok(!vp.classList.contains('dragover'));
   await loaded(v, 'zylinder.stl');
-  await analysed(v);
+  await rechne(ui, v);
 
   /* Unlesbare Datei: Hinweis statt Absturz. */
   const junk = new Uint8Array(20).buffer;
@@ -396,6 +402,9 @@ test('Abbrechen: die Analyse lässt sich anhalten und wieder starten', async () 
   const sel = doc.getElementById('demo-select');
   sel.value = 'gearbox_cover';
   sel.dispatch('change');
+  await loaded(v, 'Getriebedeckel mit Schiebern');
+  assert.equal(v.state.running, false, 'ein neues Teil rechnet nicht von selbst');
+  ui('primary').dispatch('click');
   await wait(() => v.state.running, 1200, 5);
   assert.equal(ui('primary').textContent, 'Abbrechen', 'während der Rechnung heißt der Knopf Abbrechen');
   ui('primary').dispatch('click');
@@ -407,7 +416,7 @@ test('Abbrechen: die Analyse lässt sich anhalten und wieder starten', async () 
   ui('primary').dispatch('click');
   await analysed(v);
   assert.equal(v.state.seg.mainAxis, 2);
-  assert.equal(ui('primary').hidden, true);
+  assert.equal(ui('primary').textContent, 'Neu rechnen', 'nach der Analyse bleibt der Knopf');
 });
 
 test('Einstellungen: merken, als Datei, zurücksetzen', async () => {
@@ -432,10 +441,151 @@ test('Einstellungen: merken, als Datei, zurücksetzen', async () => {
   v.tool.resetSettings();
 });
 
+/* Die folgenden Fälle laufen auf P — vor dem Fall mit der zweiten Seite
+   (?part=…): die setzt das globale document auf ihr eigenes. */
+
+test('Formteile nach einem Achsenwechsel und einem neuen Teil: wieder alle zu sehen', async () => {
+  const { doc, v, ui } = P;
+  const s = v.state, dv = v.dieView;
+  const sel = doc.getElementById('demo-select');
+  if (!/Getriebedeckel/.test(s.name)) { sel.value = 'gearbox_cover'; sel.dispatch('change'); await loaded(v, 'Getriebedeckel mit Schiebern'); }
+  if (!s.analysed) await rechne(ui, v);
+  v.showTab('formteile');
+  const box = () => ui('die-pieces').querySelectorAll('input');
+  const byLabel = l => box().find(r => r.dataset.label === String(l));
+  const holder = l => dv.holders.find(h => h.userData.piece.label === l);
+  /* Schieber +X (Richtung 0) aus. */
+  byLabel(0).checked = false; byLabel(0).dispatch('change');
+  assert.equal(holder(0).visible, false);
+  /* Formöffnung X: Richtung 0 ist jetzt eine Formhälfte — sie darf nicht
+     still ausgeblendet bleiben. */
+  v.showTab('entformung');
+  ui('axis-seg').querySelectorAll('button').find(b => b.dataset.value === '0').dispatch('click');
+  assert.equal(s.seg.mainAxis, 0);
+  v.showTab('formteile');
+  assert.equal(s.die.show[0], undefined, 'der Schalter gilt nicht mehr');
+  assert.ok(dv.holders.every(h => h.visible), 'alle Formteile zu sehen, auch die Hälfte +X');
+  assert.ok(box().every(r => r.disabled || r.checked), 'und alle Schalter an');
+  /* Die bewegliche Seite zu tauschen benennt nur um: der Schalter bleibt. */
+  v.showTab('entformung');
+  ui('axis-seg').querySelectorAll('button').find(b => b.dataset.value === 'auto').dispatch('click');
+  v.showTab('formteile');
+  byLabel(0).checked = false; byLabel(0).dispatch('change');
+  v.showTab('entformung');
+  ui('mov-seg').querySelectorAll('button').find(b => b.dataset.value === '-1').dispatch('click');
+  v.showTab('formteile');
+  assert.equal(holder(0).visible, false, 'nach dem Tausch der Seiten ist +X noch aus');
+  v.showTab('entformung');
+  ui('mov-seg').querySelectorAll('button').find(b => b.dataset.value === '1').dispatch('click');
+  /* Ein neues Teil zeigt wieder alle. */
+  const { writeSTL } = await import('../../../../web/tools/3d-studio/js/part/stlio.js');
+  const S = await import('../../../../web/tools/3d-studio/js/solids.js');
+  const buf = writeSTL(S.box(40, 30, 20), 'test');
+  doc.getElementById('stl-input').files = [{ name: 'quader.stl', arrayBuffer: () => Promise.resolve(buf), byteLength: buf.byteLength }];
+  doc.getElementById('stl-input').dispatch('change');
+  await loaded(v, 'quader.stl');
+  await rechne(ui, v);
+  assert.deepEqual(s.die.show, {}, 'ein neues Teil beginnt mit allen Formteilen');
+  v.showTab('formteile');
+  assert.ok(dv.holders.every(h => h.visible));
+  v.showTab('entformung');
+});
+
+test('Ein gesetzter Abstand bleibt beim kleineren Teil, höchstens bis zum Reglerende, und die Anzeige sagt es', async () => {
+  const { doc, v, ui } = P;
+  const s = v.state;
+  const sel = doc.getElementById('demo-select');
+  sel.value = 'oil_pan'; sel.dispatch('change');
+  await loaded(v, 'Ölwanne');
+  await rechne(ui, v);
+  for (const [name, get] of [['die-dist', () => s.die.dist], ['proj-gap', () => s.projView.gap], ['ej-gap', () => s.ej.gap]]) {
+    const el = ui(name);
+    el.value = el.max; el.dispatch('input');                // selbst gesetzt: ans Ende des großen Teils
+    assert.equal(get(), +el.max);
+  }
+  const { writeSTL } = await import('../../../../web/tools/3d-studio/js/part/stlio.js');
+  const S = await import('../../../../web/tools/3d-studio/js/solids.js');
+  const buf = writeSTL(S.box(40, 30, 20), 'test');
+  doc.getElementById('stl-input').files = [{ name: 'klein.stl', arrayBuffer: () => Promise.resolve(buf), byteLength: buf.byteLength }];
+  doc.getElementById('stl-input').dispatch('change');
+  await loaded(v, 'klein.stl');
+  await rechne(ui, v);
+  for (const [name, get] of [['die-dist', () => s.die.dist], ['proj-gap', () => s.projView.gap], ['ej-gap', () => s.ej.gap]]) {
+    const el = ui(name), max = +el.max;
+    assert.equal(max, 50, name + ': das Reglerende folgt dem kleinen Teil');
+    assert.equal(get(), max, name + ': der Wert höchstens bis dorthin');
+    assert.equal(+el.value, max);
+    assert.equal(ui(name + '-val').textContent, '50 mm', name + ': die Anzeige nennt, was gilt');
+  }
+  v.tool.resetSettings();
+});
+
+test('Rand geändert, gleich danach ein neues Teil: kein Fehler aus dem verzögerten Nachbau', async () => {
+  const { doc, v, ui } = P;
+  const s = v.state;
+  await analysed(v);
+  const errors = [];
+  const catcher = err => errors.push(err);
+  process.on('uncaughtException', catcher);
+  try {
+    v.showTab('formteile');
+    const skirt = ui('die-skirt');
+    skirt.value = '20'; skirt.dispatch('input');             // der Nachbau wartet 120 ms …
+    const sel = doc.getElementById('demo-select');
+    sel.value = 'oil_pan'; sel.dispatch('change');            // … und das neue Teil ist schneller da
+    await loaded(v, 'Ölwanne');
+    await new Promise(r => setTimeout(r, 200));
+    assert.equal(errors.length, 0, 'kein Fehler: ' + errors.map(e => e.message).join(' | '));
+    await rechne(ui, v);
+    assert.ok(s.pieces && s.pieces.length >= 2, 'die Stücke des neuen Teils');
+  } finally {
+    process.off('uncaughtException', catcher);
+    ui('die-skirt').value = '8'; ui('die-skirt').dispatch('input');
+    v.showTab('entformung');
+  }
+});
+
+test('Einpassen rahmt, was der Modus zeigt: die herausgefahrenen Formteile, die Ebenen jenseits des Bauteils', async () => {
+  const { v, ui, shell } = P;
+  const T = await import('three');
+  const dv = v.dieView;
+  await analysed(v);
+  const worst = box => {
+    const cam = v.view.camera; cam.updateMatrixWorld(true);
+    let w = 0;
+    for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
+      const p = new T.Vector3(x, y, z).project(cam); w = Math.max(w, Math.abs(p.x), Math.abs(p.y));
+    }
+    return w;
+  };
+  v.showTab('formteile');
+  const d = ui('die-dist');
+  d.value = d.max; d.dispatch('input');
+  shell.fit();
+  const pieces = new T.Box3();
+  for (const h of dv.holders) if (h.visible) pieces.expandByObject(h);
+  assert.ok(worst(pieces) <= 1, 'beim größten Abstand stehen alle Formteile im Bild: ' + worst(pieces).toFixed(2));
+  v.showTab('flaechen');
+  const g = ui('proj-gap');
+  g.value = g.max; g.dispatch('input');
+  shell.fit();
+  const planes = new T.Box3();
+  for (const o of dv.overlays.children) if (o.visible) planes.expandByObject(o);
+  assert.ok(!planes.isEmpty() && worst(planes) <= 1, 'die Silhouetten auch bei großem Abstand: ' + worst(planes).toFixed(2));
+  /* Die Entformung zeigt das Bauteil: dorthin passt Einpassen ein. */
+  v.showTab('entformung');
+  shell.fit();
+  const part = new T.Box3().setFromObject(v.partMesh);
+  const w = worst(part);
+  assert.ok(w <= 1 && w > 0.3, 'das Bauteil füllt das Bild: ' + w.toFixed(2));
+  v.tool.resetSettings();
+});
+
 test('?part=… wählt das Beispielteil aus der Adresszeile', async () => {
   const Q = await mountPage('entformungsanalyse.html', 'js/studio/pages/entformung.js', { search: '?part=heat_sink', variant: 'adresszeile' });
   assert.ok(Q.v.state.name.includes('Kühlkörper'), 'Kühlkörper geladen: ' + Q.v.state.name);
-  await analysed(Q.v);
-  assert.ok(Q.v.state.seg, 'Analyse von selbst gelaufen');
+  assert.equal(Q.v.state.seg, null, 'nicht von selbst gerechnet');
+  await rechne(Q.ui, Q.v);
+  assert.ok(Q.v.state.seg, 'Analyse auf Knopfdruck gelaufen');
   assert.equal(Q.doc.getElementById('demo-select').value, 'heat_sink');
 });

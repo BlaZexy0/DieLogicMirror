@@ -3,15 +3,11 @@
    Implementierung wie in der STL-Analyse). */
 
 import { series, line, refline } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { pMaxMachine } from '../core/physics.js';
-import { theme } from '../core/theme.js';
-import { eq } from './mathfmt.js';
+import { seq, fmt } from '../core/format.js';
+import { pMaxMachine, leverFactor } from '../core/physics.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 const CLAMP = window.__CLAMP_MODEL__;
-function leverK(v) {
-  return (v.tieX > 0 && v.tieY > 0) ? CLAMP.leverK(v.eccX, v.eccY, v.tieX, v.tieY) : 1;
-}
 
 export default {
   id: 'area',
@@ -20,8 +16,7 @@ export default {
   inputs: ['force', 'safety', 'injForce', 'pAcc', 'pAccOp', 'dmin', 'psel', 'area', 'eccX', 'eccY', 'tieX', 'tieY'],
 
   calc(v) {
-    const C = theme.chart;
-    const k = leverK(v);
+    const k = leverFactor(v);
     const lift = k - 1 >= 1;
     /* Druckachse bis zum max. spezifischen Gießdruck der Maschine; die
        Hyperbeln A(p) = F/(100·S·k·p) laufen für p → 0 gegen unendlich —
@@ -34,13 +29,16 @@ export default {
     let p0 = CLAMP.pMax(v.force, yCap, 1, 1);
     if (!isFinite(p0) || p0 <= 0 || p0 >= pMax) p0 = pMax / 100;
     const x = seq(p0, pMax, 140);
+    /* Dreimal dieselbe Größe bei anderer Sicherheit: eine Farbe (`ink`),
+       das physikalische Minimum S = 1 blass, die Auslegung mit S voll, die
+       außermittige mit S·k gestrichelt. */
     const ss = [
-      series('S=1,00 · zentrisch', C.series1, x, p => CLAMP.areaMax(v.force, p, 1, 1)),
-      series('S=' + fmt(v.safety) + ' · zentrisch', C.series2, x, p => CLAMP.areaMax(v.force, p, v.safety, 1))
+      series('S=1,00 · zentrisch', 'ink', x, p => CLAMP.areaMax(v.force, p, 1, 1), { alpha: 0.4 }),
+      series('S=' + fmt(v.safety) + ' · zentrisch', 'ink', x, p => CLAMP.areaMax(v.force, p, v.safety, 1))
     ];
     if (k > 1) {
-      ss.push(series('S=' + fmt(v.safety) + ' · k=' + fmt(k), C.series3, x,
-        p => CLAMP.areaMax(v.force, p, v.safety, k)));
+      ss.push(series('S=' + fmt(v.safety) + ' · k=' + fmt(k), 'ink', x,
+        p => CLAMP.areaMax(v.force, p, v.safety, k), { dash: [7, 4] }));
     }
     const q = line(x, ss, 'Druck in bar', 'Max. Sprengfläche in m²',
       'Kraft ' + fmt(v.force) + ' kN · S=' + fmt(v.safety) +
@@ -85,8 +83,8 @@ gewählt: A = <b data-m="asel"></b></p>`;
   },
 
   renderMath(el, v) {
-    const set = (key, val) => { const s = el.querySelector('[data-m="' + key + '"]'); if (s) s.innerHTML = subHTML(val); };
-    const k = leverK(v);
+    const set = mathSetter(el);
+    const k = leverFactor(v);
     const ok = v.psel > 0 && v.safety > 0;
     set('k', fmt(k));
     set('k2', fmt(k));

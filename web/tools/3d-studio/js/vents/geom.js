@@ -15,11 +15,12 @@
    Radius am Boden. Sie entsteht als Loft: derselbe Umriss, Ring für
    Ring nach innen versetzt, unten ein Deckel.
 
-   Prismen und Lofts bekommen ihre Deckel per Ohrenabschneiden — auch
-   das Zickzack-Band des Waschbretts ist damit dicht. */
+   Prismen und Lofts bekommen ihre Deckel per Ohrenabschneiden (js/solids.js,
+   earClip) — auch das Zickzack-Band des Waschbretts ist damit dicht. */
 
-import { frameOf, toWorld, TYPES, allItems, ventExitX, ventPoints } from './model.js';
+import { frameOf, toWorld, allItems, ventExitX, ventPoints } from './model.js';
 import { volume } from '../mesh.js';
+import { earClip, concat } from '../solids.js';
 
 /* ── Polygone ────────────────────────────────────────────────── */
 
@@ -32,51 +33,18 @@ function signedArea(poly) {
   return a / 2;
 }
 
-/** Ohrenabschneiden für ein einfaches Polygon (gegen den Uhrzeigersinn).
-    Liefert Indexdreiecke. */
-export function triangulate(poly) {
-  const n = poly.length;
-  const idx = [];
-  for (let i = 0; i < n; i++) idx.push(i);
-  const out = [];
-  const cross2 = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-  const inside = (p, a, b, c) => cross2(a, b, p) >= -1e-12 && cross2(b, c, p) >= -1e-12 && cross2(c, a, p) >= -1e-12;
-  let guard = 0;
-  while (idx.length > 3 && guard++ < 10000) {
-    let cut = false;
-    for (let k = 0; k < idx.length; k++) {
-      const i0 = idx[(k + idx.length - 1) % idx.length], i1 = idx[k], i2 = idx[(k + 1) % idx.length];
-      const a = poly[i0], b = poly[i1], c = poly[i2];
-      if (cross2(a, b, c) <= 1e-12) continue;                   // einspringende Ecke
-      let ok = true;
-      for (const j of idx) {
-        if (j === i0 || j === i1 || j === i2) continue;
-        if (inside(poly[j], a, b, c)) { ok = false; break; }
-      }
-      if (!ok) continue;
-      out.push([i0, i1, i2]);
-      idx.splice(k, 1);
-      cut = true;
-      break;
-    }
-    if (!cut) break;                                            // entartet — was da ist, reicht
-  }
-  if (idx.length === 3) out.push([idx[0], idx[1], idx[2]]);
-  return out;
-}
-
 const pushTri = (out, a, b, c) => { out.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]); };
 
 /** Loft: Ringe gleicher Punktzahl von oben (rings[0], w[0] am größten)
     nach unten, Deckel oben und unten, Mantel dazwischen. `map(u, v, w)`
     setzt lokale in Weltkoordinaten (rechtshändig). Alle Ringe gegen den
     Uhrzeigersinn, dann ist die Wicklung nach außen. */
-export function loft(rings, ws, map) {
+function loft(rings, ws, map) {
   const out = [];
   const at = (k, i) => map(rings[k][i][0], rings[k][i][1], ws[k]);
   const n = rings[0].length, last = rings.length - 1;
-  for (const [a, b, c] of triangulate(rings[0])) pushTri(out, at(0, a), at(0, b), at(0, c));        // oben, +w
-  for (const [a, b, c] of triangulate(rings[last])) pushTri(out, at(last, a), at(last, c), at(last, b)); // unten, −w
+  for (const [a, b, c] of earClip(rings[0])) pushTri(out, at(0, a), at(0, b), at(0, c));        // oben, +w
+  for (const [a, b, c] of earClip(rings[last])) pushTri(out, at(last, a), at(last, c), at(last, b)); // unten, −w
   for (let k = 0; k < last; k++) {
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n;
@@ -90,7 +58,7 @@ export function loft(rings, ws, map) {
 }
 
 /** Prisma: Polygon in (u,v), ausgezogen entlang w von w0 bis w1 (w1 > w0). */
-export function prism(polyIn, w0, w1, map) {
+function prism(polyIn, w0, w1, map) {
   const poly = signedArea(polyIn) < 0 ? polyIn.slice().reverse() : polyIn;
   return loft([poly, poly], [w1, w0], map);
 }
@@ -288,15 +256,7 @@ export function buildByType(plan) {
 }
 
 /** Alles zusammen — für die STL. */
-export function buildAll(plan) {
-  const list = [];
-  for (const it of allItems(plan)) for (const part of buildItem(it)) list.push(part);
-  const n = list.reduce((a, t) => a + t.length, 0);
-  const out = new Float64Array(n);
-  let k = 0;
-  for (const t of list) { out.set(t, k); k += t.length; }
-  return out;
-}
+export const buildAll = plan => concat(allItems(plan).flatMap(buildItem));
 
 /** Volumen eines Elements (mm³) — die Überläufe gehen ins Schussgewicht.
     Der Steg ragt ein wenig in die Bohne; das Stück wird herausgerechnet. */
@@ -316,5 +276,3 @@ export function volumeOf(item) {
   }
   return v;
 }
-
-export { TYPES };

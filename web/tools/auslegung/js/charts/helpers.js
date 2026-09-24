@@ -7,7 +7,12 @@
 
 import { seq } from '../core/format.js';
 
-export function series(n, c, x, fn) { return { n, c, y: x.map(fn) }; }
+/* Eine Serie. c ist eine Rolle der Diagrammfarben ('ink' für die eine
+   Größe, um die es geht, sonst die Sachfarbe: 'machine', 'die', 'air' …),
+   aufgelöst erst beim Zeichnen (render/line.js). o: { dash, alpha, w } für
+   Varianten derselben Größe — Strichmuster oder Deckkraft, keine
+   Mischfarbe. */
+export function series(n, c, x, fn, o) { return Object.assign({ n, c, y: x.map(fn) }, o); }
 
 export function line(x, ys, xl, yl, info) { return { x, ys, xl, yl, info }; }
 
@@ -23,7 +28,8 @@ export function heat(x0, x1, y0, y1, fn, xl, yl, cl, lo, hi, levels) {
 /* ── Grenzen (siehe core/limits.js für das Objektmodell) ──────────
    Diagramme sammeln ihre Restriktionen in q.limits = [ … ]; die Renderer
    zeichnen Linien, Schraffuren, Zielbänder und Legende daraus. Eine neue
-   Restriktion = ein weiterer Eintrag. Farbe über theme.limits[id]. */
+   Restriktion = ein weiterer Eintrag. Farbe über theme.limits[id] (die
+   Familie der Grenze), explizit als Rolle in o.c. */
 
 /* Harte Grenze: bound ist eine Zahl (konstante Schranke auf Achse `on`)
    oder eine Funktion x→y (Kurvenschranke, nur on:'y').

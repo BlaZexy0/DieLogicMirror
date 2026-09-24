@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-"""One-off generator: golden fixtures of the air/vacuum model for DieLogic 2.
+"""One-off generator: golden fixtures of the air/vacuum model (fixtures/airsim).
 
-DieLogic 2 contains no Python — its TypeScript port of `hpdcsim` (packages/core/src/vacuum) is
-pinned by the JSON files this script writes. It runs the DieLogic 1 reference exactly as the
-dashboard reached it: dashboard values -> toSimPayload() (web/tools/auslegung/js/core/simapi.js,
-mirrored in `sim_payload` below) -> backend.simcore.run_shot_simulation().
+The browser port of `hpdcsim` (web/tools/auslegung/js/core/airsim/) is pinned by the JSON files
+this script writes. It runs the reference exactly as the dashboard reached it: dashboard values
+-> toSimPayload() (web/tools/auslegung/js/core/simapi.js, mirrored in `sim_payload` below)
+-> backend.simcore.run_shot_simulation().
 
-Run from the repository root of DieLogic 1, at tag v1-final:
+Run from the repository root, at tag v1-final. The tag has the simulator and
+backend.convert/simcore but not this script (it was added in a993eb3, which removed them), so copy
+it into a worktree of the tag first:
 
-    .venv/bin/python scripts/gen-v2-vacuum-goldens.py [OUT_DIR]
+    git worktree add ../dl-v1 v1-final
+    git show main:scripts/gen-v2-vacuum-goldens.py > ../dl-v1/scripts/gen-v2-vacuum-goldens.py
+    cd ../dl-v1 && .venv/bin/python scripts/gen-v2-vacuum-goldens.py [OUT_DIR]
 
-OUT_DIR defaults to ../dieLogic_2/packages/core/fixtures/vacuum; the files of an earlier run are
+OUT_DIR defaults to fixtures/airsim of the checkout it runs in; the files of an earlier run are
 replaced. Needs `node` on the PATH (the dashboard defaults are read from fields.js, not copied).
 
 Four families of files:
@@ -218,7 +222,7 @@ def special_cases(defaults, default_curve, ref_values, ref_curve):
 
 
 def invalid_cases(ref_values, ref_curve):
-    """(name, expected message key of the TypeScript port, values, curve)."""
+    """(name, expected message key of the browser port, values, curve)."""
     def ref(**over):
         return {**ref_values, **over}
 
@@ -344,7 +348,7 @@ def describe(name, result):
 
 def main():
     check_baseline()
-    out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "dieLogic_2/packages/core/fixtures/vacuum"
+    out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "fixtures" / "airsim"
     out_dir.mkdir(parents=True, exist_ok=True)
     # Replace what an earlier run wrote — and nothing else, should OUT_DIR ever be the wrong directory.
     families = (*FIXTURES, "special", "invalid", "layer")

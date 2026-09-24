@@ -4,18 +4,11 @@
    keine freien Ziel-Gießdruck-Eingaben mehr. */
 
 import { series, line, target } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { theme } from '../core/theme.js';
-import { injForceEff } from '../core/physics.js';
-import { eq } from './mathfmt.js';
+import { seq, fmt } from '../core/format.js';
+import { injForceEff, specPressure, clampPMax } from '../core/physics.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 const PI = Math.PI;
-
-function clampMax(v) {
-  const k = (v.tieX > 0 && v.tieY > 0)
-    ? window.__CLAMP_MODEL__.leverK(v.eccX, v.eccY, v.tieX, v.tieY) : 1;
-  return window.__CLAMP_MODEL__.pMax(v.force, v.area, v.safety, k);
-}
 
 export default {
   id: 'pspec',
@@ -26,9 +19,9 @@ export default {
   calc(v) {
     const x = seq(v.dmin, v.dmax, 140);
     const F = injForceEff(v);
-    const f = d => F * 1e4 / (0.25 * PI * d * d);
-    const pClamp = clampMax(v);
-    const q = line(x, [series('Gießdruck', theme.chart.series1, x, f)],
+    const f = d => specPressure(v, d);
+    const pClamp = clampPMax(v);
+    const q = line(x, [series('Gießdruck', 'ink', x, f)],
       'Kolben-Ø in mm', 'Spez. Gießdruck in bar', 'Gießkraft ' + fmt(F) + ' kN bei ' + fmt(Math.min(v.pAccOp, v.pAcc)) + ' bar Akkumulatordruck');
     if (v.psel > 0 && isFinite(pClamp)) {
       const lo = Math.min(v.psel, pClamp), hi = Math.max(v.psel, pClamp);
@@ -59,11 +52,11 @@ Band <span data-m="band"></span> ⇒ Ø-Bereich <b data-m="Dband"></b></p>`;
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
+    const set = mathSetter(el);
     const F = injForceEff(v);
-    const p = F * 1e4 / (0.25 * PI * v.diam * v.diam);
-    const Dof = pb => Math.sqrt(F * 1e4 / (0.25 * PI * pb));
-    const pClamp = clampMax(v);
+    const p = specPressure(v);
+    const Dof = pb => Math.sqrt(F * 1e4 / (0.25 * PI * pb));        // Umkehrung: Ø zum Druck
+    const pClamp = clampPMax(v);
     set('D', fmt(v.diam) + ' mm');
     set('p', isFinite(p) ? fmt(p) + ' bar' : '—');
     set('band', fmt(v.psel) + '–' + fmt(pClamp) + ' bar');

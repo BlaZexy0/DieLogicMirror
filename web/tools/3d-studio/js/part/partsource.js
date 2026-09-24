@@ -1,155 +1,194 @@
-/* Bauteilquelle — der Abschnitt „Bauteil" beider Bauteil-Werkzeuge:
-   Beispielteil wählen, eigene STL laden (Knopf oder Ziehen-und-Ablegen),
-   Netz aufbereiten und die Kennzahlen anzeigen.
+/* Bauteilquelle — die Bauteil-Klappe eines Werkzeugs: Beispielteil wählen,
+   eine Datei laden, das Netz aufbereiten und die Kennzahlen zeigen.
 
-   Alle Bauteil-Seiten brauchen exakt dasselbe, deshalb steht es hier
-   einmal. Erwartet werden die ids demo-select, stl-btn, stl-input und
-   model-warn; part-note und model-facts sind freiwillig (die
-   Abstandsanalyse lässt beide weg) — mit `suffix` auch mehrfach auf
-   einer Seite (die Abstandsanalyse hat zwei Quellen: „-a" und „-b").
+   Die Felder bekommt sie übergeben (`fields`: select, input, button, warn,
+   note, facts; note und facts dürfen fehlen) — der Rahmen reicht die seiner
+   Klappe (js/studio/shell.js, header.partFields; die Abstandsanalyse je
+   Chip eine).
 
-   Beispielteile kommen als fertige GLB aus assets/parts/ — genauso wie
-   eine hochgeladene Datei. Erkannt wird am Dateikopf, nicht an der
-   Endung: eine GLB liest js/part/glbio.js, alles andere js/part/stlio.js. */
+   Was sie über ein geladenes Teil weiß, gibt sie MIT: onLoad(model, name,
+   { name, demoId, warning, note }). Vorher las der Rahmen Auswahl und
+   Warnzeile hinterher aus der Seite zurück.
+
+   Eine Datei aus dem Knopf der Klappe geht an onFile, wenn es das gibt: der
+   Rahmen nimmt dort auch Pläne entgegen (js/studio/host.js). Sonst liest
+   die Quelle sie selbst. Beispielteile kommen als fertige GLB aus
+   assets/parts/ — genauso wie eine hochgeladene Datei; erkannt wird am
+   Dateikopf, nicht an der Endung (js/studio/files.js, parsePart).
+
+   Wer schnell hintereinander wählt, bekommt das ZULETZT Gewählte: jede
+   Wahl zieht eine Nummer, und ein Laden, das überholt wurde, gibt auf.
+   Vorher gewann das langsamere Beispielteil — das Bild zeigte die
+   Ölwanne, Chip und Entwurfsschlüssel den Kühlkörper.
+   Scheitert ein Laden, sagt es onError(text) (der Rahmen zeigt einen
+   Toast): die Zeile der Warnung steht in der zugeklappten Bauteil-Klappe,
+   dort las sie niemand. */
 
 import { buildModel, openEdgeRatio } from './model.js';
 import { DEMO_PARTS, loadDemo } from './demoparts.js';
-import { parseSTL } from './stlio.js';
-import { readGLB, isGLB } from './glbio.js';
-import { $, fmt, facts } from '../ui/controls.js';
+import { fmt } from '../studio/format.js';
+import { facts } from '../ui/controls.js';
+import { readBuffer } from '../ui/common.js';
+import { parsePart } from '../studio/files.js';
 
 /* Auf ein vollständig gezeichnetes Bild warten — sonst steht der
    Fortschrittstext erst da, wenn die Rechnung schon vorbei ist. */
-export const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-export function mountPartSource({ busy, viewport, onStart, onLoad, suffix = '',
-                                  filter = p => !p.pairOnly, start: startId = null }) {
-  const id = name => name + suffix;
+/**
+ * @param opts.fields   { select, input, button, warn, note?, facts? }
+ * @param opts.setBusy  text → der Schleier über dem Bild, null nimmt ihn weg
+ * @param opts.onFile   file → eine Datei aus dem Knopf der Klappe; ohne: als Netz lesen
+ * @param opts.onStart  name → ein Laden beginnt
+ * @param opts.onLoad   (model, name, { name, demoId, warning, note }) → es ist da
+ * @param opts.onError  text → ein Laden ist gescheitert
+ */
+export function mountPartSource({ fields, onStart, onLoad, onError = null, setBusy = null,
+                                  onFile = null, filter = p => !p.pairOnly, start: startId = null }) {
+  const f = fields;
+  const sel = f.select;
+  const veil = setBusy || (() => {});
   const list = DEMO_PARTS.filter(filter);
-  const sel = $(id('demo-select'));
+  /* Die Nummer der jüngsten Wahl (Beispielteil, Datei). */
+  let seq = 0;
+  const warn = text => { if (f.warn) f.warn.textContent = text; };
+  /* Eine Meldung, die jemand sehen soll: in die Klappe UND nach außen. */
+  const fail = text => {
+    warn(text);
+    if (onError) onError(text);
+  };
   sel.innerHTML = list.map(p => '<option value="' + p.id + '">' + p.label + '</option>').join('');
   sel.addEventListener('change', () => pickDemo(sel.value));
 
-  $(id('stl-btn')).addEventListener('click', () => $(id('stl-input')).click());
-  $(id('stl-input')).addEventListener('change', e => { if (e.target.files[0]) readFile(e.target.files[0]); });
+  f.button.addEventListener('click', () => f.input.click());
+  f.input.addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (!onFile) { readFile(file); return; }
+    onFile(file);
+    e.target.value = '';
+  });
 
-  if (viewport) {
-    for (const ev of ['dragenter', 'dragover']) {
-      viewport.addEventListener(ev, e => { e.preventDefault(); viewport.classList.add('dragover'); });
+  /* Eine Datei als Netz lesen. Ein gescheiterter Lesevorgang (Datei entfernt,
+     Rechte, Lesefehler) bleibt nicht stumm: der Schleier geht, die Meldung
+     kommt (js/ui/common.js, readBuffer). */
+  async function readFile(file) {
+    const my = ++seq;
+    let part;
+    try { part = parsePart(await readBuffer(file), file.name); }
+    catch (err) {
+      if (my === seq) { veil(null); fail(err.message); }
+      return false;
     }
-    for (const ev of ['dragleave', 'drop']) {
-      viewport.addEventListener(ev, e => { e.preventDefault(); viewport.classList.remove('dragover'); });
-    }
-    viewport.addEventListener('drop', e => {
-      const f = e.dataTransfer && e.dataTransfer.files[0];
-      if (f) readFile(f);
-    });
+    if (my !== seq) return false;                                 // inzwischen anders gewählt
+    return loadFile(part.tris, file.name, part.note, my);
   }
 
-  function readFile(file) {
-    const fr = new FileReader();
-    fr.onload = () => {
-      const glb = isGLB(fr.result);
-      try {
-        const tris = glb ? readGLB(fr.result) : parseSTL(fr.result);
-        sel.selectedIndex = -1;
-        load(tris, file.name,
-          (glb ? 'GLB-Datei · ' : 'STL-Datei · ') + (fr.result.byteLength / 1024).toFixed(0) + ' kB');
-      } catch (err) {
-        busy.classList.remove('on');
-        $(id('model-warn')).textContent = (glb ? 'GLB' : 'STL')
-          + ' konnte nicht gelesen werden: ' + err.message;
-      }
-    };
-    /* Ohne onerror blieb ein gescheiterter Lesevorgang (Datei entfernt,
-       Rechte, Lesefehler) völlig stumm — die Busy-Anzeige lief weiter und
-       nichts sagte, warum nichts passiert. */
-    fr.onerror = () => {
-      busy.classList.remove('on');
-      $(id('model-warn')).textContent = 'Die Datei „' + file.name + '" konnte nicht gelesen werden'
-        + (fr.error && fr.error.name ? ' (' + fr.error.name + ')' : '') + '.';
-    };
-    fr.onabort = fr.onerror;
-    fr.readAsArrayBuffer(file);
+  /** Eine Datei übernehmen. Das Beispielteil gilt erst als abgewählt, wenn
+      sie wirklich geladen wird — ein zu kleines Netz ließ die Liste sonst
+      leer zurück. → true, wenn sie geladen wurde. */
+  async function loadFile(tris, name, note, token) {
+    const my = token || ++seq;
+    const before = sel.selectedIndex;
+    sel.selectedIndex = -1;
+    const ok = await load(tris, name, note, my);
+    if (!ok && my === seq) sel.selectedIndex = before;
+    return ok;
   }
 
-  async function load(tris, name, note) {
+  /** Ein Netz übernehmen → true, wenn es geladen wurde. `token`: die Nummer
+      der Wahl, die hierher führte (sonst zieht load() eine eigene);
+      `demoId`: das Beispielteil, wenn es eines ist. */
+  async function load(tris, name, note, token, demoId = null) {
+    const my = token || ++seq;
     if (!tris || tris.length < 36) {
-      $(id('model-warn')).textContent = 'Das Netz enthält weniger als vier Dreiecke.';
-      return;
+      veil(null);
+      fail('Das Netz enthält weniger als vier Dreiecke.');
+      return false;
     }
+    if (my !== seq) return false;
     if (onStart) onStart(name);
     /* Nicht jede Seite will die Beschreibung des Beispielteils sehen. */
-    const pn = $(id('part-note'));
-    if (pn) pn.textContent = note || '';
+    if (f.note) f.note.textContent = note || '';
     /* Die Größenwarnung stand bisher in showFacts — also NACH buildModel,
        das bei 197k Dreiecken rund 1,5 s den Hauptthread blockiert. Sie kam
        damit an, wenn die Arbeit längst getan war. Jetzt vorher, aus der
        Rohzahl der Dreiecke. */
     const raw = tris.length / 9;
-    $(id('model-warn')).textContent = raw > BIG_MESH
+    warn(raw > BIG_MESH
       ? 'Großes Netz (' + fmt(raw, 0) + ' Dreiecke): Aufbereitung und jede Rechnung dauern entsprechend.'
-      : '';
-    busy.textContent = raw > BIG_MESH
-      ? 'Netz aufbereiten (' + fmt(raw, 0) + ' Dreiecke) …'
-      : 'Netz aufbereiten …';
-    busy.classList.add('on');
+      : '');
+    veil(raw > BIG_MESH ? 'Netz aufbereiten (' + fmt(raw, 0) + ' Dreiecke) …' : 'Netz aufbereiten …');
     await frame();
+    /* Während des Bildes kann schon die nächste Wahl gekommen sein. */
+    if (my !== seq) return false;
     try {
       const model = buildModel(tris);
-      showFacts(model, id);
-      await onLoad(model, name);
+      const warning = showFacts(model, f);
+      await onLoad(model, name, { name, demoId, warning, note: note || '' });
+      return true;
     } catch (err) {
-      $(id('model-warn')).textContent = 'Das Netz konnte nicht aufbereitet werden: ' + err.message;
+      fail('Das Netz konnte nicht aufbereitet werden: ' + err.message);
       console.error(err);
+      return false;
     } finally {
-      busy.classList.remove('on');
+      if (my === seq) veil(null);
     }
   }
 
-  /* partId, nicht id: der Parameter verdeckte sonst den Suffix-Helfer
-     `const id = name => name + suffix` — und $('model-warn') traf auf
-     abstand.html ins Leere (dort heißen die Felder model-warn-a/-b). Ein
-     fehlgeschlagenes Beispielteil warf dann einen TypeError, statt die
-     Meldung zu zeigen: die Seite blieb tot. */
+  /** Ein Beispielteil laden — die Liste zeigt es gleich als gewählt. */
   async function pickDemo(partId) {
-    busy.textContent = 'Beispielteil laden …';
-    busy.classList.add('on');
+    const my = ++seq;
+    sel.value = partId;
+    veil('Beispielteil laden …');
     try {
       const p = await loadDemo(partId);
-      await load(p.tris, p.label, p.note);
+      if (my !== seq) return false;                               // inzwischen anders gewählt
+      return await load(p.tris, p.label, p.note, my, partId);
     } catch (err) {
-      busy.classList.remove('on');
-      $(id('model-warn')).textContent = 'Beispielteil „' + partId + '" konnte nicht geladen werden: ' + err.message;
+      if (my !== seq) return false;
+      veil(null);
+      fail('Beispielteil „' + partId + '" konnte nicht geladen werden: ' + err.message);
       console.error(err);
+      return false;
     }
   }
 
   /* Beispielteil aus der Adresszeile (?part=…) oder das vorgegebene. */
   function start() {
-    const wanted = new URLSearchParams(location.search).get('part' + suffix);
+    const wanted = new URLSearchParams(location.search).get('part');
     const first = list.find(p => p.id === wanted) || list.find(p => p.id === startId) || list[0];
-    sel.value = first.id;
     return pickDemo(first.id);
   }
 
-  return { load, pickDemo, start };
+  return {
+    load, loadFile, pickDemo, start, fields: f,
+    /** Keines gewählt: die Liste zeigt sonst von sich aus das erste Teil —
+        der Angussdesigner beginnt ohne Bauteil. */
+    deselect() { sel.selectedIndex = -1; },
+    /** Eine Meldung in die Zeile der Klappe. */
+    warn
+  };
 }
 
 /* Ab hier gilt ein Netz als groß: Aufbereitung und Rechnungen sind dann
    spürbar, und der Anwender soll das VOR der Wartezeit erfahren. */
 const BIG_MESH = 150000;
 
-function showFacts(m, id) {
+/* Kennzahlen in die Klappe, alle Hinweise zum Netz in die Warnzeile.
+   → der Text der Hinweise ('' ohne). */
+function showFacts(m, f) {
   const s = m.bounds.size;
-  facts(id('model-facts'), [
-    ['Dreiecke', fmt(m.faceCount, 0)
-      + (m.faceCount !== m.rawFaceCount ? ' (roh ' + fmt(m.rawFaceCount, 0) + ')' : '')],
-    ['Abmessungen', s.map(v => fmt(v)).join(' × ') + ' mm'],
-    ['Volumen', fmt(m.volume / 1000) + ' cm³'],
-    ['Wanddicke 2V/A', m.totalArea > 0 ? fmt(2 * m.volume / m.totalArea) + ' mm' : '—'],
-    ['Oberfläche', fmt(m.surface / 100) + ' cm²']
-  ]);
+  if (f.facts) {
+    facts(f.facts, [
+      ['Dreiecke', fmt(m.faceCount, 0)
+        + (m.faceCount !== m.rawFaceCount ? ' (roh ' + fmt(m.rawFaceCount, 0) + ')' : '')],
+      ['Abmessungen', s.map(v => fmt(v)).join(' × ') + ' mm'],
+      ['Volumen', fmt(m.volume / 1000) + ' cm³'],
+      ['Wanddicke 2V/A', m.wall !== null ? fmt(m.wall) + ' mm' : '—'],
+      ['Oberfläche', fmt(m.totalArea / 100) + ' cm²']
+    ]);
+  }
 
   /* Alle Hinweise sammeln statt beim ersten aufzuhören: die Größenwarnung
      stand vorher mit return vor der Mannigfaltigkeitsprüfung — bei einem
@@ -163,11 +202,13 @@ function showFacts(m, id) {
   }
   const openFrac = openEdgeRatio(m);
   if (openFrac > 0.005) {
-    notes.push('Achtung: ' + (100 * openFrac).toFixed(1)
+    notes.push('Achtung: ' + fmt(100 * openFrac, 1)
       + ' % der Kanten haben keinen Nachbarn: das Netz ist offen oder nicht mannigfaltig.');
   }
   if (m.volume <= 0 && openFrac <= 0.005) {
     notes.push('Das Volumen ist nicht positiv: die Dreiecke zeigen nach innen oder das Netz überlappt sich.');
   }
-  $(id('model-warn')).textContent = notes.join(' ');
+  const text = notes.join(' ');
+  if (f.warn) f.warn.textContent = text;
+  return text;
 }

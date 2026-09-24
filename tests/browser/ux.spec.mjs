@@ -58,7 +58,7 @@ const griffKlick = async (page, s, wahl) => {
 };
 const SEITEN = [
   {
-    page: 'wandstaerke.html', query: '?part=cover', hook: '__wandstaerke', datei: /-wandstaerke\.json$/,
+    page: 'wandstaerke.html', query: '?part=gearbox_cover', hook: '__wandstaerke', datei: /-wandstaerke\.json$/,
     ergebnis: async (page, s) => {
       await feld(page, s, '6');
       await page.click('[data-ui="primary"]');
@@ -73,10 +73,18 @@ const SEITEN = [
     }
   },
   {
-    page: 'entformungsanalyse.html', query: '?part=cover', hook: '__entformung', datei: /-entformung\.json$/,
-    ergebnis: (page, s) => page.waitForFunction(h => window[h].state.analysed && !window[h].state.running, s.hook, { timeout: 120_000 }),
-    /* Ein anderes Beispielteil wählen: es wird geladen und sofort gerechnet. */
-    lang: async page => { await page.click('[data-ui="part-chip"]'); await page.selectOption('#demo-select', 'oil_pan'); },
+    page: 'entformungsanalyse.html', query: '?part=gearbox_cover', hook: '__entformung', datei: /-entformung\.json$/,
+    /* Gerechnet wird auf Knopfdruck (24.09.). */
+    ergebnis: async (page, s) => {
+      if (!(await page.evaluate(h => window[h].state.analysed, s.hook))) await page.click('[data-ui="primary"]');
+      await page.waitForFunction(h => window[h].state.analysed && !window[h].state.running, s.hook, { timeout: 120_000 });
+    },
+    /* Ein anderes Beispielteil wählen und rechnen lassen. */
+    lang: async page => {
+      await page.click('[data-ui="part-chip"]'); await page.selectOption('#demo-select', 'oil_pan');
+      await page.waitForFunction(() => window.__entformung.state.ready && /Ölwanne/.test(window.__entformung.state.name), null, { timeout: 60_000 });
+      await page.click('[data-ui="primary"]');
+    },
     nachAbbruch: { offen: v => v.state.analysed === false, knopf: 'Entformung rechnen' },
     merken: {
       setzen: page => page.click('[data-ui="axis-seg"] button[data-value="0"]'),
@@ -208,6 +216,35 @@ const SEITEN = [
     }
   },
   {
+    /* Der Formaufbau hat eine Form statt eines Bauteils, und sein Plan IST die Form: geändert wird mit einer
+       neuen Gruppe (Hauptknopf, Name, „Anlegen"), entfernt über das Menü „⋯" ihres Kopfes — Entf gehört hier
+       keinem Teil, die Hervorhebung ist Ansicht, keine Auswahl. Der vollste Stand: die Temperierung
+       hervorgehoben (ihre Gruppe aufgeklappt) und das Menü eines Kreises offen. „Speichern" schreibt die GLB. */
+    page: 'form.html', query: '', hook: '__formaufbau', datei: /\.glb$/, art: 'plan',
+    ergebnis: async page => {
+      await page.click('[data-ui="tabs"] [data-mode="teile"]');
+      await page.click('[data-ui="hl-cooling"]');
+      await page.click('.comp-row.hl [data-act="menu"]');
+      await expect(page.locator('.comp-row.hl .row-menu:not(.hidden)')).toHaveCount(1);
+    },
+    plan: {
+      aendern: async (page, s) => {
+        const vorher = await zustand(page, s, s.plan.anzahl);
+        await page.click('[data-ui="tabs"] [data-mode="teile"]');
+        await page.click('[data-ui="primary"]');
+        await page.fill('[data-ui="group-title"]', 'Schieber unten');
+        await page.click('[data-ui="primary"]');
+        await expect.poll(() => zustand(page, s, s.plan.anzahl), { message: 'Anlegen legt eine Gruppe an' }).toBe(vorher + 1);
+      },
+      anzahl: v => v.asm.groups.length,
+      entfernen: async page => {
+        const kopf = page.locator('.group-head').last();
+        await kopf.locator('[data-act="group-menu"]').click();
+        await kopf.locator('[data-act="remove-group"]').click();
+      }
+    }
+  },
+  {
     page: 'kammerfuellung.html', query: '', hook: '__kammerfuellung', datei: /-kammerfuellung\.json$/,
     ergebnis: async (page, s) => {
       const tab = m => page.click(`[data-ui="tabs"] [role="tab"][data-mode="${m}"]`);
@@ -280,7 +317,8 @@ const messen = page => page.evaluate(() => {
   const knapp = [];
   const name = el => (el.dataset.ui || el.dataset.mode || el.dataset.value || el.textContent.trim() || el.tagName).slice(0, 28);
   for (const el of document.querySelectorAll('.st-root button, .st-root .klbl, .st-root .kval, .st-root .row > span, .st-root .fact span, .st-root .st-hint, .st-root .st-note, .st-root .st-hintline, .st-root summary, .st-root .st-tool-name, #status')) {
-    if (!sichtbar(el) || el.closest('[hidden]') || el.closest('[data-ui^="part-chip"]')) continue;
+    /* Das Dashboard der Auslegung (Werkbank) hat seine eigene Seite und ihre Regeln. */
+    if (!sichtbar(el) || el.closest('[hidden]') || el.closest('[data-ui^="part-chip"]') || el.closest('.wb-dash')) continue;
     if (el.scrollWidth > el.clientWidth + 1) knapp.push('Text: ' + name(el) + ' (' + el.scrollWidth + ' > ' + el.clientWidth + ')');
   }
   for (const box of document.querySelectorAll('.st-root .seg, .st-root .view-bar, .st-root .st-bar')) {
@@ -310,7 +348,9 @@ for (const s of SEITEN) {
       await page.goto(url(s));
       await ready(page, s.hook);
       const modi = await page.evaluate(() => [...document.querySelectorAll('[data-ui="tabs"] [role="tab"]')].map(b => b.dataset.mode));
-      expect(modi.length).toBeGreaterThan(1);
+      /* Mindestens ein Modus; die Abstandsanalyse hat seit dem 24.09. nur noch
+         ein Menü (Abstand und Skala zusammen), ihre Reiterleiste fällt weg. */
+      expect(modi.length).toBeGreaterThanOrEqual(1);
 
       const pruefen = async wann => {
         for (const m of modi) {
@@ -329,21 +369,31 @@ for (const s of SEITEN) {
       await pruefen('beim Laden');
       /* Eingepasst heißt: ganz im Bild — auch wenn das Bild hochkant steht
          (js/scene.js passte früher nur in die Höhe ein). Gemessen an den
-         Ecken des Hüllquaders, auf den Bildschirm projiziert: |x|, |y| ≤ 1. */
+         Ecken des Hüllquaders, auf den Bildschirm projiziert: |x|, |y| ≤ 1 —
+         im ersten Modus, in dem eingepasst wurde (beim Formaufbau fährt der
+         Modus „Öffnen" die Form auf). Wer keinen einzelnen Körper hat (die
+         Form ist eine Baugruppe), nennt seinen Hüllquader (fitBox). Danach
+         geht es im Modus von vorher weiter. */
+      const zuletzt = await page.evaluate(h => window[h].shell.mode, s.hook);
+      await page.evaluate(([hk, id]) => window[hk].shell.setMode(id), [s.hook, modi[0]]);
       const rand = await page.evaluate(h => {
         const v = window[h], netze = [v.partMesh, v.meshA, v.meshB].filter(Boolean);
-        let worst = 0;
-        for (const m of netze) {
-          m.geometry.computeBoundingBox();
-          const b = m.geometry.boundingBox;
+        const ecken = [];
+        const kasten = (b, m) => {
           for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) {
-            const p = b.min.clone().set(x, y, z).applyMatrix4(m.matrixWorld).project(v.view.camera);
-            worst = Math.max(worst, Math.abs(p.x), Math.abs(p.y));
+            const p = b.min.clone().set(x, y, z);
+            ecken.push(m ? p.applyMatrix4(m.matrixWorld) : p);
           }
-        }
+        };
+        for (const m of netze) { m.geometry.computeBoundingBox(); kasten(m.geometry.boundingBox, m); }
+        const fb = v.fitBox && v.fitBox();
+        if (fb) kasten(fb, null);
+        let worst = 0;
+        for (const p of ecken) { p.project(v.view.camera); worst = Math.max(worst, Math.abs(p.x), Math.abs(p.y)); }
         return worst;
       }, s.hook);
       expect(rand, 'das Modell ragt aus dem Bild').toBeLessThanOrEqual(1.0);
+      await page.evaluate(([hk, id]) => window[hk].shell.setMode(id), [s.hook, zuletzt]);
       await s.ergebnis(page, s);
       await pruefen('mit Ergebnis');
       /* Das Auswahlfeld eines Designers: jede seiner Gruppen einmal aufgeklappt. */
@@ -401,6 +451,13 @@ for (const s of SEITEN) {
 
   if (s.plan) test(`${s.page}: der Plan wird als Entwurf angeboten, nie still übernommen; Entf fragt nicht, Strg+Z holt zurück`, async ({ page }) => {
     const errors = watch(page);
+    /* Entfernt wird mit Entf, den Zeiger über dem Bild — oder so, wie das
+       Werkzeug entfernt (der Formaufbau: über das Menü „⋯"). */
+    const entfernen = s.plan.entfernen ? () => s.plan.entfernen(page, s) : async () => {
+      const c = await page.locator('#viewport canvas').boundingBox();
+      await page.mouse.move(c.x + c.width - 24, c.y + c.height * 0.5);
+      await page.keyboard.press('Delete');
+    };
     await page.goto(url(s));
     await ready(page, s.hook);
     const leer = await zustand(page, s, s.plan.anzahl);
@@ -428,9 +485,7 @@ for (const s of SEITEN) {
     /* Entf: ohne Nachfrage weg, der Toast bietet den Rückweg, Strg+Z geht ihn auch. */
     await s.plan.aendern(page, s);
     const voll = await zustand(page, s, s.plan.anzahl);
-    const c = await page.locator('#viewport canvas').boundingBox();
-    await page.mouse.move(c.x + c.width - 24, c.y + c.height * 0.5);
-    await page.keyboard.press('Delete');
+    await entfernen();
     await expect.poll(() => zustand(page, s, s.plan.anzahl)).toBe(voll - 1);
     const toast = page.locator('[data-ui="toast"]');
     await expect(toast).toBeVisible();
@@ -438,7 +493,7 @@ for (const s of SEITEN) {
     expect((await messen(page)).ueber, 'der Toast überdeckt nichts').toEqual([]);
     await page.keyboard.press('Control+z');
     await expect.poll(() => zustand(page, s, s.plan.anzahl)).toBe(voll);
-    await page.keyboard.press('Delete');
+    await entfernen();
     await toast.locator('.st-toast-act').click();
     await expect.poll(() => zustand(page, s, s.plan.anzahl), { message: '„Rückgängig" im Toast' }).toBe(voll);
     expect(errors).toEqual([]);
@@ -448,11 +503,15 @@ for (const s of SEITEN) {
     const errors = watch(page);
     await page.goto(url(s));
     await ready(page, s.hook);
-    /* Der erste Modus, der ein ⓘ hat (bei den Dateien der Abstandsanalyse gibt es keines). */
-    const mitInfo = await page.evaluate(() => { const b = document.querySelector('.st-mode .st-info'); return b ? b.closest('.st-mode').dataset.mode : null; });
+    /* Der erste Modus, der ein ⓘ zeigt — eines, das nicht in einem verborgenen
+       Teil des Modus steckt (das Formular „Neue Gruppe" des Formaufbaus). */
+    const mitInfo = await page.evaluate(() => {
+      const b = [...document.querySelectorAll('.st-mode .st-info')].find(x => !x.parentElement.closest('[hidden]:not(.st-mode)'));
+      return b ? b.closest('.st-mode').dataset.mode : null;
+    });
     expect(mitInfo, 'die Seite hat ein ⓘ').not.toBeNull();
     await page.evaluate(([hk, id]) => window[hk].shell.setMode(id), [s.hook, mitInfo]);
-    const info = page.locator('.st-mode:not([hidden]) .st-info').first();
+    const info = page.locator('.st-mode:not([hidden]) .st-info:visible').first();
     const anker = await info.getAttribute('data-help');
     await info.click();
     const lade = page.locator('[data-ui="help"]');
@@ -462,6 +521,39 @@ for (const s of SEITEN) {
     await expect(lade).toBeHidden();
     const [datei] = await Promise.all([page.waitForEvent('download'), page.click('[data-ui="save"]')]);
     expect(datei.suggestedFilename()).toMatch(s.datei);
+    expect(errors).toEqual([]);
+  });
+}
+
+/* Die Werkbank: sechs Schritte, jeder mit den Modi seines Werkzeugs
+   (js/studio/stages.js). In jedem Schritt und jedem Modus gilt, was oben
+   für die Werkzeugseiten gilt — mit der Leiste der Schritte links daneben. */
+for (const [w, h] of GROESSEN) {
+  test(`werkbank.html @ ${w}×${h}: kein Schritt und kein Modus scrollt, überdeckt sich oder schneidet ab`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    const errors = watch(page);
+    await page.goto('/tools/3d-studio/werkbank.html');
+    await page.waitForFunction(() => window.__werkbank?.state?.ready, null, { timeout: 60_000 });
+    /* Grob rastern: hier zählt das Layout, nicht das Feld. */
+    await page.evaluate(() => window.__werkbank.shell.setMode('feld'));
+    await page.fill('[data-owner="wandstaerke"] [data-ui="cell"]', '8');
+    await page.press('[data-owner="wandstaerke"] [data-ui="cell"]', 'Enter');
+    for (const stage of ['bauteil', 'anguss', 'fuellung', 'ueberlauf', 'temperier', 'auslegung']) {
+      await page.click(`[data-stage="${stage}"]`);
+      if (stage === 'fuellung') await page.waitForFunction(() => { const s = window.__werkbank.stages.fuellung.state; return s.result && !s.running && !s.stale; }, null, { timeout: 120_000 });
+      if (stage === 'temperier') await page.waitForFunction(() => { const s = window.__werkbank.stages.temperier.state; return s.shellDist !== null && !s.running; }, null, { timeout: 120_000 });
+      const modi = await page.evaluate(() => [...document.querySelectorAll('[data-ui="tabs"] [role="tab"]')].map(b => b.dataset.mode));
+      for (const m of modi) {
+        await page.evaluate(id => window.__werkbank.shell.setMode(id), m);
+        await page.evaluate(() => { for (const d of document.querySelectorAll('.st-mode:not([hidden]) details')) d.open = true; });
+        const r = await messen(page);
+        expect(r.body, `${stage}/${m}: Inhalt der Seitenleiste läuft über`).toBeLessThanOrEqual(0);
+        expect(r.panel, `${stage}/${m}: Seitenleiste läuft über`).toBeLessThanOrEqual(0);
+        expect(r.seite, `${stage}/${m}: die Seite selbst scrollt`).toBeLessThanOrEqual(0);
+        expect(r.ueber, `${stage}/${m}: Aufsätze überdecken sich`).toEqual([]);
+        expect(r.knapp, `${stage}/${m}: abgeschnitten`).toEqual([]);
+      }
+    }
     expect(errors).toEqual([]);
   });
 }
@@ -540,7 +632,7 @@ test.describe('grober Zeiger', () => {
         expect(r.knapp, `${m}: abgeschnitten`).toEqual([]);
         klein.push(...await page.evaluate(mode => {
           const out = [];
-          for (const el of document.querySelectorAll('.st-root button, .st-root select, .st-root input, .st-root summary')) {
+          for (const el of document.querySelectorAll('.st-root button, .st-root [role="button"], .st-root select, .st-root input, .st-root summary')) {
             if (el.hidden || el.closest('[hidden]') || el.type === 'file') continue;
             const r = el.getBoundingClientRect();
             if (r.width <= 0 || r.height <= 0) continue;
@@ -554,4 +646,54 @@ test.describe('grober Zeiger', () => {
       expect([...new Set(klein)]).toEqual([]);
     });
   }
+});
+
+/* Was nur ein echter Browser zeigt (Prüfung vom 22.09.): ein Label gehört
+   seinem Feld, nicht dem ⓘ davor; ein Doppelklick auf den Hauptknopf ist
+   kein Abbruch; der Entwurfsstreifen geht mit seinem Bauteil. */
+test.describe('Rahmen, echte Eingaben', () => {
+  test('ein Klick auf die Bezeichnung setzt den Fokus ins Feld und öffnet NICHT die Hilfe', async ({ page }) => {
+    await page.goto('/tools/3d-studio/wandstaerke.html');
+    await ready(page, '__wandstaerke');
+    const wort = page.locator('.st-mode:not([hidden]) label.row > span', { hasText: 'Zellkante' }).first();
+    const box = await wort.boundingBox();
+    await page.mouse.click(box.x + 6, box.y + box.height / 2);
+    await expect(page.locator('[data-ui="help"]')).toBeHidden();
+    expect(await page.evaluate(() => document.activeElement && document.activeElement.dataset.ui)).toBe('cell');
+    /* Das ⓘ selbst öffnet sie, auch mit der Tastatur. */
+    const i = page.locator('.st-mode:not([hidden]) .st-info').first();
+    await i.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('[data-ui="help"]')).toBeVisible();
+  });
+
+  test('ein Doppelklick auf den Hauptknopf startet die Rechnung und bricht sie nicht gleich wieder ab', async ({ page }) => {
+    await page.goto('/tools/3d-studio/wandstaerke.html');
+    await ready(page, '__wandstaerke');
+    await page.dblclick('[data-ui="primary"]');
+    await page.waitForFunction(() => window.__wandstaerke.state.field && !window.__wandstaerke.shell.busy, null, { timeout: 120_000 });
+    await expect(page.locator('[data-ui="note"]')).not.toContainText('Abgebrochen');
+  });
+
+  test('der Entwurfsstreifen gehört seinem Bauteil: ein Wechsel nimmt ihn mit', async ({ page }) => {
+    await page.goto('/tools/3d-studio/ueberlauf.html');
+    await ready(page, '__ueberlauf');
+    await page.click('[data-chip="bohne"]');
+    const c = await page.locator('#viewport canvas').boundingBox();
+    await page.mouse.click(c.x + c.width * 0.6, c.y + c.height * 0.5);
+    await expect.poll(() => page.evaluate(() => Object.keys(window.__ueberlauf.state.plan.items).length)).toBe(1);
+    const teil = async id => {
+      await page.click('[data-ui="part-chip"]');
+      await page.selectOption('#demo-select', id);
+      await page.waitForFunction(i => window.__ueberlauf.state.ready && window.__ueberlauf.host.part.demoId === i, id, { timeout: 60_000 });
+      await page.keyboard.press('Escape');
+    };
+    const streifen = page.locator('[data-ui="banner"]');
+    await teil('oil_pan');
+    await expect(streifen).toBeHidden();
+    await teil('gearbox_cover');
+    await expect(streifen).toBeVisible();
+    await teil('oil_pan');
+    await expect(streifen, 'das Angebot wandert nicht mit').toBeHidden();
+  });
 });

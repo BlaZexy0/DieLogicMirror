@@ -12,7 +12,11 @@
   <link rel="stylesheet" href="/shared/shared.css">
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
+  <!-- Setzt SVG-Bilder mit Rollenklassen (f-…, s-…) in die Seite, damit sie dem
+       Farbschema folgen: hier das gezeichnete Teamfoto. -->
+  <script src="/shared/svgfarben.js"></script>
   <style>
     .about-wrap { max-width: 1000px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
     .about-cols {
@@ -33,7 +37,7 @@
       width: 100%;
       height: auto;
       border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0,39,51,.18);
+      box-shadow: 0 8px 32px color-mix(in srgb, var(--dark) 18%, transparent);
       margin-bottom: 3rem;
     }
     .team-section h2, .values-section h2 {
@@ -64,6 +68,8 @@
       display: flex; align-items: center; justify-content: center;
     }
     .member-avatar svg { width: 44px; height: 44px; }
+    .member-avatar.foto { background: none; overflow: hidden; }
+    .member-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
     .member-card h3 { font-size: 0.98rem; font-weight: 700; margin-bottom: 0.15rem; }
     .member-role {
       font-size: 0.76rem;
@@ -111,9 +117,9 @@
 
   <div class="draft-note">
     ⚠️ <b>Mockup-Inhalte:</b> Das Teamfoto ist ein gezeichneter Platzhalter
-    (<code>assets/team-mockup.svg</code>) und die Teammitglieder sind
-    <span class="ph">[Platzhalter]</span>: echtes Foto einsetzen, Namen, Rollen und
-    Beschreibungen ersetzen. Diesen Kasten danach löschen.
+    (<code>assets/team-mockup.svg</code>); außer dem Gründer sind die Teammitglieder
+    und alle Beschreibungen <span class="ph">[Platzhalter]</span>: echte Fotos einsetzen,
+    Namen, Rollen und Beschreibungen ersetzen. Diesen Kasten danach löschen.
   </div>
 
   <div class="about-cols">
@@ -124,7 +130,7 @@
         Anschnitt und Schusskurve zusammenpassen, zeigt sich oft erst am Abmusterungstag.</p>
       <p>DieLogic bringt diese Rechnungen an einen Ort: ein Dashboard, in dem jede Eingabe
         sofort alle 19 Diagramme, die KPI-Zeile und die Prüfungen gegen die Maschinengrenzen
-        aktualisiert. Der rote Marker zeigt in jedem Bild denselben Betriebspunkt: eine
+        aktualisiert. Ein Marker zeigt in jedem Bild denselben Betriebspunkt: eine
         Auslegung, eine Wahrheit.</p>
       <p>Die Physik rechnet im Browser: Die Diagramme reagieren ohne Wartezeit auf jede
         Eingabe. Ihre Projekte liegen im Konto Ihrer Organisation auf unserem Server, damit
@@ -149,11 +155,11 @@
     <div class="team-grid">
 
       <div class="member-card">
-        <div class="member-avatar">
-          <svg viewBox="0 0 44 44" fill="none"><circle cx="22" cy="15" r="8" fill="var(--ondark)"/><path d="M6 40 Q6 26 22 26 Q38 26 38 40 Z" fill="var(--ondark)"/></svg>
+        <div class="member-avatar foto">
+          <img src="/assets/team/stephan-goeke.webp" width="84" height="84" alt="Stephan Goeke">
         </div>
-        <h3><span class="ph">[Vorname Nachname]</span></h3>
-        <div class="member-role">Gründung · Gießereitechnik</div>
+        <h3>Stephan Goeke</h3>
+        <div class="member-role">Gründer · Gießereitechnik</div>
         <p><span class="ph">[1–2 Sätze: Hintergrund im Druckguss, z. B. Prozess- oder
           Werkzeugauslegung, Jahre Berufserfahrung.]</span></p>
       </div>
@@ -192,8 +198,9 @@
       </div>
       <div class="value-card">
         <h3>Ihre Daten bleiben Ihre</h3>
-        <p>Die komplette Rechnung läuft clientseitig. Auslegungen liegen im Browser oder als
-          JSON-Datei bei Ihnen, nicht auf fremden Servern.</p>
+        <p>Die komplette Rechnung läuft in Ihrem Browser. Unser Server speichert Ihre Projekte
+          im Konto Ihrer Organisation, er berechnet nichts, und jedes Projekt lässt sich
+          jederzeit als JSON-Datei mitnehmen.</p>
       </div>
       <div class="value-card">
         <h3>Werkzeuge aus der Praxis</h3>

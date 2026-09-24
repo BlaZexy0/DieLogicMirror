@@ -1,49 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 560" font-family="Arial, Helvetica, sans-serif" role="img"><defs><clipPath id="clip0"><path d="M75.00 92.00h755.00v410.00h-755.00Z"/></clipPath><pattern id="pat0" patternUnits="userSpaceOnUse" width="8" height="8"><path d="M-2 6L6 -2M2 10L10 2" fill="none" stroke="#4c6870" stroke-opacity="0.5" stroke-width="1.4"/></pattern><clipPath id="clip1"><path d="M74.00 91.00h757.00v412.00h-757.00Z"/></clipPath></defs><rect x="0.00" y="0.00" width="880.00" height="560.00" fill="#ffffff"/>
-<text x="440.00" y="22.00" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#002733" text-anchor="middle">Entlüftungsgeschwindigkeit</text>
-<text x="440.00" y="42.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">Ø 150 mm · Entlüftung 800 mm²</text>
-<path d="M40.00 55.00L840.00 55.00" fill="none" stroke="#ccd4d6" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 92.00h755.00v410.00h-755.00Z" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<path d="M75.00 92.00L75.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="75.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">0</text>
-<path d="M252.65 92.00L252.65 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="252.65" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">2</text>
-<path d="M430.29 92.00L430.29 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="430.29" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">4</text>
-<path d="M607.94 92.00L607.94 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="607.94" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">6</text>
-<path d="M785.59 92.00L785.59 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="785.59" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">8</text>
-<path d="M75.00 502.00L830.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="68.00" y="506.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">0</text>
-<path d="M75.00 400.91L830.00 400.91" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="68.00" y="404.91" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">50</text>
-<path d="M75.00 299.81L830.00 299.81" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="68.00" y="303.81" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">100</text>
-<path d="M75.00 198.72L830.00 198.72" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="68.00" y="202.72" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">150</text>
-<path d="M75.00 97.62L830.00 97.62" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round"/>
-<text x="68.00" y="101.62" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="end">200</text>
-<text x="452.50" y="549.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle">Kolbengeschwindigkeit in m/s</text>
-<text x="0.00" y="0.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" text-anchor="middle" transform="translate(14.00 297.00) rotate(-90.00)">Entlüftungsgeschwindigkeit in m/s</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 560" font-family="Arial, Helvetica, sans-serif" role="img"><defs><clipPath id="clip0"><path d="M75.00 92.00h755.00v410.00h-755.00Z"/></clipPath><pattern id="pat0" patternUnits="userSpaceOnUse" width="8" height="8"><path d="M-2 6L6 -2M2 10L10 2" fill="none" stroke="#b42318" stroke-opacity="0.55" stroke-width="1.1" class="s-bad"/></pattern><clipPath id="clip1"><path d="M74.00 91.00h757.00v412.00h-757.00Z"/></clipPath></defs><rect x="0.00" y="0.00" width="880.00" height="560.00" fill="#ffffff" class="f-surface"/>
+<text x="440.00" y="22.00" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#002733" class="f-text" text-anchor="middle">Entlüftungsgeschwindigkeit</text>
+<text x="440.00" y="42.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="middle">Ø 150 mm · Entlüftung 800 mm²</text>
+<path d="M40.00 55.00L840.00 55.00" fill="none" stroke="#ccd4d6" stroke-width="1" stroke-linejoin="round" class="s-border"/>
+<path d="M75.00 92.00h755.00v410.00h-755.00Z" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" class="s-border-light"/>
+<path d="M75.00 92.00L75.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" class="s-border-light"/>
+<text x="75.00" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="middle">0</text>
+<path d="M252.65 92.00L252.65 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" class="s-border-light"/>
+<text x="252.65" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="middle">2</text>
+<path d="M430.29 92.00L430.29 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" class="s-border-light"/>
+<text x="430.29" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="middle">4</text>
+<path d="M607.94 92.00L607.94 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" class="s-border-light"/>
+<text x="607.94" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="middle">6</text>
+<path d="M785.59 92.00L785.59 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" class="s-border-light"/>
+<text x="785.59" y="520.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="middle">8</text>
+<path d="M75.00 502.00L830.00 502.00" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" class="s-border-light"/>
+<text x="68.00" y="506.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="end">0</text>
+<path d="M75.00 400.91L830.00 400.91" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" class="s-border-light"/>
+<text x="68.00" y="404.91" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="end">50</text>
+<path d="M75.00 299.81L830.00 299.81" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" class="s-border-light"/>
+<text x="68.00" y="303.81" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="end">100</text>
+<path d="M75.00 198.72L830.00 198.72" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" class="s-border-light"/>
+<text x="68.00" y="202.72" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="end">150</text>
+<path d="M75.00 97.62L830.00 97.62" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" class="s-border-light"/>
+<text x="68.00" y="101.62" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="end">200</text>
+<text x="452.50" y="549.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="middle">Kolbengeschwindigkeit in m/s</text>
+<text x="0.00" y="0.00" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="middle" transform="translate(14.00 297.00) rotate(-90.00)">Entlüftungsgeschwindigkeit in m/s</text>
 <g clip-path="url(#clip0)">
-<path d="M75.00 92.00h755.00v106.72h-755.00Z" fill="rgba(255,255,255,.45)" fill-rule="nonzero"/>
+<path d="M75.00 92.00h755.00v106.72h-755.00Z" fill="#ffffff" fill-rule="nonzero" class="f-surface"/>
 <path d="M75.00 92.00h755.00v106.72h-755.00Z" fill="url(#pat0)" fill-rule="nonzero"/>
-<path d="M75.00 198.72L830.00 198.72" fill="none" stroke="#4c6870" stroke-width="1.4" stroke-dasharray="6 4" stroke-linejoin="round"/>
-<text x="826.00" y="194.72" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#4c6870" text-anchor="end">v<tspan font-size="8.6" dy="3.08">luft</tspan><tspan dy="-3.08"> max 150 m/s</tspan></text>
-<text x="452.50" y="149.36" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="400" fill="#4c6870" text-anchor="middle">über zulässiger Luftgeschwindigkeit</text>
+<path d="M75.00 198.72L830.00 198.72" fill="none" stroke="#68a7cc" stroke-width="1.4" stroke-dasharray="6 4" stroke-linejoin="round" class="s-air"/>
+<text x="826.00" y="194.72" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#002733" class="f-text" text-anchor="end">v<tspan font-size="8.6" dy="3.08">luft</tspan><tspan dy="-3.08"> max 150 m/s</tspan></text>
+<text x="452.50" y="149.36" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="400" fill="#002733" class="f-text" text-anchor="middle">über zulässiger Luftgeschwindigkeit</text>
 </g>
 <g clip-path="url(#clip1)">
-<path d="M75.00 502.00L80.43 499.27L85.86 496.54L91.29 493.81L96.73 491.08L102.16 488.34L107.59 485.61L113.02 482.88L118.45 480.15L123.88 477.42L129.32 474.69L134.75 471.96L140.18 469.23L145.61 466.50L151.04 463.76L156.47 461.03L161.91 458.30L167.34 455.57L172.77 452.84L178.20 450.11L183.63 447.38L189.06 444.65L194.50 441.91L199.93 439.18L205.36 436.45L210.79 433.72L216.22 430.99L221.65 428.26L227.09 425.53L232.52 422.80L237.95 420.07L243.38 417.33L248.81 414.60L254.24 411.87L259.68 409.14L265.11 406.41L270.54 403.68L275.97 400.95L281.40 398.22L286.83 395.49L292.27 392.75L297.70 390.02L303.13 387.29L308.56 384.56L313.99 381.83L319.42 379.10L324.86 376.37L330.29 373.64L335.72 370.90L341.15 368.17L346.58 365.44L352.01 362.71L357.45 359.98L362.88 357.25L368.31 354.52L373.74 351.79L379.17 349.06L384.60 346.32L390.04 343.59L395.47 340.86L400.90 338.13L406.33 335.40L411.76 332.67L417.19 329.94L422.63 327.21L428.06 324.48L433.49 321.74L438.92 319.01L444.35 316.28L449.78 313.55L455.22 310.82L460.65 308.09L466.08 305.36L471.51 302.63L476.94 299.90L482.37 297.16L487.81 294.43L493.24 291.70L498.67 288.97L504.10 286.24L509.53 283.51L514.96 280.78L520.40 278.05L525.83 275.31L531.26 272.58L536.69 269.85L542.12 267.12L547.55 264.39L552.99 261.66L558.42 258.93L563.85 256.20L569.28 253.47L574.71 250.73L580.14 248.00L585.58 245.27L591.01 242.54L596.44 239.81L601.87 237.08L607.30 234.35L612.73 231.62L618.17 228.89L623.60 226.15L629.03 223.42L634.46 220.69L639.89 217.96L645.32 215.23L650.76 212.50L656.19 209.77L661.62 207.04L667.05 204.30L672.48 201.57L677.91 198.84L683.35 196.11L688.78 193.38L694.21 190.65L699.64 187.92L705.07 185.19L710.50 182.46L715.94 179.72L721.37 176.99L726.80 174.26L732.23 171.53L737.66 168.80L743.09 166.07L748.53 163.34L753.96 160.61L759.39 157.88L764.82 155.14L770.25 152.41L775.68 149.68L781.12 146.95L786.55 144.22L791.98 141.49L797.41 138.76L802.84 136.03L808.27 133.29L813.71 130.56L819.14 127.83L824.57 125.10L830.00 122.37" fill="none" stroke="#002733" stroke-width="2" stroke-linejoin="round"/>
+<path d="M75.00 502.00L80.43 499.27L85.86 496.54L91.29 493.81L96.73 491.08L102.16 488.34L107.59 485.61L113.02 482.88L118.45 480.15L123.88 477.42L129.32 474.69L134.75 471.96L140.18 469.23L145.61 466.50L151.04 463.76L156.47 461.03L161.91 458.30L167.34 455.57L172.77 452.84L178.20 450.11L183.63 447.38L189.06 444.65L194.50 441.91L199.93 439.18L205.36 436.45L210.79 433.72L216.22 430.99L221.65 428.26L227.09 425.53L232.52 422.80L237.95 420.07L243.38 417.33L248.81 414.60L254.24 411.87L259.68 409.14L265.11 406.41L270.54 403.68L275.97 400.95L281.40 398.22L286.83 395.49L292.27 392.75L297.70 390.02L303.13 387.29L308.56 384.56L313.99 381.83L319.42 379.10L324.86 376.37L330.29 373.64L335.72 370.90L341.15 368.17L346.58 365.44L352.01 362.71L357.45 359.98L362.88 357.25L368.31 354.52L373.74 351.79L379.17 349.06L384.60 346.32L390.04 343.59L395.47 340.86L400.90 338.13L406.33 335.40L411.76 332.67L417.19 329.94L422.63 327.21L428.06 324.48L433.49 321.74L438.92 319.01L444.35 316.28L449.78 313.55L455.22 310.82L460.65 308.09L466.08 305.36L471.51 302.63L476.94 299.90L482.37 297.16L487.81 294.43L493.24 291.70L498.67 288.97L504.10 286.24L509.53 283.51L514.96 280.78L520.40 278.05L525.83 275.31L531.26 272.58L536.69 269.85L542.12 267.12L547.55 264.39L552.99 261.66L558.42 258.93L563.85 256.20L569.28 253.47L574.71 250.73L580.14 248.00L585.58 245.27L591.01 242.54L596.44 239.81L601.87 237.08L607.30 234.35L612.73 231.62L618.17 228.89L623.60 226.15L629.03 223.42L634.46 220.69L639.89 217.96L645.32 215.23L650.76 212.50L656.19 209.77L661.62 207.04L667.05 204.30L672.48 201.57L677.91 198.84L683.35 196.11L688.78 193.38L694.21 190.65L699.64 187.92L705.07 185.19L710.50 182.46L715.94 179.72L721.37 176.99L726.80 174.26L732.23 171.53L737.66 168.80L743.09 166.07L748.53 163.34L753.96 160.61L759.39 157.88L764.82 155.14L770.25 152.41L775.68 149.68L781.12 146.95L786.55 144.22L791.98 141.49L797.41 138.76L802.84 136.03L808.27 133.29L813.71 130.56L819.14 127.83L824.57 125.10L830.00 122.37" fill="none" stroke="#002733" stroke-width="2" stroke-linejoin="round" class="s-text"/>
 </g>
-<path d="M75.00 66.00L87.00 66.00" fill="none" stroke="#002733" stroke-width="1.4" stroke-linejoin="round"/>
-<text x="92.00" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">Entlüftung</text>
-<rect x="163.75" y="62.00" width="12.00" height="9.00" fill="rgba(255,255,255,.45)"/>
+<path d="M75.00 66.00L87.00 66.00" fill="none" stroke="#002733" stroke-width="2" stroke-linejoin="round" class="s-text"/>
+<text x="92.00" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" class="f-text" text-anchor="start">Entlüftung</text>
+<rect x="163.75" y="62.00" width="12.00" height="9.00" fill="#ffffff" class="f-surface"/>
 <rect x="163.75" y="62.00" width="12.00" height="9.00" fill="url(#pat0)"/>
-<rect x="163.75" y="62.00" width="12.00" height="9.00" fill="none" stroke="#4c6870" stroke-width="1.4"/>
-<text x="180.75" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" text-anchor="start">v<tspan font-size="8.2" dy="2.94">luft</tspan><tspan dy="-2.94"> max 150 m/s</tspan></text>
-<path d="M75.00 317.02L442.89 317.02M442.89 502.00L442.89 317.02" fill="none" stroke="#b42318" stroke-width="1" stroke-dasharray="4 3" stroke-linejoin="round"/>
-<circle cx="442.89" cy="317.02" r="6" fill="#ffffff"/>
-<circle cx="442.89" cy="317.02" r="6" fill="none" stroke="#b42318" stroke-width="2.2"/>
-<circle cx="442.89" cy="317.02" r="2" fill="#b42318"/>
-<rect x="449.89" y="297.02" width="147.15" height="15.00" fill="rgba(255,255,255,.88)"/>
-<text x="453.89" y="308.02" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#b42318" text-anchor="start">v₂ 4,14 m/s → 91,49 m/s</text></svg>
+<path d="M163.75 71.00L175.75 71.00" fill="none" stroke="#68a7cc" stroke-width="1.6" stroke-dasharray="6 4" stroke-linejoin="round" class="s-air"/>
+<text x="180.75" y="70.00" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#002733" class="f-text" text-anchor="start">v<tspan font-size="8.2" dy="2.94">luft</tspan><tspan dy="-2.94"> max 150 m/s</tspan></text>
+<path d="M75.00 317.02L442.89 317.02M442.89 502.00L442.89 317.02" fill="none" stroke="#b23797" stroke-width="1" stroke-dasharray="4 3" stroke-linejoin="round" class="s-mark"/>
+<circle cx="442.89" cy="317.02" r="6" fill="#ffffff" class="f-surface"/>
+<circle cx="442.89" cy="317.02" r="6" fill="none" stroke="#b23797" stroke-width="2.2" class="s-mark"/>
+<circle cx="442.89" cy="317.02" r="2" fill="#b23797" class="f-mark"/>
+<rect x="449.89" y="297.02" width="147.15" height="15.00" fill="#ffffff" fill-opacity="0.88" class="f-surface"/>
+<text x="453.89" y="308.02" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#b23797" class="f-mark" text-anchor="start">v₂ 4,14 m/s → 91,49 m/s</text></svg>

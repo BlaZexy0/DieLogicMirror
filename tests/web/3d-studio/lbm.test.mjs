@@ -33,6 +33,8 @@ const { allFields } = await import(pathToFileURL(path.join(site, 'tools/auslegun
 const { FLAG, NEVER } = L;
 
 const defaults = () => { const v = {}; for (const f of allFields()) v[f.key] = f.def; return v; };
+/* Große Felder nie mit assert.equal vergleichen (eine scheiternde Gegenüberstellung druckt sie aus). */
+const same = (a, b, msg) => assert.ok(a === b, msg);
 
 test('Gitter: D3Q19 — Gewichte, Symmetrie, Gegenrichtungen, Schallgeschwindigkeit', () => {
   assert.equal(L.C.length, 19);
@@ -339,4 +341,140 @@ test('Lauf: jedes Bild trägt die Geschwindigkeit — in Ruhe fast null, an der 
   assert.equal(n90, 4, 'die Ecke (0,0,0) füllt ihre 2×2×2 — bis auf die vier, die schon der 200 gehören');
   assert.equal(n50, 6, 'die Ecke (4,3,2) ebenso, zwei gehören der 200');
   assert.equal(sp[at(2, 1, 1)], 200, 'das Original bleibt');
+});
+
+/* ── Luft holen, auch im Hintergrund ─────────────────────────── */
+/* Ein verborgener Reiter bekommt kein requestAnimationFrame: die Attrappe
+   ruft ihre Bilder nie auf. Bis 2026-09-22 stand ein Lauf dort still. */
+test('Luft holen: sichtbar ein Bild, verborgen ungedrosselt weiter — auch wenn die Seite beim Warten verschwindet; die Uhr lernt nur Sichtbares', async () => {
+  const { tick, nextTask } = await import(R + 'js/lbm/run.js');
+  const { runClock } = await import(R + 'js/simulation/engines/env.js');
+  const listeners = {};
+  const doc = {
+    hidden: false,
+    addEventListener: (t, fn) => { (listeners[t] ||= []).push(fn); },
+    removeEventListener: (t, fn) => { listeners[t] = (listeners[t] || []).filter(f => f !== fn); },
+    dispatch: t => { for (const fn of [...(listeners[t] || [])]) fn(); }
+  };
+  const bilder = [];
+  globalThis.document = doc;
+  globalThis.requestAnimationFrame = fn => { bilder.push(fn); return bilder.length; };
+  const within = (p, ms) => Promise.race([p.then(() => true), new Promise(r => setTimeout(() => r(false), ms))]);
+  try {
+    await nextTask();
+    /* Sichtbar: es wartet auf das Bild — und kommt mit ihm. */
+    const sichtbar = tick();
+    assert.equal(await within(sichtbar, 50), false, 'ohne Bild wartet es');
+    bilder.shift()();
+    assert.equal(await within(sichtbar, 50), true, 'mit dem Bild geht es weiter');
+    /* Wird die Seite beim Warten verborgen, kommt das Bild nie — es geht trotzdem weiter. */
+    const wartend = tick();
+    doc.hidden = true; doc.dispatch('visibilitychange');
+    assert.equal(await within(wartend, 50), true, 'verborgen beim Warten');
+    assert.equal((listeners.visibilitychange || []).length, 0, 'der Zuhörer ist wieder weg');
+    /* Verborgen: gar nicht erst auf ein Bild warten. */
+    const n = bilder.length;
+    assert.equal(await within(tick(), 50), true);
+    assert.equal(bilder.length, n, 'kein Bild angefordert');
+
+    /* Die Uhr: verborgen am Start oder zwischendurch — der Lauf lehrt kein Tempo. */
+    doc.hidden = false; doc.dispatch('visibilitychange');
+    const c = runClock();
+    assert.equal(c.fair(), true);
+    await new Promise(r => setTimeout(r, 20));
+    const vorher = c.ms();
+    c.start();
+    assert.ok(c.ms() < vorher && vorher >= 15, 'start() stellt die Uhr zurück: ' + vorher + ' → ' + c.ms());
+    doc.hidden = true; doc.dispatch('visibilitychange');
+    doc.hidden = false; doc.dispatch('visibilitychange');
+    assert.equal(c.fair(), false, 'zwischendurch verborgen');
+    doc.hidden = true;
+    assert.equal(runClock().fair(), false, 'verborgen gestartet');
+  } finally {
+    delete globalThis.document;
+    delete globalThis.requestAnimationFrame;
+  }
+});
+
+/* ── WebGPU, wenn es schiefgeht ──────────────────────────────── */
+/* Eine Attrappe von WebGPU, gerade genug für beide Kerne: sie zählt, was
+   angelegt und wieder freigegeben wird, und kann eine Pipeline scheitern
+   lassen, ein Lesen abbrechen oder das Gerät verlieren. */
+function fakeGpu({ failPipeline = false, failMap = null } = {}) {
+  const made = { buffers: [], deviceDestroyed: 0 };
+  let lose;
+  const device = {
+    lost: new Promise(r => { lose = r; }),
+    createBuffer: ({ size }) => {
+      const b = { size, destroyed: false, destroy() { this.destroyed = true; }, async mapAsync() { if (failMap) throw failMap(); }, getMappedRange: () => new ArrayBuffer(size), unmap() {} };
+      made.buffers.push(b);
+      return b;
+    },
+    queue: { writeBuffer() {}, submit() {}, onSubmittedWorkDone: async () => {} },
+    createShaderModule: () => ({ getCompilationInfo: async () => ({ messages: [] }) }),
+    createBindGroupLayout: () => ({}), createPipelineLayout: () => ({}), createBindGroup: () => ({}),
+    async createComputePipelineAsync() { if (failPipeline) { const e = new Error('pipeline kaputt'); e.name = 'GPUPipelineError'; throw e; } return {}; },
+    createCommandEncoder: () => ({ beginComputePass: () => ({ setPipeline() {}, setBindGroup() {}, dispatchWorkgroups() {}, end() {} }), copyBufferToBuffer() {}, clearBuffer() {}, finish: () => ({}) }),
+    destroy() { made.deviceDestroyed++; lose({ reason: 'destroyed', message: '' }); }
+  };
+  const adapter = { limits: { maxStorageBufferBindingSize: 1 << 30, maxBufferSize: 1 << 30 }, requestDevice: async () => device };
+  return { gpu: { requestAdapter: async () => adapter }, made, lose: message => lose({ reason: 'unknown', message }) };
+}
+
+test('WebGPU: ein Kern, der nicht angelegt wird, nimmt Gerät und Puffer mit; eine verlorene Karte ist kein Abbrechen', async () => {
+  const { createGpuSolver } = await import(R + 'js/lbm/gpu.js');
+  const { createGpuSphSolver } = await import(R + 'js/sph/gpu.js');
+  const D = await import(R + 'js/sph/domain.js');
+  const { gpuFailure } = await import(R + 'js/simulation/engines/env.js');
+  const { abortError } = await import(R + 'js/abort.js');
+  const nav = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  Object.assign(globalThis, {
+    GPUBufferUsage: { MAP_READ: 1, COPY_SRC: 4, COPY_DST: 8, UNIFORM: 64, STORAGE: 128 },
+    GPUShaderStage: { COMPUTE: 4 }, GPUMapMode: { READ: 1 }
+  });
+  const withGpu = fake => Object.defineProperty(globalThis, 'navigator', { value: { gpu: fake.gpu, userAgent: 'Node' }, configurable: true, writable: true });
+  const spec = { d: 40, length: 80, fill: 0.4, outletW: 20, outletH: 10 };
+  const kerne = [
+    ['Gitter', () => { const d = SL.buildSleeveDomain(spec, 4); d.rho0 = SL.hydrostatic(d, 2e-4); return createGpuSolver(d, { g: [0, -2e-4, 0] }); }, s => s.readFill()],
+    ['Partikel', () => createGpuSphSolver(D.sleeveSetup(spec, 4, { rho0: 2450, c0: 10 })), s => s.readPositions()]
+  ];
+  try {
+    for (const [name, make, read] of kerne) {
+      /* Die Pipeline scheitert: alles, was schon angelegt war, geht wieder. */
+      let fake = fakeGpu({ failPipeline: true });
+      withGpu(fake);
+      await assert.rejects(make(), err => err.name === 'Error' && /^WebGPU: der Kern ließ sich nicht anlegen \(pipeline kaputt\)\.$/.test(err.message), name);
+      assert.ok(fake.made.buffers.length > 3 && fake.made.buffers.every(b => b.destroyed), name + ': Puffer frei (' + fake.made.buffers.length + ')');
+      assert.equal(fake.made.deviceDestroyed, 1, name + ': Gerät frei');
+      /* Die Karte geht verloren: Lesen meldet es als Fehler, nicht als AbortError. */
+      fake = fakeGpu();
+      withGpu(fake);
+      const s = await make();
+      fake.lose('Treiber neu gestartet');
+      await new Promise(r => setTimeout(r, 0));
+      await assert.rejects(read(s), err => err.name === 'Error' && /^Die Grafikkarte ist ausgestiegen \(Treiber neu gestartet\)\. Noch einmal simulieren, sonst die Seite neu laden\.$/.test(err.message), name);
+      s.dispose();
+      assert.ok(fake.made.buffers.every(b => b.destroyed) && fake.made.deviceDestroyed === 1, name + ': dispose gibt alles frei');
+      /* Das Lesen bricht ab, ehe device.lost es sagt (der Browser wirft dann einen AbortError). */
+      fake = fakeGpu({ failMap: () => new DOMException('mapping aborted', 'AbortError') });
+      withGpu(fake);
+      const t = await make();
+      await assert.rejects(read(t), err => err.name === 'Error' && /ausgestiegen \(mapping aborted\)/.test(err.message), name);
+      t.dispose();
+      assert.ok(fake.made.buffers.every(b => b.destroyed), name + ': auch der Zwischenpuffer des Lesens');
+    }
+  } finally {
+    if (nav) Object.defineProperty(globalThis, 'navigator', nav); else delete globalThis.navigator;
+    delete globalThis.GPUBufferUsage; delete globalThis.GPUShaderStage; delete globalThis.GPUMapMode;
+  }
+  /* Und im Verfahren: ein AbortError, den das Signal nicht verlangt hat, geht als Fehler hinaus. */
+  const ac = new AbortController();
+  const fremd = new DOMException('The operation was aborted.', 'AbortError');
+  assert.equal(gpuFailure(fremd, ac.signal).name, 'Error');
+  assert.match(gpuFailure(fremd, ac.signal).message, /^Die Grafikkarte ist ausgestiegen \(The operation was aborted\.\)/);
+  ac.abort();
+  const echt = abortError();
+  same(gpuFailure(echt, ac.signal), echt, 'ein echter Abbruch bleibt einer');
+  const anders = new Error('x');
+  same(gpuFailure(anders, null), anders, 'andere Fehler bleiben, wie sie sind');
 });

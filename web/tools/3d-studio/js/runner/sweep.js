@@ -51,7 +51,7 @@
 import {
   outline, section, area, dimsForArea, POINTS, RIGHT_HALF, LEFT_HALF, TOP_EDGE, BOTTOM_EDGE
 } from './profile.js';
-import { cyl, place, translate } from '../solids.js';
+import { cyl, place, translate, earClip } from '../solids.js';
 import { AXES } from './graph.js';
 import { add, sub, scale, addScaled, dot, cross, norm, len, dist, clamp } from './vec.js';
 
@@ -171,44 +171,7 @@ function strip(halves, flip, w) {
   }
 }
 
-/* ── Felder: Ohrenabschneiden ────────────────────────────────── */
-
-/* Ein einfaches Polygon (gegen den Uhrzeigersinn) in Indexdreiecke.
-   Ein einspringendes Polygon wie die Deckfläche einer Gabelung — ein
-   Ypsilon mit Buchten — lässt sich nicht fächern; abgeschnitten wird,
-   was ein Ohr ist: eine konvexe Ecke, in deren Dreieck kein anderer
-   Punkt liegt. Entartet der Rest (sich kreuzende Kanten), bleibt, was
-   da ist — lieber ein kleines Loch als eine Ausnahme mitten im Zug. */
-function earClip(poly) {
-  const n = poly.length;
-  const idx = [];
-  for (let i = 0; i < n; i++) idx.push(i);
-  const out = [];
-  const cross2 = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-  const inside = (p, a, b, c) => cross2(a, b, p) >= -1e-12 && cross2(b, c, p) >= -1e-12 && cross2(c, a, p) >= -1e-12;
-  let guard = 0;
-  while (idx.length > 3 && guard++ < 20000) {
-    let cut = false;
-    for (let k = 0; k < idx.length; k++) {
-      const i0 = idx[(k + idx.length - 1) % idx.length], i1 = idx[k], i2 = idx[(k + 1) % idx.length];
-      const a = poly[i0], b = poly[i1], c = poly[i2];
-      if (cross2(a, b, c) <= 1e-12) continue;                 // einspringende oder gestreckte Ecke
-      let ok = true;
-      for (const j of idx) {
-        if (j === i0 || j === i1 || j === i2) continue;
-        if (inside(poly[j], a, b, c)) { ok = false; break; }
-      }
-      if (!ok) continue;
-      out.push([i0, i1, i2]);
-      idx.splice(k, 1);
-      cut = true;
-      break;
-    }
-    if (!cut) break;
-  }
-  if (idx.length === 3) out.push([idx[0], idx[1], idx[2]]);
-  return out;
-}
+/* ── Felder: Ohrenabschneiden (js/solids.js, earClip) ────────── */
 
 /* Das Ohrenabschneiden liefert IRGENDEINE Triangulation — in der Regel
    Fächer aus langen, spitzen Dreiecken, die von einer Ecke aus das ganze
@@ -786,7 +749,6 @@ function planJunctions(net) {
       need[i] = Math.max(need[i], d);
       need[i + 1] = Math.max(need[i + 1], d);
     }
-    const inl = at(inlet);
     const bIn = lastBelow(inlet.sections, inlet.length - Math.min(0.75 * w0, 0.45 * inlet.length));
     const parts = sorted.map((k, i) => {
       const a = firstAbove(k.e.sections, Math.min(need[i], 0.45 * k.e.length));
@@ -799,11 +761,29 @@ function planJunctions(net) {
       const Pa = addScaled(ra.p, ra.u, -ra.sec.halfTop), Pb = addScaled(rb.p, rb.u, rb.sec.halfTop);
       if (dot(sub(Pa, Pb), R.u) <= 0.02 * w0) clear = false;
     }
-    const jn = { node: inlet.to, inlet, ring: inlet.sections[bIn], kids: parts, rho, degenerate: !clear };
-    junctions.push(jn);
-    if (!clear) continue;
-    inl.b = Math.min(inl.b, bIn);
-    for (const k of parts) at(k.edge).a = Math.max(at(k.edge).a, k.a);
+    junctions.push({ node: inlet.to, inlet, bIn, ring: inlet.sections[bIn], kids: parts, rho, degenerate: !clear });
+  }
+  /* EINE KURZE KANTE ZWISCHEN ZWEI GABELUNGEN. Die obere Gabelung nimmt
+     sich bis zu 45 % der Kante für ihr Hosenstück, die untere ebenso vom
+     anderen Ende her. Liegt zwischen beiden Marken kein Schnitt (der
+     Abtastschritt ist größer als die Lücke, bei 16 bis 30 mm langen
+     Kanten ab 2 mm), begann das Stück der oberen HINTER dem Ring, an dem
+     das der unteren schon anfing: der Schlauch dazwischen hatte keine
+     Länge und fiel weg, und zwischen den beiden Ringen stand ein Loch
+     (104 offene Kanten, keine Prüfregel sagte etwas). Dann teilen sich
+     beide Stücke EINEN Ring — den der oberen: ihr Zwickel ist an ihm
+     geprüft; das Hosenstück der unteren wird dafür um einen Schritt kürzer. */
+  const upper = new Map();
+  for (const jn of junctions) if (!jn.degenerate) for (const k of jn.kids) upper.set(k.edge, k);
+  for (const jn of junctions) {
+    const up = upper.get(jn.inlet);
+    if (!jn.degenerate && up && up.a > jn.bIn) { jn.bIn = up.a; jn.ring = up.ring; }
+  }
+  for (const jn of junctions) {
+    if (jn.degenerate) continue;
+    const inl = at(jn.inlet);
+    inl.b = Math.min(inl.b, jn.bIn);
+    for (const k of jn.kids) at(k.edge).a = Math.max(at(k.edge).a, k.a);
   }
   return { cut, junctions };
 }

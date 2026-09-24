@@ -1,8 +1,18 @@
 /* DieLogic – web/tools/sprengflaeche/stl-app.js
-   Seiten-Code der STL-Analyse: Dateien laden, Projektion zeichnen, Tabellen
-   rendern, Ereignisse. Rechenlogik liegt in stl-math.js (Netz-Kennwerte),
+   Seiten-Code der Sprengflächenanalyse: Dateien laden (STL oder GLB),
+   Projektion zeichnen, Tabellen rendern, Ereignisse. Gelesen wird mit
+   denselben Modulen wie im 3D-Studio: STL mit stl-math.js (das 3D-Studio
+   nutzt es auch), GLB mit dessen part/glbio.js (ohne three.js; die Seite
+   zeichnet nur 2D-Projektionen und braucht keine 3D-Bibliothek).
+   Rechenlogik liegt in stl-math.js (Netz-Kennwerte),
    stl-logic.js (Zuordnung/Maschinentabelle), shared/clampmodel.js und
-   stl-logic.js (handoffValues) — dieses Script ist reine Ansicht und Verdrahtung. */
+   stl-logic.js (handoffValues) — dieses Script ist reine Ansicht und Verdrahtung.
+   ES-Modul wegen des Imports aus stl-math.js (<script type="module">);
+   stl-logic.js, clampmodel.js & Co. bleiben klassische Scripts und stehen
+   wie zuvor auf window.__STL_LOGIC__ / window.__CLAMP_MODEL__ / … bereit. */
+import { parseSTL, meshVolume, meshArea } from './stl-math.js';
+import { readGLBMeshes, isGLB } from '../3d-studio/js/part/glbio.js';
+
 (function () {
   'use strict';
 
@@ -13,12 +23,29 @@
     Z: { u: 0, v: 1, uName: 'X', vName: 'Y' },
   };
   const PAL = window.__PALETTE__;
-  const COLORS = [PAL.primary, PAL.catGreen, PAL.catOrange, PAL.catPurple, PAL.warn, PAL.accent, PAL.gold, PAL.catSlate];
+  /* Die Farbe einer Datei ist die Sachfarbe dessen, was sie zeigt: das
+     Bauteil in der Farbe der Schmelze, Anguss, Überlauf und Pressrest in
+     ihren Tönen daneben, dieselben wie im Dashboard und im 3D-Studio.
+     Dateien ohne Zuordnung bekommen reihum eine Sachfarbe AUSSERHALB der
+     Schmelze-Familie, damit sie nicht wie ein Teil des Gusses aussehen.
+     Gemerkt wird der NAME der Rolle, der Wert wird erst beim Zeichnen
+     gelesen: so folgt das Bild einem Wechsel des Farbschemas. */
+  const ROLLENFARBE = { part: 'melt', runner: 'runner', overflow: 'overflow', biscuit: 'biscuit' };
+  const FREIE_FARBEN = ['die', 'machine', 'air', 'process', 'cool', 'piston'];
   const PAD = 36;
 
-  const models = [];      // { name, tris, color, volume, area, role, proj: {X,Y,Z} }
+  const models = [];      // { name, tris, farbe, volume, area, role, proj: {X,Y,Z} }
   let dir = 'Z';
-  let colorIdx = 0;
+  let freiIdx = 0;
+
+  /* Rolle der Palette, in der eine Datei gezeichnet wird. Wer keine
+     Zuordnung hat (auch nach dem Löschen einer), behält seine Ersatzfarbe
+     aus der Reihe; vergeben wird sie beim ersten Bedarf. */
+  function farbeVon(m) {
+    if (ROLLENFARBE[m.role]) return ROLLENFARBE[m.role];
+    if (!m.farbe) m.farbe = FREIE_FARBEN[freiIdx++ % FREIE_FARBEN.length];
+    return m.farbe;
+  }
 
   const canvas = document.getElementById('proj-canvas');
   const fileInput = document.getElementById('file-input');
@@ -115,21 +142,40 @@
 
   /* ── Dateien laden ─────────────────────────────────────────── */
 
+  /* Teile einer GLB, deren Knotenname die Rolle sagt — so heißen die Teile
+     der Gusstraube (web/examples/gusstraube.glb, wie in der Beispielform des
+     3D-Studios). Andere Namen bekommen keine Rolle, die wählt der Anwender. */
+  const ROLLE_AUS_NAME = { Bauteil: 'part', Anguss: 'runner', 'Überläufe': 'overflow', 'Überlauf': 'overflow', Pressrest: 'biscuit' };
+  const ROLLEN_REIHE = ['part', 'runner', 'overflow', 'biscuit'];
+
+  /* Eine Datei → ihre Teile { name, tris, role }: eine STL ist ein Teil,
+     eine GLB so viele, wie sie Netze hat (in der Reihenfolge der Rollen). */
+  function teileAus(file, buf) {
+    if (!isGLB(buf)) return [{ name: file.name, tris: parseSTL(buf), role: file.role || '' }];
+    const netze = readGLBMeshes(buf).filter(m => m.tris.length);
+    if (!netze.length) throw new Error('Die GLB enthält keine Dreiecke.');
+    const rang = m => { const i = ROLLEN_REIHE.indexOf(ROLLE_AUS_NAME[m.name]); return i < 0 ? ROLLEN_REIHE.length : i; };
+    return netze
+      .map((m, i) => ({ m, i })).sort((a, b) => rang(a.m) - rang(b.m) || a.i - b.i)
+      .map(({ m }) => ({ name: netze.length > 1 ? m.name : file.name, tris: m.tris, role: ROLLE_AUS_NAME[m.name] || '' }));
+  }
+
   async function addFiles(fileList) {
     const errors = [];
     for (const file of fileList) {
       try {
-        const tris = parseSTL(await file.arrayBuffer());
-        models.push({
-          name: file.name,
-          tris,
-          color: COLORS[colorIdx++ % COLORS.length],
-          volume: Math.abs(meshVolume(tris)),
-          volumeSigned: meshVolume(tris),
-          area: meshArea(tris),
-          role: file.role || '',
-          proj: {},
-        });
+        for (const { name, tris, role } of teileAus(file, await file.arrayBuffer())) {
+          models.push({
+            name,
+            tris,
+            farbe: null,          // Ersatzfarbe (Rollenname), vergeben von farbeVon()
+            volume: Math.abs(meshVolume(tris)),
+            volumeSigned: meshVolume(tris),
+            area: meshArea(tris),
+            role,
+            proj: {},
+          });
+        }
       } catch (e) {
         errors.push(file.name + ': ' + e.message);
       }
@@ -161,8 +207,8 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
 
-    /* dezentes Raster */
-    ctx.strokeStyle = 'rgba(0,39,51,0.06)';
+    /* dezentes Raster in der Schrift des Farbschemas */
+    ctx.strokeStyle = PAL.rgba('text', 0.06);
     ctx.lineWidth = 1;
     for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
     for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
@@ -187,7 +233,7 @@
     for (const m of models) {
       ctx.setTransform(dpr * s, 0, 0, -dpr * s, dpr * tx, dpr * ty);
       ctx.globalAlpha = 0.55;
-      ctx.fillStyle = m.color;
+      ctx.fillStyle = PAL[farbeVon(m)];
       ctx.fill(getProjection(m, dir).path, 'nonzero');
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -204,8 +250,11 @@
       ctx.beginPath(); ctx.moveTo(toX(0), toY(0)); ctx.lineTo(toX(cog.cu), toY(cog.cv)); ctx.stroke();
       ctx.setLineDash([]);
     }
-    ctx.strokeStyle = PAL.dark;
-    ctx.fillStyle = PAL.dark;
+    /* Der Ursprung ist die Werkzeugmitte, ein Bezug, kein Urteil: in der
+       Schrift. Der Schwerpunkt S ist der Kennpunkt des Bildes, er trägt die
+       Hervorhebung (mark), wie der Betriebspunkt in den Diagrammen. */
+    ctx.strokeStyle = PAL.text;
+    ctx.fillStyle = PAL.text;
     ctx.lineWidth = 1.4;
     ctx.font = font;
     ctx.beginPath(); ctx.arc(toX(0), toY(0), 4, 0, 2 * Math.PI); ctx.stroke();
@@ -217,7 +266,7 @@
     ctx.fillText('0', toX(0) + 7, toY(0) + 7);
     if (cog) {
       const gx = toX(cog.cu), gy = toY(cog.cv);
-      ctx.fillStyle = PAL.warn;
+      ctx.fillStyle = PAL.mark;
       ctx.beginPath(); ctx.arc(gx, gy, 5, 0, 2 * Math.PI); ctx.fill();
       ctx.strokeStyle = PAL.surface;
       ctx.lineWidth = 1.5;
@@ -248,9 +297,8 @@
     return v.toLocaleString('de-DE', opts);
   }
 
-  function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
+  /* shared/util.js, vor diesem Script geladen. */
+  const escapeHtml = window.__DL_UTIL__.esc;
 
   /* Rechenkerne: Netz-Kennwerte aus stl-math.js, Zuordnung/Maschinentabelle
      aus stl-logic.js, Zuhaltung aus shared/clampmodel.js, Übernahme (ins Projekt) aus
@@ -438,7 +486,7 @@
       const opts = '<option value="">– wählen –</option>' + LOGIC.ROLES.map(([key, label]) =>
         `<option value="${key}"${m.role === key ? ' selected' : ''}>${label}</option>`).join('');
       return `<tr>
-        <td class="name" title="${escapeHtml(m.name)}"><span class="dot" style="background:${m.color}"></span>${escapeHtml(m.name)}</td>
+        <td class="name" title="${escapeHtml(m.name)}"><span class="dot" style="background:var(${PAL.cssName(farbeVon(m))})"></span>${escapeHtml(m.name)}</td>
         <td style="text-align:left"><select class="role-sel" data-idx="${i}" aria-label="Zuordnung für ${escapeHtml(m.name)}">${opts}</select></td>
         <td>${fmt(vol)} mm³ <span class="sub">(${fmt(vol / 1000)} cm³)</span></td>
         <td>${fmt(LOGIC.massKg(vol, density))} kg</td>
@@ -560,7 +608,8 @@
      (tools/auslegung/js/ui/export.js): in die Zwischenablage kopieren, ohne
      Clipboard-API oder bei verweigerter Berechtigung als Download —
      Quittung ist in beiden Fällen das Häkchen. Die Zeichenfläche ist
-     transparent, daher vor dem Export auf weißen Grund zusammensetzen. */
+     transparent, daher vor dem Export auf die Fläche des Blatts (surface
+     des Farbschemas) zusammensetzen. */
   const copyBtn = document.getElementById('copy-img-btn');
   const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 
@@ -650,7 +699,13 @@
     const sel = e.target.closest('.role-sel');
     if (!sel) return;
     const m = models[Number(sel.dataset.idx)];
-    if (m) m.role = sel.value;
+    if (m) {
+      m.role = sel.value;
+      /* Die Farbe hängt an der Rolle: Punkt in der Zeile und Bild folgen. */
+      const dot = sel.closest('tr').querySelector('.dot');
+      if (dot) dot.style.background = 'var(' + PAL.cssName(farbeVon(m)) + ')';
+      draw();
+    }
     pruefeGefolgtVon(renderMachines)();
   });
 
@@ -669,7 +724,7 @@
   card.addEventListener('drop', (e) => {
     e.preventDefault();
     card.classList.remove('dragover');
-    const files = [...e.dataTransfer.files].filter(f => /\.stl$/i.test(f.name));
+    const files = [...e.dataTransfer.files].filter(f => /\.(stl|glb)$/i.test(f.name));
     if (files.length) addFiles(files);
   });
 
@@ -686,27 +741,21 @@
   document.getElementById('shrink-toggle').addEventListener('change', renderAll);
 
   window.addEventListener('resize', draw);
+  /* Anderes Farbschema: das Bild neu malen. Die Punkte der Tabelle stehen
+     als CSS-Token und folgen von selbst. */
+  document.addEventListener('dielogic:scheme', draw);
 
-  /* ── Beispieldateien aus assets/ als Startbelegung ───────────
-     Minimaler Gießlauf mit fertiger Zuordnung: Pressrest — Anguss —
-     Bauteil — Überläufe, damit die Dashboard-Übernahme sofort geht. */
+  /* ── Beispiel als Startbelegung ──────────────────────────────
+     Die Gusstraube der Beispielform aus dem 3D-Studio (Ölwanne mit Anguss,
+     Überläufen und Pressrest, scripts/3d-studio/build-gusstraube.mjs), die
+     Rollen stehen in den Knotennamen: die Dashboard-Übernahme geht sofort. */
   async function loadDefaults() {
-    const defaults = [
-      ['/examples/biscuit.stl',  'biscuit'],
-      ['/examples/runner.stl',   'runner'],
-      ['/examples/part.stl',     'part'],
-      ['/examples/overflow.stl', 'overflow'],
-    ];
-    const files = [];
-    for (const [url, role] of defaults) {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        const buf = await res.arrayBuffer();
-        files.push({ name: url.split('/').pop(), role, arrayBuffer: async () => buf });
-      } catch (e) { /* z. B. file:// — dann ohne Beispieldateien starten */ }
-    }
-    if (files.length) addFiles(files);
+    try {
+      const res = await fetch('/examples/gusstraube.glb');
+      if (!res.ok) return;
+      const buf = await res.arrayBuffer();
+      addFiles([{ name: 'gusstraube.glb', arrayBuffer: async () => buf }]);
+    } catch (e) { /* z. B. file:// — dann ohne Beispiel starten */ }
   }
 
   /* ── Gespeicherten Stand zurücklesen ─────────────────────────

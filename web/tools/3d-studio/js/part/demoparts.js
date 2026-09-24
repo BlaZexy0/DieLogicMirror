@@ -3,8 +3,8 @@
    Die Geometrie liegt als fertige GLB in assets/parts/ und wird beim
    Anklicken geholt. Vorher wurde sie bei jedem Seitenaufruf neu
    gerechnet; das kostete bei einem Teil über hundert Millisekunden und
-   zog die ganze Geometrie-Werkstatt (js/csg.js, js/solids.js,
-   js/diegeom.js) in Seiten hinein, die damit nichts zu tun haben.
+   zog die ganze Geometrie-Werkstatt (boolesche Operationen, Primitive)
+   in Seiten hinein, die damit nichts zu tun haben.
    Jetzt kommt ein Bauteil so an, wie eine hochgeladene Datei auch
    ankäme — und dieselbe Datei prüfen die Tests. Alle Teile stammen aus
    dem Schwesterprojekt openscad_parts (`source` nennt die Quelle). */

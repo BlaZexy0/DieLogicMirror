@@ -9,12 +9,8 @@
    Prüfung. */
 
 import {
-  numberRow, sliderRow, segRow, selectRow, checkRow, kpiBlock, factsBlock, detailsBlock, warnLine, heading
+  numberRow, sliderRow, segRow, selectRow, checkRow, kpiBlock, factsBlock, detailsBlock, warnLine, heading, info
 } from '../studio/rows.js';
-
-/* Ein ⓘ hinter einer Zwischenüberschrift — wie das der Zeilen (rows.js), nur
-   ohne Feld davor. */
-const info = anchor => ' <button type="button" class="st-info" data-help="' + anchor + '" aria-label="Erklärung">ⓘ</button>';
 
 export const MODES = [
   {
@@ -23,8 +19,8 @@ export const MODES = [
     html: selectRow({ ui: 'preset', label: 'Beispiel', options: [] })
       + '<div class="st-hintline" data-ui="graph-note"></div>'
       + warnLine('graph-warn')
-      + heading('Referenzbauteil' + info('referenz'))
-      + kpiBlock('ref-kpis')
+      + '<div data-ui="ref-block">' + heading('Referenzbauteil' + info('referenz'))
+      + kpiBlock('ref-kpis') + '</div>'
       + heading('Pressrest')
       + numberRow({ ui: 'bisc-d', label: 'Durchmesser', unit: 'mm', value: '90', help: 'pressrest' })
       + numberRow({ ui: 'bisc-t', label: 'Dicke', unit: 'mm', value: '25', help: 'pressrest' })
@@ -51,6 +47,9 @@ export const MODES = [
     hint: 'Volumen und Füllzeit ergeben den Strom; daraus folgt jede Anschnittfläche.',
     html: selectRow({ ui: 'alloy', label: 'Legierung', options: [] })
       + numberRow({ ui: 'vol', label: 'Gussvolumen', unit: 'cm³', value: '420', help: 'gussvolumen' })
+      /* Nur auf der Werkbank (js/runner/tool.js, opts.castVolume): das Volumen
+         folgt Bauteil und Überläufen, bis man selbst eines tippt. */
+      + '<div data-ui="vol-auto-row" hidden>' + checkRow({ ui: 'vol-auto', label: 'aus Bauteil und Überläufen', checked: true }) + '</div>'
       + numberRow({ ui: 'tfill', label: 'Füllzeit', unit: 'ms', value: '45' })
       + numberRow({ ui: 'vgate', label: 'Anschnitt v<sub>Ziel</sub>', unit: 'm/s', value: '40', help: 'vziel' })
       + numberRow({ ui: 'chamber-len', label: 'Füllkammerlänge', unit: 'mm', value: '450', help: 'kammer' })
@@ -97,6 +96,8 @@ export const INSPECTOR = '<div class="st-hintline an-arrive" data-ui="sel-arrive
   + '<div data-group="Verzweigung">'
   + sliderRow({ ui: 'sel-ratio', label: 'Aufteilung', min: 10, max: 90, step: 1, value: 50, help: 'aufteilung' })
   + checkRow({ ui: 'sel-mirror', label: 'Äste spiegelsymmetrisch halten', help: 'spiegel' })
+  /* Warum Regler oder Häkchen gesperrt sind (js/runner/tool.js, forkNote). */
+  + '<div class="st-hintline" data-ui="sel-ratio-note"></div>'
   + '</div>'
   + '<div data-group="Anschnitt">'
   + num('sel-gh', 'Höhe', 'mm', 'anschnitthoehe')

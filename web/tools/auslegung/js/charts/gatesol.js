@@ -1,9 +1,8 @@
 /* Anschnitt-Erstarrungszeit über Anschnittdicke. */
 
 import { series, line, limit } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { theme } from '../core/theme.js';
-import { eq } from './mathfmt.js';
+import { seq, fmt } from '../core/format.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 export default {
   id: 'gatesol',
@@ -14,7 +13,7 @@ export default {
   calc(v) {
     const x = seq(0.5, v.gateTh * 2.5, 140);
     const f = s => v.solK * s * s;
-    const q = line(x, [series('Erstarrungszeit', theme.chart.series1, x, f)],
+    const q = line(x, [series('Erstarrungszeit', 'ink', x, f)],
       'Anschnittdicke in mm', 'Erstarrungszeit in ms', 'Konstante ' + fmt(v.solK) + ' ms/mm²');
     q.y0 = 0;
     q.limits = [limit('intTime', 'Nachdruckaufbauzeit ' + fmt(v.intTime) + ' ms', 'y', 'min', v.intTime, { note: 'Anschnitt erstarrt vor dem Nachdruckaufbau' })];
@@ -40,7 +39,7 @@ Nachdruckaufbauzeit t<sub>N</sub> = <b data-m="tN"></b> ⇒ Mindestdicke = <b da
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
+    const set = mathSetter(el);
     set('s', fmt(v.gateTh) + ' mm');
     set('t', fmt(v.solK * v.gateTh * v.gateTh) + ' ms');
     set('tN', fmt(v.intTime) + ' ms');

@@ -41,7 +41,8 @@ Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
   Übrige ist auf `'self'` beschränkt und wird mitgeliefert.
 - **Demo-Konto:** `DIELOGIC_DEMO_PASSWORD=<mind. 10 Zeichen>` setzen → beim
   Start entsteht die Organisation „Demo" mit Admin `demo@dielogic.de`; die
-  Login-Seite zeigt dann „Als Demo anmelden" samt Zugangsdaten. Nur zum
+  Login-Seite zeigt dann „Als Demo anmelden" mit der Adresse (das Passwort
+  steht nirgends in der Seite, `POST /api/auth/demo/login` meldet an). Nur zum
   Ausprobieren — in Produktion weglassen. Prüfen: `GET /api/auth/demo`
   liefert `{}`, solange die Variable fehlt oder zu kurz ist (dann steht
   eine Warnung im Server-Log); auf Render die Variable im Dashboard unter
@@ -76,13 +77,19 @@ unverändert im Browser, die Projekte bleiben dann dort.
 - `GET /api/health` — Lebenszeichen.
 - Konto: `GET /api/auth/invite/{token}`, `POST /api/auth/register`
   `{token, name, password}`, `POST /api/auth/login` `{email, password}`,
-  `POST /api/auth/logout`, `GET /api/auth/me`.
+  `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/password`
+  (eigenes Passwort ändern), `GET /api/auth/demo` und
+  `POST /api/auth/demo/login` (Demo-Konto, wenn eingerichtet).
 - Stammdaten: `GET /api/org/settings` (alle Mitglieder) → `{machines|alloys|parts|kosten: {data, updated_at}}`;
   Admin: `PUT /api/org/settings/{key}` `{data}` (Listen: `[{id, name, fields{…}}]`,
   kosten: `{pAl, pE, …}`), `DELETE /api/org/settings/{key}` = zurück auf Beispielwerte.
 - Organisation: `GET /api/org/members`; Admin: `GET|POST /api/org/invites`
   `{email, role}`, `DELETE /api/org/invites/{id}`,
-  `POST /api/org/members/{id}/disable`.
+  `POST /api/org/members/{id}/disable`, `POST /api/org/members/{id}/enable`,
+  `POST /api/org/members/{id}/password` (Passwort eines Mitglieds neu setzen).
+  Die Werte der Stammdaten prüft der Server gegen dieselben Grenzen wie die
+  Werkzeuge (`_domain.py`, erzeugt von `scripts/gen-domain-doc.mjs`): Felder
+  der Presets samt den Regeln zwischen zwei Feldern, die Kostensätze.
 - Projekte (auf die eigene Organisation beschränkt): `GET|POST /api/projects`,
   `GET|PUT|DELETE /api/projects/{id}` (DELETE = archivieren),
   `PUT /api/projects/{id}/draft` `{data}` (Autosave des Arbeitsstands),

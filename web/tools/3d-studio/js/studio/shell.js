@@ -19,19 +19,20 @@
 
    Der Rahmen kennt kein Werkzeug. Er baut das Gerüst, verwaltet Modi,
    Knöpfe, Felder und Meldungen und reicht dem Werkzeug Elemente über
-   data-ui — ids gibt es nur für die Einzelstücke, die js/ui/controls.js
-   und js/ui/common.js seit jeher über ids finden (colorbar, status,
-   busy, aim-banner, viewport, demo-select …). Davon gibt es je Seite
-   genau eines. */
+   data-ui — ids tragen nur die Einzelstücke, die js/ui/controls.js und
+   js/ui/common.js über ids finden (colorbar, status, aim-banner, viewport)
+   und die Felder der Bauteil-Klappe (demo-select …). Davon gibt es je
+   Seite genau eines; die Felder der Klappe reicht der Rahmen trotzdem als
+   Elemente weiter (header.partFields). */
 
 import { colorbar as setColorbar } from '../ui/controls.js';
+import { onScheme } from '../part/colors.js';
 import { mountViewBar } from '../ui/viewbar.js';
 import { createAimUI } from '../ui/common.js';
 import { createViewport } from './viewport.js';
 import { mountHelp } from './help.js';
 import { fmtTime } from './format.js';
-
-const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+import { esc } from './rows.js';
 
 const SKELETON = (title) => `
 <header class="st-bar" data-ui="bar">
@@ -71,7 +72,7 @@ const SKELETON = (title) => `
 </header>
 <div class="st-layout" data-ui="layout">
   <aside class="st-panel" data-ui="panel" aria-label="Einstellungen">
-    <div class="st-banner" data-ui="banner" hidden></div>
+    <div class="st-banner" data-ui="banner" role="status" hidden></div>
     <div class="st-tabs seg tabs" role="tablist" data-ui="tabs"></div>
     <div class="st-hint" data-ui="hint"></div>
     <div class="st-body" data-ui="body"></div>
@@ -144,47 +145,129 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   aim.hide = () => aim.show(false);
   const helpApi = mountHelp({ drawer: ui('help'), body: ui('help-body'), closeBtn: ui('help-close'), html: help });
   ui('help-title').textContent = 'Hilfe · ' + title;
+  /* Auf einer Seite mit mehreren Werkzeugen (die Werkbank) hat jedes seinen
+     Abschnitt in der Hilfe (data-help-owner): ein ⓘ öffnet sie bei den
+     Ankern SEINES Werkzeugs — zwei Werkzeuge kennen beide eine „Zellkante".
+     „?" schlägt den Abschnitt des Werkzeugs auf, das gerade dran ist. */
+  const helpOwner = el => { const o = el.closest && el.closest('[data-owner]'); return o ? o.getAttribute('data-owner') : null; };
+  let helpFor = null;
 
   /* ── Modi ─────────────────────────────────────────────────── */
+  /* Eine Seite kann mehrere GRUPPEN von Modi tragen — die Werkbank je
+     Schritt eine (js/studio/stages.js). Die Reiterleiste zeigt die Modi der
+     Gruppe, die gerade dran ist; die Abschnitte aller Gruppen stehen
+     verborgen in der Seitenleiste, damit jedes Werkzeug seine Felder
+     behält. Eine Seite mit einem Werkzeug hat genau eine Gruppe (''). Die
+     Zahlen an den Reitern gehören ihrer Gruppe: ein Werkzeug, das gerade
+     nicht dran ist, schreibt sie trotzdem, und sie stehen da, sobald seine
+     Gruppe wieder gezeigt wird. */
   let modes = [];
   let current = null;
+  let group = '';
+  const groups = new Map();          // Name → { modes, current, badges }
   const modeListeners = [];
   const tabs = ui('tabs'), body = ui('body'), hint = ui('hint');
+  /* ids nur für aria-controls/-labelledby — je Gruppe eindeutig. */
+  const tid = (g, m) => 'st-tab-' + (g ? g + '-' : '') + m.id, pid = (g, m) => 'st-mode-' + (g ? g + '-' : '') + m.id;
+  const sectionHTML = (g, m) => '<section class="st-mode" id="' + pid(g, m) + '" aria-labelledby="' + tid(g, m) + '" data-mode="' + m.id + '"'
+    + (g ? ' data-group="' + g + '"' : '') + (m.owner ? ' data-owner="' + m.owner + '"' : '') + ' role="tabpanel" hidden>' + (m.html || '') + '</section>';
+
+  /* Die Reiter der gezeigten Gruppe. Ein Modus mit `breakBefore` beginnt eine
+     neue Zeile — die Werkbank stellt so die Modi zweier Werkzeuge eines
+     Schritts untereinander. Eine Gruppe mit nur einem Modus braucht keine
+     Reiter. */
+  function renderTabs() {
+    const g = groups.get(group);
+    tabs.innerHTML = modes.map(m => (m.breakBefore ? '<span class="st-tab-break" aria-hidden="true"></span>' : '')
+      + '<button type="button" role="tab" id="' + tid(group, m) + '" aria-controls="' + pid(group, m) + '" data-mode="' + m.id + '" aria-selected="false" tabindex="-1" title="' + esc(m.hint || '') + '">'
+      + '<span class="st-tab-label">' + m.label + '</span><span class="st-tab-badge" data-badge="' + m.id + '" hidden></span></button>').join('');
+    tabs.hidden = modes.length < 2;
+    if (g) for (const [id, b] of g.badges) paintBadge(id, b.text, b.kind);
+  }
 
   function setModes(list) {
+    groups.clear();
+    groups.set('', { modes: list, current: null, badges: new Map() });
+    group = '';
     modes = list;
-    tabs.innerHTML = list.map(m => '<button type="button" role="tab" data-mode="' + m.id + '" aria-selected="false" title="' + esc(m.hint || '') + '">'
-      + '<span class="st-tab-label">' + m.label + '</span><span class="st-tab-badge" data-badge="' + m.id + '" hidden></span></button>').join('');
-    body.innerHTML = list.map(m => '<section class="st-mode" data-mode="' + m.id + '" role="tabpanel" hidden>' + (m.html || '') + '</section>').join('');
+    body.innerHTML = list.map(m => sectionHTML('', m)).join('');
+    renderTabs();
     current = null;
+  }
+
+  /** Eine weitere Gruppe von Modi: ihre Abschnitte kommen (verborgen) dazu,
+      die Reiter erst mit showGroup. */
+  function addModes(name, list) {
+    groups.set(name, { modes: list, current: null, badges: new Map() });
+    body.insertAdjacentHTML('beforeend', list.map(m => sectionHTML(name, m)).join(''));
+  }
+
+  /** Eine Gruppe zeigen: ihre Reiter, und den Modus, in dem man sie zuletzt
+      verlassen hat (sonst `want` oder den ersten). */
+  function showGroup(name, want) {
+    const g = groups.get(name);
+    if (!g) return;
+    const prev = current, prevGroup = group;
+    group = name;
+    modes = g.modes;
+    renderTabs();
+    const id = want && modes.some(m => m.id === want) ? want : g.current || modes[0].id;
+    applyMode(id, prev, prevGroup);
   }
   tabs.addEventListener('click', ev => {
     const b = ev.target.closest('[data-mode]');
     if (b) setMode(b.getAttribute('data-mode'));
   });
+  /* Reiter mit den Pfeiltasten wie jede Reiterleiste: links/rechts wechselt
+     (und wählt gleich, die Modi sind billig), Pos1/Ende springen. */
+  tabs.addEventListener('keydown', ev => {
+    const list = [...tabs.querySelectorAll('[data-mode]')];
+    const i = list.indexOf(ev.target.closest && ev.target.closest('[data-mode]'));
+    if (i < 0) return;
+    const j = ev.key === 'ArrowRight' ? (i + 1) % list.length : ev.key === 'ArrowLeft' ? (i - 1 + list.length) % list.length
+      : ev.key === 'Home' ? 0 : ev.key === 'End' ? list.length - 1 : -1;
+    if (j < 0) return;
+    ev.preventDefault();
+    setMode(list[j].getAttribute('data-mode'));
+    list[j].focus();
+  });
   function setMode(id) {
     const m = modes.find(x => x.id === id);
     if (!m || id === current) return;
-    const prev = current;
+    applyMode(id, current, group);
+  }
+  /* Die Zuhörer erfahren, woher es kam: (Modus, voriger Modus,
+     { group, prevGroup }) — beim Wechsel der Gruppe gehört der vorige Modus
+     einer anderen. */
+  function applyMode(id, prev, prevGroup) {
+    const m = modes.find(x => x.id === id);
     current = id;
+    const g = groups.get(group);
+    if (g) g.current = id;
     for (const b of tabs.querySelectorAll('[data-mode]')) {
       const on = b.getAttribute('data-mode') === id;
       b.classList.toggle('active', on);
       b.setAttribute('aria-selected', on ? 'true' : 'false');
+      b.setAttribute('tabindex', on ? '0' : '-1');
     }
-    for (const s of body.querySelectorAll('.st-mode')) s.hidden = s.getAttribute('data-mode') !== id;
+    for (const s of body.querySelectorAll('.st-mode')) s.hidden = !(s.getAttribute('data-mode') === id && (s.getAttribute('data-group') || '') === group);
     hint.textContent = m.hint || '';
     hint.hidden = !m.hint;
-    for (const fn of modeListeners) fn(id, prev);
+    for (const fn of modeListeners) fn(id, prev, { group, prevGroup });
     view.invalidate();
   }
-  const modeSection = id => body.querySelector('.st-mode[data-mode="' + id + '"]');
-  function setTabBadge(id, text, kind = '') {
+  const modeSection = (id, g = group) => body.querySelector('.st-mode[data-mode="' + id + '"]' + (g ? '[data-group="' + g + '"]' : ''));
+  function paintBadge(id, text, kind) {
     const b = tabs.querySelector('[data-badge="' + id + '"]');
     if (!b) return;
     b.textContent = text || '';
     b.hidden = !text;
     b.className = 'st-tab-badge' + (kind ? ' ' + kind : '');
+  }
+  function setTabBadge(id, text, kind = '', g = group) {
+    const store = groups.get(g);
+    if (store) store.badges.set(id, { text, kind });
+    if (g === group) paintBadge(id, text, kind);
   }
 
   /* ── Hauptknopf, Fortschritt, Zustandszeile ──────────────── */
@@ -194,7 +277,16 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   const syncActions = () => { actions.hidden = primary.hidden && note.hidden && progress.hidden && actionsExtra.hidden; };
   let lastPrimary = null, busy = false, busyClick = null;
   let primaryHandler = null;
-  primary.addEventListener('click', () => { if (busy) { if (busyClick) busyClick(); } else if (primaryHandler) primaryHandler(); });
+  /* Ein Doppelklick auf „Simulieren" war Start UND Abbruch: der erste Klick
+     macht den Knopf synchron zu „Abbrechen", der zweite traf ihn schon. Der
+     zweite Klick eines Doppelklicks (detail > 1, auch beim doppelten Tippen)
+     bricht deshalb nichts ab — wer abbrechen will, klickt eigens. */
+  primary.addEventListener('click', ev => {
+    if (busy) {
+      if (ev && ev.detail > 1) return;
+      if (busyClick) busyClick();
+    } else if (primaryHandler) primaryHandler();
+  });
   function renderPrimary() {
     const spec = lastPrimary;
     if (busy) {
@@ -225,18 +317,29 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     syncActions();
   }
   const busyEl = mount.querySelector('#busy');
-  /* veil: der Schleier über dem Bild. Eine kurze Nachrechnung, die das
-     Werkzeug von selbst startet (nach einem Zug am Griff), braucht ihn nicht —
-     er blitzte sonst bei jedem Zug auf und sperrte das Auswahlfeld. */
-  let veil = true;
+  /* Der Schleier über dem Bild gehört zwei Dingen: einer Rechnung (setBusy)
+     und dem Laden eines Bauteils (loading). Er steht, solange eines von
+     beiden ihn will — das Laden nimmt ihn einer laufenden Rechnung nicht
+     mehr weg. veil: eine kurze Nachrechnung, die das Werkzeug von selbst
+     startet (nach einem Zug am Griff), braucht ihn nicht — er blitzte sonst
+     bei jedem Zug auf und sperrte das Auswahlfeld. */
+  let veil = true, loadingText = null;
+  const paintVeil = () => busyEl.classList.toggle('on', loadingText !== null || (busy && veil));
   function setBusy(on, text, onCancel, opts = {}) {
     busy = !!on;
     veil = on ? opts.veil !== false : true;
     busyClick = on ? (onCancel || busyClick) : null;
     if (text !== undefined && on) busyEl.textContent = text;
-    busyEl.classList.toggle('on', busy && veil);
+    paintVeil();
     renderPrimary();
     syncActions();
+  }
+  /** Ein Bauteil lädt: der Text auf dem Schleier — null, wenn es fertig ist
+      (js/part/partsource.js, setBusy). */
+  function loading(text) {
+    loadingText = text === undefined ? null : text;
+    if (loadingText !== null) busyEl.textContent = loadingText;
+    paintVeil();
   }
   function setProgress(p, text) {
     if (p === null || p === undefined) {
@@ -253,9 +356,6 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
        die der Seitenleiste unter dem Finger fehlen (css/studio.css). */
     primary.style.setProperty('--progress', pct);
     if (text) { setNote(text, 'busy'); busyEl.textContent = text; }
-    /* js/part/partsource.js nimmt dem Schleier nach dem Laden die Klasse —
-       läuft währenddessen eine Rechnung, steht er mit dem nächsten Schritt wieder. */
-    if (busy && veil) busyEl.classList.add('on');
     syncActions();
   }
 
@@ -278,13 +378,24 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   /* ── Aktions-Chips ───────────────────────────────────────── */
   const chipsEl = ui('chips');
   let chips = [];
+  /* Das Farbfeld eines Chips ist die Farbe der Art, die er setzt: eine
+     Farbe oder eine Funktion, die sie beim Zeichnen nennt — dann folgt es
+     einem Wechsel des Farbschemas (unten). */
+  const iconOf = c => (typeof c.icon === 'function' ? c.icon() : c.icon);
   function setChips(list) {
     chips = list || [];
     chipsEl.hidden = !chips.length;
     chipsEl.innerHTML = chips.map(c => '<button type="button" class="st-chipbtn" data-chip="' + c.id + '">'
-      + (c.icon ? '<span class="st-chip-icon" style="background:' + c.icon + '"></span>' : '') + '<span>' + c.label + '</span></button>').join('');
+      + (c.icon ? '<span class="st-chip-icon" style="background:' + iconOf(c) + '"></span>' : '') + '<span>' + c.label + '</span></button>').join('');
     renderChips();
   }
+  onScheme(() => {
+    for (const c of chips) {
+      const b = c.icon && chipsEl.querySelector('[data-chip="' + c.id + '"]');
+      const dot = b && b.querySelector('.st-chip-icon');
+      if (dot) dot.style.background = iconOf(c);
+    }
+  });
   function renderChips() {
     for (const c of chips) {
       const b = chipsEl.querySelector('[data-chip="' + c.id + '"]');
@@ -311,6 +422,18 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   /* ── Auswahlfeld ─────────────────────────────────────────── */
   const inspectorEl = ui('inspector'), inspTitle = ui('inspector-title'), inspBody = ui('inspector-body');
   let onInspectorClose = null;
+  /* Mehrere Werkzeuge auf einer Seite (die Werkbank): jedes füllt seinen
+     eigenen Kasten im Auswahlfeld (boxFor), zu sehen ist der des Werkzeugs,
+     das dran ist (setOwner). Kopf, Einklappen und Schließen teilen sie. */
+  const ownBox = (parent, owner) => {
+    let box = [...parent.children].find(c => c.getAttribute && c.getAttribute('data-owner') === owner);
+    if (!box) {
+      box = document.createElement('div');
+      box.setAttribute('data-owner', owner);
+      parent.appendChild(box);
+    }
+    return box;
+  };
   const inspector = {
     el: inspectorEl, body: inspBody,
     show({ title: t, html }) {
@@ -319,11 +442,14 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
       inspectorEl.hidden = false;
       return inspBody;
     },
-    setTitle(t) { inspTitle.innerHTML = t || ''; },
     hide() { inspectorEl.hidden = true; },
     get visible() { return !inspectorEl.hidden; },
     collapse(on) { inspectorEl.classList.toggle('collapsed', on === undefined ? !inspectorEl.classList.contains('collapsed') : !!on); ui('inspector-toggle').textContent = inspectorEl.classList.contains('collapsed') ? '▸' : '▾'; },
-    onClose(fn) { onInspectorClose = fn; }
+    onClose(fn) { onInspectorClose = fn; },
+    boxFor: owner => ownBox(inspBody, owner),
+    setOwner(owner) {
+      for (const c of [...inspBody.children]) if (c.getAttribute && c.getAttribute('data-owner') !== null) c.hidden = c.getAttribute('data-owner') !== owner;
+    }
   };
   ui('inspector-toggle').addEventListener('click', () => inspector.collapse());
   /* ⓘ-Knöpfe öffnen die Hilfe an ihrem Anker — in der Seitenleiste, im
@@ -333,8 +459,20 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     box.addEventListener('click', ev => {
       const b = ev.target.closest && ev.target.closest('[data-help]');
       if (!b) return;
+      /* preventDefault ist hier nötig: das ⓘ sitzt im <label> seiner Zeile,
+         und ohne Abbruch setzte das Label danach noch den Fokus ins Feld
+         (oder schaltete ein Häkchen um). */
       ev.preventDefault(); ev.stopPropagation();
-      helpApi.show(b.getAttribute('data-help'));
+      helpApi.show(b.getAttribute('data-help'), helpOwner(b));
+    });
+    /* Das ⓘ ist ein <span role="button"> (rows.js) — Eingabe und Leertaste
+       lösen es aus wie einen Knopf. */
+    box.addEventListener('keydown', ev => {
+      if (ev.key !== 'Enter' && ev.key !== ' ') return;
+      const b = ev.target.closest && ev.target.closest('[data-help]');
+      if (!b || b !== ev.target) return;
+      ev.preventDefault(); ev.stopPropagation();
+      helpApi.show(b.getAttribute('data-help'), helpOwner(b));
     });
   }
   ui('inspector-close').addEventListener('click', () => { if (onInspectorClose) onInspectorClose(); else inspector.hide(); });
@@ -386,12 +524,38 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   viewport.addEventListener('wheel', introSeen, { passive: true });
   /* „Darstellung ▾" gibt es nur, wenn das Werkzeug Anzeigeoptionen hat. */
   const darstellungBtn = viewbar.querySelector('[data-darstellung]'), darstellungSep = viewbar.querySelector('[data-darstellung-sep]');
-  const darstellung = html => {
-    if (viewbar.pop) viewbar.pop.innerHTML = html || '';
-    if (darstellungBtn) darstellungBtn.hidden = !html;
-    if (darstellungSep) darstellungSep.hidden = !html;
-    return viewbar.pop;
+  const showDarstellungBtn = on => {
+    if (darstellungBtn) darstellungBtn.hidden = !on;
+    if (darstellungSep) darstellungSep.hidden = !on;
   };
+  /* Mit `owner` (die Werkbank: mehrere Werkzeuge auf einer Seite) bekommt
+     jedes Werkzeug seinen Kasten im Aufklappfeld; zu sehen ist der des
+     Werkzeugs, das dran ist (darstellungOwner) — und der Knopf nur, wenn
+     dessen Kasten etwas enthält. */
+  let darstOwner = null;
+  const darstellung = (html, owner) => {
+    const pop = viewbar.pop;
+    if (owner === undefined) {
+      if (pop) pop.innerHTML = html || '';
+      showDarstellungBtn(!!html);
+      return pop;
+    }
+    const box = ownBox(pop, owner);
+    box.innerHTML = html || '';
+    darstellungOwner(darstOwner);
+    return box;
+  };
+  function darstellungOwner(owner) {
+    darstOwner = owner;
+    let has = false;
+    for (const c of [...viewbar.pop.children]) {
+      const o = c.getAttribute && c.getAttribute('data-owner');
+      if (o === null || o === undefined) continue;
+      c.hidden = o !== owner;
+      if (o === owner && c.innerHTML) has = true;
+    }
+    showDarstellungBtn(has);
+  }
   darstellung('');
 
   /* Wo die Ansichtsleiste endet, MISST der Rahmen: sie ist je nach Schrift
@@ -422,6 +586,16 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   const bannerEl = ui('banner');
   function banner(spec) {
     if (!spec) { bannerEl.hidden = true; bannerEl.innerHTML = ''; return; }
+    /* Der Streifen steht in der Seitenleiste: ist sie weggenommen (☰), holt
+       er sie zurück — sonst fragte die Abstandsanalyse beim Ablegen einer
+       Datei („als A oder als B?") ins Leere. */
+    const lay = ui('layout');
+    if (lay && lay.classList.contains('panel-closed')) {
+      lay.classList.remove('panel-closed');
+      const t = ui('panel-toggle');
+      if (t) t.setAttribute('aria-expanded', 'true');
+      view.invalidate();
+    }
     bannerEl.innerHTML = '<div class="st-banner-text">' + esc(spec.text) + '</div><div class="st-banner-actions">'
       + (spec.actions || []).map((a, i) => '<button type="button" class="btn btn-sm ' + (a.primary ? 'btn-primary' : 'btn-outline') + '" data-banner="' + i + '">' + esc(a.label) + '</button>').join('') + '</div>';
     bannerEl.hidden = false;
@@ -435,8 +609,17 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
      daneben schließt sie. */
   const closers = [];
   const closeAll = except => { for (const c of closers) if (c !== except) c(false); };
-  function popover(chip, pop) {
-    const open = on => { pop.hidden = !on; chip.setAttribute('aria-expanded', on ? 'true' : 'false'); chip.classList.toggle('active', on); };
+  /* Eine Klappe hängt links an ihrem Chip — auf dem Telefon reichte sie damit
+     bis zu 140 px über den rechten Rand. Beim Öffnen gemessen und, wenn
+     nötig, nach links gerückt. */
+  const keepInside = pop => {
+    pop.style.left = '';
+    const r = pop.getBoundingClientRect(), over = r.right - (innerWidth - 8);
+    if (r.width > 0 && over > 0) pop.style.left = -Math.min(over, Math.max(0, r.left - 8)) + 'px';
+  };
+  function popover(chip, pop, { keep = true } = {}) {
+    const open = on => { pop.hidden = !on; chip.setAttribute('aria-expanded', on ? 'true' : 'false'); chip.classList.toggle('active', on); if (on && keep) keepInside(pop); };
+    open.isOpen = () => !pop.hidden;
     closers.push(open);
     chip.addEventListener('click', ev => { ev.stopPropagation(); const on = pop.hidden; closeAll(open); open(on); });
     pop.addEventListener('click', ev => ev.stopPropagation());
@@ -444,19 +627,30 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   }
   const partChip = ui('part-chip');
   const partOpen = popover(partChip, ui('part-pop'));
+  /* Das Aufklappfeld „Darstellung" der Ansichtsleiste und das Menü
+     „Exportieren" sind Klappen wie diese (ui/viewbar.js baut nur Kasten und
+     Knopf). Das Menü hängt rechts an seinem Knopf und reicht nie über den
+     Rand — es rückt nicht. */
+  if (viewbar.pop) popover(viewbar.popChip, viewbar.pop);
   const exportBtn = ui('export'), exportList = ui('export-list');
-  const exportOpen = on => { exportList.hidden = !on; exportBtn.setAttribute('aria-expanded', on ? 'true' : 'false'); };
-  closers.push(exportOpen);
-  exportBtn.addEventListener('click', ev => { ev.stopPropagation(); const on = exportList.hidden; closeAll(exportOpen); exportOpen(on); });
+  const exportOpen = popover(exportBtn, exportList, { keep: false });
   document.addEventListener('click', () => closeAll(null));
+  /* Die Felder einer Bauteil-Klappe — js/part/partsource.js bekommt sie als
+     Elemente, nicht als ids. */
+  const fieldsIn = (box, key = '') => {
+    const q = name => box.querySelector('#' + name + (key ? '-' + key : ''));
+    return { select: q('demo-select'), input: q('stl-input'), button: q('stl-btn'), warn: q('model-warn'), note: q('part-note'), facts: q('model-facts') };
+  };
+  const partFields = fieldsIn(ui('part-pop'));
 
   /* Mehrere Eingänge statt eines Bauteils (die Abstandsanalyse misst Datei A
      gegen Datei B): je Eingang ein Chip mit derselben Klappe wie der
      Bauteil-Chip — Beispielteil, „Datei öffnen …", „Zum Bauteil". Die Felder
-     tragen ids mit Suffix („-a"), über die js/part/partsource.js sie findet. */
+     tragen ids mit Suffix („-a") und gehen als Elemente an
+     js/part/partsource.js (fields). */
   const ACCEPT_PARTS = '.stl,.glb,model/stl,model/gltf-binary,application/sla';
-  const partChipsApi = {};
   function addPartChips(list, hint = '') {
+    const partChipsApi = {};
     const html = list.map(({ key, label, title: t = '' }) => '<div class="st-part" data-ui="part-' + key + '">'
       + '<button type="button" class="st-chip" data-ui="part-chip-' + key + '" aria-haspopup="true" aria-expanded="false" title="' + esc(t || label + ' wählen oder laden') + '">'
       + '<span class="st-chip-key">' + esc(label) + '</span> <b data-ui="part-name-' + key + '">—</b><span class="st-chip-warn" data-ui="part-warn-mark-' + key + '" hidden>⚠</span> <span class="st-caret">▾</span></button>'
@@ -475,7 +669,7 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
       const open = popover(chip, ui('part-pop-' + key));
       const plain = t || label + ' wählen oder laden';
       partChipsApi[key] = {
-        chip, open,
+        chip, open, fields: fieldsIn(ui('part-pop-' + key), key),
         set(name, warning = '') {
           ui('part-name-' + key).textContent = name || '—';
           ui('part-warn-mark-' + key).hidden = !warning;
@@ -510,7 +704,8 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
       partChip.title = warning ? 'Hinweis zum Netz: ' + warning : 'Bauteil wählen oder laden';
       partOpen(false);
     },
-    partOpen,
+    /** Die Felder der Bauteil-Klappe: { select, input, button, warn, note, facts }. */
+    partFields,
     setSave({ state, when }) {
       const el = ui('save-state');
       const t = when ? fmtTime(when) : '';
@@ -531,14 +726,25 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     onUndo(fn) { ui('undo').addEventListener('click', fn); },
     onRedo(fn) { ui('redo').addEventListener('click', fn); },
     setExports,
-    hideSave() { ui('save').hidden = true; ui('save-state').hidden = true; },
     /** Für Werkzeuge mit eigenen Dateien (die Abstandsanalyse hat zwei). */
     hidePart() { ui('part').hidden = true; },
-    /** Je Eingang ein Chip mit Bauteil-Klappe: [{ key, label, title }] → { key: { set(name, warning), open } } */
-    addPartChips,
-    partChips: partChipsApi
+    /** Der Bauteil-Chip für eine andere Quelle (die Angussfüllung lädt
+        Angusssysteme): wie die Liste heißt, was der Knopf öffnet (`accept`)
+        und der Hinweis darunter; „Zum Bauteil" entfällt. Die Felder bleiben
+        partFields — die Quelle verdrahtet sie selbst. */
+    setPartSource({ list, button, accept, hint }) {
+      const pop = ui('part-pop');
+      pop.querySelector('label.row span').textContent = list;
+      partFields.button.textContent = button;
+      partFields.input.setAttribute('accept', accept);
+      pop.querySelector('.st-pop-hint').textContent = hint;
+      pop.querySelector('details').hidden = true;
+      ui('part').hidden = false;
+    },
+    /** Je Eingang ein Chip mit Bauteil-Klappe: [{ key, label, title }] → { key: { set(name, warning), open, fields } } */
+    addPartChips
   };
-  ui('help-btn').addEventListener('click', ev => { ev.stopPropagation(); helpApi.toggle(); });
+  ui('help-btn').addEventListener('click', ev => { ev.stopPropagation(); helpApi.toggle(null, helpFor); });
   /* ☰ nimmt die Seitenleiste weg und holt sie wieder — bei jeder Breite: wo
      sie neben dem Bild steht, bekommt das Bild den Platz; unter 720 px, wo sie
      als Lade darüber liegt, gleitet sie hinaus (css/studio.css). Sie ist DA,
@@ -554,12 +760,22 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
 
   /* ── Tastatur: ein Zuhörer, das Werkzeug bekommt die Taste ─ */
   const keyListeners = [];
+  /* Wer TIPPT, dem gehören die Tasten: Textfelder (dort machen Strg+Z und
+     Entf, was sie im Text tun) und Auswahllisten (Buchstaben springen dort
+     zu Einträgen). Ein Regler, ein Häkchen oder ein Knopf mit Fokus ist kein
+     Tippen: nach einem Zug am Regler gingen Strg+Z und Entf sonst ins
+     Leere, bis man irgendwo anders hinklickte. */
+  const TEXT_TYPES = new Set(['text', 'search', 'number', 'email', 'password', 'tel', 'url', '']);
   document.addEventListener('keydown', ev => {
     const t = ev.target;
     const tag = t && t.tagName ? t.tagName : '';
-    const inInput = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || (t && t.isContentEditable);
+    const inText = (tag === 'INPUT' && TEXT_TYPES.has(String(t.type || '').toLowerCase())) || tag === 'TEXTAREA' || !!(t && t.isContentEditable);
+    const inSelect = tag === 'SELECT';
+    const inInput = inText || inSelect;
     if (ev.key === 'Escape' && helpApi.open) { helpApi.hide(); return; }
-    for (const fn of keyListeners) { if (fn(ev, { inInput }) === true) { ev.preventDefault(); return; } }
+    /* Eine offene Klappe der Kopfzeile schließt Esc zuerst. */
+    if (ev.key === 'Escape' && closers.some(c => c.isOpen && c.isOpen())) { closeAll(null); return; }
+    for (const fn of keyListeners) { if (fn(ev, { inInput, inText, inSelect }) === true) { ev.preventDefault(); return; } }
   });
 
   return {
@@ -569,14 +785,18 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
         den Hüllquader JETZT liefert — der Körper eines Designers wächst. */
     setFitTarget: fn => vp.setFitTarget(fn),
     setModes, setMode, get mode() { return current; }, onMode(fn) { modeListeners.push(fn); }, modeSection, setTabBadge,
+    /* Mehrere Gruppen von Modi (die Werkbank, js/studio/stages.js). */
+    addModes, showGroup, get group() { return group; },
     setPrimary, setNote, setBusy, progress: setProgress, get busy() { return busy; },
     setActionsExtra, actionsExtra,
     setChips, renderChips,
     inspector,
-    legend, status, colorbar: setColorbar, darstellung,
+    legend, status, colorbar: setColorbar, darstellung, darstellungOwner,
+    /** Wessen Abschnitt der Hilfe „?" aufschlägt (die Werkbank: das Werkzeug, das dran ist). */
+    setHelpOwner(owner) { helpFor = owner || null; },
     toast, hideToast, banner,
     header,
     onKey(fn) { keyListeners.push(fn); },
-    busyEl
+    loading
   };
 }

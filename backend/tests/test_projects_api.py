@@ -5,14 +5,7 @@ from fastapi.testclient import TestClient
 from backend.app import app
 from backend.auth import hash_password, verify_password
 from backend.db import Org, SessionLocal
-
-PW = "korrektes-pferd-batterie"
-
-
-def _client():
-    c = TestClient(app)
-    c.__enter__()  # Startup-Event: Schema + Bootstrap-Einladung
-    return c
+from backend.tests.conftest import BOOTSTRAP_TOKEN, OWNER_EMAIL, PW
 
 
 def test_password_hashing_roundtrip():
@@ -21,23 +14,24 @@ def test_password_hashing_roundtrip():
     assert not verify_password("falsch", h) and not verify_password("x", "kaputt")
 
 
-def test_a_bootstrap_invite_and_register():
-    c = _client()
-    r = c.get("/api/auth/invite/bootstrap-token-for-tests")
+def test_a_bootstrap_invite_and_register(client):
+    c = client
+    r = c.get(f"/api/auth/invite/{BOOTSTRAP_TOKEN}")
     if r.status_code == 200:   # andere Testmodule können den Owner schon angelegt haben
-        assert r.json()["email"] == "owner@example.com" and r.json()["role"] == "admin"
-        r = c.post("/api/auth/register", json={"token": "bootstrap-token-for-tests", "name": "Owner", "password": "kurz"})
+        assert r.json()["email"] == OWNER_EMAIL and r.json()["role"] == "admin"
+        r = c.post("/api/auth/register", json={"token": BOOTSTRAP_TOKEN, "name": "Owner", "password": "kurz"})
         assert r.status_code == 422  # Passwort zu kurz
-        r = c.post("/api/auth/register", json={"token": "bootstrap-token-for-tests", "name": "Owner", "password": PW})
+        r = c.post("/api/auth/register", json={"token": BOOTSTRAP_TOKEN, "name": "Owner", "password": PW})
         assert r.status_code == 200, r.text
         assert r.json()["user"]["role"] == "admin" and r.json()["org"]["slug"] == "dielogic"
     else:
-        _ensure_owner()
-        assert c.post("/api/auth/login", json={"email": "owner@example.com", "password": PW}).status_code == 200
+        # Token schon verbraucht → den Owner gibt es zwingend schon (sonst
+        # gäbe es niemanden, der ihn hätte verbrauchen können).
+        assert c.post("/api/auth/login", json={"email": OWNER_EMAIL, "password": PW}).status_code == 200
     assert c.get("/api/auth/me").status_code == 200
 
     # Einladung ist verbraucht
-    assert c.get("/api/auth/invite/bootstrap-token-for-tests").status_code == 404
+    assert c.get(f"/api/auth/invite/{BOOTSTRAP_TOKEN}").status_code == 404
     # Abmelden beendet die Sitzung
     c.post("/api/auth/logout")
     assert c.get("/api/auth/me").status_code == 401
@@ -46,32 +40,8 @@ def test_a_bootstrap_invite_and_register():
     assert c.post("/api/auth/login", json={"email": "Owner@Example.com", "password": PW}).status_code == 200
 
 
-def _ensure_owner():
-    """Owner-Konto anlegen, falls noch nicht geschehen (Tests laufen in
-    alphabetischer Reihenfolge und sollen einzeln bestehen)."""
-    c = _client()
-    if c.get("/api/auth/invite/bootstrap-token-for-tests").status_code == 200:
-        c.post("/api/auth/register", json={"token": "bootstrap-token-for-tests", "name": "Owner", "password": PW})
-
-
-def _ensure_jane():
-    admin = _client()
-    _login(admin, "owner@example.com")
-    if any(m["email"] == "jane@example.com" for m in admin.get("/api/org/members").json()):
-        return
-    token = admin.post("/api/org/invites", json={"email": "jane@example.com", "role": "member"}).json()["token"]
-    assert _client().post("/api/auth/register", json={"token": token, "name": "Jane", "password": PW}).status_code == 200
-
-
-def _login(c, email, pw=PW):
-    _ensure_owner()
-    r = c.post("/api/auth/login", json={"email": email, "password": pw})
-    assert r.status_code == 200, r.text
-
-
-def test_admin_invites_member_and_projects_flow():
-    admin = _client()
-    _login(admin, "owner@example.com")
+def test_admin_invites_member_and_projects_flow(owner_client, client):
+    admin = owner_client
 
     r = admin.post("/api/org/invites", json={"email": "jane@example.com", "role": "member"})
     assert r.status_code == 201, r.text
@@ -79,14 +49,14 @@ def test_admin_invites_member_and_projects_flow():
     assert "/konto/?token=" + token in url
     assert any(i["email"] == "jane@example.com" for i in admin.get("/api/org/invites").json())
 
-    jane = _client()
+    jane = client
     r = jane.post("/api/auth/register", json={"token": token, "name": "Jane", "password": PW})
     assert r.status_code == 200, r.text
     assert r.json()["user"]["role"] == "member"
     # Mitglied darf keine Einladungen aussprechen
     assert jane.post("/api/org/invites", json={"email": "x@example.com"}).status_code == 403
     members = jane.get("/api/org/members").json()
-    assert {"owner@example.com", "jane@example.com"} <= {m["email"] for m in members}
+    assert {OWNER_EMAIL, "jane@example.com"} <= {m["email"] for m in members}
 
     # Ein unbekannter Abschnitt ist ein Fehler des Aufrufers — stumm verwerfen
     # und 200 antworten hieße: das nächste Werkzeug verliert seine Arbeit (H-01).
@@ -117,7 +87,7 @@ def test_admin_invites_member_and_projects_flow():
     assert admin.get(f"/api/projects/{pid}").json()["data"]["design"]["values"]["part"] == 13
     revs = jane.get(f"/api/projects/{pid}/revisions").json()
     assert [x["rev"] for x in revs] == [2, 1]
-    assert revs[0]["author"]["email"] == "owner@example.com" and revs[0]["note"] == "Gewicht korrigiert"
+    assert revs[0]["author"]["email"] == OWNER_EMAIL and revs[0]["note"] == "Gewicht korrigiert"
     assert jane.get(f"/api/projects/{pid}/revisions/1").json()["data"]["design"]["values"]["part"] == 12
 
     r = jane.put(f"/api/projects/{pid}", json={"name": "DieCastPartA", "description": "Rev B", "customer": "ACME", "part_no": "4711"})
@@ -133,7 +103,7 @@ def test_admin_invites_member_and_projects_flow():
     assert admin.get(f"/api/projects/{pid}").status_code == 404
 
 
-def test_tenant_isolation():
+def test_tenant_isolation(client, owner_client):
     with SessionLocal() as db:
         other = Org(slug="other", name="Other GmbH")
         db.add(other)
@@ -142,59 +112,56 @@ def test_tenant_isolation():
         inv = create_invite(db, other, "bob@other.example", "admin")
         token = inv.token
 
-    bob = _client()
+    bob = client
     assert bob.post("/api/auth/register", json={"token": token, "name": "Bob", "password": PW}).status_code == 200
     r = bob.post("/api/projects", json={"name": "Secret", "data": {"design": {"values": {}}}})
     assert r.status_code == 201
     secret_id = r.json()["id"]
 
-    admin = _client()
-    _login(admin, "owner@example.com")
+    admin = owner_client
     assert admin.get(f"/api/projects/{secret_id}").status_code == 404
     assert admin.post(f"/api/projects/{secret_id}/revisions", json={"data": {}}).status_code == 404
     assert all(p["id"] != secret_id for p in admin.get("/api/projects").json())
     assert all(m["email"] != "bob@other.example" for m in admin.get("/api/org/members").json())
 
 
-def test_disable_member_ends_access():
-    _ensure_jane()
-    admin = _client()
-    _login(admin, "owner@example.com")
+def test_disable_member_ends_access(owner_client, member_client):
+    admin = owner_client
+    jane = member_client("jane@example.com")
     jane_id = next(m["id"] for m in admin.get("/api/org/members").json() if m["email"] == "jane@example.com")
-    jane = _client()
-    _login(jane, "jane@example.com")
     assert admin.post(f"/api/org/members/{jane_id}/disable").status_code == 204
     assert jane.get("/api/auth/me").status_code == 401
     assert jane.post("/api/auth/login", json={"email": "jane@example.com", "password": PW}).status_code == 401
 
 
-def test_demo_account_from_env():
+def test_demo_account_from_env(client):
     """Der Endpunkt sagt, DASS es einen Demo-Zugang gibt — nicht mehr, WIE er
     lautet. Vorher lieferte er unauthentifiziert ein gültiges Anmeldepaar."""
-    c = _client()
+    c = client
     assert c.get("/api/auth/demo").json() == {"email": "demo@dielogic.de"}
     assert "password" not in c.get("/api/auth/demo").json()
 
     # Anmelden ohne das Passwort zu kennen — der Server macht es.
-    d = _client()
-    r = d.post("/api/auth/demo/login")
-    assert r.status_code == 200, r.text
-    assert r.json()["org"]["slug"] == "demo" and r.json()["user"]["role"] == "admin"
-    assert d.get("/api/auth/me").status_code == 200
+    with TestClient(app) as d:
+        r = d.post("/api/auth/demo/login")
+        assert r.status_code == 200, r.text
+        assert r.json()["org"]["slug"] == "demo" and r.json()["user"]["role"] == "admin"
+        assert d.get("/api/auth/me").status_code == 200
 
     # Das Passwort funktioniert weiterhin, wer es kennt (Env-Variable).
-    r = _client().post("/api/auth/login", json={"email": "demo@dielogic.de", "password": "demo-demo-demo"})
-    assert r.status_code == 200
+    with TestClient(app) as e:
+        r = e.post("/api/auth/login", json={"email": "demo@dielogic.de", "password": "demo-demo-demo"})
+        assert r.status_code == 200
 
 
-def test_draft_conflict_is_refused_not_overwritten():
+def test_draft_conflict_is_refused_not_overwritten(owner_client):
     """Optimistische Sperre: wer auf einem veralteten Draft-Stempel aufsetzt,
     bekommt 409 statt den fremden Stand zu überschreiben (C-3)."""
     # Zwei Sitzungen desselben Kontos = zwei Tabs/Rechner auf einem Projekt.
-    admin = _client()
-    _login(admin, "owner@example.com")
-    jane = _client()
-    _login(jane, "owner@example.com")
+    admin = owner_client
+    jane = TestClient(app)
+    jane.__enter__()
+    assert jane.post("/api/auth/login", json={"email": OWNER_EMAIL, "password": PW}).status_code == 200
 
     pid = admin.post("/api/projects", json={"name": "Konflikt", "data": {"design": {"values": {"schuss": 1}}}}).json()["id"]
     base = admin.get(f"/api/projects/{pid}").json()["draft_at"]
@@ -226,11 +193,10 @@ def test_draft_conflict_is_refused_not_overwritten():
     assert admin.put(f"/api/projects/{pid}/draft", json={"data": {}}).status_code == 200
 
 
-def test_create_is_idempotent_per_client_id():
+def test_create_is_idempotent_per_client_id(owner_client):
     """Geht die Antwort verloren (Tab schließt, Reload), darf derselbe Versuch
     kein zweites Projekt anlegen (C-5)."""
-    admin = _client()
-    _login(admin, "owner@example.com")
+    admin = owner_client
     before = len(admin.get("/api/projects").json())
 
     body = {"id": "p19c4f1a2b3c0123456789abcdef0", "name": "Nur einmal",
@@ -253,11 +219,10 @@ def test_create_is_idempotent_per_client_id():
     assert r3.status_code == 409, r3.text
 
 
-def test_non_finite_numbers_are_refused_not_stored():
+def test_non_finite_numbers_are_refused_not_stored(owner_client):
     """NaN/Infinity machen den Lese-Endpunkt dauerhaft zu 500 — Python nimmt
     die Literale an, JSONResponse schreibt sie nicht (H-02)."""
-    admin = _client()
-    _login(admin, "owner@example.com")
+    admin = owner_client
     pid = admin.post("/api/projects", json={"name": "Endlich", "data": {}}).json()["id"]
 
     for body in ('{"data": {"design": {"values": {"part": NaN}}}}',
@@ -282,12 +247,11 @@ def test_non_finite_numbers_are_refused_not_stored():
     assert r.json()["data"]["design"]["values"] == {"part": None, "ok": 3}
 
 
-def test_concurrent_revisions_all_succeed():
+def test_concurrent_revisions_all_succeed(owner_client):
     """head_rev war ein Read-Modify-Write ohne Sperre: gleichzeitige
     „Revision anlegen" endeten in HTTP 500, der Schnappschuss war weg (H-05)."""
     import threading
-    admin = _client()
-    _login(admin, "owner@example.com")
+    admin = owner_client
     pid = admin.post("/api/projects", json={"name": "Parallel", "data": {}}).json()["id"]
 
     codes = []
@@ -307,7 +271,7 @@ def test_concurrent_revisions_all_succeed():
     assert revs == [1, 2, 3, 4, 5, 6], revs
 
 
-def test_draft_lock_is_atomic_under_load():
+def test_draft_lock_is_atomic_under_load(owner_client):
     """Prüfen und Schreiben müssen EIN Schritt sein. Getrennt lasen mehrere
     gleichzeitige Anfragen denselben Stempel, bestanden alle die Prüfung und
     schrieben nacheinander — gemessen kamen von zehn Versuchen mit demselben
@@ -315,8 +279,7 @@ def test_draft_lock_is_atomic_under_load():
     import threading
     from collections import Counter
 
-    admin = _client()
-    _login(admin, "owner@example.com")
+    admin = owner_client
     pid = admin.post("/api/projects", json={"name": "Wettlauf", "data": {"design": {"v": 0}}}).json()["id"]
     base = admin.get(f"/api/projects/{pid}").json()["draft_at"]
 

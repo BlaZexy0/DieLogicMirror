@@ -23,12 +23,14 @@
      Nur Orientierung (gestrichelte Linie), keine Fläche.
 
    Maske          { …, fn, mask: true }   (Kurvenschranke auf 'y')
-     Ausschlussseite prinzipiell unerreichbar: deckend grau gefüllt,
-     Frontlinie durchgezogen; alle übrigen Grenzen werden vom Renderer
-     auf die erreichbare Seite geclippt.
+     Ausschlussseite prinzipiell unerreichbar: deckend gefüllt
+     (theme.chart.mask), Frontlinie durchgezogen; alle übrigen Grenzen
+     werden vom Renderer auf die erreichbare Seite geclippt.
 
-   Die Farbe kommt aus theme.limits[id] (/shared/theme.js), Fallback
-   theme.chart.limit; per l.c überschreibbar. */
+   Die Farbe kommt aus theme.limits[id] (/shared/theme.js): die Familie,
+   aus der die Grenze stammt (Maschine, Werkzeug, Prozess, Luft,
+   Schmelze). Ohne Eintrag theme.chart.ref; per l.c als Rolle
+   überschreibbar (render/limits.js). */
 
 /* Zulässiges Intervall aus konstanten Grenzen EINER Achse: Schnittmenge
    aller kind-min/max-Schranken. Liefert auch die jeweils bindende Grenze

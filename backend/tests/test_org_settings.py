@@ -1,39 +1,11 @@
 """Stammdaten der Organisation: Lesen für Mitglieder, Schreiben nur Admin,
 Validierung, Zurücksetzen, Mandantentrennung."""
-from fastapi.testclient import TestClient
-
-from backend.app import app
-
-PW = "korrektes-pferd-batterie"
+from backend.tests.conftest import PW
 
 
-def _client():
-    c = TestClient(app)
-    c.__enter__()
-    return c
-
-
-def _admin():
-    c = _client()
-    if c.get("/api/auth/invite/bootstrap-token-for-tests").status_code == 200:
-        c.post("/api/auth/register", json={"token": "bootstrap-token-for-tests", "name": "Owner", "password": PW})
-    assert c.post("/api/auth/login", json={"email": "owner@example.com", "password": PW}).status_code == 200
-    return c
-
-
-def _member(admin, email="settings-member@example.com"):
-    c = _client()
-    if not any(m["email"] == email for m in admin.get("/api/org/members").json()):
-        token = admin.post("/api/org/invites", json={"email": email}).json()["token"]
-        assert c.post("/api/auth/register", json={"token": token, "name": "M", "password": PW}).status_code == 200
-    else:
-        assert c.post("/api/auth/login", json={"email": email, "password": PW}).status_code == 200
-    return c
-
-
-def test_settings_roundtrip_and_permissions():
-    admin = _admin()
-    member = _member(admin)
+def test_settings_roundtrip_and_permissions(owner_client, member_client):
+    admin = owner_client
+    member = member_client("settings-member@example.com")
     assert admin.get("/api/org/settings").status_code == 200
 
     machines = [{"id": "m-800", "name": "Unsere 800 t", "fields": {"force": 8000, "vmax": 6.5}},
@@ -63,8 +35,8 @@ def test_settings_roundtrip_and_permissions():
     assert member.delete("/api/org/settings/kosten").status_code == 403
 
 
-def test_settings_are_tenant_scoped():
-    _client()  # Startup: Schema anlegen
+def test_settings_are_tenant_scoped(client, owner_client):
+    carol = client
     from backend.auth import create_invite
     from backend.db import Org, SessionLocal
     from sqlalchemy import select
@@ -75,8 +47,27 @@ def test_settings_are_tenant_scoped():
             db.add(org)
             db.commit()
         token = create_invite(db, org, "carol@settings-other.example", "admin").token
-    carol = _client()
     assert carol.post("/api/auth/register", json={"token": token, "name": "Carol", "password": PW}).status_code == 200
     assert carol.put("/api/org/settings/alloys", json={"data": [{"id": "geheim", "name": "Geheimlegierung", "fields": {"density": 2400}}]}).status_code == 200
-    admin = _admin()
+    admin = owner_client
     assert "alloys" not in admin.get("/api/org/settings").json()
+
+
+def test_settings_check_cost_bounds_and_preset_pairs(owner_client):
+    """Kostensätze in den Grenzen der Teilekosten (vorher ließen sich 150 %
+    Ausschuss als Vorgabe speichern) und die Regeln zwischen zwei Feldern
+    eines Presets (vorher stand PAIRS in _domain.py und wurde nie angewandt:
+    Kolben-Ø min. über max. ließ sich speichern)."""
+    admin = owner_client
+    r = admin.put("/api/org/settings/kosten", json={"data": {"a": 150}})
+    assert r.status_code == 422 and "'a'" in r.text and "99" in r.text, r.text
+    r = admin.put("/api/org/settings/kosten", json={"data": {"a": 5, "oee": 85, "hMonth": 400, "altSatz": 1}})
+    assert r.status_code == 200, r.text            # unbekannte Sätze gehen weiter durch
+    r = admin.put("/api/org/settings/machines",
+                  json={"data": [{"id": "m-x", "name": "Verdreht", "fields": {"dmin": 150, "dmax": 90}}]})
+    assert r.status_code == 422 and "Kolben-Ø min." in r.text, r.text
+    r = admin.put("/api/org/settings/machines",
+                  json={"data": [{"id": "m-x", "name": "Richtig", "fields": {"dmin": 90, "dmax": 150}}]})
+    assert r.status_code == 200, r.text
+    admin.delete("/api/org/settings/machines")
+    admin.delete("/api/org/settings/kosten")

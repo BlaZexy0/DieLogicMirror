@@ -59,8 +59,12 @@ dielogic/
 │   ├── index.html       Landingpage (Hero, Schritte, Werkzeuge, Katalog, Theorie, Preise)
 │   ├── shared/          Laufzeit-Bausteine aller Seiten (klassische Scripts, vor den Modulen):
 │   │   ├── vendor/katex/    KaTeX (lokal, MIT) — rendert alle Formeln der Site; siehe README dort
-│   │   ├── palette.js       DIE Farbquelle (window.__PALETTE__; shared.css spiegelt sie,
-│   │   │                    Test prüft Gleichheit + WCAG-Kontrast)
+│   │   ├── palette.js       DIE Farbquelle: Rollen statt Farben (window.__PALETTE__,
+│   │   │                    mix/rgba; feste Farbleisten scale/lut; shared.css spiegelt die Rollen)
+│   │   ├── schemes.js       drei Farbschemata: jedes belegt alle Rollen (Umschalter auf der
+│   │   │                    Konto-Seite; lädt direkt nach palette.js, vor nav.js)
+│   │   ├── theme.js         Diagrammfarben, aus der Palette abgeleitet (derive())
+│   │   ├── svgfarben.js     setzt die Theorie-Bilder als SVG ein, damit sie dem Schema folgen
 │   │   ├── shared.css       Basis-Styles + :root-Tokens
 │   │   ├── nav.js           injiziert Site-Navigation + Footer (selbstversorgend)
 │   │   ├── version.js       Versionsnummer (Nav-Badge + /api/health)
@@ -99,7 +103,10 @@ dielogic/
 │   │                    team-mockup.svg, palette.svg (generiert), theorie/*.svg (generiert)
 │   │                    icons/*.svg: Piktogramme der Startseite (Schritte, Werkzeuge) —
 │   │                    per <use href="…svg#icon"> eingebunden, Farben var(--…, Fallback)
-│   └── examples/        Beispiel-STLs für die Sprengflächenanalyse (auch von Tests genutzt)
+│   │                    studio/*.webp: Schemabilder des 3D-Studios für die Startseite
+│   │                    (scripts/3d-studio/build-studio-figures.mjs, braucht npm run serve)
+│   └── examples/        gusstraube.glb: Beispiel der Sprengflächenanalyse, die Gusstraube
+│                        der Beispielform (scripts/3d-studio/build-gusstraube.mjs)
 ├── backend/         FastAPI: /api/auth (Einladung, Sitzung), /api/org (Mitglieder,
 │   │                Einladungen, Stammdaten), /api/projects (Revisionen)
 │   │                + statische Auslieferung von web/ (Werkzeugseiten nur mit Sitzung)
@@ -116,7 +123,7 @@ dielogic/
 ├── tests/web/       Node-Tests der Website (nicht ausgeliefert)
 ├── scripts/         Generatoren (nicht ausgeliefert): gen-theory-svgs, gen-vkrit-table,
 │   │                gen-palette, gen-icon-sprite, gen-domain-doc und 3d-studio/ (die
-│   │                glTF-Modelle des 3D-Studios); serve.py (statischer Server, npm run serve)
+│   │                Beispielform des 3D-Studios aus STL-Stücken); serve.py (statischer Server, npm run serve)
 ├── render.yaml      Render-Blueprint (Web Service: Build, Start, Healthcheck)
 └── .venv/           lokale Python-Umgebung (nicht einchecken)
 ```
@@ -206,9 +213,62 @@ eine Rechnung auf den Server legt, muss sie dort ergänzen.
 
 - **Navigation/Footer:** `web/shared/nav.js` — Linkliste (`NAV_LINKS`),
   Diagrammliste (`CHARTS`, Reihenfolge = `web/tools/auslegung/js/charts/registry.js`).
-- **Farbschema:** `web/shared/palette.js` (einzige Quelle; `shared/shared.css`
-  spiegelt sie als Tokens, Test prüft Gleichheit). Diagrammfarben:
-  `web/shared/theme.js`. Farbtafel: `web/assets/palette.svg`.
+- **Farben:** Jede Farbe der Website ist eine ROLLE der Palette
+  (`web/shared/palette.js`, einzige Quelle; `shared/shared.css` spiegelt sie
+  als Tokens). Der Code nennt nur Rollen: ein Token (`var(--melt)`), einen
+  Schlüssel von `window.__PALETTE__` (`P.melt`) oder eine Diagrammrolle
+  (`theme.chart.die`, abgeleitet in `web/shared/theme.js`). Die Familien:
+  · **Marke und Flächen** für die Bedienung (Knöpfe, Links, Auswahl, Fokus).
+  · **Ampel** `ok` / `caution` / `bad` (gut, knapp, schlecht) nur für Urteile:
+    Prüfungen, machbare Bereiche, Verstöße, Hinterschnitt, Fehler; je Stufe
+    Signalfarbe, Text (`okText` …), Grund und Rand.
+  · **Hervorhebung** `mark`: Arbeitspunkt, Ist-Wert, Kennpunkt.
+  · **Sachfarben**: dieselbe Sache hat überall dieselbe Farbe, im Diagramm, im
+    3D-Studio und in den Bildern der Theorie: Schmelze und was aus ihr wird
+    (`melt`, `runner`, `overflow`, `biscuit`), Werkzeug (`die`), Maschine und
+    Hydraulik (`machine`), Luft und Vakuum, Temperierung (`cool`), Prozess und
+    Zeit (`process`), Stahl, Kolben, das Bauteil im 3D-Studio, die Achsen.
+    Keine Sachfarbe liegt nahe am Ampelverlauf; Gelb, Orange, Rot und Grün
+    gehören der Ampel, darum sind die Sachfarben kühl.
+  In den Diagrammen ist jeder **Sperrbereich** (die Seite, die eine harte
+  Grenze ausschließt) gleich gezeichnet: deckend, rot schraffiert
+  (`theme.chart.zone` = Ampel „schlecht"); die Grenzlinie an der Kante trägt
+  die Farbe ihrer Herkunft. Farben, die im selben Diagramm als Linien
+  stehen (PQ²: Maschine, Werkzeug, Luft, Prozess; Schusskurve und
+  Luftblase: Luft, Vakuum, Prozess, Schrift), liegen weit auseinander.
+  Keine Rollen sind die **Farbleisten** (`LEISTEN` in palette.js,
+  `P.scale(name, t)`, `P.lut`, `P.gradient`): die Skalen, an denen man einen
+  Wert abliest. Sie sind in jedem Schema gleich: `heat` für die Heatmaps der
+  Auslegung, `turbo` für die Felder im 3D-Studio (Wandstärke, Abstand,
+  Füllgrad, Ankunft, Geschwindigkeit, Haftung), `draft` für die
+  Entformschräge, `speed` für das Flussschema des Angussdesigners.
+  Drei Schemata in `web/shared/schemes.js` belegen jede Rolle mit eigenen
+  Werten: DieLogic Teal (Standard), Stahlblau und Graphit. Wer eines der
+  früheren gewählt hatte (Hochkontrast, Rot-Grün-sicher, Abendschicht,
+  Anlassfarbe, Kupfer, Oliv, davor Blaupause, Aluminium, Messing), landet
+  über `ALIAS` beim nächsten der drei. Gewählt wird unter „Projekte & Konto",
+  gemerkt im localStorage dieses Browsers. Ein Wechsel schreibt die Tokens,
+  ändert `__PALETTE__` an Ort und Stelle, leitet die Diagrammfarben neu ab und
+  meldet `dielogic:scheme`: wer selbst zeichnet (Diagramme, 3D-Studio,
+  Zyklus, Sprengfläche, Hero), zeichnet darauf neu und liest die Werte frisch.
+  Die Theorie-Bilder tragen zu jeder Farbe ihre Rolle als Klasse (`f-melt`,
+  `s-steel-dark`) neben dem Standardwert; `web/shared/svgfarben.js` setzt sie
+  als SVG in die Seite, dann greifen die Tokens. Die aus Diagrammen erzeugten
+  Bilder schreibt `scripts/gen-theory-svgs.mjs` (rendert mit Platzhalterfarben
+  und ordnet jede Farbe ihrer Rolle zu).
+  Die Werte der Schemata kommen aus einem Rechenskript (wenige Anker je
+  Schema, der Rest abgeleitet) und stehen ausgeschrieben in schemes.js.
+  Geprüft wird das an drei Stellen: `tests/web/farbrollen.test.mjs` findet
+  jeden Farbwert ohne Rolle, jeden alten Namen und jedes Theorie-Bild ohne
+  Rollenklassen; `tests/web/schemes.test.mjs` rechnet für jedes Schema
+  Kontrast, Trennung der Ampel und Abstand der Sachfarben zur Ampel und
+  untereinander nach, dazu die Abstände der Linien, die im selben Diagramm
+  stehen, und dass kein Schema eine Farbleiste verändert;
+  `tests/web/render-smoke.test.mjs` prüft, dass jede Schraffur jedes
+  Diagramms dieselbe Sperrbereichsfarbe trägt;
+  `tests/web/palette.test.mjs` die Spiegelung in shared.css, die
+  Rechenhilfen und die Farbleisten. Farbtafel des Standards:
+  `web/assets/palette.svg` (`scripts/gen-palette.mjs`).
 - **Version:** `web/shared/version.js` (Nav-Badge und `/api/health`).
 - **Presets (Beispielwerte):** `web/shared/examples/*.js` — produktiv
   pflegt jede Organisation ihre eigenen als Stammdaten auf der Konto-Seite.
@@ -221,9 +281,9 @@ eine Rechnung auf den Server legt, muss sie dort ergänzen.
 - **Neues Diagramm:** wie in `web/tools/auslegung/README.md`; danach in `web/shared/nav.js`
   (`CHARTS`) und im Katalog auf `web/index.html` verlinken.
 - **3D-Studio:** eigenes README unter `web/tools/3d-studio/`. Nach
-  Änderungen an der Geometrie die Modelle neu erzeugen:
-  `node scripts/3d-studio/build-glb.mjs` (Formmodell); die Beispielteile
-  kommen fertig aus dem Schwesterprojekt openscad_parts.
+  Änderungen an der Geometrie die Modelle neu erzeugen: Form und
+  Beispielteile kommen fertig aus dem Schwesterprojekt openscad_parts
+  (`./render_die.sh --studio` ruft `scripts/3d-studio/build-die-stl.mjs`).
   Der Angussdesigner braucht keine erzeugten Modelle — seine Beispiele
   entstehen im Code (`js/runner/presets.js`). Nach Änderungen an Kamera,
   Steuerwerk oder Sichtbarkeit einmal in einem echten Browser nachsehen:

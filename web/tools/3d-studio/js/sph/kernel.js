@@ -12,7 +12,7 @@
 export const SUPPORT = 2;
 
 /** Normierung 21/(16πh³). */
-export function kernelNorm(h) {
+function kernelNorm(h) {
   return 21 / (16 * Math.PI * h * h * h);
 }
 

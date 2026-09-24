@@ -99,12 +99,14 @@ test('Kammer: in Ruhe unter Schwerkraft bleibt die Dichte bei ρ0 und die Schmel
   assert.ok(urms < 0.1, 'in Ruhe: u_rms ' + urms);
   assert.equal(s.gateArrival[0], NEVER, 'ohne Kolben kommt nichts am Laufkanal an');
 
-  /* Der Kolben mit 0,5 m/s: Kammer voll, wenn er etwa (1 − φ)·L gefahren ist. */
+  /* Der Kolben mit 0,5 m/s: Kammer voll, wenn er etwa (1 − φ)·L gefahren ist.
+     Zur Ruhe kommt die Kammer vorher, außerhalb des Laufs (wie engines/sph.js). */
   const su2 = D.sleeveSetup(spec, 4, { rho0: 2450, c0 });
   const s2 = createSphSolver(su2);
   const u = 0.5;
+  s2.settle(100, dt);
   const run = await runSph({
-    solver: s2, engine: 'cpu', dt, stepsMax: 3000, snapEvery: 250, settleSteps: 100,
+    solver: s2, engine: 'cpu', dt, stepsMax: 3000, snapEvery: 250,
     ctrlAt: step => ({ uIn: u, piston: u * step * dt }),
     onSnapshot: (snap, gateDone) => (gateDone[0] !== NEVER ? 'voll' : null)
   });

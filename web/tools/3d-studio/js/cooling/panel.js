@@ -3,7 +3,7 @@
    der Seitenleiste und in den title-Attributen standen, liegen in help.js. */
 
 import { numberRow, sliderRow, segRow, checkRow, kpiBlock, factsBlock, detailsBlock, heading, hintLine, warnLine } from '../studio/rows.js';
-import { DIRECTIONS } from './model.js';
+import { DIRECTIONS, DIST_RANGE } from './model.js';
 
 export const MODES = [
   {
@@ -13,8 +13,11 @@ export const MODES = [
        darunter sagt, welche Fläche. */
     id: 'flaeche', label: 'Fläche',
     hint: 'Die Abstandsfläche: überall derselbe Abstand zur Kavität; auf ihr sitzen die Spitzen der Kühlstiche und die Achsen der Kanäle.',
-    html: sliderRow({ ui: 'dist', label: 'Achsabstand zur Kavität', min: 5, max: 60, step: 1, value: 20, help: 'achsabstand' })
+    html: sliderRow({ ui: 'dist', label: 'Achsabstand zur Kavität', min: DIST_RANGE[0], max: DIST_RANGE[1], step: 1, value: 20, help: 'achsabstand' })
       + numberRow({ ui: 'cell', label: 'Zellkante', unit: 'mm', value: '6', help: 'zellkante' })
+      /* Auf der Werkbank kommt die Fläche aus dem gemeinsamen Feld: statt der
+         Zellkante sagt diese Zeile, woher sie kommt. */
+      + '<div class="st-hintline" data-ui="cell-shared" hidden></div>'
       + numberRow({ ui: 'min-wall', label: 'Mindest-Wandabstand', unit: 'mm', value: '10', help: 'mindestabstand' })
       + checkRow({ ui: 'min-wall-auto', label: 'Auto: Achsabstand − Ø/2', checked: true })
       + kpiBlock('shell-kpis')
@@ -58,8 +61,7 @@ export const MODES = [
    Kühlstich, „beide Enden" nur der Kanal. */
 export const GROUPS = ['Maße', 'Details'];
 export const INSPECTOR = kpiBlock('sel-kpis')
-  + '<div class="st-grouptabs" role="tablist" data-ui="sel-groups" aria-label="Auswahl">'
-  + GROUPS.map(n => '<button type="button" role="tab" data-group-tab="' + n + '">' + n + '</button>').join('') + '</div>'
+  + '<div class="st-grouptabs" role="tablist" data-ui="sel-groups" aria-label="Auswahl"></div>'
   + '<div data-group="Maße">'
   + numberRow({ ui: 'sel-d', label: 'Durchmesser', unit: 'mm', value: '20' })
   + '<div data-ui="sel-len-row">' + numberRow({ ui: 'sel-len', label: 'Länge', unit: 'mm', value: '200' }) + '</div>'

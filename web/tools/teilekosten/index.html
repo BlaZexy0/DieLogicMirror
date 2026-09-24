@@ -8,10 +8,13 @@
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
   <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
   <link rel="stylesheet" href="/shared/shared.css">
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/util.js"></script>
   <style>
     .tk-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 4rem; }
 
@@ -47,7 +50,7 @@
       flex: none;
     }
     .tk-field input:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
-    .tk-field input.linked { border-color: var(--primary); background: rgba(0,140,130,.06); }
+    .tk-field input.linked { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, transparent); }
 
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 0.9rem; margin-bottom: 1.2rem; }
     .kpi {
@@ -91,7 +94,6 @@
     .lever-note { font-size: 0.72rem; color: var(--muted); line-height: 1.55; margin-top: 0.6rem; }
 
     .tk-footnote { font-size: 0.75rem; color: var(--muted); margin-top: 0.8rem; line-height: 1.65; }
-    .hidden { display: none !important; }
     /* Eingabe außerhalb der eigenen min/max-Grenzen des Feldes. */
     .tk-field input.bad { border-color: var(--bad); background: var(--bad-bg); }
 
@@ -115,7 +117,7 @@
   <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:var(--radius);padding:0.7rem 1.1rem;margin-bottom:1.2rem;font-size:0.82rem;color:var(--muted);line-height:1.55;">
     <strong>Ausgangswerte:</strong> <span id="handoff-note">—</span>
   </div>
-  <div id="input-warn" class="hidden" style="background:var(--bad-bg);border:1px solid var(--warn-soft);border-left:3px solid var(--bad);border-radius:var(--radius);padding:0.7rem 1.1rem;margin-bottom:1.2rem;font-size:0.82rem;color:var(--bad);line-height:1.55;"></div>
+  <div id="input-warn" class="hidden" style="background:var(--bad-bg);border:1px solid var(--bad-border);border-left:3px solid var(--bad);border-radius:var(--radius);padding:0.7rem 1.1rem;margin-bottom:1.2rem;font-size:0.82rem;color:var(--bad-text);line-height:1.55;"></div>
 
   <!-- ── Eingaben ─────────────────────────────────────────── -->
   <div class="tk-inputs">
@@ -297,11 +299,8 @@
       render();
     });
   }
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
+  /* shared/util.js, vor diesem Script geladen. */
+  var escapeHtml = window.__DL_UTIL__.esc;
 
   function persist() {
     var v = {};
@@ -321,10 +320,7 @@
   document.getElementById('i-dg').addEventListener('input', render);
   applyLinks();
 
-  function fmt(x, d) {
-    if (!isFinite(x)) return '—';
-    return x.toLocaleString('de-DE', { maximumFractionDigits: d == null ? 2 : d });
-  }
+  function fmt(x, d) { return window.__DL_UTIL__.fmtZahl(x, d == null ? 2 : d); }
   function val(k) { return parseFloat(document.getElementById('i-' + k).value) || 0; }
 
   /* Die min/max-Attribute standen auf jedem Feld — und nichts las sie. Ein
@@ -369,24 +365,33 @@
   function put(id, html) { document.getElementById(id).innerHTML = html; }
   function putM(key, html) { document.querySelector('[data-m="' + key + '"]').innerHTML = html; }
 
-  /* Kostenblöcke mit Anzeige-Label und Farbe (Reihenfolge = Tabelle + Balken). */
+  /* Kostenblöcke mit Anzeige-Label und Farbe (Reihenfolge = Tabelle + Balken).
+     Die Farbe ist die Sachfarbe dessen, was da kostet, als NAME einer Rolle
+     der Palette; gelesen wird sie erst beim Zeichnen, damit ein Wechsel des
+     Farbschemas das Bild umfärbt. Das Metall in den Tönen der Schmelze
+     (Legierung, Krätze im Ton des Angusses, Umschmelzen in dem des
+     Überlaufs), Energie im Ton des Prozesses, Maschine und Personal in dem
+     der Maschine, die Amortisation in dem des Werkzeugs. Nichts davon ist
+     ein Urteil: keine Farbe der Ampel. */
   function blocksOf(r) {
     return [
-      ['Legierung (Neumetall im Teil)', r.matAlloy, P.primary],
-      ['Krätze- / Schmelzverlust', r.matLoss, P.warn],
-      ['Umschmelzen Kreislauf + Ausschuss', r.matRemelt, P.primaryLight],
-      ['Energie (Schmelzen, Warmhalten)', r.energy, P.gold],
-      ['Maschine + Personal', r.machine, P.dark3],
-      ['Werkzeugamortisation', r.tool, P.accent]
+      ['Legierung (Neumetall im Teil)', r.matAlloy, 'melt'],
+      ['Krätze- / Schmelzverlust', r.matLoss, 'runner'],
+      ['Umschmelzen Kreislauf + Ausschuss', r.matRemelt, 'overflow'],
+      ['Energie (Schmelzen, Warmhalten)', r.energy, 'process'],
+      ['Maschine + Personal', r.machine, 'machine'],
+      ['Werkzeugamortisation', r.tool, 'die']
     ];
   }
+  /* Farbfeld in einer Tabellenzeile: als CSS-Token, folgt dem Schema von selbst. */
+  function swatch(rolle) { return '<span class="swatch" style="background:var(' + P.cssName(rolle) + ')"></span>'; }
 
   function svgSplit(blocks, total) {
     var W = 480, H = 34, x = 0;
     var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" aria-label="Kostenaufteilung">';
     blocks.forEach(function (b) {
       var w = total > 0 ? Math.max(b[1], 0) / total * W : 0;
-      s += '<rect x="' + x + '" y="4" width="' + Math.max(w - 1.2, 0) + '" height="24" rx="3" fill="' + b[2] + '"/>';
+      s += '<rect x="' + x + '" y="4" width="' + Math.max(w - 1.2, 0) + '" height="24" rx="3" fill="' + P[b[2]] + '"/>';
       x += w;
     });
     return s + '</svg>';
@@ -394,7 +399,7 @@
 
   function svgCurve(v, r) {
     var W = 620, H = 320, L = 58, R = 20, T = 18, B = 40;
-    /* Der Bereich folgt dem Betriebspunkt. Fest [25, 90] s ließ den roten
+    /* Der Bereich folgt dem Betriebspunkt. Fest [25, 90] s ließ den
        Marker aus dem Bild laufen, sobald τ_z darunter oder darüber lag —
        bei 15 s stand er bei x = −25, bei 120 s bei x = 850 (Zeichenfläche
        58…600). Geklemmt wurde nur die Beschriftung. */
@@ -424,17 +429,29 @@
       s += '<text x="' + X(tt) + '" y="' + (H - B + 16) + '" text-anchor="middle" font-family="Arial" font-size="11" fill="' + P.muted + '">' + tt + '</text>';
     }
     s += '<text x="' + ((L + W - R) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-family="Arial" font-size="11.5" fill="' + P.muted + '">Zykluszeit t<tspan baseline-shift="sub" font-size="8.5">Z</tspan> in s</text>';
-    /* Kurve */
+    /* Kurve: die eine Größe des Bildes, in der Schrift (wie die Hauptkurve
+       der Diagramme, theme.chart.ink) */
     var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1); }).join('');
-    s += '<path d="' + d + '" fill="none" stroke="' + P.primary + '" stroke-width="2.2"/>';
-    /* aktueller Punkt */
-    s += '<circle cx="' + X(v.tz) + '" cy="' + Y(r.total) + '" r="5" fill="' + P.warn + '" stroke="' + P.surface + '" stroke-width="1.6"/>';
-    s += '<text x="' + Math.min(X(v.tz) + 10, W - R - 150) + '" y="' + (Y(r.total) - 13) + '" font-family="Arial" font-size="11.5" font-weight="700" fill="' + P.warn + '" paint-order="stroke" stroke="' + P.surface + '" stroke-width="3.5">'
+    s += '<path d="' + d + '" fill="none" stroke="' + P.text + '" stroke-width="2.2"/>';
+    /* aktueller Punkt: der Betriebspunkt, in der Hervorhebung */
+    s += '<circle cx="' + X(v.tz) + '" cy="' + Y(r.total) + '" r="5" fill="' + P.mark + '" stroke="' + P.surface + '" stroke-width="1.6"/>';
+    s += '<text x="' + Math.min(X(v.tz) + 10, W - R - 150) + '" y="' + (Y(r.total) - 13) + '" font-family="Arial" font-size="11.5" font-weight="700" fill="' + P.mark + '" paint-order="stroke" stroke="' + P.surface + '" stroke-width="3.5">'
       + fmt(v.tz, 1) + ' s → ' + fmt(r.total, 2) + ' €/Teil</text>';
     return s + '</svg>';
   }
 
   var letzterGueltigerStand = false;
+  /* Was zuletzt gezeichnet wurde: ein Wechsel des Farbschemas malt genau
+     das neu, auch wenn die Eingaben gerade ungültig sind (dann steht der
+     letzte gültige Stand abgeblendet da und soll trotzdem umfärben). */
+  var gezeichnet = null;
+
+  function zeichnen() {
+    if (!gezeichnet) return;
+    put('viz-split', svgSplit(gezeichnet.blocks, gezeichnet.r.total));
+    document.getElementById('viz-curve').innerHTML = svgCurve(gezeichnet.v, gezeichnet.r);
+  }
+  document.addEventListener('dielogic:scheme', zeichnen);
 
   function render() {
     persist();
@@ -474,24 +491,24 @@
 
     var rows = '', total = r.total;
     blocks.forEach(function (b) {
-      rows += '<tr><td><span class="swatch" style="background:' + b[2] + '"></span>' + b[0] + '</td>'
+      rows += '<tr><td>' + swatch(b[2]) + b[0] + '</td>'
         + '<td>' + fmt(b[1], 2) + '</td><td>' + fmt(100 * b[1] / total, 1) + ' %</td></tr>';
     });
     put('cost-body', rows);
     put('cost-foot', '<tr><td>Summe je Gutteil</td><td>' + fmt(total, 2) + ' €</td><td>100 %</td></tr>');
-    put('viz-split', svgSplit(blocks, total));
-    document.getElementById('viz-curve').innerHTML = svgCurve(v, r);
+    gezeichnet = { v: v, r: r, blocks: blocks };
+    zeichnen();
 
     /* Material-Hebel-Karte */
     var leverRows = [
-      ['Legierung (Neumetall)', ml.alloy, P.primary],
-      ['Krätze- / Schmelzverlust', ml.dross, P.warn],
-      ['Umschmelzen Ausschussanteil', ml.remelt, P.primaryLight],
-      ['Energie (Schmelzen, Warmhalten)', ml.energy, P.gold]
+      ['Legierung (Neumetall)', ml.alloy, 'melt'],
+      ['Krätze- / Schmelzverlust', ml.dross, 'runner'],
+      ['Umschmelzen Ausschussanteil', ml.remelt, 'overflow'],
+      ['Energie (Schmelzen, Warmhalten)', ml.energy, 'process']
     ];
     var lr = '';
     leverRows.forEach(function (b) {
-      lr += '<tr><td><span class="swatch" style="background:' + b[2] + '"></span>' + b[0] + '</td>'
+      lr += '<tr><td>' + swatch(b[2]) + b[0] + '</td>'
         + '<td>' + fmt(b[1] * 0.1, 4) + '</td><td>' + fmt(100 * b[1] / ml.total, 1) + ' %</td></tr>';
     });
     put('lever-body', lr);

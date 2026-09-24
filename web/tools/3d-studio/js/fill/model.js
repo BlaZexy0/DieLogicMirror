@@ -9,12 +9,18 @@
    Das Modul kennt kein Three.js; was daraus wird, rechnet
    js/fill/solve.js. */
 
-import { add, cross, norm, dot, rotate, rad } from '../runner/vec.js';
+import { add, normOr, clamp, wallFrame } from '../runner/vec.js';
+import { ELEMENT } from '../part/colors.js';
+import { checkFormat, fileIds, filePoint, fileNumber } from '../studio/planio.js';
 
 export const FORMAT = 'dielogic-fuellung';
 export const FORMAT_VERSION = 1;
 
-export const COLOR = '#e07b39';
+/** Die Farbe des Anschnitts: er gehört zum Werkzeug (Sachfarbe `die`,
+    js/part/colors.js), wie in den Diagrammen der Auslegung. Gelesen beim
+    Malen — so gilt immer das Schema von jetzt, gleich wer bei einem
+    Wechsel zuerst hinhört. */
+export const inletColor = () => ELEMENT.anschnitt;
 export const DEFAULTS = { w: 30, h: 2 };
 
 export const PARAM_META = {
@@ -22,6 +28,9 @@ export const PARAM_META = {
   h: { label: 'Höhe', min: 0.3, max: 40, unit: 'mm' },
   share: { label: 'Anteil', min: 1, max: 100, unit: '%' }
 };
+
+/** Der Regler der Dünnwand-Bremse (js/fill/panel.js) — und was eine Datei darf. */
+export const ALPHA_RANGE = [0, 1];
 
 /* Keine Füllzeit im Plan: die Rechnung kennt keine Zeit, und eine
    Umrechnung des Füllgrads in Millisekunden sagte nichts, was der
@@ -32,10 +41,7 @@ export function emptyPlan() {
 
 export const allItems = plan => Object.values(plan.items);
 
-const unit = v => {
-  const u = norm(v);
-  return (u[0] || u[1] || u[2]) ? u : [1, 0, 0];
-};
+const unit = v => normOr(v, [1, 0, 0]);
 
 /** Anschnitt anlegen: `normal` ist die nach AUSSEN gerichtete Normale. */
 export function addInlet(plan, pos, normal, params = {}) {
@@ -61,15 +67,11 @@ export function setRot(plan, id, deg) {
   if (it) it.rot = Math.max(-180, Math.min(180, Number(deg) || 0));
 }
 
-/** Dreibein: n nach außen, u quer (Breite), v längs (Höhe) — in der Wand. */
+/** Dreibein: n nach außen, u quer (Breite), v längs (Höhe) — in der Wand
+    (js/runner/vec.js, wallFrame: v ist dort d, u ist r). */
 export function frameOf(item) {
-  const n = unit(item.n);
-  const ref = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1];
-  let v = norm(cross(cross(n, ref), n));
-  const a = rad(item.rot || 0);
-  if (a) v = rotate(v, n, a);
-  const u = norm(cross(n, v));
-  return { o: item.pos, n, u, v };
+  const { n, d, r } = wallFrame(unit(item.n), item.rot);
+  return { o: item.pos, n, u: r, v: d };
 }
 
 export const areaOf = item => item.w * item.h;
@@ -92,7 +94,8 @@ export function shares(plan) {
   return out;
 }
 
-/** Die vier Ecken des Rechtecks in der Welt (für die Anzeige). */
+/** Die vier Ecken des Rechtecks in der Welt — die Tests messen daran das
+    Dreibein; den Körper im Bild baut js/fill/geom.js (inletBody). */
 export function corners(item) {
   const f = frameOf(item);
   const hw = item.w / 2, hh = item.h / 2;
@@ -113,23 +116,25 @@ export function toJSON(plan) {
   };
 }
 
+/* Kennungen, Punkte und Zahlen aus der Datei prüft js/studio/planio.js —
+   wie bei den anderen Plänen. */
 export function fromJSON(obj) {
-  if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Fülldatei (Kennung „' + FORMAT + '" fehlt).');
-  if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
+  checkFormat(obj, FORMAT, FORMAT_VERSION, 'Das ist keine Fülldatei (Kennung „' + FORMAT + '" fehlt).');
   const plan = emptyPlan();
-  if (Number.isFinite(obj.alpha)) plan.alpha = Math.max(0, Math.min(2, Number(obj.alpha)));
-  for (const raw of Array.isArray(obj.items) ? obj.items : []) {
-    const id = raw.id ? String(raw.id) : 'a' + (plan.seq + 1);
-    const n = v => (Array.isArray(v) ? v.map(Number) : [0, 0, 0]);
+  /* Werte in den Grenzen der Felder: der Regler von α reicht von 0 bis 1,
+     ein Anteil von 1 bis 100 % — mehr soll auch aus einer Datei nicht kommen. */
+  plan.alpha = fileNumber(obj.alpha, { min: ALPHA_RANGE[0], max: ALPHA_RANGE[1] }, plan.alpha);
+  const list = Array.isArray(obj.items) ? obj.items : [];
+  const { ids, seq } = fileIds(list, 'a', 'Anschnitt');
+  list.forEach((raw, i) => {
+    const id = ids[i];
     plan.items[id] = {
-      id, pos: n(raw.pos), n: unit(n(raw.n)), rot: Number(raw.rot) || 0,
-      w: Number(raw.w) || DEFAULTS.w, h: Number(raw.h) || DEFAULTS.h,
-      share: Number.isFinite(Number(raw.share)) && raw.share !== undefined && raw.share !== null ? Number(raw.share) : null
+      id, pos: filePoint(raw.pos, 'Anschnitt ' + id), n: unit((Array.isArray(raw.n) ? raw.n : [1, 0, 0]).map(Number)),
+      rot: clamp(Number(raw.rot) || 0, -180, 180),
+      w: fileNumber(raw.w, PARAM_META.w, DEFAULTS.w), h: fileNumber(raw.h, PARAM_META.h, DEFAULTS.h),
+      share: fileNumber(raw.share, PARAM_META.share, null)
     };
-    const num = +id.replace(/\D/g, '');
-    if (Number.isFinite(num)) plan.seq = Math.max(plan.seq, num);
-  }
+  });
+  plan.seq = seq;
   return plan;
 }
-
-export { dot };

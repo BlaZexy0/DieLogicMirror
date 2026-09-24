@@ -101,7 +101,8 @@ diese Datei nicht neu erzeugt, bekommt einen roten CI-Lauf.
 | Feld | Einheit | Vorgabe | Zulässig | Art |
 |---|---|---:|---|---|
 | Entlüftungsfläche `vent` | mm² | 800 | `> 0 … 100000` | plausibel |
-| Entlüftungsspalt `ventGap` | mm | 10 | `> 0 … 50` | plausibel |
+| Entlüftungskanäle Anzahl `ventCount` | — | 1 | `1 … 50` | plausibel |
+| Entlüftungskanal Höhe `ventHeight` | mm | 10 | `> 0 … 50` | plausibel |
 | Entlüftungskanal Länge `ventLen` | mm | 80 | `> 0 … 5000` | plausibel |
 | Enddruck Pumpe / Tank vor Schuss `vacPump` | mbar | 80 | `> 0 … 1013` | **hart** |
 | Vakuumtank-Volumen `vacTank` | L | 500 | `> 0 … 100000` | plausibel |
@@ -249,4 +250,4 @@ Zahlen „nicht belastbar" seien.
 
 ---
 
-_86 Felder, davon 12 mit harter Grenze · 16 Regeln zwischen Feldern · erzeugt aus `config/fields.js` und `shared/felddomaene.js`._
+_87 Felder, davon 12 mit harter Grenze · 16 Regeln zwischen Feldern · erzeugt aus `config/fields.js` und `shared/felddomaene.js`._

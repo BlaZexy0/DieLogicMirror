@@ -1,24 +1,20 @@
 /* Bedienelemente, die auf mehreren Seiten gleich aussehen und sich gleich
    verhalten sollen: Regler mit Wertanzeige, segmentierte Schalter,
-   Zahleneingaben, Kennzahlenblöcke, der „Rechnen"-Knopf mit seiner
-   Hinweiszeile und die Farbskala im Viewport.
+   Zahleneingaben, Kennzahlenblöcke und die Farbskala im Viewport.
 
-   Jeder Helfer nimmt ein ELEMENT oder eine id — die alten Seiten reichen
-   ids, die Werkzeuge des gemeinsamen Rahmens (js/studio/) ihre über
-   data-ui gefundenen Elemente. Zahlen kommen aus js/studio/format.js
-   (deutsch lesen und schreiben); die Namen bleiben hier exportiert, weil
-   die Rechenmodule und Tests sie von hier holen. */
+   Jeder Helfer nimmt ein ELEMENT oder eine id; die Werkzeuge des Rahmens
+   (js/studio/) reichen ihre über data-ui gefundenen Elemente. Zahlen kommen
+   aus js/studio/format.js (deutsch lesen und schreiben); fmt steht nur noch
+   für js/lbm/paint.js auch hier. */
 
 import { fmt, fmtPlain, parseNumber, clamp, rangeText } from '../studio/format.js';
 
-export { fmt, fmtPlain, parseNumber };
+export { fmt };
 
 export const $ = id => document.getElementById(id);
 
 /** Element oder id → Element. */
 export const el = x => (typeof x === 'string' ? $(x) : x);
-
-export const rgbCss = rgb => 'rgb(' + rgb.map(v => Math.round(v * 255)).join(',') + ')';
 
 /** Kennzahlenblock aus [Bezeichnung, Wert]-Paaren. Ohne das Element
     passiert nichts — nicht jede Seite zeigt jeden Block (die
@@ -60,29 +56,47 @@ export function segButtonSet(id, value) {
 }
 
 /** Regler; die Wertanzeige daneben heißt <id>-val — oder wird als
-    `out` mitgegeben. */
-export function slider(id, onChange, format, out) {
+    `out` mitgegeben. onChange(v) kommt bei jedem Zug — und einmal beim
+    Einbau mit dem Anfangswert, außer mit { fire: false }: dann ist der
+    Einbau keine Änderung, und niemand braucht ein „schon verdrahtet?".
+    Zurück kommt { el, set(v) }: set stellt Regler und Anzeige auf einen
+    Wert (nach dem Laden einer Datei, nach Rückgängig), ohne onChange. */
+export function slider(id, onChange, format, out, { fire = true } = {}) {
   const e = el(id);
   const o = out || (typeof id === 'string' ? $(id + '-val') : (e.parentNode && e.parentNode.querySelector('.val')));
-  const push = () => {
-    const v = +e.value;
-    if (o) o.textContent = format ? format(v) : String(v);
-    onChange(v);
-  };
-  e.addEventListener('input', push);
-  push();
-  return e;
+  const show = v => { if (o) o.textContent = format ? format(v) : String(v); };
+  e.addEventListener('input', () => { const v = +e.value; show(v); onChange(v); });
+  show(+e.value);
+  if (fire) onChange(+e.value);
+  return { el: e, set(v) { e.value = String(v); show(v); } };
 }
+
+/** Grenzen einer Lage im Auswahlfeld der Designer (mm): „12.500" liest sich
+    deutsch als 12 500 mm und läge ohne Hinweis zwölf Meter neben dem
+    Bauteil. */
+export const POS_LIMIT = { min: -5000, max: 5000, unit: 'mm' };
 
 /** Zahleneingabe: übernommen wird mit der Eingabetaste oder beim
     Verlassen. apply(wert) gibt den tatsächlich gesetzten Wert zurück
-    (geklemmt o. ä.), unlesbare Eingaben werden rot markiert und der
+    (geklemmt o. ä.), unlesbare Eingaben werden als „schlecht" markiert und der
     letzte gültige Wert bleibt stehen. Mit `min`/`max` klemmt der Helfer
     selbst und sagt es kurz dazu („auf 30 mm begrenzt"). */
 export function numberInput(id, apply, opts = {}) {
   const e = el(id);
   const { min, max, unit = '' } = opts;
+  /* Derselbe Text ist keine Eingabe. Ein Feld zeigt gerundet (die Lage auf
+     das Zehntel); ein Enter ohne Änderung las die Rundung wieder ein,
+     verschob das Element und legte einen Schritt in den Verlauf (Überlauf-
+     und Füllungsdesigner, 23.09.). Gemerkt wird der Text, solange das Feld
+     den Fokus hat: beim Hineingehen und nach jedem Übernehmen, so übernimmt
+     auch das „change", das der Browser nach einem Enter noch schickt,
+     nichts zweimal. Beim Verlassen verfällt er; was danach von außen ins
+     Feld geschrieben wird (Auswahl, Rückgängig), zählt beim nächsten Mal. */
+  let held = null;
+  e.addEventListener('focus', () => { held = e.value; });
+  e.addEventListener('blur', () => { held = null; });
   const run = () => {
+    if (held !== null && e.value === held) return;
     const v = parseNumber(e.value);
     if (v === null) { e.classList.add('bad'); return; }
     e.classList.remove('bad');
@@ -96,6 +110,7 @@ export function numberInput(id, apply, opts = {}) {
        beim nächsten „change"/Enter wieder ein (der Zuhörer hängt an beiden). */
     const set = apply(use);
     e.value = fmtPlain(set === undefined ? use : set);
+    if (held !== null) held = e.value;
   };
   e.addEventListener('change', run);
   e.addEventListener('keydown', ev => { if (ev.key === 'Enter') { run(); ev.preventDefault(); } });
@@ -119,30 +134,12 @@ export function clampNote(input, text) {
   noteTimers.set(input, setTimeout(() => { note.classList.remove('on'); note.textContent = ''; }, 2500));
 }
 
-/** „Rechnen"-Knopf samt Hinweiszeile (die Seiten ohne Rahmen). Gibt eine
-    Funktion zurück, die den Zustand setzt: { label, note, outline,
-    disabled, warn }. */
-export function runControl(btnId, noteId) {
-  const btn = el(btnId), note = el(noteId);
-  return spec => {
-    btn.textContent = spec.label;
-    btn.disabled = !!spec.disabled;
-    btn.className = 'btn ' + (spec.outline ? 'btn-outline' : 'btn-primary') + ' block-btn';
-    note.textContent = spec.note || '';
-    note.className = 'run-note' + (spec.warn ? ' stale' : '');
-  };
-}
-
 /* ── Farbskala im Viewport ───────────────────────────────────── */
 
 /** Stetiger Verlauf: fn(t) mit t von 0 (unten) bis 1 (oben) liefert die
     Farbe als CSS-Zeichenkette. */
 export const gradient = (fn, n = 24) =>
   Array.from({ length: n + 1 }, (_, i) => fn(i / n) + ' ' + (100 * i / n).toFixed(1) + '%');
-
-/** Abgestufter Verlauf: harte Kanten zwischen gleich breiten Bändern. */
-export const steps = colors => colors.map((c, i) =>
-  c + ' ' + (100 * i / colors.length).toFixed(0) + '% ' + (100 * (i + 1) / colors.length).toFixed(0) + '%');
 
 /** Skala setzen — oder mit null ausblenden. ticks laufen von oben nach
     unten, extra ist eine Zeile darunter (z. B. „Hinterschnitt"). */
@@ -152,7 +149,12 @@ export function colorbar(spec) {
   if (!spec) { e.classList.remove('on'); return; }
   e.classList.add('on');
   $('cb-title').textContent = spec.title;
-  $('cb-scale').style.background = 'linear-gradient(to top, ' + spec.stops.join(', ') + ')';
+  const scale = $('cb-scale');
+  scale.style.background = 'linear-gradient(to top, ' + spec.stops.join(', ') + ')';
+  /* Der Verlauf reicht unter den Rahmen: sonst wiederholt er sich dort, und
+     oben stünde ein Streifen vom unteren Ende (bei der Schräge ein Strich
+     „schlecht" über „gut"). */
+  scale.style.backgroundOrigin = 'border-box';
   $('cb-ticks').className = 'cb-ticks' + (spec.bands ? ' bands' : '');
   $('cb-ticks').innerHTML = spec.ticks.map(t => '<span>' + t + '</span>').join('');
   $('cb-extra').innerHTML = spec.extra || '';

@@ -1,6 +1,10 @@
 /* HPDC-Physik (portiert aus hpdc_math): Füllkammer, kritische Geschwindigkeit,
    Bewegungsprofil der Schusskurve und das komplette Schussmodell mit
-   Ereignissen und Prüfungen. Reine Rechenlogik, kein DOM. */
+   Ereignissen und Prüfungen. Dazu die abgeleiteten Größen, die Diagramme,
+   Kennzahlen, Kurvengenerator und Domänenprüfung teilen (Füllgrad,
+   NADCA-Füllzeit, spezifischer Gießdruck, Entlüftungsbedarf …): jede steht
+   hier genau einmal, statt in jedem Verbraucher neu hergeleitet zu werden.
+   Reine Rechenlogik, kein DOM. */
 
 import { fmt, seq } from './format.js';
 
@@ -9,8 +13,21 @@ const PI = Math.PI;
 /* ── Massen- und Geometrie-Helfer ── */
 export function total(v) { return v.part + v.runner + v.overflow; }
 export function afterGate(v) { return v.part + v.overflow; }
+export function doseMass(v) { return total(v) + v.biscuit; }                     // kg Dosiergewicht (inkl. Pressrest)
+export function doseVolume(v) { return doseMass(v) / v.density; }                // m³, flüssig dosiert
 export function pistonArea(v) { return 0.25 * PI * v.diam * v.diam; }           // mm²
 export function travel(m, v) { return 1e9 * (m / v.density) / pistonArea(v); }  // mm Flüssigsäule der Masse m
+
+/* Füllgrad φ (Anteil, nicht %) einer Kammer Ø D × L in mm; ohne Angabe die
+   gewählte Kammer. Eine Formel für Schussmodell, Domänenprüfung, Kurven-
+   generator, Kennzahlen, Füllkammer-Schema und die Füllgrad-Diagramme.
+   fillDiameter ist die Umkehrung: der Ø, der bei L den Füllgrad φ ergibt. */
+export function fillRatio(v, Dmm = v.diam, Lmm = v.length) {
+  return 1e9 * doseVolume(v) / (Lmm * (0.25 * PI * Dmm * Dmm));
+}
+export function fillDiameter(v, phi, Lmm = v.length) {
+  return Math.sqrt(1e9 * doseVolume(v) / (Lmm * 0.25 * PI * phi));
+}
 
 /* Zwei Dichten: In der Füllkammer steht die Schmelze flüssig (density) —
    Füllgrad, „Kammer voll" und die Säule im Kammerrohr rechnen damit. Die
@@ -21,7 +38,7 @@ export function travel(m, v) { return 1e9 * (m / v.density) / pistonArea(v); }  
    flüssig dosierten Masse und dem, was die Kavität beim Füllende flüssig
    aufnimmt, schiebt der Kolben in der Nachverdichtung nach; der Pressrest
    ist am Ende fest und wird mit ρ_sol gegen das Minimum geprüft.
-   Ohne Feststoffdichte (alte Projekte, direkte API-Nutzung) fällt alles
+   Ohne Feststoffdichte (alte Projekte, Presets ohne den Wert) fällt alles
    auf die Flüssigdichte zurück. */
 export function rhoSolidus(v) {
   if (!(v.densitySolid > 0)) return v.density;
@@ -34,14 +51,13 @@ export function biscuitSolid(v) { return cavityTravel(v.biscuit, v); }          
 /* Hub Nachverdichtung + Schwindung [mm]: vom Füllende (Kavität flüssig voll) bis zur
    Endlage (Pressrest fest) — speist Erstarrungsschwund von Kavität und Pressrest. */
 export function intensStroke(v) {
-  return travel(total(v) + v.biscuit, v) - cavityTravel(total(v), v) - biscuitSolid(v);
+  return travel(doseMass(v), v) - cavityTravel(total(v), v) - biscuitSolid(v);
 }
-/* Gießkraft im Betrieb [kN]: F_G = P_ein · A_h mit der Antriebskolbenfläche
-   A_h = F_max/P_max aus dem Maschinen-Preset (Gießkraft bei max. Akkumulator-
-   druck). Der eingestellte Druck ist auf das Maximum begrenzt; ohne gültige
-   Drücke gilt die Maximalkraft. */
-export function hydArea(v) { return v.pAcc > 0 ? v.injForce / v.pAcc * 100 : NaN; }   // cm² (kN/bar = 100 cm²)
-/* Gießkraft im Betrieb. Ohne gültige Drücke gab es bisher die MAXIMALE
+/* Antriebskolbenfläche A_h = F_max/P_max [cm²] aus dem Maschinen-Preset
+   (Gießkraft bei max. Akkumulatordruck); 1 kN/bar = 100 cm². */
+export function hydArea(v) { return v.pAcc > 0 ? v.injForce / v.pAcc * 100 : NaN; }
+/* Gießkraft im Betrieb [kN]: F_G = P_ein · A_h, der eingestellte Druck auf
+   das Maximum begrenzt. Ohne gültige Drücke gab es bisher die MAXIMALE
    Kraft zurück — die am wenigsten konservative Annahme, ausgerechnet dann,
    wenn die Eingaben unbrauchbar sind. Jetzt NaN: die Kennzahl zeigt „—"
    und die Prüfung schlägt an, statt eine Maschine größer aussehen zu
@@ -51,13 +67,88 @@ export function injForceEff(v) {
   if (!(v.pAccOp > 0) || !(v.pAcc > 0)) return NaN;
   return v.injForce * Math.min(v.pAccOp, v.pAcc) / v.pAcc;
 }
-/* Max. spezifischer Gießdruck der Maschine: effektive Gießkraft auf dem
-   kleinsten Kolben (Ø dmin) — obere Grenze der Druckachsen und für psel. In bar. */
-export function pMaxMachine(v) { return injForceEff(v) * 1e4 / (0.25 * PI * v.dmin * v.dmin); }
+/* Spezifischer Gießdruck [bar]: die wirksame Gießkraft auf der Kolbenfläche
+   Ø D in mm (p [bar] = 10⁴ · F [kN] / A [mm²]), ohne Angabe der montierte
+   Kolben — derselbe statische Metalldruck p₀ wie im PQ²-Diagramm. */
+export function specPressure(v, Dmm = v.diam) { return injForceEff(v) * 1e4 / (0.25 * PI * Dmm * Dmm); }
+/* Max. spezifischer Gießdruck der Maschine: auf dem kleinsten Kolben (Ø dmin)
+   — obere Grenze der Druckachsen und für psel. */
+export function pMaxMachine(v) { return specPressure(v, v.dmin); }
 
-/* Höhe eines Kreissegments mit Flächenanteil phi (bisektion). */
+/* Zuhaltung, gerechnet in shared/clampmodel.js (klassisches Script vor den
+   Modulen, window.__CLAMP_MODEL__): der Hebelfaktor k der Außermittigkeit
+   (ohne Säulenfeld 1) und der höchste Nachdruck, den die Zuhaltung hält,
+   p_max = F_s / (100 · S · k · A). */
+export function leverFactor(v) {
+  return (v.tieX > 0 && v.tieY > 0) ? globalThis.__CLAMP_MODEL__.leverK(v.eccX, v.eccY, v.tieX, v.tieY) : 1;
+}
+export function clampPMax(v) { return globalThis.__CLAMP_MODEL__.pMax(v.force, v.area, v.safety, leverFactor(v)); }
+/* Nötige Schließkraft [kN] beim Nachdruck psel, zentrisch: 100 · S · p · A. */
+export function clampForceNeeded(v) { return globalThis.__CLAMP_MODEL__.forceKN(v.psel, v.area, v.safety, 1); }
+
+/* Empfohlene Füllzeit nach NADCA [ms] bei der Wandstärke s (ohne Angabe die
+   des Bauteils): t_f = k · s · (T_guss − T_fließ + S_zul · Z) / (T_fließ −
+   T_form). Eine Formel für Diagramm, Kennzahl, Kurvengenerator und Auto-
+   Flächen, mit EINEM Nullschutz: ohne Gefälle zur Form oder ohne positive
+   Reserve gibt es keine Empfehlung (NaN), nie einen Wert. nadcaReserve ist
+   der Zähler, die thermische Reserve der Schmelze in °C. */
+export function nadcaReserve(v) { return v.Tcast - v.Tflow + v.Sfrac * v.Zconst; }
+export function nadcaFillMs(v, wall = v.wall) {
+  const den = v.Tflow - v.Tdie;
+  if (!(den > 0)) return NaN;
+  const t = v.kfill * wall * nadcaReserve(v) / den;
+  return t > 0 ? t : NaN;
+}
+
+/* Kontinuität ab Anschnitt: die Kavität von Bauteil + Überlauf (fest, ρ_sol)
+   ist V_a = A_K · v_p · t_f. Die Füllzeit [ms] bei der Kolbengeschwindig-
+   keit vp [m/s]; pistonSpeedFor ist dieselbe Beziehung nach v_p aufgelöst
+   und hat darum dieselbe Form. Kolben-Ø in mm, ohne Angabe der montierte. */
+export function fillTimeAt(v, vp, Dmm = v.diam) {
+  return 1e9 * cavityVolume(afterGate(v), v) / (vp * (0.25 * PI * Dmm * Dmm));
+}
+export function pistonSpeedFor(v, tMs, Dmm = v.diam) { return fillTimeAt(v, tMs, Dmm); }
+
+/* Entlüftungsbedarf [mm²]: die Luft der ganzen Kavität (fest, ρ_sol) muss in
+   der Füllzeit t_f [ms] mit höchstens v_luft,max durch die Entlüftung,
+   A = V_luft / (t_f · v_luft,max). NaN ohne Füllzeit oder Grenze. */
+export function ventAreaFor(v, tMs) {
+  if (!(tMs > 0) || !(v.vAirMax > 0)) return NaN;
+  return cavityVolume(total(v), v) / (tMs / 1000) / v.vAirMax * 1e6;
+}
+
+/* Entlüftungskanäle → der Spalt, mit dem die Luftsimulation rechnet (mm).
+   Die Fläche A ist die Summe über n Rechteckkanäle der Höhe h, jeder also
+   b = A/(n·h) breit, mit dem hydraulischen Ø 2·b·h/(b+h). Die Simulation
+   (core/airsim, an ihre Referenzwerte gebunden) kennt nur den breiten
+   Spalt s mit Ø 2·s; der gleichwertige Spalt ist deshalb b·h/(b+h). Für
+   b ≫ h (ein Waschbrett) ist das h. 0 ohne Fläche, Anzahl oder Höhe: dann
+   rechnet die Simulation ohne Kanal, nur mit der Öffnung. */
+export function ventGapEq(v) {
+  const n = v.ventCount, h = v.ventHeight;
+  if (!(v.vent > 0) || !(n > 0) || !(h > 0)) return 0;
+  const b = v.vent / (n * h);
+  return b * h / (b + h);
+}
+
+/* Zerstäubung nach Herman/NADCA (UPCT Gl. 2.38): J = v_a^1,71 · e_p · ρ,
+   empirisch in inch-pound-Einheiten (v_a in in/s, Anschnittdicke e_p in
+   inch, ρ in lb/in³). atomJ: der Faktor zur Anschnittgeschwindigkeit in
+   m/s; atomSpeed: die Umkehrung, die v_a-Grenze zu einem J. NaN ohne
+   Anschnittdicke oder Dichte. */
+export function atomJ(v, va) {
+  if (!isFinite(va) || !(va > 0) || !(v.gateTh > 0) || !(v.density > 0)) return NaN;
+  return Math.pow(va / 0.0254, 1.71) * (v.gateTh / 25.4) * (v.density * 3.6127e-5);
+}
+export function atomSpeed(v, J) {
+  if (!(J > 0) || !(v.gateTh > 0) || !(v.density > 0)) return NaN;
+  return Math.pow(J / ((v.gateTh / 25.4) * (v.density * 3.6127e-5)), 1 / 1.71) * 0.0254;
+}
+
+/* Höhe h/D eines Kreissegments mit Flächenanteil phi (Bisektion) — die
+   Füllhöhe der Kammer (auch im Schema, ui/chamber.js). */
 export function segHeight(phi) {
-  if (phi <= 0) return 0;
+  if (!(phi > 0)) return 0;
   if (phi >= 1) return 1;
   let lo = 0, hi = 1, mid = 0.5;
   for (let i = 0; i < 60; i++) {
@@ -103,6 +194,20 @@ export function vCrit(Dm, phi) {
   /* Mit derselben Konstante entnormieren, mit der die Tabelle normiert
      wurde — sie kommt aus dem Generator (vkritTable.js). */
   return Math.sqrt(VKRIT_GRAVITY * Dm) * tableF(Dm * 1000, phi);
+}
+
+/* Grenz-Ø der 1. Phase in m: der kleinste Ø in [lo, hi], bei dem v₁ ≤
+   v_krit(D, φ) gilt. v_krit steigt mit D, deshalb per Bisektion; −Infinity
+   heißt „schon lo reicht", Infinity „selbst hi ist zu langsam". Für das
+   (φ, λ)-Fenster und die v_krit-Heatmap. */
+export function critDiameter(v1, phi, lo, hi) {
+  if (vCrit(lo, phi) >= v1) return -Infinity;
+  if (vCrit(hi, phi) < v1) return Infinity;
+  for (let i = 0; i < 50; i++) {
+    const m = (lo + hi) / 2;
+    if (vCrit(m, phi) < v1) lo = m; else hi = m;
+  }
+  return (lo + hi) / 2;
 }
 
 /* Flachwassertheorie als Referenz (Deckenkriterium, DieLogic-Segment-Fit
@@ -192,6 +297,13 @@ export function buildProfile(pts) {
   };
 }
 
+/* v₁ bzw. v₂ (key) aus einem computeShot-Ergebnis; NaN ohne gültige Kurve —
+   fmt() zeigt dann „—", und jeder Vergleich mit > 0 fällt durch. */
+export function shotSpeed(shot, key) {
+  const x = shot && !shot.error ? shot[key] : NaN;
+  return x > 0 ? x : NaN;
+}
+
 /* Schussmodell: Füllkammer + Ereignisse + Prüfungen.
    v = Eingabewerte, curvePoints = Schusskurven-Wegpunkte. */
 export function computeShot(v, curvePoints) {
@@ -199,12 +311,12 @@ export function computeShot(v, curvePoints) {
   try { prof = buildProfile(curvePoints); }
   catch (e) { return { error: '' + e }; }
 
-  const A = 0.25 * PI * Math.pow(v.diam / 1000, 2), rho = v.density, L = v.length / 1000;
+  const A = 0.25 * PI * Math.pow(v.diam / 1000, 2), L = v.length / 1000;
   /* Kavitäten fest (ρ_sol), Dosierung flüssig (ρ) — siehe rhoSolidus */
   const rhoS = rhoSolidus(v);
   const Vr = v.runner / rhoS, Vp = v.part / rhoS, Vo = v.overflow / rhoS;
-  const Vdose = (v.runner + v.part + v.overflow + v.biscuit) / rho;
-  const phi = Vdose / (A * L);
+  const Vdose = doseVolume(v);
+  const phi = fillRatio(v);
   if (phi >= 1) return { error: 'Dosiervolumen (' + fmt(Vdose * 1e6) + ' cm³) übersteigt das Kammervolumen: Füllgrad ≥ 100 %.' };
   if (phi <= 0) return { error: 'Dosiervolumen ist null.' };
 
@@ -257,7 +369,7 @@ export function computeShot(v, curvePoints) {
      keit stehen nur unter Bedingungen darin. Wer über den Index zugreift,
      trifft je nach Eingabe eine andere Prüfung. */
   const checks = [];
-  const check = (id, ok, text) => checks.push(Object.assign([!!ok, text], { id: id, ok: !!ok, text: text }));
+  const check = (id, ok, text) => checks.push({ id, ok: !!ok, text });
   check('vcrit', v1 <= vcrit + 1e-9, '1. Phase: max. ' + fmt(v1) + ' m/s bis Kammer voll ' + (v1 <= vcrit ? '≤' : '>') + ' v_krit ' + fmt(vcrit) + ' m/s (CFD).');
   check('vmax', prof.vmax <= v.vmax + 1e-9, 'Spitzengeschwindigkeit ' + fmt(prof.vmax) + ' m/s ' + (prof.vmax <= v.vmax ? '≤' : '>') + ' Maschinenlimit ' + fmt(v.vmax) + ' m/s.');
   const aPk = Math.max(prof.amax, -prof.amin, 0);
@@ -266,7 +378,7 @@ export function computeShot(v, curvePoints) {
   check('endlage', prof.travel <= L - biscLen + 2e-3, 'Kurvenende ' + fmt(prof.travel * 1000) + ' mm bleibt vor der Endlage (Kammer ' + fmt(v.length) + ' mm − Pressrest fest ' + fmt(biscLen * 1000) + ' mm).');
   check('biscuit', biscLen * 1000 >= v.biscuitMin, 'Pressrest fest ' + fmt(biscLen * 1000) + ' mm ' + (biscLen * 1000 >= v.biscuitMin ? '≥' : '<') + ' Minimum ' + fmt(v.biscuitMin) + ' mm (Hub Nachverdichtung + Schwindung ' + fmt(intens * 1000) + ' mm).');
   /* Eigene Prüfung: die Pressrest-Zeile oben prüft nur die feste Länge und
-     blieb deshalb grün, während der Hub negativ war — ein Schuss, bei dem
+     blieb deshalb erfüllt, während der Hub negativ war — ein Schuss, bei dem
      Kavität und Pressrest fest mehr Platz brauchen, als die Dosierung
      flüssig hergibt. */
   check('intens', intens >= -1e-9, 'Nachverdichtung + Schwindung ' + fmt(intens * 1000) + ' mm '
@@ -277,7 +389,6 @@ export function computeShot(v, curvePoints) {
 
   return {
     profile: prof, samples: prof.samples(320), events: evs,
-    phi, sFill, vcrit, wave: waveSpeed(v.diam / 1000, phi),
-    gateR, totalStroke, biscLen, biscLiquid, intens, fill, v1, v2, Vdose, checks
+    phi, sFill, vcrit, gateR, totalStroke, biscLen, biscLiquid, intens, fill, v1, v2, Vdose, checks
   };
 }

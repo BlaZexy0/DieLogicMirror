@@ -16,47 +16,54 @@ import * as G from './graph.js';
 import { ALLOYS } from './flow.js';
 import { junctionPlan } from './sweep.js';
 import { sub, norm, len, dot } from './vec.js';
+import { fmt as fmtDe } from '../studio/format.js';
 
 /* Fenster der Anschnittgeschwindigkeit je Werkstoff, m/s. */
 const V_GATE = { al: [20, 60], mg: [30, 100], zn: [20, 50] };
 /* Ab hier wäscht der Strahl den Stahl des Laufkanals aus. */
 const V_RUNNER_MAX = 30;
 
-const fmt = (v, n = 1) => v.toLocaleString('de-DE', { maximumFractionDigits: n });
+/* Zahlen wie überall im Studio (js/studio/format.js) — hier mit einer
+   Nachkommastelle, wenn keine andere verlangt ist. */
+const fmt = (v, n = 1) => fmtDe(v, n);
 
 export function checkRules(g, net, flow, proc) {
   const out = [];
   const add = (level, title, text) => out.push({ level, title, text });
-  const alloy = ALLOYS[proc.alloy] ? proc.alloy : 'al';
+  const alloy = Object.hasOwn(ALLOYS, proc.alloy) ? proc.alloy : 'al';
 
-  /* ── 1. Der Querschnitt darf nicht wachsen ── */
+  /* ── 1. Der Querschnitt darf nicht wachsen ──
+     Gemessen an der ENGSTEN Stelle, die die Schmelze auf ihrem Weg vom
+     Pressrest bis hierher schon passiert hat, nicht am Schnitt davor: ein
+     Kanal, der auf 62 mm auf das Doppelte aufgeht, wächst je Millimeter um
+     gut ein Prozent, und ein Vergleich mit dem Nachbarn fand das nie. Ein
+     Prozent Spielraum gehört der Rundung der Maße. Der Weg beginnt am
+     Mantel des Pressrests (s0, js/runner/curve.js): was davor liegt, ist
+     Pressrest und kein Kanal. */
   let grow = null;
-  for (const e of net.edges) {
-    for (let i = 1; i < e.sections.length; i++) {
-      const a = e.sections[i - 1].area, b = e.sections[i].area;
-      if (b > a * 1.02) {
-        const rel = b / a - 1;
-        if (!grow || rel > grow.rel) grow = { rel, edge: e, s: e.sections[i].s, a, b };
+  const byFrom = new Map();
+  for (const e of net.edges) { if (!byFrom.has(e.fromId)) byFrom.set(e.fromId, []); byFrom.get(e.fromId).push(e); }
+  const follow = (id, min) => {
+    for (const e of byFrom.get(id) || []) {
+      let m = min;
+      for (const sec of e.sections) {
+        if (sec.s < (e.s0 || 0)) continue;
+        if (m && sec.area > m.area * 1.01) {
+          const rel = sec.area / m.area - 1;
+          if (!grow || rel > grow.rel) grow = { rel, edge: e, s: sec.s, a: m.area, b: sec.area };
+        }
+        if (!m || sec.area < m.area) m = { area: sec.area };
       }
+      follow(e.toId, m);
     }
-  }
-  /* Auch über die Knoten hinweg: was aus einer Kante herauskommt, darf
-     in der nächsten nicht wieder größer werden. */
-  for (const e of net.edges) {
-    const inEdge = net.edges.find(x => x.toId === e.fromId);
-    if (!inEdge) continue;
-    const a = inEdge.sections[inEdge.sections.length - 1].area;
-    const b = e.sections[0].area;
-    if (b > a * 1.02 && (!grow || b / a - 1 > grow.rel)) {
-      grow = { rel: b / a - 1, edge: e, s: 0, a, b, atNode: true };
-    }
-  }
+  };
+  follow(g.rootId, null);
   if (grow) {
     add('bad', 'Der Querschnitt wächst',
       'Zwischen ' + label(g, grow.edge.fromId) + ' und ' + label(g, grow.edge.toId)
-      + (grow.atNode ? ' schon am Übergang' : ' bei ' + fmt(grow.s, 0) + ' mm')
-      + ' nimmt der Querschnitt um ' + fmt(grow.rel * 100) + ' % zu (' + fmt(grow.a, 0)
-      + ' → ' + fmt(grow.b, 0) + ' mm²). Wo sich der Kanal erweitert, löst sich der Strahl '
+      + (grow.s < 1e-9 ? ' schon am Übergang' : ' bei ' + fmt(grow.s, 0) + ' mm')
+      + ' ist der Querschnitt um ' + fmt(grow.rel * 100) + ' % größer als an der engsten Stelle davor ('
+      + fmt(grow.a, 0) + ' → ' + fmt(grow.b, 0) + ' mm²). Wo sich der Kanal erweitert, löst sich der Strahl '
       + 'von der Wand ab und reißt Luft mit; der Querschnitt muss vom Pressrest bis zum '
       + 'Anschnitt stetig abnehmen.');
   } else {
@@ -64,12 +71,18 @@ export function checkRules(g, net, flow, proc) {
       'Vom Pressrest bis zu jedem Anschnitt wird der Kanal enger: der Strahl bleibt an der Wand.');
   }
 
-  /* ── 2. Verzweigungen: Summe der Abgänge ── */
+  /* ── 2. Verzweigungen: Summe der Abgänge ──
+     Die Abgänge mit ihrem EIGENEN Querschnitt hinter dem Hosenstück: am
+     Punkt, in den jeder läuft, bei einem Anschnitt am Ende des Laufkanals
+     vor dem Übergang. Der erste Schnitt jeder Kante taugt dafür nicht —
+     dort teilt js/runner/curve.js (startDims) den Zulauf nach der
+     Aufteilung, und die Summe war immer genau der Zulauf: die Regel konnte
+     nie anschlagen. */
   for (const n of G.allNodes(g)) {
     const kids = G.childrenOf(g, n.id);
     if (kids.length < 2) continue;
     const parent = net.nodeArea[n.id];
-    const sum = kids.reduce((a, k) => a + (net.nodeArea[k.id] ? areaAtStart(net, k.id) : 0), 0);
+    const sum = kids.reduce((a, k) => a + ownArea(net, k), 0);
     const ratio = sum / Math.max(parent.area, 1e-6);
     if (ratio > 1.02) {
       add('bad', 'Verzweigung öffnet sich',
@@ -81,7 +94,9 @@ export function checkRules(g, net, flow, proc) {
         + ' % des Zulaufquerschnitts übrig. Üblich sind 85 bis 100 %. Darunter '
         + 'beschleunigt der Strahl im Verteiler stärker als nötig.');
     } else {
-      add('ok', 'Verzweigung ' + label(g, n.id),
+      /* label() nennt die Art schon: „Abgänge an Verzweigung k3", nicht
+         „Verzweigung Verzweigung k3". */
+      add('ok', 'Abgänge an ' + label(g, n.id),
         fmt(ratio * 100, 0) + ' % des Zulaufquerschnitts gehen weiter, im üblichen Band.');
     }
   }
@@ -283,10 +298,9 @@ const label = (g, id) => {
   return (G.TYPES[n.type] || {}).label + ' ' + id;
 };
 
-const areaAtStart = (net, id) => {
-  const e = net.edges.find(x => x.toId === id);
-  return e ? e.sections[0].area : 0;
-};
+/* Der eigene Querschnitt eines Abgangs (Regel 2): der am Punkt, in den er
+   läuft — bei einem Anschnitt der Laufkanal kurz davor. */
+const ownArea = (net, k) => (k.type === 'gate' ? areaBeforeGate(net, k.id) : (net.nodeArea[k.id] || {}).area || 0);
 
 /* Querschnitt kurz VOR dem Anschnitt: der letzte Schnitt, der noch zum
    Laufkanal gehört (vor Übergang und Anschnittlänge). */

@@ -1,15 +1,17 @@
 /**
  * DieLogic – nav.js
- * Injiziert Site-Navigation und Footer. Vollständig selbstversorgend:
- * alle Nav-/Footer-Styles werden mit injiziert (feste Farbwerte, keine
- * CSS-Variablen) — dadurch funktioniert die Navigation auch auf den
- * Dashboard-Seiten (app/), die nur ihr eigenes main.css laden.
- * Läuft über file:// und http(s).
+ * Injiziert Site-Navigation und Footer. Ihre Styles liegen in
+ * shared/shared.css (Abschnitt „Navigation"), nicht mehr in diesem Skript:
+ * die Farben sind dort CSS-Variablen aus shared/palette.js, ein
+ * Farbschemawechsel (shared/schemes.js) schreibt sie um, ohne dass nav.js
+ * etwas neu bauen muss.
+ * Pfade sind root-absolut (/tools/…) und brauchen darum http(s), nicht
+ * file://.
  *
  * Einbindung von der Startseite:
  *   <script src="/shared/nav.js"></script>
  *
- * Einbindung aus app/ (eine Ebene tiefer, ohne Footer):
+ * Einbindung ohne Footer (die Werkzeugseiten):
  *   <script src="/shared/nav.js" data-footer="none"></script>
  *
  * Schmale Fenster (Tablet, Handy): passen die Links nicht mehr neben Logo
@@ -20,9 +22,30 @@
  */
 
 (function () {
-  /* Farben: shared/palette.js, Version: version.js — beide vor nav.js geladen. */
-  const C = window.__PALETTE__;
+  /* Version: shared/version.js, vor nav.js geladen. */
   const VERSION = 'v' + (window.__DL_VERSION__ || '?');
+
+  /* ── Eine Anfrage für /api/auth/me, für die ganze Seite ──────
+     Sonst fragen orgpresets.js, projectbar.js und (auf /konto/) die Seite
+     selbst je einzeln — bis zu dreimal derselbe Request. nav.js lädt auf
+     jeder Seite zuerst (im <head>) und legt das Ergebnis hier ab, noch vor
+     DOMContentLoaded; die anderen greifen darauf zu, statt selbst zu
+     fragen. Löst IMMER auf (kein reject): { status, ok, me }. status 0 =
+     kein Netz/Backend erreicht (fetch warf oder file://), sonst der
+     HTTP-Status; me ist der geparste Rumpf nur bei ok, sonst null. */
+  function fetchAuthMe() {
+    if (location.protocol === 'file:' || typeof fetch !== 'function') {
+      return Promise.resolve({ status: 0, ok: false, me: null });
+    }
+    return fetch('/api/auth/me', { credentials: 'same-origin' }).then(function (r) {
+      if (!r.ok) return { status: r.status, ok: false, me: null };
+      return r.json().then(
+        function (me) { return { status: r.status, ok: true, me: me }; },
+        function () { return { status: r.status, ok: false, me: null }; }
+      );
+    }, function () { return { status: 0, ok: false, me: null }; });
+  }
+  const authMe = window.__DL_AUTH_ME__ = fetchAuthMe();
 
   /* ── Diagramm-Einzelseiten (Reihenfolge = js/charts/registry.js) ── */
   const CHARTS = [
@@ -53,7 +76,7 @@
      Leiste; mit dem Studio daneben war das eine Reihe von neun, in der
      man die zwei Hälften nicht mehr sah. Beide Menüs haben dieselben
      Spalten: links das Ganze (Werkzeuge · Werkbank), rechts die vielen
-     Einzelnen (Diagramme · Einzeltools) — die 19 Diagramme und die acht
+     Einzelnen (Diagramme · Einzeltools) — die 19 Diagramme und die
      Werkzeuge des Studios in je zwei Spalten. */
   const NAV_LINKS = [
     { label: 'Auslegung', columns: [
@@ -98,15 +121,9 @@
     { label: 'Kontakt', href: '/recht/kontakt.html' },
   ];
 
-  /* ── Basispfad auflösen ───────────────────────────────────── */
+  /* ── Einbindung ───────────────────────────────────────────── */
   const scriptEl = document.currentScript;
-  const base = (scriptEl && scriptEl.dataset.base) ? scriptEl.dataset.base.replace(/\/+$/, '') : '';
   const wantFooter = !(scriptEl && scriptEl.dataset.footer === 'none');
-
-  function resolveHref(href) {
-    if (!href || href.startsWith('#') || href.startsWith('http')) return href;
-    return base + href;
-  }
 
   /* ── Aktiven Link erkennen ────────────────────────────────── */
   function isActive(href) {
@@ -119,7 +136,7 @@
     const norm = (p) => p.replace(/\/$/, '/index.html');
     let target;
     try {
-      target = new URL(resolveHref(hrefPath), window.location.href).pathname;
+      target = new URL(hrefPath, window.location.href).pathname;
     } catch (e) {
       return false;
     }
@@ -129,18 +146,25 @@
   }
 
   /* ── Logo (assets/logo.svg — Füllkammer + Schusskurve) ────── */
-  /* Wortmarke „DiehLogic": zwischen „Die" und „Logic" steht ein H, dessen
-     Stämme die Kammerwände sind und dessen Querbalken die Schmelze ist, die
-     als Pfeil durch den Anschnitt schießt (Motiv der Logo-Kachel). Das H
-     ist dekorativ — vorgelesen bleibt der Name „DieLogic". */
-  const H_GLYPH = `<svg class="dl-h-glyph" viewBox="0 0 100 100" aria-hidden="true"><rect x="0" y="0" width="17" height="100" rx="3" fill="${C.surface}"/><rect x="83" y="0" width="17" height="100" rx="3" fill="${C.surface}"/><path d="M17 38 L60 38 L60 26 L83 50 L60 74 L60 62 L17 62 Z" fill="${C.primary}"/></svg>`;
-  const WORDMARK = `Die${H_GLYPH}<span style="color:${C.primaryLight}">Logic</span>`;
+  /* Wortmarke „DiehLogic": zwischen „Die" und „Logic" steht das Zeichen der
+     Marke — zwei Formhälften, zur Teilung hin abgesetzt, dazwischen schießt
+     die Schmelze als Pfeil durch den Spalt. Die Silhouette bleibt ein H, aber
+     die Blöcke lesen sich als Werkzeug und nicht als Buchstabe im Wort
+     (dasselbe Zeichen trägt die Kachel in assets/logo.svg). Es ist
+     dekorativ — vorgelesen bleibt der Name „DieLogic".
+     Die Farben stehen als Klasse im Stylesheet, nicht als fill-Attribut:
+     wechselt das Farbschema (shared/schemes.js), wird nur das Stylesheet
+     neu gesetzt — das Markup bleibt stehen und färbt sich mit. */
+  const H_GLYPH = '<svg class="dl-h-glyph" viewBox="0 0 100 100" aria-hidden="true">'
+    + '<path class="dl-h-form" d="M0 0 H34 V34 H22 V66 H34 V100 H0 Z"/>'
+    + '<path class="dl-h-form" d="M100 0 H66 V34 H78 V66 H66 V100 H100 Z"/>'
+    + '<path class="dl-h-strahl" d="M22 40 L57 40 L57 27 L80 50 L57 73 L57 60 L22 60 Z"/></svg>';
+  const WORDMARK = `Die${H_GLYPH}<span class="dl-word-logic">Logic</span>`;
 
   /* ── Nav-Links bauen ──────────────────────────────────────── */
   const linkHtml = child => {
-    const href = resolveHref(child.href);
     const active = isActive(child.href) ? ' active' : '';
-    return `<a href="${href}" class="${active}">${child.label}</a>`;
+    return `<a href="${child.href}" class="${active}">${child.label}</a>`;
   };
 
   function buildNavLinks() {
@@ -169,485 +193,73 @@
         ${dropdown}
       </li>`;
       }
-      const href = resolveHref(item.href);
       const active = isActive(item.href) ? ' class="active"' : '';
-      return `<li><a href="${href}"${active}>${item.label}</a></li>`;
+      return `<li><a href="${item.href}"${active}>${item.label}</a></li>`;
     }).join('\n      ');
   }
 
   /* ── Footer bauen ─────────────────────────────────────────── */
+  /* Die Fußzeile baut ihre Auslegungs- und Theorie-Spalte aus denselben
+     Listen wie die Kopfleiste (NAV_LINKS, CHARTS) — vorher standen Werkzeuge
+     und Theorieseiten hier ein zweites bzw. drittes Mal von Hand, und die
+     Titel liefen auseinander (z. B. „Kritische Geschwindigkeit" hier gegen
+     „Kritische Kolbengeschwindigkeit" oben). Nur die Kartentexte ohne
+     Entsprechung in NAV_LINKS (Marketing-Zeile, Rechtliches, Fußzeile
+     unten) bleiben hier ausgeschrieben. */
   function buildFooter() {
-    const r = resolveHref;
+    const [dashboard, ...auslegungTools] = NAV_LINKS[0].columns[0].items;
+    const footerCharts = ['shotcurve', 'pq2', 'phild'].map(id => CHARTS.find(c => c[0] === id));
+    const theorie = NAV_LINKS.find(g => g.label === 'Theorie').children;
     return `<footer class="dl-footer">
   <div class="dl-footer-col">
     <div class="dl-footer-logo">
       <span class="dl-footer-wordmark">${WORDMARK}</span>
     </div>
     <p class="dl-footer-desc">Gießtechnische Auslegung für den Druckguss (HPDC): Schusskurve, PQ², Füllkammer, Zyklus und Teilekosten: ein Projekt, alle Werkzeuge.</p>
-    <p class="dl-footer-desc" style="margin-top:1rem;color:${C.ondark2};">© 2026 DieLogic</p>
+    <p class="dl-footer-desc dl-footer-copy">© 2026 DieLogic</p>
   </div>
 
   <div class="dl-footer-col">
     <h4>Auslegung</h4>
     <ul>
-      <li><a href="${r('/tools/auslegung/')}">Dashboard</a></li>
-      <li><a href="${r('/tools/auslegung/chart.html?id=shotcurve')}">Schusskurve</a></li>
-      <li><a href="${r('/tools/auslegung/chart.html?id=pq2')}">PQ²-Diagramm</a></li>
-      <li><a href="${r('/tools/auslegung/chart.html?id=phild')}">Auslegungsfenster (φ, λ)</a></li>
-      <li><a href="${r('/tools/sprengflaeche/')}">Sprengflächenanalyse</a></li>
-      <li><a href="${r('/tools/teilekosten/')}">Teilekosten-Kalkulation</a></li>
-      <li><a href="${r('/tools/zyklus/')}">Zyklusanalyse</a></li>
+      <li><a href="${dashboard.href}">${dashboard.label}</a></li>
+      ${footerCharts.map(([id, title]) => `<li><a href="/tools/auslegung/chart.html?id=${id}">${title}</a></li>`).join('\n      ')}
+      ${auslegungTools.map(t => `<li><a href="${t.href}">${t.label}</a></li>`).join('\n      ')}
     </ul>
   </div>
 
   <div class="dl-footer-col">
     <h4>3D-Studio und Wissen</h4>
     <ul>
-      <li><a href="${r('/tools/3d-studio/')}">3D-Studio: alle Werkzeuge</a></li>
-      <li><a href="${r('/index.html#diagramme')}">Alle 19 Diagramme</a></li>
-      <li><a href="${r('/theorie/pq2.html')}">Theorie: PQ²-Diagramm</a></li>
-      <li><a href="${r('/theorie/kritische-geschwindigkeit.html')}">Theorie: Kritische Geschwindigkeit</a></li>
-      <li><a href="${r('/theorie/kreissegmente.html')}">Theorie: Kreissegmente der Füllkammer</a></li>
-      <li><a href="${r('/theorie/nebenbedingungen.html')}">Theorie: Nebenbedingungen der Auslegung</a></li>
-      <li><a href="${r('/theorie/entlueftung-vakuum.html')}">Theorie: Entlüftung, Vakuum und die Restblase</a></li>
-      <li><a href="${r('/theorie/zuhaltung-sprengflaeche.html')}">Theorie: Zuhaltung und Sprengfläche</a></li>
+      <li><a href="/tools/3d-studio/">3D-Studio: alle Werkzeuge</a></li>
+      <li><a href="/index.html#diagramme">Alle ${CHARTS.length} Diagramme</a></li>
+      ${theorie.map(t => `<li><a href="${t.href}">Theorie: ${t.label}</a></li>`).join('\n      ')}
     </ul>
   </div>
 
   <div class="dl-footer-col">
     <h4>Rechtliches</h4>
     <ul>
-      <li><a href="${r('/recht/impressum.html')}">Impressum</a></li>
-      <li><a href="${r('/recht/datenschutz.html')}">Datenschutzerklärung</a></li>
-      <li><a href="${r('/recht/agb.html')}">AGB</a></li>
-      <li><a href="${r('/recht/widerruf.html')}">Widerrufsbelehrung</a></li>
-      <li><a href="${r('/recht/ueber-uns.html')}">Über uns</a></li>
-      <li><a href="${r('/recht/kontakt.html')}">Kontakt</a></li>
+      <li><a href="/recht/impressum.html">Impressum</a></li>
+      <li><a href="/recht/datenschutz.html">Datenschutzerklärung</a></li>
+      <li><a href="/recht/agb.html">AGB</a></li>
+      <li><a href="/recht/widerruf.html">Widerrufsbelehrung</a></li>
+      <li><a href="/recht/ueber-uns.html">Über uns</a></li>
+      <li><a href="/recht/kontakt.html">Kontakt</a></li>
     </ul>
   </div>
 
   <div class="dl-footer-bottom">
     DieLogic: Auslegungsrechnung und Visualisierung im Browser. Für Gießerei-Ingenieure gebaut.
-    &nbsp;·&nbsp; <a href="${r('/recht/impressum.html')}" style="color:${C.ondark2};">Impressum</a>
-    &nbsp;·&nbsp; <a href="${r('/recht/datenschutz.html')}" style="color:${C.ondark2};">Datenschutz</a>
+    &nbsp;·&nbsp; <a href="/recht/impressum.html">Impressum</a>
+    &nbsp;·&nbsp; <a href="/recht/datenschutz.html">Datenschutz</a>
   </div>
 </footer>`;
   }
 
-  /* ── Styles (selbstversorgend, feste Farbwerte) ───────────── */
-  const NAV_CSS = `
-.dl-nav {
-  height: 56px;
-  background: ${C.dark};
-  display: flex;
-  align-items: center;
-  padding: 0 2rem;
-  gap: 2rem;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  font-family: 'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  -webkit-font-smoothing: antialiased;
-  box-shadow: 0 1px 0 rgba(255,255,255,.06), 0 8px 24px -12px rgba(0,20,27,.5);
-}
-.dl-nav-logo {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  text-decoration: none;
-}
-.dl-h-glyph { height: 0.78em; width: auto; display: inline-block; margin: 0 0.1em; }
-.dl-nav-logo-text {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: white;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-}
-.dl-nav-version {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: rgba(255,255,255,.6);
-  align-self: flex-end;
-  padding-bottom: 0.15rem;
-  white-space: nowrap;
-}
-.dl-nav-links {
-  display: flex;
-  gap: 0;
-  list-style: none;
-  margin: 0 0 0 auto;
-  padding: 0;
-}
-.dl-nav-links a {
-  color: ${C.ondark};
-  font-size: 0.875rem;
-  font-weight: 500;
-  padding: 0 0.9rem;
-  text-decoration: none;
-  line-height: 56px;
-  transition: color 0.15s;
-  display: inline-block;
-  white-space: nowrap;
-  position: relative;
-}
-.dl-nav-links a:hover { color: white; }
-/* Aktiver Reiter: kurzer, runder Strich unter dem Wort statt einer Linie
-   über die ganze Reiterbreite. */
-.dl-nav-links > li > a.active,
-.dl-nav-group > .dl-nav-group-label.active { color: white; }
-.dl-nav-links > li > a.active::after,
-.dl-nav-group > .dl-nav-group-label.active::after {
-  content: '';
-  position: absolute;
-  left: 0.9rem; right: 0.9rem; bottom: 12px;
-  height: 2px;
-  border-radius: 2px;
-  background: ${C.primaryLight};
-}
-.dl-nav-cta { display: flex; gap: 0.5rem; margin-left: 1.5rem; }
-.dl-nav-cta a {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.42rem 0.95rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-decoration: none;
-  background: ${C.primary};
-  color: white;
-  transition: background 0.15s, box-shadow 0.15s;
-  white-space: nowrap;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
-}
-.dl-nav-cta a:hover { background: ${C.primary2}; box-shadow: 0 4px 14px -4px rgba(0,140,130,.7), inset 0 1px 0 rgba(255,255,255,.14); }
-
-.dl-nav-group { position: relative; display: inline-block; }
-.dl-nav-group > .dl-nav-group-label {
-  color: ${C.ondark};
-  font-size: 0.875rem;
-  font-family: inherit;
-  font-weight: 500;
-  padding: 0 0.9rem;
-  line-height: 56px;
-  cursor: pointer;
-  display: inline-block;
-  transition: color 0.15s;
-  background: none;
-  border: 0;
-  position: relative;
-}
-.dl-nav-group:hover > .dl-nav-group-label,
-.dl-nav-group.open > .dl-nav-group-label,
-.dl-nav-group > .dl-nav-group-label:focus-visible { color: white; }
-.dl-nav-dropdown {
-  position: absolute;
-  top: 56px;
-  left: 0;
-  background: ${C.dark2};
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 12px;
-  padding: 0.45rem;
-  min-width: 280px;
-  max-height: min(60vh, 520px);
-  overflow-y: auto;
-  display: none;
-  z-index: 200;
-  box-shadow: 0 16px 40px -8px rgba(0,20,27,.55), 0 0 0 1px rgba(0,0,0,.2);
-}
-/* Offen ist ein Menü genau dann, wenn es .open trägt — Maus, Klick,
-   Touch und Tastatur setzen die Klasse in wireDropdowns(), nicht :hover.
-   Zu heißt display: none, nicht visibility: hidden: Firefox trifft beim
-   Zeigertest (elementFromPoint) die Einträge eines unsichtbaren Menüs,
-   sobald darin eine Spaltenüberschrift über beide Spalten geht
-   (column-span: all) — auch mit pointer-events: none, Chromium nicht.
-   Auf dem Weg von „Auslegung" nach unten „betrat" der Zeiger so das
-   verborgene 3D-Studio-Menü, das darüberliegt, und das Menü schaltete um.
-   Ein Menü, das nicht dargestellt wird, kann niemand treffen. */
-.dl-nav-group.open .dl-nav-dropdown {
-  display: block;
-  animation: dl-menu-in 0.15s ease-out;
-}
-@keyframes dl-menu-in {
-  from { opacity: 0; transform: translateY(-4px); }
-}
-.dl-nav-dropdown a {
-  display: block;
-  padding: 0.45rem 0.8rem;
-  font-size: 0.84rem;
-  line-height: 1.4;
-  color: ${C.ondark};
-  text-decoration: none;
-  border-radius: 8px;
-}
-.dl-nav-dropdown a:hover { color: white; background: rgba(255,255,255,.07); }
-.dl-nav-dropdown a.active {
-  color: white;
-  background: rgba(0,140,130,.18);
-}
-
-.dl-footer {
-  background: ${C.dark};
-  color: ${C.ondark};
-  padding: 3.5rem 2rem 2rem;
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 2rem;
-  font-family: 'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-.dl-footer-logo {
-  color: white;
-  font-size: 1rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.5rem;
-}
-.dl-footer-desc { font-size: 0.8rem; line-height: 1.6; max-width: 240px; margin: 0; }
-.dl-footer-col h4 {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: white;
-  margin: 0 0 0.75rem;
-}
-.dl-footer-col ul { list-style: none; margin: 0; padding: 0; }
-.dl-footer-col li a {
-  font-size: 0.8rem;
-  color: ${C.ondark};
-  text-decoration: none;
-  display: block;
-  padding: 0.2rem 0;
-}
-.dl-footer-col li a:hover { color: white; }
-.dl-footer-bottom {
-  grid-column: 1 / -1;
-  border-top: 1px solid ${C.dark2};
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  font-size: 0.75rem;
-  color: ${C.ondark2};
-  text-align: center;
-}
-
-/* ── Schmale Leiste: Burger-Knopf und Klapp-Panel ───────────────────
-   Passen die Links nicht mehr neben Logo und „Anmelden", schaltet
-   nav.js die Klasse .dl-nav--compact — gemessen, nicht per fester
-   Breakpoint-Grenze, damit ein neuer Nav-Reiter die Leiste nicht
-   wieder sprengt. */
-.dl-nav-burger {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  margin-left: 0.4rem;
-  padding: 0;
-  border: 1px solid rgba(255,255,255,.2);
-  border-radius: 8px;
-  background: none;
-  color: ${C.ondark};
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.dl-nav-burger:hover { color: white; border-color: rgba(255,255,255,.45); }
-.dl-nav-burger span,
-.dl-nav-burger span::before,
-.dl-nav-burger span::after {
-  display: block;
-  width: 18px;
-  height: 2px;
-  border-radius: 2px;
-  background: currentColor;
-  transition: transform 0.18s, background 0.18s;
-}
-.dl-nav-burger span { position: relative; }
-.dl-nav-burger span::before,
-.dl-nav-burger span::after { content: ''; position: absolute; left: 0; }
-.dl-nav-burger span::before { top: -6px; }
-.dl-nav-burger span::after { top: 6px; }
-.dl-nav--open .dl-nav-burger span { background: transparent; }
-.dl-nav--open .dl-nav-burger span::before { transform: translateY(6px) rotate(45deg); }
-.dl-nav--open .dl-nav-burger span::after { transform: translateY(-6px) rotate(-45deg); }
-
-.dl-nav--compact .dl-nav-burger { display: inline-flex; }
-.dl-nav--compact .dl-nav-logo { flex: 0 1 auto; min-width: 0; overflow: hidden; }
-.dl-nav--compact .dl-nav-cta { margin-left: auto; }
-.dl-nav--compact .dl-nav-links {
-  display: none;
-  position: absolute;
-  top: 56px;
-  left: 0;
-  right: 0;
-  flex-direction: column;
-  margin: 0;
-  padding: 0.25rem 0 0.6rem;
-  background: ${C.dark2};
-  border-top: 1px solid ${C.dark3};
-  box-shadow: 0 12px 28px rgba(0,20,27,.45);
-  max-height: calc(100vh - 56px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  z-index: 200;
-}
-.dl-nav--compact.dl-nav--open .dl-nav-links { display: flex; }
-.dl-nav--compact .dl-nav-links > li { width: 100%; }
-.dl-nav--compact .dl-nav-links > li > a,
-.dl-nav--compact .dl-nav-group > .dl-nav-group-label {
-  display: flex;
-  align-items: center;
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 46px;
-  padding: 0.5rem 1.25rem;
-  font-size: 0.95rem;
-  line-height: 1.3;
-  text-align: left;
-}
-.dl-nav--compact .dl-nav-links > li > a.active {
-  border-left: 3px solid ${C.primary};
-  padding-left: calc(1.25rem - 3px);
-}
-.dl-nav--compact .dl-nav-links > li > a.active::after,
-.dl-nav--compact .dl-nav-group > .dl-nav-group-label.active::after { content: none; }
-.dl-nav--compact .dl-nav-group { display: block; position: static; }
-.dl-nav--compact .dl-nav-group > .dl-nav-group-label { justify-content: space-between; }
-.dl-nav--compact .dl-nav-group > .dl-nav-group-label::after {
-  content: '';
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  margin-left: 0.75rem;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: translateY(-2px) rotate(45deg);
-  transition: transform 0.18s;
-}
-.dl-nav--compact .dl-nav-group.open > .dl-nav-group-label::after {
-  transform: translateY(2px) rotate(-135deg);
-}
-.dl-nav--compact .dl-nav-dropdown {
-  display: none;
-  position: static;
-  animation: none;
-  min-width: 0;
-  max-height: none;
-  overflow: visible;
-  padding: 0.1rem 0 0.35rem;
-  border: 0;
-  border-radius: 0;
-  background: rgba(0,0,0,.18);
-  box-shadow: none;
-}
-.dl-nav--compact .dl-nav-group.open > .dl-nav-dropdown { display: block; }
-.dl-nav--compact .dl-nav-dropdown a {
-  display: flex;
-  align-items: center;
-  min-height: 40px;
-  padding: 0.5rem 1.25rem 0.5rem 2.25rem;
-  font-size: 0.88rem;
-}
-.dl-nav--compact .dl-nav-dropdown a.active {
-  background: none;
-  border-radius: 0;
-  border-left: 3px solid ${C.primary};
-  padding-left: calc(2.25rem - 3px);
-}
-
-/* Messzustand: die Links werden kurz aus dem Fluss genommen und in die
-   breite Darstellung gezwungen — so kennt nav.js ihre Naturbreite auch
-   dann, wenn die Leiste gerade zusammengeklappt ist. */
-.dl-nav--measuring .dl-nav-links {
-  display: flex !important;
-  position: absolute !important;
-  visibility: hidden !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: auto !important;
-  flex-direction: row !important;
-  width: auto !important;
-  max-width: none !important;
-  max-height: none !important;
-  overflow: visible !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  background: none !important;
-  box-shadow: none !important;
-}
-.dl-nav--measuring .dl-nav-group { display: inline-block !important; }
-.dl-nav--measuring .dl-nav-links > li > a,
-.dl-nav--measuring .dl-nav-group > .dl-nav-group-label {
-  display: inline-block !important;
-  width: auto !important;
-  min-height: 0 !important;
-  padding: 0 0.9rem !important;
-  font-size: 0.85rem !important;
-  line-height: 56px !important;
-}
-.dl-nav--measuring .dl-nav-group > .dl-nav-group-label::after { content: none !important; }
-.dl-nav--measuring .dl-nav-dropdown { display: none !important; }
-.dl-nav--measuring .dl-nav-cta { margin-left: 1.5rem !important; }
-.dl-nav--measuring .dl-nav-burger { display: none !important; }
-
-/* ── Menü mit Spalten („Auslegung"): Werkzeuge links, die Diagramme
-   rechts in zwei Spalten. Es hängt mit der rechten Kante am Reiter,
-   weil es breiter ist als der Platz rechts davon. ─────────────── */
-.dl-nav-group.open .dl-nav-dropdown--cols { display: flex; }
-.dl-nav-dropdown--cols {
-  align-items: flex-start;
-  left: auto;
-  right: 0;
-  min-width: 0;
-  max-height: none;
-  overflow: visible;
-  padding: 0.6rem 0.5rem 0.7rem;
-}
-.dl-nav-col { padding: 0 0.3rem; min-width: 200px; }
-.dl-nav-col + .dl-nav-col { border-left: 1px solid rgba(255,255,255,.08); }
-.dl-nav-col-title {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: ${C.ondark2};
-  padding: 0.3rem 0.8rem 0.45rem;
-  column-span: all;
-}
-.dl-nav-col--two { column-count: 2; column-gap: 0; }
-.dl-nav-col--two a { break-inside: avoid; }
-.dl-nav--compact .dl-nav-dropdown--cols { display: none; padding: 0.1rem 0 0.35rem; }
-.dl-nav--compact .dl-nav-group.open > .dl-nav-dropdown--cols { display: block; }
-.dl-nav--compact .dl-nav-col { padding: 0; min-width: 0; column-count: 1; }
-.dl-nav--compact .dl-nav-col + .dl-nav-col { border-left: 0; margin-top: 0.25rem; }
-.dl-nav--compact .dl-nav-col-title { padding: 0.45rem 1.25rem 0.2rem 2.25rem; }
-.dl-nav--compact .dl-nav-dropdown a { border-radius: 0; }
-
-@media (max-width: 960px) {
-  .dl-nav { padding: 0 1rem; gap: 1rem; }
-  .dl-footer { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 480px) {
-  .dl-nav { padding: 0 0.75rem; gap: 0.5rem; }
-  .dl-nav-version { display: none; }
-}
-`;
-
-  function injectStyles() {
-    const style = document.createElement('style');
-    style.id = 'dielogic-nav-styles';
-    style.textContent = NAV_CSS;
-    document.head.appendChild(style);
-  }
-
   function injectNav() {
     const navHTML = `<nav class="dl-nav">
-  <a class="dl-nav-logo" href="${resolveHref('/index.html')}">
+  <a class="dl-nav-logo" href="/index.html">
     <span class="dl-nav-logo-text">${WORDMARK}</span>
     <span class="dl-nav-version">${VERSION}</span>
   </a>
@@ -655,18 +267,13 @@
     ${buildNavLinks()}
   </ul>
   <div class="dl-nav-cta">
-    <a href="${resolveHref('/konto/')}" id="dl-nav-account">Anmelden</a>
+    <a href="/konto/" id="dl-nav-account">Anmelden</a>
   </div>
   <button type="button" class="dl-nav-burger" aria-label="Menü öffnen"
           aria-expanded="false" aria-controls="dl-nav-links"><span></span></button>
 </nav>`;
 
-    const mount = document.getElementById('nav-mount');
-    if (mount) {
-      mount.innerHTML = navHTML;
-    } else {
-      document.body.insertAdjacentHTML('afterbegin', navHTML);
-    }
+    document.body.insertAdjacentHTML('afterbegin', navHTML);
     wireDropdowns();
     wireCompact();
   }
@@ -897,23 +504,24 @@
 
   /* Angemeldet? Dann zeigt der Knopf den Namen statt „Anmelden" — nur
      hinter dem Backend (http/https); bei file:// oder statischem Hosting
-     bleibt der Link zur Konto-Seite. */
+     bleibt der Link zur Konto-Seite. Meldet das Ergebnis zusätzlich als
+     Ereignis „dielogic:auth": die Konto-Seite braucht dieselbe Antwort für
+     ihre eigene Anzeige und schrieb den Knopf bisher ein zweites Mal selbst
+     — ohne recompute() danach aufzurufen (die Leiste konnte dadurch zu
+     breit für „Anmelden" bleiben, statt aufs Burger-Menü umzuschalten). */
   function showAccount() {
-    if (location.protocol === 'file:' || typeof fetch !== 'function') return;
-    fetch(resolveHref('/api/auth/me'), { credentials: 'same-origin' })
-      .then(r => (r.ok ? r.json() : null))
-      .then(me => {
-        const a = document.getElementById('dl-nav-account');
-        if (!a) return;
-        if (me && me.user) a.textContent = '👤 ' + (me.user.name || me.user.email);
+    authMe.then(r => {
+      const a = document.getElementById('dl-nav-account');
+      if (a) {
+        if (r.ok && r.me && r.me.user) a.textContent = '👤 ' + (r.me.user.name || r.me.user.email);
         a.title = 'Projekte & Konto';
-        if (recompute) recompute();
-      })
-      .catch(() => {});
+      }
+      if (recompute) recompute();
+      if (typeof CustomEvent === 'function') document.dispatchEvent(new CustomEvent('dielogic:auth', { detail: r }));
+    });
   }
 
   function init() {
-    injectStyles();
     injectNav();
     if (wantFooter) injectFooter();
     showAccount();

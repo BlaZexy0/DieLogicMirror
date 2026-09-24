@@ -8,29 +8,18 @@
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
   <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
   <link rel="stylesheet" href="/shared/shared.css">
   <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
   <script defer src="/shared/vendor/katex/katex.min.js"></script>
-  <script defer src="/shared/vendor/katex/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore'})"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
-  <style>
-    .fig-wrap {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin: 1.25rem 0;
-    }
-    .fig-wrap img { display: block; width: 100%; border-radius: 6px 6px 0 0; }
-    .fig-cap {
-      font-size: 0.8rem;
-      color: var(--muted);
-      padding: 0.6rem 0.9rem;
-      border-top: 1px solid var(--border);
-      line-height: 1.5;
-    }
-  </style>
+  <script src="/shared/svgfarben.js"></script>
+  <!-- .fig-wrap / .fig-cap: shared/shared.css -->
 </head>
 <body>
 
@@ -125,7 +114,7 @@
           A<sub>ent,erf</sub>(t<sub>f</sub>) mit den Standardwerten (V<sub>luft</sub> ≈ 6,4 l,
           v<sub>luft,max</sub> = 150 m/s). Gestrichelt die vorhandene Entlüftung (800 mm²) und
           als Referenz die Anschnittfläche; schraffiert der Bereich, in dem der Bedarf die
-          vorhandene Fläche übersteigt. Der rote Punkt ist die Füllzeit der aktuellen
+          vorhandene Fläche übersteigt. Der Arbeitspunkt markiert die Füllzeit der aktuellen
           Schusskurve.</div>
       </div>
 
@@ -148,7 +137,7 @@
         <img src="/assets/theorie/vent.svg" alt="Entlüftungsgeschwindigkeit über der Kolbengeschwindigkeit" loading="lazy">
         <div class="fig-cap"><b>Die Übersetzung als Gerade:</b> v<sub>ent</sub> über
           v<sub>p</sub> mit der Steigung A<sub>K</sub>/A<sub>ent</sub> ≈ 22. Schraffiert der
-          Bereich über v<sub>luft,max</sub> = 150 m/s; der rote Punkt markiert v₂ der aktuellen
+          Bereich über v<sub>luft,max</sub> = 150 m/s; der Arbeitspunkt markiert v₂ der aktuellen
           Schusskurve.</div>
       </div>
 
@@ -176,12 +165,14 @@
             Auslegungsgröße, und nicht der Druck.</span></div>
       </div>
       <div class="prose">
-        <p>Eine reale Entlüftung ist aber keine Blende, sondern ein <b>Kanal</b>: ein breiter
-          Schlitz von einigen Zehntelmillimetern Höhe und einigen Zentimetern Länge bis zum
-          Ventil. Auf diesem Weg reibt die Luft an den Wänden, und mit dem Druck ändert sich,
-          <em>wie</em> sie strömt. Das Dashboard rechnet den Kanal deshalb mit Spalthöhe und
-          Kanallänge (hydraulischer Durchmesser 2·Spalt) als isotherme Rohrströmung mit
-          Wandreibung, und die kennt drei Regime:</p>
+        <p>Eine reale Entlüftung ist aber keine Blende, sondern ein <b>Kanal</b>: meist
+          einige Kanäle von etwa zehn Millimetern Höhe bis zum Ventil, beim Waschbrett ein
+          breiter Schlitz von wenigen Zehntelmillimetern. Auf diesem Weg reibt die Luft an
+          den Wänden, und mit dem Druck ändert sich, <em>wie</em> sie strömt. Das Dashboard
+          teilt die Entlüftungsfläche A deshalb auf n Rechteckkanäle der Höhe h auf (Breite
+          b = A/(n·h), hydraulischer Durchmesser 2·b·h/(b+h)) und rechnet sie mit der
+          Kanallänge als isotherme Rohrströmung mit Wandreibung, und die kennt drei
+          Regime:</p>
       </div>
       <div class="derivation-box">
         <div class="step"><span class="step-num">①</span>
@@ -201,7 +192,7 @@
             Ende der Absaugung, wenn Kammer- und Pumpendruck nur noch Millibar trennen,
             fällt die Reynolds-Zahl unter einige Hundert. Dann fließt die Luft nach
             Poiseuille: Der Massenstrom wächst mit der Differenz der <em>Quadrate</em> der
-            Drücke und mit der dritten Potenz der Spalthöhe. Die letzten Millibar zum
+            Drücke und mit der dritten Potenz der Kanalhöhe. Die letzten Millibar zum
             Enddruck sind darum die langsamsten.</span></div>
       </div>
       <div class="prose">
@@ -226,13 +217,13 @@
           <span><b>Sofort-Enddruck (ideal, ohne Drossel):</b> Ab dem Kolbenweg „Vakuum ab"
             springt der Druck augenblicklich auf den Enddruck (Standard 80 mbar) und bleibt
             dort, solange das Ventil offen ist: eine unendlich schnelle Pumpe hinter einem
-            unendlich weiten Kanal. Entlüftungsfläche, Spalt und Kanallänge gehen hier
+            unendlich weiten Kanal. Entlüftungsfläche, Kanäle und Kanallänge gehen hier
             nicht ein. Obere Abschätzung dessen, was eine Anlage überhaupt leisten
             könnte.</span></div>
         <div class="step"><span class="step-num">③</span>
           <span><b>Drossel → Pumpe (Enddruck konstant):</b> das Kanalmodell aus Abschnitt 4
             gegen eine Pumpe, die den Enddruck hält, egal wie viel Luft ankommt. Die
-            Absaugung muss durch Fläche, Spalt und Kanal; Choking, Reibung und der zähe
+            Absaugung muss durch Fläche und Kanäle; Choking, Reibung und der zähe
             Schluss begrenzen sie. Hier zahlt sich Fläche aus, nicht Pumpenleistung.</span></div>
         <div class="step"><span class="step-num">④</span>
           <span><b>Drossel → Vakuumtank (Druck steigt):</b> derselbe Kanal, aber dahinter ein
@@ -281,8 +272,8 @@
         <img src="/assets/theorie/bubble.svg" alt="Blasen-Durchmesserverhältnis über dem Nachdruck" loading="lazy">
         <div class="fig-cap"><b>Blasen-Ø-Verhältnis über dem Nachdruck</b> (ohne Vakuum,
           p<sub>vor</sub> = 1013 mbar): flach ansteigende Kubikwurzel bis zum maximalen
-          Nachdruck des montierten Kolbens; der rote Marker ist der gewählte metallseitige
-          Nachdruck (600 bar → Ø-Verhältnis ≈ 10,7). Im Dashboard kommt mit aktiver
+          Nachdruck des montierten Kolbens; der Arbeitspunkt ist der gewählte metallseitige
+          Nachdruck (600 bar → Ø-Verhältnis ≈ 10,3). Im Dashboard kommt mit aktiver
           Vakuum-Simulation eine zweite, höhere Kurve für den simulierten Restdruck
           p<sub>vor</sub> dazu; dieselbe Blase wird dann mehr als doppelt so stark
           komprimiert.</div>
@@ -338,7 +329,8 @@
             Gasdynamik (kompressible Strömung idealer Gase). Isotherme Rohrströmung mit
             Wandreibung und Choking bei M = 1/√γ: Shapiro, <i>The Dynamics and
             Thermodynamics of Compressible Fluid Flow</i>; Reibbeiwert aller Regime nach
-            Churchill (1977), laminarer Ast des breiten Spalts f = 96/Re.</li>
+            Churchill (1977), laminarer Ast des breiten Spalts f = 96/Re (für Kanäle, die
+            nicht viel breiter als hoch sind, eine Näherung).</li>
           <li>Grenzwerte und Faustregeln (v<sub>luft,max</sub>, Entlüftungs- zu
             Anschnittfläche, Füllzeit): Prozessfenster-Eingaben des Dashboards; Kriterien
             und Literaturbelege im Artikel

@@ -11,7 +11,8 @@ der Weg frei ist (verdeckungsgenau, nicht nur über den Winkel). Dann gelten fes
 die Richtung, die am meisten davon sieht, auch parallel (0°); was niemand sieht, ist
 <b>Hinterschnitt</b>. Splitter ohne Schräge, die keine Hälfte sieht, gehen an die Hälften und werden
 als Fläche gemeldet. Weder Formhälften noch Schieber müssen dafür vorhanden sein.</p>
-<p>Gerechnet wird sofort beim Laden: Es gibt keine Regler, die eine Bestätigung bräuchten. Die
+<p>Gerechnet wird auf Knopfdruck, mit <b>Entformung rechnen</b>: Bei großen Teilen dauert die
+Sichtbarkeit spürbar. Die
 <b>Formöffnung</b> wird automatisch so gewählt, dass Schieber und Hinterschnitte zusammen die kleinste
 Fläche haben; X, Y, Z lassen sich zum Vergleich fest setzen, das rechnet nur die Zuordnung neu
 (Millisekunden). Die Sichtbarkeit selbst, der teure Teil, hängt nur am Netz und lässt sich
@@ -22,13 +23,14 @@ abbrechen.</p>
 <p>Welche der beiden Hälften auf der Formöffnungsachse die bewegliche ist (Auswerferseite). Im
 Bauteilrahmen liegt die Trennebene bei z = 0 und die Form öffnet nach +z: Die +Seite ist die
 bewegliche. Liegt das Teil anders herum, hier tauschen; die Namen in Legende und Kennzahlen wandern
-mit.</p>
+mit, ebenso die Farben der Hälften (bewegliche Seite Rose, feste Seite Gelb).</p>
 </section>
 <section data-help-anchor="schraege">
 <h3>Entformschräge</h3>
 <p>Die Entformschräge ist <code>arcsin(n · d)</code> gegen die <em>zugewiesene</em> Richtung; eine
-Schieberfläche wird also gegen den Schieber bewertet. Der Grenzwert teilt die Farbskala: darunter
-rot, bis zum Dreifachen der Übergang, darüber unkritisch. Hinterschnitte bleiben dunkelrot.
+Schieberfläche wird also gegen den Schieber bewertet. Der Grenzwert teilt die Farbskala: darunter von
+Rot nach Gold, darüber von hellem zu sattem Grün, das ab dem Dreifachen bleibt. Hinterschnitte stehen
+in einem dunkleren „schlecht" da, die Skala nennt ihre Farbe.
 Wandstärken haben eine <a href="wandstaerke.html">eigene Seite</a>.</p>
 </section>
 <section data-help-anchor="netz">
@@ -45,15 +47,19 @@ Dreiecke.</p>
 Entformrichtung auseinander, wie beim Öffnen der Form. Jedes Formteil zeigt genau die Flächen, die es
 abbildet, von der Seite, von der man in die offene Form sieht. Der <b>Rand</b> ist die Trennlinie,
 ein Stück in die Form hinein gezogen: die Trennfläche in Andeutung, damit das Stück nicht wie Papier
-aussieht. Sechs Formteile sind möglich, zwei Hälften und vier Schieber; was kein Dreieck braucht,
-steht grau und kommt in der Form nicht vor. Hinterschnitte bleiben rot an ihrem Ort.</p>
+aussieht. Sechs Formteile sind möglich, zwei Hälften und vier Schieber: die bewegliche Seite in Rose,
+die feste in Gelb, jeder Schieber in der Farbe seiner Richtung (die Farbe der Achse, die Gegenrichtung
+heller). Wer die bewegliche Seite tauscht, tauscht die Farben der Hälften. Was kein Dreieck braucht, steht blass in der
+Liste und kommt in der Form nicht vor. Hinterschnitte bleiben als „schlecht" an ihrem Ort. Die Schalter
+gelten für dieses Bauteil und diese Formöffnung: Mit einer anderen Achse wird aus einem Schieber eine
+Hälfte, dann stehen wieder alle Formteile da.</p>
 </section>
 <section data-help-anchor="flaechen">
 <h3>Projizierte Flächen</h3>
 <p>Jedes Formteil projiziert in seine Öffnungsrichtung, gerastert als Vereinigung (nicht als Summe der
 Dreiecke): bei den Hälften die Fläche auf der Trennebene, bei einem Schieber die Fläche, gegen die er
 verriegelt werden muss. Die Silhouetten stehen jenseits des Bauteils in der jeweiligen
-Entformrichtung, Umriss und Füllung in der Regionsfarbe. Es sind Flächen, keine Kräfte.</p>
+Entformrichtung, Umriss und Füllung in der Farbe ihres Formteils. Es sind Flächen, keine Kräfte.</p>
 </section>
 <section data-help-anchor="haftung">
 <h3>Haftung</h3>
@@ -64,8 +70,8 @@ Fläche, Reibung gegen Schräge, und <code>g</code> aus dem Winkel zwischen Flä
 zum Schwerpunkt: 1 zum Schwerpunkt hin (Innenwand, Bohrung, die zugewandte Rippenflanke), 0 davon weg
 (Außenwand), ½ quer dazu (Flanken, die an der Form entlanggleiten).</p>
 <p>Die Summen beider Hälften sagen, auf welcher Seite das Teil bleibt. Das Bauteil trägt das Maß als
-Farbe; je Hälfte verteilt eine Karte es auf ihre Trennebene, beide auf derselben Skala, jenseits des
-Bauteils in ihrer Entformrichtung. Schieber und Hinterschnitte bleiben außen vor: Sie tragen nichts
+Farbe (blau schwach, rot stark; was nicht haftet, im Grau des Bauteils); je Hälfte verteilt eine Karte
+es auf ihre Trennebene, beide auf derselben Skala, jenseits des Bauteils in ihrer Entformrichtung. Schieber und Hinterschnitte bleiben außen vor: Sie tragen nichts
 zur Haftung an den Hälften bei. Eine grobe Näherung ohne Elastizität: Sie sagt WO im Verhältnis zu
 wo, keine Kraft in Newton.</p>
 </section>
@@ -76,7 +82,8 @@ wo, keine Kraft in Newton.</p>
 <li>Der Zeiger über dem Bauteil nennt unten links Region, Entformschräge, freie Richtungen und Haftung
 des Dreiecks darunter.</li>
 <li>Ziehen dreht, rechte Maustaste oder zwei Finger verschieben, das Rad zoomt zum Zeiger;
-<b>Einpassen</b> (F, Doppelklick ins Leere) holt das Bauteil ins Bild.</li>
+<b>Einpassen</b> (F, Doppelklick ins Leere) holt ins Bild, was der Modus zeigt: das Bauteil, bei den
+Formteilen die herausgefahrenen Stücke, bei Flächen und Haftung die Ebenen dazu.</li>
 <li>Die Einstellungen merkt sich der Browser je Bauteil; <b>Speichern</b> schreibt sie als JSON-Datei.</li>
 </ul>
 </section>`;

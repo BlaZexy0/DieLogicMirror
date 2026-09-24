@@ -50,8 +50,9 @@
       customer: str(meta.customer, 200), partNo: str(meta.partNo, 100),
       createdAt: t, updatedAt: t,
       design: null, geometry: null, cycle: null, cost: null,
-      /* Serverseite: { id, rev, savedAt } sobald das Projekt im Konto liegt;
-         dirty = lokale Änderungen seit dem letzten Speichern. */
+      /* Serverseite: { id, rev, savedAt, draftAt } sobald das Projekt im
+         Konto liegt (remoteOf); dirty = lokale Änderungen seit dem letzten
+         Speichern. */
       remote: null, dirty: false
     };
   }
@@ -466,6 +467,31 @@
     return put(p, true);
   }
 
+  /* ── Server ↔ Cache ───────────────────────────────────────────
+     Projektleiste (shared/projectbar.js) und Kontoseite übernehmen
+     Serverprojekte an mehreren Stellen; alle gehen hierdurch. Der
+     Serverbezug trägt den Stempel des Arbeitsstands (draftAt): ohne ihn
+     schickt das nächste Speichern base_draft_at: null, und der Server kann
+     einen neueren Stand eines anderen nicht mehr erkennen (die Kontoseite
+     vergaß ihn, 23.09.). */
+
+  /** Der Serverbezug aus einer Antwort von /api/projects (anlegen, laden). */
+  function remoteOf(r) {
+    return { id: r.id, rev: r.rev, savedAt: r.updated_at, draftAt: r.draft_at || null };
+  }
+
+  /** Ein Serverprojekt als lokales Dokument. `localId`: die Cache-id, unter
+      der es schon liegt (sonst neu); `data`: die Abschnitte, wenn nicht die
+      der Antwort (beim Anlegen die eigenen). */
+  function fromServer(full, localId, data) {
+    return Object.assign({ id: localId, name: full.name, description: full.description,
+      customer: full.customer, partNo: full.part_no, createdAt: full.created_at, updatedAt: full.updated_at,
+      remote: remoteOf(full), dirty: false }, data !== undefined ? (data || {}) : (full.data || {}));
+  }
+
+  /** Die Kopfdaten eines Dokuments, wie der Server sie nimmt. */
+  function metaOf(p) { return { name: p.name, description: p.description, customer: p.customer, part_no: p.partNo }; }
+
   /* Dateiname für den Export: „DieLogic_DieCastPartA.json" */
   function fileName(p) {
     p = p || current() || {};
@@ -473,12 +499,12 @@
   }
 
   var api = {
-    STORE_KEY: STORE_KEY, SECTIONS: SECTIONS, EVENT: EVENT, SCHEMA: SCHEMA,
+    STORE_KEY: STORE_KEY, EVENT: EVENT,
     init: init, list: list, current: current, get: get, select: select,
     create: create, update: update, duplicate: duplicate, remove: remove, put: put, markSaved: markSaved,
     bindAccount: bindAccount, clearAll: clearAll, storageOk: storageOk,
     getSection: getSection, setSection: setSection, mergeDesign: mergeDesign,
-    sectionsOf: sectionsOf, derived: derived,
+    sectionsOf: sectionsOf, derived: derived, remoteOf: remoteOf, fromServer: fromServer, metaOf: metaOf,
     exportJSON: exportJSON, importJSON: importJSON, fileName: fileName,
     _reset: function () { store = null; storage = null; }
   };

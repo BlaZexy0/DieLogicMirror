@@ -30,9 +30,10 @@ eingebundene KaTeX gerendert (`/shared/vendor/katex`, Helfer `eq()`/`tex()` in
 - **`chart.html?id=<diagramm-id>`** — Einzelseite pro Diagramm. Zeigt nur die
   Eingaben, die dieses Diagramm beeinflussen. Über das ↗-Symbol auf jeder
   Diagrammkarte bzw. das Auswahlmenü im Kopf erreichbar.
-  Gültige IDs: `shotcurve`, `pq2`, `phild`, `area`, `machine`, `clamp`,
-  `filltime`, `fill`, `vent`, `sleeve`, `gate`, `slowshot`, `pspec`, `window`,
-  `ftwall`, `gvwall`, `ventreq`, `yield`, `gatesol`.
+  Gültige IDs (Reihenfolge wie in `js/charts/registry.js`): `shotcurve`,
+  `pq2`, `phild`, `fill`, `sleeve`, `slowshot`, `gate`, `window`, `gvwall`,
+  `gatesol`, `bubble`, `filltime`, `ftwall`, `vent`, `ventreq`, `area`,
+  `machine`, `pspec`, `yield`.
 
 ## Konfiguration (ohne Code-Änderung, ohne Build)
 
@@ -52,14 +53,27 @@ zugehörige Feldgruppe ausgeblendet und eine Zusammenfassung unter dem Select
 zeigt die übernommenen Werte; Handänderung eines Preset-Felds springt zurück
 auf „manuell". Eine neue Domäne = Eintrag in `PRESET_DOMAINS`, Feldgruppe mit
 `preset: '<id>'`, config-Datei und Select in beiden HTML-Seiten.
-- **`/shared/palette.js`** — UI-Farben (einzige Quelle, siehe ../../README).
-- **`/shared/theme.js`** — Diagrammfarben (`window.__THEME__`): Serien, Marker,
-  Grenzlinien, Zielbänder, Farben/Linienfarben des (φ, λ)-Fensters und die
-  Heatmap-Farbrampe. Bei eigenen Farben auf Kontrast und unterscheidbare
-  Helligkeit der Serienfarben achten (Farbfehlsichtigkeit).
+- **`/shared/palette.js`** — alle Farben als Rollen (einzige Quelle, siehe
+  ../../README): Ampel (gut, knapp, schlecht) nur für Urteile, `mark` für
+  den Arbeitspunkt, Sachfarben für Dinge (Schmelze, Anguss, Werkzeug,
+  Maschine, Luft, Vakuum …). Dazu die festen Farbleisten (`LEISTEN`), in
+  jedem Schema gleich: `heat` für die Heatmaps.
+- **`/shared/theme.js`** — Diagrammfarben (`window.__THEME__`), aus der
+  Palette abgeleitet, keine eigenen Werte: `chart` (Rollen wie `ink`,
+  `die`, `machine`, `feasible`, `target`, `mask`, `mark`, `ref`),
+  `limits` (Farbe einer Grenze = ihre Familie: Maschine, Werkzeug, Prozess,
+  Luft, Schmelze), `map`/`mapLines` fürs (φ, λ)-Fenster, `heatStops`
+  (die feste Leiste `heat`, sieben Stützstellen aus Turbo) für die Heatmaps.
+- **`/shared/schemes.js`** — das Farbschema. Beim Wechsel füllt
+  `__THEME__.derive()` diese Objekte an Ort und Stelle neu und feuert
+  `dielogic:scheme`; die Seiten (`js/ui/page.js`: Dashboard, Einzelseite,
+  Werkbank) zeichnen darauf Diagramme und Füllkammer neu (die
+  Diagrammdaten tragen Rollennamen, `farbe()` in
+  `core/theme.js` löst sie beim Zeichnen auf). Varianten derselben Größe
+  unterscheiden Strichmuster (`dash`) und Deckkraft (`alpha`), nie
+  Mischfarben: aus diesen Diagrammen entstehen die Theorie-Bilder.
 
-Beide Dateien sind JSON-Daten in einer `window.__…`-Zuweisung und werden als
-klassische `<script>`-Tags geladen — ohne Build direkt editierbar.
+Alle drei Dateien sind klassische `<script>`-Tags und laufen ohne Build.
 
 ## Funktionen pro Diagrammkarte
 
@@ -112,32 +126,36 @@ css/main.css       Layout/Komponenten (Farb-Tokens aus /shared/shared.css)
 js/
   config/fields.js   Eingabegruppen: Keys, Labels, Einheiten, Defaults, Grenzen
   core/              Logik ohne DOM
-    format.js          Zahlformat (de-DE), seq()
-    physics.js         HPDC-Mathematik: Profil, Schussmodell, v_krit, Prüfungen
+    format.js          Zahlformat (de-DE), seq(), Indizes (subParts/subHTML)
+    physics.js         HPDC-Mathematik: Profil, Schussmodell, v_krit, Prüfungen —
+                       und jede abgeleitete Größe genau einmal (Füllgrad,
+                       NADCA-Füllzeit, spez. Gießdruck, Zuhaltung, Entlüftungsbedarf …)
     vkritTable.js      CFD-Tabelle der kritischen Geschwindigkeit (GENERIERT)
     curvegen.js        Schusskurven-Generatoren (Wegpunkte aus v₁/a₁/v₂/a₂)
     autofit.js         Auto-Schalter: ideale Anschnitt- und Entlüftungsfläche
     domain.js          die Eingabedomäne, angewandt (welche Werte überhaupt rechnen dürfen)
     limits.js          Grenzen (Ungleichungs-Restriktionen) als Daten
     state.js           zentraler Zustand + subscribe/notify
-    theme.js           übernimmt window.__THEME__
+    theme.js           dieselben Objekte wie window.__THEME__ + farbe(Rolle)
     airsim/            Luftsimulation der Füllkammer (siehe unten)
     simstore.js        hält ihr Ergebnis; rechnet bei jeder Eingabe synchron neu
   render/            Canvas-Renderer (theme-gesteuert)
-    base.js            Rahmen, Achsen, Marker, Farbrampe, Konturen
+    base.js            Rahmen, Achsen, Marker, Farbskala (ramp), Konturen
     limits.js          zeichnet Grenzen: Schraffuren, Zielbänder, Legende
     line.js / heat.js / map.js / donut.js / draw.js / hover.js
   charts/            EIN Modul pro Diagramm
     registry.js        Liste aller Diagramme (Reihenfolge = Anordnung)
     shotcurve.js …     je: id, Titel, inputs-Liste, calc(v, {shot})
   ui/                DOM-Aufbau und Interaktion
+    page.js            die Seitenpipeline: prüfen → rechnen → zeichnen, Dashboard-
+                       Aufbau, Seitenstart — für main.js, single.js und die Werkbank
     inputs.js          Sidebar, Validierung, Eingabe-Hervorhebung
     chamber.js         Füllkammer-Schema über den Kennwerten
     presets.js         Maschinen-Preset-Auswahl
     curveTable.js      Schusskurven-Editor
     kpis.js            Prüfpanels (Kennwerte, Prüfzeilen, Kolbenweg-Lineal, Prüfleiste)
     cards.js           Diagrammkarten (Tabs, Buttons, Zeichnen)
-    export.js          PNG / CSV / JSON-Speichern+Laden
+    export.js          PNG in die Zwischenablage (Diagramme, Füllkammer), Schusskurven-CSV
   main.js            Einstieg Dashboard (index.html)
   single.js          Einstieg Einzelseite (chart.html)
 ```
@@ -173,11 +191,12 @@ Eingabe: kein Ladezustand, kein veraltetes Ergebnis.
 
 ## Mathe-Erklärung auf Einzelseiten
 
-Ein Diagrammmodul kann optional `mathHTML()` (statisches Gleichungs-Markup) und
-`renderMath(el, v)` (füllt `data-m`-Platzhalter mit live berechneten Werten)
-exportieren. `chart.html` zeigt diesen Abschnitt dann als Karte
-„Mathematik & Herleitung" unter dem Diagramm — derzeit beim
-(φ, λ)-Auslegungsfenster umgesetzt. Das Auslegungsfenster wird geometrisch
+Jedes Diagrammmodul liefert `mathHTML()` (statisches Gleichungs-Markup, TeX
+über `eq()`/`tex()`) und `renderMath(el, v, shot)` (füllt die
+`data-m`-Platzhalter über `mathSetter(el)` aus `js/charts/mathfmt.js` mit
+live berechneten Werten — aus denselben Funktionen wie das Diagramm).
+`chart.html` zeigt diesen Abschnitt als Karte „Mathematik & Herleitung"
+unter dem Diagramm. Das (φ, λ)-Auslegungsfenster wird geometrisch
 gezeichnet: das machbare Band ist ein analytisch berechnetes Polygon
 (r_lo(φ) ≤ r ≤ r_hi(φ)), die Grenzen sind beschriftete Kurven, der Hover wertet
 die Formeln exakt aus.
@@ -200,12 +219,12 @@ ein Objekt pro Restriktion in `q.limits = [ … ]` (Erzeuger in
   (Band zwischen Kurven, z. B. das v_a-Fenster im Prozessfenster).
 - `refline(id, label, on, value)` — reine Referenzlinie ohne Fläche.
 - Maske: `limit(…, fn, { mask: true })` (Kurvenschranke auf `y`) — die
-  Ausschlussseite ist prinzipiell unerreichbar und wird deckend grau
-  gefüllt (`theme.chart.maskFill`), die Frontlinie durchgezogen gezeichnet;
+  Ausschlussseite ist prinzipiell unerreichbar und wird deckend gefüllt
+  (`theme.chart.mask`), die Frontlinie durchgezogen gezeichnet;
   alle anderen Grenzen des Diagramms werden auf die erreichbare Seite
   geclippt (z. B. die Hüllkurve im PQ²).
 - `q.feasible = 'Label'` — füllt die Schnittmenge der erlaubten Seiten
-  aller harten Grenzen grün (`theme.chart.okFill`, wie das machbare Band
+  aller harten Grenzen (`theme.chart.feasible`, wie das machbare Band
   im (φ, λ)-Fenster) und setzt einen Legendeneintrag. Optional teilt
   `q.feasibleSplit = { fn, label }` das Band an einer Kurve: oberhalb
   heller gefüllt (z. B. Maschinenlinie im PQ² — Fenster erfüllt, aber
@@ -216,9 +235,16 @@ ein Objekt pro Restriktion in `q.limits = [ … ]` (Erzeuger in
 
 Linien- und Heatmap-Renderer zeichnen daraus Linien, Schraffuren und die
 Legende (render/limits.js); der Heatmap-Hover meldet verletzte Grenzen am
-Mauspunkt. Die Farbe kommt aus `theme.limits[id]` (/shared/theme.js) —
-gleiche id = gleiche Farbe in jedem Diagramm. Für machbare Bänder zwischen
-mehreren Kurvenschranken (wie im (φ, λ)-Fenster) liefert
+Mauspunkt. Die Linie einer Grenze trägt die Farbe aus `theme.limits[id]`
+(/shared/theme.js): die Familie, aus der die Grenze stammt (Maschine,
+Werkzeug, Prozess, Luft, Schmelze), gleiche id = gleiche Farbe in jedem
+Diagramm. Glieder einer Familie unterscheidet das Strichmuster
+(`limitDash` in render/limits.js). Die ausgeschlossene Seite ist ein
+Sperrbereich und sieht in jedem Diagramm gleich aus: deckend in der
+Fläche, darüber rot schraffiert (`theme.chart.zone`, die Ampel
+„schlecht"), auch über einer Heatmap; der Legendeneintrag zeigt dieselbe
+Schraffur mit der Grenzlinie an der Kante. Für
+machbare Bänder zwischen mehreren Kurvenschranken (wie im (φ, λ)-Fenster) liefert
 `feasibleBand()` aus `js/core/limits.js` die Polygone samt bindender
 Grenze je Stützstelle. Eine neue Restriktion ist damit ein weiterer
 Eintrag im Array — Zeichnung, Legende und Hover kommen automatisch.
@@ -243,6 +269,9 @@ dann nicht mehr im Diagramm-Modul. Ausnahmen blieben ohnehin lokal
    `id`, `title`, `desc`, `inputs` (Feld-Keys für die Hervorhebung) und
    `calc(v, {shot})`, das eine Linien-/Heat-/Map-/Donut-Spezifikation liefert
    (siehe bestehende Module und `js/charts/helpers.js`); Grenzen als
-   `q.limits` (siehe oben).
+   `q.limits` (siehe oben). Größen wie Füllgrad oder Füllzeit kommen aus
+   `js/core/physics.js`, nicht neu hergeleitet; wer die Schusskurve liest
+   (`shotSpeed(shot, 'v2')` …), setzt `usesCurve: true`. Dazu `mathHTML()`
+   und `renderMath()` (siehe oben).
 2. In `js/charts/registry.js` importieren und in die Liste aufnehmen.
    Dashboard-Karte und Einzelseite entstehen automatisch.

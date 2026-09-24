@@ -17,7 +17,10 @@ import globals from 'globals';
 
 const CLASSIC = [
   'web/shared/*.js', 'web/shared/examples/*.js',
-  'web/tools/sprengflaeche/*.js', 'web/tools/teilekosten/*.js', 'web/tools/zyklus/*.js'
+  /* stl-math.js und stl-app.js sind ES-Module (import aus stl-math.js,
+     seit dem einen STL-Parser der Website) — stl-logic.js bleibt klassisch. */
+  'web/tools/sprengflaeche/stl-logic.js',
+  'web/tools/teilekosten/*.js', 'web/tools/zyklus/*.js'
 ];
 
 const rules = {
@@ -34,8 +37,8 @@ const rules = {
 export default [
   {
     ignores: [
-      'node_modules/**', '.venv/**', 'build/**', 'data/**',
-      'web/**/vendor/**', 'tests/browser/.results/**', 'tests/browser/report/**'
+      'node_modules/**', '.venv/**', 'data/**',
+      'web/**/vendor/**', 'tests/browser/.results/**'
     ]
   },
   {
@@ -50,7 +53,7 @@ export default [
     rules: { ...rules, 'no-undef': 'off' }
   },
   {
-    files: ['tests/**/*.mjs', 'tools/**/*.mjs', 'eslint.config.mjs'],
+    files: ['tests/**/*.mjs', 'scripts/**/*.mjs', 'eslint.config.mjs'],
     languageOptions: { ecmaVersion: 2024, sourceType: 'module', globals: { ...globals.node, ...globals.browser } },
     rules
   }

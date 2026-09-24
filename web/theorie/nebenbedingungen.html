@@ -8,30 +8,24 @@
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
   <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
   <link rel="stylesheet" href="/shared/shared.css">
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
   <!-- KaTeX -->
   <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
   <script defer src="/shared/vendor/katex/katex.min.js"></script>
-  <script defer src="/shared/vendor/katex/auto-render.min.js"
-    onload="renderMathInElement(document.body,{delimiters:[
-      {left:'$$',right:'$$',display:true},
-      {left:'$',right:'$',display:false}
-    ]})"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
   <style>
-    /* ── Seitenspezifische Extras (nicht in shared.css) ─────── */
-    .math-block {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--primary);
-      border-radius: var(--radius);
-      padding: 0.9rem 1.2rem;
-      margin: 1rem 0;
-      overflow-x: auto;
-      text-align: center;
-    }
+    /* ── Seitenspezifische Extras (.math-block-Basis: shared.css) ──
+       Etwas knapper als dort (viele kurze Formeln hintereinander); die
+       Zentrierung übernimmt KaTeX selbst (.katex-display), die Regel hier
+       war insofern ein Duplikat. */
+    .math-block { padding: 0.9rem 1.2rem; margin: 1rem 0; }
     .katex-display { overflow-x: auto; padding: 0.25rem 0; }
 
     /* Nebenbedingungs-Karten */
@@ -289,7 +283,7 @@
             v_{g,\max} \le 65\,\mathrm{m/s} \quad(\text{weitere Studien})$$
         </div>
         <p class="src"><b>Quellen für das Kriterium:</b> NADCA Product Specification Standards
-          (2015) · Miller, <i>Gating Manual</i> #512 (2006) · Hao et al., <i>Atomization in
+          (2015) · Miller, <i>Gating Manual</i> &#35;512 (2006) · Hao et al., <i>Atomization in
           HPDC</i> (1998).</p>
       </div>
 

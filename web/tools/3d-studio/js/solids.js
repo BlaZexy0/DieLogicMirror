@@ -1,13 +1,14 @@
 /* Primitive als Dreieckssuppen (Float64Array, 9 Werte je Dreieck) —
-   dieselbe Darstellung wie js/mesh.js und js/csg.js.
+   dieselbe Darstellung wie js/mesh.js.
 
-   Warum eigene Primitive statt BoxGeometry/CylinderGeometry: die Form
-   entsteht in js/components.js aus booleschen Operationen (Kavität,
-   Bohrungen, Taschen). Dafür braucht es geschlossene, konsistent
+   Warum eigene Primitive statt BoxGeometry/CylinderGeometry: der
+   Angussdesigner baut den Pressrest daraus (js/runner/sweep.js),
+   die Tests bauen Prüfteile, auch mit booleschen Operationen
+   (tests/web/3d-studio/csg.mjs). Dafür braucht es geschlossene, konsistent
    orientierte Netze und einen „aufgedickten" Zwilling jedes Körpers als
    Schneidwerkzeug (Parameter g = Luftspalt). Beides ist mit eigenen
-   Bausteinen einfacher als mit den Three.js-Generatoren — und es läuft
-   ohne Three.js, also auch in tests/ und tools/build-glb.mjs.
+   Bausteinen einfacher als mit den Three.js-Generatoren, und es läuft
+   ohne Three.js, also auch unter Node.
 
    Konvention: alles wird entlang +z um den Ursprung gebaut und mit
    place() gedreht/verschoben. Normalen zeigen nach außen. */
@@ -194,7 +195,66 @@ export function concat(list) {
   return out;
 }
 
+/* ── Polygone ────────────────────────────────────────────────── */
+
+/**
+ * Ohrenabschneiden: ein einfaches Polygon ([x, y] je Punkt, gegen den
+ * Uhrzeigersinn) in Indexdreiecke. Ein einspringendes Polygon wie die
+ * Deckfläche einer Gabelung im Anguss (ein Ypsilon mit Buchten) oder das
+ * Zickzack-Band eines Waschbretts lässt sich nicht fächern; abgeschnitten
+ * wird, was ein Ohr ist: eine konvexe Ecke, in deren Dreieck kein anderer
+ * Punkt liegt. Entartet der Rest (sich kreuzende Kanten), bleibt, was da
+ * ist — lieber ein kleines Loch als eine Ausnahme mitten im Zug. Der
+ * Angussdesigner (js/runner/sweep.js) und die Überläufe (js/vents/geom.js)
+ * hatten je eine Abschrift.
+ */
+export function earClip(poly) {
+  const n = poly.length;
+  const idx = [];
+  for (let i = 0; i < n; i++) idx.push(i);
+  const out = [];
+  const cross2 = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  const inside = (p, a, b, c) => cross2(a, b, p) >= -1e-12 && cross2(b, c, p) >= -1e-12 && cross2(c, a, p) >= -1e-12;
+  let guard = 0;
+  while (idx.length > 3 && guard++ < 20000) {
+    let cut = false;
+    for (let k = 0; k < idx.length; k++) {
+      const i0 = idx[(k + idx.length - 1) % idx.length], i1 = idx[k], i2 = idx[(k + 1) % idx.length];
+      const a = poly[i0], b = poly[i1], c = poly[i2];
+      if (cross2(a, b, c) <= 1e-12) continue;                 // einspringende oder gestreckte Ecke
+      let ok = true;
+      for (const j of idx) {
+        if (j === i0 || j === i1 || j === i2) continue;
+        if (inside(poly[j], a, b, c)) { ok = false; break; }
+      }
+      if (!ok) continue;
+      out.push([i0, i1, i2]);
+      idx.splice(k, 1);
+      cut = true;
+      break;
+    }
+    if (!cut) break;
+  }
+  if (idx.length === 3) out.push([idx[0], idx[1], idx[2]]);
+  return out;
+}
+
 /* ── Rohrzug ─────────────────────────────────────────────────── */
+
+/** Das Dreibein einer Achse: a die Achse (Einheitsvektor), u und v quer
+    dazu — gebaut über die Weltachse, die am wenigsten mit a zusammenfällt.
+    Für Rohre, Bohrungen und alles, was sich um eine Achse dreht. */
+export function perpFrame(axis) {
+  const len = Math.hypot(axis[0], axis[1], axis[2]);
+  const w = [axis[0] / len, axis[1] / len, axis[2] / len];
+  /* Hilfsachse, die nicht parallel zu w liegt. */
+  const h = Math.abs(w[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+  let u = [w[1] * h[2] - w[2] * h[1], w[2] * h[0] - w[0] * h[2], w[0] * h[1] - w[1] * h[0]];
+  const ul = Math.hypot(u[0], u[1], u[2]);
+  u = [u[0] / ul, u[1] / ul, u[2] / ul];
+  const v = [w[1] * u[2] - w[2] * u[1], w[2] * u[0] - w[0] * u[2], w[0] * u[1] - w[1] * u[0]];
+  return { a: w, u, v };
+}
 
 /* Zylinder zwischen aufeinanderfolgenden Punkten, Kugeln an den Knicken —
    die Temperierkreise. Arbeitet direkt in Weltkoordinaten. */
@@ -206,13 +266,7 @@ export function pipe(points, d, seg = 20) {
     const dir = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
     const len = Math.hypot(dir[0], dir[1], dir[2]);
     if (len < 1e-9) continue;
-    const w = [dir[0] / len, dir[1] / len, dir[2] / len];
-    /* Hilfsachse, die nicht parallel zu w liegt. */
-    const h = Math.abs(w[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
-    let u = [w[1] * h[2] - w[2] * h[1], w[2] * h[0] - w[0] * h[2], w[0] * h[1] - w[1] * h[0]];
-    const ul = Math.hypot(u[0], u[1], u[2]);
-    u = [u[0] / ul, u[1] / ul, u[2] / ul];
-    const v = [w[1] * u[2] - w[2] * u[1], w[2] * u[0] - w[0] * u[2], w[0] * u[1] - w[1] * u[0]];
+    const { a: w, u, v } = perpFrame(dir);
     const local = cyl(r, 0, len, seg);
     const out = new Float64Array(local.length);
     for (let k = 0; k < local.length; k += 3) {

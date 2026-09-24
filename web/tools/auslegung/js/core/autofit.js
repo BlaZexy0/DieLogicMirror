@@ -16,14 +16,7 @@
 import './curvegen.js';                        // Preparer-Reihenfolge: erst Kurve, dann Auto
 import { allFields } from '../config/fields.js';
 import { state, addPreparer } from './state.js';
-import { total, afterGate, pistonArea, computeShot, cavityVolume } from './physics.js';
-
-/* Empfohlene NADCA-Füllzeit [ms] (wie ftwall/curvegen). */
-function nadcaMs(v) {
-  const den = v.Tflow - v.Tdie;
-  const t = den !== 0 ? v.kfill * v.wall * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / den : NaN;
-  return t > 0 ? t : NaN;
-}
+import { afterGate, pistonArea, computeShot, cavityVolume, nadcaFillMs, ventAreaFor } from './physics.js';
 
 /* Ideale Anschnittfläche [mm²] oder NaN. shot optional (computeShot-Ergebnis). */
 export function idealGate(v, shot) {
@@ -35,7 +28,7 @@ export function idealGate(v, shot) {
   const evPart = shot && !shot.error && shot.events && shot.events[2];
   if (evPart && evPart.inP && evPart.v > 0) Q = A * evPart.v * 1000;
   else if (shot && !shot.error && shot.v2 > 0) Q = A * shot.v2 * 1000;
-  else { const tN = nadcaMs(v); Q = 1e9 * cavityVolume(afterGate(v), v) / (tN / 1000); }
+  else { const tN = nadcaFillMs(v); Q = 1e9 * cavityVolume(afterGate(v), v) / (tN / 1000); }
   if (!(Q > 0) || !isFinite(Q)) return NaN;
   return Math.max(10, Math.round(Q / (target * 1000) / 10) * 10);
 }
@@ -43,10 +36,9 @@ export function idealGate(v, shot) {
 /* Ideale Entlüftungsfläche [mm²] oder NaN. */
 export function idealVent(v, shot) {
   if (!(v.vAirMax > 0) || !(v.density > 0)) return NaN;
-  const tf = shot && !shot.error && shot.fill > 0 ? shot.fill : nadcaMs(v);
+  const tf = shot && !shot.error && shot.fill > 0 ? shot.fill : nadcaFillMs(v);
   if (!(tf > 0)) return NaN;
-  const Vm = cavityVolume(total(v), v);         // m³ verdrängte Luft (Kavität fest)
-  const A = Vm / (tf / 1000) / v.vAirMax * 1e6; // mm²
+  const A = ventAreaFor(v, tf);                 // mm², verdrängte Luft = Kavität fest
   return Math.max(10, Math.ceil(A / 10) * 10);
 }
 

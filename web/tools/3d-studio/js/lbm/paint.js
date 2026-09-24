@@ -20,29 +20,33 @@
    die die Seite ihr gibt — bis zur ersten Ankunft, denn danach herrschen
    Anschnitte bzw. Laufkanal, und der Weg davor wäre einfarbig blau.
    Das Maximum wäre ehrlicher, aber unbrauchbar: die schnellsten Zellen
-   sind immer die wenigen an der Engstelle. Was schneller ist, bleibt rot. */
+   sind immer die wenigen an der Engstelle. Was schneller ist, bleibt rot.
+
+   Gefärbt wird auf der ganzen Farbleiste `turbo` (js/part/colors.js, in
+   jedem Farbschema dieselbe), ruhig blau, schnell rot, als Tafel: die
+   Fläche hat Hunderttausende Ecken je Bild. Die Tafel ist linear, denn
+   three.js wandelt Punktfarben nicht. */
 
 import * as T from 'three';
-import { turbo } from '../part/colors.js';
-import { fmt, gradient, rgbCss } from '../ui/controls.js';
-
-/* Turbo als Tabelle: die Fläche hat Hunderttausende Ecken je Bild. */
-const LUT = new Float32Array(256 * 3);
-for (let k = 0; k < 256; k++) LUT.set(turbo(k / 255), 3 * k);
+import { lutLinear, scale } from '../part/colors.js';
+import { fmt, gradient } from '../ui/controls.js';
 
 /**
  * Das obere Ende der Skala in Gittereinheiten: das q-Quantil der
  * Geschwindigkeit über die Schmelzezellen eines Bildes, das größte über
- * alle Bilder.
+ * alle Bilder. Schmelze ist, was mindestens `minFill` (Byte) gefüllt ist:
+ * im Gitter jede Zelle mit Schmelze (die Front ist eine Zellschicht); das
+ * Metamodell gibt einen stetigen Schmelzeanteil, und seine Luft trägt eigene
+ * Geschwindigkeiten — dort zählt erst, was mehr als halb voll ist (128).
  */
-export function speedScale(snapshots, q = 0.99) {
+export function speedScale(snapshots, q = 0.99, minFill = 1) {
   const hist = new Uint32Array(256);
   let best = 0;
   for (const s of snapshots) {
     if (!(s.uMax > 0) || !s.speed) continue;
     hist.fill(0);
     let n = 0;
-    for (let i = 0; i < s.fill.length; i++) if (s.fill[i] > 0) { hist[s.speed[i]]++; n++; }
+    for (let i = 0; i < s.fill.length; i++) if (s.fill[i] >= minFill) { hist[s.speed[i]]++; n++; }
     let acc = 0, b = 255;
     for (let k = 0; k < 256; k++) { acc += hist[k]; if (acc >= q * n) { b = k; break; } }
     best = Math.max(best, b / 255 * s.uMax);
@@ -103,7 +107,8 @@ export function paintMelt(mesh, snap, domain, uScale) {
   const { fill } = snap;
   if (last.snap !== snap) last = { snap, dil: dilate(snap.speed, domain.dims) };
   const speed = last.dil;
-  const scale = uScale > 0 ? snap.uMax / (255 * uScale) : 0;   // Byte → Anteil der Skala
+  const LUT = lutLinear('turbo');
+  const toT = uScale > 0 ? snap.uMax / (255 * uScale) : 0;     // Byte → Anteil der Skala
   for (let v = 0; v < pos.count; v++) {
     const x = (p[3 * v] - o[0]) / h, y = (p[3 * v + 1] - o[1]) / h, z = (p[3 * v + 2] - o[2]) / h;
     const i0 = Math.max(0, Math.min(nx - 2, Math.floor(x)));
@@ -118,7 +123,7 @@ export function paintMelt(mesh, snap, domain, uScale) {
       const wt = (dx ? fx : 1 - fx) * (dy ? fy : 1 - fy) * (dz ? fz : 1 - fz);
       sum += wt * speed[idx]; w += wt;
     }
-    const t = w > 0 ? sum / w * scale : 0;
+    const t = w > 0 ? sum / w * toT : 0;
     const k = 3 * Math.max(0, Math.min(255, Math.round(t * 255)));
     arr[3 * v] = LUT[k]; arr[3 * v + 1] = LUT[k + 1]; arr[3 * v + 2] = LUT[k + 2];
   }
@@ -131,7 +136,7 @@ export function speedColorbar(vScale, until = 'des Laufs') {
   const v = vScale > 0 ? vScale : 0;
   return {
     title: 'Geschwindigkeit der Schmelze',
-    stops: gradient(t => rgbCss(turbo(t))),
+    stops: gradient(t => scale('turbo', t)),
     ticks: [fmt(v, 2) + ' m/s', fmt(v / 2, 2) + ' m/s', '0 m/s'],
     extra: 'Skala: 99. Perzentil ' + until + ' · Schnelleres bleibt rot'
   };

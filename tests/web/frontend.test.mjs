@@ -2,8 +2,9 @@
      node --test tests/web/frontend.test.mjs
 
    Geprüft werden:
-   1. stl-math.js gegen die Sollwerte der mitgelieferten Beispiel-STLs
-      (web/examples/{part,runner,biscuit,overflow}.stl)
+   1. stl-math.js gegen die Sollwerte kleiner Prüfkörper
+      (tests/web/fixtures/stl/{part,runner,biscuit,overflow}.stl) und das
+      Beispiel der Seite, die Gusstraube (web/examples/gusstraube.glb)
    2. das geteilte Zuhaltungs-Modell (shared/clampmodel.js)
    3. die Übernahme STL → Projekt (stl-logic.js handoffValues + project.mergeDesign)
    4. die Konsistenz von Felddefinition und Maschinen-Presets
@@ -22,7 +23,7 @@ import path from 'node:path';
 const require = createRequire(import.meta.url);
 const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
 
-const { parseSTL, meshVolume, meshArea, meshBounds } = require(path.join(site, 'tools/sprengflaeche/stl-math.js'));
+const { parseSTL, meshVolume, meshArea, meshBounds } = await import(pathToFileURL(path.join(site, 'tools/sprengflaeche/stl-math.js')));
 const logic = require(path.join(site, 'tools/sprengflaeche/stl-logic.js'));
 const kosten = require(path.join(site, 'tools/teilekosten/teilekosten-logic.js'));
 const zyklus = require(path.join(site, 'tools/zyklus/zyklus-logic.js'));
@@ -35,10 +36,10 @@ const MACHINES = globalThis.__MACHINES__.machines;
 
 const { allFields, groups, PRESET_KEYS } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
 
-/* inputs.js/curvegen.js ziehen core/state.js mit — der braucht das Projekt-Modul
+/* curvegen.js zieht core/state.js mit — der braucht das Projekt-Modul
    (project.js fällt ohne localStorage auf einen Leerspeicher zurück). */
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-const { checkValues, checkField } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/ui/inputs.js')));
+const { checkValues, checkField } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/domain.js')));
 const { generateCurve, fillTimeMs } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/curvegen.js')));
 const { computeShot, cavityVolume } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
 const { state, applyData } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/state.js')));
@@ -153,7 +154,7 @@ test('autofit: ideale Anschnitt- und Entlüftungsfläche aus Schusskurve bzw. NA
   closeTo(vp * 0.25 * Math.PI * v.diam ** 2 / Ag, 40, 0.6);
   /* dieselbe Größe, die die Prüfung bewertet: Anschnittgeschwindigkeit bei Bauteilfüllung im Band */
   const s2 = computeShot(Object.assign({}, v, { gate: Ag }), DEFAULT_CURVE.map(p => p.slice()));
-  assert.ok(s2.checks.find(c => /Anschnittgeschwindigkeit/.test(c[1]))[0], 'Prüfung muss bestehen');
+  assert.ok(s2.checks.find(c => c.id === 'gatev').ok, 'Prüfung muss bestehen');
   /* Entlüftung: Bedarf bei der Füllzeit der Kurve (Diagramm Entlüftungsbedarf), aufgerundet */
   const Vm = cavityVolume(v.part + v.runner + v.overflow, v);   // Kavität fest (ρ_sol), nicht flüssig
   const need = Vm / (shot.fill / 1000) / v.vAirMax * 1e6;
@@ -269,7 +270,36 @@ test('state: applyData verwirft ungültige Kurvenpunkte statt NaN zu übernehmen
   assert.deepEqual(state.curve, [[10, 0.2], [500, 3]], 'gültige Punkte bleiben, kaputte fliegen raus');
 });
 
+test('state: ein alter Entlüftungsspalt wird die Höhe eines Kanals', () => {
+  const vorher = { ventCount: state.values.ventCount, ventHeight: state.values.ventHeight };
+  state.values.ventCount = 5;
+  applyData({ values: { ventGap: 0.5 } });
+  assert.equal(state.values.ventHeight, 0.5);
+  assert.equal(state.values.ventCount, 1, 'der alte Spalt war ein Kanal');
+  applyData({ values: { ventGap: 0.5, ventCount: 4, ventHeight: 12 } });
+  assert.deepEqual([state.values.ventCount, state.values.ventHeight], [4, 12], 'neue Felder gewinnen, der Spalt zählt nicht');
+  Object.assign(state.values, vorher);
+});
+
 /* ── Navigation (web/shared/nav.js) ────────────────────────────────── */
+
+/* GET /api/auth/me lief bis zu dreimal je Seite (nav.js, orgpresets.js,
+   projectbar.js), auf /konto/ zweimal (nav.js, die Seite selbst). Jetzt
+   fragt nur noch nav.js wirklich; die anderen lesen window.__DL_AUTH_ME__
+   (von nav.js abgelegt, noch vor DOMContentLoaded — nav.js lädt auf jeder
+   Seite zuerst). */
+test('GET /api/auth/me: nur nav.js fragt wirklich, die anderen teilen sich die eine Antwort', () => {
+  const nav = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
+  assert.match(nav, /window\.__DL_AUTH_ME__ = fetchAuthMe\(\)/, 'nav.js legt die gemeinsame Anfrage nicht ab');
+  for (const [datei, quelle] of [
+    ['shared/orgpresets.js', readFileSync(path.join(site, 'shared/orgpresets.js'), 'utf8')],
+    ['shared/projectbar.js', readFileSync(path.join(site, 'shared/projectbar.js'), 'utf8')],
+    ['konto/index.html', readFileSync(path.join(site, 'konto/index.html'), 'utf8')],
+  ]) {
+    assert.doesNotMatch(quelle, /fetch\(['"]\/api\/auth\/me['"]/, `${datei}: fragt noch selbst`);
+    assert.match(quelle, /__DL_AUTH_ME__/, `${datei}: liest die gemeinsame Antwort nicht`);
+  }
+});
 
 test('nav: CHARTS-Liste entspricht der Registry (Ids, Titel, Reihenfolge)', () => {
   const src = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
@@ -317,20 +347,96 @@ test('nav: Auslegung und 3D-Studio sind Spaltenmenüs — Werkzeuge · Diagramme
 
 test('nav: schmale Leiste klappt zum Burger-Menü statt horizontal zu scrollen', () => {
   const src = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
-  assert.ok(!/\.dl-nav\s*\{[^}]*overflow-x:\s*auto/.test(src),
+  /* Die Regeln selbst liegen in shared.css (nav.js baut nur noch Markup). */
+  const css = readFileSync(path.join(site, 'shared/shared.css'), 'utf8');
+  assert.ok(!/\.dl-nav\s*\{[^}]*overflow-x:\s*auto/.test(css),
     'die Leiste darf nicht wieder horizontal scrollen — das versteckt „Anmelden"');
   assert.match(src, /class="dl-nav-burger"[\s\S]*?aria-controls="dl-nav-links"/,
     'Burger-Knopf fehlt oder zeigt nicht auf die Linkliste');
   assert.match(src, /<ul class="dl-nav-links" id="dl-nav-links">/,
     'die Linkliste braucht die id, auf die aria-controls zeigt');
   for (const cls of ['dl-nav--compact', 'dl-nav--open', 'dl-nav--measuring']) {
-    assert.ok(src.includes('.' + cls), `CSS-Regel für .${cls} fehlt`);
+    assert.ok(css.includes('.' + cls), `CSS-Regel für .${cls} fehlt`);
     assert.ok(src.includes("'" + cls + "'"), `nav.js schaltet ${cls} nicht`);
   }
 });
 
+/* Der Diagramm-Katalog der Startseite (index.html) ist eine zweite,
+   handgepflegte Liste neben CHARTS in nav.js — ungeschützt lief sie schon
+   einmal auseinander (andere Reihenfolge, 3 andere Titel). Der Test hält
+   nur die Ids als Menge gegen die Registry fest (Katalog zeigt jedes
+   Diagramm genau einmal); Reihenfolge und die eigenen, kürzeren
+   Kartentitel sind Layout der Startseite und bleiben ihr. */
+test('Landingpage: der Diagramm-Katalog zeigt jedes Diagramm der Registry genau einmal', () => {
+  const idx = readFileSync(path.join(site, 'index.html'), 'utf8');
+  const ids = [...idx.matchAll(/class="catalog-card" href="\/tools\/auslegung\/chart\.html\?id=([a-z0-9]+)"/g)]
+    .map(m => m[1]);
+  assert.deepEqual([...ids].sort(), charts.map(c => c.id).sort(),
+    'Katalog-Ids müssen genau die Ids der Registry sein, keine fehlt, keine zusätzliche');
+  assert.equal(new Set(ids).size, ids.length, 'keine Id steht doppelt im Katalog');
+});
+
+/* Die Zahl der Diagramme steht als Text an mehreren Stellen (Startseite,
+   Über-uns, der generierte Domänen-Report) — dort darf sie stehen bleiben
+   (kein Ort kann sie zur Laufzeit herleiten), aber dieser Test hält sie
+   gegen die Registry fest, statt sie unbemerkt auseinanderlaufen zu lassen. */
+test('die Zahl der Diagramme (19) stimmt überall mit der Registry überein', () => {
+  const n = String(charts.length);
+  const idx = readFileSync(path.join(site, 'index.html'), 'utf8');
+  for (const re of [
+    new RegExp('mit\\s*\\n\\s*' + n + ' gekoppelten Diagrammen'),
+    new RegExp('<strong>' + n + '</strong>gekoppelte Diagramme'),
+    new RegExp('alle ' + n + ' Diagramme\\b'),
+    new RegExp('<span class="tool-tag">' + n + ' Diagramme</span>'),
+    new RegExp('<h2 class="section-title">Alle ' + n + ' Diagramme</h2>'),
+    new RegExp('Dashboard mit allen ' + n + ' Diagrammen'),
+  ]) assert.match(idx, re, 'index.html: ' + re);
+
+  const ueberUns = readFileSync(path.join(site, 'recht/ueber-uns.html'), 'utf8');
+  assert.match(ueberUns, new RegExp('alle ' + n + ' Diagramme\\b'), 'recht/ueber-uns.html');
+
+  const genDomainDoc = readFileSync(path.join(site, '..', 'scripts/gen-domain-doc.mjs'), 'utf8');
+  assert.match(genDomainDoc, new RegExp('die Guards in allen ' + n + ' Diagrammen'), 'scripts/gen-domain-doc.mjs');
+});
+
+/* ── Kopf-Baustein aller Seiten (Meta, Manifest, KaTeX) ────────────────
+   Eine Reihe von Kopfzeilen wird je Seite kopiert — leicht, dass eine
+   Seite hinter den anderen zurückbleibt (Konto und alle sechs
+   Theorie-Seiten hatten kein Manifest, Konto kein theme-color, drei
+   Varianten des KaTeX-Aufrufs, davon eine ganz ohne errorColor). Deckt
+   web/*.html, konto, recht, theorie und die drei kleinen Werkzeuge ab —
+   Auslegung und 3D-Studio liegen bei den Agenten, die dort arbeiten. */
+const KOPF_SEITEN = [
+  'index.html', 'konto/index.html',
+  'recht/impressum.html', 'recht/datenschutz.html', 'recht/agb.html', 'recht/widerruf.html',
+  'recht/ueber-uns.html', 'recht/kontakt.html',
+  'theorie/pq2.html', 'theorie/kritische-geschwindigkeit.html', 'theorie/kreissegmente.html',
+  'theorie/nebenbedingungen.html', 'theorie/entlueftung-vakuum.html', 'theorie/zuhaltung-sprengflaeche.html',
+  'tools/sprengflaeche/index.html', 'tools/teilekosten/index.html', 'tools/zyklus/index.html'
+];
+
+test('jede Seite (außer Auslegung/3D-Studio) hat denselben Kopf-Baustein: theme-color, Manifest', () => {
+  for (const p of KOPF_SEITEN) {
+    const html = readFileSync(path.join(site, p), 'utf8');
+    assert.match(html, /<meta name="theme-color" content="#002733">/, p + ': theme-color fehlt oder weicht vom Standardschema ab');
+    assert.match(html, /<link rel="manifest" href="\/assets\/site\.webmanifest">/, p + ': Manifest fehlt');
+  }
+});
+
+test('KaTeX-Seiten laden /shared/katex-init.js, kein onload= mehr am Script-Tag', () => {
+  let geprüft = 0;
+  for (const p of KOPF_SEITEN) {
+    const html = readFileSync(path.join(site, p), 'utf8');
+    if (!html.includes('vendor/katex/auto-render.min.js')) continue;
+    assert.doesNotMatch(html, /onload\s*=\s*"\s*renderMathInElement/, p + ': KaTeX-Aufruf gehört nach shared/katex-init.js');
+    assert.match(html, /<script defer src="\/shared\/katex-init\.js"><\/script>/, p + ': lädt katex-init.js nicht');
+    geprüft++;
+  }
+  assert.equal(geprüft, 7, 'sieben Seiten binden KaTeX ein');
+});
+
 function loadAsset(name) {
-  const buf = readFileSync(path.join(site, 'examples', name));
+  const buf = readFileSync(path.join(site, '..', 'tests', 'web', 'fixtures', 'stl', name));
   return parseSTL(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
 }
 
@@ -343,12 +449,56 @@ const boundsEqual = (tris, min, max) => {
   for (let i = 0; i < 3; i++) { closeTo(b.min[i], min[i]); closeTo(b.max[i], max[i]); }
 };
 
+/* Eine unlesbare Koordinate ist eine beschädigte Datei, kein NaN-Volumen:
+   die Seite meldete sonst ein „nach innen gewickeltes" Netz. */
+test('stl-math: unlesbare Koordinaten werden abgewiesen, ASCII wie binär', () => {
+  const ascii = t => new TextEncoder().encode(t).buffer;
+  const kaputt = 'solid t\nfacet normal 0 0 1\nouter loop\nvertex - 0 0\nvertex 1 0 0\nvertex 0 1 0\nendloop\nendfacet\nendsolid t\n';
+  assert.throws(() => parseSTL(ascii(kaputt)), /Unlesbare Koordinate.*Punkt 1.*beschädigt/);
+  const heil = kaputt.replace('vertex - 0 0', 'vertex 0 0 0');
+  assert.equal(parseSTL(ascii(heil)).length, 9);
+  const bin = new ArrayBuffer(84 + 50);
+  const dv = new DataView(bin);
+  dv.setUint32(80, 1, true);
+  for (let k = 0; k < 9; k++) dv.setFloat32(84 + 12 + 4 * k, k === 4 ? NaN : k, true);
+  assert.throws(() => parseSTL(bin), /Unlesbare Koordinate.*Punkt 2/);
+});
+
 /* ── 1 · Beispiel-STLs gegen Sollwerte aus der Geometrie ─────── */
 /* Maße wie beim Erzeugen der Dateien: Quaderflächen/-volumina exakt,
    Zylinder als Prisma mit n = 48 Segmenten (r = 35, h = 25). */
 
 const DENSITY = 2700; // kg/m³, Default der Seite
 const massKg = (volMm3) => volMm3 * DENSITY * 1e-9;
+
+/* Das Beispiel der Seite: die Gusstraube der Beispielform (3D-Studio), vier
+   Netze, deren Knotennamen die Rolle sagen (stl-app.js ROLLE_AUS_NAME). Der
+   Pressrest ist der Zylinder aus der OpenSCAD-Quelle: 64-Eck r = 65 mm,
+   20 mm dick (dazu die 0,01-mm-Haut des Angusses über ihm), dieselben
+   Stücke wie castRunner und castBiscuit in assets/die.glb; der Anguss
+   reicht nicht in den Kreis des Pressrests. */
+test('gusstraube.glb: vier Teile mit Rolle im Namen, Pressrest wie in der Quelle', async () => {
+  const { readGLBMeshes, isGLB } = await import(pathToFileURL(path.join(site, 'tools/3d-studio/js/part/glbio.js')));
+  const buf = readFileSync(path.join(site, 'examples', 'gusstraube.glb'));
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  assert.ok(isGLB(ab));
+  const netze = Object.fromEntries(readGLBMeshes(ab).map(m => [m.name, m.tris]));
+  assert.deepEqual(Object.keys(netze).sort(), ['Anguss', 'Bauteil', 'Pressrest', 'Überläufe']);
+  const cm3 = n => meshVolume(netze[n]) / 1000;
+  closeTo(cm3('Bauteil'), 1333.60, 1e-3);
+  closeTo(cm3('Überläufe'), 71.93, 1e-3);
+  closeTo(cm3('Anguss') + cm3('Pressrest'), 326.53, 1e-3);          // das frühere eine Stück der Form
+  const vieleck = 32 * 65 * 65 * Math.sin(2 * Math.PI / 64);        // mm², Fläche des 64-Ecks
+  closeTo(meshVolume(netze.Pressrest), vieleck * 20, 2e-4);
+  const t = netze.Anguss;
+  for (let i = 0; i < t.length; i += 9) {
+    const cx = (t[i] + t[i + 3] + t[i + 6]) / 3, cy = (t[i + 1] + t[i + 4] + t[i + 7]) / 3;
+    assert.ok(Math.hypot(cx, cy + 280) > 64, 'Anguss-Dreieck im Kreis des Pressrests bei ' + cx.toFixed(1) + ', ' + cy.toFixed(1));
+  }
+  for (const n in netze) assert.ok(meshVolume(netze[n]) > 0, n + ': positives Volumen');
+  const stl = readFileSync(path.join(site, 'tools/sprengflaeche/stl-app.js'), 'utf8');
+  for (const n in netze) assert.match(stl, new RegExp("'?" + n + "'?: '"), n + ' fehlt in ROLLE_AUS_NAME');
+});
 
 test('part.stl: Platte 200×120×4 mit Aufsatz 60×40×10', () => {
   const tris = loadAsset('part.stl');
@@ -823,9 +973,11 @@ test('physics: jede Prüfung trägt eine stabile id — die Liste ist es nicht',
   /* Genau das machte den Indexzugriff falsch: dieselbe Position, andere Prüfung. */
   assert.notEqual(mit.checks[2].id, ohne.checks[2].id);
 
-  /* Die alte Form [ok, text] bleibt erhalten — shotcurve.js liest sie so. */
+  /* Schlichte Objekte { id, ok, text }: die alte Array-Form [ok, text] las
+     zuletzt nur noch shotcurve.js, jetzt über ok/text. */
   for (const c of mit.checks) {
-    assert.equal(c[0], c.ok);
-    assert.equal(c[1], c.text);
+    assert.deepEqual(Object.keys(c), ['id', 'ok', 'text']);
+    assert.equal(typeof c.ok, 'boolean');
+    assert.ok(!Array.isArray(c));
   }
 });

@@ -1,13 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" width="26" height="26" fill="none">
-  <!-- Auslegungsfenster (φ, λ) — machbares Band, Betriebspunkt.
-       Raster: Motiv innerhalb 2…24, Strich 1,6 (Hilfslinien 1,4 · 70 %), Marker in der Warnfarbe (warn).
-       Farben aus der Palette (shared.css), Fallback für die Ansicht außerhalb der Seite. -->
+  <!-- Auslegungsfenster (φ, λ): machbares Band, Betriebspunkt.
+       Raster: Motiv innerhalb 2…24, Strich 1,6 (Hilfslinien 1,4 · 70 %).
+       Farben sind Rollen der Palette (shared/palette.js): das Fenster der
+       Füllkammer in der Farbe des Kolbens (piston), der Betriebspunkt in der
+       Hervorhebung (mark). Der Hex-Rückfall ist der Standardwert der Rolle,
+       für die Ansicht außerhalb der Seite. -->
   <symbol id="icon" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 3.5 V22.5 H23" stroke="var(--cat-purple, #9a77e8)" stroke-width="1.4" opacity=".7"/>
-    <path d="M5 20.5 C9 13 13 8.5 22 6 V11 C15 12.5 11 16.5 9 22 H5 Z" fill="var(--cat-purple, #9a77e8)" opacity=".32"/>
-    <path d="M5 20.5 C9 13 13 8.5 22 6" stroke="var(--cat-purple, #9a77e8)" stroke-width="1.6"/>
-    <path d="M9 22 C11 16.5 15 12.5 22 11" stroke="var(--cat-purple, #9a77e8)" stroke-width="1.6"/>
-    <circle cx="13.5" cy="13.2" r="1.9" fill="var(--warn, #c2447e)"/>
+    <path d="M3 3.5 V22.5 H23" stroke="var(--piston, #36545d)" stroke-width="1.4" opacity=".7"/>
+    <path d="M5 20.5 C9 13 13 8.5 22 6 V11 C15 12.5 11 16.5 9 22 H5 Z" fill="var(--piston, #36545d)" opacity=".22"/>
+    <path d="M5 20.5 C9 13 13 8.5 22 6" stroke="var(--piston, #36545d)" stroke-width="1.6"/>
+    <path d="M9 22 C11 16.5 15 12.5 22 11" stroke="var(--piston, #36545d)" stroke-width="1.6"/>
+    <circle cx="13.5" cy="13.2" r="1.9" fill="var(--mark, #b23797)"/>
   </symbol>
   <use href="#icon"/>
 </svg>

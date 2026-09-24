@@ -50,8 +50,13 @@ Dort liegen Paket (`packages/hpdcsim/`), Übersetzungsschicht
 (`backend/convert.py`, `backend/simcore.py`) und ihre Tests vollständig im
 Git-Verlauf; eine Kopie des Pakets liegt außerhalb des Repositorys unter
 `~/DieLogic/backup/hpdcsim-2026-09-19/`. Der Generator
-`scripts/gen-v2-vacuum-goldens.py` läuft nur an diesem Tag
-(`git checkout v1-final`) und verweigert jeden anderen Stand.
+`scripts/gen-v2-vacuum-goldens.py` braucht dieses Paket und die
+Übersetzungsschicht; beide gibt es nur an `v1-final`, den Generator aber
+erst ab dem Commit, der sie entfernt hat (a993eb3). Neu erzeugen also so:
+einen Worktree auf `v1-final` anlegen
+(`git worktree add ../dl-v1 v1-final`), das Skript dorthin kopieren
+(`git show main:scripts/gen-v2-vacuum-goldens.py > ../dl-v1/scripts/gen-v2-vacuum-goldens.py`)
+und es im Worktree ausführen; er verweigert jeden anderen Stand.
 
 Die Fälle werden nicht mehr neu erzeugt — sie sind der eingefrorene Maßstab.
 Ändert sich das Modell absichtlich, ist das eine fachliche Entscheidung: die

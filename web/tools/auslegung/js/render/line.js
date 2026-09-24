@@ -1,45 +1,44 @@
 /* Liniendiagramme: Serien, Grenzen (d.limits — Ausschlussflächen, Ziel-
-   bänder, Referenzlinien), Ereignismarker, Betriebspunkt. */
+   bänder, Referenzlinien), Ereignismarker, Betriebspunkt.
 
-import { lineFrame, heading, axes, ticks, marker, fillRich, LEGEND_ROW, LEGEND_MAX_ROWS, LEGEND_TOP } from './base.js';
+   Eine Serie trägt ihre Farbe als Rolle (s.c = 'ink', 'machine', 'air' …),
+   aufgelöst beim Zeichnen. Varianten derselben Größe (S = 1, S, S·k)
+   unterscheiden sich über s.dash (Strichmuster) und s.alpha (Deckkraft),
+   nie über eine Mischfarbe; s.w setzt die Linienbreite. Serien auf der
+   rechten Achse sind ohne eigenes Muster gestrichelt. */
+
+import { lineFrame, heading, axes, ticks, marker, fillRich, scales, LEGEND_MAX_ROWS, LEGEND_TOP } from './base.js';
 import { fmt } from '../core/format.js';
-import { theme } from '../core/theme.js';
-import { drawLimits, legendItems, drawLegendSwatch } from './limits.js';
+import { theme, farbe } from '../core/theme.js';
+import { drawLimits, legendItems, legendRows, drawLegend } from './limits.js';
 
 const PI = Math.PI;
+const RECHTS = [7, 4];                    // Strich der Serien auf der rechten Achse
 
-/* Die Einträge der Legende: Serien, machbares Band, Grenzen. */
+/* Strichmuster einer Serie: eigenes, sonst gestrichelt rechts, sonst voll. */
+function strich(s) { return s.dash || (s.axis === 'right' ? RECHTS : []); }
+
+/* Die Einträge der Legende: Serien, machbares Band, Grenzen. Das machbare
+   Band und sein hellerer Teil (nur mit anderem Kolben-Ø) haben in der
+   Legende genau die Farbe, mit der sie gezeichnet sind. */
 function legendEntries(d, C) {
-  return d.ys.map(s => ({ label: s.n, sev: 'series', color: s.c }))
+  const ascX = d.x[d.x.length - 1] >= d.x[0];
+  return d.ys.map(s => ({ label: s.n, sev: 'series', color: farbe(s.c), dash: strich(s), alpha: s.alpha }))
     .concat(d.feasible ? [{ label: typeof d.feasible === 'string' ? d.feasible : 'machbares Band',
-      sev: 'target', color: C.okFill || 'rgba(0,140,130,.30)' }] : [])
+      sev: 'feasible', color: C.feasible }] : [])
     .concat(d.feasible && d.feasibleSplit && d.feasibleSplit.label
-      ? [{ label: d.feasibleSplit.label, sev: 'target', color: 'rgba(0,140,130,.13)' }] : [])
-    .concat(legendItems(d.limits));
-}
-
-/* Wie viele Zeilen braucht die Legende bei dieser Breite? Reine Messung —
-   sie legt die Höhe des Plotrahmens fest, muss also vor ihm laufen. */
-function legendRows(x, w, d, L, R) {
-  const items = legendEntries(d, theme.chart);
-  x.save();
-  x.font = '10.5px Arial';
-  let lx = L, rows = 1;
-  for (const it of items) {
-    const tw = x.measureText(it.label).width;
-    if (lx > L && lx + 17 + tw > w - R) { lx = L; rows++; }
-    lx += 17 + tw + 14;
-  }
-  x.restore();
-  return rows;
+      ? [{ label: d.feasibleSplit.label, sev: 'feasible', color: C.feasibleAlt }] : [])
+    .concat(legendItems(d.limits, ascX));
 }
 
 export function drawLine(x, w, h, d) {
   heading(x, w, h, d);
   const C = theme.chart;
-  /* Erst mit dem provisorischen Rahmen messen (L und R hängen nicht an der
-     Legendenhöhe), dann den endgültigen Rahmen bilden. */
-  d._legendRows = legendRows(x, w, d, lineFrame(w, h, d).L, lineFrame(w, h, d).R);
+  /* Wie viele Zeilen braucht die Legende? Erst mit dem provisorischen
+     Rahmen messen (L und R hängen nicht an der Legendenhöhe), dann den
+     endgültigen Rahmen bilden. */
+  const f0 = lineFrame(w, h, d);
+  d._legendRows = legendRows(x, legendEntries(d, C), f0.L, w - f0.R);
   const f = lineFrame(w, h, d);
   const x0 = d.x[0], x1 = d.x[d.x.length - 1];
   const left = d.ys.filter(s => s.axis !== 'right');
@@ -60,27 +59,23 @@ export function drawLine(x, w, h, d) {
      Diagramm blieb leer. Statt zu klemmen wird ein lesbarer Bereich um den
      Wert aufgespannt; die Achsenbeschriftung zeigt ihn an. */
   if (!(y1 > y0)) { const c = isFinite(y0) ? y0 : 0; y0 = c - 0.5; y1 = c + 0.5; }
-  const spanX = (x1 - x0) || 1;
   axes(x, w, h, f, x0, x1, y0, y1, d);
-  const X = a => f.L + (a - x0) / spanX * f.pw;
-  const Y = a => f.T + (y1 - a) / (y1 - y0) * f.ph;
+  const { X, Y } = scales(f, x0, x1, y0, y1);
 
-  /* rechte Achse: eigene Skala für Serien mit axis:'right' */
+  /* rechte Achse: eigene Skala für Serien mit axis:'right', von 0 an */
   let YR = Y;
   if (right.length) {
     let rall = [];
     for (let i = 0; i < right.length; i++) rall = rall.concat(right[i].y.filter(isFinite));
     if (!rall.length) rall = [1];
-    const r0 = d.r0 == null ? 0 : d.r0;
-    const r1 = d.r1 == null ? Math.max.apply(null, rall) * 1.08 : d.r1;
-    YR = a => f.T + (r1 - a) / (r1 - r0 || 1) * f.ph;
-    const rc = right[0].c;
-    x.strokeStyle = rc; x.globalAlpha = 0.6;
+    const r0 = 0, r1 = Math.max.apply(null, rall) * 1.08;
+    YR = scales(f, x0, x1, r0, r1).Y;
+    x.strokeStyle = farbe(right[0].c); x.globalAlpha = 0.6;
     x.beginPath(); x.moveTo(f.L + f.pw, f.T); x.lineTo(f.L + f.pw, f.T + f.ph); x.stroke();
     x.globalAlpha = 1;
     for (const t of ticks(r0, r1)) {
-      /* Beschriftung in Textfarbe: die Serienfarben erreichen auf Weiß nur
-         1,98–4,14:1 (series4 sogar 2,22:1) und verfehlen damit den
+      /* Beschriftung in Textfarbe: Sachfarben wie die Luft sind Linien und
+         Flächen, keine Schrift (auf Weiß teils unter 3:1) und verfehlen den
          WCAG-Textkontrast. Die Zuordnung trägt die farbige Achse selbst
          und der gestrichelte Kurvenzug. Eigene glatte Teilung der rechten
          Skala; ihre Striche fallen nicht auf das Gitter der linken. */
@@ -100,7 +95,9 @@ export function drawLine(x, w, h, d) {
   drawLimits(x, f, X, Y, d);
 
   /* Prozessereignisse (nummerierte Chips + vertikale Linien). Chips, die
-     dichter als eine Chip-Breite liegen, weichen zeilenweise nach unten aus. */
+     dichter als eine Chip-Breite liegen, weichen zeilenweise nach unten aus.
+     Linie und Punkt in `event`, der Chip in `chip`, wie die Nummern der
+     Ereignistabelle unter der Schusskurve (.ev-chip). */
   let lastChipX = -Infinity, chipRow = 0;
   if (d.events) for (let i = 0; i < d.events.length; i++) {
     const ev = d.events[i], ex = X(ev.x);
@@ -118,8 +115,8 @@ export function drawLine(x, w, h, d) {
     }
     x.beginPath(); x.arc(ex, cy, 9, 0, 2 * PI);
     x.fillStyle = C.surface; x.fill();
-    x.strokeStyle = C.series2; x.lineWidth = 1.5; x.stroke();
-    x.fillStyle = C.series2; x.textAlign = 'center'; x.font = 'bold 10px Arial';
+    x.strokeStyle = C.chip; x.lineWidth = 1.5; x.stroke();
+    x.fillStyle = C.chip; x.textAlign = 'center'; x.font = 'bold 10px Arial';
     fillRich(x, '' + ev.n, ex, cy + 3.5);
   }
 
@@ -136,9 +133,11 @@ export function drawLine(x, w, h, d) {
   }
 
   for (let i = 0; i < d.ys.length; i++) {
-    const Ys = d.ys[i].axis === 'right' ? YR : Y;
-    x.strokeStyle = d.ys[i].c; x.lineWidth = 2;
-    if (d.ys[i].axis === 'right') x.setLineDash([7, 4]);
+    const s = d.ys[i];
+    const Ys = s.axis === 'right' ? YR : Y;
+    x.strokeStyle = farbe(s.c); x.lineWidth = s.w || 2;
+    x.setLineDash(strich(s));
+    x.globalAlpha = s.alpha || 1;
     x.beginPath();
     let started = false;
     for (let j = 0; j < d.x.length; j++) {
@@ -148,13 +147,14 @@ export function drawLine(x, w, h, d) {
     }
     x.stroke();
     x.setLineDash([]);
+    x.globalAlpha = 1;
   }
 
-  /* Kurven-Stützpunkte (Schusskurve) */
+  /* Kurven-Stützpunkte (Schusskurve): Punkte der Kurve, in ihrer Farbe */
   if (d.pts) for (let i = 0; i < d.pts.length; i++) {
     const pt = d.pts[i];
     x.beginPath(); x.arc(X(pt.x), Y(pt.y), 4, 0, 2 * PI);
-    x.fillStyle = C.series1; x.fill();
+    x.fillStyle = C.ink; x.fill();
     x.strokeStyle = C.surface; x.lineWidth = 2; x.stroke();
   }
   x.restore();
@@ -162,34 +162,18 @@ export function drawLine(x, w, h, d) {
   /* Legende: Serien + Grenzen, mit Umbruch. Der Rahmen ist oben bereits auf
      die nötige Zeilenzahl gewachsen; passt selbst dann nicht alles (mehr als
      LEGEND_MAX_ROWS Zeilen), wird der Rest gezählt statt verschwiegen. */
-  const items = legendEntries(d, C);
-  let lx = f.L, ly = LEGEND_TOP, row = 1, shown = 0;
-  x.font = '10.5px Arial';
-  for (const it of items) {
-    const tw = x.measureText(it.label).width;
-    if (lx > f.L && lx + 17 + tw > w - f.R) {
-      if (row >= LEGEND_MAX_ROWS) break;
-      lx = f.L; ly += LEGEND_ROW; row++;
-    }
-    drawLegendSwatch(x, it, lx, ly);
-    x.fillStyle = C.text; x.textAlign = 'left'; x.font = '10.5px Arial';
-    fillRich(x, it.label, lx + 17, ly);
-    lx += 17 + tw + 14;
-    shown++;
-  }
-  if (shown < items.length) {
-    x.fillStyle = C.text; x.textAlign = 'left'; x.font = 'bold 10.5px Arial';
-    fillRich(x, '+ ' + (items.length - shown) + ' weitere', lx, ly);
-  }
+  drawLegend(x, legendEntries(d, C), f.L, w - f.R, LEGEND_TOP, LEGEND_MAX_ROWS);
 
-  /* Freie Segmente (z. B. Drosselung zwischen Werkzeug- und Maschinenlinie) */
+  /* Freie Segmente (z. B. Drosselung zwischen Werkzeug- und Maschinenlinie):
+     eine Referenz, keine Grenze, darum in `ref`, das auch als Schrift trägt. */
   if (d.segs) for (const sg of d.segs) {
+    const sc = farbe(sg.c) || C.ref;
     x.save();
-    x.strokeStyle = sg.c || C.marker; x.lineWidth = 1.5; x.setLineDash(sg.dash || [5, 4]);
+    x.strokeStyle = sc; x.lineWidth = 1.5; x.setLineDash([5, 4]);
     x.beginPath(); x.moveTo(X(sg.x1), Y(sg.y1)); x.lineTo(X(sg.x2), Y(sg.y2)); x.stroke();
     x.setLineDash([]);
     if (sg.label) {
-      x.font = '10.5px Arial'; x.fillStyle = sg.c || C.marker; x.textAlign = 'left';
+      x.font = '10.5px Arial'; x.fillStyle = sc; x.textAlign = 'left';
       fillRich(x, sg.label, X(Math.max(sg.x1, sg.x2)) + 6, (Y(sg.y1) + Y(sg.y2)) / 2 + 4);
     }
     x.restore();

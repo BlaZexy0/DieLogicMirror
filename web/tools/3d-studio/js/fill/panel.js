@@ -5,31 +5,37 @@
    Die Reiter von links nach rechts sind die Arbeit: das Bauteil ansehen,
    Anschnitte setzen, rechnen, das Ergebnis lesen. */
 
-import { numberRow, sliderRow, segRow, kpiBlock, factsBlock, detailsBlock, warnLine, heading, hintLine } from '../studio/rows.js';
-import { DEFAULTS } from './model.js';
-
-const de = v => String(v).replace('.', ',');
+import { numberRow, sliderRow, segRow, kpiBlock, factsBlock, detailsBlock, warnLine, heading, hintLine, info } from '../studio/rows.js';
+import { PLAY } from '../simulation/panel-common.js';
+import { fmtPlain } from '../studio/format.js';
+import { DEFAULTS, ALPHA_RANGE } from './model.js';
 
 export const MODES = [
   {
     id: 'anschnitte', label: 'Anschnitte',
     hint: 'Oben im Bild „Anschnitt setzen", dann aufs Bauteil klicken. Hier steht, was gesetzt ist; ein Klick wählt es.',
-    html: heading('Vorgaben für neue Anschnitte')
-      + numberRow({ ui: 'def-w', label: 'Breite', unit: 'mm', value: de(DEFAULTS.w), help: 'vorgaben' })
-      + numberRow({ ui: 'def-h', label: 'Höhe', unit: 'mm', value: de(DEFAULTS.h) })
+    /* Auf der Werkbank kommen die Anschnitte aus dem Anguss (js/fill/tool.js,
+       opts.derive): dann entfallen die Vorgaben, und die Liste heißt anders. */
+    html: '<div data-ui="defaults-block">' + heading('Vorgaben für neue Anschnitte')
+      + numberRow({ ui: 'def-w', label: 'Breite', unit: 'mm', value: fmtPlain(DEFAULTS.w), help: 'vorgaben' })
+      + numberRow({ ui: 'def-h', label: 'Höhe', unit: 'mm', value: fmtPlain(DEFAULTS.h) }) + '</div>'
       /* Wie viele gesetzt sind, steht hier — nicht als Zahl am Reiter: vier
          Reiter mit Zahl passen in Firefox nicht mehr in eine 320 px breite
          Seitenleiste, und „Ergebnis" stünde allein in einer zweiten Zeile. */
-      + heading('Gesetzt <span class="fu-count" data-ui="item-count"></span>')
+      + heading('<span data-ui="list-title">Gesetzt</span> <span class="fu-count" data-ui="item-count"></span>')
       + '<div class="st-list" data-ui="item-list" data-scroll></div>'
       + hintLine('<span data-ui="item-empty">Noch kein Anschnitt gesetzt.</span>')
+      + warnLine('inlet-warn')
   },
   {
     id: 'fuellung', label: 'Füllung',
     hint: 'Das Bauteil wird gerastert, die Front läuft von den Anschnitten durch die Zellen: eine Abschätzung, keine Strömung.',
     html: numberRow({ ui: 'cell', label: 'Zellkante', unit: 'mm', value: '3', help: 'zellkante' })
+      /* Auf der Werkbank rastert das gemeinsame Feld: statt der Zellkante sagt
+         diese Zeile, woher sie kommt. */
+      + '<div class="st-hintline" data-ui="cell-shared" hidden></div>'
       + warnLine('cell-note')
-      + sliderRow({ ui: 'alpha', label: 'Dünnwand-Bremse α', min: 0, max: 1, step: 0.1, value: 0.5, help: 'alpha' })
+      + sliderRow({ ui: 'alpha', label: 'Dünnwand-Bremse α', min: ALPHA_RANGE[0], max: ALPHA_RANGE[1], step: 0.1, value: 0.5, help: 'alpha' })
       + kpiBlock('fill-kpis')
       + warnLine('fill-warn')
       + detailsBlock('grid-details', 'Raster', factsBlock('grid-facts'))
@@ -38,23 +44,27 @@ export const MODES = [
     id: 'ergebnis', label: 'Ergebnis',
     hint: 'Der Füllgrad einer Stelle ist der Anteil des Volumens, der voll ist, wenn die Front sie erreicht: eine Reihenfolge, keine Zeit.',
     html: segRow({ ui: 'show-seg', label: 'Anzeige', value: 'koerper', help: 'ansichten',
-      options: [['farbe', 'Füllgrad'], ['koerper', 'Füllkörper'], ['grau', 'Bauteil']] })
-      + sliderRow({ ui: 'q', label: 'Füllgrad', min: 0, max: 100, step: 1, value: 50, help: 'fuellgrad' })
+      options: [['farbe', 'Füllzeit'], ['koerper', 'Füllkörper'], ['grau', 'Bauteil']] })
       + sliderRow({ ui: 'spots-count', label: 'Letzte Stellen', min: 0, max: 20, step: 1, value: 5, help: 'letzte-stellen' })
       + kpiBlock('result-kpis')
-      + hintLine('Wo die Front zuletzt ankommt, sammelt sich die Luft: dort gehören die Überläufe hin; der <a href="ueberlauf.html">Überlaufdesigner</a> setzt sie.')
+      /* Nur auf der Werkbank (mit der Uhr der Schusskurve): die Zeiten ab
+         Kolbenstart, gezeigt wird ab „Kammer voll". */
+      + detailsBlock('clock-details', 'Ab Kolbenstart', factsBlock('clock-facts'))
+      + hintLine('<span data-ui="spots-hint">Wo die Front zuletzt ankommt, sammelt sich die Luft: dort gehören die Überläufe hin; der <a href="ueberlauf.html">Überlaufdesigner</a> setzt sie.</span>'
+        + '<span data-ui="spots-hint-bench" hidden>Wo die Front zuletzt ankommt, sammelt sich die Luft: dort gehören die Überläufe hin. Im Schritt Überläufe stehen diese Stellen als Marken.</span>')
   }
 ];
 
-/* Das Auswahlfeld des gewählten Anschnitts: drei Gruppen als Reiter — es
-   steht immer nur eine da, so bleibt das Feld kurz genug, um nie zu scrollen.
+/* Das Auswahlfeld des gewählten Anschnitts: drei Gruppen als Reiter
+   (js/studio/rows.js, groupTabs) — es steht immer nur eine da, so bleibt
+   das Feld kurz genug, um nie zu scrollen.
    „füllt … %" und „Entfernen" stehen darunter, gleich welche Gruppe offen ist.
    Der Anteil sieht aus wie jede Zahlenzeile, wird aber vom Werkzeug selbst
    gelesen: ein LEERES Feld ist hier eine Angabe („aus der Fläche"), keine
    Fehleingabe — was dann gilt, steht als Platzhalter im Feld („auto 63"). */
 export const GROUPS = ['Maße', 'Lage', 'Details'];
-/* Die Reiter selbst setzt das Werkzeug ein, sobald es eine Auswahl gibt — wie
-   beim Überlaufdesigner: ohne Auswahl trägt die Seite nur die Reiter der Modi. */
+/* Die Reiter selbst setzt das Werkzeug ein, sobald es eine Auswahl gibt: ohne
+   Auswahl trägt die Seite nur die Reiter der Modi. */
 export const INSPECTOR = '<div class="st-grouptabs" role="tablist" data-ui="sel-groups" aria-label="Anschnitt"></div>'
   + '<div data-ui="sel-params">'
   + '<div data-group="Maße">'
@@ -74,3 +84,13 @@ export const INSPECTOR = '<div class="st-grouptabs" role="tablist" data-ui="sel-
   + '<button type="button" class="btn btn-sm btn-outline block-btn st-danger" data-ui="del-item">Entfernen</button>';
 
 export const DARSTELLUNG = sliderRow({ ui: 'opacity', label: 'Deckkraft Bauteil', min: 5, max: 100, step: 1, value: 100 });
+
+/* Füllgrad und Abspielen: unten unter dem Hauptknopf (shell.setActionsExtra),
+   wie der Zeitregler der Simulationen, und in jedem Modus bedienbar
+   (Rückmeldung vom 24.09.). Der Regler stellt den Füllkörper auf einen
+   Füllgrad; Abspielen lässt ihn bis 100 % volllaufen. */
+export const PLAYBACK =
+  '<div data-ui="q-row" class="off"><div class="row sim-time"><span>Füllgrad' + info('fuellgrad') + '</span>'
+  + '<button type="button" class="sim-play" data-ui="q-play" aria-label="Abspielen" disabled>' + PLAY + '</button>'
+  + '<input type="range" data-ui="q" aria-label="Füllgrad" min="0" max="100" step="1" value="50" disabled>'
+  + '<span class="val" data-ui="q-val"></span></div></div>';

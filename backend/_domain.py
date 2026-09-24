@@ -58,7 +58,8 @@ FIELDS: dict[str, tuple[str, float, float, str]] = {
     "gateTh": ("gt", 0, 100, "Anschnittdicke"),
     "Cd": ("gt", 0, 1, "Durchflussbeiwert"),
     "vent": ("gt", 0, 100000, "Entlüftungsfläche"),
-    "ventGap": ("gt", 0, 50, "Entlüftungsspalt"),
+    "ventCount": ("min", 1, 50, "Entlüftungskanäle Anzahl"),
+    "ventHeight": ("gt", 0, 50, "Entlüftungskanal Höhe"),
     "ventLen": ("gt", 0, 5000, "Entlüftungskanal Länge"),
     "vacPump": ("gt", 0, 1013, "Enddruck Pumpe / Tank vor Schuss"),
     "vacTank": ("gt", 0, 100000, "Vakuumtank-Volumen"),
@@ -100,17 +101,30 @@ PAIRS: list[tuple] = [
     ("in", "length", "lmin", "lmax", "Gewählte Kammerlänge außerhalb der Maschinengrenzen"),
 ]
 
+# Kostensätze der Organisation: key -> (lo_kind, lo, max, label)
+KOSTEN: dict[str, tuple[str, float, float, str]] = {
+    "mpart": ("gt", 0, 1000, "Bauteilgewicht je Schuss"),
+    "mdose": ("gt", 0, 1000, "Schussgewicht"),
+    "tz": ("min", 1, 3600, "Zykluszeit"),
+    "kav": ("min", 1, 200, "Kavitäten"),
+    "a": ("min", 0, 99, "Ausschuss"),
+    "oee": ("min", 1, 100, "OEE / Verfügbarkeit"),
+    "pAl": ("min", 0, 1000, "Legierungspreis"),
+    "pRe": ("min", 0, 1000, "Umschmelzkosten Kreislauf"),
+    "kr": ("min", 0, 20, "Schmelzverlust (Krätze)"),
+    "eKg": ("min", 0, 20, "Schmelz- & Warmhalteenergie"),
+    "pE": ("min", 0, 10, "Strompreis"),
+    "pM": ("min", 0, 10000, "Maschinenstundensatz Zelle"),
+    "pP": ("min", 0, 1000, "Personal"),
+    "nP": ("min", 0, 20, "Bediener je Zelle"),
+    "wz": ("min", 0, 10000000, "Werkzeugkosten"),
+    "st": ("min", 1, 10000000, "Standmenge"),
+    "dg": ("min", 0, 100000, "Eingesparte Masse je Bauteil"),
+    "hMonth": ("min", 1, 744, "Produktionsstunden je Monat"),
+}
 
-def check_field(key: str, x) -> str | None:
-    """None = in Ordnung, sonst der Grund.
 
-    Ein unbekannter Schlüssel ist ein Fehler, kein Durchlass: ein
-    vertipptes "forcee" ließ die Maschinenkraft bisher still auf dem
-    Vorgabewert stehen (H-40).
-    """
-    spec = FIELDS.get(key)
-    if spec is None:
-        return "ist kein Eingabefeld"
+def _check(spec, x) -> str | None:
     kind, lo, hi, _label = spec
     if isinstance(x, bool) or not isinstance(x, (int, float)):
         return "muss eine Zahl sein"
@@ -122,4 +136,48 @@ def check_field(key: str, x) -> str | None:
         return f"darf nicht unter {lo:g} liegen"
     if not x <= hi:
         return f"darf nicht über {hi:g} liegen"
+    return None
+
+
+def check_field(key: str, x) -> str | None:
+    """None = in Ordnung, sonst der Grund.
+
+    Ein unbekannter Schlüssel ist ein Fehler, kein Durchlass: ein
+    vertipptes "forcee" ließ die Maschinenkraft bisher still auf dem
+    Vorgabewert stehen (H-40).
+    """
+    spec = FIELDS.get(key)
+    if spec is None:
+        return "ist kein Eingabefeld"
+    return _check(spec, x)
+
+
+def check_kosten(key: str, x) -> str | None:
+    """Wie check_field für die Kostensätze. Ein unbekannter Schlüssel
+    geht durch: gespeicherte Sätze älterer Stände sollen sich weiter
+    speichern lassen; die bekannten prüft es wie das Werkzeug.
+    """
+    spec = KOSTEN.get(key)
+    return None if spec is None else _check(spec, x)
+
+
+def check_pairs(fields: dict) -> str | None:
+    """Die Regeln zwischen zwei Feldern, soweit ein Eintrag (ein Preset)
+    beide trägt. None = in Ordnung, sonst der Text der Regel. Bis zum
+    23.09. stand PAIRS nur hier und wurde nie angewandt: ein
+    Maschinen-Preset mit Kolben-Ø min. über max. ließ sich speichern.
+    """
+    for r in PAIRS:
+        if r[0] == "in":
+            _, key, lo, hi, text = r
+            if key in fields and lo in fields and not fields[lo] <= fields[key]:
+                return text
+            if key in fields and hi in fields and not fields[key] <= fields[hi]:
+                return text
+            continue
+        a, b, op, text = r
+        if a in fields and b in fields:
+            ok = fields[a] < fields[b] if op == "<" else fields[a] <= fields[b]
+            if not ok:
+                return text
     return None

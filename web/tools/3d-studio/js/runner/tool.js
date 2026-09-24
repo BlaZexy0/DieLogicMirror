@@ -29,13 +29,24 @@
    Die Datei bleibt „dielogic-anguss" Version 1: der Graph. Dazu kommen
    drei Schlüssel, die ältere Leser übergehen — `process` und `sizing`
    (sonst nähme Rückgängig eine Prozessänderung nur halb zurück: die
-   Anschnittbreiten hängen an ihr) und `ref`, die Lage des Bauteils. */
+   Anschnittbreiten hängen an ihr) und `ref`, die Lage des Bauteils.
+
+   AUF DER WERKBANK (opts.partFrame) ist das Bauteil kein Referenzteil,
+   sondern DAS Bauteil: es liegt im Bauteilsystem (Trennebene z = 0) und
+   bleibt dort, der Anguss wird davor gebaut — kein Beispiel, keine Lage.
+   Ein neues Bauteil beginnt ohne Anguss (die Werkbank schlägt einen vor:
+   opts.propose steht im Modus System, wo sonst die Beispiele stehen, und
+   gibt ihm seinen Hauptknopf), das Gussvolumen kommt aus Bauteil und
+   Überläufen (opts.castVolume, abschaltbar), und der Prozess lässt sich
+   aus der Auslegung übernehmen. Was die übrigen Schritte brauchen —
+   Mündungen, Kurve, Volumen, Körper —, steht in tool.link. */
 
 import * as T from 'three';
-import { facts, slider, numberInput, segButtons, segButtonSet } from '../ui/controls.js';
-import { fmt, fmtPlain, fmtUnit } from '../studio/format.js';
-import { kpis } from '../studio/rows.js';
-import { writeSTL } from '../part/stlio.js';
+import { onScheme, ROLE, VIEW } from '../part/colors.js';
+import { facts, slider, numberInput, segButtons, segButtonSet, POS_LIMIT } from '../ui/controls.js';
+import { fmt, fmtPlain, fmtUnit, parseNumber } from '../studio/format.js';
+import { kpis, esc, selTitle, groupTabs, legendRow, selectedRow } from '../studio/rows.js';
+import { saveSTL } from '../studio/files.js';
 import { DEMO_PARTS } from '../part/demoparts.js';
 import * as G from './graph.js';
 import { sampleNetwork } from './curve.js';
@@ -45,11 +56,13 @@ import { checkRules } from './rules.js';
 import { autoTaper, DEFAULT_SIZING } from './sizing.js';
 import { DEMOS } from './presets.js';
 import { flowChart } from './chart.js';
-import { createEditor, SELECTED_RING, FOLLOWER_COLOR } from './editor.js';
+import { createEditor } from './editor.js';
+import { createPlacer } from '../handles.js';
+import { rayAt } from '../viewmath.js';
 import { rotate, norm, cross, dot, sub, add } from './vec.js';
-import { shotTimeline, flowOnCurve } from './shottime.js';
+import { shotTimeline, flowOnCurve, curveValues as curveValuesFor } from './shottime.js';
 import { state as design } from '../../../auslegung/js/core/state.js';
-import { download, safeName, dirText, setTris } from '../ui/common.js';
+import { dirText, setTris, surfaceMaterial } from '../ui/common.js';
 import { MODES, INSPECTOR, DARSTELLUNG, CHART } from './panel.js';
 
 const HANDLE_HINT = '<b>Punkt</b> ziehen: in der Arbeitsebene · <b>Alt</b>: aus ihr heraus · <b>Pfeil</b> am Anschnitt: Mündung ans Bauteil · <b>Entf</b>: entfernen';
@@ -67,11 +80,20 @@ const within = (v, [lo, hi]) => Math.max(lo, Math.min(hi, v));
    Gastgeber lädt Beispielteile nach ihrer Kennung. */
 const partIdOf = ref => (DEMO_PARTS.find(p => p.file === ref.file) || {}).id || null;
 
-export function createAngussTool(host) {
+/**
+ * @param opts.partFrame   die Werkbank: das Bauteil bleibt, wo es ist (s. o.)
+ * @param opts.propose     api → { html, mounted, primary }: der Vorschlag im Modus System
+ * @param opts.castVolume  () → Gussvolumen in mm³ aus Bauteil und Überläufen
+ */
+export function createAngussTool(host, opts = {}) {
   const { shell, view } = host;
   const ui = host.ui;
+  const bench = !!opts.partFrame;
+  /* Auf der Werkbank ist das Werkzeug nur dran, solange einer seiner Modi
+     zu sehen ist (setActive); auf seiner eigenen Seite immer. */
+  let active = true;
   const state = {
-    graph: DEMOS[0].build(),
+    graph: bench ? G.emptyGraph() : DEMOS[0].build(),
     net: null, flow: null, rules: [], lines: [],
     proc: { ...F.DEFAULT_PROCESS },
     sizing: { ...DEFAULT_SIZING },
@@ -82,11 +104,12 @@ export function createAngussTool(host) {
        aus. flowView ist dieselbe Strömung mit den Zeiten AB „KAMMER VOLL":
        das lesen Auswahlfeld, Schema und Prüfregeln. */
     onCurve: true, timeline: null, flowShown: null, flowView: null,
-    name: DEMOS[0].label, preset: DEMOS[0].id, ready: false,
-    chartOpen: false, openGroup: '',
+    /* Das Gussvolumen aus Bauteil und Überläufen (nur mit opts.castVolume). */
+    volAuto: !!opts.castVolume,
+    preset: bench ? null : DEMOS[0].id, ready: false,
+    chartOpen: false,
     /* Lage des Referenzbauteils: { key, quat, pos } — oder null ohne Bauteil. */
-    place: null,
-    refPending: null
+    place: null
   };
   let wired = false, hinted = false, dragged = false;
 
@@ -100,7 +123,7 @@ export function createAngussTool(host) {
      ableiten: bei einer Dreieckssuppe ohne geteilte Ecken lieferte
      computeVertexNormals ohnehin nur die Flächennormale — nur eben als
      2,2 MB großes Attribut, das bei jedem Mauszug neu gerechnet wurde. */
-  const runnerMat = new T.MeshStandardMaterial({ color: 0x008c82, roughness: 0.52, metalness: 0.04, side: T.DoubleSide, flatShading: true });
+  const runnerMat = surfaceMaterial(ROLE.runner, { roughness: 0.52, metalness: 0.04 });
   const runnerMesh = new T.Mesh(new T.BufferGeometry(), runnerMat);
   group.add(runnerMesh);
 
@@ -109,14 +132,24 @@ export function createAngussTool(host) {
      Trennebene — zwei Flächen in derselben Tiefe kann der Tiefenpuffer nicht
      ordnen (Flimmern). polygonOffset zieht den Pressrest um einen
      Tiefenschritt vor: wo beide zusammenfallen, gewinnt er. */
-  const biscMat = new T.MeshStandardMaterial({
-    color: 0x93a6b0, roughness: 0.6, metalness: 0.06, side: T.DoubleSide,
+  const biscMat = surfaceMaterial(ROLE.biscuit, {
+    roughness: 0.6, metalness: 0.06, flat: false,
     polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
   });
   const biscMesh = new T.Mesh(new T.BufferGeometry(), biscMat);
   group.add(biscMesh);
 
-  const lineMat = new T.LineBasicMaterial({ color: 0x002733, transparent: true, opacity: 0.55 });
+  const lineMat = new T.LineBasicMaterial({ color: VIEW.lines, transparent: true, opacity: 0.55 });
+  /* Ein Wechsel des Farbschemas: Anguss, Pressrest und Mittellinien
+     umfärben, Auswahlfeld, Legende und Schema neu. Die Griffe gleicht
+     js/handles.js selbst ab, die Chips der Rahmen. */
+  onScheme(() => {
+    runnerMat.color.set(ROLE.runner);
+    biscMat.color.set(ROLE.biscuit);
+    lineMat.color.set(VIEW.lines);
+    if (wired) { updateLegend(); if (state.chartOpen) updateChart(); else syncSelection(); }
+    view.invalidate();
+  });
   const lineGroup = new T.Group();
   group.add(lineGroup);
 
@@ -142,19 +175,30 @@ export function createAngussTool(host) {
       return e && e.sections.length ? e.sections[e.sections.length - 1].t : null;
     },
     onAim: id => startAim(id),
-    onSelect: () => { cancelAim(); syncSelection(); },
-    onChange: what => {
+    onSelect: () => { placer.cancel(); syncSelection(); },
+    onChange: (what, id) => {
       if (what === 'drag') { dragged = true; rebuild('drag'); return; }
+      /* Esc mitten im Zug (host.cancelDrag): zurück zum Stand davor, ohne
+         Schritt. Hat sich nichts bewegt, gibt es nichts zurückzuholen — dann
+         nur die Anzeige, die während des Zugs ohne Regeln lief. */
+      if (what === 'cancel') {
+        dragged = false;
+        if (!host.revert()) { rebuild(); syncSelection(); }
+        return;
+      }
       rebuild();
       if (what !== 'drop') return;
       syncSelection();
       /* Ein Klick auf einen Griff endet auch mit „drop" — gemeldet wird nur,
          was sich bewegt hat: sonst stünde nach dem bloßen Auswählen
-         „Ungespeichert" da. */
-      if (dragged) host.changed(sel() && !sel().parent ? 'System verschoben' : 'Punkt verschoben');
+         „Ungespeichert" da. Benannt nach dem GEZOGENEN Punkt, nicht nach
+         der Auswahl: am Pressrest hieß der Schritt sonst „Punkt verschoben". */
+      const n = state.graph.nodes[id];
+      if (dragged) host.changed(n && !n.parent ? 'System verschoben' : 'Punkt verschoben');
       dragged = false;
     }
   });
+  const placer = createPlacer({ aim: shell.aim, handles: editor });
 
   /* ── Kette: Graph → Anzeige ──────────────────────────────── */
   /* Während eines Zuges zählt, was man sieht: Netz, Linien, Griffe. Regeln,
@@ -162,6 +206,7 @@ export function createAngussTool(host) {
      Ergebnis, nicht zur Bewegung. */
   function rebuild(mode) {
     const g = state.graph;
+    if (!g.rootId) { setEmpty(); return; }
     F.applyAutoGates(g, state.proc);
     state.net = sampleNetwork(g);
     state.flow = F.analyseFlow(g, state.net, state.proc);
@@ -182,6 +227,30 @@ export function createAngussTool(host) {
       if (host.refreshActions) host.refreshActions();
     }
     view.invalidate();
+    /* Die übrigen Schritte der Werkbank hören mit (Füllung, Auslegung). */
+    host.emit('runner');
+  }
+
+  /* Ohne Pressrest kein System (die Werkbank, bevor ein Bauteil da ist, und
+     jedes neue Bauteil bis zum Vorschlag): nichts im Bild, nichts zu prüfen. */
+  function setEmpty() {
+    state.net = null; state.flow = null; state.flowShown = null; state.flowView = null; state.timeline = null;
+    state.rules = []; state.lines = [];
+    setTris(runnerMesh, []);
+    for (const child of lineGroup.children.slice()) { child.geometry.dispose(); lineGroup.remove(child); }
+    biscuitKey = '';
+    editor.refresh();
+    applyVisibility();
+    if (state.chartOpen) openChart(false);
+    if (wired) {
+      updateSystem();
+      updateShot();
+      updateRules();
+      shell.renderChips();
+      if (host.refreshActions) host.refreshActions();
+    }
+    view.invalidate();
+    host.emit('runner');
   }
 
   /* ── Die Schusskurve unter dem Anguss ────────────────────────
@@ -216,12 +285,14 @@ export function createAngussTool(host) {
       tFirst: shift(fl.tFirst), tLast: shift(fl.tLast), tRunner: fl.tRunner === null ? null : fl.tRunner - t0
     };
   }
+  /* Die Legierung von hier gilt auch für die Kurve (runner/shottime.js). */
+  const curveValues = () => curveValuesFor(design.values, state.proc.alloy);
   function updateTimeline() {
     state.timeline = null;
     state.flowShown = state.flow;
     state.flowView = state.flow;
     if (!state.onCurve || !state.flow) return;
-    const tl = shotTimeline(design.values, modelVolumes(), { diam: state.graph.biscuit.d, length: state.proc.chamberLen });
+    const tl = shotTimeline(curveValues(), modelVolumes(), { diam: state.graph.biscuit.d, length: state.proc.chamberLen });
     if (tl.error) { state.timeline = { error: tl.error }; return; }
     state.timeline = tl;
     state.flowShown = flowOnCurve(state.flow, tl);
@@ -262,12 +333,15 @@ export function createAngussTool(host) {
 
   /* Anzeigeoptionen (Darstellung ▾): nichts davon ändert den Plan. */
   const look = { biscuit: true, handles: true };
+  /* Anguss und Pressrest sind der Plan und bleiben auf der Werkbank auch in
+     den anderen Schritten stehen; Mittellinie und Griffe gehören dem Schritt. */
   function applyVisibility() {
-    runnerMesh.visible = state.show === 'sweep';
-    biscMesh.visible = look.biscuit;
-    lineGroup.visible = look.handles;
-    editor.group.visible = look.handles;
-    editor.setEnabled(look.handles);
+    const has = !!state.graph.rootId;
+    runnerMesh.visible = has && state.show === 'sweep';
+    biscMesh.visible = has && look.biscuit;
+    lineGroup.visible = look.handles && active;
+    editor.group.visible = look.handles && active;
+    editor.setEnabled(look.handles && active);
     view.invalidate();
   }
 
@@ -297,6 +371,7 @@ export function createAngussTool(host) {
     ui('bisc-d').value = fmtPlain(b.d, 2);
     ui('bisc-t').value = fmtPlain(b.t, 2);
     segButtonSet(ui('axis-seg'), b.axis);
+    if (!net) { facts(ui('system-facts'), []); return; }
     facts(ui('system-facts'), [
       ['Punkte', fmt(G.allNodes(g).length, 0)],
       ['Anschnitte', fmt(gatesOf(g).length, 0)],
@@ -312,8 +387,9 @@ export function createAngussTool(host) {
     if (!m) { kpis(ui('ref-kpis'), [{ label: 'Keines geladen', value: '—' }]); return; }
     const cm3 = m.volume / 1000;
     const usable = cm3 >= 0.01 && cm3 <= 1e5;
+    /* Der Dateiname ist Text von außen — in die Seite nur maskiert. */
     kpis(ui('ref-kpis'), [{
-      label: host.part.name || 'Bauteil', value: usable ? fmtUnit(cm3, 'cm³') : '—', verdict: usable ? '' : 'warn',
+      label: esc(host.part.name || 'Bauteil'), value: usable ? fmtUnit(cm3, 'cm³') : '—', verdict: usable ? '' : 'warn',
       note: usable ? '' : 'Volumen unbrauchbar (offenes Netz); das Gussvolumen bleibt, wie es ist.'
     }]);
   }
@@ -344,10 +420,10 @@ export function createAngussTool(host) {
         });
       }
       arrivalRows('');
-      if (!at && abs && abs.unreached && abs.unreached.length) rows.push({ label: 'Ankunft', value: '—', verdict: 'bad', note: 'Die Kurve endet, bevor die Schmelze ankommt (' + abs.unreached.join(', ') + ').' });
+      if (!at && abs && abs.unreached && abs.unreached.length) rows.push({ label: 'Ankunft', value: '—', verdict: 'bad', note: 'Die Kurve endet, bevor die Schmelze ankommt (' + esc(abs.unreached.join(', ')) + ').' });
       details.push(['Füllgrad der Kammer', fmtUnit(tl.phi * 100, '%')]);
       details.push(['Kammer voll ab Kolbenstart', fmtUnit(tl.tFull * 1000, 'ms', 0)]);
-      if (abs && abs.onCurve && abs.tRunner === null && abs.unreached.length) details.push(['Kurve endet vor', abs.unreached.join(', ')]);
+      if (abs && abs.onCurve && abs.tRunner === null && abs.unreached.length) details.push(['Kurve endet vor', esc(abs.unreached.join(', '))]);
       warn.textContent = tl.warn || '';
     } else {
       arrivalRows(' · konstanter Strom');
@@ -363,6 +439,13 @@ export function createAngussTool(host) {
   const RANK = { bad: 0, warn: 1, note: 2, ok: 3 };
   function updateRules() {
     const rules = state.rules;
+    if (!rules.length) {
+      shell.setTabBadge('pruefung', '');
+      kpis(ui('rules-kpis'), []);
+      ui('rules-bar').innerHTML = '';
+      ui('rules-list').innerHTML = '';
+      return;
+    }
     const ok = rules.filter(r => r.level === 'ok').length;
     const bad = rules.filter(r => r.level === 'bad').length, warn = rules.filter(r => r.level === 'warn').length;
     const kind = bad ? 'bad' : warn ? 'warn' : '';
@@ -373,15 +456,16 @@ export function createAngussTool(host) {
     }]);
     const sorted = rules.slice().sort((a, b) => RANK[a.level] - RANK[b.level]);
     ui('rules-bar').innerHTML = sorted.map(r => '<span class="' + r.level + '"></span>').join('');
+    /* Die Sätze nennen Kennungen aus der Datei: maskiert, wie alles von außen. */
     ui('rules-list').innerHTML = sorted.map(r =>
-      '<details class="rule ' + r.level + '"' + (r.level === 'ok' ? '' : ' open') + '><summary><b>' + r.title + '</b></summary><span>' + r.text + '</span></details>').join('');
+      '<details class="rule ' + r.level + '"' + (r.level === 'ok' ? '' : ' open') + '><summary><b>' + esc(r.title) + '</b></summary><span>' + esc(r.text) + '</span></details>').join('');
   }
 
   /* Die Kennzahlen des ganzen Systems stehen beim Flussschema — und dort
      nur, was das Schema NICHT ohnehin zeigt. Gezeichnet wird es nur, solange
      es offen ist, in Bildschirmbreite, damit die Schrift mitwächst. */
   function updateChart() {
-    if (!state.chartOpen) return;
+    if (!state.chartOpen || !state.net) return;
     const g = state.graph, fl = state.flowView || state.flow;
     const rows = [
       ['Punkte', fmt(G.allNodes(g).length, 0)],
@@ -394,7 +478,7 @@ export function createAngussTool(host) {
     const at = arrivalText(fl);
     if (at) rows.push(['Ankunft', at.value + ' ab Kammer voll' + (at.many ? ' · Δ ' + at.spread : '') + (fl.onCurve ? '' : ' · bei konstantem Strom')]);
     if (fl.onCurve && state.timeline) {
-      rows.push(['Schusskurve', 'DieLogic-Kurve · v₂ ' + fmtUnit(state.timeline.v2, 'm/s') + (fl.unreached.length ? ' · endet vor ' + fl.unreached.join(', ') : '')]);
+      rows.push(['Schusskurve', 'DieLogic-Kurve · v₂ ' + fmtUnit(state.timeline.v2, 'm/s') + (fl.unreached.length ? ' · endet vor ' + esc(fl.unreached.join(', ')) : '')]);
     }
     facts(ui('chart-facts'), rows);
     ui('chart-body').innerHTML = flowChart(g, state.net, fl, { width: 900 });
@@ -403,7 +487,7 @@ export function createAngussTool(host) {
     state.chartOpen = !!on;
     ui('chart-panel').classList.toggle('on', state.chartOpen);
     /* Über dem Schema hat der Hinweis zu den Griffen nichts zu suchen. */
-    if (state.chartOpen) { cancelAim(); updateChart(); if (hinted) { shell.status(''); hinted = false; } }
+    if (state.chartOpen) { placer.cancel(); updateChart(); if (hinted) { shell.status(''); hinted = false; } }
     else syncSelection();
     shell.renderChips();
     if (host.refreshActions) host.refreshActions();
@@ -413,30 +497,44 @@ export function createAngussTool(host) {
   const sel = () => (editor.selected ? state.graph.nodes[editor.selected] || null : null);
   const nodeName = n => (G.TYPES[n.type] || G.TYPES.point).label + ' ' + n.id;
 
-  /* Kopfzeile des Auswahlfeldes: Artfarbe, Bezeichnung, id. */
+  /* Kopfzeile des Auswahlfeldes: Artfarbe, Bezeichnung, id. Die id kann aus
+     einer Datei stammen; fromJSON lässt nur harmlose zu, maskiert wird sie
+     trotzdem (selTitle). */
   function selectionLabel(g, n) {
     const meta = G.TYPES[n.type] || G.TYPES.point;
-    return '<span class="dot" style="background:' + meta.color + '"></span>' + meta.label + ' <code>' + n.id + '</code>'
-      + (G.isFollower(g, n.id) ? ' <em>gespiegelt, die andere Seite bearbeiten</em>'
-        : n.aim ? ' <em class="pinned">ans Bauteil gebunden</em>' : '');
+    return selTitle({ color: meta.color, label: meta.label, id: n.id,
+      extra: G.isFollower(g, n.id) ? ' <em>gespiegelt, die andere Seite bearbeiten</em>'
+        : n.aim ? ' <em class="pinned">ans Bauteil gebunden</em>' : '' });
   }
 
-  /* Welche Gruppen das Auswahlfeld zeigt, hängt an der Art des Punktes. */
+  /* Welche Gruppen das Auswahlfeld zeigt, hängt an der Art des Punktes. Eine
+     Gabelung ist, was sich gabelt — auch der Pressrest mit zwei Abgängen. */
+  const isFork = n => n.type === 'branch' || n.type === 'mirror' || n.children.length >= 2;
   const groupsFor = n => ['Lage', 'Querschnitt',
-    ...(n.type === 'branch' || n.type === 'mirror' ? ['Verzweigung'] : []),
+    ...(isFork(n) ? ['Verzweigung'] : []),
     ...(n.type === 'gate' ? ['Anschnitt', 'Mündung'] : []), DETAILS];
 
-  function showGroup() {
-    for (const b of ui('sel-groups').querySelectorAll('[data-group-tab]')) {
-      const on = b.getAttribute('data-group-tab') === state.openGroup;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-selected', on ? 'true' : 'false');
+  /* Warum Aufteilung oder Spiegel-Häkchen gerade nicht gehen — '' heißt:
+     beide gehen. Die Zeile steht unter dem Regler, der Regler ist gesperrt;
+     ein Regler, der sich zieht und nichts tut, sagte es nicht. */
+  function forkNote(n) {
+    const kids = n.children.length;
+    if (G.isMirrorBranch(n) && kids === 2) {
+      return n.type === 'mirror' ? 'Ein Spiegelpunkt teilt immer 50:50.'
+        : 'Gespiegelt teilen die Äste 50:50. Für eine andere Aufteilung die Spiegelung lösen.';
     }
-    for (const el of ui('sel-params').querySelectorAll('[data-group]')) el.hidden = el.getAttribute('data-group') !== state.openGroup;
-    ui('sel-facts').hidden = state.openGroup !== DETAILS;
+    if (kids > 2) return fmt(kids, 0) + ' Abgänge teilen den Strom zu gleichen Teilen; spiegeln lassen sich nur zwei.';
+    if (!n.parent) return 'Am Pressrest gibt es nichts zu spiegeln: ihm fehlt die Zulaufrichtung.';
+    return '';
   }
 
+  /* Die Gruppen des Auswahlfelds (js/studio/rows.js) und die Regler darin —
+     es gibt sie, sobald der Rahmen das Feld eingesetzt hat (mounted). */
+  let groups = null;
+  const sliders = {};
+
   function syncSelection() {
+    if (!groups) return;
     const g = state.graph;
     const n = sel();
     shell.renderChips();
@@ -445,14 +543,11 @@ export function createAngussTool(host) {
     if (!n) { shell.inspector.hide(); if (hinted) { shell.status(''); hinted = false; } return; }
     hinted = true;
     const follower = G.isFollower(g, n.id);
-    const isRoot = !n.parent, isGate = n.type === 'gate', isBranch = n.type === 'branch' || n.type === 'mirror';
+    const isRoot = !n.parent, isGate = n.type === 'gate', isBranch = isFork(n);
     shell.inspector.show({ title: selectionLabel(g, n) });
     shell.status(HANDLE_HINT);
 
-    const names = groupsFor(n);
-    if (!names.includes(state.openGroup)) state.openGroup = names[0];
-    ui('sel-groups').innerHTML = names.map(x => '<button type="button" role="tab" data-group-tab="' + x + '">' + x + '</button>').join('');
-    showGroup();
+    groups.set(groupsFor(n));
 
     /* Ein Zehntel: „−137,25" passt nicht in ein Drittel der Zeile, und auf
        den Hundertstelmillimeter setzt niemand einen Kanalpunkt. */
@@ -463,14 +558,14 @@ export function createAngussTool(host) {
        „System"): seine Ebene IST die Ausstoßrichtung, kippen lässt sie sich nicht. */
     ui('plane-block').hidden = isRoot;
     ui('root-note').hidden = !isRoot;
-    ui('sel-roll').value = String(n.tilt[0]);
-    ui('sel-roll-val').textContent = fmt(n.tilt[0], 0) + '°';
-    ui('sel-pitch').value = String(n.tilt[1]);
-    ui('sel-pitch-val').textContent = fmt(n.tilt[1], 0) + '°';
+    sliders['sel-roll'].set(n.tilt[0]);
+    sliders['sel-pitch'].set(n.tilt[1]);
     if (isBranch) {
-      ui('sel-ratio').value = String(Math.round((n.ratio || 0.5) * 100));
-      ui('sel-ratio-val').textContent = fmt(n.ratio * 100, 0) + ':' + fmt((1 - n.ratio) * 100, 0);
-      ui('sel-mirror').checked = !!n.mirror;
+      const r = n.ratio === undefined ? 0.5 : n.ratio;
+      sliders['sel-ratio'].set(Math.round(r * 100));
+      if (n.children.length > 2) ui('sel-ratio-val').textContent = 'gleich';
+      ui('sel-mirror').checked = !!n.mirror && n.children.length <= 2;
+      ui('sel-ratio-note').textContent = follower ? '' : forkNote(n);
     }
     if (isGate) {
       ui('sel-gh').value = fmtPlain(n.gate.h, 2);
@@ -479,12 +574,16 @@ export function createAngussTool(host) {
       ui('sel-gw').value = fmtPlain(n.gate.w, 2);
       ui('sel-gauto').checked = !!n.gate.auto;
       ui('sel-gtrans').value = n.gate.transition;
-    } else cancelAim();
+    } else placer.cancel();
 
     /* Die nachgezogene Seite einer Spiegelung zeigt ihre Werte, nimmt aber
        keine an — bearbeitet wird die andere. */
-    for (const k of ['sel-x', 'sel-y', 'sel-z', 'sel-w', 'sel-h', 'sel-roll', 'sel-pitch', 'sel-ratio', 'sel-gh', 'sel-glen', 'sel-gtrans', 'sel-gauto']) ui(k).disabled = follower;
-    ui('sel-mirror').disabled = follower || n.type === 'mirror';
+    for (const k of ['sel-x', 'sel-y', 'sel-z', 'sel-w', 'sel-h', 'sel-roll', 'sel-pitch', 'sel-gh', 'sel-glen', 'sel-gtrans', 'sel-gauto']) ui(k).disabled = follower;
+    /* Die Aufteilung gilt nur für genau zwei Äste, und eine Spiegelung hält
+       sie auf 50:50 (G.syncMirror); gespiegelt wird nur an einer Gabelung
+       mit Zulauf und genau zwei Ästen. forkNote sagt jeweils, warum nicht. */
+    ui('sel-ratio').disabled = follower || n.children.length !== 2 || G.isMirrorBranch(n);
+    ui('sel-mirror').disabled = follower || n.type === 'mirror' || isRoot || n.children.length !== 2;
     ui('sel-gw').disabled = follower || (isGate && !!n.gate.auto);
     ui('sel-aim').disabled = follower;
     /* Eine andere Stelle bekommt der Anschnitt mit einem neuen Klick — einen
@@ -550,10 +649,7 @@ export function createAngussTool(host) {
 
   /* Ein Feld des Auswahlfelds ändert den gewählten Punkt. `key` fasst
      Reglerschritte zu EINEM Eintrag im Verlauf zusammen. */
-  function commit(label, key) {
-    if (key && host.history) { host.history.coalesce(key, label); host.changed('', { silent: true }); }
-    else host.changed(label);
-  }
+  const commit = (label, key) => host.changed(label, key ? { coalesce: key } : undefined);
   function editNode(fn, label, key) {
     const n = sel();
     if (!n || G.isFollower(state.graph, n.id)) return false;
@@ -571,6 +667,13 @@ export function createAngussTool(host) {
     if (!n) return NEEDS_SEL;
     if (G.isFollower(state.graph, n.id)) return IS_FOLLOWER;
     if (n.type === 'gate') return 'Hinter einem Anschnitt ist Schluss: einen Punkt davor wählen oder „Davor einfügen".';
+    /* Ein dritter Ast schaltete die Spiegelung stillschweigend ab (G.addChild
+       verweigert ihn deshalb) — hier steht, warum und was stattdessen geht. */
+    if (G.isMirrorBranch(n) && n.children.length >= 2) {
+      return n.type === 'mirror'
+        ? 'Ein Spiegelpunkt hat genau zwei Äste: einen Punkt dahinter wählen und dort anfügen.'
+        : 'Eine gespiegelte Verzweigung hat genau zwei Äste. Für einen dritten zuerst die Spiegelung lösen (Auswahlfeld, Verzweigung).';
+    }
     return '';
   };
   const insertReason = () => {
@@ -618,8 +721,7 @@ export function createAngussTool(host) {
     G.removeNode(g, n.id);
     rebuild();
     editor.select(g.nodes[parent] ? parent : g.rootId);
-    host.changed(name + ' entfernt');
-    host.toastUndo(behind ? name + ' und ' + behind + (behind === 1 ? ' Punkt' : ' Punkte') + ' dahinter entfernt.' : name + ' entfernt.');
+    host.removed(name, behind ? name + ' und ' + behind + (behind === 1 ? ' Punkt' : ' Punkte') + ' dahinter entfernt.' : undefined);
     return true;
   }
 
@@ -630,16 +732,8 @@ export function createAngussTool(host) {
      Bauteil anklickt, legt beides auf einmal fest: den Ort der Mündung
      und die Richtung, in der die Schmelze das Bauteil betritt.
      Der scharfe Zustand muss unübersehbar sein: oben im Viewport steht,
-     was zu tun ist. */
-  const aim = shell.aim;
-  /* Solange gezielt wird, weicht das Auswahlfeld auf seine Kopfzeile zurück —
-     das tut der Rahmen (shell.aim.show). */
-  function cancelAim() {
-    const was = editor.cancelAim();
-    aim.hide();
-    return was;
-  }
-  host.cancelAim = cancelAim;
+     was zu tun ist (js/handles.js, createPlacer); solange gezielt wird,
+     weicht das Auswahlfeld auf seine Kopfzeile zurück — das tut der Rahmen. */
 
   /* Der Klick auf den Pfeil eines Anschnitts (oder auf den Knopf im
      Auswahlfeld). Ohne Referenzbauteil gibt es nichts zu treffen — dann
@@ -647,13 +741,13 @@ export function createAngussTool(host) {
   function startAim(id) {
     const n = id && state.graph.nodes[id];
     if (!n || n.type !== 'gate' || G.isFollower(state.graph, id)) return;
-    if (!host.part.model || !host.part.mesh.visible) { aim.note(NEEDS_PART); return; }
+    if (!host.part.model || !host.part.mesh.visible) { shell.aim.note(NEEDS_PART); return; }
     if (state.chartOpen) openChart(false);
     /* Schon scharf für diesen Anschnitt: bleibt scharf. Abgebrochen wird
        mit Esc, mit „Abbrechen" im Hinweis oder durch eine andere Auswahl. */
-    aim.show(true, 'Mündung ans Bauteil: die Stelle auf dem Bauteil anklicken. Ziehen dreht die Ansicht, Esc bricht ab.');
-    aim.onCancel = cancelAim;
-    editor.armAim({
+    placer.aim({
+      text: 'Mündung ans Bauteil: die Stelle auf dem Bauteil anklicken. Ziehen dreht die Ansicht, Esc bricht ab.',
+      miss: 'Daneben: Die Stelle muss auf dem Bauteil liegen.',
       /* Die Arbeitsebene des Anschnitts, jedes Mal frisch: ein Treffer an
          einer aufrechten Wand wird in sie gelegt (js/handles.js). */
       plane: () => {
@@ -661,13 +755,11 @@ export function createAngussTool(host) {
         return gn ? { origin: gn.pos, normal: G.planeNormal(state.graph, gn) } : null;
       },
       onHit: hit => {
-        aim.hide();
         G.aimAt(state.graph, id, hit.point, hit.dir);
         rebuild();
         syncSelection();
         host.changed('Mündung ans Bauteil gebunden');
-      },
-      onMiss: () => aim.miss('Daneben: Die Stelle muss auf dem Bauteil liegen.', () => editor.aiming)
+      }
     });
   }
 
@@ -679,10 +771,8 @@ export function createAngussTool(host) {
      dreht die Ansicht wie immer. */
   const bodyRay = new T.Raycaster();
   function pickBody(ev) {
-    if (!state.net || state.chartOpen) return null;
-    const dom = view.renderer.domElement;
-    const r = dom.getBoundingClientRect();
-    bodyRay.setFromCamera(new T.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), view.camera);
+    if (!active || !state.net || state.chartOpen) return null;
+    rayAt(bodyRay, ev, view.renderer.domElement, view.camera);
     group.updateMatrixWorld(true);
     const hits = bodyRay.intersectObjects([runnerMesh, biscMesh].filter(m => m.visible), false);
     if (!hits.length) return null;
@@ -726,6 +816,7 @@ export function createAngussTool(host) {
      dessen Lage genau. Gedreht wird das MESH; das Netz bleibt unberührt. */
   const round = (v, n) => Math.round(v * 10 ** n) / 10 ** n;
   function applyPlace(p) {
+    if (bench) return;                          // die Werkbank: das Bauteil bleibt, wo es ist
     const mesh = host.part.mesh;
     if (p) { mesh.quaternion.set(p.quat[0], p.quat[1], p.quat[2], p.quat[3]); mesh.position.set(p.pos[0], p.pos[1], p.pos[2]); }
     else { mesh.quaternion.identity(); mesh.position.set(0, 0, 0); }
@@ -735,6 +826,7 @@ export function createAngussTool(host) {
   }
   const placeOf = (q, pos) => ({ key: host.part.key, quat: q.toArray().map(v => round(v, 6)), pos: pos.map(v => round(v, 3)) });
   function placePart(ref) {
+    if (bench) return;
     const m = host.part.model;
     if (!m) { applyPlace(null); return; }
     if (ref) {
@@ -778,10 +870,16 @@ export function createAngussTool(host) {
       und stellt es vor seine Anschnitte. */
   function pickPreset(id) {
     const d = DEMOS.find(x => x.id === id) || DEMOS[0];
-    cancelAim();
+    placer.cancel();
     state.preset = d.id;
-    state.name = d.label;
     state.graph = d.build();
+    /* Bemessen ist ein Beispiel für den voreingestellten Prozess
+       (presets.js). Gilt hier ein anderer — ein Bauteil hat sein Volumen
+       eingetragen —, wird es für DIESEN bemessen, wie mit „Querschnitte
+       abstufen": sonst begrüßte es mit 1000 cm³ Gussvolumen mit wachsendem
+       Querschnitt, zu schnellem Laufkanal und zu großem Anschnitt. */
+    F.applyAutoGates(state.graph, state.proc);
+    autoTaper(state.graph, state.proc, state.sizing);
     ui('preset').value = d.id;
     ui('graph-note').textContent = '';
     ui('graph-warn').textContent = '';
@@ -791,16 +889,13 @@ export function createAngussTool(host) {
     adoptGraph();
     if (refId && !loaded) {
       state.ready = false;
-      /* Die Auswahl der Bauteil-Klappe mitführen: daran liest der Gastgeber,
-         welches Beispielteil es ist (Schlüssel des Entwurfs). */
-      const partSel = document.getElementById('demo-select');
-      if (partSel) partSel.value = refId;
-      state.refPending = Promise.resolve(host.part.pickDemo(refId)).then(() => {
+      /* Das Beispielteil lädt der Gastgeber; die Klappe zeigt es als gewählt,
+         und sein Schlüssel ist der des Entwurfs. */
+      return Promise.resolve(host.part.pickDemo(refId)).then(() => {
         /* Kam das Teil nicht (Datei fehlt), meldet es die Bauteil-Klappe —
            die Seite arbeitet ohne weiter. */
         if (!state.ready) { ui('graph-warn').textContent = '„' + d.ref.name + '" konnte nicht geladen werden; das Beispiel steht ohne sein Bauteil.'; state.ready = true; }
       });
-      return state.refPending;
     }
     return Promise.resolve();
   }
@@ -808,33 +903,29 @@ export function createAngussTool(host) {
   /** Nach dem Laden eines anderen Systems alle Anzeigen nachziehen. */
   function syncPanel() {
     const g = state.graph, p = state.proc;
-    ui('draft').value = String(g.draft);
-    ui('draft-val').textContent = fmt(g.draft) + '°';
+    sliders.draft.set(g.draft);
     ui('radius').value = fmtPlain(g.radius, 2);
     ui('branch-r').value = fmtPlain(g.branchR, 2);
-    ui('tension').value = String(Math.round(g.tension * 100));
-    ui('tension-val').textContent = fmt(g.tension, 2);
+    sliders.tension.set(Math.round(g.tension * 100));
     ui('step').value = fmtPlain(g.step, 2);
     ui('gate-h').value = fmtPlain(g.gateH, 2);
-    ui('taper').value = String(Math.round(state.sizing.taper * 100));
-    ui('taper-val').textContent = fmt(state.sizing.taper * 100, 0) + ' %';
-    ui('aspect').value = String(Math.round(state.sizing.aspect * 100));
-    ui('aspect-val').textContent = fmt(state.sizing.aspect, 2);
+    sliders.taper.set(Math.round(state.sizing.taper * 100));
+    sliders.aspect.set(Math.round(state.sizing.aspect * 100));
     ui('alloy').value = p.alloy;
     ui('vol').value = fmtPlain(p.volume, 1);
     ui('tfill').value = fmtPlain(p.fillTime, 1);
     ui('vgate').value = fmtPlain(p.vGate, 1);
     ui('chamber-len').value = fmtPlain(p.chamberLen, 0);
-    ui('cbranch').value = String(Math.round(p.cBranch * 100));
-    ui('cbranch-val').textContent = fmt(p.cBranch, 2);
+    sliders.cbranch.set(Math.round(p.cBranch * 100));
     ui('shot-time').checked = state.onCurve;
+    ui('vol-auto').checked = state.volAuto;
   }
   function adoptGraph() {
     syncPanel();
     rebuild();
     /* Nichts gewählt: das erste Bild zeigt das ganze System, kein Feld davor. */
     editor.select(null);
-    if (host.history) host.history.reset();
+    host.resetHistory();
     fit();
     state.ready = true;
   }
@@ -842,7 +933,7 @@ export function createAngussTool(host) {
   /* ── Datei, Verlauf ──────────────────────────────────────── */
   const toDoc = () => ({
     ...G.toJSON(state.graph),
-    process: { ...state.proc, onCurve: state.onCurve },
+    process: { ...state.proc, onCurve: state.onCurve, ...(opts.castVolume ? { volAuto: state.volAuto } : {}) },
     sizing: { taper: state.sizing.taper, aspect: state.sizing.aspect },
     ...(state.place ? { ref: state.place } : {})
   });
@@ -853,24 +944,33 @@ export function createAngussTool(host) {
     state.graph = G.fromJSON(doc);
     const p = doc.process;
     if (p && typeof p === 'object') {
-      if (F.ALLOYS[p.alloy]) state.proc.alloy = p.alloy;
+      if (Object.hasOwn(F.ALLOYS, p.alloy)) state.proc.alloy = p.alloy;
       for (const k of Object.keys(PROC_RANGE)) if (Number.isFinite(p[k])) state.proc[k] = within(p[k], PROC_RANGE[k]);
       if (typeof p.onCurve === 'boolean') state.onCurve = p.onCurve;
+      if (opts.castVolume && typeof p.volAuto === 'boolean') state.volAuto = p.volAuto;
     }
     const s = doc.sizing;
     if (s && typeof s === 'object') {
       if (Number.isFinite(s.taper)) state.sizing.taper = within(s.taper, [0.7, 1]);
       if (Number.isFinite(s.aspect)) state.sizing.aspect = within(s.aspect, [0.3, 1.2]);
     }
-    /* Die Lage des Bauteils gilt nur für DAS Bauteil, zu dem sie gehört. */
+    /* Die Lage des Bauteils gilt nur für DAS Bauteil, zu dem sie gehört. Die
+       Drehung auf Länge eins: ein anderer Betrag verzerrte das Bauteil. */
     const r = doc.ref;
     if (r && host.part.model && r.key === host.part.key && Array.isArray(r.quat) && r.quat.length === 4 && Array.isArray(r.pos) && r.pos.length === 3
-      && [...r.quat, ...r.pos].every(Number.isFinite)) applyPlace({ key: r.key, quat: r.quat.slice(), pos: r.pos.slice() });
+      && [...r.quat, ...r.pos].every(Number.isFinite)) {
+      const l = Math.hypot(...r.quat);
+      if (l > 1e-6) {
+        applyPlace({ key: r.key, quat: Math.abs(l - 1) > 1e-6 ? r.quat.map(v => v / l) : r.quat.slice(), pos: r.pos.slice() });
+        return true;
+      }
+    }
+    return false;
   }
 
   /* ── Chips: anfügen, einfügen, Schema ────────────────────── */
   const addChip = (id, label, type, title) => ({
-    id, label, icon: G.TYPES[type].color, title,
+    id, label, icon: () => G.TYPES[type].color, title,
     enabled: () => !addReason(), reason: addReason, onClick: () => addOf(type)
   });
   shell.setChips([
@@ -884,51 +984,46 @@ export function createAngussTool(host) {
 
   /* ── Verdrahten: sobald der Rahmen die Felder der Modi eingesetzt hat ── */
   function mounted() {
+    /* Die ⓘ darin bedient der Rahmen (ein Zuhörer am Auswahlfeld, js/studio/shell.js). */
     shell.inspector.body.innerHTML = INSPECTOR;
-    for (const b of shell.inspector.body.querySelectorAll('[data-help]')) {
-      b.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); shell.help.show(b.getAttribute('data-help')); });
-    }
     shell.inspector.onClose(() => editor.select(null));
     shell.viewport.insertAdjacentHTML('beforeend', CHART);
     ui('chart-close').addEventListener('click', () => openChart(false));
-    shell.header.setPart('Bauteil laden …', 'Referenz');
-    /* Die Bauteil-Klappe zeigt von sich aus das erste Beispielteil als
-       gewählt — hier ist aber (noch) keines geladen. */
-    const partSel = document.getElementById('demo-select');
-    if (partSel) partSel.selectedIndex = -1;
-
-    ui('sel-groups').addEventListener('click', ev => {
-      const b = ev.target.closest('[data-group-tab]');
-      if (!b) return;
-      state.openGroup = b.getAttribute('data-group-tab');
-      showGroup();
-    });
+    if (bench) {
+      /* Die Werkbank: kein Beispiel, kein Referenzteil — das Bauteil ist ihres. */
+      ui('preset').closest('.row').hidden = true;
+      ui('ref-block').hidden = true;
+    } else {
+      shell.header.setPart('Bauteil laden …', 'Referenz');
+      /* Die Bauteil-Klappe zeigt von sich aus das erste Beispielteil als
+         gewählt — hier ist aber (noch) keines geladen. */
+      host.part.deselect();
+    }
+    ui('vol-auto-row').hidden = !opts.castVolume;
+    /* Welche Gruppen es gibt, hängt an der Art des Punktes; „Details" zeigt
+       die abgeleiteten Zahlen darunter. */
+    groups = groupTabs({ tabs: ui('sel-groups'), box: ui('sel-params'), onShow: open => { ui('sel-facts').hidden = open !== DETAILS; } });
 
     /* System */
     ui('preset').innerHTML = DEMOS.map(d => '<option value="' + d.id + '">' + d.label + '</option>').join('');
     ui('preset').addEventListener('change', e => pickPreset(e.target.value));
-    numberInput(ui('bisc-d'), v => { state.graph.biscuit.d = v; rebuild(); host.changed('Pressrest-Durchmesser geändert'); return v; }, { min: 10, max: 400, unit: 'mm' });
-    numberInput(ui('bisc-t'), v => { state.graph.biscuit.t = v; rebuild(); host.changed('Pressrest-Dicke geändert'); return v; }, { min: 1, max: 300, unit: 'mm' });
+    /* Der Pressrest ist Kolben und Füllkammer der Kurve: mit seinen Maßen
+       ändern sich Füllgrad und Ankunft — auch die im offenen Auswahlfeld. */
+    const mm = k => ({ min: G.LIMITS[k][0], max: G.LIMITS[k][1], unit: 'mm' });
+    numberInput(ui('bisc-d'), v => { state.graph.biscuit.d = v; rebuild(); syncSelection(); host.changed('Pressrest-Durchmesser geändert'); return v; }, mm('biscuitD'));
+    numberInput(ui('bisc-t'), v => { state.graph.biscuit.t = v; rebuild(); syncSelection(); host.changed('Pressrest-Dicke geändert'); return v; }, mm('biscuitT'));
     segButtons(ui('axis-seg'), value => {
       const g = state.graph;
-      const from = G.AXES[g.biscuit.axis], to = G.AXES[value];
+      const o = g.biscuit.pos.slice();
       /* Mitdrehen statt nur umdeuten: die Trennebene kippt, und der Anguss
-         liegt weiter in ihr — das Referenzbauteil mit ihm. */
-      let axis = cross(from, to);
-      const ang = Math.acos(Math.max(-1, Math.min(1, dot(from, to))));
-      if (Math.hypot(axis[0], axis[1], axis[2]) < 1e-9) axis = cross(from, Math.abs(from[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]);
-      axis = norm(axis);
-      if (ang > 1e-9) {
-        const o = g.biscuit.pos;
-        for (const n of G.allNodes(g)) n.pos = add(o, rotate(sub(n.pos, o), axis, ang));
-        if (state.place && host.part.model) {
-          const turn = new T.Quaternion().setFromAxisAngle(new T.Vector3(axis[0], axis[1], axis[2]), ang);
-          const q = turn.clone().multiply(new T.Quaternion(state.place.quat[0], state.place.quat[1], state.place.quat[2], state.place.quat[3]));
-          applyPlace(placeOf(q, add(o, rotate(sub(state.place.pos, o), axis, ang))));
-        }
+         liegt weiter in ihr, samt gebundener Mündungen (G.turnSystem) — das
+         Referenzbauteil mit ihm. */
+      const { axis, ang } = G.turnSystem(g, value);
+      if (ang > 1e-9 && state.place && host.part.model) {
+        const turn = new T.Quaternion().setFromAxisAngle(new T.Vector3(axis[0], axis[1], axis[2]), ang);
+        const q = turn.clone().multiply(new T.Quaternion(state.place.quat[0], state.place.quat[1], state.place.quat[2], state.place.quat[3]));
+        applyPlace(placeOf(q, add(o, rotate(sub(state.place.pos, o), axis, ang))));
       }
-      g.biscuit.axis = value;
-      G.setBiscuit(g, {});
       rebuild();
       syncSelection();
       host.changed('Ausstoßrichtung geändert');
@@ -938,29 +1033,30 @@ export function createAngussTool(host) {
     });
 
     /* Kanalform */
-    const graphSlider = (name, set, text, label) => slider(ui(name), v => {
-      if (!wired) return;
+    const graphSlider = (name, set, text, label) => { sliders[name] = slider(ui(name), v => {
       set(v);
       rebuild();
       if (sel()) syncFacts(sel());
       commit(label, name);
-    }, text, ui(name + '-val'));
+    }, text, ui(name + '-val'), { fire: false }); };
     graphSlider('draft', v => { state.graph.draft = v; }, v => fmt(v) + '°', 'Entformschräge geändert');
     graphSlider('tension', v => { state.graph.tension = v / 100; }, v => fmt(v / 100, 2), 'Splinestraffheit geändert');
-    const graphNumber = (name, set, range, label) => numberInput(ui(name), v => { set(v); rebuild(); syncSelection(); host.changed(label); return v; }, { min: range[0], max: range[1], unit: 'mm' });
-    graphNumber('radius', v => { state.graph.radius = v; }, [0, 20], 'Bodenradius geändert');
-    graphNumber('branch-r', v => { state.graph.branchR = v; }, [0, 40], 'Zwickelradius geändert');
-    graphNumber('step', v => { state.graph.step = v; }, [0.2, 10], 'Abtastschritt geändert');
-    graphNumber('gate-h', v => { G.setGateHeight(state.graph, v); }, [0.3, 30], 'Anschnitthöhe geändert');
+    const graphNumber = (name, set, key, label) => numberInput(ui(name), v => { set(v); rebuild(); syncSelection(); host.changed(label); return v; }, mm(key));
+    graphNumber('radius', v => { state.graph.radius = v; }, 'radius', 'Bodenradius geändert');
+    graphNumber('branch-r', v => { state.graph.branchR = v; }, 'branchR', 'Zwickelradius geändert');
+    graphNumber('step', v => { state.graph.step = v; }, 'step', 'Abtastschritt geändert');
+    graphNumber('gate-h', v => { G.setGateHeight(state.graph, v); }, 'gateH', 'Anschnitthöhe geändert');
     /* Verjüngung und Seitenverhältnis wirken erst mit „Querschnitte abstufen". */
-    slider(ui('taper'), v => { if (!wired) return; state.sizing.taper = v / 100; commit('Verjüngung geändert', 'taper'); }, v => fmt(v, 0) + ' %', ui('taper-val'));
-    slider(ui('aspect'), v => { if (!wired) return; state.sizing.aspect = v / 100; commit('Seitenverhältnis geändert', 'aspect'); }, v => fmt(v / 100, 2), ui('aspect-val'));
+    sliders.taper = slider(ui('taper'), v => { state.sizing.taper = v / 100; commit('Verjüngung geändert', 'taper'); }, v => fmt(v, 0) + ' %', ui('taper-val'), { fire: false });
+    sliders.aspect = slider(ui('aspect'), v => { state.sizing.aspect = v / 100; commit('Seitenverhältnis geändert', 'aspect'); }, v => fmt(v / 100, 2), ui('aspect-val'), { fire: false });
 
     /* Prozess */
     ui('alloy').innerHTML = Object.entries(F.ALLOYS).map(([k, v]) => '<option value="' + k + '">' + v.label + '</option>').join('');
-    ui('alloy').addEventListener('change', e => { state.proc.alloy = e.target.value; rebuild(); host.changed('Legierung geändert'); });
+    ui('alloy').addEventListener('change', e => { state.proc.alloy = e.target.value; rebuild(); syncSelection(); host.changed('Legierung geändert'); });
     const procNumber = (name, key, unit, label) => numberInput(ui(name), v => {
       state.proc[key] = v;
+      /* Ein getipptes Gussvolumen gilt: es folgt dann nicht mehr Bauteil und Überläufen. */
+      if (key === 'volume' && state.volAuto) { state.volAuto = false; ui('vol-auto').checked = false; }
       rebuild();
       syncSelection();
       host.changed(label);
@@ -970,25 +1066,36 @@ export function createAngussTool(host) {
     procNumber('tfill', 'fillTime', 'ms', 'Füllzeit geändert');
     procNumber('vgate', 'vGate', 'm/s', 'Zielgeschwindigkeit geändert');
     procNumber('chamber-len', 'chamberLen', 'mm', 'Füllkammerlänge geändert');
-    slider(ui('cbranch'), v => {
-      if (!wired) return;
+    sliders.cbranch = slider(ui('cbranch'), v => {
       state.proc.cBranch = v / 100;
       rebuild();
       if (sel()) syncFacts(sel());
       commit('Verzweigungsverlust geändert', 'cbranch');
-    }, v => fmt(v / 100, 2), ui('cbranch-val'));
+    }, v => fmt(v / 100, 2), ui('cbranch-val'), { fire: false });
     ui('shot-time').addEventListener('change', e => {
       state.onCurve = e.target.checked;
       rebuild();
       syncSelection();
       host.changed(state.onCurve ? 'Ankunft nach der Schusskurve' : 'Ankunft bei konstantem Strom');
     });
+    ui('vol-auto').addEventListener('change', e => {
+      state.volAuto = e.target.checked;
+      if (syncVolume() && state.graph.rootId) rebuild();
+      syncSelection();
+      host.changed(state.volAuto ? 'Gussvolumen aus Bauteil und Überläufen' : 'Gussvolumen von Hand');
+    });
 
-    /* Auswahlfeld */
+    /* Auswahlfeld. Die Lage steht auf das Zehntel gerundet im Feld; ein
+       Enter im unveränderten Feld las diese Rundung wieder ein und setzte
+       den Punkt (am Pressrest das ganze System) um ein paar Hundertstel —
+       als Schritt im Verlauf. Wer nichts ändert, verschiebt nichts. Die
+       Grenzen fangen „12.500" ab: das liest sich deutsch als 12 500 mm und
+       läge ohne Hinweis zwölf Meter neben dem Bauteil. */
     for (const [name, axis] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) {
       numberInput(ui(name), v => {
         const n = sel();
         if (!n || G.isFollower(state.graph, n.id)) return v;
+        if (v === parseNumber(fmtPlain(n.pos[axis], 1))) return v;
         const p = n.pos.slice();
         p[axis] = v;
         G.setPos(state.graph, n.id, p);
@@ -996,18 +1103,18 @@ export function createAngussTool(host) {
         syncFacts(n);
         host.changed(n.parent ? 'Lage geändert' : 'System verschoben');
         return v;
-      });
+      }, POS_LIMIT);
     }
     numberInput(ui('sel-w'), v => {
       const w = Math.min(state.graph.biscuit.d, v);
       editNode(x => { x.w = w; }, 'Kanalbreite geändert');
       return w;
-    }, { min: 1, max: 400, unit: 'mm' });
-    numberInput(ui('sel-h'), v => { editNode(x => { x.h = v; }, 'Kanaltiefe geändert'); return v; }, { min: 0.4, max: 200, unit: 'mm' });
-    const nodeSlider = (name, set, text, label) => slider(ui(name), v => {
-      if (!wired || !sel()) return;
+    }, mm('w'));
+    numberInput(ui('sel-h'), v => { editNode(x => { x.h = v; }, 'Kanaltiefe geändert'); return v; }, mm('h'));
+    const nodeSlider = (name, set, text, label) => { sliders[name] = slider(ui(name), v => {
+      if (!sel()) return;
       editNode(n => set(n, v), label, name + ':' + sel().id);
-    }, text, ui(name + '-val'));
+    }, text, ui(name + '-val'), { fire: false }); };
     nodeSlider('sel-roll', (n, v) => { n.tilt = [v, n.tilt[1]]; }, v => fmt(v, 0) + '°', 'Ebene längs gekippt');
     nodeSlider('sel-pitch', (n, v) => { n.tilt = [n.tilt[0], v]; }, v => fmt(v, 0) + '°', 'Ebene quer gekippt');
     nodeSlider('sel-ratio', (n, v) => { n.ratio = v / 100; }, v => fmt(v, 0) + ':' + fmt(100 - v, 0), 'Aufteilung geändert');
@@ -1023,9 +1130,9 @@ export function createAngussTool(host) {
       editNode(n => { n.gate.h = v; n.gate.hAuto = Math.abs(v - state.graph.gateH) < 1e-9; }, 'Anschnitthöhe geändert');
       syncSelection();
       return v;
-    }, { min: 0.3, max: 30, unit: 'mm' });
-    numberInput(ui('sel-glen'), v => { editNode(n => { n.gate.len = v; }, 'Anschnitttiefe geändert'); return v; }, { min: 0, max: 60, unit: 'mm' });
-    numberInput(ui('sel-gw'), v => { editNode(n => { n.gate.w = v; }, 'Anschnittbreite geändert'); return v; }, { min: 1, max: 600, unit: 'mm' });
+    }, mm('gateH'));
+    numberInput(ui('sel-glen'), v => { editNode(n => { n.gate.len = v; }, 'Anschnitttiefe geändert'); return v; }, mm('gateLen'));
+    numberInput(ui('sel-gw'), v => { editNode(n => { n.gate.w = v; }, 'Anschnittbreite geändert'); return v; }, mm('gateW'));
     ui('sel-gauto').addEventListener('change', e => {
       editNode(n => { n.gate.auto = e.target.checked; }, e.target.checked ? 'Anschnittbreite folgt der Zielgeschwindigkeit' : 'Anschnittbreite von Hand');
       syncSelection();
@@ -1040,20 +1147,79 @@ export function createAngussTool(host) {
     segButtons(inPop('show-seg'), v => { state.show = v; applyVisibility(); });
     inPop('show-biscuit').addEventListener('change', e => { look.biscuit = e.target.checked; applyVisibility(); });
     inPop('show-line').addEventListener('change', e => { look.handles = e.target.checked; applyVisibility(); });
-    shell.legend('<div class="st-title">Punktarten</div>'
-      + Object.values(G.TYPES).map(t => '<div class="lg-row"><span class="dot" style="background:' + t.color + '"></span>' + t.label + '</div>').join('')
-      + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>'
-      + '<div class="lg-row"><span class="dot" style="background:' + FOLLOWER_COLOR + '"></span>gespiegelt (folgt)</div>');
+    updateLegend();
 
     updateRef();
+    if (proposal && proposal.mounted) proposal.mounted();
     wired = true;
+  }
+
+  function updateLegend() {
+    shell.legend('<div class="st-title">Punktarten</div>'
+      + Object.values(G.TYPES).map(t => legendRow(t.color, t.label)).join('')
+      + selectedRow() + legendRow(VIEW.follower, 'gespiegelt (folgt)', ';opacity:.6'));
+  }
+
+  /* Auf der Werkbank liegt die Trennebene bei z = 0: ein Plan aus dem
+     Angussdesigner (Achse ±Y) passt dort nicht, bis man ihn dreht. */
+  const frameWarning = () => {
+    const ax = state.graph.biscuit.axis;
+    return !bench || !state.graph.rootId || ax === '+z' || ax === '-z' ? ''
+      : 'Der Plan liegt im Rahmen des Angussdesigners (Achse ' + ax + '). Die Werkbank erwartet die Trennebene bei z = 0: unter „System" die Richtung auf −Z stellen und den Pressrest an seinen Ort ziehen.';
+  };
+
+  /* ── Das Gussvolumen aus Bauteil und Überläufen (die Werkbank) ─ */
+  /** → true, wenn es sich geändert hat. */
+  function syncVolume() {
+    if (!opts.castVolume || !state.volAuto) return false;
+    const mm3 = opts.castVolume();
+    if (!(mm3 > 0)) return false;
+    const v = within(Math.round(mm3 / 100) / 10, PROC_RANGE.volume);
+    if (Math.abs(v - state.proc.volume) < 1e-9) return false;
+    state.proc.volume = v;
+    if (wired) ui('vol').value = fmtPlain(v, 1);
+    return true;
+  }
+
+  /* ── Der Prozess aus der Auslegung (die Werkbank) ──────────── */
+  /* Die Legierung nach der Dichte der Auslegung, die Zielgeschwindigkeit aus
+     der Mitte ihres Zielbands — und danach die Füllzeit der Kurve, die mit
+     dieser Legierung gerechnet ist. */
+  function designProc() {
+    const v = design.values, out = {};
+    if (v.density > 0) {
+      out.alloy = Object.keys(F.ALLOYS).reduce((a, k) => (Math.abs(F.ALLOYS[k].rho - v.density) < Math.abs(F.ALLOYS[a].rho - v.density) ? k : a));
+    }
+    if (Number.isFinite(v.gateMin) && Number.isFinite(v.gateMax)) out.vGate = within(Math.round((v.gateMin + v.gateMax) / 2), PROC_RANGE.vGate);
+    return out;
+  }
+  function processFromDesign() {
+    const want = designProc();
+    if (want.alloy) { state.proc.alloy = want.alloy; ui('alloy').value = want.alloy; }
+    if (want.vGate !== undefined) { state.proc.vGate = want.vGate; ui('vgate').value = fmtPlain(want.vGate, 1); }
+    rebuild();
+    const f = curveFill();
+    if (f !== null) { state.proc.fillTime = Math.round(f * 10) / 10; ui('tfill').value = fmtPlain(state.proc.fillTime, 1); }
+    rebuild();
+    syncSelection();
+    host.changed('Prozess aus der Auslegung übernommen');
+  }
+  function designPrimary() {
+    const want = designProc(), fill = curveFill();
+    const todo = (want.alloy && want.alloy !== state.proc.alloy) || (want.vGate !== undefined && Math.abs(want.vGate - state.proc.vGate) > 0.5)
+      || (fill !== null && Math.abs(fill - state.proc.fillTime) > 0.5);
+    if (!state.graph.rootId) return { label: 'Prozess aus der Auslegung', disabled: true, reason: 'Noch kein Anguss: erst im Modus „System" einen vorschlagen.' };
+    if (!todo) return { hidden: true, noteKind: 'ok', reason: 'Legierung, Füllzeit und Zielgeschwindigkeit stimmen mit der Auslegung überein.' };
+    return { label: 'Prozess aus der Auslegung', onClick: processFromDesign,
+      reason: 'Legierung nach der Dichte, die Füllzeit aus der Schusskurve, die Zielgeschwindigkeit aus der Mitte des Zielbands.' };
   }
 
   /* ── Hauptknöpfe der Modi ────────────────────────────────── */
   const PRIMARY = {
-    system: () => null,
+    /* Auf der Werkbank legt der Knopf des Vorschlags ein System ans Bauteil. */
+    system: () => (proposal ? proposal.primary() : null),
     /* reason: '' — die Zustandszeile eines anderen Modus bleibt sonst stehen. */
-    kanalform: () => ({
+    kanalform: () => (!state.graph.rootId ? { label: 'Querschnitte abstufen', disabled: true, reason: 'Noch kein Anguss.' } : {
       label: 'Querschnitte abstufen', reason: '',
       onClick: () => {
         autoTaper(state.graph, state.proc, state.sizing);
@@ -1067,6 +1233,7 @@ export function createAngussTool(host) {
        rechnen Strom und Zeiten mit derselben Zahl. Stimmen sie schon, gibt
        es nichts zu tun: kein toter Knopf, nur die Zeile, die es sagt. */
     prozess: () => {
+      if (bench) return designPrimary();
       const fill = curveFill();
       if (fill === null) {
         return {
@@ -1088,30 +1255,158 @@ export function createAngussTool(host) {
         }
       };
     },
-    pruefung: () => ({ label: state.chartOpen ? 'Flussschema schließen' : 'Flussschema öffnen', reason: '', kind: state.chartOpen ? 'outline' : '', onClick: () => openChart(!state.chartOpen) })
+    pruefung: () => (!state.net ? { label: 'Flussschema öffnen', disabled: true, reason: 'Noch kein Anguss.' }
+      : { label: state.chartOpen ? 'Flussschema schließen' : 'Flussschema öffnen', reason: '', kind: state.chartOpen ? 'outline' : '', onClick: () => openChart(!state.chartOpen) })
   };
 
-  const fileBase = () => safeName(state.name || host.part.name || 'anguss');
+  /* Dateinamen wie beim Plan (<bauteil>-anguss.json, js/studio/files.js):
+     <bauteil>-anguss.stl und <bauteil>-pressrest.stl. Vorher hießen die
+     STL nach dem Beispiel, der Plan nach dem Bauteil. */
+
+  /* Mit Referenzbauteil kommen Anguss und Pressrest in DESSEN Koordinaten
+     heraus. Hier steht das Bauteil gedreht und verschoben (placePart), im
+     CAD so, wie seine Datei es beschreibt: die Umkehrung seiner Lage bringt
+     die Körper dorthin, wo sie am Bauteil sitzen (bei der Ölwanne 90° und
+     637 mm). Eine starre Bewegung, der Umlaufsinn bleibt. */
+  function toPartFrame(tris) {
+    const p = state.place;
+    const m = new T.Matrix4().compose(new T.Vector3(p.pos[0], p.pos[1], p.pos[2]),
+      new T.Quaternion(p.quat[0], p.quat[1], p.quat[2], p.quat[3]), new T.Vector3(1, 1, 1)).invert();
+    const out = new Float64Array(tris.length);
+    const v = new T.Vector3();
+    for (let i = 0; i < tris.length; i += 3) {
+      v.set(tris[i], tris[i + 1], tris[i + 2]).applyMatrix4(m);
+      out[i] = v.x; out[i + 1] = v.y; out[i + 2] = v.z;
+    }
+    return out;
+  }
+
+  /* Die Werkbank: der Vorschlag im Modus System und was die übrigen
+     Schritte brauchen. */
+  function setGraph(g, { label = '', fit: fitNow = false } = {}) {
+    placer.cancel();
+    state.graph = g;
+    state.preset = null;
+    if (wired) { ui('graph-note').textContent = ''; ui('graph-warn').textContent = frameWarning(); syncPanel(); }
+    rebuild();
+    editor.select(null);
+    syncSelection();
+    if (fitNow) fit();
+    if (label) host.changed(label);
+    state.ready = true;
+  }
+  const api = { ui, state, setGraph, rebuild, fit, get partMesh() { return host.part.mesh; } };
+  const proposal = opts.propose ? opts.propose(api) : null;
+
+  /** Die Mündungen für die Füllung: Ort, Mündungsrichtung (in die Kavität),
+      Breite, Höhe, Anteil am Strom (Ist) und die Ankunft ab Kolbenstart —
+      je Anschnitt, auch die nachgezogenen einer Spiegelung. */
+  function gateMouths() {
+    const g = state.graph, net = state.net, fl = state.flow;
+    if (!net || !fl) return [];
+    const shown = state.flowShown || fl;
+    const out = [];
+    for (const n of G.allNodes(g)) {
+      if (n.type !== 'gate') continue;
+      const e = net.edges.find(x => x.toId === n.id);
+      const t = e && e.sections.length ? e.sections[e.sections.length - 1].t : G.chordDir(g, n);
+      const r = fl.gates.find(x => x.id === n.id);
+      const rs = shown.gates.find(x => x.id === n.id);
+      out.push({ id: n.id, pos: n.pos.slice(), dir: t.slice(), w: n.gate.w, h: n.gate.h,
+        share: r ? r.ist : 1 / Math.max(1, fl.gates.length), bound: !!n.aim || G.isFollower(g, n.id),
+        /* Ohne Kurve gibt es keine Zeit; endet die Kurve vorher, NaN. */
+        tArrive: shown.onCurve && rs ? rs.tArrive : NaN });
+    }
+    return out;
+  }
+
+  /* Die Werkbank: nicht mehr dran — kein Zielen, kein Schema, Mittellinie
+     und Griffe weg (Anguss und Pressrest bleiben als Körper stehen); wieder
+     dran — Griffe und Auswahlfeld wie vorhin. */
+  function setActive(on) {
+    active = on;
+    if (!on) { placer.cancel(); if (state.chartOpen) openChart(false); }
+    applyVisibility();
+    if (on) syncSelection();
+  }
 
   const tool = {
     id: 'anguss',
-    modes: MODES.map(m => ({ ...m, enter() {}, leave() {}, primary: PRIMARY[m.id] })),
+    /* Der Vorschlag steht oben im Modus System — dort, wo auf der eigenen
+       Seite die Beispiele stehen (auf der Werkbank verborgen). */
+    modes: MODES.map(m => ({
+      ...m, html: m.id === 'system' && proposal ? proposal.html + m.html : m.html, primary: PRIMARY[m.id]
+    })),
     accepts: [G.FORMAT],
+    setActive,
+    /* Was als Plan auch in anderen Schritten der Werkbank im Bild steht. */
+    bodies: group,
+    link: {
+      gateMouths,
+      /** Die Schusskurve unter diesem Anguss — für die Uhr der Füllung. */
+      curve() {
+        const on = !!(state.flowShown && state.flowShown.onCurve);
+        return { onCurve: on, timeline: on ? state.timeline : null };
+      },
+      /** Anguss und Pressrest in mm³ — für die Auslegung. */
+      volumes() {
+        const b = state.graph.biscuit;
+        return {
+          runner: state.flow ? state.flow.runnerVolume : 0,
+          biscuit: state.graph.rootId ? Math.PI * b.d * b.d / 4 * b.t : 0
+        };
+      },
+      /** Die Körper als Dreieckssuppen (Sprengfläche) — leer ohne System. */
+      soups: () => (state.net ? [sweepRunner(state.net), biscuitMesh(state.graph.biscuit)] : []),
+      /** Anschnittfläche (mm²) und -höhe (mm) — null ohne System. */
+      gate: () => (state.flow ? { area: state.flow.gateArea, th: state.graph.gateH } : null),
+      /* Die Werkbank-Datei: der Graph und der Prozess getrennt, wie seit jeher. */
+      graphDoc: () => (state.graph.rootId ? G.toJSON(state.graph) : null),
+      procDoc: () => ({ ...state.proc, sizing: { ...state.sizing }, volAuto: state.volAuto, onCurve: state.onCurve }),
+      setProc(p) {
+        if (!p || typeof p !== 'object') return;
+        if (Object.hasOwn(F.ALLOYS, p.alloy)) state.proc.alloy = p.alloy;
+        for (const k of Object.keys(PROC_RANGE)) if (Number.isFinite(p[k])) state.proc[k] = within(p[k], PROC_RANGE[k]);
+        const s = p.sizing;
+        if (s && typeof s === 'object') {
+          if (Number.isFinite(s.taper)) state.sizing.taper = within(s.taper, [0.7, 1]);
+          if (Number.isFinite(s.aspect)) state.sizing.aspect = within(s.aspect, [0.3, 1.2]);
+        }
+        if (typeof p.volAuto === 'boolean') state.volAuto = p.volAuto;
+        if (typeof p.onCurve === 'boolean') state.onCurve = p.onCurve;
+        if (wired) syncPanel();
+        if (state.graph.rootId) rebuild();
+      },
+      setGraph,
+      /** Bauteil oder Überläufe haben sich geändert: das Gussvolumen zieht nach. */
+      syncVolume() { if (syncVolume() && state.graph.rootId) { rebuild(); syncSelection(); } },
+      /** Maschine, Kammer oder Legierung der Auslegung haben sich geändert:
+          die Kurve unter dem Anguss ist eine andere. */
+      curveChanged() { if (state.graph.rootId && state.onCurve) { rebuild(); syncSelection(); } }
+    },
     toJSON: toDoc,
     /* Eine Datei (oder ein Entwurf): ein anderes System — nichts gewählt, das
-       Bild eingepasst. Den Verlauf setzt der Gastgeber zurück. */
+       Bild eingepasst. Den Verlauf setzt der Gastgeber zurück. Kennt die
+       Datei keine Lage für DIESES Bauteil (ein anderes, keines, ein Plan von
+       woanders), stünde es noch dort, wo es zum vorigen Plan gehörte —
+       womöglich 300 mm neben den Anschnitten. Es kommt vor die Anschnitte
+       des geöffneten Plans, wie bei einem Beispiel ohne eigenes Bauteil,
+       und die Zeile unter dem Beispiel sagt es. */
     fromJSON(obj) {
-      cancelAim();
-      applyDoc(obj);
-      state.name = '';
+      placer.cancel();
+      const placed = applyDoc(obj);
+      const moved = !bench && !!host.part.model && !placed;
+      if (moved) placePart(null);
       state.preset = null;
       ui('preset').selectedIndex = -1;
-      ui('graph-note').textContent = 'Aus einer Datei oder einem Entwurf geladen.';
-      ui('graph-warn').textContent = '';
+      ui('graph-note').textContent = 'Aus einer Datei oder einem Entwurf geladen.'
+        + (moved ? ' Eine Lage für dieses Bauteil kannte der Plan nicht: es steht jetzt vor seinen Anschnitten.' : '');
+      ui('graph-warn').textContent = frameWarning();
       syncPanel();
       rebuild();
       editor.select(null);
       fit();
+      state.ready = true;
     },
     serialize: toDoc,
     /* Rückgängig: das System wie es war. Kommt dabei etwas zurück (ein
@@ -1121,7 +1416,7 @@ export function createAngussTool(host) {
     restore(doc) {
       const keep = editor.selected;
       const before = new Set(Object.keys(state.graph.nodes));
-      cancelAim();
+      placer.cancel();
       applyDoc(doc);
       const g = state.graph;
       const back = Object.keys(g.nodes).filter(id => !before.has(id));
@@ -1141,13 +1436,18 @@ export function createAngussTool(host) {
       run: () => {
         const runner = sweepRunner(state.net);
         if (!runner.length) return;
-        download(new Blob([writeSTL(runner, 'DieLogic Anguss')], { type: 'model/stl' }), fileBase() + '-anguss.stl');
-        download(new Blob([writeSTL(biscuitMesh(state.graph.biscuit), 'DieLogic Pressrest')], { type: 'model/stl' }), fileBase() + '-pressrest.stl');
-        shell.toast('Zwei Dateien: ' + fileBase() + '-anguss.stl und ' + fileBase() + '-pressrest.stl.');
+        const inPart = !!(host.part.model && state.place);
+        const frame = inPart ? toPartFrame : t => t;
+        const a = saveSTL(frame(runner), 'DieLogic Anguss', host.part.name, 'anguss');
+        const b = saveSTL(frame(biscuitMesh(state.graph.biscuit)), 'DieLogic Pressrest', host.part.name, 'pressrest');
+        /* Auf der Werkbank IST das Bauteilsystem das der Szene. */
+        shell.toast('Zwei Dateien: ' + a + ' und ' + b + '.' + (inPart || (bench && host.part.model) ? ' Sie stehen in den Koordinaten des Bauteils und liegen im CAD genau an ihm.' : ''));
       }
     }],
     keys: {
       Delete: () => removeSelected(),
+      /* Einen laufenden Zug und das Zielen bricht der Rahmen vorher ab
+         (cancelDrag, cancelAim); hier kommt Esc nur ohne beides an. */
       Escape: () => {
         if (state.chartOpen) { openChart(false); return true; }
         if (!editor.selected) return false;
@@ -1155,6 +1455,8 @@ export function createAngussTool(host) {
         return true;
       }
     },
+    cancelDrag: () => { if (!editor.dragging) return false; editor.cancelDrag(); return true; },
+    cancelAim: () => placer.cancel(),
     onPartStart() { state.ready = false; },
     /* Ein Referenzbauteil ist da: hinstellen, sein Volumen übernehmen. Das
        Referenzteil liefert die Zahl, um die sich alles dreht — aus dem
@@ -1163,6 +1465,19 @@ export function createAngussTool(host) {
        NICHT enthalten; wer sie mitrechnen will, schlägt sie im Feld auf. */
     onPart(model) {
       host.part.setLook({ visible: true, colors: false });
+      if (bench) {
+        /* Die Werkbank: ein neues Bauteil beginnt ohne Anguss — sie schlägt
+           gleich einen vor. Das Gussvolumen kommt aus Bauteil und Überläufen. */
+        placer.cancel();
+        state.graph = G.emptyGraph();
+        editor.select(null);
+        syncVolume();
+        updateRef();
+        rebuild();
+        syncSelection();
+        state.ready = true;
+        return;
+      }
       const ref = presetRef();
       const mine = !!ref && host.part.demoId === partIdOf(ref);
       placePart(mine ? ref : null);
@@ -1178,7 +1493,7 @@ export function createAngussTool(host) {
       rebuild();
       syncSelection();
       /* Ein Bauteil ist kein Schritt, den Rückgängig zurücknehmen könnte. */
-      if (host.history) host.history.reset();
+      host.resetHistory();
       fit();
       state.ready = true;
     },

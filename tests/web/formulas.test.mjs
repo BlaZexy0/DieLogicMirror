@@ -10,24 +10,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
+import { site, ladeSkripte, themeLaden, auslegung } from './stubs/dashboard.mjs';
 
-const require = createRequire(import.meta.url);
-const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
-
-globalThis.katex = require(path.join(site, 'shared/vendor/katex/katex.min.js'));
-globalThis.window = globalThis;
-globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-require(path.join(site, 'shared/palette.js'));
-require(path.join(site, 'shared/theme.js'));
-require(path.join(site, 'shared/examples/machines.js'));
-require(path.join(site, 'shared/project.js'));
-require(path.join(site, 'shared/clampmodel.js'));
-const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
-Object.assign(theme, globalThis.__THEME__);
-const { charts } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/registry.js')));
-const { eq, tex } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/mathfmt.js')));
+globalThis.katex = createRequire(import.meta.url)(path.join(site, 'shared/vendor/katex/katex.min.js'));
+ladeSkripte();
+await themeLaden();
+const { charts } = await auslegung('charts/registry.js');
+const { eq, tex } = await auslegung('charts/mathfmt.js');
 
 const render = (src, display) => globalThis.katex.renderToString(src, { throwOnError: true, displayMode: display, strict: 'ignore' });
 

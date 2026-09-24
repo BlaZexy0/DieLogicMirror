@@ -3,9 +3,8 @@
 
 import { series, line, limit, refline } from './helpers.js';
 import { fmt, subHTML } from '../core/format.js';
-import { theme } from '../core/theme.js';
 import { sim } from '../core/simstore.js';
-import { eq } from './mathfmt.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 /* Anzeige der Simulations-Luftdruckkurve kappen: nahe der vollständigen
    Füllung divergiert das Modell (Restluftvolumen → 0). */
@@ -34,18 +33,17 @@ export default {
   usesCurve: true,
   usesSim: true,
   csv: true,
-  inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'densitySolid', 'shrink', 'diam', 'length', 'gate', 'vent', 'ventGap', 'ventLen', 'vmax', 'amax', 'tmax', 'biscuitMin', 'gateMin', 'gateMax', 'vacModel', 'vacPump', 'vacTank', 'vacStart', 'vacEnd', 'vacEndStroke', 'vacEndTime'],
+  inputs: ['part', 'runner', 'overflow', 'biscuit', 'density', 'densitySolid', 'shrink', 'diam', 'length', 'gate', 'vent', 'ventCount', 'ventHeight', 'ventLen', 'vmax', 'amax', 'tmax', 'biscuitMin', 'gateMin', 'gateMax', 'vacModel', 'vacPump', 'vacTank', 'vacStart', 'vacEnd', 'vacEndStroke', 'vacEndTime'],
 
   calc(v, { shot }) {
     if (shot.error) return { err: shot.error, title: this.title };
-    const C = theme.chart;
     const sm = shot.samples, tb = this.tab;
     let x, y, xl, yl;
     if (tb === 'tv') { x = sm.t; y = sm.v; xl = 'Zeit in s'; yl = 'Kolbengeschwindigkeit in m/s'; }
     else if (tb === 'ts') { x = sm.t; y = sm.s; xl = 'Zeit in s'; yl = 'Weg in mm'; }
     else { x = sm.s; y = sm.v; xl = 'Weg in mm'; yl = 'Kolbengeschwindigkeit in m/s'; }
 
-    const q = line(x, [series('Kolben', C.series1, x, (_, i) => y[i])], xl, yl,
+    const q = line(x, [series('Kolben', 'ink', x, (_, i) => y[i])], xl, yl,
       'Dosiert ' + fmt(shot.Vdose * 1e6) + ' cm³ · Füllgrad ' + fmt(shot.phi * 100) + ' % · Kammer voll bei ' + fmt(shot.sFill * 1000) + ' mm');
     q.ys[0].y = y;
     q.area = 1;
@@ -68,6 +66,8 @@ export default {
         q.limits.push(limit('vmax', 'v_max Maschine ' + fmt(v.vmax) + ' m/s', 'y', 'max', v.vmax));
       q.y1 = Math.max(Math.max.apply(null, q.ys[0].y), shot.vcrit) * 1.12;
     } else {
+      /* Füllende und Endlage sind Bezugsmarken des Kolbenwegs, keine
+         Grenzen: Referenzlinien in `ref`. */
       q.limits = [refline('stroke', 'Füllende ' + fmt(shot.totalStroke * 1000) + ' mm', 'y', shot.totalStroke * 1000),
         refline('endpos', 'Endlage ' + fmt((shot.totalStroke + shot.intens) * 1000) + ' mm (nach Nachverdichtung + Schwindung)', 'y', (shot.totalStroke + shot.intens) * 1000)];
     }
@@ -98,14 +98,14 @@ export default {
       const [sx, sp] = pick(sd.samples.p_air_mbar);
       if (sx.length > 1) {
         q.ys.push({
-          n: 'Luftdruck Kammer (Simulation)', u: 'mbar', c: C.series4,
+          n: 'Luftdruck Kammer (Simulation)', u: 'mbar', c: 'air',
           axis: 'right', y: x.map(xv => interpSim(sx, sp, xv))
         });
         q.rl = 'Luftdruck in mbar (Anzeige ≤ ' + fmt(P_CLIP_MBAR) + ')';
         const [tx, tp] = pick(sd.samples.p_tank_mbar);
         if (tx.length > 1) {
           q.ys.push({
-            n: 'Tankdruck (Simulation)', u: 'mbar', c: C.series2,
+            n: 'Tankdruck (Simulation)', u: 'mbar', c: 'vacuum',
             axis: 'right', y: x.map(xv => interpSim(tx, tp, xv))
           });
         }
@@ -153,11 +153,11 @@ export default {
     });
     shot.checks.forEach(c => {
       const li = document.createElement('li'), ic = document.createElement('span');
-      ic.className = 'ck ' + (c[0] ? 'ok' : 'bad');
-      ic.textContent = c[0] ? '✓' : '✗';
+      ic.className = 'ck ' + (c.ok ? 'ok' : 'bad');
+      ic.textContent = c.ok ? '✓' : '✗';
       li.appendChild(ic);
       const sp = document.createElement('span');
-      sp.innerHTML = subHTML(c[1]);   // Prüftexte tragen Indizes (v_krit, a_max)
+      sp.innerHTML = subHTML(c.text);   // Prüftexte tragen Indizes (v_krit, a_max)
       li.appendChild(sp);
       cl.appendChild(li);
     });
@@ -196,7 +196,7 @@ v<sub>krit</sub> = <b data-m="vcrit"></b> · max. v der 1. Phase = <b data-m="vs
   },
 
   renderMath(el, v, shot) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
+    const set = mathSetter(el);
     if (!shot || shot.error) {
       ['tEnd', 'hub', 'vpk', 'apk', 'phi', 'sfill', 'stroke', 'intens', 'lb', 'ratio', 'tf', 'vcrit', 'vslow']
         .forEach(k => set(k, '—'));

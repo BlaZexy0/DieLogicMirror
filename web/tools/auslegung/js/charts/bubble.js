@@ -3,11 +3,10 @@
    Formtemperatur ein). */
 
 import { series, line } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { theme } from '../core/theme.js';
-import { pistonArea } from '../core/physics.js';
+import { seq, fmt } from '../core/format.js';
+import { specPressure } from '../core/physics.js';
 import { sim } from '../core/simstore.js';
-import { eq } from './mathfmt.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 const P_ATM = 1.01325;                                  // Umgebungsdruck bar
 const K = 273.15;
@@ -46,31 +45,36 @@ export function vacPressure(v) {
   return null;
 }
 
-/* Maximaler Nachdruck mit dem montierten Kolben: volle Gießkraft auf der
-   Kolbenfläche (statisch, wie p₀ im PQ²-Diagramm). */
+/* Maximaler Nachdruck mit dem montierten Kolben: die wirksame Gießkraft
+   beim eingestellten Akkumulatordruck auf der Kolbenfläche (statisch, wie
+   p₀ im PQ²-Diagramm). Bis zum 23.09. stand hier die volle Gießkraft; mit
+   einem Arbeitsdruck unter dem Nenndruck endete die Achse dann bei einem
+   Druck, den PQ² und spezifischer Gießdruck gar nicht zeigen. */
 function pMax(v) {
-  const A = pistonArea(v);
-  return v.injForce > 0 && A > 0 ? v.injForce * 1e4 / A : NaN;
+  const p = specPressure(v);
+  return isFinite(p) ? p : NaN;
 }
 
 export default {
   id: 'bubble',
   title: 'Luftblase unter Nachdruck',
   desc: 'Durchmesserverhältnis vor/nach Nachdruck',
-  inputs: ['injForce', 'diam', 'psel', 'Tliq', 'Tdie', 'vacModel', 'vent', 'ventGap', 'ventLen', 'vacPump', 'vacTank', 'vacStart', 'vacEnd', 'vacEndStroke', 'vacEndTime'],
+  inputs: ['injForce', 'pAcc', 'pAccOp', 'diam', 'psel', 'Tliq', 'Tdie', 'vacModel', 'vent', 'ventCount', 'ventHeight', 'ventLen', 'vacPump', 'vacTank', 'vacStart', 'vacEnd', 'vacEndStroke', 'vacEndTime'],
   usesCurve: true,
   usesSim: true,
 
   calc(v) {
     const p0 = pMax(v);
-    if (!(p0 > P_ATM)) return { err: 'braucht Gießkraft und Kolben-Ø (max. Nachdruck ≤ Umgebungsdruck).' };
+    if (!(p0 > P_ATM)) return { err: 'braucht Gießkraft, Akkumulatordrücke und Kolben-Ø (max. Nachdruck ≤ Umgebungsdruck).' };
     if (!(v.Tliq > v.Tdie) || !(v.Tdie > -K)) return { err: 'braucht Liquidus- über Formtemperatur.' };
     const x = seq(P_ATM, p0, 200);
     const pVac = vacPressure(v);
-    const C = theme.chart;
-    const ys = [series('ohne Vakuum (p_vor 1013 mbar)', pVac !== null ? C.muted : C.series1, x, p => ratio(v, p))];
+    /* Mit dem Vergleich trägt jede Kurve die Sache, die in der Kammer steht:
+       Luft bei Atmosphärendruck, Vakuum bei abgesaugter Kammer. Allein ist
+       die Kurve ohne Vakuum die Hauptgröße des Diagramms (Schrift). */
+    const ys = [series('ohne Vakuum (p_vor 1013 mbar)', pVac !== null ? 'air' : 'ink', x, p => ratio(v, p))];
     if (pVac !== null) {
-      ys.push(series('mit Vakuum (p_vor ' + fmt(pVac * 1000) + ' mbar, Simulation)', C.series1, x, p => ratio(v, p, pVac)));
+      ys.push(series('mit Vakuum (p_vor ' + fmt(pVac * 1000) + ' mbar, Simulation)', 'vacuum', x, p => ratio(v, p, pVac)));
     }
     const q = line(x, ys,
       'Nachdruck p_N in bar', 'Blasen-Ø-Verhältnis D_vor/D_nach',
@@ -106,8 +110,8 @@ zeigt das Diagramm nur die Kurve für Umgebungsdruck.</p>
 <p class="math-note">Die Kubikwurzel ist der Grund, warum viel Nachdruck nötig ist: das <em>Volumen</em>
 schrumpft proportional zum Druck, der sichtbare Poren-Ø aber nur mit p<sup>1/3</sup>. Eine Verzehnfachung
 des Ø-Verhältnisses kostet das Tausendfache an Druck. Die x-Achse endet beim maximalen Nachdruck des
-montierten Kolbens p<sub>max</sub> = F<sub>G</sub>/A<sub>K</sub> (volle Gießkraft, statisch, wie p₀ im
-PQ²-Diagramm). Annahmen: ideales Gas, keine Lösung der Luft in der Schmelze, Blase bleibt kugelig.</p>
+montierten Kolbens p<sub>max</sub> = F<sub>G,eff</sub>/A<sub>K</sub> (wirksame Gießkraft beim eingestellten
+Akkumulatordruck, statisch, wie p₀ im PQ²-Diagramm). Annahmen: ideales Gas, keine Lösung der Luft in der Schmelze, Blase bleibt kugelig.</p>
 <p class="math-note">Aktuell: p<sub>max</sub>(Ø <span data-m="D"></span>) = <b data-m="pmax"></b> ·
 T<sub>liq</sub>/T<sub>Form</sub> = <b data-m="Tratio"></b> (in K) · p<sub>vor</sub> = <b data-m="pvor"></b> ·
 beim gewählten Nachdruck p<sub>N</sub> = <span data-m="psel"></span>: D<sub>vor</sub>/D<sub>nach</sub> = <b data-m="r"></b>
@@ -115,7 +119,7 @@ beim gewählten Nachdruck p<sub>N</sub> = <span data-m="psel"></span>: D<sub>vor
   },
 
   renderMath(el, v) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
+    const set = mathSetter(el);
     const p0 = pMax(v);
     set('D', fmt(v.diam) + ' mm');
     set('pmax', isFinite(p0) ? fmt(p0) + ' bar' : '—');

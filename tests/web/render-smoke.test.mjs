@@ -6,66 +6,29 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import path from 'node:path';
+import {
+  ladeSkripte, themeLaden, auslegung, defaults, canvasGlobals, stummerKontext as makeCtx
+} from './stubs/dashboard.mjs';
 
-const require = createRequire(import.meta.url);
-const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
+/* Mini-DOM: gerade genug für die Renderer. Ein Canvas behält seinen
+   Kontext: die Schraffur-Kachel wird einmal bemalt und später als Pattern
+   gelesen (Test „Sperrbereiche"). Dann die klassischen Scripts wie auf der
+   Seite (setzen window.__…__). */
+canvasGlobals();
+ladeSkripte();
+const theme = await themeLaden();
 
-/* ── Mini-DOM: gerade genug für die Renderer ── */
-globalThis.window = globalThis;
+const { DEFAULT_CURVE } = await auslegung('config/fields.js');
+const { computeShot } = await auslegung('core/physics.js');
+const { drawAny } = await auslegung('render/draw.js');
+const { charts } = await auslegung('charts/registry.js');
 
-class Path2DStub {
-  moveTo() {} lineTo() {} closePath() {} rect() {} arc() {} addPath() {}
-}
-globalThis.Path2D = Path2DStub;
-
-function makeCtx() {
-  const target = {
-    measureText: s => ({ width: String(s).length * 6 }),
-    createPattern: () => ({}),
-    getImageData: (x, y, w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }),
-  };
-  return new Proxy(target, {
-    get(t, k) {
-      if (typeof k === 'symbol') return undefined;
-      if (k in t) return t[k];
-      return () => {};                    // jede Methode ist ein No-Op
-    },
-    set(t, k, v) { t[k] = v; return true; },
-  });
-}
-
-globalThis.document = {
-  createElement: () => ({ width: 0, height: 0, getContext: () => makeCtx() }),
-  documentElement: {},
-  body: {},
-};
-globalThis.getComputedStyle = () => ({ fontFamily: 'Arial', getPropertyValue: () => '' });
-globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-
-/* Klassische Scripts wie auf der Seite laden (setzen window.__…__) */
-require(path.join(site, 'shared/palette.js'));
-require(path.join(site, 'shared/theme.js'));
-require(path.join(site, 'shared/examples/machines.js'));
-require(path.join(site, 'shared/project.js'));
-require(path.join(site, 'shared/clampmodel.js'));
-const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
-Object.assign(theme, globalThis.__THEME__);
-
-const { allFields, DEFAULT_CURVE } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
-const { computeShot } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
-const { drawAny } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/draw.js')));
-const { charts } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/registry.js')));
-
-const values = {};
-for (const f of allFields()) values[f.key] = f.def;
+const values = defaults();
 const shot = computeShot(values, DEFAULT_CURVE.map(p => p.slice()));
 assert.ok(!shot.error, 'computeShot mit Defaults darf nicht fehlschlagen: ' + shot.error);
 
 /* ── Füllkammer-Schema: SVG-String je Variante prüfen ── */
-const { buildSvg } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/ui/chamber.js')));
+const { buildSvg } = await auslegung('ui/chamber.js');
 
 for (const va of ['A', 'B', 'C']) {
   test('chamber-svg: Variante ' + va + ' vollständig und ohne NaN', () => {
@@ -96,7 +59,7 @@ for (const def of charts) {
       assert.ok(d, def.id + ': calc lieferte nichts');
       if (d.err) return;                  // Fehlermeldung ist ein gültiges Ergebnis
       d.title = d.title || def.title;
-      drawAny(makeCtx(), 1000, 800, d, def);
+      drawAny(makeCtx(), 1000, 800, d);
     });
   }
 }
@@ -128,21 +91,67 @@ for (const [label, bad] of DEGENERATE) {
         assert.ok(d, `${def.id}: calc lieferte nichts bei ${key} = ${label}`);
         if (d.err) continue;
         d.title = d.title || def.title;
-        assert.doesNotThrow(() => drawAny(makeCtx(), 1000, 800, d, def),
+        assert.doesNotThrow(() => drawAny(makeCtx(), 1000, 800, d),
           `${def.id}: Zeichnen wirft bei ${key} = ${label}`);
       }
     });
   }
 }
 
-test('turbo(): nicht endliche Werte werfen nicht, sondern bleiben leer', async () => {
-  const { turbo } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/render/base.js')));
+test('ramp(): nicht endliche Werte werfen nicht, sondern bleiben leer', async () => {
+  const { ramp } = await auslegung('render/base.js');
   for (const t of [NaN, Infinity, -Infinity, undefined, null]) {
-    assert.doesNotThrow(() => turbo(t), `turbo(${t}) wirft`);
+    assert.doesNotThrow(() => ramp(t), `ramp(${t}) wirft`);
   }
-  assert.equal(turbo(NaN), 'rgba(0,0,0,0)');
-  assert.match(turbo(0), /^rgb\(/);
-  assert.match(turbo(1), /^rgb\(/);
+  assert.equal(ramp(NaN), 'rgba(0,0,0,0)');
+  assert.match(ramp(0), /^rgb\(/);
+  assert.match(ramp(1), /^rgb\(/);
+});
+
+/* Die Heatmaps färben mit der festen Farbleiste `heat` der Palette, alle,
+   auch v_krit: eine Farbleiste ist ein Maßstab und folgt dem Schema nicht
+   (die Leisten von vorher, Wunsch vom 23.09.). */
+test('ramp(): die feste Leiste heat, von Dunkelviolett nach Dunkelrot', async () => {
+  const { ramp } = await auslegung('render/base.js');
+  const P = globalThis.__PALETTE__;
+  const rgb = hex => 'rgb(' + P.hexRgb(hex).map(u => Math.round(u * 255)).join(',') + ')';
+  const heat = P.leisten.heat;
+  assert.equal(ramp(0), 'rgb(48,18,59)');
+  assert.equal(ramp(1), 'rgb(122,4,3)');
+  heat.forEach(([t, hex]) => assert.equal(ramp(t), rgb(hex), 'Stützstelle bei ' + t.toFixed(3)));
+  for (const id of ['fill', 'filltime', 'window', 'slowshot']) {
+    const q = charts.find(c => c.id === id).calc(values, { shot });
+    assert.equal(q.ramp, undefined, id + ': keine eigene Skala je Diagramm');
+  }
+});
+
+/* Sperrbereiche sehen in jedem Diagramm gleich aus (Rückmeldung vom
+   23.09.: die Fläche über v_krit war in der Schusskurve braun, im Füllgrad
+   die der Schmelze, in der Nachdruckaufbauzeit wieder anders). Jede
+   Schraffur, die ein Diagramm legt, trägt die Farbe `zone`, gleich welche
+   Grenze sie zieht. */
+test('Sperrbereiche: jede Schraffur in derselben Farbe, gleich welche Grenze', () => {
+  const kacheln = new Set();
+  let flaechen = 0;
+  const ctx = () => {
+    const g = makeCtx();
+    g.createPattern = kachel => { kacheln.add(kachel); flaechen++; return {}; };
+    return g;
+  };
+  for (const def of charts) {
+    const tabs = [undefined, ...((def.tabs || []).map(t => t.id || t))];
+    for (const tab of tabs) {
+      if (tab !== undefined) def.tab = tab;
+      const d = def.calc(values, { shot });
+      if (!d || d.err) continue;
+      d.title = d.title || def.title;
+      drawAny(ctx(), 1000, 800, d);
+    }
+  }
+  assert.ok(flaechen > 10, 'es sollten Sperrbereiche gezeichnet worden sein: ' + flaechen);
+  const farben = new Set([...kacheln].map(k => k.getContext('2d').strokeStyle));
+  assert.deepEqual([...farben], [theme.chart.zone], 'Schraffurfarben: ' + [...farben].join(', '));
+  assert.equal(theme.chart.zone, globalThis.__PALETTE__.bad, 'ein Sperrbereich ist ein Urteil: „schlecht"');
 });
 
 /* Zusammenfallende Grenzenpaare: gateMin = gateMax, dmin = dmax,
@@ -165,7 +174,7 @@ for (const [a, b, val] of EQUAL_PAIRS) {
       assert.ok(d, `${def.id}: calc lieferte nichts`);
       if (d.err) continue;
       d.title = d.title || def.title;
-      assert.doesNotThrow(() => drawAny(makeCtx(), 1000, 800, d, def), `${def.id}: Zeichnen wirft`);
+      assert.doesNotThrow(() => drawAny(makeCtx(), 1000, 800, d), `${def.id}: Zeichnen wirft`);
     }
   });
 }

@@ -18,7 +18,7 @@
                  Flächen folgen als zusammenhängender Fleck der Mehrheit
                  ihrer Nachbarn (Kantenlänge), damit die Trennlinie nicht
                  über die Wand zackt; bei Gleichstand der beweglichen
-                 Hälfte. Die Schrägen-Ansicht zeigt sie rot (0°).
+                 Hälfte. Die Schrägen-Ansicht zeigt sie als „schlecht" (0°).
    3. SCHIEBER   Was keine Hälfte sieht, bekommt ein Schieber, der es
                  frei sieht. Eine Fläche PARALLEL zur Schieberrichtung
                  (0°) ist erlaubt: eine Querbohrung wird von einem Kern
@@ -49,8 +49,9 @@
 
    Was eine Hälfte nur TEILWEISE sieht (ein großes Dreieck der Flansch-
    unterseite, von dem ein Streifen über einem Dom liegt), zählt hier als
-   Ganzes als nicht gesehen — js/part/refine.js zerlegt solche Dreiecke
-   an der Schattengrenze, bevor die Zuordnung endgültig ist.
+   Ganzes als nicht gesehen. Zerlegt wird ein solches Dreieck nicht: das
+   Netz bleibt, wie es geladen wurde — wie fein es ist, entscheidet der
+   Export.
 
    Die Formöffnungsrichtung wird, wenn nicht vorgegeben, automatisch
    gewählt: die Achse mit der kleinsten Fläche aus Schiebern und
@@ -320,5 +321,13 @@ export function segment(model, vis, opts = {}) {
     scores[axis] = r.score;
     if (!best || better(r, best)) best = r;
   }
-  return { ...best, cand, auto: !fixed, scores };
+  return { ...best, cand, auto: !fixed, scores, movingSign };
+}
+
+/** Die Rolle einer Richtung (0 … 5) in der Zuordnung seg: +1 die bewegliche
+    Hälfte, −1 die feste, 0 ein Schieber oder der Hinterschnitt. */
+export function halfOf(label, seg) {
+  const d = DIRS[label];
+  if (!d || !seg || d.axis !== seg.mainAxis) return 0;
+  return d.sign === (seg.movingSign === -1 ? -1 : 1) ? 1 : -1;
 }

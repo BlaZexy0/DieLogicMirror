@@ -10,21 +10,16 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mountPage, kpiText, wait } from './fixture.mjs';
+import { mountPage, kpiText, wait, interact, seg } from './fixture.mjs';
 
-let P, T3, G, F, cam, canvas, b, c;
-const zeiger = (t, x, y, extra = {}) => canvas.dispatch(t, { button: 0, clientX: x, clientY: y, stopPropagation() {}, preventDefault() {}, ...extra });
-const klick = (x, y) => { zeiger('pointerdown', x, y); zeiger('pointerup', x, y); };
-const px = p => { const q = new T3.Vector3(...p).project(cam); return [(q.x + 1) / 2 * 800, (1 - q.y) / 2 * 600]; };
-const schauAuf = (from, to) => { cam.position.set(...from); cam.up.set(0, 1, 0); cam.lookAt(...to); cam.updateMatrixWorld(true); P.v.view.scene.updateMatrixWorld(true); };
-const chip = id => P.doc.querySelector('[data-chip="' + id + '"]');
+const C = await import('../../../../web/tools/3d-studio/js/part/colors.js');
+
+let P, T3, G, F, A, cam, b, c, zeiger, klick, px, schauAuf, chip, taste, tippen;
 const pop = name => P.doc.querySelector('[data-ui="' + name + '"]');
-const taste = (key, extra = {}) => P.doc.dispatch('keydown', { key, target: canvas, preventDefault() {}, ...extra });
 const items = () => Object.values(P.v.state.plan.items);
 const autos = () => items().filter(i => i.auto);
 const ruhig = () => wait(() => !P.v.state.queued && !P.v.state.running && P.v.state.ready, 1200);
-const richtung = r => P.ui('dir-seg').querySelectorAll('button').find(x => x.dataset.value === r).dispatch('click');
-const tippen = (name, text) => { const el = P.ui(name); el.value = text; el.dispatch('change'); };
+const richtung = r => seg(P.ui('dir-seg'), r).dispatch('click');
 /* Ein anderes Beispielteil, wie über die Auswahl in der Bauteil-Klappe. */
 const teil = id => { P.doc.getElementById('demo-select').value = id; return P.host.part.pickDemo(id); };
 
@@ -33,8 +28,8 @@ before(async () => {
   T3 = await import('three');
   G = await import('../../../../web/tools/3d-studio/js/cooling/model.js');
   F = await import('../../../../web/tools/3d-studio/js/part/field.js');
-  cam = P.v.view.camera;
-  canvas = P.v.view.renderer.domElement;
+  A = await import('../../../../web/tools/3d-studio/js/cooling/auto.js');
+  ({ cam, zeiger, klick, px, schauAuf, chip, taste, setze: tippen } = interact(P, { T3 }));
   b = P.host.part.model.bounds;
   c = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
 });
@@ -103,6 +98,72 @@ test('Modi besitzen ihr Bild: die Abstandsfläche gehört „Abstandsfläche" un
   shell.setMode('setzen');
 });
 
+/* Die Achsen zweier Stiche: wie nah sie sich irgendwo kommen. */
+const achsen = list => {
+  let best = Infinity;
+  for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+    const p = G.axisOf(list[i]), q = G.axisOf(list[j]);
+    best = Math.min(best, Math.sqrt(A.segmentDist2(p.a, p.b, q.a, q.b)));
+  }
+  return best;
+};
+
+test('Automatik mit den Vorgaben auf dem Vorgabeteil: nichts unter dem Mindest-Wandabstand — und ein zweiter Lauf stapelt nichts', () => {
+  const { v, ui, host, shell } = P;
+  /* So, wie die Seite startet: Normale, acht Stiche, 30 mm. Früher standen
+     davon zwei unter dem Mindest-Wandabstand (einer bei 0,5 mm): in der Tasche
+     des Deckels lief der 200-mm-Stich quer hinüber auf einen Dom zu. */
+  assert.equal(shell.mode, 'setzen');
+  assert.deepEqual([v.state.dirMode, v.state.auto.count, v.state.auto.spacing, v.state.auto.replace], ['normal', 8, 30, true]);
+  ui('primary').dispatch('click');
+  assert.equal(autos().length, 8, 'acht Kühlstiche');
+  for (const a of autos()) {
+    const ch = v.state.checks.get(a.id);
+    assert.equal(ch.verdict, 'ok', 'was mit den Vorgaben gesetzt wird, gilt nie als zu nah: ' + a.id + ' bei ' + ch.c);
+  }
+  assert.equal(v.offenders().length, 0);
+  assert.equal(ui('note').textContent, '8 Kühlstiche gesetzt', 'nichts darunter, nichts zu melden');
+  assert.ok(achsen(autos()) >= 30 - 1e-9, 'die Achsen halten den Stichabstand: ' + achsen(autos()));
+  /* Ohne „Ersetzen": neben die ersten, nicht auf sie. Früher kamen dieselben
+     acht Stellen noch einmal — acht Stiche doppelt. */
+  const rep = ui('auto-replace');
+  rep.checked = false; rep.dispatch('change');
+  ui('primary').dispatch('click');
+  assert.ok(autos().length > 8, 'es kamen weitere dazu: ' + autos().length);
+  assert.ok(achsen(autos()) >= 30 - 1e-9, 'keiner auf oder neben einem von vorhin: ' + achsen(autos()));
+  assert.ok(autos().every(a => v.state.checks.get(a.id).verdict === 'ok'), 'und alle halten den Mindest-Wandabstand');
+  assert.match(ui('note').textContent, /^\d+ Kühlstiche gesetzt/);
+  assert.doesNotMatch(ui('note').textContent, /unter dem Mindest-Wandabstand/);
+  rep.checked = true; rep.dispatch('change');
+  host.undo(); host.undo();
+  assert.equal(items().length, 0, 'zurück zum leeren Plan');
+  /* Ein eigener Mindest-Wandabstand über Achsabstand − Ø/2: keine Stelle hält
+     ihn — es wird nichts gesetzt, und die Zeile sagt warum. */
+  const auto = ui('min-wall-auto');
+  auto.checked = false; auto.dispatch('change');
+  tippen('min-wall', '15');
+  ui('primary').dispatch('click');
+  assert.equal(items().length, 0, 'nichts, was die Prüfung nicht bestünde');
+  assert.equal(ui('note').textContent, '0 Kühlstiche gesetzt · keine Stelle hält den Mindest-Wandabstand von 15 mm: an der Spitze bleiben nur Achsabstand − Ø/2 = 10 mm');
+  assert.ok(ui('note').classList.contains('warn'));
+  host.undo(); host.undo();
+  assert.ok(ui('min-wall-auto').checked && !Number.isFinite(v.state.plan.minWall), 'wieder „Auto"');
+  /* 40 Stiche mit 80 mm Abstand passen nicht um den Deckel: es werden weniger —
+     nie zwei zu nah —, und die Zeile sagt es. Früher kamen 40, und diese Zeile
+     erschien nie. */
+  const cnt = ui('auto-count'), sp = ui('auto-spacing');
+  cnt.value = '40'; cnt.dispatch('input');
+  sp.value = '80'; sp.dispatch('input');
+  ui('primary').dispatch('click');
+  assert.ok(autos().length < 40 && autos().length > 8, 'weniger als verlangt: ' + autos().length);
+  assert.ok(achsen(autos()) >= 80 - 1e-9, 'keine zwei enger als 80 mm: ' + achsen(autos()));
+  assert.match(ui('note').textContent, /nur so viele Stellen halten den Stichabstand: Abstand kleiner wählen oder weniger Bohrungen/);
+  host.undo();
+  assert.equal(items().length, 0);
+  cnt.value = '8'; cnt.dispatch('input');
+  sp.value = '30'; sp.dispatch('input');
+});
+
 let s1, k;
 test('Kühlstich setzen: Spitze auf der Fläche, Stich nach außen — und die Vorgabe warnt NICHT', () => {
   const { v, ui, host } = P;
@@ -164,6 +225,24 @@ test('Richtung: entlang Z mit dem Vorzeichen vom Bauteil weg, „Blick" zur Kame
   klick(400, 300);
   assert.ok(items()[2].dir[0] > 0.99, 'zur Kamera: ' + items()[2].dir);
   richtung('normal');
+});
+
+test('„Normale" von innen: auch wenn die Kamera zwischen Fläche und Bauteil steht, läuft der Stich vom Bauteil weg', () => {
+  const { v, host } = P;
+  /* Die Kamera steht 8 mm vor der +X-Wand — diesseits der Abstandsfläche —
+     und schaut nach außen: der Strahl trifft die Fläche von innen. Die
+     Normale des Dreiecks, zum Betrachter gedreht, zeigte dann ins Bauteil. */
+  const wallX = 190 + c[2] * Math.tan(1.5 * Math.PI / 180);
+  schauAuf([wallX + 8, c[1], c[2]], [wallX + 300, c[1], c[2]]);
+  chip('stich').dispatch('click');
+  klick(400, 300);
+  const s = items()[3];
+  assert.ok(s && s.p[0] > wallX + 15, 'die Spitze sitzt auf der Fläche vor der Wand: ' + (s && s.p));
+  assert.ok(s.dir[0] > 0.95, 'und der Stich läuft nach außen, nicht ins Bauteil: ' + s.dir);
+  assert.equal(v.state.checks.get(s.id).verdict, 'ok');
+  host.undo();
+  assert.equal(items().length, 3);
+  schauAuf([b.max[0] + 400, c[1], c[2]], c);
 });
 
 test('Kanal: zwei Klicks; Esc dazwischen bricht ab; derselbe Chip noch einmal auch', () => {
@@ -260,6 +339,32 @@ test('Achsenpfeile: je Achse ziehen — ein Zug ist EIN Schritt, ein bloßer Kli
   assert.equal(host.history.depth, tiefe2, 'wählen ist keine Änderung');
 });
 
+test('Esc mitten im Zug: das Ende springt zurück, und es gibt keinen Schritt', async () => {
+  const { v, host, ui } = P;
+  v.handles.select(k.id + ':b');
+  v.view.scene.updateMatrixWorld(true);
+  const [tx, ty] = px(v.handles.gizmoTip(1));
+  const b0 = k.b.slice(), tiefe = host.history.depth, label = host.history.undoLabel;
+  zeiger('pointerdown', tx, ty);
+  assert.ok(v.handles.dragging, 'der Zug beginnt');
+  zeiger('pointermove', tx, ty - 30);
+  await new Promise(r => setTimeout(r, 30));
+  assert.ok(Math.abs(v.state.plan.items[k.id].b[1] - b0[1]) > 2, 'das Ende wandert');
+  taste('Escape');
+  assert.ok(!v.handles.dragging, 'Esc beendet den Zug');
+  k = v.state.plan.items[k.id];
+  assert.ok(Math.hypot(k.b[0] - b0[0], k.b[1] - b0[1], k.b[2] - b0[2]) < 1e-3, 'das Ende steht, wo es war: ' + k.b);
+  assert.equal(host.history.depth, tiefe, 'kein Schritt');
+  assert.equal(host.history.undoLabel, label);
+  assert.equal(v.handles.selected, k.id + ':b', 'die Auswahl bleibt');
+  assert.equal(ui('sel-y').value, k.b[1].toFixed(1).replace('.', ',').replace(/,0$/, ''), 'das Lagefeld zeigt den alten Ort');
+  zeiger('pointerup', tx, ty - 30);
+  assert.equal(host.history.depth, tiefe, 'das Loslassen danach ist kein Zug mehr');
+  /* Ohne Zug hebt Esc die Auswahl auf, wie bisher. */
+  taste('Escape');
+  assert.equal(v.handles.selected, null);
+});
+
 test('Rückgängig und Wiederholen: der Plan geht hin und her, die Auswahl bleibt', () => {
   const { v, ui, host } = P;
   const jetzt = k.b.slice();
@@ -348,9 +453,13 @@ test('Automatik: N Stiche auf der Fläche, EIN Schritt; Vorgaben warnen nicht; d
   assert.equal(ui('min-wall').value, '5');
   tippen('def-d', '20');
   assert.equal(ui('min-wall').value, '10');
+  /* Die Vorgaben gehören zum Plan (an ihnen hängt mit „Auto" das Urteil):
+     jede Änderung ist ein Schritt. */
+  assert.equal(host.history.undoLabel, 'Vorgabe Kühlstich-Ø geändert');
   rep.checked = true; rep.dispatch('change');
-  /* Zurück zum Stand vor den Läufen. */
-  host.undo(); host.undo(); host.undo();
+  /* Zurück zum Stand vor den Läufen: zwei Vorgaben, drei Läufe. */
+  for (let i = 0; i < 5; i++) host.undo();
+  assert.equal(ui('def-d').value, '20', 'das Feld zeigt die Vorgabe des Plans');
   assert.equal(autos().length, 0);
   assert.equal(items().length, 4);
   richtung('normal');
@@ -382,8 +491,11 @@ test('Mindest-Wandabstand: Auto folgt dem Achsabstand; von Hand gehört er zum P
   assert.equal(doc.querySelector('[data-badge="pruefung"]').textContent, String(off.length), 'der Reiter zählt sie');
   assert.ok(ui('plan-kpis').querySelector('.krow.warn'), 'kleinster Wandabstand mit Urteil');
   assert.match(kpiText(ui('plan-kpis')), /Mindest-Wandabstand 13 mm · \d+ Elemente? darunter/);
-  assert.ok(v.meshes.tight.visible && v.meshes.tight.geometry.attributes.position.count > 0, 'im Bild stehen sie in der Warnfarbe');
+  assert.ok(v.meshes.warn.visible && v.meshes.warn.geometry.attributes.position.count > 0, 'im Bild stehen sie in der Farbe von „knapp"');
+  assert.equal(v.meshes.bad.geometry.attributes.position.count, 0, 'ein Durchbruch ist keiner darunter');
+  assert.equal('#' + v.meshes.warn.material.color.getHexString(), C.ROLE.caution, 'die Ampel, keine eigene Warnfarbe');
   assert.match(doc.getElementById('pt-legend').innerHTML, /zu nah an der Kavität/, 'und die Legende nennt die Farbe');
+  assert.ok(!/Durchbruch/.test(doc.getElementById('pt-legend').innerHTML), 'was nicht im Bild ist, nennt sie nicht');
   /* Ein Klick wählt das Element und holt es ins Bild — „Einpassen" merkt sich weiter das Ganze. */
   const ziel0 = v.view.controls.target.clone();
   ui('offender-list').querySelector('[data-item="' + s1.id + '"]').dispatch('click');
@@ -510,6 +622,34 @@ test('Datei hin und zurück; alte Dateien ohne minWall sind „Auto"; Entfernen 
   assert.ok(ui('min-wall-auto').checked && ui('min-wall').disabled, 'ohne Schlüssel: Auto');
   assert.ok(tool.exports[0].enabled(), 'der STL-Export ist frei');
   assert.throws(() => tool.fromJSON({ format: 'dielogic-luft', version: 1 }), /keine Temperierdatei/);
+  /* Kennungen gehen ins Auswahlfeld und in die Liste: eine Datei mit einer,
+     die HTML sein könnte, wird abgelehnt — und der Plan bleibt stehen. */
+  assert.throws(() => tool.fromJSON({ ...json, items: [{ id: '<img src=x onerror=alert(1)>', type: 'stich', p: [0, 0, 0], dir: [0, 0, 1] }] }), /keine gültige Kennung/);
+  assert.equal(items().length, 4);
+  /* Die Vorgaben kommen mit der Datei — mit „Auto" hängt an ihnen das Urteil. */
+  tool.fromJSON({ ...json, defaults: { d: 30, len: 150, kd: 12 } });
+  assert.equal(ui('def-d').value, '30');
+  assert.equal(ui('def-len').value, '150');
+  assert.equal(ui('def-kd').value, '12');
+  assert.equal(ui('min-wall').value, '5', 'Auto: 20 − 30/2');
+  assert.equal(tool.toJSON().defaults.d, 30, 'und gehen wieder mit hinaus');
+  tool.fromJSON(json);
+  assert.equal(ui('def-d').value, '20');
+  assert.equal(ui('min-wall').value, '10');
+  /* Und käme eine Kennung doch an der Prüfung vorbei: maskiert, in der Liste
+     wie im Auswahlfeld. Ein Stich ins Bauteil steht in der Liste. */
+  const evil = '<img src=x onerror=alert(1)>';
+  const s0 = items().find(i => i.type === 'stich');
+  v.state.plan.items[evil] = { id: evil, type: 'stich', p: s0.p.slice(), dir: s0.dir.map(x => -x), d: 20, len: 200 };
+  v.rebuild();
+  v.handles.select(evil);
+  for (const el of [ui('offender-list'), ui('inspector-title')]) {
+    assert.ok(!el.innerHTML.includes('<img') && el.innerHTML.includes('&lt;img'), 'maskiert: ' + el.innerHTML.slice(0, 160));
+    assert.equal(el.querySelector('img'), null);
+  }
+  v.handles.select(null);
+  delete v.state.plan.items[evil];
+  v.rebuild();
   host.history.reset();
 
   /* Entfernen: Knopf, dann Toast mit „Rückgängig" — das Zurückgeholte ist gewählt. */

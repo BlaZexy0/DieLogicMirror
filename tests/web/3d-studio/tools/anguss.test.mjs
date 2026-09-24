@@ -10,29 +10,19 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mountPage, kpiText, wait } from './fixture.mjs';
+import { mountPage, kpiText, wait, interact } from './fixture.mjs';
 
-let P, T3, G, cam, canvas;
-const zeiger = (t, x, y, extra = {}) => canvas.dispatch(t, { button: 0, clientX: x, clientY: y, stopPropagation() {}, preventDefault() {}, ...extra });
-const klick = (x, y) => { zeiger('pointerdown', x, y); zeiger('pointerup', x, y); };
-const px = p => { const q = new T3.Vector3(...p).project(cam); return [(q.x + 1) / 2 * 800, (1 - q.y) / 2 * 600]; };
-/* Von oben: die Trennebene y = 0 liegt flach im Bild. */
-const vonOben = (at, hoehe = 400) => { cam.position.set(at[0], at[1] + hoehe, at[2]); cam.up.set(0, 0, -1); cam.lookAt(at[0], at[1], at[2]); cam.updateMatrixWorld(true); P.v.view.scene.updateMatrixWorld(true); };
-const schauAuf = (from, to) => { cam.position.set(...from); cam.up.set(0, 1, 0); cam.lookAt(...to); cam.updateMatrixWorld(true); P.v.view.scene.updateMatrixWorld(true); };
-const chip = id => P.doc.querySelector('[data-chip="' + id + '"]');
-const taste = (key, extra = {}) => P.doc.dispatch('keydown', { key, target: canvas, preventDefault() {}, ...extra });
+/* Die Hand an der Seite (./fixture.mjs, interact); vonOben: die Trennebene
+   y = 0 liegt flach im Bild. */
+let P, T3, G, cam, zeiger, klick, px, vonOben, schauAuf, chip, taste, gruppen, gruppe, setze;
 const knoten = () => Object.keys(P.v.state.graph.nodes).length;
-const gruppen = () => P.ui('sel-groups').querySelectorAll('[data-group-tab]').map(b => b.getAttribute('data-group-tab'));
-const gruppe = name => P.ui('sel-groups').querySelector('[data-group-tab="' + name + '"]').dispatch('click');
-const setze = (name, wert) => { const el = P.ui(name); el.value = wert; el.dispatch('change'); };
 const datei = (name, buf) => ({ name, arrayBuffer: () => Promise.resolve(buf), byteLength: buf.byteLength });
 
 before(async () => {
   P = await mountPage('anguss.html', 'js/studio/pages/anguss.js', { design: true });
   T3 = await import('three');
   G = await import('../../../../web/tools/3d-studio/js/runner/graph.js');
-  cam = P.v.view.camera;
-  canvas = P.v.view.renderer.domElement;
+  ({ cam, zeiger, klick, px, vonOben, schauAuf, chip, taste, gruppen, gruppe, setze } = interact(P, { T3 }));
 });
 
 test('Rahmen: vier Modi, sechs Chips, das Beispiel steht ohne Bauteil — nichts Ungespeichertes', () => {
@@ -129,6 +119,37 @@ test('Prozess: „Füllzeit der Kurve übernehmen" — danach kein toter Knopf; 
   cb.checked = true;
   cb.dispatch('change');
   assert.ok(s.flowShown.onCurve);
+});
+
+test('Legierung und Pressrest: die Kurve rechnet mit der Legierung von hier, das offene Auswahlfeld zieht nach', () => {
+  const { v, ui } = P;
+  const s = v.state;
+  const gate = Object.values(s.graph.nodes).find(n => n.type === 'gate' && !G.isFollower(s.graph, n.id));
+  v.editor.select(gate.id);
+  gruppe('Details');
+  const facts0 = ui('sel-facts').innerHTML, arrive0 = ui('sel-arrive').textContent;
+  const rho0 = s.timeline.v.density;
+  /* Zink: die Kurve bekommt Dichte und Thermik von Zamak 5 — vorher rechnete
+     sie still mit der Legierung des Projekts (Aluminium). */
+  const alloy = ui('alloy');
+  alloy.value = 'zn';
+  alloy.dispatch('change');
+  assert.ok(s.timeline && !s.timeline.error, 'Kurve: ' + (s.timeline && s.timeline.error));
+  assert.equal(s.timeline.v.density, 6200, 'die Schmelzdichte der Vorlage');
+  assert.notEqual(ui('sel-facts').innerHTML, facts0, 'Verlust und Ankunft im offenen Auswahlfeld sind die neuen');
+  assert.notEqual(ui('sel-arrive').textContent, arrive0);
+  /* Aluminium: dasselbe Metall wie im Projekt — es bleibt bei dessen Werten. */
+  alloy.value = 'al';
+  alloy.dispatch('change');
+  assert.equal(s.timeline.v.density, rho0);
+  assert.equal(ui('sel-facts').innerHTML, facts0);
+  /* Der Pressrest ist Kolben und Kammer der Kurve: sein Ø ändert die Zeiten. */
+  setze('bisc-d', '120');
+  assert.notEqual(ui('sel-facts').innerHTML, facts0, 'der Pressrest zieht das Auswahlfeld nach');
+  taste('z', { ctrlKey: true });
+  assert.equal(s.graph.biscuit.d, 90);
+  assert.equal(ui('sel-facts').innerHTML, facts0);
+  v.editor.select(null);
 });
 
 test('Prüfung: der Reiter zählt, der Modus listet — das Beispiel ist sauber', () => {
@@ -285,6 +306,24 @@ test('Pressrest unter „System": Maße, Richtung dreht das System — die Kamer
   setze('sel-x', '0');
 });
 
+test('Richtung umschalten: eine gebundene Mündung dreht mit und bleibt in ihrer Ebene', () => {
+  const { v, ui } = P;
+  const g = () => v.state.graph;
+  const gate = Object.values(g().nodes).find(n => n.type === 'gate' && !G.isFollower(g(), n.id));
+  /* Gebunden entlang der Sehne: 0° aus der Ebene. */
+  G.aimAt(g(), gate.id, gate.pos, G.chordDir(g(), gate));
+  v.rebuild();
+  assert.ok(G.aimTilt(g(), g().nodes[gate.id]) < 1e-6);
+  ui('axis-seg').querySelectorAll('button').find(b => b.dataset.value === '+z').dispatch('click');
+  const n = g().nodes[gate.id];
+  assert.ok(G.aimTilt(g(), n) < 1e-6, 'nach +y → +z weiter in der Ebene: ' + G.aimTilt(g(), n) + '°');
+  assert.ok(!v.state.rules.find(r => /Trennebene/.test(r.title)), 'keine Beanstandung');
+  taste('z', { ctrlKey: true });
+  assert.equal(g().biscuit.axis, '+y');
+  G.clearAim(g(), gate.id);
+  v.rebuild();
+});
+
 test('Kanalform und Anschnitt: Vorgabe und eigene Höhe, Zwickelradius, Regler = EIN Schritt, „Querschnitte abstufen"', () => {
   const { v, ui, shell, host } = P;
   shell.setMode('kanalform');
@@ -401,6 +440,129 @@ test('Zeiger: ein Klick auf den Griff wählt (kein Schritt), ein Zug ist EIN Sch
   assert.equal(v.editor.selected, null);
 });
 
+test('Esc mitten im Zug nimmt ihn zurück, ohne Schritt; der Zug am Pressrest heißt „System verschoben"', async () => {
+  const { v, host } = P;
+  const g = () => v.state.graph;
+  const p1 = g().nodes[g().nodes[g().rootId].children[0]];
+  const p0 = p1.pos.slice();
+  vonOben(p0);
+  v.rebuild();
+  const tiefe = host.history.depth;
+  const [hx, hy] = px(p0);
+  zeiger('pointerdown', hx, hy);
+  assert.ok(v.editor.dragging, 'der Zug läuft');
+  zeiger('pointermove', hx + 40, hy);
+  await new Promise(r => setTimeout(r, 30));
+  const unterwegs = g().nodes[p1.id].pos;
+  assert.ok(Math.hypot(unterwegs[0] - p0[0], unterwegs[2] - p0[2]) > 5, 'der Punkt ist unterwegs');
+  taste('Escape');
+  assert.ok(!v.editor.dragging, 'Esc beendet den Zug');
+  assert.deepEqual(g().nodes[p1.id].pos, p0, 'und der Punkt steht, wo er vorher stand');
+  assert.equal(v.editor.selected, p1.id, 'die Auswahl bleibt');
+  zeiger('pointermove', hx + 80, hy);
+  zeiger('pointerup', hx + 80, hy);
+  assert.deepEqual(g().nodes[p1.id].pos, p0, 'Weiterziehen und Loslassen danach bewegen nichts');
+  assert.equal(host.history.depth, tiefe, 'kein Schritt');
+
+  /* Der Pressrest zieht das System mit — der Schritt heißt so. */
+  const r0 = g().nodes[g().rootId].pos.slice();
+  vonOben(r0);
+  v.rebuild();
+  const [rx, ry] = px(r0);
+  zeiger('pointerdown', rx, ry);
+  assert.equal(v.editor.selected, g().rootId);
+  zeiger('pointermove', rx + 30, ry);
+  await new Promise(r => setTimeout(r, 30));
+  zeiger('pointerup', rx + 30, ry);
+  assert.notDeepEqual(g().nodes[g().rootId].pos, r0);
+  assert.equal(host.history.undoLabel, 'System verschoben');
+  taste('z', { ctrlKey: true });
+  assert.deepEqual(g().nodes[g().rootId].pos, r0);
+  v.editor.select(null);
+});
+
+test('Lage im Auswahlfeld: Enter ohne Änderung verschiebt nichts; „12.500" wird begrenzt, mit Hinweis', () => {
+  const { v, ui, host } = P;
+  const g = () => v.state.graph;
+  const enter = name => ui(name).dispatch('keydown', { key: 'Enter', preventDefault() {} });
+  /* Nach einem Zug liegt ein Punkt abseits des Zehntels, das Feld zeigt es gerundet. */
+  const id = g().nodes[g().rootId].children[0];
+  G.setPos(g(), id, [3.14159, 0, 62.34567]);
+  v.rebuild();
+  host.changed('Punkt verschoben');
+  v.editor.select(id);
+  gruppe('Lage');
+  assert.equal(ui('sel-x').value, '3,1');
+  const tiefe = host.history.depth;
+  for (const k of ['sel-x', 'sel-y', 'sel-z']) enter(k);
+  assert.deepEqual(g().nodes[id].pos, [3.14159, 0, 62.34567], 'die Rundung der Anzeige wird nicht eingelesen');
+  assert.equal(host.history.depth, tiefe, 'kein Schritt');
+  /* Am Pressrest hätte es das ganze System verschoben. */
+  v.editor.select(g().rootId);
+  const alle = Object.values(g().nodes).map(n => n.pos.slice());
+  enter('sel-x');
+  assert.deepEqual(Object.values(g().nodes).map(n => n.pos.slice()), alle);
+  assert.equal(host.history.depth, tiefe);
+  /* Deutsch gelesen ist „12.500" zwölftausendfünfhundert: begrenzt, und das Feld sagt es. */
+  v.editor.select(id);
+  setze('sel-x', '12.500');
+  assert.equal(g().nodes[id].pos[0], 5000);
+  assert.match(ui('sel-x').closest('.row').querySelector('.clamp-note').textContent, /auf 5000 mm begrenzt/);
+  taste('z', { ctrlKey: true });
+  taste('z', { ctrlKey: true });
+  assert.ok(Math.abs(g().nodes[id].pos[0]) < 1e-9, 'zurück: ' + g().nodes[id].pos);
+  v.editor.select(null);
+});
+
+test('Verzweigung im Auswahlfeld: gespiegelt ist die Aufteilung gesperrt und sagt warum, kein dritter Ast; ein Punkt mit zweitem Abgang bekommt die Gruppe', () => {
+  const { v, ui } = P;
+  const g = () => v.state.graph;
+  const b = Object.values(g().nodes).find(n => n.type === 'branch' && n.mirror);
+  v.editor.select(b.id);
+  gruppe('Verzweigung');
+  assert.ok(ui('sel-ratio').disabled, 'gespiegelt teilt sie 50:50, der Regler ist gesperrt');
+  assert.match(ui('sel-ratio-note').textContent, /Gespiegelt teilen die Äste 50:50/);
+  assert.ok(!ui('sel-mirror').disabled && ui('sel-mirror').checked);
+  /* Ein dritter Ast schaltete die Spiegelung still ab: der Chip sagt, warum nicht. */
+  const n0 = knoten();
+  assert.ok(chip('add-gate').classList.contains('off'));
+  chip('add-gate').dispatch('click');
+  assert.equal(knoten(), n0);
+  assert.match(ui('toast').textContent, /genau zwei Äste/);
+  /* Ohne Spiegelung: die Aufteilung ist frei, ein dritter Ast geht — und dann
+     teilen drei zu gleichen Teilen, zu spiegeln gibt es nichts. */
+  const cb = ui('sel-mirror');
+  cb.checked = false;
+  cb.dispatch('change');
+  assert.ok(!ui('sel-ratio').disabled);
+  assert.equal(ui('sel-ratio-note').textContent, '');
+  chip('add-gate').dispatch('click');
+  assert.equal(g().nodes[b.id].children.length, 3);
+  v.editor.select(b.id);
+  gruppe('Verzweigung');
+  assert.ok(ui('sel-ratio').disabled && ui('sel-mirror').disabled);
+  assert.match(ui('sel-ratio-note').textContent, /3 Abgänge teilen den Strom zu gleichen Teilen/);
+  taste('z', { ctrlKey: true });
+  taste('z', { ctrlKey: true });
+  assert.ok(g().nodes[b.id].mirror && g().nodes[b.id].children.length === 2, 'Strg+Z: wieder gespiegelt, zwei Äste');
+
+  /* Ein Punkt, an den ein zweiter Abgang kommt, ist eine Verzweigung — mit
+     Aufteilung und Häkchen, nicht fest 50:50. */
+  const gate = Object.values(g().nodes).find(n => n.type === 'gate' && !G.isFollower(g(), n.id));
+  const vor = g().nodes[gate.parent];
+  v.editor.select(vor.id);
+  assert.deepEqual(gruppen(), ['Lage', 'Querschnitt', 'Details']);
+  chip('add-point').dispatch('click');
+  v.editor.select(vor.id);
+  assert.equal(g().nodes[vor.id].type, 'branch');
+  assert.deepEqual(gruppen(), ['Lage', 'Querschnitt', 'Verzweigung', 'Details']);
+  gruppe('Verzweigung');
+  assert.ok(!ui('sel-ratio').disabled && !ui('sel-mirror').disabled);
+  taste('z', { ctrlKey: true });
+  assert.equal(g().nodes[vor.id].type, 'point');
+  v.editor.select(null);
+});
+
 test('Beispielwechsel und Flussschema: Chip und Hauptknopf öffnen es, Esc und × schließen', () => {
   const { v, ui, shell } = P;
   const sel = ui('preset');
@@ -432,6 +594,30 @@ test('Beispielwechsel und Flussschema: Chip und Hauptknopf öffnen es, Esc und �
   ui('chart-close').dispatch('click');
   assert.ok(!v.state.chartOpen, 'das × schließt es');
   shell.setMode('system');
+});
+
+test('Ein Beispiel wird für den Prozess von hier bemessen: mit 1000 cm³ verletzt es keine Regel, die an den Querschnitten hängt', () => {
+  /* Die Beispiele sind für 420 cm³ bemessen. Mit einem größeren Teil
+     begrüßten sie mit „Querschnitt wächst", „Laufkanal zu schnell" und
+     „Anschnitt zu groß" — Regeln, die der Anwender nicht verletzt hatte.
+     Was an der Gestalt hängt, bleibt: die Stufe hat mit dickeren Kanälen
+     einen zu engen Bogen (Radius unter 2·d_h), das ändert kein Abstufen. */
+  const { v, ui } = P;
+  setze('vol', '1000');
+  const sel = ui('preset');
+  try {
+    for (const id of ['zwei', 'vier', 'faecher', 'stufe']) {
+      sel.value = id;
+      sel.dispatch('change');
+      const schlecht = v.state.rules.filter(r => r.level !== 'ok' && !(id === 'stufe' && r.title === 'Zu enger Bogen'));
+      assert.deepEqual(schlecht.map(r => r.title), [], id + ': ' + schlecht.map(r => r.text).join(' | '));
+      assert.ok(ui('undo').disabled, id + ': ein neues System, kein Schritt');
+    }
+  } finally {
+    setze('vol', '420');
+    sel.value = 'vier';
+    sel.dispatch('change');
+  }
 });
 
 test('Referenzbauteil = Bauteil des Gastgebers: Volumen wird Gussvolumen, es steht vor den Anschnitten; Mündung ans Bauteil binden', async () => {
@@ -592,6 +778,54 @@ test('Referenzbauteil = Bauteil des Gastgebers: Volumen wird Gussvolumen, es ste
   assert.equal(host.part.opacity, 0.6);
 });
 
+test('Zielen, dann ein anderer Griff: der Klick wählt diesen Punkt, die Mündung bleibt, das Zielen endet', () => {
+  const { v, doc, host } = P;
+  const g = () => v.state.graph;
+  assert.ok(host.part.model && host.part.mesh.visible, 'ein Bauteil ist da');
+  const gate = Object.values(g().nodes).find(n => n.type === 'gate' && !G.isFollower(g(), n.id));
+  v.editor.select(gate.id);
+  v.startAim(gate.id);
+  assert.ok(v.editor.aiming, 'der Zielmodus ist scharf');
+  const pos0 = g().nodes[gate.id].pos.slice(), aim0 = g().nodes[gate.id].aim;
+  const tiefe = host.history.depth;
+  const vor = g().nodes[gate.parent];
+  vonOben(vor.pos);
+  v.rebuild();
+  klick(...px(vor.pos));
+  assert.equal(v.editor.selected, vor.id, 'der Klick auf den Griff wählt den Punkt');
+  assert.ok(!v.editor.aiming, 'und beendet das Zielen');
+  assert.ok(doc.getElementById('aim-banner').classList.contains('hidden'), 'der Hinweis ist weg');
+  assert.deepEqual(g().nodes[gate.id].pos, pos0, 'der Anschnitt ist nicht zur Stelle hinter dem Griff gesprungen');
+  assert.deepEqual(g().nodes[gate.id].aim, aim0);
+  assert.equal(host.history.depth, tiefe, 'kein Schritt');
+  v.editor.select(null);
+});
+
+test('Von außen kommt nur Text: ein Dateiname mit spitzen Klammern, ein Plan mit präparierter Kennung', async () => {
+  const { v, ui, host } = P;
+  const { writeSTL } = await import('../../../../web/tools/3d-studio/js/part/stlio.js');
+  const S = await import('../../../../web/tools/3d-studio/js/solids.js');
+  const name = 'bau<b>teil</b>.stl';
+  await host.openFile(datei(name, writeSTL(S.box(100, 100, 100), 'test')));
+  await wait(() => v.state.ready && host.part.name === name);
+  assert.match(ui('ref-kpis').innerHTML, /bau&lt;b&gt;teil&lt;\/b&gt;\.stl/, 'maskiert');
+  assert.equal(ui('ref-kpis').querySelectorAll('b').length, 0, 'kein <b> aus dem Namen');
+  /* Ein Plan, dessen Anschnitt „k3<img …>" heißt: abgewiesen, der Plan bleibt. */
+  const doc = JSON.parse(JSON.stringify(P.tool.toJSON()));
+  const alt = doc.nodes.find(n => n.type === 'gate').id, evil = 'k3<img src=x onerror="window.__pwned=1">';
+  for (const n of doc.nodes) {
+    if (n.id === alt) n.id = evil;
+    n.children = n.children.map(c => (c === alt ? evil : c));
+  }
+  const n0 = knoten(), ids = Object.keys(v.state.graph.nodes).join();
+  await host.openFile(datei('kollege-anguss.json', new TextEncoder().encode(JSON.stringify(doc)).buffer));
+  assert.match(ui('toast').textContent, /ungültige Kennung/, ui('toast').textContent);
+  assert.doesNotMatch(ui('toast').innerHTML, /<img/);
+  assert.equal(knoten(), n0);
+  assert.equal(Object.keys(v.state.graph.nodes).join(), ids, 'der Plan bleibt, wie er war');
+  assert.equal(globalThis.__pwned, undefined);
+});
+
 test('Datei: der Graph als JSON (Format unverändert, Prozess als freiwilliger Schlüssel), zwei STL, Laden setzt den Verlauf zurück', () => {
   const { v, ui, host, tool } = P;
   const json = JSON.parse(JSON.stringify(tool.toJSON()));
@@ -629,6 +863,64 @@ test('Datei: der Graph als JSON (Format unverändert, Prozess als freiwilliger S
   globalThis.URL.createObjectURL = urlBefore;
   assert.match(ui('save-state').textContent, /Gespeichert/);
   assert.ok(host.history.canUndo || true);
+});
+
+test('Mit Bauteil: die STL in dessen Koordinaten, die Namen wie beim Plan; ein Plan ohne Lage stellt das Bauteil vor seine Anschnitte', async () => {
+  const { v, ui, host, tool } = P;
+  const { writeSTL, parseSTL } = await import('../../../../web/tools/3d-studio/js/part/stlio.js');
+  const S = await import('../../../../web/tools/3d-studio/js/solids.js');
+  const { sweepRunner, biscuitMesh } = await import('../../../../web/tools/3d-studio/js/runner/sweep.js');
+  await host.openFile(datei('deckel.stl', writeSTL(S.box(100, 100, 100), 'test')));
+  await wait(() => v.state.ready && host.part.name === 'deckel.stl');
+  /* Hier steht das Bauteil gedreht (Trennebene y = 0) und verschoben. */
+  host.part.mesh.updateMatrixWorld(true);
+  assert.ok(Math.abs(host.part.mesh.quaternion.w - 1) > 1e-3, 'gedreht');
+
+  const blobs = [];
+  const urlBefore = globalThis.URL.createObjectURL;
+  globalThis.URL.createObjectURL = b => { blobs.push(b); return 'blob:test'; };
+  tool.exports[0].run();
+  globalThis.URL.createObjectURL = urlBefore;
+  assert.equal(blobs.length, 2);
+  assert.match(ui('toast').textContent, /deckel-anguss\.stl und deckel-pressrest\.stl\. Sie stehen in den Koordinaten des Bauteils/);
+  /* Zurück in die Lage im Bild gebracht, liegt jeder Punkt genau, wo der Anguss steht. */
+  const back = (tris, m) => {
+    const out = new Float64Array(tris.length), p = new T3.Vector3();
+    for (let i = 0; i < tris.length; i += 3) { p.set(tris[i], tris[i + 1], tris[i + 2]).applyMatrix4(m); out[i] = p.x; out[i + 1] = p.y; out[i + 2] = p.z; }
+    return out;
+  };
+  for (const [blob, world] of [[blobs[0], sweepRunner(v.state.net)], [blobs[1], biscuitMesh(v.state.graph.biscuit)]]) {
+    const tris = parseSTL(await blob.arrayBuffer());
+    assert.equal(tris.length, world.length);
+    const w = back(tris, host.part.mesh.matrixWorld);
+    let worst = 0, moved = 0;
+    for (let i = 0; i < w.length; i++) { worst = Math.max(worst, Math.abs(w[i] - world[i])); moved = Math.max(moved, Math.abs(tris[i] - world[i])); }
+    assert.ok(moved > 1, 'die Datei steht NICHT in den Koordinaten des Angusses');
+    assert.ok(worst < 1e-3, 'Hin und zurück auf ' + worst + ' mm');
+  }
+  ui('save').dispatch('click');
+  assert.match(ui('toast').textContent, /Gespeichert: deckel-anguss\.json/, 'derselbe Name wie der Plan');
+
+  /* Ein Plan, 300 mm versetzt und ohne Lage für dieses Bauteil: das Bauteil
+     kommt vor SEINE Anschnitte, die Zeile unter dem Beispiel sagt es. */
+  const doc = JSON.parse(JSON.stringify(tool.toJSON()));
+  delete doc.ref;
+  for (const n of doc.nodes) n.pos[0] += 300;
+  doc.biscuit.pos[0] += 300;
+  tool.fromJSON(doc);
+  const bb = new T3.Box3().setFromObject(host.part.mesh);
+  const gates = Object.values(v.state.graph.nodes).filter(n => n.type === 'gate');
+  const zMax = Math.max(...gates.map(n => n.pos[2]));
+  const xMid = gates.reduce((a, n) => a + n.pos[0], 0) / gates.length;
+  assert.ok(Math.abs(bb.min.z - zMax) < 1e-3, 'an den Anschnitten des geöffneten Plans: ' + bb.min.z + ' / ' + zMax);
+  assert.ok(Math.abs((bb.min.x + bb.max.x) / 2 - xMid) < 1e-3 && Math.abs(xMid - 300) < 1e-6, 'mittig zu ihnen, 300 mm weiter');
+  assert.match(ui('graph-note').textContent, /Eine Lage für dieses Bauteil kannte der Plan nicht/);
+  /* Mit Lage für dieses Bauteil gilt sie genau. */
+  const withRef = JSON.parse(JSON.stringify(tool.toJSON()));
+  withRef.ref.pos[1] += 50;
+  tool.fromJSON(withRef);
+  assert.deepEqual(host.part.mesh.position.toArray(), withRef.ref.pos);
+  assert.doesNotMatch(ui('graph-note').textContent, /kannte der Plan nicht/);
 });
 
 /* Eine zweite Seite (?demo=oelwanne) — danach gehört das Dokument ihr, deshalb zuletzt. */

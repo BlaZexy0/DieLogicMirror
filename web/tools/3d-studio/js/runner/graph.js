@@ -33,9 +33,22 @@ import {
   add, sub, scale, addScaled, dot, cross, norm, len, rotate,
   mirrorPoint, mirrorDir, rad, clamp
 } from './vec.js';
+import { ELEMENT } from '../part/colors.js';
+import { checkFormat, isId, ID_RULE } from '../studio/planio.js';
 
 export const FORMAT = 'dielogic-anguss';
 export const FORMAT_VERSION = 1;
+
+/* Die Grenzen der Werte, die eine Angussdatei trägt, [min, max] in mm (die
+   Neigung in Grad, die Straffheit als Faktor). Dieselben gelten in den
+   Feldern und Reglern des Angussdesigners (runner/tool.js, panel.js); beim
+   Laden werden sie geklemmt. Vorher übernahm fromJSON die Werte einer Datei
+   ungeprüft: Schrittweite 0,001, Neigung 89°, eine negative Kanalbreite. */
+export const LIMITS = Object.freeze({
+  draft: [0, 15], radius: [0, 20], branchR: [0, 40], tension: [0.3, 1.8], step: [0.2, 10], gateH: [0.3, 30],
+  w: [1, 400], h: [0.4, 200], gateLen: [0, 60], gateW: [1, 600], biscuitD: [10, 400], biscuitT: [1, 300]
+});
+const within = (v, k) => clamp(v, LIMITS[k][0], LIMITS[k][1]);
 
 /** Die sechs Hauptrichtungen — dieselbe Schreibweise wie js/solids.js. */
 export const AXES = {
@@ -44,13 +57,18 @@ export const AXES = {
   '+z': [0, 0, 1], '-z': [0, 0, -1]
 };
 
-/** Knotenarten. Die Farbe ist zugleich die Farbe des Griffs im Viewport. */
+/** Knotenarten. Die Farbe ist zugleich die Farbe des Griffs im Viewport
+    (js/part/colors.js, ELEMENT): Punkt, Verzweigung und Spiegelpunkt heben
+    sich vom Anguss ab, der Punkt in der Hervorhebung, die Verzweigung im
+    Violett der Maschine, der Spiegelpunkt in der hellen Hervorhebung; der
+    Pressrest trägt seine Sachfarbe, der Anschnitt die des Werkzeugs. Sie
+    folgt dem Farbschema. */
 export const TYPES = {
-  root:   { label: 'Pressrest', color: '#557786' },
-  point:  { label: 'Punkt', color: '#008c82' },
-  branch: { label: 'Verzweigung', color: '#d4a908' },
-  mirror: { label: 'Spiegelpunkt', color: '#9a77e8' },
-  gate:   { label: 'Anschnitt', color: '#e07b39' }
+  root:   { label: 'Pressrest', get color() { return ELEMENT.pressrest; } },
+  point:  { label: 'Punkt', get color() { return ELEMENT.punkt; } },
+  branch: { label: 'Verzweigung', get color() { return ELEMENT.verzweigung; } },
+  mirror: { label: 'Spiegelpunkt', get color() { return ELEMENT.spiegelpunkt; } },
+  gate:   { label: 'Anschnitt', get color() { return ELEMENT.anschnitt; } }
 };
 
 /**
@@ -90,7 +108,13 @@ export function emptyGraph() {
   };
 }
 
-const newId = g => 'k' + (++g.seq);
+/* Eine neue id ist nie eine schon vergebene: aus einer Datei kann eine
+   Kennung stammen, die der Zähler später selbst erreicht hätte. */
+const newId = g => {
+  let id;
+  do { id = 'k' + (++g.seq); } while (g.nodes[id]);
+  return id;
+};
 
 /* ── Zugriff ─────────────────────────────────────────────────── */
 export const node = (g, id) => g.nodes[id] || null;
@@ -261,20 +285,37 @@ export function addChild(g, parentId, type = 'point') {
   const p = g.nodes[parentId];
   if (!p) return null;
   if (p.type === 'gate') return null;                 // hinter dem Anschnitt ist Schluss
+  /* Eine gespiegelte Gabelung hat genau zwei Äste. Ein dritter schaltete
+     die Spiegelung stillschweigend ab (isMirrorBranch), und wer ihn später
+     wieder entfernte, bekam sie zurück: das Nachziehen überschrieb dann,
+     was an der anderen Seite inzwischen geändert war. */
+  if (isMirrorBranch(p) && p.children.length >= 2) return null;
+  let made;
   if (type === 'branch' || type === 'mirror') {
-    const b = makeNode(g, type, p, suggestPos(g, p));
-    const a1 = makeNode(g, 'gate', b, suggestPos(g, b, 30));
-    const a2 = makeNode(g, 'gate', b, suggestPos(g, b, -30));
-    a1.w = a2.w = b.w * 0.55; a1.h = a2.h = b.h * 0.8;
-    /* Beide Äste entstehen symmetrisch; gekoppelt bleiben sie nur, wenn
-       der Knoten spiegelt. Sonst ist jeder für sich anfassbar. */
-    if (b.mirror) syncMirror(g, b, a1.id);
-    return b;
+    made = makeNode(g, type, p, suggestPos(g, p));
+    const a1 = makeNode(g, 'gate', made, suggestPos(g, made, 30));
+    const a2 = makeNode(g, 'gate', made, suggestPos(g, made, -30));
+    a1.w = a2.w = made.w * 0.55; a1.h = a2.h = made.h * 0.8;
+  } else {
+    made = makeNode(g, type, p, suggestPos(g, p));
+    if (type === 'gate') { made.w = p.w * 0.8; made.h = p.h * 0.7; }
   }
-  const n = makeNode(g, type, p, suggestPos(g, p));
-  if (type === 'gate') { n.w = p.w * 0.8; n.h = p.h * 0.7; }
-  syncFrom(g, n.id);
-  return n;
+  /* Ein Punkt mit einem zweiten Abgang IST eine Verzweigung — geometrisch
+     war er es schon (curve.js teilt den Zulauf, sweep.js baut das
+     Hosenstück), nur fehlten ihm Aufteilung und Spiegel-Häkchen, und er
+     teilte fest 50:50. Das Gegenstück steht in removeNode. */
+  if (p.type === 'point' && p.children.length >= 2) {
+    p.type = 'branch';
+    p.ratio = 0.5;
+    p.mirror = false;
+  }
+  /* Nachziehen ab dem Neuen: ein Spiegelpunkt legt seine Gegenseite an,
+     und liegt der Neue auf der führenden Seite einer Spiegelung, bekommt
+     die Gegenseite ihn SOFORT — nicht erst beim nächsten Zug. Sonst stand
+     die Gabelung eine Weile nur auf einer Seite, und so wurde sie auch
+     gespeichert. */
+  syncFrom(g, made.id);
+  return made;
 }
 
 /** Punkt zwischen einen Knoten und seinen Vorgänger einfügen. */
@@ -316,10 +357,13 @@ export function removeNode(g, id) {
     rec(id);
     for (const k of drop) delete g.nodes[k];
   }
-  /* Eine Verzweigung ohne Gabelung ist keine mehr. */
+  /* Eine Verzweigung ohne Gabelung ist keine mehr — und der Ast, der
+     bleibt, ist keine nachgezogene Seite mehr: die Marke bestimmte sonst
+     später, welche Seite führt, wenn hier wieder gespiegelt wird. */
   if ((p.type === 'branch' || p.type === 'mirror') && p.children.length < 2 && p.parent) {
     p.type = 'point';
     delete p.ratio; delete p.mirror;
+    for (const c of p.children) if (g.nodes[c]) delete g.nodes[c].follower;
   }
   syncFrom(g, p.id);
   return true;
@@ -330,7 +374,7 @@ export function removeNode(g, id) {
 /* Eine Gabelung mit Spiegelung. Auch mit nur EINEM Kind: dann legt das
    Nachziehen die Gegenseite erst an — so beschreibt ein Beispiel oder
    eine Datei nur die eine Seite, und die andere entsteht daraus. */
-const isMirrorBranch = n => (n.type === 'branch' || n.type === 'mirror')
+export const isMirrorBranch = n => (n.type === 'branch' || n.type === 'mirror')
   && n.mirror && n.children.length >= 1 && n.children.length <= 2;
 
 /** Die führende Seite: die, die der Anwender bearbeitet. Ohne Hinweis
@@ -392,9 +436,13 @@ export function syncMirror(g, branch, leadChildId) {
     /* Die gebundene Richtung wird an derselben Ebene gespiegelt wie die
        Lage — sonst zeigte die Gegenseite am Bauteil vorbei. */
     if (s.aim) d.aim = mirrorDir(s.aim, normal); else delete d.aim;
-    if (s.ratio !== undefined) d.ratio = s.ratio;
-    if (s.mirror !== undefined) d.mirror = s.mirror;
-    if (s.gate) d.gate = { ...s.gate };
+    /* Was die Quelle NICHT hat, hat die Kopie auch nicht: ein wieder-
+       verwendeter Knoten behielt sonst das Verhältnis einer Verzweigung,
+       die er längst nicht mehr ist — die Gegenseite teilte 80:20, die
+       führende 50:50. */
+    if (s.ratio !== undefined) d.ratio = s.ratio; else delete d.ratio;
+    if (s.mirror !== undefined) d.mirror = s.mirror; else delete d.mirror;
+    if (s.gate) d.gate = { ...s.gate }; else delete d.gate;
     const old = d.children.slice();
     d.children = [];
     s.children.forEach((sc, i) => {
@@ -456,6 +504,35 @@ export function setPos(g, id, pos) {
   }
   n.pos = [pos[0], pos[1], pos[2]];
   syncFrom(g, id);
+}
+
+/**
+ * Die Ausstoßrichtung umstellen und das System mitdrehen: um den
+ * Pressrest, auf dem kürzesten Weg von der alten Achse zur neuen. Die
+ * Trennebene kippt, und der Anguss liegt weiter in ihr — mit allem, was
+ * eine Richtung hat: auch die ans Bauteil gebundenen Mündungen drehen mit.
+ * Blieben sie stehen, zeigte nach dem Umschalten jeder gebundene
+ * Anschnitt aus seiner Ebene heraus.
+ * → { axis, ang } der Drehung, damit der Aufrufer das Bauteil mitdrehen
+ *   kann; ang = 0 heißt: es gab nichts zu drehen.
+ */
+export function turnSystem(g, key) {
+  const from = AXES[g.biscuit.axis], to = AXES[key];
+  if (!from || !to) return { axis: [0, 0, 1], ang: 0 };
+  let axis = cross(from, to);
+  const ang = Math.acos(clamp(dot(from, to), -1, 1));
+  if (len(axis) < 1e-9) axis = cross(from, Math.abs(from[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]);
+  axis = norm(axis);
+  if (ang > 1e-9) {
+    const o = g.biscuit.pos;
+    for (const n of allNodes(g)) {
+      n.pos = add(o, rotate(sub(n.pos, o), axis, ang));
+      if (n.aim) n.aim = norm(rotate(n.aim, axis, ang));
+    }
+  }
+  g.biscuit.axis = key;
+  setBiscuit(g, {});
+  return { axis, ang };
 }
 
 /** Knoten in seiner Arbeitsebene verschieben: der Anteil senkrecht zur
@@ -544,47 +621,110 @@ export function toJSON(g) {
   };
 }
 
+/* Kennungen kommen aus der Datei und landen in der Seite: in der Kopfzeile
+   des Auswahlfelds, in den Sätzen der Prüfliste, in der Tabelle der
+   Angussfüllung. Erlaubt ist, was das Werkzeug selbst vergibt („k12"), und
+   was ein Mensch sinnvoll hineinschreibt: ein Buchstabe, dann Buchstaben,
+   Ziffern, _ und -, höchstens 32 Zeichen. Eine Datei mit anderen Kennungen
+   wird abgewiesen, nicht umgeschrieben — eine Kennung mit spitzen Klammern
+   ist kein Tippfehler. Die Namen, die jedes Objekt schon mitbringt
+   („constructor", „toString"), sind ebenfalls keine: nachgeschlagen in
+   `nodes`, fände man sonst etwas, das nie gespeichert war. */
+const validId = id => isId(id) && !(id in Object.prototype);
+
+/* Zahlen aus der Datei: endlich, sonst die Vorgabe — eine Zeichenkette oder
+   ein fehlender Wert rechnete sich sonst als NaN durch die ganze Kette. */
+const num = (v, def) => {
+  const x = typeof v === 'string' ? (v.trim() ? Number(v) : NaN) : v;
+  return typeof x === 'number' && Number.isFinite(x) ? x : def;
+};
+const vec = (a, n, def) => (Array.isArray(a) && a.length === n ? a.map((v, i) => num(v, def[i])) : def.slice());
+const own = (o, k) => typeof k === 'string' && Object.hasOwn(o, k);
+
 export function fromJSON(obj) {
-  if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Angussdatei (Kennung „' + FORMAT + '" fehlt).');
-  if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
+  checkFormat(obj, FORMAT, FORMAT_VERSION, 'Das ist keine Angussdatei (Kennung „' + FORMAT + '" fehlt).');
   const g = emptyGraph();
-  Object.assign(g.biscuit, obj.biscuit || {});
-  if (!AXES[g.biscuit.axis]) g.biscuit.axis = '+y';
+  const b = obj.biscuit && typeof obj.biscuit === 'object' ? obj.biscuit : {};
+  g.biscuit.pos = vec(b.pos, 3, [0, 0, 0]);
+  g.biscuit.axis = own(AXES, b.axis) ? b.axis : '+y';
+  g.biscuit.d = within(num(b.d, 90), 'biscuitD');
+  g.biscuit.t = within(num(b.t, 25), 'biscuitT');
   /* Ältere Dateien kennen den Zwickelradius nicht — dann gilt die Vorgabe. */
-  for (const k of ['draft', 'radius', 'branchR', 'tension', 'step', 'gateH']) if (Number.isFinite(obj[k])) g[k] = obj[k];
+  for (const k of ['draft', 'radius', 'branchR', 'tension', 'step', 'gateH']) if (Number.isFinite(obj[k])) g[k] = within(obj[k], k);
   const list = Array.isArray(obj.nodes) ? obj.nodes : [];
   if (!list.length) throw new Error('Die Datei enthält keine Knoten.');
-  for (const n of list) {
-    g.nodes[n.id] = {
-      id: n.id, type: TYPES[n.type] ? n.type : 'point',
-      parent: n.parent || null, children: Array.isArray(n.children) ? n.children.slice() : [],
-      pos: (n.pos || [0, 0, 0]).map(Number), tilt: (n.tilt || [0, 0]).map(Number),
-      w: Number(n.w) || 10, h: Number(n.h) || 6
+  if (obj.rootId !== undefined && obj.rootId !== null && !validId(obj.rootId)) {
+    throw new Error('Der Wurzelknoten der Datei hat eine ungültige Kennung: ' + ID_RULE + '.');
+  }
+  list.forEach((n, i) => {
+    const where = 'Knoten Nr. ' + (i + 1);
+    if (!n || typeof n !== 'object') throw new Error(where + ' der Datei ist kein Knoten.');
+    if (!validId(n.id)) throw new Error(where + ' der Datei hat eine ungültige Kennung: ' + ID_RULE + '.');
+    if (own(g.nodes, n.id)) throw new Error('Die Kennung „' + n.id + '" kommt in der Datei zweimal vor.');
+    const kids = Array.isArray(n.children) ? n.children : [];
+    const parent = n.parent === '' || n.parent === undefined ? null : n.parent;
+    if ((parent !== null && !validId(parent)) || !kids.every(validId)) {
+      throw new Error(where + ' der Datei (' + n.id + ') verweist auf eine ungültige Kennung: ' + ID_RULE + '.');
+    }
+    const node = g.nodes[n.id] = {
+      id: n.id, type: own(TYPES, n.type) ? n.type : 'point',
+      parent, children: [...new Set(kids)],
+      pos: vec(n.pos, 3, [0, 0, 0]), tilt: vec(n.tilt, 2, [0, 0]),
+      w: within(num(n.w, 0) || 10, 'w'), h: within(num(n.h, 0) || 6, 'h')
     };
-    if (n.ratio !== undefined) g.nodes[n.id].ratio = clamp(Number(n.ratio) || 0.5, 0.05, 0.95);
-    if (n.mirror !== undefined) g.nodes[n.id].mirror = !!n.mirror;
-    if (n.gate) {
-      const gate = { h: g.gateH, len: 4, w: 20, auto: true, transition: 'ende', ...n.gate };
+    if (n.ratio !== undefined) node.ratio = clamp(num(n.ratio, 0.5) || 0.5, 0.05, 0.95);
+    if (n.mirror !== undefined) node.mirror = !!n.mirror;
+    if (n.gate && typeof n.gate === 'object') {
+      const s = n.gate;
+      const gate = {
+        h: within(num(s.h, g.gateH), 'gateH'), len: within(num(s.len, 4), 'gateLen'), w: within(num(s.w, 20), 'gateW'),
+        auto: s.auto === undefined ? true : !!s.auto,
+        /* Auch der Übergang ist ein Wort aus der Datei: nur die bekannten. */
+        transition: own(TRANSITIONS, s.transition) ? s.transition : 'ende'
+      };
       /* Ältere Dateien kennen die Vorgabe nicht: was auf der Vorgabe
          steht, folgt ihr; was davon abweicht, ist eine eigene Höhe. */
-      if (gate.hAuto === undefined) gate.hAuto = Math.abs(gate.h - g.gateH) < 1e-9;
-      g.nodes[n.id].gate = gate;
+      gate.hAuto = s.hAuto === undefined ? Math.abs(gate.h - g.gateH) < 1e-9 : !!s.hAuto;
+      node.gate = gate;
     }
-    if (Array.isArray(n.aim) && len(n.aim.map(Number))) g.nodes[n.id].aim = norm(n.aim.map(Number));
-    if (n.follower) g.nodes[n.id].follower = true;
-    const num = +String(n.id).replace(/\D/g, '');
-    if (Number.isFinite(num)) g.seq = Math.max(g.seq, num);
-  }
+    if (Array.isArray(n.aim) && n.aim.length === 3) {
+      const a = vec(n.aim, 3, [0, 0, 0]);
+      if (len(a) > 1e-12) node.aim = norm(a);
+    }
+    if (n.follower) node.follower = true;
+    const k = Number(n.id.replace(/\D/g, '') || 0);
+    if (Number.isSafeInteger(k)) g.seq = Math.max(g.seq, k);
+  });
   /* Verwaiste Verweise entfernen — eine von Hand bearbeitete Datei soll
      die Seite nicht töten, sondern so weit wie möglich funktionieren. */
   for (const n of Object.values(g.nodes)) {
-    n.children = n.children.filter(c => g.nodes[c] && g.nodes[c].parent === n.id);
-    if (n.parent && !g.nodes[n.parent]) n.parent = null;
+    n.children = n.children.filter(c => own(g.nodes, c) && g.nodes[c].parent === n.id);
+    if (n.parent && !own(g.nodes, n.parent)) n.parent = null;
   }
-  g.rootId = obj.rootId && g.nodes[obj.rootId] ? obj.rootId
+  g.rootId = own(g.nodes, obj.rootId) ? obj.rootId
     : (Object.values(g.nodes).find(n => !n.parent) || {}).id;
   if (!g.rootId) throw new Error('Die Datei hat keinen Wurzelknoten.');
-  g.nodes[g.rootId].type = 'root';
-  g.nodes[g.rootId].pos = g.biscuit.pos.slice();
+  const r = g.nodes[g.rootId];
+  /* Die Wurzel hat keinen Vorgänger — auch dann nicht, wenn die Datei im
+     Kreis verweist; und was von ihr aus nicht zu erreichen ist, gehört
+     nicht zum System (ein Ring aus Knoten ließe jeden Weg nach oben nie
+     enden). */
+  if (r.parent && own(g.nodes, r.parent)) g.nodes[r.parent].children = g.nodes[r.parent].children.filter(c => c !== r.id);
+  r.parent = null;
+  r.type = 'root';
+  r.pos = g.biscuit.pos.slice();
+  const reach = new Set(allNodes(g).map(n => n.id));
+  for (const id of Object.keys(g.nodes)) if (!reach.has(id)) delete g.nodes[id];
+  for (const n of Object.values(g.nodes)) {
+    if (n.type === 'root' && n.id !== r.id) n.type = 'point';
+    /* Dieselben Regeln wie beim Bearbeiten: ein Punkt mit zwei Abgängen
+       ist eine Verzweigung (addChild), eine Spiegelung hat genau zwei Äste. */
+    if (n.type === 'point' && n.children.length >= 2) {
+      n.type = 'branch';
+      if (n.ratio === undefined) n.ratio = 0.5;
+      if (n.mirror === undefined) n.mirror = false;
+    }
+    if (n.mirror && n.children.length > 2) n.mirror = false;
+  }
   return normalizeMirrors(g);
 }

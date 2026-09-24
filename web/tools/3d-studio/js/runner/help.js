@@ -24,7 +24,10 @@ Vorgänger. Ein Knopf, der gerade nicht geht, sagt beim Antippen, warum.</li>
 <li><b>Pfeil</b> am Anschnitt (oder „Mündung ans Bauteil binden"): danach eine Stelle auf dem Bauteil anklicken.</li>
 <li><b>Entf</b> entfernt die Auswahl ohne Nachfrage: Ein Punkt mit genau einem Nachfolger wird überbrückt, sonst
 fällt alles dahinter mit weg; die Meldung nennt, wie viel. <b>Strg+Z</b> holt es zurück, <b>Strg+Y</b> wiederholt,
-<b>Esc</b> hebt Auswahl und Zielmodus auf, <b>F</b> passt das Bild ein.</li>
+<b>Esc</b> bricht einen Zug ab (der Punkt springt zurück, es entsteht kein Schritt) und hebt sonst Zielmodus und
+Auswahl auf, <b>F</b> passt das Bild ein.</li>
+<li>Die <b>Lage</b> im Auswahlfeld nimmt Werte bis 5000 mm in jede Richtung; wer ein Feld unverändert mit Eingabe
+verlässt, verschiebt nichts.</li>
 <li>Blasse Punkte sind die <b>gespiegelte Seite</b> einer Verzweigung: sie folgen; bearbeitet wird die andere.</li>
 </ul>
 </section>
@@ -36,7 +39,8 @@ Bauteil-Chip (Beispielteil, Datei) oder durch Ablegen einer STL/GLB im Bild.</p>
 <p>Ein Bauteil liegt im Studio mit der Trennebene bei z = 0; der Anguss liegt in der Trennebene des Pressrests.
 Deshalb wird das Bauteil hier gedreht und vor die Anschnitte gestellt: seine Trennebene in die des Angusses, seine
 nächste Kante an die Anschnitte. Das Netz selbst bleibt, wie es ist. Ein Beispiel, das sein Bauteil mitbringt
-(Ölwanne), stellt es genau an seine Mündungen. Die Deckkraft steht unter „Darstellung".</p>
+(Ölwanne), stellt es genau an seine Mündungen. Ein Plan aus einer Datei, der die Lage für dieses Bauteil kennt,
+stellt es dorthin; kennt er keine, kommt es vor seine Anschnitte. Die Deckkraft steht unter „Darstellung".</p>
 </section>
 <section data-help-anchor="pressrest">
 <h3>Pressrest</h3>
@@ -69,7 +73,9 @@ Wert löst den Anschnitt davon, es sei denn, er ist genau die Vorgabe.</p>
 <section data-help-anchor="abstufen">
 <h3>Querschnitte abstufen</h3>
 <p>Von den Anschnitten rückwärts: A = Q·Anteil / v<sub>Ziel</sub>, der zuführende Kanal das 1,6-fache, davor je die
-Summe der Abgänge durch die Verjüngung. Danach wächst der Querschnitt nirgends mehr.</p>
+Summe der Abgänge durch die Verjüngung. Danach wächst der Querschnitt nirgends mehr, auch nicht hinter dem
+Anschluss am Pressrest, der höchstens 0,9 seines Durchmessers breit wird. Ein gewähltes Beispiel wird ebenso für
+den Prozess von hier bemessen.</p>
 <p><b>Verjüngung</b> je Abschnitt: der Kanal ist um diesen Faktor größer als die Summe seiner Abgänge.
 <b>Seitenverhältnis</b>: Tiefe geteilt durch Breite. Bewährt sind 0,5 bis 1,0.</p>
 </section>
@@ -96,11 +102,13 @@ folgt daraus der Füllgrad, den die Schusskurve braucht.</p>
 <h3>Ankunft nach der DieLogic-Schusskurve</h3>
 <p>Die Ankunft der Schmelze an jedem Anschnitt nach der DieLogic-Schusskurve der Auslegung (López-Anfahrt bis
 v<sub>krit</sub>, Plateau bis Kammer voll, Rampe auf das v₂ der NADCA-Füllzeit), erzeugt mit der Füllkammer von hier
-(Pressrest-Ø als Kolben-Ø, Kammerlänge von oben) und den Volumen von hier; Maschine und Thermik aus dem aktuellen
-Projekt. Ohne Häkchen: ein konstanter Strom aus Gussvolumen und Füllzeit.</p>
-<p>Die Zeiten zählen <b>ab „Kammer voll"</b>: Von da an füllt sich der Anguss in der Rampe der zweiten Phase; wie
-weit erster und letzter Anschnitt auseinanderliegen, steht daneben. Die Zeiten ab Kolbenstart (erst die langsame
-erste Phase bis „Kammer voll") stehen in den Details. Die Kammer ist die von hier: Pressrest-Ø und Kammerlänge,
+(Pressrest-Ø als Kolben-Ø, Kammerlänge von oben), der Legierung und den Volumen von hier; Maschine und Thermik aus
+dem aktuellen Projekt. Ist die Legierung des Projekts dasselbe Metall wie die von hier, gelten ihre Werte, sonst die
+der Vorlage (AlSi9Cu3, AZ91D, Zamak 5). Ohne Häkchen: ein konstanter Strom aus Gussvolumen und Füllzeit.</p>
+<p>Die Zeiten zählen <b>ab „Kammer voll"</b>: Dann steht die Schmelze am Mantel des Pressrests, und von da an füllt
+sich der Anguss in der Rampe der zweiten Phase; wie weit erster und letzter Anschnitt auseinanderliegen, steht
+daneben. Das Stück des ersten Kanals im Pressrest zählt als Pressrest, nicht als Anguss. Die Zeiten ab Kolbenstart
+(erst die langsame erste Phase bis „Kammer voll") stehen in den Details. Die Kammer ist die von hier: Pressrest-Ø und Kammerlänge,
 daraus der Füllgrad; Maschine (v<sub>max</sub>, a<sub>max</sub>) und Thermik nimmt die Kurve aus dem aktuellen Projekt.</p>
 <p><b>Füllzeit der Kurve übernehmen</b>: die Füllzeit ab Anschnitt, die die Kurve braucht, als Füllzeit des
 Prozesses übernehmen; dann passen Ströme und Zeiten zusammen.</p>
@@ -122,12 +130,15 @@ Prozesses übernehmen; dann passen Ströme und Zeiten zusammen.</p>
 <section data-help-anchor="aufteilung">
 <h3>Aufteilung</h3>
 <p>Wie viel des Stroms in den ersten Ast gehen SOLL. Was wirklich fließt, entscheidet der Widerstand; beides steht
-im Flussschema nebeneinander.</p>
+im Flussschema nebeneinander. Gespiegelt teilen die Äste immer 50:50, mit drei und mehr Abgängen teilen sie zu
+gleichen Teilen; der Regler ist dann gesperrt, die Zeile darunter sagt es. Ein Punkt, an den ein zweiter Abgang
+kommt, wird eine Verzweigung.</p>
 </section>
 <section data-help-anchor="spiegel">
 <h3>Spiegeln</h3>
 <p>Mit dem Häkchen bleiben beide Äste spiegelsymmetrisch: eine Seite wird bearbeitet, die andere zieht nach (blass,
-nicht anfassbar). Ein Spiegelpunkt spiegelt immer.</p>
+nicht anfassbar). Ein Spiegelpunkt spiegelt immer. Gespiegelt wird eine Gabelung mit genau zwei Ästen: einen dritten
+gibt es erst, wenn die Spiegelung gelöst ist.</p>
 </section>
 <section data-help-anchor="anschnitt">
 <h3>Anschnitt</h3>
@@ -138,13 +149,16 @@ Querschnitt vor dem Bauteil, entlang der Mündungsrichtung. Nicht die Breite; di
 mit, sobald der Vorgänger wandert. Wer stattdessen die Stelle am Bauteil anklickt, legt beides auf einmal fest: den
 Ort der Mündung und die Richtung, in der die Schmelze das Bauteil betritt. Gebunden ist die Richtung, nicht der
 Punkt; er lässt sich weiter ziehen. Eine andere Stelle bekommt der Anschnitt mit einem neuen Klick auf den Pfeil;
-<b>Strg+Z</b> nimmt die Bindung zurück.</p>
+<b>Strg+Z</b> nimmt die Bindung zurück. Ein Klick auf einen anderen Punkt während des Zielens wählt diesen und
+beendet das Zielen. Beim Umschalten der Richtung dreht die gebundene Mündung mit.</p>
 </section>
 <section data-help-anchor="flussschema">
 <h3>Flussschema</h3>
 <p>Der Angussbaum als Schema: Querschnitte, Geschwindigkeiten, Soll gegen Ist und die Ankunft der Schmelze an
 jedem Anschnitt. Lauflänge, Angussvolumen, Volumenstrom und Druckbedarf stehen darüber: dort, wo auch Fläche,
-Geschwindigkeit und Aufteilung an jedem Ast hängen.</p>
+Geschwindigkeit und Aufteilung an jedem Ast hängen. Die Dicke eines Bandes folgt dem Querschnitt, seine Farbe
+der Geschwindigkeit: von Blau (ruhig) über Teal und Gold nach Rot (schnell), bis zum schnellsten Anschnitt
+dieses Angusses. Ein Urteil ist das nicht; geurteilt wird in der Prüfung.</p>
 </section>
 <section data-help-anchor="pruefung">
 <h3>Prüfung</h3>
@@ -157,7 +171,9 @@ abgetasteten Millimeter. Am Reiter steht, wie viele erfüllt sind; verletzte Reg
 Viewport per Ablegen entgegen; was für eine es ist, entscheidet der Inhalt.</p>
 <p><b>Exportieren → STL</b> sind zwei Dateien: der <b>Anguss</b> als ein geschlossener Körper (an den Gabelungen
 gehen die Kanäle mit Zwickelradius ineinander über, am Pressrest ist der erste Kanal an dessen Mantel beschnitten)
-und der <b>Pressrest</b> als Zylinder. Beide berühren sich, keiner steckt im anderen. Der Browser fragt beim ersten
-Mal, ob die Seite mehrere Dateien laden darf.</p>
+und der <b>Pressrest</b> als Zylinder. Beide berühren sich, keiner steckt im anderen. Mit Referenzbauteil stehen sie
+in dessen Koordinaten und liegen im CAD genau an seiner Datei; ohne in denen des Angusses. Sie heißen wie der Plan:
+<i>bauteil</i>-anguss.stl und <i>bauteil</i>-pressrest.stl neben <i>bauteil</i>-anguss.json. Der Browser fragt beim
+ersten Mal, ob die Seite mehrere Dateien laden darf.</p>
 <p>Solange nichts gespeichert ist, hebt der Browser einen Entwurf auf und bietet ihn beim nächsten Mal an.</p>
 </section>`;

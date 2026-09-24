@@ -1,6 +1,8 @@
 /* Die Partikel im Bild: Punkte als beleuchtete Kugeln, je Partikel nach
    Geschwindigkeit gefärbt — dieselbe Turbo-Skala wie die Fläche der
-   Gitterrechnung (js/lbm/paint.js), damit beide Seiten gleich lesen.
+   Gitterrechnung (js/lbm/paint.js), damit beide Seiten gleich lesen. Der
+   eigene Shader wandelt keine Farbräume: die Tafel kommt mit den Werten
+   der Farbleiste (lutFloat), nicht linear.
 
    Ein Punkt ist eine Kugel vom Partikelabstand: der Vertex-Shader setzt
    die Punktgröße aus Projektion und Abstand (perspektivisch mit dem
@@ -8,10 +10,7 @@
    Punktquadrats und schattiert die Kugel aus der Punktkoordinate. */
 
 import * as T from 'three';
-import { turbo } from '../part/colors.js';
-
-const LUT = new Float32Array(256 * 3);
-for (let k = 0; k < 256; k++) LUT.set(turbo(k / 255), 3 * k);
+import { lutFloat } from '../part/colors.js';
 
 const VERT = /* glsl */`
 uniform float uSize;
@@ -68,25 +67,32 @@ export function speedScaleParticles(snapshots, q = 0.99) {
 }
 
 /** Ein Bild in die Punktwolke: Orte (mm) und Farben nach Geschwindigkeit
-    auf der Skala vScale (m/s). */
-export function showParticles(pts, snap, vScale) {
+    auf der Skala vScale (m/s). `capacity`: so viele Partikel hat das größte
+    Bild des Laufs — dafür wird der Platz EINMAL angelegt, gezeichnet wird mit
+    setDrawRange nur, was dieses Bild hat. Bis 2026-09-22 kamen neue Felder,
+    sobald sich die Zahl änderte (beim Abspielen fast jedes Bild), und die
+    alten Puffer blieben auf der Grafikkarte liegen. */
+export function showParticles(pts, snap, vScale, capacity = snap.n) {
   const geo = pts.geometry;
   const n = snap.n;
   let pa = geo.getAttribute('position'), ca = geo.getAttribute('color');
-  if (pa.count !== n) {
-    pa = new T.BufferAttribute(new Float32Array(3 * n), 3);
-    ca = new T.BufferAttribute(new Float32Array(3 * n), 3);
+  if (pa.count < n) {
+    const cap = Math.max(n, capacity);
+    geo.dispose();                                   // gibt die zu kleinen Puffer der Karte frei
+    pa = new T.BufferAttribute(new Float32Array(3 * cap), 3).setUsage(T.DynamicDrawUsage);
+    ca = new T.BufferAttribute(new Float32Array(3 * cap), 3).setUsage(T.DynamicDrawUsage);
     geo.setAttribute('position', pa);
     geo.setAttribute('color', ca);
   }
   pa.array.set(snap.pos);
   const k = vScale > 0 ? snap.uMax / (255 * vScale) : 0;
-  const col = ca.array;
+  const col = ca.array, LUT = lutFloat('turbo');
   for (let i = 0; i < n; i++) {
     const t = Math.max(0, Math.min(255, Math.round(snap.speed[i] * k * 255)));
     col[3 * i] = LUT[3 * t]; col[3 * i + 1] = LUT[3 * t + 1]; col[3 * i + 2] = LUT[3 * t + 2];
   }
-  pa.needsUpdate = true; ca.needsUpdate = true;
+  /* Hochgeladen wird nur der Teil, der gezeichnet wird. */
+  for (const a of [pa, ca]) { a.clearUpdateRanges(); a.addUpdateRange(0, 3 * n); a.needsUpdate = true; }
   geo.setDrawRange(0, n);
   geo.boundingSphere = null;
   pts.visible = n > 0;

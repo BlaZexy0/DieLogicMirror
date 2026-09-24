@@ -10,11 +10,14 @@ erste, kalte und oxidhaltige Schmelze und geben der Luft einen Weg aus der Kavit
 <section data-help-anchor="setzen">
 <h3>Setzen, ziehen, neu setzen</h3>
 <p>Oben im Bild eine <b>Art</b> wählen, dann auf das Bauteil klicken: der getroffene Punkt ist der Ort,
-die nach außen gerichtete Flächennormale die Achse; dorthin wachsen Steg, Bohne und Kanal.</p>
+die nach außen gerichtete Flächennormale die Hochachse. Steg, Bohne und Kanal liegen in der Wandebene, ihre
+offene Seite an der Wandfläche, die Tiefe wächst entgegen der Normalen; wohin das Element in der Ebene weist,
+sagt die Drehung.</p>
 <ul>
 <li><b>Punkt ziehen</b>: er rutscht auf der Wand entlang (in ihrer Tangentialebene); mit <b>Alt</b> von ihr weg.</li>
 <li><b>Pfeil anklicken</b>: das Element an eine andere Stelle des Bauteils setzen.</li>
-<li><b>Entf</b> entfernt die Auswahl, <b>Strg+Z</b> holt sie zurück, <b>Esc</b> bricht das Setzen ab.</li>
+<li><b>Entf</b> entfernt die Auswahl, <b>Strg+Z</b> holt sie zurück, <b>Esc</b> bricht das Setzen oder einen
+Zug ab (der Punkt springt zurück).</li>
 </ul>
 </section>
 <section data-help-anchor="arten">
@@ -31,8 +34,8 @@ gesammelt wird.</li>
 </section>
 <section data-help-anchor="drehung">
 <h3>Drehung</h3>
-<p>Drehung um die Achse des Elements (die Wandnormale): Was an der Bohne oben ist, wandert um den Steg
-herum. Die Längsrichtung schwenkt in der Wand, die Achse bleibt die Normale.</p>
+<p>Drehung um die Hochachse des Elements (die Wandnormale): Das Element schwenkt in der Wand um seinen
+Ort, die Längsrichtung dreht sich mit, die Hochachse bleibt die Normale.</p>
 </section>
 <section data-help-anchor="volumen">
 <h3>Volumen</h3>

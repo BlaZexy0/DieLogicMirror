@@ -342,9 +342,7 @@ export function createSolver(domain, params = {}) {
   }
 
   return {
-    N, cu, gateArrival,
-    get cf() { return cfO; },
-    get f() { return fA; },
+    N, gateArrival,
     /** Ein Zeitschritt mit der Kolbengeschwindigkeit uIn (Gittereinheiten)
         und, wenn der Kolben wandert, seiner Zellschicht ip. */
     step(uIn, s, ip = NO_PLUNGER) {

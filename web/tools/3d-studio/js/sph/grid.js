@@ -42,23 +42,8 @@ export function createGrid(min, max, cell) {
     }
   }
 
-  /** Alle Partikel in den 27 Zellen um (x,y,z): fn(j) je Kandidat. */
-  function around(x, y, z, fn) {
-    const i0 = Math.min(nx - 1, Math.max(0, Math.floor((x - min[0]) / cell)));
-    const j0 = Math.min(ny - 1, Math.max(0, Math.floor((y - min[1]) / cell)));
-    const k0 = Math.min(nz - 1, Math.max(0, Math.floor((z - min[2]) / cell)));
-    for (let k = Math.max(0, k0 - 1); k <= Math.min(nz - 1, k0 + 1); k++) {
-      for (let j = Math.max(0, j0 - 1); j <= Math.min(ny - 1, j0 + 1); j++) {
-        for (let i = Math.max(0, i0 - 1); i <= Math.min(nx - 1, i0 + 1); i++) {
-          const c = (k * ny + j) * nx + i;
-          for (let s = start[c]; s < start[c + 1]; s++) fn(list[s]);
-        }
-      }
-    }
-  }
-
   return {
-    dims, cells, cell, min, build, around, cellIndex,
+    dims, cells, cell, min, build, cellIndex,
     get start() { return start; },
     get list() { return list; }
   };

@@ -16,11 +16,21 @@
    wenn die Seite ein Bild will: Füllstand, Ankunft, Melder — über einen
    Zwischenpuffer, der auf den Hauptspeicher abgebildet wird.
 
-   Gibt es kein WebGPU (navigator.gpu fehlt), meldet createGpuSolver das
-   mit einem Fehler; die Seite fällt dann auf den JavaScript-Kern zurück. */
+   Gibt es kein WebGPU (navigator.gpu fehlt), meldet createGpuSolver das mit
+   einem Fehler. Einen Rückfall auf den JavaScript-Kern gibt es dabei nicht
+   mehr: welcher Kern läuft, entscheidet sich vorher (probeGpu, kernelOf in
+   engines/lbm.js), und scheitert die Grafikkarte doch, endet der Lauf als
+   „Rechnung gescheitert" (core.js).
+
+   Geht die Karte mitten im Lauf verloren (Treiber, Ruhezustand), sagt es
+   device.lost — und das Lesen danach scheitert mit einem AbortError, den der
+   Rahmen als „Abbrechen" läse. Beides wird zu EINER gewöhnlichen Meldung
+   (lostError). Scheitert das Anlegen nach requestDevice (ein Shader, eine
+   Pipeline), gehen Gerät und Puffer gleich wieder, statt liegen zu bleiben. */
 
 import { Q, C, W, OPP, FLAG, NEVER, NO_PLUNGER, FF, FU } from './lattice.js';
 import { PARAMS } from './fslbm.js';
+import { failedSetup, openDevice, lostTracker, makeBuffer, compileShader, readBuffer } from './webgpu.js';
 
 const WG = 64;                                  // Zellen je Arbeitsgruppe
 const UNIFORM_STRIDE = 256;                     // Byte je Schritt im Uniform-Puffer
@@ -314,12 +324,6 @@ fn pass5(@builtin(global_invocation_id) gid: vec3<u32>) {
 `;
 }
 
-/** Gibt es WebGPU? */
-export const hasWebGPU = () => typeof navigator !== 'undefined' && !!navigator.gpu;
-
-/** Der Shader-Quelltext — für Tests und die Fehlersuche. */
-export const wgslSource = (nx, ny) => wgsl(nx, ny);
-
 /**
  * Den GPU-Kern anlegen. Gleiche Schnittstelle wie createSolver in
  * js/lbm/fslbm.js, nur dass Lesen asynchron ist:
@@ -331,22 +335,22 @@ export const wgslSource = (nx, ny) => wgsl(nx, ny);
  *   dispose()
  */
 export async function createGpuSolver(domain, params = {}) {
-  if (!hasWebGPU()) throw new Error('Kein WebGPU in diesem Browser.');
   const P = { ...PARAMS, ...params };
-  const adapter = await navigator.gpu.requestAdapter();
-  if (!adapter) throw new Error('WebGPU: kein Adapter (Grafikkarte nicht freigegeben?).');
   const N = domain.N;
-  const need = Q * 4 * N;
-  const limits = {};
-  if (need > adapter.limits.maxStorageBufferBindingSize) {
-    throw new Error('Das Gitter braucht ' + (need / 1048576).toFixed(0) + ' MB je Verteilungspuffer, die Grafikkarte erlaubt '
-      + (adapter.limits.maxStorageBufferBindingSize / 1048576).toFixed(0) + ' MB. Zellkante vergrößern.');
+  const device = await openDevice(Q * 4 * N, 'Das Gitter', 'Verteilungspuffer', 'Zellkante vergrößern');
+  const buffers = [];
+  try {
+    return await buildSolver(device, buffers, domain, P);
+  } catch (err) {
+    throw failedSetup(device, buffers, err);
   }
-  if (need > 134217728) {
-    limits.maxStorageBufferBindingSize = need;
-    limits.maxBufferSize = Math.max(need, adapter.limits.maxBufferSize >= need ? need : 0);
-  }
-  const device = await adapter.requestDevice({ requiredLimits: limits });
+}
+
+/* Alles nach requestDevice: Puffer, Shader, Pipelines — und der Kern. Was
+   hier angelegt wird, steht in `buffers` (failedSetup, dispose). */
+async function buildSolver(device, buffers, domain, P) {
+  const N = domain.N;
+  const getLost = lostTracker(device);
   const [nx, ny] = domain.dims;
   const { WALL, GAS, INTERFACE, FLUID, INLET } = FLAG;
 
@@ -368,27 +372,20 @@ export async function createGpuSolver(domain, params = {}) {
   }
   void WALL; void GAS;
 
-  const mk = (size, usage) => device.createBuffer({ size: Math.max(16, Math.ceil(size / 4) * 4), usage });
+  const mk = (size, usage) => makeBuffer(device, buffers, size, usage);
   const ST = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST;
   const bufA = mk(f0.byteLength, ST), bufB = mk(f0.byteLength, ST);
   const bufCA = mk(cf.byteLength, ST), bufCB = mk(cf.byteLength, ST);
   const bufU = mk(cu.byteLength, ST);
   const gates = new Uint32Array(Math.max(1, (domain.gates || []).length)).fill(NEVER);
   const bufG = mk(gates.byteLength, ST);
-  const bufUni = device.createBuffer({ size: UNIFORM_STRIDE * BATCH, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const bufUni = mk(UNIFORM_STRIDE * BATCH, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
   device.queue.writeBuffer(bufA, 0, f0); device.queue.writeBuffer(bufB, 0, f0);
   device.queue.writeBuffer(bufCA, 0, cf); device.queue.writeBuffer(bufCB, 0, cf);
   device.queue.writeBuffer(bufU, 0, cu);
   device.queue.writeBuffer(bufG, 0, gates);
 
-  const module = device.createShaderModule({ code: wgsl(nx, ny) });
-  /* Ein Shader, der nicht übersetzt, soll sagen, warum — nicht nur „invalid". */
-  const info = await module.getCompilationInfo();
-  const errors = info.messages.filter(m => m.type === 'error');
-  if (errors.length) {
-    device.destroy();
-    throw new Error('WGSL: ' + errors.map(m => m.lineNum + ':' + m.linePos + ' ' + m.message).join(' | '));
-  }
+  const module = await compileShader(device, wgsl(nx, ny));
   const layout = device.createBindGroupLayout({
     entries: [
       { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform', hasDynamicOffset: true } },
@@ -441,20 +438,10 @@ export async function createGpuSolver(domain, params = {}) {
     device.queue.submit([enc.finish()]);
   }
 
-  async function read(buf, byteOffset, byteLength, Ctor) {
-    const staging = device.createBuffer({ size: byteLength, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
-    const enc = device.createCommandEncoder();
-    enc.copyBufferToBuffer(buf, byteOffset, staging, 0, byteLength);
-    device.queue.submit([enc.finish()]);
-    await staging.mapAsync(GPUMapMode.READ);
-    const out = new Ctor(staging.getMappedRange().slice(0));
-    staging.unmap();
-    staging.destroy();
-    return out;
-  }
+  const read = (buf, byteOffset, byteLength, Ctor) => readBuffer(device, getLost, buf, byteLength, Ctor, byteOffset);
 
   return {
-    N, device,
+    N,
     /** n Schritte; uIns[k] ist die Kolbengeschwindigkeit des Schritts
         firstStep + k, ips[k] (wahlweise) die Kolbenschicht. */
     run(uIns, firstStep, ips = null) {
@@ -466,10 +453,7 @@ export async function createGpuSolver(domain, params = {}) {
     readFill: () => read(cfBufs[parity], FF.EPS * N * 4, N * 4, Float32Array),
     readVelocity: () => read(cfBufs[parity], FF.UX * N * 4, 3 * N * 4, Float32Array),
     readArrival: () => read(bufU, FU.ARRIVAL * N * 4, N * 4, Uint32Array),
-    readFlags: () => read(bufU, FU.FLAG * N * 4, N * 4, Uint32Array),
     readGates: () => read(bufG, 0, gates.byteLength, Uint32Array),
-    /** Warten, bis die Karte alles abgearbeitet hat. */
-    sync: () => device.queue.onSubmittedWorkDone(),
-    dispose() { for (const b of [bufA, bufB, bufCA, bufCB, bufU, bufG, bufUni]) b.destroy(); device.destroy(); }
+    dispose() { for (const b of buffers) b.destroy(); device.destroy(); }
   };
 }

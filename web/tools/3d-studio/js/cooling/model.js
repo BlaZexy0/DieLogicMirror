@@ -18,20 +18,34 @@
 
    Das Modul kennt kein Three.js; die Körper baut js/cooling/geom.js. */
 
-import { add, sub, norm, len, addScaled } from '../runner/vec.js';
+import { add, sub, normOr, len, addScaled, clamp } from '../runner/vec.js';
+import { ELEMENT } from '../part/colors.js';
+import { checkFormat, fileIds, filePoint, fileNumber } from '../studio/planio.js';
 
 export const FORMAT = 'dielogic-temperier';
 export const FORMAT_VERSION = 1;
 
+/* Beide Arten sind Temperierung und tragen deren Sachfarbe
+   (js/part/colors.js), der Kanal die hellere. */
 export const TYPES = {
-  stich: { label: 'Kühlstich', color: '#e07b39', params: { d: 20, len: 200 } },
-  kanal: { label: 'Kanal', color: '#2e6da4', params: { d: 10 } }
+  stich: { label: 'Kühlstich', get color() { return ELEMENT.stich; }, params: { d: 20, len: 200 } },
+  kanal: { label: 'Kanal', get color() { return ELEMENT.kanal; }, params: { d: 10 } }
 };
 
 export const PARAM_META = {
   d: { label: 'Durchmesser', min: 2, max: 60, unit: 'mm' },
   len: { label: 'Länge', min: 5, max: 1000, unit: 'mm' }
 };
+
+/** Der Regler des Achsabstands (js/cooling/panel.js) — und was eine Datei darf. */
+export const DIST_RANGE = [5, 60];
+
+/** Die Vorgaben für neue Elemente: Ø und Länge eines Kühlstichs, Ø eines
+    Kanals. Sie gehören zum Plan: mit „Auto" folgt ihnen der Mindest-
+    Wandabstand und damit das Urteil über jedes Element — ein gespeicherter
+    Plan muss nach dem Laden dasselbe sagen wie vorher. */
+export const DEFAULTS = { d: TYPES.stich.params.d, len: TYPES.stich.params.len, kd: TYPES.kanal.params.d };
+export const DEFAULT_META = { d: PARAM_META.d, len: PARAM_META.len, kd: PARAM_META.d };
 
 /** Wie die Richtung eines Kühlstichs beim Setzen bestimmt wird. */
 export const DIRECTIONS = {
@@ -43,15 +57,12 @@ export const DIRECTIONS = {
 };
 
 export function emptyPlan() {
-  return { format: FORMAT, version: FORMAT_VERSION, dist: 20, items: {}, seq: 0 };
+  return { format: FORMAT, version: FORMAT_VERSION, dist: 20, defaults: { ...DEFAULTS }, items: {}, seq: 0 };
 }
 
 export const allItems = plan => Object.values(plan.items);
 
-const unit = v => {
-  const u = norm(v);
-  return (u[0] || u[1] || u[2]) ? u : [0, 0, 1];
-};
+const unit = v => normOr(v, [0, 0, 1]);
 
 /**
  * Richtung eines Kühlstichs aus der Wahl: `outward` ist die nach außen
@@ -163,30 +174,40 @@ export function toJSON(plan) {
     /* Nur wer einen eigenen Mindest-Wandabstand eingetragen hat, bekommt den
        Schlüssel — ohne ihn gilt „Auto", auch für alle älteren Dateien. */
     ...(Number.isFinite(plan.minWall) ? { minWall: plan.minWall } : {}),
+    defaults: { ...plan.defaults },
     items: allItems(plan).map(it => (it.type === 'stich'
       ? { id: it.id, type: 'stich', p: it.p.map(r4), dir: it.dir.map(v => +v.toFixed(6)), d: it.d, len: it.len, ...(it.auto ? { auto: true } : {}) }
       : { id: it.id, type: 'kanal', a: it.a.map(r4), b: it.b.map(r4), d: it.d }))
   };
 }
 
+/* Kennungen, Punkte und Zahlen aus der Datei prüft js/studio/planio.js —
+   wie bei den anderen Plänen. */
 export function fromJSON(obj) {
-  if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Temperierdatei (Kennung „' + FORMAT + '" fehlt).');
-  if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
+  checkFormat(obj, FORMAT, FORMAT_VERSION, 'Das ist keine Temperierdatei (Kennung „' + FORMAT + '" fehlt).');
   const plan = emptyPlan();
-  if (Number.isFinite(obj.dist)) plan.dist = Math.max(1, Math.min(200, Number(obj.dist)));
-  if (Number.isFinite(obj.minWall)) plan.minWall = Math.max(MIN_WALL_RANGE[0], Math.min(MIN_WALL_RANGE[1], Number(obj.minWall)));
-  for (const raw of Array.isArray(obj.items) ? obj.items : []) {
-    const num = +String(raw.id || '').replace(/\D/g, '');
-    const id = raw.id ? String(raw.id) : 't' + (plan.seq + 1);
-    const n = v => (Array.isArray(v) ? v.map(Number) : [0, 0, 0]);
+  /* Werte in den Grenzen der Felder: was dort nicht einzustellen wäre (der
+     Regler des Achsabstands reicht von 5 bis 60 mm), soll auch aus einer
+     Datei nicht kommen. */
+  plan.dist = fileNumber(obj.dist, { min: DIST_RANGE[0], max: DIST_RANGE[1] }, plan.dist);
+  if (Number.isFinite(obj.minWall)) plan.minWall = clamp(Number(obj.minWall), MIN_WALL_RANGE[0], MIN_WALL_RANGE[1]);
+  /* Ältere Dateien kennen keine Vorgaben: für sie gelten die, mit denen die
+     Seite startet — nicht, was gerade im Feld steht, sonst hinge das Urteil
+     über einen geladenen Plan an einer Eingabe, die nirgends gespeichert ist. */
+  const def = obj.defaults && typeof obj.defaults === 'object' ? obj.defaults : {};
+  for (const k of Object.keys(DEFAULTS)) plan.defaults[k] = fileNumber(def[k], DEFAULT_META[k], DEFAULTS[k]);
+  const list = Array.isArray(obj.items) ? obj.items : [];
+  const { ids, seq } = fileIds(list, 't');
+  list.forEach((raw, i) => {
+    const id = ids[i], what = 'Element ' + id;
     if (raw.type === 'kanal') {
-      plan.items[id] = { id, type: 'kanal', a: n(raw.a), b: n(raw.b), d: Number(raw.d) || TYPES.kanal.params.d };
+      plan.items[id] = { id, type: 'kanal', a: filePoint(raw.a, what), b: filePoint(raw.b, what), d: fileNumber(raw.d, PARAM_META.d, TYPES.kanal.params.d) };
     } else {
-      plan.items[id] = { id, type: 'stich', p: n(raw.p), dir: unit(n(raw.dir)),
-        d: Number(raw.d) || TYPES.stich.params.d, len: Number(raw.len) || TYPES.stich.params.len };
+      plan.items[id] = { id, type: 'stich', p: filePoint(raw.p, what), dir: unit((Array.isArray(raw.dir) ? raw.dir : [0, 0, 1]).map(Number)),
+        d: fileNumber(raw.d, PARAM_META.d, TYPES.stich.params.d), len: fileNumber(raw.len, PARAM_META.len, TYPES.stich.params.len) };
       if (raw.auto) plan.items[id].auto = true;
     }
-    if (Number.isFinite(num)) plan.seq = Math.max(plan.seq, num);
-  }
+  });
+  plan.seq = seq;
   return plan;
 }

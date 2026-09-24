@@ -12,14 +12,15 @@
   <link rel="stylesheet" href="/shared/shared.css">
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
   <style>
     /* ── Hero ───────────────────────────────────────────────── */
     .hero {
       min-height: 82vh;
       background:
-        radial-gradient(1100px 520px at 50% 115%, rgba(63,194,182,.22), transparent 60%),
-        radial-gradient(700px 400px at 90% -10%, rgba(0,140,130,.25), transparent 60%),
+        radial-gradient(1100px 520px at 50% 115%, color-mix(in srgb, var(--primary-light) 22%, transparent), transparent 60%),
+        radial-gradient(700px 400px at 90% -10%, color-mix(in srgb, var(--primary) 25%, transparent), transparent 60%),
         linear-gradient(135deg, var(--dark) 0%, var(--dark2) 55%, var(--primary-deep) 100%);
       display: flex;
       flex-direction: column;
@@ -30,14 +31,14 @@
       position: relative;
       overflow: hidden;
     }
-    .hero-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+    .hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; z-index: 0; }
     .hero-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
     .hero-pill {
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
-      background: rgba(0,140,130,.15);
-      border: 1px solid rgba(0,140,130,.5);
+      background: color-mix(in srgb, var(--primary) 15%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent);
       color: var(--primary-light);
       font-size: 0.78rem;
       font-weight: 600;
@@ -140,7 +141,7 @@
     .tools-section {
       padding: 6rem 2rem;
       background:
-        radial-gradient(900px 500px at 10% 0%, rgba(0,140,130,.18), transparent 60%),
+        radial-gradient(900px 500px at 10% 0%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 60%),
         var(--dark);
     }
     .tools-inner { max-width: 1100px; margin: 0 auto; }
@@ -160,20 +161,26 @@
     .tool-card:hover {
       transform: translateY(-3px);
       background: rgba(255,255,255,.06);
-      border-color: rgba(63,194,182,.45);
+      border-color: color-mix(in srgb, var(--primary-light) 45%, transparent);
       box-shadow: 0 20px 40px -18px rgba(0,0,0,.6);
     }
     .tool-card.featured {
       grid-column: span 3;
-      border-color: rgba(63,194,182,.55);
-      background: linear-gradient(135deg, rgba(0,140,130,.16), rgba(255,255,255,.03) 60%);
+      border-color: color-mix(in srgb, var(--primary-light) 55%, transparent);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 16%, transparent), rgba(255,255,255,.03) 60%);
     }
+    /* Die Kachel trägt die Kennfarbe des Werkzeugs (--kenn am Element): die
+       Marke für das Dashboard, sonst eine Sachfarbe (Maschine, Luft,
+       Werkzeug …), nie eine Farbe der Ampel. Sie ist hell, nicht dunkel wie
+       die Karte: die Sachfarben sind für hellen Grund gemacht, und die
+       dunklen unter ihnen (Prozess, Kolben, Werkzeug) verschwänden sonst auf
+       dem dunklen Grund der Sektion. */
     .tool-card-icon {
       width: 46px; height: 46px;
       border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
       margin-bottom: 1rem;
-      border: 1px solid rgba(255,255,255,.08);
+      background: color-mix(in oklab, var(--kenn, var(--primary)) 14%, var(--surface));
     }
     .tool-card h3 {
       font-size: 1rem;
@@ -186,9 +193,9 @@
     .badge-live {
       font-size: 0.65rem;
       font-weight: 700;
-      background: rgba(0,140,130,.15);
+      background: color-mix(in srgb, var(--primary) 15%, transparent);
       color: var(--primary-light);
-      border: 1px solid rgba(0,140,130,.5);
+      border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent);
       padding: 0.1rem 0.45rem;
       border-radius: 10px;
       letter-spacing: 0.05em;
@@ -196,7 +203,7 @@
     .tool-card p { font-size: 0.84rem; color: var(--ondark); line-height: 1.6; margin-bottom: 0.5rem; }
     .tool-card .physics-note {
       font-size: 0.76rem;
-      color: var(--cat-slate);
+      color: var(--ondark2);
       font-style: italic;
       margin-bottom: 1rem;
       line-height: 1.5;
@@ -255,6 +262,8 @@
       border-radius: var(--radius);
       padding: 1.5rem 1.5rem 1.4rem;
       background: var(--surface);
+      /* Die Farbe des oberen Rands setzt jede Karte selbst: die Sachfarbe
+         ihres Themas (Maschine, Schmelze, Kolben, Prozess, Luft, Werkzeug). */
       border-top: 3px solid transparent;
       box-shadow: var(--shadow);
       transition: box-shadow 0.18s var(--ease), transform 0.18s var(--ease);
@@ -269,7 +278,7 @@
     .pricing-section {
       padding: 6rem 2rem;
       background:
-        radial-gradient(800px 400px at 50% 100%, rgba(0,140,130,.2), transparent 60%),
+        radial-gradient(800px 400px at 50% 100%, color-mix(in srgb, var(--primary) 20%, transparent), transparent 60%),
         var(--dark);
     }
     .pricing-inner { max-width: 1000px; margin: 0 auto; }
@@ -285,9 +294,9 @@
       position: relative;
     }
     .pricing-card.featured {
-      border-color: rgba(63,194,182,.6);
-      background: linear-gradient(160deg, rgba(0,140,130,.2), rgba(255,255,255,.04) 65%);
-      box-shadow: 0 30px 60px -30px rgba(0,140,130,.6);
+      border-color: color-mix(in srgb, var(--primary-light) 60%, transparent);
+      background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 20%, transparent), rgba(255,255,255,.04) 65%);
+      box-shadow: 0 30px 60px -30px color-mix(in srgb, var(--primary) 60%, transparent);
       transform: scale(1.03);
     }
     .most-popular {
@@ -315,7 +324,7 @@
       font-variant-numeric: tabular-nums;
     }
     .plan-price span { font-size: 0.85rem; font-weight: 400; color: var(--ondark); }
-    .plan-alt { font-size: 0.78rem; color: var(--cat-slate); margin-bottom: 1.2rem; }
+    .plan-alt { font-size: 0.78rem; color: var(--ondark2); margin-bottom: 1.2rem; }
     .plan-features { list-style: none; margin-bottom: 1.5rem; }
     .plan-features li {
       font-size: 0.84rem;
@@ -330,7 +339,7 @@
       grid-column: 1 / -1;
       text-align: center;
       font-size: 0.75rem;
-      color: var(--cat-slate);
+      color: var(--ondark2);
       margin-top: 0.5rem;
     }
     .pricing-legal a { color: var(--ondark); }
@@ -341,7 +350,6 @@
     }
     @media (max-width: 768px) {
       .steps-grid { grid-template-columns: 1fr; }
-      .step:not(:last-child)::after { display: none; }
       .tools-grid { grid-template-columns: 1fr; }
       .tool-card.featured { grid-column: span 1; }
       .theory-grid { grid-template-columns: 1fr; }
@@ -354,6 +362,59 @@
       .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; width: 100%; margin-top: 2.2rem; }
       .hero-stat { min-width: 0; padding: 0.7rem 0.5rem; font-size: 0.7rem; line-height: 1.25; }
       .hero-stat strong { font-size: 1.35rem; }
+    }
+
+    /* 3D-Studio: Werkzeug für Werkzeug (Schemabilder aus
+       scripts/3d-studio/build-studio-figures.mjs, Legenden mit den Farbrollen) */
+    .studio-section { padding: 6rem 2rem; background: var(--bg); border-top: 1px solid var(--border-light); }
+    .studio-inner { max-width: 1140px; margin: 0 auto; }
+    .studio-section .section-title { color: var(--text); }
+    .studio-section .section-sub { color: var(--muted); }
+    .studio-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+    .studio-card {
+      display: flex; flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      text-decoration: none;
+      transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), border-color 0.18s var(--ease);
+    }
+    .studio-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--pale-border); }
+    .studio-fig { margin: 0; padding: 0.55rem 0.55rem 0; background: var(--surface); }
+    .studio-fig img { display: block; width: 100%; height: auto; border-radius: 9px; background: #fff; }
+    .studio-text { padding: 0.9rem 1.15rem 1.15rem; }
+    .studio-text h4 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 0.3rem; letter-spacing: -0.01em; }
+    .studio-text p { font-size: 0.82rem; color: var(--muted); line-height: 1.55; }
+    .studio-text .arrow { color: var(--primary); font-weight: 600; font-size: 0.8rem; margin-top: 0.55rem; }
+    .studio-card.wide { grid-column: span 3; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); align-items: stretch; }
+    .studio-card.wide .studio-fig { order: 2; display: flex; align-items: center; padding: 0.8rem 0.8rem 0.8rem 0; }
+    .studio-card.wide .studio-text { padding: 1.6rem 1.7rem; align-self: center; }
+    .studio-card.wide .studio-text h4 { font-size: 1.05rem; }
+    .studio-card.wide .studio-text p { font-size: 0.88rem; }
+    .fig-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 0.28rem 0.75rem; margin: 0.75rem 0 0; padding: 0; }
+    .fig-legend li { display: flex; align-items: center; gap: 0.35rem; font-size: 0.73rem; color: var(--muted); line-height: 1.3; }
+    .fig-legend .key { width: 11px; height: 11px; border-radius: 3px; flex: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dark) 18%, transparent); }
+    .fig-legend .key.bar { width: 52px; }
+    .wb-chain { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.35rem; margin: 0 0 1rem; padding: 0; }
+    .wb-chain li { display: flex; align-items: center; gap: 0.35rem; list-style: none; }
+    .wb-chain .pill {
+      background: var(--surface); border: 1px solid var(--pale-border); color: var(--text);
+      font-size: 0.8rem; font-weight: 600; padding: 0.32rem 0.8rem; border-radius: var(--radius-pill);
+      box-shadow: var(--shadow);
+    }
+    .wb-chain .sep { color: var(--primary); font-weight: 700; }
+    .wb-chain-note { text-align: center; font-size: 0.8rem; color: var(--muted); margin: 0 0 2.6rem; }
+    @media (max-width: 900px) {
+      .studio-grid { grid-template-columns: repeat(2, 1fr); }
+      .studio-card.wide { grid-column: span 2; }
+    }
+    @media (max-width: 768px) {
+      .studio-section { padding: 4rem 1.2rem; }
+      .studio-grid { grid-template-columns: 1fr; }
+      .studio-card.wide { grid-column: span 1; grid-template-columns: 1fr; }
+      .studio-card.wide .studio-fig { order: 0; padding: 0.55rem 0.55rem 0; }
     }
   </style>
 </head>
@@ -383,11 +444,11 @@
     <line x1="20" y1="9" x2="20" y2="19" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/>
   </symbol>
   <symbol id="icon-tool-3dstudio" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M13 2.6 L22.4 8 L22.4 18 L13 23.4 L3.6 18 L3.6 8 Z" stroke="var(--primary)" stroke-width="1.8"/>
-    <path d="M3.6 8 L13 13.4 L22.4 8" stroke="var(--primary)" stroke-width="1.5" opacity=".55"/>
-    <path d="M13 13.4 V23.4" stroke="var(--primary)" stroke-width="1.5" opacity=".55"/>
-    <path d="M2.2 13.4 H23.8" stroke="var(--cat-slate)" stroke-width="1.4" stroke-dasharray="2.6 2.2" opacity=".75"/>
-    <path d="M13 10.2 L16.2 12 L16.2 15.4 L13 17.2 L9.8 15.4 L9.8 12 Z" fill="var(--gold)" opacity=".92"/>
+    <path d="M13 2.6 L22.4 8 L22.4 18 L13 23.4 L3.6 18 L3.6 8 Z" stroke="var(--steel-dark)" stroke-width="1.8"/>
+    <path d="M3.6 8 L13 13.4 L22.4 8" stroke="var(--steel-dark)" stroke-width="1.5" opacity=".55"/>
+    <path d="M13 13.4 V23.4" stroke="var(--steel-dark)" stroke-width="1.5" opacity=".55"/>
+    <path d="M2.2 13.4 H23.8" stroke="var(--die)" stroke-width="1.4" stroke-dasharray="2.6 2.2" opacity=".75"/>
+    <path d="M13 10.2 L16.2 12 L16.2 15.4 L13 17.2 L9.8 15.4 L9.8 12 Z" fill="var(--melt)" opacity=".92"/>
   </symbol>
   <symbol id="icon-tool-dashboard" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
     <rect x="2" y="2.5" width="22" height="21" rx="2.5" stroke="var(--primary)" stroke-width="1.6"/>
@@ -396,51 +457,51 @@
     <line x1="4.5" y1="11" x2="7" y2="11" stroke="var(--primary)" stroke-width="1.6"/>
     <line x1="4.5" y1="15" x2="7" y2="15" stroke="var(--primary)" stroke-width="1.6"/>
     <path d="M12.5 14 L15 10.5 L17.5 12 L21 6.5" stroke="var(--primary)" stroke-width="1.6"/>
-    <circle cx="17.5" cy="12" r="1.7" fill="var(--warn)"/>
+    <circle cx="17.5" cy="12" r="1.7" fill="var(--mark)"/>
     <rect x="12.5" y="17.5" width="5" height="2.2" rx="1.1" fill="var(--primary)"/>
     <rect x="12.5" y="17.5" width="9" height="2.2" rx="1.1" stroke="var(--primary)" stroke-width="1" opacity=".55"/>
   </symbol>
   <symbol id="icon-tool-phild" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 3.5 V22.5 H23" stroke="var(--cat-purple)" stroke-width="1.4" opacity=".7"/>
-    <path d="M5 20.5 C9 13 13 8.5 22 6 V11 C15 12.5 11 16.5 9 22 H5 Z" fill="var(--cat-purple)" opacity=".32"/>
-    <path d="M5 20.5 C9 13 13 8.5 22 6" stroke="var(--cat-purple)" stroke-width="1.6"/>
-    <path d="M9 22 C11 16.5 15 12.5 22 11" stroke="var(--cat-purple)" stroke-width="1.6"/>
-    <circle cx="13.5" cy="13.2" r="1.9" fill="var(--warn)"/>
+    <path d="M3 3.5 V22.5 H23" stroke="var(--piston)" stroke-width="1.4" opacity=".7"/>
+    <path d="M5 20.5 C9 13 13 8.5 22 6 V11 C15 12.5 11 16.5 9 22 H5 Z" fill="var(--piston)" opacity=".22"/>
+    <path d="M5 20.5 C9 13 13 8.5 22 6" stroke="var(--piston)" stroke-width="1.6"/>
+    <path d="M9 22 C11 16.5 15 12.5 22 11" stroke="var(--piston)" stroke-width="1.6"/>
+    <circle cx="13.5" cy="13.2" r="1.9" fill="var(--mark)"/>
   </symbol>
   <symbol id="icon-tool-pq2" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 3.5 V22.5 H23" stroke="var(--primary)" stroke-width="1.4" opacity=".7"/>
-    <path d="M5 5.5 C13 5.5 17.5 11 21 22" stroke="var(--primary)" stroke-width="1.8"/>
-    <path d="M5 22 C9 22 14.5 17 17.5 5" stroke="var(--primary)" stroke-width="1.8" opacity=".55"/>
-    <circle cx="15.7" cy="10.8" r="1.9" fill="var(--warn)"/>
+    <path d="M3 3.5 V22.5 H23" stroke="var(--machine)" stroke-width="1.4" opacity=".7"/>
+    <path d="M5 5.5 C13 5.5 17.5 11 21 22" stroke="var(--machine)" stroke-width="1.8"/>
+    <path d="M5 22 C9 22 14.5 17 17.5 5" stroke="var(--die)" stroke-width="1.8"/>
+    <circle cx="15.7" cy="10.8" r="1.9" fill="var(--mark)"/>
   </symbol>
   <symbol id="icon-tool-schusskurve" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 3.5 V22.5 H23" stroke="var(--accent)" stroke-width="1.4" opacity=".7"/>
-    <path d="M5 18.5 H10.5 C13 18.5 13 7 16 7 H21.5" stroke="var(--accent)" stroke-width="1.8"/>
-    <line x1="11.5" y1="21" x2="11.5" y2="5" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="1.6 1.8" opacity=".8"/>
-    <circle cx="18.5" cy="7" r="1.9" fill="var(--warn)"/>
+    <path d="M3 3.5 V22.5 H23" stroke="var(--air)" stroke-width="1.4" opacity=".7"/>
+    <path d="M5 18.5 H10.5 C13 18.5 13 7 16 7 H21.5" stroke="var(--air)" stroke-width="1.8"/>
+    <line x1="11.5" y1="21" x2="11.5" y2="5" stroke="var(--air)" stroke-width="1.2" stroke-dasharray="1.6 1.8" opacity=".8"/>
+    <circle cx="18.5" cy="7" r="1.9" fill="var(--mark)"/>
   </symbol>
   <symbol id="icon-tool-sprengflaeche" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M13 2.5 L20.5 6.2 L20.5 12.5 L13 16.2 L5.5 12.5 L5.5 6.2 Z" stroke="var(--gold)" stroke-width="1.6"/>
-    <path d="M5.5 6.2 L13 9.9 L20.5 6.2 M13 9.9 V16.2" stroke="var(--gold)" stroke-width="1.4"/>
-    <line x1="5.5" y1="13.5" x2="5.5" y2="19.5" stroke="var(--gold)" stroke-width="1.1" stroke-dasharray="1.4 1.6" opacity=".8"/>
-    <line x1="20.5" y1="13.5" x2="20.5" y2="19.5" stroke="var(--gold)" stroke-width="1.1" stroke-dasharray="1.4 1.6" opacity=".8"/>
-    <path d="M3 21.5 L13 24.3 L23 21.5 L13 19.2 Z" fill="var(--gold)" opacity=".4" stroke="var(--gold)" stroke-width="1.2"/>
+    <path d="M13 2.5 L20.5 6.2 L20.5 12.5 L13 16.2 L5.5 12.5 L5.5 6.2 Z" stroke="var(--die)" stroke-width="1.6"/>
+    <path d="M5.5 6.2 L13 9.9 L20.5 6.2 M13 9.9 V16.2" stroke="var(--die)" stroke-width="1.4"/>
+    <line x1="5.5" y1="13.5" x2="5.5" y2="19.5" stroke="var(--die)" stroke-width="1.1" stroke-dasharray="1.4 1.6" opacity=".8"/>
+    <line x1="20.5" y1="13.5" x2="20.5" y2="19.5" stroke="var(--die)" stroke-width="1.1" stroke-dasharray="1.4 1.6" opacity=".8"/>
+    <path d="M3 21.5 L13 24.3 L23 21.5 L13 19.2 Z" fill="var(--die)" opacity=".3" stroke="var(--die)" stroke-width="1.2"/>
   </symbol>
   <symbol id="icon-tool-teilekosten" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="10" cy="10" r="7.2" stroke="var(--warn)" stroke-width="1.6"/>
-    <path d="M12.6 7.6 C12 7 11.2 6.8 10.5 6.8 C8.7 6.8 7.7 8.2 7.7 10 C7.7 11.8 8.7 13.2 10.5 13.2 C11.2 13.2 12 13 12.6 12.4 M6.6 9.1 H11.2 M6.6 10.9 H11.2" stroke="var(--warn)" stroke-width="1.4"/>
-    <rect x="3" y="20" width="9.5" height="3.2" rx="1" fill="var(--warn)" opacity=".9"/>
-    <rect x="13.5" y="20" width="5.5" height="3.2" rx="1" fill="var(--warn)" opacity=".55"/>
-    <rect x="20" y="20" width="3" height="3.2" rx="1" fill="var(--warn)" opacity=".3"/>
-    <path d="M19 8.5 L23 8.5 M23 8.5 L21 6.5 M23 8.5 L21 10.5" stroke="var(--warn)" stroke-width="1.4" opacity=".7"/>
+    <circle cx="10" cy="10" r="7.2" stroke="var(--mark)" stroke-width="1.6"/>
+    <path d="M12.6 7.6 C12 7 11.2 6.8 10.5 6.8 C8.7 6.8 7.7 8.2 7.7 10 C7.7 11.8 8.7 13.2 10.5 13.2 C11.2 13.2 12 13 12.6 12.4 M6.6 9.1 H11.2 M6.6 10.9 H11.2" stroke="var(--mark)" stroke-width="1.4"/>
+    <rect x="3" y="20" width="9.5" height="3.2" rx="1" fill="var(--mark)" opacity=".9"/>
+    <rect x="13.5" y="20" width="5.5" height="3.2" rx="1" fill="var(--mark)" opacity=".55"/>
+    <rect x="20" y="20" width="3" height="3.2" rx="1" fill="var(--mark)" opacity=".3"/>
+    <path d="M19 8.5 L23 8.5 M23 8.5 L21 6.5 M23 8.5 L21 10.5" stroke="var(--mark)" stroke-width="1.4" opacity=".7"/>
   </symbol>
   <symbol id="icon-tool-zyklus" viewBox="0 0 26 26" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M13 3.5 A9.5 9.5 0 0 1 22.3 11" stroke="var(--cat-green)" stroke-width="2.2"/>
-    <path d="M22.3 15 A9.5 9.5 0 0 1 16 22" stroke="var(--cat-green)" stroke-width="2.2" opacity=".7"/>
-    <path d="M10 22 A9.5 9.5 0 0 1 3.7 15" stroke="var(--cat-green)" stroke-width="2.2" opacity=".5"/>
-    <path d="M3.7 11 A9.5 9.5 0 0 1 9.5 4.2" stroke="var(--cat-green)" stroke-width="2.2" opacity=".35"/>
-    <path d="M7.6 2.6 L9.8 4.3 L7.8 6.4" stroke="var(--cat-green)" stroke-width="1.6"/>
-    <path d="M13 9 V14.5 M11.2 16.3 A1.8 1.8 0 1 0 14.8 16.3 A1.8 1.8 0 1 0 11.2 16.3" stroke="var(--warn)" stroke-width="1.5"/>
+    <path d="M13 3.5 A9.5 9.5 0 0 1 22.3 11" stroke="var(--process)" stroke-width="2.2"/>
+    <path d="M22.3 15 A9.5 9.5 0 0 1 16 22" stroke="var(--process)" stroke-width="2.2" opacity=".7"/>
+    <path d="M10 22 A9.5 9.5 0 0 1 3.7 15" stroke="var(--process)" stroke-width="2.2" opacity=".5"/>
+    <path d="M3.7 11 A9.5 9.5 0 0 1 9.5 4.2" stroke="var(--process)" stroke-width="2.2" opacity=".35"/>
+    <path d="M7.6 2.6 L9.8 4.3 L7.8 6.4" stroke="var(--process)" stroke-width="1.6"/>
+    <path d="M13 9 V14.5 M11.2 16.3 A1.8 1.8 0 1 0 14.8 16.3 A1.8 1.8 0 1 0 11.2 16.3" stroke="var(--mark)" stroke-width="1.5"/>
   </symbol>
 </svg>
 <!-- ICON-SPRITE:END -->
@@ -449,26 +510,7 @@
      HERO
 ═══════════════════════════════════════════════════════════════ -->
 <section class="hero">
-  <svg class="hero-bg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
-    <defs>
-      <pattern id="hex-grid" x="0" y="0" width="60" height="52" patternUnits="userSpaceOnUse">
-        <polygon points="30,2 55,15 55,37 30,50 5,37 5,15" fill="none" stroke="var(--surface)" stroke-width="0.5" opacity="0.08"/>
-      </pattern>
-    </defs>
-    <rect width="100%" height="100%" fill="url(#hex-grid)"/>
-    <line x1="5%" y1="28%" x2="22%" y2="28%" stroke="var(--surface)" stroke-width="0.6" opacity="0.12"/>
-    <line x1="5%" y1="28%" x2="5%" y2="26%" stroke="var(--surface)" stroke-width="0.6" opacity="0.12"/>
-    <line x1="22%" y1="28%" x2="22%" y2="26%" stroke="var(--surface)" stroke-width="0.6" opacity="0.12"/>
-    <line x1="78%" y1="72%" x2="95%" y2="72%" stroke="var(--surface)" stroke-width="0.6" opacity="0.12"/>
-    <line x1="78%" y1="72%" x2="78%" y2="74%" stroke="var(--surface)" stroke-width="0.6" opacity="0.12"/>
-    <line x1="95%" y1="72%" x2="95%" y2="74%" stroke="var(--surface)" stroke-width="0.6" opacity="0.12"/>
-    <line x1="88%" y1="15%" x2="88%" y2="40%" stroke="var(--surface)" stroke-width="0.6" opacity="0.09"/>
-    <line x1="86%" y1="15%" x2="90%" y2="15%" stroke="var(--surface)" stroke-width="0.6" opacity="0.09"/>
-    <line x1="86%" y1="40%" x2="90%" y2="40%" stroke="var(--surface)" stroke-width="0.6" opacity="0.09"/>
-    <line x1="12%" y1="62%" x2="18%" y2="62%" stroke="var(--primary)" stroke-width="0.8" opacity="0.25"/>
-    <line x1="15%" y1="59%" x2="15%" y2="65%" stroke="var(--primary)" stroke-width="0.8" opacity="0.25"/>
-    <circle cx="15%" cy="62%" r="3" fill="none" stroke="var(--primary)" stroke-width="0.8" opacity="0.25"/>
-  </svg>
+  <canvas class="hero-bg" id="hero-guss" aria-hidden="true"></canvas>
 
   <div class="hero-content">
     <span class="hero-pill">
@@ -478,8 +520,8 @@
     <h1>Gießtechnische Auslegung für den Druckguss in einem Dashboard</h1>
     <p class="subtitle">DieLogic rechnet die komplette HPDC-Auslegung live im Browser: Massenbilanz,
       Füllkammer, Schusskurve, PQ²-Arbeitspunkt, Prozessfenster und Maschinengrenzen, mit
-      19 gekoppelten Diagrammen, Prüfpanels mit Gesamturteil und einem roten Betriebspunkt-Marker
-      in jedem Bild. Keine Installation. Jede Änderung landet im Projekt Ihres Teams.</p>
+      19 gekoppelten Diagrammen, Prüfpanels mit Gesamturteil und demselben markierten
+      Betriebspunkt in jedem Bild. Keine Installation. Jede Änderung landet im Projekt Ihres Teams.</p>
     <div class="hero-ctas">
       <a href="/tools/auslegung/" class="btn btn-lg btn-primary">→ Dashboard öffnen</a>
       <a href="#diagramme" class="btn btn-lg btn-ghost btn-ghost-ondark">Alle Diagramme ansehen</a>
@@ -549,7 +591,7 @@
 
       <!-- Dashboard (featured) -->
       <div class="tool-card featured">
-        <div class="tool-card-icon" style="background:rgba(0,140,130,.15);">
+        <div class="tool-card-icon" style="--kenn:var(--primary);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-dashboard"/></svg>
         </div>
         <h3>DieLogic Dashboard <span class="badge-live">LIVE</span></h3>
@@ -575,7 +617,7 @@
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(140,190,230,.12);">
+        <div class="tool-card-icon" style="--kenn:var(--air);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-schusskurve"/></svg>
         </div>
         <h3>Schusskurve <span class="badge-live">EINZELSEITE</span></h3>
@@ -588,20 +630,20 @@
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(0,140,130,.12);">
+        <div class="tool-card-icon" style="--kenn:var(--machine);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-pq2"/></svg>
         </div>
         <h3>PQ²-Diagramm <span class="badge-live">EINZELSEITE</span></h3>
         <p>Maschinenlinie gegen Formwiderstand mit dem Arbeitspunkt, Anschnittgeschwindigkeit
-          und Füllzeit: umschaltbare Achsenmodi, roter Betriebspunkt-Marker und die Eingaben,
-          die genau dieses Diagramm beeinflussen, direkt daneben.</p>
+          und Füllzeit: umschaltbare Achsenmodi, ein Marker für den Betriebspunkt und die
+          Eingaben, die genau dieses Diagramm beeinflussen, direkt daneben.</p>
         <div class="tool-card-btns">
           <a href="/tools/auslegung/chart.html?id=pq2" class="btn btn-sm btn-primary">Öffnen →</a>
         </div>
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(154,119,232,.12);">
+        <div class="tool-card-icon" style="--kenn:var(--piston);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-phild"/></svg>
         </div>
         <h3>Auslegungsfenster (φ, λ) <span class="badge-live">EINZELSEITE</span></h3>
@@ -614,7 +656,7 @@
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(212,169,8,.12);">
+        <div class="tool-card-icon" style="--kenn:var(--die);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-sprengflaeche"/></svg>
         </div>
         <h3>Sprengflächenanalyse <span class="badge-live">NEU</span></h3>
@@ -633,7 +675,7 @@
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(194,68,126,.12);">
+        <div class="tool-card-icon" style="--kenn:var(--mark);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-teilekosten"/></svg>
         </div>
         <h3>Teilekosten-Kalkulation <span class="badge-live">NEU</span></h3>
@@ -652,7 +694,7 @@
       </div>
 
       <div class="tool-card">
-        <div class="tool-card-icon" style="background:rgba(76,159,112,.12);">
+        <div class="tool-card-icon" style="--kenn:var(--process);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-zyklus"/></svg>
         </div>
         <h3>Zyklusanalyse <span class="badge-live">NEU</span></h3>
@@ -671,17 +713,18 @@
       </div>
 
       <div class="tool-card featured">
-        <div class="tool-card-icon" style="background:rgba(0,140,130,.12);">
+        <div class="tool-card-icon" style="--kenn:var(--melt);">
           <svg width="26" height="26" aria-hidden="true"><use href="#icon-tool-3dstudio"/></svg>
         </div>
         <h3>3D-Studio <span class="badge-live">NEU</span></h3>
-        <p>Acht Werkzeuge in 3D und die Werkbank, die sie als Schritte an einem Bauteil
+        <p>Zehn Werkzeuge in 3D und die Werkbank, die sie als Schritte an einem Bauteil
           aneinanderreiht: die Druckgießform als Schnittmodell mit echter Kavität;
           die Entformungsanalyse, die jedem Dreieck die Formhälfte oder den Schieber zuordnet, samt
           Trennlinie, Hinterschnitten und Entformschrägen; zwei Messwerkzeuge: nach innen
           die Wandstärke (wo das Bauteil am dicksten ist, erstarrt es zuletzt), nach außen der
           Abstand zum Temperierkanal; die Füllabschätzung, die die Schmelzefront von den
-          Anschnitten durch das gerasterte Bauteil laufen lässt; und drei Designer für das,
+          Anschnitten durch das gerasterte Bauteil laufen lässt; zwei Simulationen, die die
+          Schmelze selbst rechnen, im Anguss und in der Füllkammer; und drei Designer für das,
           was um das Bauteil in die Form kommt: Angusssystem, Überläufe mit Entlüftung,
           Temperierkanäle.</p>
         <div class="tool-tags">
@@ -691,6 +734,7 @@
           <span class="tool-tag">Abstandsanalyse</span>
           <span class="tool-tag">Angussdesigner</span>
           <span class="tool-tag">Füllabschätzung</span>
+          <span class="tool-tag">Füllsimulation</span>
         </div>
         <div class="tool-card-btns">
           <a href="/tools/3d-studio/" class="btn btn-sm btn-primary">Öffnen →</a>
@@ -699,6 +743,133 @@
 
     </div>
   </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     3D-STUDIO: WERKZEUG FÜR WERKZEUG
+═══════════════════════════════════════════════════════════════ -->
+<section class="studio-section" id="studio">
+  <div class="studio-inner">
+    <div class="section-head"><span class="eyebrow">Am Bauteil</span></div>
+    <h2 class="section-title">Das 3D-Studio, Werkzeug für Werkzeug</h2>
+    <p class="section-sub">Acht Werkzeuge rund um Bauteil und Form, dazu zwei Füllsimulationen. Jedes Bild
+      unten zeigt, was das Werkzeug aus einem Bauteil macht: gerechnet im Browser, die Dateien
+      bleiben auf dem Rechner.</p>
+    <ul class="wb-chain"><li><span class="pill">Bauteil</span><span class="sep">›</span></li><li><span class="pill">Anguss</span><span class="sep">›</span></li><li><span class="pill">Füllung</span><span class="sep">›</span></li><li><span class="pill">Überläufe</span><span class="sep">›</span></li><li><span class="pill">Temperierung</span><span class="sep">›</span></li><li><span class="pill">Auslegung</span></li></ul>
+    <p class="wb-chain-note">Die Werkbank hängt sie aneinander: ein Bauteil, sechs Schritte, am Ende die Auslegung.</p>
+    <div class="studio-grid">
+      <a class="studio-card wide" href="/tools/3d-studio/werkbank.html">
+        <figure class="studio-fig"><img src="/assets/studio/werkbank.webp" width="1100" height="825" alt="Getriebedeckel mit dem vorgeschlagenen Angusssystem: Pressrest, Laufkanäle, Anschnitte an der Bauteilkante" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Werkbank</h4>
+          <p>Sechs Schritte an einem Bauteil, jeder baut auf dem vorigen auf: Formteilung und Wandstärke, Angusssystem, Füllung, Überläufe, Temperierung und am Ende die Auslegung, die Massen, Anschnittfläche und Sprengfläche aus dem Modell übernimmt. Das Bild zeigt den Stand nach Schritt zwei: das Bauteil mit dem Anguss, den die Werkbank aus seiner Kante vorschlägt.</p>
+          <ul class="fig-legend"><li><span class="key" style="background:var(--part)"></span>Bauteil</li><li><span class="key" style="background:var(--runner)"></span>Anguss aus dem Vorschlag</li><li><span class="key" style="background:var(--biscuit)"></span>Pressrest</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/form.html">
+        <figure class="studio-fig"><img src="/assets/studio/form.webp" width="780" height="585" alt="Schnitt durch eine Kaltkammer-Druckgießform: beide Hälften, Füllkammer, Gießkolben, Kavität, Temperierkreise" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Formaufbau</h4>
+          <p>Die Druckgießform als Baugruppe, hier im Schnitt: feste und bewegliche Seite, die Füllkammer mit dem Gießkolben, die Kavität dazwischen und die Temperierkreise darin.</p>
+          <ul class="fig-legend"><li><span class="key" style="background:color-mix(in srgb, var(--steel), var(--steel-dark))"></span>Stahl</li><li><span class="key" style="background:var(--melt)"></span>Gussteil</li><li><span class="key" style="background:var(--piston)"></span>Gießkolben</li><li><span class="key" style="background:var(--cool)"></span>Temperierung</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/entformungsanalyse.html">
+        <figure class="studio-fig"><img src="/assets/studio/entformung.webp" width="780" height="585" alt="Bauteil, eingefärbt nach Formhälften und Schiebern" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Entformungsanalyse</h4>
+          <p>Jede Fläche bekommt die Seite, die sie bilden kann. Was in keine Richtung frei kommt, ist ein Hinterschnitt und braucht einen Schieber.</p>
+          <ul class="fig-legend"><li><span class="key" style="background:var(--half-mov)"></span>bewegliche Seite</li><li><span class="key" style="background:var(--half-fix)"></span>feste Seite</li><li><span class="key" style="background:var(--axis-x)"></span>Schieber</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/wandstaerke.html">
+        <figure class="studio-fig"><img src="/assets/studio/wandstaerke.webp" width="780" height="585" alt="Durchscheinendes Bauteil mit Kugeln an den dicksten Stellen" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Wandstärkenanalyse</h4>
+          <p>Ein Abstandsfeld im Bauteil sagt an jeder Stelle, wie dick die Wand ist. Die dicksten Stellen erstarren zuletzt: dort sitzen die Wärmezentren, und dorthin muss die Temperierung.</p>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo"></span>Wärmezentrum: je dicker die Wand, desto größer und röter die Kugel</li><li><span class="key" style="background:var(--part)"></span>Bauteil durchscheinend</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/abstand.html">
+        <figure class="studio-fig"><img src="/assets/studio/abstand.webp" width="780" height="585" alt="Bauteil, eingefärbt nach dem Abstand zu den Temperierkanälen" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Abstandsanalyse</h4>
+          <p>Der kürzeste Weg von jeder Stelle der einen Datei zur anderen, etwa von der Kavität zum Temperierkanal. Rot heißt nah, blau fern; die Skala setzt man selbst.</p>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo" data-richtung="270deg"></span>nah → fern</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/fuellung.html">
+        <figure class="studio-fig"><img src="/assets/studio/fuellung.webp" width="780" height="585" alt="Bauteil mit Anschnitten, eingefärbt nach der Reihenfolge der Füllung" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Füllabschätzung</h4>
+          <p>Die Schmelzefront läuft von den Anschnitten durch das gerasterte Bauteil. Die Farbe sagt, wann eine Stelle voll ist; die letzten Stellen sind die, an denen die Luft steht.</p>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo"></span>zuerst → zuletzt gefüllt</li><li><span class="key" style="background:var(--die)"></span>Anschnitt</li><li><span class="key" style="background:var(--mark)"></span>zuletzt gefüllt</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/anguss.html">
+        <figure class="studio-fig"><img src="/assets/studio/anguss.webp" width="780" height="585" alt="Angusssystem mit Pressrest, Verzweigung und vier Anschnitten an der Ölwanne" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Angussdesigner</h4>
+          <p>Pressrest, Laufkanäle und Anschnitte wachsen als ein geschlossener Körper aus einem Graphen: Querschnitt je Punkt, Zwickelradius je Verzweigung, gerader Steg am Anschnitt.</p>
+          <ul class="fig-legend"><li><span class="key" style="background:var(--biscuit)"></span>Pressrest</li><li><span class="key" style="background:var(--mark)"></span>Punkt</li><li><span class="key" style="background:var(--mark-warm)"></span>Verzweigung</li><li><span class="key" style="background:var(--die)"></span>Anschnitt</li><li><span class="key" style="background:var(--part)"></span>Bauteil als Referenz</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/ueberlauf.html">
+        <figure class="studio-fig"><img src="/assets/studio/ueberlauf.webp" width="780" height="585" alt="Bauteil von oben: außen am Flanschrand zwei Überlaufbohnen und ein Waschbrett, an den Seiten je ein Überlauf mit Entlüftung" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Überlaufdesigner</h4>
+          <p>Überläufe fangen die kalte Schmelzefront, Entlüftungen lassen die Luft heraus. Beides sitzt außen am Bauteilrand in der Trennebene; das Volumen geht ins Schussgewicht.</p>
+          <ul class="fig-legend"><li><span class="key" style="background:var(--mark)"></span>Bohne</li><li><span class="key" style="background:var(--air)"></span>mit Entlüftung</li><li><span class="key" style="background:var(--mark-warm)"></span>Waschbrett</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/temperier.html">
+        <figure class="studio-fig"><img src="/assets/studio/temperier.webp" width="780" height="585" alt="Bauteil von unten in der Abstandsfläche: zwei gerade Kanäle unter dem Boden, automatisch gesetzte Kühlstiche parallel zur Formöffnung" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Temperierkanal-Designer</h4>
+          <p>Kühlstiche und Kanäle liegen auf der Fläche im gewählten Abstand zur Kavität. Die Automatik verteilt sie dorthin, wo das Bauteil dick ist; wer zu nah an der Kavität steht, wird gelb markiert.</p>
+          <ul class="fig-legend"><li><span class="key" style="background:var(--cool)"></span>Kühlstich</li><li><span class="key" style="background:color-mix(in srgb, var(--cool) 55%, var(--surface))"></span>Kanal</li><li><span class="key" style="background:var(--primary-light)"></span>Abstandsfläche</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/angussfuellung.html">
+        <figure class="studio-fig"><img src="/assets/studio/angussfuellung.webp" width="780" height="585" alt="Schmelze auf halbem Weg durch das Angusssystem, eingefärbt nach Geschwindigkeit" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Angussfüllung</h4>
+          <p>Die Schmelze vom Pressrest bis zu den Anschnitten, gerechnet mit dem Gitter (Lattice-Boltzmann mit freier Oberfläche) oder mit Partikeln (SPH), auf der Grafikkarte, sonst in JavaScript. Ergebnis: wann die Schmelze an welchem Anschnitt ankommt.</p>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo"></span>langsam → schnell</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card wide" href="/tools/3d-studio/kammerfuellung.html">
+        <figure class="studio-fig"><img src="/assets/studio/kammerfuellung.webp" width="1100" height="440" alt="Welle in der Füllkammer vor dem Gießkolben, eingefärbt nach Geschwindigkeit" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Kammerfüllung</h4>
+          <p>Die Welle in der Füllkammer: Wie schnell darf der Kolben anfahren, ohne dass die Welle bricht und Luft einschließt? Gitter, Partikel oder ein auf OpenFOAM-Rechnungen trainiertes Metamodell, gegen die Schusskurve, mit „Kammer voll“ und eingeschlossener Luft.</p>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo"></span>langsam → schnell</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+    </div>
+  </div>
+  <script>
+    /* Die Farbleisten der Legenden kommen aus der Palette (fest, in jedem
+       Schema gleich), nicht als Farbwerte ins HTML. */
+    (function () {
+      var P = window.__PALETTE__;
+      if (!P || !P.gradient) return;
+      document.querySelectorAll('.fig-legend [data-leiste]').forEach(function (el) {
+        el.style.background = P.gradient(el.dataset.leiste, el.dataset.richtung);
+      });
+    })();
+  </script>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════
@@ -766,40 +937,40 @@
       <div class="dl-carousel-hint">Ziehen dreht den Ring · Klick öffnet den Artikel</div>
     </div>
     <div class="theory-grid">
-      <div class="theory-card" style="border-top-color:var(--primary);">
+      <div class="theory-card" style="border-top-color:var(--machine);">
         <h4>Das PQ²-Diagramm</h4>
         <p>Maschinenlinie, Werkzeuglinie und Hüllkurve, das machbare Band mit seinen vier
           Grenzen (Entlüftung, Erstarrung, Zerstäubung, Erosion) und der Spielraum für den
           Anschnitt, mit den Original-Diagrammen aus dem Dashboard.</p>
-        <a href="theorie/pq2.html" class="link-primary">Lesen →</a>
+        <a href="/theorie/pq2.html" class="link-primary">Lesen →</a>
       </div>
-      <div class="theory-card" style="border-top-color:var(--accent);">
+      <div class="theory-card" style="border-top-color:var(--melt);">
         <h4>Kritische Kolbengeschwindigkeit</h4>
         <p>Von den Flachwassergleichungen über Charakteristiken und Kolbenwelle zum
           Deckenkriterium, samt numerischer Prüfung, wie gut das Nogowizin-Polynom die exakte
           Kreisquerschnitts-Lösung trifft.</p>
         <a href="/theorie/kritische-geschwindigkeit.html" class="link-primary">Lesen →</a>
       </div>
-      <div class="theory-card" style="border-top-color:var(--accent);">
+      <div class="theory-card" style="border-top-color:var(--piston);">
         <h4>Kreissegmente der Füllkammer</h4>
         <p>Wie eine einzige zweidimensionale Figur Füllgrad, freie Oberfläche, benetzten Bogen
           und das (φ, λ)-Auslegungsdiagramm der Füllkammer bestimmt.</p>
         <a href="/theorie/kreissegmente.html" class="link-primary">Lesen →</a>
       </div>
-      <div class="theory-card" style="border-top-color:var(--warn);">
+      <div class="theory-card" style="border-top-color:var(--process);">
         <h4>Nebenbedingungen der Auslegung</h4>
         <p>Alle Nebenbedingungen N1–N20 der gießtechnischen Auslegung, von Anschnitt und
           Füllzeit bis Schusskurve, mit Formeln, Grenzwert-Logik und Quellen.</p>
         <a href="/theorie/nebenbedingungen.html" class="link-primary">Lesen →</a>
       </div>
-      <div class="theory-card" style="border-top-color:var(--gold);">
+      <div class="theory-card" style="border-top-color:var(--air);">
         <h4>Entlüftung, Vakuum und die Restblase</h4>
         <p>Wohin mit mehreren Litern Luft in Millisekunden? Entlüftungsbedarf, Drosselströmung
           mit Choking, die Vakuummodelle der Simulation, und warum der Nachdruck Poren nur
           mit der Kubikwurzel schrumpft.</p>
         <a href="/theorie/entlueftung-vakuum.html" class="link-primary">Lesen →</a>
       </div>
-      <div class="theory-card" style="border-top-color:var(--cat-slate);">
+      <div class="theory-card" style="border-top-color:var(--die);">
         <h4>Zuhaltung und Sprengfläche</h4>
         <p>Von der projizierten Fläche zur Kraft auf jede einzelne Säule: die Statik der
           Zuhaltung, der Hebelfaktor aus Außermittigkeit und Schiebern, und warum eine Form
@@ -868,5 +1039,6 @@
 </section>
 
 <script type="module" src="/shared/carousel3d.js"></script>
+<script src="/shared/hero-guss.js" defer></script>
 </body>
 </html>

@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -19,7 +19,7 @@ const ohneKommentare = src => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*
 globalThis.window = globalThis;
 require(path.join(site, 'shared/examples/kosten.js'));
 const Z = require(path.join(site, 'tools/zyklus/zyklus-logic.js'));
-const M = require(path.join(site, 'tools/sprengflaeche/stl-math.js'));
+const M = await import(pathToFileURL(path.join(site, 'tools/sprengflaeche/stl-math.js')));
 const SL = require(path.join(site, 'tools/sprengflaeche/stl-logic.js'));
 
 const O = { tz: 52, tauBl: 6, Tdie: 200, Teject: 300, dTspray: 50,

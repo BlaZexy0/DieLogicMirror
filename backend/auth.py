@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .db import AuthSession, Invite, Org, User, get_db, iso, now
+from .db import AuthSession, Invite, Org, User, aware, get_db, iso, now
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -63,9 +63,18 @@ DUMMY_HASH = hash_password(secrets.token_urlsafe(24))
 
 # ── Sitzungen ─────────────────────────────────────────────────────────
 
-def _secure_cookie(request: Request) -> bool:
+def request_is_https(request: Request) -> bool:
+    """Kam die Verbindung über TLS? Hinter dem Proxy steht das in
+    X-Forwarded-Proto, hinter mehreren als Liste; der erste Eintrag ist der
+    des Clients. Cookie (Secure) und HSTS (app.py) lesen es hier: bis zum
+    23.09. las das Cookie den ganzen Kopf, und bei „https, http" fehlte ihm
+    Secure, während HSTS schon galt."""
     proto = request.headers.get("x-forwarded-proto", request.url.scheme)
-    return proto == "https"
+    return proto.split(",")[0].strip().lower() == "https"
+
+
+def _secure_cookie(request: Request) -> bool:
+    return request_is_https(request)
 
 
 def start_session(db: Session, user: User, request: Request, response: Response) -> None:
@@ -93,10 +102,7 @@ def optional_user(request: Request, db: Session = Depends(get_db)) -> User | Non
     sess = db.scalar(select(AuthSession).where(AuthSession.token == token))
     if not sess:
         return None
-    expires = sess.expires_at
-    if expires.tzinfo is None:  # SQLite liefert naive Zeitstempel zurück
-        from datetime import timezone
-        expires = expires.replace(tzinfo=timezone.utc)
+    expires = aware(sess.expires_at)  # SQLite liefert naive Zeitstempel zurück
     if expires < now():
         db.delete(sess)
         db.commit()
@@ -154,13 +160,12 @@ def _valid_invite(db: Session, token: str) -> Invite:
     inv = db.scalar(select(Invite).where(Invite.token == token))
     if not inv or inv.used_at is not None:
         raise HTTPException(status_code=404, detail="Einladung unbekannt oder bereits eingelöst.")
+    # Jede Einladung bekommt beim Anlegen eine Frist. Eine ohne Frist stammt
+    # aus einer älteren Version und wäre ein Dauerschlüssel: sie gilt als
+    # abgelaufen, ein Admin lädt neu ein.
     expires = inv.expires_at
-    if expires is not None:
-        if expires.tzinfo is None:
-            from datetime import timezone
-            expires = expires.replace(tzinfo=timezone.utc)
-        if expires < now():
-            raise HTTPException(status_code=410, detail="Einladung abgelaufen — bitte neu einladen lassen.")
+    if expires is None or aware(expires) < now():
+        raise HTTPException(status_code=410, detail="Einladung abgelaufen. Bitte neu einladen lassen.")
     return inv
 
 

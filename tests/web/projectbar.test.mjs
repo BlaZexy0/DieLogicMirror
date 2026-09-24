@@ -156,6 +156,14 @@ function boot({ store = null } = {}) {
     const r = srv.handle(opts.method || 'GET', String(url), opts.body ? JSON.parse(opts.body) : null);
     return { ok: r.status < 400, status: r.status, json: async () => r.data };
   };
+  /* projectbar.js liest die Sitzung nicht mehr selbst per fetch, sondern aus
+     window.__DL_AUTH_ME__ — das legt sonst nav.js an (nicht in diesem
+     Test geladen), darum hier dasselbe nachgebaut, über denselben
+     fetch-Stub wie der Rest. */
+  globalThis.__DL_AUTH_ME__ = globalThis.fetch('/api/auth/me', { credentials: 'same-origin' }).then(
+    async r => (r.ok ? { status: r.status, ok: true, me: await r.json() } : { status: r.status, ok: false, me: null }),
+    () => ({ status: 0, ok: false, me: null })
+  );
 
   for (const f of ['shared/palette.js', 'shared/project.js']) {
     const abs = require.resolve(path.join(site, f));

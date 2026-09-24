@@ -29,7 +29,12 @@
    welcher Reihenfolge die Kavität voll wird. */
 
 import { abortError } from '../abort.js';
+import { sampleField, cellAt } from '../part/field.js';
 import { frameOf, shares, allItems } from './model.js';
+
+/* Liegt die Mitte eines Anschnitts weiter als zwei Zellkanten neben dem
+   Bauteil, sitzt er nicht darauf: er füllt nichts. */
+export const GAP_CELLS = 2;
 
 /* ── Binärer Heap über Zellindizes ───────────────────────────── */
 class Heap {
@@ -110,6 +115,19 @@ export function seedCells(field, item) {
 }
 
 /**
+ * Wie weit die Mitte eines Anschnitts neben dem Bauteil liegt, mm (0 auf
+ * der Wand oder darin). Das Feld kennt den Abstand im Band um die Wand;
+ * weiter draußen steht dort das Band — außerhalb des Rasters: Infinity.
+ */
+export function gateGap(field, item) {
+  for (let a = 0; a < 3; a++) {
+    const g = (item.pos[a] - field.origin[a]) / field.h;
+    if (!(g >= 0 && g <= field.dims[a] - 1)) return Infinity;
+  }
+  return Math.max(0, sampleField(field, item.pos[0], item.pos[1], item.pos[2]));
+}
+
+/**
  * Die Füllung rechnen.
  *   field   Rasterfeld mit vollständigem Kern (js/part/field.js)
  *   plan    Füllplan mit Anschnitten
@@ -119,7 +137,8 @@ export function seedCells(field, item) {
  * → { arrival: Float32Array (Zeiteinheit, außen Infinity), frac: Float32Array (Füllgrad 0..1,
  *     außen NaN), source: Int16Array (Anschnitt je Zelle, −1 außen), path: Float32Array
  *     (Fließweg in mm), cells, stats: { maxPath, refThickness, wallThickness, flowRatio, unreached,
- *     volume, inlets:[{id, cells, seeds, volume}] } }
+ *     volume, inlets:[{id, cells, seeds, volume, gap, closed}] } }
+ *   gap: mm neben dem Bauteil; closed: 'off' (daneben), 'share' (0 % am Strom) oder null
  *   opts.wallThickness: Wanddicke fürs Verhältnis Fließweg/Wanddicke (sonst 2·Bezugsdicke)
  */
 export async function solveFill(field, plan, opts = {}) {
@@ -151,10 +170,16 @@ export async function solveFill(field, plan, opts = {}) {
   const done = new Uint8Array(N);
   const heap = new Heap(Math.max(16, cells * 2 + 16), arrival);
 
-  /* Quellen: Tempo je Anschnitt aus seinem Anteil, bezogen auf den Mittelwert. */
+  /* Quellen: Tempo je Anschnitt aus seinem Anteil, bezogen auf den Mittelwert.
+     Zwei füllen nichts: einer, der nicht auf dem Bauteil sitzt — früher begann
+     seine Front an der nächsten Innenzelle, wo immer die lag —, und einer
+     ohne Anteil (die festen Anteile der anderen ergeben schon 100 %): durch
+     ihn fließt nichts, und der Boden des Tempos ließ ihn trotzdem füllen. */
   const meanShare = items.length ? 1 / items.length : 1;
   const mult = items.map(it => Math.min(4, Math.max(0.25, (sh[it.id] ?? meanShare) / meanShare)));
-  const seeds = items.map(it => seedCells(field, it));
+  const gaps = items.map(it => gateGap(field, it));
+  const closed = items.map((it, s) => (gaps[s] > GAP_CELLS * h ? 'off' : !((sh[it.id] ?? meanShare) > 0) ? 'share' : null));
+  const seeds = items.map((it, s) => (closed[s] ? [] : seedCells(field, it)));
   const start = items.map(it => (offsets && Number.isFinite(offsets[it.id]) ? Math.max(0, offsets[it.id]) : 0));
   seeds.forEach((list, s) => {
     for (const idx of list) {
@@ -200,7 +225,7 @@ export async function solveFill(field, plan, opts = {}) {
   const unreached = cells - order.length;
 
   let maxPath = 0;
-  const perInlet = items.map((it, s) => ({ id: it.id, cells: 0, seeds: 0, offset: start[s] }));
+  const perInlet = items.map((it, s) => ({ id: it.id, cells: 0, seeds: 0, offset: start[s], gap: gaps[s], closed: closed[s] }));
   seeds.forEach((list, s) => { perInlet[s].seeds = list.length; });
   for (const i of order) {
     if (path[i] > maxPath) maxPath = path[i];
@@ -241,14 +266,12 @@ export function fracToSurface(field, frac) {
   return out;
 }
 
-/** Trilinear abtasten (NaN-Zellen werden übersprungen). */
+/** Trilinear abtasten wie js/part/field.js (sampleField, dieselbe Zelle) —
+    NaN-Zellen werden übersprungen, die übrigen neu gewichtet. */
 export function sampleFrac(field, fracSurf, x, y, z) {
-  const [nx, ny, nz] = field.dims;
-  const gx = (x - field.origin[0]) / field.h, gy = (y - field.origin[1]) / field.h, gz = (z - field.origin[2]) / field.h;
-  const i0 = Math.max(0, Math.min(nx - 2, Math.floor(gx)));
-  const j0 = Math.max(0, Math.min(ny - 2, Math.floor(gy)));
-  const k0 = Math.max(0, Math.min(nz - 2, Math.floor(gz)));
-  const fx = Math.max(0, Math.min(1, gx - i0)), fy = Math.max(0, Math.min(1, gy - j0)), fz = Math.max(0, Math.min(1, gz - k0));
+  const [nx, ny] = field.dims;
+  const c = cellAt(field, x, y, z);
+  const i0 = c[0], j0 = c[1], k0 = c[2], fx = c[3], fy = c[4], fz = c[5];
   let sum = 0, wsum = 0;
   for (let dk = 0; dk <= 1; dk++) for (let dj = 0; dj <= 1; dj++) for (let di = 0; di <= 1; di++) {
     const v = fracSurf[((k0 + dk) * ny + j0 + dj) * nx + i0 + di];

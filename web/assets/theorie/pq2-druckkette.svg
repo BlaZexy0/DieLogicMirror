@@ -1,148 +1,103 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 470" font-family="Inter, -apple-system, 'Segoe UI', Arial, sans-serif" role="img" aria-label="Druckkette des Schussaggregats: Druckspeicher, Drossel, Antriebszylinder, Füllkammer mit Gießkolben, Anschnitt und Kavität; darunter der Verlauf von statischem Druck und Geschwindigkeit entlang desselben Wegs">
-  <!-- Handgezeichnetes Schema für theorie/pq2.html. Oben der Weg des Öls
-       (gold, wie die Maschinenlinie) und der Schmelze (petrol, wie die
-       Werkzeuglinie), unten über demselben Weg der Verlauf von statischem
-       Druck und Geschwindigkeit: die vier Stationen der Bernoulli-Kette.
-       Konventionen: keine Zahlenwerte, nur Formelzeichen; Indizes als
-       tspan (72 %, dy 3); Farben aus shared/palette.js. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 392" font-family="Inter, -apple-system, 'Segoe UI', Arial, sans-serif" role="img" aria-label="Druckkette des Schussaggregats: der Druckspeicher über dem Antriebszylinder, dazwischen die Drossel; die Kolbenstange schiebt den Gießkolben durch die Füllkammer, die Einfüllöffnung direkt vor ihm, die Kammer endet bündig an der Trennebene; von dort steigt der Anguss über den Anschnitt ins Gussteil">
+  <!-- Handgezeichnetes Schema für theorie/pq2.html: der Weg des Öls und der
+       Schmelze durch die vier Stationen der Bildunterschrift.
+       Der Druckspeicher sitzt über dem Antriebszylinder, die Drossel in der
+       Leitung dazwischen; die Kolbenstange ist kurz, die Einfüllöffnung liegt
+       gleich vor dem zurückgezogenen Gießkolben; die Füllkammer endet bündig
+       an der Trennebene, der Anguss steigt von dort in der Trennebene zum
+       Anschnitt und ins Gussteil (vereinfacht, in beiden Formhälften).
+       Kein Druckverlauf und keine Formeln im Bild: die stehen in der
+       Bildunterschrift. Indizes als tspan (72 %, dy 3).
+       Farben sind Rollen der Palette (shared/palette.js): die Klasse nennt
+       die Rolle (f-… Füllung, s-… Strich), der Wert daneben ist ihr Standard;
+       shared/svgfarben.js färbt das Bild auf der Seite nach dem gewählten
+       Schema. Öl und Hydraulik in `machine` wie die Maschinenlinie, das
+       Gaspolster in `air`, Schmelze und Gussteil in `melt`, Kolben und Stange
+       in `piston`, Form und Wände in `steel`/`steel-dark`, Beschriftung in
+       `text`/`muted`. Helle Flächen über fill-opacity. -->
   <defs>
     <pattern id="die-hatch" width="7" height="7" patternUnits="userSpaceOnUse">
-      <rect width="7" height="7" fill="#eef2f4"/>
-      <path d="M0 7 L7 0" stroke="#b7c6cc" stroke-width="1"/>
+      <rect width="7" height="7" fill="#dae1e2" fill-opacity="0.55" class="f-steel"/>
+      <path d="M0 7 L7 0" stroke="#7b9096" stroke-opacity="0.45" stroke-width="1" class="s-steel-dark"/>
     </pattern>
     <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
-      <path d="M0 0 L8 4 L0 8 Z" fill="#00655e"/>
+      <path d="M0 0 L8 4 L0 8 Z" fill="#008c82" class="f-melt"/>
     </marker>
     <marker id="arr-oil" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
-      <path d="M0 0 L8 4 L0 8 Z" fill="#8a6d00"/>
+      <path d="M0 0 L8 4 L0 8 Z" fill="#ac6eef" class="f-machine"/>
     </marker>
   </defs>
 
-  <!-- ── Stationsspalten: verbinden Schema und Verlauf ── -->
-  <g stroke="#ccd4d6" stroke-width="1" stroke-dasharray="3 4">
-    <line x1="140" y1="58" x2="140" y2="440"/>
-    <line x1="200" y1="58" x2="200" y2="440"/>
-    <line x1="470" y1="58" x2="470" y2="440"/>
-    <line x1="790" y1="58" x2="790" y2="440"/>
+  <!-- ── Die Stationen: ① über dem Speicher, ② und ③ unter ihren Teilen, ④ am Anschnitt ── -->
+  <g font-size="15" font-weight="700" fill="#002733" class="f-text" text-anchor="middle">
+    <text x="105" y="36">① Druckspeicher</text>
+    <text x="135" y="378">② Drossel und Antriebszylinder</text>
+    <text x="470" y="378">③ Gießkolben und Füllkammer</text>
   </g>
-
-  <!-- ── Überschriften der Stationen ── -->
-  <g font-size="14" font-weight="700" fill="#002733" text-anchor="middle">
-    <text x="95" y="24">① Druckspeicher</text>
-    <text x="335" y="24">② Drossel und Antriebszylinder</text>
-    <text x="630" y="24">③ Füllkammer</text>
-    <text x="800" y="24">④ Anschnitt</text>
-  </g>
-  <g font-size="12.5" fill="#4c6870" text-anchor="middle">
-    <text x="95" y="43">p<tspan font-size="72%" dy="3">acc</tspan></text>
-    <text x="335" y="43">p<tspan font-size="72%" dy="3">hyd</tspan><tspan dy="-3"> = p</tspan><tspan font-size="72%" dy="3">acc</tspan><tspan dy="-3"> − K</tspan><tspan font-size="72%" dy="3">v</tspan><tspan dy="-3">·v²</tspan></text>
-    <text x="630" y="43">p<tspan font-size="72%" dy="3">m</tspan><tspan dy="-3"> = p</tspan><tspan font-size="72%" dy="3">hyd</tspan><tspan dy="-3"> · A</tspan><tspan font-size="72%" dy="3">h</tspan><tspan dy="-3"> / A</tspan><tspan font-size="72%" dy="3">K</tspan></text>
-    <text x="800" y="43">p<tspan font-size="72%" dy="3">m</tspan><tspan dy="-3"> → ½ρ·v</tspan><tspan font-size="72%" dy="3">a</tspan><tspan dy="-3">²</tspan></text>
-  </g>
+  <text x="650" y="378" font-size="13" fill="#4c6870" class="f-muted" text-anchor="middle">Druckgießform</text>
 
   <!-- ── ① Druckspeicher: Flasche, Gaspolster über Öl ── -->
-  <path d="M52 92 Q52 72 95 72 Q138 72 138 92 L138 288 L52 288 Z" fill="#eef2f4"/>
-  <path d="M52 172 Q74 165 95 172 T138 172 L138 288 L52 288 Z" fill="rgba(224,164,0,.28)"/>
-  <path d="M52 92 Q52 72 95 72 Q138 72 138 92 L138 288 L52 288 Z" fill="none" stroke="#557786" stroke-width="2.5"/>
-  <path d="M52 172 Q74 165 95 172 T138 172" fill="none" stroke="#557786" stroke-width="1"/>
-  <text x="95" y="128" font-size="12" fill="#4c6870" text-anchor="middle">Gaspolster</text>
-  <text x="95" y="224" font-size="12.5" font-weight="700" fill="#8a6d00" text-anchor="middle">Öl</text>
-  <text x="95" y="244" font-size="12.5" font-weight="700" fill="#8a6d00" text-anchor="middle">p<tspan font-size="72%" dy="3">acc</tspan></text>
+  <path d="M60 132 L60 76 Q60 54 105 54 Q150 54 150 76 L150 132 Q128 139 105 132 Q82 125 60 132 Z" fill="#68a7cc" fill-opacity="0.16" class="f-air"/>
+  <path d="M60 132 Q82 125 105 132 T150 132 L150 194 L60 194 Z" fill="#ac6eef" fill-opacity="0.24" class="f-machine"/>
+  <path d="M60 76 Q60 54 105 54 Q150 54 150 76 L150 194 L60 194 Z" fill="none" stroke="#7b9096" stroke-width="2.5" class="s-steel-dark"/>
+  <path d="M60 132 Q82 125 105 132 T150 132" fill="none" stroke="#7b9096" stroke-width="1" class="s-steel-dark"/>
+  <text x="105" y="100" font-size="13" fill="#4c6870" class="f-muted" text-anchor="middle">Gaspolster</text>
+  <text x="105" y="170" font-size="13.5" font-weight="700" fill="#002733" class="f-text" text-anchor="middle">Öl</text>
 
-  <!-- Leitung mit Drossel: aus der Flasche waagerecht in den Zylinderboden -->
-  <rect x="138" y="238" width="64" height="14" fill="rgba(224,164,0,.28)"/>
-  <path d="M138 238 L202 238 M138 252 L202 252" fill="none" stroke="#557786" stroke-width="2"/>
-  <path d="M160 232 L180 232 L170 245 Z M160 258 L180 258 L170 245 Z" fill="#557786"/>
-  <line x1="150" y1="245" x2="160" y2="245" stroke="#8a6d00" stroke-width="1.5" marker-end="url(#arr-oil)"/>
-  <text x="170" y="275" font-size="11.5" fill="#4c6870" text-anchor="middle">Drossel</text>
-  <text x="170" y="290" font-size="11.5" fill="#4c6870" text-anchor="middle">−K<tspan font-size="72%" dy="3">v</tspan><tspan dy="-3">·v²</tspan></text>
+  <!-- Leitung mit Drossel: aus dem Speicher senkrecht hinunter in den Zylinderboden -->
+  <rect x="98" y="194" width="14" height="48" fill="#ac6eef" fill-opacity="0.24" class="f-machine"/>
+  <path d="M98 194 L98 242 M112 194 L112 242" fill="none" stroke="#7b9096" stroke-width="2" class="s-steel-dark"/>
+  <path d="M88 209 L88 227 L105 218 Z M122 209 L122 227 L105 218 Z" fill="#7b9096" class="f-steel-dark"/>
+  <line x1="105" y1="229" x2="105" y2="240" stroke="#ac6eef" stroke-width="1.5" class="s-machine" marker-end="url(#arr-oil)"/>
+  <text x="82" y="223" font-size="13" fill="#4c6870" class="f-muted" text-anchor="end">Drossel</text>
 
-  <!-- ── ② Antriebszylinder: großer Kolben, Fläche A_h ── -->
-  <rect x="202" y="152" width="90" height="108" fill="rgba(224,164,0,.28)"/>
-  <path d="M202 238 L202 150 L382 150 L382 260 L202 260 L202 252" fill="none" stroke="#557786" stroke-width="2.5"/>
-  <rect x="292" y="152" width="20" height="108" fill="#2a3f4a"/>
-  <rect x="312" y="196" width="160" height="20" fill="#9aacb4" stroke="#557786" stroke-width="1"/>
-  <text x="247" y="200" font-size="13" font-weight="700" fill="#8a6d00" text-anchor="middle">p<tspan font-size="72%" dy="3">hyd</tspan></text>
-  <text x="247" y="222" font-size="11.5" fill="#8a6d00" text-anchor="middle">Öl</text>
-  <path d="M302 132 L302 148" fill="none" stroke="#557786" stroke-width="1"/>
-  <text x="302" y="126" font-size="11.5" fill="#4c6870" text-anchor="middle">Antriebskolben A<tspan font-size="72%" dy="3">h</tspan></text>
+  <!-- ── ② Antriebszylinder unter dem Speicher: großer Kolben, Fläche A_h ── -->
+  <rect x="32" y="244" width="118" height="92" fill="#ac6eef" fill-opacity="0.24" class="f-machine"/>
+  <rect x="150" y="244" width="16" height="92" fill="#36545d" class="f-piston"/>
+  <rect x="166" y="282" width="184" height="16" fill="#36545d" fill-opacity="0.4" stroke="#36545d" stroke-width="1" class="f-piston s-piston"/>
+  <path d="M98 242 L30 242 L30 338 L240 338 L240 298 M240 282 L240 242 L112 242" fill="none" stroke="#7b9096" stroke-width="2.5" class="s-steel-dark"/>
+  <text x="91" y="295" font-size="13.5" font-weight="700" fill="#002733" class="f-text" text-anchor="middle">Öl</text>
+  <path d="M158 234 L158 242" fill="none" stroke="#4c6870" stroke-width="1" class="s-muted"/>
+  <text x="132" y="229" font-size="13" fill="#4c6870" class="f-muted">Antriebskolben A<tspan font-size="72%" dy="3">h</tspan></text>
+  <text x="285" y="275" font-size="13" fill="#4c6870" class="f-muted" text-anchor="middle">Kolbenstange</text>
 
-  <!-- ── Formhälften: Kammer endet an der Trennebene, Kavität in beiden Hälften ── -->
-  <rect x="720" y="82" width="70" height="228" fill="url(#die-hatch)" stroke="#7d949c" stroke-width="1.5"/>
-  <rect x="790" y="82" width="70" height="228" fill="url(#die-hatch)" stroke="#7d949c" stroke-width="1.5"/>
-  <!-- Kammerbohrung, Anguss, Anschnitt und Kavität freistellen -->
-  <rect x="720" y="183" width="70" height="44" fill="#fff"/>
-  <rect x="775" y="150" width="30" height="77" fill="#fff"/>
-  <rect x="784" y="136" width="12" height="16" fill="#fff"/>
-  <rect x="748" y="96" width="84" height="42" fill="#fff"/>
-  <line x1="790" y1="82" x2="790" y2="310" stroke="#7d949c" stroke-width="1" stroke-dasharray="5 4"/>
-  <text x="790" y="324" font-size="11.5" fill="#4c6870" text-anchor="middle">Trennebene</text>
-  <text x="755" y="300" font-size="10.5" fill="#4c6870" text-anchor="middle">feste Seite</text>
-  <text x="825" y="300" font-size="10.5" fill="#4c6870" text-anchor="middle">bewegliche Seite</text>
+  <!-- ── Formhälften: die Füllkammer endet bündig an der Trennebene ── -->
+  <rect x="560" y="60" width="180" height="290" fill="url(#die-hatch)"/>
+  <!-- Die Trennebene vor dem Freistellen: in Kammer, Anguss und Gussteil verschwindet sie -->
+  <line x1="650" y1="58" x2="650" y2="352" stroke="#7b9096" stroke-width="1" stroke-dasharray="5 4" class="s-steel-dark"/>
+  <!-- Kammerbohrung, Anguss, Anschnitt und Gussteil freistellen: in der
+       Fläche hinter dem Bild (surface2, wie der Bildkasten), darüber liegt
+       gleich die Schmelze -->
+  <rect x="560" y="268" width="100" height="44" fill="#f8fafa" class="f-surface2"/>
+  <rect x="640" y="150" width="20" height="162" fill="#f8fafa" class="f-surface2"/>
+  <rect x="645" y="134" width="10" height="18" fill="#f8fafa" class="f-surface2"/>
+  <path d="M590 136 L590 102 L612 102 L612 82 L688 82 L688 102 L710 102 L710 136 Z" fill="#f8fafa" class="f-surface2"/>
+  <!-- Umriss der Form: offen, wo die Füllkammer durch die feste Seite geht -->
+  <path d="M560 268 L560 60 L740 60 L740 350 L560 350 L560 312" fill="none" stroke="#7b9096" stroke-width="1.5" class="s-steel-dark"/>
+  <text x="650" y="50" font-size="13" fill="#4c6870" class="f-muted" text-anchor="middle">Trennebene</text>
+  <text x="605" y="340" font-size="10.5" fill="#4c6870" class="f-muted" text-anchor="middle">feste Seite</text>
+  <text x="695" y="340" font-size="10.5" fill="#4c6870" class="f-muted" text-anchor="middle">bewegliche Seite</text>
 
-  <!-- ── ③ Füllkammer: Rohr bis zur Trennebene, Einfüllöffnung oben ── -->
-  <path d="M470 183 L500 183 M540 183 L775 183 M470 227 L805 227" fill="none" stroke="#557786" stroke-width="2.5"/>
-  <path d="M500 183 L500 166 L492 156 M540 183 L540 166 L548 156" fill="none" stroke="#557786" stroke-width="2.5"/>
-  <text x="520" y="148" font-size="11.5" fill="#4c6870" text-anchor="middle">Einfüllöffnung</text>
-  <!-- Gießkolben (Fläche A_K) und Schmelze -->
-  <rect x="472" y="185" width="88" height="40" fill="#2a3f4a"/>
-  <text x="516" y="209" font-size="11" fill="#e8edf1" text-anchor="middle">Gießkolben A<tspan font-size="72%" dy="3">K</tspan></text>
-  <rect x="560" y="185" width="245" height="40" fill="rgba(0,140,130,.30)"/>
-  <rect x="777" y="150" width="28" height="35" fill="rgba(0,140,130,.30)"/>
-  <rect x="784" y="138" width="12" height="14" fill="rgba(0,140,130,.30)"/>
-  <text x="660" y="200" font-size="13" font-weight="700" fill="#00655e" text-anchor="middle">Schmelze</text>
-  <text x="660" y="218" font-size="12.5" font-weight="700" fill="#00655e" text-anchor="middle">p<tspan font-size="72%" dy="3">m</tspan><tspan dy="-3">, v</tspan><tspan font-size="72%" dy="3">p</tspan></text>
-  <!-- Anguss an der Trennebene: Steigkanal, Anschnitt als Engstelle -->
-  <path d="M775 227 L775 150 L784 150 L784 138 L796 138 L796 150 L805 150 L805 227" fill="none" stroke="#557786" stroke-width="2.5"/>
-  <path d="M748 138 L832 138 L832 96 L748 96 Z" fill="none" stroke="#557786" stroke-width="2.5"/>
-  <!-- Strahl in der Kavität: schnell, fächert auf -->
-  <path d="M790 136 L790 104" fill="none" stroke="#00655e" stroke-width="2" marker-end="url(#arr)"/>
-  <path d="M787 136 L768 106" fill="none" stroke="#00655e" stroke-width="1.2" marker-end="url(#arr)"/>
-  <path d="M793 136 L812 106" fill="none" stroke="#00655e" stroke-width="1.2" marker-end="url(#arr)"/>
-  <text x="712" y="114" font-size="11.5" fill="#4c6870" text-anchor="end">Kavität, p ≈ 0</text>
-  <line x1="716" y1="110" x2="748" y2="110" stroke="#4c6870" stroke-width="1" stroke-dasharray="2 2"/>
-  <text x="844" y="146" font-size="11.5" fill="#00655e" text-anchor="start">A<tspan font-size="72%" dy="3">a</tspan><tspan dy="-3">, v</tspan><tspan font-size="72%" dy="3">a</tspan></text>
-  <line x1="797" y1="145" x2="840" y2="145" stroke="#00655e" stroke-width="1"/>
+  <!-- ── ③ Füllkammer: Gießkolben (Fläche A_K) hinten, die Einfüllöffnung gleich davor, das Rohr bis zur Trennebene ── -->
+  <path d="M438 270 L640 270 L640 150 L645 150 L645 136 L655 136 L655 150 L660 150 L660 310 L438 310 Z" fill="#008c82" fill-opacity="0.3" class="f-melt"/>
+  <path d="M590 136 L590 102 L612 102 L612 82 L688 82 L688 102 L710 102 L710 136 Z" fill="#008c82" fill-opacity="0.3" class="f-melt"/>
+  <rect x="350" y="270" width="88" height="40" fill="#36545d" class="f-piston"/>
+  <path d="M330 268 L446 268 M482 268 L640 268 M330 312 L660 312" fill="none" stroke="#7b9096" stroke-width="2.5" class="s-steel-dark"/>
+  <path d="M446 268 L446 254 L438 244 M482 268 L482 254 L490 244" fill="none" stroke="#7b9096" stroke-width="2.5" class="s-steel-dark"/>
+  <text x="464" y="236" font-size="13" fill="#4c6870" class="f-muted" text-anchor="middle">Einfüllöffnung</text>
+  <text x="394" y="294" font-size="11.5" fill="#ffffff" class="f-surface" text-anchor="middle">Gießkolben A<tspan font-size="72%" dy="3">K</tspan></text>
+  <text x="545" y="295" font-size="14" font-weight="700" fill="#002733" class="f-text" text-anchor="middle">Schmelze</text>
+  <line x1="590" y1="290" x2="618" y2="290" stroke="#008c82" stroke-width="1.8" class="s-melt" marker-end="url(#arr)"/>
 
-  <!-- ── Verlauf über demselben Weg: statischer Druck und Geschwindigkeit ── -->
-  <line x1="52" y1="430" x2="860" y2="430" stroke="#ccd4d6" stroke-width="1"/>
-  <text x="52" y="340" font-size="12" font-weight="700" fill="#002733">Entlang des Wegs</text>
-  <!-- Legende -->
-  <line x1="200" y1="336" x2="222" y2="336" stroke="#8a6d00" stroke-width="2.5"/>
-  <line x1="222" y1="336" x2="244" y2="336" stroke="#008c82" stroke-width="2.5"/>
-  <text x="250" y="340" font-size="11.5" fill="#2a3f4a">statischer Druck p (Öl · Schmelze)</text>
-  <line x1="450" y1="336" x2="490" y2="336" stroke="#2a3f4a" stroke-width="1.8" stroke-dasharray="5 3"/>
-  <text x="496" y="340" font-size="11.5" fill="#2a3f4a">Geschwindigkeit v</text>
+  <!-- Anguss: steigt in der Trennebene aus dem Kammerende, der Anschnitt als Engstelle, darüber das Gussteil -->
+  <path d="M640 268 L640 150 L645 150 L645 136 M655 136 L655 150 L660 150 L660 312" fill="none" stroke="#7b9096" stroke-width="2.5" class="s-steel-dark"/>
+  <path d="M645 136 L590 136 L590 102 L612 102 L612 82 L688 82 L688 102 L710 102 L710 136 L655 136" fill="none" stroke="#7b9096" stroke-width="2.5" class="s-steel-dark"/>
+  <line x1="650" y1="252" x2="650" y2="214" stroke="#008c82" stroke-width="1.8" class="s-melt" marker-end="url(#arr)"/>
+  <text x="650" y="124" font-size="13.5" font-weight="700" fill="#002733" class="f-text" text-anchor="middle">Gussteil</text>
 
-  <!-- Druck: Öl (Speicher → Drossel → Zylinder), Übersetzung am Kolbenpaar, Schmelze (Kammer → Anschnitt → Kavität) -->
-  <path d="M52 372 L160 372 L180 381 L300 381 L300 430 L52 430 Z" fill="rgba(224,164,0,.22)"/>
-  <path d="M470 352 L784 352 L796 426 L860 426 L860 430 L470 430 Z" fill="rgba(0,140,130,.20)"/>
-  <path d="M52 372 L160 372 L180 381 L300 381" fill="none" stroke="#8a6d00" stroke-width="2.5"/>
-  <path d="M300 381 L470 352" fill="none" stroke="#557786" stroke-width="1.5" stroke-dasharray="2 3"/>
-  <path d="M470 352 L784 352 L796 426 L860 426" fill="none" stroke="#008c82" stroke-width="2.5"/>
-  <!-- Geschwindigkeit: Öl langsam in der Flasche, schnell in der Leitung, Kolben langsam; Schmelze langsam in der Kammer, schnell im Anschnitt -->
-  <path d="M52 428 L138 428 L142 404 L198 404 L202 424 L300 424" fill="none" stroke="#2a3f4a" stroke-width="1.8" stroke-dasharray="5 3"/>
-  <path d="M470 422 L782 422 L786 356 L796 356 L800 400 L860 400" fill="none" stroke="#2a3f4a" stroke-width="1.8" stroke-dasharray="5 3"/>
-  <!-- Beschriftung des Verlaufs -->
-  <g font-size="11.5" fill="#8a6d00">
-    <text x="95" y="366" text-anchor="middle">p<tspan font-size="72%" dy="3">acc</tspan></text>
-    <text x="240" y="375" text-anchor="middle">p<tspan font-size="72%" dy="3">hyd</tspan></text>
-    <text x="170" y="398" text-anchor="middle" fill="#4c6870">K<tspan font-size="72%" dy="3">v</tspan><tspan dy="-3">·v²</tspan></text>
-  </g>
-  <g font-size="11.5" fill="#00655e">
-    <text x="700" y="346" text-anchor="middle">p<tspan font-size="72%" dy="3">m</tspan><tspan dy="-3"> = p</tspan><tspan font-size="72%" dy="3">hyd</tspan><tspan dy="-3">·A</tspan><tspan font-size="72%" dy="3">h</tspan><tspan dy="-3">/A</tspan><tspan font-size="72%" dy="3">K</tspan></text>
-    <text x="838" y="420" text-anchor="middle">p ≈ 0</text>
-  </g>
-  <g font-size="11.5" fill="#2a3f4a">
-    <text x="385" y="404" text-anchor="middle" fill="#4c6870">Übersetzung A<tspan font-size="72%" dy="3">h</tspan><tspan dy="-3">/A</tspan><tspan font-size="72%" dy="3">K</tspan></text>
-    <text x="170" y="418" text-anchor="middle">v<tspan font-size="72%" dy="3">Öl</tspan></text>
-    <text x="630" y="416" text-anchor="middle">v<tspan font-size="72%" dy="3">p</tspan></text>
-    <text x="791" y="350" text-anchor="middle">v<tspan font-size="72%" dy="3">a</tspan></text>
-    <text x="838" y="396" text-anchor="middle">Strahl</text>
-  </g>
-  <text x="52" y="448" font-size="10.5" fill="#4c6870">Druckspeicher</text>
-  <text x="290" y="448" font-size="10.5" fill="#4c6870">Zylinder</text>
-  <text x="620" y="448" font-size="10.5" fill="#4c6870" text-anchor="middle">Füllkammer</text>
-  <text x="790" y="448" font-size="10.5" fill="#4c6870" text-anchor="middle">Anschnitt</text>
-  <text x="860" y="448" font-size="10.5" fill="#4c6870" text-anchor="end">Kavität</text>
+  <!-- ── ④ Anschnitt und Anguss: rechts neben der Form beschriftet ── -->
+  <line x1="657" y1="143" x2="748" y2="143" stroke="#4c6870" stroke-width="1" stroke-dasharray="2 2" class="s-muted"/>
+  <text x="752" y="147" font-size="13" font-weight="700" fill="#002733" class="f-text">④ Anschnitt</text>
+  <line x1="662" y1="218" x2="748" y2="218" stroke="#4c6870" stroke-width="1" stroke-dasharray="2 2" class="s-muted"/>
+  <text x="752" y="223" font-size="13" fill="#4c6870" class="f-muted">Anguss</text>
 </svg>

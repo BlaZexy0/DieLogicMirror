@@ -1,10 +1,9 @@
 /* Anschnittfläche für Zielgeschwindigkeit. */
 
 import { series, line, target } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { pistonArea } from '../core/physics.js';
-import { theme } from '../core/theme.js';
-import { eq } from './mathfmt.js';
+import { seq, fmt } from '../core/format.js';
+import { pistonArea, shotSpeed } from '../core/physics.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 export default {
   id: 'gate',
@@ -14,22 +13,21 @@ export default {
   usesCurve: true,
 
   calc(v, o) {
-    const C = theme.chart;
     const A = pistonArea(v);
     const x = seq(0, v.vmax, 140);
-    /* Kurvenfarben = Fensterfarben von v_a min/max (wie im PQ²/Prozessfenster) */
-    const cMin = (theme.limits && theme.limits.gateMin) || C.series1;
-    const cMax = (theme.limits && theme.limits.gateMax) || C.series2;
+    /* Die nötige Anschnittfläche gehört zum Werkzeug: beide Kurven in
+       dessen Farbe, wie die v_a-Grenzen im PQ²; die Fläche für v_a,min
+       durchgezogen, die für v_a,max gestrichelt. */
     const q = line(x, [
-      series('A bei ' + fmt(v.gateMin) + ' m/s', cMin, x, s => s * A / v.gateMin),
-      series('A bei ' + fmt(v.gateMax) + ' m/s', cMax, x, s => s * A / v.gateMax)
+      series('A bei ' + fmt(v.gateMin) + ' m/s', 'die', x, s => s * A / v.gateMin),
+      series('A bei ' + fmt(v.gateMax) + ' m/s', 'die', x, s => s * A / v.gateMax, { dash: [7, 4] })
     ], 'Kolbengeschwindigkeit in m/s', 'Anschnittfläche in mm²',
       'Ø ' + fmt(v.diam) + ' mm · Auswahl ' + fmt(v.gate) + ' mm²');
     /* Zulässiges Fenster zwischen den beiden Kurven als Zielband */
     if (v.gateMin > 0 && v.gateMax > 0)
       q.limits = [target('gateBand', 'Ziel ' + fmt(v.gateMin) + '–' + fmt(v.gateMax) + ' m/s', 'y',
         s => s * A / v.gateMax, s => s * A / v.gateMin)];
-    const v2 = o && o.shot && !o.shot.error ? o.shot.v2 : null;
+    const v2 = shotSpeed(o && o.shot, 'v2');
     if (v2 > 0) {
       q.pt = [v2, v.gate];
       q.ptl = 'Auswahl ' + fmt(v.gate) + ' mm² bei v₂ ' + fmt(v2) + ' m/s';
@@ -57,9 +55,9 @@ Auswahl A<sub>a</sub> = <b data-m="Asel"></b> ⇒ v<sub>a</sub> = <b data-m="va"
   },
 
   renderMath(el, v, shot) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
+    const set = mathSetter(el);
     const A = pistonArea(v);
-    const v2 = shot && !shot.error && shot.v2 != null ? shot.v2 : NaN;
+    const v2 = shotSpeed(shot, 'v2');
     set('vsel', fmt(v2) + ' m/s');
     set('gmin', fmt(v.gateMin) + ' m/s');
     set('gmax', fmt(v.gateMax) + ' m/s');

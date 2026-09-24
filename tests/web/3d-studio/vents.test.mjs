@@ -245,3 +245,58 @@ test('Datei: hin und zurück ergibt denselben Plan', () => {
   assert.deepEqual(alt.items.l1.vent, [[45, 0]], 'alte Kanallänge → ein Punkt');
   assert.equal(alt.items.l1.p.ventL, undefined);
 });
+
+test('Datei der Fassung 1: die Trennebene wird zur Hochachse — nichts liegt um 90° gekippt', () => {
+  /* Fassung 1: `axis` die Ausstoßachse, `dir` die Richtung IN der Ebene, `rot` um die Achse. */
+  const v1 = { format: M.FORMAT, version: 1, axis: '+y', items: [
+    { id: 'l1', type: 'bohne', pos: [10, 0, 5], dir: [1, 0, 0], rot: 30, p: { stegW: 10, wellD: 6 } },
+    { id: 'l2', type: 'entlueftet', pos: [0, 0, 0], dir: [0.2, 0.9, -1], rot: 0, p: { ventL: 30 } }
+  ] };
+  const plan = M.fromJSON(v1);
+  const near = (a, b, msg) => assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 1e-6, msg + ': ' + a + ' ≠ ' + b);
+  const f1 = M.frameOf(plan.items.l1);
+  near(f1.n, [0, 1, 0], 'die Ausstoßachse ist oben');
+  /* +x um +y um 30° gedreht (rechte Hand): [cos 30°, 0, −sin 30°]. */
+  near(f1.d, [Math.cos(Math.PI / 6), 0, -Math.sin(Math.PI / 6)], 'die Längsrichtung wie in Fassung 1');
+  near(f1.r, [f1.n[1] * f1.d[2] - f1.n[2] * f1.d[1], f1.n[2] * f1.d[0] - f1.n[0] * f1.d[2], f1.n[0] * f1.d[1] - f1.n[1] * f1.d[0]], 'quer: n × d');
+  near(plan.items.l1.pos, [10, 0, 5], 'am selben Ort');
+  assert.equal(plan.items.l1.p.stegW, 10, 'die Maße der Datei gelten');
+  /* Eine Richtung, die nicht in der Ebene lag, wurde schon damals in sie gelegt. */
+  const f2 = M.frameOf(plan.items.l2);
+  near(f2.n, [0, 1, 0]);
+  near(f2.d, [0.2 / Math.hypot(0.2, 1), 0, -1 / Math.hypot(0.2, 1)], 'in die Ebene gelegt');
+  assert.deepEqual(plan.items.l2.vent, [[30, 0]], 'die alte Kanallänge wird zu einem Punkt');
+  /* Und die Körper liegen, wie sie lagen: die Bohne unter der Trennebene (−y). */
+  const tris = GEO.buildItem(plan.items.l1).flat();
+  let maxY = -Infinity, minY = Infinity;
+  for (let i = 1; i < tris.length; i += 3) { maxY = Math.max(maxY, tris[i]); minY = Math.min(minY, tris[i]); }
+  assert.ok(maxY < 1e-9 && minY < -5, 'flach unter der Ebene, in die Tiefe nach −y: ' + minY + ' … ' + maxY);
+  /* Fassung 2 und 3 lesen `dir` weiter als Wandnormale. */
+  near(M.frameOf(M.fromJSON({ ...v1, version: 3 }).items.l1).n, [1, 0, 0], 'Fassung 3 wie bisher');
+});
+
+test('Datei: Kennungen geprüft, fehlende eindeutig, Maße in die Grenzen der Felder', () => {
+  const base = { format: M.FORMAT, version: 3 };
+  for (const id of ['<img src=x onerror=alert(1)>', 'l1" onclick="x', '3', 'a b']) {
+    assert.throws(() => M.fromJSON({ ...base, items: [{ id, type: 'bohne', pos: [0, 0, 0], dir: [1, 0, 0] }] }), /keine gültige Kennung/, id);
+  }
+  assert.throws(() => M.fromJSON({ ...base, items: [{ id: 'l1', type: 'bohne', dir: [1, 0, 0] }] }), /Lage fehlt/);
+  const plan = M.fromJSON({ ...base, items: [
+    { type: 'bohne', pos: [0, 0, 0], dir: [1, 0, 0], rot: 999, p: { wellD: 500, stegH: -1, draft: 'viel' } },
+    { type: 'waschbrett', pos: [1, 0, 0], dir: [1, 0, 0], p: { waves: 3.6, ventW: 0 } },
+    { id: 'l1', type: 'schlitz', pos: [2, 0, 0], dir: [1, 0, 0] },
+    { id: 'l1', type: 'schlitz', pos: [3, 0, 0], dir: [1, 0, 0] }
+  ] });
+  const ids = Object.keys(plan.items);
+  assert.equal(ids.length, 4, 'vier Elemente, keins überschrieben: ' + ids);
+  assert.equal(plan.items.l1.pos[0], 2, 'die Kennung gehört dem ersten, der sie trägt');
+  const b = M.allItems(plan).find(it => it.type === 'bohne');
+  assert.equal(b.rot, 180);
+  assert.equal(b.p.wellD, M.PARAM_META.wellD.max);
+  assert.equal(b.p.stegH, M.PARAM_META.stegH.min);
+  assert.equal(b.p.draft, M.TYPES.bohne.params.draft, 'Unlesbares: die Vorgabe');
+  const w = M.allItems(plan).find(it => it.type === 'waschbrett');
+  assert.equal(w.p.waves, 4, 'ganze Wellen');
+  assert.equal(w.p.ventW, M.PARAM_META.ventW.min);
+  assert.ok(!ids.includes(M.addItem(plan, 'bohne', [0, 0, 0], [1, 0, 0]).id), 'ein neues Element bekommt eine freie Kennung');
+});

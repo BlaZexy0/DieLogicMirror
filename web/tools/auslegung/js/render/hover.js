@@ -4,7 +4,6 @@ import { frame, lineFrame } from './base.js';
 import { donutGeom, donutTotal } from './donut.js';
 import { MAP_LABELS } from './map.js';
 import { fmt, subHTML } from '../core/format.js';
-import { vCrit } from '../core/physics.js';
 import { violates } from '../core/limits.js';
 
 const PI = Math.PI;
@@ -79,24 +78,19 @@ export function showHover(card, ev) {
   if (px < f.L || px > w - f.R || py < f.T || py > h - f.B) { box.textContent = HOVER_IDLE; return; }
 
   if (d.kind === 'map') {
-    /* Exakt aus den Formeln ausgewertet — kein Raster-Snapping. */
+    /* Exakt aus den Formeln ausgewertet — kein Raster-Snapping; das Urteil
+       fällt das Diagramm selbst (charts/phild.js classify). */
     const xv = (px - f.L) / f.pw * 100;
     const yv = d.rMax - (py - f.T) / f.ph * (d.rMax - d.rMin);
-    const phi = xv / 100, P = d.params;
+    const phi = xv / 100;
     if (phi <= 0 || phi >= 1 || yv <= 0) { box.textContent = HOVER_IDLE; return; }
-    const D = Math.cbrt(4 * P.V / (PI * phi * yv));       // m
-    const L = yv * D;                                     // m
-    const b = 4 * P.Vb / (PI * D * D) * 1000;             // mm
-    const vc = vCrit(D, phi);                             // m/s
-    const bad = [];
-    if (D * 1000 < P.dmin || D * 1000 > P.dmax) bad.push('bore');
-    if (L * 1000 < P.lmin || L * 1000 > P.lmax) bad.push('len');
-    if (b < P.biscuitMin) bad.push('bisc');
-    if (P.v1 > vc) bad.push('crit');
-    const verdict = bad.length
-      ? '<b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + bad.map(k => MAP_LABELS[k]).join(', ') + '</b>'
-      : '<b style="color:' + window.__PALETTE__.ok + '">MACHBAR</b>';
-    box.innerHTML = '<b>φ:</b> ' + fmt(xv) + ' % · <b>λ:</b> ' + fmt(yv) + ' → <b>Ø</b> ' + fmt(D * 1000) + ' mm · <b>L</b> ' + fmt(L * 1000) + ' mm · <b>Pressrest</b> ' + fmt(b) + ' mm · <b>v<sub>krit</sub></b> ' + fmt(vc) + ' m/s · ' + verdict;
+    const c = d.classify(phi, yv);
+    /* Urteil als Klasse: die Farbe (Textstufe der Ampel) kommt aus dem CSS
+       und folgt dem Farbschema von selbst. */
+    const verdict = c.bad.length
+      ? '<b class="hv-bad">verletzt: ' + c.bad.map(k => MAP_LABELS[k]).join(', ') + '</b>'
+      : '<b class="hv-ok">MACHBAR</b>';
+    box.innerHTML = '<b>φ:</b> ' + fmt(xv) + ' % · <b>λ:</b> ' + fmt(yv) + ' → <b>Ø</b> ' + fmt(c.D * 1000) + ' mm · <b>L</b> ' + fmt(c.L * 1000) + ' mm · <b>Pressrest</b> ' + fmt(c.b) + ' mm · <b>v<sub>krit</sub></b> ' + fmt(c.vc) + ' m/s · ' + verdict;
     return;
   }
 
@@ -109,7 +103,7 @@ export function showHover(card, ev) {
       + ' · <b>' + subHTML(nameOf(d.yl)) + ':</b> ' + vu(yv, unitOf(d.yl))
       + ' · <b>' + subHTML(nameOf(d.cl)) + ':</b> ' + vu(heatVal(d, xv, yv), unitOf(d.cl));
     const bad = (d.limits || []).filter(l => violates(l, xv, yv));
-    if (bad.length) msg += ' · <b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + subHTML(bad.map(l => l.label).join(', ')) + '</b>';
+    if (bad.length) msg += ' · <b class="hv-bad">verletzt: ' + subHTML(bad.map(l => l.label).join(', ')) + '</b>';
     box.innerHTML = msg;
   } else {
     let msg = '<b>' + subHTML(nameOf(d.xl)) + ':</b> ' + vu(xv, unitOf(d.xl));
@@ -124,7 +118,7 @@ export function showHover(card, ev) {
     if (d.ys.length === 1 && d.limits && d.limits.length) {
       const val = interp(d.x, d.ys[0].y, xv);
       const bad = d.limits.filter(l => violates(l, xv, val));
-      if (bad.length) msg += ' · <b style="color:' + window.__PALETTE__.bad + '">verletzt: ' + subHTML(bad.map(l => l.label).join(', ')) + '</b>';
+      if (bad.length) msg += ' · <b class="hv-bad">verletzt: ' + subHTML(bad.map(l => l.label).join(', ')) + '</b>';
     }
     box.innerHTML = msg;
   }

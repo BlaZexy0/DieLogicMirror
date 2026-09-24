@@ -7,7 +7,10 @@
    Verzweigung. Jede Kante ist ein Band, dessen Dicke der Wurzel aus dem
    Querschnitt folgt (nicht dem Querschnitt selbst — sonst verschwinden
    die Anschnitte neben dem Verteiler), und dessen Farbe die
-   Geschwindigkeit zeigt.
+   Geschwindigkeit zeigt: auf der Farbleiste `speed` von Blau (langsam)
+   über Teal und Gold nach Rot (schnell). Ein Urteil ist das nicht (die
+   Leiste reicht bis zum schnellsten Anschnitt dieses Angusses); geurteilt
+   wird in der Prüfliste.
 
    So liest man in einem Bild ab, was sonst drei Tabellen bräuchte: wo
    der Querschnitt springt, welcher Ast zu schnell wird, und wie weit
@@ -17,14 +20,16 @@
    Bibliothek, und im Ausdruck scharf. */
 
 import * as G from './graph.js';
-import { ramp } from '../part/colors.js';
+import { scale } from '../part/colors.js';
+import { fmt as fmtDe } from '../studio/format.js';
 
-/* Geschwindigkeit: ruhig und weit (Hausblau) → schnell und eng (Rot). */
-const V_STOPS = ['#2e6da4', '#3fc2b6', '#d4a908', '#b42318'];
-const css = rgb => 'rgb(' + rgb.map(v => Math.round(v * 255)).join(',') + ')';
-export const speedColor = (v, vMax) => css(ramp(V_STOPS, v / Math.max(vMax, 1e-6)));
+/* Geschwindigkeit: ruhig und weit (Blau) → schnell und eng (Rot), auf der
+   Farbleiste `speed` (js/part/colors.js), in jedem Farbschema dieselbe. */
+export const speedColor = (v, vMax) => scale('speed', v / Math.max(vMax, 1e-6));
 
-const fmt = (v, n = 1) => v.toLocaleString('de-DE', { maximumFractionDigits: n });
+/* Zahlen wie überall im Studio (js/studio/format.js) — hier mit einer
+   Nachkommastelle, wenn keine andere verlangt ist. */
+const fmt = (v, n = 1) => fmtDe(v, n);
 
 /**
  * Schema zeichnen.
@@ -93,8 +98,14 @@ export function flowChart(g, net, flow, opts = {}) {
   const parts = [];
   parts.push('<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" '
     + 'aria-label="Flussschema des Angusssystems">');
-  parts.push('<style>.cl{font:10px var(--mono,monospace);fill:#557786}'
-    + '.cn{font:600 10.5px system-ui,sans-serif;fill:#0d2933}</style>');
+  /* Schrift, Maßstab und Knotenrand folgen dem Farbschema (das SVG steht
+     im Dokument, die Tokens erreichen es); die Rückfallwerte sind die
+     Standardwerte der Rollen. Ein Urteil als Schrift nimmt die Textstufe
+     der Ampel. Die Bänder tragen die Skala, die Knoten ihre Artfarben. */
+  parts.push('<style>.cl{font:10px var(--mono,monospace);fill:var(--muted,#4c6870)}'
+    + '.cn{font:600 10.5px system-ui,sans-serif;fill:var(--text,#002733)}'
+    + '.cl.bad{fill:var(--bad-text,#b42318)}.ax{stroke:var(--border,#ccd4d6)}'
+    + '.nd{stroke:var(--surface,#fff);stroke-width:1.5}</style>');
 
   /* Bänder */
   for (const e of net.edges) {
@@ -152,12 +163,15 @@ export function flowChart(g, net, flow, opts = {}) {
     const x = X(dist[n.id] || 0), y = Y(row[n.id]);
     const meta = G.TYPES[n.type];
     parts.push('<circle cx="' + x + '" cy="' + y + '" r="' + (n.type === 'gate' ? 5.5 : 4.5)
-      + '" fill="' + meta.color + '" stroke="#fff" stroke-width="1.5"/>');
+      + '" fill="' + meta.color + '" class="nd"/>');
     if (n.type === 'root') {
       parts.push('<text class="cn" x="' + (x - 10) + '" y="' + (y + 3.5) + '" text-anchor="end">Pressrest</text>');
     }
-    if ((n.type === 'branch' || n.type === 'mirror') && n.children.length === 2) {
-      const t = fmt(n.ratio * 100, 0) + ':' + fmt((1 - n.ratio) * 100, 0);
+    /* Jede Gabel mit zwei Ästen trägt ihre Aufteilung — auch der Pressrest
+       mit zwei Abgängen, der im Auswahlfeld seinen Regler hat. */
+    if (n.children.length === 2) {
+      const r = n.ratio === undefined ? 0.5 : n.ratio;
+      const t = fmt(r * 100, 0) + ':' + fmt((1 - r) * 100, 0);
       if (fits(x, y - 12, t.length * 6.1)) {
         parts.push('<text class="cl" x="' + x + '" y="' + (y - 12) + '" text-anchor="middle">' + t + '</text>');
       }
@@ -166,31 +180,31 @@ export function flowChart(g, net, flow, opts = {}) {
 
   /* Anschnitte rechts beschriften: Fläche und Geschwindigkeit, Soll
      gegen Ist, und wann die Schmelze dort ankommt. Der späteste
-     Anschnitt wird rot, sobald die Spanne mehr als 15 % der Füllzeit
-     ausmacht — dieselbe Schwelle wie in der Prüfliste. */
+     Anschnitt steht als „schlecht" da, sobald die Spanne mehr als 15 % der
+     Füllzeit ausmacht — dieselbe Schwelle wie in der Prüfliste. */
   const tSpan = (flow.tLast - flow.tFirst) * 1000;
   const lateBad = gates.length > 1 && flow.fillTime > 0 && tSpan / flow.fillTime > 0.15;
   for (const r of gates) {
     const x = X(dist[r.id] || 0), y = Y(row[r.id]);
     const dev = r.ist - r.soll;
-    const col = Math.abs(dev) > 0.05 ? '#b42318' : '#557786';
+    const col = Math.abs(dev) > 0.05 ? 'cl bad' : 'cl';
     parts.push('<text class="cn" x="' + (x + 10) + '" y="' + (y - 2) + '">'
       + fmt(r.area, 0) + ' mm² · ' + fmt(r.v) + ' m/s</text>');
-    parts.push('<text class="cl" x="' + (x + 10) + '" y="' + (y + 11) + '" fill="' + col + '">'
+    parts.push('<text class="' + col + '" x="' + (x + 10) + '" y="' + (y + 11) + '">'
       + 'Soll ' + fmt(r.soll * 100, 0) + ' % · Ist ' + fmt(r.ist * 100, 0) + ' %</text>');
     if (Number.isFinite(r.tArrive)) {
-      const tc = lateBad && r.tArrive >= flow.tLast - 1e-9 ? '#b42318' : '#557786';
-      parts.push('<text class="cl" x="' + (x + 10) + '" y="' + (y + 24) + '" fill="' + tc + '">'
+      const tc = lateBad && r.tArrive >= flow.tLast - 1e-9 ? 'cl bad' : 'cl';
+      parts.push('<text class="' + tc + '" x="' + (x + 10) + '" y="' + (y + 24) + '">'
         + 'Ankunft ' + fmt(r.tArrive * 1000) + ' ms</text>');
     }
   }
 
   /* Maßstab unten */
   parts.push('<line x1="' + padL + '" y1="' + (H - 16) + '" x2="' + X(maxDist)
-    + '" y2="' + (H - 16) + '" stroke="#c9d6da"/>');
+    + '" y2="' + (H - 16) + '" class="ax"/>');
   for (let i = 0; i <= 4; i++) {
     const d = maxDist * i / 4;
-    parts.push('<line x1="' + X(d) + '" y1="' + (H - 20) + '" x2="' + X(d) + '" y2="' + (H - 12) + '" stroke="#c9d6da"/>');
+    parts.push('<line x1="' + X(d) + '" y1="' + (H - 20) + '" x2="' + X(d) + '" y2="' + (H - 12) + '" class="ax"/>');
     parts.push('<text class="cl" x="' + X(d) + '" y="' + (H - 3) + '" text-anchor="middle">'
       + fmt(d, 0) + '</text>');
   }

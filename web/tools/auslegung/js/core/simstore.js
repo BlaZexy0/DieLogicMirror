@@ -8,12 +8,13 @@
    `sim.data` null und `sim.error` die Meldung für den Anwender.
 
    Reihenfolge: initSim() abonniert den Zustand und muss VOR dem render()
-   der Seite abonnieren (main.js, single.js, Werkbank) — notify() ruft die
-   Abonnenten der Reihe nach, und die Diagramme sollen das frische Ergebnis
-   sehen. */
+   der Seite abonnieren (ui/page.js startPage, für Dashboard, Einzelseite
+   und Werkbank) — notify() ruft die Abonnenten der Reihe nach, und die
+   Diagramme sollen das frische Ergebnis sehen. */
 
 import { state, subscribe } from './state.js';
 import { simulateAir, SimError } from './airsim/simulate.js';
+import { ventGapEq } from './physics.js';
 
 export const sim = { status: 'idle', data: null, error: null };
 
@@ -28,7 +29,8 @@ export function refreshSim() {
   if (k === lastKey) return;   // Ergebnis passt schon (notify() ohne Änderung an Werten oder Kurve)
   lastKey = k;
   try {
-    sim.data = simulateAir(state.values, state.curve);
+    /* Die Kanäle als der gleichwertige Spalt, den die Simulation kennt. */
+    sim.data = simulateAir({ ...state.values, ventGap: ventGapEq(state.values) }, state.curve);
     sim.error = null;
     sim.status = 'ok';
   } catch (e) {

@@ -10,7 +10,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-const { fmt, fmtPlain } = await import('../../../web/tools/3d-studio/js/ui/controls.js');
+const { fmt, fmtPlain } = await import('../../../web/tools/3d-studio/js/studio/format.js');
 
 /* parseNumber ist modulintern — hier wortgleich nachgebildet, damit der
    Rundlauf ohne DOM prüfbar bleibt. */

@@ -5,26 +5,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createRequire } from 'node:module';
+import { site, ladeSkripte, themeLaden, auslegung, defaults } from './stubs/dashboard.mjs';
 
-const require = createRequire(import.meta.url);
-const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
-globalThis.window = globalThis;
-globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-require(path.join(site, 'shared/palette.js'));
-require(path.join(site, 'shared/theme.js'));
-require(path.join(site, 'shared/examples/machines.js'));
-require(path.join(site, 'shared/project.js'));
-require(path.join(site, 'shared/clampmodel.js'));
-const { theme } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/theme.js')));
-Object.assign(theme, globalThis.__THEME__);
-const { allFields } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/config/fields.js')));
-const pq2 = (await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/pq2.js')))).default;
-const { pqCore } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/charts/pq2.js')));
-const { injForceEff, pMaxMachine } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
+ladeSkripte();
+await themeLaden();
+const { default: pq2, pqCore } = await auslegung('charts/pq2.js');
+const { injForceEff, pMaxMachine, hydArea } = await auslegung('core/physics.js');
 
-const defaults = () => { const v = {}; for (const f of allFields()) v[f.key] = f.def; return v; };
 const calc = (v, tab, tab2) => { pq2.tab = tab; pq2.tab2 = tab2; return pq2.calc(v); };
 const maskOf = q => q.limits.find(l => l.mask);
 const closeTo = (a, b, tol = 1e-9) => assert.ok(Math.abs(a - b) <= tol * Math.max(1, Math.abs(b)), `${a} ≠ ${b}`);
@@ -42,7 +29,7 @@ test('pq2: v_p-Achse endet bei v_max und zeigt nur den montierten Kolben', () =>
     assert.ok(Math.abs(maskOf(q).fn(v.vmax)) < 1e-6, 'Maske endet bei v_max auf 0');
     assert.equal(q.feasibleSplit, undefined, 'kein „anderer Kolben-Ø" auf der v_p-Achse');
     const m = q.ys.find(s => /^Maschine/.test(s.n));
-    assert.ok(m && m.c === theme.chart.series4, 'Maschinenlinie bleibt eine Serie in Serienfarbe');
+    assert.ok(m && m.c === 'machine', 'Maschinenlinie bleibt eine Serie in der Sachfarbe der Maschine');
     /* Arbeitspunkt liegt im Bild */
     assert.ok(q.pt[0] > 0 && q.pt[0] <= v.vmax);
   }
@@ -120,7 +107,6 @@ test('pq2: eingestellter Akkumulatordruck skaliert Gießkraft, p₀, Hüllkurve 
   closeTo(pqCore(Object.assign({}, v, { pAccOp: 999 })).p0, c1.p0);
   closeTo(calc(Object.assign({}, v, { pAccOp: 999 }), 'q', 'ph').y1, 1.05 * v.pAcc);
   /* Antriebskolben aus dem Preset: 1300 kN / 190 bar ≈ 684,2 cm² (1 kN/bar = 100 cm²) */
-  const { hydArea } = await import(pathToFileURL(path.join(site, 'tools/auslegung/js/core/physics.js')));
   closeTo(hydArea(v), 1300 / 190 * 100);
 });
 
@@ -150,4 +136,18 @@ test('pq2: Arbeitspunkt aus der Schusskurve (Q = A_K·v₂ auf der Werkzeuglinie
   closeTo(qt.pt[0], c.Vag / Qop * 1000);
   /* Erklärung: Live-Werte vorhanden */
   const el = { querySelector: () => null }; pq2.renderMath(el, v, { v2 });
+});
+
+/* v₂ des Arbeitspunkts kommt aus der Schusskurve: ohne usesCurve fehlte der
+   Einzelseite des PQ² der Kurveneditor, und 🎯 überging die Kurve. Jedes
+   Diagramm, das o.shot liest, sagt es (23.09.). */
+test('Diagramme, die die Schusskurve lesen, melden usesCurve', async () => {
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const dir = path.join(site, 'tools/auslegung/js/charts');
+  for (const f of readdirSync(dir).filter(n => n.endsWith('.js'))) {
+    const src = readFileSync(path.join(dir, f), 'utf8');
+    if (/\bo\.shot\b|\bo && o\.shot\b|\{ shot \}/.test(src) && /export default/.test(src)) {
+      assert.match(src, /usesCurve:\s*true/, f + ' liest die Schusskurve, meldet aber kein usesCurve');
+    }
+  }
 });

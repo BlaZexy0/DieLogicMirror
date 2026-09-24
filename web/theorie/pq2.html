@@ -8,28 +8,23 @@
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
   <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
   <link rel="stylesheet" href="/shared/shared.css">
   <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
   <script defer src="/shared/vendor/katex/katex.min.js"></script>
-  <script defer src="/shared/vendor/katex/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore'})"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
+  <!-- .fig-wrap / .fig-cap: shared/shared.css -->
   <style>
-    .fig-wrap {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin: 1.25rem 0;
-    }
-    .fig-wrap img { display: block; width: 100%; border-radius: 6px 6px 0 0; }
-    .fig-cap {
-      font-size: 0.8rem;
-      color: var(--muted);
-      padding: 0.6rem 0.9rem;
-      border-top: 1px solid var(--border);
-      line-height: 1.5;
-    }
+    /* Ein breites Schema scrollt auf dem Handy in seinem Kasten, statt auf
+       Briefmarkengröße zu schrumpfen (die Beschriftung wäre dort 5 px hoch). */
+    .fig-scroll { overflow-x: auto; border-radius: 6px 6px 0 0; }
+    @media (max-width: 600px) { .fig-scroll img, .fig-scroll .svg-bild { min-width: 680px; } }
     .fig-wrap canvas { display: block; width: 100%; border-radius: 6px 6px 0 0; }
     .fig-wrap [hidden] { display: none !important; }
     .fig-controls {
@@ -41,7 +36,8 @@
       font-size: 0.85rem;
       color: var(--muted);
     }
-    .fig-controls input[type="range"] { flex: 1; accent-color: var(--warn-border); }
+    /* Der Regler stellt den Kolben-Ø, also die Maschinenlinie: ihre Rolle */
+    .fig-controls input[type="range"] { flex: 1; accent-color: var(--machine); }
     .fig-controls output { min-width: 6.5rem; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-body); }
   </style>
 </head>
@@ -105,26 +101,26 @@
       <div class="prose">
         <p>Druck und kinetische Energie sind ineinander umtauschbar: Wo die Strömung schnell wird,
           fällt der statische Druck, und umgekehrt. Im Schussaggregat wird dieser Tausch an vier
-          Stationen gespielt, vom Druckspeicher bis zum Anschnitt. Das Bild zeigt oben den Weg des
-          Öls und der Schmelze und darunter, aufgetragen über demselben Weg, wie statischer Druck
-          und Geschwindigkeit sich dabei ablösen:</p>
+          Stationen gespielt, vom Druckspeicher bis zum Anschnitt. Das Bild zeigt den Weg des Öls
+          und der Schmelze durch diese vier Stationen:</p>
       </div>
       <div class="fig-wrap">
-        <img src="/assets/theorie/pq2-druckkette.svg" alt="Druckkette des Schussaggregats: Druckspeicher, Drossel, Antriebszylinder, Füllkammer mit Gießkolben, Anschnitt und Kavität; darunter der Verlauf von statischem Druck und Geschwindigkeit entlang desselben Wegs" loading="lazy">
+        <div class="fig-scroll"><img src="/assets/theorie/pq2-druckkette.svg" alt="Druckkette des Schussaggregats: der Druckspeicher über dem Antriebszylinder, dazwischen die Drossel; die Kolbenstange schiebt den Gießkolben durch die Füllkammer, die Einfüllöffnung direkt vor ihm, die Kammer endet bündig an der Trennebene; von dort steigt der Anguss über den Anschnitt ins Gussteil" loading="lazy"></div>
         <div class="fig-cap"><b>Die Druckkette des Schussaggregats, und was Bernoulli daraus macht.</b>
           ① Im <b>Druckspeicher</b> hält das Gaspolster das Öl auf p<sub>acc</sub>: nichts
           bewegt sich, reiner Druck.
-          ② Auf dem Weg zum <b>Antriebszylinder</b> kostet die Drossel quadratisch mit der
-          Ölgeschwindigkeit, p<sub>hyd</sub> = p<sub>acc</sub> − K<sub>v</sub>·v².
-          ③ Das Kolbenpaar übersetzt den Öldruck über das Flächenverhältnis auf die Schmelze in
-          der <b>Füllkammer</b>, p<sub>m</sub> = p<sub>hyd</sub>·A<sub>h</sub>/A<sub>K</sub>:
-          Der große Antriebskolben und der kleine Gießkolben machen aus 190 bar Öl gut 700 bar
-          Metalldruck. In der Kammer ist die Schmelze langsam (v<sub>p</sub> wenige m/s), der
-          Druck ist praktisch rein statisch.
-          ④ Erst am <b>Anschnitt</b> schlägt Bernoulli zu: Die Engstelle setzt den statischen
-          Metalldruck in Geschwindigkeit um, p<sub>m</sub> → ½ρv<sub>a</sub>²; im Verlauf unten
-          fällt die Drucklinie dort auf den Kavitätsdruck ≈ 0, und die Geschwindigkeit springt
-          von v<sub>p</sub> auf v<sub>a</sub>.</div>
+          ② Auf dem Weg hinunter in den <b>Antriebszylinder</b> schießt das Öl durch die Drossel
+          und verliert dabei quadratisch mit seiner Geschwindigkeit,
+          p<sub>hyd</sub> = p<sub>acc</sub> − K<sub>v</sub>·v².
+          ③ Die Schmelze kommt durch die Einfüllöffnung gleich vor dem Gießkolben in die
+          <b>Füllkammer</b>. Über die Kolbenstange übersetzt das Kolbenpaar den Öldruck auf sie,
+          p<sub>m</sub> = p<sub>hyd</sub>·A<sub>h</sub>/A<sub>K</sub>: Der große Antriebskolben und
+          der kleine Gießkolben machen aus 190 bar Öl gut 700 bar Metalldruck. In der Kammer ist
+          die Schmelze langsam (v<sub>p</sub> wenige m/s), der Druck ist praktisch rein statisch.
+          ④ Die Kammer endet bündig an der Trennebene, von dort steigt der Anguss zum
+          <b>Anschnitt</b>. Erst hier schlägt Bernoulli zu: Die Engstelle setzt den statischen
+          Metalldruck in Geschwindigkeit um, p<sub>m</sub> → ½ρv<sub>a</sub>²; im Gussteil
+          dahinter ist vom Druck fast nichts übrig, die Schmelze schießt mit v<sub>a</sub> ein.</div>
       </div>
       <div class="prose">
         <p>Die Stationen ①–③ sind die <em>Maschine</em>: Sie bestimmen, wie viel Druck bei welchem
@@ -155,13 +151,13 @@
       </div>
       <div class="eq">$$p_{m}(Q) = p_{0} \cdot \left( 1 - \frac{Q^{2}}{Q^{2}_{\text{dry}}} \right) \qquad p_{0} = \frac{F_{G}}{A_{K}}, \quad Q_{\text{dry}} = A_{K} \cdot v_{\text{dry}}$$</div>
       <div class="fig-wrap">
-        <img src="/assets/theorie/pq2-maschine.svg" alt="Maschinenlinie des montierten Kolbens unter der grauen Hüllkurven-Front" loading="lazy">
-        <div class="fig-cap"><b>Die Maschinenlinie (Standardwerte, Ø 150):</b> Die goldene Parabel
+        <img src="/assets/theorie/pq2-maschine.svg" alt="Maschinenlinie des montierten Kolbens unter der Front der Hüllkurve" loading="lazy">
+        <div class="fig-cap"><b>Die Maschinenlinie (Standardwerte, Ø 150):</b> Die Parabel der Maschine
           fällt vom statischen Gießdruck p₀ = 735,7 bar auf null beim Trockenschuss-Volumenstrom
           Q<sub>dry</sub> = 150,2 l/s. Alles unterhalb der Linie kann die Maschine mit diesem
-          Kolben liefern (gedrosselt), alles oberhalb nicht. Die graue Front ist die Grenze über
-          <em>alle</em> Kolben-Ø (Abschnitt 4); die goldene Linie berührt sie in genau einem
-          Punkt.</div>
+          Kolben liefern (gedrosselt), alles oberhalb nicht. Die Front der abgedeckten Fläche, die
+          Hüllkurve, ist die Grenze über <em>alle</em> Kolben-Ø (Abschnitt 4); die Maschinenlinie
+          berührt sie in genau einem Punkt.</div>
       </div>
       <div class="prose">
         <p>Wichtig: Jeder Kolben-Ø hat <em>seine eigene</em> Maschinenlinie. Ein kleinerer Kolben
@@ -189,9 +185,10 @@
       <div class="fig-wrap">
         <img src="/assets/theorie/pq2-werkzeug.svg" alt="Drei Werkzeuglinien für kleine, gewählte und große Anschnittfläche" loading="lazy">
         <div class="fig-cap"><b>Der A<sub>a</sub>²-Hebel:</b> Dieselbe Massenbilanz, drei
-          Anschnittflächen. Die pinke Linie (A<sub>a</sub> = 1.200 mm²) verlangt für jeden
-          Volumenstrom mehr als das Doppelte an Druck wie die gewählte (1.800 mm², türkis); die
-          graue (2.700 mm²) weniger als die Hälfte: Die Fläche steht im Nenner im Quadrat.</div>
+          Anschnittflächen. Die gestrichelte Linie (A<sub>a</sub> = 1.200 mm²) verlangt für jeden
+          Volumenstrom mehr als das Doppelte an Druck wie die gewählte (1.800 mm², durchgezogen);
+          die punktierte (2.700 mm²) weniger als die Hälfte: Die Fläche steht im Nenner im
+          Quadrat.</div>
       </div>
       <div class="insight-box">
         <div class="label">Kernaussage</div>
@@ -226,9 +223,9 @@
       <div class="prose">
         <p>Die Konstante a hat die Einheit einer <b>Leistung</b> (Standardwerte: 4,25 MW; sie steht
           in jeder Diagramm-Unterzeile). Jede Kolben-Maschinenlinie berührt die Hüllkurve in genau
-          einem Punkt; im Bild von Abschnitt 2 ist das der Berührpunkt der goldenen Parabel mit
-          der grauen Front. Weil der Maschine nur die Kolben-Ø zwischen Ø min und Ø max zur
-          Verfügung stehen, folgt die graue Front außerhalb der beiden Berührpunkte der Parabel
+          einem Punkt; im Bild von Abschnitt 2 ist das der Berührpunkt der Maschinenlinie mit
+          der Front der Hüllkurve. Weil der Maschine nur die Kolben-Ø zwischen Ø min und Ø max
+          zur Verfügung stehen, folgt die Front außerhalb der beiden Berührpunkte der Parabel
           des jeweiligen Grenz-Kolbens.</p>
       </div>
       <div class="insight-box">
@@ -245,26 +242,26 @@
           der namensgebende Trick des PQ²-Diagramms, und so zeigt es auch das Grundbild:</p>
       </div>
       <div class="fig-wrap">
-        <img id="grundImg" src="/assets/theorie/pq2-grund.svg" alt="PQ²-Grundbild im Q²-Maßstab: Maschinenlinie und Werkzeuglinie als Geraden, Hüllkurve als graue Front, Schnittpunkt markiert" loading="lazy">
+        <img id="grundImg" data-live src="/assets/theorie/pq2-grund.svg" alt="PQ²-Grundbild im Q²-Maßstab: Maschinenlinie und Werkzeuglinie als Geraden, Hüllkurve als Front der abgedeckten Fläche, Schnittpunkt markiert" loading="lazy">
         <canvas id="grundCanvas" width="880" height="560" hidden></canvas>
         <div class="fig-controls" id="grundControls" hidden>
           <label for="grundDiam">Kolben-Ø</label>
           <input type="range" id="grundDiam" min="120" max="200" step="1" value="150">
           <output id="grundDiamOut">Ø 150 mm</output>
         </div>
-        <div class="fig-cap"><b>Das Grundbild im Q²-Maßstab (Standardwerte):</b> Die goldene
+        <div class="fig-cap"><b>Das Grundbild im Q²-Maßstab (Standardwerte):</b> Die
           <b>Maschinenlinie</b> ist eine Gerade von (0, p₀) zur Nullstelle bei Q²<sub>dry</sub>;
-          die türkise <b>Werkzeuglinie</b> eine Ursprungsgerade mit Steigung C<sub>W</sub>. Ihr
-          Schnitt ist der markierte <b>Arbeitspunkt</b>. Die graue Fläche ist für keinen Kolben-Ø
-          erreichbar: Die Hüllkurve a/Q wird im Q²-Maßstab zur Kurve a/√(Q²), die Berührlogik
+          die <b>Werkzeuglinie</b> eine Ursprungsgerade mit Steigung C<sub>W</sub>. Ihr
+          Schnitt ist der markierte <b>Arbeitspunkt</b>. Die abgedeckte Fläche ist für keinen
+          Kolben-Ø erreichbar: Die Hüllkurve a/Q wird im Q²-Maßstab zur Kurve a/√(Q²), die Berührlogik
           bleibt. <b>Der Regler wechselt den montierten Kolben-Ø:</b> Ein kleinerer Kolben hebt
           p₀ und senkt Q²<sub>dry</sub> (steile Gerade), ein größerer macht das Gegenteil; jede
-          Maschinengerade bleibt unter der grauen Front. Die Front selbst bewegt sich nicht: Sie
+          Maschinengerade bleibt unter der Front der Hüllkurve. Die Front selbst bewegt sich nicht: Sie
           ist eine Eigenschaft der Maschine, nicht des Kolbens.</div>
       </div>
       <div class="prose">
-        <p>Lesart: Alles unterhalb der grauen Front ist mit <em>irgendeinem</em> Kolben
-          erreichbar, alles unterhalb der goldenen Geraden mit dem <em>montierten</em>. Wo Angebot
+        <p>Lesart: Alles unterhalb der Front der Hüllkurve ist mit <em>irgendeinem</em> Kolben
+          erreichbar, alles unterhalb der Maschinengeraden mit dem <em>montierten</em>. Wo Angebot
           und Nachfrage sich treffen, stellt sich der ungedrosselte Prozess ein. Gleichsetzen
           p<sub>m</sub> = p<sub>W</sub> und Auflösen nach Q liefert den Arbeitspunkt in
           geschlossener Form:</p>
@@ -294,18 +291,18 @@
           weniger Volumenstrom). Geschwindigkeits-Grenzen werden zu <em>horizontalen</em> Linien
           auf der Druckachse, und zwar <b>unabhängig von der Anschnittfläche</b>: p(v<sub>a</sub>)
           ist schlicht der Staudruck, den es braucht, um die Schmelze auf v<sub>a</sub> zu bringen.
-          Zusammen entsteht ein Rechteck; geschnitten mit der Hüllkurve bleibt das grüne
+          Zusammen entsteht ein Rechteck; geschnitten mit der Hüllkurve bleibt das
           <b>machbare Band</b>, dieselbe Darstellung wie im (φ, λ)-Auslegungsfenster.</p>
       </div>
       <div class="fig-wrap">
         <img src="/assets/theorie/pq2-q.svg" alt="PQ²-Diagramm mit machbarem Band und allen Grenzen" loading="lazy">
         <div class="fig-cap"><b>Das vollständige Bild (Achsenmodus „Q"):</b> Das Grundbild
-          (hier im Q-Maßstab, beide Kennlinien als Parabeln), jetzt mit allen Grenzen. Das grüne
+          (hier im Q-Maßstab, beide Kennlinien als Parabeln), jetzt mit allen Grenzen. Das
           machbare Band liegt zwischen „t<sub>f</sub> max" (links) und der Entlüftungsbedingung
           „t<sub>f</sub> ≥ 53,34 ms" (rechts), nach unten begrenzt von „v<sub>a</sub> min", nach
-          oben von „v<sub>a</sub> max". Schraffierte Flächen verletzen je eine Grenze, die graue
-          Fläche ist für keinen Kolben erreichbar. Oberhalb der Maschinenlinie ist das Band heller
-          gefüllt: „machbar (anderer Kolben-Ø)". Die türkise Werkzeuglinie durchquert das Band;
+          oben von „v<sub>a</sub> max". Schraffierte Flächen verletzen je eine Grenze, die
+          abgedeckte Fläche jenseits der Hüllkurve ist für keinen Kolben erreichbar. Oberhalb der Maschinenlinie ist das Band heller
+          gefüllt: „machbar (anderer Kolben-Ø)". Die Werkzeuglinie durchquert das Band;
           der Schnittpunkt liegt hier knapp <em>außerhalb</em> (über v<sub>a</sub> max, 69 m/s
           statt 50); die Prüfliste im Dashboard meldet genau das.</div>
       </div>
@@ -348,9 +345,9 @@
       <div class="fig-wrap">
         <img src="/assets/theorie/pq2-pw.svg" alt="PQ²-Diagramm im Leistungsmodus P·Q" loading="lazy">
         <div class="fig-cap"><b>Achsenmodus „P·Q":</b> Die Hüllkurve wird zur Horizontalen bei
-          y = a; die goldene Maschinenkurve des gewählten Kolbens berührt ihr Maximum exakt auf
+          y = a; die Maschinenkurve des gewählten Kolbens berührt ihr Maximum exakt auf
           dieser Linie (bei v<sub>p</sub> = v<sub>dry</sub>/√3). Links und rechts fällt die
-          schwarze Frontlinie ab: Dort begrenzen der kleinste bzw. größte Kolben. Das grüne
+          Frontlinie der Hüllkurve ab: Dort begrenzen der kleinste bzw. größte Kolben. Das
           machbare Band und alle Grenzen wandern konsistent mit.</div>
       </div>
 
@@ -365,7 +362,7 @@
       </div>
       <div class="eq">$$A_{a,\min} = \frac{V_{a}}{t_{f,\max} \cdot v_{a,\max}} \qquad A_{a,\max} = \frac{V_{a}}{t_{f,\min} \cdot v_{a,\min}}$$</div>
       <div class="prose">
-        <p>Je größer das grüne Band, desto mehr lässt sich später im Betrieb mit leicht änderbaren
+        <p>Je größer das machbare Band, desto mehr lässt sich später im Betrieb mit leicht änderbaren
           Größen erreichen (Leistungsstufe, Metalldruck, Temperatur), ohne schwer änderbare
           anzufassen (Kolben-Ø, Anschnittfläche, Entlüftung: alles, was Werkzeug- oder
           Maschinenumbau bedeutet). Die Spanne [A<sub>a,min</sub>, A<sub>a,max</sub>] rechnet der
@@ -403,8 +400,11 @@
 </div>
 
 <!-- Interaktives Grundbild: dieselben Module wie das Dashboard, gezeichnet
-     mit der simplify-Reduktion aus tools/gen-theory-svgs.mjs (nur Maschinen-
-     linie, Werkzeuglinie, Hüllkurven-Maske). Ohne JS bleibt das statische SVG. -->
+     mit der simplify-Reduktion aus scripts/gen-theory-svgs.mjs (nur Maschinen-
+     linie, Werkzeuglinie, Hüllkurven-Maske). Ohne JS bleibt das statische SVG
+     (data-live: svgfarben.js lässt es aus, die Seite zeichnet es selbst).
+     Die Farben sind die Rollen der Diagramme aus shared/theme.js; wechselt
+     das Farbschema, zeichnet die Seite das Bild neu. -->
 <script src="/shared/theme.js"></script>
 <script src="/shared/examples/machines.js"></script>
 <script src="/shared/examples/alloys.js"></script>
@@ -416,7 +416,10 @@
   import { drawAny } from '/tools/auslegung/js/render/draw.js';
   import pq2 from '/tools/auslegung/js/charts/pq2.js';
 
-  Object.assign(theme, window.__THEME__);   // nur Chart-Farben, keine CSS-Variablen
+  /* theme ist dasselbe Objekt wie window.__THEME__ (core/theme.js): ein
+     Schemawechsel leitet seine Rollen an Ort und Stelle neu ab. Sollte es
+     einmal eine Kopie sein, holt diese Zeile die lebenden Unterobjekte. */
+  if (theme !== window.__THEME__) Object.assign(theme, window.__THEME__);
 
   const values = {};
   for (const f of allFields()) values[f.key] = f.def;
@@ -464,6 +467,9 @@
   }
 
   slider.addEventListener('input', render);
+  /* Farbschema gewechselt: die Rollen sind schon neu abgeleitet (schemes.js
+     ruft __THEME__.derive()), das Bild muss nur neu gezeichnet werden. */
+  document.addEventListener('dielogic:scheme', () => { if (!canvas.hidden) render(); });
   /* Erst umschalten, wenn das interaktive Bild wirklich steht — sonst wäre
      die statische Erklärgrafik weg und nichts an ihrer Stelle. */
   if (render()) {

@@ -52,7 +52,8 @@ keine Arbeitsebene: die Enden bewegen sich frei im Raum. Beim Kanal wandern auf 
 zugleich, er behält dann Länge und Richtung.</li>
 <li>Der <b>Pfeil</b> am Kühlstich setzt Spitze und Richtung neu: anklicken, dann die neue Stelle auf der
 Abstandsfläche.</li>
-<li><b>Entf</b> entfernt die Auswahl, <b>Strg+Z</b> holt sie zurück, <b>Esc</b> bricht das Setzen ab.</li>
+<li><b>Entf</b> entfernt die Auswahl, <b>Strg+Z</b> holt sie zurück, <b>Esc</b> bricht das Setzen oder einen
+Zug ab (das Ende springt zurück).</li>
 </ul>
 <p>Gesetzt wird im Modus „Setzen": Dort steht die Abstandsfläche im Bild. Wer in einem anderen Modus
 einen Chip oder den Pfeil wählt, landet dort.</p>
@@ -65,20 +66,25 @@ einen Chip oder den Pfeil wählt, landet dort.</p>
 <li><b>Blick</b>: auf die Kamera zu, so, wie man gerade schaut</li>
 <li><b>X</b>, <b>Y</b>, <b>Z</b>: entlang der Achse, mit dem Vorzeichen, das vom Bauteil weg zeigt</li>
 </ul>
-<p>Die Wahl gilt für neu gesetzte Stiche und für die Automatik; bei „Normale" nimmt die Automatik den
-Feldgradienten an der Stelle. In der Form laufen Kühlstiche meist entlang der Öffnungsrichtung. Die
-Normale führt in einer Tasche quer durch den Hohlraum und auf der anderen Seite wieder ins Bauteil.
-Solche Stiche zeigt die Prüfung.</p>
+<p>Die Wahl gilt für neu gesetzte Stiche und für die Automatik; bei „Normale" zählt der Feldgradient an
+der Stelle, auch wenn man von innen auf die Fläche schaut (aus einer Tasche heraus). In der Form laufen
+Kühlstiche meist entlang der Öffnungsrichtung. Die Normale führt in einer Tasche quer durch den Hohlraum
+und auf der anderen Seite wieder ins Bauteil. Solche Stiche zeigt die Prüfung.</p>
 </section>
 <section data-help-anchor="automatik">
 <h3>Automatik</h3>
 <p>Jede Stelle im Bauteil soll eine Bohrung in der Nähe haben, dicke Stellen zuerst: die Zellen des
 Bauteils zählen mit ihrer Wandstärke, die Bohrungen wandern auf der Abstandsfläche so, dass die
 gewichteten Abstände im Bauteil gleichmäßig klein werden. Richtung und Maße kommen von den
-Kühlstich-Vorgaben oben; von Hand gesetzte Stiche bleiben.</p>
-<p><b>Stichabstand min.</b>: näher kommen sich zwei Bohrungen nicht. Er ist nie kleiner als
-1,5 × Durchmesser: Zwei Bohrungen, die sich berühren, sind eine. Liegt der Regler darunter, sagt die
-Zeile unter dem Knopf, womit gerechnet wird.</p>
+Kühlstich-Vorgaben oben.</p>
+<p>Gesetzt wird nur, was die <b>Prüfung</b> besteht: ein Stich mit Vorgabemaßen muss an der Stelle auf seiner
+ganzen Länge den Mindest-Wandabstand halten (in einer Tasche liefe er sonst quer durch den Hohlraum auf die
+Wand gegenüber zu). Was schon steht, bleibt und wird auf Abstand gehalten: von Hand gesetzte Stiche, Kanäle
+und, ohne „Vorherige automatische ersetzen", die automatischen eines früheren Laufs. Passen nicht so viele,
+setzt die Automatik weniger und sagt es in der Zeile unter dem Knopf.</p>
+<p><b>Stichabstand min.</b>: näher kommen sich zwei Bohrungsachsen nicht, auf ihrer ganzen Länge. Er ist
+nie kleiner als 1,5 × Durchmesser: Zwei Bohrungen, die sich berühren, sind eine. Liegt der Regler darunter,
+sagt die Zeile unter dem Knopf, womit gerechnet wird.</p>
 <p>„Letzter Lauf der Automatik" (im Modus „Prüfung") nennt den gewichteten mittleren und den größten
 Abstand einer Bauteilzelle zur nächsten Bohrungsspitze.</p>
 </section>
@@ -86,7 +92,8 @@ Abstand einer Bauteilzelle zur nächsten Bohrungsspitze.</p>
 <h3>Prüfung</h3>
 <p>Der <b>Wandabstand</b> ist der kleinste Abstand der Bohrungswand zur Kavität, aus dem Feld entlang der
 Achse abgetastet. Die Liste nennt jedes Element, das den Mindest-Wandabstand unterschreitet, das engste
-zuerst. Ein Klick wählt es und holt es ins Bild. Im Viewport stehen diese Elemente in der Warnfarbe,
+zuerst. Ein Klick wählt es und holt es ins Bild. Im Viewport stehen diese Elemente in der Farbe ihres
+Urteils („knapp" unter dem Mindest-Wandabstand, „schlecht" beim Durchbruch; die Legende nennt beide),
 in jedem Modus, auch während man zieht.</p>
 <ul>
 <li><b>unter dem Mindest-Wandabstand</b>: näher an der Kavität als eingestellt</li>
@@ -104,8 +111,9 @@ Bohrungen ohne sie.</p>
 </section>
 <section data-help-anchor="dateien">
 <h3>Dateien</h3>
-<p><b>Speichern</b> legt den Plan als JSON ab: Achsabstand, Elemente mit Ort, Richtung und Maßen, dazu ein
-selbst eingetragener Mindest-Wandabstand. <b>Exportieren → STL</b> sind die Bohrungen als geschlossene
+<p><b>Speichern</b> legt den Plan als JSON ab: Achsabstand, Elemente mit Ort, Richtung und Maßen, die
+Vorgaben für neue Elemente (mit „Auto" hängt an ihnen der Mindest-Wandabstand) und ein selbst eingetragener
+Mindest-Wandabstand. <b>Exportieren → STL</b> sind die Bohrungen als geschlossene
 Körper, etwa zum Abziehen vom Formeinsatz im CAD. Solange nichts gespeichert ist, hebt der Browser einen
 Entwurf je Bauteil auf und bietet ihn beim nächsten Mal an.</p>
 </section>`;

@@ -18,10 +18,15 @@
    daraus die Verkürzung (von selbst, weil die Bildschirmanteile kürzer
    werden) und die Deckkraft: was nach hinten zeigt, wird blasser. */
 
+/* Die Farben sind die Achsenrollen als Tokens (shared.css): das SVG steht
+   im Dokument, ein Farbschema erreicht es also ohne Neuzeichnen. Dieselben
+   Farben wie die Achsenpfeile der Griffe und die Entformrichtungen
+   (js/part/colors.js); keine davon ist eine Ampelfarbe, X ist also kein
+   Fehler und Y kein „gut". */
 const AXES = [
-  { label: 'X', dir: [1, 0, 0], color: '#b42318' },
-  { label: 'Y', dir: [0, 1, 0], color: '#4c9f70' },
-  { label: 'Z', dir: [0, 0, 1], color: '#2e6da4' }
+  { label: 'X', dir: [1, 0, 0], color: 'var(--axis-x, #ac6eef)' },
+  { label: 'Y', dir: [0, 1, 0], color: 'var(--axis-y, #68a7cc)' },
+  { label: 'Z', dir: [0, 0, 1], color: 'var(--axis-z, #2e65a0)' }
 ];
 
 const SIZE = 74, C = SIZE / 2, R = 22;
@@ -33,8 +38,8 @@ export function mountAxes(container) {
   el.innerHTML = '<svg viewBox="0 0 ' + SIZE + ' ' + SIZE + '" width="' + SIZE + '" height="' + SIZE
     + '" aria-hidden="true">'
     + AXES.map(a => '<line x1="' + C + '" y1="' + C + '" x2="' + C + '" y2="' + C
-      + '" stroke="' + a.color + '" stroke-width="1.8" stroke-linecap="round"/>').join('')
-    + AXES.map(a => '<circle cx="' + C + '" cy="' + C + '" r="7.5" fill="' + a.color + '"/>').join('')
+      + '" style="stroke:' + a.color + '" stroke-width="1.8" stroke-linecap="round"/>').join('')
+    + AXES.map(a => '<circle cx="' + C + '" cy="' + C + '" r="7.5" style="fill:' + a.color + '"/>').join('')
     + AXES.map(a => '<text x="' + C + '" y="' + C + '" text-anchor="middle" dominant-baseline="central" '
       + 'fill="#fff" font-size="9" font-weight="700" font-family="system-ui,sans-serif">'
       + a.label + '</text>').join('')

@@ -56,6 +56,30 @@ export const DEFAULT_PROCESS = {
 
 const lambdaOf = re => (re < 2300 ? 64 / Math.max(re, 1e-3) : 0.316 / Math.pow(re, 0.25));
 
+/* Welcher Anteil des Schritts von sa bis sb hinter s0 liegt, also außerhalb
+   des Pressrests (js/runner/curve.js, markBiscuit). */
+const outside = (sa, sb, s0 = 0) => (sb <= s0 ? 0 : sa >= s0 ? 1 : (sb - s0) / Math.max(sb - sa, 1e-12));
+
+/** Volumen der Kanäle in mm³ — ohne das Stück im Pressrest: das ist
+    Pressrest, und als solcher zählt es schon (π/4·d²·Dicke). Doppelt
+    gezählt waren beim Beispiel „Zwei Anschnitte" 24 von 113 cm³. */
+export function runnerVolume(net) {
+  let v = 0;
+  for (const e of net.edges) {
+    const secs = e.sections;
+    for (let i = 0; i < secs.length - 1; i++) {
+      const a = secs[i], b = secs[i + 1];
+      const k = outside(a.s, b.s, e.s0);
+      if (k <= 0) continue;
+      /* Im angeschnittenen Schritt: der Querschnitt am Mantel linear
+         dazwischen, dann die Trapezregel über den Rest. */
+      const aIn = k < 1 ? b.area + (a.area - b.area) * k : a.area;
+      v += (aIn + b.area) / 2 * (b.s - a.s) * k;
+    }
+  }
+  return v;
+}
+
 /** Volumenstrom in m³/s aus Gussvolumen (cm³) und Füllzeit (ms). */
 export const flowRate = proc =>
   Math.max(proc.volume, 1e-6) * 1e-6 / Math.max(proc.fillTime, 1) * 1000;
@@ -97,8 +121,12 @@ function edgeLoss(edge, Q, mat, cBranch, inState) {
     out.friction += lambdaOf(re) * (ds / Math.max(dh, 1e-6)) * rho / 2 * vm * vm;
     /* Laufzeit der Front durch diesen Schritt: die Schmelze füllt den
        Kanal mit dem Strom, der in diesem Ast fließt — je enger, desto
-       schneller ist sie durch. */
-    if (vm > 1e-9) out.time += ds / vm;
+       schneller ist sie durch. Gezählt ab dem Mantel des Pressrests (s0
+       aus js/runner/curve.js): bei „Kammer voll" steht die Schmelze dort
+       schon; von seiner Mitte an gerechnet kam jede Ankunft um die Zeit
+       durch den Pressrest zu spät, 2 bis 4 ms. */
+    const run = outside(a.s, b.s, edge.s0);
+    if (vm > 1e-9 && run > 0) out.time += ds * run / vm;
 
     const kappa = (a.kappa + b.kappa) / 2;
     if (kappa > 1e-9) {
@@ -143,7 +171,7 @@ const parallel = list => {
  *   proc Prozessgrößen (DEFAULT_PROCESS)
  */
 export function analyseFlow(g, net, proc) {
-  const mat = ALLOYS[proc.alloy] || ALLOYS.al;
+  const mat = Object.hasOwn(ALLOYS, proc.alloy) ? ALLOYS[proc.alloy] : ALLOYS.al;
   const Q = flowRate(proc);
   const byTo = new Map();
   for (const e of net.edges) byTo.set(e.toId, e);
@@ -264,13 +292,7 @@ export function analyseFlow(g, net, proc) {
     dp: dpList.length ? Math.max(...dpList) : 0,
     dpMin: dpList.length ? Math.min(...dpList) : 0,
     vGateMean: totalArea > 0 ? Q / (totalArea * 1e-6) : 0,
-    runnerVolume: net.edges.reduce((a, e) => {
-      let v = 0;
-      for (let i = 0; i < e.sections.length - 1; i++) {
-        v += (e.sections[i].area + e.sections[i + 1].area) / 2 * (e.sections[i + 1].s - e.sections[i].s);
-      }
-      return a + v;
-    }, 0)
+    runnerVolume: runnerVolume(net)
   };
 }
 

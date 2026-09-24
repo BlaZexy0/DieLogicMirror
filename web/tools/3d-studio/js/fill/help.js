@@ -20,7 +20,8 @@ Rechteck liegt in der Wandebene: <b>Breite</b> quer, <b>Höhe</b> längs.</p>
 <ul>
 <li><b>Punkt ziehen</b>: der Anschnitt rutscht auf der Wand (in der Wandebene).</li>
 <li><b>Pfeil anklicken</b>: den Anschnitt an eine andere Stelle des Bauteils setzen.</li>
-<li><b>Entf</b> entfernt die Auswahl, <b>Strg+Z</b> holt sie zurück, <b>Esc</b> bricht das Setzen ab.</li>
+<li><b>Entf</b> entfernt die Auswahl, <b>Strg+Z</b> holt sie zurück, <b>Esc</b> bricht das Setzen oder einen
+Zug ab (der Anschnitt springt zurück).</li>
 </ul>
 </section>
 <section data-help-anchor="vorgaben">
@@ -36,6 +37,10 @@ bezogen auf den Mittelwert, schneller oder langsamer; wer eine Zelle zuerst erre
 <p>„füllt … %" im Auswahlfeld ist, was dabei herauskommt: der Anteil des Volumens, den dieser Anschnitt
 tatsächlich füllt. Die Naht zwischen zwei Anschnitten liegt dort, wo beide Fronten zugleich ankommen.
 Ein Anschnitt mit ⚠ trifft kaum eine Rasterzelle: feiner rastern oder höher machen.</p>
+<p>Zwei Anschnitte füllen <b>nichts</b> und stehen mit ⚠ in der Liste und unter „Füllung": einer, der
+nicht auf dem Bauteil sitzt (seine Mitte liegt mehr als zwei Zellkanten neben der Wand, etwa nach einem Zug
+über eine Kante hinaus), und einer ohne Anteil am Strom, weil die festen Anteile der anderen schon 100 %
+ergeben. Ergeben sie mehr, wird im Verhältnis gekürzt.</p>
 </section>
 <section data-help-anchor="drehung">
 <h3>Drehung</h3>
@@ -47,7 +52,8 @@ Ein Anschnitt mit ⚠ trifft kaum eine Rasterzelle: feiner rastern oder höher m
 die halbe Wanddicke ist ein guter Wert. Feiner dauert länger; beim Laden wird sie aus dem Bauteil
 vorgeschlagen (halbe Wanddicke 2V/A), ein selbst gesetzter Wert überlebt ein neues Bauteil.</p>
 <p>Das Raster entsteht beim ersten <b>Rechnen</b>: eng um das Teil, zwei Zellen Rand. Wer die Zellkante
-danach ändert, bekommt <b>Neu rastern</b>; bis dahin zeigt das Bild das vorige Raster. Nach unten begrenzt
+danach ändert, bekommt <b>Neu rastern</b>; bis dahin zeigt das Bild das vorige Raster. Wird gerade gerastert,
+gilt eine neu eingetippte Kante sofort: das Raster beginnt mit ihr von vorn. Nach unten begrenzt
 nur der Speicher: mehr als 16 Mio. Rasterpunkte gibt es nicht; dann wird die Kante angehoben, und die
 Zeile unter dem Feld sagt es schon beim Eintippen. Was das Raster kosten wird (Rasterpunkte, Speicher),
 steht unter <b>Raster</b>, bevor gerechnet wird.</p>
@@ -71,20 +77,25 @@ sie abbricht; dann wartet sie wieder auf den Knopf.</p>
 <section data-help-anchor="ansichten">
 <h3>Drei Ansichten</h3>
 <ul>
-<li><b>Füllgrad</b>: Bauteil nach Füllgrad gefärbt (früh blau, spät rot); was über dem Regler liegt,
-bleibt grau.</li>
-<li><b>Füllkörper</b>: die Schmelze beim gewählten Füllgrad als Körper, das Bauteil durchscheinend.</li>
+<li><b>Füllzeit</b>: Bauteil danach gefärbt, wann die Front ankommt (früh blau, spät rot, die Skala
+im Bild), als Anteil der Füllung; auf der Werkbank mit der Zeit der Schusskurve. Was über dem
+Füllgrad-Regler liegt, behält das Grau des Bauteils.</li>
+<li><b>Füllkörper</b>: die Schmelze beim gewählten Füllgrad als Körper in der Farbe der Schmelze,
+das Bauteil durchscheinend.</li>
 <li><b>Bauteil</b>: nur das Bauteil und die Anschnitte.</li>
 </ul>
 </section>
 <section data-help-anchor="fuellgrad">
 <h3>Füllgrad</h3>
-<p>Bis zu welchem Füllgrad gezeigt wird; die Front wandert mit dem Regler. Voreingestellt ist der
-Füllkörper bei 50 %: die Front mitten im Teil sagt auf einen Blick, wo die Schmelze zuerst hinkommt.</p>
+<p>Bis zu welchem Füllgrad gezeigt wird; die Front wandert mit dem Regler. Er steht unten unter dem
+Hauptknopf, in jedem Reiter, sobald gerechnet ist; der Knopf daneben spielt die Füllung bis 100 %
+ab. Voreingestellt ist der Füllkörper bei 50 %: die Front mitten im Teil sagt auf einen Blick, wo die
+Schmelze zuerst hinkommt.</p>
 </section>
 <section data-help-anchor="letzte-stellen">
 <h3>Letzte Stellen</h3>
-<p>Die zuletzt gefüllten Stellen als rote Kugeln: so viele, wie der Regler sagt; bei 0 keine. Wo die
+<p>Die zuletzt gefüllten Stellen als Kugeln in der Farbe der Hervorhebung (die Legende nennt sie):
+so viele, wie der Regler sagt; bei 0 keine. Wo die
 Front zuletzt ankommt, sammelt sich die Luft: dort gehören die Überläufe hin; der
 <a href="ueberlauf.html">Überlaufdesigner</a> setzt sie.</p>
 </section>

@@ -28,6 +28,30 @@ export function norm(a) {
   return l > 1e-12 ? [a[0] / l, a[1] / l, a[2] / l] : [0, 0, 0];
 }
 
+/** Normieren — und wo es keine Richtung gibt (ein Nullvektor aus einer
+    Datei), `fallback`. */
+export function normOr(a, fallback) {
+  const u = norm(a);
+  return (u[0] || u[1] || u[2]) ? u : fallback.slice();
+}
+
+/**
+ * Das Dreibein eines Elements auf einer Wand (Überläufe, Anschnitte): n die
+ * Normale nach außen (Einheitsvektor), d die Längsrichtung IN der Wandebene,
+ * r quer — um n gedreht mit `rotDeg`. Rechtshändig: x = d, y = r, z = n.
+ * Woher die Längsrichtung ohne Trennebene kommt: von der Weltachse, die am
+ * wenigsten mit n zusammenfällt, in die Ebene gelegt — so gibt es keine
+ * Stelle, an der das Dreibein umkippt, und zwei benachbarte Elemente auf
+ * derselben Wand liegen gleich.
+ */
+export function wallFrame(n, rotDeg = 0) {
+  const ref = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1];
+  let d = norm(cross(cross(n, ref), n));                      // ref in die Ebene gelegt
+  const a = rad(rotDeg || 0);
+  if (a) d = rotate(d, n, a);
+  return { n, d, r: norm(cross(n, d)) };
+}
+
 
 /** Drehung um eine Achse (Rodrigues), Winkel im Bogenmaß. */
 export function rotate(v, axis, ang) {

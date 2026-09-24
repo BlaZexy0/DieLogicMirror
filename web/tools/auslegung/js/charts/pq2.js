@@ -14,31 +14,46 @@
    P·Q — dort wird die Hüllkurve zur Horizontalen y = a. */
 
 import { series, line, limit } from './helpers.js';
-import { seq, fmt, subHTML } from '../core/format.js';
-import { pistonArea, afterGate, total, injForceEff, cavityVolume } from '../core/physics.js';
-import { theme } from '../core/theme.js';
-import { eq } from './mathfmt.js';
+import { seq, fmt } from '../core/format.js';
+import { pistonArea, afterGate, total, injForceEff, specPressure, hydArea, cavityVolume, atomSpeed, shotSpeed } from '../core/physics.js';
+import { eq, mathSetter } from './mathfmt.js';
 
 const PI = Math.PI, S3 = Math.sqrt(3);
 
 /* Gemeinsame Kerngrößen für calc(), renderMath() und die KPI-Zeile
-   (ui/kpis.js) — die eine Implementierung des Arbeitspunkts. null bei
-   ungültigen Eingaben. */
+   (ui/kpis.js) — die eine Implementierung des Arbeitspunkts: Maschinen-
+   und Werkzeuglinie, Schnittpunkt, Betriebspunkt der Schusskurve, Hüllkurve
+   und die Druckachse der Anschnittgeschwindigkeit. null bei ungültigen
+   Eingaben. */
 export function pqCore(v) {
   const FG = injForceEff(v);                                    // Gießkraft kN beim eingestellten Akkumulatordruck
   if (!(v.gate > 0) || !(v.Cd > 0) || !(v.vmax > 0) || !(FG > 0) || !(v.density > 0) || !(v.diam > 0)) return null;
   const Ap = pistonArea(v) * 1e-6;                              // Kolbenfläche m²
-  const p0 = FG * 1e4 / pistonArea(v);                          // statischer Metalldruck bar (= P_acc·A_h/A_K)
+  const p0 = specPressure(v);                                   // statischer Metalldruck bar (= P_acc·A_h/A_K)
   const Qmax = Ap * v.vmax;                                     // Trockenschuss-Volumenstrom m³/s
   const Ag = v.gate * 1e-6;                                     // Anschnittfläche m²
   const Cdie = v.density / (2 * v.Cd * v.Cd * Ag * Ag) / 1e5;   // Werkzeugkonstante C_t/A_g² in bar/(m³/s)²
   const Qs = Math.sqrt(p0 / (Cdie + p0 / (Qmax * Qmax)));       // Arbeitspunkt m³/s
   const Vag = cavityVolume(afterGate(v), v);                    // Kavität ab Anschnitt m³ (fest, ρ_sol)
+  /* Maschinenlinie des montierten Kolbens (CSIRO-Form, Gl. 2.9) in bar:
+     P = p₀·(1 − Q²/Q_dry²), jenseits von Q_dry negativ — was dort gilt,
+     entscheidet der Verbraucher (Lücke in der Serie, 0 als Maske). */
+  const machineLine = Q => p0 * (1 - (Q / Qmax) * (Q / Qmax));
+  /* Betriebspunkt der Schusskurve: Q = A_K·v₂ auf der Werkzeuglinie, pM die
+     Maschinenlinie dort (0 jenseits von Q_dry), tf die Füllzeit ab
+     Anschnitt in ms; null ohne v₂. */
+  const opAt = v2 => {
+    if (!(v2 > 0)) return null;
+    const Q = Ap * v2;
+    return { Q, p: Cdie * Q * Q, pM: Q < Qmax ? machineLine(Q) : 0, tf: Vag / Q * 1000 };
+  };
+  /* Druck, der die Anschnittgeschwindigkeit v_a treibt (UPCT Gl. 2.26), in
+     bar: P = ρ/2·(v_a/C_d)², unabhängig von der Anschnittfläche. */
+  const pGate = va => v.density * (va / v.Cd) * (va / v.Cd) / 2 / 1e5;
   /* Machine Performance Envelope (Pego Guerra Gl. 2.13/2.14):
      P = a/Q mit a = (2√3/9)·F_G·v_dry — Leistungskonstante des Akkumulators.
      Gültig zwischen den Berührpunkten Q_t = A_K·v_dry/√3 von Ø min und Ø max. */
   const aMPE = (2 * S3 / 9) * (FG * 1e3) * v.vmax;              // W
-  const pEnv = Q => aMPE / Q / 1e5;                             // bar
   const QtLo = 0.25 * PI * Math.pow(v.dmin / 1000, 2) * v.vmax / S3;
   const QtHi = 0.25 * PI * Math.pow(v.dmax / 1000, 2) * v.vmax / S3;
   /* Erreichbarkeitsgrenze über ALLE Kolben-Ø: innerhalb der Berührpunkte
@@ -54,28 +69,23 @@ export function pqCore(v) {
     const r = Q / (A * v.vmax);
     /* Der montierte Kolben zählt immer zur Erreichbarkeit — auch wenn sein Ø
        außerhalb dmin–dmax liegt; sonst liefe seine Maschinenlinie in die
-       graue Maske hinein. */
-    const rc = Q / Qmax;
-    const pA = FG * 1e3 / (A * 1e5) * (1 - r * r), pM = p0 * (1 - rc * rc);
+       Maske hinein. */
+    const pA = FG * 1e3 / (A * 1e5) * (1 - r * r), pM = machineLine(Q);
     return pM >= pA ? { p: Math.max(pM, 0), A: Ap } : { p: Math.max(pA, 0), A };
   };
   const pReach = Q => reach(Q).p;
   const aReach = Q => reach(Q).A;
   /* Hydraulische v_a-Grenze (Pego Guerra, dort „J" = C_d): v_a = C_d·√(2·p₀/ρ) */
   const vaHydr = v.Cd * Math.sqrt(2 * p0 * 1e5 / v.density);
-  /* Zerstäubung nach Herman/NADCA (UPCT Gl. 2.38): J = v_a^1.71 · e_p · ρ —
-     empirisch in inch-pound-Einheiten (v [in/s], e_p [in], ρ [lb/in³]).
-     J_min (≈ 750, konservativ) ist die Untergrenze der Anschnittgeschwindig-
-     keit (keine Zerstäubung darunter), J_max (≈ 6000) die Obergrenze
-     (Überzerstäubung/Erosion darüber). */
-  const vaOfJ = J => (J > 0 && v.gateTh > 0)
-    ? Math.pow(J / ((v.gateTh / 25.4) * (v.density * 3.6127e-5)), 1 / 1.71) * 0.0254
-    : NaN;
-  const vaAtom = vaOfJ(v.JatomMin), vaAtomMax = vaOfJ(v.JatomMax);
+  /* Zerstäubung (Herman-J-Faktor, core/physics.js atomSpeed): J_min (≈ 750,
+     konservativ) ist die Untergrenze der Anschnittgeschwindigkeit (keine
+     Zerstäubung darunter), J_max (≈ 6000) die Obergrenze (Überzerstäubung/
+     Erosion darüber). */
+  const vaAtom = atomSpeed(v, v.JatomMin), vaAtomMax = atomSpeed(v, v.JatomMax);
   /* Minimale Füllzeit aus der Entlüftungsbedingung (Operational Window, Zone C):
      die verdrängte Luft V_luft muss durch A_ent mit höchstens v_luft,max entweichen. */
   const tVent = (v.vent > 0 && v.vAirMax > 0) ? cavityVolume(total(v), v) / (v.vent * 1e-6 * v.vAirMax) : NaN;
-  return { FG, Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, pEnv, pReach, aReach, QtLo, QtHi, Alo, Ahi, vaHydr, vaAtom, vaAtomMax, tVent };
+  return { FG, Ap, p0, Qmax, Ag, Cdie, Qs, Vag, ps: Cdie * Qs * Qs, aMPE, machineLine, opAt, pGate, pReach, aReach, QtLo, QtHi, Alo, Ahi, vaHydr, vaAtom, vaAtomMax, tVent };
 }
 
 export default {
@@ -87,11 +97,13 @@ export default {
   tab2: 'pm',
   tabs2: [['pm', 'p<sub>m</sub>'], ['ph', 'p<sub>hyd</sub>'], ['pw', 'P·Q']],
   inputs: ['gate', 'Cd', 'vmax', 'injForce', 'diam', 'dmin', 'dmax', 'density', 'densitySolid', 'shrink', 'part', 'runner', 'overflow', 'vent', 'vAirMax', 'tmax', 'gateMin', 'gateMax', 'pAcc', 'pAccOp', 'gateTh', 'JatomMin', 'JatomMax'],
+  /* Der Arbeitspunkt der Schusskurve (v₂) kommt aus der Kurve: die
+     Einzelseite zeigt dafür den Kurveneditor, 🎯 markiert die Kurve mit. */
+  usesCurve: true,
 
   calc(v, o) {
     const c = pqCore(v);
     if (!c) return { err: 'Anschnittfläche, Cd, v_max und Gießkraft müssen > 0 sein.' };
-    const C = theme.chart;
     const { Ap, p0, Qmax, Ag, Cdie, Qs, Vag, tVent } = c;
     const tb = this.tab, yb = this.tab2 || 'pm';
 
@@ -153,16 +165,18 @@ export default {
     const x = Qarr.map(fx);
 
     /* Hüllkurve/Erreichbarkeitsgrenze ist keine Serie mehr, sondern die
-       Masken-Grenze unten (graue Deckfläche oberhalb, schwarze Frontlinie). */
-    const machineLine = Q => p0 * (1 - (Q / Qmax) * (Q / Qmax));
+       Masken-Grenze unten (deckende Fläche oberhalb, durchgezogene
+       Frontlinie in der Farbe der Maschine). */
+    const machineLine = c.machineLine;
     const ys = [
       /* Maschinenlinie endet bei Q_dry des gewählten Kolbens (NaN dahinter).
          Im v_p-Modus fällt sie mit der Maskengrenze zusammen — sie bleibt
-         trotzdem eine Serie, damit sie in jedem Modus dieselbe Farbe hat
-         (Serien werden über den Grenzen gezeichnet). */
-      series('Maschine (Ø ' + fmt(v.diam) + ' mm)', C.series4, Qarr,
+         trotzdem eine Serie, damit sie in jedem Modus gleich aussieht
+         (Serien werden über den Grenzen gezeichnet). Die Farben sind die
+         Sachfarben: Maschine und Werkzeug, wie ihre Grenzen. */
+      series('Maschine (Ø ' + fmt(v.diam) + ' mm)', 'machine', Qarr,
         Q => Q <= Qmax ? fy(machineLine(Q), Q) : NaN),
-      series('Werkzeug', C.series2, Qarr, Q => fy(Cdie * Q * Q, Q))
+      series('Werkzeug', 'die', Qarr, Q => fy(Cdie * Q * Q, Q))
     ];
 
     const q = line(x, ys, xl, yl,
@@ -188,7 +202,7 @@ export default {
     /* v_a-Grenzen auf der Druckachse: P(v_a) = ρ/2·(v_a/C_d)² — unabhängig
        von der Anschnittfläche (UPCT Gl. 2.26). In den Druckmodi Horizontalen,
        im Leistungsmodus Kurven y = P(v_a)·Q(x). */
-    const Pg = vg => v.density * (vg / v.Cd) * (vg / v.Cd) / 2 / 1e5;   // bar
+    const Pg = c.pGate;                                                  // bar
     const ylim = (id, label, kind, Pbar, note) => {
       if (!(Pbar > 0) || !isFinite(Pbar)) return;
       q.limits.push(yb === 'pw'
@@ -202,8 +216,8 @@ export default {
     if (isFinite(c.vaAtom)) ylim('atom', 'Zerstäubung J ≥ ' + fmt(v.JatomMin) + ': v_a ≥ ' + fmt(c.vaAtom) + ' m/s', 'min', Pg(c.vaAtom), 'keine Zerstäubung');
     if (isFinite(c.vaAtomMax)) ylim('atomMax', 'Zerstäubung J ≤ ' + fmt(v.JatomMax) + ': v_a ≤ ' + fmt(c.vaAtomMax) + ' m/s', 'max', Pg(c.vaAtomMax), 'Überzerstäubung / Erosion');
 
-    /* Erreichbarkeitsgrenze als Maske: oberhalb grau (für keinen Kolben-Ø
-       erreichbar), alle anderen Grenzen werden darauf gestutzt. Im
+    /* Erreichbarkeitsgrenze als Maske: oberhalb deckend (für keinen
+       Kolben-Ø erreichbar), alle anderen Grenzen werden darauf gestutzt. Im
        Leistungsmodus wird die Hüllkurve dabei zur Horizontalen y = a. */
     if (pistonOnly) {
       q.limits.push(limit('mpe', 'darüber unerreichbar (Ø ' + fmt(v.diam) + ')', 'y', 'max',
@@ -213,11 +227,12 @@ export default {
         xv => { const Q = ix(xv); return fy(c.pReach(Q), Q, c.aReach(Q)); }, { mask: true, note: 'unerreichbar (alle Ø)' }));
     }
 
-    /* Grünes machbares Band (wie im (φ, λ)-Fenster): Schnittmenge aller
-       harten Grenzen. Oberhalb der Maschinenlinie des aktuellen Kolbens
-       heller — Fenster erfüllt, aber nur mit anderem Ø erreichbar (entfällt
-       im v_p-Modus, der nur den montierten Kolben zeigt).
-       Grenzen sind nur in der Legende benannt (kein Text im Diagramm). */
+    /* Machbares Band (wie im (φ, λ)-Fenster): Schnittmenge aller harten
+       Grenzen, in der Ampelfarbe „gut". Oberhalb der Maschinenlinie des
+       aktuellen Kolbens heller — Fenster erfüllt, aber nur mit anderem Ø
+       erreichbar (entfällt im v_p-Modus, der nur den montierten Kolben
+       zeigt). Grenzen sind nur in der Legende benannt (kein Text im
+       Diagramm). */
     q.feasible = 'machbares Band';
     if (!pistonOnly) q.feasibleSplit = {
       fn: xv => fy(machineLine(ix(xv)), ix(xv)),
@@ -231,20 +246,17 @@ export default {
        linie bei Q = A_K·v₂ (darunter, wenn die Maschine gedrosselt wird);
        die Differenz zur Maschinenlinie ist der Drosselverlust. */
     const unit = tb === 'q' ? ' l/s' : tb === 'q2' ? ' (l/s)²' : tb === 'vp' ? ' m/s' : ' ms';
-    const v2 = o && o.shot && !o.shot.error && o.shot.v2 > 0 ? o.shot.v2 : null;
+    const v2 = shotSpeed(o && o.shot, 'v2');
+    const op = c.opAt(v2);
     const sx = fx(Qs), sy = fy(Cdie * Qs * Qs, Qs);
-    if (v2 !== null) {
-      const Qop = Ap * v2, pOp = Cdie * Qop * Qop;
-      const ox = fx(Qop), oy = fy(pOp, Qop);
+    if (op) {
+      const ox = fx(op.Q), oy = fy(op.p, op.Q);
       q.pt = [ox, oy];
       q.ptl = 'Arbeitspunkt Schusskurve (v₂ ' + fmt(v2) + ' m/s) ' + fmt(ox) + unit + ' / ' + fmt(oy) + yUnit;
       q.pt2 = [sx, sy];
       q.ptl2 = 'Schnittpunkt ungedrosselt ' + fmt(sx) + unit + ' / ' + fmt(sy) + yUnit;
-      if (Qop < Qmax) {
-        const pM = machineLine(Qop);
-        if (pM > pOp) q.segs = [{ x1: ox, y1: oy, x2: ox, y2: fy(pM, Qop), c: C.event || C.axis,
-          label: 'gedrosselt Δp ' + fmt(fy(pM, Qop) - oy) + yUnit }];
-      }
+      if (op.Q < Qmax && op.pM > op.p) q.segs = [{ x1: ox, y1: oy, x2: ox, y2: fy(op.pM, op.Q), c: 'ref',
+        label: 'gedrosselt Δp ' + fmt(fy(op.pM, op.Q) - oy) + yUnit }];
     } else {
       q.pt = [sx, sy];
       q.ptl = 'Schnittpunkt Maschine × Werkzeug ' + fmt(sx) + unit + ' / ' + fmt(sy) + yUnit + ' (keine Schusskurve)';
@@ -296,16 +308,16 @@ Einsetzen liefert dieselbe Hyperbel. Jede Kolbenparabel berührt die Hüllkurve 
 v<sub>p</sub> = v<sub>dry</sub>/√3 ≈ 0,577·v<sub>dry</sub> und P = ⅔·p₀(D). Die Hüllkurve ist eine reine
 Maschineneigenschaft (unabhängig von Kolben und Werkzeug); a hat die Dimension einer Leistung: die
 Energie, die der Akkumulator während der Einspritzphase an die Schmelze abgibt.</p>
-<p class="math-note">Im Diagramm ist die Fläche <b>oberhalb</b> der Erreichbarkeitsgrenze grau
-maskiert: zwischen den Berührpunkten Q<sub>t</sub> = A<sub>K</sub>·v<sub>dry</sub>/√3 von Ø<sub>min</sub> und
+<p class="math-note">Im Diagramm ist die Fläche <b>oberhalb</b> der Erreichbarkeitsgrenze
+abgedeckt (Legende „Hüllkurve"): zwischen den Berührpunkten Q<sub>t</sub> = A<sub>K</sub>·v<sub>dry</sub>/√3 von Ø<sub>min</sub> und
 Ø<sub>max</sub> ist das die Hüllkurve a/Q, außerhalb die Parabel des Grenz-Kolbens; dort kommt kein
 Betriebspunkt hin, egal welcher Kolben montiert ist; alle anderen Grenzflächen sind darauf gestutzt. Aktuell:
 a = <b data-m="aMPE"></b> · gültig für Q = <b data-m="Qt"></b> · Berührpunkt aktueller Kolben bei
 <b data-m="Qtcur"></b> · optimaler Kolben-Ø am Arbeitspunkt: <b data-m="Dopt"></b></p>
 <p class="math-note"><b>Achsen mit Kolbenbezug:</b> Die x-Achse v<sub>p</sub> = Q/A<sub>K</sub> ist die
 Geschwindigkeit des <em>montierten</em> Kolbens; ein anderer Ø hätte bei gleichem Q eine andere v<sub>p</sub>.
-Dieser Modus zeigt deshalb nur den montierten Kolben: die Achse endet bei v<sub>max</sub>, die graue Grenze ist
-seine Maschinenlinie, das hellere Band „anderer Kolben-Ø" entfällt. Auf der Hydraulikdruck-Achse wird jeder Punkt
+Dieser Modus zeigt deshalb nur den montierten Kolben: die Achse endet bei v<sub>max</sub>, die Grenze der abgedeckten
+Fläche ist seine Maschinenlinie, das hellere Band „anderer Kolben-Ø" entfällt. Auf der Hydraulikdruck-Achse wird jeder Punkt
 mit der Fläche des Kolbens umgerechnet, der ihn erreicht (P<sub>h</sub> = P·A/A<sub>h</sub>,
 A<sub>h</sub> = F<sub>G</sub>/P<sub>acc</sub>); die Antriebsseite bleibt so immer ≤ P<sub>acc</sub>, auch entlang
 der Hüllkurve.</p>
@@ -384,7 +396,7 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
   },
 
   renderMath(el, v, shot) {
-    const set = (k, val) => { const s = el.querySelector('[data-m="' + k + '"]'); if (s) s.innerHTML = subHTML(val); };
+    const set = mathSetter(el);
     const c = pqCore(v);
     if (!c) {
       ['AK', 'p0', 'Qmax', 'Va', 'CW', 'Qs', 'ps', 'vp', 'va', 'tf', 'tf2', 'Qt', 'Qtcur', 'Dopt', 'aMPE',
@@ -406,20 +418,19 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
     set('tf', fmt(tf) + ' ms');
     set('tf2', fmt(tf) + ' ms');
     /* Realer Betriebspunkt aus der Schusskurve */
-    const v2 = shot && !shot.error && shot.v2 > 0 ? shot.v2 : null;
-    if (v2 !== null) {
-      const Qop = c.Ap * v2, pOp = c.Cdie * Qop * Qop;
-      const pM = Qop < c.Qmax ? c.p0 * (1 - (Qop / c.Qmax) ** 2) : 0;
-      set('v2', fmt(v2) + ' m/s'); set('Qop', fmt(Qop * 1000) + ' l/s'); set('pOp', fmt(pOp) + ' bar');
-      set('pMop', Qop < c.Qmax ? fmt(pM) + ' bar' : '(über Q_dry)');
-      set('dpOp', pM > pOp ? fmt(pM - pOp) + ' bar' : (Qop < c.Qmax ? 'keiner: v₂ über dem Schnittpunkt, nicht erreichbar' : 'nicht erreichbar'));
-      set('tfop', fmt(c.Vag / Qop * 1000) + ' ms');
+    const v2 = shotSpeed(shot, 'v2');
+    const op = c.opAt(v2);
+    if (op) {
+      set('v2', fmt(v2) + ' m/s'); set('Qop', fmt(op.Q * 1000) + ' l/s'); set('pOp', fmt(op.p) + ' bar');
+      set('pMop', op.Q < c.Qmax ? fmt(op.pM) + ' bar' : '(über Q_dry)');
+      set('dpOp', op.pM > op.p ? fmt(op.pM - op.p) + ' bar' : (op.Q < c.Qmax ? 'keiner: v₂ über dem Schnittpunkt, nicht erreichbar' : 'nicht erreichbar'));
+      set('tfop', fmt(op.tf) + ' ms');
     } else ['v2', 'Qop', 'pOp', 'pMop', 'dpOp', 'tfop'].forEach(k => set(k, '(keine Schusskurve)'));
     /* Operational Window auf der Druckachse + y-Modi */
-    const Pg = vg => v.density * (vg / v.Cd) * (vg / v.Cd) / 2 / 1e5;
+    const Pg = c.pGate;
     set('Pgmin', v.gateMin > 0 ? fmt(Pg(v.gateMin)) + ' bar' : '—');
     set('Pgmax', v.gateMax > 0 ? fmt(Pg(v.gateMax)) + ' bar' : '—');
-    set('pAccM', v.pAcc > 0 ? fmt(Math.min(v.pAccOp, v.pAcc)) + ' bar eingestellt (max. ' + fmt(v.pAcc) + ' bar, A_h = ' + fmt(v.injForce / v.pAcc * 100) + ' cm²)' : '—');
+    set('pAccM', v.pAcc > 0 ? fmt(Math.min(v.pAccOp, v.pAcc)) + ' bar eingestellt (max. ' + fmt(v.pAcc) + ' bar, A_h = ' + fmt(hydArea(v)) + ' cm²)' : '—');
     set('FG', fmt(c.FG) + ' kN (max. ' + fmt(v.injForce) + ' kN bei ' + fmt(v.pAcc) + ' bar)');
     set('aMPE2', fmt(c.aMPE / 1e6) + ' MW');
     /* Hüllkurve */

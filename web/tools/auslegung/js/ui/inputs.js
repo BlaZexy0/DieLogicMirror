@@ -43,27 +43,16 @@ function fieldHTML(f) {
 export function buildInputs(container, onlyKeys = null) {
   const keep = f => !onlyKeys || onlyKeys.has(f.key);
   for (const g of groups) {
-    let inner;
-    if (g.columns) {
-      const cols = g.columns
-        .map(c => ({ title: c.title, fields: c.fields.filter(keep) }))
-        .filter(c => c.fields.length);
-      if (!cols.length) continue;
-      inner = '<div class="chamber-grid">' + cols.map(c =>
-        '<div class="input-column"><h4>' + c.title + '</h4>' + c.fields.map(fieldHTML).join('') + '</div>'
-      ).join('') + '</div>';
-    } else {
-      const fs = g.fields.filter(keep);
-      if (!fs.length) continue;
-      /* adv-Felder eingeklappt hinter „Erweiterte Optionen" — außer es gibt
-         nur adv-Felder (Einzelseiten-Modus), dann normal anzeigen. */
-      const norm = fs.filter(f => !f.adv), adv = fs.filter(f => f.adv);
-      inner = '<div class="fields">' + (norm.length ? norm : adv).map(fieldHTML).join('') + '</div>' +
-        (norm.length && adv.length
-          ? '<details class="adv-fields"><summary>Erweiterte Optionen</summary><div class="fields">' +
-            adv.map(fieldHTML).join('') + '</div></details>'
-          : '');
-    }
+    const fs = g.fields.filter(keep);
+    if (!fs.length) continue;
+    /* adv-Felder eingeklappt hinter „Erweiterte Optionen" — außer es gibt
+       nur adv-Felder (Einzelseiten-Modus), dann normal anzeigen. */
+    const norm = fs.filter(f => !f.adv), adv = fs.filter(f => f.adv);
+    const inner = '<div class="fields">' + (norm.length ? norm : adv).map(fieldHTML).join('') + '</div>' +
+      (norm.length && adv.length
+        ? '<details class="adv-fields"><summary>Erweiterte Optionen</summary><div class="fields">' +
+          adv.map(fieldHTML).join('') + '</div></details>'
+        : '');
     const el = document.createElement('div');
     el.className = 'group' + (g.wide ? ' wide' : '');
     el.dataset.group = g.id;
@@ -130,8 +119,8 @@ export function updatePresetVisibility() {
   });
 }
 
-/* Werte programmatisch setzen (Preset, JSON-Import) — aktualisiert Zustand
-   und sichtbare Eingabefelder. */
+/* Werte programmatisch setzen (Preset, Übernahme aus dem Modell in der
+   Werkbank) — aktualisiert Zustand und sichtbare Eingabefelder. */
 export function applyValues(fields) {
   for (const k in fields) {
     if (fields[k] == null) continue;
@@ -143,15 +132,11 @@ export function applyValues(fields) {
   }
 }
 
-/* Felder, die zwingend > 0 sein müssen (Divisionen, Achsen, Wurzeln,
-   physikalisch zwingend positive Größen). Exportiert für den
-   Konsistenz-Test: jedes numerische Feld gehört in genau eine Klasse. */
 /* Die Eingabedomäne steht in config/fields.js und wird in core/domain.js
-   angewandt. Hier bleibt nur, was das DOM braucht: markieren und melden. */
-export { checkField, checkValues } from '../core/domain.js';
-
-/* Wie checkValues, markiert zusätzlich die Sidebar. Der Rückgabewert ist das
-   Urteil — render() rechnet nur weiter, wenn es ok ist. */
+   angewandt (checkValues). Hier bleibt nur, was das DOM braucht: markieren
+   und melden. Wie checkValues, markiert zusätzlich die Sidebar; der
+   Rückgabewert ist das Urteil — die Seite (ui/page.js) rechnet nur weiter,
+   wenn es ok ist. */
 export function validate(v) {
   const res = checkValues(v);
   const { bad } = res;

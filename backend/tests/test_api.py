@@ -19,6 +19,10 @@ def test_simulation_endpoint_is_gone():
     statische Datei oder als Route ohne Rechenkern."""
     r = client.post("/api/sim/shot", json={"values": {}, "curve": [[0, 1]]})
     assert r.status_code in (404, 405)
+    # POST allein beweist es nicht: StaticFiles beantwortet jede Methode
+    # außer GET/HEAD mit 405, auch wenn dort noch eine Datei läge. Erst GET
+    # zeigt, ob der Pfad wirklich verschwunden ist.
+    assert client.get("/api/sim/shot").status_code == 404
 
 
 def test_static_site_is_served():

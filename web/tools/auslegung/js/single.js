@@ -1,50 +1,19 @@
 /* Einstieg Einzelseite (chart.html?id=<chart-id>): ein Diagramm in voller
-   Breite, in der Sidebar nur die Eingaben, die dieses Diagramm beeinflussen. */
+   Breite, in der Sidebar nur die Eingaben, die dieses Diagramm beeinflussen.
+   Rechnen und Zeichnen: ui/page.js, dieselbe Pipeline wie das Dashboard. */
 
 import { loadTheme } from './core/theme.js';
-import { state, subscribe } from './core/state.js';
 import { subHTML } from './core/format.js';
-import { computeShot } from './core/physics.js';
-import { applyCurveGen } from './core/curvegen.js';
-import { applyAuto } from './core/autofit.js';
 import { charts, chartsById } from './charts/registry.js';
 import { PRESET_KEYS, PRESET_DOMAINS } from './config/fields.js';
-import { buildInputs, validate, refreshAuto, updateFieldVisibility } from './ui/inputs.js';
+import { buildInputs } from './ui/inputs.js';
 import { initPresetSelect } from './ui/presets.js';
 import { renderCurveTable, wireAddPoint } from './ui/curveTable.js';
-import { buildCard, renderCard } from './ui/cards.js';
-import { initSim } from './core/simstore.js';
+import { buildCard, renderCard, paintCard } from './ui/cards.js';
+import { createRender, startPage } from './ui/page.js';
 
 const id = new URLSearchParams(location.search).get('id');
 const def = chartsById[id] || charts[0];
-let card = null;
-let mathSec = null;
-
-let letzterGueltigerStand = false;
-
-function render() {
-  const v = state.values;
-  /* Generierte Kurvenmodi liefern die Kurve auch für Diagramme ohne Kurven-UI */
-  const genErr = applyCurveGen(v);
-  applyAuto(v);
-  refreshAuto();
-  updateFieldVisibility();
-  if (def.usesCurve && state.curveGen.mode !== 'points') renderCurveTable(genErr);
-  /* Erst prüfen, dann rechnen — wie im Dashboard (main.js). */
-  const urteil = validate(v);
-  document.body.classList.toggle('inputs-invalid', !urteil.ok);
-  if (!urteil.ok) {
-    if (letzterGueltigerStand) return;
-    renderCard(card, def, v, null, 'Eingaben außerhalb des zulässigen Bereichs: ' +
-      (urteil.msgs[0] || 'siehe Seitenleiste') + '.');
-    return;
-  }
-  letzterGueltigerStand = true;
-
-  const shot = computeShot(v, state.curve);
-  renderCard(card, def, v, shot);
-  if (mathSec && def.renderMath) def.renderMath(mathSec, v, shot);
-}
 
 async function init() {
   await loadTheme();
@@ -80,9 +49,10 @@ async function init() {
     document.getElementById('curve-group').style.display = 'none';
   }
 
-  card = buildCard(def, document.getElementById('charts'), { link: false, forceWide: true, fitHeight: true });
+  const card = buildCard(def, document.getElementById('charts'), { link: false, forceWide: true, fitHeight: true });
 
   /* Mathe-Erklärung unter dem Diagramm (nur auf der Einzelseite) */
+  let mathSec = null;
   if (def.mathHTML) {
     mathSec = document.createElement('section');
     mathSec.className = 'card wide math-panel';
@@ -93,11 +63,19 @@ async function init() {
     document.getElementById('charts').appendChild(mathSec);
   }
 
-  let rt;
-  window.onresize = () => { clearTimeout(rt); rt = setTimeout(render, 120); };
-
-  if (def.usesSim) initSim();
-  subscribe(render);
+  /* Die generierte Kurve gilt auch für Diagramme ohne Kurven-UI; nur die
+     Tabelle dazu gibt es dann nicht. */
+  const render = createRender({
+    curve: !!def.usesCurve,
+    blocked: (v, grund) => renderCard(card, def, v, null, grund),
+    draw: (v, shot) => {
+      renderCard(card, def, v, shot);
+      if (mathSec && def.renderMath) def.renderMath(mathSec, v, shot);
+    }
+  });
+  /* Farbschema gewechselt: das Diagramm aus seinen Daten neu zeichnen
+     (Rollen statt Farbwerten, siehe ui/cards.js paintCard). */
+  startPage(render, { sim: !!def.usesSim, repaint: () => paintCard(card, def) });
   requestAnimationFrame(() => requestAnimationFrame(render));
 }
 

@@ -61,14 +61,16 @@ def now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def aware(dt: datetime) -> datetime:
+    """dt mit Zeitzone — SQLite gibt naive (UTC-)Zeitstempel zurück, die
+    sonst als Ortszeit gelesen werden (Browser) oder sich nicht mit
+    now() vergleichen lassen (naiv vs. bewusst wirft TypeError)."""
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+
+
 def iso(dt: datetime | None) -> str | None:
-    """ISO-8601 mit Zeitzone — SQLite gibt naive (UTC-)Zeitstempel zurück,
-    die der Browser sonst als Ortszeit liest."""
-    if dt is None:
-        return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.isoformat()
+    """ISO-8601 mit Zeitzone, None bleibt None."""
+    return aware(dt).isoformat() if dt is not None else None
 
 
 def new_id() -> str:

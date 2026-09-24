@@ -12,11 +12,13 @@
    'v1v2' — Rampe mit a₁ auf V₁, Plateau bis „Kammer voll", Rampe mit a₂
      auf V₂ bis zum Schussende (L − Pressrest).
 
-   Reine Rechenlogik + ein dünner state-Wrapper (applyCurveGen). */
+   Reine Rechenlogik + ein dünner state-Wrapper (applyCurveGen), der als
+   Preparer bei jedem notify() läuft; seine Meldung hält curveGenMessage()
+   für die Kurventabelle bereit. */
 
 import { state, addPreparer } from './state.js';
 import { fmt } from './format.js';
-import { total, afterGate, pistonArea, vCrit, waveSpeed, cavityVolume, cavityTravel } from './physics.js';
+import { total, fillRatio, vCrit, waveSpeed, cavityTravel, nadcaFillMs, pistonSpeedFor } from './physics.js';
 
 /* Punkte aufräumen: runden, streng steigende s erzwingen. */
 function clean(pts) {
@@ -80,9 +82,7 @@ export function fillTimeMs(v0, v2, a, s0, sGate, sOver) {
 }
 
 export function generateCurve(v, g) {
-  const A = pistonArea(v);
-  const mdos = total(v) + v.biscuit;
-  const phi = 1e9 * (mdos / v.density) / (v.length * A);
+  const phi = fillRatio(v);
   if (!(phi > 0 && phi < 1)) return { error: 'Füllgrad außerhalb (0, 1), Kurve nicht generierbar.' };
   const sFill = (1 - phi) * v.length;                       // „Kammer voll" [mm]
   const sEnd = sFill + cavityTravel(total(v), v);            // Füllende: Kavität (fest, ρ_sol) voll [mm]
@@ -125,12 +125,11 @@ export function generateCurve(v, g) {
     /* 2. Phase: v₂ so, dass die Füllzeit ab Anschnitt die empfohlene
        NADCA-Füllzeit trifft — mit der Rampe, die ab „Kammer voll" noch in
        die Formfüllung hineinläuft (bei a_max = 0: sofort auf v₂). */
-    const denN = v.Tflow - v.Tdie;
-    const tN = denN !== 0 ? v.kfill * v.wall * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / denN : NaN;
+    const tN = nadcaFillMs(v);
     if (!(tN > 0)) return { error: 'NADCA-Füllzeit nicht berechenbar: Temperaturen und k prüfen.' };
     const sGate = sR + cavityTravel(v.runner, v);             // Anguss gefüllt [mm]
     const sOver = sR + cavityTravel(total(v), v);             // Überlauf gefüllt [mm]
-    const vFlat = 1e9 * cavityVolume(afterGate(v), v) / (tN * A); // ohne Rampe nötig
+    const vFlat = pistonSpeedFor(v, tN);                      // ohne Rampe nötig
     const want = v2 => fillTimeMs(vTop, v2, v.amax, sR, sGate, sOver);
     let v2, warn = null;
     const vCap = v.vmax > 0 ? v.vmax : Infinity;
@@ -191,5 +190,9 @@ export function applyCurveGen(v) {
 /* Generierte Kurven VOR persist() und den Subscribern aktualisieren:
    localStorage und alle Subscriber (z. B. die Luftsimulation in
    core/simstore.js) sehen so dieselbe Kurve wie die Diagramme — sonst
-   hinge das von der Subscriber-Reihenfolge ab. */
-addPreparer(() => { applyCurveGen(state.values); });
+   hinge das von der Subscriber-Reihenfolge ab. Die Seiten rechnen die
+   Kurve danach nicht noch einmal; die Meldung des Laufs holen sie sich
+   hier (ui/page.js → Kurventabelle). */
+let meldung = null;
+export function curveGenMessage() { return meldung; }
+addPreparer(() => { meldung = applyCurveGen(state.values); });
