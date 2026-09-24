@@ -31,7 +31,7 @@ import { kpis } from '../studio/rows.js';
 import { checkFormat } from '../studio/planio.js';
 import { rayAt, hoverProbe } from '../viewmath.js';
 import {
-  onScheme, VIEW, scale, scaleFn, linRgb, turboTrim, sideColor, undercutColor, undercutDark, draftColor, draftHex
+  onScheme, VIEW, scale, scaleFn, linRgb, heatTrim, sideColor, undercutColor, undercutDark, draftColor, draftHex
 } from '../part/colors.js';
 import { MODES, DARSTELLUNG } from './panel.js';
 
@@ -325,7 +325,7 @@ export function createEntformungTool(host, opts = {}) {
 
   /* Nach Regionen trägt jede Fläche die Farbe ihres Formteils, der
      Hinterschnitt „schlecht"; nach Schräge die Farbleiste `draft`, der
-     Hinterschnitt dunkler; nach Haftung die Leiste `turbo`. Die Rollen
+     Hinterschnitt dunkler; nach Haftung die Leiste `heat`. Die Rollen
      kommen aus dem Schema von jetzt, die Leisten sind in jedem Schema
      dieselben (js/part/colors.js); als Punktfarben linear. */
   function updateColors() {
@@ -352,14 +352,14 @@ export function createEntformungTool(host, opts = {}) {
     col.needsUpdate = true;
   }
 
-  /* Haftung: die Leiste `turbo` nach dem Haftmaß je Fläche, blau = schwach,
-     rot = stark (turboTrim, wie die Karten daneben); was nicht haftet
+  /* Haftung: die Leiste `heat` nach dem Haftmaß je Fläche, blau = schwach,
+     rot = stark (heatTrim, wie die Karten daneben); was nicht haftet
      (Außenwand, waagerecht, Schieber, Hinterschnitt), trägt das Grau des
      Bauteils: dort gibt es keinen Wert. */
   function gripPainter() {
-    const g = state.grip, none = linRgb(VIEW.noData), turbo = scaleFn('turbo');
+    const g = state.grip, none = linRgb(VIEW.noData), heat = scaleFn('heat');
     return f => (!g || !(g.intensity[f] > 0) || !(g.maxIntensity > 0) ? none
-      : turbo(turboTrim(g.intensity[f] / g.maxIntensity)));
+      : heat(heatTrim(g.intensity[f] / g.maxIntensity)));
   }
 
   function updatePartingLine() {
@@ -403,7 +403,7 @@ export function createEntformungTool(host, opts = {}) {
     if (mode === 'grip') {
       return shell.colorbar({
         title: 'Haftung',
-        stops: gradient(t => scale('turbo', turboTrim(t))),
+        stops: gradient(t => scale('heat', heatTrim(t))),
         ticks: ['stark', '', '', '', 'schwach'],
         extra: chip(VIEW.noData) + 'haftet nicht'
       });

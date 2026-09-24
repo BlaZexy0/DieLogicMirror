@@ -19,7 +19,7 @@
   <rect x="10" y="174" width="320" height="14" fill="url(#hatch-b)" stroke="#7b9096" stroke-width="1.2" class="s-steel-dark"/>
   <!-- Schmelze: Kamm berührt die Decke -->
   <path d="M64 37 L150 37 C168 38 178 54 188 78 C198 102 212 124 238 132 L330 134 L330 174 L64 174 Z"
-        fill="#008c82" fill-opacity="0.3" stroke="#008c82" stroke-width="1.5" stroke-linejoin="round" class="f-melt s-melt"/>
+        fill="#e85f08" fill-opacity="0.3" stroke="#e85f08" stroke-width="1.5" stroke-linejoin="round" class="f-melt s-melt"/>
   <!-- Kolben -->
   <rect x="0" y="96" width="30" height="18" fill="#36545d" fill-opacity="0.55" stroke="#36545d" stroke-width="1.2" class="f-piston s-piston"/>
   <rect x="30" y="38" width="34" height="134" fill="#36545d" stroke="#36545d" stroke-width="1.2" class="f-piston s-piston"/>

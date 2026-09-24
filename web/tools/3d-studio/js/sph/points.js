@@ -1,5 +1,5 @@
 /* Die Partikel im Bild: Punkte als beleuchtete Kugeln, je Partikel nach
-   Geschwindigkeit gefärbt — dieselbe Turbo-Skala wie die Fläche der
+   Geschwindigkeit gefärbt — dieselbe Farbskala wie die Fläche der
    Gitterrechnung (js/lbm/paint.js), damit beide Seiten gleich lesen. Der
    eigene Shader wandelt keine Farbräume: die Tafel kommt mit den Werten
    der Farbleiste (lutFloat), nicht linear.
@@ -86,7 +86,7 @@ export function showParticles(pts, snap, vScale, capacity = snap.n) {
   }
   pa.array.set(snap.pos);
   const k = vScale > 0 ? snap.uMax / (255 * vScale) : 0;
-  const col = ca.array, LUT = lutFloat('turbo');
+  const col = ca.array, LUT = lutFloat('heat');
   for (let i = 0; i < n; i++) {
     const t = Math.max(0, Math.min(255, Math.round(snap.speed[i] * k * 255)));
     col[3 * i] = LUT[3 * t]; col[3 * i + 1] = LUT[3 * t + 1]; col[3 * i + 2] = LUT[3 * t + 2];

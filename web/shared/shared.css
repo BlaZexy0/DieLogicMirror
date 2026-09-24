@@ -52,16 +52,16 @@
   --mark: #b23797;
   /* Licht: die leuchtende Glühbirne (Sichtbarkeit an) */
   --lamp: #f2b200;
-  /* Punktarten der 3D-Designer neben --mark: warm (Verzweigung, Waschbrett), kühl (Spiegelpunkt) */
-  --mark-warm: #f66e5c;
+  /* Punktarten der 3D-Designer neben --mark: Limette (Verzweigung, Waschbrett), Himmelblau (Spiegelpunkt) */
+  --mark-lime: #9fd83a;
   --mark-cool: #19bdfc;
   /* Formhälften der Entformung: bewegliche Seite, feste Seite */
   --half-mov: #e66685;
   --half-fix: #fbde4e;
   /* Sachfarben: überall dieselben Dinge in derselben Farbe */
-  --melt: #008c82;
-  --runner: #006665;
-  --overflow: #8bbfb8;
+  --melt: #e85f08;
+  --runner: #9f6403;
+  --overflow: #f6b48f;
   --biscuit: #82979f;
   --die: #2e65a0;
   --machine: #ac6eef;

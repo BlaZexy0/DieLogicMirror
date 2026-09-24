@@ -3,13 +3,14 @@
    sind fest (Wunsch vom 23.09.: wieder die Leisten von vorher, in jedem
    Schema dieselben). Hier geprüft:
      · jede Elementart trägt ihre Farbe aus ELEMENT: die Knoten des Angusses,
-       die Bohne und das Waschbrett in der Hervorhebung und im Violett der
-       Maschine, fern vom Anguss; Luft, Temperierung und Werkzeug in ihren
+       die Bohne und das Waschbrett in der Hervorhebung, in Limette und
+       Himmelblau, fern vom Anguss; Luft, Temperierung und Werkzeug in ihren
        Sachfarben; Richtungen und Achsen die Achsenrollen; keine davon ist
        eine Farbe der Ampel;
      · ein Wechsel des Schemas färbt alles um, auch was ein Modell sich merkt
        (der Anschnitt der Füllung);
-     · die Farbleisten `turbo`, `draft` und `speed` sind die von palette.js,
+     · die Farbleisten `heat` und `draft` sind die von palette.js (die
+       Felder und das Flussschema lesen `heat`, die Leiste der Auslegung),
        mit und ohne Palette dieselben und in jedem Schema gleich; die Stufe
        der Entformschräge sitzt am Grenzwert; Punktfarben linear;
      · ohne Palette (Node) gelten die Standardwerte der Rollen;
@@ -58,7 +59,7 @@ const dE = (a, b) => { const p = oklab(a), q = oklab(b); return 100 * Math.hypot
 const near = (a, b) => [1, 3, 5].every(i => Math.abs(parseInt(a.slice(i, i + 2), 16) - parseInt(b.slice(i, i + 2), 16)) <= 1);
 const toLin = c => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
 
-const LEISTEN = ['turbo', 'draft', 'speed'];
+const LEISTEN = ['heat', 'draft'];
 /* Die Stellen, an denen die Leisten verglichen werden: ein feines Raster
    und die Stufe der Schräge (1/3) mit ihren Nachbarn. */
 const STELLEN = [...Array.from({ length: 101 }, (_, i) => i / 100), 1 / 3 - 1e-9, 1 / 3, 1 / 3 + 1e-9, -0.5, 1.5];
@@ -77,11 +78,12 @@ test('Standard: jede Elementart trägt ihre Farbe', () => {
   S.set('teal');
   const c = S.colors('teal');
   /* Was ein Designer setzt, hebt sich vom Anguss ab: die Hervorhebung und
-     ihre Geschwister Koralle (warm) und Himmelblau (kühl). */
+     ihre Geschwister Limette und Himmelblau (Koralle bis 24.09.: auf dem
+     orangen Anguss verschwand sie). */
   assert.equal(VENTS.TYPES.bohne.color, c.mark, 'die Bohne in der Hervorhebung');
-  assert.equal(VENTS.TYPES.waschbrett.color, c.markWarm, 'das Waschbrett in Koralle');
+  assert.equal(VENTS.TYPES.waschbrett.color, c.markLime, 'das Waschbrett in Limette');
   assert.equal(G.TYPES.point.color, c.mark, 'der Punkt in der Hervorhebung');
-  assert.equal(G.TYPES.branch.color, c.markWarm, 'die Verzweigung in Koralle');
+  assert.equal(G.TYPES.branch.color, c.markLime, 'die Verzweigung in Limette');
   assert.equal(G.TYPES.mirror.color, c.markCool, 'der Spiegelpunkt in Himmelblau');
   /* Die übrigen tragen die Sachfarbe ihrer Sache. */
   assert.equal(VENTS.TYPES.entlueftet.color, c.air);
@@ -188,7 +190,7 @@ test('Umschalten färbt Designer, Anguss, Richtungen und Achsen um', () => {
   const c = S.colors('stahl');
   assert.notEqual(c.mark, S.colors('teal').mark, 'Stahlblau hat eine eigene Hervorhebung');
   assert.equal(VENTS.TYPES.bohne.color, c.mark);
-  assert.equal(VENTS.TYPES.waschbrett.color, c.markWarm);
+  assert.equal(VENTS.TYPES.waschbrett.color, c.markLime);
   assert.equal(VENTS.TYPES.entlueftet.color, c.air);
   assert.equal(COOL.TYPES.stich.color, c.cool);
   assert.equal(FILL.inletColor(), c.die, 'der Anschnitt der Füllung zieht mit dem Ereignis nach');
@@ -205,7 +207,7 @@ test('Umschalten färbt Designer, Anguss, Richtungen und Achsen um', () => {
   assert.equal(FILL.inletColor(), P.die);
 });
 
-test('Farbleisten: die von palette.js, turbo blau → grün → rot, Punktfarben linear', () => {
+test('Farbleisten: die von palette.js, heat blau → grün → rot, Punktfarben linear', () => {
   S.set('teal');
   for (const name of LEISTEN) {
     for (const t of STELLEN) {
@@ -216,34 +218,34 @@ test('Farbleisten: die von palette.js, turbo blau → grün → rot, Punktfarben
     assert.equal(C.scale(name, NaN), null, name + ': NaN gibt keine Farbe');
     assert.equal(C.scaleRgb(name, NaN), null);
   }
-  /* Turbo: dunkelblau über Grün und Gelb nach Dunkelrot. */
-  const lo = C.scaleRgb('turbo', 0.15), mid = C.scaleRgb('turbo', 0.5), hi = C.scaleRgb('turbo', 0.85);
-  assert.ok(lo[2] > 0.9 && lo[2] > lo[0], 'Turbo unten blau');
-  assert.ok(mid[1] > mid[0] && mid[1] > mid[2], 'Turbo in der Mitte grün');
-  assert.ok(hi[0] > 0.8 && hi[0] > hi[2], 'Turbo oben rot');
-  /* Das Flussschema des Angussdesigners: Blau, Teal, Gold, Rot. */
-  assert.deepEqual([0, 1 / 3, 2 / 3, 1].map(t => C.scale('speed', t)), ['#2e6da4', '#3fc2b6', '#d4a908', '#b42318']);
-  assert.equal(CHART.speedColor(2, 4), P.scale('speed', 0.5), 'die Bänder auf der Leiste speed');
-  assert.equal(CHART.speedColor(9, 4), '#b42318', 'was schneller ist, bleibt rot');
-  assert.equal(CHART.speedColor(0, 0), '#2e6da4');
+  /* heat: Dunkelviolett über Blau, Grün und Gelb nach Dunkelrot. */
+  const lo = C.scaleRgb('heat', 0.25), mid = C.scaleRgb('heat', 0.5), hi = C.scaleRgb('heat', 0.85);
+  assert.ok(lo[2] > 0.75 && lo[2] > lo[1] && lo[1] > lo[0], 'heat unten blau');
+  assert.ok(mid[1] > mid[0] && mid[1] > mid[2], 'heat in der Mitte grün');
+  assert.ok(hi[0] > 0.8 && hi[0] > hi[2], 'heat oben rot');
+  /* Das Flussschema des Angussdesigners liest heat, beschnitten wie die
+     Felder (seit 24.09.; vorher eine eigene Leiste `speed`). */
+  assert.equal(CHART.speedColor(2, 4), P.scale('heat', C.heatTrim(0.5)), 'die Bänder auf heat');
+  assert.equal(CHART.speedColor(9, 4), P.scale('heat', C.heatTrim(1)), 'was schneller ist, bleibt am roten Ende');
+  assert.equal(CHART.speedColor(0, 0), P.scale('heat', C.heatTrim(0)));
   /* Die Tafeln: n Farben, r, g, b je Eintrag; Float wie die Leiste, linear
      für Punktfarben. */
-  const tab = C.lut('turbo');
+  const tab = C.lut('heat');
   assert.equal(tab.length, 256 * 3);
   for (const k of [0, 64, 128, 200, 255]) {
-    const want = P.hexRgb(P.scale('turbo', k / 255)).map(v => Math.round(v * 255));
+    const want = P.hexRgb(P.scale('heat', k / 255)).map(v => Math.round(v * 255));
     assert.deepEqual([tab[3 * k], tab[3 * k + 1], tab[3 * k + 2]], want, 'Tafel bei ' + k);
-    const f = C.lutFloat('turbo'), l = C.lutLinear('turbo');
+    const f = C.lutFloat('heat'), l = C.lutLinear('heat');
     for (let i = 0; i < 3; i++) {
       assert.ok(Math.abs(f[3 * k + i] - want[i] / 255) < 1e-6, 'lutFloat bei ' + k);
       assert.ok(Math.abs(l[3 * k + i] - toLin(want[i] / 255)) < 1e-6, 'lutLinear bei ' + k);
     }
   }
   assert.equal(C.lut('draft', 2).length, 6);
-  const turbo = C.scaleFn('turbo');
-  assert.deepEqual(turbo(0.5).map(v => +v.toFixed(3)), C.linRgb(P.scale('turbo', 128 / 255)).map(v => +v.toFixed(3)), 'scaleFn liest die lineare Tafel');
-  assert.deepEqual(turbo(-1), turbo(0), 'geklemmt');
-  assert.deepEqual(turbo(2), turbo(1));
+  const heat = C.scaleFn('heat');
+  assert.deepEqual(heat(0.5).map(v => +v.toFixed(3)), C.linRgb(P.scale('heat', 128 / 255)).map(v => +v.toFixed(3)), 'scaleFn liest die lineare Tafel');
+  assert.deepEqual(heat(-1), heat(0), 'geklemmt');
+  assert.deepEqual(heat(2), heat(1));
   /* Linear heißt: dieselbe Rolle als Punktfarbe sieht aus wie als Material. */
   const lin = C.linRgb(P.part), srgb = P.hexRgb(P.part);
   for (let i = 0; i < 3; i++) assert.ok(lin[i] < srgb[i], 'linear ist dunkler als sRGB');
@@ -286,13 +288,13 @@ test('Die Farbleisten sind in jedem Schema dieselben', () => {
   const ref = Object.fromEntries(LEISTEN.map(name => [name, STELLEN.map(t => C.scale(name, t))]));
   const refDraft = [0, 1, 1.5, 2, 4.5, 6].map(deg => C.draftHex(deg, 1.5));
   const refSpeed = [0, 1, 2, 3].map(v => CHART.speedColor(v, 3));
-  const refTab = Array.from(C.lut('turbo'));
+  const refTab = Array.from(C.lut('heat'));
   for (const s of S.list) {
     assert.equal(S.set(s.id), s.id);
     for (const name of LEISTEN) assert.deepEqual(STELLEN.map(t => C.scale(name, t)), ref[name], s.id + ': ' + name);
     assert.deepEqual([0, 1, 1.5, 2, 4.5, 6].map(deg => C.draftHex(deg, 1.5)), refDraft, s.id + ': Entformschräge');
     assert.deepEqual([0, 1, 2, 3].map(v => CHART.speedColor(v, 3)), refSpeed, s.id + ': Flussschema');
-    const tab = C.lut('turbo');
+    const tab = C.lut('heat');
     assert.ok(tab.length === refTab.length && tab.every((v, i) => v === refTab[i]), s.id + ': Tafel');
   }
   S.set('teal');
@@ -329,8 +331,11 @@ test('Formaufbau: Teile tragen Rollen, nur Sachfarben, die dem Schema folgen', (
   assert.equal(R.BY_ID.castOverflow.color, P.overflow);
   assert.equal(cool.color, P.cool);
   S.set('graphit');
-  assert.notEqual(S.colors('graphit').melt, S.colors('teal').melt);
-  assert.equal(cast.color, S.colors('graphit').melt, 'die Voreinstellung folgt dem Schema');
+  /* Die Schmelze ist seit 24.09. in jedem Schema dasselbe Orange; dem Schema
+     folgt, was dort anders aussieht, etwa die Temperierung. */
+  assert.equal(cast.color, S.colors('graphit').melt, 'das Gussteil ist in jedem Schema Schmelze');
+  assert.notEqual(S.colors('graphit').cool, S.colors('teal').cool);
+  assert.equal(cool.color, S.colors('graphit').cool, 'die Voreinstellung folgt dem Schema');
   S.set('teal');
   /* Die Stahlteile: Stufen zwischen Fläche und Kante, Nachbarn getrennt. */
   const steel = R.COMPONENTS.filter(c => c.role.startsWith('steel')).map(c => c.color);

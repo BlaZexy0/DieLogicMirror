@@ -57,10 +57,8 @@ const zahl = x => x.toFixed(1).replace('.', ',');
 
 const COLS = 4, CW = 300, CH = 118, SQ = 56, PAD = 28, HEAD = 78, GAP = 34;
 const VERLAEUFE = [
-  ['heat', 'Heatmaps der Auslegung: sieben Stützstellen aus Turbo', 'scale(\'heat\', t), theme.heatStops'],
-  ['turbo', 'Felder im 3D-Studio: Wandstärke, Abstand, Füllgrad, Ankunft, Geschwindigkeit, Haftung', 'scale(\'turbo\', t), Polynom nach Popov'],
-  ['draft', 'Entformschräge: bis zum Grenzwert (t = 1/3) Rot nach Gold, darüber hell- nach sattgrün', 'scale(\'draft\', t), t = Winkel / 3·Grenzwert'],
-  ['speed', 'Geschwindigkeit im Flussschema des Angussdesigners', 'scale(\'speed\', t)']
+  ['heat', 'Jeder Messwert: Heatmaps der Auslegung, Felder im 3D-Studio, Flussschema', 'scale(\'heat\', t), theme.heatStops, sieben Stützstellen aus Turbo'],
+  ['draft', 'Entformschräge: bis zum Grenzwert (t = 1/3) Rot nach Gold, darüber hell- nach sattgrün', 'scale(\'draft\', t), t = Winkel / 3·Grenzwert']
 ];
 const VH = 58;                                     // Höhe je Verlauf
 const rows = familien.reduce((n, g) => n + Math.ceil(g.keys.length / COLS), 0);
@@ -99,9 +97,10 @@ for (const g of familien) {
   y += Math.ceil(g.keys.length / COLS) * CH;
 }
 
-/* Die Farbleisten: eine Leiste aus Stützstellen mit genau diesen (zwei an
-   einer Stelle sind die Stufe der Entformschräge), Turbo als Polynom mit
-   dichten Stützen, zwischen denen die lineare Mischung nicht auffällt. */
+/* Die Farbleisten: Stützstellen, mit genau diesen gezeichnet (zwei an
+   einer Stelle sind die Stufe der Entformschräge). Eine Leiste als
+   Funktion bekäme dichte Stützen, zwischen denen die lineare Mischung
+   nicht auffällt; zur Zeit sind beide Leisten Stützstellen. */
 s += `<text x="${PAD}" y="${y + 14}" font-size="11" font-weight="700" letter-spacing="1.2" fill="${P.muted}">FARBLEISTEN (FEST, IN JEDEM SCHEMA GLEICH, KEINE ROLLEN)</text>\n`;
 y += GAP;
 const N = 33, BW = COLS * CW - 40;

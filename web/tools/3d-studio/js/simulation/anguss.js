@@ -256,7 +256,7 @@ export function createAngussfuellungTool(host) {
     if (arrival) {
       colorbar({
         title: 'Ankunft ab Kammer voll',
-        stops: gradient(t => scale('turbo', t)),
+        stops: gradient(t => scale('heat', t)),
         ticks: [fmtUnit(r.tArrivalMax * 1000, 'ms', 1), fmtUnit(r.tArrivalMax * 500, 'ms', 1), '0 ms'],
         extra: chip(VIEW.noData) + ' nie erreicht'
       });

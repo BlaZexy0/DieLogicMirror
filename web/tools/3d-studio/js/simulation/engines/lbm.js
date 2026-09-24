@@ -134,7 +134,7 @@ export const lbm = {
      Ankunft der 27 umliegenden Zellen (die Ecke liegt auf der Wand; die
      nächsten Zellen sind oft Stahl, und auf der Deckfläche liegt die erste
      Schmelzezelle eine ganze Zelle tiefer). Die Ankunft auf der ganzen
-     Farbleiste `turbo`, früh blau, spät rot; nie erreicht trägt das Grau
+     Farbleiste `heat`, früh blau, spät rot; nie erreicht trägt das Grau
      des Bauteils (keine Daten). → Ende der Skala in s. */
   paintArrival(result, mesh) {
     const d = result.domain;
@@ -146,7 +146,7 @@ export const lbm = {
     let tMax = 0;
     for (const gt of result.gates) if (Number.isFinite(gt.tSim)) tMax = Math.max(tMax, gt.tSim);
     if (!(tMax > 0)) tMax = result.snapshots[result.snapshots.length - 1].t || 1;
-    const grey = linRgb(VIEW.noData), turbo = scaleFn('turbo');
+    const grey = linRgb(VIEW.noData), heat = scaleFn('heat');
     for (let v = 0; v < n; v++) {
       const i0 = Math.round((pos.getX(v) - d.origin[0]) / d.h), j0 = Math.round((pos.getY(v) - d.origin[1]) / d.h), k0 = Math.round((pos.getZ(v) - d.origin[2]) / d.h);
       let best = NEVER;
@@ -156,7 +156,7 @@ export const lbm = {
         const a = result.arrival[(k * ny + j) * nx + i];
         if (a < best) best = a;
       }
-      const c = best === NEVER ? grey : turbo(Math.min(1, best * result.dt / tMax));
+      const c = best === NEVER ? grey : heat(Math.min(1, best * result.dt / tMax));
       col[v * 3] = c[0]; col[v * 3 + 1] = c[1]; col[v * 3 + 2] = c[2];
     }
     mesh.geometry.setAttribute('color', new T.BufferAttribute(col, 3));
