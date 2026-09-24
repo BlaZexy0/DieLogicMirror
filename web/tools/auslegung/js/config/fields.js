@@ -121,18 +121,22 @@ export const groups = [
   },
   {
     id: 'vacuum', title: 'Vakuum und Entlüftung',
-    note: 'Die Entlüftungsfläche treibt die Entlüftungs-KPIs und -Diagramme. In den Drossel-Modellen der Luftsimulation ist sie mit Spalt und Kanallänge der Widerstand, durch den die Luft zur Pumpe bzw. in den Tank muss: bei großem Druckverhältnis chokt der Kanal (Schallgeschwindigkeit am Austritt), dazwischen begrenzt die Wandreibung, bei kleiner Druckdifferenz und niedrigem Druck fließt die Luft zäh (laminar). „Sofort-Enddruck" ignoriert Fläche und Kanal; der Druck springt beim Öffnen auf den Enddruck. Der Tank ist vor dem Schuss auf den Enddruck evakuiert; sein Druck steigt mit jeder abgesaugten Luftmasse. Schließt das Ventil vor dem Füllende, wird die Restluft danach verdichtet.',
+    note: 'Die Entlüftungsfläche treibt die Entlüftungs-KPIs und -Diagramme. In den Drossel-Modellen der Luftsimulation ist sie mit Kanalzahl, Kanalhöhe und Kanallänge der Widerstand, durch den die Luft zur Pumpe bzw. in den Tank muss: bei großem Druckverhältnis chokt der Kanal (Schallgeschwindigkeit am Austritt), dazwischen begrenzt die Wandreibung, bei kleiner Druckdifferenz und niedrigem Druck fließt die Luft zäh (laminar). „Sofort-Enddruck" ignoriert Fläche und Kanal; der Druck springt beim Öffnen auf den Enddruck. Der Tank ist vor dem Schuss auf den Enddruck evakuiert; sein Druck steigt mit jeder abgesaugten Luftmasse. Schließt das Ventil vor dem Füllende, wird die Restluft danach verdichtet.',
     fields: [
       { key: 'vacModel', label: 'Vakuum-Modell', unit: '', def: 'conductance', type: 'select',
         options: [['aus', 'ohne Vakuum'], ['ideal', 'Sofort-Enddruck (ideal, ohne Drossel)'], ['conductance', 'Drossel → Pumpe (Enddruck konstant)'], ['tank', 'Drossel → Vakuumtank (Druck steigt)']] },
       { key: 'vent', label: 'Entlüftungsfläche', unit: 'mm²', def: 800,
         auto: 'Ideal: Entlüftungsbedarf bei der Füllzeit der Schusskurve: A_ent = V_luft/(t_f·v_luft,max), auf 10 mm² aufgerundet', gt: 0, max: 100000, bound: 'plaus' },
-      /* Entlüftungskanal als breiter Schlitz: Spalthöhe und Weglänge bis zum
-         Ventil bestimmen die Wandreibung (hydraulischer Ø = 2·Spalt). */
+      /* Die Entlüftungsfläche ist die Summe über n rechteckige Kanäle der
+         Höhe h bis zum Ventil; die Breite folgt daraus (b = A/(n·h)). Die
+         Wandreibung rechnet mit dem hydraulischen Ø eines Kanals,
+         2·b·h/(b+h) (physics.ventGapEq). Ein Waschbrett ist n = 1 mit
+         kleiner Höhe, dann wird daraus der breite Spalt. */
       /* when: nur sichtbar (und geprüft), solange das Modell das Feld
          braucht — der Kanal nur in den Drossel-Modellen, der Tank nur beim
          Tankmodell, alles Weitere nur mit Vakuum. */
-      { key: 'ventGap', label: 'Entlüftungsspalt', unit: 'mm', def: 10, gt: 0, max: 50, bound: 'plaus', when: { vacModel: VAC_DROSSEL } },
+      { key: 'ventCount', label: 'Entlüftungskanäle Anzahl', unit: '', def: 1, min: 1, max: 50, bound: 'plaus', when: { vacModel: VAC_DROSSEL } },
+      { key: 'ventHeight', label: 'Entlüftungskanal Höhe', unit: 'mm', def: 10, gt: 0, max: 50, bound: 'plaus', when: { vacModel: VAC_DROSSEL } },
       { key: 'ventLen', label: 'Entlüftungskanal Länge', unit: 'mm', def: 80, gt: 0, max: 5000, bound: 'plaus', when: { vacModel: VAC_DROSSEL } },
       { key: 'vacPump',  label: 'Enddruck Pumpe / Tank vor Schuss', unit: 'mbar', def: 80 , gt: 0, max: 1013, bound: 'hart', why: 'ein Enddruck über dem Umgebungsdruck ist kein Vakuum', when: { vacModel: VAC_ON } },
       { key: 'vacTank',  label: 'Vakuumtank-Volumen', unit: 'L', def: 500, gt: 0, max: 100000, bound: 'plaus', when: { vacModel: ['tank'] } },

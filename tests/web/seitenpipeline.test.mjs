@@ -62,12 +62,12 @@ test('die Vakuum-Felder folgen dem Modell (in der Werkbank fehlte das)', async (
   const modell = doc.querySelector('select[data-k="vacModel"]');
   const setze = m => { modell.value = m; modell.oninput(); };
   setze('aus');
-  for (const k of ['vacPump', 'vacStart', 'vacTank', 'ventGap']) assert.ok(feld(k).hidden, k + ' müsste ausgeblendet sein');
+  for (const k of ['vacPump', 'vacStart', 'vacTank', 'ventHeight']) assert.ok(feld(k).hidden, k + ' müsste ausgeblendet sein');
   assert.ok(!feld('vent').hidden, 'die Entlüftungsfläche bleibt');
   setze('tank');
-  for (const k of ['vacPump', 'vacStart', 'vacTank', 'ventGap']) assert.ok(!feld(k).hidden, k + ' müsste sichtbar sein');
+  for (const k of ['vacPump', 'vacStart', 'vacTank', 'ventHeight']) assert.ok(!feld(k).hidden, k + ' müsste sichtbar sein');
   setze('conductance');
-  assert.ok(feld('vacTank').hidden && !feld('ventGap').hidden);
+  assert.ok(feld('vacTank').hidden && !feld('ventHeight').hidden);
 });
 
 test('ein Wechsel des Farbschemas malt alle Karten und die Füllkammer neu, ohne zu rechnen', () => {

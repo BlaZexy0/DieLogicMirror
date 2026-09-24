@@ -117,6 +117,20 @@ export function ventAreaFor(v, tMs) {
   return cavityVolume(total(v), v) / (tMs / 1000) / v.vAirMax * 1e6;
 }
 
+/* Entlüftungskanäle → der Spalt, mit dem die Luftsimulation rechnet (mm).
+   Die Fläche A ist die Summe über n Rechteckkanäle der Höhe h, jeder also
+   b = A/(n·h) breit, mit dem hydraulischen Ø 2·b·h/(b+h). Die Simulation
+   (core/airsim, an ihre Referenzwerte gebunden) kennt nur den breiten
+   Spalt s mit Ø 2·s; der gleichwertige Spalt ist deshalb b·h/(b+h). Für
+   b ≫ h (ein Waschbrett) ist das h. 0 ohne Fläche, Anzahl oder Höhe: dann
+   rechnet die Simulation ohne Kanal, nur mit der Öffnung. */
+export function ventGapEq(v) {
+  const n = v.ventCount, h = v.ventHeight;
+  if (!(v.vent > 0) || !(n > 0) || !(h > 0)) return 0;
+  const b = v.vent / (n * h);
+  return b * h / (b + h);
+}
+
 /* Zerstäubung nach Herman/NADCA (UPCT Gl. 2.38): J = v_a^1,71 · e_p · ρ,
    empirisch in inch-pound-Einheiten (v_a in in/s, Anschnittdicke e_p in
    inch, ρ in lb/in³). atomJ: der Faktor zur Anschnittgeschwindigkeit in

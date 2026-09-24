@@ -165,12 +165,14 @@
             Auslegungsgröße, und nicht der Druck.</span></div>
       </div>
       <div class="prose">
-        <p>Eine reale Entlüftung ist aber keine Blende, sondern ein <b>Kanal</b>: ein breiter
-          Schlitz von einigen Zehntelmillimetern Höhe und einigen Zentimetern Länge bis zum
-          Ventil. Auf diesem Weg reibt die Luft an den Wänden, und mit dem Druck ändert sich,
-          <em>wie</em> sie strömt. Das Dashboard rechnet den Kanal deshalb mit Spalthöhe und
-          Kanallänge (hydraulischer Durchmesser 2·Spalt) als isotherme Rohrströmung mit
-          Wandreibung, und die kennt drei Regime:</p>
+        <p>Eine reale Entlüftung ist aber keine Blende, sondern ein <b>Kanal</b>: meist
+          einige Kanäle von etwa zehn Millimetern Höhe bis zum Ventil, beim Waschbrett ein
+          breiter Schlitz von wenigen Zehntelmillimetern. Auf diesem Weg reibt die Luft an
+          den Wänden, und mit dem Druck ändert sich, <em>wie</em> sie strömt. Das Dashboard
+          teilt die Entlüftungsfläche A deshalb auf n Rechteckkanäle der Höhe h auf (Breite
+          b = A/(n·h), hydraulischer Durchmesser 2·b·h/(b+h)) und rechnet sie mit der
+          Kanallänge als isotherme Rohrströmung mit Wandreibung, und die kennt drei
+          Regime:</p>
       </div>
       <div class="derivation-box">
         <div class="step"><span class="step-num">①</span>
@@ -190,7 +192,7 @@
             Ende der Absaugung, wenn Kammer- und Pumpendruck nur noch Millibar trennen,
             fällt die Reynolds-Zahl unter einige Hundert. Dann fließt die Luft nach
             Poiseuille: Der Massenstrom wächst mit der Differenz der <em>Quadrate</em> der
-            Drücke und mit der dritten Potenz der Spalthöhe. Die letzten Millibar zum
+            Drücke und mit der dritten Potenz der Kanalhöhe. Die letzten Millibar zum
             Enddruck sind darum die langsamsten.</span></div>
       </div>
       <div class="prose">
@@ -215,13 +217,13 @@
           <span><b>Sofort-Enddruck (ideal, ohne Drossel):</b> Ab dem Kolbenweg „Vakuum ab"
             springt der Druck augenblicklich auf den Enddruck (Standard 80 mbar) und bleibt
             dort, solange das Ventil offen ist: eine unendlich schnelle Pumpe hinter einem
-            unendlich weiten Kanal. Entlüftungsfläche, Spalt und Kanallänge gehen hier
+            unendlich weiten Kanal. Entlüftungsfläche, Kanäle und Kanallänge gehen hier
             nicht ein. Obere Abschätzung dessen, was eine Anlage überhaupt leisten
             könnte.</span></div>
         <div class="step"><span class="step-num">③</span>
           <span><b>Drossel → Pumpe (Enddruck konstant):</b> das Kanalmodell aus Abschnitt 4
             gegen eine Pumpe, die den Enddruck hält, egal wie viel Luft ankommt. Die
-            Absaugung muss durch Fläche, Spalt und Kanal; Choking, Reibung und der zähe
+            Absaugung muss durch Fläche und Kanäle; Choking, Reibung und der zähe
             Schluss begrenzen sie. Hier zahlt sich Fläche aus, nicht Pumpenleistung.</span></div>
         <div class="step"><span class="step-num">④</span>
           <span><b>Drossel → Vakuumtank (Druck steigt):</b> derselbe Kanal, aber dahinter ein
@@ -327,7 +329,8 @@
             Gasdynamik (kompressible Strömung idealer Gase). Isotherme Rohrströmung mit
             Wandreibung und Choking bei M = 1/√γ: Shapiro, <i>The Dynamics and
             Thermodynamics of Compressible Fluid Flow</i>; Reibbeiwert aller Regime nach
-            Churchill (1977), laminarer Ast des breiten Spalts f = 96/Re.</li>
+            Churchill (1977), laminarer Ast des breiten Spalts f = 96/Re (für Kanäle, die
+            nicht viel breiter als hoch sind, eine Näherung).</li>
           <li>Grenzwerte und Faustregeln (v<sub>luft,max</sub>, Entlüftungs- zu
             Anschnittfläche, Füllzeit): Prozessfenster-Eingaben des Dashboards; Kriterien
             und Literaturbelege im Artikel

@@ -54,6 +54,18 @@ test('Füllgrad und Dosiervolumen: eine Formel für alle alten Stellen', () => {
   }
 });
 
+test('Entlüftungskanäle: der gleichwertige Spalt der Luftsimulation', () => {
+  const v = Object.assign(defaults(), { vent: 800, ventCount: 1, ventHeight: 10 });
+  close(Ph.ventGapEq(v), 80 * 10 / 90, 1e-12, 'ein Kanal 80 × 10 mm');
+  close(Ph.ventGapEq({ ...v, ventCount: 5 }), 16 * 10 / 26, 1e-12, 'fünf Kanäle 16 × 10 mm');
+  /* Waschbrett: ein sehr breiter, flacher Kanal ist der alte breite Spalt. */
+  const wb = Ph.ventGapEq({ ...v, ventHeight: 0.3 });
+  assert.ok(wb < 0.3 && wb > 0.3 * 0.9998, 'b ≫ h → Spalt = h: ' + wb);
+  /* Symmetrisch: n Kanäle b × h haben denselben Ø wie h × b. */
+  close(Ph.ventGapEq({ ...v, ventCount: 5, ventHeight: 16 }), Ph.ventGapEq({ ...v, ventCount: 5 }), 1e-12);
+  for (const k of ['vent', 'ventCount', 'ventHeight']) assert.equal(Ph.ventGapEq({ ...v, [k]: 0 }), 0, k + ' = 0 → kein Kanal');
+});
+
 test('NADCA-Füllzeit: eine Formel, ein Nullschutz', () => {
   const alt = (v, s = v.wall) => v.kfill * s * (v.Tcast - v.Tflow + v.Sfrac * v.Zconst) / (v.Tflow - v.Tdie);
   for (const v of VARIANTEN) {

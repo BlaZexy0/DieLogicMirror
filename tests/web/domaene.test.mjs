@@ -280,14 +280,14 @@ test('hiddenFields: je Vakuum-Modell nur die Felder, die es braucht', () => {
   const v = defaults();
   const sichtbar = k => !hiddenFields(v).has(k);
   v.vacModel = 'aus';
-  for (const k of ['ventGap', 'ventLen', 'vacPump', 'vacTank', 'vacStart', 'vacEnd', 'vacEndStroke', 'vacEndTime'])
+  for (const k of ['ventCount', 'ventHeight', 'ventLen', 'vacPump', 'vacTank', 'vacStart', 'vacEnd', 'vacEndStroke', 'vacEndTime'])
     assert.ok(!sichtbar(k), `ohne Vakuum: ${k} müsste ausgeblendet sein`);
   assert.ok(sichtbar('vent'), 'die Entlüftungsfläche treibt KPIs und bleibt immer sichtbar');
   v.vacModel = 'ideal';
   assert.ok(sichtbar('vacPump') && sichtbar('vacStart') && sichtbar('vacEnd'));
-  assert.ok(!sichtbar('ventGap') && !sichtbar('ventLen') && !sichtbar('vacTank'), 'Sofort-Enddruck kennt keinen Kanal und keinen Tank');
+  assert.ok(!sichtbar('ventCount') && !sichtbar('ventHeight') && !sichtbar('ventLen') && !sichtbar('vacTank'), 'Sofort-Enddruck kennt keinen Kanal und keinen Tank');
   v.vacModel = 'conductance';
-  assert.ok(sichtbar('ventGap') && sichtbar('ventLen') && !sichtbar('vacTank'));
+  assert.ok(sichtbar('ventCount') && sichtbar('ventHeight') && sichtbar('ventLen') && !sichtbar('vacTank'));
   v.vacModel = 'tank';
   assert.ok(sichtbar('vacTank'));
   /* Ventilschluss: nur das Zahlenfeld des gewählten Modus */

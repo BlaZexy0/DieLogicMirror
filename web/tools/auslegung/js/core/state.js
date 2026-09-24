@@ -112,6 +112,13 @@ export function applyData(data) {
     }
     /* Ältere Projekte ohne ein Folge-Feld: Vorgabe = Wert der Quelle */
     applyFollows(Object.keys(FOLLOWS).filter(k => data.values[k] == null));
+    /* Bis 2026-09 war der Entlüftungskanal ein breiter Spalt (ventGap).
+       Seine Höhe wird die Kanalhöhe, als ein Kanal. */
+    const gap = Number(data.values.ventGap);
+    if (data.values.ventHeight == null && isFinite(gap) && gap > 0) {
+      state.values.ventHeight = gap;
+      if (data.values.ventCount == null) state.values.ventCount = 1;
+    }
   }
   if (Array.isArray(data.curve) && data.curve.length) {
     /* Nur endliche Zahlenpaare übernehmen und die Länge begrenzen —

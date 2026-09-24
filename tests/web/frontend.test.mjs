@@ -269,6 +269,17 @@ test('state: applyData verwirft ungültige Kurvenpunkte statt NaN zu übernehmen
   assert.deepEqual(state.curve, [[10, 0.2], [500, 3]], 'gültige Punkte bleiben, kaputte fliegen raus');
 });
 
+test('state: ein alter Entlüftungsspalt wird die Höhe eines Kanals', () => {
+  const vorher = { ventCount: state.values.ventCount, ventHeight: state.values.ventHeight };
+  state.values.ventCount = 5;
+  applyData({ values: { ventGap: 0.5 } });
+  assert.equal(state.values.ventHeight, 0.5);
+  assert.equal(state.values.ventCount, 1, 'der alte Spalt war ein Kanal');
+  applyData({ values: { ventGap: 0.5, ventCount: 4, ventHeight: 12 } });
+  assert.deepEqual([state.values.ventCount, state.values.ventHeight], [4, 12], 'neue Felder gewinnen, der Spalt zählt nicht');
+  Object.assign(state.values, vorher);
+});
+
 /* ── Navigation (web/shared/nav.js) ────────────────────────────────── */
 
 /* GET /api/auth/me lief bis zu dreimal je Seite (nav.js, orgpresets.js,

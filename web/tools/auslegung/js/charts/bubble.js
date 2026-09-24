@@ -59,7 +59,7 @@ export default {
   id: 'bubble',
   title: 'Luftblase unter Nachdruck',
   desc: 'Durchmesserverhältnis vor/nach Nachdruck',
-  inputs: ['injForce', 'pAcc', 'pAccOp', 'diam', 'psel', 'Tliq', 'Tdie', 'vacModel', 'vent', 'ventGap', 'ventLen', 'vacPump', 'vacTank', 'vacStart', 'vacEnd', 'vacEndStroke', 'vacEndTime'],
+  inputs: ['injForce', 'pAcc', 'pAccOp', 'diam', 'psel', 'Tliq', 'Tdie', 'vacModel', 'vent', 'ventCount', 'ventHeight', 'ventLen', 'vacPump', 'vacTank', 'vacStart', 'vacEnd', 'vacEndStroke', 'vacEndTime'],
   usesCurve: true,
   usesSim: true,
 

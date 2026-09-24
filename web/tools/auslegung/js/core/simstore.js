@@ -14,6 +14,7 @@
 
 import { state, subscribe } from './state.js';
 import { simulateAir, SimError } from './airsim/simulate.js';
+import { ventGapEq } from './physics.js';
 
 export const sim = { status: 'idle', data: null, error: null };
 
@@ -28,7 +29,8 @@ export function refreshSim() {
   if (k === lastKey) return;   // Ergebnis passt schon (notify() ohne Änderung an Werten oder Kurve)
   lastKey = k;
   try {
-    sim.data = simulateAir(state.values, state.curve);
+    /* Die Kanäle als der gleichwertige Spalt, den die Simulation kennt. */
+    sim.data = simulateAir({ ...state.values, ventGap: ventGapEq(state.values) }, state.curve);
     sim.error = null;
     sim.status = 'ok';
   } catch (e) {
