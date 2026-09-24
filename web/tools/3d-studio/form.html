@@ -4,12 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Formaufbau · 3D-Studio · DieLogic</title>
+<meta name="description" content="Eine Druckgießform als Baugruppe: Teile in Gruppen, Temperierkreise und Gruppen hervorheben, Farben ändern, aufschneiden und öffnen, als eine GLB speichern und wieder laden.">
 <meta name="theme-color" content="#002733">
 <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
 <link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="stylesheet" href="/shared/shared.css">
-<link rel="stylesheet" href="css/viewer.css">
+<link rel="stylesheet" href="css/studio.css">
 <script src="/shared/version.js"></script>
 <script src="/shared/palette.js"></script>
 <script src="/shared/schemes.js"></script>
@@ -18,111 +19,8 @@
   { "imports": { "three": "./vendor/three/three.module.js" } }
 </script>
 </head>
-<body class="viewer">
-
-<section class="page-hero compact">
-  <div class="inner">
-    <h1>Formaufbau</h1>
-    <p class="subtitle">Eine Druckgießform als Baugruppe: Teile in Gruppen, Kreise und Gruppen hervorheben, Farben ändern, als eine GLB speichern und wieder laden.</p>
-  </div>
-</section>
-
-<div class="layout">
-  <aside class="form-side">
-    <h2>Gruppen und Teile</h2>
-    <div class="quick" id="quick">
-      <button type="button" class="btn btn-outline" id="show-all" title="Alle Teile einblenden, Hervorhebung aufheben">Alle zeigen</button>
-      <button type="button" class="btn btn-outline" id="hl-cooling" title="Alle Temperierkreise hervorheben, der Rest wird blass">Temperierung</button>
-      <button type="button" class="btn btn-outline" id="hl-clear" disabled title="Hervorhebung aufheben">Aufheben</button>
-    </div>
-    <div class="hint quick-hint">Kopf tippen: Gruppe auf- oder zuklappen (eine zur Zeit) · Name tippen:
-      hervorheben (auch im Bild) · Farbfeld: Farbe · ⋯: umbenennen, verschieben, entfernen</div>
-    <div id="components"></div>
-    <button type="button" class="btn btn-outline block-btn" id="group-new">+ Gruppe anlegen</button>
-    <div id="group-form" class="hidden">
-      <div class="row"><span>Name</span><input type="text" id="group-title" placeholder="z. B. Schieber −X" autocomplete="off"></div>
-      <div class="row"><span>Seite</span>
-        <select id="group-side" autocomplete="off">
-          <option value="fix">feste Hälfte (bleibt stehen)</option>
-          <option value="mov" selected>bewegliche Hälfte (fährt mit)</option>
-        </select></div>
-      <div class="row"><span>Werkstoffklasse</span><select id="group-mat" autocomplete="off"></select></div>
-      <div class="row"><span>Schieber</span><select id="group-slide" autocomplete="off"></select></div>
-      <div class="row"><span>Schieberweg</span><input type="text" id="group-travel" value="120" inputmode="decimal" autocomplete="off"><span class="val">mm</span></div>
-      <div class="warn-line" id="group-warn"></div>
-      <div class="btn-pair">
-        <button type="button" class="btn btn-primary" id="group-add">Anlegen</button>
-        <button type="button" class="btn btn-outline" id="group-cancel">Abbrechen</button>
-      </div>
-    </div>
-
-    <h2>Darstellung</h2>
-    <div class="row">
-      <span>Deckkraft Stahl</span>
-      <input type="range" id="opacity" min="10" max="100" value="40" autocomplete="off">
-      <span class="val" id="opacity-val"></span>
-    </div>
-    <div class="row">
-      <span>Form öffnen</span>
-      <input type="range" id="open" min="0" max="100" value="0" autocomplete="off">
-      <span class="val" id="open-val"></span>
-    </div>
-
-    <h2>Schnitt</h2>
-    <label class="inline"><input type="checkbox" id="clip-on" autocomplete="off"> Schnittebene zeigen</label>
-    <div id="clip-detail" class="disabled">
-      <div class="row">
-        <span>Achse</span>
-        <div class="seg">
-          <button type="button" data-axis="x" class="active">X</button>
-          <button type="button" data-axis="y">Y</button>
-          <button type="button" data-axis="z">Z</button>
-        </div>
-      </div>
-      <div class="row">
-        <span>Position</span>
-        <input type="range" id="clip-pos" min="-100" max="100" value="0" autocomplete="off">
-        <span class="val" id="clip-pos-val"></span>
-      </div>
-      <label class="inline"><input type="checkbox" id="clip-flip" autocomplete="off"> Seite umkehren</label>
-    </div>
-
-    <h2>Dateien</h2>
-    <div class="row"><span>STL laden in</span><select id="stl-target" autocomplete="off"></select></div>
-    <input type="file" id="stl-input" accept=".stl,.glb,model/stl,model/gltf-binary,application/sla" multiple hidden>
-    <button type="button" class="btn btn-outline block-btn" id="stl-btn">+ STL-Dateien laden</button>
-    <input type="file" id="glb-input" accept=".glb,model/gltf-binary" hidden>
-    <div class="row"><span>Dateiname</span><input type="text" id="glb-name" value="formaufbau" autocomplete="off"><span class="val">.glb</span></div>
-    <div class="btn-pair">
-      <button type="button" class="btn btn-outline" id="glb-btn">GLB laden</button>
-      <button type="button" class="btn btn-primary" id="glb-save">Als GLB speichern</button>
-    </div>
-    <div class="hint" id="file-note"></div>
-    <div class="hint hidden-empty">Geladen: <span id="file-source"></span></div>
-    <div class="warn-line" id="file-warn"></div>
-
-    <div class="hint">
-      <b>Heizkühlplan:</b> „Temperierung" hebt alle Kreise hervor, ein Tipp auf einen Kreis
-      nur diesen. Der Rest der Form wird blass, Deckkraft Stahl und Schnitt bleiben.
-      Farben und Namen der Teile werden mit in die GLB geschrieben, die Hervorhebung nicht.
-      Die voreingestellten Farben sind die des Farbschemas und folgen ihm; eine selbst gewählte
-      Farbe bleibt, wie sie ist.
-      <p style="margin-top:.7rem">Der Schnitt zeigt die Körper <b>geschlossen</b>: je
-      Teil zeichnet ein Stencil-Durchgang eine massive Schnittfläche in der Farbe des Teils;
-      bei einer Hervorhebung verblassen die Schnittflächen der anderen Teile. Die
-      Werkstoffklasse (Stahl, Gussteil, Anguss, Überläufe, Temperierung, Kolben, Stifte)
-      eines geladenen Teils kommt aus seiner Gruppe; beim Verschieben wechselt sie mit.
-      Gruppen, Seiten und Schieberwege stehen als glTF-<code>extras</code> in der GLB; eine
-      GLB ohne diese Angaben wird über die Namen aus <code>js/registry.js</code> einsortiert,
-      Teile mit anderen Namen kommen in „Sonstige Teile".</p>
-    </div>
-  </aside>
-
-  <div id="viewport">
-    <div id="status"></div>
-  </div>
-</div>
-
-<script type="module" src="js/die.js"></script>
+<body class="studio">
+<div id="studio" class="st-root"></div>
+<script type="module" src="js/studio/pages/formaufbau.js"></script>
 </body>
 </html>

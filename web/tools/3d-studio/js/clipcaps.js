@@ -17,7 +17,7 @@
    genau die Schnittflächen der Teile, die nicht dazugehören.
 
    Die Zwillings-Meshes hängen als Geschwister neben den Original-Meshes:
-   Sichtbarkeits-Schalter der Sidebar und der „Form öffnen"-Versatz wirken
+   Sichtbarkeits-Schalter der Liste und der Weg beim Öffnen wirken
    dadurch automatisch auch auf die Schnittflächen. Sie tragen
    userData.stencilTwin, damit Export und Neuaufbau sie erkennen. */
 
@@ -256,8 +256,11 @@ export function initClipCaps(scene, dieScene, bounds) {
   /** Die Schnittebene, solange sie gezeigt wird (sonst null) — für den
       Treffertest im Viewer: der Raycaster von Three.js kennt sie nicht. */
   const activePlane = () => (last.on ? plane : null);
+  /** Der halbe Weg der Ebene entlang einer Achse (mm): Lage ±1 des Reglers
+      ist dieser Wert — die Seitenleiste nennt die Lage in mm. */
+  const extent = axis => EXTENT[axis];
 
   measure(bounds);
   build();
-  return { setClip, refresh, update, recolor, setActive, activePlane };
+  return { setClip, refresh, update, recolor, setActive, activePlane, extent };
 }

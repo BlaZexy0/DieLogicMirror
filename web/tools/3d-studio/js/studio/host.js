@@ -21,6 +21,13 @@
        das Werkzeug seine Bauteile selbst hält (die Abstandsanalyse: A oder B?),
      openJSON(obj, name) — eine Datei, die nicht zu accepts gehört (die
        Angussfüllung nimmt Anguss- und Werkbankdateien),
+     openFiles(files) — wer seine Dateien selbst liest, bekommt sie roh und
+       alle, die abgelegt wurden (der Formaufbau: eine GLB ist dort eine
+       ganze Form, mehrere STL kommen auf einmal),
+     save() — wessen Dokument keine JSON-Datei ist (die GLB des
+       Formaufbaus), schreibt beim Speichern selbst und liefert, was nach
+       „Gespeichert:" steht (null: nichts geschrieben); saveTitle nennt es
+       am Knopf,
      onPartStart() — ein Bauteil BEGINNT zu laden (das alte Ergebnis gilt ab
        jetzt nicht mehr als fertig), onPart(model, name) — es ist da,
      start() — wer ohne das Bauteil des Gastgebers anfängt, lädt selbst,
@@ -276,7 +283,9 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
     }
   }
   host.openFile = openFile;
-  wireDrop(shell.viewport, openFile);
+  /* Abgelegt wird eine Datei — oder, für ein Werkzeug, das seine Dateien
+     selbst liest (openFiles), alle auf einmal. */
+  wireDrop(shell.viewport, files => (host.tool && host.tool.openFiles ? host.tool.openFiles(files) : openFile(files[0])), { multiple: true });
 
   /* ── Das Werkzeug einbauen ───────────────────────────────── */
   host.mountTool = factory => {
@@ -307,7 +316,24 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       history.reset();
     } else shell.header.setUndo({ visible: false });
     const docName = () => (host.part ? host.part.name : (tool.docName ? tool.docName() : ''));
-    shell.header.onSave(() => {
+    /* Speichern schreibt den Plan als JSON — außer das Werkzeug schreibt
+       sein Dokument selbst (save: die GLB des Formaufbaus). Gespeichert ist
+       es erst, wenn die Datei da ist. */
+    if (tool.saveTitle) shell.ui('save').title = tool.saveTitle;
+    shell.header.onSave(async () => {
+      if (tool.save) {
+        let what;
+        try { what = await tool.save(); }
+        catch (err) {
+          shell.toast('Speichern ging nicht: ' + err.message, { ms: 8000 });
+          console.error(err);
+          return;
+        }
+        if (!what) return;
+        store.markSaved();
+        shell.toast('Gespeichert: ' + what);
+        return;
+      }
       saveJSON(tool.toJSON(), planName(docName(), id));
       store.markSaved();
       shell.toast('Gespeichert: ' + planName(docName(), id));

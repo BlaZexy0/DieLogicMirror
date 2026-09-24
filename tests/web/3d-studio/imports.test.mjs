@@ -136,33 +136,8 @@ test('alle Imports der HTML-Seiten lösen auf', () => {
   assert.deepEqual(problems, []);
 });
 
-test('jede id, die ein Viewer-Modul anspricht, steht im HTML', () => {
-  const pairs = [
-    /* Nur noch der Formaufbau spricht ids an — alle anderen Seiten laufen im
-       gemeinsamen Rahmen und finden ihre Felder über data-ui (nächster Test). */
-    ['form.html', [join('js', 'die.js'), join('js', 'ui', 'sidebar.js')]]
-  ];
-  const problems = [];
-  for (const [html, jsList] of pairs) {
-    const page = readFileSync(join(ROOT, html), 'utf8');
-    const ids = new Set([...page.matchAll(/id="([^"]+)"/g)].map(m => m[1]));
-    const src = jsList.map(j => readFileSync(join(ROOT, j), 'utf8')).join('\n');
-    const used = new Set();
-    for (const m of src.matchAll(/\$\('([^']+)'\)/g)) used.add(m[1]);
-    for (const m of src.matchAll(/getElementById\('([^']+)'\)/g)) used.add(m[1]);
-    /* Werte-Anzeigen heißen <id>-val und werden im Regler-Helfer gebaut. */
-    for (const m of src.matchAll(/slider\('([^']+)'/g)) { used.add(m[1]); used.add(m[1] + '-val'); }
-    for (const m of src.matchAll(/seg3\('([^']+)'/g)) used.add(m[1]);
-    for (const m of src.matchAll(/numberInput\('([^']+)'/g)) used.add(m[1]);
-    /* Zusammengesetzte ids (Suffix, Schleifen über 'a'/'b') lassen sich
-       statisch nicht auflösen — sie prüft der Verdrahtungstest. */
-    for (const id of [...used]) if (/'|\+|\$\{/.test(id)) used.delete(id);
-    for (const id of used) if (!ids.has(id)) problems.push(html + ': keine id „' + id + '"');
-  }
-  assert.deepEqual(problems, []);
-});
-
-/* Die Werkzeuge des gemeinsamen Rahmens (js/studio/) kennen keine ids: sie
+/* Die Werkzeuge des gemeinsamen Rahmens (js/studio/) kennen keine ids —
+   seit auch der Formaufbau darin läuft, spricht keines mehr eine an. Sie
    finden ihre Felder mit ui('name') = [data-ui="name"] — in ihren eigenen
    Feldern (js/<werkzeug>/panel.js) oder im Gerüst des Rahmens. Die Felder
    entstehen aus Bausteinen (rows.js), deshalb werden sie hier GEBAUT und
@@ -180,7 +155,7 @@ test('jedes data-ui, das ein Werkzeug des Rahmens anspricht, steht in seinen Fel
 
   const tools = readdirSync(join(ROOT, 'js')).filter(d =>
     existsSync(join(ROOT, 'js', d, 'tool.js')) && existsSync(join(ROOT, 'js', d, 'panel.js')));
-  assert.ok(tools.includes('wandstaerke'), 'Werkzeuge gefunden: ' + tools.join(', '));
+  assert.ok(tools.includes('wandstaerke') && tools.includes('formaufbau'), 'Werkzeuge gefunden: ' + tools.join(', '));
   const problems = [];
   for (const dir of tools) {
     const panel = await import(pathToFileURL(join(ROOT, 'js', dir, 'panel.js')));

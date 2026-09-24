@@ -97,60 +97,40 @@ Formrücken geht;
 je Hälfte zwei Temperierkreise (fest: unter dem flachen Boden und unter
 dem Sumpf), an Pressrest, Anguss und Auswerferstiften vorbeigeführt.
 
-Bedienung (die Seitenleiste ist für Tablet und Halle gebaut: hohe
-Zeilen, das Häufige sichtbar, das Seltene hinter „⋯"):
+Die Seite läuft im **gemeinsamen Rahmen** (`js/formaufbau/`: `tool.js`,
+`list.js` für die Gruppen und Teile, `panel.js`, `help.js`), gebaut für
+Tablet und Halle: unter dem Finger ist jedes Ziel 44 px hoch, das Häufige
+sichtbar, das Seltene hinter „⋯". Der Chip der Kopfzeile ist die **Form**
+(Beispielform oder eine eigene Datei), die drei Reiter sind Modi — jeder
+besitzt, was er im Bild zeigt:
 
-- **Schnellknöpfe** über der Liste: **Alle zeigen** (alles einblenden,
-  Hervorhebung weg), **Temperierung** (alle Kreise beider Hälften
-  hervorheben — die Teile in Gruppen der Klassen Temperierung fest /
+- **Teile** — über der Liste die Schnellknöpfe **Alle zeigen** (alles
+  einblenden, Hervorhebung weg), **Temperierung** (alle Kreise beider
+  Hälften hervorheben — die Teile in Gruppen der Klassen Temperierung fest /
   beweglich; ein zweiter Tipp nimmt sie wieder heraus) und **Aufheben**
-  (mit der Zahl der hervorgehobenen Teile).
-- **Gruppen** mit je einer **Glühbirne** im Kopf: leuchtet sie, ist
-  mindestens ein Teil sichtbar; ein Tipp schaltet die ganze Gruppe um.
-  Ein Tipp auf den **Gruppennamen** hebt alle Teile der Gruppe hervor.
-  „⋯" öffnet Umbenennen, STL-Dateien in diese Gruppe laden, eine Farbe
-  für alle Teile und Entfernen (nur leer). Je Teil: Schalter, **Farbfeld**
-  (tippen öffnet den Farbwähler; Kolben und Stifte behalten ihre festen
-  Farben), **Name** (tippen hebt hervor) und „⋯" mit Umbenennen,
-  Verschieben in eine andere Gruppe und Entfernen — das Verschieben stand
-  früher als Auswahlfeld in jeder Zeile, als Plan in der Halle braucht das
-  niemand. „Gruppe anlegen" fragt Name, Seite, Werkstoffklasse und
-  Schieber-Richtung samt Weg (deutsch gelesen: „1.500" sind 1500 mm; einen
-  fehlenden Namen oder Weg meldet das Formular selbst). Aufgeklappt ist
-  **eine Gruppe zur Zeit**:
-  ein Tipp auf den Kopf (Pfeil, Zahl der Teile oder freie Fläche) klappt
-  sie auf und die vorige zu, ein zweiter Tipp zu — so bleibt die Leiste
-  kurz, auch wenn eine Gruppe dreißig Teile hat; der Kopf sagt, wie viele
-  Teile es sind und wie viele ausgeblendet. Eine neue Hervorhebung zieht
-  die Gruppe des Teils auf, damit die Zeile zu sehen ist.
-- **Hervorheben**: die hervorgehobenen Teile bleiben deckend und leuchten
-  leicht, alles andere wird blass (Stahl auf 6 %, Gegossenes auf 14 %),
-  auch die Schnittflächen der übrigen Teile (`clip.setActive`): wer einen
-  Kreis hervorhebt, sieht auch den Schnitt des anderen Kreises blass.
-  Ein **Tipp ins Bild** hebt das Teil darunter hervor (ein kurzer Tipp
-  ohne Ziehen; blasse Teile fangen den Tipp nicht ab), ein Tipp ins
-  Leere hebt alles auf. Mit Schnittebene gilt, was zu sehen ist: was
-  weggeschnitten ist, zählt nicht, und ein Tipp auf eine Schnittfläche
-  trifft das Teil, dem sie gehört, ein Kreis im Stahl also den Kreis. Die
-  Hervorhebung ist Sache der Ansicht und steht
-  nicht in der GLB — Farben und Namen schon (`assembly.setColor`,
-  Materialfarbe plus Metadatum).
-- **Dateien**: „STL laden in" (Zielgruppe wählbar, mehrere Dateien auf
-  einmal, auch per Ziehen-und-Ablegen auf den Viewport), „GLB laden"
-  ersetzt die ganze Baugruppe und passt sie ins Bild ein (die Zoomgrenzen
-  folgen ihr; die Beispielform behält ihre Startansicht), „Als GLB
-  speichern" schreibt sie mit allen Metadaten. Eine abgelegte GLB wird
-  ebenfalls als Baugruppe geladen. Geschrieben wird bei geschlossener Form,
-  mit der ganzen Lage jedes Knotens relativ zu seinem Elternknoten und mit
-  sauberen Kopien der Materialien: deckend, ohne Leuchten, in der Farbe des
-  Teils. Deckkraft Stahl, Hervorhebung und Schnitt gehören der Ansicht.
-- **Deckkraft Stahl** und **Form öffnen**: beides bleibt bei einer
-  Hervorhebung erhalten, blass heißt „unter der Deckkraft". Nach dem
-  Neuladen zeigen Regler und Häkchen, was im Bild ist; der Browser setzt
-  keine alten Werte mehr ein.
-- **Schnittebene** (Achse, Position, Seite): der Schnitt zeigt die Körper
-  *geschlossen*. Stencil-Capping zeichnet je Teil und Werkstoffklasse eine
-  massive Schnittfläche in der Farbe des Teils (`js/clipcaps.js`, nach dem
+  (mit der Zahl der hervorgehobenen Teile). Darunter die **Gruppen** mit je
+  einer **Glühbirne** im Kopf: leuchtet sie, ist mindestens ein Teil
+  sichtbar; ein Tipp schaltet die ganze Gruppe um. Ein Tipp auf den
+  **Gruppennamen** hebt alle Teile der Gruppe hervor. „⋯" öffnet
+  Umbenennen, STL-Dateien in diese Gruppe laden, eine Farbe für alle Teile
+  und Entfernen (nur leer). Je Teil: Schalter, **Farbfeld** (tippen öffnet
+  den Farbwähler; Kolben und Stifte behalten ihre festen Farben), **Name**
+  (ein Knopf: tippen hebt hervor) und „⋯" mit Umbenennen, Verschieben in
+  eine andere Gruppe und Entfernen. Aufgeklappt ist **eine Gruppe zur
+  Zeit**: ein Tipp auf den Kopf (Pfeil, Zahl der Teile oder freie Fläche)
+  klappt sie auf und die vorige zu, ein zweiter Tipp zu; die Liste scrollt
+  in sich, die Seitenleiste nie. Eine neue Hervorhebung zieht die Gruppe des
+  Teils auf. Der Hauptknopf **Gruppe anlegen** setzt an die Stelle der Liste
+  das Formular (Name, Seite, Werkstoffklasse, Schieber-Richtung samt Weg,
+  deutsch gelesen: „1.500" sind 1500 mm; einen fehlenden Namen oder Weg
+  meldet das Formular selbst) und heißt dann **Anlegen**; Abbrechen, Esc
+  und ein anderer Reiter schließen es. Unter dem Knopf steht, was die Form
+  hat („18 Teile in 6 Gruppen · 2 ausgeblendet").
+- **Schnitt** — solange der Reiter gewählt ist, ist die Form
+  aufgeschnitten (kein eigener Schalter mehr): Achse, Lage in mm entlang
+  der Achse, Seite umkehren. Der Schnitt zeigt die Körper *geschlossen*.
+  Stencil-Capping zeichnet je Teil und Werkstoffklasse eine massive
+  Schnittfläche in der Farbe des Teils (`js/clipcaps.js`, nach dem
   Three.js-Beispiel `webgl_clipping_stencil`): die Einsätze zeigen ihr
   eigenes Grau, ein umgefärbter Kreis seine neue Farbe, der Inhalt
   (Gussteil, Temperierung …) liegt knapp vor dem Stahl. Gezeichnet wird nur
@@ -158,15 +138,69 @@ Zeilen, das Häufige sichtbar, das Seltene hinter „⋯"):
   groß wie der Schnitt durch den Kasten ihres Teils. Der Weg der Ebene
   reicht über die geschlossene und die ganz geöffnete Form
   (`assembly.bounds`, bei der Beispielform in z rund ± 1040 mm statt
-  ± 770 mm), damit sie beim Öffnen nicht springt.
+  ± 770 mm), damit sie nicht springt, wenn sich bei offener Form etwas
+  ändert.
+- **Öffnen** — solange der Reiter gewählt ist, steht die Form offen (60 %
+  des Wegs zum Einstieg): der Regler **Weg** in mm, darunter, was die
+  bewegliche Hälfte und jeder Schieber gerade fahren. Wer den Reiter
+  verlässt, schließt die Form; Achse, Lage und Weg bleiben eingestellt.
+
+Quer über die Reiter:
+
+- **Hervorheben**: die hervorgehobenen Teile bleiben deckend und leuchten
+  leicht, alles andere wird blass (Stahl auf 6 %, Gegossenes auf 14 %),
+  auch die Schnittflächen der übrigen Teile (`clip.setActive`): wer einen
+  Kreis hervorhebt, sieht auch den Schnitt des anderen Kreises blass.
+  Ein **Tipp ins Bild** hebt das Teil darunter hervor (ein kurzer Tipp
+  ohne Ziehen; blasse Teile fangen den Tipp nicht ab), ein Tipp ins
+  Leere hebt alles auf, Esc auch. Mit Schnittebene gilt, was zu sehen ist:
+  was weggeschnitten ist, zählt nicht, und ein Tipp auf eine Schnittfläche
+  trifft das Teil, dem sie gehört, ein Kreis im Stahl also den Kreis. Die
+  Hervorhebung ist Sache der Ansicht: sie gilt in jedem Reiter, ist kein
+  Schritt im Verlauf und steht nicht in der GLB — Farben und Namen schon
+  (`assembly.setColor`, Materialfarbe plus Metadatum).
+- **Deckkraft Stahl** steht unter „Darstellung" in der Ansichtsleiste; bei
+  einer Hervorhebung bleibt der Stahl darunter.
+- **Rückgängig** (↶ ↷, Strg+Z/Y) für jede Änderung an der Form:
+  Umbenennen, Verschieben, Färben (ein Schritt, wenn der Farbwähler sich
+  schließt), Entfernen (ohne Nachfrage, der Toast bietet „Rückgängig"),
+  Gruppen anlegen und entfernen, STL laden. Der Verlauf zieht die
+  Metadaten ab (`assembly.metadata()`), `assembly.apply()` bringt die
+  Baugruppe auf einen Abzug zurück. Ein entferntes Teil liegt dafür in
+  einer Ablage, nicht im Müll (freigegeben wird sie mit der Baugruppe), und
+  ein Teil, das in seine erste Werkstoffklasse zurückkehrt, trägt wieder
+  genau seine eigenen Materialien — der Kolben in der Füllkammer bleibt
+  Kolben. Ein- und Ausblenden, Hervorheben, Schnitt, Öffnen und Deckkraft
+  sind Ansicht und kein Schritt.
+- **Dateien**: „Datei öffnen …" in der Klappe der Form und das Ablegen im
+  Bild nehmen GLB und STL, mehrere auf einmal (das Werkzeug liest seine
+  Dateien selbst, `openFiles`): eine GLB ersetzt die ganze Baugruppe und
+  wird eingepasst (die Zoomgrenzen folgen ihr), STL-Dateien kommen als
+  Teile in die aufgeklappte Gruppe — ebenso über den Chip **STL laden** oben
+  im Bild und „STL laden" im Menü einer Gruppe; alle zusammen sind EIN
+  Schritt. **Speichern** in der Kopfzeile schreibt die Form als GLB mit
+  allen Metadaten (die Beispielform als `formaufbau.glb`, eine geöffnete
+  Datei unter ihrem Namen), kein JSON; erst danach gilt sie als
+  gespeichert. Geschrieben wird bei geschlossener Form, mit der ganzen Lage
+  jedes Knotens relativ zu seinem Elternknoten und mit sauberen Kopien der
+  Materialien: deckend, ohne Leuchten, in der Farbe des Teils. Deckkraft
+  Stahl, Hervorhebung, Schnitt und Öffnen gehören der Ansicht.
+- **Entwurf**: solange nichts gespeichert ist, hebt der Browser die
+  Metadaten je Form auf (`studio:formaufbau:<Datei>`) und bietet sie beim
+  nächsten Öffnen derselben Datei an — Namen, Gruppen, Zuordnung, Farben,
+  Entferntes. Teile, die aus STL-Dateien dazukamen, stehen nur in einer
+  gespeicherten GLB; fehlen sie, sagt es die Zeile unten links.
 - Über dem Viewport: **X · Y · Z · Iso** — ein zweiter Klick auf denselben
   Knopf dreht die Blickrichtung um (die Beschriftung wechselt auf −X, −Y,
-  −Z bzw. Iso'). Daneben **Persp / Parallel**: Zentralprojektion oder
-  2D-Parallelprojektion (orthografisch, maßstäblich); beim Umschalten
-  bleibt der Bildausschnitt gleich groß.
-- Hover zeigt das Teil unter der Maus, nach derselben Regel wie der Tipp;
-  gesucht wird höchstens einmal je Bild und nicht, solange eine Taste
-  gedrückt ist.
+  −Z bzw. Iso'). Daneben **Einpassen** und **Persp / Parallel**:
+  Zentralprojektion oder 2D-Parallelprojektion (orthografisch,
+  maßstäblich); beim Umschalten bleibt der Bildausschnitt gleich groß.
+  Eingepasst wird auch die Beispielform, in der Blickrichtung von der
+  festen Seite, mit der sie immer begann.
+- Hover zeigt das Teil unter der Maus unten links, nach derselben Regel
+  wie der Tipp; gesucht wird höchstens einmal je Bild und nicht, solange
+  eine Taste gedrückt ist. Eine Meldung (eine Datei ging nicht) bleibt dort
+  stehen, bis die nächste Datei geladen ist.
 
 ## Entformungsanalyse (`entformungsanalyse.html`)
 
@@ -2113,9 +2147,10 @@ seinem Bauteil und wird beim nächsten Mal angeboten, nie still übernommen.
 
 Alle Werkzeugseiten bekommen dasselbe Gerüst und denselben Ablauf.
 Die drei Analysen (Wandstärke, Entformung, Abstand), die vier Designer
-(Anguss, Überlauf, Temperierung, Füllabschätzung) und die beiden Simulationen
-(Anguss- und Kammerfüllung) laufen darin; Formaufbau und Werkbank ziehen nach
-(bis dahin tragen sie `css/viewer.css` und ihre eigene Seitenleiste).
+(Anguss, Überlauf, Temperierung, Füllabschätzung), die beiden Simulationen
+(Anguss- und Kammerfüllung) und der Formaufbau laufen darin; die Werkbank
+zieht nach (bis dahin trägt sie `css/viewer.css` und ihre eigene
+Seitenleiste).
 
 ```
 Kopfzeile     Werkzeug · Bauteil-Chip (Beispielteil, Datei öffnen) · ↶ ↷ ·
@@ -2184,7 +2219,11 @@ Die Regeln, die der Rahmen durchsetzt — und die Tests, die sie halten:
   einer Meldung und „Zurücksetzen"; kein „Ungespeichert", keine Frage beim
   Verlassen. „Speichern" schreibt in beiden Fällen JSON
   (`<bauteil>-<werkzeug>.json`), „Öffnen" und Ablegen entscheiden nach dem
-  Inhalt (Netz oder Plan), nicht nach der Endung.
+  Inhalt (Netz oder Plan), nicht nach der Endung. Der Formaufbau ist die
+  Ausnahme: sein Dokument ist die Form selbst, „Speichern" schreibt sie als
+  GLB (`save()` im Werkzeug), und seine Dateien liest er selbst
+  (`openFiles()`: eine GLB ist eine ganze Form, mehrere STL kommen auf
+  einmal).
 - **Zahlen sprechen deutsch** (`format.js`): Anzeige mit Komma und
   Tausenderpunkt, Stellen je Einheit, und ein Parser, der `1.500` als 1500
   und `1.5` als 1,5 liest. Eine Eingabe außerhalb der Grenzen wird geklemmt
@@ -2257,7 +2296,8 @@ Exportieren und Tasten; die Seite selbst ist nur noch
 **Der Vertrag** steht im Kopf von `host.js`, an EINER Stelle: alles, was
 der Gastgeber vom Werkzeug wissen will, steht in dem Objekt, das die
 Fabrik zurückgibt (Modi, Datei, Export, Tasten, `cancelDrag`,
-`cancelAim`, `dropPart`, `openJSON`, `onPartStart`/`onPart`, `start`) —
+`cancelAim`, `dropPart`, `openJSON`, `openFiles`, `save`,
+`onPartStart`/`onPart`, `start`) —
 der Gastgeber schreibt nichts von außen an das Werkzeug, und das Werkzeug
 greift nicht in den Gastgeber: es meldet mit `host.changed(label,
 { coalesce, ms })`, `host.removed(was)`, `host.revert()`,
@@ -2410,7 +2450,7 @@ Stufe der Schräge am Grenzwert) und die Rückfälle;
 
 ```
 index.html            Übersicht (Karten der Werkzeuge)
-form.html             Viewer 1: Formaufbau
+form.html             Viewer 1: Formaufbau (im Rahmen, js/formaufbau/)
 entformungsanalyse.html   Viewer 2: Entformungsanalyse
 wandstaerke.html      Viewer 3: Wandstärkenanalyse
 abstand.html          Viewer 4: Abstandsanalyse
@@ -2419,7 +2459,7 @@ ueberlauf.html        Viewer 6: Überlaufdesigner (Überläufe und Entlüftungen
 temperier.html        Viewer 7: Temperierkanal-Designer (Kühlstiche und Kanäle)
 fuellung.html         Viewer 8: Füllabschätzung (Frontausbreitung von Anschnitten)
 css/site.css          Übersichtsseite und Karten
-css/viewer.css        Seitenleiste und Viewport der Viewer, die noch nicht im Rahmen laufen
+css/viewer.css        Seitenleiste und Viewport der Werkbank, die noch nicht im Rahmen läuft
 css/studio.css        der gemeinsame Rahmen: Kopfzeile, Modi, Viewport-Aufsätze, Hilfe, Stufen, Touch
 assets/die.glb        DAS Formmodell — binäres glTF, vom Viewer geladen
 assets/parts/*.glb    die Beispielteile — ebenfalls fertiges glTF
@@ -2444,8 +2484,8 @@ js/fill/solve.js      Frontausbreitung (Dijkstra, Dünnwand-Bremse, Anteile), F�
 js/fill/geom.js       Anschnitte als flache Quader für die Anzeige
 js/fill/tool.js       Füllabschätzung im Rahmen (dazu panel.js: Felder je Modus, help.js: Hilfetexte)
 js/clipcaps.js        Schnittebene mit geschlossenen Schnittflächen (Stencil)
-js/die.js             Einstieg Formaufbau-Viewer
-js/ui/sidebar.js      Baugruppen-Schalter und Regler des Formaufbaus
+js/assembly.js        die Form als Baugruppe: Gruppen, Teile, Farben, Öffnen, Export, Rückgängig (apply)
+js/formaufbau/        Formaufbau im Rahmen: tool.js, list.js (Gruppen und Teile), panel.js, help.js
 js/ui/viewbar.js      Ansichtsleiste (X/Y/Z/Iso mit Vorzeichen, Projektion)
 js/ui/controls.js     Regler, Schalter, Zahleneingabe, Kennzahlen, Farbskala
 js/part/model.js      Arbeitsmodell der Analyse (aufräumen, Topologie)
@@ -2564,18 +2604,18 @@ nichts. Die Dateien liegen unter `tests/web/3d-studio/`:
 | `field.test.mjs` | Abstandsfeld und Offsetfläche gegen die geschlossene Formel (Quader, Kugel), Untermaß, Geschlossenheit, verschmelzende Spalte |
 | `distance.test.mjs` | Punkt-Netz-Abstand gegen Fläche, Kante, Ecke und Innenraum, Symmetrie, Unabhängigkeit von der Rasterweite, gemessen am Netz wie geladen |
 | `die.test.mjs` | die ausgelieferte `assets/die.glb` trägt alle Knoten-, Baugruppen- und Materialnamen, über die der Viewer sucht, und indizierte Geometrie |
-| `imports.test.mjs` | jeder Import löst auf, jeder exportierte Name existiert, jede angesprochene HTML-id ist vorhanden — und für die Werkzeuge des Rahmens: jedes `ui('name')` steht als `data-ui` in den (dafür gebauten) Feldern oder im Gerüst |
+| `imports.test.mjs` | jeder Import löst auf, jeder exportierte Name existiert — und für die Werkzeuge des Rahmens: jedes `ui('name')` steht als `data-ui` in den (dafür gebauten) Feldern oder im Gerüst |
 | `studio-core.test.mjs` | der Rahmen ohne Werkzeug: `parseNumber` (`1.500`, `1.5`, `0.500`, `1.234,5`, `−3`), Rundlauf mit `fmtPlain`, Verlauf (Zug = ein Eintrag, Zusammenfassen, Grenze), Entwurf (schreiben, finden, verwerfen, ohne Speicher), Abbruch erreicht `buildField` und `runSimulation`, Aufträge (überholt ohne `onCancel`), `planField`, `planio.js`, `createPlacer`, Dateinamen, `turboTrim`, `viewmath.js`, `slider` mit `fire`/`set`, Zeichnen auf Abruf |
 | `tools/*.test.mjs` | je Werkzeug des Rahmens die Seite unter dem DOM-Platzhalter (`tools/fixture.mjs`, dazu `interact(P)` für Zeiger, Klick, Kamera, Chips, Tasten und Felder und `same`/`seg`/`set`): Modi besitzen ihren Viewport, Hauptknopf und Zustandszeile, Abbrechen, Einstellungen kommen zurück und lassen sich zurücksetzen, Datei; `tools/rahmen.test.mjs` hält am Überlaufdesigner, was der Rahmen jedem Werkzeug verspricht (Entwurf je Bauteil, Tasten und Esc, Klappen, Doppelklick, ⓘ, `cancelDrag`, der Vertrag von `host.changed`/`resetHistory`) |
 | `runner.test.mjs` | der Angussdesigner ohne Browser: Profil (Umriss gegen Abstandsfunktion), Graph (Spiegelung, Einfügen, Löschen, JSON), Kurve (Bogenlänge, monotoner Querschnitt), Sweep (Volumen = Fläche × Länge, geschlossen auch mit gerundeten Deckeln), Strömung, Regeln, Auslegung, Flussschema |
 | `fill.test.mjs` | die Füllabschätzung ohne Browser: Plan und Anteile, Startzellen unter dem Rechteck, Frontausbreitung (Ankunft wächst mit dem Weg, Füllgrad als Volumenrang, der größere Anschnitt kommt weiter, die Dünnwand-Bremse verzögert eine Rippe), Füllkörper bei 100 % und 50 %, letzte Stellen |
-| `viewer.test.mjs` | die Verdrahtung aller Viewer — mit einem winzigen DOM aus der **echten** HTML-Seite und dem echten Three.js ohne WebGL-Renderer (`tests/stubs/`) |
 | `farben.test.mjs` | Farbrollen: jede Elementart trägt ihre Farbe, in jedem Schema unterscheidbar und fern der Ampel, Knoten, Bohne und Waschbrett fern vom Anguss; ein Wechsel färbt alles um; die Farbleisten `turbo`, `draft` und `speed` sind die von `palette.js` und in jedem Schema gleich, die Stufe der Schräge sitzt am Grenzwert; Rückfälle ohne Palette; die Rollen der Formaufbau-Teile |
 
-`viewer.test.mjs` und `tools/` sind der Ersatz für den Browser, den es in
-der Kommandozeile nicht gibt: sie klicken Knöpfe, ziehen Regler und prüfen,
-dass Kamera, Farben, Legende und Kennzahlen wirklich reagieren. Felder und
-Modelle dabei nie mit `assert.equal` vergleichen, sondern mit
+`tools/` ist der Ersatz für den Browser, den es in der Kommandozeile nicht
+gibt — mit einem winzigen DOM aus der **echten** HTML-Seite und dem echten
+Three.js ohne WebGL-Renderer (`stubs/`): die Tests klicken Knöpfe, ziehen
+Regler und prüfen, dass Kamera, Farben, Legende und Kennzahlen wirklich
+reagieren. Felder und Modelle dabei nie mit `assert.equal` vergleichen, sondern mit
 `assert.ok(a === b)`: schlägt der Vergleich fehl, baut Node einen
 Textvergleich beider Objekte — bei Millionen Rasterwerten frisst das den
 Arbeitsspeicher.

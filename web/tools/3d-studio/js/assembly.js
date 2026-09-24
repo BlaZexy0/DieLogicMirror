@@ -32,8 +32,14 @@
    Maßstäben. Das Öffnen legt seinen Weg OBEN DRAUF, und der Export
    schreibt die ganze Kette mit.
 
-   Alles hier ist DOM-frei; die Seitenleiste (js/ui/assembly-sidebar.js)
-   und der Viewer (js/die.js) rufen nur diese Funktionen. */
+   RÜCKGÄNGIG: die Metadaten (metadata()) sind der Stand, den der Verlauf
+   des Rahmens abzieht, und apply() bringt die Baugruppe auf einen solchen
+   Stand zurück. Ein entferntes Teil kommt dafür in eine Ablage statt in
+   den Müll, und ein Teil, das in seine erste Werkstoffklasse zurückkehrt,
+   trägt wieder genau seine eigenen Materialien.
+
+   Alles hier ist DOM-frei; der Formaufbau (js/formaufbau/tool.js) und
+   seine Liste (js/formaufbau/list.js) rufen nur diese Funktionen. */
 
 import * as T from 'three';
 import { COMPONENTS, roleColor } from './registry.js';
@@ -130,8 +136,8 @@ const otherGroup = side => ({ ...OTHER[side], color: roleColor(OTHER[side].role)
 const release = root => disposeTree(root, { skip: o => o.userData.stencilTwin });
 
 /* Für die Datei: die Farbe des Teils, deckend, ohne Leuchten. Deckkraft
-   und Hervorhebung sind Sache der Ansicht (js/die.js stellt sie an den
-   Materialien im Bild ein) und gehören nicht in die GLB. */
+   und Hervorhebung sind Sache der Ansicht (js/formaufbau/tool.js stellt
+   sie an den Materialien im Bild ein) und gehören nicht in die GLB. */
 function fileMaterial(m) {
   const c = m.clone();
   c.opacity = 1;
@@ -170,10 +176,19 @@ export function createAssembly(scene) {
   const groupOf = key => groups.find(g => g.key === key);
   const itemOf = id => items.find(i => i.id === id);
   const rootFor = g => (g.side === 'fix' ? fixedRoot : movingRoot);
+  /* Entfernte Teile liegen in der ABLAGE, nicht im Müll: Rückgängig holt sie
+     samt Geometrie und Materialien zurück (apply). Freigegeben wird die
+     Ablage mit der Baugruppe (dispose). */
+  const shelf = new Map();            // Teil-id → { item, side }
   const uniqueId = base => {
     let id = slug(base), n = 2;
-    while (items.some(i => i.id === id) || scene.getObjectByName(id)) id = slug(base) + '_' + n++;
+    while (items.some(i => i.id === id) || shelf.has(id) || scene.getObjectByName(id)) id = slug(base) + '_' + n++;
     return id;
+  };
+  const meshesOf = object => {
+    const out = [];
+    object.traverse(o => { if (o.isMesh && !o.userData.stencilTwin) out.push(o); });
+    return out;
   };
   const roots = new Set([scene, die, fixedRoot, movingRoot]);
   const within = (o, root) => { for (let p = o.parent; p; p = p.parent) if (p === root) return true; return false; };
@@ -214,9 +229,10 @@ export function createAssembly(scene) {
 
   /* Alles Übrige: je Mesh, das zu keinem Teil gehört, der oberste Knoten
      darüber, der weder eine Wurzel ist noch ein Teil enthält — bei einem
-     CAD-Export also das Kind von fixedRoot/movingRoot, wie der Viewer es
-     erwartet (js/die.js). Es heißt, wie es in der Datei heißt; ist der Name
-     leer oder schon vergeben, bekommt der Knoten einen eigenen. */
+     CAD-Export also das Kind von fixedRoot/movingRoot, wie der Formaufbau
+     es erwartet (js/formaufbau/tool.js). Es heißt, wie es in der Datei
+     heißt; ist der Name leer oder schon vergeben, bekommt der Knoten einen
+     eigenen. */
   (function adoptTheRest() {
     const owned = new Set(items.map(i => i.object));
     const holders = new Set();
@@ -256,11 +272,6 @@ export function createAssembly(scene) {
     while (groups.some(g => g.key === key)) key = slug(base) + '_' + n++;
     return key;
   };
-  const meshesOf = object => {
-    const out = [];
-    object.traverse(o => { if (o.isMesh && !o.userData.stencilTwin) out.push(o); });
-    return out;
-  };
 
   /* Jedes Teil bekommt eigene Materialien: eine fremd erzeugte GLB darf
      ein Material über mehrere Knoten teilen, aber Farbe, Hervorhebung und
@@ -277,6 +288,27 @@ export function createAssembly(scene) {
     }
   })();
 
+  /* Die EIGENEN Materialien eines Teils, wie es in seine erste Gruppe kam
+     (aus der Datei, beim Laden der STL), samt den Namen seiner Netze: kommt
+     es in eine Gruppe dieser Werkstoffklasse zurück — von Hand oder mit
+     Rückgängig —, trägt es genau sie wieder, auch den Kolben in der
+     Füllkammer und die Stifte im Auswerferpaket. In jeder anderen Klasse
+     trägt jedes Netz ein Material dieser Klasse, einmal gebaut und gemerkt
+     (made). Vorher baute jedes Verschieben neue: aus dem Kolben wurde
+     Stahl, und kein Weg führte zurück. `color` sagt, in welcher Farbe die
+     eigenen Materialien stehen — ein CAD-Knoten mit mehreren Farben behält
+     sie, solange niemand eine andere wählt. */
+  const home = new Map();             // Teil-id → { mat, mats: Map(Netz → Material), names: Map(Netz → Name), color }
+  const made = new Map();             // Netz → Map(Klasse → Material)
+  function settle(it) {
+    const g = groupOf(it.group);
+    const meshes = meshesOf(it.object);
+    home.set(it.id, { mat: g ? g.mat : 'steel', mats: new Map(meshes.map(m => [m, m.material])), names: new Map(meshes.map(m => [m, m.name])), color: it.color });
+  }
+  for (const it of items) settle(it);
+  /** Trägt das Teil gerade seine eigenen Materialien? */
+  const atHome = it => { const h = home.get(it.id), g = groupOf(it.group); return !!(h && g && h.mat === g.mat); };
+
   /* Die Farben ins Bild: Teile mit Rolle bekommen deren Wert (beim Laden
      tragen ihre Materialien noch die Farben der Datei), Kolben und Stifte
      die ihrer Klasse. Ein Teil mit einem Wert bleibt, wie es ist. Beim
@@ -289,6 +321,44 @@ export function createAssembly(scene) {
       else continue;
       m.material.needsUpdate = true;
     }
+    if (it.role && atHome(it)) home.get(it.id).color = it.color;
+  }
+  /* Eine Farbe auf alle Netze des Teils, außer Kolben und Stifte. */
+  function tint(it, color, role) {
+    it.color = color;
+    it.role = role;
+    for (const m of meshesOf(it.object)) {
+      if (FIXED_COLOR.has(m.material.name)) continue;
+      m.material.color.set(color);
+      m.material.needsUpdate = true;
+    }
+    if (atHome(it)) home.get(it.id).color = color;
+  }
+  /* Die Materialien nach der Werkstoffklasse der Gruppe: die eigenen, wenn
+     es ihre ist, sonst eines dieser Klasse je Netz — ein Netz, das die
+     Klasse schon trägt, behält sein Material. Danach die Farbe des Teils;
+     eigene Materialien nur, wenn sie inzwischen eine andere tragen. */
+  function dress(it) {
+    const g = groupOf(it.group), h = home.get(it.id);
+    if (!g) return;
+    const back = !!h && h.mat === g.mat;
+    for (const m of meshesOf(it.object)) {
+      if (back && h.mats.has(m)) {
+        m.material = h.mats.get(m);
+        m.name = h.names.get(m);
+      } else if (m.material.name !== g.mat) {
+        let box = made.get(m);
+        if (!box) made.set(m, box = new Map());
+        if (!box.has(g.mat)) box.set(g.mat, makeMaterial(g.mat, it.color));
+        m.material = box.get(g.mat);
+        m.name = it.id + '_' + g.mat;
+      }
+      const fixed = FIXED_COLOR.has(m.material.name);
+      if (fixed) m.material.color.set(classColor(m.material.name));
+      else if (!back || h.color !== it.color) m.material.color.set(it.color);
+      m.material.needsUpdate = true;
+    }
+    if (back) h.color = it.color;
   }
   function recolor() {
     for (const g of groups) if (g.role) g.color = roleColor(g.role) || g.color;
@@ -342,16 +412,19 @@ export function createAssembly(scene) {
     const item = { id, label, group, ...own, object };
     items.push(item);
     remember(object);
+    settle(item);
     setOpen(openT);
     return item;
   }
 
+  /* Entfernen legt das Teil in die Ablage (oben): seine Geometrie bleibt,
+     bis die Baugruppe geht — Rückgängig braucht sie. */
   function removeItem(id) {
     const it = itemOf(id);
     if (!it) return false;
+    const g = groupOf(it.group);
     it.object.removeFromParent();
-    release(it.object);
-    basePos.delete(it.object);
+    shelf.set(id, { item: it, side: g ? g.side : 'fix' });
     items.splice(items.indexOf(it), 1);
     return true;
   }
@@ -371,13 +444,7 @@ export function createAssembly(scene) {
   function setColor(id, color) {
     const it = itemOf(id), hex = normalizeHex(color);
     if (!it || !hex) return false;
-    it.color = hex;
-    it.role = null;
-    for (const m of meshesOf(it.object)) {
-      if (FIXED_COLOR.has(m.material.name)) continue;
-      m.material.color.set(hex);
-      m.material.needsUpdate = true;
-    }
+    tint(it, hex, null);
     return true;
   }
 
@@ -393,21 +460,17 @@ export function createAssembly(scene) {
 
   /* In eine andere Gruppe: Seite wechseln heißt Elternknoten wechseln —
      bei geschlossener Form, damit das Teil bleibt, wo es in der Form sitzt —,
-     und das Teil bekommt die Werkstoffklasse der neuen Gruppe. */
+     und das Teil bekommt die Werkstoffklasse der neuen Gruppe (dress). */
+  function rehome(it, g, fromSide) {
+    if (fromSide !== g.side) closed(() => { rootFor(g).attach(it.object); remember(it.object); });
+    it.group = g.key;
+    dress(it);
+  }
   function moveItem(id, groupKey) {
     const it = itemOf(id), g = groupOf(groupKey);
     if (!it || !g || it.group === groupKey) return false;
     const from = groupOf(it.group);
-    if (!from || from.side !== g.side) {
-      closed(() => { rootFor(g).attach(it.object); remember(it.object); });
-    }
-    it.group = groupKey;
-    for (const m of meshesOf(it.object)) {
-      if (m.material.name === g.mat) continue;
-      m.material.dispose();
-      m.material = makeMaterial(g.mat, it.color);
-      m.name = it.id + '_' + g.mat;
-    }
+    rehome(it, g, from ? from.side : null);
     setOpen(openT);
     return true;
   }
@@ -450,6 +513,65 @@ export function createAssembly(scene) {
         ...(g.slide ? { slide: { ...g.slide } } : {}) })),
       items: items.map(i => ({ id: i.id, label: i.label, group: i.group, color: i.color, ...role(i) }))
     };
+  }
+
+  /** Die Baugruppe auf einen Stand ihrer Metadaten bringen (Rückgängig,
+      Wiederholen, ein Entwurf): Gruppen, Namen, Zuordnung, Farben,
+      Reihenfolge, Öffnungsweg. Was im Stand fehlt, kommt in die Ablage; was
+      er nennt und die Ablage hat, kommt wieder. Ein Teil, das weder da ist
+      noch in der Ablage liegt (eines aus einer STL-Datei, das nur ein Entwurf
+      kennt), steht in `missing`: seine Geometrie gibt es nur in einer GLB.
+      Die Datei kann von irgendwo kommen — übernommen wird, was readGroup und
+      readColor gelten lassen. */
+  function apply(meta) {
+    const missing = [];
+    if (!meta || !Array.isArray(meta.groups) || !Array.isArray(meta.items)) return { missing };
+    const next = [];
+    for (const raw of meta.groups) {
+      const g = readGroup(raw);
+      if (g && !next.some(x => x.key === g.key)) next.push(g);
+    }
+    const want = [];
+    for (const w of meta.items) if (w && typeof w.id === 'string' && !want.some(x => x.id === w.id)) want.push(w);
+    const ids = new Set(want.map(w => w.id));
+    /* Erst in die Ablage, was fehlt — solange die alten Gruppen noch sagen,
+       auf welcher Seite es hing. */
+    for (const it of items.slice()) if (!ids.has(it.id)) removeItem(it.id);
+    const sideOf = new Map(items.map(it => { const g = groupOf(it.group); return [it.id, g ? g.side : null]; }));
+    for (const [id, s] of shelf) sideOf.set(id, s.side);
+    groups.splice(0, groups.length, ...next);
+    /* Die Gruppe eines Teils: die des Stands, sonst seine bisherige, sonst
+       „Sonstige Teile" seiner Seite. */
+    const groupFor = (w, it) => {
+      const g = groupOf(w.group) || groupOf(it.group);
+      if (g) return g;
+      const side = sideOf.get(it.id) === 'mov' ? 'mov' : 'fix';
+      if (!groupOf(OTHER[side].key)) groups.push(otherGroup(side));
+      return groupOf(OTHER[side].key);
+    };
+    const order = [];
+    for (const w of want) {
+      let it = itemOf(w.id);
+      if (!it) {
+        const s = shelf.get(w.id);
+        if (!s) { missing.push(w.id); continue; }
+        shelf.delete(w.id);
+        it = s.item;
+        (s.side === 'mov' ? movingRoot : fixedRoot).add(it.object);
+        items.push(it);
+      }
+      order.push(it);
+      it.label = String(w.label || it.label).trim() || it.label;
+      const g = groupFor(w, it);
+      if (g.key !== it.group) rehome(it, g, sideOf.get(it.id));
+      const c = readColor(w, { color: g.color, role: g.role });
+      if (c.color !== it.color || (c.role || null) !== (it.role || null)) tint(it, c.color, c.role || null);
+    }
+    items.splice(0, items.length, ...order);
+    if (Number.isFinite(meta.openTravel)) openTravel = meta.openTravel;
+    setOpen(openT);
+    scene.updateMatrixWorld(true);
+    return { missing };
   }
 
   /** Sauberer Baum für den Export: ohne Stencil-Zwillinge, bei geschlossener
@@ -507,8 +629,17 @@ export function createAssembly(scene) {
     return box;
   }
 
+  /* Mit der Baugruppe geht alles, was sie hält: die Szene, die Ablage und
+     die Materialien, die gerade kein Netz trägt (eigene eines verschobenen
+     Teils, gebaute eines zurückgekehrten). Doppelt freigeben schadet nicht. */
   function dispose() {
     release(scene);
+    for (const { item } of shelf.values()) release(item.object);
+    shelf.clear();
+    for (const h of home.values()) for (const m of h.mats.values()) m.dispose();
+    for (const box of made.values()) for (const m of box.values()) m.dispose();
+    home.clear();
+    made.clear();
     scene.removeFromParent();
   }
 
@@ -517,6 +648,6 @@ export function createAssembly(scene) {
     get openTravel() { return openTravel; },
     setOpen, addItem, removeItem, renameItem, moveItem, setColor, setGroupColor, recolor,
     addGroup, removeGroup, renameGroup,
-    setVisible, labelOf, groupOf, itemOf, metadata, toExportRoot, bounds, dispose
+    setVisible, labelOf, groupOf, itemOf, metadata, apply, toExportRoot, bounds, dispose
   };
 }

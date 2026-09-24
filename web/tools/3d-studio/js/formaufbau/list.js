@@ -1,16 +1,19 @@
-/* Seitenleiste des Formaufbau-Viewers: die Gruppen und Teile einer
-   bearbeitbaren Baugruppe (js/assembly.js) — gebaut für die Halle: große
-   Zeilen, alles Häufige mit einem Fingertipp, alles Seltene hinter „⋯".
+/* Die Gruppen und Teile einer Form — der Modus „Teile" des Formaufbaus,
+   gebaut für die Halle: große Zeilen (unter dem Finger jedes Ziel 44 px,
+   css/studio.css), alles Häufige mit einem Fingertipp, alles Seltene
+   hinter „⋯".
 
-   Je Gruppe ein Kopf: die Glühbirne (leuchtet, solange etwas sichtbar
-   ist; ein Tipp schaltet die Gruppe um), der Name (ein Tipp hebt die
-   ganze Gruppe hervor), die Seite — und „⋯" mit Umbenennen, STL-Dateien
-   laden, einer Farbe für alle Teile und Entfernen (nur leer).
-   Je Teil: der Schalter, das Farbfeld (tippen öffnet den Farbwähler), der
-   Name (ein Tipp hebt das Teil hervor) und „⋯" mit Umbenennen, Verschieben
-   in eine andere Gruppe und Entfernen. Das Verschieben stand früher als
-   Auswahlfeld in JEDER Zeile — als Heizkühlplan in der Halle braucht das
-   niemand, es nahm nur Platz und Aufmerksamkeit.
+   Je Gruppe ein Kopf: der Pfeil (auf- und zuklappen), die Glühbirne
+   (leuchtet, solange etwas sichtbar ist; ein Tipp schaltet die Gruppe um),
+   der Name (ein Tipp hebt die ganze Gruppe hervor), darunter Seite und Zahl
+   der Teile — und „⋯" mit Umbenennen, STL-Dateien laden, einer Farbe für
+   alle Teile und Entfernen (nur leer). Je Teil: der Schalter, das Farbfeld
+   (tippen öffnet den Farbwähler), der Name (ein Tipp hebt das Teil hervor)
+   und „⋯" mit Umbenennen, Verschieben in eine andere Gruppe und Entfernen.
+   Das Verschieben stand früher als Auswahlfeld in JEDER Zeile — als
+   Heizkühlplan in der Halle braucht das niemand, es nahm nur Platz und
+   Aufmerksamkeit. Namen sind Knöpfe: mit der Tastatur erreichbar, und
+   sie brechen um, statt abgeschnitten zu werden.
 
    Aufgeklappt ist EINE Gruppe zur Zeit: ihre Zeilen stehen unter dem
    Kopf, die der anderen Gruppen bleiben im Baum, nur unsichtbar — eine
@@ -20,18 +23,22 @@
    die vorige zu, ein zweiter Tipp klappt sie zu. Glühbirne, Name und „⋯"
    tun weiter ihr Eigenes. Eine NEUE Hervorhebung zieht die Gruppe des
    Teils auf, damit die Zeile zu sehen ist; wer sie danach zuklappt,
-   bekommt sie nicht wieder aufgedrängt.
+   bekommt sie nicht wieder aufgedrängt. Die aufgeklappte Gruppe ist auch
+   das Ziel für STL-Dateien (openGroup).
 
-   Hervorheben ist Sache des Viewers (js/die.js): er sagt der Leiste mit
-   `highlighted(id)`, was hervorgehoben ist, und bekommt mit
-   `onHighlight(ids)` die Teile, die der Tipp meint. Die Leiste wird nach
-   jeder Änderung ganz neu gezeichnet — sie ist klein, das ist billiger
-   als jede Zeile einzeln nachzuziehen. Nur der Farbwähler zeichnet
-   während des Ziehens nicht neu: ein neu gebautes Eingabefeld unter dem
-   Finger schlösse den Wähler.
+   Was die Liste ändert, meldet sie dem Werkzeug (js/formaufbau/tool.js):
+   onEdit(label, info) für eine Änderung an der Form — daraus werden
+   Rückgängig und Entwurf —, onView(info) für die Ansicht (Ein- und
+   Ausblenden, die Farbe, solange der Wähler noch offen ist), onHighlight(ids)
+   für einen Tipp auf einen Namen. Hervorheben ist Sache des Werkzeugs: es
+   sagt der Liste mit highlighted(id), was hervorgehoben ist. Die Liste wird
+   nach jeder Änderung ganz neu gezeichnet — sie ist klein, das ist billiger
+   als jede Zeile einzeln nachzuziehen. Nur der Farbwähler zeichnet während
+   des Ziehens nicht neu: ein neu gebautes Eingabefeld unter dem Finger
+   schlösse den Wähler.
 
    Namen und Schlüssel der Gruppen kommen aus der GLB (glTF-extras), also
-   von irgendwem: in HTML nur durch esc(). */
+   von irgendwem: in HTML nur durch esc(), sonst als Text. */
 
 import { esc } from '../studio/rows.js';
 import { classColor } from '../materials.js';
@@ -48,7 +55,7 @@ function button(cls, html, title, act) {
   b.setAttribute('type', 'button');
   b.className = cls;
   b.innerHTML = html;
-  b.title = title;
+  if (title) { b.title = title; b.setAttribute('aria-label', title); }
   if (act) b.setAttribute('data-act', act);
   return b;
 }
@@ -60,22 +67,25 @@ function span(cls, text) {
   return s;
 }
 
-/* Text an Ort und Stelle bearbeiten: Eingabefeld statt Text, Enter oder
-   Verlassen übernimmt, Escape verwirft. */
-function editInline(target, current, commit) {
+/* Text an Ort und Stelle bearbeiten: ein Eingabefeld an die Stelle des
+   Namens (der Knopf weicht solange), Enter oder Verlassen übernimmt,
+   Escape verwirft. */
+function editInline(anchor, current, commit) {
   const input = document.createElement('input');
   input.setAttribute('type', 'text');
+  input.setAttribute('spellcheck', 'false');
+  input.setAttribute('autocomplete', 'off');
   input.className = 'inline-edit';
   input.value = current;
-  target.textContent = '';
-  target.appendChild(input);
+  anchor.hidden = true;
+  anchor.after(input);
   let done = false;
   const finish = ok => {
     if (done) return;
     done = true;
     const v = String(input.value).trim();
     input.remove();
-    target.textContent = ok && v ? v : current;
+    anchor.hidden = false;
     if (ok && v && v !== current) commit(v);
   };
   input.addEventListener('change', () => finish(true));
@@ -84,39 +94,63 @@ function editInline(target, current, commit) {
     if (e.key === 'Enter') finish(true);
     else if (e.key === 'Escape') finish(false);
   });
-  /* Der Tipp auf den Namen hebt sonst hervor — nicht beim Bearbeiten. */
+  /* Der Tipp auf den Kopf klappt sonst — nicht beim Bearbeiten. */
   input.addEventListener('click', e => e.stopPropagation());
   if (input.focus) input.focus();
   if (input.select) input.select();
 }
 
-/* Ein Tipp irgendwo sonst schließt das offene Menü — ein Zuhörer für
-   alle Leisten, die es je gab (der Viewer baut sie je Modell neu). */
-let current = null;
-document.addEventListener('pointerdown', e => {
-  const t = e.target;
-  if (current && !(t && t.closest && t.closest('.row-menu, [data-act="menu"], [data-act="group-menu"]'))) current.closeMenus();
-});
-
-export function mountAssemblySidebar(el, asm, {
-  onChanged, onAddFiles, targetSelect, onHighlight = () => {}, highlighted = () => false
+export function createPartList(el, {
+  onEdit, onView, onAddFiles, onHighlight = () => {}, highlighted = () => false
 }) {
+  let asm = null;
   let openMenu = null;
   let openGroup;                   // Schlüssel der aufgeklappten Gruppe; null = alle zu
   let lastHl = '';                 // die Hervorhebung beim letzten Zeichnen
   const firstWithItems = () => { const g = asm.groups.find(x => asm.items.some(i => i.group === x.key)) || asm.groups[0]; return g ? g.key : null; };
-  const closeMenus = () => { if (openMenu) { openMenu.classList.add('hidden'); openMenu = null; } };
-  const toggleMenu = menu => {
+  const closeMenus = () => {
+    if (!openMenu) return false;
+    openMenu.classList.add('hidden');
+    const more = openMenu.parentNode && openMenu.parentNode.querySelector('[aria-expanded][data-act$="menu"]');
+    if (more) more.setAttribute('aria-expanded', 'false');
+    openMenu = null;
+    return true;
+  };
+  const toggleMenu = (menu, more) => {
     const wasOpen = openMenu === menu;
     closeMenus();
-    if (!wasOpen) { menu.classList.remove('hidden'); openMenu = menu; }
+    if (!wasOpen) { menu.classList.remove('hidden'); more.setAttribute('aria-expanded', 'true'); openMenu = menu; }
   };
   const dots = new Map();          // Teil-id → Farbfeld, für das Nachfärben ohne Neuzeichnen
 
+  /* Ein Tipp irgendwo sonst schließt das offene Menü. */
+  document.addEventListener('pointerdown', e => {
+    const t = e.target;
+    if (openMenu && !(t && t.closest && t.closest('.row-menu, [data-act="menu"], [data-act="group-menu"]'))) closeMenus();
+  });
+
+  /* Wo die Tastatur stand: ein neu gezeichneter Knopf verlöre den Fokus
+     sonst bei jedem Tipp (Hervorheben, Aufklappen), und wer mit Tab und
+     Eingabe arbeitet, begänne jedes Mal von vorn. */
+  function focusKey() {
+    const a = document.activeElement;
+    if (!a || !el.contains(a) || !a.getAttribute || !a.getAttribute('data-act')) return null;
+    const row = a.closest('[data-item]'), head = a.closest('[data-group]');
+    return { act: a.getAttribute('data-act'), attr: row ? 'data-item' : 'data-group', key: (row || head) ? (row || head).getAttribute(row ? 'data-item' : 'data-group') : null };
+  }
+  function refocus(was) {
+    if (!was || was.key === null) return;
+    const box = [...el.querySelectorAll('[' + was.attr + ']')].find(x => x.getAttribute(was.attr) === was.key);
+    const target = box && box.querySelector('[data-act="' + was.act + '"]');
+    if (target && target.focus) target.focus();
+  }
+
   function render() {
+    const was = focusKey();
     el.innerHTML = '';
     openMenu = null;
     dots.clear();
+    if (!asm) return;
     const refreshers = [];
     const refreshAll = () => { for (const f of refreshers) f(); };
 
@@ -139,19 +173,16 @@ export function mountAssemblySidebar(el, asm, {
       fold.setAttribute('aria-expanded', open ? 'true' : 'false');
       const bulb = button('bulb-btn', BULB, g.title + ' ein- oder ausblenden');
       bulb.setAttribute('aria-pressed', 'true');
-      const title = document.createElement('h3');
-      title.className = 'group-title';
+      /* Der Name hebt die Gruppe hervor; Seite und Zahl der Teile stehen klein
+         darunter und klappen wie der Rest des Kopfes. */
+      const title = button('group-title', '', 'Tippen: ' + g.title + ' hervorheben', 'hl-group');
+      title.removeAttribute('aria-label');
       title.textContent = g.title;
-      title.title = 'Tippen: ' + g.title + ' hervorheben';
-      title.setAttribute('data-act', 'hl-group');
       const tag = span('side-tag', SIDE_LABEL[g.side]
         + (g.slide ? ' · Schieber ' + (g.slide.sign > 0 ? '+' : '−') + g.slide.axis.toUpperCase() : ''));
       const count = span('count', '');
-      count.title = 'Tippen: ' + g.title + (open ? ' zuklappen' : ' aufklappen');
-      const more = button('row-btn more', '&#8943;', 'Umbenennen, STL laden, Farbe, entfernen', 'group-menu');
-      /* Eine Zeile, die nicht umbricht: Pfeil, Glühbirne, dann der Name
-         mit Seite und Zahl der Teile klein darunter, rechts „⋯"; das Menü
-         ist die zweite Zeile des Kopfes. */
+      const more = button('row-btn more', '&#8943;', 'Gruppe: umbenennen, STL laden, Farbe, entfernen', 'group-menu');
+      more.setAttribute('aria-expanded', 'false');
       const line = document.createElement('div');
       line.className = 'group-line';
       const text = document.createElement('div');
@@ -166,19 +197,18 @@ export function mountAssemblySidebar(el, asm, {
       /* Das Menü der Gruppe — zu, bis „⋯" es öffnet. */
       const menu = document.createElement('div');
       menu.className = 'row-menu hidden';
-      const rename = button('menu-btn', '&#9998; Umbenennen', 'Gruppe umbenennen', 'rename-group');
-      const add = button('menu-btn', '+ STL laden', 'STL-Dateien in diese Gruppe laden', 'add-stl');
+      const rename = button('menu-btn', '&#9998; Umbenennen', '', 'rename-group');
+      const add = button('menu-btn', '+ STL laden', '', 'add-stl');
       const colorWrap = document.createElement('label');
       colorWrap.className = 'menu-color';
-      colorWrap.title = 'Eine Farbe für alle Teile der Gruppe';
       const colorIn = document.createElement('input');
       colorIn.setAttribute('type', 'color');
       colorIn.setAttribute('data-act', 'group-color');
       colorIn.value = g.color || classColor(g.mat);
       colorWrap.append(colorIn, span('', 'Farbe für alle'));
-      const del = button('menu-btn danger', '&times; Gruppe entfernen',
-        mine.length ? 'Nur eine leere Gruppe lässt sich entfernen' : 'Gruppe entfernen', 'remove-group');
+      const del = button('menu-btn danger', '&times; Gruppe entfernen', '', 'remove-group');
       del.disabled = mine.length > 0;
+      if (del.disabled) del.title = 'Nur eine leere Gruppe lässt sich entfernen';
       menu.append(rename, add, colorWrap, del);
       head.appendChild(menu);
       el.appendChild(head);
@@ -209,29 +239,38 @@ export function mountAssemblySidebar(el, asm, {
       fold.addEventListener('click', e => { e.stopPropagation(); toggleFold(); });
       head.addEventListener('click', e => {
         const t = e.target;
-        if (t && t.closest && t.closest('button, .group-title, .row-menu, input, label, .inline-edit')) return;
+        if (t && t.closest && t.closest('button, .row-menu, input, label, .inline-edit')) return;
         toggleFold();
       });
       bulb.addEventListener('click', () => {
         const show = !boxes.some(b => b.checked);
         for (const b of boxes) { b.checked = show; asm.setVisible(b.getAttribute('data-comp'), show); }
         refreshAll();
-        onChanged({ visibility: true });
+        onView({ visibility: true });
       });
       title.addEventListener('click', () => { if (mine.length) onHighlight(mine.map(i => i.id)); });
-      more.addEventListener('click', e => { e.stopPropagation(); toggleMenu(menu); });
-      rename.addEventListener('click', () => { closeMenus(); editInline(title, g.title, v => { if (asm.renameGroup(g.key, v)) render(); }); });
+      more.addEventListener('click', e => { e.stopPropagation(); toggleMenu(menu, more); });
+      rename.addEventListener('click', () => {
+        closeMenus();
+        const was = g.title;
+        editInline(title, was, v => { if (asm.renameGroup(g.key, v)) { render(); onEdit('Gruppe „' + was + '" umbenannt', { names: true }); } });
+      });
       add.addEventListener('click', () => { closeMenus(); onAddFiles(g.key); });
+      /* Der Wähler färbt, solange er offen ist (Ansicht); ein Schritt wird es,
+         wenn er sich schließt. */
       colorIn.addEventListener('input', () => {
         if (!asm.setGroupColor(g.key, colorIn.value)) return;
         for (const it of mine) paintDot(it);
-        onChanged({ color: true });
+        onView({ color: true });
       });
-      colorIn.addEventListener('change', () => render());
-      del.addEventListener('click', () => { if (asm.removeGroup(g.key)) { render(); onChanged({ visibility: true }); } });
+      colorIn.addEventListener('change', () => {
+        if (asm.setGroupColor(g.key, colorIn.value)) onEdit('Farbe der Gruppe „' + g.title + '"', { color: true });
+        render();
+      });
+      del.addEventListener('click', () => { if (asm.removeGroup(g.key)) { render(); onEdit('Gruppe „' + g.title + '"', { removed: true, names: true }); } });
     }
     refreshAll();
-    syncTargets();
+    refocus(was);
   }
 
   function paintDot(it) {
@@ -243,11 +282,16 @@ export function mountAssemblySidebar(el, asm, {
     const row = document.createElement('div');
     row.className = 'comp-row' + (highlighted(it.id) ? ' hl' : '');
     row.setAttribute('data-item', it.id);
+    /* Der Schalter sitzt in einem Label: das ist das Ziel für den Finger. */
+    const vis = document.createElement('label');
+    vis.className = 'vis';
+    vis.title = it.label + ' ein- oder ausblenden';
     const cb = document.createElement('input');
     cb.setAttribute('type', 'checkbox');
     cb.setAttribute('data-comp', it.id);
-    cb.title = it.label + ' ein- oder ausblenden';
+    cb.setAttribute('aria-label', it.label + ' sichtbar');
     cb.checked = it.object.visible !== false;
+    vis.appendChild(cb);
 
     /* Das Farbfeld IST der Farbwähler: das echte Eingabefeld liegt
        unsichtbar darüber, so öffnet ein Tipp den Wähler des Systems. */
@@ -257,6 +301,7 @@ export function mountAssemblySidebar(el, asm, {
     const colorIn = document.createElement('input');
     colorIn.setAttribute('type', 'color');
     colorIn.setAttribute('data-act', 'color');
+    colorIn.setAttribute('aria-label', 'Farbe von ' + it.label);
     colorIn.value = it.color;
     const dot = document.createElement('span');
     dot.className = 'dot';
@@ -264,50 +309,68 @@ export function mountAssemblySidebar(el, asm, {
     swatch.append(colorIn, dot);
     dots.set(it.id, dot);
 
-    const name = span('name', it.label);
-    name.title = 'Tippen: hervorheben · ' + it.id;
-    name.setAttribute('data-act', 'hl');
-    const more = button('row-btn more', '&#8943;', 'Umbenennen, verschieben, entfernen', 'menu');
-    row.append(cb, swatch, name, more);
+    const name = button('name', '', 'Tippen: hervorheben · ' + it.id, 'hl');
+    name.removeAttribute('aria-label');
+    name.textContent = it.label;
+    const more = button('row-btn more', '&#8943;', it.label + ': umbenennen, verschieben, entfernen', 'menu');
+    more.setAttribute('aria-expanded', 'false');
+    row.append(vis, swatch, name, more);
 
     const menu = document.createElement('div');
     menu.className = 'row-menu hidden';
-    const ren = button('menu-btn', '&#9998; Umbenennen', 'Teil umbenennen', 'rename');
+    const ren = button('menu-btn', '&#9998; Umbenennen', '', 'rename');
     const moveWrap = document.createElement('label');
     moveWrap.className = 'menu-move';
     const move = document.createElement('select');
     move.className = 'row-move';
-    move.title = 'In eine andere Gruppe verschieben';
     move.setAttribute('data-act', 'move');
     move.innerHTML = asm.groups.map(g => '<option value="' + esc(g.key) + '"' + (g.key === it.group ? ' selected' : '') + '>' + esc(g.title) + '</option>').join('');
     move.value = it.group;
     moveWrap.append(span('', 'Verschieben nach'), move);
-    const del = button('menu-btn danger', '&times; Entfernen', 'Teil entfernen', 'remove');
+    const del = button('menu-btn danger', '&times; Entfernen', '', 'remove');
     menu.append(ren, moveWrap, del);
     row.appendChild(menu);
     parent.appendChild(row);
 
-    cb.addEventListener('change', () => { asm.setVisible(it.id, cb.checked); refreshAll(); onChanged({ visibility: true }); });
-    colorIn.addEventListener('input', () => { if (asm.setColor(it.id, colorIn.value)) { paintDot(it); onChanged({ color: true }); } });
-    colorIn.addEventListener('change', () => render());
+    cb.addEventListener('change', () => { asm.setVisible(it.id, cb.checked); refreshAll(); onView({ visibility: true }); });
+    colorIn.addEventListener('input', () => { if (asm.setColor(it.id, colorIn.value)) { paintDot(it); onView({ color: true }); } });
+    colorIn.addEventListener('change', () => {
+      if (asm.setColor(it.id, colorIn.value)) onEdit('Farbe von „' + it.label + '"', { color: true });
+      render();
+    });
     name.addEventListener('click', () => onHighlight([it.id]));
-    more.addEventListener('click', e => { e.stopPropagation(); toggleMenu(menu); });
-    move.addEventListener('change', () => { if (asm.moveItem(it.id, move.value)) { render(); onChanged(); } });
-    ren.addEventListener('click', () => { closeMenus(); editInline(name, it.label, v => { if (asm.renameItem(it.id, v)) render(); }); });
-    del.addEventListener('click', () => { if (asm.removeItem(it.id)) { render(); onChanged(); } });
+    more.addEventListener('click', e => { e.stopPropagation(); toggleMenu(menu, more); });
+    move.addEventListener('change', () => {
+      const g = asm.groupOf(move.value);
+      if (!asm.moveItem(it.id, move.value)) return;
+      openGroup = move.value;
+      render();
+      onEdit('„' + it.label + '" nach „' + (g ? g.title : move.value) + '" verschoben');
+    });
+    ren.addEventListener('click', () => {
+      closeMenus();
+      const was = it.label;
+      editInline(name, was, v => { if (asm.renameItem(it.id, v)) { render(); onEdit('„' + was + '" umbenannt', { names: true }); } });
+    });
+    del.addEventListener('click', () => { if (asm.removeItem(it.id)) { render(); onEdit('„' + it.label + '"', { removed: true }); } });
     return cb;
   }
 
-  /* Die Zielauswahl „STL laden in" folgt den Gruppen. */
-  function syncTargets() {
-    if (!targetSelect) return;
-    const keep = targetSelect.value;
-    targetSelect.innerHTML = asm.groups.map(g => '<option value="' + esc(g.key) + '">' + esc(g.title) + '</option>').join('');
-    targetSelect.value = asm.groups.some(g => g.key === keep) ? keep : (asm.groups[0] ? asm.groups[0].key : '');
-  }
-
-  const api = { render, closeMenus };
-  current = api;
-  render();
-  return api;
+  return {
+    render,
+    /** Das offene Menü schließen — true, wenn eines offen war (Esc). */
+    closeMenus,
+    /** Eine neue Form: alles zu bis auf die erste Gruppe mit Teilen. */
+    setAssembly(next) { asm = next; openGroup = undefined; lastHl = ''; render(); },
+    /** Die Gruppe eines Teils oder eine Gruppe aufklappen — nach dem Laden
+        einer STL, nach Rückgängig: man sieht, was wiederkam. */
+    reveal({ item, group } = {}) {
+      if (!asm) return;
+      const key = group || (item && asm.itemOf(item) ? asm.itemOf(item).group : null);
+      if (key && asm.groupOf(key)) openGroup = key;
+      render();
+    },
+    /** Die aufgeklappte Gruppe (null: keine) — das Ziel für STL-Dateien. */
+    get openGroup() { return openGroup === undefined ? null : openGroup; }
+  };
 }

@@ -208,6 +208,35 @@ const SEITEN = [
     }
   },
   {
+    /* Der Formaufbau hat eine Form statt eines Bauteils, und sein Plan IST die Form: geändert wird mit einer
+       neuen Gruppe (Hauptknopf, Name, „Anlegen"), entfernt über das Menü „⋯" ihres Kopfes — Entf gehört hier
+       keinem Teil, die Hervorhebung ist Ansicht, keine Auswahl. Der vollste Stand: die Temperierung
+       hervorgehoben (ihre Gruppe aufgeklappt) und das Menü eines Kreises offen. „Speichern" schreibt die GLB. */
+    page: 'form.html', query: '', hook: '__formaufbau', datei: /\.glb$/, art: 'plan',
+    ergebnis: async page => {
+      await page.click('[data-ui="tabs"] [data-mode="teile"]');
+      await page.click('[data-ui="hl-cooling"]');
+      await page.click('.comp-row.hl [data-act="menu"]');
+      await expect(page.locator('.comp-row.hl .row-menu:not(.hidden)')).toHaveCount(1);
+    },
+    plan: {
+      aendern: async (page, s) => {
+        const vorher = await zustand(page, s, s.plan.anzahl);
+        await page.click('[data-ui="tabs"] [data-mode="teile"]');
+        await page.click('[data-ui="primary"]');
+        await page.fill('[data-ui="group-title"]', 'Schieber unten');
+        await page.click('[data-ui="primary"]');
+        await expect.poll(() => zustand(page, s, s.plan.anzahl), { message: 'Anlegen legt eine Gruppe an' }).toBe(vorher + 1);
+      },
+      anzahl: v => v.asm.groups.length,
+      entfernen: async page => {
+        const kopf = page.locator('.group-head').last();
+        await kopf.locator('[data-act="group-menu"]').click();
+        await kopf.locator('[data-act="remove-group"]').click();
+      }
+    }
+  },
+  {
     page: 'kammerfuellung.html', query: '', hook: '__kammerfuellung', datei: /-kammerfuellung\.json$/,
     ergebnis: async (page, s) => {
       const tab = m => page.click(`[data-ui="tabs"] [role="tab"][data-mode="${m}"]`);
@@ -329,21 +358,31 @@ for (const s of SEITEN) {
       await pruefen('beim Laden');
       /* Eingepasst heißt: ganz im Bild — auch wenn das Bild hochkant steht
          (js/scene.js passte früher nur in die Höhe ein). Gemessen an den
-         Ecken des Hüllquaders, auf den Bildschirm projiziert: |x|, |y| ≤ 1. */
+         Ecken des Hüllquaders, auf den Bildschirm projiziert: |x|, |y| ≤ 1 —
+         im ersten Modus, in dem eingepasst wurde (beim Formaufbau fährt der
+         Modus „Öffnen" die Form auf). Wer keinen einzelnen Körper hat (die
+         Form ist eine Baugruppe), nennt seinen Hüllquader (fitBox). Danach
+         geht es im Modus von vorher weiter. */
+      const zuletzt = await page.evaluate(h => window[h].shell.mode, s.hook);
+      await page.evaluate(([hk, id]) => window[hk].shell.setMode(id), [s.hook, modi[0]]);
       const rand = await page.evaluate(h => {
         const v = window[h], netze = [v.partMesh, v.meshA, v.meshB].filter(Boolean);
-        let worst = 0;
-        for (const m of netze) {
-          m.geometry.computeBoundingBox();
-          const b = m.geometry.boundingBox;
+        const ecken = [];
+        const kasten = (b, m) => {
           for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) {
-            const p = b.min.clone().set(x, y, z).applyMatrix4(m.matrixWorld).project(v.view.camera);
-            worst = Math.max(worst, Math.abs(p.x), Math.abs(p.y));
+            const p = b.min.clone().set(x, y, z);
+            ecken.push(m ? p.applyMatrix4(m.matrixWorld) : p);
           }
-        }
+        };
+        for (const m of netze) { m.geometry.computeBoundingBox(); kasten(m.geometry.boundingBox, m); }
+        const fb = v.fitBox && v.fitBox();
+        if (fb) kasten(fb, null);
+        let worst = 0;
+        for (const p of ecken) { p.project(v.view.camera); worst = Math.max(worst, Math.abs(p.x), Math.abs(p.y)); }
         return worst;
       }, s.hook);
       expect(rand, 'das Modell ragt aus dem Bild').toBeLessThanOrEqual(1.0);
+      await page.evaluate(([hk, id]) => window[hk].shell.setMode(id), [s.hook, zuletzt]);
       await s.ergebnis(page, s);
       await pruefen('mit Ergebnis');
       /* Das Auswahlfeld eines Designers: jede seiner Gruppen einmal aufgeklappt. */
@@ -401,6 +440,13 @@ for (const s of SEITEN) {
 
   if (s.plan) test(`${s.page}: der Plan wird als Entwurf angeboten, nie still übernommen; Entf fragt nicht, Strg+Z holt zurück`, async ({ page }) => {
     const errors = watch(page);
+    /* Entfernt wird mit Entf, den Zeiger über dem Bild — oder so, wie das
+       Werkzeug entfernt (der Formaufbau: über das Menü „⋯"). */
+    const entfernen = s.plan.entfernen ? () => s.plan.entfernen(page, s) : async () => {
+      const c = await page.locator('#viewport canvas').boundingBox();
+      await page.mouse.move(c.x + c.width - 24, c.y + c.height * 0.5);
+      await page.keyboard.press('Delete');
+    };
     await page.goto(url(s));
     await ready(page, s.hook);
     const leer = await zustand(page, s, s.plan.anzahl);
@@ -428,9 +474,7 @@ for (const s of SEITEN) {
     /* Entf: ohne Nachfrage weg, der Toast bietet den Rückweg, Strg+Z geht ihn auch. */
     await s.plan.aendern(page, s);
     const voll = await zustand(page, s, s.plan.anzahl);
-    const c = await page.locator('#viewport canvas').boundingBox();
-    await page.mouse.move(c.x + c.width - 24, c.y + c.height * 0.5);
-    await page.keyboard.press('Delete');
+    await entfernen();
     await expect.poll(() => zustand(page, s, s.plan.anzahl)).toBe(voll - 1);
     const toast = page.locator('[data-ui="toast"]');
     await expect(toast).toBeVisible();
@@ -438,7 +482,7 @@ for (const s of SEITEN) {
     expect((await messen(page)).ueber, 'der Toast überdeckt nichts').toEqual([]);
     await page.keyboard.press('Control+z');
     await expect.poll(() => zustand(page, s, s.plan.anzahl)).toBe(voll);
-    await page.keyboard.press('Delete');
+    await entfernen();
     await toast.locator('.st-toast-act').click();
     await expect.poll(() => zustand(page, s, s.plan.anzahl), { message: '„Rückgängig" im Toast' }).toBe(voll);
     expect(errors).toEqual([]);
@@ -448,11 +492,15 @@ for (const s of SEITEN) {
     const errors = watch(page);
     await page.goto(url(s));
     await ready(page, s.hook);
-    /* Der erste Modus, der ein ⓘ hat (bei den Dateien der Abstandsanalyse gibt es keines). */
-    const mitInfo = await page.evaluate(() => { const b = document.querySelector('.st-mode .st-info'); return b ? b.closest('.st-mode').dataset.mode : null; });
+    /* Der erste Modus, der ein ⓘ zeigt — eines, das nicht in einem verborgenen
+       Teil des Modus steckt (das Formular „Neue Gruppe" des Formaufbaus). */
+    const mitInfo = await page.evaluate(() => {
+      const b = [...document.querySelectorAll('.st-mode .st-info')].find(x => !x.parentElement.closest('[hidden]:not(.st-mode)'));
+      return b ? b.closest('.st-mode').dataset.mode : null;
+    });
     expect(mitInfo, 'die Seite hat ein ⓘ').not.toBeNull();
     await page.evaluate(([hk, id]) => window[hk].shell.setMode(id), [s.hook, mitInfo]);
-    const info = page.locator('.st-mode:not([hidden]) .st-info').first();
+    const info = page.locator('.st-mode:not([hidden]) .st-info:visible').first();
     const anker = await info.getAttribute('data-help');
     await info.click();
     const lade = page.locator('[data-ui="help"]');

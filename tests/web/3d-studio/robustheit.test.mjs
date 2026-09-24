@@ -289,13 +289,14 @@ test('Lesefehler und fehlende GLB-Knoten melden sich', async () => {
   const read = ps.slice(ps.indexOf('async function readFile('), ps.indexOf('async function loadFile('));
   assert.match(read, /catch \(err\) \{\s*if \(my === seq\) \{ veil\(null\); fail\(err\.message\); \}/, 'Schleier weg, Meldung raus');
   /* Ohne die Knoten warf der Öffnen-Regler einen TypeError statt zu
-     sagen, was fehlt: die Baugruppe prüft sie beim Aufbau, der Viewer
-     fängt den Fehler und schreibt ihn in die Statuszeile. */
+     sagen, was fehlt: die Baugruppe prüft sie beim Aufbau, der Formaufbau
+     fängt den Fehler und meldet ihn (Statuszeile, Klappe, Toast —
+     tools/formaufbau.test.mjs prüft das an einer Datei ohne die Knoten). */
   const asm = src('js/assembly.js');
   assert.match(asm, /if \(!fixedRoot \|\| !movingRoot\) throw new Error/);
-  const die = src('js/die.js');
-  assert.match(die, /catch \(err\) \{\s*status\.textContent = err\.message/);
-  assert.match(die, /if \(asm\) \{ asm\.setOpen\(t\)/, 'der Regler wartet, bis eine Baugruppe steht');
+  const tool = src('js/formaufbau/tool.js');
+  assert.match(tool, /catch \(err\) \{\s*report\(err\.message \+ ' ' \+ LOADABLE\)/);
+  assert.match(tool, /if \(asm\) \{ asm\.setOpen\(openNow\(\)\)/, 'der Regler wartet, bis eine Baugruppe steht');
 });
 
 /* ── Der gemeinsame Rahmen (js/studio/) ───────────────────────────────── */

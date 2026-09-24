@@ -1,12 +1,12 @@
 /* Jede Seite des 3D-Studios kommt im echten Browser hoch: Leinwand da,
-   Achsenkreuz da, kein Fehler in der Konsole — und die beiden
-   Entwurfsseiten melden sich bereit. Mehr prüfen die Node-Tests; hier
-   zählt, was nur der Browser weiß. */
+   Achsenkreuz da, kein Fehler in der Konsole — und die Werkzeuge melden
+   sich bereit. Mehr prüfen die Node-Tests; hier zählt, was nur der Browser
+   weiß. */
 
 import { test, expect } from '@playwright/test';
 
 const PAGES = [
-  ['form.html', null],
+  ['form.html', () => window.__formaufbau?.state?.ready],
   ['entformungsanalyse.html', () => window.__form3d?.state?.model],
   ['wandstaerke.html', () => window.__form3d?.state?.ready],
   ['abstand.html', null],

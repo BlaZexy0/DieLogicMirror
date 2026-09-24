@@ -864,3 +864,126 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
 /* Die Liste derer unter dem Mindest-Wandabstand steht UNTER vier Kennzahlen —
    sie scrollt in sich und lässt der Seitenleiste auch bei 44-px-Zeilen Luft. */
 .st-root[data-tool="temperier"] .st-list[data-ui="offender-list"][data-scroll] { max-height: 24vh; }
+
+/* ── Formaufbau ────────────────────────────────────────────────
+   Der Modus „Teile" füllt die Seitenleiste: oben die Schnellknöpfe, darunter
+   die Gruppen und Teile (js/formaufbau/list.js). Die Liste scrollt in SICH
+   (eine Form hat schnell dreißig Teile), die Seitenleiste nie; das Formular
+   „Neue Gruppe" steht an ihrer Stelle. Gebaut für die Halle: hohe Zeilen,
+   große Ziele, das Häufige sichtbar, das Seltene hinter „⋯"; unter dem
+   Finger ist jedes Ziel 44 px (unten). Namen brechen um, statt abgeschnitten
+   zu werden. */
+.st-root[data-tool="formaufbau"] .st-mode[data-mode="teile"]:not([hidden]) { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.st-root[data-tool="formaufbau"] .fa-quick { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 4px; }
+.st-root[data-tool="formaufbau"] .fa-quick .btn { flex: 1 1 auto; min-height: 32px; padding: .3rem .55rem; font-size: .78rem; }
+.st-root[data-tool="formaufbau"] .fa-quick .btn.active { background: var(--pale); border-color: var(--primary); color: var(--primary-deep); }
+.st-root[data-tool="formaufbau"] .fa-list { flex: 1 1 0; min-height: 0; overflow-y: auto; margin: 0 -6px; padding: 0 6px 6px; }
+.st-root[data-tool="formaufbau"] .fa-form { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+/* Werkstoffklasse und Schieber: die Auswahl unter der Bezeichnung, über die
+   ganze Breite — „Überläufe + Entlüftung" passte neben ihr nicht ins Feld.
+   Der Name ist Text, keine Maßzahl: linksbündig, in der Grundschrift. */
+.st-root[data-tool="formaufbau"] .fa-form .row > select { flex: 1 1 100%; }
+.st-root[data-tool="formaufbau"] .fa-form input[data-ui="group-title"] { text-align: left; font-family: var(--sans); }
+
+/* Der Kopf einer Gruppe: Pfeil, Glühbirne, Name mit Seite und Zahl der Teile
+   klein darunter, rechts „⋯"; das Menü ist seine zweite Zeile. */
+.st-root[data-tool="formaufbau"] .group-head { margin: 6px 0 0; padding: 2px 2px 2px 0; border-radius: 7px; cursor: pointer; }
+.st-root[data-tool="formaufbau"] .group-head.hl { background: var(--pale); box-shadow: inset 3px 0 0 var(--primary); }
+.st-root[data-tool="formaufbau"] .group-line { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.st-root[data-tool="formaufbau"] .group-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.st-root[data-tool="formaufbau"] .group-title {
+  border: 0; background: none; padding: 3px 4px 1px; margin: 0; border-radius: 4px; cursor: pointer; text-align: left; max-width: 100%;
+  font-family: var(--sans); font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
+  white-space: normal; overflow-wrap: anywhere;
+}
+.st-root[data-tool="formaufbau"] .group-title:hover { color: var(--primary-deep); background: var(--surface); }
+.st-root[data-tool="formaufbau"] .group-head.hl .group-title { color: var(--primary-deep); }
+.st-root[data-tool="formaufbau"] .group-meta { padding: 0 4px 2px; font-size: .66rem; color: var(--muted); }
+.st-root[data-tool="formaufbau"] .fold-btn {
+  flex: 0 0 auto; width: 24px; height: 28px; padding: 0; border: 0; background: none; border-radius: 5px; cursor: pointer;
+  color: var(--muted); font-family: var(--sans); font-size: .95rem; line-height: 1;
+}
+.st-root[data-tool="formaufbau"] .fold-btn:hover { background: var(--pale); color: var(--primary-deep); }
+.st-root[data-tool="formaufbau"] .group-body.folded { display: none; }
+/* Die Glühbirne als Gruppenschalter: leuchtet, solange etwas sichtbar ist. An
+   ist ein Zustand der Bedienung, kein Urteil: die helle Marke. */
+.st-root[data-tool="formaufbau"] .bulb-btn {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 28px; padding: 0;
+  border: 1px solid var(--border); background: var(--surface2); border-radius: 6px; cursor: pointer; transition: background .15s, border-color .15s;
+}
+.st-root[data-tool="formaufbau"] .bulb-btn:hover { background: var(--pale); border-color: var(--primary); }
+.st-root[data-tool="formaufbau"] .bulb-btn .bulb { width: 17px; height: 17px; display: block; }
+.st-root[data-tool="formaufbau"] .bulb-btn .glass { fill: none; stroke: var(--muted-light); stroke-width: 1.5; }
+.st-root[data-tool="formaufbau"] .bulb-btn .socket { fill: none; stroke: var(--muted-light); stroke-width: 1.5; stroke-linecap: round; }
+.st-root[data-tool="formaufbau"] .bulb-btn .rays { display: none; }
+.st-root[data-tool="formaufbau"] .bulb-btn.on .glass { fill: var(--primary-light); stroke: var(--primary); }
+.st-root[data-tool="formaufbau"] .bulb-btn.on .socket { stroke: var(--muted); }
+.st-root[data-tool="formaufbau"] .bulb-btn.on .rays { display: block; fill: none; stroke: var(--primary-light); stroke-width: 1.6; stroke-linecap: round; }
+
+/* Die Zeile eines Teils: Schalter · Farbfeld · Name · „⋯". */
+.st-root[data-tool="formaufbau"] .comp-row {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 2px 4px; padding: 1px 2px; min-height: 32px; border-radius: 7px; font-size: .86rem;
+}
+.st-root[data-tool="formaufbau"] .comp-row:hover { background: var(--surface2); }
+.st-root[data-tool="formaufbau"] .comp-row.hl { background: var(--pale); box-shadow: inset 3px 0 0 var(--primary); }
+.st-root[data-tool="formaufbau"] .comp-row .vis { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 28px; cursor: pointer; }
+.st-root[data-tool="formaufbau"] .comp-row .vis input { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); cursor: pointer; }
+.st-root[data-tool="formaufbau"] .comp-row .name {
+  flex: 1 1 0; min-width: 0; border: 0; background: none; padding: 4px 4px; margin: 0; border-radius: 4px; cursor: pointer; text-align: left;
+  font-family: var(--sans); font-size: .86rem; color: var(--text); white-space: normal; overflow-wrap: anywhere; line-height: 1.3;
+}
+.st-root[data-tool="formaufbau"] .comp-row .name:hover { color: var(--primary-deep); }
+.st-root[data-tool="formaufbau"] .comp-row.hl .name { font-weight: 600; color: var(--primary-deep); }
+/* Das Farbfeld ist der Farbwähler: das Eingabefeld liegt unsichtbar darüber. */
+.st-root[data-tool="formaufbau"] .swatch { position: relative; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 28px; cursor: pointer; }
+.st-root[data-tool="formaufbau"] .swatch input[type="color"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; border: 0; cursor: pointer; }
+.st-root[data-tool="formaufbau"] .swatch .dot { width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,.2); display: block; }
+.st-root[data-tool="formaufbau"] .swatch:hover .dot { border-color: var(--primary); box-shadow: 0 0 0 2px var(--pale); }
+
+/* „⋯" je Kopf und Zeile, das Menü darunter. */
+.st-root[data-tool="formaufbau"] .row-btn.more {
+  flex: 0 0 auto; min-width: 30px; height: 28px; padding: 0 5px; border: 1px solid transparent; border-radius: 5px; background: none; cursor: pointer;
+  color: var(--muted); font-family: var(--sans); font-size: 1rem; line-height: 1; letter-spacing: -.02em;
+}
+.st-root[data-tool="formaufbau"] .row-btn.more:hover, .st-root[data-tool="formaufbau"] .row-btn.more[aria-expanded="true"] { border-color: var(--border); background: var(--surface2); }
+.st-root[data-tool="formaufbau"] .row-menu {
+  flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 4px 6px 30px; font-size: .78rem; color: var(--muted);
+}
+.st-root[data-tool="formaufbau"] .row-menu.hidden { display: none; }
+.st-root[data-tool="formaufbau"] .menu-btn {
+  border: 1px solid var(--border); background: var(--surface); border-radius: 6px; padding: 4px 9px; min-height: 28px;
+  font-family: var(--sans); font-size: .78rem; color: var(--text-body); cursor: pointer;
+}
+.st-root[data-tool="formaufbau"] .menu-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-deep); background: var(--pale); }
+.st-root[data-tool="formaufbau"] .menu-btn.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad-text); background: var(--bad-bg); }
+.st-root[data-tool="formaufbau"] .menu-btn:disabled { opacity: .4; cursor: default; }
+.st-root[data-tool="formaufbau"] .menu-move, .st-root[data-tool="formaufbau"] .menu-color { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.st-root[data-tool="formaufbau"] .menu-color { cursor: pointer; }
+.st-root[data-tool="formaufbau"] .menu-color input[type="color"] { width: 28px; height: 24px; padding: 0 2px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); cursor: pointer; }
+.st-root[data-tool="formaufbau"] .row-move { flex: 0 1 auto; max-width: 170px; min-height: 28px; font-size: .78rem; padding: 3px 4px; }
+.st-root[data-tool="formaufbau"] .inline-edit {
+  flex: 1 1 0; width: 100%; min-width: 0; font: inherit; font-size: .84rem; padding: 3px 5px;
+  border: 1px solid var(--primary); border-radius: 4px; background: var(--surface); color: var(--text);
+}
+.st-root[data-tool="formaufbau"] .comp-empty { font-size: .73rem; color: var(--muted); font-style: italic; padding: 2px 2px 6px 30px; }
+
+/* Unter dem Finger: jedes Ziel der Liste 44 px — Pfeil, Glühbirne, Name,
+   Schalter, Farbfeld, „⋯" und die Knöpfe der Menüs. */
+@media (pointer: coarse) {
+  .st-root[data-tool="formaufbau"] .fa-quick .btn,
+  .st-root[data-tool="formaufbau"] .group-title,
+  .st-root[data-tool="formaufbau"] .comp-row .name,
+  .st-root[data-tool="formaufbau"] .menu-btn,
+  .st-root[data-tool="formaufbau"] .menu-move,
+  .st-root[data-tool="formaufbau"] .menu-color,
+  .st-root[data-tool="formaufbau"] .row-move { min-height: 44px; }
+  .st-root[data-tool="formaufbau"] .fold-btn,
+  .st-root[data-tool="formaufbau"] .bulb-btn,
+  .st-root[data-tool="formaufbau"] .row-btn.more,
+  .st-root[data-tool="formaufbau"] .comp-row .vis,
+  .st-root[data-tool="formaufbau"] .swatch { width: 44px; height: 44px; }
+  .st-root[data-tool="formaufbau"] .comp-row .vis input { width: 20px; height: 20px; }
+  .st-root[data-tool="formaufbau"] .swatch .dot { width: 20px; height: 20px; }
+  .st-root[data-tool="formaufbau"] .row-menu { padding-left: 8px; }
+  .st-root[data-tool="formaufbau"] .inline-edit { min-height: 40px; }
+}

@@ -1,8 +1,9 @@
-/* Das Gerüst der beiden Seiten ohne den gemeinsamen Rahmen: Formaufbau
-   (form.html) und Werkbank (werkbank.html, dazu css/werkbank.css) —
-   Seitenleiste, Viewport, Auswahlfeld. Farben und Buttons kommen aus
-   /shared/shared.css. Die Werkzeugseiten tragen css/studio.css; was hier
-   gleich dasteht, fällt weg, wenn beide Seiten auf den Rahmen umziehen. */
+/* Das Gerüst der Seite ohne den gemeinsamen Rahmen: die Werkbank
+   (werkbank.html, dazu css/werkbank.css) — Seitenleiste, Viewport,
+   Auswahlfeld. Farben und Buttons kommen aus /shared/shared.css. Die
+   Werkzeugseiten tragen css/studio.css, der Formaufbau auch (seine Regeln
+   stehen dort); was hier gleich dasteht, fällt weg, wenn die Werkbank auf
+   den Rahmen umzieht. */
 
 html, body { height: 100%; }
 
@@ -33,132 +34,6 @@ aside h2 {
   border-bottom: 1px solid var(--border);
 }
 aside h2:first-child { margin-top: 4px; }
-
-/* ── Baugruppen ────────────────────────────────────────────── */
-/* Für die Halle: hohe Zeilen, große Ziele, das Häufige sichtbar, das
-   Seltene hinter „⋯". */
-.group-head {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 7px;
-  margin: 12px 0 2px; padding: 3px 4px 3px 2px; border-radius: 7px;
-}
-.group-head h3 {
-  font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
-  margin: 0; font-weight: 700;
-}
-.group-head .group-line { display: flex; align-items: center; gap: 7px; flex: 1 0 100%; min-width: 0; }
-.group-head .group-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.group-head .group-title {
-  cursor: pointer; padding: 3px 2px 1px; border-radius: 4px; min-width: 0; align-self: flex-start; max-width: 100%;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.group-head .group-meta { padding: 0 2px 2px; font-size: .66rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.group-head .group-title:hover { color: var(--primary-deep); background: var(--pale); }
-.group-head.hl { background: var(--pale); box-shadow: inset 3px 0 0 var(--primary); }
-.group-head.hl h3 { color: var(--primary-deep); }
-/* Eine Gruppe zur Zeit aufgeklappt: der Kopf trägt Pfeil und Zahl der
-   Teile und klappt beim Tippen; die Zeilen der anderen bleiben im Baum,
-   nur unsichtbar. */
-.group-head { cursor: pointer; }
-.group-head.folded { margin-bottom: 0; }
-.group-head .fold-btn {
-  border: 0; background: none; color: var(--muted); width: 22px; height: 24px; padding: 0;
-  font-size: .95rem; line-height: 1; cursor: pointer; border-radius: 5px; flex-shrink: 0; font-family: var(--sans);
-}
-.group-head .fold-btn:hover { background: var(--pale); color: var(--primary-deep); }
-.group-head .count { font-size: .66rem; color: var(--muted); white-space: nowrap; }
-.group-body.folded { display: none; }
-/* Glühbirne als Gruppenschalter: leuchtet, solange etwas sichtbar ist. */
-.bulb-btn {
-  border: 1px solid var(--border); background: var(--surface2); border-radius: 6px;
-  padding: 3px 6px; line-height: 0; cursor: pointer; transition: background .15s, border-color .15s;
-}
-.bulb-btn:hover { background: var(--pale); border-color: var(--primary); }
-.bulb-btn .bulb { width: 17px; height: 17px; display: block; }
-.bulb-btn .glass { fill: none; stroke: var(--muted-light); stroke-width: 1.5; }
-.bulb-btn .socket { fill: none; stroke: var(--muted-light); stroke-width: 1.5; stroke-linecap: round; }
-.bulb-btn .rays { display: none; }
-/* An: die Gruppe ist zu sehen. Ein Zustand der Bedienung, kein Urteil: die
-   helle Marke. */
-.bulb-btn.on .glass { fill: var(--primary-light); stroke: var(--primary); }
-.bulb-btn.on .socket { stroke: var(--muted); }
-.bulb-btn.on .rays {
-  display: block; fill: none; stroke: var(--primary-light); stroke-width: 1.6; stroke-linecap: round;
-}
-
-.comp-row {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 9px; padding: 4px 4px;
-  min-height: 32px; border-radius: 7px; font-size: .88rem;
-}
-.comp-row:hover { background: var(--surface2); }
-.comp-row input[type="checkbox"] { width: 17px; height: 17px; margin: 0; accent-color: var(--primary); cursor: pointer; flex-shrink: 0; }
-.comp-row .dot { width: 15px; height: 15px; border-radius: 4px; border: 1px solid rgba(0,0,0,.2); flex-shrink: 0; display: block; }
-.comp-row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; padding: 4px 2px; border-radius: 4px; }
-.comp-row .name:hover { color: var(--primary-deep); }
-.comp-row.hl { background: var(--pale); box-shadow: inset 3px 0 0 var(--primary); }
-.comp-row.hl .name { font-weight: 600; color: var(--primary-deep); }
-
-/* Das Farbfeld ist der Farbwähler: das Eingabefeld liegt unsichtbar darüber. */
-.swatch { position: relative; width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
-.swatch input[type="color"] {
-  position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; border: 0; cursor: pointer;
-}
-.swatch:hover .dot { border-color: var(--primary); box-shadow: 0 0 0 2px var(--pale); }
-
-/* Bearbeitbare Baugruppe: „⋯" je Kopf und Zeile, Menü darunter. */
-.group-head .side-tag { font-size: .66rem; color: var(--muted); margin: 0; text-transform: none; letter-spacing: 0; white-space: nowrap; }
-.row-btn {
-  border: 1px solid var(--border); background: var(--surface2); border-radius: 5px;
-  padding: 0 5px; min-width: 20px; line-height: 1.35; font-size: .78rem; cursor: pointer;
-  color: var(--muted); font-family: var(--sans);
-}
-.row-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-deep); background: var(--pale); }
-.row-btn.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad-text); background: var(--bad-bg); }
-.row-btn:disabled { opacity: .35; cursor: default; }
-.row-btn.more {
-  min-width: 28px; height: 24px; font-size: 1rem; line-height: 1; letter-spacing: -.02em;
-  border-color: transparent; background: none; color: var(--muted); flex-shrink: 0;
-}
-.row-btn.more:hover { border-color: var(--border); background: var(--surface2); color: var(--muted); }
-.row-menu {
-  flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
-  padding: 6px 4px 5px 28px; font-size: .78rem; color: var(--muted);
-}
-.row-menu.hidden { display: none; }
-.menu-btn {
-  border: 1px solid var(--border); background: var(--surface); border-radius: 6px;
-  padding: 4px 9px; font-size: .78rem; cursor: pointer; color: var(--text-body); font-family: var(--sans);
-}
-.menu-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-deep); background: var(--pale); }
-.menu-btn.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad-text); background: var(--bad-bg); }
-.menu-btn:disabled { opacity: .35; cursor: default; }
-.menu-move, .menu-color { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-.menu-color input[type="color"] { width: 26px; height: 22px; padding: 0 2px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); cursor: pointer; }
-.row-move {
-  max-width: 150px; font-size: .76rem; padding: 3px 4px; border: 1px solid var(--border);
-  border-radius: 5px; background: var(--surface); color: var(--text-body); font-family: var(--sans);
-}
-.inline-edit {
-  width: 100%; min-width: 0; font: inherit; padding: 1px 4px;
-  border: 1px solid var(--primary); border-radius: 4px; background: var(--surface);
-}
-.comp-empty { font-size: .73rem; color: var(--muted); font-style: italic; padding: 2px 2px 4px 30px; }
-
-/* Die Schnellknöpfe über der Liste. */
-.quick { display: flex; gap: 6px; margin: 2px 0 6px; }
-.quick .btn { flex: 1; padding: .38rem .3rem; font-size: .78rem; min-width: 0; }
-.quick .btn.active { background: var(--pale); border-color: var(--primary); color: var(--primary-deep); }
-.quick .btn:disabled { opacity: .45; cursor: default; }
-.quick-hint { margin: 0 0 6px; font-size: .74rem; }
-#group-form {
-  margin-top: 8px; padding: 8px 9px; background: var(--surface2);
-  border: 1px solid var(--border-light); border-radius: var(--radius);
-}
-#group-form .row > span:first-child { width: 100px; }
-#group-form input[type="text"], #group-form select, aside select#stl-target, aside input#glb-name {
-  flex: 1; min-width: 0; font: inherit; font-size: .8rem; padding: .22rem .3rem;
-  border: 1px solid var(--border); border-radius: 5px; background: var(--surface);
-}
-.hidden-empty:has(span:empty) { display: none; }
 
 /* ── Regler, Schalter, Segmente ────────────────────────────── */
 .row { display: flex; align-items: center; gap: 10px; padding: 4px 2px; font-size: .84rem; }
@@ -320,8 +195,8 @@ select {
    Erklärkasten, der sechs Zeilen hoch ist, schiebt den nächsten Regler aus
    dem Bild und wird beim zweiten Mal ohnehin nicht mehr gelesen.
 
-   Die engeren Abstände hängen an body.designer, damit der Formaufbau, der
-   diese Datei mitträgt, seine gewohnten behält. */
+   Die engeren Abstände hängen an body.designer: so trug diese Datei
+   früher auch den Formaufbau mit seinen gewohnten. */
 /* Achsen heißen X, Y, Z — auch hier. In der Ansichtsleiste stehen sie in
    der dicktengleichen Schrift, ebenso jeder Zahlenwert daneben; nur diese
    sechs Knöpfe standen in der Fließtextschrift, und dieselbe Beschriftung

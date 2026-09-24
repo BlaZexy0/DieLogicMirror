@@ -1,7 +1,7 @@
 /* Dateien des Studios: öffnen (der Inhalt entscheidet, nicht die Endung),
-   speichern (der Plan als JSON), exportieren (Körper als STL). Lesen,
-   Herunterladen und der Dateiname kommen aus js/ui/common.js — die Werkbank
-   holt sie noch von dort. */
+   speichern (der Plan als JSON, die Form des Formaufbaus als GLB),
+   exportieren (Körper als STL). Lesen, Herunterladen und der Dateiname
+   kommen aus js/ui/common.js — die Werkbank holt sie noch von dort. */
 
 import { download, safeName, readBuffer, looksLikeJSON } from '../ui/common.js';
 import { readGLB, isGLB } from '../part/glbio.js';
@@ -59,6 +59,15 @@ export async function openAny(file, handlers) {
 /** Den Plan als JSON herunterladen. */
 export function saveJSON(obj, name) {
   download(new Blob([JSON.stringify(obj, null, 1)], { type: 'application/json' }), name);
+}
+
+/** Ein Dokument, das selbst eine GLB ist (die Form des Formaufbaus),
+    herunterladen: `name` ohne Endung, geschrieben wie jeder Dateiname hier.
+    → der Dateiname */
+export function saveGLB(buf, name) {
+  const file = safeName(baseName(name) || 'formaufbau') + '.glb';
+  download(new Blob([buf], { type: 'model/gltf-binary' }), file);
+  return file;
 }
 
 /** Ablegen auf dem Viewport: Rahmen einblenden, Datei durchreichen — mit
