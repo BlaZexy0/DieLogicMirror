@@ -68,6 +68,8 @@
       display: flex; align-items: center; justify-content: center;
     }
     .member-avatar svg { width: 44px; height: 44px; }
+    .member-avatar.foto { background: none; overflow: hidden; }
+    .member-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
     .member-card h3 { font-size: 0.98rem; font-weight: 700; margin-bottom: 0.15rem; }
     .member-role {
       font-size: 0.76rem;
@@ -115,9 +117,9 @@
 
   <div class="draft-note">
     ⚠️ <b>Mockup-Inhalte:</b> Das Teamfoto ist ein gezeichneter Platzhalter
-    (<code>assets/team-mockup.svg</code>) und die Teammitglieder sind
-    <span class="ph">[Platzhalter]</span>: echtes Foto einsetzen, Namen, Rollen und
-    Beschreibungen ersetzen. Diesen Kasten danach löschen.
+    (<code>assets/team-mockup.svg</code>); außer dem Gründer sind die Teammitglieder
+    und alle Beschreibungen <span class="ph">[Platzhalter]</span>: echte Fotos einsetzen,
+    Namen, Rollen und Beschreibungen ersetzen. Diesen Kasten danach löschen.
   </div>
 
   <div class="about-cols">
@@ -153,11 +155,11 @@
     <div class="team-grid">
 
       <div class="member-card">
-        <div class="member-avatar">
-          <svg viewBox="0 0 44 44" fill="none"><circle cx="22" cy="15" r="8" fill="var(--ondark)"/><path d="M6 40 Q6 26 22 26 Q38 26 38 40 Z" fill="var(--ondark)"/></svg>
+        <div class="member-avatar foto">
+          <img src="/assets/team/stephan-goeke.webp" width="84" height="84" alt="Stephan Goeke">
         </div>
-        <h3><span class="ph">[Vorname Nachname]</span></h3>
-        <div class="member-role">Gründung · Gießereitechnik</div>
+        <h3>Stephan Goeke</h3>
+        <div class="member-role">Gründer · Gießereitechnik</div>
         <p><span class="ph">[1–2 Sätze: Hintergrund im Druckguss, z. B. Prozess- oder
           Werkzeugauslegung, Jahre Berufserfahrung.]</span></p>
       </div>
