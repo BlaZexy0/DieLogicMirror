@@ -7,8 +7,8 @@
    Verzweigung. Jede Kante ist ein Band, dessen Dicke der Wurzel aus dem
    Querschnitt folgt (nicht dem Querschnitt selbst — sonst verschwinden
    die Anschnitte neben dem Verteiler), und dessen Farbe die
-   Geschwindigkeit zeigt: auf der Farbleiste `speed` von Blau (langsam)
-   über Teal und Gold nach Rot (schnell). Ein Urteil ist das nicht (die
+   Geschwindigkeit zeigt: auf der Farbleiste `heat` von Blau (langsam)
+   über Grün und Gelb nach Rot (schnell). Ein Urteil ist das nicht (die
    Leiste reicht bis zum schnellsten Anschnitt dieses Angusses); geurteilt
    wird in der Prüfliste.
 
@@ -20,12 +20,15 @@
    Bibliothek, und im Ausdruck scharf. */
 
 import * as G from './graph.js';
-import { scale } from '../part/colors.js';
+import { scale, heatTrim } from '../part/colors.js';
 import { fmt as fmtDe } from '../studio/format.js';
 
 /* Geschwindigkeit: ruhig und weit (Blau) → schnell und eng (Rot), auf der
-   Farbleiste `speed` (js/part/colors.js), in jedem Farbschema dieselbe. */
-export const speedColor = (v, vMax) => scale('speed', v / Math.max(vMax, 1e-6));
+   Farbleiste `heat` wie jeder Messwert (die Leiste der Auslegung), an den
+   dunklen Enden beschnitten wie die Felder (heatTrim); in jedem
+   Farbschema dieselbe. Bis 24.09. hatte das Flussschema eine eigene
+   Leiste `speed`. */
+export const speedColor = (v, vMax) => scale('heat', heatTrim(v / Math.max(vMax, 1e-6)));
 
 /* Zahlen wie überall im Studio (js/studio/format.js) — hier mit einer
    Nachkommastelle, wenn keine andere verlangt ist. */

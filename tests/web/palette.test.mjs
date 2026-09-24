@@ -50,27 +50,26 @@ test('palette: die Rechenhilfen mischen im OK-Lab-Raum und folgen den Rollen', (
   assert.equal(P.rgba('ok', 0.5), 'rgba(21,154,76,0.5)');
 });
 
-/* Die Farbleisten von vorher (Stand vor dem Umbau der Farbrollen), fest
-   und ohne Rolle: Turbo als Polynom fürs 3D-Studio, sieben Stützstellen
-   für die Heatmaps der Auslegung, die Entformschräge mit ihrer Stufe am
-   Grenzwert, das Flussschema des Angussdesigners. */
-test('palette: die Farbleisten sind die von vorher', () => {
+/* Die Farbleisten, fest und ohne Rolle: `heat`, sieben Stützstellen aus
+   Turbo, für jeden Messwert (Heatmaps der Auslegung, Felder im 3D-Studio,
+   Flussschema) und die Entformschräge mit ihrer Stufe am Grenzwert. Seit
+   24.09. nur diese zwei: vorher las das 3D-Studio Turbo als Polynom
+   (`turbo`) und das Flussschema eine eigene Leiste (`speed`). */
+test('palette: zwei Farbleisten, heat und die Entformschräge', () => {
+  assert.deepEqual(Object.keys(P.leisten).sort(), ['draft', 'heat']);
   assert.equal(P.scale('heat', 0), '#30123b');
   assert.equal(P.scale('heat', 0.5), '#67eb73');
   assert.equal(P.scale('heat', 1), '#7a0403');
-  assert.equal(P.scale('turbo', 0.5), '#96fa50', 'Turbo nach Popov bei der Hälfte');
   assert.equal(P.scale('draft', 0), '#b42318', 'unter 0° und bei 0°: Rot');
   assert.equal(P.scale('draft', 1 / 3 - 1e-9), '#d4a908', 'knapp unter dem Grenzwert: Gold');
   assert.equal(P.scale('draft', 1 / 3), '#7cc4a0', 'am Grenzwert: die Stufe ins helle Grün');
   assert.equal(P.scale('draft', 1), '#0d7a3c', 'beim Dreifachen: sattes Grün');
-  assert.equal(P.scale('speed', 0), '#2e6da4');
-  assert.equal(P.scale('speed', 1), '#b42318');
-  assert.equal(P.scale('turbo', NaN), null, 'ohne Wert keine Farbe');
+  assert.equal(P.scale('heat', NaN), null, 'ohne Wert keine Farbe');
   assert.equal(P.scale('heat', -1), P.scale('heat', 0), 'geklemmt');
   const t = P.lut('heat', 7);
   assert.equal(t.length, 21);
   assert.deepEqual([...t], [48, 18, 59, 55, 117, 197, 29, 172, 213, 103, 235, 115, 245, 194, 37, 250, 126, 29, 122, 4, 3]);
-  assert.match(P.gradient('turbo'), /^linear-gradient\(90deg, #/);
+  assert.match(P.gradient('heat'), /^linear-gradient\(90deg, #/);
   /* Keine Rolle: kein Token, kein Schlüssel in colors. */
   for (const n of Object.keys(P.leisten)) assert.ok(!(n in P.colors), n);
 });

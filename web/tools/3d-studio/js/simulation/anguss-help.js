@@ -92,7 +92,7 @@ Füllstands), bei den Partikeln als Kugeln vom Partikelabstand, nach Geschwindig
 durchscheinend. Die Skala gilt für den ganzen Lauf; ihr Ende ist das 99. Perzentil über die Bilder bis zur
 ersten Ankunft. Danach herrschen die Anschnitte, und der Weg davor wäre einfarbig blau. Was schneller
 ist, bleibt rot.</p>
-<p><b>Ankunft</b>: der Anguss nach der Ankunft der Front gefärbt (Turbo: früh blau, spät rot; was die
+<p><b>Ankunft</b>: der Anguss nach der Ankunft der Front gefärbt (Farbskala: früh blau, spät rot; was die
 Front nie erreicht, im Grau des Bauteils). Diese Farben
 gibt es nur aus der Gitterrechnung. Steht das Bild der Partikel da, fehlt die Wahl.</p>
 <p>Die Rechnung endet, wenn alle Anschnitte gemeldet sind (plus fünf Prozent für das Bild), spätestens am

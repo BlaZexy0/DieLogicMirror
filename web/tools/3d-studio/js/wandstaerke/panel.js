@@ -24,7 +24,7 @@ export const MODES = [
   },
   {
     id: 'schnitt', label: 'Schnitt',
-    hint: 'Ein Schnitt durch das Feld: innen die Wandstärke in der Turbo-Skala, außen das Bauteilgrau.',
+    hint: 'Ein Schnitt durch das Feld: innen die Wandstärke in der Farbskala, außen das Bauteilgrau.',
     html: segRow({ ui: 'slice-seg', label: 'Achse', value: '2', options: [['0', 'X'], ['1', 'Y'], ['2', 'Z']] })
       + sliderRow({ ui: 'slice-pos', label: 'Position', min: 0, max: 100, step: 1, value: 50 })
   },

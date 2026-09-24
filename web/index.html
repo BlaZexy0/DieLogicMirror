@@ -790,7 +790,7 @@
         <div class="studio-text">
           <h4>Wandstärkenanalyse</h4>
           <p>Ein Abstandsfeld im Bauteil sagt an jeder Stelle, wie dick die Wand ist. Die dicksten Stellen erstarren zuletzt: dort sitzen die Wärmezentren, und dorthin muss die Temperierung.</p>
-          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo"></span>Wärmezentrum: je dicker die Wand, desto größer und röter die Kugel</li><li><span class="key" style="background:var(--part)"></span>Bauteil durchscheinend</li></ul>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="heat"></span>Wärmezentrum: je dicker die Wand, desto größer und röter die Kugel</li><li><span class="key" style="background:var(--part)"></span>Bauteil durchscheinend</li></ul>
           <div class="arrow">Öffnen →</div>
         </div>
       </a>
@@ -799,7 +799,7 @@
         <div class="studio-text">
           <h4>Abstandsanalyse</h4>
           <p>Der kürzeste Weg von jeder Stelle der einen Datei zur anderen, etwa von der Kavität zum Temperierkanal. Rot heißt nah, blau fern; die Skala setzt man selbst.</p>
-          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo" data-richtung="270deg"></span>nah → fern</li></ul>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="heat" data-richtung="270deg"></span>nah → fern</li></ul>
           <div class="arrow">Öffnen →</div>
         </div>
       </a>
@@ -808,7 +808,7 @@
         <div class="studio-text">
           <h4>Füllabschätzung</h4>
           <p>Die Schmelzefront läuft von den Anschnitten durch das gerasterte Bauteil. Die Farbe sagt, wann eine Stelle voll ist; die letzten Stellen sind die, an denen die Luft steht.</p>
-          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo"></span>zuerst → zuletzt gefüllt</li><li><span class="key" style="background:var(--die)"></span>Anschnitt</li><li><span class="key" style="background:var(--mark)"></span>zuletzt gefüllt</li></ul>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="heat"></span>zuerst → zuletzt gefüllt</li><li><span class="key" style="background:var(--die)"></span>Anschnitt</li><li><span class="key" style="background:var(--mark)"></span>zuletzt gefüllt</li></ul>
           <div class="arrow">Öffnen →</div>
         </div>
       </a>
@@ -817,7 +817,7 @@
         <div class="studio-text">
           <h4>Angussdesigner</h4>
           <p>Pressrest, Laufkanäle und Anschnitte wachsen als ein geschlossener Körper aus einem Graphen: Querschnitt je Punkt, Zwickelradius je Verzweigung, gerader Steg am Anschnitt.</p>
-          <ul class="fig-legend"><li><span class="key" style="background:var(--biscuit)"></span>Pressrest</li><li><span class="key" style="background:var(--mark)"></span>Punkt</li><li><span class="key" style="background:var(--mark-warm)"></span>Verzweigung</li><li><span class="key" style="background:var(--die)"></span>Anschnitt</li><li><span class="key" style="background:var(--part)"></span>Bauteil als Referenz</li></ul>
+          <ul class="fig-legend"><li><span class="key" style="background:var(--biscuit)"></span>Pressrest</li><li><span class="key" style="background:var(--mark)"></span>Punkt</li><li><span class="key" style="background:var(--mark-lime)"></span>Verzweigung</li><li><span class="key" style="background:var(--die)"></span>Anschnitt</li><li><span class="key" style="background:var(--part)"></span>Bauteil als Referenz</li></ul>
           <div class="arrow">Öffnen →</div>
         </div>
       </a>
@@ -826,7 +826,7 @@
         <div class="studio-text">
           <h4>Überlaufdesigner</h4>
           <p>Überläufe fangen die kalte Schmelzefront, Entlüftungen lassen die Luft heraus. Beides sitzt außen am Bauteilrand in der Trennebene; das Volumen geht ins Schussgewicht.</p>
-          <ul class="fig-legend"><li><span class="key" style="background:var(--mark)"></span>Bohne</li><li><span class="key" style="background:var(--air)"></span>mit Entlüftung</li><li><span class="key" style="background:var(--mark-warm)"></span>Waschbrett</li></ul>
+          <ul class="fig-legend"><li><span class="key" style="background:var(--mark)"></span>Bohne</li><li><span class="key" style="background:var(--air)"></span>mit Entlüftung</li><li><span class="key" style="background:var(--mark-lime)"></span>Waschbrett</li></ul>
           <div class="arrow">Öffnen →</div>
         </div>
       </a>
@@ -844,7 +844,7 @@
         <div class="studio-text">
           <h4>Angussfüllung</h4>
           <p>Die Schmelze vom Pressrest bis zu den Anschnitten, gerechnet mit dem Gitter (Lattice-Boltzmann mit freier Oberfläche) oder mit Partikeln (SPH), auf der Grafikkarte, sonst in JavaScript. Ergebnis: wann die Schmelze an welchem Anschnitt ankommt.</p>
-          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo"></span>langsam → schnell</li></ul>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="heat"></span>langsam → schnell</li></ul>
           <div class="arrow">Öffnen →</div>
         </div>
       </a>
@@ -853,7 +853,7 @@
         <div class="studio-text">
           <h4>Kammerfüllung</h4>
           <p>Die Welle in der Füllkammer: Wie schnell darf der Kolben anfahren, ohne dass die Welle bricht und Luft einschließt? Gitter, Partikel oder ein auf OpenFOAM-Rechnungen trainiertes Metamodell, gegen die Schusskurve, mit „Kammer voll“ und eingeschlossener Luft.</p>
-          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo"></span>langsam → schnell</li></ul>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="heat"></span>langsam → schnell</li></ul>
           <div class="arrow">Öffnen →</div>
         </div>
       </a>

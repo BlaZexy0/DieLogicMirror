@@ -11,7 +11,7 @@
     <path d="M3.6 8 L13 13.4 L22.4 8" stroke="var(--steel-dark, #7b9096)" stroke-width="1.5" opacity=".55"/>
     <path d="M13 13.4 V23.4" stroke="var(--steel-dark, #7b9096)" stroke-width="1.5" opacity=".55"/>
     <path d="M2.2 13.4 H23.8" stroke="var(--die, #2e65a0)" stroke-width="1.4" stroke-dasharray="2.6 2.2" opacity=".75"/>
-    <path d="M13 10.2 L16.2 12 L16.2 15.4 L13 17.2 L9.8 15.4 L9.8 12 Z" fill="var(--melt, #008c82)" opacity=".92"/>
+    <path d="M13 10.2 L16.2 12 L16.2 15.4 L13 17.2 L9.8 15.4 L9.8 12 Z" fill="var(--melt, #e85f08)" opacity=".92"/>
   </symbol>
   <use href="#icon"/>
 </svg>

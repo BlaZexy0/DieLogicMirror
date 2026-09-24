@@ -24,7 +24,7 @@
 
 import * as T from 'three';
 import { diePieces, maskOutline } from './dieview.js';
-import { sideColor, undercutColor, mixHex, hex2rgb, lut, turboTrim, VIEW, onScheme } from './colors.js';
+import { sideColor, undercutColor, mixHex, hex2rgb, lut, heatTrim, VIEW, onScheme } from './colors.js';
 import { UNDERCUT } from './segment.js';
 import { disposeTree, surfaceMaterial } from '../ui/common.js';
 
@@ -240,17 +240,17 @@ export function createDieView(view) {
         const eg = new T.Group();
         eg.userData.overlay = 'ejector';
         eg.userData.piece = p;
-        /* Die Karte auf der Farbleiste `turbo` (in jedem Farbschema
+        /* Die Karte auf der Farbleiste `heat` (in jedem Farbschema
            dieselbe), blau = wenig, rot = viel, ohne die fast schwarzen Enden
-           — dasselbe Stück wie das Bauteil daneben (turboTrim); was kaum
+           — dasselbe Stück wie das Bauteil daneben (heatTrim); was kaum
            haftet, ist zudem durchscheinend. Die Textur trägt die Werte der
            Leiste: sRGB. */
         const { nu, nv } = em.frame;
         const rgba = new Uint8Array(nu * nv * 4);
-        const tab = lut('turbo');
+        const tab = lut('heat');
         for (let i = 0; i < em.map.length; i++) {
           const v = em.map[i];
-          const k = 3 * Math.round(turboTrim(v) * 255);
+          const k = 3 * Math.round(heatTrim(v) * 255);
           rgba[i * 4] = tab[k]; rgba[i * 4 + 1] = tab[k + 1]; rgba[i * 4 + 2] = tab[k + 2];
           rgba[i * 4 + 3] = v > 0.01 ? 150 + 105 * Math.min(1, v * 2) : 0;
         }

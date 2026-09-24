@@ -14,8 +14,9 @@
      · Farbleisten: die Skalen, an denen man einen Messwert abliest
        (Wandstärke, Abstand, Füllgrad, Haftung, Geschwindigkeit, Ankunft,
        Entformschräge). Sie sind FEST, in jedem Schema dieselben, und
-       stehen in palette.js (LEISTEN): `turbo` für die Felder, `draft` für
-       die Entformschräge, `speed` für das Flussschema.
+       stehen in palette.js (LEISTEN): `heat`, die Leiste der Auslegung,
+       für jeden Messwert (auch das Flussschema), `draft` für die
+       Entformschräge.
      · Die Ampel: nur, wo geurteilt wird (Hinterschnitt, zu nah,
        Durchbruch, verletzt). Nichts anderes nimmt ihre Farben.
 
@@ -53,15 +54,15 @@ export const ROLE = Object.freeze({
   get caution() { return pal('caution', '#e0a400'); },
   get bad() { return pal('bad', '#b42318'); },
   get mark() { return pal('mark', '#b23797'); },
-  get markWarm() { return pal('markWarm', '#f66e5c'); },
+  get markLime() { return pal('markLime', '#9fd83a'); },
   get markCool() { return pal('markCool', '#19bdfc'); },
   get halfMov() { return pal('halfMov', '#e66685'); },
   get halfFix() { return pal('halfFix', '#fbde4e'); },
   /* Sachfarben */
   get machine() { return pal('machine', '#ac6eef'); },
-  get melt() { return pal('melt', '#008c82'); },
-  get runner() { return pal('runner', '#006665'); },
-  get overflow() { return pal('overflow', '#8bbfb8'); },
+  get melt() { return pal('melt', '#e85f08'); },
+  get runner() { return pal('runner', '#9f6403'); },
+  get overflow() { return pal('overflow', '#f6b48f'); },
   get biscuit() { return pal('biscuit', '#82979f'); },
   get die() { return pal('die', '#2e65a0'); },
   get air() { return pal('air', '#68a7cc'); },
@@ -99,29 +100,17 @@ export function mixHex(a, b, t) {
 /* Fest und in jedem Schema gleich (palette.js, LEISTEN). Stützstellen
    [t, Farbe], zwei an derselben Stelle sind eine Stufe; gemischt wird
    linear in sRGB, wie palette.js es tut. */
-function turboPoly(t) {
-  const x = Math.max(0, Math.min(1, t));
-  const x2 = x * x, x3 = x2 * x, x4 = x3 * x, x5 = x4 * x;
-  const c = v => Math.max(0, Math.min(1, v));
-  return [
-    c(0.13572138 + 4.61539260 * x - 42.66032258 * x2 + 132.13108234 * x3 - 152.94239396 * x4 + 59.28637943 * x5),
-    c(0.09140261 + 2.19418839 * x + 4.84296658 * x2 - 14.18503333 * x3 + 4.27729857 * x4 + 2.82956604 * x5),
-    c(0.10667330 + 12.64194608 * x - 60.58204836 * x2 + 110.36276771 * x3 - 89.90310912 * x4 + 27.34824973 * x5)
-  ];
-}
 const leiste = (name, rueckfall) => { const p = P(); return (p && p.leisten && p.leisten[name]) || rueckfall; };
 const LEISTE = {
-  get turbo() { return leiste('turbo', turboPoly); },
-  get draft() { return leiste('draft', [[0, '#b42318'], [1 / 3, '#d4a908'], [1 / 3, '#7cc4a0'], [1, '#0d7a3c']]); },
-  get speed() { return leiste('speed', [[0, '#2e6da4'], [1 / 3, '#3fc2b6'], [2 / 3, '#d4a908'], [1, '#b42318']]); }
+  get heat() { return leiste('heat', [[0, '#30123b'], [1 / 6, '#3775c5'], [2 / 6, '#1dacd5'], [3 / 6, '#67eb73'], [4 / 6, '#f5c225'], [5 / 6, '#fa7e1d'], [1, '#7a0403']]); },
+  get draft() { return leiste('draft', [[0, '#b42318'], [1 / 3, '#d4a908'], [1 / 3, '#7cc4a0'], [1, '#0d7a3c']]); }
 };
 
-/** Farbe auf einer Farbleiste ('turbo', 'draft', 'speed') als [r, g, b]
+/** Farbe auf einer Farbleiste ('heat', 'draft') als [r, g, b]
     mit 0 … 1, t = 0 … 1; NaN gibt null. */
 export function scaleRgb(name, t) {
   if (!(t === t)) return null;
   const l = LEISTE[name], x = Math.max(0, Math.min(1, t));
-  if (typeof l === 'function') return l(x);
   let i = l.length - 2;
   while (i > 0 && x < l[i][0]) i--;        // von oben: an einer Stufe gilt die obere Seite
   const a = hex2rgb(l[i][1]), b = hex2rgb(l[i + 1][1]), w = l[i + 1][0] - l[i][0];
@@ -134,12 +123,12 @@ export function scale(name, t) {
   return c ? hexOf(c) : null;
 }
 
-/** Wo ein Messwert (0 … 1) auf der Leiste `turbo` liegt, wenn ihre fast
+/** Wo ein Messwert (0 … 1) auf der Leiste `heat` liegt, wenn ihre fast
     schwarzen Enden wegbleiben: das Stück von sattem Blau bis sattem Rot.
     Wandstärke, Abstand und Haftung — am Bauteil, auf der Karte und in der
     Skala — lesen die Leiste so; vorher trug die Haftkarte ein anderes
     Stück (0,05 … 0,95) als das Bauteil daneben unter derselben Skala. */
-export const turboTrim = t => 0.08 + 0.84 * Math.max(0, Math.min(1, t));
+export const heatTrim = t => 0.08 + 0.84 * Math.max(0, Math.min(1, t));
 
 /* Für viele Werte je Bild (Punktfarben, Texturen): eine Tafel mit n Farben,
    r, g, b je Eintrag 0 … 255. Die Leisten sind fest; gemerkt wird je
@@ -242,16 +231,18 @@ export const draftColor = (deg, limit) => scaleRgb('draft', draftT(deg, limit)).
 /* Was ein Designer setzt, muss sich vom Anguss abheben (Rückmeldung vom
    23.09.: in den Tönen der Schmelze verschwanden Bohne, Waschbrett und
    die Knoten im Lauf). Diese Arten tragen darum nicht die Farbe der
-   Schmelze, sondern die Hervorhebung und ihre zwei Geschwister markWarm
-   (Koralle) und markCool (Himmelblau). Die Punktarten untereinander sollen
+   Schmelze, sondern die Hervorhebung und ihre zwei Geschwister markLime
+   (Limette) und markCool (Himmelblau). Die Punktarten untereinander sollen
    ebenso klar getrennt sein (Rückmeldung vom 24.09.: Punkt, Verzweigung
    und Spiegelpunkt lagen in Magenta, Violett und hellem Magenta zu nah
    beieinander); die drei liegen in jedem Schema paarweise bei ΔE ≥ 20.
-     Anguss     Punkt = Hervorhebung, Verzweigung = Koralle, Spiegelpunkt =
+   Die Verzweigung war kurz Koralle; seit die Schmelze orange ist (24.09.),
+   verschwand sie auf dem Anguss, darum Limette.
+     Anguss     Punkt = Hervorhebung, Verzweigung = Limette, Spiegelpunkt =
                 Himmelblau (seine nachgezogene Gegenseite ist blass,
                 VIEW.follower). Pressrest = Pressrest, Anschnitt = Werkzeug
                 (wie in den Diagrammen).
-     Überlauf   Bohne = Hervorhebung, Waschbrett = Koralle. Die Entlüftung
+     Überlauf   Bohne = Hervorhebung, Waschbrett = Limette. Die Entlüftung
                 ist Luft: Bohne mit Entlüftung = Luft, der Schlitz die
                 hellere Luft, die Kanalpunkte noch heller, damit sie nicht
                 wie ein Schlitz aussehen.
@@ -263,12 +254,12 @@ export const draftColor = (deg, limit) => scaleRgb('draft', draftT(deg, limit)).
 export const ELEMENT = Object.freeze({
   get pressrest() { return ROLE.biscuit; },
   get punkt() { return ROLE.mark; },
-  get verzweigung() { return ROLE.markWarm; },
+  get verzweigung() { return ROLE.markLime; },
   get spiegelpunkt() { return ROLE.markCool; },
   get anschnitt() { return ROLE.die; },
   get bohne() { return ROLE.mark; },
   get entlueftet() { return ROLE.air; },
-  get waschbrett() { return ROLE.markWarm; },
+  get waschbrett() { return ROLE.markLime; },
   get schlitz() { return mixHex('air', 'surface', 0.4); },
   get kanalpunkt() { return mixHex('air', 'surface', 0.7); },
   get stich() { return ROLE.cool; },

@@ -19,16 +19,16 @@ import { kpis } from '../studio/rows.js';
 import { saveSTL } from '../studio/files.js';
 import { checkFormat } from '../studio/planio.js';
 import { surfaceMaterial } from '../ui/common.js';
-import { onScheme, VIEW, scale, lut, hex2rgb, turboTrim } from '../part/colors.js';
+import { onScheme, VIEW, scale, lut, hex2rgb, heatTrim } from '../part/colors.js';
 import { MODES, DARSTELLUNG } from './panel.js';
 
 export const FORMAT = 'dielogic-wandstaerke';
 export const FORMAT_VERSION = 1;
 
 const BAND_CELLS = 3, PAD_CELLS = 2;
-/* Die Wandstärke auf der Farbleiste `turbo` (js/part/colors.js, in jedem
+/* Die Wandstärke auf der Farbleiste `heat` (js/part/colors.js, in jedem
    Farbschema dieselbe): dünn blau, dick rot — das Stück von sattem Blau bis
-   sattem Rot, ohne die fast schwarzen Enden (turboTrim). Mehr als
+   sattem Rot, ohne die fast schwarzen Enden (heatTrim). Mehr als
    MAX_SAMPLES Rasterpunkte rechnet der Gastgeber nicht: darüber hebt er die
    Zellkante an (js/part/field.js, planField). */
 const LIMIT_TEXT = fmt(MAX_SAMPLES / 1e6, 0) + ' Mio.';
@@ -212,7 +212,7 @@ export function createWandstaerkeTool(host) {
     const maxIn = Math.max(state.stats.maxIn, 1e-6);
     /* Jede Marke in der Farbe ihrer Wandstärke, auf derselben Leiste wie der Schnitt. */
     for (const m of state.maxima) {
-      const color = new T.Color(scale('turbo', turboTrim(m.r / maxIn)));
+      const color = new T.Color(scale('heat', heatTrim(m.r / maxIn)));
       const mat = rings
         ? new T.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, side: T.DoubleSide, depthTest: false, depthWrite: false })
         : new T.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.05, transparent: true, opacity: 0.65, depthWrite: false });
@@ -241,17 +241,17 @@ export function createWandstaerkeTool(host) {
   /* ── Schnitt ─────────────────────────────────────────────── */
   const scaleEnd = () => Math.max(state.stats ? state.stats.maxIn : 1, 1e-6);
   /* Die Farben des Schnitts, einmal je Bild geholt: innen die Leiste
-     `turbo` (dünn blau, dick rot, turboTrim) als Tafel, außen das Grau des
+     `heat` (dünn blau, dick rot, heatTrim) als Tafel, außen das Grau des
      Bauteils (dort gibt es keine Wandstärke), die Kontur in der Tinte. Die
      Textur trägt die Werte der Leiste und ist deshalb sRGB. */
   function slicePainter() {
-    const tab = lut('turbo');
+    const tab = lut('heat');
     const none = hex2rgb(VIEW.noData).map(x => x * 255), ink = hex2rgb(VIEW.lines).map(x => x * 255);
     return (v, h, inn, out, o) => {
       const c = Math.abs(v) < h * 0.6 ? ink : v >= 0 ? none : null;
       if (c) { out[o] = c[0]; out[o + 1] = c[1]; out[o + 2] = c[2]; }
       else {
-        const k = 3 * Math.round(turboTrim(-v / inn) * 255);
+        const k = 3 * Math.round(heatTrim(-v / inn) * 255);
         out[o] = tab[k]; out[o + 1] = tab[k + 1]; out[o + 2] = tab[k + 2];
       }
       out[o + 3] = 255;
@@ -309,7 +309,7 @@ export function createWandstaerkeTool(host) {
     const inn = scaleEnd();
     shell.colorbar({
       title: 'Wandstärke',
-      stops: gradient(t => scale('turbo', turboTrim(t))),
+      stops: gradient(t => scale('heat', heatTrim(t))),
       ticks: [1, 0.75, 0.5, 0.25, 0].map(q => fmtUnit(2 * inn * q, 'mm')),
       extra: (state.slice.on ? chip(VIEW.lines) + 'Bauteilkontur' : '')
         + (state.hot.on ? (state.slice.on ? ' · ' : '') + 'Marken nach Größe gefärbt' : '')

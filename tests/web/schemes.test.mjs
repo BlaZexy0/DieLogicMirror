@@ -115,17 +115,25 @@ const DATEN = ['mark', 'melt', 'die', 'machine', 'air', 'cool', 'process'];
 test('keine Sachfarbe und nicht die Hervorhebung sieht aus wie ein Urteil', () => {
   /* Der Abstand zum ganzen Verlauf gut → knapp → schlecht, nicht nur zu den
      drei Stufen: ein Orange liegt zwischen „knapp" und „schlecht" und würde
-     als „fast schlecht" gelesen. Die Schmelze darf näher heran, sie ist im
-     Standard die Marke (Teal neben Grün). */
+     als „fast schlecht" gelesen. Die eine Ausnahme ist die Schmelze mit
+     ihrer Familie: sie ist Orange, heißes Metall (Wunsch vom 24.09.), und
+     liegt damit auf dem Verlauf. Dafür hält sie zu den beiden Stufen selbst
+     Abstand, ΔE ≥ 14; der Anguss (Kupferbraun) und der Überlauf (Apricot)
+     ≥ 11. */
   for (const s of S.list) {
     const c = farben(s.id);
-    for (const k of DATEN) {
-      const min = k === 'melt' ? 8 : 13;
+    for (const k of DATEN.filter(k => k !== 'melt')) {
       const d = zurAmpel(c[k], c);
-      assert.ok(d >= min, `${s.id}: ${k} liegt nur ΔE ${d.toFixed(1)} vom Ampelverlauf`);
+      assert.ok(d >= 13, `${s.id}: ${k} liegt nur ΔE ${d.toFixed(1)} vom Ampelverlauf`);
     }
-    /* Die abgeleiteten Sachfarben auch nicht: Anguss, Überlauf, Vakuum. */
-    for (const k of ['runner', 'overflow', 'vacuum']) {
+    for (const [k, min] of [['melt', 14], ['runner', 11], ['overflow', 11]]) {
+      for (const stufe of ['caution', 'bad']) {
+        const d = dE(c[k], c[stufe]);
+        assert.ok(d >= min, `${s.id}: ${k} liegt nur ΔE ${d.toFixed(1)} von ${stufe}`);
+      }
+    }
+    /* Die abgeleitete Sachfarbe Vakuum auch nicht. */
+    for (const k of ['vacuum']) {
       const d = zurAmpel(c[k], c);
       assert.ok(d >= 8, `${s.id}: ${k} liegt nur ΔE ${d.toFixed(1)} vom Ampelverlauf`);
     }
@@ -189,10 +197,11 @@ test('Diagramme: Linien, die zusammen stehen, sind klar verschieden', () => {
 });
 
 /* Teal ist die Farbe des Standards. In Stahlblau und Graphit wirkte die
-   Schmelze in Teal wie ein vergessener Rest (Rückmeldung vom 23.09.): dort
-   trägt sie ein Stahlblau, und keine andere Rolle darf ins Teal rutschen.
-   Gemessen am Farbton in OK-LCh; fast graue Farben haben keinen. */
-test('Teal gehört dem Standard: die anderen Schemata tragen es nirgends', () => {
+   Schmelze in Teal wie ein vergessener Rest (Rückmeldung vom 23.09.); keine
+   Rolle darf dort ins Teal rutschen. Gemessen am Farbton in OK-LCh; fast
+   graue Farben haben keinen. Die Schmelze selbst ist seit 24.09. überall
+   Orange. */
+test('Teal gehört dem Standard, die Schmelze ist überall Orange', () => {
   const lch = h => { const [l, a, b] = oklab(h); return [l, Math.hypot(a, b), (Math.atan2(b, a) * 180 / Math.PI + 360) % 360]; };
   for (const s of S.list.filter(x => x.id !== S.default)) {
     for (const [k, v] of Object.entries(farben(s.id))) {
@@ -200,10 +209,16 @@ test('Teal gehört dem Standard: die anderen Schemata tragen es nirgends', () =>
       assert.ok(ch < 0.03 || h <= 160 || h >= 212, `${s.id}: ${k} ${v} liegt im Teal (h ${h.toFixed(0)}°)`);
     }
   }
-  /* Die Schmelze trägt dort den Ton der Marke: Stahlblau neben Stahlblau. */
-  for (const id of ['stahl', 'graphit']) {
-    const h = lch(farben(id).melt)[2];
-    assert.ok(h > 225 && h < 255, `${id}: Schmelze h ${h.toFixed(0)}° ist kein Stahlblau`);
+  /* Die Schmelze ist in jedem Schema Orange (Wunsch vom 24.09.: Teal und
+     Stahlblau fühlten sich für Metall falsch an), der Anguss ein
+     Kupferbraun, der Überlauf ein Apricot: dieselbe Familie überall. */
+  for (const s of S.list) {
+    const c = farben(s.id), [, ch, h] = lch(c.melt);
+    assert.ok(ch > 0.12 && h > 35 && h < 60, `${s.id}: Schmelze ${c.melt} (h ${h.toFixed(0)}°) ist kein Orange`);
+    for (const k of ['runner', 'overflow']) {
+      const hk = lch(c[k])[2];
+      assert.ok(hk > 35 && hk < 70, `${s.id}: ${k} ${c[k]} (h ${hk.toFixed(0)}°) gehört nicht zur Familie der Schmelze`);
+    }
   }
 });
 
@@ -214,7 +229,7 @@ test('Teal gehört dem Standard: die anderen Schemata tragen es nirgends', () =>
 test('die Farbleisten sind in jedem Schema dieselben', () => {
   const T01 = [0, 0.1, 0.25, 1 / 3, 0.5, 0.66, 0.8, 1];
   const probe = () => Object.keys(P.leisten).map(n => T01.map(t => P.scale(n, t)).join()).join('|');
-  assert.deepEqual(Object.keys(P.leisten).sort(), ['draft', 'heat', 'speed', 'turbo']);
+  assert.deepEqual(Object.keys(P.leisten).sort(), ['draft', 'heat']);
   for (const s of S.list) {
     for (const k of Object.keys(s.colors)) assert.doesNotMatch(k, /^seq|heat|turbo|leiste/i, s.id + ': ' + k);
   }

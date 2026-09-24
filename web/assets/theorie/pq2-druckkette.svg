@@ -21,7 +21,7 @@
       <path d="M0 7 L7 0" stroke="#7b9096" stroke-opacity="0.45" stroke-width="1" class="s-steel-dark"/>
     </pattern>
     <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
-      <path d="M0 0 L8 4 L0 8 Z" fill="#008c82" class="f-melt"/>
+      <path d="M0 0 L8 4 L0 8 Z" fill="#e85f08" class="f-melt"/>
     </marker>
     <marker id="arr-oil" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M0 0 L8 4 L0 8 Z" fill="#ac6eef" class="f-machine"/>
@@ -79,20 +79,20 @@
   <text x="695" y="340" font-size="10.5" fill="#4c6870" class="f-muted" text-anchor="middle">bewegliche Seite</text>
 
   <!-- ── ③ Füllkammer: Gießkolben (Fläche A_K) hinten, die Einfüllöffnung gleich davor, das Rohr bis zur Trennebene ── -->
-  <path d="M438 270 L640 270 L640 150 L645 150 L645 136 L655 136 L655 150 L660 150 L660 310 L438 310 Z" fill="#008c82" fill-opacity="0.3" class="f-melt"/>
-  <path d="M590 136 L590 102 L612 102 L612 82 L688 82 L688 102 L710 102 L710 136 Z" fill="#008c82" fill-opacity="0.3" class="f-melt"/>
+  <path d="M438 270 L640 270 L640 150 L645 150 L645 136 L655 136 L655 150 L660 150 L660 310 L438 310 Z" fill="#e85f08" fill-opacity="0.3" class="f-melt"/>
+  <path d="M590 136 L590 102 L612 102 L612 82 L688 82 L688 102 L710 102 L710 136 Z" fill="#e85f08" fill-opacity="0.3" class="f-melt"/>
   <rect x="350" y="270" width="88" height="40" fill="#36545d" class="f-piston"/>
   <path d="M330 268 L446 268 M482 268 L640 268 M330 312 L660 312" fill="none" stroke="#7b9096" stroke-width="2.5" class="s-steel-dark"/>
   <path d="M446 268 L446 254 L438 244 M482 268 L482 254 L490 244" fill="none" stroke="#7b9096" stroke-width="2.5" class="s-steel-dark"/>
   <text x="464" y="236" font-size="13" fill="#4c6870" class="f-muted" text-anchor="middle">Einfüllöffnung</text>
   <text x="394" y="294" font-size="11.5" fill="#ffffff" class="f-surface" text-anchor="middle">Gießkolben A<tspan font-size="72%" dy="3">K</tspan></text>
   <text x="545" y="295" font-size="14" font-weight="700" fill="#002733" class="f-text" text-anchor="middle">Schmelze</text>
-  <line x1="590" y1="290" x2="618" y2="290" stroke="#008c82" stroke-width="1.8" class="s-melt" marker-end="url(#arr)"/>
+  <line x1="590" y1="290" x2="618" y2="290" stroke="#e85f08" stroke-width="1.8" class="s-melt" marker-end="url(#arr)"/>
 
   <!-- Anguss: steigt in der Trennebene aus dem Kammerende, der Anschnitt als Engstelle, darüber das Gussteil -->
   <path d="M640 268 L640 150 L645 150 L645 136 M655 136 L655 150 L660 150 L660 312" fill="none" stroke="#7b9096" stroke-width="2.5" class="s-steel-dark"/>
   <path d="M645 136 L590 136 L590 102 L612 102 L612 82 L688 82 L688 102 L710 102 L710 136 L655 136" fill="none" stroke="#7b9096" stroke-width="2.5" class="s-steel-dark"/>
-  <line x1="650" y1="252" x2="650" y2="214" stroke="#008c82" stroke-width="1.8" class="s-melt" marker-end="url(#arr)"/>
+  <line x1="650" y1="252" x2="650" y2="214" stroke="#e85f08" stroke-width="1.8" class="s-melt" marker-end="url(#arr)"/>
   <text x="650" y="124" font-size="13.5" font-weight="700" fill="#002733" class="f-text" text-anchor="middle">Gussteil</text>
 
   <!-- ── ④ Anschnitt und Anguss: rechts neben der Form beschriftet ── -->

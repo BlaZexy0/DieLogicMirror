@@ -148,9 +148,9 @@ test('Modi besitzen ihren Viewport: Isofläche, Schnitt mit Skala, Wärmezentren
   assert.ok(doc.getElementById('cb-extra').innerHTML.includes('Bauteilkontur'));
   assert.equal(ui('slice-scale-seg'), null, 'keine Skalenwahl — außen gibt es nichts zu zeigen');
   const C = await import('../../../../web/tools/3d-studio/js/part/colors.js');
-  /* Die feste Farbleiste `turbo`: dünn blau, dick rot. */
-  const lo = C.scaleRgb('turbo', 0.15), hi = C.scaleRgb('turbo', 0.85), mid = C.scaleRgb('turbo', 0.5);
-  assert.ok(lo[2] > 0.9 && lo[2] > lo[0] && hi[0] > 0.8 && hi[0] > hi[2] && mid[1] > mid[0] && mid[1] > mid[2], 'Turbo: blau → grün → rot');
+  /* Die feste Farbleiste `heat` (die der Auslegung): dünn blau, dick rot. */
+  const lo = C.scaleRgb('heat', 0.25), hi = C.scaleRgb('heat', 0.85), mid = C.scaleRgb('heat', 0.5);
+  assert.ok(lo[2] > 0.75 && lo[2] > lo[0] && hi[0] > 0.8 && hi[0] > hi[2] && mid[1] > mid[0] && mid[1] > mid[2], 'heat: blau → grün → rot');
   for (const ax of ['0', '1', '2']) {
     ui('slice-seg').querySelectorAll('button').find(b => b.dataset.value === ax).dispatch('click');
     assert.equal(s.slice.axis, +ax);
@@ -170,7 +170,7 @@ test('Modi besitzen ihren Viewport: Isofläche, Schnitt mit Skala, Wärmezentren
   assert.equal(doc.getElementById('cb-title').textContent, 'Wandstärke', 'die Skala erklärt die Farben');
   const m0 = v.hotGroup.children[0];
   assert.ok(Math.abs(m0.scale.x - s.maxima[0].r) < 1e-9, 'Radius = Feldwert');
-  const want = C.hex2rgb(C.scale('turbo', 0.08 + 0.84 * s.maxima[0].r / s.stats.maxIn)), got = C.hex2rgb('#' + m0.material.color.getHexString());
+  const want = C.hex2rgb(C.scale('heat', 0.08 + 0.84 * s.maxima[0].r / s.stats.maxIn)), got = C.hex2rgb('#' + m0.material.color.getHexString());
   assert.ok(want.every((x, i) => Math.abs(x - got[i]) < 0.01), 'die größte Marke trägt die Farbe ihrer Größe: ' + got + ' / ' + want);
   if (s.maxima.length > 1) {
     const last = v.hotGroup.children[s.maxima.length - 1];

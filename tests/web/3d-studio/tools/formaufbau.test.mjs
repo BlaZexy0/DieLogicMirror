@@ -1160,15 +1160,21 @@ test('voreingestellte Farben folgen dem Farbschema, gewählte bleiben', async ()
     assert.equal(asm.itemOf('castPart').role, 'melt');
     assert.ok(near(hexOf(mat('castPart')), Pal.melt), 'das Gussteil ist Schmelze: ' + hexOf(mat('castPart')));
     assert.ok(asm.setColor('coolFixL', '#00ff00'));
+    const stahlVorher = asm.itemOf('fixHalf').color;
     S.set('graphit');
     const k = S.colors('graphit');
-    assert.notEqual(k.melt, S.colors('teal').melt, 'Graphit hat eine eigene Schmelze');
-    assert.equal(asm.itemOf('castPart').color, k.melt, 'die Voreinstellung folgt dem Schema');
-    assert.ok(near(hexOf(mat('castPart')), k.melt), 'samt Material');
+    /* Die Schmelze ist seit 24.09. in jedem Schema dasselbe Orange; dem
+       Schema folgt, was dort anders aussieht: der Stahl der Formhälfte. */
+    assert.equal(k.melt, S.colors('teal').melt, 'die Schmelze ist überall Orange');
+    assert.equal(asm.itemOf('castPart').color, k.melt, 'das Gussteil bleibt Schmelze');
     assert.equal(asm.groupOf('cast').color, k.melt, 'und die Gruppe');
+    const stahl = Pal.mix('steel', 'steelDark', 0.45);
+    assert.notEqual(stahl, stahlVorher, 'Graphit hat einen eigenen Stahl');
+    assert.equal(asm.itemOf('fixHalf').color, stahl, 'die Voreinstellung folgt dem Schema');
+    assert.ok(near(hexOf(mat('fixHalf')), stahl), 'samt Material');
     assert.equal(asm.itemOf('coolFixL').color, '#00ff00', 'eine gewählte Farbe bleibt');
     assert.equal(mat('coolFixL').color.getHexString(), '00ff00');
-    assert.equal(rowOf('castPart').querySelector('.dot').style.background, k.melt, 'die Liste zeichnet neu');
+    assert.equal(rowOf('fixHalf').querySelector('.dot').style.background, stahl, 'die Liste zeichnet neu');
     assert.equal(rowOf('coolFixL').querySelector('.dot').style.background, '#00ff00');
     assert.equal(M.classColor('plunger'), k.piston, 'der Kolben ist Kolben');
     /* Die Schnittflächen tragen die Farbe ihres Teils, auch nach dem Wechsel. */

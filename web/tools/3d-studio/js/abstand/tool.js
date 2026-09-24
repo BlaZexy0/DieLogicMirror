@@ -31,7 +31,7 @@ import { fmtPlain, fmtUnit, fmtFixed } from '../studio/format.js';
 import { checkFormat } from '../studio/planio.js';
 import { surfaceMaterial } from '../ui/common.js';
 import { rayAt, hoverProbe } from '../viewmath.js';
-import { onScheme, VIEW, scale, scaleFn, linRgb, mixHex, turboTrim } from '../part/colors.js';
+import { onScheme, VIEW, scale, scaleFn, linRgb, mixHex, heatTrim } from '../part/colors.js';
 import { MODES, DARSTELLUNG, CHIP_HINT } from './panel.js';
 
 export const FORMAT = 'dielogic-abstand';
@@ -41,9 +41,9 @@ const RUN = 'Abstand berechnen';
 const REACH = [0.01, 1e5];
 /* Der kleinste Abstand der beiden Skalengrenzen — so fein, wie auch
    „Grenzen aus den Messwerten" rundet. Gefärbt wird auf der Farbleiste
-   `turbo`, wie in der Wandstärkenanalyse und in jedem Farbschema dieselbe:
+   `heat`, wie in der Wandstärkenanalyse und in jedem Farbschema dieselbe:
    nah ist rot (kritisch), fern blau — das Stück von sattem Blau bis sattem
-   Rot (turboTrim). */
+   Rot (heatTrim). */
 const SCALE_GAP = 0.1;
 
 export function createAbstandTool(host) {
@@ -265,11 +265,11 @@ export function createAbstandTool(host) {
       } else {
         const { min, max } = state.scale;
         const { index, faceCount } = s.model;
-        const turbo = scaleFn('turbo');
+        const heat = scaleFn('heat');
         for (let f = 0; f < faceCount; f++) {
           for (let e = 0; e < 3; e++) {
             const v = s.dist[index[f * 3 + e]];
-            const rgb = turbo(turboTrim(1 - (max > min ? (v - min) / (max - min) : 0)));
+            const rgb = heat(heatTrim(1 - (max > min ? (v - min) / (max - min) : 0)));
             arr[f * 9 + e * 3] = rgb[0]; arr[f * 9 + e * 3 + 1] = rgb[1]; arr[f * 9 + e * 3 + 2] = rgb[2];
           }
         }
@@ -287,7 +287,7 @@ export function createAbstandTool(host) {
     const { min, max } = state.scale;
     colorbar({
       title: 'Abstand A ↔ B',
-      stops: gradient(t => scale('turbo', turboTrim(1 - t))),
+      stops: gradient(t => scale('heat', heatTrim(1 - t))),
       ticks: [max, min + 0.75 * (max - min), min + 0.5 * (max - min), min + 0.25 * (max - min), min]
         .map((v, i) => (i === 0 ? '≥ ' : i === 4 ? '≤ ' : '') + fmtFixed(v, 1)),
       extra: 'mm · nah rot, fern blau'

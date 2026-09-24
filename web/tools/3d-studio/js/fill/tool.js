@@ -566,15 +566,15 @@ export function createFuellungTool(host, opts = {}) {
     const pos = part.mesh.geometry.getAttribute('position');
     if (!col || !pos) return;
     const arr = col.array, p = pos.array, f = state.field, s = state.surf, q = state.q;
-    /* Der Füllgrad auf der ganzen Farbleiste `turbo` (in jedem Farbschema
+    /* Der Füllgrad auf der ganzen Farbleiste `heat` (in jedem Farbschema
        dieselbe): früh blau, spät rot. */
-    const turbo = scaleFn('turbo'), grey = linRgb(VIEW.noData);
+    const heat = scaleFn('heat'), grey = linRgb(VIEW.noData);
     for (let i = 0; i < pos.count; i++) {
       const v = sampleFrac(f, s, p[3 * i], p[3 * i + 1], p[3 * i + 2]);
       /* Was über dem Regler liegt, bleibt im Grau des Bauteils — so wandert
          die Front über die Oberfläche. */
       if (Number.isNaN(v) || v > q + 1e-6) { arr.set(grey, 3 * i); continue; }
-      arr.set(turbo(v), 3 * i);
+      arr.set(heat(v), 3 * i);
     }
     col.needsUpdate = true;
     shown.paintFor = state.result; shown.paintQ = state.q;
@@ -671,7 +671,7 @@ export function createFuellungTool(host, opts = {}) {
     const tm = timingNow();
     shell.colorbar(on && state.show === 'farbe' ? {
       title: 'Füllzeit',
-      stops: gradient(t => scale('turbo', t)),
+      stops: gradient(t => scale('heat', t)),
       ticks: [100, 75, 50, 25, 0].map(v => v + ' %'),
       extra: tm && tm.tEnd !== null ? fmtUnit((tm.tFirst - tm.tFull) * 1000, 'ms', 0) + ' bis ' + fmtUnit((tm.tEnd - tm.tFull) * 1000, 'ms', 0) + ' ab Kammer voll'
         : 'wann die Front ankommt, als Anteil der Füllung'

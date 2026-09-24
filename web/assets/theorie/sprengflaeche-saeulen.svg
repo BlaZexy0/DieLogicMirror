@@ -35,12 +35,12 @@
   <!-- Sprengfläche: Silhouette aus Bauteil, Anguss, Überläufen und Pressrest.
        Flächen (Bauteil 130×100, Anguss 26×58, drei Überläufe 22×18, Pressrest r=22)
        ergeben den Schwerpunkt S ≈ (350, 178). -->
-  <rect x="280" y="114" width="130" height="100" rx="8" fill="#008c82" fill-opacity="0.22" stroke="#008c82" stroke-width="1.6" class="f-melt s-melt"/>
-  <rect x="360" y="214" width="26" height="58" fill="#006665" fill-opacity="0.22" stroke="#006665" stroke-width="1.6" class="f-runner s-runner"/>
+  <rect x="280" y="114" width="130" height="100" rx="8" fill="#e85f08" fill-opacity="0.22" stroke="#e85f08" stroke-width="1.6" class="f-melt s-melt"/>
+  <rect x="360" y="214" width="26" height="58" fill="#9f6403" fill-opacity="0.22" stroke="#9f6403" stroke-width="1.6" class="f-runner s-runner"/>
   <circle cx="373" cy="292" r="22" fill="#82979f" fill-opacity="0.22" stroke="#82979f" stroke-width="1.6" class="f-biscuit s-biscuit"/>
-  <rect x="296" y="96" width="22" height="18" fill="#8bbfb8" fill-opacity="0.35" stroke="#8bbfb8" stroke-width="1.6" class="f-overflow s-overflow"/>
-  <rect x="332" y="96" width="22" height="18" fill="#8bbfb8" fill-opacity="0.35" stroke="#8bbfb8" stroke-width="1.6" class="f-overflow s-overflow"/>
-  <rect x="368" y="96" width="22" height="18" fill="#8bbfb8" fill-opacity="0.35" stroke="#8bbfb8" stroke-width="1.6" class="f-overflow s-overflow"/>
+  <rect x="296" y="96" width="22" height="18" fill="#f6b48f" fill-opacity="0.35" stroke="#f6b48f" stroke-width="1.6" class="f-overflow s-overflow"/>
+  <rect x="332" y="96" width="22" height="18" fill="#f6b48f" fill-opacity="0.35" stroke="#f6b48f" stroke-width="1.6" class="f-overflow s-overflow"/>
+  <rect x="368" y="96" width="22" height="18" fill="#f6b48f" fill-opacity="0.35" stroke="#f6b48f" stroke-width="1.6" class="f-overflow s-overflow"/>
   <text x="418" y="150" font-size="12" fill="#002733" class="f-text" font-weight="700">A</text>
   <text x="418" y="164" font-size="10" fill="#4c6870" class="f-muted">Sprengfläche</text>
   <text x="336" y="91" font-size="10" fill="#4c6870" class="f-muted">Überläufe</text>

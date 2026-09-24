@@ -22,7 +22,7 @@
    Das Maximum wäre ehrlicher, aber unbrauchbar: die schnellsten Zellen
    sind immer die wenigen an der Engstelle. Was schneller ist, bleibt rot.
 
-   Gefärbt wird auf der ganzen Farbleiste `turbo` (js/part/colors.js, in
+   Gefärbt wird auf der ganzen Farbleiste `heat` (js/part/colors.js, in
    jedem Farbschema dieselbe), ruhig blau, schnell rot, als Tafel: die
    Fläche hat Hunderttausende Ecken je Bild. Die Tafel ist linear, denn
    three.js wandelt Punktfarben nicht. */
@@ -107,7 +107,7 @@ export function paintMelt(mesh, snap, domain, uScale) {
   const { fill } = snap;
   if (last.snap !== snap) last = { snap, dil: dilate(snap.speed, domain.dims) };
   const speed = last.dil;
-  const LUT = lutLinear('turbo');
+  const LUT = lutLinear('heat');
   const toT = uScale > 0 ? snap.uMax / (255 * uScale) : 0;     // Byte → Anteil der Skala
   for (let v = 0; v < pos.count; v++) {
     const x = (p[3 * v] - o[0]) / h, y = (p[3 * v + 1] - o[1]) / h, z = (p[3 * v + 2] - o[2]) / h;
@@ -136,7 +136,7 @@ export function speedColorbar(vScale, until = 'des Laufs') {
   const v = vScale > 0 ? vScale : 0;
   return {
     title: 'Geschwindigkeit der Schmelze',
-    stops: gradient(t => scale('turbo', t)),
+    stops: gradient(t => scale('heat', t)),
     ticks: [fmt(v, 2) + ' m/s', fmt(v / 2, 2) + ' m/s', '0 m/s'],
     extra: 'Skala: 99. Perzentil ' + until + ' · Schnelleres bleibt rot'
   };

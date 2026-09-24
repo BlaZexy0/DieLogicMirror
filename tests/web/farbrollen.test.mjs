@@ -3,7 +3,7 @@
      · Im Code steht keine Farbe, sondern eine Rolle: ein CSS-Token
        (var(--melt)), ein Schlüssel von window.__PALETTE__ (P.melt,
        pal('melt')), eine Rolle der Diagramme (theme.chart.die) oder eine
-       der festen Farbleisten (P.scale('turbo', t)). Ein Farbwert darf nur
+       der festen Farbleisten (P.scale('heat', t)). Ein Farbwert darf nur
        als Rückfall stehen, und dann genau mit dem Standardwert seiner
        Rolle: var(--melt, #008c82), pal('melt', '#008c82'), bei einer
        Farbleiste mit ihren Stützstellen: leiste('draft', [[0, '#b42318'],

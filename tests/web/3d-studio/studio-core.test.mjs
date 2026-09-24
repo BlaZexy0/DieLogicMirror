@@ -492,13 +492,13 @@ test('Dateinamen: <bauteil>-<was>.<endung>, ohne die Endung des Bauteils mitten 
   assert.equal(baseName('plan.v2.json'), 'plan.v2');
 });
 
-test('Farbleiste: turboTrim staucht 0 … 1 in das lesbare Stück der Leiste und klemmt', async () => {
-  const { turboTrim } = await import('../../../web/tools/3d-studio/js/part/colors.js');
+test('Farbleiste: heatTrim staucht 0 … 1 in das lesbare Stück der Leiste und klemmt', async () => {
+  const { heatTrim } = await import('../../../web/tools/3d-studio/js/part/colors.js');
   const near = (a, b) => Math.abs(a - b) < 1e-12;
-  assert.ok(near(turboTrim(0), 0.08) && near(turboTrim(1), 0.92) && near(turboTrim(0.5), 0.5));
-  assert.equal(turboTrim(-4), turboTrim(0));
-  assert.equal(turboTrim(9), turboTrim(1));
-  assert.ok(turboTrim(0.3) < turboTrim(0.31), 'steigend');
+  assert.ok(near(heatTrim(0), 0.08) && near(heatTrim(1), 0.92) && near(heatTrim(0.5), 0.5));
+  assert.equal(heatTrim(-4), heatTrim(0));
+  assert.equal(heatTrim(9), heatTrim(1));
+  assert.ok(heatTrim(0.3) < heatTrim(0.31), 'steigend');
 });
 
 /* ── Blick ───────────────────────────────────────────────────── */

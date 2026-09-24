@@ -15,11 +15,13 @@
                   Je Stufe die Signalfarbe (Linie, Fläche, Punkt), Text,
                   Grund und Rand.
      Hervorhebung mark: der Arbeitspunkt, der Ist-Wert, ein Kennpunkt.
-                  markWarm (Koralle) und markCool (Himmelblau): die
+                  markLime (Limette) und markCool (Himmelblau): die
                   weiteren Punktarten der 3D-Designer neben mark, in jedem
-                  Schema gleich und weit weg voneinander, vom Anguss, vom
-                  Werkzeug-Blau und von der Ampel (Verzweigung und
-                  Waschbrett warm, Spiegelpunkt kühl).
+                  Schema gleich und weit weg voneinander, von der Schmelze
+                  und dem Anguss, vom Werkzeug-Blau und von der Ampel
+                  (Verzweigung und Waschbrett Limette, Spiegelpunkt
+                  Himmelblau). Bis 24.09. war die dritte Koralle; auf dem
+                  orangen Anguss verschwand sie.
      Licht        lamp: die leuchtende Glühbirne eines Sichtbarkeits-
                   Schalters (Formaufbau). Warm und in jedem Schema gleich:
                   „an" soll nach Licht aussehen, auch wo die Marke grau ist.
@@ -33,7 +35,11 @@
                   Maschine, Luft und Vakuum, Temperierung, Prozess (Zeit),
                   Stahl, Kolben, das Bauteil im 3D-Studio, die Achsen.
                   Sie liegen weit weg vom Ampelverlauf: keine Sachfarbe darf
-                  wie ein Urteil aussehen.
+                  wie ein Urteil aussehen. Die Ausnahme ist die Schmelze: sie
+                  ist Orange (Wunsch vom 24.09., heißes Metall), und Orange
+                  liegt zwischen „knapp" und „schlecht". Sie hält dafür zu
+                  beiden Stufen selbst Abstand (ΔE ≥ 14), der Anguss als
+                  Kupferbraun und der Überlauf als Apricot ebenso.
    Dazu die Farbleisten (unten, LEISTEN): die Skalen, an denen man einen
    Wert abliest. Sie sind KEINE Rollen und in jedem Schema gleich.
 
@@ -86,7 +92,7 @@
     badBorder:     '#e2988c',
     /* Hervorhebung */
     mark:          '#b23797',   // Arbeitspunkt, Ist-Wert, Kennpunkt (Schwerpunkt, Zykluszeit)
-    markWarm:      '#f66e5c',   // Punktart warm: Verzweigung, Waschbrett
+    markLime:      '#9fd83a',   // Punktart Limette: Verzweigung, Waschbrett
     markCool:      '#19bdfc',   // Punktart kühl: Spiegelpunkt
     /* Licht */
     lamp:          '#f2b200',   // leuchtende Glühbirne (Sichtbarkeit an)
@@ -94,9 +100,9 @@
     halfMov:       '#e66685',   // bewegliche Seite der Form (Entformung)
     halfFix:       '#fbde4e',   // feste Seite der Form (Entformung)
     /* Sachfarben */
-    melt:          '#008c82',   // Schmelze und Gussteil (im Standard = die Marke)
-    runner:        '#006665',   // Anguss (Schmelze, dunkel)
-    overflow:      '#8bbfb8',   // Überlauf (Schmelze, hell)
+    melt:          '#e85f08',   // Schmelze und Gussteil: Orange, in jedem Schema
+    runner:        '#9f6403',   // Anguss (Schmelze, dunkel: Kupferbraun)
+    overflow:      '#f6b48f',   // Überlauf (Schmelze, hell: Apricot)
     biscuit:       '#82979f',   // Pressrest (grau: der Rest in der Kammer)
     die:           '#2e65a0',   // Werkzeug: Werkzeuglinie, Anschnitt, Formhälften
     machine:       '#ac6eef',   // Maschine: Maschinenlinie, Maschinengrenzen
@@ -202,41 +208,29 @@
   /* ── Farbleisten ─────────────────────────────────────────────
      Die stufenlosen Skalen, an denen man einen Wert abliest: die Heatmaps
      der Auslegung, die Felder im 3D-Studio, das Flussschema des
-     Angussdesigners. Eine Farbleiste ist ein Maßstab, sie sieht darum in
-     jedem Schema gleich aus: keine Rolle, kein Schema erreicht sie (Wunsch
-     vom 23.09.: keine eigene Gestaltung je Schema, zurück zu den Leisten
-     von vorher). Sie stehen nur hier; das 3D-Studio hat für die Tests unter
-     Node eine Abschrift (js/part/colors.js), der Test farbrollen hält sie
-     gleich.
-       heat    Heatmaps der Auslegung: sieben Stützstellen aus Turbo,
-               Dunkelviolett über Blau, Grün und Gelb nach Dunkelrot.
-       turbo   Felder im 3D-Studio (Wandstärke, Abstand, Füllgrad, Ankunft,
-               Geschwindigkeit, Haftung): Turbo (Google, 2019) als Polynom
-               fünften Grades nach Mikhail Popov, in der Helligkeit fast
-               monoton und ohne die Streifen des alten Regenbogens.
+     Angussdesigners, die Entformschräge. Eine Farbleiste ist ein Maßstab,
+     sie sieht darum in jedem Schema gleich aus: keine Rolle, kein Schema
+     erreicht sie (Wunsch vom 23.09.: keine eigene Gestaltung je Schema,
+     zurück zu den Leisten von vorher). Sie stehen nur hier; das 3D-Studio
+     hat für die Tests unter Node eine Abschrift (js/part/colors.js), der
+     Test farbrollen hält sie gleich.
+       heat    Jeder Messwert: die Heatmaps der Auslegung, die Felder im
+               3D-Studio (Wandstärke, Abstand, Füllgrad, Ankunft,
+               Geschwindigkeit, Haftung) und das Flussschema des
+               Angussdesigners. Sieben Stützstellen aus Turbo (Google,
+               2019): Dunkelviolett über Blau, Grün und Gelb nach Dunkelrot.
        draft   Entformschräge, t = Winkel / dreifacher Grenzwert: bis zum
                Grenzwert (t = 1/3) von Rot nach Gold, darüber von hellem zu
                sattem Grün. Die Stufe am Grenzwert ist gewollt.
-       speed   Geschwindigkeit im Flussschema des Angussdesigners: Blau,
-               Teal, Gold, Rot.
+     Bis 24.09. hatte das 3D-Studio eine eigene Leiste (`turbo`, das
+     Polynom nach Popov) und das Flussschema noch eine (`speed`: Blau, Teal,
+     Gold, Rot). Seitdem liest jeder Messwert die Leiste der Auslegung.
      Stützstellen [t, Farbe]; zwei an derselben Stelle sind eine Stufe.
      Gemischt wird linear in sRGB, wie die Leisten es immer taten. */
-  function turbo(t) {
-    var x = Math.max(0, Math.min(1, t));
-    var x2 = x * x, x3 = x2 * x, x4 = x3 * x, x5 = x4 * x;
-    function c(v) { return Math.max(0, Math.min(1, v)); }
-    return [
-      c(0.13572138 + 4.61539260 * x - 42.66032258 * x2 + 132.13108234 * x3 - 152.94239396 * x4 + 59.28637943 * x5),
-      c(0.09140261 + 2.19418839 * x + 4.84296658 * x2 - 14.18503333 * x3 + 4.27729857 * x4 + 2.82956604 * x5),
-      c(0.10667330 + 12.64194608 * x - 60.58204836 * x2 + 110.36276771 * x3 - 89.90310912 * x4 + 27.34824973 * x5)
-    ];
-  }
   var LEISTEN = {
     heat: [[0, '#30123b'], [1 / 6, '#3775c5'], [2 / 6, '#1dacd5'], [3 / 6, '#67eb73'],
       [4 / 6, '#f5c225'], [5 / 6, '#fa7e1d'], [1, '#7a0403']],
-    turbo: turbo,
-    draft: [[0, '#b42318'], [1 / 3, '#d4a908'], [1 / 3, '#7cc4a0'], [1, '#0d7a3c']],
-    speed: [[0, '#2e6da4'], [1 / 3, '#3fc2b6'], [2 / 3, '#d4a908'], [1, '#b42318']]
+    draft: [[0, '#b42318'], [1 / 3, '#d4a908'], [1 / 3, '#7cc4a0'], [1, '#0d7a3c']]
   };
 
   /** Farbe auf einer Farbleiste als [r, g, b] mit 0 … 1, t = 0 … 1; NaN gibt null. */
@@ -244,7 +238,6 @@
     if (!(t === t)) return null;             // NaN: keine Farbe
     var l = LEISTEN[name];
     t = Math.max(0, Math.min(1, t));
-    if (typeof l === 'function') return l(t);
     var i = l.length - 2;
     while (i > 0 && t < l[i][0]) i--;       // von oben: an einer Stufe gilt die obere Seite
     var a = hexRgb(l[i][1]), b = hexRgb(l[i + 1][1]), w = l[i + 1][0] - l[i][0];

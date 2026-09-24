@@ -33,7 +33,7 @@ sich unter <b>Exportieren</b> als STL speichern.</p>
 </section>
 <section data-help-anchor="schnitt">
 <h3>Feldschnitt</h3>
-<p>Ein Schnitt durch das Feld als Rasterbild: innen zeigt die Turbo-Skala die Wandstärke (blau an der
+<p>Ein Schnitt durch das Feld als Rasterbild: innen zeigt die Farbskala die Wandstärke (blau an der
 Oberfläche, rot an der dicksten Stelle, die Werte stehen an der Skala), außen steht das Grau des
 Bauteils, die Bauteilkontur liegt als Linie in der Farbe der Schrift darüber. Achse und Lage sind
 Regler. Im Schnitt steht nur das Bauteil, durchscheinend: Die Isofläche verdeckte die Schnittebene

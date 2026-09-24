@@ -330,7 +330,7 @@ weit neben dem Bild.
   Viewport), die Trennlinie.
 - **Formteile** — die Regionen als Formteile auseinandergezogen (unten).
 - **Flächen** — die projizierten Flächen mit ihren Silhouetten (unten).
-- **Haftung** — das Bauteil nach Haftmaß gefärbt (Turbo, Farbskala; was
+- **Haftung** — das Bauteil nach Haftmaß gefärbt (Farbskala `heat`; was
   nicht haftet, im Grau des Bauteils) und die Haftkarten beider Hälften
   (unten).
 
@@ -521,7 +521,7 @@ Porosität, und bis dorthin muss der Nachdruck über Anguss und Speiser
 reichen.
 
 Drei Wege, das abzulesen: die **Isofläche** (oben), der **Feldschnitt** — ein
-Schnitt durch das Feld als Rasterbild in der Turbo-Skala, blau an der
+Schnitt durch das Feld als Rasterbild in der Farbskala, blau an der
 Oberfläche, rot an der dicksten Stelle, außen im Grau des Bauteils, mit
 der Bauteilkontur als Linie; Achse und Lage sind Regler, im Schnitt
 steht nur das Bauteil durchscheinend — und die **Wärmezentren**: `thickMaxima` in
@@ -541,9 +541,9 @@ und kleinste markierte Wandstärke und den Ort der dicksten.
 ### Das Feld ansehen
 
 Ein **Feldschnitt** zeigt das Feld selbst als Rasterbild: Achse und
-Position wählbar, gefärbt in der **Turbo-Skala** (dunkelblau über Grün
-und Gelb nach Rot, das Polynom nach Popov: die Farbleiste `turbo`, in
-jedem Farbschema dieselbe). **Innen** ist es die Wandstärke: an der
+Position wählbar, gefärbt in der **Farbskala** (dunkelblau über Grün
+und Gelb nach Rot: die Farbleiste `heat` der Auslegung, in jedem
+Farbschema dieselbe). **Innen** ist es die Wandstärke: an der
 Oberfläche blau, dick rot, die Skala nennt das Doppelte des Feldwerts.
 Außen gibt es nichts zu zeigen (das Feld reicht nur zwei Zellen über das
 Bauteil hinaus), dort steht das Grau des Bauteils, so hebt sich der
@@ -630,7 +630,7 @@ Laden, sagt es ein Toast, und der Chip nennt wieder das Teil, das noch da ist.
   darüber (und umgekehrt), und die Zeile unter dem geschobenen Feld sagt
   es. Geschoben statt geklemmt, damit man in jeder Reihenfolge der Eingabe
   zum gewollten Bereich kommt. Die Grenzen färben nur um; nur die Suchgrenze
-  verlangt eine neue Rechnung. Der Verlauf ist die Turbo-Skala wie in
+  verlangt eine neue Rechnung. Der Verlauf ist die Farbskala wie in
   der Wandstärkenanalyse, nah rot (kritisch), fern blau.
 - **Beide Teile** lassen sich einzeln aus- und einblenden, und wahlweise
   wird A, B oder beides eingefärbt; das jeweils andere bleibt einfarbig,
@@ -1325,9 +1325,9 @@ Safari) rechnet JavaScript — Minuten statt Sekunden; die Seite sagt es.
 
 Die Schmelze als Fläche des halben Füllstands (`js/part/surfacenets.js`)
 zur Zeit des Reglers, mit Abspielen, je Ecke nach ihrer Geschwindigkeit
-gefärbt (Turbo, Skala in m/s: `js/lbm/paint.js`, siehe unten bei der
+gefärbt (Farbskala `heat`, in m/s: `js/lbm/paint.js`, siehe unten bei der
 Kammerfüllung); der Anguss durchscheinend oder nach der Ankunft der Front
-gefärbt (Turbo, was die Front nie erreicht, im Grau des Bauteils). Je
+gefärbt (Farbskala `heat`, was die Front nie erreicht, im Grau des Bauteils). Je
 Anschnitt die Ankunft der Rechnung neben der 1D-Rechnung, dazu Füllstand am Ende,
 Schritte, Zellen, Rechenzeit, Zeitschritt und τ. Die Zeiten zählen ab
 „Kammer voll"; die Rechnung endet, wenn alle Anschnitte gemeldet sind
@@ -1553,7 +1553,7 @@ Die alten Adressen `…-sph.html` leiten dorthin weiter.
   der Betrag der Geschwindigkeit als Byte auf das Maximum des Bildes —
   wie bei der Gitterrechnung. `points.js` zeichnet sie als beleuchtete
   Kugeln vom Partikelabstand (Punkt-Sprites), nach Geschwindigkeit auf
-  derselben Turbo-Skala wie die Fläche der Gitterseiten (99. Perzentil
+  derselben Farbskala wie die Fläche der Gitterseiten (99. Perzentil
   bis zur ersten Ankunft). **Eingeschlossene Luft** der Kammer: das
   Partikelbild auf ein Raster von 1,5 d gelegt, belegte Zellen sind
   Schmelze, dann `enclosedGas` aus `js/lbm/sleeve.js`; der Füllgrad des
@@ -2116,7 +2116,7 @@ Schleier über dem Bild, sie dauert Zehntelsekunden.
 Im Modus *Ergebnis*; voreingestellt ist der **Füllkörper bei 50 %** — die
 Front mitten im Teil sagt auf einen Blick, wohin die Schmelze zuerst kommt.
 
-- **Füllgrad** — das Bauteil nach Füllgrad gefärbt (Turbo: früh blau, spät
+- **Füllgrad** — das Bauteil nach Füllgrad gefärbt (Farbskala: früh blau, spät
   rot; der Wert an der Oberfläche kommt aus den Innenzellen daneben).
   Was über dem Regler **Füllgrad** liegt, behält das Grau des Bauteils: so
   wandert die Front mit dem Regler über die Oberfläche. Die Skala steht
@@ -2370,9 +2370,9 @@ gezeichneten Bilder.
 (`web/shared/schemes.js`, gewählt unter „Projekte & Konto"), oder eine
 feste Farbleiste. Im CSS steht ein Token, im Modul fragt man
 `js/part/colors.js`: `ROLE.melt`, `ELEMENT.bohne`, `VIEW.selected`,
-`scale('turbo', t)`. Farbwerte stehen dort nur als Rückfall für die Tests
+`scale('heat', t)`. Farbwerte stehen dort nur als Rückfall für die Tests
 unter Node ohne Palette: der Standardwert jeder Rolle
-(`pal('melt', '#008c82')`) und die Stützstellen der Leisten. Die
+(`pal('melt', '#e85f08')`) und die Stützstellen der Leisten. Die
 Einteilung:
 
 - **Sachfarben** für Dinge, in jedem Werkzeug dieselben: die Schmelze und
@@ -2405,19 +2405,21 @@ Einteilung:
 - **Farbleisten** für Messwerte: sie sind ein Maßstab und darum FEST, in
   jedem Farbschema dieselben (Wunsch vom 23.09.: keine eigene Gestaltung je
   Schema, zurück zu den Leisten von vorher). Sie stehen in `palette.js`
-  (`LEISTEN`), `colors.js` hat eine Abschrift als Rückfall. `turbo` ist
-  Turbo (Google, 2019) als Polynom fünften Grades nach Popov, dunkelblau
-  über Grün und Gelb nach Dunkelrot: die Wandstärke im Schnitt und die
-  Wärmezentren, der Abstand (umgekehrt: nah rot, fern blau) und die Haftung
-  (am Bauteil wie auf den Haftkarten der Hälften) nehmen das Stück
-  0,08 … 0,92 von sattem Blau bis sattem Rot (`turboTrim`); Füllgrad,
-  Geschwindigkeit der Schmelze (Gitter, Partikel, Metamodell) und Ankunft
-  die ganze Leiste.
+  (`LEISTEN`), `colors.js` hat eine Abschrift als Rückfall. `heat` ist die
+  Leiste der Auslegung (Wunsch vom 24.09.: überall dieselbe), sieben
+  Stützstellen aus Turbo (Google, 2019), Dunkelviolett über Blau, Grün und
+  Gelb nach Dunkelrot: die Wandstärke im Schnitt und die Wärmezentren, der
+  Abstand (umgekehrt: nah rot, fern blau) und die Haftung (am Bauteil wie
+  auf den Haftkarten der Hälften) nehmen das Stück 0,08 … 0,92 von sattem
+  Blau bis sattem Rot (`heatTrim`); Füllgrad, Geschwindigkeit der Schmelze
+  (Gitter, Partikel, Metamodell) und Ankunft die ganze Leiste. Bis 24.09.
+  las das Studio stattdessen Turbo als Polynom nach Popov (`turbo`).
   `draft` ist die Entformschräge, `t` = Winkel durch den dreifachen
   Grenzwert (`draftT`): bis zum Grenzwert von Rot nach Gold, dort eine
   gewollte Stufe, darüber von hellem zu sattem Grün, ab dem Dreifachen
-  sattes Grün. `speed` färbt die Bänder im Flussschema des
-  Angussdesigners: Blau, Teal, Gold, Rot, bis zum schnellsten Anschnitt.
+  sattes Grün. Die Bänder im Flussschema des Angussdesigners lesen
+  ebenfalls `heat`, beschnitten wie die Felder, bis zum schnellsten
+  Anschnitt (bis 24.09. mit einer eigenen Leiste `speed`).
   Gelesen wird mit `scale(name, t)` (Hex), `scaleRgb(name, t)` und für
   viele Werte je Bild mit den Tafeln `lut`, `lutFloat`, `lutLinear` und
   `scaleFn`.
@@ -2619,11 +2621,11 @@ nichts. Die Dateien liegen unter `tests/web/3d-studio/`:
 | `distance.test.mjs` | Punkt-Netz-Abstand gegen Fläche, Kante, Ecke und Innenraum, Symmetrie, Unabhängigkeit von der Rasterweite, gemessen am Netz wie geladen |
 | `die.test.mjs` | die ausgelieferte `assets/die.glb` trägt alle Knoten-, Baugruppen- und Materialnamen, über die der Viewer sucht, und indizierte Geometrie |
 | `imports.test.mjs` | jeder Import löst auf, jeder exportierte Name existiert — und für die Werkzeuge des Rahmens: jedes `ui('name')` steht als `data-ui` in den (dafür gebauten) Feldern oder im Gerüst |
-| `studio-core.test.mjs` | der Rahmen ohne Werkzeug: `parseNumber` (`1.500`, `1.5`, `0.500`, `1.234,5`, `−3`), Rundlauf mit `fmtPlain`, Verlauf (Zug = ein Eintrag, Zusammenfassen, Grenze), Entwurf (schreiben, finden, verwerfen, ohne Speicher), Abbruch erreicht `buildField` und `runSimulation`, Aufträge (überholt ohne `onCancel`), `planField`, `planio.js`, `createPlacer`, Dateinamen, `turboTrim`, `viewmath.js`, `slider` mit `fire`/`set`, Zeichnen auf Abruf |
+| `studio-core.test.mjs` | der Rahmen ohne Werkzeug: `parseNumber` (`1.500`, `1.5`, `0.500`, `1.234,5`, `−3`), Rundlauf mit `fmtPlain`, Verlauf (Zug = ein Eintrag, Zusammenfassen, Grenze), Entwurf (schreiben, finden, verwerfen, ohne Speicher), Abbruch erreicht `buildField` und `runSimulation`, Aufträge (überholt ohne `onCancel`), `planField`, `planio.js`, `createPlacer`, Dateinamen, `heatTrim`, `viewmath.js`, `slider` mit `fire`/`set`, Zeichnen auf Abruf |
 | `tools/*.test.mjs` | je Werkzeug des Rahmens die Seite unter dem DOM-Platzhalter (`tools/fixture.mjs`, dazu `interact(P)` für Zeiger, Klick, Kamera, Chips, Tasten und Felder und `same`/`seg`/`set`): Modi besitzen ihren Viewport, Hauptknopf und Zustandszeile, Abbrechen, Einstellungen kommen zurück und lassen sich zurücksetzen, Datei; `tools/rahmen.test.mjs` hält am Überlaufdesigner, was der Rahmen jedem Werkzeug verspricht (Entwurf je Bauteil, Tasten und Esc, Klappen, Doppelklick, ⓘ, `cancelDrag`, der Vertrag von `host.changed`/`resetHistory`) |
 | `runner.test.mjs` | der Angussdesigner ohne Browser: Profil (Umriss gegen Abstandsfunktion), Graph (Spiegelung, Einfügen, Löschen, JSON), Kurve (Bogenlänge, monotoner Querschnitt), Sweep (Volumen = Fläche × Länge, geschlossen auch mit gerundeten Deckeln), Strömung, Regeln, Auslegung, Flussschema |
 | `fill.test.mjs` | die Füllabschätzung ohne Browser: Plan und Anteile, Startzellen unter dem Rechteck, Frontausbreitung (Ankunft wächst mit dem Weg, Füllgrad als Volumenrang, der größere Anschnitt kommt weiter, die Dünnwand-Bremse verzögert eine Rippe), Füllkörper bei 100 % und 50 %, letzte Stellen |
-| `farben.test.mjs` | Farbrollen: jede Elementart trägt ihre Farbe, in jedem Schema unterscheidbar und fern der Ampel, Knoten, Bohne und Waschbrett fern vom Anguss; ein Wechsel färbt alles um; die Farbleisten `turbo`, `draft` und `speed` sind die von `palette.js` und in jedem Schema gleich, die Stufe der Schräge sitzt am Grenzwert; Rückfälle ohne Palette; die Rollen der Formaufbau-Teile |
+| `farben.test.mjs` | Farbrollen: jede Elementart trägt ihre Farbe, in jedem Schema unterscheidbar und fern der Ampel, Knoten, Bohne und Waschbrett fern vom Anguss; ein Wechsel färbt alles um; die Farbleisten `heat` und `draft` sind die von `palette.js` und in jedem Schema gleich, die Stufe der Schräge sitzt am Grenzwert; Rückfälle ohne Palette; die Rollen der Formaufbau-Teile |
 
 `tools/` ist der Ersatz für den Browser, den es in der Kommandozeile nicht
 gibt — mit einem winzigen DOM aus der **echten** HTML-Seite und dem echten
