@@ -19,6 +19,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .auth import bootstrap_demo, bootstrap_from_env, optional_user, request_is_https, router as auth_router
 from .db import SessionLocal, init_db
+from .account import router as account_router
 from .orgsettings import router as orgsettings_router
 from .projects import router as projects_router
 
@@ -55,6 +56,7 @@ app = FastAPI(title="DieLogic Backend", version=VERSION, lifespan=_lifespan,
 app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(orgsettings_router)
+app.include_router(account_router)
 
 
 def _startup():

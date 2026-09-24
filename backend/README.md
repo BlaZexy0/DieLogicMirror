@@ -52,7 +52,7 @@ Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
   Adresse des Aufrufers und 8 je E-Mail in 15 Minuten, „Passwort vergessen"
   3 je E-Mail pro Stunde, Registrierung 10 je Aufrufer pro Stunde; darüber
   antwortet der Server 429 mit `Retry-After`.
-- **Demo-Konto:** `DIELOGIC_DEMO_PASSWORD=<mind. 10 Zeichen>` setzen → beim
+- **Demo-Konto:** `DIELOGIC_DEMO_PASSWORD=<mind. 12 Zeichen>` setzen → beim
   Start entsteht die Organisation „Demo" mit Admin `demo@dielogic.de`; die
   Login-Seite zeigt dann „Als Demo anmelden" mit der Adresse (das Passwort
   steht nirgends in der Seite, `POST /api/auth/demo/login` meldet an). Nur zum
@@ -61,6 +61,20 @@ Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
   eine Warnung im Server-Log); auf Render die Variable im Dashboard unter
   *Environment* setzen (`sync: false` im Blueprint), der Dienst startet
   danach neu.
+- **Passwörter:** mindestens 12 Zeichen, nicht aus E-Mail oder Namen,
+  nicht aus der Liste häufiger Passwörter, keine Tastatur-/Zahlenfolgen,
+  beim Ändern und Zurücksetzen nicht gleich dem alten (`auth.password_problem`);
+  die Konto-Seite zeigt dieselben Regeln als Stärkeanzeige beim Tippen.
+- **Kontoverwaltung** (`backend/account.py`): `GET /api/auth/sessions` und
+  `POST /api/auth/sessions/revoke-others` (angemeldete Geräte),
+  `DELETE /api/auth/me` `{password}` (eigenes Konto; als einziges Mitglied
+  samt Organisation), `GET|PUT /api/org` (Kennzahlen, Name),
+  `GET /api/org/export` (alles als JSON: Projekte mit Revisionen, Stammdaten,
+  Mitglieder, Protokoll), `DELETE /api/org` `{password, confirm}` (Name als
+  Bestätigung), `POST /api/org/members/{id}/role` `{name: admin|member}`,
+  `GET /api/org/audit` (Änderungsprotokoll, Tabelle `audit_log`, geschrieben
+  von `backend/audit.py` bei Anmeldung, Einladung, Passwort, Projekt,
+  Revision, Stammdaten, Export, Löschung).
 - **CLI** (lokal oder mit Shell-Zugang):
 
   ```bash

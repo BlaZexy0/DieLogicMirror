@@ -12,7 +12,9 @@ import json
 import math
 import re
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+
+from . import audit
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -129,7 +131,7 @@ def get_settings(user: User = Depends(current_user), db: Session = Depends(get_d
 
 
 @router.put("/{key}")
-def put_setting(key: str, body: SettingIn, user: User = Depends(admin_user), db: Session = Depends(get_db)):
+def put_setting(key: str, body: SettingIn, request: Request, user: User = Depends(admin_user), db: Session = Depends(get_db)):
     data = clean_setting(key, body.data)
     row = db.scalar(select(OrgSetting).where(OrgSetting.org_id == user.org_id, OrgSetting.key == key))
     if not row:
@@ -138,6 +140,7 @@ def put_setting(key: str, body: SettingIn, user: User = Depends(admin_user), db:
     row.data, row.updated_by, row.updated_at = data, user.id, now()
     db.commit()
     db.refresh(row)
+    audit.record(db, "settings.update", user=user, request=request, target=key)
     return _out(row)
 
 
@@ -150,5 +153,5 @@ def delete_setting(key: str, user: User = Depends(admin_user), db: Session = Dep
     if row:
         db.delete(row)
         db.commit()
-    from fastapi import Response
+        audit.record(db, "settings.reset", user=user, target=key)
     return Response(status_code=204)

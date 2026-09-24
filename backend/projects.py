@@ -13,12 +13,13 @@ from __future__ import annotations
 import json
 import math
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from . import audit
 from .auth import current_user
 from .db import Project, ProjectRevision, User, get_db, iso, now
 
@@ -189,7 +190,7 @@ def list_projects(user: User = Depends(current_user), db: Session = Depends(get_
 
 
 @router.post("", status_code=201)
-def create_project(body: ProjectCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def create_project(body: ProjectCreate, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Projekt anlegen. Schickt der Client eine ``id`` mit, ist der Aufruf
     idempotent: dieselbe id liefert dasselbe Projekt statt eines zweiten.
     Eine id, die in einer fremden Organisation liegt, wird ignoriert (der
@@ -217,6 +218,7 @@ def create_project(body: ProjectCreate, user: User = Depends(current_user), db: 
     db.add(p)
     db.commit()
     db.refresh(p)
+    audit.record(db, "project.create", user=user, request=request, target=p.name)
     return _project_out(p)
 
 
@@ -286,11 +288,12 @@ def save_draft(project_id: str, body: DraftIn, user: User = Depends(current_user
 
 
 @router.delete("/{project_id}", status_code=204)
-def archive_project(project_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def archive_project(project_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Archivieren statt löschen — Revisionen bleiben nachvollziehbar."""
     p = _get_project(db, user, project_id)
     p.archived_at = now()
     db.commit()
+    audit.record(db, "project.archive", user=user, request=request, target=p.name)
     return Response(status_code=204)
 
 
@@ -303,11 +306,12 @@ def list_revisions(project_id: str, user: User = Depends(current_user), db: Sess
 
 
 @router.post("/{project_id}/revisions", status_code=201)
-def save_revision(project_id: str, body: RevisionIn, user: User = Depends(current_user),
+def save_revision(project_id: str, body: RevisionIn, request: Request, user: User = Depends(current_user),
                   db: Session = Depends(get_db)):
     p = _get_project(db, user, project_id)
     data = _check_data(body.data)
     rev = _add_revision(db, p, user, data, body.note)
+    audit.record(db, "project.revision", user=user, request=request, target=p.name, detail={"rev": rev.rev, "notiz": body.note[:120]})
     return _revision_out(rev, False)
 
 

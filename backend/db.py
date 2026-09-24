@@ -152,6 +152,20 @@ class PasswordReset(Base):
     user: Mapped[User] = relationship()
 
 
+class AuditLog(Base):
+    """Änderungsprotokoll je Organisation, siehe audit.py."""
+    __tablename__ = "audit_log"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    org_id: Mapped[str] = mapped_column(ForeignKey("orgs.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    actor_email: Mapped[str] = mapped_column(String(320), nullable=False, default="")
+    action: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    target: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    detail: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+
+
 class Project(Base):
     __tablename__ = "projects"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)

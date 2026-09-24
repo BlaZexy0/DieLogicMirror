@@ -16,6 +16,7 @@ import hashlib
 import hmac
 import logging
 import os
+import re
 import secrets
 from datetime import timedelta
 
@@ -24,7 +25,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import mail, ratelimit
+from . import audit, mail, ratelimit
 from .db import AuthSession, Invite, Org, PasswordReset, User, aware, get_db, iso, now
 
 router = APIRouter(prefix="/api", tags=["auth"])
@@ -35,7 +36,7 @@ log = logging.getLogger("uvicorn.error")
 
 DEMO_EMAIL = "demo@dielogic.de"
 INVITE_DAYS = 14
-MIN_PASSWORD = 10
+MIN_PASSWORD = 12
 RESET_MINUTES = 60
 
 # Rate-Limits: (Versuche, Fenster in Sekunden)
@@ -64,6 +65,43 @@ def verify_password(password: str, stored: str) -> bool:
         return hmac.compare_digest(digest, bytes.fromhex(digest_hex))
     except (ValueError, TypeError):
         return False
+
+
+# Kerne häufiger Passwörter (klein geschrieben): angehängte Ziffern und
+# Sonderzeichen werden vor dem Vergleich abgeschnitten, Tastatur- und
+# Zahlenfolgen prüft der Code selbst.
+COMMON_BASES = {
+    "password", "passwort", "passwd", "qwerty", "qwertz", "letmein", "welcome", "willkommen",
+    "admin", "administrator", "iloveyou", "dielogic", "druckguss", "giesserei", "hallo", "geheim",
+    "test", "changeme", "sommer", "winter", "fruehling", "herbst", "master", "login", "monkey",
+    "dragon", "football", "fussball", "abc", "azerty", "computer", "internet", "schatz", "liebe",
+}
+
+
+def password_problem(password: str, email: str = "", name: str = "") -> str | None:
+    """Warum ein Passwort nicht taugt, oder None. Gilt beim Anlegen, Ändern
+    und Zurücksetzen gleichermaßen. Länge vor Sonderzeichen-Regeln: zwölf
+    Zeichen mit etwas Abwechslung sind stärker als acht mit Pflicht-Symbol."""
+    pw = password or ""
+    if len(pw) < MIN_PASSWORD:
+        return f"Das Passwort muss mindestens {MIN_PASSWORD} Zeichen haben."
+    low = pw.lower()
+    # Kern ohne angehängte Ziffern/Zeichen: „Passwort2026!" ist so häufig wie „passwort"
+    core = re.sub(r"[\d\W_]+$", "", re.sub(r"^[\d\W_]+", "", low))
+    if core in COMMON_BASES or core.replace("1", "i").replace("0", "o").replace("3", "e") in COMMON_BASES:
+        return "Dieses Passwort ist zu häufig; bitte ein anderes wählen."
+    if len(set(low)) < 5:
+        return "Das Passwort braucht mehr verschiedene Zeichen."
+    if low.isdigit():
+        return "Nur Ziffern reichen nicht."
+    for run in ("0123456789", "abcdefghijklmnopqrstuvwxyz", "qwertzuiop", "qwertyuiop", "asdfghjkl"):
+        if any(run[i:i + 6] in low for i in range(len(run) - 5)):
+            return "Bitte keine Tastatur- oder Zahlenfolgen."
+    parts = [t for t in re.split(r"[@._\-\s]+", (email or "").lower()) if len(t) >= 4]
+    parts += [t for t in re.split(r"\s+", (name or "").lower()) if len(t) >= 4]
+    if any(t in low for t in parts):
+        return "Das Passwort darf nicht aus E-Mail-Adresse oder Namen bestehen."
+    return None
 
 
 # Vergleichsziel für Anmeldeversuche mit unbekannter Adresse — damit der
@@ -346,6 +384,9 @@ def register(body: RegisterIn, request: Request, response: Response, db: Session
     inv = _valid_invite(db, body.token)
     if db.scalar(select(User).where(User.email == inv.email)):
         raise HTTPException(status_code=409, detail="Für diese E-Mail-Adresse gibt es bereits ein Konto.")
+    problem = password_problem(body.password, inv.email, body.name)
+    if problem:
+        raise HTTPException(status_code=422, detail=problem)
     user = User(org_id=inv.org_id, email=inv.email, name=body.name.strip(),
                 pw_hash=hash_password(body.password), role=inv.role)
     inv.used_at = now()
@@ -353,6 +394,7 @@ def register(body: RegisterIn, request: Request, response: Response, db: Session
     db.commit()
     db.refresh(user)
     start_session(db, user, request, response)
+    audit.record(db, "account.register", user=user, request=request, target=user.email, detail={"rolle": user.role})
     return me_out(user)
 
 
@@ -369,14 +411,20 @@ def login(body: LoginIn, request: Request, response: Response, db: Session = Dep
     # abfragen kann.
     ok = verify_password(body.password, user.pw_hash if user else DUMMY_HASH)
     if not user or user.disabled or not ok:
+        if user:
+            audit.record(db, "login.failed", user=user, request=request, target=user.email)
         raise HTTPException(status_code=401, detail="E-Mail oder Passwort stimmen nicht.")
     start_session(db, user, request, response)
+    audit.record(db, "login", user=user, request=request, target=user.email)
     return me_out(user)
 
 
 @router.post("/auth/logout")
-def logout(request: Request, response: Response, db: Session = Depends(get_db)):
+def logout(request: Request, response: Response, db: Session = Depends(get_db),
+           user: User | None = Depends(optional_user)):
     end_session(db, request, response)
+    if user:
+        audit.record(db, "logout", user=user, request=request, target=user.email)
     return {"ok": True}
 
 
@@ -409,6 +457,7 @@ def new_invite(body: InviteIn, request: Request, user: User = Depends(admin_user
         raise HTTPException(status_code=422, detail=str(error))
     url = invite_url(str(request.base_url), inv.token)
     mailed = _send_invite(inv, url, user)
+    audit.record(db, "invite.create", user=user, request=request, target=inv.email, detail={"rolle": inv.role, "mail": mailed})
     return {"id": inv.id, "email": inv.email, "role": inv.role, "token": inv.token,
             "url": url, "expires_at": iso(inv.expires_at), "mailed": mailed}
 
@@ -438,6 +487,7 @@ def revoke_invite(invite_id: str, user: User = Depends(admin_user), db: Session 
     inv = db.get(Invite, invite_id)
     if not inv or inv.org_id != user.org_id:
         raise HTTPException(status_code=404, detail="Einladung nicht gefunden.")
+    audit.record(db, "invite.revoke", user=user, target=inv.email, commit=False)
     db.delete(inv)
     db.commit()
     return Response(status_code=204)
@@ -452,12 +502,16 @@ def change_password(body: PasswordIn, request: Request, response: Response,
         raise HTTPException(status_code=403, detail="Das aktuelle Passwort stimmt nicht.")
     if body.new_password == body.current_password:
         raise HTTPException(status_code=422, detail="Das neue Passwort muss sich vom alten unterscheiden.")
+    problem = password_problem(body.new_password, user.email, user.name)
+    if problem:
+        raise HTTPException(status_code=422, detail=problem)
     user.pw_hash = hash_password(body.new_password)
     keep = request.cookies.get(COOKIE)
     for sess in db.scalars(select(AuthSession).where(AuthSession.user_id == user.id)).all():
         if sess.token != keep:
             db.delete(sess)
     db.commit()
+    audit.record(db, "password.change", user=user, request=request, target=user.email)
     _notify_password_changed(user)
     return {"ok": True}
 
@@ -524,6 +578,11 @@ def reset_password(body: ResetIn, request: Request, response: Response, db: Sess
     user = pr.user
     if user.disabled:
         raise HTTPException(status_code=403, detail="Dieses Konto ist deaktiviert.")
+    if verify_password(body.password, user.pw_hash):
+        raise HTTPException(status_code=422, detail="Das neue Passwort muss sich vom alten unterscheiden.")
+    problem = password_problem(body.password, user.email, user.name)
+    if problem:
+        raise HTTPException(status_code=422, detail=problem)
     user.pw_hash = hash_password(body.password)
     pr.used_at = now()
     for sess in db.scalars(select(AuthSession).where(AuthSession.user_id == user.id)).all():
@@ -532,6 +591,7 @@ def reset_password(body: ResetIn, request: Request, response: Response, db: Sess
                                                         PasswordReset.used_at.is_(None))).all():
         other.used_at = now()
     db.commit()
+    audit.record(db, "password.reset", user=user, request=request, target=user.email)
     _notify_password_changed(user)
     start_session(db, user, request, response)
     return me_out(user)
@@ -555,6 +615,7 @@ def reset_member_password(user_id: str, user: User = Depends(admin_user),
     for sess in db.scalars(select(AuthSession).where(AuthSession.user_id == target.id)).all():
         db.delete(sess)
     db.commit()
+    audit.record(db, "member.password_reset", user=user, target=target.email)
     return {"email": target.email, "password": temp}
 
 
@@ -568,6 +629,7 @@ def enable_member(user_id: str, user: User = Depends(admin_user), db: Session = 
         raise HTTPException(status_code=404, detail="Benutzer nicht gefunden.")
     target.disabled = False
     db.commit()
+    audit.record(db, "member.enable", user=user, target=target.email)
     return Response(status_code=204)
 
 
@@ -601,4 +663,5 @@ def disable_member(user_id: str, user: User = Depends(admin_user), db: Session =
     for sess in db.scalars(select(AuthSession).where(AuthSession.user_id == target.id)).all():
         db.delete(sess)
     db.commit()
+    audit.record(db, "member.disable", user=user, target=target.email)
     return Response(status_code=204)
