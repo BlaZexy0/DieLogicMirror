@@ -15,7 +15,7 @@
    (js/part/dieviewer.js). Kein Three.js — die Tests rechnen es nach. */
 
 import { DIRS } from './visibility.js';
-import { UNDERCUT } from './segment.js';
+import { UNDERCUT, halfOf } from './segment.js';
 
 /** Einheitsvektor der Richtung d (0..5) — die Entformrichtung. */
 export function dirVector(d) {
@@ -29,12 +29,13 @@ export function dirVector(d) {
  *   model  Arbeitsmodell (js/part/model.js): tris, index, verts, nbr, areas, centroids
  *   seg    Zuordnung (js/part/segment.js): label je Dreieck
  *   opts.skirt  Rand in mm entlang der Trennlinie, in die Form hinein (0: keiner)
- * → [{ label, dir, axis, span, side, faces, area, center, tris, skirt, skirtLen, edges }], Hälften und
+ * → [{ label, dir, axis, span, side, half, faces, area, center, tris, skirt, skirtLen, edges }], Hälften und
  *   Schieber nach Richtung geordnet, Hinterschnitte (ohne Richtung, ohne
  *   Rand) zuletzt. `side` sagt, auf welcher Seite der Trennebene ein Stück
- *   liegt (+1 bewegliche, −1 feste Seite): für die Hälften ihr Vorzeichen,
+ *   liegt (+1 oder −1 entlang der Achse): für die Hälften ihr Vorzeichen,
  *   für Schieber und Hinterschnitte die Seite ihres Flächenschwerpunkts —
- *   dort sitzt der Schieber in der Form. Die Trennebene ist dabei die
+ *   dort sitzt der Schieber in der Form. `half` ist die Rolle (halfOf:
+ *   +1 bewegliche Hälfte, −1 feste, 0 Schieber). Die Trennebene ist dabei die
  *   mittlere Höhe der Trennlinie zwischen den beiden Hälften
  *   (`parting`, auf jedem Stück), nicht z = 0: das Bauteil darf liegen,
  *   wo es will.
@@ -114,6 +115,7 @@ export function diePieces(model, seg, opts = {}) {
   for (const p of out) {
     p.parting = parting;
     p.side = p.axis === ax ? p.dir[ax] : (p.center[ax] >= parting ? 1 : -1);
+    p.half = halfOf(p.label, seg);
   }
   return out;
 }

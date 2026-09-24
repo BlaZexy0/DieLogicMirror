@@ -23,7 +23,7 @@ abbrechen.</p>
 <p>Welche der beiden Hälften auf der Formöffnungsachse die bewegliche ist (Auswerferseite). Im
 Bauteilrahmen liegt die Trennebene bei z = 0 und die Form öffnet nach +z: Die +Seite ist die
 bewegliche. Liegt das Teil anders herum, hier tauschen; die Namen in Legende und Kennzahlen wandern
-mit.</p>
+mit, ebenso die Farben der Hälften (bewegliche Seite Rose, feste Seite Gelb).</p>
 </section>
 <section data-help-anchor="schraege">
 <h3>Entformschräge</h3>
@@ -47,8 +47,9 @@ Dreiecke.</p>
 Entformrichtung auseinander, wie beim Öffnen der Form. Jedes Formteil zeigt genau die Flächen, die es
 abbildet, von der Seite, von der man in die offene Form sieht. Der <b>Rand</b> ist die Trennlinie,
 ein Stück in die Form hinein gezogen: die Trennfläche in Andeutung, damit das Stück nicht wie Papier
-aussieht. Sechs Formteile sind möglich, zwei Hälften und vier Schieber, jedes in der Farbe seiner
-Richtung (die Farbe der Achse, die Gegenrichtung heller); was kein Dreieck braucht, steht blass in der
+aussieht. Sechs Formteile sind möglich, zwei Hälften und vier Schieber: die bewegliche Seite in Rose,
+die feste in Gelb, jeder Schieber in der Farbe seiner Richtung (die Farbe der Achse, die Gegenrichtung
+heller). Wer die bewegliche Seite tauscht, tauscht die Farben der Hälften. Was kein Dreieck braucht, steht blass in der
 Liste und kommt in der Form nicht vor. Hinterschnitte bleiben als „schlecht" an ihrem Ort. Die Schalter
 gelten für dieses Bauteil und diese Formöffnung: Mit einer anderen Achse wird aus einem Schieber eine
 Hälfte, dann stehen wieder alle Formteile da.</p>
@@ -58,7 +59,7 @@ Hälfte, dann stehen wieder alle Formteile da.</p>
 <p>Jedes Formteil projiziert in seine Öffnungsrichtung, gerastert als Vereinigung (nicht als Summe der
 Dreiecke): bei den Hälften die Fläche auf der Trennebene, bei einem Schieber die Fläche, gegen die er
 verriegelt werden muss. Die Silhouetten stehen jenseits des Bauteils in der jeweiligen
-Entformrichtung, Umriss und Füllung in der Farbe ihrer Richtung. Es sind Flächen, keine Kräfte.</p>
+Entformrichtung, Umriss und Füllung in der Farbe ihres Formteils. Es sind Flächen, keine Kräfte.</p>
 </section>
 <section data-help-anchor="haftung">
 <h3>Haftung</h3>

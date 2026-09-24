@@ -9,7 +9,7 @@ import { subtract, union } from './csg.mjs';
 import { volume } from '../../../web/tools/3d-studio/js/mesh.js';
 import { buildModel, openEdgeRatio } from '../../../web/tools/3d-studio/js/part/model.js';
 import { computeVisibility, DIRS } from '../../../web/tools/3d-studio/js/part/visibility.js';
-import { segment } from '../../../web/tools/3d-studio/js/part/segment.js';
+import { segment, halfOf, UNDERCUT } from '../../../web/tools/3d-studio/js/part/segment.js';
 import { draftAngles, draftStats, dirNames } from '../../../web/tools/3d-studio/js/part/draft.js';
 import { parseSTL, writeSTL } from '../../../web/tools/3d-studio/js/part/stlio.js';
 import { DEMO_PARTS } from '../../../web/tools/3d-studio/js/part/demoparts.js';
@@ -315,7 +315,7 @@ test('Splitter: ein winziger Fleck ohne Sicht einer Hälfte geht an die Hälften
   assert.equal([0, 1, 2, 3].reduce((a, i) => a + seg.areaByLabel[i], 0), 0, 'und kein Schieber');
 });
 
-test('Bewegliche Seite: +Achse als Vorgabe, tauschbar — Namen und Gleichstand folgen', async () => {
+test('Bewegliche Seite: +Achse als Vorgabe, tauschbar — Namen, Rollen und Gleichstand folgen', async () => {
   const m = buildModel(S.box(60, 40, 30));
   const vis = await computeVisibility(m, { samples: 7 });
   const plus = segment(m, vis, { mainAxis: 2 });
@@ -326,6 +326,11 @@ test('Bewegliche Seite: +Achse als Vorgabe, tauschbar — Namen und Gleichstand 
   assert.equal(dirNames(2)[4].name, 'Bewegliche Seite +Z');
   assert.equal(dirNames(2, -1)[4].name, 'Feste Seite +Z');
   assert.equal(dirNames(2, -1)[5].name, 'Bewegliche Seite −Z');
+  /* Die Rolle je Richtung und je Formteil: an ihr hängen die Farben der
+     Hälften (js/part/colors.js, sideColor). */
+  assert.deepEqual([0, 1, 2, 3, 4, 5, UNDERCUT].map(l => halfOf(l, plus)), [0, 0, 0, 0, 1, -1, 0]);
+  assert.deepEqual([4, 5].map(l => halfOf(l, minus)), [-1, 1], 'getauscht: −Z ist die bewegliche');
+  assert.deepEqual(diePieces(m, minus).filter(p => p.half).map(p => [p.label, p.half]), [[4, -1], [5, 1]]);
 });
 
 test('Projizierte Flächen: je Stück in seiner Richtung, gerastert als Vereinigung', async () => {

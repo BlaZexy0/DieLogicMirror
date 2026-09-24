@@ -55,6 +55,8 @@ export const ROLE = Object.freeze({
   get mark() { return pal('mark', '#b23797'); },
   get markWarm() { return pal('markWarm', '#f66e5c'); },
   get markCool() { return pal('markCool', '#19bdfc'); },
+  get halfMov() { return pal('halfMov', '#e66685'); },
+  get halfFix() { return pal('halfFix', '#fbde4e'); },
   /* Sachfarben */
   get machine() { return pal('machine', '#ac6eef'); },
   get melt() { return pal('melt', '#008c82'); },
@@ -198,12 +200,19 @@ export const axisColors = () => ACHSE.map(k => ROLE[k]);
 const GEGEN = [['surface', 0.4], ['surface', 0.55], ['text', 0.55]];
 /** Die sechs Entformrichtungen (Reihenfolge wie js/part/visibility.js:
     +X, −X, +Y, −Y, +Z, −Z): die Farbe der Achse, die Gegenrichtung eine
-    Stufe davon. Welche Richtung eine Formhälfte ist, hängt an der
-    Formöffnung; die Farbe sagt die Richtung, nicht die Rolle. */
+    Stufe davon. So stehen die Schieber da; die beiden Hälften tragen ihre
+    Rolle (sideColor). */
 export function regionColor(label) {
   const a = label >> 1;
   return label % 2 ? mixHex(ACHSE[a], GEGEN[a][0], GEGEN[a][1]) : ROLE[ACHSE[a]];
 }
+/** Die Farbe eines Formteils in der Entformung: die beiden Hälften nach
+    ihrer Rolle (half +1 die bewegliche Seite `halfMov`, −1 die feste
+    `halfFix`), die Schieber (half 0) nach ihrer Richtung. Die Rolle kommt
+    aus der Zuordnung (halfOf in js/part/segment.js): wer die bewegliche
+    Seite tauscht, tauscht die Farben der Hälften. Früher trugen auch die
+    Hälften ihre Richtung, +Z und −Z waren zwei Stufen desselben Blaus. */
+export const sideColor = (label, half) => (half > 0 ? ROLE.halfMov : half < 0 ? ROLE.halfFix : regionColor(label));
 
 /* ── Stahl ───────────────────────────────────────────────────── */
 /** Eine Abstufung des Stahls zwischen der Fläche (t = 0, `steel`) und der

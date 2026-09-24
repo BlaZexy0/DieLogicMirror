@@ -321,5 +321,13 @@ export function segment(model, vis, opts = {}) {
     scores[axis] = r.score;
     if (!best || better(r, best)) best = r;
   }
-  return { ...best, cand, auto: !fixed, scores };
+  return { ...best, cand, auto: !fixed, scores, movingSign };
+}
+
+/** Die Rolle einer Richtung (0 … 5) in der Zuordnung seg: +1 die bewegliche
+    Hälfte, −1 die feste, 0 ein Schieber oder der Hinterschnitt. */
+export function halfOf(label, seg) {
+  const d = DIRS[label];
+  if (!d || !seg || d.axis !== seg.mainAxis) return 0;
+  return d.sign === (seg.movingSign === -1 ? -1 : 1) ? 1 : -1;
 }

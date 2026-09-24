@@ -55,6 +55,9 @@
   /* Punktarten der 3D-Designer neben --mark: warm (Verzweigung, Waschbrett), kühl (Spiegelpunkt) */
   --mark-warm: #f66e5c;
   --mark-cool: #19bdfc;
+  /* Formhälften der Entformung: bewegliche Seite, feste Seite */
+  --half-mov: #e66685;
+  --half-fix: #fbde4e;
   /* Sachfarben: überall dieselben Dinge in derselben Farbe */
   --melt: #008c82;
   --runner: #006665;

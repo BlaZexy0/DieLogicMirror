@@ -20,7 +20,7 @@
 
 import * as T from 'three';
 import { computeVisibility, DIRS } from '../part/visibility.js';
-import { segment, UNDERCUT } from '../part/segment.js';
+import { segment, halfOf, UNDERCUT } from '../part/segment.js';
 import { draftAngles, draftStats, dirNames } from '../part/draft.js';
 import { diePieces, pieceProjections } from '../part/dieview.js';
 import { gripPerFace, ejectorMaps } from '../part/ejector.js';
@@ -31,7 +31,7 @@ import { kpis } from '../studio/rows.js';
 import { checkFormat } from '../studio/planio.js';
 import { rayAt, hoverProbe } from '../viewmath.js';
 import {
-  onScheme, VIEW, scale, scaleFn, linRgb, turboTrim, regionColor, undercutColor, undercutDark, draftColor, draftHex
+  onScheme, VIEW, scale, scaleFn, linRgb, turboTrim, sideColor, undercutColor, undercutDark, draftColor, draftHex
 } from '../part/colors.js';
 import { MODES, DARSTELLUNG } from './panel.js';
 
@@ -319,7 +319,11 @@ export function createEntformungTool(host, opts = {}) {
   }
 
   /* ── Farben ──────────────────────────────────────────────── */
-  /* Nach Regionen trägt jede Fläche die Farbe ihrer Richtung, der
+  /** Die Farbe einer Richtung: die Hälften nach ihrer Rolle, die Schieber
+      nach ihrer Richtung (js/part/colors.js, sideColor). */
+  const colorOf = l => sideColor(l, halfOf(l, state.seg));
+
+  /* Nach Regionen trägt jede Fläche die Farbe ihres Formteils, der
      Hinterschnitt „schlecht"; nach Schräge die Farbleiste `draft`, der
      Hinterschnitt dunkler; nach Haftung die Leiste `turbo`. Die Rollen
      kommen aus dem Schema von jetzt, die Leisten sind in jedem Schema
@@ -330,7 +334,7 @@ export function createEntformungTool(host, opts = {}) {
     const col = part.colors();
     if (!col || !model || !seg || mode === 'plain') return;      // grau: das Material des Gastgebers
     const arr = col.array;
-    const regions = [0, 1, 2, 3, 4, 5].map(l => linRgb(regionColor(l)));
+    const regions = [0, 1, 2, 3, 4, 5].map(l => linRgb(colorOf(l)));
     const under = linRgb(mode === 'draft' ? undercutDark() : undercutColor());
     const grip = mode === 'grip' ? gripPainter() : null;
     for (let f = 0; f < model.faceCount; f++) {
@@ -388,7 +392,7 @@ export function createEntformungTool(host, opts = {}) {
     if (!seg || !model || shell.mode !== 'entformung' || state.mode !== 'regions') { shell.legend(''); return; }
     const A = model.totalArea || 1;
     const names = dirNames(seg.mainAxis, state.movSign);
-    const rows = names.map((d, i) => ({ name: d.name, color: regionColor(i), frac: seg.areaByLabel[i] / A }));
+    const rows = names.map((d, i) => ({ name: d.name, color: colorOf(i), frac: seg.areaByLabel[i] / A }));
     rows.push({ name: 'Hinterschnitt', color: undercutColor(), frac: seg.areaByLabel[6] / A });
     shell.legend('<div class="st-title">Flächenanteil</div>' + rows.filter(r => r.frac >= 0.0005).map(r =>
       '<div class="lg-row">' + chip(r.color) + '<span>' + r.name + '</span><span class="pct">' + pct(r.frac) + '</span></div>').join(''));
@@ -463,7 +467,7 @@ export function createEntformungTool(host, opts = {}) {
       const on = has && state.die.show[l] !== false;
       return '<label class="inline piece-row' + (has ? '' : ' off') + '">'
         + '<input type="checkbox" data-label="' + l + '"' + (on ? ' checked' : '') + (has ? '' : ' disabled') + '>'
-        + chip(regionColor(l)) + '<span class="name">' + names[l].name + '</span>'
+        + chip(colorOf(l)) + '<span class="name">' + names[l].name + '</span>'
         + '<span class="pct">' + (has ? pct(area / A) : 'nicht in der Form') + '</span></label>';
     }).join('');
     if (seg.areaByLabel[6] > 0) {
@@ -479,7 +483,7 @@ export function createEntformungTool(host, opts = {}) {
     if (!seg || !proj) return;
     const names = dirNames(seg.mainAxis, state.movSign);
     const cm2 = a => fmtFixed(a / 100, 1) + ' cm²';
-    const rows = proj.pieces.map(q => ({ label: chip(regionColor(q.label)) + ' ' + names[q.label].name, value: cm2(q.area) }));
+    const rows = proj.pieces.map(q => ({ label: chip(colorOf(q.label)) + ' ' + names[q.label].name, value: cm2(q.area) }));
     rows.push({ label: 'Bauteil auf die Trennebene', value: cm2(proj.total.area) });
     kpis(ui('proj-kpis'), rows);
   }

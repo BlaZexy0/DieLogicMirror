@@ -1,5 +1,6 @@
 /* Die Formansicht im Viewport: die Stücke aus js/part/dieview.js als
-   Meshes, jedes in der Farbe seiner Richtung (js/part/colors.js), der Rand
+   Meshes, die Hälften in der Farbe ihrer Rolle, die Schieber in der ihrer
+   Richtung (sideColor in js/part/colors.js), der Rand
    dunkler, die Trennlinie als Linie — und jedes um denselben Abstand entlang seiner
    Entformrichtung verschoben, damit die Form aufgeht wie beim Öffnen.
 
@@ -23,7 +24,7 @@
 
 import * as T from 'three';
 import { diePieces, maskOutline } from './dieview.js';
-import { regionColor, undercutColor, mixHex, hex2rgb, lut, turboTrim, VIEW, onScheme } from './colors.js';
+import { sideColor, undercutColor, mixHex, hex2rgb, lut, turboTrim, VIEW, onScheme } from './colors.js';
 import { UNDERCUT } from './segment.js';
 import { disposeTree, surfaceMaterial } from '../ui/common.js';
 
@@ -45,10 +46,11 @@ export function createDieView(view) {
   let alpha = 0.6;                               // Deckkraft der Silhouetten und der Karte
   const hidden = new Set();                      // Formteile, die der Nutzer ausgeblendet hat
 
-  /* Die Farbe eines Stücks: seine Richtung, der Hinterschnitt „schlecht";
-     der Rand dieselbe Farbe dunkler. Gelesen beim Bauen und bei jedem
-     Wechsel des Farbschemas (recolor). */
-  const pieceColor = p => (p.label === UNDERCUT ? undercutColor() : regionColor(p.label));
+  /* Die Farbe eines Stücks: die Hälfte ihre Rolle, der Schieber seine
+     Richtung, der Hinterschnitt „schlecht"; der Rand dieselbe Farbe
+     dunkler. Gelesen beim Bauen und bei jedem Wechsel des Farbschemas
+     (recolor). */
+  const pieceColor = p => (p.label === UNDERCUT ? undercutColor() : sideColor(p.label, p.half));
   const skirtColor = color => mixHex(color, 'text', 0.3);
   const surfMat = color => surfaceMaterial(color, { roughness: 0.6, metalness: 0.08 });
   const skirtMat = color => surfaceMaterial(skirtColor(color), { roughness: 0.7, metalness: 0.05 });
@@ -205,7 +207,7 @@ export function createDieView(view) {
     for (const o of overlays.children.slice()) { disposeObject(o); overlays.remove(o); }
     for (const p of pieces) {
       if (p.axis < 0) continue;
-      const color = regionColor(p.label);
+      const color = sideColor(p.label, p.half);
       const pr = projections && projections.pieces.find(q => q.label === p.label);
       const em = ejectors.find(q => q.label === p.label) || null;
       if (pr) {

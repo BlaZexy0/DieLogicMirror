@@ -99,6 +99,11 @@ test('Standard: jede Elementart trägt ihre Farbe', () => {
   assert.equal(C.regionColor(5), P.mix('axisZ', 'text', 0.55), '−Z dunkler: hell fiele es auf +Y');
   assert.equal(C.regionColor(4), c.axisZ, '+Z');
   assert.equal(C.undercutColor(), c.bad, 'der Hinterschnitt ist ein Urteil');
+  /* Die Hälften tragen ihre Rolle, die Schieber ihre Richtung. */
+  assert.equal(C.sideColor(4, 1), c.halfMov, 'die bewegliche Seite in Rose');
+  assert.equal(C.sideColor(5, -1), c.halfFix, 'die feste Seite in Gelb');
+  assert.equal(C.sideColor(5, 1), c.halfMov, 'getauscht: die Farbe folgt der Rolle, nicht der Richtung');
+  assert.equal(C.sideColor(0, 0), C.regionColor(0), 'ein Schieber in seiner Richtung');
 });
 
 test('In jedem Schema: die Arten sind unterscheidbar, und keine sieht aus wie ein Urteil', () => {
@@ -146,6 +151,34 @@ test('In jedem Schema: Knoten, Bohne und Waschbrett liegen weit weg vom Anguss u
     }
     /* Die drei Punktarten, die der Anwender setzt, klar getrennt (24.09.). */
     for (const [a, b] of [['punkt', 'verzweigung'], ['punkt', 'spiegelpunkt'], ['verzweigung', 'spiegelpunkt']]) far(E[a], E[b], 20, a + ' und ' + b);
+  }
+  S.set('teal');
+});
+
+test('In jedem Schema: die Formhälften weit auseinander, auch bei Rot-Grün-Schwäche', () => {
+  /* Rückmeldung vom 24.09.: die beiden Hälften waren zwei Stufen desselben
+     Blaus. Jetzt Rose und Gelb. Lachs und Mint lagen bei Deuteranopie nur
+     ΔE 7 auseinander; geprüft wird darum auch mit den Simulationen nach
+     Machado, Oliveira und Fernandes (2009), Schweregrad 1, in linearem RGB. */
+  const SIM = {
+    deutan: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
+    protan: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]]
+  };
+  const sim = (hex, m) => '#' + m.map(r => {
+    const c = P.hexRgb(hex).map(toLin);
+    const v = Math.min(1, Math.max(0, r[0] * c[0] + r[1] * c[1] + r[2] * c[2]));
+    return Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055)).toString(16).padStart(2, '0');
+  }).join('');
+  for (const s of S.list) {
+    S.set(s.id);
+    const mov = C.sideColor(4, 1), fix = C.sideColor(5, -1);
+    const far = (a, b, min, text) => assert.ok(dE(a, b) >= min, s.id + ': ' + text + ' nur ΔE ' + dE(a, b).toFixed(1) + ' (' + a + ' / ' + b + ')');
+    far(mov, fix, 30, 'bewegliche und feste Seite');
+    for (const [k, m] of Object.entries(SIM)) far(sim(mov, m), sim(fix, m), 20, 'die Hälften bei ' + k);
+    for (const h of [mov, fix]) {
+      for (let l = 0; l < 6; l++) far(h, C.regionColor(l), 15, 'Hälfte und Schieber ' + l);
+      far(h, C.undercutColor(), 15, 'Hälfte und Hinterschnitt');
+    }
   }
   S.set('teal');
 });

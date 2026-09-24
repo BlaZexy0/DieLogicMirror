@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1256 2644" width="1256" height="2644" font-family="-apple-system,Inter,Segoe UI,Helvetica,Arial,sans-serif" role="img" aria-label="DieLogic Farbrollen">
-<rect width="1256" height="2644" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1256 2796" width="1256" height="2796" font-family="-apple-system,Inter,Segoe UI,Helvetica,Arial,sans-serif" role="img" aria-label="DieLogic Farbrollen">
+<rect width="1256" height="2796" fill="#ffffff"/>
 <text x="28" y="38" font-size="22" font-weight="700" fill="#002733">DieLogic: Farbrollen im Standardschema „DieLogic Teal"</text>
 <text x="28" y="56" font-size="11.5" fill="#4c6870">Quelle: web/shared/palette.js · CSS-Tokens in shared/shared.css (:root) · Diagrammrollen abgeleitet in shared/theme.js · die anderen Schemata belegen dieselben Rollen (shared/schemes.js)</text>
 <text x="28" y="71" font-size="11.5" fill="#4c6870">Kontrast nach WCAG 2.x auf surface und auf dark: T = als Text geeignet (≥ 4,5:1), t = nur groß oder fett (≥ 3:1). Ampel nur für Urteile, Sachfarben für Dinge, mark für den Betriebspunkt.</text>
@@ -226,6 +226,18 @@
 <text x="96" y="1503" font-size="10.5" fill="#2a3f4a">Arbeitspunkt, Ist-Wert, Kennpunkt</text>
 <text x="96" y="1516" font-size="10.5" fill="#2a3f4a">(Schwerpunkt, Zykluszeit)</text>
 <text x="96" y="1532" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 5,4:1 T   auf dark 2,9:1 –</text>
+<rect x="328" y="1456" width="56" height="56" rx="8" fill="#f66e5c" stroke="none"/>
+<text x="356" y="1490" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="396" y="1471" font-size="13.5" font-weight="700" fill="#002733">markWarm</text>
+<text x="396" y="1487" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--mark-warm · #f66e5c</text>
+<text x="396" y="1503" font-size="10.5" fill="#2a3f4a">Punktart warm: Verzweigung, Waschbrett</text>
+<text x="396" y="1532" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 2,9:1 –   auf dark 5,5:1 T</text>
+<rect x="628" y="1456" width="56" height="56" rx="8" fill="#19bdfc" stroke="none"/>
+<text x="656" y="1490" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="696" y="1471" font-size="13.5" font-weight="700" fill="#002733">markCool</text>
+<text x="696" y="1487" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--mark-cool · #19bdfc</text>
+<text x="696" y="1503" font-size="10.5" fill="#2a3f4a">Punktart kühl: Spiegelpunkt</text>
+<text x="696" y="1532" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 2,2:1 –   auf dark 7,3:1 T</text>
 <text x="28" y="1588" font-size="11" font-weight="700" letter-spacing="1.2" fill="#4c6870">LICHT</text>
 <rect x="28" y="1608" width="56" height="56" rx="8" fill="#f2b200" stroke="none"/>
 <text x="56" y="1642" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
@@ -233,142 +245,143 @@
 <text x="96" y="1639" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--lamp · #f2b200</text>
 <text x="96" y="1655" font-size="10.5" fill="#2a3f4a">leuchtende Glühbirne (Sichtbarkeit an)</text>
 <text x="96" y="1684" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 1,9:1 –   auf dark 8,3:1 T</text>
-<rect x="328" y="1608" width="56" height="56" rx="8" fill="#f66e5c" stroke="none"/>
-<text x="356" y="1642" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
-<text x="396" y="1623" font-size="13.5" font-weight="700" fill="#002733">markWarm</text>
-<text x="396" y="1639" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--mark-warm · #f66e5c</text>
-<text x="396" y="1655" font-size="10.5" fill="#2a3f4a">Punktart warm: Verzweigung, Waschbrett</text>
-<text x="396" y="1684" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 2,9:1 –   auf dark 5,5:1 T</text>
-<rect x="628" y="1608" width="56" height="56" rx="8" fill="#19bdfc" stroke="none"/>
-<text x="656" y="1642" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
-<text x="696" y="1623" font-size="13.5" font-weight="700" fill="#002733">markCool</text>
-<text x="696" y="1639" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--mark-cool · #19bdfc</text>
-<text x="696" y="1655" font-size="10.5" fill="#2a3f4a">Punktart kühl: Spiegelpunkt</text>
-<text x="696" y="1684" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 2,2:1 –   auf dark 7,3:1 T</text>
-<text x="28" y="1740" font-size="11" font-weight="700" letter-spacing="1.2" fill="#4c6870">SACHFARBEN</text>
-<rect x="28" y="1760" width="56" height="56" rx="8" fill="#008c82" stroke="none"/>
-<text x="56" y="1794" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
-<text x="96" y="1775" font-size="13.5" font-weight="700" fill="#002733">melt</text>
-<text x="96" y="1791" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--melt · #008c82</text>
-<text x="96" y="1807" font-size="10.5" fill="#2a3f4a">Schmelze und Gussteil (im Standard =</text>
-<text x="96" y="1820" font-size="10.5" fill="#2a3f4a">die Marke)</text>
-<text x="96" y="1836" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 4,1:1 t   auf dark 3,8:1 t</text>
-<rect x="328" y="1760" width="56" height="56" rx="8" fill="#006665" stroke="none"/>
-<text x="356" y="1794" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
-<text x="396" y="1775" font-size="13.5" font-weight="700" fill="#002733">runner</text>
-<text x="396" y="1791" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--runner · #006665</text>
-<text x="396" y="1807" font-size="10.5" fill="#2a3f4a">Anguss (Schmelze, dunkel)</text>
-<text x="396" y="1836" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 6,8:1 T   auf dark 2,3:1 –</text>
-<rect x="628" y="1760" width="56" height="56" rx="8" fill="#8bbfb8" stroke="none"/>
-<text x="656" y="1794" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
-<text x="696" y="1775" font-size="13.5" font-weight="700" fill="#002733">overflow</text>
-<text x="696" y="1791" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--overflow · #8bbfb8</text>
-<text x="696" y="1807" font-size="10.5" fill="#2a3f4a">Überlauf (Schmelze, hell)</text>
-<text x="696" y="1836" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 2,1:1 –   auf dark 7,7:1 T</text>
-<rect x="928" y="1760" width="56" height="56" rx="8" fill="#82979f" stroke="none"/>
-<text x="956" y="1794" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
-<text x="996" y="1775" font-size="13.5" font-weight="700" fill="#002733">biscuit</text>
-<text x="996" y="1791" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--biscuit · #82979f</text>
-<text x="996" y="1807" font-size="10.5" fill="#2a3f4a">Pressrest (grau: der Rest in der</text>
-<text x="996" y="1820" font-size="10.5" fill="#2a3f4a">Kammer)</text>
-<text x="996" y="1836" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 3,1:1 t   auf dark 5,1:1 T</text>
-<rect x="28" y="1878" width="56" height="56" rx="8" fill="#2e65a0" stroke="none"/>
-<text x="56" y="1912" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
-<text x="96" y="1893" font-size="13.5" font-weight="700" fill="#002733">die</text>
-<text x="96" y="1909" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--die · #2e65a0</text>
-<text x="96" y="1925" font-size="10.5" fill="#2a3f4a">Werkzeug: Werkzeuglinie, Anschnitt,</text>
-<text x="96" y="1938" font-size="10.5" fill="#2a3f4a">Formhälften</text>
-<text x="96" y="1954" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 6,0:1 T   auf dark 2,6:1 –</text>
-<rect x="328" y="1878" width="56" height="56" rx="8" fill="#ac6eef" stroke="none"/>
-<text x="356" y="1912" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
-<text x="396" y="1893" font-size="13.5" font-weight="700" fill="#002733">machine</text>
-<text x="396" y="1909" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--machine · #ac6eef</text>
-<text x="396" y="1925" font-size="10.5" fill="#2a3f4a">Maschine: Maschinenlinie,</text>
-<text x="396" y="1938" font-size="10.5" fill="#2a3f4a">Maschinengrenzen</text>
-<text x="396" y="1954" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 3,4:1 t   auf dark 4,7:1 T</text>
-<rect x="628" y="1878" width="56" height="56" rx="8" fill="#68a7cc" stroke="none"/>
-<text x="656" y="1912" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
-<text x="696" y="1893" font-size="13.5" font-weight="700" fill="#002733">air</text>
-<text x="696" y="1909" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--air · #68a7cc</text>
-<text x="696" y="1925" font-size="10.5" fill="#2a3f4a">Luft: Luftdruck, Entlüftung</text>
-<text x="696" y="1954" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 2,6:1 –   auf dark 6,0:1 T</text>
-<rect x="928" y="1878" width="56" height="56" rx="8" fill="#296485" stroke="none"/>
-<text x="956" y="1912" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
-<text x="996" y="1893" font-size="13.5" font-weight="700" fill="#002733">vacuum</text>
-<text x="996" y="1909" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--vacuum · #296485</text>
-<text x="996" y="1925" font-size="10.5" fill="#2a3f4a">Vakuum: Tankdruck, Vakuumweg</text>
-<text x="996" y="1954" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 6,4:1 T   auf dark 2,4:1 –</text>
-<rect x="28" y="1996" width="56" height="56" rx="8" fill="#1e3a71" stroke="none"/>
-<text x="56" y="2030" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
-<text x="96" y="2011" font-size="13.5" font-weight="700" fill="#002733">cool</text>
-<text x="96" y="2027" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--cool · #1e3a71</text>
-<text x="96" y="2043" font-size="10.5" fill="#2a3f4a">Temperierung: Kühlstich, Kanal, Kreise</text>
-<text x="96" y="2072" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 11,1:1 T   auf dark 1,4:1 –</text>
-<rect x="328" y="1996" width="56" height="56" rx="8" fill="#5c3824" stroke="none"/>
-<text x="356" y="2030" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
-<text x="396" y="2011" font-size="13.5" font-weight="700" fill="#002733">process</text>
-<text x="396" y="2027" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--process · #5c3824</text>
-<text x="396" y="2043" font-size="10.5" fill="#2a3f4a">Prozess und Zeit: Füllzeit, v_krit,</text>
-<text x="396" y="2056" font-size="10.5" fill="#2a3f4a">Nachdruck</text>
-<text x="396" y="2072" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 10,3:1 T   auf dark 1,5:1 –</text>
-<rect x="628" y="1996" width="56" height="56" rx="8" fill="#dae1e2" stroke="none"/>
-<text x="656" y="2030" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
-<text x="696" y="2011" font-size="13.5" font-weight="700" fill="#002733">steel</text>
-<text x="696" y="2027" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--steel · #dae1e2</text>
-<text x="696" y="2043" font-size="10.5" fill="#2a3f4a">Stahl als Fläche (Kammer, Form)</text>
-<text x="696" y="2072" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 1,3:1 –   auf dark 11,8:1 T</text>
-<rect x="928" y="1996" width="56" height="56" rx="8" fill="#7b9096" stroke="none"/>
-<text x="956" y="2030" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
-<text x="996" y="2011" font-size="13.5" font-weight="700" fill="#002733">steelDark</text>
-<text x="996" y="2027" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--steel-dark · #7b9096</text>
-<text x="996" y="2043" font-size="10.5" fill="#2a3f4a">Stahl als Kante, Schnitt, Schraffur</text>
-<text x="996" y="2072" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 3,3:1 t   auf dark 4,7:1 T</text>
-<rect x="28" y="2114" width="56" height="56" rx="8" fill="#36545d" stroke="none"/>
-<text x="56" y="2148" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
-<text x="96" y="2129" font-size="13.5" font-weight="700" fill="#002733">piston</text>
-<text x="96" y="2145" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--piston · #36545d</text>
-<text x="96" y="2161" font-size="10.5" fill="#2a3f4a">Kolben und Kolbenstange</text>
-<text x="96" y="2190" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 8,1:1 T   auf dark 1,9:1 –</text>
-<rect x="328" y="2114" width="56" height="56" rx="8" fill="#bec9cc" stroke="none"/>
-<text x="356" y="2148" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
-<text x="396" y="2129" font-size="13.5" font-weight="700" fill="#002733">part</text>
-<text x="396" y="2145" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--part · #bec9cc</text>
-<text x="396" y="2161" font-size="10.5" fill="#2a3f4a">das Bauteil im 3D-Studio (neutral,</text>
-<text x="396" y="2174" font-size="10.5" fill="#2a3f4a">trägt die Analysefarben)</text>
-<text x="396" y="2190" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 1,7:1 –   auf dark 9,3:1 T</text>
-<rect x="628" y="2114" width="56" height="56" rx="8" fill="#ac6eef" stroke="none"/>
-<text x="656" y="2148" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
-<text x="696" y="2129" font-size="13.5" font-weight="700" fill="#002733">axisX</text>
-<text x="696" y="2145" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--axis-x · #ac6eef</text>
-<text x="696" y="2161" font-size="10.5" fill="#2a3f4a">Achse X (= Maschine)</text>
-<text x="696" y="2190" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 3,4:1 t   auf dark 4,7:1 T</text>
-<rect x="928" y="2114" width="56" height="56" rx="8" fill="#68a7cc" stroke="none"/>
-<text x="956" y="2148" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
-<text x="996" y="2129" font-size="13.5" font-weight="700" fill="#002733">axisY</text>
-<text x="996" y="2145" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--axis-y · #68a7cc</text>
-<text x="996" y="2161" font-size="10.5" fill="#2a3f4a">Achse Y (= Luft)</text>
-<text x="996" y="2190" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 2,6:1 –   auf dark 6,0:1 T</text>
-<rect x="28" y="2232" width="56" height="56" rx="8" fill="#2e65a0" stroke="none"/>
-<text x="56" y="2266" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
-<text x="96" y="2247" font-size="13.5" font-weight="700" fill="#002733">axisZ</text>
-<text x="96" y="2263" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--axis-z · #2e65a0</text>
-<text x="96" y="2279" font-size="10.5" fill="#2a3f4a">Achse Z, die Formöffnung (= Werkzeug)</text>
-<text x="96" y="2308" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 6,0:1 T   auf dark 2,6:1 –</text>
-<text x="28" y="2364" font-size="11" font-weight="700" letter-spacing="1.2" fill="#4c6870">FARBLEISTEN (FEST, IN JEDEM SCHEMA GLEICH, KEINE ROLLEN)</text>
+<text x="28" y="1740" font-size="11" font-weight="700" letter-spacing="1.2" fill="#4c6870">FORMHÄLFTEN</text>
+<rect x="28" y="1760" width="56" height="56" rx="8" fill="#e66685" stroke="none"/>
+<text x="56" y="1794" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="96" y="1775" font-size="13.5" font-weight="700" fill="#002733">halfMov</text>
+<text x="96" y="1791" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--half-mov · #e66685</text>
+<text x="96" y="1807" font-size="10.5" fill="#2a3f4a">bewegliche Seite der Form (Entformung)</text>
+<text x="96" y="1836" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 3,2:1 t   auf dark 4,9:1 T</text>
+<rect x="328" y="1760" width="56" height="56" rx="8" fill="#fbde4e" stroke="none"/>
+<text x="356" y="1794" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="396" y="1775" font-size="13.5" font-weight="700" fill="#002733">halfFix</text>
+<text x="396" y="1791" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--half-fix · #fbde4e</text>
+<text x="396" y="1807" font-size="10.5" fill="#2a3f4a">feste Seite der Form (Entformung)</text>
+<text x="396" y="1836" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 1,3:1 –   auf dark 11,7:1 T</text>
+<text x="28" y="1892" font-size="11" font-weight="700" letter-spacing="1.2" fill="#4c6870">SACHFARBEN</text>
+<rect x="28" y="1912" width="56" height="56" rx="8" fill="#008c82" stroke="none"/>
+<text x="56" y="1946" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="96" y="1927" font-size="13.5" font-weight="700" fill="#002733">melt</text>
+<text x="96" y="1943" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--melt · #008c82</text>
+<text x="96" y="1959" font-size="10.5" fill="#2a3f4a">Schmelze und Gussteil (im Standard =</text>
+<text x="96" y="1972" font-size="10.5" fill="#2a3f4a">die Marke)</text>
+<text x="96" y="1988" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 4,1:1 t   auf dark 3,8:1 t</text>
+<rect x="328" y="1912" width="56" height="56" rx="8" fill="#006665" stroke="none"/>
+<text x="356" y="1946" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="396" y="1927" font-size="13.5" font-weight="700" fill="#002733">runner</text>
+<text x="396" y="1943" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--runner · #006665</text>
+<text x="396" y="1959" font-size="10.5" fill="#2a3f4a">Anguss (Schmelze, dunkel)</text>
+<text x="396" y="1988" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 6,8:1 T   auf dark 2,3:1 –</text>
+<rect x="628" y="1912" width="56" height="56" rx="8" fill="#8bbfb8" stroke="none"/>
+<text x="656" y="1946" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="696" y="1927" font-size="13.5" font-weight="700" fill="#002733">overflow</text>
+<text x="696" y="1943" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--overflow · #8bbfb8</text>
+<text x="696" y="1959" font-size="10.5" fill="#2a3f4a">Überlauf (Schmelze, hell)</text>
+<text x="696" y="1988" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 2,1:1 –   auf dark 7,7:1 T</text>
+<rect x="928" y="1912" width="56" height="56" rx="8" fill="#82979f" stroke="none"/>
+<text x="956" y="1946" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="996" y="1927" font-size="13.5" font-weight="700" fill="#002733">biscuit</text>
+<text x="996" y="1943" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--biscuit · #82979f</text>
+<text x="996" y="1959" font-size="10.5" fill="#2a3f4a">Pressrest (grau: der Rest in der</text>
+<text x="996" y="1972" font-size="10.5" fill="#2a3f4a">Kammer)</text>
+<text x="996" y="1988" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 3,1:1 t   auf dark 5,1:1 T</text>
+<rect x="28" y="2030" width="56" height="56" rx="8" fill="#2e65a0" stroke="none"/>
+<text x="56" y="2064" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="96" y="2045" font-size="13.5" font-weight="700" fill="#002733">die</text>
+<text x="96" y="2061" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--die · #2e65a0</text>
+<text x="96" y="2077" font-size="10.5" fill="#2a3f4a">Werkzeug: Werkzeuglinie, Anschnitt,</text>
+<text x="96" y="2090" font-size="10.5" fill="#2a3f4a">Formhälften</text>
+<text x="96" y="2106" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 6,0:1 T   auf dark 2,6:1 –</text>
+<rect x="328" y="2030" width="56" height="56" rx="8" fill="#ac6eef" stroke="none"/>
+<text x="356" y="2064" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="396" y="2045" font-size="13.5" font-weight="700" fill="#002733">machine</text>
+<text x="396" y="2061" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--machine · #ac6eef</text>
+<text x="396" y="2077" font-size="10.5" fill="#2a3f4a">Maschine: Maschinenlinie,</text>
+<text x="396" y="2090" font-size="10.5" fill="#2a3f4a">Maschinengrenzen</text>
+<text x="396" y="2106" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 3,4:1 t   auf dark 4,7:1 T</text>
+<rect x="628" y="2030" width="56" height="56" rx="8" fill="#68a7cc" stroke="none"/>
+<text x="656" y="2064" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="696" y="2045" font-size="13.5" font-weight="700" fill="#002733">air</text>
+<text x="696" y="2061" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--air · #68a7cc</text>
+<text x="696" y="2077" font-size="10.5" fill="#2a3f4a">Luft: Luftdruck, Entlüftung</text>
+<text x="696" y="2106" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 2,6:1 –   auf dark 6,0:1 T</text>
+<rect x="928" y="2030" width="56" height="56" rx="8" fill="#296485" stroke="none"/>
+<text x="956" y="2064" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="996" y="2045" font-size="13.5" font-weight="700" fill="#002733">vacuum</text>
+<text x="996" y="2061" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--vacuum · #296485</text>
+<text x="996" y="2077" font-size="10.5" fill="#2a3f4a">Vakuum: Tankdruck, Vakuumweg</text>
+<text x="996" y="2106" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 6,4:1 T   auf dark 2,4:1 –</text>
+<rect x="28" y="2148" width="56" height="56" rx="8" fill="#1e3a71" stroke="none"/>
+<text x="56" y="2182" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="96" y="2163" font-size="13.5" font-weight="700" fill="#002733">cool</text>
+<text x="96" y="2179" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--cool · #1e3a71</text>
+<text x="96" y="2195" font-size="10.5" fill="#2a3f4a">Temperierung: Kühlstich, Kanal, Kreise</text>
+<text x="96" y="2224" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 11,1:1 T   auf dark 1,4:1 –</text>
+<rect x="328" y="2148" width="56" height="56" rx="8" fill="#5c3824" stroke="none"/>
+<text x="356" y="2182" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="396" y="2163" font-size="13.5" font-weight="700" fill="#002733">process</text>
+<text x="396" y="2179" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--process · #5c3824</text>
+<text x="396" y="2195" font-size="10.5" fill="#2a3f4a">Prozess und Zeit: Füllzeit, v_krit,</text>
+<text x="396" y="2208" font-size="10.5" fill="#2a3f4a">Nachdruck</text>
+<text x="396" y="2224" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 10,3:1 T   auf dark 1,5:1 –</text>
+<rect x="628" y="2148" width="56" height="56" rx="8" fill="#dae1e2" stroke="none"/>
+<text x="656" y="2182" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="696" y="2163" font-size="13.5" font-weight="700" fill="#002733">steel</text>
+<text x="696" y="2179" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--steel · #dae1e2</text>
+<text x="696" y="2195" font-size="10.5" fill="#2a3f4a">Stahl als Fläche (Kammer, Form)</text>
+<text x="696" y="2224" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 1,3:1 –   auf dark 11,8:1 T</text>
+<rect x="928" y="2148" width="56" height="56" rx="8" fill="#7b9096" stroke="none"/>
+<text x="956" y="2182" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="996" y="2163" font-size="13.5" font-weight="700" fill="#002733">steelDark</text>
+<text x="996" y="2179" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--steel-dark · #7b9096</text>
+<text x="996" y="2195" font-size="10.5" fill="#2a3f4a">Stahl als Kante, Schnitt, Schraffur</text>
+<text x="996" y="2224" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 3,3:1 t   auf dark 4,7:1 T</text>
+<rect x="28" y="2266" width="56" height="56" rx="8" fill="#36545d" stroke="none"/>
+<text x="56" y="2300" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="96" y="2281" font-size="13.5" font-weight="700" fill="#002733">piston</text>
+<text x="96" y="2297" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--piston · #36545d</text>
+<text x="96" y="2313" font-size="10.5" fill="#2a3f4a">Kolben und Kolbenstange</text>
+<text x="96" y="2342" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 8,1:1 T   auf dark 1,9:1 –</text>
+<rect x="328" y="2266" width="56" height="56" rx="8" fill="#bec9cc" stroke="none"/>
+<text x="356" y="2300" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="396" y="2281" font-size="13.5" font-weight="700" fill="#002733">part</text>
+<text x="396" y="2297" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--part · #bec9cc</text>
+<text x="396" y="2313" font-size="10.5" fill="#2a3f4a">das Bauteil im 3D-Studio (neutral,</text>
+<text x="396" y="2326" font-size="10.5" fill="#2a3f4a">trägt die Analysefarben)</text>
+<text x="396" y="2342" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 1,7:1 –   auf dark 9,3:1 T</text>
+<rect x="628" y="2266" width="56" height="56" rx="8" fill="#ac6eef" stroke="none"/>
+<text x="656" y="2300" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="696" y="2281" font-size="13.5" font-weight="700" fill="#002733">axisX</text>
+<text x="696" y="2297" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--axis-x · #ac6eef</text>
+<text x="696" y="2313" font-size="10.5" fill="#2a3f4a">Achse X (= Maschine)</text>
+<text x="696" y="2342" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 3,4:1 t   auf dark 4,7:1 T</text>
+<rect x="928" y="2266" width="56" height="56" rx="8" fill="#68a7cc" stroke="none"/>
+<text x="956" y="2300" text-anchor="middle" font-size="17" font-weight="700" fill="#002733">Aa</text>
+<text x="996" y="2281" font-size="13.5" font-weight="700" fill="#002733">axisY</text>
+<text x="996" y="2297" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--axis-y · #68a7cc</text>
+<text x="996" y="2313" font-size="10.5" fill="#2a3f4a">Achse Y (= Luft)</text>
+<text x="996" y="2342" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 2,6:1 –   auf dark 6,0:1 T</text>
+<rect x="28" y="2384" width="56" height="56" rx="8" fill="#2e65a0" stroke="none"/>
+<text x="56" y="2418" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">Aa</text>
+<text x="96" y="2399" font-size="13.5" font-weight="700" fill="#002733">axisZ</text>
+<text x="96" y="2415" font-size="11" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">--axis-z · #2e65a0</text>
+<text x="96" y="2431" font-size="10.5" fill="#2a3f4a">Achse Z, die Formöffnung (= Werkzeug)</text>
+<text x="96" y="2460" font-size="10" font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">auf surface 6,0:1 T   auf dark 2,6:1 –</text>
+<text x="28" y="2516" font-size="11" font-weight="700" letter-spacing="1.2" fill="#4c6870">FARBLEISTEN (FEST, IN JEDEM SCHEMA GLEICH, KEINE ROLLEN)</text>
 <linearGradient id="verlauf-heat" x1="0" y1="0" x2="1" y2="0"><stop offset="0.0000" stop-color="#30123b"/><stop offset="0.1667" stop-color="#3775c5"/><stop offset="0.3333" stop-color="#1dacd5"/><stop offset="0.5000" stop-color="#67eb73"/><stop offset="0.6667" stop-color="#f5c225"/><stop offset="0.8333" stop-color="#fa7e1d"/><stop offset="1.0000" stop-color="#7a0403"/></linearGradient>
-<rect x="28" y="2384" width="1160" height="22" rx="4" fill="url(#verlauf-heat)"/>
-<text x="28" y="2422" font-size="12" font-weight="700" fill="#002733">heat</text>
-<text x="88" y="2422" font-size="11" fill="#2a3f4a">Heatmaps der Auslegung: sieben Stützstellen aus Turbo · <tspan font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">scale('heat', t), theme.heatStops</tspan></text>
+<rect x="28" y="2536" width="1160" height="22" rx="4" fill="url(#verlauf-heat)"/>
+<text x="28" y="2574" font-size="12" font-weight="700" fill="#002733">heat</text>
+<text x="88" y="2574" font-size="11" fill="#2a3f4a">Heatmaps der Auslegung: sieben Stützstellen aus Turbo · <tspan font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">scale('heat', t), theme.heatStops</tspan></text>
 <linearGradient id="verlauf-turbo" x1="0" y1="0" x2="1" y2="0"><stop offset="0.0000" stop-color="#23171b"/><stop offset="0.0313" stop-color="#3e2a72"/><stop offset="0.0625" stop-color="#493eaf"/><stop offset="0.0938" stop-color="#4a54d7"/><stop offset="0.1250" stop-color="#446aee"/><stop offset="0.1563" stop-color="#3c80f8"/><stop offset="0.1875" stop-color="#3295f7"/><stop offset="0.2188" stop-color="#2aaaef"/><stop offset="0.2500" stop-color="#26bde1"/><stop offset="0.2813" stop-color="#25cecf"/><stop offset="0.3125" stop-color="#29ddbb"/><stop offset="0.3438" stop-color="#32e9a6"/><stop offset="0.3750" stop-color="#40f392"/><stop offset="0.4063" stop-color="#51fa7f"/><stop offset="0.4375" stop-color="#66fd6d"/><stop offset="0.4688" stop-color="#7efd5d"/><stop offset="0.5000" stop-color="#96fa50"/><stop offset="0.5313" stop-color="#aff444"/><stop offset="0.5625" stop-color="#c6eb3b"/><stop offset="0.5938" stop-color="#dcdf33"/><stop offset="0.6250" stop-color="#eed02d"/><stop offset="0.6563" stop-color="#fbbe28"/><stop offset="0.6875" stop-color="#ffab24"/><stop offset="0.7188" stop-color="#ff9621"/><stop offset="0.7500" stop-color="#ff801d"/><stop offset="0.7813" stop-color="#fc6a19"/><stop offset="0.8125" stop-color="#ee5415"/><stop offset="0.8438" stop-color="#dd3f11"/><stop offset="0.8750" stop-color="#c92d0c"/><stop offset="0.9063" stop-color="#b41d07"/><stop offset="0.9375" stop-color="#a11202"/><stop offset="0.9688" stop-color="#940c00"/><stop offset="1.0000" stop-color="#900d00"/></linearGradient>
-<rect x="28" y="2442" width="1160" height="22" rx="4" fill="url(#verlauf-turbo)"/>
-<text x="28" y="2480" font-size="12" font-weight="700" fill="#002733">turbo</text>
-<text x="88" y="2480" font-size="11" fill="#2a3f4a">Felder im 3D-Studio: Wandstärke, Abstand, Füllgrad, Ankunft, Geschwindigkeit, Haftung · <tspan font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">scale('turbo', t), Polynom nach Popov</tspan></text>
+<rect x="28" y="2594" width="1160" height="22" rx="4" fill="url(#verlauf-turbo)"/>
+<text x="28" y="2632" font-size="12" font-weight="700" fill="#002733">turbo</text>
+<text x="88" y="2632" font-size="11" fill="#2a3f4a">Felder im 3D-Studio: Wandstärke, Abstand, Füllgrad, Ankunft, Geschwindigkeit, Haftung · <tspan font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">scale('turbo', t), Polynom nach Popov</tspan></text>
 <linearGradient id="verlauf-draft" x1="0" y1="0" x2="1" y2="0"><stop offset="0.0000" stop-color="#b42318"/><stop offset="0.3333" stop-color="#d4a908"/><stop offset="0.3333" stop-color="#7cc4a0"/><stop offset="1.0000" stop-color="#0d7a3c"/></linearGradient>
-<rect x="28" y="2500" width="1160" height="22" rx="4" fill="url(#verlauf-draft)"/>
-<text x="28" y="2538" font-size="12" font-weight="700" fill="#002733">draft</text>
-<text x="88" y="2538" font-size="11" fill="#2a3f4a">Entformschräge: bis zum Grenzwert (t = 1/3) Rot nach Gold, darüber hell- nach sattgrün · <tspan font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">scale('draft', t), t = Winkel / 3·Grenzwert</tspan></text>
+<rect x="28" y="2652" width="1160" height="22" rx="4" fill="url(#verlauf-draft)"/>
+<text x="28" y="2690" font-size="12" font-weight="700" fill="#002733">draft</text>
+<text x="88" y="2690" font-size="11" fill="#2a3f4a">Entformschräge: bis zum Grenzwert (t = 1/3) Rot nach Gold, darüber hell- nach sattgrün · <tspan font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">scale('draft', t), t = Winkel / 3·Grenzwert</tspan></text>
 <linearGradient id="verlauf-speed" x1="0" y1="0" x2="1" y2="0"><stop offset="0.0000" stop-color="#2e6da4"/><stop offset="0.3333" stop-color="#3fc2b6"/><stop offset="0.6667" stop-color="#d4a908"/><stop offset="1.0000" stop-color="#b42318"/></linearGradient>
-<rect x="28" y="2558" width="1160" height="22" rx="4" fill="url(#verlauf-speed)"/>
-<text x="28" y="2596" font-size="12" font-weight="700" fill="#002733">speed</text>
-<text x="88" y="2596" font-size="11" fill="#2a3f4a">Geschwindigkeit im Flussschema des Angussdesigners · <tspan font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">scale('speed', t)</tspan></text>
+<rect x="28" y="2710" width="1160" height="22" rx="4" fill="url(#verlauf-speed)"/>
+<text x="28" y="2748" font-size="12" font-weight="700" fill="#002733">speed</text>
+<text x="88" y="2748" font-size="11" fill="#2a3f4a">Geschwindigkeit im Flussschema des Angussdesigners · <tspan font-family="JetBrains Mono,Fira Code,Menlo,monospace" fill="#4c6870">scale('speed', t)</tspan></text>
 </svg>

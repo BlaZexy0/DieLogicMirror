@@ -23,6 +23,11 @@
      Licht        lamp: die leuchtende Glühbirne eines Sichtbarkeits-
                   Schalters (Formaufbau). Warm und in jedem Schema gleich:
                   „an" soll nach Licht aussehen, auch wo die Marke grau ist.
+     Formhälften  halfMov (Rose) und halfFix (Gelb): die bewegliche und die
+                  feste Seite der Form in der Entformung, in jedem Schema
+                  gleich. Weit weg voneinander, auch bei Rot-Grün-Schwäche,
+                  von den Richtungen der Schieber (Achsenfarben) und vom
+                  Hinterschnitt (bad).
      Sachfarben   Dinge, die überall dieselbe Farbe haben: die Schmelze und
                   was aus ihr wird (Anguss, Überlauf, Pressrest), Werkzeug,
                   Maschine, Luft und Vakuum, Temperierung, Prozess (Zeit),
@@ -81,10 +86,13 @@
     badBorder:     '#e2988c',
     /* Hervorhebung */
     mark:          '#b23797',   // Arbeitspunkt, Ist-Wert, Kennpunkt (Schwerpunkt, Zykluszeit)
-    /* Licht */
-    lamp:          '#f2b200',   // leuchtende Glühbirne (Sichtbarkeit an)
     markWarm:      '#f66e5c',   // Punktart warm: Verzweigung, Waschbrett
     markCool:      '#19bdfc',   // Punktart kühl: Spiegelpunkt
+    /* Licht */
+    lamp:          '#f2b200',   // leuchtende Glühbirne (Sichtbarkeit an)
+    /* Formhälften */
+    halfMov:       '#e66685',   // bewegliche Seite der Form (Entformung)
+    halfFix:       '#fbde4e',   // feste Seite der Form (Entformung)
     /* Sachfarben */
     melt:          '#008c82',   // Schmelze und Gussteil (im Standard = die Marke)
     runner:        '#006665',   // Anguss (Schmelze, dunkel)
