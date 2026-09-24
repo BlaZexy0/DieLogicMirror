@@ -3,10 +3,20 @@
  * STL-Parsing (binär + ASCII) und Netz-Kennwerte, ohne DOM-Abhängigkeiten.
  * Dreiecke werden als Float32Array mit 9 Werten pro Dreieck gehalten
  * (x0,y0,z0, x1,y1,z1, x2,y2,z2) — Einheiten wie in der Datei (üblich: mm).
+ *
+ * DER eine STL-Parser der Website: das 3D-Studio importiert ihn
+ * (js/part/stlio.js re-exportiert parseSTL/meshVolume/meshArea/meshBounds
+ * als Float64Array, dazu writeSTL fürs Schreiben, was hier fehlt). Vorher
+ * hatte das Studio eine eigene, zweite Abschrift ohne den Endlichkeits-Test
+ * unten für binäre Dateien — eine STL mit NaN-Koordinaten lief dort
+ * unbemerkt durch.
+ * ES-Modul (import/export): die Seite lädt es als
+ * <script type="module">, ebenso stl-app.js, das parseSTL/meshVolume/
+ * meshArea importiert.
  */
 
 /** Parst einen STL-ArrayBuffer (binär oder ASCII) zu einem Float32Array. */
-function parseSTL(buffer) {
+export function parseSTL(buffer) {
   if (buffer.byteLength >= 84) {
     const dv = new DataView(buffer);
     const n = dv.getUint32(80, true);
@@ -52,7 +62,11 @@ function parseAsciiSTL(text) {
   const vals = [];
   let m;
   while ((m = re.exec(text)) !== null) {
-    vals.push(parseFloat(m[1]), parseFloat(m[2]), parseFloat(m[3]));
+    /* +x (Number-Konvertierung), nicht parseFloat: der lässt eine Form wie
+       „1e" (kaputte Exponentialschreibweise) klaglos zu 1 werden, weil er
+       am ersten ungültigen Zeichen abschneidet, statt den ganzen Ausdruck
+       zu verlangen. +"1e" ist NaN und greift bei pruefeKoordinaten(). */
+    vals.push(+m[1], +m[2], +m[3]);
   }
   const nTri = Math.floor(vals.length / 9);
   if (nTri === 0) throw new Error('Keine Dreiecke in der ASCII-STL gefunden');
@@ -61,7 +75,7 @@ function parseAsciiSTL(text) {
 }
 
 /** Volumen über die Summe signierter Tetraeder (geschlossenes Netz vorausgesetzt). */
-function meshVolume(tris) {
+export function meshVolume(tris) {
   let v6 = 0;
   for (let i = 0; i < tris.length; i += 9) {
     const ax = tris[i],     ay = tris[i + 1], az = tris[i + 2];
@@ -77,7 +91,7 @@ function meshVolume(tris) {
 }
 
 /** Oberfläche als Summe der Dreiecksflächen. */
-function meshArea(tris) {
+export function meshArea(tris) {
   let a = 0;
   for (let i = 0; i < tris.length; i += 9) {
     const ux = tris[i + 3] - tris[i], uy = tris[i + 4] - tris[i + 1], uz = tris[i + 5] - tris[i + 2];
@@ -91,7 +105,7 @@ function meshArea(tris) {
 }
 
 /** Bounding-Box des Netzes: { min:[x,y,z], max:[x,y,z] }. */
-function meshBounds(tris) {
+export function meshBounds(tris) {
   const min = [Infinity, Infinity, Infinity];
   const max = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < tris.length; i += 3) {
@@ -102,8 +116,4 @@ function meshBounds(tris) {
     }
   }
   return { min, max };
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseSTL, meshVolume, meshArea, meshBounds };
 }

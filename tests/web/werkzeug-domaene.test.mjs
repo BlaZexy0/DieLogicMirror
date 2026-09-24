@@ -59,6 +59,23 @@ test('domäne: jede eingetragene Grenze weist den Wert dahinter zurück', () => 
   }
 });
 
+/* H_MONTH: kein Feld einer Werkzeugseite (nur die Kostensätze der
+   Organisation, /konto/), darum nicht in FELDER, aber Teil derselben
+   Domäne — dieselben Regeln wie jedes andere Feld. */
+test('H_MONTH: dieselben Regeln wie ein Feld aus FELDER, nur außerhalb davon', () => {
+  const f = DOM.H_MONTH;
+  assert.ok(f && f.key === 'hMonth');
+  assert.ok(f.label && f.unit !== undefined);
+  assert.ok(f.max > f.min);
+  assert.ok(['hart', 'plaus'].includes(f.bound));
+  assert.ok(DOM.pruefeFeld(f, f.min - 1), 'min greift nicht');
+  assert.ok(DOM.pruefeFeld(f, f.max + 1), 'max greift nicht');
+  assert.ok(DOM.pruefeFeld(f, NaN), 'NaN kommt durch');
+  assert.equal(DOM.pruefeFeld(f, f.min), null, 'die Grenze selbst muss noch gehen');
+  assert.equal(DOM.FELDER.teilekosten.some(x => x.key === 'hMonth'), false,
+    'hMonth gehört nicht zu FELDER.teilekosten — sonst böte die Teilekosten-Seite es als Eingabe an');
+});
+
 /* ── Was vorher durchkam ───────────────────────────────────────────────── */
 
 test('kosten: die Werte, die vorher NaN oder eine falsche Zahl lieferten', () => {
@@ -121,6 +138,28 @@ test('verdrahtung: beide Seiten setzen die Attribute aus der Domäne', () => {
     'Teilekosten lädt shared/felddomaene.js nicht');
   assert.match(read('tools/sprengflaeche/index.html'), /src="\/shared\/felddomaene\.js"/,
     'Sprengfläche lädt shared/felddomaene.js nicht');
+});
+
+/* Die Kostensätze der Organisation (/konto/, Reiter „Kosten & Sätze"): eine
+   dritte Seite mit derselben Domäne wie die Teilekosten-Seite (plus
+   H_MONTH), aber ohne attribute()/setzeGrenzen() — das Formular baut sich
+   hier bei jedem Aufruf aus KOSTEN_FIELDS neu, die Grenzen kommen direkt
+   beim Bauen mit. */
+test('verdrahtung: die Kostensätze der Organisation (/konto/) laden die Domäne und prüfen vor dem Speichern', () => {
+  const konto = read('konto/index.html');
+  assert.match(konto, /src="\/shared\/felddomaene\.js"/, 'lädt shared/felddomaene.js nicht');
+  assert.match(konto, /__DOMAENE__/, 'die Domäne wird nicht gelesen');
+  assert.match(konto, /DOMAENE\.H_MONTH/, 'hMonth bekommt keine eigene Grenze (H_MONTH)');
+  assert.match(konto, /DOMAENE\.pruefeFeld\(/, 'die Grenzen werden nicht geprüft');
+  /* Jedes Feld, das renderKosten() zeigt, bekommt min/max am Element — vor
+     dem Umbau standen dort keine Attribute und keine Prüfung vor dem PUT. */
+  assert.match(konto, /min="\s*'\s*\+\s*lo\s*\+\s*'"|min=" \+ lo \+ "/, 'renderKosten() setzt kein min=');
+  assert.match(konto, /max="\s*'\s*\+\s*b\.max\s*\+\s*'"|max=" \+ b\.max \+ "/, 'renderKosten() setzt kein max=');
+  /* Speichern bricht bei einer verletzten Grenze ab, statt zu senden. */
+  const save = konto.slice(konto.indexOf("$('sd-save').addEventListener"));
+  const vorDemFetch = save.slice(0, save.indexOf("await api('PUT'"));
+  assert.match(vorDemFetch, /pruefeKosten\(data\)/, "pruefeKosten() steht nicht vor dem PUT");
+  assert.match(vorDemFetch, /if \(!check\.ok\) \{[^}]*return/, 'eine verletzte Grenze bricht nicht ab');
 });
 
 test('verdrahtung: kein Rechenweg läuft an der Sperre vorbei', () => {

@@ -27,29 +27,10 @@ require(path.join(site, 'shared/theme.js'));
 const T = globalThis.__THEME__;
 const read = f => readFileSync(path.join(site, f), 'utf8');
 
-/* Kontrast wie in palette.test.mjs — dort für den Standard, hier für jedes
-   Schema gegen SEINE eigenen Flächen. */
-function lum(hex) {
-  const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
-    .map(x => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-}
-function contrast(a, b) {
-  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
-}
-
-/* Abstand im OK-Lab-Raum, ×100 (ΔE_ok): gleich große Zahlen sehen gleich
-   verschieden aus. */
-function oklab(h) {
-  const lin = c => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-  const [r, g, b] = [1, 3, 5].map(i => lin(parseInt(h.slice(i, i + 2), 16) / 255));
-  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
-  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
-  const q = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-  return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * q, 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * q, 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * q];
-}
-const dE = (a, b) => { const x = oklab(a), y = oklab(b); return 100 * Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]); };
+/* Kontrast (WCAG) und ΔE_ok (Abstand im OK-Lab-Raum, ×100): aus
+   shared/palette.js — dort für den Standard, hier für jedes Schema gegen
+   SEINE eigenen Flächen. */
+const contrast = P.contrast, oklab = P.oklab, dE = P.deltaE;
 /* Abstand einer Farbe zum Ampelverlauf gut → knapp → schlecht (in OK-Lab
    gemischt, wie P.mix mischt). */
 function zurAmpel(x, c) {
@@ -295,15 +276,25 @@ test('die Konto-Seite baut den Umschalter aus schemes.js, nicht aus eigenen Wert
   assert.doesNotMatch(konto, /seq[1-5]|S\.groups/);
 });
 
-test('nav.js und projectbar.js bauen ihr Stylesheet neu, wenn das Schema wechselt', () => {
-  for (const f of ['shared/nav.js', 'shared/projectbar.js']) {
-    assert.match(read(f), /addEventListener\('dielogic:scheme'/, f);
+test('nav.js und projectbar.js färben sich über CSS-Variablen mit, ohne beim Schemawechsel etwas neu zu bauen', () => {
+  const nav = read('shared/nav.js');
+  const pb = read('shared/projectbar.js');
+  /* Ihre Regeln liegen in shared.css und benutzen var(--rolle): ein
+     Schemawechsel (schemes.js schreibt die Tokens am Wurzelelement um)
+     erreicht Leiste und Fußzeile darüber von selbst — nav.js und
+     projectbar.js brauchen dafür weder ein eigenes Stylesheet noch einen
+     Listener auf „dielogic:scheme". */
+  for (const [label, src] of [['nav.js', nav], ['projectbar.js', pb]]) {
+    assert.doesNotMatch(src, /dielogic:scheme/, label + ': kein Listener mehr nötig');
+    assert.doesNotMatch(src, /__PALETTE__/, label + ': keine Farblogik mehr in JS');
   }
+  const css = read('shared/shared.css');
+  assert.match(css, /\.dl-nav\s*\{[^}]*var\(--dark\)/, 'shared.css: .dl-nav benutzt var(--dark)');
+  assert.match(css, /\.dl-pb\s*\{[^}]*var\(--surface\)/, 'shared.css: .dl-pb benutzt var(--surface)');
   /* Und sie tragen ihre Farben nicht ins Markup: was einmal im HTML steht,
      färbt sich beim Wechsel nicht mit. */
-  const nav = read('shared/nav.js');
-  assert.doesNotMatch(nav, /style="color:\$\{C\./, 'nav.js: Farbe im Markup statt im Stylesheet');
-  assert.doesNotMatch(nav, /fill="\$\{C\./, 'nav.js: fill-Attribut statt Klasse');
+  assert.doesNotMatch(nav, /style="color:\$\{/, 'nav.js: Farbe im Markup statt im Stylesheet');
+  assert.doesNotMatch(nav, /fill="\$\{/, 'nav.js: fill-Attribut statt Klasse');
 });
 
 test('die Fläche des 3D-Viewports ist eine Rolle, jedes Schema bringt seine eigene mit', () => {

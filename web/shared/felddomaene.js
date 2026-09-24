@@ -57,6 +57,14 @@
     ]
   };
 
+  /* Produktionsstunden je Monat: kein Feld einer Werkzeugseite — es steht
+     nur bei den Kostensätzen der Organisation (/konto/) — aber Teil
+     derselben Domäne; scripts/gen-domain-doc.mjs hängt es an
+     FELDER.teilekosten an, bevor es nach backend/_domain.py (KOSTEN)
+     geschrieben wird. Eigens gehalten, statt in FELDER.teilekosten: dort
+     würde es auch der Teilekosten-Seite als Eingabefeld angeboten. */
+  var H_MONTH = { key: 'hMonth', label: 'Produktionsstunden je Monat', unit: 'h', min: 1, max: 744, bound: 'plaus' };
+
   /* Regeln zwischen zwei Feldern. */
   var PAARE = {
     teilekosten: [
@@ -118,7 +126,7 @@
     return n;
   }
 
-  var api = { FELDER: FELDER, PAARE: PAARE, feld: feld,
+  var api = { FELDER: FELDER, PAARE: PAARE, H_MONTH: H_MONTH, feld: feld,
     pruefeFeld: pruefeFeld, pruefe: pruefe, attribute: attribute };
   root.__DOMAENE__ = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

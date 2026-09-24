@@ -8,11 +8,13 @@
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
   <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
   <link rel="stylesheet" href="/shared/shared.css">
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
   <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/util.js"></script>
   <style>
     .tk-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 4rem; }
 
@@ -48,7 +50,7 @@
       flex: none;
     }
     .tk-field input:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
-    .tk-field input.linked { border-color: var(--primary); background: rgba(var(--primary-rgb), .06); }
+    .tk-field input.linked { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, transparent); }
 
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 0.9rem; margin-bottom: 1.2rem; }
     .kpi {
@@ -92,7 +94,6 @@
     .lever-note { font-size: 0.72rem; color: var(--muted); line-height: 1.55; margin-top: 0.6rem; }
 
     .tk-footnote { font-size: 0.75rem; color: var(--muted); margin-top: 0.8rem; line-height: 1.65; }
-    .hidden { display: none !important; }
     /* Eingabe außerhalb der eigenen min/max-Grenzen des Feldes. */
     .tk-field input.bad { border-color: var(--bad); background: var(--bad-bg); }
 
@@ -298,11 +299,8 @@
       render();
     });
   }
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
+  /* shared/util.js, vor diesem Script geladen. */
+  var escapeHtml = window.__DL_UTIL__.esc;
 
   function persist() {
     var v = {};
@@ -322,10 +320,7 @@
   document.getElementById('i-dg').addEventListener('input', render);
   applyLinks();
 
-  function fmt(x, d) {
-    if (!isFinite(x)) return '—';
-    return x.toLocaleString('de-DE', { maximumFractionDigits: d == null ? 2 : d });
-  }
+  function fmt(x, d) { return window.__DL_UTIL__.fmtZahl(x, d == null ? 2 : d); }
   function val(k) { return parseFloat(document.getElementById('i-' + k).value) || 0; }
 
   /* Die min/max-Attribute standen auf jedem Feld — und nichts las sie. Ein

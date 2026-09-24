@@ -17,7 +17,10 @@ import globals from 'globals';
 
 const CLASSIC = [
   'web/shared/*.js', 'web/shared/examples/*.js',
-  'web/tools/sprengflaeche/*.js', 'web/tools/teilekosten/*.js', 'web/tools/zyklus/*.js'
+  /* stl-math.js und stl-app.js sind ES-Module (import aus stl-math.js,
+     seit dem einen STL-Parser der Website) — stl-logic.js bleibt klassisch. */
+  'web/tools/sprengflaeche/stl-logic.js',
+  'web/tools/teilekosten/*.js', 'web/tools/zyklus/*.js'
 ];
 
 const rules = {

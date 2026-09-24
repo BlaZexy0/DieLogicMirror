@@ -8,14 +8,17 @@
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
   <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
   <link rel="stylesheet" href="/shared/shared.css">
   <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
   <script defer src="/shared/vendor/katex/katex.min.js"></script>
-  <script defer src="/shared/vendor/katex/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore'})"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
   <script src="/shared/version.js"></script>
   <script src="/shared/palette.js"></script>
   <script src="/shared/schemes.js"></script>
   <script src="/shared/nav.js"></script>
+  <script src="/shared/util.js"></script>
   <style>
     .zk-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 4rem; }
 
@@ -125,7 +128,7 @@
     .zk-table th.r, .zk-table td.r { text-align: right; }
     .zk-table td { padding: 0.35rem 0.8rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
     .zk-table td.sect {
-      background: rgba(var(--dark-rgb), .04); color: var(--muted);
+      background: color-mix(in srgb, var(--dark) 4%, transparent); color: var(--muted);
       font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
       padding: 0.4rem 0.8rem;
     }
@@ -182,7 +185,7 @@
     .zk-field input:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
     /* Abgewiesene Eingabe (z. B. negative Dauer) — der letzte gültige Wert bleibt. */
     input.bad { border-color: var(--bad) !important; background: var(--bad-bg); }
-    .zk-field input.linked { border-color: var(--primary); background: rgba(var(--primary-rgb), .06); }
+    .zk-field input.linked { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, transparent); }
     .zk-field .ro { font-family: var(--mono); font-size: 0.8rem; color: var(--text); white-space: nowrap; }
     .zk-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.6rem; margin-bottom: 0.9rem; }
     .zk-kpi { background: var(--bg); border: 1px solid var(--border-light); border-radius: 8px; padding: 0.5rem 0.7rem; }
@@ -393,21 +396,14 @@
   function groupStyle(g) { return GROUP_STYLE[g] || STYLE_FALLBACK; }
 
   /* Schrift auf einer farbigen Fläche (Balken, Band): die dunkle Schrift
-     oder die helle Fläche des Blatts, je nachdem, was besser liest (WCAG).
-     Reicht keine der beiden für 4,5:1 (Töne mittlerer Helligkeit wie die
-     Schmelze), dann reines Schwarz oder Weiß. */
-  function leucht(hex) {
-    var c = P.hexRgb(hex).map(function (x) { return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
-    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-  }
-  function kontrast(a, b) {
-    var la = leucht(a), lb = leucht(b);
-    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-  }
+     oder die helle Fläche des Blatts, je nachdem, was besser liest (WCAG,
+     P.contrast aus shared/palette.js). Reicht keine der beiden für 4,5:1
+     (Töne mittlerer Helligkeit wie die Schmelze), dann reines Schwarz
+     oder Weiß. */
   function schriftAuf(fill) {
-    var dunkel = kontrast(fill, P.text), hell = kontrast(fill, P.surface);
+    var dunkel = P.contrast(fill, P.text), hell = P.contrast(fill, P.surface);
     if (Math.max(dunkel, hell) >= 4.5) return dunkel >= hell ? P.text : P.surface;
-    return kontrast(fill, '#000000') >= kontrast(fill, '#ffffff') ? '#000000' : '#ffffff';
+    return P.contrast(fill, '#000000') >= P.contrast(fill, '#ffffff') ? '#000000' : '#ffffff';
   }
 
   var SECTION_META = LOGIC.SECTION_META;
@@ -419,15 +415,9 @@
 
   var view = 'full';   // 'full' | 'closed' | 'open'
 
-  function fmt(x, d) {
-    if (!isFinite(x)) return '—';
-    return x.toLocaleString('de-DE', { maximumFractionDigits: d == null ? 1 : d });
-  }
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
+  /* shared/util.js, vor diesem Script geladen. */
+  function fmt(x, d) { return window.__DL_UTIL__.fmtZahl(x, d == null ? 1 : d); }
+  var escapeHtml = window.__DL_UTIL__.esc;
 
   /* ── Layout aufbauen: Schieber → zwei Vorgänge, Abschnitte flach ── */
 

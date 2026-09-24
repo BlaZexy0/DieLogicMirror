@@ -33,7 +33,6 @@
   'use strict';
 
   var T = root.__THEME__ = root.__THEME__ || {};
-  T.name = 'aus der Palette';
   T.chart = T.chart || {};
   T.limits = T.limits || {};
   T.map = T.map || {};
@@ -53,9 +52,7 @@
      einem Wechsel die neuen Werte. */
   function stuetzen(P, name, out) {
     out.length = 0;
-    P.leisten[name].forEach(function (s) {
-      out.push(P.hexRgb(s[1]).map(function (v) { return Math.round(v * 255); }));
-    });
+    P.leisten[name].forEach(function (s) { out.push(P.rgb255(s[1])); });
     return out;
   }
 
@@ -70,7 +67,7 @@
     C.melt = P.melt; C.runner = P.runner; C.overflow = P.overflow; C.biscuit = P.biscuit;
     C.piston = P.piston; C.cool = P.cool; C.process = P.process;
     C.ok = P.ok; C.caution = P.caution; C.bad = P.bad;
-    C.okText = P.okText; C.cautionText = P.cautionText; C.badText = P.badText;
+    C.badText = P.badText;   // okText/cautionText: kein Leser (nur badText, draw.js)
     C.feasible = P.rgba('ok', 0.26);
     C.feasibleAlt = P.rgba('ok', 0.11);
     C.target = P.rgba('ok', 0.14);

@@ -9,22 +9,18 @@
    auf der Konto-Seite (/konto/).
 
    Einbindung (nach project.js):
-     <script src="/shared/projectbar.js" data-base=".."></script>
+     <script src="/shared/projectbar.js"></script>
    Die Leiste sitzt auf allen Seiten gleich: direkt unter der Site-Navigation,
    feste Höhe 44px (das Dashboard rechnet seine Kopfzeile damit, css/site.css).
-   Selbstversorgend: Styles werden mit injiziert. */
+   Ihre Styles liegen in shared/shared.css. */
 (function () {
   'use strict';
 
-  /* shared/palette.js, vor nav.js geladen. Farben mit Deckkraft nimmt
-     C.rgba(rolle, deckkraft): sie folgen dem Farbschema. */
-  var C = window.__PALETTE__;
+  /* shared/project.js, vor projectbar.js geladen. */
   var P = window.__PROJECT__;
   if (!P) throw new Error('shared/project.js muss vor projectbar.js geladen sein.');
 
-  var script = document.currentScript;
-  var base = (script && script.dataset.base ? script.dataset.base : '').replace(/\/+$/, '');
-  var KONTO = base + '/konto/';
+  var KONTO = '/konto/';
 
   var session = null;      // { user, org }
   var busy = false;
@@ -61,42 +57,10 @@
   }
 
   /* ── Markup ───────────────────────────────────────────────── */
-
-  /* Als Funktion: beim Wechsel des Farbschemas (shared/schemes.js) liest
-     sie die neuen Werte aus __PALETTE__ und das <style> wird ersetzt.
-     Der Stand der Synchronisation ist ein Urteil der Ampel: „ungespeichert"
-     und „wird gespeichert" in der Schriftstufe von „knapp", ein Fehler im
-     Dialog in der von „schlecht". */
-  function pbCss() {
-    return '\
-.dl-pb{display:flex;align-items:center;gap:.5rem;flex-wrap:nowrap;min-height:44px;box-sizing:border-box;padding:.3rem 2rem;overflow:hidden;background:' + C.surface + ';border-bottom:1px solid ' + C.borderLight + ';font:13px/1.4 -apple-system,"Inter",BlinkMacSystemFont,"Segoe UI",sans-serif;color:' + C.text + ';position:relative;z-index:50}\
-.dl-pb-label{font-weight:700;color:' + C.muted + ';font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;margin-right:.2rem}\
-.dl-pb select{font:inherit;font-weight:600;padding:.3rem 1.6rem .3rem .5rem;border:1px solid ' + C.border + ';border-radius:7px;background:' + C.surface2 + ';color:' + C.text + ';width:16rem;max-width:40vw;flex:0 0 auto}\
-.dl-pb-desc{color:' + C.muted + ';max-width:34rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\
-.dl-pb-btn{font:inherit;font-size:12px;font-weight:600;padding:.3rem .6rem;border:1px solid ' + C.border + ';border-radius:7px;background:' + C.surface + ';color:' + C.text + ';cursor:pointer;text-decoration:none;white-space:nowrap}\
-.dl-pb-btn:hover{border-color:' + C.primary + ';color:' + C.primary + '}\
-.dl-pb-btn.primary{background:' + C.primary + ';border-color:' + C.primary + ';color:' + C.surface + '}\
-.dl-pb-btn.primary:hover{background:' + C.primary2 + '}\
-.dl-pb-btn:disabled{opacity:.5;cursor:default}\
-.dl-pb-sp{flex:1}\
-.dl-pb-status{color:' + C.muted + ';font-size:12px;white-space:nowrap}\
-.dl-pb-status.dirty{color:' + C.cautionText + ';font-weight:600}\
-.dl-pb-status.pending{color:' + C.cautionText + '}\
-.dl-pb-user{color:' + C.muted + ';font-size:12px;white-space:nowrap}\
-.dl-pb-user a{color:' + C.primary + ';text-decoration:none;font-weight:600}\
-.dl-pb-dialog{border:0;border-radius:12px;padding:0;max-width:32rem;width:calc(100% - 2rem);box-shadow:0 18px 50px ' + C.rgba('dark', .25) + ';font:14px/1.45 -apple-system,"Inter",BlinkMacSystemFont,"Segoe UI",sans-serif;color:' + C.text + '}\
-.dl-pb-dialog::backdrop{background:' + C.rgba('dark', .45) + '}\
-.dl-pb-dialog form{padding:1.2rem 1.4rem}\
-.dl-pb-dialog h3{margin:0 0 .8rem;font-size:1.05rem}\
-.dl-pb-dialog label{display:block;font-size:12px;font-weight:600;color:' + C.muted + ';margin:.6rem 0 .2rem}\
-.dl-pb-dialog input,.dl-pb-dialog textarea{width:100%;font:inherit;padding:.45rem .6rem;border:1px solid ' + C.border + ';border-radius:7px;box-sizing:border-box}\
-.dl-pb-dialog textarea{min-height:4.5rem;resize:vertical}\
-.dl-pb-row{display:flex;gap:.6rem}.dl-pb-row>*{flex:1}\
-.dl-pb-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem}\
-.dl-pb-err{color:' + C.badText + ';font-size:12px;margin-top:.5rem;min-height:1em}\
-@media (max-width:1100px){.dl-pb-desc{display:none}.dl-pb{padding:.3rem 1rem}}\
-@media (max-width:700px){.dl-pb{flex-wrap:wrap;row-gap:.25rem}.dl-pb-status,.dl-pb-user{white-space:normal}}';
-  }
+  /* Styles: shared/shared.css, Abschnitt „Projektleiste". Der Stand der
+     Synchronisation ist ein Urteil der Ampel: „ungespeichert" und „wird
+     gespeichert" in der Schriftstufe von „knapp", ein Fehler im Dialog in
+     der von „schlecht". */
 
   var syncState = { status: 'idle', at: null, error: null }; // idle | saving | ok | error
   /* Projekte, deren Autosave der Server mit 409 abgelehnt hat: dort liegt ein
@@ -156,20 +120,8 @@
 
   var bar;
 
-  function injectCss() {
-    var style = document.getElementById('dl-pb-styles');
-    if (!style) {
-      style = document.createElement('style');
-      style.id = 'dl-pb-styles';
-      document.head.appendChild(style);
-    }
-    style.textContent = pbCss();
-  }
-
   function mount() {
     seen = sectionSnapshot();
-    injectCss();
-    document.addEventListener('dielogic:scheme', injectCss);
 
     bar = document.createElement('div');
     bar.className = 'dl-pb';
@@ -499,14 +451,13 @@
   }
 
   async function initSession() {
-    try {
-      session = await api('GET', '/api/auth/me');
-      /* Vor jedem Lesen und jedem Push: gehört der lokale Cache diesem Konto?
-         Ein fremder Bestand wird verworfen, statt angezeigt und hochgeladen. */
-      if (session && session.org && P.bindAccount(session.org.id)) { location.reload(); return; }
-    } catch (err) {
+    /* nav.js (immer vor projectbar.js geladen) legt eine gemeinsame Anfrage
+       für /api/auth/me ab — ein Fallback nur zur Sicherheit. Löst nie ab
+       (kein reject), darum kein try/catch mehr nötig. */
+    var r = await (window.__DL_AUTH_ME__ || Promise.resolve({ status: 0, ok: false, me: null }));
+    if (!r.ok) {
       session = null;
-      if (err.status === 401) {
+      if (r.status === 401) {
         /* Abgelaufene oder fremde Sitzung: nichts von diesem Konto bleibt auf
            dem Gerät liegen (dasselbe Muster wie orgpresets.js). */
         P.clearAll();
@@ -517,6 +468,10 @@
       bar.insertAdjacentHTML('beforeend', '<span class="dl-pb-status dirty">Backend nicht erreichbar: Änderungen bleiben nur in diesem Browser.</span>');
       return;
     }
+    session = r.me;
+    /* Vor jedem Lesen und jedem Push: gehört der lokale Cache diesem Konto?
+       Ein fremder Bestand wird verworfen, statt angezeigt und hochgeladen. */
+    if (session && session.org && P.bindAccount(session.org.id)) { location.reload(); return; }
     refresh();
     if (session) {
       /* Erst holen, dann senden. Umgekehrt schiebt schon das bloße Öffnen einer

@@ -224,10 +224,7 @@
     return out;
   }
 
-  function kanaele(hex) {
-    return parseInt(hex.slice(1, 3), 16) + ',' + parseInt(hex.slice(3, 5), 16)
-      + ',' + parseInt(hex.slice(5, 7), 16);
-  }
+  function kanaele(hex) { return P.rgb255(hex).join(','); }
 
   /* Welche Farben es auch als Kanäle gibt (shared.css, :root). */
   var KANAELE = { dark: '--dark-rgb', primary: '--primary-rgb', primaryLight: '--primary-light-rgb',
@@ -287,11 +284,8 @@
 
   function current() { return active; }
 
-  /* Die Fläche hinter dem Körper im 3D-Studio (Rolle `viewport`). */
-  function viewport() { return P.viewport; }
-
-  /* Wer eigene Styles ins Dokument gespritzt hat (nav.js, projectbar.js),
-     baut sie hierauf neu — CSS-Variablen allein erreichen sie nicht. */
+  /* Wer selbst zeichnet (Diagramme, 3D-Studio, hero-guss.js) — CSS-Variablen
+     allein erreichen nur, was CSS liest. */
   function melden() {
     if (typeof document === 'undefined' || typeof CustomEvent !== 'function') return;
     document.dispatchEvent(new CustomEvent('dielogic:scheme', { detail: { id: active } }));
@@ -320,16 +314,13 @@
   apply(active);
 
   var api = {
-    key: KEY,
     list: SCHEMES,
     alias: ALIAS,
     base: BASE,
     default: DEFAULT,
     colors: colors,
     current: current,
-    viewport: viewport,
-    set: set,
-    apply: apply
+    set: set
   };
   root.__SCHEMES__ = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

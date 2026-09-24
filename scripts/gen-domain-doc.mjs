@@ -250,9 +250,10 @@ py.push(']');
 py.push('');
 /* Die Kostensätze der Organisation (Konto-Seite → Teilekosten): die Felder
    der Teilekosten aus shared/felddomaene.js, dazu die Produktionsstunden je
-   Monat, die nur die Konto-Seite führt. Vorher prüfte der Server hier nur,
-   ob es Zahlen sind: 150 % Ausschuss ließen sich als Vorgabe speichern. */
-const KOSTEN = wz.FELDER.teilekosten.concat([{ key: 'hMonth', label: 'Produktionsstunden je Monat', min: 1, max: 744 }]);
+   Monat (wz.H_MONTH), die nur die Konto-Seite führt. Vorher prüfte der
+   Server hier nur, ob es Zahlen sind: 150 % Ausschuss ließen sich als
+   Vorgabe speichern. */
+const KOSTEN = wz.FELDER.teilekosten.concat([wz.H_MONTH]);
 py.push('# Kostensätze der Organisation: key -> (lo_kind, lo, max, label)');
 py.push('KOSTEN: dict[str, tuple[str, float, float, str]] = {');
 for (const f of KOSTEN) {

@@ -5,10 +5,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
+const require = createRequire(import.meta.url);
 const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
+const P = require(path.join(site, 'shared/palette.js'));
 const read = f => readFileSync(path.join(site, f), 'utf8');
 const konto = read('konto/index.html');
 /* Für Prüfungen auf tote Muster: Kommentare zählen nicht — dort stehen sie
@@ -91,13 +94,7 @@ test('Einladungs-Token verschwindet sofort aus der Adresszeile', () => {
 test('.btn-ghost erfüllt den Textkontrast auf hellem UND dunklem Grund', () => {
   const css = readFileSync(path.join(site, 'shared/shared.css'), 'utf8');
   const tok = k => (css.match(new RegExp('--' + k + ':\\s*(#[0-9a-fA-F]{6})')) || [])[1];
-  const lum = hex => {
-    const c = hex.replace('#', '');
-    const v = [0, 2, 4].map(i => parseInt(c.substr(i, 2), 16) / 255)
-      .map(u => (u <= 0.03928 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4)));
-    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
-  };
-  const cr = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+  const cr = P.contrast;
 
   const ondark = tok('ondark'), bg = tok('bg'), text = tok('text'), dark = tok('dark');
   assert.ok(ondark && bg && text && dark, 'Farbtoken nicht gefunden');

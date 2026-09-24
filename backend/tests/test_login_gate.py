@@ -7,18 +7,10 @@ unter /tools/ einen 302 auf /konto/?next=… — kein HTML verlässt ihn."""
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi.testclient import TestClient
-
-from backend.app import SITE_DIR, app, needs_login
+from backend.app import SITE_DIR, needs_login
 
 TOOLS = SITE_DIR / "tools"
 PAGES = sorted("/tools/" + p.relative_to(TOOLS).as_posix() for p in TOOLS.rglob("*.html"))
-
-
-def _client():
-    c = TestClient(app, follow_redirects=False)
-    c.__enter__()   # Startup: Schema + Demo-Konto (DIELOGIC_DEMO_PASSWORD aus conftest)
-    return c
 
 
 def _redirects_to_login(r, target):
@@ -41,9 +33,9 @@ def test_needs_login_meint_nur_die_seiten_unter_tools():
         assert not needs_login(path), path
 
 
-def test_jede_werkzeugseite_wird_ohne_sitzung_zur_anmeldung_geschickt():
+def test_jede_werkzeugseite_wird_ohne_sitzung_zur_anmeldung_geschickt(client_no_redirect):
     assert len(PAGES) >= 13, PAGES   # Dashboard (2), Sprengfläche, Teilekosten, Zyklus, 3D-Studio (14)
-    c = _client()
+    c = client_no_redirect
     for url in PAGES:
         _redirects_to_login(c.get(url), url)
         if url.endswith("/index.html"):
@@ -52,22 +44,22 @@ def test_jede_werkzeugseite_wird_ohne_sitzung_zur_anmeldung_geschickt():
     _redirects_to_login(c.head("/tools/auslegung/"), "/tools/auslegung/")
 
 
-def test_umleitung_nimmt_die_suchparameter_mit():
-    c = _client()
+def test_umleitung_nimmt_die_suchparameter_mit(client_no_redirect):
+    c = client_no_redirect
     _redirects_to_login(c.get("/tools/auslegung/chart.html?id=pq2&x=1"), "/tools/auslegung/chart.html?id=pq2&x=1")
     _redirects_to_login(c.get("/tools/3d-studio/anguss.html?demo=zwei"), "/tools/3d-studio/anguss.html?demo=zwei")
 
 
-def test_umleitung_traegt_dieselben_koepfe_wie_jede_seite():
-    r = _client().get("/tools/auslegung/")
+def test_umleitung_traegt_dieselben_koepfe_wie_jede_seite(client_no_redirect):
+    r = client_no_redirect.get("/tools/auslegung/")
     assert r.status_code == 302
     assert r.headers["cache-control"] == "no-cache"
     assert "default-src 'self'" in r.headers.get("content-security-policy", "")
     assert r.headers.get("x-frame-options") == "DENY"
 
 
-def test_alles_andere_bleibt_offen():
-    c = _client()
+def test_alles_andere_bleibt_offen(client_no_redirect):
+    c = client_no_redirect
     for url in ("/", "/konto/", "/theorie/pq2.html", "/recht/impressum.html", "/recht/datenschutz.html"):
         assert c.get(url).status_code == 200, url
     # Module unter /tools/…/js/ brauchen die Konto- und die Theorieseite — ohne Anmeldung.
@@ -77,8 +69,8 @@ def test_alles_andere_bleibt_offen():
         assert "<html" not in r.text[:200].lower(), url
 
 
-def test_mit_sitzung_kommen_die_seiten_und_nach_dem_abmelden_nicht_mehr():
-    c = _client()
+def test_mit_sitzung_kommen_die_seiten_und_nach_dem_abmelden_nicht_mehr(client_no_redirect):
+    c = client_no_redirect
     assert c.post("/api/auth/demo/login").status_code == 200
     for url in ("/tools/auslegung/", "/tools/auslegung/chart.html?id=pq2", "/tools/sprengflaeche/",
                 "/tools/teilekosten/", "/tools/zyklus/", "/tools/3d-studio/", "/tools/3d-studio/anguss.html"):

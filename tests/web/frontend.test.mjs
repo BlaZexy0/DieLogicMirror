@@ -22,7 +22,7 @@ import path from 'node:path';
 const require = createRequire(import.meta.url);
 const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web');
 
-const { parseSTL, meshVolume, meshArea, meshBounds } = require(path.join(site, 'tools/sprengflaeche/stl-math.js'));
+const { parseSTL, meshVolume, meshArea, meshBounds } = await import(pathToFileURL(path.join(site, 'tools/sprengflaeche/stl-math.js')));
 const logic = require(path.join(site, 'tools/sprengflaeche/stl-logic.js'));
 const kosten = require(path.join(site, 'tools/teilekosten/teilekosten-logic.js'));
 const zyklus = require(path.join(site, 'tools/zyklus/zyklus-logic.js'));
@@ -271,6 +271,24 @@ test('state: applyData verwirft ungültige Kurvenpunkte statt NaN zu übernehmen
 
 /* ── Navigation (web/shared/nav.js) ────────────────────────────────── */
 
+/* GET /api/auth/me lief bis zu dreimal je Seite (nav.js, orgpresets.js,
+   projectbar.js), auf /konto/ zweimal (nav.js, die Seite selbst). Jetzt
+   fragt nur noch nav.js wirklich; die anderen lesen window.__DL_AUTH_ME__
+   (von nav.js abgelegt, noch vor DOMContentLoaded — nav.js lädt auf jeder
+   Seite zuerst). */
+test('GET /api/auth/me: nur nav.js fragt wirklich, die anderen teilen sich die eine Antwort', () => {
+  const nav = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
+  assert.match(nav, /window\.__DL_AUTH_ME__ = fetchAuthMe\(\)/, 'nav.js legt die gemeinsame Anfrage nicht ab');
+  for (const [datei, quelle] of [
+    ['shared/orgpresets.js', readFileSync(path.join(site, 'shared/orgpresets.js'), 'utf8')],
+    ['shared/projectbar.js', readFileSync(path.join(site, 'shared/projectbar.js'), 'utf8')],
+    ['konto/index.html', readFileSync(path.join(site, 'konto/index.html'), 'utf8')],
+  ]) {
+    assert.doesNotMatch(quelle, /fetch\(['"]\/api\/auth\/me['"]/, `${datei}: fragt noch selbst`);
+    assert.match(quelle, /__DL_AUTH_ME__/, `${datei}: liest die gemeinsame Antwort nicht`);
+  }
+});
+
 test('nav: CHARTS-Liste entspricht der Registry (Ids, Titel, Reihenfolge)', () => {
   const src = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
   const m = src.match(/const CHARTS = \[([\s\S]*?)\n {2}\];/);
@@ -317,16 +335,92 @@ test('nav: Auslegung und 3D-Studio sind Spaltenmenüs — Werkzeuge · Diagramme
 
 test('nav: schmale Leiste klappt zum Burger-Menü statt horizontal zu scrollen', () => {
   const src = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
-  assert.ok(!/\.dl-nav\s*\{[^}]*overflow-x:\s*auto/.test(src),
+  /* Die Regeln selbst liegen in shared.css (nav.js baut nur noch Markup). */
+  const css = readFileSync(path.join(site, 'shared/shared.css'), 'utf8');
+  assert.ok(!/\.dl-nav\s*\{[^}]*overflow-x:\s*auto/.test(css),
     'die Leiste darf nicht wieder horizontal scrollen — das versteckt „Anmelden"');
   assert.match(src, /class="dl-nav-burger"[\s\S]*?aria-controls="dl-nav-links"/,
     'Burger-Knopf fehlt oder zeigt nicht auf die Linkliste');
   assert.match(src, /<ul class="dl-nav-links" id="dl-nav-links">/,
     'die Linkliste braucht die id, auf die aria-controls zeigt');
   for (const cls of ['dl-nav--compact', 'dl-nav--open', 'dl-nav--measuring']) {
-    assert.ok(src.includes('.' + cls), `CSS-Regel für .${cls} fehlt`);
+    assert.ok(css.includes('.' + cls), `CSS-Regel für .${cls} fehlt`);
     assert.ok(src.includes("'" + cls + "'"), `nav.js schaltet ${cls} nicht`);
   }
+});
+
+/* Der Diagramm-Katalog der Startseite (index.html) ist eine zweite,
+   handgepflegte Liste neben CHARTS in nav.js — ungeschützt lief sie schon
+   einmal auseinander (andere Reihenfolge, 3 andere Titel). Der Test hält
+   nur die Ids als Menge gegen die Registry fest (Katalog zeigt jedes
+   Diagramm genau einmal); Reihenfolge und die eigenen, kürzeren
+   Kartentitel sind Layout der Startseite und bleiben ihr. */
+test('Landingpage: der Diagramm-Katalog zeigt jedes Diagramm der Registry genau einmal', () => {
+  const idx = readFileSync(path.join(site, 'index.html'), 'utf8');
+  const ids = [...idx.matchAll(/class="catalog-card" href="\/tools\/auslegung\/chart\.html\?id=([a-z0-9]+)"/g)]
+    .map(m => m[1]);
+  assert.deepEqual([...ids].sort(), charts.map(c => c.id).sort(),
+    'Katalog-Ids müssen genau die Ids der Registry sein, keine fehlt, keine zusätzliche');
+  assert.equal(new Set(ids).size, ids.length, 'keine Id steht doppelt im Katalog');
+});
+
+/* Die Zahl der Diagramme steht als Text an mehreren Stellen (Startseite,
+   Über-uns, der generierte Domänen-Report) — dort darf sie stehen bleiben
+   (kein Ort kann sie zur Laufzeit herleiten), aber dieser Test hält sie
+   gegen die Registry fest, statt sie unbemerkt auseinanderlaufen zu lassen. */
+test('die Zahl der Diagramme (19) stimmt überall mit der Registry überein', () => {
+  const n = String(charts.length);
+  const idx = readFileSync(path.join(site, 'index.html'), 'utf8');
+  for (const re of [
+    new RegExp('mit\\s*\\n\\s*' + n + ' gekoppelten Diagrammen'),
+    new RegExp('<strong>' + n + '</strong>gekoppelte Diagramme'),
+    new RegExp('alle ' + n + ' Diagramme\\b'),
+    new RegExp('<span class="tool-tag">' + n + ' Diagramme</span>'),
+    new RegExp('<h2 class="section-title">Alle ' + n + ' Diagramme</h2>'),
+    new RegExp('Dashboard mit allen ' + n + ' Diagrammen'),
+  ]) assert.match(idx, re, 'index.html: ' + re);
+
+  const ueberUns = readFileSync(path.join(site, 'recht/ueber-uns.html'), 'utf8');
+  assert.match(ueberUns, new RegExp('alle ' + n + ' Diagramme\\b'), 'recht/ueber-uns.html');
+
+  const genDomainDoc = readFileSync(path.join(site, '..', 'scripts/gen-domain-doc.mjs'), 'utf8');
+  assert.match(genDomainDoc, new RegExp('die Guards in allen ' + n + ' Diagrammen'), 'scripts/gen-domain-doc.mjs');
+});
+
+/* ── Kopf-Baustein aller Seiten (Meta, Manifest, KaTeX) ────────────────
+   Eine Reihe von Kopfzeilen wird je Seite kopiert — leicht, dass eine
+   Seite hinter den anderen zurückbleibt (Konto und alle sechs
+   Theorie-Seiten hatten kein Manifest, Konto kein theme-color, drei
+   Varianten des KaTeX-Aufrufs, davon eine ganz ohne errorColor). Deckt
+   web/*.html, konto, recht, theorie und die drei kleinen Werkzeuge ab —
+   Auslegung und 3D-Studio liegen bei den Agenten, die dort arbeiten. */
+const KOPF_SEITEN = [
+  'index.html', 'konto/index.html',
+  'recht/impressum.html', 'recht/datenschutz.html', 'recht/agb.html', 'recht/widerruf.html',
+  'recht/ueber-uns.html', 'recht/kontakt.html',
+  'theorie/pq2.html', 'theorie/kritische-geschwindigkeit.html', 'theorie/kreissegmente.html',
+  'theorie/nebenbedingungen.html', 'theorie/entlueftung-vakuum.html', 'theorie/zuhaltung-sprengflaeche.html',
+  'tools/sprengflaeche/index.html', 'tools/teilekosten/index.html', 'tools/zyklus/index.html'
+];
+
+test('jede Seite (außer Auslegung/3D-Studio) hat denselben Kopf-Baustein: theme-color, Manifest', () => {
+  for (const p of KOPF_SEITEN) {
+    const html = readFileSync(path.join(site, p), 'utf8');
+    assert.match(html, /<meta name="theme-color" content="#002733">/, p + ': theme-color fehlt oder weicht vom Standardschema ab');
+    assert.match(html, /<link rel="manifest" href="\/assets\/site\.webmanifest">/, p + ': Manifest fehlt');
+  }
+});
+
+test('KaTeX-Seiten laden /shared/katex-init.js, kein onload= mehr am Script-Tag', () => {
+  let geprüft = 0;
+  for (const p of KOPF_SEITEN) {
+    const html = readFileSync(path.join(site, p), 'utf8');
+    if (!html.includes('vendor/katex/auto-render.min.js')) continue;
+    assert.doesNotMatch(html, /onload\s*=\s*"\s*renderMathInElement/, p + ': KaTeX-Aufruf gehört nach shared/katex-init.js');
+    assert.match(html, /<script defer src="\/shared\/katex-init\.js"><\/script>/, p + ': lädt katex-init.js nicht');
+    geprüft++;
+  }
+  assert.equal(geprüft, 7, 'sieben Seiten binden KaTeX ein');
 });
 
 function loadAsset(name) {

@@ -91,15 +91,7 @@ test('theme.js hat keinen ui-Block mehr (UI-Farben = palette.js)', () => {
 });
 
 /* ── Kontrast (WCAG 2.x) ── */
-function lum(hex) {
-  const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
-    .map(x => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-}
-export function contrast(a, b) {
-  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
-}
+const contrast = P.contrast;
 
 test('Kontrast: Textfarben auf Weiß ≥ 4.5:1 (primary ≥ 4 für große/fette Schrift)', () => {
   const onWhite = ['dark', 'dark2', 'dark3', 'primary2', 'primaryDeep', 'textBody', 'muted', 'okText', 'cautionText', 'badText', 'mark'];

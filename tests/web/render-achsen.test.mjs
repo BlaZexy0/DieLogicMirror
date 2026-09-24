@@ -57,16 +57,7 @@ test('Null-Spanne in der Heatmap (Ø min = Ø max) liefert keine NaN-Koordinaten
 
 /* ── H-19 ─────────────────────────────────────────────────────────────── */
 
-function contrast(a, b) {
-  const lum = hex => {
-    const c = String(hex).replace('#', '');
-    const v = [0, 2, 4].map(i => parseInt(c.substr(i, 2), 16) / 255)
-      .map(u => (u <= 0.03928 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4)));
-    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
-  };
-  const l1 = lum(a), l2 = lum(b);
-  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-}
+const contrast = globalThis.__PALETTE__.contrast;
 
 test('Beschriftung der rechten Achse erfüllt den WCAG-Textkontrast', () => {
   const C = theme.chart;

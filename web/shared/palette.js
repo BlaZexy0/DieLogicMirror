@@ -143,10 +143,40 @@
     return hex(rgbAus([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t]));
   }
 
+  /** [r,g,b] 0…255 (ganzzahlig) — aus einem Schlüssel oder Hexwert. */
+  function rgb255(x) {
+    var c = hexRgb(wert(x));
+    return [Math.round(c[0] * 255), Math.round(c[1] * 255), Math.round(c[2] * 255)];
+  }
+
   /** Mit Deckkraft als rgba(r,g,b,a) — aus einem Schlüssel oder Hexwert. */
   function rgba(x, a) {
-    var c = hexRgb(wert(x));
-    return 'rgba(' + Math.round(c[0] * 255) + ',' + Math.round(c[1] * 255) + ',' + Math.round(c[2] * 255) + ',' + a + ')';
+    var c = rgb255(x);
+    return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
+  }
+
+  /* ── Kontrast (WCAG) ──────────────────────────────────────────
+     Eigene, flachere Kennlinie als lin() oben: der WCAG-2.x-Standard
+     rechnet mit der Schwelle 0,03928 (ein historischer Rundungswert),
+     lin() mit der genaueren 0,04045 der eigentlichen sRGB-Kennlinie, die
+     für die Mischung im OK-Lab-Raum richtig ist. Zwei Zwecke, zwei
+     Konstanten — nicht zusammenlegen. */
+  function luminance(x) {
+    var c = hexRgb(wert(x)).map(function (v) { return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  /** Kontrastverhältnis nach WCAG 2.x, immer ≥ 1. a, b: Schlüssel oder Hex. */
+  function contrast(a, b) {
+    var la = luminance(a), lb = luminance(b);
+    var hi = Math.max(la, lb), lo = Math.min(la, lb);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  /** Abstand im OK-Lab-Raum ×100 (ΔE_ok): gleich große Zahlen sehen gleich
+      verschieden aus. a, b: Hexwerte (wie oklab()). */
+  function deltaE(a, b) {
+    var p = oklab(a), q = oklab(b);
+    return 100 * Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
   }
 
   /* ── Farbleisten ─────────────────────────────────────────────
@@ -229,7 +259,12 @@
   }
 
   api.hexRgb = hexRgb;
+  api.rgb255 = rgb255;
+  api.oklab = oklab;
   api.mix = mix;
+  api.luminance = luminance;
+  api.contrast = contrast;
+  api.deltaE = deltaE;
   api.rgba = rgba;
   api.leisten = LEISTEN;
   api.scale = scale;

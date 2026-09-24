@@ -55,13 +55,12 @@
      Strang gemischt wird; gelesen beim Start und bei jedem Schemawechsel. */
   const P = window.__PALETTE__;
   if (!P) return;
-  const kanaele = h => P.hexRgb(h).map(v => Math.round(v * 255));
   let GIESS, LIQ, SOL, FEST;
   function farbenLesen() {
-    GIESS = kanaele(P.mix('melt', '#ffffff', 0.55));
-    LIQ = kanaele(P.melt);
-    SOL = kanaele(P.mix('melt', 'dark', 0.35));
-    FEST = kanaele(P.mix('melt', 'ondark', 0.5));
+    GIESS = P.rgb255(P.mix('melt', '#ffffff', 0.55));
+    LIQ = P.rgb255(P.melt);
+    SOL = P.rgb255(P.mix('melt', 'dark', 0.35));
+    FEST = P.rgb255(P.mix('melt', 'ondark', 0.5));
   }
   farbenLesen();
 

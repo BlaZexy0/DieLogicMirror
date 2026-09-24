@@ -48,14 +48,11 @@ for (const line of src.split('\n')) {
 }
 const familien = groups.filter(g => g.keys.length);
 
-function lum(hex) {
-  const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
-    .map(x => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-}
-const contrast = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+const lum = P.luminance, contrast = P.contrast, cssName = P.cssName;
+/* Kein shared/util.js esc(): das SVG hier ist Textinhalt, kein Attribut —
+   ' und " brauchen kein Escaping, und ein zusätzliches &#39; im
+   generierten SVG wäre nur unnötiges Rauschen im Diff. */
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-const cssName = k => '--' + k.replace(/[A-Z]/g, c => '-' + c.toLowerCase());
 const zahl = x => x.toFixed(1).replace('.', ',');
 
 const COLS = 4, CW = 300, CH = 118, SQ = 56, PAD = 28, HEAD = 78, GAP = 34;

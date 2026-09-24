@@ -499,7 +499,7 @@
   }
 
   var api = {
-    STORE_KEY: STORE_KEY, SECTIONS: SECTIONS, EVENT: EVENT, SCHEMA: SCHEMA,
+    STORE_KEY: STORE_KEY, EVENT: EVENT,
     init: init, list: list, current: current, get: get, select: select,
     create: create, update: update, duplicate: duplicate, remove: remove, put: put, markSaved: markSaved,
     bindAccount: bindAccount, clearAll: clearAll, storageOk: storageOk,

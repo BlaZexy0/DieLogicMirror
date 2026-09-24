@@ -19,8 +19,8 @@
     .hero {
       min-height: 82vh;
       background:
-        radial-gradient(1100px 520px at 50% 115%, rgba(var(--primary-light-rgb), .22), transparent 60%),
-        radial-gradient(700px 400px at 90% -10%, rgba(var(--primary-rgb), .25), transparent 60%),
+        radial-gradient(1100px 520px at 50% 115%, color-mix(in srgb, var(--primary-light) 22%, transparent), transparent 60%),
+        radial-gradient(700px 400px at 90% -10%, color-mix(in srgb, var(--primary) 25%, transparent), transparent 60%),
         linear-gradient(135deg, var(--dark) 0%, var(--dark2) 55%, var(--primary-deep) 100%);
       display: flex;
       flex-direction: column;
@@ -37,8 +37,8 @@
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
-      background: rgba(var(--primary-rgb), .15);
-      border: 1px solid rgba(var(--primary-rgb), .5);
+      background: color-mix(in srgb, var(--primary) 15%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent);
       color: var(--primary-light);
       font-size: 0.78rem;
       font-weight: 600;
@@ -141,7 +141,7 @@
     .tools-section {
       padding: 6rem 2rem;
       background:
-        radial-gradient(900px 500px at 10% 0%, rgba(var(--primary-rgb), .18), transparent 60%),
+        radial-gradient(900px 500px at 10% 0%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 60%),
         var(--dark);
     }
     .tools-inner { max-width: 1100px; margin: 0 auto; }
@@ -161,13 +161,13 @@
     .tool-card:hover {
       transform: translateY(-3px);
       background: rgba(255,255,255,.06);
-      border-color: rgba(var(--primary-light-rgb), .45);
+      border-color: color-mix(in srgb, var(--primary-light) 45%, transparent);
       box-shadow: 0 20px 40px -18px rgba(0,0,0,.6);
     }
     .tool-card.featured {
       grid-column: span 3;
-      border-color: rgba(var(--primary-light-rgb), .55);
-      background: linear-gradient(135deg, rgba(var(--primary-rgb), .16), rgba(255,255,255,.03) 60%);
+      border-color: color-mix(in srgb, var(--primary-light) 55%, transparent);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 16%, transparent), rgba(255,255,255,.03) 60%);
     }
     /* Die Kachel trägt die Kennfarbe des Werkzeugs (--kenn am Element): die
        Marke für das Dashboard, sonst eine Sachfarbe (Maschine, Luft,
@@ -193,9 +193,9 @@
     .badge-live {
       font-size: 0.65rem;
       font-weight: 700;
-      background: rgba(var(--primary-rgb), .15);
+      background: color-mix(in srgb, var(--primary) 15%, transparent);
       color: var(--primary-light);
-      border: 1px solid rgba(var(--primary-rgb), .5);
+      border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent);
       padding: 0.1rem 0.45rem;
       border-radius: 10px;
       letter-spacing: 0.05em;
@@ -278,7 +278,7 @@
     .pricing-section {
       padding: 6rem 2rem;
       background:
-        radial-gradient(800px 400px at 50% 100%, rgba(var(--primary-rgb), .2), transparent 60%),
+        radial-gradient(800px 400px at 50% 100%, color-mix(in srgb, var(--primary) 20%, transparent), transparent 60%),
         var(--dark);
     }
     .pricing-inner { max-width: 1000px; margin: 0 auto; }
@@ -294,9 +294,9 @@
       position: relative;
     }
     .pricing-card.featured {
-      border-color: rgba(var(--primary-light-rgb), .6);
-      background: linear-gradient(160deg, rgba(var(--primary-rgb), .2), rgba(255,255,255,.04) 65%);
-      box-shadow: 0 30px 60px -30px rgba(var(--primary-rgb), .6);
+      border-color: color-mix(in srgb, var(--primary-light) 60%, transparent);
+      background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 20%, transparent), rgba(255,255,255,.04) 65%);
+      box-shadow: 0 30px 60px -30px color-mix(in srgb, var(--primary) 60%, transparent);
       transform: scale(1.03);
     }
     .most-popular {
@@ -350,7 +350,6 @@
     }
     @media (max-width: 768px) {
       .steps-grid { grid-template-columns: 1fr; }
-      .step:not(:last-child)::after { display: none; }
       .tools-grid { grid-template-columns: 1fr; }
       .tool-card.featured { grid-column: span 1; }
       .theory-grid { grid-template-columns: 1fr; }
@@ -739,7 +738,7 @@
         <p>Maschinenlinie, Werkzeuglinie und Hüllkurve, das machbare Band mit seinen vier
           Grenzen (Entlüftung, Erstarrung, Zerstäubung, Erosion) und der Spielraum für den
           Anschnitt, mit den Original-Diagrammen aus dem Dashboard.</p>
-        <a href="theorie/pq2.html" class="link-primary">Lesen →</a>
+        <a href="/theorie/pq2.html" class="link-primary">Lesen →</a>
       </div>
       <div class="theory-card" style="border-top-color:var(--melt);">
         <h4>Kritische Kolbengeschwindigkeit</h4>

@@ -72,8 +72,13 @@
   apply(cached, window);
 
   if (location.protocol === 'file:' || typeof fetch !== 'function') return;
-  fetch('/api/auth/me', { credentials: 'same-origin' })
+  /* nav.js (immer vor orgpresets.js geladen) legt eine gemeinsame Anfrage
+     für /api/auth/me ab — sonst fragen beide Skripte denselben Pfad einzeln.
+     Ein Fallback nur zur Sicherheit, falls diese Seite nav.js einmal nicht
+     lädt. */
+  (root.__DL_AUTH_ME__ || Promise.resolve({ status: 0, ok: false, me: null }))
     .then(function (r) {
+      if (r.status === 0) throw new Error('kein Netz/Backend');   // derselbe Pfad wie ein gescheiterter fetch unten (catch)
       if (!r.ok) {
         /* Nicht angemeldet: Cache einer früheren Sitzung verwerfen */
         if (r.status === 401 && cached) { try { localStorage.removeItem(CACHE_KEY); } catch (e) {} }

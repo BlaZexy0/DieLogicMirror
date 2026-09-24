@@ -2,7 +2,12 @@
    Seiten-Code der STL-Analyse: Dateien laden, Projektion zeichnen, Tabellen
    rendern, Ereignisse. Rechenlogik liegt in stl-math.js (Netz-Kennwerte),
    stl-logic.js (Zuordnung/Maschinentabelle), shared/clampmodel.js und
-   stl-logic.js (handoffValues) — dieses Script ist reine Ansicht und Verdrahtung. */
+   stl-logic.js (handoffValues) — dieses Script ist reine Ansicht und Verdrahtung.
+   ES-Modul wegen des Imports aus stl-math.js (<script type="module">);
+   stl-logic.js, clampmodel.js & Co. bleiben klassische Scripts und stehen
+   wie zuvor auf window.__STL_LOGIC__ / window.__CLAMP_MODEL__ / … bereit. */
+import { parseSTL, meshVolume, meshArea } from './stl-math.js';
+
 (function () {
   'use strict';
 
@@ -268,9 +273,8 @@
     return v.toLocaleString('de-DE', opts);
   }
 
-  function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
+  /* shared/util.js, vor diesem Script geladen. */
+  const escapeHtml = window.__DL_UTIL__.esc;
 
   /* Rechenkerne: Netz-Kennwerte aus stl-math.js, Zuordnung/Maschinentabelle
      aus stl-logic.js, Zuhaltung aus shared/clampmodel.js, Übernahme (ins Projekt) aus

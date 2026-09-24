@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .db import AuthSession, Invite, Org, User, get_db, iso, now
+from .db import AuthSession, Invite, Org, User, aware, get_db, iso, now
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -102,10 +102,7 @@ def optional_user(request: Request, db: Session = Depends(get_db)) -> User | Non
     sess = db.scalar(select(AuthSession).where(AuthSession.token == token))
     if not sess:
         return None
-    expires = sess.expires_at
-    if expires.tzinfo is None:  # SQLite liefert naive Zeitstempel zurück
-        from datetime import timezone
-        expires = expires.replace(tzinfo=timezone.utc)
+    expires = aware(sess.expires_at)  # SQLite liefert naive Zeitstempel zurück
     if expires < now():
         db.delete(sess)
         db.commit()
@@ -165,10 +162,7 @@ def _valid_invite(db: Session, token: str) -> Invite:
         raise HTTPException(status_code=404, detail="Einladung unbekannt oder bereits eingelöst.")
     expires = inv.expires_at
     if expires is not None:
-        if expires.tzinfo is None:
-            from datetime import timezone
-            expires = expires.replace(tzinfo=timezone.utc)
-        if expires < now():
+        if aware(expires) < now():
             raise HTTPException(status_code=410, detail="Einladung abgelaufen — bitte neu einladen lassen.")
     return inv
 

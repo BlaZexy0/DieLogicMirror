@@ -52,7 +52,9 @@ class RevisionIn(BaseModel):
 class DraftIn(BaseModel):
     data: dict
     # Optimistische Sperre: der Draft-Stempel, auf dem der Client arbeitet.
-    # None = kein Anspruch (älterer Client, erster Push).
+    # None = kein Anspruch: beim allerersten Push eines Projekts (noch kein
+    # draftAt bekannt) — ein normaler, laufend genutzter Pfad, nicht nur
+    # ein Fall für ältere Clients (shared/projectbar.js: push()).
     base_draft_at: str | None = None
 
 
