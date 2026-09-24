@@ -6,17 +6,16 @@
    Anschnitte setzen, rechnen, das Ergebnis lesen. */
 
 import { numberRow, sliderRow, segRow, kpiBlock, factsBlock, detailsBlock, warnLine, heading, hintLine } from '../studio/rows.js';
+import { fmtPlain } from '../studio/format.js';
 import { DEFAULTS, ALPHA_RANGE } from './model.js';
-
-const de = v => String(v).replace('.', ',');
 
 export const MODES = [
   {
     id: 'anschnitte', label: 'Anschnitte',
     hint: 'Oben im Bild „Anschnitt setzen", dann aufs Bauteil klicken. Hier steht, was gesetzt ist; ein Klick wählt es.',
     html: heading('Vorgaben für neue Anschnitte')
-      + numberRow({ ui: 'def-w', label: 'Breite', unit: 'mm', value: de(DEFAULTS.w), help: 'vorgaben' })
-      + numberRow({ ui: 'def-h', label: 'Höhe', unit: 'mm', value: de(DEFAULTS.h) })
+      + numberRow({ ui: 'def-w', label: 'Breite', unit: 'mm', value: fmtPlain(DEFAULTS.w), help: 'vorgaben' })
+      + numberRow({ ui: 'def-h', label: 'Höhe', unit: 'mm', value: fmtPlain(DEFAULTS.h) })
       /* Wie viele gesetzt sind, steht hier — nicht als Zahl am Reiter: vier
          Reiter mit Zahl passen in Firefox nicht mehr in eine 320 px breite
          Seitenleiste, und „Ergebnis" stünde allein in einer zweiten Zeile. */
@@ -46,15 +45,16 @@ export const MODES = [
   }
 ];
 
-/* Das Auswahlfeld des gewählten Anschnitts: drei Gruppen als Reiter — es
-   steht immer nur eine da, so bleibt das Feld kurz genug, um nie zu scrollen.
+/* Das Auswahlfeld des gewählten Anschnitts: drei Gruppen als Reiter
+   (js/studio/rows.js, groupTabs) — es steht immer nur eine da, so bleibt
+   das Feld kurz genug, um nie zu scrollen.
    „füllt … %" und „Entfernen" stehen darunter, gleich welche Gruppe offen ist.
    Der Anteil sieht aus wie jede Zahlenzeile, wird aber vom Werkzeug selbst
    gelesen: ein LEERES Feld ist hier eine Angabe („aus der Fläche"), keine
    Fehleingabe — was dann gilt, steht als Platzhalter im Feld („auto 63"). */
 export const GROUPS = ['Maße', 'Lage', 'Details'];
-/* Die Reiter selbst setzt das Werkzeug ein, sobald es eine Auswahl gibt — wie
-   beim Überlaufdesigner: ohne Auswahl trägt die Seite nur die Reiter der Modi. */
+/* Die Reiter selbst setzt das Werkzeug ein, sobald es eine Auswahl gibt: ohne
+   Auswahl trägt die Seite nur die Reiter der Modi. */
 export const INSPECTOR = '<div class="st-grouptabs" role="tablist" data-ui="sel-groups" aria-label="Anschnitt"></div>'
   + '<div data-ui="sel-params">'
   + '<div data-group="Maße">'

@@ -1,7 +1,9 @@
 /* Griffe im Viewport — auswählen, ziehen, zielen. Gemeinsam für alle
-   Werkzeuge, die Punkte auf oder an einem Bauteil setzen: der
-   Angussdesigner (Knoten des Angussgraphen) und der Überlaufdesigner
-   (Überläufe und Entlüftungen).
+   Werkzeuge, die Punkte auf oder an einem Bauteil setzen: den
+   Angussdesigner (Knoten des Angussgraphen), den Überlaufdesigner
+   (Überläufe und Entlüftungen), den Temperierkanal-Designer (Kühlstiche
+   und Kanäle) und die Füllabschätzung (Anschnitte). Dazu createPlacer:
+   der Zielmodus mit seinem Hinweis im Bild, wie ihn alle vier führen.
 
    Was ein Griff IST, weiß dieses Modul nicht. Es bekommt eine Liste von
    Dingen mit Ort, Farbe und wahlweise einer Richtung, und ein paar
@@ -34,15 +36,22 @@
 
 import * as T from 'three';
 import { onScheme, axisColors, VIEW } from './part/colors.js';
+import { perPixel, rayAt } from './viewmath.js';
 
 const HANDLE_PX = 9;
 
-/** Ring um den gewählten Griff — dunkel, weil Weiß auf dem hellen
-    Viewport unsichtbar ist und die Artfarbe erhalten bleiben soll. Er ist
-    die Tinte des Farbschemas (js/part/colors.js, VIEW), die Arbeitsebene
-    und der angefahrene Pfeil sind seine Marke. Alles hier folgt einem
-    Wechsel (dielogic:scheme): auch die Griffe, deren Farben die Werkzeuge
-    bei jedem Abgleich neu nennen. */
+/* Der Ring um den gewählten Griff ist dunkel, weil Weiß auf dem hellen
+   Viewport unsichtbar ist und die Artfarbe erhalten bleiben soll: die Tinte
+   des Farbschemas (js/part/colors.js, VIEW.selected — auch in den Legenden
+   der Werkzeuge, js/studio/rows.js, selectedRow), die Arbeitsebene und der
+   angefahrene Pfeil sind seine Marke. Alles hier folgt einem Wechsel
+   (dielogic:scheme): auch die Griffe, deren Farben die Werkzeuge bei jedem
+   Abgleich neu nennen. */
+
+/** Nur noch für die Werkbank (js/werkbank/), bis sie auf die Bausteine der
+    Werkzeuge umzieht: die Farbe des Rings als Variable, die ein Wechsel des
+    Schemas nachzieht. Die Werkzeuge lesen VIEW.selected beim Malen — so
+    hängt nichts daran, wer bei einem Wechsel zuerst hinhört. */
 export let SELECTED_RING = VIEW.selected;
 onScheme(() => { SELECTED_RING = VIEW.selected; });
 
@@ -68,13 +77,12 @@ const ZAXIS = new T.Vector3(0, 0, 1);
  * @param opts.onSelect    id | null
  * @param opts.onChange    ('drag' | 'drop' | 'cancel', id) — 'cancel': Esc hat den Zug
  *                         abgebrochen (cancelDrag), das Werkzeug kehrt zum Stand davor zurück
- * @param opts.onHover     id | null
  * @param opts.onAim       id — der Pfeil wurde angeklickt
  * @param opts.aimPicksHandles  im Zielmodus wählt ein Klick auf einen Griff diesen
  *                         (und beendet das Zielen), statt die Stelle dahinter zu nehmen
  */
 export function createHandles(opts) {
-  const { view, items, plane, move, getRefMesh, onSelect, onChange, onHover, onAim } = opts;
+  const { view, items, plane, move, getRefMesh, onSelect, onChange, onAim } = opts;
   const redraw = () => { if (view.invalidate) view.invalidate(); };
   const dom = view.renderer.domElement;
   const group = new T.Group();
@@ -99,7 +107,7 @@ export function createHandles(opts) {
   /* Ring um die Auswahl: eine flache Scheibe, immer zur Kamera gedreht,
      ebenfalls zweimal gezeichnet. */
   const ringGeo = new T.RingGeometry(1.35, 1.85, 32);
-  const ringMats = [ghost(SELECTED_RING, 0.4), solid(SELECTED_RING)];
+  const ringMats = [ghost(VIEW.selected, 0.4), solid(VIEW.selected)];
   for (const m of ringMats) m.side = T.DoubleSide;
   const rings = ringMats.map((m, i) => {
     const r = new T.Mesh(ringGeo, m);
@@ -171,18 +179,12 @@ export function createHandles(opts) {
   const handles = new Map();
   const arrows = new Map();
   const ray = new T.Raycaster();
-  const ndc = new T.Vector2();
   const state = {
     selected: null, hover: null, drag: null, enabled: true,
     aim: null, aimDown: null, aimMove: null, aimRaf: 0, aimPickMs: 0
   };
 
-  const pixelSize = camera => {
-    const h = Math.max(dom.clientHeight, 1);
-    if (camera.isOrthographicCamera) return (camera.top - camera.bottom) / camera.zoom / h * HANDLE_PX;
-    const d = camera.position.distanceTo(view.controls.target);
-    return 2 * d * Math.tan(camera.fov * Math.PI / 360) / h * HANDLE_PX;
-  };
+  const pixelSize = camera => perPixel(camera, camera.position.distanceTo(view.controls.target), dom.clientHeight) * HANDLE_PX;
 
   /* ── Griffe abgleichen ─────────────────────────────────────── */
   function ensureArrow(id, color) {
@@ -289,11 +291,7 @@ export function createHandles(opts) {
   }
 
   /* ── Zeigen ────────────────────────────────────────────────── */
-  function castFrom(ev) {
-    const r = dom.getBoundingClientRect();
-    ndc.set((ev.clientX - r.left) / r.width * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
-    ray.setFromCamera(ndc, view.camera);
-  }
+  const castFrom = ev => rayAt(ray, ev, dom, view.camera);
 
   /* Was unter dem Zeiger liegt: { id } für eine Kugel, { id, arrow } für
      einen Pfeil — das Nächste gewinnt. */
@@ -594,7 +592,6 @@ export function createHandles(opts) {
       heatArrow(hit && hit.arrow ? hit.id : null);
       for (const g of gizmoAxes) g.shaft.material = g.tip.material = (hit && hit.gizmo === g.hit.userData.gizmo ? g.hot : g.mat);
       redraw();
-      if (onHover) onHover(hit ? hit.id : null);
     }
   }
 
@@ -666,18 +663,61 @@ export function createHandles(opts) {
   dom.addEventListener('pointercancel', onUp);
 
   return {
+    /* pickRef: was ein Klick an dieser Stelle träfe — für Tests und Skripte,
+       die vor dem Klick prüfen, ob dort Bauteil ist (wie arrowTip). */
     refresh, select, group, armAim, cancelAim, cancelDrag, pickRef, aimFor, arrowTip, gizmoTip,
     get aiming() { return !!state.aim; },
     get aimMark() { return aimMark.visible ? aimMark.position.toArray() : null; },
     get selected() { return state.selected; },
     get dragging() { return !!state.drag; },
-    setEnabled(v) { state.enabled = v; },
-    dispose() {
-      dom.removeEventListener('pointerdown', onDown, true);
-      dom.removeEventListener('pointermove', onMove);
-      dom.removeEventListener('pointerup', onUp);
-      dom.removeEventListener('pointercancel', onUp);
-      view.scene.remove(group);
+    setEnabled(v) { state.enabled = v; }
+  };
+}
+
+/**
+ * Der Zielmodus eines Werkzeugs, wie ihn alle vier Designer führen: der
+ * Hinweis oben im Bild (shell.aim: Text, „Abbrechen", die Antwort auf einen
+ * Fehlklick), die Griffe scharf (handles.armAim), danach wieder alles aus.
+ * Vorher stand dieser Ablauf in jedem Werkzeug einmal, fürs Setzen und fürs
+ * Neusetzen noch einmal.
+ *
+ *   aim({ what, text, miss, plane, onHit })  zielen; `what` ist, was gesetzt
+ *       wird (sein Chip gilt so lange als aktiv, placing), `miss` die Antwort
+ *       auf einen Klick daneben (ohne: die des Hinweises), `plane` wie bei
+ *       armAim. onHit(hit) kommt nach dem Ende des Zielens — wer darin
+ *       gleich wieder zielt (der zweite Punkt eines Kanals), zielt weiter.
+ *   cancel()  abbrechen (Esc, „Abbrechen", ein anderer Chip) → true, wenn
+ *       gezielt wurde; opts.onCancel räumt auf, was das Werkzeug dabei hält.
+ *   opts.onEnd  nach jedem Ende (Treffer oder Abbruch) — die Chips neu.
+ */
+export function createPlacer({ aim, handles, onEnd = null, onCancel = null }) {
+  let placing = null;
+  const end = () => { if (onEnd) onEnd(); };
+  const api = {
+    get placing() { return placing; },
+    aim({ what = null, text, miss = null, plane = null, onHit }) {
+      placing = what;
+      aim.show(true, text);
+      aim.onCancel = api.cancel;
+      handles.armAim({
+        plane,
+        onHit: hit => {
+          aim.hide();
+          placing = null;
+          onHit(hit);
+          end();
+        },
+        onMiss: () => aim.miss(miss, () => handles.aiming)
+      });
+    },
+    cancel() {
+      const was = handles.cancelAim();
+      aim.hide();
+      placing = null;
+      if (onCancel) onCancel();
+      end();
+      return was;
     }
   };
+  return api;
 }

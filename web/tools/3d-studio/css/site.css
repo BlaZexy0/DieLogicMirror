@@ -1,29 +1,7 @@
-/* Übersichtsseite (index.html).
-   Aufbau und Maße folgen der DieLogic-Startseite (web/index.html):
-   dunkler Hero, Karten auf dunklem Grund, Schrittspalten auf hellem. */
-
-/* ── Hero ──────────────────────────────────────────────────── */
-.hero {
-  background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 55%, var(--primary-deep) 100%);
-  padding: 4.5rem 2rem 4rem; text-align: center; position: relative; overflow: hidden;
-}
-.hero-bg { position: absolute; inset: 0; pointer-events: none; }
-.hero-content { position: relative; max-width: 780px; margin: 0 auto; }
-.hero-pill {
-  display: inline-flex; align-items: center; gap: .4rem;
-  background: rgba(var(--primary-rgb), .15); border: 1px solid rgba(var(--primary-rgb), .5);
-  color: var(--primary-light); font-size: .78rem; font-weight: 600;
-  padding: .3rem .8rem; border-radius: 20px; margin-bottom: 1.4rem;
-}
-.hero h1 {
-  font-size: clamp(1.7rem, 3.6vw, 2.7rem); font-weight: 800; color: #fff;
-  letter-spacing: -.03em; line-height: 1.15; margin-bottom: 1rem;
-}
-.hero .subtitle { color: var(--ondark); font-size: 1.02rem; line-height: 1.65; margin: 0 auto 2rem; max-width: 640px; }
-.hero-ctas { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; }
-.hero-stats { display: flex; gap: 2.2rem; margin-top: 2.6rem; flex-wrap: wrap; justify-content: center; }
-.hero-stat { font-size: .8rem; color: var(--ondark); }
-.hero-stat strong { display: block; color: #fff; font-size: 1.15rem; font-weight: 700; font-family: var(--mono); }
+/* Übersichtsseite des 3D-Studios (index.html).
+   Der Kopf ist der gemeinsame der Seite (.page-hero, /shared/shared.css);
+   hier stehen die Karten auf dunklem Grund und die Schrittspalten auf
+   hellem, in Aufbau und Maßen wie auf der DieLogic-Startseite. */
 
 /* ── Werkzeugkarten ────────────────────────────────────────── */
 .tools-section { padding: 4.5rem 2rem; background: var(--dark); }

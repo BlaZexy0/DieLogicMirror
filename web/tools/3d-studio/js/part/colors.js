@@ -130,6 +130,13 @@ export function scale(name, t) {
   return c ? hexOf(c) : null;
 }
 
+/** Wo ein Messwert (0 … 1) auf der Leiste `turbo` liegt, wenn ihre fast
+    schwarzen Enden wegbleiben: das Stück von sattem Blau bis sattem Rot.
+    Wandstärke, Abstand und Haftung — am Bauteil, auf der Karte und in der
+    Skala — lesen die Leiste so; vorher trug die Haftkarte ein anderes
+    Stück (0,05 … 0,95) als das Bauteil daneben unter derselben Skala. */
+export const turboTrim = t => 0.08 + 0.84 * Math.max(0, Math.min(1, t));
+
 /* Für viele Werte je Bild (Punktfarben, Texturen): eine Tafel mit n Farben,
    r, g, b je Eintrag 0 … 255. Die Leisten sind fest; gemerkt wird je
    Leiste und Größe. */

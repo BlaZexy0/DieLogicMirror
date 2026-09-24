@@ -12,13 +12,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { mountPage, wait, kpiText, read, ROOT } from './fixture.mjs';
+import { mountPage, wait, kpiText, read, ROOT, same, seg, set } from './fixture.mjs';
 
 /* Ergebnisse tragen große Felder — nie mit assert.equal vergleichen
-   (eine scheiternde Gegenüberstellung druckt sie aus; siehe wandstaerke.test.mjs). */
-const same = (a, b, msg) => assert.ok(a === b, msg);
-const seg = (el, value) => el.querySelectorAll('button').find(b => b.dataset.value === value);
-const set = (el, val) => { el.value = val; el.dispatch('change'); };
+   (eine scheiternde Gegenüberstellung druckt sie aus), deshalb same(). */
 let P;
 
 before(async () => {
@@ -321,22 +318,22 @@ test('Legierung: die Kurve rechnet mit der Legierung von hier, wie im Angussdesi
 });
 
 test('Eine Angussdatei als Quelle; Fremdes wird abgewiesen', async () => {
-  const { v, ui, host } = P;
+  const { v, ui, tool } = P;
   const s = v.state;
   const G = await import(pathToFileURL(resolve(ROOT, 'js/runner/graph.js')));
   const { DEMOS } = await import(pathToFileURL(resolve(ROOT, 'js/runner/presets.js')));
   const obj = G.toJSON(DEMOS.find(d => d.id === 'vier').build());
-  host.openJSON(obj, 'mein-anguss.json');
+  tool.openJSON(obj, 'mein-anguss.json');
   assert.equal(s.name, 'mein-anguss');
   assert.equal(ui('part-name').textContent, 'mein-anguss');
   assert.match(ui('graph-note').textContent, /Geladen: mein-anguss\.json/);
   assert.match(kpiText(ui('graph-kpis')), /Anschnitte\s*4/);
   assert.equal(ui('result-table').querySelectorAll('tbody tr').length, 5, 'vier Anschnitte und die Spreizung');
   /* Eine Werkbankdatei bringt ihren Prozess mit. */
-  host.openJSON({ format: 'dielogic-werkbank', anguss: obj, prozess: { volume: 777 } }, 'bank.json');
+  tool.openJSON({ format: 'dielogic-werkbank', anguss: obj, prozess: { volume: 777 } }, 'bank.json');
   assert.equal(s.proc.volume, 777);
   assert.equal(ui('vol').value, '777');
-  assert.throws(() => host.openJSON({ format: 'dielogic-ueberlauf', version: 1 }, 'falsch.json'), /keine Angussdatei/);
+  assert.throws(() => tool.openJSON({ format: 'dielogic-ueberlauf', version: 1 }, 'falsch.json'), /keine Angussdatei/);
   assert.match(ui('graph-warn').textContent, /falsch\.json/);
   v.pickDemo('zwei');
   assert.equal(ui('graph-warn').textContent, '');
@@ -351,7 +348,7 @@ test('Eine Angussdatei als Quelle; Fremdes wird abgewiesen', async () => {
    „Anschnitt …" der Tabelle ging roh in innerHTML. js/runner/graph.js weist
    solche Namen inzwischen ab — hier wird der Graph deshalb von Hand gebaut. */
 test('Namen aus der Datei sind Text: ein Anschnitt „<img …>" steht als Text in der Tabelle', async () => {
-  const { v, ui, host } = P;
+  const { v, ui, tool } = P;
   const s = v.state;
   const { DEMOS } = await import(pathToFileURL(resolve(ROOT, 'js/runner/presets.js')));
   const { compareTable } = await import(pathToFileURL(resolve(ROOT, 'js/simulation/table.js')));
@@ -376,7 +373,7 @@ test('Namen aus der Datei sind Text: ein Anschnitt „<img …>" steht als Text 
   assert.match(el.innerHTML, /&lt;b&gt;c&lt;\/b&gt;.*&lt;i&gt;x&lt;\/i&gt;.*a &amp; b.*&lt;script&gt;1&lt;\/script&gt;/);
   /* Der Dateiname steht nur als Text (Hinweiszeile, Chip). */
   const G = await import(pathToFileURL(resolve(ROOT, 'js/runner/graph.js')));
-  host.openJSON(G.toJSON(DEMOS.find(d => d.id === 'zwei').build()), '<img src=y>.json');
+  tool.openJSON(G.toJSON(DEMOS.find(d => d.id === 'zwei').build()), '<img src=y>.json');
   assert.equal(ui('graph-note').querySelectorAll('img').length, 0);
   assert.equal(ui('graph-note').textContent, 'Geladen: <img src=y>.json');
   assert.equal(ui('part-name').querySelectorAll('img').length, 0);

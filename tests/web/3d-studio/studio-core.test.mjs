@@ -1,5 +1,7 @@
 /* Der gemeinsame Rahmen des Studios — die Teile, die ohne Werkzeug
-   prüfbar sind: Zahlen lesen und schreiben, Verlauf, Entwurf, Abbruch.
+   prüfbar sind: Zahlen lesen und schreiben, Verlauf, Entwurf, Abbruch,
+   Aufträge, Raster, Pläne aus Dateien, Setzen, Dateinamen, Blick, Regler
+   und das Zeichnen auf Abruf.
 
      node --import ./tests/web/3d-studio/stubs/register.mjs --test tests/web/3d-studio/studio-core.test.mjs */
 
@@ -62,10 +64,10 @@ test('Verlauf: commit, undo, redo — und ein Zug ist ein Eintrag', () => {
   assert.ok(h.undo()); assert.equal(doc.n, 0);
   assert.equal(h.canUndo, false);
   assert.ok(h.redo()); assert.equal(doc.n, 1);
-  /* Ein Zug: begin, viele Schritte, end → ein Eintrag. */
-  h.begin();
+  /* Ein Zug meldet sich erst beim Loslassen (js/handles.js, „drop"): viele
+     Schritte, EIN commit — ein Eintrag. */
   for (let k = 0; k < 20; k++) doc.n = 10 + k;
-  h.end('Zug');
+  h.commit('Zug');
   assert.equal(doc.n, 29);
   h.undo();
   assert.equal(doc.n, 1, 'der ganze Zug auf einmal zurück');
@@ -105,21 +107,21 @@ test('Entwurf: schreiben, wiederfinden, verwerfen; ohne Speicher ohne Fehler', a
     assert.ok(globalThis.localStorage.getItem('studio:probe:teil-a'));
     st.setPart('teil-b');
     assert.equal(st.peek(), null, 'ein anderes Bauteil sieht seinen eigenen Entwurf');
-    assert.deepEqual(st.others().map(o => o.part), ['teil-a'], 'aber weiß von dem anderen');
     st.setPart('teil-a');
     st.markSaved();
     assert.equal(st.dirty, false);
     st.discard();
     assert.equal(st.peek(), null);
     /* Zu groß: wird nicht geschrieben, kein Fehler. */
-    assert.equal(st.flush(() => ({ big: 'x'.repeat(600 * 1024) })), false);
+    st.save(() => ({ big: 'x'.repeat(600 * 1024) }));
+    assert.equal(st.flushPending(), false);
   } finally { globalThis.localStorage = saved; }
   const gone = globalThis.localStorage;
   delete globalThis.localStorage;
   try {
     const st = createStore({ tool: 'probe' });
-    assert.equal(st.available, false);
-    assert.equal(st.flush(() => ({})), false);
+    st.save(() => ({}));
+    assert.equal(st.flushPending(), false, 'ohne Speicher kein Entwurf, und kein Fehler');
     assert.equal(st.peek(), null);
   } finally { globalThis.localStorage = gone; }
 });
@@ -222,7 +224,7 @@ test('Drehkugel: zwei Finger auseinander zoomen HINEIN, die Mitte verschiebt, ei
 
 /* ── Abbruch ─────────────────────────────────────────────────── */
 test('Abbruch: das Feld hört an seinem Haltepunkt auf und wirft AbortError', async () => {
-  const model = buildModel(S.box([60, 40, 20]));
+  const model = buildModel(S.box(60, 40, 20));
   const ac = new AbortController();
   let calls = 0;
   const p = buildField(model, { h: 2, band: 6, pad: 4, signal: ac.signal, onProgress: () => { if (++calls === 2) ac.abort(); } });
@@ -293,4 +295,242 @@ test('Einpassen: ganz im freien Rechteck, aber nicht kleiner als nötig', async 
   cam.updateMatrixWorld(true);
   const tip = new T.Vector3(600, 0, 0).project(cam);
   assert.ok(Math.abs(tip.x) <= 1 && Math.abs(tip.y) <= 1, 'das neue Ende steht im Bild');
+});
+
+/* ── Aufträge ────────────────────────────────────────────────── */
+/* Bis der Auftrag abgebrochen wird — wie ein Rechenmodul an seinem Haltepunkt. */
+const untilAbort = signal => new Promise((res, rej) => {
+  signal.addEventListener('abort', () => { const e = new Error('abgebrochen'); e.name = 'AbortError'; rej(e); });
+});
+
+test('Auftrag: ein neuer Lauf überholt den laufenden still — ohne dessen onCancel; eine dritte gewinnt', async () => {
+  const { createJobRunner } = await import('../../../web/tools/3d-studio/js/studio/job.js');
+  const busy = [];
+  const jobs = createJobRunner({ setBusy: on => busy.push(on), progress() {} });
+  let cancels = 0;
+  const a = { run: untilAbort, onCancel: () => cancels++ };
+  const pa = jobs.run(a);
+  assert.equal(jobs.running, true);
+  const pb = jobs.run({ run: async () => 'b' });
+  assert.equal(await pa, null, 'der alte liefert null');
+  assert.equal(a.superseded, true, 'und trägt, dass er überholt wurde');
+  assert.equal(cancels, 0, 'kein onCancel: niemand hat abgebrochen');
+  assert.equal(await pb, 'b');
+  assert.equal(jobs.running, false);
+  assert.equal(busy.at(-1), false, 'der Knopf ist wieder frei');
+
+  /* Drei kurz nacheinander: der mittlere kommt nicht zum Zug. */
+  const x = { run: untilAbort }, y = { run: untilAbort };
+  const px = jobs.run(x), py = jobs.run(y), pz = jobs.run({ run: async () => 'z' });
+  assert.deepEqual([await px, await py, await pz], [null, null, 'z']);
+  assert.ok(x.superseded && y.superseded);
+
+  /* „Abbrechen" ist eine Entscheidung des Anwenders: onCancel kommt. */
+  const c = { run: untilAbort, onCancel: () => cancels++ };
+  const pc = jobs.run(c);
+  jobs.cancel();
+  assert.equal(await pc, null);
+  assert.equal(cancels, 1);
+  assert.ok(!c.superseded);
+
+  /* supersede() ohne neuen Lauf: still, wie beim Bauteilwechsel. */
+  const d = { run: untilAbort, onCancel: () => cancels++ };
+  const pd = jobs.run(d);
+  jobs.supersede();
+  assert.equal(await pd, null);
+  assert.equal(cancels, 1, 'wieder kein onCancel');
+  jobs.supersede();                                            // ohne Lauf: nichts zu tun
+  jobs.cancel();
+
+  /* Ein echter Fehler bleibt ein Fehler. */
+  await assert.rejects(jobs.run({ run: async () => { throw new Error('kaputt'); } }), /kaputt/);
+  assert.equal(jobs.running, false);
+});
+
+/* ── Raster ──────────────────────────────────────────────────── */
+test('Raster: planField hebt die Zellkante in Zehnprozentschritten, bis das Raster unter MAX_SAMPLES bleibt', async () => {
+  const { planField, fieldSize, MAX_SAMPLES } = await import('../../../web/tools/3d-studio/js/part/field.js');
+  const model = buildModel(S.box(400, 300, 200));
+  const fits = planField(model, { h: 4, band: 6, pad: 10 });
+  assert.equal(fits.lifted, false);
+  assert.ok(fits.est === fits.asked, 'passt es, gilt das verlangte');
+  assert.equal(fits.est.h, 4);
+
+  const big = planField(model, { h: 0.5, band: 6, pad: 10 });
+  assert.ok(big.asked.samples > MAX_SAMPLES, 'verlangt: ' + big.asked.samples);
+  assert.equal(big.asked.h, 0.5);
+  assert.equal(big.lifted, true);
+  assert.ok(big.est.samples <= MAX_SAMPLES, 'es entstehen ' + big.est.samples);
+  assert.equal(big.est.band, 6, 'das Band bleibt');
+  assert.deepEqual(big.est.origin, big.asked.origin, 'der Rand auch');
+  /* Die erste Kante der Folge 0,5 · 1,1 · 1,1 … (auf Hundertstel), die passt. */
+  let h = 0.5;
+  while (fieldSize(model, 0, 6, { h, pad: 10 }).samples > MAX_SAMPLES) h = Math.round(h * 110) / 100;
+  assert.equal(big.est.h, h);
+});
+
+/* ── Pläne aus Dateien ───────────────────────────────────────── */
+test('Pläne aus Dateien: Format und Fassung, Kennungen, Punkte und Zahlen in den Grenzen ihres Felds', async () => {
+  const { checkFormat, isId, fileIds, filePoint, fileNumber } = await import('../../../web/tools/3d-studio/js/studio/planio.js');
+  assert.doesNotThrow(() => checkFormat({ format: 'dielogic-x', version: 2 }, 'dielogic-x', 2, 'Keine x-Datei.'));
+  assert.throws(() => checkFormat({ format: 'dielogic-y', version: 1 }, 'dielogic-x', 2, 'Keine x-Datei.'), /^Error: Keine x-Datei\.$/);
+  assert.throws(() => checkFormat(null, 'dielogic-x', 2, 'Keine x-Datei.'), /Keine x-Datei/);
+  assert.throws(() => checkFormat({ format: 'dielogic-x', version: 3 }, 'dielogic-x', 2, 'Keine x-Datei.'), /neueren Fassung \(Version 3\)/);
+
+  assert.ok(isId('t1') && isId('Anschnitt_2-b'));
+  assert.ok(!isId('1t') && !isId('a<b>') && !isId('a'.repeat(33)) && !isId(7));
+
+  /* Fehlende und doppelte Kennungen bekommen neue, gezählt ab der höchsten Nummer. */
+  const { ids, seq } = fileIds([{ id: 't2' }, {}, { id: 't2' }, { id: 'x7' }], 't');
+  assert.deepEqual(ids, ['t2', 't8', 't9', 'x7']);
+  assert.equal(seq, 9);
+  assert.throws(() => fileIds([{ id: 'a' }, { id: '<b>' }], 't', 'Anschnitt'), /Anschnitt 2 der Datei hat keine gültige Kennung: erlaubt sind/);
+  assert.throws(() => fileIds([null], 't'), /Element 1 der Datei ist unlesbar/);
+
+  assert.deepEqual(filePoint([1, '2', 3, 9], 'Bohne b1'), [1, 2, 3]);
+  assert.throws(() => filePoint([1, 2], 'Bohne b1'), /Bohne b1: Die Lage fehlt oder ist keine Zahl/);
+  assert.throws(() => filePoint([1, 'a', 3], 'Bohne b1'), /keine Zahl/);
+
+  const meta = { min: 1, max: 10 };
+  assert.equal(fileNumber(5, meta, 3), 5);
+  assert.equal(fileNumber('50', meta, 3), 10, 'geklemmt wie im Feld');
+  assert.equal(fileNumber(-2, meta, 3), 1);
+  for (const leer of ['', null, undefined, 'viel']) assert.equal(fileNumber(leer, meta, 3), 3, 'ohne Zahl die Vorgabe: ' + leer);
+});
+
+/* ── Setzen ──────────────────────────────────────────────────── */
+test('Setzen: ein Treffer setzt und beendet das Zielen, ein Fehlklick bleibt dabei, Esc bricht ab', async () => {
+  const { createPlacer } = await import('../../../web/tools/3d-studio/js/handles.js');
+  const log = [];
+  const aim = { onCancel: null, show: (on, text) => log.push('zeigt ' + text), hide: () => log.push('weg'), miss: (text, still) => log.push('daneben ' + text + ' ' + still()) };
+  let armed = null;
+  const handles = {
+    aiming: false,
+    armAim(o) { armed = o; handles.aiming = true; },
+    cancelAim() { const was = handles.aiming; handles.aiming = false; armed = null; return was; }
+  };
+  let ends = 0, cancels = 0, hit = null;
+  const placer = createPlacer({ aim, handles, onEnd: () => ends++, onCancel: () => cancels++ });
+
+  placer.aim({ what: 'bohne', text: 'Auf das Bauteil klicken', miss: 'Dort ist kein Bauteil.', onHit: h => { hit = h; } });
+  assert.equal(placer.placing, 'bohne');
+  assert.ok(log.includes('zeigt Auf das Bauteil klicken'));
+  assert.equal(aim.onCancel, placer.cancel, 'das ✕ im Hinweis bricht ab wie Esc');
+  armed.onMiss();
+  assert.equal(placer.placing, 'bohne', 'ein Fehlklick beendet das Zielen nicht');
+  assert.ok(log.includes('daneben Dort ist kein Bauteil. true'));
+  handles.aiming = false;                                      // so ruft js/handles.js onHit: nach cancelAim
+  armed.onHit({ point: [1, 2, 3] });
+  assert.deepEqual(hit, { point: [1, 2, 3] });
+  assert.equal(placer.placing, null);
+  assert.equal(ends, 1);
+  assert.equal(log.at(-1), 'weg', 'der Hinweis ist weg');
+
+  placer.aim({ what: 'kanal', text: 'Zielen', onHit: () => assert.fail('nach dem Abbruch trifft nichts mehr') });
+  assert.equal(placer.cancel(), true, 'es wurde gezielt');
+  assert.equal(placer.placing, null);
+  assert.equal(cancels, 1);
+  assert.equal(ends, 2, 'onEnd auch nach dem Abbruch');
+  assert.equal(armed, null);
+  assert.equal(placer.cancel(), false, 'ohne Zielen: nichts abgebrochen');
+});
+
+/* ── Dateinamen, Farbleiste ──────────────────────────────────── */
+test('Dateinamen: <bauteil>-<was>.<endung>, ohne die Endung des Bauteils mitten im Namen', async () => {
+  const { exportName, planName, baseName } = await import('../../../web/tools/3d-studio/js/studio/files.js');
+  assert.equal(exportName('Deckel.stl', 'ueberlaeufe', 'stl'), 'deckel-ueberlaeufe.stl');
+  assert.equal(exportName('Ölwanne.GLB', 'abstand', 'json'), 'oelwanne-abstand.json');
+  assert.equal(exportName('', 'fuellung', 'stl'), 'bauteil-fuellung.stl', 'ohne Bauteil: „bauteil"');
+  assert.equal(planName('gearbox_cover', 'temperier'), 'gearbox_cover-temperier.json');
+  assert.equal(baseName('plan.v2.json'), 'plan.v2');
+});
+
+test('Farbleiste: turboTrim staucht 0 … 1 in das lesbare Stück der Leiste und klemmt', async () => {
+  const { turboTrim } = await import('../../../web/tools/3d-studio/js/part/colors.js');
+  const near = (a, b) => Math.abs(a - b) < 1e-12;
+  assert.ok(near(turboTrim(0), 0.08) && near(turboTrim(1), 0.92) && near(turboTrim(0.5), 0.5));
+  assert.equal(turboTrim(-4), turboTrim(0));
+  assert.equal(turboTrim(9), turboTrim(1));
+  assert.ok(turboTrim(0.3) < turboTrim(0.31), 'steigend');
+});
+
+/* ── Blick ───────────────────────────────────────────────────── */
+test('Blick: Maß je Bildpunkt, Zeiger in Gerätekoordinaten, Strahl, Achsen des Bildes', async () => {
+  const T = await import('three');
+  const { perPixel, pointerNdc, rayAt, cameraAxes } = await import('../../../web/tools/3d-studio/js/viewmath.js');
+  const cam = new T.PerspectiveCamera(90, 2, 1, 1000);          // tan 45° = 1: in 100 mm Abstand 200 mm hoch
+  assert.ok(Math.abs(perPixel(cam, 100, 200) - 1) < 1e-9);
+  assert.ok(Number.isFinite(perPixel(cam, 100, 0)), 'ein Element ohne Höhe teilt nicht durch null');
+  const ortho = new T.OrthographicCamera(-100, 100, 50, -50, 1, 1000);
+  ortho.zoom = 2;
+  assert.ok(Math.abs(perPixel(ortho, 1, 100) - 0.5) < 1e-12 && perPixel(ortho, 900, 100) === perPixel(ortho, 1, 100), 'parallel: überall dasselbe');
+
+  const el = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 400, height: 200 }) };
+  const mid = pointerNdc({ clientX: 300, clientY: 150 }, el);
+  const corner = pointerNdc({ clientX: 100, clientY: 50 }, el);
+  assert.deepEqual([mid.x, mid.y, corner.x, corner.y], [0, 0, -1, 1]);
+
+  cam.position.set(0, 0, 10);
+  cam.lookAt(0, 0, 0);
+  cam.updateMatrixWorld(true);
+  const { ray } = rayAt(new T.Raycaster(), { clientX: 300, clientY: 150 }, el, cam);
+  assert.ok(ray.direction.distanceTo(new T.Vector3(0, 0, -1)) < 1e-9, 'durch die Mitte geradeaus');
+  const { right, up } = cameraAxes(cam);
+  assert.ok(right.distanceTo(new T.Vector3(1, 0, 0)) < 1e-9 && up.distanceTo(new T.Vector3(0, 1, 0)) < 1e-9);
+});
+
+/* ── Regler ──────────────────────────────────────────────────── */
+test('Regler: mit fire: false meldet das Anlegen nichts, set() zeigt ohne Meldung, Ziehen meldet', async () => {
+  const { buildDocument, installGlobals } = await import('./stubs/dom.mjs');
+  const { doc } = buildDocument('<!DOCTYPE html><html><body><input type="range" id="r" min="0" max="10" value="4"><span id="r-val"></span></body></html>');
+  installGlobals(doc);
+  const { slider } = await import('../../../web/tools/3d-studio/js/ui/controls.js');
+  const got = [];
+  const s = slider('r', v => got.push(v), v => v + ' mm', null, { fire: false });
+  assert.deepEqual(got, [], 'kein Aufruf beim Anlegen');
+  assert.equal(doc.getElementById('r-val').textContent, '4 mm', 'der Wert steht trotzdem da');
+  s.set(7);
+  assert.equal(doc.getElementById('r').value, '7');
+  assert.equal(doc.getElementById('r-val').textContent, '7 mm');
+  assert.deepEqual(got, [], 'set() meldet nichts');
+  s.el.dispatch('input');
+  assert.deepEqual(got, [7]);
+  const plain = [];
+  slider('r', v => plain.push(v));
+  assert.deepEqual(plain, [7], 'ohne Angabe wie bisher: einmal beim Anlegen');
+});
+
+/* ── Zeichnen auf Abruf ──────────────────────────────────────── */
+test('Bild auf Abruf: ruhend kein Bild, jeder Anlass genau eins; Maße aus onBeforeRender gelten schon im ersten', async () => {
+  const { buildDocument, installGlobals } = await import('./stubs/dom.mjs');
+  const { doc } = buildDocument('<!DOCTYPE html><html><body><div id="vp"></div></body></html>');
+  installGlobals(doc);
+  const T = await import('three');
+  const { initScene } = await import('../../../web/tools/3d-studio/js/scene.js');
+  const view = initScene(doc.getElementById('vp'));
+  const frame = () => view.renderer.loop();                   // ein Tick der Bildschleife
+  frame();
+  assert.equal(view.frames, 1, 'das erste Bild');
+  for (let i = 0; i < 20; i++) frame();
+  assert.equal(view.frames, 1, 'ruhend: kein Bild, auch kein „zur Sicherheit"');
+  view.invalidate(); view.invalidate(); frame(); frame();
+  assert.equal(view.frames, 2, 'zweimal invalidate vor dem Tick: EIN Bild');
+  doc.dispatch('input', {}); frame();
+  assert.equal(view.frames, 3, 'ein Regler der Seite zeichnet neu');
+  doc.dispatch('dielogic:scheme', {}); frame();
+  assert.equal(view.frames, 4, 'ein Wechsel des Farbschemas auch');
+  view.setView('x'); frame();
+  assert.equal(view.frames, 5, 'eine Ansicht auch');
+
+  /* Ein Griff in Bildgröße setzt sein Maß in onBeforeRender — gerufen wird
+     das vor dem Zeichnen, damit es nicht erst im nächsten Bild gilt. */
+  let k = 3;
+  const m = new T.Mesh(new T.SphereGeometry(1));
+  m.onBeforeRender = () => { m.scale.setScalar(k); };
+  view.scene.add(m);
+  view.invalidate(); frame();
+  assert.equal(m.scale.x, 3);
+  m.visible = false; k = 9;
+  view.invalidate(); frame();
+  assert.equal(m.scale.x, 3, 'Unsichtbares wird nicht gefragt');
 });

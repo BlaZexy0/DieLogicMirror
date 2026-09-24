@@ -10,29 +10,19 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mountPage, kpiText, wait } from './fixture.mjs';
+import { mountPage, kpiText, wait, interact } from './fixture.mjs';
 
-let P, T3, G, cam, canvas;
-const zeiger = (t, x, y, extra = {}) => canvas.dispatch(t, { button: 0, clientX: x, clientY: y, stopPropagation() {}, preventDefault() {}, ...extra });
-const klick = (x, y) => { zeiger('pointerdown', x, y); zeiger('pointerup', x, y); };
-const px = p => { const q = new T3.Vector3(...p).project(cam); return [(q.x + 1) / 2 * 800, (1 - q.y) / 2 * 600]; };
-/* Von oben: die Trennebene y = 0 liegt flach im Bild. */
-const vonOben = (at, hoehe = 400) => { cam.position.set(at[0], at[1] + hoehe, at[2]); cam.up.set(0, 0, -1); cam.lookAt(at[0], at[1], at[2]); cam.updateMatrixWorld(true); P.v.view.scene.updateMatrixWorld(true); };
-const schauAuf = (from, to) => { cam.position.set(...from); cam.up.set(0, 1, 0); cam.lookAt(...to); cam.updateMatrixWorld(true); P.v.view.scene.updateMatrixWorld(true); };
-const chip = id => P.doc.querySelector('[data-chip="' + id + '"]');
-const taste = (key, extra = {}) => P.doc.dispatch('keydown', { key, target: canvas, preventDefault() {}, ...extra });
+/* Die Hand an der Seite (./fixture.mjs, interact); vonOben: die Trennebene
+   y = 0 liegt flach im Bild. */
+let P, T3, G, cam, zeiger, klick, px, vonOben, schauAuf, chip, taste, gruppen, gruppe, setze;
 const knoten = () => Object.keys(P.v.state.graph.nodes).length;
-const gruppen = () => P.ui('sel-groups').querySelectorAll('[data-group-tab]').map(b => b.getAttribute('data-group-tab'));
-const gruppe = name => P.ui('sel-groups').querySelector('[data-group-tab="' + name + '"]').dispatch('click');
-const setze = (name, wert) => { const el = P.ui(name); el.value = wert; el.dispatch('change'); };
 const datei = (name, buf) => ({ name, arrayBuffer: () => Promise.resolve(buf), byteLength: buf.byteLength });
 
 before(async () => {
   P = await mountPage('anguss.html', 'js/studio/pages/anguss.js', { design: true });
   T3 = await import('three');
   G = await import('../../../../web/tools/3d-studio/js/runner/graph.js');
-  cam = P.v.view.camera;
-  canvas = P.v.view.renderer.domElement;
+  ({ cam, zeiger, klick, px, vonOben, schauAuf, chip, taste, gruppen, gruppe, setze } = interact(P, { T3 }));
 });
 
 test('Rahmen: vier Modi, sechs Chips, das Beispiel steht ohne Bauteil — nichts Ungespeichertes', () => {

@@ -602,14 +602,16 @@ Laden, sagt es ein Toast, und der Chip nennt wieder das Teil, das noch da ist.
   wird A, B oder beides eingefärbt; das jeweils andere bleibt einfarbig,
   damit nicht zwei Skalen um dieselbe Aufmerksamkeit konkurrieren.
 
-**Grobe Netze werden vorher verfeinert.** Eine ebene Wand aus zwei
-Dreiecken hat vier Eckpunkte; zwischen ihnen würde linear interpoliert
-und der wahre Abstandsverlauf ginge verloren — und genau so eine Wand
-liegt dem Temperierkanal gegenüber. `refine()` teilt zu große Dreiecke an
-den Kantenmitten, die Punkte bleiben exakt auf der Fläche.
-`tests/distance.test.mjs` zeigt den Unterschied: eine 200er-Platte 10 mm
-über einem Quader meldet ohne Verfeinerung über 50 mm, mit Verfeinerung
-die richtigen 10 mm.
+**Gemessen wird am Netz, wie es geladen wurde.** Die Punkte sind seine
+Ecken, dazwischen blendet die Einfärbung linear über. Eine ebene Wand aus
+zwei Dreiecken hat also nur ihre vier Ecken, und die engste Stelle mitten
+in einem großen Dreieck sieht die Messung nicht — wer dort genau hinsehen
+will, exportiert das Bauteil feiner vernetzt. Die Seite verändert das Netz
+nicht: wie fein ein Bauteil ist, entscheidet der Export (bis zum 23.09.
+teilte sie zu große Dreiecke vorher selbst an den Kantenmitten).
+`tests/web/3d-studio/distance.test.mjs` hält beides fest: eine Platte aus
+zwölf Dreiecken 10 mm über einem Quader wird an ihren acht Ecken gemessen
+(über 50 mm), fein vernetzt ergibt sie die richtigen 10 mm.
 
 ## Angussdesigner (`anguss.html`)
 
@@ -639,11 +641,11 @@ wartet — aber drei Dinge sorgen dafür, dass es sich auch so anfühlt:
   Zeiger hinterher. Jetzt zählt der letzte Zeigerort vor dem nächsten
   Bild, und während des Zuges laufen nur Abtasten, Sweep und Griffe —
   Regeln, Kennzahlen und Schema kommen beim Loslassen.
-- **Gezeichnet wird auf Abruf** (`renderOnDemand` in `js/scene.js`): nur
-  wenn sich Kamera oder Szene geändert haben, sonst viermal je Sekunde
-  als Netz. Eine Schleife, die sechzigmal je Sekunde ein durchscheinendes
-  Bauteil mit einer Million Dreiecken zeichnet, machte die ganze Seite
-  zäh, auch die Felder in der Seitenleiste.
+- **Gezeichnet wird auf Abruf** (`js/scene.js`, auf jeder Seite): nur
+  wenn sich Kamera oder Szene geändert haben. Eine Schleife, die
+  sechzigmal je Sekunde ein durchscheinendes Bauteil mit einer Million
+  Dreiecken zeichnet, machte die ganze Seite zäh, auch die Felder in der
+  Seitenleiste. Siehe „Zeichnen auf Abruf" unten.
 - Die Umkehrung „Maße zu einer Fläche" (`dimsForArea`) kommt aus der
   exakten Trapezfläche samt Eckenabzug in geschlossener Form und macht
   nur noch einen Schritt am Umriss statt fünf — sie lief für jeden
@@ -965,12 +967,10 @@ bis Netz bleibt unter 25 ms — der Sweep läuft bei jedem Mausschritt.
 Seit dem Angussdesigner ist sein Viewport der Maßstab für alle Seiten des
 Studios: der Quaternionen-Trackball, das mitgeführte Licht, das
 Achsenkreuz unter der Ansichtsleiste, das Zeichnen auf Abruf und KEIN
-Bodenraster sind die Voreinstellungen von `initScene` (js/scene.js) — ein
-Körper, den man frei von allen Seiten ansieht, hat kein „unten", und das
-Raster lag bei jeder schrägen Ansicht im Bild. Der Formaufbau und die drei
-Bauteilseiten bekommen das ohne eigenes Zutun; wer die alte
-Azimut-Höhenwinkel-Steuerung oder das Raster will, verlangt
-`orbit: 'orbit'` bzw. `grid: true`.
+Bodenraster — `initScene` (js/scene.js) kennt nichts anderes mehr, nur
+noch Kamerastart, Zielpunkt und die Grenzen des Abstands. Ein Körper, den
+man frei von allen Seiten ansieht, hat kein „unten", und das Raster lag
+bei jeder schrägen Ansicht im Bild.
 
 Die OrbitControls drehen um eine feste Hochachse. Für ein Bauteil auf
 einem Raster ist das richtig, für einen Anguss hinderlich: er liegt in
@@ -979,8 +979,7 @@ Draufsicht auf sie ist genau der Pol, an dem eine Kugelsteuerung klemmt.
 `js/trackball.js` dreht deshalb mit Quaternionen um eine Achse in der
 Bildebene — kein Pol, keine Sperre.
 
-Aus demselben Grund wandert **das Licht mit der Kamera** (Option
-`headlight` in js/scene.js). Ortsfeste Lichter setzen ein „oben" und eine
+Aus demselben Grund wandert **das Licht mit der Kamera** (js/scene.js). Ortsfeste Lichter setzen ein „oben" und eine
 bevorzugte Blickrichtung voraus; wer frei um einen freistehenden Körper
 dreht, schaut ständig auf die abgewandte Seite, und die lag vorher im
 Dunkeln. Das mitgeführte Licht steht leicht über und neben der Kamera,
@@ -2163,11 +2162,12 @@ Die Regeln, die der Rahmen durchsetzt — und die Tests, die sie halten:
   Schritt und verschwindet, sobald sich der Verlauf bewegt — sonst nähme sein
   Knopf später einen ganz anderen Schritt zurück als den, von dem er spricht.
   Was durch Rückgängig wiederkommt, ist gewählt. Ein Zug am Griff ist EIN
-  Schritt, ein Dreh am Regler auch (`history.coalesce`); ein bloßer Klick auf
-  einen Griff ist keiner. Beim **Zielen** (ein Chip, dann ein Klick aufs
-  Bauteil) steht der Hinweis in der Spalte oben links, und das Auswahlfeld
-  weicht auf seine Kopfzeile zurück — es läge sonst dort, wo man hinklicken
-  will. Wo ein Klick auf einen anderen Griff diesen wählen und das Zielen
+  Schritt, ein Dreh am Regler auch (`host.changed(label, { coalesce })`); ein
+  bloßer Klick auf einen Griff ist keiner. Beim **Zielen** (ein Chip, dann ein
+  Klick aufs Bauteil) steht der Hinweis in der Spalte oben links, und das
+  Auswahlfeld weicht auf seine Kopfzeile zurück — es läge sonst dort, wo man
+  hinklicken will. Den Ablauf (Hinweis, Treffer, Fehlklick, Esc) haben alle
+  vier Designer von `createPlacer` (js/handles.js). Wo ein Klick auf einen anderen Griff diesen wählen und das Zielen
   beenden soll (der Angussdesigner), setzt das Werkzeug `aimPicksHandles`;
   beim Setzen gilt der Klick der Stelle, auch über einem Griff.
 - **Einpassen** (F, Knopf, Doppelklick ins Leere) legt das Modell in den
@@ -2228,7 +2228,7 @@ Die Regeln, die der Rahmen durchsetzt — und die Tests, die sie halten:
   Fokus hat (der Griff nimmt ihn beim Drücken nicht weg):
   `handles.cancelDrag()` endet ohne „drop" mit `onChange('cancel')`, und das
   Werkzeug kehrt mit `host.revert()` zum letzten Schritt zurück, ohne neuen
-  (`host.cancelDrag` bietet dem Rahmen den Abbruch an). Der zweite Klick
+  (`cancelDrag()` im Werkzeug bietet dem Rahmen den Abbruch an). Der zweite Klick
   eines Doppelklicks auf den Hauptknopf bricht nichts ab (`detail > 1`).
 - **Der Entwurf gehört seinem Bauteil.** Ein neues Bauteil nimmt das Angebot
   im Streifen mit, auch wenn es selbst keinen Entwurf hat. „Wiederherstellen"
@@ -2251,7 +2251,64 @@ auf der Werkbank werden mehrere Werkzeuge auf einer Seite leben. Der
 Gastgeber (`host.js`) besitzt Bauteil, Abstandsfeld, Verlauf, Entwurf,
 Rechnungen und Dateien und verdrahtet Reiter, Hauptknopf, Speichern,
 Exportieren und Tasten; die Seite selbst ist nur noch
-`<div id="studio">` und ein Modul unter `js/studio/pages/`.
+`<div id="studio">` und ein Modul unter `js/studio/pages/`, das
+`bootPage({ id, name, title, help, tool })` ruft.
+
+**Der Vertrag** steht im Kopf von `host.js`, an EINER Stelle: alles, was
+der Gastgeber vom Werkzeug wissen will, steht in dem Objekt, das die
+Fabrik zurückgibt (Modi, Datei, Export, Tasten, `cancelDrag`,
+`cancelAim`, `dropPart`, `openJSON`, `onPartStart`/`onPart`, `start`) —
+der Gastgeber schreibt nichts von außen an das Werkzeug, und das Werkzeug
+greift nicht in den Gastgeber: es meldet mit `host.changed(label,
+{ coalesce, ms })`, `host.removed(was)`, `host.revert()`,
+`host.resetHistory()`, rechnet mit `host.jobs` und fragt das Feld mit
+`host.field.plan()`/`ensure()`. Weitere Bausteine, die jedes Werkzeug
+gleich benutzt:
+
+- **Bauteil laden.** `js/part/partsource.js` gibt das geladene Netz direkt
+  weiter: `onLoad(model, name, { demoId, warning, note })`; eine Datei lädt
+  `host.part.load(tris, name, note)` (Ablegen, Öffnen) und ein Beispielteil
+  `host.part.pickDemo(id)`. Beginnt ein neues Bauteil zu laden, endet eine
+  laufende Rechnung still (`host.jobs.supersede()`), und die Werkzeuge
+  zählen ihre Läufe: was nach dem Bauteilwechsel oder einem neueren Lauf
+  zurückkommt, fasst nichts mehr an („der jüngste Auftrag gewinnt").
+- **Rechnungen** (`job.js`): `run(spec)` überholt einen laufenden Auftrag
+  und wartet, bis er an seinem Haltepunkt aufgegeben hat; der überholte
+  endet ohne `onCancel` und trägt `spec.superseded`. Nur „Abbrechen" ist
+  eine Entscheidung des Anwenders.
+- **Raster** (`js/part/field.js`): `planField(model, { h, band, pad })`
+  sagt vorher, welche Zellkante wirklich gerastert wird — über
+  `MAX_SAMPLES` Punkten hebt es die Kante in Schritten von zehn Prozent,
+  Band und Rand bleiben. Der Gastgeber rastert damit, und jede
+  Kostenvorschau der Werkzeuge rechnet mit derselben Zahl.
+- **Pläne aus Dateien** (`planio.js`): Format und Fassung
+  (`checkFormat`), Kennungen (`fileIds`: fehlende und doppelte bekommen
+  neue), Punkte und Zahlen in den Grenzen ihres Felds.
+- **Dateinamen** (`files.js`): `<bauteil>-<was>.<endung>`
+  (`exportName`, `planName`, `saveSTL`), ohne die Endung des Bauteils
+  mitten im Namen.
+- **Regler** (`js/ui/controls.js`): `slider(id, onChange, format, out,
+  { fire })` gibt `{ el, set(v) }` zurück; `set` zeigt einen Wert, ohne
+  zu melden, und `fire: false` meldet auch beim Anlegen nichts.
+- **Blick** (`js/viewmath.js`): Maß je Bildpunkt, Zeiger in
+  Gerätekoordinaten, Strahl unter dem Zeiger, Bildachsen und
+  `hoverProbe` (was unter dem Zeiger liegt, höchstens einmal je Bild) —
+  für Griffe, Trackball, Einpassen, Licht und die Analysen.
+
+**Zeichnen auf Abruf.** Jede Seite zeichnet NUR, wenn sich etwas geändert
+hat (`js/scene.js`); eine ruhende Seite zeichnet nicht. Zeiger, Rad,
+Größenänderung, Farbschema, Projektion und Ansichten melden sich im
+Szenenmodul selbst, Regler und Schalter der Seite über ihre Ereignisse
+(`input`, `change`, `click`, `keydown` am Dokument); wer sonst etwas am
+Bild ändert — ein Ergebnis, eine geladene Datei, ein Schnitt, ein Bild der
+Wiedergabe —, ruft `view.invalidate()`. Was sich nach der Kamera richtet
+(Griffe in Bildgröße, zur Kamera gedrehte Ringe), setzt Maß und Drehung in
+`onBeforeRender`; das Szenenmodul ruft diese vor dem Zeichnen einmal
+selbst, sonst gälte das neue Maß erst im nächsten Bild. Bis zum 23.09.
+zeichnete ein Netz viermal je Sekunde „zur Sicherheit" — es hielt
+Grafikkarte und SwiftShader auf jeder ruhenden Seite beschäftigt und
+verdeckte, wo ein `invalidate()` fehlte. `view.frames` zählt die
+gezeichneten Bilder.
 
 **Farben.** Eine Farbe im Studio ist entweder eine ROLLE der Palette
 (`web/shared/palette.js`), deren Wert aus dem gewählten Farbschema kommt
@@ -2297,9 +2354,10 @@ Einteilung:
   Turbo (Google, 2019) als Polynom fünften Grades nach Popov, dunkelblau
   über Grün und Gelb nach Dunkelrot: die Wandstärke im Schnitt und die
   Wärmezentren, der Abstand (umgekehrt: nah rot, fern blau) und die Haftung
-  nehmen das Stück 0,08 … 0,92 von sattem Blau bis sattem Rot, die
-  Haftkarten der Hälften 0,05 … 0,95; Füllgrad, Geschwindigkeit der
-  Schmelze (Gitter, Partikel, Metamodell) und Ankunft die ganze Leiste.
+  (am Bauteil wie auf den Haftkarten der Hälften) nehmen das Stück
+  0,08 … 0,92 von sattem Blau bis sattem Rot (`turboTrim`); Füllgrad,
+  Geschwindigkeit der Schmelze (Gitter, Partikel, Metamodell) und Ankunft
+  die ganze Leiste.
   `draft` ist die Entformschräge, `t` = Winkel durch den dreifachen
   Grenzwert (`draftT`): bis zum Grenzwert von Rot nach Gold, dort eine
   gewollte Stufe, darüber von hellem zu sattem Grün, ab dem Dreifachen
@@ -2367,11 +2425,12 @@ assets/die.glb        DAS Formmodell — binäres glTF, vom Viewer geladen
 assets/parts/*.glb    die Beispielteile — ebenfalls fertiges glTF
 
 js/solids.js          Primitive als Dreieckssuppen (Quader, Loft, Zylinder, Kugel, Rohr)
-js/mesh.js            Netz-Werkzeuge: verschweißen, Nachbarschaft, T-Stöße, Normalen, Verfeinern
+js/mesh.js            Netz-Werkzeuge: verschweißen, Nachbarschaft, T-Stöße, Normalen
 js/registry.js        Baugruppen-Metadaten (id, Label, Seite, Farbe)
 js/scene.js           Renderer, Kameras (Zentral + Parallel), Licht, Ansichten, Zeichnen auf Abruf, Achsenkreuz
 js/trackball.js       Quaternionen-Trackball: freies Drehen um einen Punkt
-js/handles.js         Griffe im Viewport: auswählen, in der Ebene ziehen, Pfeile, Zielmodus aufs Bauteil
+js/handles.js         Griffe im Viewport: auswählen, in der Ebene ziehen, Pfeile, Zielmodus aufs Bauteil; createPlacer
+js/viewmath.js        Kamera und Zeiger: Maß je Bildpunkt, Zeiger → Strahl, Bildachsen, hoverProbe
 js/ui/axes.js         das Achsenkreuz (SVG über dem Bild)
 js/vents/model.js     der Überlaufplan: Arten, Maße, Dreibein, Datei, Prüfregeln
 js/vents/geom.js      Prismen aus dem Plan: Steg, Bohne, Kanal, Waschbrett
@@ -2410,7 +2469,8 @@ js/studio/viewport.js Szene + Einpassen in den freien Teil des Bildes, Zoom zum 
 js/studio/job.js      lange Rechnungen: Knopf wird „Abbrechen", Fortschritt, AbortSignal
 js/studio/history.js  Rückgängig/Wiederholen als Stapel von JSON-Abzügen
 js/studio/store.js    Entwürfe und Einstellungen in localStorage, je Werkzeug und Bauteil
-js/studio/files.js    Öffnen nach Inhalt, Speichern als JSON, Ablegen auf dem Viewport
+js/studio/files.js    Öffnen nach Inhalt, Speichern als JSON, Ablegen auf dem Viewport, Dateinamen, STL-Export
+js/studio/planio.js   Pläne aus Dateien: Format und Fassung, Kennungen, Punkte, Zahlen in ihren Grenzen
 js/studio/format.js   Zahlen deutsch schreiben und lesen (fmt, fmtUnit, parseNumber, clamp)
 js/studio/rows.js     Bausteine der Seitenleiste (Zahl, Regler, Schalter, Kennzahlen, Details)
 js/studio/help.js     die Hilfe-Lade mit Ankern
@@ -2433,7 +2493,7 @@ js/runner/tool.js     Angussdesigner im Rahmen (dazu panel.js: Felder je Modus, 
 js/simulation/        Angussfüllung (anguss.js) und Kammerfüllung (kammer.js) im Rahmen; core.js: Schalter, Lauf, Ergebnisse, Bild
 js/simulation/engines/ die Verfahren als Adapter: lbm.js (Gitter), sph.js (Partikel), env.js (WebGPU, Tempo, Zeitschätzung)
 js/lbm/, js/sph/      die Kerne: Lattice-Boltzmann und SPH, je auf der Grafikkarte (WGSL) und in JavaScript
-vendor/three/         three.module.js 0.160, OrbitControls, GLTFLoader/-Exporter, LICENSE (MIT)
+vendor/three/         three.module.js 0.160, GLTFLoader/-Exporter, LICENSE (MIT)
 vendor/utils/         BufferGeometryUtils, TextureUtils (von den Loadern gebraucht)
 ```
 
@@ -2502,11 +2562,11 @@ nichts. Die Dateien liegen unter `tests/web/3d-studio/`:
 | `geometry.test.mjs` | Primitive (Volumen, Orientierung, Aufdicken), CSG, Verschweißen, T-Stöße, weiche Normalen |
 | `part.test.mjs` | Sichtbarkeit und Teilung an Körpern mit bekannter Antwort (Würfel, gedrafteter Quader, Pilzkopf, Querbohrung), Entformschrägen, STL, und ob die ausgelieferten `assets/parts/*.glb` noch zur Quelle passen |
 | `field.test.mjs` | Abstandsfeld und Offsetfläche gegen die geschlossene Formel (Quader, Kugel), Untermaß, Geschlossenheit, verschmelzende Spalte |
-| `distance.test.mjs` | Punkt-Netz-Abstand gegen Fläche, Kante, Ecke und Innenraum, Symmetrie, Unabhängigkeit von der Rasterweite, Verfeinern |
+| `distance.test.mjs` | Punkt-Netz-Abstand gegen Fläche, Kante, Ecke und Innenraum, Symmetrie, Unabhängigkeit von der Rasterweite, gemessen am Netz wie geladen |
 | `die.test.mjs` | die ausgelieferte `assets/die.glb` trägt alle Knoten-, Baugruppen- und Materialnamen, über die der Viewer sucht, und indizierte Geometrie |
 | `imports.test.mjs` | jeder Import löst auf, jeder exportierte Name existiert, jede angesprochene HTML-id ist vorhanden — und für die Werkzeuge des Rahmens: jedes `ui('name')` steht als `data-ui` in den (dafür gebauten) Feldern oder im Gerüst |
-| `studio-core.test.mjs` | der Rahmen ohne Werkzeug: `parseNumber` (`1.500`, `1.5`, `0.500`, `1.234,5`, `−3`), Rundlauf mit `fmtPlain`, Verlauf (Zug = ein Eintrag, Zusammenfassen, Grenze), Entwurf (schreiben, finden, verwerfen, ohne Speicher), Abbruch erreicht `buildField` und `runSimulation` |
-| `tools/*.test.mjs` | je Werkzeug des Rahmens die Seite unter dem DOM-Platzhalter (`tools/fixture.mjs`): Modi besitzen ihren Viewport, Hauptknopf und Zustandszeile, Abbrechen, Einstellungen kommen zurück und lassen sich zurücksetzen, Datei; `tools/rahmen.test.mjs` hält am Überlaufdesigner, was der Rahmen jedem Werkzeug verspricht (Entwurf je Bauteil, Tasten und Esc, Klappen, Doppelklick, ⓘ, `cancelDrag`) |
+| `studio-core.test.mjs` | der Rahmen ohne Werkzeug: `parseNumber` (`1.500`, `1.5`, `0.500`, `1.234,5`, `−3`), Rundlauf mit `fmtPlain`, Verlauf (Zug = ein Eintrag, Zusammenfassen, Grenze), Entwurf (schreiben, finden, verwerfen, ohne Speicher), Abbruch erreicht `buildField` und `runSimulation`, Aufträge (überholt ohne `onCancel`), `planField`, `planio.js`, `createPlacer`, Dateinamen, `turboTrim`, `viewmath.js`, `slider` mit `fire`/`set`, Zeichnen auf Abruf |
+| `tools/*.test.mjs` | je Werkzeug des Rahmens die Seite unter dem DOM-Platzhalter (`tools/fixture.mjs`, dazu `interact(P)` für Zeiger, Klick, Kamera, Chips, Tasten und Felder und `same`/`seg`/`set`): Modi besitzen ihren Viewport, Hauptknopf und Zustandszeile, Abbrechen, Einstellungen kommen zurück und lassen sich zurücksetzen, Datei; `tools/rahmen.test.mjs` hält am Überlaufdesigner, was der Rahmen jedem Werkzeug verspricht (Entwurf je Bauteil, Tasten und Esc, Klappen, Doppelklick, ⓘ, `cancelDrag`, der Vertrag von `host.changed`/`resetHistory`) |
 | `runner.test.mjs` | der Angussdesigner ohne Browser: Profil (Umriss gegen Abstandsfunktion), Graph (Spiegelung, Einfügen, Löschen, JSON), Kurve (Bogenlänge, monotoner Querschnitt), Sweep (Volumen = Fläche × Länge, geschlossen auch mit gerundeten Deckeln), Strömung, Regeln, Auslegung, Flussschema |
 | `fill.test.mjs` | die Füllabschätzung ohne Browser: Plan und Anteile, Startzellen unter dem Rechteck, Frontausbreitung (Ankunft wächst mit dem Weg, Füllgrad als Volumenrang, der größere Anschnitt kommt weiter, die Dünnwand-Bremse verzögert eine Rippe), Füllkörper bei 100 % und 50 %, letzte Stellen |
 | `viewer.test.mjs` | die Verdrahtung aller Viewer — mit einem winzigen DOM aus der **echten** HTML-Seite und dem echten Three.js ohne WebGL-Renderer (`tests/stubs/`) |

@@ -18,8 +18,9 @@
 
    Das Modul kennt kein Three.js; die Körper baut js/cooling/geom.js. */
 
-import { add, sub, norm, len, addScaled, clamp } from '../runner/vec.js';
+import { add, sub, normOr, len, addScaled, clamp } from '../runner/vec.js';
 import { ELEMENT } from '../part/colors.js';
+import { checkFormat, fileIds, filePoint, fileNumber } from '../studio/planio.js';
 
 export const FORMAT = 'dielogic-temperier';
 export const FORMAT_VERSION = 1;
@@ -61,10 +62,7 @@ export function emptyPlan() {
 
 export const allItems = plan => Object.values(plan.items);
 
-const unit = v => {
-  const u = norm(v);
-  return (u[0] || u[1] || u[2]) ? u : [0, 0, 1];
-};
+const unit = v => normOr(v, [0, 0, 1]);
 
 /**
  * Richtung eines Kühlstichs aus der Wahl: `outward` ist die nach außen
@@ -183,54 +181,10 @@ export function toJSON(plan) {
   };
 }
 
-/* Kennungen aus einer Datei: vorn ein Buchstabe, dann Buchstaben, Ziffern,
-   _ oder -, höchstens 32 Zeichen. Sie stehen im Auswahlfeld und in der
-   Liste — eine Datei mit anderen stammt nicht von hier und wird abgelehnt.
-   Wer keine Kennung hat (oder eine, die schon vergeben ist), bekommt eine
-   neue, die keiner anderen gleicht: früher wurde jedes Element ohne
-   Kennung zu „t1" und überschrieb das vorige. */
-const ID = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
-export function fileIds(list, prefix) {
-  const ids = [], taken = new Set();
-  let seq = 0;
-  list.forEach((raw, i) => {
-    if (!raw || typeof raw !== 'object') throw new Error('Element ' + (i + 1) + ' der Datei ist unlesbar.');
-    const id = raw.id !== undefined && raw.id !== null && raw.id !== '' ? String(raw.id) : null;
-    if (id !== null && !ID.test(id)) {
-      throw new Error('Element ' + (i + 1) + ' der Datei hat keine gültige Kennung: erlaubt sind Buchstaben, Ziffern, _ und -, vorn ein Buchstabe, höchstens 32 Zeichen.');
-    }
-    ids.push(id !== null && !taken.has(id) ? id : null);
-    if (id === null) return;
-    taken.add(id);
-    const num = +id.replace(/\D/g, '');
-    if (Number.isSafeInteger(num)) seq = Math.max(seq, num);
-  });
-  for (let i = 0; i < ids.length; i++) {
-    if (ids[i]) continue;
-    let id;
-    do id = prefix + (++seq); while (taken.has(id));
-    taken.add(id);
-    ids[i] = id;
-  }
-  return { ids, seq };
-}
-
-/** Ein Punkt aus der Datei: drei Zahlen — sonst ist die Datei beschädigt. */
-function filePoint(v, what) {
-  const p = Array.isArray(v) && v.length >= 3 ? v.slice(0, 3).map(Number) : null;
-  if (!p || !p.every(Number.isFinite)) throw new Error(what + ': Die Lage fehlt oder ist keine Zahl.');
-  return p;
-}
-
-/** Eine Zahl aus der Datei in den Grenzen ihres Feldes — oder die Vorgabe. */
-const fileNumber = (v, meta, fallback) => {
-  const x = v === null || v === '' || v === undefined ? NaN : Number(v);
-  return Number.isFinite(x) ? clamp(x, meta.min, meta.max) : fallback;
-};
-
+/* Kennungen, Punkte und Zahlen aus der Datei prüft js/studio/planio.js —
+   wie bei den anderen Plänen. */
 export function fromJSON(obj) {
-  if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Temperierdatei (Kennung „' + FORMAT + '" fehlt).');
-  if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
+  checkFormat(obj, FORMAT, FORMAT_VERSION, 'Das ist keine Temperierdatei (Kennung „' + FORMAT + '" fehlt).');
   const plan = emptyPlan();
   /* Werte in den Grenzen der Felder: was dort nicht einzustellen wäre (der
      Regler des Achsabstands reicht von 5 bis 60 mm), soll auch aus einer

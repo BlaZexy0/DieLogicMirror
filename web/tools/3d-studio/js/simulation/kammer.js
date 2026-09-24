@@ -10,9 +10,8 @@
 
    Gerechnet wird mit dem Gitter (js/lbm/), mit Partikeln (js/sph/) oder mit
    dem Metamodell (js/meta/) — ein Schalter, drei Verfahren (core.js,
-   engines/). Das Werkzeug hat kein Bauteil und keine Datei als Quelle:
-   createHost({ part: false }), die Einstellungen gehören zu EINEM Schlüssel
-   („kammer").
+   engines/). Das Werkzeug hat kein Bauteil und keine Datei als Quelle
+   (part: false), die Einstellungen gehören zu EINEM Schlüssel („kammer").
 
    Die Modi: Kammer · Kurve · Simulation · Ergebnis. Kammer, Kolben und
    Kolben stehen immer im Bild, dazu die ruhende Schmelze bis zum Stand
@@ -23,9 +22,11 @@
    Änderung ein anderes Problem stellt). */
 
 import * as T from 'three';
-import { segButtons, segButtonSet, slider, numberInput, parseNumber, clampNote } from '../ui/controls.js';
+import { segButtons, segButtonSet, slider, numberInput, clampNote } from '../ui/controls.js';
 import { kpis, esc } from '../studio/rows.js';
-import { fmtPlain, fmtUnit, fmtFixed, rangeText } from '../studio/format.js';
+import { fmtPlain, fmtUnit, fmtFixed, rangeText, parseNumber } from '../studio/format.js';
+import { checkFormat } from '../studio/planio.js';
+import { surfaceMaterial } from '../ui/common.js';
 import { fillLevel, outletFor } from '../lbm/sleeve.js';
 import * as F from '../runner/flow.js';
 import { shotTimeline } from '../runner/shottime.js';
@@ -87,14 +88,14 @@ export function createKammerfuellungTool(host) {
      Stahl, in derselben Stufe wie die Füllkammer im Formaufbau
      (js/registry.js), durchscheinend; der Kolben ist Kolben. */
   const sleeveColor = () => steelShade(0.62);
-  const sleeveMat = new T.MeshStandardMaterial({ color: sleeveColor(), roughness: 0.55, metalness: 0.1, side: T.DoubleSide, transparent: true, opacity: 0.25, depthWrite: false });
+  const sleeveMat = surfaceMaterial(sleeveColor(), { roughness: 0.55, metalness: 0.1, flat: false, transparent: true, opacity: 0.25, depthWrite: false });
   const sleeveMesh = new T.Mesh(new T.BufferGeometry(), sleeveMat);
-  const plungerMesh = new T.Mesh(new T.BufferGeometry(), new T.MeshStandardMaterial({ color: ROLE.piston, roughness: 0.5, metalness: 0.3, side: T.DoubleSide }));
+  const plungerMesh = new T.Mesh(new T.BufferGeometry(), surfaceMaterial(ROLE.piston, { roughness: 0.5, metalness: 0.3, flat: false }));
   /* Die ruhende Schmelze vor dem Schuss: ohne sie änderte der Regler
      „Füllgrad" nur Zahlen. Sie trägt die Farbe der Schmelze; im Ergebnis
      löst sie das Bild des Laufs ab, das seine Skala mitbringt. */
-  const restMesh = new T.Mesh(new T.BufferGeometry(), new T.MeshStandardMaterial({
-    color: ROLE.melt, roughness: 0.5, metalness: 0.05, side: T.DoubleSide, transparent: true, opacity: 0.85
+  const restMesh = new T.Mesh(new T.BufferGeometry(), surfaceMaterial(ROLE.melt, {
+    roughness: 0.5, metalness: 0.05, flat: false, transparent: true, opacity: 0.85
   }));
   group.add(sleeveMesh, plungerMesh, restMesh);
 
@@ -338,15 +339,13 @@ export function createKammerfuellungTool(host) {
   }
 
   /* ── Modi ────────────────────────────────────────────────── */
-  const modes = MODES.map(m => ({ ...m }));
-  for (const m of modes) { m.primary = core.primary; m.enter = () => core.applyView(); m.leave = () => core.stopPlay(); }
+  const modes = MODES.map(m => ({ ...m, primary: core.primary, enter: () => core.applyView(), leave: () => core.stopPlay() }));
 
   /* ── Verdrahtung ─────────────────────────────────────────── */
-  let wired = false;
-  const changed = label => { if (wired) host.changed(label); };
   /** Ein Feld, das das Problem ändert: neu aufstellen, dann dem Rahmen melden. */
-  const edit = label => { updateProblem(label); changed(label); };
-  let opacityEl = null;
+  const edit = label => { updateProblem(label); host.changed(label); };
+  /* Die Regler, die syncFields nachstellt (slider: set ohne Rückruf). */
+  let fillSlider = null, opacitySlider = null;
   const urlEngine = engineFromUrl();
   let starting = true;
 
@@ -354,27 +353,23 @@ export function createKammerfuellungTool(host) {
   function syncFields() {
     const s = state.spec;
     ui('sl-d').value = fmtPlain(s.d); ui('sl-len').value = fmtPlain(s.length);
-    ui('sl-fill').value = String(Math.round(s.fill * 100));
-    ui('sl-fill-val').textContent = Math.round(s.fill * 100) + ' %';
+    fillSlider.set(Math.round(s.fill * 100));
     ui('sl-v1').value = fmtPlain(state.v1); ui('sl-v2').value = fmtPlain(state.v2); ui('sl-a').value = fmtPlain(state.a);
     ui('alloy').value = state.alloy;
     segButtonSet(ui('curve-seg'), state.curveMode);
     ui('v1v2-block').hidden = state.curveMode !== 'v1v2';
     ui('punkte-block').hidden = state.curveMode !== 'punkte';
     renderPunkte();
-    if (opacityEl) {
-      opacityEl.value = String(Math.round(state.opacity * 100));
-      opacityEl.parentNode.querySelector('.val').textContent = opacityEl.value + ' %';
-    }
+    opacitySlider.set(Math.round(state.opacity * 100));
   }
 
   function mounted() {
     ui('alloy').innerHTML = Object.entries(F.ALLOYS).map(([k, x]) => '<option value="' + k + '">' + x.label + '</option>').join('');
     /* Neue Maße: die Auflösung folgt wieder dem Vorschlag, das Bild passt neu ein. */
-    const resized = label => { core.autoCell(); updateProblem(label); fitScene(); changed(label); };
+    const resized = label => { core.autoCell(); updateProblem(label); fitScene(); host.changed(label); };
     numberInput(ui('sl-d'), v => { state.spec.d = v; resized('Durchmesser'); return v; }, { min: LIMITS.d[0], max: LIMITS.d[1], unit: 'mm' });
     numberInput(ui('sl-len'), v => { state.spec.length = v; resized('Länge'); return v; }, { min: LIMITS.length[0], max: LIMITS.length[1], unit: 'mm' });
-    slider(ui('sl-fill'), v => { if (!wired) return; state.spec.fill = v / 100; edit('Füllgrad'); }, v => v + ' %');
+    fillSlider = slider(ui('sl-fill'), v => { state.spec.fill = v / 100; edit('Füllgrad'); }, v => v + ' %', null, { fire: false });
     segButtons(ui('curve-seg'), v => {
       state.curveMode = v;
       if (v === 'punkte') punkteHolen();
@@ -412,7 +407,7 @@ export function createKammerfuellungTool(host) {
       renderPunkte();
       fokus('[data-loesch="' + Math.min(i, state.points.length - 1) + '"]');
       updateProblem('Wegpunkt');
-      changed('Wegpunkt entfernt');
+      host.changed('Wegpunkt entfernt');
     });
     ui('punkt-plus').addEventListener('click', () => {
       if (state.points.length >= MAX_PUNKTE) return;
@@ -428,11 +423,9 @@ export function createKammerfuellungTool(host) {
     /* Die Legierung gehört zum Problem (Zähigkeit des Gitters, Dichte der Partikel). */
     ui('alloy').addEventListener('change', e => { state.alloy = e.target.value; edit('Legierung'); });
     const pop = shell.darstellung(DARSTELLUNG);
-    opacityEl = pop.querySelector('[data-ui="opacity"]');
-    slider(opacityEl, v => { state.opacity = v / 100; applyLook(); changed('Deckkraft'); }, v => v + ' %');
+    opacitySlider = slider(pop.querySelector('[data-ui="opacity"]'), v => { state.opacity = v / 100; applyLook(); host.changed('Deckkraft'); }, v => v + ' %', null, { fire: false });
     core.mounted();
     syncFields();
-    wired = true;
   }
 
   /* ── Einstellungen: merken, laden, zurücksetzen ──────────── */
@@ -442,8 +435,7 @@ export function createKammerfuellungTool(host) {
     points: state.points.map(pt => pt.slice()), opacity: state.opacity
   });
   function fromJSON(obj) {
-    if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Datei der Kammerfüllung.');
-    if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
+    checkFormat(obj, FORMAT, FORMAT_VERSION, 'Das ist keine Datei der Kammerfüllung.');
     /* Was das Problem stellt — mit „Punkte" gehören die Wegpunkte dazu: eine
        Datei, die sich nur in ihnen unterschied, ließ sonst die alte Kurve stehen
        (die Liste zeigte die neuen Punkte, Kennzahlen, Tabelle und Lauf die alten). */
@@ -489,8 +481,7 @@ export function createKammerfuellungTool(host) {
   const tool = {
     id: 'kammerfuellung', modes, startMode: 'kammer', settingsOnly: true,
     mounted, start, toJSON, fromJSON, resetSettings, accepts: [FORMAT], exports: [],
-    docName: () => 'kammer-' + fmtPlain(state.spec.d, 0) + 'x' + fmtPlain(state.spec.length, 0),
-    state, group
+    docName: () => 'kammer-' + fmtPlain(state.spec.d, 0) + 'x' + fmtPlain(state.spec.length, 0)
   };
   tool.__viewer = {
     state, view, shell, host, tool, core, group, sleeveMesh, plungerMesh, restMesh,

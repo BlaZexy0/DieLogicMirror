@@ -7,10 +7,9 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mountPage, wait, kpiText } from './fixture.mjs';
+import { mountPage, wait, kpiText, same, seg } from './fixture.mjs';
 
-/* Messwerte nie mit assert.equal vergleichen (siehe wandstaerke.test.mjs). */
-const same = (a, b, msg) => assert.ok(a === b, msg);
+/* Messwerte nie mit assert.equal vergleichen (same, ./fixture.mjs). */
 /* Ungefärbt steht ein Netz im Grau des Bauteils (Rolle part, als Punktfarbe
    linear), B eine Stufe dunkler — ohne Palette die Standardwerte. */
 const C = await import('../../../../web/tools/3d-studio/js/part/colors.js');
@@ -65,14 +64,17 @@ test('Abstand auf Knopfdruck: beide Richtungen, Kennzahlen, Skala aus den Messwe
   assert.equal(shell.mode, 'abstand', 'wer bei den Dateien rechnet, landet bei den Zahlen');
   assert.ok(s.a.dist && s.a.dist.length === s.a.model.vertexCount, 'ein Wert je Punkt von A');
   assert.ok(s.b.dist && s.b.dist.length === s.b.model.vertexCount, 'ein Wert je Punkt von B');
-  /* Beide Richtungen müssen (fast) denselben kleinsten Abstand finden — der
-     kürzeste Weg zwischen zwei Flächen ist symmetrisch. Gemessen wird an den
-     Eckpunkten des verfeinerten Netzes (Schritt diag/80): ein Unterschied von
-     einem Bruchteil des Schritts ist Abtastung, kein Fehler. */
-  const step = Math.max(s.a.model.bounds.diag, s.b.model.bounds.diag) / 80;
-  assert.ok(Math.abs(s.a.stats.min - s.b.stats.min) < step / 4,
-    'kleinster Abstand von beiden Seiten gleich: ' + s.a.stats.min.toFixed(2) + ' / ' + s.b.stats.min.toFixed(2));
-  assert.ok(s.a.stats.min > 0, 'die Körper berühren sich nicht');
+  /* Gemessen wird am Netz, wie es geladen wurde — verfeinert wird nichts
+     (die Feinheit ist Sache des Exports): A und B haben genau die Dreiecke
+     ihrer Dateien. Jede Richtung misst an ihren eigenen Ecken; der kleinste
+     Wert von A nach B und der von B nach A sind je eine obere Schranke des
+     kürzesten Wegs, nicht dieselbe Zahl. */
+  const { loadDemo } = await import('../../../../web/tools/3d-studio/js/part/demoparts.js');
+  const { buildModel } = await import('../../../../web/tools/3d-studio/js/part/model.js');
+  for (const [k, id] of [['a', 'oil_pan'], ['b', 'coolfix']]) {
+    assert.equal(s[k].model.faceCount, buildModel((await loadDemo(id)).tris).faceCount, k + ': das Netz der Datei, nicht mehr');
+  }
+  assert.ok(s.a.stats.min > 0 && s.b.stats.min > 0, 'die Körper berühren sich nicht');
   const lo = Math.min(s.a.stats.min, s.b.stats.min), hi = Math.max(s.a.stats.max, s.b.stats.max);
   assert.ok(Math.abs(s.scale.min - lo) <= 0.1 + 1e-9 && Math.abs(s.scale.max - hi) <= 0.1 + 1e-9, 'Grenzen aus den Messwerten');
   assert.equal(ui('scale-min').value, String(s.scale.min).replace('.', ','));
@@ -254,14 +256,14 @@ test('Eine neue Datei: nichts bleibt vom alten Paar stehen, auch nicht auf der a
   const { doc, v, ui, shell } = P;
   const s = v.state;
   const S = await solids();
-  /* Würfel von 20 mm (grobe Netze werden verfeinert — größere Teile kosten
-     hier nur Zeit). B steckt zu einem Viertel in A: eine Durchdringung. */
+  /* Würfel von 20 mm (größere Teile kosten hier nur Zeit). B steckt zu
+     einem Viertel in A: eine Durchdringung. */
   await loadAs('a', 'wuerfel-a.stl', S.box(20, 20, 20));
   await loadAs('b', 'wuerfel-b.stl', S.translate(S.box(20, 20, 20), 15, 0, 0));
   shell.setMode('abstand');
   ui('primary').dispatch('click');
   await wait(() => s.analysed && !s.running, 1600);
-  ui('color-seg').querySelectorAll('button').find(b => b.dataset.value === 'both').dispatch('click');
+  seg(ui('color-seg'), 'both').dispatch('click');
   const bar = doc.getElementById('colorbar');
   assert.ok(bar.classList.contains('on'), 'gerechnet: die Skala steht');
   assert.match(kpiText(ui('dist-kpis')), /A → B/);

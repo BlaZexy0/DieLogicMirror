@@ -47,12 +47,16 @@ import { distSqPointTri } from '../mesh.js';
 /** Erlaubte Zellkanten in mm — feiner frisst Speicher, gröber sieht keine Wand. */
 export const CELL_RANGE = [0.25, 50];
 
+/** Mehr Rasterpunkte rechnet das Studio nicht: darüber wird die Zellkante
+    angehoben (planField). 16 Mio. Werte sind 64 MB. */
+export const MAX_SAMPLES = 16e6;
+
 /** Vorschlag für die Zellkante aus dem Bauteil: die halbe Wanddicke
     (2V/A), damit eine Wand mindestens zwei Zellen über ihre Dicke hat;
     ohne brauchbare Wanddicke ein 64stel der längsten Kante. Auf glatte
     Werte gerundet — halbe Millimeter ab 1 mm, darunter Zehntel. */
 export function suggestCell(m) {
-  const wall = m.volume > 0 && m.totalArea > 0 ? 2 * m.volume / m.totalArea : 0;
+  const wall = m.wall > 0 ? m.wall : 0;
   const longest = Math.max(m.bounds.size[0], m.bounds.size[1], m.bounds.size[2]) || 1;
   const h = Math.max(CELL_RANGE[0], Math.min(CELL_RANGE[1], wall > 0 ? wall / 2 : longest / 64));
   return h >= 1 ? Math.round(h * 2) / 2 : Math.round(h * 10) / 10;
@@ -72,6 +76,24 @@ export function fieldSize(model, res, band, extra = {}) {
   const origin = [0, 1, 2].map(a => b.min[a] - pad);
   const samples = dims[0] * dims[1] * dims[2];
   return { dims, origin, h, band, samples, bytes: samples * 4 };
+}
+
+/**
+ * Was ein Feld mit der Zellkante `h` kosten wird — und mit welcher Kante
+ * es wirklich gerastert wird: hätte es mehr als MAX_SAMPLES Punkte, wird
+ * die Kante in Schritten von zehn Prozent angehoben; Band und Rand (mm)
+ * bleiben. EINE Rechnung für den Gastgeber, der rastert (js/studio/host.js),
+ * und die Werkzeuge, die es VORHER sagen: vorher stand die Schleife dreimal
+ * da, und die Vorschau der Füllung hob das Band mit der Kante an — der
+ * Gastgeber nicht.
+ *   → { est, asked, lifted }: est das Raster, das entsteht (est.h die Kante),
+ *     asked das verlangte, lifted ob angehoben wurde
+ */
+export function planField(model, { h, band, pad }) {
+  const asked = fieldSize(model, 0, band, { h, pad });
+  let est = asked, hh = h;
+  while (est.samples > MAX_SAMPLES) { hh = Math.round(hh * 110) / 100; est = fieldSize(model, 0, band, { h: hh, pad }); }
+  return { est, asked, lifted: est !== asked };
 }
 
 /* ── Durchgang 1: innen oder außen ───────────────────────────── */
@@ -316,15 +338,27 @@ export function fieldVolume(f, iso) {
   return n * f.h * f.h * f.h;
 }
 
-/** Wert an beliebiger Stelle (trilinear) — für Abfragen im Viewer. */
-export function sampleField(f, x, y, z) {
+/** Die Rasterzelle um (x, y, z) und die Lage darin, an den Rand geklemmt:
+    [i, j, k, tx, ty, tz] — geschrieben in `out`. Beide Abtaster (hier und
+    js/fill/solve.js, sampleFrac) suchen damit, sie wichten nur verschieden. */
+const CELL = new Float64Array(6);
+export function cellAt(f, x, y, z, out = CELL) {
   const [nx, ny, nz] = f.dims;
   const gx = (x - f.origin[0]) / f.h, gy = (y - f.origin[1]) / f.h, gz = (z - f.origin[2]) / f.h;
   const i = Math.max(0, Math.min(nx - 2, Math.floor(gx)));
   const j = Math.max(0, Math.min(ny - 2, Math.floor(gy)));
   const k = Math.max(0, Math.min(nz - 2, Math.floor(gz)));
-  const tx = Math.max(0, Math.min(1, gx - i)), ty = Math.max(0, Math.min(1, gy - j)), tz = Math.max(0, Math.min(1, gz - k));
-  const at = (a, b, c) => f.data[(c * ny + b) * nx + a];
+  out[0] = i; out[1] = j; out[2] = k;
+  out[3] = Math.max(0, Math.min(1, gx - i)); out[4] = Math.max(0, Math.min(1, gy - j)); out[5] = Math.max(0, Math.min(1, gz - k));
+  return out;
+}
+
+/** Wert an beliebiger Stelle (trilinear) — für Abfragen im Viewer. */
+export function sampleField(f, x, y, z) {
+  const [nx, ny] = f.dims;
+  const c = cellAt(f, x, y, z);
+  const i = c[0], j = c[1], k = c[2], tx = c[3], ty = c[4], tz = c[5];
+  const at = (a, b, cc) => f.data[(cc * ny + b) * nx + a];
   const lerp = (p, q, t) => p + (q - p) * t;
   const c00 = lerp(at(i, j, k), at(i + 1, j, k), tx);
   const c10 = lerp(at(i, j + 1, k), at(i + 1, j + 1, k), tx);

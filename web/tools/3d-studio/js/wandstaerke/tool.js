@@ -8,16 +8,16 @@
    Gastgeber (host.field) — auf der Werkbank teilen es sich drei Schritte. */
 
 import * as T from 'three';
-import { fieldSize, thickMaxima, CELL_RANGE } from '../part/field.js';
+import { thickMaxima, CELL_RANGE, MAX_SAMPLES } from '../part/field.js';
 import { surfaceNets } from '../part/surfacenets.js';
-import { writeSTL } from '../part/stlio.js';
 import { volume, surface } from '../mesh.js';
 import { facts, segButtons, segButtonSet, slider, numberInput, colorbar, gradient, chip } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit } from '../studio/format.js';
 import { kpis } from '../studio/rows.js';
-import { download, safeName, baseName } from '../studio/files.js';
-import * as C from '../part/colors.js';
-import { onScheme, VIEW } from '../part/colors.js';
+import { saveSTL } from '../studio/files.js';
+import { checkFormat } from '../studio/planio.js';
+import { surfaceMaterial } from '../ui/common.js';
+import { onScheme, VIEW, scale, lut, hex2rgb, turboTrim } from '../part/colors.js';
 import { MODES, DARSTELLUNG } from './panel.js';
 
 export const FORMAT = 'dielogic-wandstaerke';
@@ -25,12 +25,11 @@ export const FORMAT_VERSION = 1;
 
 const BAND_CELLS = 3, PAD_CELLS = 2;
 /* Die Wandstärke auf der Farbleiste `turbo` (js/part/colors.js, in jedem
-   Farbschema dieselbe): dünn blau, dick rot. Benutzt wird das Stück von
-   sattem Blau bis sattem Rot, ohne die fast schwarzen Enden. */
-const turboT = t => 0.08 + 0.84 * Math.max(0, Math.min(1, t));
-/* Mehr Rasterpunkte rechnet der Gastgeber nicht (js/studio/host.js): darüber
-   hebt er die Zellkante in Schritten von zehn Prozent an. */
-const MAX_SAMPLES = 16e6;
+   Farbschema dieselbe): dünn blau, dick rot — das Stück von sattem Blau bis
+   sattem Rot, ohne die fast schwarzen Enden (turboTrim). Mehr als
+   MAX_SAMPLES Rasterpunkte rechnet der Gastgeber nicht: darüber hebt er die
+   Zellkante an (js/part/field.js, planField). */
+const LIMIT_TEXT = fmt(MAX_SAMPLES / 1e6, 0) + ' Mio.';
 
 export function createWandstaerkeTool(host) {
   const { shell, view, part, field: hostField } = host;
@@ -56,7 +55,7 @@ export function createWandstaerkeTool(host) {
   /* Die Isofläche ist eine Bauhilfe, kein Körper der Form: die Rolle der
      Hilfsflächen (wie die Abstandsfläche der Temperierung), leicht
      durchscheinend. */
-  const offsetMat = new T.MeshStandardMaterial({ color: VIEW.helper, roughness: 0.5, metalness: 0.12, side: T.DoubleSide, flatShading: true, transparent: true, opacity: 0.85 });
+  const offsetMat = surfaceMaterial(VIEW.helper, { roughness: 0.5, metalness: 0.12, transparent: true, opacity: 0.85 });
   const offsetMesh = new T.Mesh(new T.BufferGeometry(), offsetMat);
   /* Vor dem durchscheinenden Bauteil zeichnen: sie liegt in ihm, und das
      Bauteil schreibt keine Tiefe — in umgekehrter Folge stünde sie davor. */
@@ -80,21 +79,10 @@ export function createWandstaerkeTool(host) {
   /* ── Das Feld ────────────────────────────────────────────── */
   const params = (h = state.cell) => ({ h, band: BAND_CELLS * h, pad: PAD_CELLS * h });
 
-  /* Was der Gastgeber rastern WIRD: über 16 Mio. Punkten hebt er die
-     Zellkante an (js/studio/host.js, dieselbe Schleife). Die Kosten nennen
-     das Raster, das wirklich entsteht — vorher standen dort 22,58 Mio.
-     Punkte, gerechnet wurde still mit einer gröberen Zelle. */
-  function plannedField() {
-    const p = params();
-    const asked = fieldSize(part.model, 0, p.band, { h: p.h, pad: p.pad });
-    let est = asked, h = p.h;
-    while (est.samples > MAX_SAMPLES) { h = Math.round(h * 110) / 100; est = fieldSize(part.model, 0, p.band, { h, pad: p.pad }); }
-    return { est, asked, lifted: est !== asked };
-  }
-
   /* Die Rechnung gehört zu dem Bauteil, für das sie begann: ein neues
-     beendet sie still (onPartStart), ihr Ergebnis zählt dann nicht mehr. */
-  let epoch = 0, silent = false;
+     überholt sie (der Gastgeber beendet sie still, js/studio/job.js), und
+     ihr Lauf fasst danach nichts mehr an — der jüngste Auftrag gewinnt. */
+  let latest = 0;
 
   async function runField() {
     if (!part.model || state.running) return;
@@ -103,7 +91,7 @@ export function createWandstaerkeTool(host) {
        wer während der Rechnung in einen anderen Modus ging, bleibt dort.
        Ein NEUES Feld (andere Zellkante) lässt einen, wo man ist. */
     const first = !state.field && shell.mode === 'feld';
-    const my = epoch;
+    const my = ++latest;
     /* Gerechnet wird mit der Zellkante von JETZT. Wer sie währenddessen
        ändert, bekommt am Ende ein Feld, das als veraltet dasteht. */
     const asked = state.cell;
@@ -116,14 +104,13 @@ export function createWandstaerkeTool(host) {
         ...params(asked), signal,
         onProgress: (p, what) => progress(p, 'Feld rastern · ' + what + ' … ' + Math.round(p * 100) + ' %')
       }),
-      onCancel: () => { if (!silent) state.cancelled = true; }
+      onCancel: () => { state.cancelled = true; }
     }).catch(err => {
-      if (my === epoch) ui('field-warn').textContent = 'Das Feld konnte nicht gerechnet werden: ' + err.message;
+      if (my === latest) ui('field-warn').textContent = 'Das Feld konnte nicht gerechnet werden: ' + err.message;
       console.error(err);
       return null;
     });
-    silent = false;
-    if (my !== epoch) return;                        // anderes Bauteil: onPartStart hat aufgeräumt
+    if (my !== latest) return;                       // anderes Bauteil: onPartStart hat aufgeräumt
     state.running = false; state.ready = true;
     if (f) {
       state.field = f;
@@ -172,7 +159,7 @@ export function createWandstaerkeTool(host) {
     applyMode();
   }
 
-  let extractRaf = 0, opacityEl = null;
+  let extractRaf = 0;
   const maxUnder = () => (state.stats ? state.stats.maxIn : 1e4);
   function setUnder(v, live) {
     state.underTouched = true;
@@ -205,7 +192,7 @@ export function createWandstaerkeTool(host) {
     const maxIn = Math.max(state.stats.maxIn, 1e-6);
     /* Jede Marke in der Farbe ihrer Wandstärke, auf derselben Leiste wie der Schnitt. */
     for (const m of state.maxima) {
-      const color = new T.Color(C.scale('turbo', turboT(m.r / maxIn)));
+      const color = new T.Color(scale('turbo', turboTrim(m.r / maxIn)));
       const mat = rings
         ? new T.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, side: T.DoubleSide, depthTest: false, depthWrite: false })
         : new T.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.05, transparent: true, opacity: 0.65, depthWrite: false });
@@ -234,17 +221,17 @@ export function createWandstaerkeTool(host) {
   /* ── Schnitt ─────────────────────────────────────────────── */
   const scaleEnd = () => Math.max(state.stats ? state.stats.maxIn : 1, 1e-6);
   /* Die Farben des Schnitts, einmal je Bild geholt: innen die Leiste
-     `turbo` (dünn blau, dick rot, turboT) als Tafel, außen das Grau des
+     `turbo` (dünn blau, dick rot, turboTrim) als Tafel, außen das Grau des
      Bauteils (dort gibt es keine Wandstärke), die Kontur in der Tinte. Die
      Textur trägt die Werte der Leiste und ist deshalb sRGB. */
   function slicePainter() {
-    const tab = C.lut('turbo');
-    const none = C.hex2rgb(VIEW.noData).map(x => x * 255), ink = C.hex2rgb(VIEW.lines).map(x => x * 255);
+    const tab = lut('turbo');
+    const none = hex2rgb(VIEW.noData).map(x => x * 255), ink = hex2rgb(VIEW.lines).map(x => x * 255);
     return (v, h, inn, out, o) => {
       const c = Math.abs(v) < h * 0.6 ? ink : v >= 0 ? none : null;
       if (c) { out[o] = c[0]; out[o + 1] = c[1]; out[o + 2] = c[2]; }
       else {
-        const k = 3 * Math.round(turboT(-v / inn) * 255);
+        const k = 3 * Math.round(turboTrim(-v / inn) * 255);
         out[o] = tab[k]; out[o + 1] = tab[k + 1]; out[o + 2] = tab[k + 2];
       }
       out[o + 3] = 255;
@@ -302,7 +289,7 @@ export function createWandstaerkeTool(host) {
     const inn = scaleEnd();
     colorbar({
       title: 'Wandstärke',
-      stops: gradient(t => C.scale('turbo', turboT(t))),
+      stops: gradient(t => scale('turbo', turboTrim(t))),
       ticks: [1, 0.75, 0.5, 0.25, 0].map(q => fmtUnit(2 * inn * q, 'mm')),
       extra: (state.slice.on ? chip(VIEW.lines) + 'Bauteilkontur' : '')
         + (state.hot.on ? (state.slice.on ? ' · ' : '') + 'Marken nach Größe gefärbt' : '')
@@ -329,13 +316,16 @@ export function createWandstaerkeTool(host) {
   function updateFieldFacts() {
     const m = part.model;
     if (!m) { ui('field-cost').textContent = ''; ui('field-warn').textContent = ''; facts(ui('field-facts'), []); kpis(ui('field-kpis'), []); return; }
-    const { est, asked, lifted } = plannedField();
+    /* Was der Gastgeber rastern WIRD (js/part/field.js, planField): die Kosten
+       nennen das Raster, das wirklich entsteht — vorher standen dort 22,58
+       Mio. Punkte, gerechnet wurde still mit einer gröberen Zelle. */
+    const { est, asked, lifted } = hostField.plan(params());
     const mb = est.bytes / (1024 * 1024);
     ui('field-cost').textContent = 'Raster ' + est.dims.join(' × ') + ' · ' + fmt(est.samples / 1e6, 2) + ' Mio. Punkte · ' + fmtUnit(mb, 'MB');
     /* Mehr als 16 Mio. Punkte rechnet die Seite nicht: das sagt sie VORHER,
        und die Zeile bleibt stehen, solange das Feld so gerastert ist. */
     ui('field-warn').textContent = lifted
-      ? 'Gerastert wird mit ' + fmtUnit(est.h, 'mm', 2) + ': Mit ' + fmtUnit(state.cell, 'mm', 2) + ' wären es ' + fmt(asked.samples / 1e6, 0) + ' Mio. Rasterpunkte, die Grenze sind 16 Mio.'
+      ? 'Gerastert wird mit ' + fmtUnit(est.h, 'mm', 2) + ': Mit ' + fmtUnit(state.cell, 'mm', 2) + ' wären es ' + fmt(asked.samples / 1e6, 0) + ' Mio. Rasterpunkte, die Grenze sind ' + LIMIT_TEXT
       : '';
     const rows = [['Zellkante', fmtUnit(est.h, 'mm', 2)], ['Raster', est.dims.join(' × ')], ['Rasterpunkte', fmt(est.samples / 1e6, 2) + ' Mio.'], ['Speicher', fmtUnit(mb, 'MB')]];
     if (state.field && !state.stale) rows.push(['Rechenzeit', fmtUnit(state.ms, 'ms', 0)]);
@@ -387,7 +377,7 @@ export function createWandstaerkeTool(host) {
   by.isoflaeche.primary = needsField;
   by.schnitt.primary = needsField;
   by.waermezentren.primary = needsField;
-  for (const m of modes) { m.enter = () => { syncGates(); applyMode(); }; m.leave = () => {}; }
+  for (const m of modes) m.enter = () => { syncGates(); applyMode(); };
 
   /* Ohne Feld sind die Felder der abgeleiteten Modi gedämpft. */
   function syncGates() {
@@ -400,10 +390,8 @@ export function createWandstaerkeTool(host) {
   }
 
   /* ── Verdrahtung ─────────────────────────────────────────── */
-  /* slider() meldet seinen Anfangswert schon beim Einbau — das ist keine
-     Änderung. Gemeldet wird erst, wenn alles verdrahtet ist. */
-  let wired = false;
-  const changed = label => { if (wired) host.changed(label); };
+  /* Die Regler, die fromJSON nachstellt (slider: set ohne Rückruf). */
+  const sliders = {};
   function mounted() {
     numberInput(ui('cell'), v => {
       state.cellTouched = true;
@@ -417,25 +405,24 @@ export function createWandstaerkeTool(host) {
     ui('under-slider').addEventListener('input', e => setUnder(+e.target.value, true));
     segButtons(ui('show-seg'), v => { state.show = v; applyMode(); host.changed('Anzeige'); });
     segButtons(ui('slice-seg'), v => { state.slice.axis = +v; updateSlice(); host.changed('Schnittachse'); });
-    slider(ui('slice-pos'), v => { state.slice.pos = v; updateSlice(); changed('Schnittlage'); }, () => '');
+    sliders.slicePos = slider(ui('slice-pos'), v => { state.slice.pos = v; updateSlice(); host.changed('Schnittlage'); }, () => '', null, { fire: false });
     segButtons(ui('hot-seg'), v => { state.hot.shape = v; updateHotspots(); host.changed('Form'); });
-    slider(ui('hot-min'), v => { state.hot.min = v; updateHotspots(); changed('Schwelle'); }, v => v + ' %');
+    sliders.hotMin = slider(ui('hot-min'), v => { state.hot.min = v; updateHotspots(); host.changed('Schwelle'); }, v => v + ' %', null, { fire: false });
     const pop = shell.darstellung(DARSTELLUNG);
-    opacityEl = pop.querySelector('[data-ui="opacity"]');
-    slider(opacityEl, v => { state.opacity = v / 100; applyMode(); changed('Deckkraft'); }, v => v + ' %');
-    wired = true;
+    sliders.opacity = slider(pop.querySelector('[data-ui="opacity"]'), v => { state.opacity = v / 100; applyMode(); host.changed('Deckkraft'); }, v => v + ' %', null, { fire: false });
     updateFieldFacts();
   }
 
   /* ── Bauteil gewechselt ──────────────────────────────────── */
   /* Ein Bauteil BEGINNT zu laden: eine laufende Rechnung gehört zum alten.
      Sie lief sonst zu Ende (Sekunden bei feiner Zelle) und sperrte so lange
-     das Feld des neuen. Still beendet — das ist kein Abbruch des Anwenders. */
+     das Feld des neuen. Der Gastgeber beendet sie still — das ist kein
+     Abbruch des Anwenders —, und ihr Lauf fasst nichts mehr an. */
   function onPartStart() {
     state.ready = false;
-    epoch++;
+    latest++;
     /* Die Zeile trug den Fortschritt — sie spräche sonst noch vom alten Teil. */
-    if (state.running) { silent = true; host.jobs.cancel(); shell.setNote(''); }
+    if (state.running) shell.setNote('');
     state.running = false;
   }
 
@@ -465,22 +452,21 @@ export function createWandstaerkeTool(host) {
     hot: { shape: state.hot.shape, min: state.hot.min }
   });
   function fromJSON(obj) {
-    if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Datei der Wandstärkenanalyse.');
-    if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
+    checkFormat(obj, FORMAT, FORMAT_VERSION, 'Das ist keine Datei der Wandstärkenanalyse.');
     if (Number.isFinite(obj.cell)) { state.cell = Math.max(CELL_RANGE[0], Math.min(CELL_RANGE[1], obj.cell)); state.cellTouched = true; ui('cell').value = fmtPlain(state.cell); hostField.setCell(state.cell); }
     if (Number.isFinite(obj.under)) { state.under = Math.abs(obj.under); state.underTouched = true; ui('under').value = fmtPlain(state.under); ui('under-slider').value = String(state.under); }
     if (obj.show) { state.show = obj.show; segButtonSet(ui('show-seg'), state.show); }
     if (Number.isFinite(obj.opacity)) {
       state.opacity = Math.max(0.1, Math.min(1, obj.opacity));
-      if (opacityEl) { opacityEl.value = String(Math.round(state.opacity * 100)); const o = opacityEl.parentNode.querySelector('.val'); if (o) o.textContent = opacityEl.value + ' %'; }
+      sliders.opacity.set(Math.round(state.opacity * 100));
     }
     if (obj.slice) {
       state.slice.axis = +obj.slice.axis || 0;
       state.slice.pos = Number.isFinite(+obj.slice.pos) ? +obj.slice.pos : 50;   // 0 ist eine Lage, kein „fehlt"
       segButtonSet(ui('slice-seg'), String(state.slice.axis));
-      ui('slice-pos').value = String(state.slice.pos);
+      sliders.slicePos.set(state.slice.pos);
     }
-    if (obj.hot) { state.hot.shape = obj.hot.shape || 'kugeln'; state.hot.min = +obj.hot.min || 75; segButtonSet(ui('hot-seg'), state.hot.shape); ui('hot-min').value = String(state.hot.min); ui('hot-min-val').textContent = state.hot.min + ' %'; }
+    if (obj.hot) { state.hot.shape = obj.hot.shape || 'kugeln'; state.hot.min = +obj.hot.min || 75; segButtonSet(ui('hot-seg'), state.hot.shape); sliders.hotMin.set(state.hot.min); }
     markStale();
     if (state.field && !state.stale) extract(); else applyMode();
     host.refreshActions();
@@ -498,16 +484,11 @@ export function createWandstaerkeTool(host) {
     label: 'Isofläche als STL',
     enabled: () => !!(state.offsetTris && state.offsetTris.length),
     reason: 'Zuerst das Feld berechnen, dann gibt es eine Isofläche.',
-    run: () => {
-      download(new Blob([writeSTL(state.offsetTris, 'DieLogic Isofläche')], { type: 'model/stl' }),
-        safeName((baseName(part.name) || 'bauteil') + '-isoflaeche') + '.stl');
-      host.store.markSaved();
-    }
+    run: () => saveSTL(state.offsetTris, 'DieLogic Isofläche', part.name, 'isoflaeche')
   }];
 
   const tool = {
-    id: 'wandstaerke', modes, startMode: 'feld', settingsOnly: true, mounted, onPart, onPartStart, toJSON, fromJSON, resetSettings, accepts: [FORMAT], exports,
-    runField, extract, state, group, offsetMesh, sliceMesh, hotGroup
+    id: 'wandstaerke', modes, startMode: 'feld', settingsOnly: true, mounted, onPart, onPartStart, toJSON, fromJSON, resetSettings, accepts: [FORMAT], exports
   };
   tool.__viewer = { state, view, get partMesh() { return part.mesh; }, offsetMesh, sliceMesh, hotGroup, runField, extract, shell, host, tool };
   return tool;

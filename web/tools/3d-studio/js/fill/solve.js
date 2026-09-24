@@ -29,7 +29,7 @@
    welcher Reihenfolge die Kavität voll wird. */
 
 import { abortError } from '../abort.js';
-import { sampleField } from '../part/field.js';
+import { sampleField, cellAt } from '../part/field.js';
 import { frameOf, shares, allItems } from './model.js';
 
 /* Liegt die Mitte eines Anschnitts weiter als zwei Zellkanten neben dem
@@ -266,14 +266,12 @@ export function fracToSurface(field, frac) {
   return out;
 }
 
-/** Trilinear abtasten (NaN-Zellen werden übersprungen). */
+/** Trilinear abtasten wie js/part/field.js (sampleField, dieselbe Zelle) —
+    NaN-Zellen werden übersprungen, die übrigen neu gewichtet. */
 export function sampleFrac(field, fracSurf, x, y, z) {
-  const [nx, ny, nz] = field.dims;
-  const gx = (x - field.origin[0]) / field.h, gy = (y - field.origin[1]) / field.h, gz = (z - field.origin[2]) / field.h;
-  const i0 = Math.max(0, Math.min(nx - 2, Math.floor(gx)));
-  const j0 = Math.max(0, Math.min(ny - 2, Math.floor(gy)));
-  const k0 = Math.max(0, Math.min(nz - 2, Math.floor(gz)));
-  const fx = Math.max(0, Math.min(1, gx - i0)), fy = Math.max(0, Math.min(1, gy - j0)), fz = Math.max(0, Math.min(1, gz - k0));
+  const [nx, ny] = field.dims;
+  const c = cellAt(field, x, y, z);
+  const i0 = c[0], j0 = c[1], k0 = c[2], fx = c[3], fy = c[4], fz = c[5];
   let sum = 0, wsum = 0;
   for (let dk = 0; dk <= 1; dk++) for (let dj = 0; dj <= 1; dj++) for (let di = 0; di <= 1; di++) {
     const v = fracSurf[((k0 + dk) * ny + j0 + dj) * nx + i0 + di];

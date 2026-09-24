@@ -51,7 +51,7 @@
 import {
   outline, section, area, dimsForArea, POINTS, RIGHT_HALF, LEFT_HALF, TOP_EDGE, BOTTOM_EDGE
 } from './profile.js';
-import { cyl, place, translate } from '../solids.js';
+import { cyl, place, translate, earClip } from '../solids.js';
 import { AXES } from './graph.js';
 import { add, sub, scale, addScaled, dot, cross, norm, len, dist, clamp } from './vec.js';
 
@@ -171,44 +171,7 @@ function strip(halves, flip, w) {
   }
 }
 
-/* ── Felder: Ohrenabschneiden ────────────────────────────────── */
-
-/* Ein einfaches Polygon (gegen den Uhrzeigersinn) in Indexdreiecke.
-   Ein einspringendes Polygon wie die Deckfläche einer Gabelung — ein
-   Ypsilon mit Buchten — lässt sich nicht fächern; abgeschnitten wird,
-   was ein Ohr ist: eine konvexe Ecke, in deren Dreieck kein anderer
-   Punkt liegt. Entartet der Rest (sich kreuzende Kanten), bleibt, was
-   da ist — lieber ein kleines Loch als eine Ausnahme mitten im Zug. */
-function earClip(poly) {
-  const n = poly.length;
-  const idx = [];
-  for (let i = 0; i < n; i++) idx.push(i);
-  const out = [];
-  const cross2 = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-  const inside = (p, a, b, c) => cross2(a, b, p) >= -1e-12 && cross2(b, c, p) >= -1e-12 && cross2(c, a, p) >= -1e-12;
-  let guard = 0;
-  while (idx.length > 3 && guard++ < 20000) {
-    let cut = false;
-    for (let k = 0; k < idx.length; k++) {
-      const i0 = idx[(k + idx.length - 1) % idx.length], i1 = idx[k], i2 = idx[(k + 1) % idx.length];
-      const a = poly[i0], b = poly[i1], c = poly[i2];
-      if (cross2(a, b, c) <= 1e-12) continue;                 // einspringende oder gestreckte Ecke
-      let ok = true;
-      for (const j of idx) {
-        if (j === i0 || j === i1 || j === i2) continue;
-        if (inside(poly[j], a, b, c)) { ok = false; break; }
-      }
-      if (!ok) continue;
-      out.push([i0, i1, i2]);
-      idx.splice(k, 1);
-      cut = true;
-      break;
-    }
-    if (!cut) break;
-  }
-  if (idx.length === 3) out.push([idx[0], idx[1], idx[2]]);
-  return out;
-}
+/* ── Felder: Ohrenabschneiden (js/solids.js, earClip) ────────── */
 
 /* Das Ohrenabschneiden liefert IRGENDEINE Triangulation — in der Regel
    Fächer aus langen, spitzen Dreiecken, die von einer Ecke aus das ganze

@@ -10,21 +10,16 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mountPage, wait } from './fixture.mjs';
+import { mountPage, wait, interact } from './fixture.mjs';
 
-let P, cam, canvas, b, c;
-const zeiger = (t, x, y, extra = {}) => canvas.dispatch(t, { button: 0, clientX: x, clientY: y, stopPropagation() {}, preventDefault() {}, ...extra });
-const klick = (x, y) => { zeiger('pointerdown', x, y); zeiger('pointerup', x, y); };
-const schauAuf = (from, to) => { cam.position.set(...from); cam.up.set(0, 1, 0); cam.lookAt(...to); cam.updateMatrixWorld(true); P.v.view.scene.updateMatrixWorld(true); };
-const chip = id => P.doc.querySelector('[data-chip="' + id + '"]');
+let P, cam, canvas, b, c, zeiger, klick, schauAuf, chip;
 const anzahl = () => Object.keys(P.v.state.plan.items).length;
 const teil = async id => { P.doc.getElementById('demo-select').value = id; await P.host.part.pickDemo(id); await wait(() => P.v.state.ready, 1200); };
 const setzen = () => { chip('bohne').dispatch('click'); klick(400, 300); };
 
 before(async () => {
   P = await mountPage('ueberlauf.html', 'js/studio/pages/ueberlauf.js');
-  cam = P.v.view.camera;
-  canvas = P.v.view.renderer.domElement;
+  ({ cam, canvas, zeiger, klick, schauAuf, chip } = interact(P, { T3: await import('three') }));
   b = P.host.part.model.bounds;
   c = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
   schauAuf([b.max[0] + 400, c[1], c[2]], c);
@@ -179,4 +174,31 @@ test('Griffe: cancelDrag beendet einen Zug ohne „drop" und meldet „cancel"',
   assert.ok(v.view.controls.enabled, 'die Kamera ist wieder frei');
   assert.equal(v.handles.cancelDrag(), null, 'ohne Zug nichts zu tun');
   zeiger('pointerup', x, y);
+});
+
+/* Der Vertrag (js/studio/host.js): was ein Werkzeug meldet, und was der
+   Gastgeber daraus macht. */
+test('Vertrag: changed() ist nur mit Änderung ein Schritt, coalesce fasst Reglerschritte zusammen, resetHistory() fängt neu an', () => {
+  const { v, host, ui } = P;
+  const id = Object.keys(v.state.plan.items)[0];
+  const x = () => v.state.plan.items[id].pos[0];
+  host.resetHistory();
+  assert.ok(ui('undo').disabled, 'ein neuer Anfang: nichts zurückzunehmen');
+  host.changed('nichts geändert');
+  assert.ok(ui('undo').disabled, 'eine Meldung ohne Änderung ist kein Schritt');
+
+  const x0 = x();
+  v.state.plan.items[id].pos[0] = x0 + 5;
+  host.changed('verschoben');
+  for (const d of [6, 7, 8]) { v.state.plan.items[id].pos[0] = x0 + d; host.changed('Lage', { coalesce: 'lage-x' }); }
+  assert.equal(host.undo(), true);
+  assert.equal(x(), x0 + 5, 'drei Reglerschritte unter einem Schlüssel: EIN Schritt');
+  assert.equal(host.undo(), true);
+  assert.equal(x(), x0, 'davor der Zug');
+  assert.equal(host.undo(), false, 'und davor nichts');
+  assert.equal(host.redo(), true);
+  assert.equal(x(), x0 + 5);
+  host.undo();
+  host.resetHistory();
+  assert.ok(ui('undo').disabled && ui('redo').disabled, 'resetHistory vergisst beide Richtungen');
 });

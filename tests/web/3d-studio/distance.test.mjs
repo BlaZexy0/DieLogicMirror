@@ -1,16 +1,19 @@
-/* Abstand zwischen zwei Netzen und das Verfeinern davor.
+/* Abstand zwischen zwei Netzen.
 
    Geprüft wird gegen Anordnungen, deren Abstand man im Kopf ausrechnet:
    Punkt vor einer Quaderfläche, vor einer Kante, vor einer Ecke, im
    Inneren — und zwei konzentrische Kugeln, bei denen jeder Punkt der
-   äußeren denselben Abstand zur inneren hat. */
+   äußeren denselben Abstand zur inneren hat. Gemessen wird an den Ecken
+   des Netzes, wie es geladen wurde: verfeinert wird nichts (die Feinheit
+   ist Sache des Exports). Wo eine Prüfung Punkte mitten auf einer Fläche
+   braucht, ist der Prüfkörper fein vernetzt (./fein.mjs). */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as S from '../../../web/tools/3d-studio/js/solids.js';
-import { bounds, refine, volume, surface } from '../../../web/tools/3d-studio/js/mesh.js';
 import { buildModel } from '../../../web/tools/3d-studio/js/part/model.js';
 import { buildLocator, closestDistance, distanceToMesh, distanceStats } from '../../../web/tools/3d-studio/js/part/distance.js';
+import { subdivide } from './fein.mjs';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol,
   (msg || '') + ': ' + a + ' ≠ ' + b + ' (±' + tol + ')');
@@ -53,55 +56,32 @@ test('Zwei Kugeln: jeder Punkt der äußeren hat denselben Abstand', async () =>
 });
 
 test('Der Abstand ist symmetrisch', async () => {
-  /* Zwei Platten, 15 mm Luft dazwischen. Verfeinert, weil die kürzeste
-     Verbindung mitten auf den Flächen liegt — ein Quader hat dort keinen
-     Punkt, und ohne Verfeinerung fände die Messung nur die Ecken. */
-  const a = buildModel(refine(S.box(60, 60, 10), 5));
-  const b = buildModel(refine(S.place(S.box(40, 40, 10), 'z', 0, 0, 25), 5));
+  /* Zwei Platten, 15 mm Luft dazwischen, fein vernetzt: die kürzeste
+     Verbindung liegt mitten auf den Flächen — ein Quader aus zwölf
+     Dreiecken hat dort keinen Punkt. */
+  const a = buildModel(subdivide(S.box(60, 60, 10), 5));
+  const b = buildModel(subdivide(S.place(S.box(40, 40, 10), 'z', 0, 0, 25), 5));
   const dA = await distanceToMesh(a, buildLocator(b.tris), {});
   const dB = await distanceToMesh(b, buildLocator(a.tris), {});
   near(distanceStats(a, dA).min, 15, 1e-6, 'A → B');
   near(distanceStats(b, dB).min, 15, 1e-6, 'B → A');
 });
 
-test('Verfeinern behält die Fläche und teilt zu große Dreiecke', () => {
-  const plate = S.box(200, 200, 5);
-  assert.equal(plate.length / 9, 12, 'ein Quader hat zwölf Dreiecke');
-  const fine = refine(plate, 10);
-  assert.ok(fine.length / 9 > 1000, 'geteilt: ' + fine.length / 9 + ' Dreiecke');
-  near(volume(fine), volume(plate), 1e-6, 'Volumen unverändert');
-  near(surface(fine), surface(plate), 1e-6, 'Oberfläche unverändert');
-  const b0 = bounds(plate), b1 = bounds(fine);
-  for (let k = 0; k < 3; k++) near(b1.size[k], b0.size[k], 1e-9, 'Ausdehnung');
-  /* Keine Kante bleibt zu lang. */
-  let worst = 0;
-  for (let i = 0; i < fine.length; i += 9) {
-    for (let e = 0; e < 3; e++) {
-      const a = i + e * 3, c = i + ((e + 1) % 3) * 3;
-      worst = Math.max(worst, Math.hypot(fine[c] - fine[a], fine[c + 1] - fine[a + 1], fine[c + 2] - fine[a + 2]));
-    }
-  }
-  assert.ok(worst <= 10 + 1e-9, 'längste Kante: ' + worst.toFixed(3));
-  assert.equal(refine(fine, 10).length, fine.length, 'ein zweiter Lauf ändert nichts mehr');
-});
-
-test('Verfeinern hört an der Obergrenze auf', () => {
-  const fine = refine(S.box(200, 200, 5), 0.5, 5000);
-  assert.ok(fine.length / 9 <= 20000, 'gedeckelt statt ins Unendliche: ' + fine.length / 9);
-});
-
-test('Grobes Netz verfälscht die Karte, verfeinertes nicht', async () => {
+test('Gemessen wird an den Ecken des Netzes, wie es geladen wurde', async () => {
   /* Eine 200er-Platte 10 mm über einem kleinen Quader: an den Ecken ist
-     sie weit weg, in der Mitte genau 10 mm. Ohne Verfeinerung gibt es
-     nur die vier Eckpunkte — und der kleinste gemessene Abstand wäre
-     völlig falsch. */
+     sie weit weg, in der Mitte genau 10 mm. Als Quader aus zwölf Dreiecken
+     hat sie nur ihre acht Ecken — gemessen wird dort, ein Wert je Ecke, und
+     der kleinste liegt weit über den 10 mm. Das ist die Aussage dieses
+     Netzes; wer die Mitte messen will, exportiert es feiner. */
   const target = buildLocator(S.box(100, 60, 40));
   const platte = S.place(S.box(200, 200, 5), 'z', 0, 0, 32.5);
   const grob = buildModel(platte);
-  const stG = distanceStats(grob, await distanceToMesh(grob, target, {}));
-  assert.ok(stG.min > 50, 'grob: kleinster Abstand grotesk zu groß (' + stG.min.toFixed(1) + ' mm)');
+  const dG = await distanceToMesh(grob, target, {});
+  assert.equal(dG.length, grob.vertexCount, 'ein Wert je Ecke des geladenen Netzes');
+  assert.equal(grob.vertexCount, 8);
+  assert.ok(distanceStats(grob, dG).min > 50, 'nur die Ecken: ' + distanceStats(grob, dG).min.toFixed(1) + ' mm');
 
-  const fein = buildModel(refine(platte, 4));
+  const fein = buildModel(subdivide(platte, 4));
   const stF = distanceStats(fein, await distanceToMesh(fein, target, {}));
-  near(stF.min, 10, 0.01, 'verfeinert: der echte Abstand');
+  near(stF.min, 10, 0.01, 'fein exportiert: der echte Abstand');
 });

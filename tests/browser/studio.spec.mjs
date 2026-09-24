@@ -43,6 +43,50 @@ for (const [page, readyFn] of PAGES) {
   });
 }
 
+/* Gezeichnet wird nur auf Abruf (js/scene.js): eine ruhende Seite zeichnet
+   nicht — bis zum 23.09. zeichnete ein Netz viermal je Sekunde „zur
+   Sicherheit" —, und was das Bild bewegt, zeichnet. view.frames zählt die
+   Bilder. Die weitergeleiteten Partikelseiten sind dieselben Werkzeuge. */
+for (const [page, readyFn] of PAGES.filter(([f]) => !/-sph\.html$/.test(f))) {
+  test('3D-Studio: ' + page + ' zeichnet nur auf Abruf', async ({ page: p }) => {
+    await p.goto('/tools/3d-studio/' + page);
+    if (readyFn) await p.waitForFunction(readyFn, null, { timeout: 60_000 });
+    const hook = page === 'werkbank.html' ? '__werkbank' : '__form3d';
+    await p.waitForFunction(h => window[h]?.view, hook);
+    const frames = () => p.evaluate(h => window[h].view.frames, hook);
+    /* Was die Seite nach dem Laden noch rechnet (Analysen, Felder, die
+       Schritte der Werkbank), zeichnet danach zu Recht ein Bild. */
+    const busy = () => p.evaluate(h => {
+      const v = window[h], jobs = v.host && v.host.jobs;
+      const states = [v.state, ...Object.values(v.stages || {}).map(st => st.state)].filter(Boolean);
+      return !!(jobs && jobs.running) || states.some(s => s.running || s.computing || s.queued || s.ready === false);
+    }, hook);
+    /* Zur Ruhe kommen: nichts rechnet, und eine Sekunde lang kein neues Bild. */
+    const ruhig = async () => {
+      let last = -1;
+      await expect.poll(async () => { const f = await frames(); const same = f === last && !(await busy()); last = f; return same; },
+        { intervals: [1000], timeout: 90_000, message: 'die Seite kommt zur Ruhe' }).toBe(true);
+    };
+    await ruhig();
+    /* Kein Takt mehr: ein spätes Bild (ein Ergebnis, das Layout nach dem
+       Laden der Schrift) darf kommen, ein Netz, das „zur Sicherheit"
+       zeichnet, brächte in drei Sekunden ein Dutzend. */
+    const f0 = await frames();
+    await p.waitForTimeout(3000);
+    expect(await frames() - f0, 'eine ruhende Seite zeichnet nicht').toBeLessThanOrEqual(1);
+
+    /* Drehen zeichnet, Bild für Bild — und danach ist wieder Ruhe. */
+    const box = await p.locator('#viewport canvas').boundingBox();
+    const x = box.x + box.width * 0.55, y = box.y + box.height * 0.55;
+    await p.mouse.move(x, y);
+    await p.mouse.down();
+    for (let i = 1; i <= 6; i++) await p.mouse.move(x + 8 * i, y + 4 * i);
+    await p.mouse.up();
+    await expect.poll(frames, { message: 'Drehen zeichnet' }).toBeGreaterThan(f0 + 1);
+    await ruhig();
+  });
+}
+
 /* Das Metamodell im echten Browser: 3,6 MB ONNX plus 14 MB Rechenwerk
    (onnxruntime-web, WebAssembly). Unter Node rechnen meta.test.mjs und
    tools/kammerfuellung.test.mjs dasselbe Modell; hier zählt, dass die Seite

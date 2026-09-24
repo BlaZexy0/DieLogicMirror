@@ -258,8 +258,6 @@ select { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--bo
 .st-hintline:empty { display: none; }
 .warn-line { font-size: .78rem; color: var(--bad-text); padding: 4px 2px; line-height: 1.45; }
 .warn-line:empty { display: none; }
-.run-note { font-size: .76rem; color: var(--muted); line-height: 1.45; padding: 5px 2px 0; }
-.run-note:empty { display: none; }
 .legend { margin-top: 6px; }
 .legend-row { display: flex; align-items: center; gap: 8px; padding: 2.5px 2px; font-size: .8rem; }
 /* Das Farbfeld (chip() aus js/ui/controls.js) — überall dasselbe. */
@@ -456,7 +454,7 @@ button.st-list-row.active { background: var(--pale); }
   background: rgba(var(--surface-rgb), .92); border: 1px solid var(--border-light); border-radius: var(--radius); min-width: 142px;
 }
 .pt-legend:empty { display: none; }
-.pt-legend .pt-menu-title, .st-title {
+.st-title {
   font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding: 0 2px 3px;
 }
 .pt-legend .lg-row { display: flex; align-items: center; gap: 7px; font-size: .76rem; color: var(--text-body); padding: 1px 2px; }
@@ -465,13 +463,7 @@ button.st-list-row.active { background: var(--pale); }
 .pt-legend .lg-row .chip { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; border: 1px solid rgba(0,0,0,.18); display: inline-block; }
 .pt-legend .lg-row .pct { margin-left: auto; padding-left: 14px; font-family: var(--mono); font-size: .72rem; color: var(--muted); white-space: nowrap; }
 
-/* Das Flussschema (Angussdesigner): füllt den Viewport. */
-.chart-btn {
-  padding: .5rem 1.1rem; border: 1px solid var(--primary-deep); border-radius: 8px; background: var(--primary); color: #fff;
-  cursor: pointer; font-family: var(--sans); font-size: .88rem; font-weight: 600; box-shadow: 0 2px 8px rgba(var(--dark-rgb), .18); pointer-events: auto;
-}
-.chart-btn:hover { background: var(--primary2); }
-.chart-btn.active { background: var(--primary-deep); }
+/* Das Flussschema (Angussdesigner, Chip „Flussschema"): füllt den Viewport. */
 .chart-panel {
   position: absolute; inset: 12px; z-index: 6; display: none; min-height: 0; flex-direction: column;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 6px 24px rgba(var(--dark-rgb), .14);

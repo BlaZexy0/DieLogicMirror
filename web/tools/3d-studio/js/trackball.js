@@ -20,9 +20,14 @@
    Die Schnittstelle ist die der OrbitControls, soweit js/scene.js sie
    benutzt (object, target, update, minDistance/maxDistance, minZoom/
    maxZoom, dispose) — die Ansichtsleiste und die Projektionsumschaltung
-   funktionieren dadurch unverändert. */
+   funktionieren dadurch unverändert. Es wird bewusst NICHT nachgelaufen:
+   beim Setzen eines Punktes auf den Zehntelmillimeter ist eine Kamera,
+   die nach dem Loslassen noch weiterdreht, keine Hilfe, sondern ein
+   Ärgernis — und jede Bewegung geschieht im Zuhörer, js/scene.js zeichnet
+   danach genau ein Bild. */
 
 import * as T from 'three';
+import { perPixel, pointerNdc, cameraAxes } from './viewmath.js';
 
 const ROTATE = 0, PAN = 1;
 
@@ -32,13 +37,6 @@ export class TrackballControls {
     this.domElement = domElement;
     this.target = new T.Vector3();
     this.enabled = true;
-    /* Beide Felder gibt es nur, weil js/scene.js sie bei jedem Steuerwerk
-       setzt; hier werden sie entgegengenommen und nicht beachtet. Es wird
-       bewusst NICHT nachgelaufen: beim Setzen eines Punktes auf den
-       Zehntelmillimeter ist eine Kamera, die nach dem Loslassen noch
-       weiterdreht, keine Hilfe, sondern ein Ärgernis. */
-    this.enableDamping = false;
-    this.dampingFactor = 0;
     this.rotateSpeed = 1.0;
     this.zoomSpeed = 1.0;
     this.minDistance = 1;
@@ -149,10 +147,8 @@ export class TrackballControls {
     e.preventDefault();
     const factor = Math.pow(0.95, -Math.sign(e.deltaY) * this.zoomSpeed);
     if (this.zoomToCursor) {
-      const r = this.domElement.getBoundingClientRect();
-      const nx = ((e.clientX - r.left) / Math.max(r.width, 1)) * 2 - 1;
-      const ny = -((e.clientY - r.top) / Math.max(r.height, 1)) * 2 + 1;
-      this.dollyAt(factor, nx, ny);
+      const p = pointerNdc(e, this.domElement);
+      this.dollyAt(factor, p.x, p.y);
     } else this.dolly(factor);
   }
 
@@ -191,9 +187,7 @@ export class TrackballControls {
     const el = this.domElement;
     const size = Math.max(Math.min(el.clientWidth || 800, el.clientHeight || 600), 1);
     const angle = Math.hypot(dx, dy) / size * Math.PI * this.rotateSpeed;
-    const m = this.object.matrixWorld.elements;
-    const right = new T.Vector3(m[0], m[1], m[2]).normalize();
-    const up = new T.Vector3(m[4], m[5], m[6]).normalize();
+    const { right, up } = cameraAxes(this.object);
     const axis = up.multiplyScalar(dx).add(right.multiplyScalar(dy));
     if (axis.lengthSq() < 1e-12) return;
     axis.normalize();
@@ -209,19 +203,9 @@ export class TrackballControls {
   }
 
   panByPixels(dx, dy) {
-    const el = this.domElement;
-    const h = Math.max(el.clientHeight || 600, 1);
-    let scale;
-    if (this.object.isOrthographicCamera) {
-      scale = (this.object.top - this.object.bottom) / this.object.zoom / h;
-    } else {
-      const dist = this.object.position.distanceTo(this.target);
-      scale = 2 * dist * Math.tan(this.object.fov * Math.PI / 360) / h;
-    }
-    const m = this.object.matrixWorld.elements;
-    const right = new T.Vector3(m[0], m[1], m[2]).normalize().multiplyScalar(-dx * scale);
-    const up = new T.Vector3(m[4], m[5], m[6]).normalize().multiplyScalar(dy * scale);
-    const move = right.add(up);
+    const scale = perPixel(this.object, this.object.position.distanceTo(this.target), this.domElement.clientHeight || 600);
+    const { right, up } = cameraAxes(this.object);
+    const move = right.multiplyScalar(-dx * scale).add(up.multiplyScalar(dy * scale));
     this.target.add(move);
     this.object.position.add(move);
     this.object.updateMatrixWorld();

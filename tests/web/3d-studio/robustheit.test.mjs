@@ -14,7 +14,8 @@ import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import * as S from '../../../web/tools/3d-studio/js/solids.js';
-import { orientMesh, weld, volume, refine } from '../../../web/tools/3d-studio/js/mesh.js';
+import { orientMesh, weld, volume } from '../../../web/tools/3d-studio/js/mesh.js';
+import { subdivide } from './fein.mjs';
 import { buildModel, openEdgeRatio } from '../../../web/tools/3d-studio/js/part/model.js';
 import { readGLB } from '../../../web/tools/3d-studio/js/part/glbio.js';
 import { buildLocator } from '../../../web/tools/3d-studio/js/part/distance.js';
@@ -144,7 +145,7 @@ test('sauber gewickelte Netze bleiben unangetastet', () => {
 /* ── H-22 ─────────────────────────────────────────────────────────────── */
 
 test('große Suchgrenze lässt das Beschleunigungsgitter nicht zusammenfallen (H-22)', () => {
-  const tris = refine(S.box(352, 686, 12), 8);
+  const tris = subdivide(S.box(352, 686, 12), 8);
   const cells = o => buildLocator(tris, o).dims.reduce((a, b) => a * b, 1);
   const fein = cells({ maxDist: 5 });
   assert.ok(fein > 200, 'Testaufbau: ohne große Suchgrenze ein feines Gitter, ist ' + fein);
@@ -191,8 +192,16 @@ test('Volumen wird nicht mehr mit Math.abs schöngerechnet (H-24)', () => {
 });
 
 test('Strahlentest läuft höchstens einmal je Bild (H-25)', () => {
-  /* Beide Viewer: die Abstandsseite testet sogar zwei Netze je Ereignis. */
+  /* Beide Viewer hören über js/viewmath.js (hoverProbe) hin — die
+     Abstandsseite testet sogar zwei Netze je Ereignis. Keiner hängt einen
+     eigenen pointermove-Zuhörer an, in dem der Strahl liefe. */
   for (const f of ['js/entformung/tool.js', 'js/abstand/tool.js']) {
+    const s = src(f);
+    assert.ok(/hoverProbe\(canvas, /.test(s), f + ': der Hover läuft nicht über hoverProbe');
+    assert.ok(!s.includes("addEventListener('pointermove'"), f + ': ein eigener pointermove-Zuhörer');
+  }
+  {
+    const f = 'js/viewmath.js';
     const s = src(f);
     const at = s.indexOf("addEventListener('pointermove'");
     assert.ok(at > 0, f + ': kein pointermove-Zuhörer gefunden');
@@ -269,9 +278,16 @@ test('ASCII-STL: unlesbare Koordinaten sind ein Fehler, keine NaN', async () => 
   assert.throws(() => parseSTL(enc(kaputt)), /Unlesbare Koordinate/);
 });
 
-test('Lesefehler und fehlende GLB-Knoten melden sich', () => {
+test('Lesefehler und fehlende GLB-Knoten melden sich', async () => {
+  /* Ein gescheiterter Lesevorgang blieb früher stumm, die Busy-Anzeige lief
+     weiter: jetzt kommt eine Meldung (js/ui/common.js, readBuffer), und die
+     Bauteilquelle nimmt dabei den Schleier weg. */
+  const { readBuffer } = await import('../../../web/tools/3d-studio/js/ui/common.js');
+  const weg = { name: 'weg.stl', arrayBuffer: () => Promise.reject(Object.assign(new Error('fort'), { name: 'NotReadableError' })) };
+  await assert.rejects(readBuffer(weg), /„weg\.stl" konnte nicht gelesen werden \(NotReadableError\)\./);
   const ps = src('js/part/partsource.js');
-  assert.match(ps, /fr\.onerror/, 'ein gescheiterter Lesevorgang blieb stumm, die Busy-Anzeige lief weiter');
+  const read = ps.slice(ps.indexOf('async function readFile('), ps.indexOf('async function loadFile('));
+  assert.match(read, /catch \(err\) \{\s*if \(my === seq\) \{ veil\(null\); fail\(err\.message\); \}/, 'Schleier weg, Meldung raus');
   /* Ohne die Knoten warf der Öffnen-Regler einen TypeError statt zu
      sagen, was fehlt: die Baugruppe prüft sie beim Aufbau, der Viewer
      fängt den Fehler und schreibt ihn in die Statuszeile. */

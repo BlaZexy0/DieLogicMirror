@@ -8,8 +8,8 @@
 
    Der gemeinsame Rahmen (js/studio/) gibt zwei Dinge dazu: „Einpassen"
    (opts.fit) und ein Aufklappfeld „Darstellung" für die Anzeigeoptionen
-   des Werkzeugs (opts.popover: true) — beides fehlt auf den alten Seiten,
-   die die Leiste ohne opts aufrufen. */
+   des Werkzeugs (opts.popover: true) — beides fehlt auf den Seiten ohne
+   den Rahmen (Formaufbau, Werkbank), die die Leiste ohne opts aufrufen. */
 
 const VIEW_BUTTONS = [
   { key: 'x', label: 'X', title: 'Blick entlang der X-Achse (nochmal klicken: −X)' },

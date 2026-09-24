@@ -3,7 +3,7 @@
    Punkte und die Nachbarschaft über Kanten. Ohne Three.js — damit die
    Analyse in tests/ unter Node läuft. */
 
-import { faceData, weld, adjacency, bounds, volume, surface, cleanMesh, orientMesh } from '../mesh.js';
+import { faceData, weld, adjacency, bounds, volume, cleanMesh, orientMesh } from '../mesh.js';
 
 export function buildModel(rawTris, opts = {}) {
   /* Erst aufräumen: entartete Dreiecke und T-Stöße würden die
@@ -17,6 +17,8 @@ export function buildModel(rawTris, opts = {}) {
   const tris = oriented.tris;
   const fd = faceData(tris);
   const w = weld(tris);
+  const vol = volume(tris);
+  const totalArea = fd.areas.reduce((a, b) => a + b, 0);
   return {
     tris,
     flippedFaces: oriented.flipped,
@@ -29,9 +31,14 @@ export function buildModel(rawTris, opts = {}) {
     vertexCount: w.vertexCount,
     nbr: adjacency(w.index, fd.count),
     bounds: bounds(tris),
-    volume: volume(tris),
-    surface: surface(tris),
-    totalArea: fd.areas.reduce((a, b) => a + b, 0),
+    volume: vol,
+    /* Die Oberfläche ist die Summe der Dreiecksflächen — ein zweiter Gang
+       über das Netz (mesh.js, surface) ergab dieselbe Zahl. */
+    totalArea,
+    /* Wanddicke 2V/A: die Kennzahl der Klappe, der Vorschlag der Zellkante
+       (js/part/field.js), die Füllung. Ohne Fläche null, bei einem nach
+       innen gewickelten Netz negativ — wer sie braucht, prüft auf > 0. */
+    wall: totalArea > 0 ? 2 * vol / totalArea : null,
     repairedPoints: cleaned.inserted,
     rawFaceCount: rawTris.length / 9
   };

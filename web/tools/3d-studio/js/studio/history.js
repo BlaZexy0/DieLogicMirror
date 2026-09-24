@@ -3,15 +3,14 @@
    Jedes Werkzeug hat EINE Quelle der Wahrheit (Graph, Plan), und die
    lässt sich als JSON abziehen (toJSON) und zurücksetzen (fromJSON). Also
    ist der Verlauf eine Liste solcher Abzüge: commit() nach jeder
-   abgeschlossenen Änderung, begin()/end() um einen Zug am Griff (ein
-   Eintrag für den ganzen Zug, nicht einer je Maussschritt), coalesce()
-   für Regler (ein Eintrag, solange man am selben Regler dreht). */
+   abgeschlossenen Änderung — ein Zug am Griff meldet sich erst beim
+   Loslassen, ist also EIN Eintrag, nicht einer je Mausschritt —,
+   coalesce() für Regler (ein Eintrag, solange man am selben Regler dreht). */
 
 export function createHistory({ serialize, restore, limit = 100 } = {}) {
   let past = [];      // Abzüge vor dem aktuellen Stand
   let future = [];    // was rückgängig gemacht wurde
   let present = null; // der aktuelle Abzug (als Text)
-  let open = null;    // begin() offen: der Stand vor dem Zug
   let coalesceKey = null, coalesceTimer = 0;
   const listeners = [];
   const snap = () => JSON.stringify(serialize());
@@ -19,7 +18,7 @@ export function createHistory({ serialize, restore, limit = 100 } = {}) {
 
   const api = {
     /** Den jetzigen Stand als Ausgangspunkt merken (nach dem Laden). */
-    reset() { past = []; future = []; present = snap(); open = null; coalesceKey = null; emit(); },
+    reset() { past = []; future = []; present = snap(); coalesceKey = null; emit(); },
     /** Eine abgeschlossene Änderung eintragen. */
     commit(label = '') {
       const now = snap();
@@ -30,22 +29,6 @@ export function createHistory({ serialize, restore, limit = 100 } = {}) {
       present = now;
       future = [];
       coalesceKey = null;
-      emit();
-      return true;
-    },
-    /** Ein Zug beginnt: den Stand davor festhalten … */
-    begin() { if (open === null) open = present === null ? snap() : present; },
-    /** … und beim Loslassen als EINEN Eintrag ablegen. */
-    end(label = '') {
-      if (open === null) return api.commit(label);
-      const before = open;
-      open = null;
-      const now = snap();
-      if (now === before) { present = now; return false; }
-      past.push({ state: before, label });
-      if (past.length > limit) past.shift();
-      present = now;
-      future = [];
       emit();
       return true;
     },
@@ -60,8 +43,7 @@ export function createHistory({ serialize, restore, limit = 100 } = {}) {
     /** Zum zuletzt eingetragenen Stand zurück, ohne Eintrag: was seitdem
         geschah, war nie ein Schritt (ein Zug am Griff, den Esc abbricht). */
     revert() {
-      if (present === null || snap() === present) { open = null; return false; }
-      open = null;
+      if (present === null || snap() === present) return false;
       restore(JSON.parse(present));
       emit();
       return true;

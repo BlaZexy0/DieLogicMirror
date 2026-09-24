@@ -10,23 +10,16 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mountPage, kpiText, wait } from './fixture.mjs';
+import { mountPage, kpiText, wait, interact, seg } from './fixture.mjs';
 
 const C = await import('../../../../web/tools/3d-studio/js/part/colors.js');
 
-let P, T3, G, F, A, cam, canvas, b, c;
-const zeiger = (t, x, y, extra = {}) => canvas.dispatch(t, { button: 0, clientX: x, clientY: y, stopPropagation() {}, preventDefault() {}, ...extra });
-const klick = (x, y) => { zeiger('pointerdown', x, y); zeiger('pointerup', x, y); };
-const px = p => { const q = new T3.Vector3(...p).project(cam); return [(q.x + 1) / 2 * 800, (1 - q.y) / 2 * 600]; };
-const schauAuf = (from, to) => { cam.position.set(...from); cam.up.set(0, 1, 0); cam.lookAt(...to); cam.updateMatrixWorld(true); P.v.view.scene.updateMatrixWorld(true); };
-const chip = id => P.doc.querySelector('[data-chip="' + id + '"]');
+let P, T3, G, F, A, cam, b, c, zeiger, klick, px, schauAuf, chip, taste, tippen;
 const pop = name => P.doc.querySelector('[data-ui="' + name + '"]');
-const taste = (key, extra = {}) => P.doc.dispatch('keydown', { key, target: canvas, preventDefault() {}, ...extra });
 const items = () => Object.values(P.v.state.plan.items);
 const autos = () => items().filter(i => i.auto);
 const ruhig = () => wait(() => !P.v.state.queued && !P.v.state.running && P.v.state.ready, 1200);
-const richtung = r => P.ui('dir-seg').querySelectorAll('button').find(x => x.dataset.value === r).dispatch('click');
-const tippen = (name, text) => { const el = P.ui(name); el.value = text; el.dispatch('change'); };
+const richtung = r => seg(P.ui('dir-seg'), r).dispatch('click');
 /* Ein anderes Beispielteil, wie über die Auswahl in der Bauteil-Klappe. */
 const teil = id => { P.doc.getElementById('demo-select').value = id; return P.host.part.pickDemo(id); };
 
@@ -36,8 +29,7 @@ before(async () => {
   G = await import('../../../../web/tools/3d-studio/js/cooling/model.js');
   F = await import('../../../../web/tools/3d-studio/js/part/field.js');
   A = await import('../../../../web/tools/3d-studio/js/cooling/auto.js');
-  cam = P.v.view.camera;
-  canvas = P.v.view.renderer.domElement;
+  ({ cam, zeiger, klick, px, schauAuf, chip, taste, setze: tippen } = interact(P, { T3 }));
   b = P.host.part.model.bounds;
   c = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
 });

@@ -34,11 +34,14 @@ import { parseSTL } from './part/stlio.js';
 import { isGLB } from './part/glbio.js';
 import { fmt, parseNumber } from './studio/format.js';
 import { onScheme } from './part/colors.js';
+import { download } from './ui/common.js';
+import { wireDrop } from './studio/files.js';
+import { rayAt } from './viewmath.js';
 
 const $ = id => document.getElementById(id);
 
 /* Handle für die Browser-Konsole UND für den Verdrahtungstest
-   (tests/viewer.test.mjs). */
+   (tests/web/3d-studio/viewer.test.mjs). */
 export const __viewer = { state: { ready: false }, lastExport: null };
 
 const container = $('viewport');
@@ -321,16 +324,8 @@ $('glb-input').addEventListener('change', e => {
   if (f) __viewer.pending = f.arrayBuffer().then(buf => loadGLBBuffer(buf, f.name)).catch(err => { console.error(err); });
 });
 
-for (const ev of ['dragenter', 'dragover']) {
-  container.addEventListener(ev, e => { e.preventDefault(); container.classList.add('dragover'); });
-}
-for (const ev of ['dragleave', 'drop']) {
-  container.addEventListener(ev, e => { e.preventDefault(); container.classList.remove('dragover'); });
-}
-container.addEventListener('drop', e => {
-  const files = e.dataTransfer ? [...e.dataTransfer.files] : [];
-  if (files.length) __viewer.pending = addFiles(files);
-});
+/* Abgelegte Dateien: alle auf einmal, wie aus dem Knopf. */
+wireDrop(container, files => { __viewer.pending = addFiles(files); }, { multiple: true });
 
 /** Die ganze Baugruppe als binäres glTF, Metadaten als extras. */
 async function saveGLB() {
@@ -340,11 +335,7 @@ async function saveGLB() {
   const buf = await new Promise((res, rej) => new GLTFExporter().parse(root, res, rej, { binary: true }));
   __viewer.lastExport = buf;
   const name = (String($('glb-name').value || 'formaufbau').trim().replace(/\.glb$/i, '') || 'formaufbau') + '.glb';
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([buf], { type: 'model/gltf-binary' }));
-  a.download = name;
-  a.click();
-  if (URL.revokeObjectURL) setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  download(new Blob([buf], { type: 'model/gltf-binary' }), name);
   note('Gespeichert: ' + name + ' · ' + fmt(buf.byteLength / 1024, 0) + ' kB · '
     + asm.items.length + ' Teile in ' + asm.groups.length + ' Gruppen');
   return buf;
@@ -419,10 +410,8 @@ function seen(h) {
 /** Das Teil unter dem Zeiger (Teil-id) oder null. */
 function pick(ev) {
   if (!asm) return null;
-  const r = canvas.getBoundingClientRect();
-  const p = new T.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
   asm.scene.updateMatrixWorld();
-  ray.setFromCamera(p, view.camera);
+  rayAt(ray, ev, canvas, view.camera);
   const hits = hitsAlong(asm.items.filter(i => i.object.visible).map(i => i.object));
   /* Blasse Teile zählen nicht — sonst träfe der Tipp auf einen Kreis den
      Stahl davor. */

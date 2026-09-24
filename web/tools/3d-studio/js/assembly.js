@@ -39,6 +39,7 @@ import * as T from 'three';
 import { COMPONENTS, roleColor } from './registry.js';
 import { makeMaterial, CLASS_ROLE, FIXED_COLOR, classColor } from './materials.js';
 import { smoothNormals, indexTriangles } from './mesh.js';
+import { disposeTree } from './ui/common.js';
 
 export const FORMAT = 'dielogic-formaufbau';
 export const VERSION = 1;
@@ -126,16 +127,7 @@ const otherGroup = side => ({ ...OTHER[side], color: roleColor(OTHER[side].role)
    Texturen, für JEDEN Knoten darunter. Die Stencil-Zwillinge des Schnitts
    teilen die Geometrie mit ihrem Original, ihr Material gehört dem Schnitt
    (js/clipcaps.js). */
-function release(root) {
-  root.traverse(o => {
-    if (o.userData.stencilTwin) return;
-    if (o.geometry) o.geometry.dispose();
-    for (const m of Array.isArray(o.material) ? o.material : o.material ? [o.material] : []) {
-      for (const v of Object.values(m)) if (v && v.isTexture) v.dispose();
-      m.dispose();
-    }
-  });
-}
+const release = root => disposeTree(root, { skip: o => o.userData.stencilTwin });
 
 /* Für die Datei: die Farbe des Teils, deckend, ohne Leuchten. Deckkraft
    und Hervorhebung sind Sache der Ansicht (js/die.js stellt sie an den

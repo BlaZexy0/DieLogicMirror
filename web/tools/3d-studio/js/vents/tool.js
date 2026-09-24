@@ -28,12 +28,11 @@
 import * as T from 'three';
 import { facts, slider, numberInput, POS_LIMIT } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit, parseNumber } from '../studio/format.js';
-import { kpis, esc } from '../studio/rows.js';
-import { writeSTL } from '../part/stlio.js';
-import { createHandles, SELECTED_RING } from '../handles.js';
+import { kpis, esc, selTitle, groupTabs, listRow, onListPick, legendRow, selectedRow } from '../studio/rows.js';
+import { saveSTL } from '../studio/files.js';
+import { createHandles, createPlacer } from '../handles.js';
 import { onScheme, ELEMENT } from '../part/colors.js';
-import { setTris, download, safeName, dirText, outward } from '../ui/common.js';
-import { baseName } from '../studio/files.js';
+import { setTris, dirText, outward, surfaceMaterial } from '../ui/common.js';
 import * as M from './model.js';
 import { buildByType, buildAll, volumeOf } from './geom.js';
 import { MODES, INSPECTOR, DARSTELLUNG } from './panel.js';
@@ -66,16 +65,19 @@ const splitId = id => {
 export function createUeberlaufTool(host) {
   const { shell, view } = host;
   const ui = host.ui;
-  const state = { plan: M.emptyPlan(), ready: false, placing: null, openGroup: '' };
-  let wired = false;
+  let placer = null;
+  const state = {
+    plan: M.emptyPlan(), ready: false,
+    /** Welche Art gerade gesetzt wird (ihr Chip ist aktiv) — oder null. */
+    get placing() { return placer ? placer.placing : null; }
+  };
 
   /* ── Szene: je Art ein Körper in der Artfarbe ────────────── */
   const group = new T.Group();
   view.scene.add(group);
   const meshes = {};
   for (const [type, meta] of Object.entries(M.TYPES)) {
-    const mat = new T.MeshStandardMaterial({ color: meta.color, roughness: 0.55, metalness: 0.04, side: T.DoubleSide, flatShading: true });
-    meshes[type] = new T.Mesh(new T.BufferGeometry(), mat);
+    meshes[type] = new T.Mesh(new T.BufferGeometry(), surfaceMaterial(meta.color, { roughness: 0.55, metalness: 0.04 }));
     group.add(meshes[type]);
   }
   /* Die Artfarben folgen dem Farbschema (js/part/colors.js): die Körper
@@ -83,7 +85,8 @@ export function createUeberlaufTool(host) {
      js/handles.js selbst ab, die Chips der Rahmen. */
   onScheme(() => {
     for (const [type, meta] of Object.entries(M.TYPES)) meshes[type].material.color.set(meta.color);
-    if (wired) { syncSelection(); updateLegend(); }
+    syncSelection();
+    updateLegend();
     view.invalidate();
   });
 
@@ -125,7 +128,7 @@ export function createUeberlaufTool(host) {
       else if (k > 0) M.setVentPoint(state.plan, base, k, pos);
       /* k = 0, das Bohnenende, sitzt fest an der Bohne. */
     },
-    onSelect: () => { cancelAim(); syncSelection(); },
+    onSelect: () => { placer.cancel(); syncSelection(); },
     onChange: what => {
       if (what === 'drag') { rebuild('drag'); return; }
       /* Esc mitten im Zug: zurück zum Stand davor — der Zug war nie ein Schritt. */
@@ -135,6 +138,7 @@ export function createUeberlaufTool(host) {
     },
     onAim: id => startMove(id)
   });
+  placer = createPlacer({ aim: shell.aim, handles, onEnd: () => shell.renderChips() });
 
   /* ── Kette: Plan → Anzeige ───────────────────────────────── */
   function rebuild(mode) {
@@ -167,35 +171,38 @@ export function createUeberlaufTool(host) {
   function updateList() {
     const items = M.allItems(state.plan);
     const cur = selPart().base;
-    ui('item-list').innerHTML = items.map(it =>
-      '<button type="button" class="st-list-row' + (it.id === cur ? ' active' : '') + '" data-item="' + esc(it.id) + '">'
-      + '<span class="dot" style="background:' + M.TYPES[it.type].color + '"></span>'
-      + '<span class="name">' + esc(label(it)) + '</span><span class="val">' + fmtUnit(volumeOf(it) / 1000, 'cm³') + '</span></button>').join('');
+    ui('item-list').innerHTML = items.map(it => listRow({
+      id: it.id, color: M.TYPES[it.type].color, name: esc(label(it)),
+      value: fmtUnit(volumeOf(it) / 1000, 'cm³'), active: it.id === cur
+    })).join('');
     ui('item-empty').hidden = items.length > 0;
   }
   /* ── Auswahl ─────────────────────────────────────────────── */
   const selPart = () => splitId(handles.selected);
   const sel = () => (handles.selected ? state.plan.items[selPart().base] : null);
+  /* Die Gruppen des Auswahlfelds (js/studio/rows.js) und der Drehregler —
+     beide gibt es, sobald der Rahmen das Feld eingesetzt hat (mounted). */
+  let groups = null, rot = null;
 
   function syncSelection() {
+    if (!groups) return;
     const it = sel();
     updateList();
     if (!it) { shell.inspector.hide(); shell.status(''); return; }
     const meta = M.TYPES[it.type];
     const part = selPart();
     const sub = part.k === null ? '' : part.k === 0 ? 'Bohnenende' : 'Kanalpunkt ' + part.k;
-    shell.inspector.show({ title: '<span class="dot" style="background:' + meta.color + '"></span>' + meta.label + ' <code>' + esc(it.id) + '</code>' + (sub ? ' <em>' + sub + '</em>' : '') });
+    shell.inspector.show({ title: selTitle({ color: meta.color, label: meta.label, id: it.id, extra: sub ? ' <em>' + sub + '</em>' : '' }) });
     shell.status(HANDLE_HINT);
     ui('sel-type').value = it.type;
     /* Lage: das Element — oder, bei einem Kanalpunkt, der Punkt selbst. */
     const shown = part.k === null ? it.pos : part.k === 0 ? M.ventWorld(it).exit : M.ventWorld(it).points[part.k - 1];
     for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) { ui(k).value = fmtPlain(shown[i], 1); ui(k).disabled = part.k === 0; }
-    ui('sel-rot').value = String(it.rot || 0);
-    ui('sel-rot-val').textContent = fmt(it.rot || 0, 0) + '°';
-    syncVent(it, part);
+    rot.set(it.rot || 0);
 
     /* Die Maße der Art als Zeilen — jede Art hat andere, deshalb werden sie
-       bei jeder Auswahl neu aufgebaut; welche Gruppe offen steht, bleibt. */
+       bei jeder Auswahl neu aufgebaut; welche Gruppe offen steht, bleibt.
+       Wer einen Kanalpunkt wählt, will am Kanal arbeiten: dessen Gruppe. */
     const keys = Object.keys(it.p);
     const row = k => {
       const m = M.PARAM_META[k] || { label: k };
@@ -204,17 +211,14 @@ export function createUeberlaufTool(host) {
         + '<span class="unit">' + (m.unit === undefined ? 'mm' : m.unit) + '</span></label>';
     };
     const left = keys.slice();
-    const groups = [];
+    const list = [];
     for (const [name, test] of PARAM_GROUPS) {
       const mine = left.filter(test);
       for (const k of mine) left.splice(left.indexOf(k), 1);
-      if (mine.length) groups.push([name, mine]);
+      if (mine.length) list.push([name, mine]);
     }
-    const names = [...groups.map(g => g[0]), DETAILS];
-    if (!names.includes(state.openGroup)) state.openGroup = names[0];
-    ui('sel-groups').innerHTML = names.map(n => '<button type="button" role="tab" data-group-tab="' + n + '">' + n + '</button>').join('');
-    ui('sel-params').innerHTML = groups.map(([name, mine]) => '<div data-group="' + name + '">' + mine.map(row).join('') + '</div>').join('');
-    showGroup();
+    ui('sel-params').innerHTML = list.map(([name, mine]) => '<div data-group="' + name + '">' + mine.map(row).join('') + '</div>').join('');
+    groups.set([...list.map(g => g[0]), DETAILS], part.k > 0 ? 'Kanal' : '');
     for (const k of keys) {
       const m = M.PARAM_META[k] || { min: 0, max: 1e6 };
       const el = ui('sel-params').querySelector('[data-param="' + k + '"]');
@@ -230,36 +234,28 @@ export function createUeberlaufTool(host) {
         return val;
       }, { min: m.min, max: m.max, unit: m.unit === undefined ? 'mm' : m.unit });
     }
+    syncVent(it, part);
     syncFacts(it);
     ui('del-item').textContent = part.k !== null ? 'Punkt entfernen' : 'Entfernen';
     ui('del-item').disabled = !(part.k === null || (part.k > 0 && M.ventPoints(it).length > 1));
   }
 
+  /* Die gewählte Gruppe zeigt ihre Maße (groupTabs); dazu gehören die
+     abgeleiteten Zahlen zu „Details" und der Kanal zu „Kanal". */
+  function showExtras(open) {
+    const it = sel();
+    ui('sel-facts').hidden = open !== DETAILS;
+    ui('vent-block').hidden = !(it && it.type === 'entlueftet' && open === 'Kanal');
+  }
+
   /* Der Kanal: Punkte anhängen und entfernen — nur beim Überlauf mit Entlüftung. */
   function syncVent(it, part) {
-    const on = !!it && it.type === 'entlueftet';
-    ui('vent-block').hidden = !(on && state.openGroup === 'Kanal');
-    if (!on) return;
-    /* Wer einen Kanalpunkt wählt, will am Kanal arbeiten: seine Gruppe zeigen. */
-    if (part && part.k !== null && part.k > 0) state.openGroup = 'Kanal';
+    if (it.type !== 'entlueftet') return;
     const pts = M.ventPoints(it);
     let len = 0, prev = [0, 0];
     for (const q of pts) { len += Math.hypot(q[0] - prev[0], q[1] - prev[1]); prev = q; }
     ui('vent-note').textContent = pts.length + (pts.length === 1 ? ' Punkt' : ' Punkte') + ' · ' + fmtUnit(len, 'mm') + ' in der Wandebene';
     ui('vent-del').disabled = !(part && part.k > 0 && pts.length > 1);
-  }
-
-  /* Die gewählte Gruppe zeigen — alle anderen (und die Details) verbergen. */
-  function showGroup() {
-    for (const b of ui('sel-groups').querySelectorAll('[data-group-tab]')) {
-      const on = b.getAttribute('data-group-tab') === state.openGroup;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-selected', on ? 'true' : 'false');
-    }
-    for (const g of ui('sel-params').querySelectorAll('[data-group]')) g.hidden = g.getAttribute('data-group') !== state.openGroup;
-    ui('sel-facts').hidden = state.openGroup !== DETAILS;
-    const it = sel();
-    ui('vent-block').hidden = !(it && it.type === 'entlueftet' && state.openGroup === 'Kanal');
   }
 
   function syncFacts(it) {
@@ -281,55 +277,34 @@ export function createUeberlaufTool(host) {
       if (!(part.k > 0) || !M.removeVentPoint(state.plan, it.id, part.k)) return false;
       rebuild();
       handles.select(it.id + ':v' + Math.min(part.k, M.ventPoints(it).length));
-      host.changed('Kanalpunkt entfernt');
-      host.toastUndo('Kanalpunkt entfernt.');
+      host.removed('Kanalpunkt');
       return true;
     }
     const name = label(it);
     M.removeItem(state.plan, it.id);
     handles.select(null);
     rebuild();
-    host.changed(name + ' entfernt');
-    host.toastUndo(name + ' entfernt.');
+    host.removed(name);
     return true;
   }
 
-  /* ── Zielmodus: setzen und neu setzen ────────────────────── */
-  const aim = shell.aim;
-  function cancelAim() {
-    const was = handles.aiming;
-    handles.cancelAim();
-    aim.hide();
-    state.placing = null;
-    shell.renderChips();
-    return was;
-  }
-  host.cancelAim = cancelAim;
-  /* Esc mitten im Zug (js/handles.js): für den Rahmen, der Esc zuerst hier
-     anbieten kann — auch wenn noch ein Eingabefeld den Fokus hat. */
-  host.cancelDrag = () => !!handles.cancelDrag();
-
+  /* ── Zielmodus: setzen und neu setzen (js/handles.js, createPlacer) ── */
   /** Ein neues Element der Art `type`: der nächste Klick aufs Bauteil setzt es.
       Der Strahl liefert die nach INNEN gerichtete Normale; das Element wächst nach außen. */
   function startPlace(type) {
     if (!M.TYPES[type]) return;
     if (!host.part.model) { shell.toast(NEEDS_PART); return; }
-    if (state.placing === type) { cancelAim(); return; }          // derselbe Chip noch einmal: doch nicht
+    if (state.placing === type) { placer.cancel(); return; }       // derselbe Chip noch einmal: doch nicht
     handles.select(null);
-    state.placing = type;
-    aim.show(true, M.TYPES[type].label + ': die Stelle am Bauteil anklicken, wo sie sitzen soll. Ziehen dreht die Ansicht, Esc bricht ab.');
-    aim.onCancel = cancelAim;
-    handles.armAim({
+    placer.aim({
+      what: type,
+      text: M.TYPES[type].label + ': die Stelle am Bauteil anklicken, wo sie sitzen soll. Ziehen dreht die Ansicht, Esc bricht ab.',
       onHit: hit => {
-        aim.hide();
-        state.placing = null;
         const it = M.addItem(state.plan, type, hit.point, outward(hit.dir));
         rebuild();
         handles.select(it.id);
-        shell.renderChips();
         host.changed(label(it) + ' gesetzt');
-      },
-      onMiss: () => aim.miss(null, () => handles.aiming)
+      }
     });
     shell.renderChips();
   }
@@ -339,17 +314,14 @@ export function createUeberlaufTool(host) {
     const it = state.plan.items[id];
     if (!it) return;
     if (!host.part.model) { shell.toast(NEEDS_PART); return; }
-    aim.show(true, label(it) + ': die neue Stelle am Bauteil anklicken. Esc bricht ab.');
-    aim.onCancel = cancelAim;
-    handles.armAim({
+    placer.aim({
+      text: label(it) + ': die neue Stelle am Bauteil anklicken. Esc bricht ab.',
       onHit: hit => {
-        aim.hide();
         M.placeAt(state.plan, id, hit.point, outward(hit.dir));
         rebuild();
         syncSelection();
         host.changed(label(it) + ' neu gesetzt');
-      },
-      onMiss: () => aim.miss(null, () => handles.aiming)
+      }
     });
   }
 
@@ -364,18 +336,8 @@ export function createUeberlaufTool(host) {
   function mounted() {
     shell.inspector.body.innerHTML = INSPECTOR;
     shell.inspector.onClose(() => handles.select(null));
-
-    ui('sel-groups').addEventListener('click', ev => {
-      const b = ev.target.closest('[data-group-tab]');
-      if (!b) return;
-      state.openGroup = b.getAttribute('data-group-tab');
-      showGroup();
-    });
-
-    ui('item-list').addEventListener('click', ev => {
-      const row = ev.target.closest('[data-item]');
-      if (row) handles.select(row.getAttribute('data-item'));
-    });
+    groups = groupTabs({ tabs: ui('sel-groups'), box: ui('sel-params'), onShow: showExtras });
+    onListPick(ui('item-list'), id => handles.select(id));
 
     ui('sel-type').innerHTML = Object.entries(M.TYPES).map(([k, v]) => '<option value="' + k + '">' + v.label + '</option>').join('');
     ui('sel-type').addEventListener('change', e => {
@@ -418,15 +380,14 @@ export function createUeberlaufTool(host) {
       host.changed('Kanalpunkt angehängt');
     });
     ui('vent-del').addEventListener('click', () => removeSelected());
-    slider(ui('sel-rot'), v => {
+    rot = slider(ui('sel-rot'), v => {
       const it = sel();
-      if (!it || !wired) return;
+      if (!it) return;
       M.setRot(state.plan, it.id, v);
       rebuild();
       syncFacts(it);
-      if (host.history) host.history.coalesce('rot:' + it.id, 'Drehung geändert');
-      host.changed('', { silent: true });
-    }, v => fmt(v, 0) + '°', ui('sel-rot-val'));
+      host.changed('Drehung geändert', { coalesce: 'rot:' + it.id });
+    }, v => fmt(v, 0) + '°', ui('sel-rot-val'), { fire: false });
     ui('del-item').addEventListener('click', () => removeSelected());
 
     /* ── Darstellung, Legende ────────────────────────────────── */
@@ -436,31 +397,25 @@ export function createUeberlaufTool(host) {
 
     rebuild();
     syncSelection();
-    wired = true;
   }
 
   function updateLegend() {
-    shell.legend(Object.values(M.TYPES).map(t => '<div class="lg-row"><span class="dot" style="background:' + t.color + '"></span>' + t.label + '</div>').join('')
-      + '<div class="lg-row"><span class="dot" style="background:' + ELEMENT.kanalpunkt + '"></span>Kanalpunkt</div>'
-      + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>');
+    shell.legend(Object.values(M.TYPES).map(t => legendRow(t.color, t.label)).join('')
+      + legendRow(ELEMENT.kanalpunkt, 'Kanalpunkt') + selectedRow());
   }
 
   /* ── Plan laden, Bauteil ─────────────────────────────────── */
   function loadPlan(plan) {
-    cancelAim();
+    placer.cancel();
     state.plan = plan;
     handles.select(null);
     rebuild();
     syncSelection();
   }
 
-  /* <bauteil>-<was>.stl wie bei den anderen Werkzeugen — ohne die Endung des
-     Bauteils mitten im Namen („deckel-stl-ueberlaeufe.stl"). */
-  const stlName = () => safeName((baseName(host.part.name) || 'bauteil') + '-ueberlaeufe') + '.stl';
-
   const tool = {
     id: 'ueberlauf',
-    modes: MODES.map(m => ({ ...m, enter() {}, leave() {}, primary: () => null })),
+    modes: MODES,
     startMode: 'elemente',
     accepts: [M.FORMAT],
     toJSON: () => M.toJSON(state.plan),
@@ -473,7 +428,7 @@ export function createUeberlaufTool(host) {
     restore(doc) {
       const keep = handles.selected;
       const before = new Set(Object.keys(state.plan.items));
-      cancelAim();
+      placer.cancel();
       state.plan = M.fromJSON(doc);
       const back = Object.keys(state.plan.items).filter(id => !before.has(id));
       const { base, k } = splitId(keep);
@@ -490,24 +445,26 @@ export function createUeberlaufTool(host) {
     exports: [{
       label: 'Körper als STL',
       enabled: () => M.allItems(state.plan).length > 0, reason: 'Noch nichts gesetzt.',
-      run: () => download(new Blob([writeSTL(buildAll(state.plan), 'DieLogic Überläufe')], { type: 'model/stl' }), stlName())
+      run: () => saveSTL(buildAll(state.plan), 'DieLogic Überläufe', host.part.name, 'ueberlaeufe')
     }],
     keys: {
       Delete: () => removeSelected(),
-      /* Esc hebt die Auswahl auf. Einen laufenden Zug bricht der Rahmen
-         vorher ab (host.cancelDrag, js/studio/host.js). */
+      /* Esc hebt die Auswahl auf. Einen laufenden Zug und das Zielen bricht
+         der Rahmen vorher ab (cancelDrag, cancelAim). */
       Escape: () => {
         if (!handles.selected) return false;
         handles.select(null);
         return true;
       }
     },
+    cancelDrag: () => !!handles.cancelDrag(),
+    cancelAim: () => placer.cancel(),
     onPartStart() { state.ready = false; },
     onPart() {
       /* Ein Element sitzt auf der Wand EINES Bauteils: ein neues beginnt leer.
          Der bisherige Plan bleibt als Entwurf bei seinem Bauteil. */
       loadPlan(M.emptyPlan());
-      if (host.history) host.history.reset();
+      host.resetHistory();
       host.part.setLook({ visible: true, colors: false });
       shell.renderChips();
       state.ready = true;

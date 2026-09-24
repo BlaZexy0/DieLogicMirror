@@ -1,5 +1,8 @@
-/* Gemeinsames Gerüst aller Werkzeugseiten des Studios: Seitenleiste,
-   Viewport, Auswahlfeld. Farben und Buttons kommen aus /shared/shared.css. */
+/* Das Gerüst der beiden Seiten ohne den gemeinsamen Rahmen: Formaufbau
+   (form.html) und Werkbank (werkbank.html, dazu css/werkbank.css) —
+   Seitenleiste, Viewport, Auswahlfeld. Farben und Buttons kommen aus
+   /shared/shared.css. Die Werkzeugseiten tragen css/studio.css; was hier
+   gleich dasteht, fällt weg, wenn beide Seiten auf den Rahmen umziehen. */
 
 html, body { height: 100%; }
 
@@ -175,28 +178,7 @@ label.inline input { accent-color: var(--primary); }
 .seg button:hover:not(.active) { background: var(--surface2); color: var(--text); }
 .seg button.active { background: var(--primary); color: #fff; }
 .seg.stack { flex-wrap: wrap; }
-/* Reiter am Kopf der Seitenleiste: je Reiter ein Modus, einer sichtbar —
-   eine Zeile Text mit Unterstrich, kein Knopfblock. */
-.seg.tabs {
-  display: flex; justify-content: space-between; flex-wrap: wrap; overflow: visible;
-  border: none; border-bottom: 1px solid var(--border); border-radius: 0; margin: 0 0 12px;
-}
-.seg.tabs button, .seg.tabs button + button {
-  flex: 0 1 auto; min-width: 0; background: none; border: none; border-bottom: 2px solid transparent;
-  margin-bottom: -1px; padding: 8px 2px 7px; cursor: pointer; white-space: nowrap;
-  font-family: var(--sans); font-size: .76rem; font-weight: 600; color: var(--muted);
-  transition: color .15s, border-color .15s;
-}
-.seg.tabs button:hover:not(.active) { background: none; color: var(--text); }
-.seg.tabs button.active { background: none; color: var(--primary-deep); border-bottom-color: var(--primary); }
 aside section > h2:first-child { margin-top: 4px; }
-/* Formteile: je mögliches Formteil eine Zeile mit Schalter und Farbe. */
-.pieces { margin-top: 8px; border-top: 1px solid var(--border-light); padding-top: 4px; }
-.pieces .piece-row { display: flex; align-items: center; gap: 7px; padding: 3px 2px; font-size: .84rem; }
-.pieces .piece-row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pieces .piece-row .pct { font-family: var(--mono); font-size: .76rem; color: var(--muted); }
-.pieces .piece-row.off { opacity: .45; }
-.pieces .legend-row { padding-top: 5px; }
 
 select, input[type="file"], input[type="text"] { font-family: var(--sans); font-size: .82rem; }
 /* Zahleneingabe (Aufmaß): rechtsbündig wie eine Maßangabe, Eingabe wird
@@ -331,16 +313,15 @@ select {
 /* Abgestufte Skala: die Beschriftung gehört in die Mitte der Stufe. */
 .cb-ticks.bands { justify-content: space-around; }
 
-/* ══ Angussdesigner (anguss.html) ═══════════════════════════════
-   Die Seitenleiste trägt hier NUR noch, was für das ganze System gilt —
-   der gewählte Punkt wird im Viewport bearbeitet. Sie darf deshalb enger
-   sitzen als auf den Analyseseiten: kleinere Abstände, kürzere
-   Hinweistexte. Ein Erklärkasten, der sechs Zeilen hoch ist, schiebt den
-   nächsten Regler aus dem Bild und wird beim zweiten Mal ohnehin nicht
-   mehr gelesen.
+/* ══ Werkbank (werkbank.html, body.designer) ═══════════════════
+   Die Seitenleiste trägt hier NUR, was für den ganzen Schritt gilt — der
+   gewählte Punkt wird im Viewport bearbeitet. Sie darf deshalb enger
+   sitzen als im Formaufbau: kleinere Abstände, kürzere Hinweistexte. Ein
+   Erklärkasten, der sechs Zeilen hoch ist, schiebt den nächsten Regler aus
+   dem Bild und wird beim zweiten Mal ohnehin nicht mehr gelesen.
 
-   Die engeren Abstände hängen an body.designer, damit die vier
-   Analyseseiten ihre gewohnten behalten — sie teilen sich diese Datei. */
+   Die engeren Abstände hängen an body.designer, damit der Formaufbau, der
+   diese Datei mitträgt, seine gewohnten behält. */
 /* Achsen heißen X, Y, Z — auch hier. In der Ansichtsleiste stehen sie in
    der dicktengleichen Schrift, ebenso jeder Zahlenwert daneben; nur diese
    sechs Knöpfe standen in der Fließtextschrift, und dieselbe Beschriftung

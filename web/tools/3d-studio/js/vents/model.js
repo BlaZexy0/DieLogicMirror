@@ -17,8 +17,9 @@
    Normale. Was daraus an Geometrie wird, rechnet js/vents/geom.js;
    dieses Modul kennt kein Three.js und läuft in den Tests unter Node. */
 
-import { add, addScaled, cross, norm, dot, rotate, rad, clamp } from '../runner/vec.js';
+import { add, addScaled, cross, norm, normOr, dot, rotate, rad, clamp, wallFrame } from '../runner/vec.js';
 import { ELEMENT } from '../part/colors.js';
+import { checkFormat, fileIds, filePoint } from '../studio/planio.js';
 
 export const FORMAT = 'dielogic-luft';
 export const FORMAT_VERSION = 3;
@@ -29,7 +30,7 @@ export const FORMAT_VERSION = 3;
    der Bohne; von dort werden die rechteckigen Kanäle Punkt für Punkt
    gezogen. Weil die Punkte in den Ebenenkoordinaten stehen, bleiben sie
    in der Ebene — beim Ziehen, beim Drehen, beim Versetzen der Bohne. */
-export const VENT_DEFAULT = [[50, 0]];
+const VENT_DEFAULT = [[50, 0]];
 export const VENT_STEP = 50;
 
 /** Die Arten — Farbe für Griff, Pfeil und Körper (js/part/colors.js,
@@ -90,10 +91,7 @@ export function emptyPlan() {
 
 export const allItems = plan => Object.values(plan.items);
 
-const unit = d => {
-  const u = norm(d);
-  return (u[0] || u[1] || u[2]) ? u : [1, 0, 0];
-};
+const unit = d => normOr(d, [1, 0, 0]);
 
 /** Element anlegen: `dir` ist die nach AUSSEN gerichtete Flächennormale
     am Ort — die Hochachse des Elements. Wer die nach innen gerichtete
@@ -146,22 +144,13 @@ export function setRot(plan, id, deg) {
  * Das lokale Dreibein eines Elements: n „oben" ist die Flächennormale
  * nach außen (dorthin liegt die offene Seite von Steg und Bohne, die
  * Tiefe wächst nach −n), d die Längsrichtung IN der Wandebene, r quer.
- * Um n gedreht mit `rot`. Rechtshändig: x = d, y = r, z = n.
- *
- * Woher die Längsrichtung ohne Trennebene kommt: von der Weltachse, die
- * am wenigsten mit n zusammenfällt, in die Ebene gelegt — so gibt es
- * keine Stelle, an der das Dreibein umkippt, und zwei benachbarte
- * Elemente auf derselben Wand liegen gleich. Ein Element, das entlang
- * der Normalen von der Wand abstünde, wäre ein Turm, kein Überlauf: die
- * Bohne liegt in der Trennebene, und die ist hier die Wand.
+ * Um n gedreht mit `rot`. Rechtshändig: x = d, y = r, z = n — das Dreibein
+ * jeder Wand (js/runner/vec.js, wallFrame). Ein Element, das entlang der
+ * Normalen von der Wand abstünde, wäre ein Turm, kein Überlauf: die Bohne
+ * liegt in der Trennebene, und die ist hier die Wand.
  */
 export function frameOf(item) {
-  const n = unit(item.dir);
-  const ref = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1];
-  let d = norm(cross(cross(n, ref), n));                      // ref in die Ebene gelegt
-  const a = rad(item.rot || 0);
-  if (a) d = rotate(d, n, a);
-  const r = norm(cross(n, d));
+  const { n, d, r } = wallFrame(unit(item.dir), item.rot);
   return { o: item.pos, d, r, n };
 }
 
@@ -170,7 +159,7 @@ export const toWorld = (f, x, y, z) => add(f.o, add(add([f.d[0] * x, f.d[1] * x,
   [f.r[0] * y, f.r[1] * y, f.r[2] * y]), [f.n[0] * z, f.n[1] * z, f.n[2] * z]));
 
 /** Welt → lokale Ebenenkoordinaten [x, y] (z fällt weg: in die Ebene gelotet). */
-export const toLocal = (f, p) => {
+const toLocal = (f, p) => {
   const v = [p[0] - f.o[0], p[1] - f.o[1], p[2] - f.o[2]];
   return [dot(v, f.d), dot(v, f.r)];
 };
@@ -240,44 +229,6 @@ export function toJSON(plan) {
   };
 }
 
-/* Kennungen aus einer Datei: vorn ein Buchstabe, dann Buchstaben, Ziffern,
-   _ oder -, höchstens 32 Zeichen. Sie stehen im Auswahlfeld und in der
-   Liste — eine Datei mit anderen stammt nicht von hier und wird abgelehnt.
-   Wer keine Kennung hat (oder eine, die schon vergeben ist), bekommt eine
-   neue, die keiner anderen gleicht: sonst überschrieben sich die Elemente. */
-const ID = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
-export function fileIds(list, prefix) {
-  const ids = [], taken = new Set();
-  let seq = 0;
-  list.forEach((raw, i) => {
-    if (!raw || typeof raw !== 'object') throw new Error('Element ' + (i + 1) + ' der Datei ist unlesbar.');
-    const id = raw.id !== undefined && raw.id !== null && raw.id !== '' ? String(raw.id) : null;
-    if (id !== null && !ID.test(id)) {
-      throw new Error('Element ' + (i + 1) + ' der Datei hat keine gültige Kennung: erlaubt sind Buchstaben, Ziffern, _ und -, vorn ein Buchstabe, höchstens 32 Zeichen.');
-    }
-    ids.push(id !== null && !taken.has(id) ? id : null);
-    if (id === null) return;
-    taken.add(id);
-    const num = +id.replace(/\D/g, '');
-    if (Number.isSafeInteger(num)) seq = Math.max(seq, num);
-  });
-  for (let i = 0; i < ids.length; i++) {
-    if (ids[i]) continue;
-    let id;
-    do id = prefix + (++seq); while (taken.has(id));
-    taken.add(id);
-    ids[i] = id;
-  }
-  return { ids, seq };
-}
-
-/** Ein Punkt aus der Datei: drei Zahlen — sonst ist die Datei beschädigt. */
-function filePoint(v, what) {
-  const p = Array.isArray(v) && v.length >= 3 ? v.slice(0, 3).map(Number) : null;
-  if (!p || !p.every(Number.isFinite)) throw new Error(what + ': Die Lage fehlt oder ist keine Zahl.');
-  return p;
-}
-
 /* Fassung 1 kannte eine Trennebene: `axis` (±x, ±y, ±z) war die
    Ausstoßachse, `dir` die Richtung IN dieser Ebene, vom Bauteil weg, und
    `rot` drehte um die Achse. Das ist dasselbe Dreibein wie heute, mit der
@@ -295,9 +246,12 @@ function fromVersion1(axis, dir, rotDeg) {
   return { dir: n.slice(), rot: Math.round(rot * 1e6) / 1e6 };
 }
 
+/* Kennungen, Punkte und Zahlen aus der Datei prüft js/studio/planio.js —
+   wie bei den anderen Plänen: eine fremde Kennung wird abgelehnt, eine
+   fehlende oder doppelte neu vergeben, Maße kommen in die Grenzen der
+   Felder. */
 export function fromJSON(obj) {
-  if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Überlaufdatei (Kennung „' + FORMAT + '" fehlt).');
-  if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
+  checkFormat(obj, FORMAT, FORMAT_VERSION, 'Das ist keine Überlaufdatei (Kennung „' + FORMAT + '" fehlt).');
   const plan = emptyPlan();
   const list = Array.isArray(obj.items) ? obj.items : [];
   const { ids, seq } = fileIds(list, 'l');
@@ -332,5 +286,3 @@ export function fromJSON(obj) {
   plan.seq = seq;
   return plan;
 }
-
-export { dot };

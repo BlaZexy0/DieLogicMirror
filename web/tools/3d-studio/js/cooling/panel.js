@@ -58,8 +58,7 @@ export const MODES = [
    Kühlstich, „beide Enden" nur der Kanal. */
 export const GROUPS = ['Maße', 'Details'];
 export const INSPECTOR = kpiBlock('sel-kpis')
-  + '<div class="st-grouptabs" role="tablist" data-ui="sel-groups" aria-label="Auswahl">'
-  + GROUPS.map(n => '<button type="button" role="tab" data-group-tab="' + n + '">' + n + '</button>').join('') + '</div>'
+  + '<div class="st-grouptabs" role="tablist" data-ui="sel-groups" aria-label="Auswahl"></div>'
   + '<div data-group="Maße">'
   + numberRow({ ui: 'sel-d', label: 'Durchmesser', unit: 'mm', value: '20' })
   + '<div data-ui="sel-len-row">' + numberRow({ ui: 'sel-len', label: 'Länge', unit: 'mm', value: '200' }) + '</div>'

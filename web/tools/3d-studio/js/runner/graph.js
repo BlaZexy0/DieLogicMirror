@@ -34,6 +34,7 @@ import {
   mirrorPoint, mirrorDir, rad, clamp
 } from './vec.js';
 import { ELEMENT } from '../part/colors.js';
+import { checkFormat, isId, ID_RULE } from '../studio/planio.js';
 
 export const FORMAT = 'dielogic-anguss';
 export const FORMAT_VERSION = 1;
@@ -629,9 +630,7 @@ export function toJSON(g) {
    ist kein Tippfehler. Die Namen, die jedes Objekt schon mitbringt
    („constructor", „toString"), sind ebenfalls keine: nachgeschlagen in
    `nodes`, fände man sonst etwas, das nie gespeichert war. */
-const ID = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
-const validId = id => typeof id === 'string' && ID.test(id) && !(id in Object.prototype);
-const ID_RULE = 'erlaubt sind Buchstaben, Ziffern, „_" und „-", vorn ein Buchstabe, höchstens 32 Zeichen';
+const validId = id => isId(id) && !(id in Object.prototype);
 
 /* Zahlen aus der Datei: endlich, sonst die Vorgabe — eine Zeichenkette oder
    ein fehlender Wert rechnete sich sonst als NaN durch die ganze Kette. */
@@ -643,8 +642,7 @@ const vec = (a, n, def) => (Array.isArray(a) && a.length === n ? a.map((v, i) =>
 const own = (o, k) => typeof k === 'string' && Object.hasOwn(o, k);
 
 export function fromJSON(obj) {
-  if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Angussdatei (Kennung „' + FORMAT + '" fehlt).');
-  if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
+  checkFormat(obj, FORMAT, FORMAT_VERSION, 'Das ist keine Angussdatei (Kennung „' + FORMAT + '" fehlt).');
   const g = emptyGraph();
   const b = obj.biscuit && typeof obj.biscuit === 'object' ? obj.biscuit : {};
   g.biscuit.pos = vec(b.pos, 3, [0, 0, 0]);

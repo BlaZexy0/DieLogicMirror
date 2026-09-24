@@ -9,10 +9,11 @@
    in core.js, die Verfahren selbst hinter engines/.
 
    Das Werkzeug arbeitet nicht auf einem Bauteil, sondern auf einem
-   ANGUSSSYSTEM: es verzichtet auf das Bauteil des Gastgebers
-   (createHost({ part: false })), beschriftet dessen Chip in der Kopfzeile
-   zum Anguss-Chip um (Beispiel wählen, Angussdatei öffnen) und nennt mit
+   ANGUSSSYSTEM: es verzichtet auf das Bauteil des Gastgebers (part: false),
+   beschriftet dessen Chip in der Kopfzeile zum Anguss-Chip um (Beispiel
+   wählen, Angussdatei öffnen: shell.header.setPartSource) und nennt mit
    host.settingsFor(quelle) das System, zu dem seine Einstellungen gehören.
+   Eine Angussdatei reicht der Gastgeber an openJSON.
 
    Die Modi: System (was geladen ist) · Prozess (Legierung, Gussvolumen,
    Füllkammer — und was die Kurve daraus macht) · Simulation (Verfahren,
@@ -26,6 +27,8 @@ import { setTris } from '../ui/common.js';
 import { scale, onScheme, ROLE, VIEW } from '../part/colors.js';
 import { kpis } from '../studio/rows.js';
 import { fmt, fmtPlain, fmtUnit, fmtFixed } from '../studio/format.js';
+import { checkFormat } from '../studio/planio.js';
+import { surfaceMaterial } from '../ui/common.js';
 import * as G from '../runner/graph.js';
 import { DEMOS } from '../runner/presets.js';
 import { sampleNetwork } from '../runner/curve.js';
@@ -64,16 +67,13 @@ export function createAngussfuellungTool(host) {
   /* Der Anguss als durchscheinender Behälter um die Schmelze, der Pressrest
      ebenso — in ihren Sachfarben (js/part/colors.js), die einem Wechsel des
      Farbschemas folgen. */
-  const runnerMat = new T.MeshStandardMaterial({
-    color: ROLE.runner, roughness: 0.55, metalness: 0.05, side: T.DoubleSide, flatShading: true,
-    transparent: true, opacity: 0.3, depthWrite: false
-  });
-  const colorMat = new T.MeshStandardMaterial({ vertexColors: true, color: 0xffffff, roughness: 0.6, metalness: 0.05, side: T.DoubleSide, flatShading: true });
+  const runnerMat = surfaceMaterial(ROLE.runner, { roughness: 0.55, metalness: 0.05, transparent: true, opacity: 0.3, depthWrite: false });
+  const colorMat = surfaceMaterial(0xffffff, { vertexColors: true, roughness: 0.6, metalness: 0.05 });
   const runnerMesh = new T.Mesh(new T.BufferGeometry(), runnerMat);
   /* flatShading: setTris() legt keine Normalen an — ohne sie bliebe der Pressrest
      unbeleuchtet, ein dunkler Klotz statt eines durchscheinenden Körpers (so
      stand er auf den alten Seiten). */
-  const biscMat = new T.MeshStandardMaterial({ color: ROLE.biscuit, roughness: 0.6, metalness: 0.06, side: T.DoubleSide, flatShading: true, transparent: true, opacity: 0.3, depthWrite: false });
+  const biscMat = surfaceMaterial(ROLE.biscuit, { roughness: 0.6, metalness: 0.06, transparent: true, opacity: 0.3, depthWrite: false });
   const biscMesh = new T.Mesh(new T.BufferGeometry(), biscMat);
   group.add(runnerMesh, biscMesh);
   /* Eingepasst werden Anguss und Pressrest — F, „Einpassen" und Doppelklick fragen hier. */
@@ -268,30 +268,27 @@ export function createAngussfuellungTool(host) {
   /* Der Rahmen kennt nur „Bauteil" und blendet seinen Chip für Werkzeuge
      ohne Bauteil aus. Dieses Werkzeug HAT eine Quelle — dieselbe Stelle,
      dieselbe Geste, nur steht „Anguss" daran und die Klappe nimmt JSON. */
-  const inFrame = sel => shell.root.querySelector(sel);
+  const source = shell.header.partFields;
   function setSourceChip(name) {
     shell.header.setPart(name, 'Anguss');
     ui('part-chip').title = 'Angusssystem wählen oder laden';
   }
   function mountSource() {
-    ui('part').hidden = false;
-    const sel = inFrame('#demo-select'), input = inFrame('#stl-input'), btn = inFrame('#stl-btn');
-    inFrame('[data-ui="part-pop"] label.row span').textContent = 'Beispiel';
-    sel.innerHTML = DEMOS.map(d => '<option value="' + d.id + '">' + d.label + '</option>').join('');
-    sel.addEventListener('change', e => pickDemo(e.target.value));
-    input.setAttribute('accept', '.json,application/json');
-    btn.textContent = 'Angussdatei öffnen …';
-    btn.addEventListener('click', () => input.click());
-    input.addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) host.openFile(f); e.target.value = ''; });
-    inFrame('.st-pop-hint').textContent = 'Eine Datei des Angussdesigners oder der Werkbank (JSON). Sie lässt sich auch in den Viewport ziehen.';
-    inFrame('[data-ui="part-pop"] details').hidden = true;
+    shell.header.setPartSource({
+      list: 'Beispiel', button: 'Angussdatei öffnen …', accept: '.json,application/json',
+      hint: 'Eine Datei des Angussdesigners oder der Werkbank (JSON). Sie lässt sich auch in den Viewport ziehen.'
+    });
+    source.select.innerHTML = DEMOS.map(d => '<option value="' + d.id + '">' + d.label + '</option>').join('');
+    source.select.addEventListener('change', e => pickDemo(e.target.value));
+    source.button.addEventListener('click', () => source.input.click());
+    source.input.addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) host.openFile(f); e.target.value = ''; });
     ui('drop-hint').textContent = 'Angussdatei (JSON) hier ablegen';
   }
 
   function pickDemo(id) {
     const d = DEMOS.find(x => x.id === id) || DEMOS[0];
-    inFrame('#demo-select').value = d.id;
-    inFrame('#model-warn').textContent = '';
+    source.select.value = d.id;
+    source.warn.textContent = '';
     ui('graph-note').textContent = '';
     ui('graph-warn').textContent = '';
     adoptGraph(d.build(), d.label, null, 'beispiel-' + d.id);
@@ -308,8 +305,8 @@ export function createAngussfuellungTool(host) {
       ui('graph-warn').textContent = 'Die Datei „' + name + '" konnte nicht gelesen werden: ' + err.message;
       throw err;
     }
-    inFrame('#demo-select').selectedIndex = -1;
-    inFrame('#model-warn').textContent = '';
+    source.select.selectedIndex = -1;
+    source.warn.textContent = '';
     ui('graph-warn').textContent = '';
     ui('graph-note').textContent = 'Geladen: ' + name;
     /* Kein eigener Toast: adoptGraph meldet gegebenenfalls „Einstellungen
@@ -318,30 +315,28 @@ export function createAngussfuellungTool(host) {
   }
 
   /* ── Modi ────────────────────────────────────────────────── */
-  const modes = MODES.map(m => ({ ...m }));
-  for (const m of modes) { m.primary = core.primary; m.enter = () => core.applyView(); m.leave = () => core.stopPlay(); }
+  const modes = MODES.map(m => ({ ...m, primary: core.primary, enter: () => core.applyView(), leave: () => core.stopPlay() }));
 
   /* ── Verdrahtung ─────────────────────────────────────────── */
-  let wired = false;
-  const changed = label => { if (wired) host.changed(label); };
-  let opacityEl = null;
+  let opacitySlider = null;
   const urlEngine = engineFromUrl();
   let starting = true;
 
   function mounted() {
     mountSource();
-    host.openJSON = openJSON;
     ui('alloy').innerHTML = Object.entries(F.ALLOYS).map(([k, v]) => '<option value="' + k + '">' + v.label + '</option>').join('');
-    const edit = label => { updateCurve(label); changed(label); };
+    const edit = label => { updateCurve(label); host.changed(label); };
     ui('alloy').addEventListener('change', e => { state.proc.alloy = e.target.value; edit('Legierung'); });
     numberInput(ui('vol'), v => { state.proc.volume = v; edit('Gussvolumen'); return v; }, { min: VOLUME[0], max: VOLUME[1], unit: 'cm³' });
     numberInput(ui('chamber-len'), v => { state.proc.chamberLen = v; edit('Füllkammerlänge'); return v; }, { min: CHAMBER[0], max: CHAMBER[1], unit: 'mm' });
-    segButtons(ui('show-seg'), v => { state.show = v; core.applyView(); changed('Zeigen'); });
+    segButtons(ui('show-seg'), v => { state.show = v; core.applyView(); host.changed('Zeigen'); });
     const pop = shell.darstellung(DARSTELLUNG);
-    opacityEl = pop.querySelector('[data-ui="opacity"]');
-    slider(opacityEl, v => { state.opacity = v / 100; applyLook(shell.mode === 'ergebnis' ? core.shown() : null); changed('Deckkraft'); }, v => v + ' %');
+    opacitySlider = slider(pop.querySelector('[data-ui="opacity"]'), v => {
+      state.opacity = v / 100;
+      applyLook(shell.mode === 'ergebnis' ? core.shown() : null);
+      host.changed('Deckkraft');
+    }, v => v + ' %', null, { fire: false });
     core.mounted();
-    wired = true;
   }
 
   /* ── Einstellungen: merken, laden, zurücksetzen ──────────── */
@@ -351,8 +346,7 @@ export function createAngussfuellungTool(host) {
     show: state.show, opacity: state.opacity
   });
   function fromJSON(obj) {
-    if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Datei der Angussfüllung.');
-    if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
+    checkFormat(obj, FORMAT, FORMAT_VERSION, 'Das ist keine Datei der Angussfüllung.');
     const p = obj.proc || {};
     const before = JSON.stringify([state.proc.alloy, state.proc.volume, state.proc.chamberLen]);
     if (Object.hasOwn(F.ALLOYS, p.alloy)) state.proc.alloy = p.alloy;
@@ -366,8 +360,7 @@ export function createAngussfuellungTool(host) {
     state.show = obj.show === 'ankunft' ? 'ankunft' : 'schmelze';
     segButtonSet(ui('show-seg'), state.show);
     state.opacity = Number.isFinite(obj.opacity) ? Math.max(0.05, Math.min(1, obj.opacity)) : 0.3;
-    opacityEl.value = String(Math.round(state.opacity * 100));
-    opacityEl.parentNode.querySelector('.val').textContent = opacityEl.value + ' %';
+    opacitySlider.set(Math.round(state.opacity * 100));
     core.renderResults();
     host.refreshActions();
   }
@@ -386,10 +379,9 @@ export function createAngussfuellungTool(host) {
 
   const tool = {
     id: 'angussfuellung', modes, startMode: 'system', settingsOnly: true,
-    mounted, start, toJSON, fromJSON, resetSettings, accepts: [FORMAT], exports: [],
+    mounted, start, toJSON, fromJSON, resetSettings, accepts: [FORMAT], exports: [], openJSON,
     /* „beispiel-zwei" statt des langen Beispielnamens mit Klammern — daraus wird der Dateiname. */
-    docName: () => state.sourceKey || 'anguss',
-    state, group
+    docName: () => state.sourceKey || 'anguss'
   };
   tool.__viewer = {
     state, view, shell, host, tool, core, group, runnerMesh, biscMesh,

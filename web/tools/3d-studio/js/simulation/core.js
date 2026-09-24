@@ -105,8 +105,7 @@ export function createSimCore(opts) {
      (Zellkante oder Partikelabstand); das Metamodell hat keins. */
   const rangeOf = id => ENGINES[id].range({ kind });
 
-  let wired = false;
-  const changed = label => { if (wired) host.changed(label); };
+  let wired = false;                       // die Felder stehen auf der Seite (mounted)
 
   function syncEngine() {
     const eng = ENGINES[state.engine];
@@ -333,7 +332,7 @@ export function createSimCore(opts) {
     /* Zeitregler und Abspielen gehören nicht in einen Reiter, sondern unter den
        Hauptknopf: das Bild des Laufs ist da, gleich wo man gerade einstellt. */
     shell.setActionsExtra(PLAYBACK_ROWS);
-    segButtons(ui('engine-seg'), v => { setEngine(v); changed('Rechenverfahren'); });
+    segButtons(ui('engine-seg'), v => { setEngine(v); host.changed('Rechenverfahren'); });
     /* Geklemmt wird hier, nicht in numberInput: dessen Grenzen stehen beim
        Anlegen fest, dieses Feld gehört aber dem gewählten Verfahren. */
     numberInput(ui('cell'), v => {
@@ -344,12 +343,12 @@ export function createSimCore(opts) {
       cache = {};
       syncEngine();
       host.refreshActions();
-      changed(ENGINES[state.engine].cellLabel);
+      host.changed(ENGINES[state.engine].cellLabel);
       return use;
     }, { unit: 'mm' });
     segButtons(ui('bild-seg'), v => { state.bild = v; stopPlay(); renderResults(); });
     /* Ohne Anzeige dahinter: die Zeit steht unten links im Bild. */
-    slider(ui('t-slider'), v => { if (wired) { stopPlay(); showFrame(v); } });
+    slider(ui('t-slider'), v => { stopPlay(); showFrame(v); }, null, null, { fire: false });
     ui('play').addEventListener('click', togglePlay);
     wired = true;
     setPlayButton(false);

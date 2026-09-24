@@ -1,29 +1,61 @@
 /* Der Gastgeber eines Werkzeugs: Rahmen, Bauteil, Abstandsfeld, Verlauf,
    Entwurf, Rechnungen und Dateien — alles, was ein Werkzeug von seiner
-   Umgebung braucht, an einem Ort. Die Einzelseiten bauen einen Gastgeber
-   für ihr eines Werkzeug (createHost); die Werkbank ist ein Gastgeber für
-   sechs.
+   Umgebung braucht, an einem Ort. Jede Werkzeugseite baut EINEN Gastgeber
+   für ihr eines Werkzeug (bootPage).
 
-   Ein Werkzeug ist eine Fabrik createXTool(host), die zurückgibt:
-     id, modes [{ id, label, hint, help, html, enter(), leave(), primary() }],
-     toJSON(), fromJSON(obj), accepts [Formatkennung], exports [{ label, enabled, run }],
-     serialize()/restore() für den Verlauf (wahlweise), keys { Delete, Escape } (wahlweise),
+   DER VERTRAG. Ein Werkzeug ist eine Fabrik createXTool(host), die ein
+   Objekt zurückgibt; alles, was der Gastgeber vom Werkzeug wissen will,
+   steht darin — er schreibt nichts von außen an sich selbst:
+     id, modes [{ id, label, hint, help, html, enter(), leave(), primary() }]
+       (enter/leave/primary wahlweise; primary() liefert den Hauptknopf
+       { label, onClick, disabled, hidden, kind, reason, noteKind } oder null),
+     startMode, mounted() — die Felder der Modi stehen jetzt auf der Seite,
+     toJSON(), fromJSON(obj), accepts [Formatkennung],
+     exports [{ label, enabled, reason, run }],
+     serialize()/restore(doc) für den Verlauf (wahlweise),
+     keys { Delete, Escape } (wahlweise; true: die Taste ist verbraucht),
+     cancelDrag() — Esc während eines Zugs am Griff: abbrechen, true, wenn
+       einer lief (wahlweise; kommt vor jedem anderen Esc, auch im Feld),
+     cancelAim() — Esc im Zielmodus: abbrechen, true, wenn gezielt wurde,
+     dropPart(tris, name, note) — ein geöffnetes oder abgelegtes Netz, wenn
+       das Werkzeug seine Bauteile selbst hält (die Abstandsanalyse: A oder B?),
+     openJSON(obj, name) — eine Datei, die nicht zu accepts gehört (die
+       Angussfüllung nimmt Anguss- und Werkbankdateien),
      onPartStart() — ein Bauteil BEGINNT zu laden (das alte Ergebnis gilt ab
-       jetzt nicht mehr als fertig), onPart(model) — es ist da,
+       jetzt nicht mehr als fertig), onPart(model, name) — es ist da,
+     start() — wer ohne das Bauteil des Gastgebers anfängt, lädt selbst,
+     docName() — der Name der Plandatei ohne Bauteil,
      settingsOnly — das Werkzeug hat nur Einstellungen, keinen Plan (die
        Analysen): sie werden je Bauteil still gemerkt und beim nächsten Mal
        übernommen (mit „Zurücksetzen", dazu resetSettings()); kein
        „Ungespeichert", keine Frage beim Verlassen. Ein Plan (die Designer)
        wird dagegen nie still übernommen, und die Seite fragt, bevor er
        verloren geht.
+
+   Was das Werkzeug vom Gastgeber bekommt — und NUR das benutzt es:
+     host.shell, host.ui(name), host.view, host.viewport, host.aim,
+     host.part (oder null), host.field, host.jobs,
+     host.changed(label, { coalesce, ms }) — eine abgeschlossene Änderung:
+       Verlauf, Entwurf, Kopfzeile. Ohne Änderung ist es keine. Mit
+       `coalesce` (ein Schlüssel) sind Reglerschritte unter demselben
+       Schlüssel innerhalb von `ms` EIN Schritt,
+     host.toastUndo(text) — nach changed(): „… entfernt · Rückgängig",
+     host.removed(was, text) — beides in einem: der Schritt „<was> entfernt"
+       und sein Toast,
+     host.revert() — zum letzten Schritt zurück, ohne Schritt (Esc beim Zug),
+     host.resetHistory() — ein neuer Anfang (neues Bauteil, neues System),
+     host.refreshActions() — der Hauptknopf des Modus neu,
+     host.settingsFor(key) — für Werkzeuge ohne das Bauteil des Gastgebers:
+       zu welchem Schlüssel die Einstellungen gehören,
+     host.openFile(file) — eine Datei, wie aus dem Knopf der Klappe.
+
    Ein Werkzeug mit ZWEI Bauteilen (die Abstandsanalyse) verzichtet auf das
-   Bauteil des Gastgebers (createHost({ part: false })): es lädt seine Dateien
-   selbst, nennt mit host.settingsFor(schlüssel) das Paar, zu dem seine
-   Einstellungen gehören, nimmt abgelegte Netze über host.dropPart entgegen
-   und startet in tool.start().
-   Der Gastgeber verdrahtet Reiter, Hauptknopf, Speichern, Exportieren,
-   Öffnen, Rückgängig, Entwurf und Tasten — das Werkzeug kümmert sich nur
-   um seine Sache. */
+   Bauteil des Gastgebers (part: false): es lädt seine Dateien selbst, nennt
+   mit host.settingsFor(schlüssel) das Paar, zu dem seine Einstellungen
+   gehören, und nimmt abgelegte Netze mit dropPart entgegen. Der Gastgeber
+   verdrahtet Reiter, Hauptknopf, Speichern, Exportieren, Öffnen,
+   Rückgängig, Entwurf und Tasten — das Werkzeug kümmert sich nur um seine
+   Sache. */
 
 import { createShell } from './shell.js';
 import { createPart } from './part.js';
@@ -31,28 +63,31 @@ import { createHistory } from './history.js';
 import { createStore } from './store.js';
 import { createJobRunner } from './job.js';
 import { openAny, saveJSON, planName, wireDrop } from './files.js';
-import { buildField, fieldSize, fieldExtrema, suggestCell, CELL_RANGE } from '../part/field.js';
+import { buildField, planField, fieldExtrema, suggestCell, CELL_RANGE } from '../part/field.js';
 import { fmtWhen } from './format.js';
-
-const MAX_SAMPLES = 16e6;
 
 export function createHost({ mount, id, title, help = '', start = null, sceneOpts = {}, part = true }) {
   const shell = createShell({ mount, title, help, sceneOpts });
   mount.setAttribute('data-tool', id);      // css/studio.css: Regeln, die nur EIN Werkzeug betreffen
-  /* Ein Ereignisbus (on/emit) und host.ready standen hier nach dem Vorbild
-     der Werkbank; abonniert und gelesen hat sie niemand (entfernt 23.09.). */
   const host = {
     id, shell, ui: shell.ui, view: shell.view, viewport: shell.viewport, aim: shell.aim,
     tool: null
   };
+  const jobs = createJobRunner(shell);
+  host.jobs = jobs;
 
   /* ── Bauteil ─────────────────────────────────────────────── */
   if (!part) shell.header.hidePart();
   host.part = !part ? null : createPart({
-    shell, start,
+    shell, start, onFile: file => openFile(file),
     /* Was vom bisherigen Bauteil noch nicht geschrieben ist, jetzt — bevor
-       das Werkzeug seinen Stand für das neue wegräumt. */
-    onStart: () => { store.flushPending(); if (host.tool && host.tool.onPartStart) host.tool.onPartStart(); },
+       das Werkzeug seinen Stand für das neue wegräumt. Eine Rechnung für das
+       alte Bauteil endet still: ihr Ergebnis gehört niemandem mehr. */
+    onStart: () => {
+      store.flushPending();
+      jobs.supersede();
+      if (host.tool && host.tool.onPartStart) host.tool.onPartStart();
+    },
     onLoad: async (model, name) => {
       field.data = null; field.stats = null; field.stale = false;
       if (field.hAuto) field.h = suggestCell(model);
@@ -64,6 +99,9 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
 
   /* ── Das Abstandsfeld: einmal je Bauteil und Zellkante ──── */
   const asked = f => (f.hAsked ?? f.h);
+  /* Band nach außen und Rand um das Bauteil (mm): ohne Angabe drei und
+     zwei Zellen, so viel braucht die Wandstärke. */
+  const extent = (opts, h) => ({ h, band: opts.band ?? 3 * h, pad: opts.pad ?? 2 * h });
   const field = {
     data: null, stats: null, h: 3, hAuto: true, stale: false,
     setCell(v) {
@@ -75,27 +113,23 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       field.stale = stale;
       return field.h;
     },
-    /** Was das Feld kosten würde. */
-    estimate(opts = {}) {
+    /** Was das Feld kosten würde und mit welcher Kante es entsteht
+        (js/part/field.js, planField) — für die Vorschau der Werkzeuge. */
+    plan(opts = {}) {
       const m = host.part && host.part.model;
-      if (!m) return null;
-      const h = opts.h || field.h;
-      return fieldSize(m, 0, opts.band ?? 3 * h, { h, pad: opts.pad ?? 2 * h });
+      return m ? planField(m, extent(opts, opts.h || field.h)) : null;
     },
     /** Das Feld holen — vorhanden oder jetzt rechnen (mit Fortschritt und Abbruch). */
     async ensure(opts = {}) {
       const m = host.part && host.part.model;
       if (!m) return null;
-      const h = opts.h || field.h;
-      const band = opts.band ?? 3 * h, pad = opts.pad ?? 2 * h;
+      const { h, band, pad } = extent(opts, opts.h || field.h);
       /* Verglichen wird mit dem, was BESTELLT war: ein Feld, das über 16 Mio.
          Punkten gröber gerastert wurde, passte sonst nie und galt nach jedem
          Blick auf die Zellkante als veraltet. */
       const fits = f => f && Math.abs(asked(f) - h) < 1e-9 && f.band >= band - 1e-6 && (f.padAsked ?? f.padCells * f.h) >= pad - 1e-6;
       if (!opts.force && !field.stale && fits(field.data)) return field.data;
-      let size = fieldSize(m, 0, band, { h, pad });
-      let hh = h;
-      while (size.samples > MAX_SAMPLES) { hh = Math.round(hh * 110) / 100; size = fieldSize(m, 0, band, { h: hh, pad }); }
+      const hh = planField(m, { h, band, pad }).est.h;
       const f = await buildField(m, { h: hh, band, pad, onProgress: opts.onProgress, signal: opts.signal });
       f.padCells = Math.round(pad / hh);
       f.hAsked = h;
@@ -109,10 +143,9 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
   };
   host.field = field;
 
-  /* ── Entwurf, Verlauf, Rechnungen ────────────────────────── */
+  /* ── Entwurf, Verlauf ────────────────────────────────────── */
   const store = createStore({ tool: id });
-  host.store = store;
-  host.jobs = createJobRunner(shell);
+  host.store = store;                       // für die Tests; die Werkzeuge melden über changed()
   let history = null;
   store.guard();
   const settingsOnly = () => !!(host.tool && host.tool.settingsOnly);
@@ -123,10 +156,14 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
 
   /** Das Werkzeug meldet eine Änderung: Verlauf, Entwurf, Kopfzeile. */
   host.changed = (label = '', opts = {}) => {
-    /* Eine Meldung ohne Änderung ist keine: ein bloßer Klick auf einen Griff
-       endet bei js/handles.js mit „drop", und die Seite stand danach auf
-       „Ungespeichert", ohne dass sich etwas getan hätte. */
-    if (history && !opts.silent && !history.commit(label)) return;
+    if (history) {
+      /* Reglerdrehen: ein Eintrag, solange man am selben Regler dreht. */
+      if (opts.coalesce) history.coalesce(opts.coalesce, label, opts.ms);
+      /* Eine Meldung ohne Änderung ist keine: ein bloßer Klick auf einen Griff
+         endet bei js/handles.js mit „drop", und die Seite stand danach auf
+         „Ungespeichert", ohne dass sich etwas getan hätte. */
+      else if (!history.commit(label)) return;
+    }
     host.dropUndoToast();
     store.save(() => host.tool.toJSON(), { quiet: settingsOnly() });
   };
@@ -138,6 +175,8 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
   /** Zum zuletzt eingetragenen Stand zurück, ohne Schritt — für den Zug am
       Griff, den Esc abbricht (js/handles.js, onChange('cancel')). */
   host.revert = () => !!(history && history.revert());
+  /** Ein neuer Anfang: der jetzige Stand ist der erste, nichts davor. */
+  host.resetHistory = () => { if (history) history.reset(); };
   /** „… entfernt · Rückgängig": der Toast gehört zu GENAU dem Schritt, der
       eben gemeldet wurde. Bewegt sich der Verlauf danach (Strg+Z, ein neuer
       Schritt), verschwindet er — sonst nähme sein Knopf später einen ganz
@@ -145,6 +184,9 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
   let undoToast = false;
   host.toastUndo = text => { shell.toast(text, { action: 'Rückgängig', onAction: () => { undoToast = false; host.undo(); } }); undoToast = true; };
   host.dropUndoToast = () => { if (undoToast) { undoToast = false; shell.hideToast(); } };
+  /** Etwas ist entfernt — gefragt wird nicht: der Schritt „<was> entfernt"
+      und der Toast mit „Rückgängig" (`text`, sonst „<was> entfernt."). */
+  host.removed = (what, text = what + ' entfernt.') => { host.changed(what + ' entfernt'); host.toastUndo(text); };
 
   /** Für Werkzeuge ohne das Bauteil des Gastgebers: zu welchem Schlüssel
       (etwa dem Dateipaar) die Einstellungen gehören — und gleich nachsehen,
@@ -203,36 +245,31 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
   }
 
   /* ── Dateien ─────────────────────────────────────────────── */
+  /* Der Knopf der Bauteil-Klappe und das Ablegen im Bild nehmen beides: ein
+     Netz und einen Plan. Was es ist, sagt der Inhalt (js/studio/files.js). */
   async function openFile(file) {
+    const tool = host.tool;
     try {
       await openAny(file, {
         json: (obj, name) => {
-          const tool = host.tool;
           if (tool && tool.accepts && tool.accepts.includes(obj.format)) {
             tool.fromJSON(obj);
-            if (history) history.reset();
+            host.resetHistory();
             /* Einstellungen aus einer Datei gelten wie selbst gesetzte: gemerkt. */
             if (tool.settingsOnly) store.save(() => tool.toJSON(), { quiet: true });
             store.markSaved();
             shell.toast('„' + name + '" geladen.');
-          } else if (host.openJSON) host.openJSON(obj, name);
+          } else if (tool && tool.openJSON) tool.openJSON(obj, name);
           else throw new Error('„' + name + '" gehört zu einem anderen Werkzeug (Kennung „' + obj.format + '").');
         },
         part: async (tris, name, note) => {
-          if (host.dropPart) return host.dropPart(tris, name, note);
+          if (tool && tool.dropPart) return tool.dropPart(tris, name, note);
           if (!host.part) throw new Error('Dieses Werkzeug nimmt hier kein Bauteil entgegen.');
-          /* Das Beispielteil gilt erst als abgewählt, wenn die Datei geladen
-             ist — ein zu kleines Netz ließ die Liste sonst leer zurück. */
-          const sel = document.getElementById('demo-select');
-          const before = sel ? sel.selectedIndex : -1;
-          if (sel) sel.selectedIndex = -1;
-          const ok = await host.part.load(tris, name, note);
-          if (!ok && sel && sel.selectedIndex === -1) sel.selectedIndex = before;
-          return ok;
+          return host.part.load(tris, name, note);
         }
       });
     } catch (err) {
-      const warn = document.getElementById('model-warn');
+      const warn = shell.header.partFields.warn;
       if (warn) warn.textContent = err.message;
       shell.toast(err.message, { ms: 8000 });
       console.error(err);
@@ -240,18 +277,6 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
   }
   host.openFile = openFile;
   wireDrop(shell.viewport, openFile);
-  /* Der Dateiknopf der Bauteil-Klappe nimmt auch Pläne: partsource.js
-     liest nur Netze, deshalb greift der Gastgeber vor. */
-  const input = document.getElementById('stl-input');
-  const stlBtn = document.getElementById('stl-btn');
-  if (host.part && input && stlBtn) {
-    const fresh = input.cloneNode(true);
-    input.replaceWith(fresh);
-    fresh.addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) openFile(f); e.target.value = ''; });
-    const freshBtn = stlBtn.cloneNode(true);
-    stlBtn.replaceWith(freshBtn);
-    freshBtn.addEventListener('click', () => fresh.click());
-  }
 
   /* ── Das Werkzeug einbauen ───────────────────────────────── */
   host.mountTool = factory => {
@@ -275,7 +300,7 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
     };
     if (tool.serialize && tool.restore) {
       history = createHistory({ serialize: tool.serialize, restore: doc => { tool.restore(doc); host.refreshActions(); } });
-      host.history = history;
+      host.history = history;               // für die Tests; die Werkzeuge melden über changed()
       history.on(h => shell.header.setUndo({ visible: true, canUndo: h.canUndo, canRedo: h.canRedo, undoLabel: h.undoLabel, redoLabel: h.redoLabel }));
       shell.header.onUndo(() => host.undo());
       shell.header.onRedo(() => host.redo());
@@ -299,8 +324,8 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
         /* Ein laufender Zug am Griff zuerst — auch wenn ein Feld noch den
            Fokus hat: js/handles.js verhindert beim Griff das Wegnehmen des
            Fokus, und Esc verließe sonst nur das Feld. */
-        if (host.cancelDrag && host.cancelDrag()) return true;
-        if (shell.aim && host.cancelAim && host.cancelAim()) return true;
+        if (tool.cancelDrag && tool.cancelDrag()) return true;
+        if (tool.cancelAim && tool.cancelAim()) return true;
         /* Esc im Feld verlässt das Feld — und nimmt NICHT die Auswahl weg:
            das Auswahlfeld, in dem man tippt, verschwände sonst samt Eingabe. */
         if (ctx.inInput) { if (ev.target && ev.target.blur) ev.target.blur(); return true; }
@@ -318,7 +343,27 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
     return tool;
   };
 
-  /** Loslegen: Bauteil laden (?part=… oder Vorgabe) — oder das Werkzeug lädt selbst. */
-  host.start = () => (host.part ? host.part.start() : (host.tool && host.tool.start ? host.tool.start() : null));
+  /** Loslegen: das Werkzeug, wenn es selbst anfängt (start) — sonst das
+      Bauteil (?part=… oder die Vorgabe). */
+  host.start = () => {
+    const tool = host.tool;
+    if (tool && tool.start) return tool.start();
+    return host.part ? host.part.start() : null;
+  };
   return host;
+}
+
+/**
+ * Eine Werkzeugseite: EIN Gastgeber, EIN Werkzeug, und los. `name` ist der
+ * Testgriff (window.__<name>, dazu window.__form3d wie auf jeder 3D-Seite).
+ * → der Testgriff des Werkzeugs (tool.__viewer), sofort — das Laden läuft.
+ */
+export function bootPage({ tool: factory, name, ...opts }) {
+  const host = createHost({ mount: document.getElementById('studio'), ...opts });
+  const tool = host.mountTool(factory);
+  const handle = tool.__viewer;
+  window.__form3d = handle;
+  window['__' + name] = handle;
+  Promise.resolve(host.start()).catch(err => console.error(err));
+  return handle;
 }

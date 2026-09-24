@@ -19,10 +19,11 @@
 
    Der Rahmen kennt kein Werkzeug. Er baut das Gerüst, verwaltet Modi,
    Knöpfe, Felder und Meldungen und reicht dem Werkzeug Elemente über
-   data-ui — ids gibt es nur für die Einzelstücke, die js/ui/controls.js
-   und js/ui/common.js seit jeher über ids finden (colorbar, status,
-   busy, aim-banner, viewport, demo-select …). Davon gibt es je Seite
-   genau eines. */
+   data-ui — ids tragen nur die Einzelstücke, die js/ui/controls.js und
+   js/ui/common.js über ids finden (colorbar, status, aim-banner, viewport)
+   und die Felder der Bauteil-Klappe (demo-select …). Davon gibt es je
+   Seite genau eines; die Felder der Klappe reicht der Rahmen trotzdem als
+   Elemente weiter (header.partFields). */
 
 import { colorbar as setColorbar } from '../ui/controls.js';
 import { onScheme } from '../part/colors.js';
@@ -116,10 +117,7 @@ const SKELETON = (title) => `
   </aside>
 </div>`;
 
-let shells = 0;
-
 export function createShell({ mount, title, help = '', sceneOpts = {} }) {
-  const shellNo = ++shells;
   mount.innerHTML = SKELETON(title);
   mount.classList.add('st-root');
   const ui = name => mount.querySelector('[data-ui="' + name + '"]');
@@ -156,9 +154,8 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
 
   function setModes(list) {
     modes = list;
-    /* ids nur für aria-controls/-labelledby, mit einer Nummer je Rahmen:
-       auf einer Seite könnten mehrere Werkzeuge dieselben Modusnamen haben. */
-    const tid = m => 'st' + shellNo + '-tab-' + m.id, pid = m => 'st' + shellNo + '-mode-' + m.id;
+    /* ids nur für aria-controls/-labelledby — ein Rahmen je Seite. */
+    const tid = m => 'st-tab-' + m.id, pid = m => 'st-mode-' + m.id;
     tabs.innerHTML = list.map(m => '<button type="button" role="tab" id="' + tid(m) + '" aria-controls="' + pid(m) + '" data-mode="' + m.id + '" aria-selected="false" tabindex="-1" title="' + esc(m.hint || '') + '">'
       + '<span class="st-tab-label">' + m.label + '</span><span class="st-tab-badge" data-badge="' + m.id + '" hidden></span></button>').join('');
     body.innerHTML = list.map(m => '<section class="st-mode" id="' + pid(m) + '" aria-labelledby="' + tid(m) + '" data-mode="' + m.id + '" role="tabpanel" hidden>' + (m.html || '') + '</section>').join('');
@@ -254,18 +251,29 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     syncActions();
   }
   const busyEl = mount.querySelector('#busy');
-  /* veil: der Schleier über dem Bild. Eine kurze Nachrechnung, die das
-     Werkzeug von selbst startet (nach einem Zug am Griff), braucht ihn nicht —
-     er blitzte sonst bei jedem Zug auf und sperrte das Auswahlfeld. */
-  let veil = true;
+  /* Der Schleier über dem Bild gehört zwei Dingen: einer Rechnung (setBusy)
+     und dem Laden eines Bauteils (loading). Er steht, solange eines von
+     beiden ihn will — das Laden nimmt ihn einer laufenden Rechnung nicht
+     mehr weg. veil: eine kurze Nachrechnung, die das Werkzeug von selbst
+     startet (nach einem Zug am Griff), braucht ihn nicht — er blitzte sonst
+     bei jedem Zug auf und sperrte das Auswahlfeld. */
+  let veil = true, loadingText = null;
+  const paintVeil = () => busyEl.classList.toggle('on', loadingText !== null || (busy && veil));
   function setBusy(on, text, onCancel, opts = {}) {
     busy = !!on;
     veil = on ? opts.veil !== false : true;
     busyClick = on ? (onCancel || busyClick) : null;
     if (text !== undefined && on) busyEl.textContent = text;
-    busyEl.classList.toggle('on', busy && veil);
+    paintVeil();
     renderPrimary();
     syncActions();
+  }
+  /** Ein Bauteil lädt: der Text auf dem Schleier — null, wenn es fertig ist
+      (js/part/partsource.js, setBusy). */
+  function loading(text) {
+    loadingText = text === undefined ? null : text;
+    if (loadingText !== null) busyEl.textContent = loadingText;
+    paintVeil();
   }
   function setProgress(p, text) {
     if (p === null || p === undefined) {
@@ -282,9 +290,6 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
        die der Seitenleiste unter dem Finger fehlen (css/studio.css). */
     primary.style.setProperty('--progress', pct);
     if (text) { setNote(text, 'busy'); busyEl.textContent = text; }
-    /* js/part/partsource.js nimmt dem Schleier nach dem Laden die Klasse —
-       läuft währenddessen eine Rechnung, steht er mit dem nächsten Schritt wieder. */
-    if (busy && veil) busyEl.classList.add('on');
     syncActions();
   }
 
@@ -359,7 +364,6 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
       inspectorEl.hidden = false;
       return inspBody;
     },
-    setTitle(t) { inspTitle.innerHTML = t || ''; },
     hide() { inspectorEl.hidden = true; },
     get visible() { return !inspectorEl.hidden; },
     collapse(on) { inspectorEl.classList.toggle('collapsed', on === undefined ? !inspectorEl.classList.contains('collapsed') : !!on); ui('inspector-toggle').textContent = inspectorEl.classList.contains('collapsed') ? '▸' : '▾'; },
@@ -505,8 +509,8 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     const r = pop.getBoundingClientRect(), over = r.right - (innerWidth - 8);
     if (r.width > 0 && over > 0) pop.style.left = -Math.min(over, Math.max(0, r.left - 8)) + 'px';
   };
-  function popover(chip, pop) {
-    const open = on => { pop.hidden = !on; chip.setAttribute('aria-expanded', on ? 'true' : 'false'); chip.classList.toggle('active', on); if (on) keepInside(pop); };
+  function popover(chip, pop, { keep = true } = {}) {
+    const open = on => { pop.hidden = !on; chip.setAttribute('aria-expanded', on ? 'true' : 'false'); chip.classList.toggle('active', on); if (on && keep) keepInside(pop); };
     open.isOpen = () => !pop.hidden;
     closers.push(open);
     chip.addEventListener('click', ev => { ev.stopPropagation(); const on = pop.hidden; closeAll(open); open(on); });
@@ -515,23 +519,30 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   }
   const partChip = ui('part-chip');
   const partOpen = popover(partChip, ui('part-pop'));
-  /* Das Aufklappfeld „Darstellung" der Ansichtsleiste ist eine Klappe wie
-     diese (ui/viewbar.js baut nur Kasten und Knopf). */
+  /* Das Aufklappfeld „Darstellung" der Ansichtsleiste und das Menü
+     „Exportieren" sind Klappen wie diese (ui/viewbar.js baut nur Kasten und
+     Knopf). Das Menü hängt rechts an seinem Knopf und reicht nie über den
+     Rand — es rückt nicht. */
   if (viewbar.pop) popover(viewbar.popChip, viewbar.pop);
   const exportBtn = ui('export'), exportList = ui('export-list');
-  const exportOpen = on => { exportList.hidden = !on; exportBtn.setAttribute('aria-expanded', on ? 'true' : 'false'); };
-  exportOpen.isOpen = () => !exportList.hidden;
-  closers.push(exportOpen);
-  exportBtn.addEventListener('click', ev => { ev.stopPropagation(); const on = exportList.hidden; closeAll(exportOpen); exportOpen(on); });
+  const exportOpen = popover(exportBtn, exportList, { keep: false });
   document.addEventListener('click', () => closeAll(null));
+  /* Die Felder einer Bauteil-Klappe — js/part/partsource.js bekommt sie als
+     Elemente, nicht als ids. */
+  const fieldsIn = (box, key = '') => {
+    const q = name => box.querySelector('#' + name + (key ? '-' + key : ''));
+    return { select: q('demo-select'), input: q('stl-input'), button: q('stl-btn'), warn: q('model-warn'), note: q('part-note'), facts: q('model-facts') };
+  };
+  const partFields = fieldsIn(ui('part-pop'));
 
   /* Mehrere Eingänge statt eines Bauteils (die Abstandsanalyse misst Datei A
      gegen Datei B): je Eingang ein Chip mit derselben Klappe wie der
      Bauteil-Chip — Beispielteil, „Datei öffnen …", „Zum Bauteil". Die Felder
-     tragen ids mit Suffix („-a"), über die js/part/partsource.js sie findet. */
+     tragen ids mit Suffix („-a") und gehen als Elemente an
+     js/part/partsource.js (fields). */
   const ACCEPT_PARTS = '.stl,.glb,model/stl,model/gltf-binary,application/sla';
-  const partChipsApi = {};
   function addPartChips(list, hint = '') {
+    const partChipsApi = {};
     const html = list.map(({ key, label, title: t = '' }) => '<div class="st-part" data-ui="part-' + key + '">'
       + '<button type="button" class="st-chip" data-ui="part-chip-' + key + '" aria-haspopup="true" aria-expanded="false" title="' + esc(t || label + ' wählen oder laden') + '">'
       + '<span class="st-chip-key">' + esc(label) + '</span> <b data-ui="part-name-' + key + '">—</b><span class="st-chip-warn" data-ui="part-warn-mark-' + key + '" hidden>⚠</span> <span class="st-caret">▾</span></button>'
@@ -550,7 +561,7 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
       const open = popover(chip, ui('part-pop-' + key));
       const plain = t || label + ' wählen oder laden';
       partChipsApi[key] = {
-        chip, open,
+        chip, open, fields: fieldsIn(ui('part-pop-' + key), key),
         set(name, warning = '') {
           ui('part-name-' + key).textContent = name || '—';
           ui('part-warn-mark-' + key).hidden = !warning;
@@ -585,7 +596,8 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
       partChip.title = warning ? 'Hinweis zum Netz: ' + warning : 'Bauteil wählen oder laden';
       partOpen(false);
     },
-    partOpen,
+    /** Die Felder der Bauteil-Klappe: { select, input, button, warn, note, facts }. */
+    partFields,
     setSave({ state, when }) {
       const el = ui('save-state');
       const t = when ? fmtTime(when) : '';
@@ -606,12 +618,23 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     onUndo(fn) { ui('undo').addEventListener('click', fn); },
     onRedo(fn) { ui('redo').addEventListener('click', fn); },
     setExports,
-    hideSave() { ui('save').hidden = true; ui('save-state').hidden = true; },
     /** Für Werkzeuge mit eigenen Dateien (die Abstandsanalyse hat zwei). */
     hidePart() { ui('part').hidden = true; },
-    /** Je Eingang ein Chip mit Bauteil-Klappe: [{ key, label, title }] → { key: { set(name, warning), open } } */
-    addPartChips,
-    partChips: partChipsApi
+    /** Der Bauteil-Chip für eine andere Quelle (die Angussfüllung lädt
+        Angusssysteme): wie die Liste heißt, was der Knopf öffnet (`accept`)
+        und der Hinweis darunter; „Zum Bauteil" entfällt. Die Felder bleiben
+        partFields — die Quelle verdrahtet sie selbst. */
+    setPartSource({ list, button, accept, hint }) {
+      const pop = ui('part-pop');
+      pop.querySelector('label.row span').textContent = list;
+      partFields.button.textContent = button;
+      partFields.input.setAttribute('accept', accept);
+      pop.querySelector('.st-pop-hint').textContent = hint;
+      pop.querySelector('details').hidden = true;
+      ui('part').hidden = false;
+    },
+    /** Je Eingang ein Chip mit Bauteil-Klappe: [{ key, label, title }] → { key: { set(name, warning), open, fields } } */
+    addPartChips
   };
   ui('help-btn').addEventListener('click', ev => { ev.stopPropagation(); helpApi.toggle(); });
   /* ☰ nimmt die Seitenleiste weg und holt sie wieder — bei jeder Breite: wo
@@ -662,6 +685,6 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     toast, hideToast, banner,
     header,
     onKey(fn) { keyListeners.push(fn); },
-    busyEl
+    loading
   };
 }

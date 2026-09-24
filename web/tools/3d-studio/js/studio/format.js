@@ -37,7 +37,7 @@ export function fmtUnit(v, unit, max) {
   if (!Number.isFinite(v)) return '—';
   let d = max !== undefined ? max : (unit in DIGITS ? DIGITS[unit] : 2);
   if (unit === 'ms' && Math.abs(v) < 10 && max === undefined) d = 1;
-  return fmt(v, d) + (unit ? (unit === '°' || unit === '%' ? (unit === '%' ? ' %' : ' °') : ' ' + unit) : '');
+  return fmt(v, d) + (unit ? ' ' + unit : '');
 }
 
 /** Eingabe lesen. null, wenn es keine Zahl ist. */

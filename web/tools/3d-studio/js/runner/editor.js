@@ -14,22 +14,21 @@
    (js/runner/graph.js, setPos). In der Arbeitsebene mit moveInPlane,
    mit Alt (aus der Ebene heraus) mit setPos. Zurück kommt die
    Schnittstelle von js/handles.js, wie sie ist — auch cancelDrag, mit dem
-   Esc einen Zug abbricht (der Rahmen über host.cancelDrag). */
+   Esc einen Zug abbricht (der Rahmen fragt das Werkzeug, tool.cancelDrag). */
 
 import * as G from './graph.js';
 import { createHandles, SELECTED_RING } from '../handles.js';
 import { VIEW } from '../part/colors.js';
 
+/* Nur noch für die Werkbank (js/werkbank/runner.js), bis sie auf die
+   Bausteine der Werkzeuge umzieht; der Angussdesigner liest VIEW beim Malen. */
 export { SELECTED_RING };
-/** Farbe der nachgezogenen Gegenseite: blass, Bedienung statt Sache
-    (js/part/colors.js). Eine Funktion, weil die Legende sie ebenfalls
-    zeigt und beide dem Farbschema folgen. */
 export const followerColor = () => VIEW.follower;
 
 export function createEditor(opts) {
-  const { view, getGraph, onSelect, onChange, onHover, getRefMesh, getGateDir, onAim } = opts;
+  const { view, getGraph, onSelect, onChange, getRefMesh, getGateDir, onAim } = opts;
   return createHandles({
-    view, getRefMesh, onSelect, onChange, onHover, onAim,
+    view, getRefMesh, onSelect, onChange, onAim,
     /* Zielt man die Mündung eines Anschnitts, wählt ein Klick auf einen
        ANDEREN Griff diesen Punkt und beendet das Zielen — sonst gewänne der
        Treffer auf dem Bauteil dahinter, und die Mündung spränge dorthin.
@@ -42,7 +41,9 @@ export function createEditor(opts) {
         const follower = G.isFollower(g, n.id);
         return {
           id: n.id, pos: n.pos,
-          color: follower ? followerColor() : (G.TYPES[n.type] || G.TYPES.point).color,
+          /* Die nachgezogene Gegenseite blass: Bedienung statt Sache
+             (js/part/colors.js, VIEW.follower — auch in der Legende). */
+          color: follower ? VIEW.follower : (G.TYPES[n.type] || G.TYPES.point).color,
           ghost: follower,
           /* Der Pfeil zeigt die WIRKLICHE Mündungsrichtung — die letzte
              Tangente der abgetasteten Kante, ob gebunden oder aus der

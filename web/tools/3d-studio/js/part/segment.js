@@ -49,8 +49,9 @@
 
    Was eine Hälfte nur TEILWEISE sieht (ein großes Dreieck der Flansch-
    unterseite, von dem ein Streifen über einem Dom liegt), zählt hier als
-   Ganzes als nicht gesehen — js/part/refine.js zerlegt solche Dreiecke
-   an der Schattengrenze, bevor die Zuordnung endgültig ist.
+   Ganzes als nicht gesehen. Zerlegt wird ein solches Dreieck nicht: das
+   Netz bleibt, wie es geladen wurde — wie fein es ist, entscheidet der
+   Export.
 
    Die Formöffnungsrichtung wird, wenn nicht vorgegeben, automatisch
    gewählt: die Achse mit der kleinsten Fläche aus Schiebern und

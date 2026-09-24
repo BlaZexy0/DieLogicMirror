@@ -37,13 +37,12 @@ import * as T from 'three';
 import { onScheme, ROLE, VIEW } from '../part/colors.js';
 import { facts, segButtons, slider, numberInput, POS_LIMIT } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit } from '../studio/format.js';
-import { kpis, esc } from '../studio/rows.js';
-import { baseName } from '../studio/files.js';
+import { kpis, esc, selTitle, groupTabs, listRow, onListPick, legendRow, selectedRow } from '../studio/rows.js';
+import { saveSTL } from '../studio/files.js';
 import { sampleField, CELL_RANGE } from '../part/field.js';
 import { surfaceNets } from '../part/surfacenets.js';
-import { writeSTL } from '../part/stlio.js';
-import { createHandles, SELECTED_RING } from '../handles.js';
-import { setTris, download, safeName, dirText } from '../ui/common.js';
+import { createHandles, createPlacer } from '../handles.js';
+import { setTris, dirText, surfaceMaterial } from '../ui/common.js';
 import * as M from './model.js';
 import { buildItem, buildAll, volumeOf, wallClearance, wallVerdict } from './geom.js';
 import { planCooling, outwardNormal, SPACING_FACTOR } from './auto.js';
@@ -89,7 +88,7 @@ const splitId = id => { const i = (id || '').indexOf(':'); return i < 0 ? [id, '
    halbe Wanddicke wie bei Wandstärke und Füllung — das Feld reicht hier
    weit nach außen, und die Fläche im Abstand braucht keine Zellen, die
    eine Wand auflösen. */
-export function suggestShellCell(model) {
+function suggestShellCell(model) {
   const longest = Math.max(...model.bounds.size) || 1;
   const h = Math.max(CELL_RANGE[0], Math.min(CELL_RANGE[1], longest / 64));
   return h >= 1 ? Math.round(h * 2) / 2 : Math.round(h * 10) / 10;
@@ -99,9 +98,10 @@ export function createTemperierTool(host) {
   const { shell, view, part, field: hostField } = host;
   const ui = host.ui;
 
+  let placer = null;
   const state = {
     plan: M.emptyPlan(), field: null, fieldH: 0, shellDist: null, shellCount: 0, lifted: null,
-    h: 6, hAuto: true, dirMode: 'normal', both: false, shellClear: true,
+    h: 6, hAuto: true, dirMode: 'normal', both: false,
     /* Die Vorgaben für neue Elemente stehen im Plan (js/cooling/model.js):
        mit „Auto" hängt der Mindest-Wandabstand an ihnen. */
     get defaults() { return state.plan.defaults; },
@@ -109,7 +109,9 @@ export function createTemperierTool(host) {
        Regler auf 25 und es wurde still mit 30 gerechnet. */
     auto: { count: 8, spacing: 30, replace: true, stats: null, last: null },
     checks: new Map(),                       // id → { c, verdict }
-    placing: null, pending: null, openGroup: GROUPS[0],
+    /** Was gerade gesetzt wird ('stich', 'kanal') — oder null. */
+    get placing() { return placer ? placer.placing : null; },
+    pending: null,                           // das erste Ende eines Kanals, der gerade gesetzt wird
     running: false, queued: false, cancelled: false, held: false, ready: false, ms: 0,
     /** Zeigt das Bild eine Fläche, die nicht (mehr) zu den Einstellungen passt? */
     get stale() { return !!part.model && !(state.shellDist === state.plan.dist && state.field && Math.abs(state.fieldH - state.h) < 1e-9); },
@@ -127,12 +129,8 @@ export function createTemperierTool(host) {
      die Elemente auf ihr nicht flackern. Sie ist das Ziel des Zielmodus.
      Deckend (Darstellung) zeigt sie ihre Form — Taschen, Rippenschatten,
      wo die Fläche eng wird — und die Stiche und Kanäle davor. */
-  const shellMat = new T.MeshStandardMaterial({
-    color: shellColor(), roughness: 0.6, metalness: 0.02, transparent: true, opacity: SHELL_OPACITY,
-    depthWrite: false, side: T.DoubleSide, flatShading: true
-  });
+  const shellMat = surfaceMaterial(shellColor(), { roughness: 0.6, metalness: 0.02, transparent: true, opacity: SHELL_OPACITY, depthWrite: false });
   function setShellClear(on) {
-    state.shellClear = on;
     shellMat.transparent = on;
     shellMat.opacity = on ? SHELL_OPACITY : 1;
     shellMat.depthWrite = !on;
@@ -145,7 +143,7 @@ export function createTemperierTool(host) {
 
   /* Je Art ein Körper in der Artfarbe — und je Urteil einer für alle, die
      zu nah an der Kavität stehen. */
-  const bodyMat = color => new T.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.1, side: T.DoubleSide });
+  const bodyMat = color => surfaceMaterial(color, { roughness: 0.5, metalness: 0.1, flat: false });
   const meshes = {};
   for (const [type, meta] of Object.entries(M.TYPES)) meshes[type] = new T.Mesh(new T.BufferGeometry(), bodyMat(meta.color));
   for (const [v, t] of Object.entries(TIGHT)) meshes[v] = new T.Mesh(new T.BufferGeometry(), bodyMat(t.color()));
@@ -156,7 +154,7 @@ export function createTemperierTool(host) {
     for (const [type, meta] of Object.entries(M.TYPES)) meshes[type].material.color.set(meta.color);
     for (const [v, t] of Object.entries(TIGHT)) meshes[v].material.color.set(t.color());
     shellMat.color.set(shellColor());
-    if (wired) syncSelection();
+    syncSelection();
     view.invalidate();
   });
 
@@ -196,7 +194,7 @@ export function createTemperierTool(host) {
       const [iid, end] = splitId(id);
       M.setEnd(state.plan, iid, end, pos, state.both);
     },
-    onSelect: () => { cancelAim(); syncSelection(); },
+    onSelect: () => { placer.cancel(); syncSelection(); },
     onChange: what => {
       if (what === 'drag') { rebuild('drag'); return; }
       /* Esc mitten im Zug: zurück zum Stand davor — der Zug war nie ein Schritt. */
@@ -212,6 +210,9 @@ export function createTemperierTool(host) {
     },
     onAim: id => startMove(id)
   });
+  /* Zielen: ein Kühlstich mit einem Klick, ein Kanal mit zweien — wer
+     abbricht, verwirft auch das erste Ende. */
+  placer = createPlacer({ aim: shell.aim, handles, onEnd: () => shell.renderChips(), onCancel: () => { state.pending = null; } });
 
   /* ── Prüfen: Wandabstand gegen den Mindest-Wandabstand ───── */
   const minWall = () => M.minWallOf(state.plan, state.defaults.d, state.defaults.kd);
@@ -281,10 +282,10 @@ export function createTemperierTool(host) {
     const cur = sel();
     ui('offender-list').innerHTML = off.map(it => {
       const ch = state.checks.get(it.id);
-      return '<button type="button" class="st-list-row ' + ch.verdict + (cur && cur.it.id === it.id ? ' active' : '') + '" data-item="' + esc(it.id) + '">'
-        + '<span class="dot" style="background:' + M.TYPES[it.type].color + '"></span>'
-        + '<span class="name">' + esc(label(it)) + (it.auto ? ' · automatisch' : '') + '</span>'
-        + '<span class="val">' + (ch.verdict === 'bad' ? 'Durchbruch' : fmtUnit(ch.c, 'mm')) + '</span></button>';
+      return listRow({
+        id: it.id, color: M.TYPES[it.type].color, name: esc(label(it)) + (it.auto ? ' · automatisch' : ''),
+        value: ch.verdict === 'bad' ? 'Durchbruch' : fmtUnit(ch.c, 'mm'), cls: ch.verdict, active: !!cur && cur.it.id === it.id
+      });
     }).join('');
     ui('offender-note').textContent = off.length ? 'Ein Klick wählt es und holt es heran.'
       : !items.length ? 'Noch nichts gesetzt.' : !state.field ? 'Geprüft wird, sobald die Abstandsfläche steht.'
@@ -296,9 +297,11 @@ export function createTemperierTool(host) {
   /* ── Abstandsfläche ──────────────────────────────────────── */
   /* Das Feld reicht nach außen bis über den Abstand hinaus; ein Abstand
      innerhalb des Bandes kostet nur das Ableiten, mehr ein neues Feld. Kommt
-     währenddessen ein anderes Bauteil oder ein anderer Wert, bricht die
-     laufende Rechnung ab und beginnt mit dem neuen Stand von vorn. */
-  let rerun = false, shellTimer = 0;
+     währenddessen ein anderer Wert, ist die laufende Rechnung überholt und
+     der neue Stand beginnt von vorn (js/studio/job.js); ein neues Bauteil
+     beendet sie ohnehin (der Gastgeber). Der jüngste Auftrag gewinnt: ein
+     überholter Lauf fasst danach nichts mehr an. */
+  let latest = 0, shellTimer = 0;
   const bandFor = dist => dist * 1.3 + 5;
   const fieldFits = () => !!state.field && state.field.band >= state.plan.dist + 1 && Math.abs(state.fieldH - state.h) < 1e-9;
   /** Sekunden, die ein neues Feld mit den jetzigen Einstellungen etwa braucht. */
@@ -316,12 +319,14 @@ export function createTemperierTool(host) {
     state.queued = false;
     const model = part.model;
     if (!model) return;
-    if (state.running) { rerun = true; host.jobs.cancel(); return; }
+    const my = ++latest;
+    /* Eine laufende Rechnung gilt einem Stand von vorhin: sie ist überholt. */
+    if (state.running) { host.jobs.supersede(); state.running = false; }
     const dist = state.plan.dist, h = state.h;
     state.cancelled = false;
     state.held = false;
     ui('shell-warn').textContent = '';
-    if (fieldFits()) { if (state.shellDist !== dist) derive(dist); finish(); return; }
+    if (fieldFits()) { if (state.shellDist !== dist) derive(dist); state.ready = true; finish(); return; }
     if (asked !== true && estimate() > HOLD_S) { state.held = true; state.ready = true; finish(); return; }
 
     state.running = true; state.ready = false;
@@ -336,12 +341,13 @@ export function createTemperierTool(host) {
         h, band, pad: band + 3 * h, signal,
         onProgress: (p, what) => progress(p, 'Abstandsfeld · ' + what + ' … ' + Math.round(p * 100) + ' %')
       }),
-      onCancel: () => { state.cancelled = !rerun; }
+      onCancel: () => { state.cancelled = true; }
     }).catch(err => {
-      ui('shell-warn').textContent = 'Die Abstandsfläche konnte nicht gerechnet werden: ' + err.message;
+      if (my === latest) ui('shell-warn').textContent = 'Die Abstandsfläche konnte nicht gerechnet werden: ' + err.message;
       console.error(err);
       return null;
     });
+    if (my !== latest) return;                        // ein neuerer Auftrag hat übernommen
     state.running = false;
     if (f && part.model === model) {
       state.field = f;
@@ -353,11 +359,8 @@ export function createTemperierTool(host) {
         console.error(err);
       }
     }
-    const again = rerun || part.model !== model;
-    rerun = false;
-    state.ready = !again;
+    state.ready = true;
     finish();
-    if (again) computeShell();
   }
   function derive(dist) {
     const tris = surfaceNets(state.field, dist);
@@ -406,10 +409,9 @@ export function createTemperierTool(host) {
     ui('min-wall').disabled = auto;
     ui('min-wall').value = fmtPlain(minWall(), 1);
   }
+  let distSlider = null;                               // der Regler des Achsabstands (mounted)
   function syncDist() {
-    if (!wired) return;
-    ui('dist').value = String(state.plan.dist);
-    ui('dist-val').textContent = fmt(state.plan.dist, 0) + ' mm';
+    if (distSlider) distSlider.set(state.plan.dist);
   }
   function syncDefaults() {
     if (!wired) return;
@@ -428,7 +430,7 @@ export function createTemperierTool(host) {
   /* Was sich beim Ziehen mitbewegt: Lage und Urteil. */
   function syncSelLive() {
     const s = sel();
-    if (!s || !wired) return;
+    if (!s || !groups) return;
     const pos = posOf(s);
     for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) ui(k).value = fmtPlain(pos[i], 1);
     const ch = state.checks.get(s.it.id) || { c: null, verdict: '' };
@@ -437,6 +439,10 @@ export function createTemperierTool(host) {
       note: ch.c === null ? 'erst mit der Abstandsfläche' : verdictNote(ch.verdict, minWall(), ch.c)
     }]);
   }
+
+  /* Die Gruppen des Auswahlfelds (js/studio/rows.js) — es gibt sie, sobald
+     der Rahmen das Feld eingesetzt hat (mounted). */
+  let groups = null;
 
   function syncSelection() {
     if (!wired) return;
@@ -447,8 +453,8 @@ export function createTemperierTool(host) {
     const meta = M.TYPES[it.type];
     const stich = it.type === 'stich';
     shell.inspector.show({
-      title: '<span class="dot" style="background:' + meta.color + '"></span>' + meta.label + ' <code>' + esc(it.id) + '</code>'
-        + (stich ? '' : ' <em>Ende ' + end.toUpperCase() + '</em>') + (it.auto ? ' <em>automatisch</em>' : '')
+      title: selTitle({ color: meta.color, label: meta.label, id: it.id,
+        extra: (stich ? '' : ' <em>Ende ' + end.toUpperCase() + '</em>') + (it.auto ? ' <em>automatisch</em>' : '') })
     });
     shell.status('<b>Achsenpfeil</b>: je Achse · <b>Punkt</b>: in der Bildebene · '
       + (stich ? '<b>Pfeil</b>: neu setzen · ' : '') + '<b>Entf</b>: entfernen');
@@ -467,17 +473,6 @@ export function createTemperierTool(host) {
       ['Wasserinhalt', fmtUnit(volumeOf(it) / 1000, 'cm³', 2)],
       ['Mindest-Wandabstand', fmtUnit(minWall(), 'mm')]
     ]);
-    showGroup();
-  }
-
-  /* Die gewählte Gruppe des Auswahlfelds zeigen — die andere verbergen. */
-  function showGroup() {
-    for (const b of ui('sel-groups').querySelectorAll('[data-group-tab]')) {
-      const on = b.getAttribute('data-group-tab') === state.openGroup;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-selected', on ? 'true' : 'false');
-    }
-    for (const g of shell.inspector.body.querySelectorAll('[data-group]')) g.hidden = g.getAttribute('data-group') !== state.openGroup;
   }
 
   /* Entfernen fragt nicht; „Rückgängig" holt es zurück. */
@@ -488,8 +483,7 @@ export function createTemperierTool(host) {
     M.removeItem(state.plan, s.it.id);
     handles.select(null);
     rebuild();
-    host.changed(name + ' entfernt');
-    host.toastUndo(name + ' entfernt.');
+    host.removed(name);
     return true;
   }
 
@@ -503,22 +497,7 @@ export function createTemperierTool(host) {
     shell.fit(box, 1.8);
   }
 
-  /* ── Zielmodus: setzen und neu setzen ────────────────────── */
-  const aim = shell.aim;
-  const stillAiming = () => handles.aiming;
-  function cancelAim() {
-    const was = handles.aiming;
-    handles.cancelAim();
-    aim.hide();
-    state.placing = null;
-    state.pending = null;
-    shell.renderChips();
-    return was;
-  }
-  host.cancelAim = cancelAim;
-  /* Esc mitten im Zug (js/handles.js): für den Rahmen, der Esc zuerst hier
-     anbieten kann — auch wenn noch ein Eingabefeld den Fokus hat. */
-  host.cancelDrag = () => !!handles.cancelDrag();
+  /* ── Zielmodus: setzen und neu setzen (js/handles.js, createPlacer) ── */
   const noShellReason = () => (!part.model ? NEEDS_PART
     : state.running ? 'Die Abstandsfläche wird gerade gerechnet. Gleich lässt sich setzen.'
       : 'Noch keine Abstandsfläche: im Modus „Abstandsfläche" berechnen.');
@@ -543,49 +522,41 @@ export function createTemperierTool(host) {
   function startPlace(type) {
     if (!M.TYPES[type]) return;
     if (!hasShell() || state.running) { shell.toast(noShellReason()); return; }
-    if (state.placing === type) { cancelAim(); return; }          // derselbe Chip noch einmal: doch nicht
-    cancelAim();
+    if (state.placing === type) { placer.cancel(); return; }       // derselbe Chip noch einmal: doch nicht
+    placer.cancel();
     toSetzen();
     handles.select(null);
-    state.placing = type;
-    aim.onCancel = cancelAim;
     if (type === 'stich') {
       /* Kurz: im schmalen Bild hat der Hinweis 350 px — die lange Fassung der
          Richtung (M.DIRECTIONS[…].hint) steht in der Hilfe. */
-      aim.show(true, 'Kühlstich: auf die Abstandsfläche klicken; er läuft ' + AIM_DIR[state.dirMode] + '. Esc bricht ab.');
-      handles.armAim({
+      placer.aim({
+        what: 'stich', miss: MISS,
+        text: 'Kühlstich: auf die Abstandsfläche klicken; er läuft ' + AIM_DIR[state.dirMode] + '. Esc bricht ab.',
         onHit: hit => {
-          aim.hide();
-          state.placing = null;
           const it = M.addStich(state.plan, hit.point, dirAt(hit), { d: state.defaults.d, len: state.defaults.len });
           rebuild();
           handles.select(it.id);
-          shell.renderChips();
           host.changed(label(it) + ' gesetzt');
-        },
-        onMiss: () => aim.miss(MISS, stillAiming)
+        }
       });
     } else {
-      aim.show(true, 'Kanal: das erste Ende auf der Abstandsfläche anklicken. Esc bricht ab.');
-      handles.armAim({
+      placer.aim({
+        what: 'kanal', miss: MISS,
+        text: 'Kanal: das erste Ende auf der Abstandsfläche anklicken. Esc bricht ab.',
         onHit: hit => {
           state.pending = hit.point.slice();
-          aim.show(true, 'Kanal: jetzt das andere Ende anklicken. Esc bricht ab.');
-          handles.armAim({
+          placer.aim({
+            what: 'kanal', miss: MISS,
+            text: 'Kanal: jetzt das andere Ende anklicken. Esc bricht ab.',
             onHit: hit2 => {
-              aim.hide();
-              state.placing = null;
               const it = M.addKanal(state.plan, state.pending, hit2.point, { d: state.defaults.kd });
               state.pending = null;
               rebuild();
               handles.select(it.id + ':b');
-              shell.renderChips();
               host.changed(label(it) + ' gesetzt');
-            },
-            onMiss: () => aim.miss(MISS, stillAiming)
+            }
           });
-        },
-        onMiss: () => aim.miss(MISS, stillAiming)
+        }
       });
     }
     shell.renderChips();
@@ -597,17 +568,15 @@ export function createTemperierTool(host) {
     if (!it || it.type !== 'stich') return;
     if (!hasShell() || state.running) { shell.toast(noShellReason()); return; }
     toSetzen();
-    aim.show(true, 'Kühlstich ' + it.id + ': die neue Stelle auf der Abstandsfläche anklicken. Esc bricht ab.');
-    aim.onCancel = cancelAim;
-    handles.armAim({
+    placer.aim({
+      miss: MISS,
+      text: 'Kühlstich ' + it.id + ': die neue Stelle auf der Abstandsfläche anklicken. Esc bricht ab.',
       onHit: hit => {
-        aim.hide();
         M.placeStich(state.plan, it.id, hit.point, dirAt(hit));
         rebuild();
         syncSelection();
         host.changed(label(it) + ' neu gesetzt');
-      },
-      onMiss: () => aim.miss(MISS, stillAiming)
+      }
     });
   }
 
@@ -638,7 +607,7 @@ export function createTemperierTool(host) {
   };
   function runAuto() {
     if (!hasShell() || !state.field || state.running) { shell.toast(noShellReason()); return; }
-    cancelAim();
+    placer.cancel();
     const pos = shellMesh.geometry.attributes.position;
     if (!pos || !pos.array.length) return;
     if (state.auto.replace) M.removeAuto(state.plan);
@@ -721,43 +690,36 @@ export function createTemperierTool(host) {
   /* Die Legende nennt nur, was im Bild ist: die Urteile, solange etwas zu
      nah steht, die Fläche in den Modi, die sie zeigen. */
   function updateLegend() {
-    const row = (color, text, extra = '') => '<div class="lg-row"><span class="dot" style="background:' + color + extra + '"></span>' + text + '</div>';
     const off = offenders();
-    shell.legend(Object.values(M.TYPES).map(t => row(t.color, t.label)).join('')
-      + Object.entries(TIGHT).map(([v, t]) => (off.some(it => verdictOf(it.id) === v) ? row(t.color(), t.text) : '')).join('')
-      + (shellMesh.visible ? row(shellColor(), 'Abstandsfläche', ';opacity:.5') : '')
-      + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>');
+    shell.legend(Object.values(M.TYPES).map(t => legendRow(t.color, t.label)).join('')
+      + Object.entries(TIGHT).map(([v, t]) => (off.some(it => verdictOf(it.id) === v) ? legendRow(t.color(), t.text) : '')).join('')
+      + (shellMesh.visible ? legendRow(shellColor(), 'Abstandsfläche', ';opacity:.5') : '')
+      + selectedRow());
   }
-  const modes = MODES.map(m => ({ ...m, enter: applyMode, leave() {}, primary: () => null }));
+  const modes = MODES.map(m => ({ ...m, enter: applyMode }));
   const by = Object.fromEntries(modes.map(m => [m.id, m]));
   by.flaeche.primary = shellPrimary;
   by.setzen.primary = autoPrimary;
   /* Wer „Setzen" verlässt, zielt nicht mehr: die Fläche geht womöglich aus dem Bild. */
-  by.setzen.leave = () => { cancelAim(); };
+  by.setzen.leave = () => { placer.cancel(); };
 
   /* ── Verdrahten: sobald der Rahmen die Felder eingesetzt hat ── */
   function mounted() {
     shell.inspector.body.innerHTML = INSPECTOR;
     shell.inspector.onClose(() => handles.select(null));
-    ui('sel-groups').addEventListener('click', ev => {
-      const b = ev.target.closest('[data-group-tab]');
-      if (!b) return;
-      state.openGroup = b.getAttribute('data-group-tab');
-      showGroup();
-    });
+    groups = groupTabs({ tabs: ui('sel-groups'), box: shell.inspector.body });
+    groups.set(GROUPS);
 
-    /* Abstandsfläche. slider() meldet seinen Anfangswert schon beim Einbau —
-       das ist keine Änderung. */
-    slider(ui('dist'), v => {
-      if (!wired || v === state.plan.dist) return;
+    /* Abstandsfläche. */
+    distSlider = slider(ui('dist'), v => {
+      if (v === state.plan.dist) return;
       state.plan.dist = v;
       syncMinWall();
       rebuild();
       updateShellFacts();
-      if (host.history) host.history.coalesce('dist', 'Achsabstand geändert');
-      host.changed('', { silent: true });
+      host.changed('Achsabstand geändert', { coalesce: 'dist' });
       scheduleShell();
-    }, v => fmt(v, 0) + ' mm', ui('dist-val'));
+    }, v => fmt(v, 0) + ' mm', ui('dist-val'), { fire: false });
     /* Die Zellkante: eintippen, bestätigen, das Feld wird neu gerastert.
        Einmal gesetzt, bleibt sie auch für das nächste Bauteil stehen. Sie
        gehört zur Seite, nicht zum Plan — also kein Schritt im Verlauf. */
@@ -810,14 +772,13 @@ export function createTemperierTool(host) {
     vorgabe('def-d', 'd', 'Vorgabe Kühlstich-Ø');
     vorgabe('def-len', 'len', 'Vorgabe Kühlstich-Länge');
     vorgabe('def-kd', 'kd', 'Vorgabe Kanal-Ø');
-    slider(ui('auto-count'), v => { state.auto.count = v; }, v => fmt(v, 0), ui('auto-count-val'));
-    slider(ui('auto-spacing'), v => { state.auto.spacing = v; if (wired) host.refreshActions(); }, v => fmt(v, 0) + ' mm', ui('auto-spacing-val'));
+    slider(ui('auto-count'), v => { state.auto.count = v; }, v => fmt(v, 0), ui('auto-count-val'), { fire: false });
+    slider(ui('auto-spacing'), v => { state.auto.spacing = v; host.refreshActions(); }, v => fmt(v, 0) + ' mm', ui('auto-spacing-val'), { fire: false });
     ui('auto-replace').addEventListener('change', e => { state.auto.replace = e.target.checked; });
 
     /* Prüfung: die Liste wählt und holt ins Bild. */
-    ui('offender-list').addEventListener('click', ev => {
-      const row = ev.target.closest('[data-item]');
-      const it = row ? state.plan.items[row.getAttribute('data-item')] : null;
+    onListPick(ui('offender-list'), item => {
+      const it = state.plan.items[item];
       if (!it) return;
       /* Beim Kanal das Ende, das der Kavität näher ist. */
       let id = it.id;
@@ -860,13 +821,10 @@ export function createTemperierTool(host) {
     ui('del-item').addEventListener('click', () => removeSelected());
 
     /* Darstellung: Deckkraft des Bauteils, Abstandsfläche durchscheinend oder
-       deckend. Der Rahmen verdrahtet ⓘ nur in der Seitenleiste — hier selbst. */
+       deckend. Das ⓘ darin bedient der Rahmen (js/studio/shell.js). */
     const pop = shell.darstellung(DARSTELLUNG);
     slider(pop.querySelector('[data-ui="opacity"]'), v => part.setOpacity(v / 100), v => v + ' %', pop.querySelector('[data-ui="opacity-val"]'));
     pop.querySelector('[data-ui="shell-clear"]').addEventListener('change', e => setShellClear(e.target.checked));
-    for (const b of pop.querySelectorAll('[data-help]')) {
-      b.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); shell.help.show(b.getAttribute('data-help')); });
-    }
 
     wired = true;
     syncDist();
@@ -880,7 +838,7 @@ export function createTemperierTool(host) {
 
   /* ── Plan laden, Bauteil ─────────────────────────────────── */
   function loadPlan(plan, later = false) {
-    cancelAim();
+    placer.cancel();
     state.plan = plan;
     state.auto.last = null; state.auto.stats = null;
     handles.select(null);
@@ -890,10 +848,10 @@ export function createTemperierTool(host) {
     updateAutoFacts();
     rebuild();
     syncSelection();
-    /* Beim Laden eines Bauteils erst NACH onPart: js/part/partsource.js räumt
-       seinen Schleier weg, sobald onLoad zurückkehrt — die Rechnung setzt ihren
-       danach. Läuft noch eine (für das vorige Teil), bricht computeShell sie ab
-       und beginnt mit dem neuen Stand von vorn. */
+    /* Beim Laden eines Bauteils erst NACH onPart: das Laden nimmt seinen
+       Schleier weg, sobald onLoad zurückkehrt — die Rechnung setzt ihren
+       danach. Läuft noch eine, ist sie überholt: computeShell beginnt mit dem
+       neuen Stand von vorn. */
     if (!part.model || !state.stale) return;
     if (later) setTimeout(() => computeShell(), 0);
     else computeShell();
@@ -912,14 +870,13 @@ export function createTemperierTool(host) {
     setTris(shellMesh, []);
     if (state.hAuto) { state.h = suggestShellCell(model); ui('cell').value = fmtPlain(state.h); }
     loadPlan(fresh, true);
-    if (host.history) host.history.reset();
+    host.resetHistory();
     updateShellFacts();
     applyMode();
     shell.renderChips();
     host.refreshActions();
   }
 
-  const fileName = () => safeName((baseName(part.name) || 'bauteil') + '-temperierung');
   const tool = {
     id: 'temperier',
     modes,
@@ -935,7 +892,7 @@ export function createTemperierTool(host) {
     restore(doc) {
       const keep = handles.selected;
       const before = new Set(Object.keys(state.plan.items));
-      cancelAim();
+      placer.cancel();
       state.plan = M.fromJSON(doc);
       const back = Object.values(state.plan.items).filter(x => !before.has(x.id));
       const [id, end] = splitId(keep);
@@ -952,19 +909,23 @@ export function createTemperierTool(host) {
     exports: [{
       label: 'Bohrungen als STL',
       enabled: () => M.allItems(state.plan).length > 0, reason: 'Noch nichts gesetzt.',
-      run: () => download(new Blob([writeSTL(buildAll(state.plan), 'DieLogic Temperierung')], { type: 'model/stl' }), fileName() + '.stl')
+      run: () => saveSTL(buildAll(state.plan), 'DieLogic Temperierung', part.name, 'temperierung')
     }],
     keys: {
       Delete: () => removeSelected(),
-      /* Esc hebt die Auswahl auf. Einen laufenden Zug bricht der Rahmen
-         vorher ab (host.cancelDrag, js/studio/host.js). */
+      /* Esc hebt die Auswahl auf. Einen laufenden Zug und das Zielen bricht
+         der Rahmen vorher ab (cancelDrag, cancelAim). */
       Escape: () => {
         if (!handles.selected) return false;
         handles.select(null);
         return true;
       }
     },
-    onPartStart() { state.ready = false; },
+    cancelDrag: () => !!handles.cancelDrag(),
+    cancelAim: () => placer.cancel(),
+    /* Eine laufende Rechnung gehört zum alten Bauteil: der Gastgeber hat sie
+       still beendet, ihr Lauf fasst nichts mehr an. */
+    onPartStart() { state.ready = false; state.running = false; latest++; },
     onPart,
     mounted
   };

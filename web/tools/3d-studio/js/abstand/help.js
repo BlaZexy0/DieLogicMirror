@@ -10,9 +10,10 @@ Bauteiloberfläche vom Temperierkanal entfernt</b>, vom Auswerferstift, vom Nach
 Durchbruchgefahr und eine Stelle, die zu schnell erstarrt; zu weit heißt, die Kühlung greift dort
 nicht.</p>
 <p>Gerechnet wird <b>exakt</b>: für jeden Punkt der einen Oberfläche der echte Abstand zum nächsten
-Dreieck der anderen, kein Raster, keine Näherung. Ein Würfelraster beschleunigt nur die Suche. Grobe
-Netze (eine ebene Wand aus zwei Dreiecken) werden vorher verfeinert, sonst hätte die Einfärbung dort
-nichts zu interpolieren.</p>
+Dreieck der anderen, kein Raster, keine Näherung. Ein Würfelraster beschleunigt nur die Suche. Die
+Punkte sind die Ecken des Netzes, so wie es geladen wurde; dazwischen wird die Farbe linear
+übergeblendet. Eine ebene Wand aus zwei Dreiecken hat also nur ihre vier Ecken: Wer dort eine feinere
+Karte braucht, exportiert das Bauteil feiner vernetzt. Verändert wird das Netz hier nicht.</p>
 </section>
 <section data-help-anchor="suchgrenze">
 <h3>Suchgrenze</h3>

@@ -32,14 +32,13 @@
 import * as T from 'three';
 import { facts, segButtons, slider, numberInput, clampNote, gradient, POS_LIMIT } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit, parseNumber, clamp, rangeText } from '../studio/format.js';
-import { kpis, esc } from '../studio/rows.js';
-import { download, safeName, baseName } from '../studio/files.js';
-import { CELL_RANGE } from '../part/field.js';
+import { kpis, esc, selTitle, groupTabs, listRow, onListPick, legendRow, selectedRow } from '../studio/rows.js';
+import { saveSTL } from '../studio/files.js';
+import { CELL_RANGE, MAX_SAMPLES } from '../part/field.js';
 import { surfaceNets } from '../part/surfacenets.js';
-import { writeSTL } from '../part/stlio.js';
 import { scale, scaleFn, linRgb, onScheme, ROLE, VIEW } from '../part/colors.js';
-import { createHandles, SELECTED_RING } from '../handles.js';
-import { setTris, dirText, outward } from '../ui/common.js';
+import { createHandles, createPlacer } from '../handles.js';
+import { setTris, dirText, outward, surfaceMaterial } from '../ui/common.js';
 import * as M from './model.js';
 import { buildAll } from './geom.js';
 import { solveFill, fracToSurface, sampleFrac, fillBodyField, lastSpots } from './solve.js';
@@ -63,8 +62,8 @@ const SLIDER_MS = 1200;
 /* Über etwa 300 : 1 wird es eng — die klassische Grenze der Füllbarkeit. */
 const FLOW_LIMIT = 300;
 /* Mehr Rasterpunkte rechnet host.field nicht: es hebt die Zellkante an
-   (js/studio/host.js, dieselbe Grenze, derselbe Schritt von 10 %). */
-const MAX_SAMPLES = 16e6;
+   (js/part/field.js, planField). */
+const LIMIT_TEXT = fmt(MAX_SAMPLES / 1e6, 0) + ' Mio.';
 /* Warum ein Anschnitt nichts füllt (js/fill/solve.js, closed). */
 const CLOSED_NOTE = {
   off: 'liegt neben dem Bauteil: auf die Wand setzen',
@@ -75,8 +74,11 @@ export function createFuellungTool(host) {
   const { shell, view, part, field: hostField } = host;
   const ui = host.ui;
 
+  let placer = null;
   const state = {
-    plan: M.emptyPlan(), defaults: { ...M.DEFAULTS }, placing: false, openGroup: GROUPS[0],
+    plan: M.emptyPlan(), defaults: { ...M.DEFAULTS },
+    /** Wird gerade ein Anschnitt gesetzt (der Chip ist aktiv)? */
+    get placing() { return !!(placer && placer.placing); },
     h: 3, hAuto: true, field: null, cells: 0, gridMs: 0,
     result: null, surf: null, ms: 0,
     /* stale: das Ergebnis passt nicht (mehr) zum Plan. auto: der erste Lauf
@@ -85,16 +87,17 @@ export function createFuellungTool(host) {
     /* Voreingestellt der Füllkörper bei halbem Füllgrad — die Front mitten
        im Teil sagt auf einen Blick, wo die Schmelze zuerst hinkommt. */
     show: 'koerper', q: 0.5, opacity: 1,
-    spots: { count: 5, list: [], get on() { return this.count > 0; } },
+    spots: { count: 5, list: [] },
     ready: false,
     get model() { return part.model; },
-    get name() { return part.name; },
-    get computing() { return state.running; }
+    get name() { return part.name; }
   };
   let wired = false;
   let rev = 0;                 // zählt die Änderungen am Plan: wozu ein Ergebnis gehört
-  let epoch = 0;               // zählt die Bauteile: ein Lauf für ein altes fasst nichts mehr an
-  let silent = false;          // der laufende Abbruch kommt von der Seite, nicht vom Anwender
+  /* Der jüngste Auftrag gewinnt: ein neues Bauteil überholt die laufende
+     Rechnung (der Gastgeber beendet sie still, js/studio/job.js), und ihr
+     Lauf fasst danach nichts mehr an. */
+  let latest = 0;
   let queuedRegrid = false;
   let rasterH = 0;             // mit welcher Zellkante das laufende Raster gerechnet wird
   let timer = 0;
@@ -107,13 +110,13 @@ export function createFuellungTool(host) {
   const group = new T.Group();
   view.scene.add(group);
 
-  const inletMat = new T.MeshStandardMaterial({ color: M.COLOR, roughness: 0.5, metalness: 0.1, side: T.DoubleSide, flatShading: true });
+  const inletMat = surfaceMaterial(M.inletColor(), { roughness: 0.5, metalness: 0.1 });
   const inletMesh = new T.Mesh(new T.BufferGeometry(), inletMat);
   group.add(inletMesh);
 
   /* Der Füllkörper: die Schmelze bis zum Füllgrad, in der Farbe der
      Schmelze. Wie weit sie ist, sagt seine Form, nicht seine Farbe. */
-  const bodyMat = new T.MeshStandardMaterial({ color: ROLE.melt, roughness: 0.35, metalness: 0.45, side: T.DoubleSide, flatShading: true });
+  const bodyMat = surfaceMaterial(ROLE.melt, { roughness: 0.35, metalness: 0.45 });
   const bodyMesh = new T.Mesh(new T.BufferGeometry(), bodyMat);
   bodyMesh.visible = false;
   group.add(bodyMesh);
@@ -129,7 +132,7 @@ export function createFuellungTool(host) {
   /* Ein Wechsel des Farbschemas: Körper umfärben, das Bauteil neu bemalen,
      Legende, Skala, Liste und Auswahlfeld mit den neuen Farben. */
   onScheme(() => {
-    inletMat.color.set(M.COLOR);
+    inletMat.color.set(M.inletColor());
     bodyMat.color.set(ROLE.melt);
     spotMat.color.set(spotColor());
     shown.paintFor = null;
@@ -152,9 +155,9 @@ export function createFuellungTool(host) {
   const handles = createHandles({
     view,
     getRefMesh: () => part.mesh,
-    markColor: () => M.COLOR,
+    markColor: () => M.inletColor(),
     items: () => M.allItems(state.plan).map(it => ({
-      id: it.id, pos: it.pos, color: M.COLOR, dir: it.n, planeSize: Math.max(24, it.w * 1.5)
+      id: it.id, pos: it.pos, color: M.inletColor(), dir: it.n, planeSize: Math.max(24, it.w * 1.5)
     })),
     /* Gezogen wird in der Wandebene: der Anschnitt rutscht auf der Wand. */
     plane: id => {
@@ -166,7 +169,7 @@ export function createFuellungTool(host) {
       if (it && !dragFrom) dragFrom = it.pos.slice();
       M.setPos(state.plan, id, pos);
     },
-    onSelect: () => { cancelAim(); syncSelection(); },
+    onSelect: () => { placer.cancel(); syncSelection(); },
     onChange: (what, id) => {
       if (what === 'drag') { rebuild('drag'); return; }
       /* Esc mitten im Zug: zurück zum Stand davor — der Zug war nie ein
@@ -190,6 +193,7 @@ export function createFuellungTool(host) {
     },
     onAim: id => startMove(id)
   });
+  placer = createPlacer({ aim: shell.aim, handles, onEnd: () => shell.renderChips() });
 
   /* ── Kette: Plan → Anzeige ───────────────────────────────── */
   function rebuild(mode) {
@@ -215,10 +219,11 @@ export function createFuellungTool(host) {
       const inf = inletInfo(it.id);
       const thin = !!inf && !inf.closed && inf.seeds <= 1;
       const fills = !inf ? '' : inf.closed ? ' · füllt nichts ⚠' : ' · füllt ' + fillsText(inf) + ' des Volumens' + (thin ? ' ⚠' : '');
-      return '<button type="button" class="st-list-row fu-row' + (it.id === cur ? ' active' : '') + (thin || (inf && inf.closed) ? ' warn' : '') + '" data-item="' + esc(it.id) + '">'
-        + '<span class="dot" style="background:' + M.COLOR + '"></span>'
-        + '<span class="name">' + esc(label(it)) + '</span><span class="val">' + fmt(it.w, 1) + ' × ' + fmt(it.h, 1) + ' mm</span>'
-        + '<span class="sub">' + fmtUnit(100 * (sh[it.id] || 0), '%') + ' Strom' + fills + '</span></button>';
+      return listRow({
+        id: it.id, color: M.inletColor(), name: esc(label(it)), value: fmt(it.w, 1) + ' × ' + fmt(it.h, 1) + ' mm',
+        sub: fmtUnit(100 * (sh[it.id] || 0), '%') + ' Strom' + fills,
+        cls: 'fu-row' + (thin || (inf && inf.closed) ? ' warn' : ''), active: it.id === cur
+      });
     }).join('');
     ui('item-empty').hidden = items.length > 0;
     ui('item-count').textContent = items.length ? '· ' + fmt(items.length, 0) : '';
@@ -258,29 +263,22 @@ export function createFuellungTool(host) {
     if (lifted && Math.abs(state.h - asked) < 1e-9) {
       state.h = f.h;
       ui('cell').value = fmtPlain(f.h);
-      ui('cell-note').textContent = 'Feiner geht hier nicht: 16 Mio. Rasterpunkte sind die Grenze, die Zellkante steht auf ' + fmtUnit(f.h, 'mm', 2) + '.';
+      ui('cell-note').textContent = 'Feiner geht hier nicht: ' + LIMIT_TEXT + ' Rasterpunkte sind die Grenze, die Zellkante steht auf ' + fmtUnit(f.h, 'mm', 2) + '.';
     } else if (!lifted) ui('cell-note').textContent = '';
     /* Ein Ergebnis gehört zu SEINEM Raster: mit dem neuen ist das alte weg. */
     dropResult();
   }
 
-  /* Was die eingetippte Kante kosten würde — und wenn es zu viel ist, mit
-     welcher Kante tatsächlich gerastert wird. Das steht VOR dem Rechnen da. */
-  function plannedGrid() {
-    let h = state.h;
-    let est = hostField.estimate(gridParams());
-    const asked = est;
-    while (est.samples > MAX_SAMPLES) { h = Math.round(h * 110) / 100; est = hostField.estimate({ h, band: Math.max(2.5 * h, 1.5), pad: 2 * h }); }
-    return { est, asked, lifted: est !== asked };
-  }
-
   function updateGridFacts() {
     if (!part.model) { facts(ui('grid-facts'), []); return; }
     const f = state.field && !cellChanged() ? state.field : null;
-    const plan = f ? null : plannedGrid();
+    /* Was die eingetippte Kante kosten würde — und wenn es zu viel ist, mit
+       welcher Kante tatsächlich gerastert wird (dieselbe Rechnung wie beim
+       Rastern, js/part/field.js). Das steht VOR dem Rechnen da. */
+    const plan = f ? null : hostField.plan(gridParams());
     if (plan) {
       ui('cell-note').textContent = plan.lifted
-        ? 'Das wären ' + fmt(plan.asked.samples / 1e6, 0) + ' Mio. Rasterpunkte, die Grenze sind 16 Mio.; gerastert wird mit ' + fmtUnit(plan.est.h, 'mm', 2) + '.'
+        ? 'Das wären ' + fmt(plan.asked.samples / 1e6, 0) + ' Mio. Rasterpunkte, die Grenze sind ' + LIMIT_TEXT + '; gerastert wird mit ' + fmtUnit(plan.est.h, 'mm', 2) + '.'
         : '';
     }
     const est = f ? { dims: f.dims, samples: f.data.length, bytes: f.data.length * 4 } : plan.est;
@@ -324,12 +322,12 @@ export function createFuellungTool(host) {
     refresh();
   }
 
-  /* Ein Lauf: das Raster, wenn es fehlt oder neu soll, dann die Front. */
+  /* Ein Lauf: das Raster, wenn es fehlt oder neu soll, dann die Front. Ein
+     gerade überholter Lauf räumt erst an seinem nächsten Haltepunkt auf —
+     darauf wartet host.jobs.run selbst. */
   async function runOnce(regrid, quiet = false) {
-    /* Ein gerade abgebrochener Lauf räumt erst beim nächsten Haltepunkt auf. */
-    while (host.jobs.running) await new Promise(r => setTimeout(r, 15));
     const model = part.model;
-    const wall = model.totalArea > 0 ? 2 * model.volume / model.totalArea : null;
+    const wall = model.wall;
     const pct = p => Math.round(p * 100) + ' %';
     return host.jobs.run({
       quiet,
@@ -355,7 +353,7 @@ export function createFuellungTool(host) {
         });
         return { f, res, rev: myRev, ms: performance.now() - t1 };
       },
-      onCancel: () => { if (!silent) state.cancelled = true; }
+      onCancel: () => { state.cancelled = true; }
     }).catch(err => {
       state.error = err.message;
       console.error(err);
@@ -366,9 +364,9 @@ export function createFuellungTool(host) {
   /**
    * Rechnen. `regrid`: auch das Raster neu (die Zellkante hat sich geändert);
    * `advance`: der erste Lauf aus dem Modus „Füllung" geht von selbst zum
-   * Ergebnis. Kommt währenddessen eine Änderung, bricht die Frontausbreitung
-   * still ab und beginnt mit dem neuen Plan — das Raster läuft weiter, es
-   * hängt nicht am Plan.
+   * Ergebnis. Kommt währenddessen eine Änderung, ist die Frontausbreitung
+   * überholt: sie endet still und beginnt mit dem neuen Plan — das Raster
+   * läuft weiter, es hängt nicht am Plan.
    */
   async function compute({ regrid = false, advance = false, quiet = false } = {}) {
     clearTimeout(timer);
@@ -378,24 +376,24 @@ export function createFuellungTool(host) {
       if (regrid) queuedRegrid = true;
       /* Ein neues Raster verlangt, während das alte noch läuft: das ist
          verlorene Zeit — abbrechen und mit der neuen Kante von vorn. */
-      if (state.phase === 'fill' || (regrid && state.phase === 'raster')) { silent = true; host.jobs.cancel(); }
+      if (state.phase === 'fill' || (regrid && state.phase === 'raster')) host.jobs.supersede();
       return;
     }
-    const my = epoch;
+    const my = ++latest;
     const first = !state.result;
     state.running = true; state.ready = false; state.cancelled = false; state.error = '';
     ui('fill-warn').textContent = '';
     let out;
     for (;;) {
       const grid = regrid || queuedRegrid;
-      regrid = false; queuedRegrid = false; state.queued = false; silent = false;
+      regrid = false; queuedRegrid = false; state.queued = false;
       refresh();
       /* Ist der letzte Anschnitt inzwischen weg, gibt es nichts zu rechnen. */
       /* Eine Nachrechnung nach einer Änderung am Plan läuft ohne Schleier über
          dem Bild — sie dauert Zehntelsekunden. Muss neu gerastert werden, dauert
          es länger: dann mit. */
       out = M.allItems(state.plan).length ? await runOnce(grid, quiet && !grid && !!state.field) : null;
-      if (my !== epoch) return;                                        // anderes Bauteil: onPartStart hat aufgeräumt
+      if (my !== latest) return;                                       // anderes Bauteil: onPartStart hat aufgeräumt
       if (state.cancelled || state.error || !state.queued) break;
     }
     state.running = false; state.phase = ''; state.queued = false;
@@ -539,11 +537,10 @@ export function createFuellungTool(host) {
       stops: gradient(t => scale('turbo', t)),
       ticks: [100, 75, 50, 25, 0].map(v => v + ' %')
     } : null);
-    const row = (color, text) => '<div class="lg-row"><span class="dot" style="background:' + color + '"></span>' + text + '</div>';
-    shell.legend(row(M.COLOR, 'Anschnitt')
-      + (body ? row(ROLE.melt, 'Schmelze bis ' + fmt(100 * state.q, 0) + ' %') : '')
-      + (spotGroup.visible ? row(spotColor(), 'zuletzt gefüllt') : '')
-      + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>');
+    shell.legend(legendRow(M.inletColor(), 'Anschnitt')
+      + (body ? legendRow(ROLE.melt, 'Schmelze bis ' + fmt(100 * state.q, 0) + ' %') : '')
+      + (spotGroup.visible ? legendRow(spotColor(), 'zuletzt gefüllt') : '')
+      + selectedRow());
     if (wired) updateResultKpis();
     view.invalidate();
   }
@@ -563,11 +560,16 @@ export function createFuellungTool(host) {
   /* ── Auswahl ─────────────────────────────────────────────── */
   const sel = () => (handles.selected ? state.plan.items[handles.selected] : null);
 
+  /* Die Gruppen des Auswahlfelds und der Drehregler — beide gibt es, sobald
+     der Rahmen das Feld eingesetzt hat (mounted). */
+  let groups = null, rot = null;
+
   function syncSelection() {
+    if (!groups) return;
     const it = sel();
     updateList();
     if (!it) { shell.inspector.hide(); shell.status(''); return; }
-    shell.inspector.show({ title: '<span class="dot" style="background:' + M.COLOR + '"></span>Anschnitt <code>' + esc(it.id) + '</code>' });
+    shell.inspector.show({ title: selTitle({ color: M.inletColor(), label: 'Anschnitt', id: it.id }) });
     shell.status(HANDLE_HINT);
     ui('sel-w').value = fmtPlain(it.w);
     ui('sel-h').value = fmtPlain(it.h);
@@ -576,23 +578,10 @@ export function createFuellungTool(host) {
     ui('sel-share').classList.remove('bad');
     ui('sel-share').placeholder = 'auto ' + fmt(100 * (M.shares(state.plan)[it.id] || 0), 0);
     for (const [k, i] of [['sel-x', 0], ['sel-y', 1], ['sel-z', 2]]) ui(k).value = fmtPlain(it.pos[i], 1);
-    ui('sel-rot').value = String(it.rot || 0);
-    ui('sel-rot-val').textContent = fmt(it.rot || 0, 0) + '°';
-    showGroup();
+    rot.set(it.rot || 0);
+    /* Die Reiter erst mit einer Auswahl — ohne trägt die Seite nur die der Modi. */
+    groups.set(GROUPS);
     syncSelKpis();
-  }
-
-  /* Die gewählte Gruppe des Auswahlfelds zeigen — die anderen verbergen. */
-  function showGroup() {
-    if (!ui('sel-groups').children.length) {
-      ui('sel-groups').innerHTML = GROUPS.map(n => '<button type="button" role="tab" data-group-tab="' + n + '">' + n + '</button>').join('');
-    }
-    for (const b of ui('sel-groups').querySelectorAll('[data-group-tab]')) {
-      const on = b.getAttribute('data-group-tab') === state.openGroup;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-selected', on ? 'true' : 'false');
-    }
-    for (const g of ui('sel-params').querySelectorAll('[data-group]')) g.hidden = g.getAttribute('data-group') !== state.openGroup;
   }
 
   /* „füllt … %": was die Rechnung zum gewählten Anschnitt sagt. */
@@ -624,49 +613,28 @@ export function createFuellungTool(host) {
     M.removeItem(state.plan, it.id);
     handles.select(null);
     rebuild();
-    host.changed(name + ' entfernt');
-    /* Der Toast gehört zu genau diesem Schritt (host.toastUndo). */
-    host.toastUndo(name + ' entfernt.');
+    host.removed(name);
     planChanged();
     return true;
   }
 
-  /* ── Zielmodus: setzen und neu setzen ────────────────────── */
-  const aim = shell.aim;
-  function cancelAim() {
-    const was = handles.aiming;
-    handles.cancelAim();
-    aim.hide();
-    state.placing = false;
-    shell.renderChips();
-    return was;
-  }
-  host.cancelAim = cancelAim;
-  /* Esc mitten im Zug (js/handles.js): für den Rahmen, der Esc zuerst hier
-     anbieten kann — auch wenn noch ein Eingabefeld den Fokus hat. */
-  host.cancelDrag = () => !!handles.cancelDrag();
-
+  /* ── Zielmodus: setzen und neu setzen (js/handles.js, createPlacer) ── */
   /** Ein neuer Anschnitt: der nächste Klick aufs Bauteil setzt ihn. Der Strahl
       liefert die nach INNEN gerichtete Normale; der Anschnitt trägt die nach außen. */
   function startPlace() {
     if (!part.model) { shell.toast(NEEDS_PART); return; }
-    if (state.placing) { cancelAim(); return; }                    // derselbe Chip noch einmal: doch nicht
+    if (state.placing) { placer.cancel(); return; }                // derselbe Chip noch einmal: doch nicht
     handles.select(null);
-    state.placing = true;
-    aim.show(true, 'Anschnitt: die Stelle am Bauteil anklicken, wo die Schmelze eintritt. Ziehen dreht die Ansicht, Esc bricht ab.');
-    aim.onCancel = cancelAim;
-    handles.armAim({
+    placer.aim({
+      what: 'anschnitt',
+      text: 'Anschnitt: die Stelle am Bauteil anklicken, wo die Schmelze eintritt. Ziehen dreht die Ansicht, Esc bricht ab.',
       onHit: hit => {
-        aim.hide();
-        state.placing = false;
         const it = M.addInlet(state.plan, hit.point, outward(hit.dir), { w: state.defaults.w, h: state.defaults.h });
         rebuild();
         handles.select(it.id);
-        shell.renderChips();
         host.changed(label(it) + ' gesetzt');
         planChanged();
-      },
-      onMiss: () => aim.miss(null, () => handles.aiming)
+      }
     });
     shell.renderChips();
   }
@@ -676,23 +644,20 @@ export function createFuellungTool(host) {
     const it = state.plan.items[id];
     if (!it) return;
     if (!part.model) { shell.toast(NEEDS_PART); return; }
-    aim.show(true, label(it) + ': die neue Stelle am Bauteil anklicken. Esc bricht ab.');
-    aim.onCancel = cancelAim;
-    handles.armAim({
+    placer.aim({
+      text: label(it) + ': die neue Stelle am Bauteil anklicken. Esc bricht ab.',
       onHit: hit => {
-        aim.hide();
         M.placeAt(state.plan, id, hit.point, outward(hit.dir));
         rebuild();
         syncSelection();
         host.changed(label(it) + ' neu gesetzt');
         planChanged();
-      },
-      onMiss: () => aim.miss(null, () => handles.aiming)
+      }
     });
   }
 
   shell.setChips([{
-    id: 'anschnitt', label: 'Anschnitt setzen', icon: () => M.COLOR,
+    id: 'anschnitt', label: 'Anschnitt setzen', icon: () => M.inletColor(),
     title: 'Die Stelle am Bauteil anklicken, an der die Schmelze eintritt.',
     enabled: () => !!part.model, reason: NEEDS_PART,
     active: () => state.placing,
@@ -727,7 +692,7 @@ export function createFuellungTool(host) {
     return null;
   }
 
-  const modes = MODES.map(m => ({ ...m, enter: () => { syncGates(); applyMode(); }, leave: () => {} }));
+  const modes = MODES.map(m => ({ ...m, enter: () => { syncGates(); applyMode(); } }));
   const by = Object.fromEntries(modes.map(m => [m.id, m]));
   by.anschnitte.primary = gatesPrimary;
   by.fuellung.primary = () => runPrimary('fuellung');
@@ -738,18 +703,8 @@ export function createFuellungTool(host) {
   function mounted() {
     shell.inspector.body.innerHTML = INSPECTOR;
     shell.inspector.onClose(() => handles.select(null));
-
-    ui('sel-groups').addEventListener('click', ev => {
-      const b = ev.target.closest('[data-group-tab]');
-      if (!b) return;
-      state.openGroup = b.getAttribute('data-group-tab');
-      showGroup();
-    });
-
-    ui('item-list').addEventListener('click', ev => {
-      const row = ev.target.closest('[data-item]');
-      if (row) handles.select(row.getAttribute('data-item'));
-    });
+    groups = groupTabs({ tabs: ui('sel-groups'), box: ui('sel-params') });
+    onListPick(ui('item-list'), id => handles.select(id));
     numberInput(ui('def-w'), v => { state.defaults.w = v; return v; }, limits('w'));
     numberInput(ui('def-h'), v => { state.defaults.h = v; return v; }, limits('h'));
 
@@ -803,15 +758,14 @@ export function createFuellungTool(host) {
         return v;
       }, POS_LIMIT);
     }
-    slider(ui('sel-rot'), v => {
+    rot = slider(ui('sel-rot'), v => {
       const it = sel();
-      if (!it || !wired) return;
+      if (!it) return;
       M.setRot(state.plan, it.id, v);
       rebuild();
-      if (host.history) host.history.coalesce('rot:' + it.id, 'Drehung geändert', SLIDER_MS);
-      host.changed('', { silent: true });
+      host.changed('Drehung geändert', { coalesce: 'rot:' + it.id, ms: SLIDER_MS });
       planChanged();
-    }, v => fmt(v, 0) + '°', ui('sel-rot-val'));
+    }, v => fmt(v, 0) + '°', ui('sel-rot-val'), { fire: false });
     ui('del-item').addEventListener('click', () => removeSelected());
 
     /* Füllung. */
@@ -830,21 +784,19 @@ export function createFuellungTool(host) {
       refresh();
       return state.h;
     }, { min: CELL_RANGE[0], max: CELL_RANGE[1], unit: 'mm' });
-    slider(ui('alpha'), v => {
-      if (!wired) return;
+    alpha = slider(ui('alpha'), v => {
       state.plan.alpha = v;
-      if (host.history) host.history.coalesce('alpha', 'Dünnwand-Bremse geändert', SLIDER_MS);
-      host.changed('', { silent: true });
+      host.changed('Dünnwand-Bremse geändert', { coalesce: 'alpha', ms: SLIDER_MS });
       planChanged();
-    }, v => fmt(v, 1));
+    }, v => fmt(v, 1), null, { fire: false });
 
     /* Ergebnis — Anzeige, kein Plan: nichts davon ist ein Schritt im Verlauf. */
     segButtons(ui('show-seg'), v => { state.show = v; applyMode(); });
-    slider(ui('q'), v => { state.q = v / 100; if (wired) applySoon(); }, v => v + ' %');
-    slider(ui('spots-count'), v => { state.spots.count = v; if (wired) applyMode(); }, v => (v ? String(v) : 'keine'));
+    slider(ui('q'), v => { state.q = v / 100; applySoon(); }, v => v + ' %', null, { fire: false });
+    slider(ui('spots-count'), v => { state.spots.count = v; applyMode(); }, v => (v ? String(v) : 'keine'), null, { fire: false });
 
     const pop = shell.darstellung(DARSTELLUNG);
-    slider(pop.querySelector('[data-ui="opacity"]'), v => { state.opacity = v / 100; if (wired) applyMode(); }, v => v + ' %', pop.querySelector('[data-ui="opacity-val"]'));
+    slider(pop.querySelector('[data-ui="opacity"]'), v => { state.opacity = v / 100; applyMode(); }, v => v + ' %', pop.querySelector('[data-ui="opacity-val"]'), { fire: false });
 
     wired = true;
     rebuild();
@@ -853,22 +805,16 @@ export function createFuellungTool(host) {
   }
 
   /* ── Plan laden, Bauteil ─────────────────────────────────── */
-  function syncAlpha() {
-    ui('alpha').value = String(state.plan.alpha);
-    ui('alpha-val').textContent = fmt(state.plan.alpha, 1);
-  }
-
+  let alpha = null;                                  // der Regler der Dünnwand-Bremse (mounted)
   function loadPlan(plan) {
-    cancelAim();
+    placer.cancel();
     state.plan = plan;
     handles.select(null);
-    syncAlpha();
+    alpha.set(state.plan.alpha);
     rebuild();
     syncSelection();
     planChanged();
   }
-
-  const stlName = () => safeName((baseName(part.name) || 'bauteil') + '-fuellung') + '-' + Math.round(100 * state.q) + '.stl';
 
   const tool = {
     id: 'fuellung',
@@ -885,11 +831,11 @@ export function createFuellungTool(host) {
     restore(doc) {
       const keep = handles.selected;
       const before = new Set(Object.keys(state.plan.items));
-      cancelAim();
+      placer.cancel();
       state.plan = M.fromJSON(doc);
       const back = Object.keys(state.plan.items).filter(id => !before.has(id));
       handles.select(keep && state.plan.items[keep] ? keep : back.length === 1 ? back[0] : null);
-      syncAlpha();
+      alpha.set(state.plan.alpha);
       rebuild();
       syncSelection();
       /* Nach einem abgebrochenen Zug ist der Plan der, zu dem die Füllung
@@ -900,27 +846,30 @@ export function createFuellungTool(host) {
       label: 'Füllkörper als STL',
       enabled: () => !!state.result, reason: 'Zuerst die Füllung rechnen, dann gibt es einen Füllkörper.',
       run: () => {
+        const q = Math.round(100 * state.q);
         const tris = surfaceNets(fillBodyField(state.field, state.result.frac, state.q), 0);
-        if (!tris.length) { shell.toast('Bei ' + Math.round(100 * state.q) + ' % gibt es noch keinen Füllkörper; den Füllgrad anheben.'); return; }
-        download(new Blob([writeSTL(tris, 'DieLogic Füllkörper ' + Math.round(100 * state.q) + ' %')], { type: 'model/stl' }), stlName());
+        if (!tris.length) { shell.toast('Bei ' + q + ' % gibt es noch keinen Füllkörper; den Füllgrad anheben.'); return; }
+        saveSTL(tris, 'DieLogic Füllkörper ' + q + ' %', part.name, 'fuellung-' + q);
       }
     }],
     keys: {
       Delete: () => removeSelected(),
-      /* Esc hebt die Auswahl auf. Einen laufenden Zug bricht der Rahmen
-         vorher ab (host.cancelDrag, js/studio/host.js). */
+      /* Esc hebt die Auswahl auf. Einen laufenden Zug und das Zielen bricht
+         der Rahmen vorher ab (cancelDrag, cancelAim). */
       Escape: () => {
         if (!handles.selected) return false;
         handles.select(null);
         return true;
       }
     },
+    cancelDrag: () => !!handles.cancelDrag(),
+    cancelAim: () => placer.cancel(),
     onPartStart() {
       state.ready = false;
-      epoch++;
+      /* Eine laufende Rechnung gehört zum alten Bauteil: der Gastgeber hat
+         sie still beendet, ihr Lauf fasst nichts mehr an. */
+      latest++;
       clearTimeout(timer);
-      /* Eine laufende Rechnung gehört zum alten Bauteil: still beenden. */
-      if (state.running) { silent = true; host.jobs.cancel(); }
       state.running = false; state.phase = ''; state.queued = false; queuedRegrid = false;
     },
     onPart() {
@@ -938,7 +887,7 @@ export function createFuellungTool(host) {
       const plan = M.emptyPlan();
       plan.alpha = state.plan.alpha;
       loadPlan(plan);
-      if (host.history) host.history.reset();
+      host.resetHistory();
       shell.renderChips();
       refresh();
       state.ready = true;

@@ -16,13 +16,16 @@ import * as G from './graph.js';
 import { ALLOYS } from './flow.js';
 import { junctionPlan } from './sweep.js';
 import { sub, norm, len, dot } from './vec.js';
+import { fmt as fmtDe } from '../studio/format.js';
 
 /* Fenster der Anschnittgeschwindigkeit je Werkstoff, m/s. */
 const V_GATE = { al: [20, 60], mg: [30, 100], zn: [20, 50] };
 /* Ab hier wäscht der Strahl den Stahl des Laufkanals aus. */
 const V_RUNNER_MAX = 30;
 
-const fmt = (v, n = 1) => v.toLocaleString('de-DE', { maximumFractionDigits: n });
+/* Zahlen wie überall im Studio (js/studio/format.js) — hier mit einer
+   Nachkommastelle, wenn keine andere verlangt ist. */
+const fmt = (v, n = 1) => fmtDe(v, n);
 
 export function checkRules(g, net, flow, proc) {
   const out = [];

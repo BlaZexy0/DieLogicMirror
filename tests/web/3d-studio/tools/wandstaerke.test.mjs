@@ -7,13 +7,13 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mountPage, wait, kpiText } from './fixture.mjs';
+import { mountPage, wait, kpiText, same } from './fixture.mjs';
 
 /* Felder NIE mit assert.equal vergleichen: schlägt der Vergleich fehl, baut
    Node einen Textvergleich beider Objekte — bei 14 Mio. Rasterwerten frisst
    das den ganzen Arbeitsspeicher (so geschehen: 25 GB, der Kernel räumte
-   ab). Deshalb same(): Identität prüfen, nur die Meldung ausgeben. */
-const same = (a, b, msg) => assert.ok(a === b, msg);
+   ab). Deshalb same() aus ./fixture.mjs: Identität prüfen, nur die Meldung
+   ausgeben. */
 
 const fmtDe = v => v.toLocaleString('de-DE', { maximumFractionDigits: 2 });
 let P;

@@ -9,15 +9,25 @@
    gleich groß bleibt. Das Steuerwerk bekommt die neue Kamera zugewiesen;
    object wird dort bei jedem update() gelesen.
 
-   Gesteuert wird mit dem Quaternionen-Trackball aus js/trackball.js. Die
-   OrbitControls von Three.js standen als Option `orbit` daneben, gewählt
-   hat sie niemand; sie wurden auf jeder 3D-Seite trotzdem geladen (30 KB,
-   bis zum 23.09.). */
+   Gesteuert wird mit dem Quaternionen-Trackball aus js/trackball.js.
+
+   Gezeichnet wird NUR, wenn sich etwas geändert hat. Eine Schleife, die
+   sechzigmal je Sekunde ein durchscheinendes Bauteil mit einer Million
+   Dreiecken zeichnet, macht die ganze Seite zäh — auch die Felder in der
+   Seitenleiste, die damit gar nichts zu tun haben. Zeigergeräte, Rad,
+   Größenänderung, Farbschema, Projektion und Ansichten melden sich hier
+   selbst, Regler und Schalter der Seite über ihre Ereignisse (unten); wer
+   sonst etwas am Bild ändert — ein Ergebnis, eine geladene Datei, ein
+   Schnitt, ein Bild der Wiedergabe —, ruft api.invalidate(). Ein Netz
+   darunter, das viermal je Sekunde „zur Sicherheit" zeichnete, gibt es
+   nicht mehr (bis zum 23.09.): es hielt Grafikkarte und SwiftShader auf
+   jeder ruhenden Seite beschäftigt. */
 
 import * as T from 'three';
 import { TrackballControls } from './trackball.js';
 import { mountAxes } from './ui/axes.js';
 import { ROLE, onScheme } from './part/colors.js';
+import { cameraAxes } from './viewmath.js';
 
 /* Blickrichtung = Standort der Kamera relativ zum Ziel. Ein zweiter Klick
    auf denselben Knopf dreht das Vorzeichen um (X → −X). Die Draufsicht
@@ -32,36 +42,8 @@ const VIEWS = {
 
 export function initScene(container, opts = {}) {
   const {
-    /* Die Fläche hinter dem Körper: ohne Angabe die Rolle `viewport` des
-       Farbschemas, und sie folgt einem Wechsel sofort (unten). Wer eine
-       eigene Farbe übergibt, behält sie. */
-    background = null,
-    /* Kein Bodenraster: ein Körper, den man frei von allen Seiten ansieht,
-       hat kein „unten" — das Raster lag bei jeder schrägen Ansicht im Bild
-       und von unten davor. Wer es will, verlangt grid: true. */
-    gridSize = 3000, gridY = -470, grid: wantGrid = false,
     cameraStart = [1500, 680, -1350], target = [0, 0, 20],
-    minDistance = 60, maxDistance = 8000,
-    /* Mitgeführtes Licht. Ortsfeste Lichter setzen voraus, dass es ein
-       „oben" und eine bevorzugte Blickrichtung gibt. Wer frei um einen
-       Körper dreht, schaut ständig auf die abgewandte Seite, und die
-       liegt dann im Dunkeln. Ein Licht, das mit der Kamera wandert
-       (leicht nach oben und zur Seite versetzt, damit es nicht flach
-       wird), beleuchtet immer das, was man gerade ansieht. */
-    headlight = true,
-    /* Nur zeichnen, wenn sich etwas geändert hat. Eine Schleife, die
-       sechzigmal je Sekunde ein durchscheinendes Bauteil mit einer
-       Million Dreiecken zeichnet, macht die ganze Seite zäh — auch die
-       Felder in der Seitenleiste, die damit gar nichts zu tun haben.
-       Zeigergeräte, Rad, Größenänderung, Regler und die Ansichtsfunktionen
-       melden sich selbst; nach jeder Meldung wird eine Sekunde lang
-       jedes Bild gezeichnet (Ergebnisse aus Workern kommen kurz danach),
-       die Seite ruft api.invalidate() nach jeder eigenen Änderung, und
-       als Netz darunter wird viermal je Sekunde gezeichnet, damit eine
-       vergessene Meldung nichts einfriert. */
-    renderOnDemand = true,
-    /* Das Achsenkreuz unter der Ansichtsleiste (js/ui/axes.js). */
-    axes = true
+    minDistance = 60, maxDistance = 8000
   } = opts;
 
   const renderer = new T.WebGLRenderer({ antialias: true });
@@ -69,16 +51,19 @@ export function initScene(container, opts = {}) {
   renderer.localClippingEnabled = true;
   container.appendChild(renderer.domElement);
 
+  /* Die Fläche hinter dem Körper ist die Rolle `viewport` des Farbschemas
+     und folgt einem Wechsel sofort (unten). Kein Bodenraster: ein Körper,
+     den man frei von allen Seiten ansieht, hat kein „unten". */
   const scene = new T.Scene();
-  scene.background = new T.Color(background === null ? ROLE.viewport : background);
+  scene.background = new T.Color(ROLE.viewport);
 
   const persp = new T.PerspectiveCamera(40, 1, 5, 40000);
   persp.position.set(...cameraStart);
   const ortho = new T.OrthographicCamera(-1, 1, 1, -1, -40000, 40000);
   ortho.position.copy(persp.position);
 
-  let dirty = true, lastFrame = 0, warmUntil = 0;
-  const invalidate = () => { dirty = true; warmUntil = performance.now() + 1000; };
+  let dirty = true;
+  const invalidate = () => { dirty = true; };
   const api = { scene, renderer, camera: persp, projection: 'persp', invalidate };
 
   /* Der Trackball dreht frei mit Quaternionen um den Zielpunkt: kein Pol,
@@ -91,34 +76,32 @@ export function initScene(container, opts = {}) {
   controls.maxZoom = 200;
   api.controls = controls;
 
-  /* Mit mitgeführtem Licht tragen die ortsfesten nur noch die Grundform;
-     sonst wäre die zugewandte Seite überstrahlt. Alle Lichter sind weiß,
-     der Boden des Himmelslichts ein neutrales Grau: ein getöntes Licht
-     färbte jeden Körper mit, auch die Sachfarben und die Skalen. */
+  /* Mitgeführtes Licht. Ortsfeste Lichter setzen voraus, dass es ein „oben"
+     und eine bevorzugte Blickrichtung gibt. Wer frei um einen Körper dreht,
+     schaut ständig auf die abgewandte Seite, und die liegt dann im Dunkeln.
+     Ein Licht, das mit der Kamera wandert (leicht nach oben und zur Seite
+     versetzt, damit es nicht flach wird), beleuchtet immer das, was man
+     gerade ansieht; die ortsfesten tragen daneben nur die Grundform, sonst
+     wäre die zugewandte Seite überstrahlt. Alle Lichter sind weiß, der
+     Boden des Himmelslichts ein neutrales Grau: ein getöntes Licht färbte
+     jeden Körper mit, auch die Sachfarben und die Skalen. */
   const neutral = k => new T.Color(0xffffff).multiplyScalar(k);
-  scene.add(new T.HemisphereLight(0xffffff, neutral(headlight ? 0.8 : 0.58), headlight ? 0.85 : 1.0));
-  const key = new T.DirectionalLight(0xffffff, headlight ? 0.5 : 1.4);
+  scene.add(new T.HemisphereLight(0xffffff, neutral(0.8), 0.85));
+  const key = new T.DirectionalLight(0xffffff, 0.5);
   key.position.set(700, 1000, 900);
   scene.add(key);
-  const fill = new T.DirectionalLight(0xffffff, headlight ? 0.2 : 0.46);
+  const fill = new T.DirectionalLight(0xffffff, 0.2);
   fill.position.set(-800, 300, -700);
   scene.add(fill);
-
-  let head = null;
-  if (headlight) {
-    head = new T.DirectionalLight(0xffffff, 0.95);
-    scene.add(head);
-    scene.add(head.target);
-  }
+  const head = new T.DirectionalLight(0xffffff, 0.95);
+  scene.add(head);
+  scene.add(head.target);
   /* Nur die RICHTUNG eines Richtungslichts zählt, deshalb genügen
      Einheitsbeträge um den Zielpunkt herum. */
   const camRight = new T.Vector3(), camUp = new T.Vector3(), toCam = new T.Vector3();
   function aimHeadlight() {
-    if (!head) return;
     const cam = api.camera;
-    const m = cam.matrixWorld.elements;
-    camRight.set(m[0], m[1], m[2]).normalize();
-    camUp.set(m[4], m[5], m[6]).normalize();
+    cameraAxes(cam, camRight, camUp);
     toCam.copy(cam.position).sub(controls.target).normalize();
     head.position.copy(controls.target).add(toCam)
       .addScaledVector(camRight, -0.4).addScaledVector(camUp, 0.5);
@@ -126,29 +109,11 @@ export function initScene(container, opts = {}) {
     head.target.updateMatrixWorld();
   }
 
-  let grid = null;
-  const makeGrid = () => new T.GridHelper(gridSize, 30, ROLE.border, ROLE.borderLight);
-  if (wantGrid) {
-    grid = makeGrid();
-    grid.position.y = gridY;
-    scene.add(grid);
-  }
-
   /* Ein Wechsel des Farbschemas: die Fläche dahinter sofort nachziehen,
-     nicht erst beim nächsten Laden; das Raster färbt über Punktfarben und
-     wird mit Lage und Maßstab neu gebaut. */
+     nicht erst beim nächsten Laden — und neu zeichnen, was die Werkzeuge
+     dabei umfärben. */
   onScheme(() => {
-    if (background === null) scene.background.set(ROLE.viewport);
-    if (grid) {
-      const next = makeGrid();
-      next.position.copy(grid.position);
-      next.scale.copy(grid.scale);
-      scene.remove(grid);
-      grid.geometry.dispose();
-      grid.material.dispose();
-      grid = next;
-      scene.add(grid);
-    }
+    scene.background.set(ROLE.viewport);
     invalidate();
   });
 
@@ -174,34 +139,52 @@ export function initScene(container, opts = {}) {
     persp.updateProjectionMatrix();
     applyOrthoFrustum();
   }
-  new ResizeObserver(() => { resize(); dirty = true; }).observe(container);
+  new ResizeObserver(() => { resize(); invalidate(); }).observe(container);
   resize();
 
-  if (renderOnDemand) {
-    const el = renderer.domElement;
-    el.addEventListener('pointerdown', invalidate);
-    el.addEventListener('pointerup', invalidate);
-    el.addEventListener('pointermove', e => { if (e.buttons) dirty = true; });
-    el.addEventListener('wheel', invalidate, { passive: true });
-    /* Regler und Schalter der Seitenleiste ändern fast immer das Bild —
-       so muss nicht jeder einzelne Zuhörer daran denken. */
-    for (const ev of ['input', 'change', 'click', 'keydown']) document.addEventListener(ev, invalidate, true);
+  /* Was die Kamera bewegt (der Trackball dreht, schiebt und zoomt in seinen
+     Zuhörern, ohne Nachlauf), meldet sich hier. Regler und Schalter der
+     Seitenleiste ändern fast immer das Bild — so muss nicht jeder einzelne
+     Zuhörer daran denken. Ein Bild je Ereignis, nicht eine Sekunde lang. */
+  const el = renderer.domElement;
+  el.addEventListener('pointerdown', invalidate);
+  el.addEventListener('pointerup', invalidate);
+  el.addEventListener('pointermove', e => { if (e.buttons) invalidate(); });
+  el.addEventListener('wheel', invalidate, { passive: true });
+  for (const ev of ['input', 'change', 'click', 'keydown']) document.addEventListener(ev, invalidate, true);
+
+  /* Das Achsenkreuz unter der Ansichtsleiste (js/ui/axes.js). */
+  const axesGizmo = mountAxes(container);
+  scene.onBeforeRender = (renderer, scene, camera) => axesGizmo.update(camera);
+
+  /* Was sich nach der Kamera richtet — Griffe und Marken in Bildgröße
+     (js/handles.js, die Fundstellen der Füllung), zur Kamera gedrehte
+     Ringe —, setzt Maß und Drehung in onBeforeRender. Three.js rechnet die
+     Weltmatrizen aber VOR diesem Aufruf: das neue Maß käme erst mit dem
+     nächsten Bild, und das kommt beim Zeichnen auf Abruf nicht (nach dem
+     Rad, einer Ansicht, einer Größenänderung standen die Griffe im alten
+     Maß da). Deshalb laufen diese Aufrufe hier einmal VOR dem Zeichnen;
+     beim Zeichnen setzen sie dasselbe noch einmal, ohne Wirkung. */
+  const plain = T.Object3D.prototype.onBeforeRender;
+  function followCamera(cam) {
+    cam.updateMatrixWorld();
+    scene.traverseVisible(o => {
+      if (o !== scene && o.onBeforeRender !== plain) o.onBeforeRender(renderer, scene, cam, o.geometry, o.material, null);
+    });
   }
 
-  let axesGizmo = null;
-  if (axes && container.appendChild) {
-    axesGizmo = mountAxes(container);
-    scene.onBeforeRender = (renderer, scene, camera) => axesGizmo.update(camera);
-  }
-
-  renderer.setAnimationLoop(now => {
-    if (renderOnDemand && !dirty && now > warmUntil && now - lastFrame < 250) return;
+  renderer.setAnimationLoop(() => {
+    if (!dirty) return;
     dirty = false;
-    lastFrame = now;
     controls.update();
     aimHeadlight();
+    followCamera(api.camera);
     renderer.render(scene, api.camera);
+    api.frames++;
   });
+  /* Gezeichnete Bilder seit dem Start — tests/browser/studio.spec.mjs prüft
+     daran, dass eine ruhende Seite nicht mehr zeichnet. */
+  api.frames = 0;
 
   /* ── Projektion umschalten ──────────────────────────────────── */
   const halfFov = () => persp.fov * Math.PI / 360;
@@ -228,7 +211,7 @@ export function initScene(container, opts = {}) {
     api.projection = kind;
     controls.object = api.camera;
     controls.update();
-    dirty = true;
+    invalidate();
     return kind;
   }
 
@@ -250,12 +233,12 @@ export function initScene(container, opts = {}) {
     if (controls.resetUp) controls.resetUp();
     cam.lookAt(controls.target);
     controls.update();
-    dirty = true;
+    invalidate();
     return last;
   }
 
   /* Modell einpassen: Ziel auf die Mitte, Abstand bzw. Zoom aus der
-     Bounding-Box. Wird vom Teile-Viewer nach jedem Import gebraucht. */
+     Bounding-Box — nach jedem Laden und für „Einpassen". */
   function fitTo(boxOrObject, margin = 1.25) {
     const box = boxOrObject.isBox3 ? boxOrObject : new T.Box3().setFromObject(boxOrObject);
     if (box.isEmpty()) return;
@@ -286,14 +269,7 @@ export function initScene(container, opts = {}) {
     applyOrthoFrustum();
     controls.minDistance = radius / 20;
     controls.maxDistance = radius * 40;
-    dirty = true;
-    if (grid) {
-      /* Das Raster mitwachsen lassen — sonst liegt es bei einem großen
-         Bauteil als Briefmarke darunter und bei einem kleinen bis zum
-         Horizont. */
-      grid.scale.setScalar(Math.max(0.02, radius * 3 / gridSize));
-      grid.position.set(center.x, box.min.y - radius * 0.12, center.z);
-    }
+    invalidate();
     controls.update();
     return { center, radius };
   }

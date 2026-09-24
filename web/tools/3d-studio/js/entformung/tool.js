@@ -28,17 +28,17 @@ import { createDieView } from '../part/dieviewer.js';
 import { facts, segButtons, segButtonSet, slider, colorbar, gradient, chip } from '../ui/controls.js';
 import { fmt, fmtUnit, fmtFixed } from '../studio/format.js';
 import { kpis } from '../studio/rows.js';
-import * as C from '../part/colors.js';
-import { onScheme, VIEW } from '../part/colors.js';
+import { checkFormat } from '../studio/planio.js';
+import { rayAt, hoverProbe } from '../viewmath.js';
+import {
+  onScheme, VIEW, scale, scaleFn, linRgb, turboTrim, regionColor, undercutColor, undercutDark, draftColor, draftHex
+} from '../part/colors.js';
 import { MODES, DARSTELLUNG } from './panel.js';
 
 export const FORMAT = 'dielogic-entformung';
 export const FORMAT_VERSION = 1;
 
 const RUN = 'Entformung rechnen';
-/* Die Haftung auf der Farbleiste `turbo`, wie die Wandstärke: benutzt wird
-   das Stück von sattem Blau bis sattem Rot, ohne die fast schwarzen Enden. */
-const turboT = t => 0.08 + 0.84 * Math.max(0, Math.min(1, t));
 const pct = x => fmtFixed(100 * x, 1) + ' %';
 const DEFAULTS = { axis: 'auto', movSign: 1, mode: 'regions', draftLimit: 1.5, showParting: true, showEdges: false,
   die: { skirt: 8, part: true }, projView: { alpha: 0.6 }, ej: { mu: 0.3, alpha: 0.7 } };
@@ -120,32 +120,28 @@ export function createEntformungTool(host) {
     const longest = Math.max(...model.bounds.size);
     const fit = (name, max, auto, touched) => {
       ui(name).max = String(max);
-      setSlider(name, touched ? Math.min(max, +ui(name).value) : auto, ' mm');
+      sliders[name].set(touched ? Math.min(max, +ui(name).value) : auto);
       return +ui(name).value;
     };
     state.die.dist = fit('die-dist', Math.max(50, Math.round(longest * 1.2)), Math.max(10, Math.round(longest * 0.25)), state.die.distTouched);
     for (const [name, st] of [['proj-gap', state.projView], ['ej-gap', state.ej]]) {
       st.gap = fit(name, Math.max(50, Math.round(longest)), Math.max(10, Math.round(longest * 0.08)), st.gapTouched);
     }
-    /* Erst nach dem Laden: js/part/partsource.js räumt seinen Schleier weg,
-       sobald onLoad zurückkehrt — die Rechnung setzt ihren danach. */
+    /* Erst nach dem Laden: das Laden nimmt seinen Schleier weg, sobald onLoad
+       zurückkehrt — die Rechnung setzt ihren danach. */
     setTimeout(runAnalysis, 0);
-  }
-
-  function setSlider(name, v, unit) {
-    ui(name).value = String(v);
-    ui(name + '-val').textContent = fmt(v, 0) + unit;
   }
 
   /* Die Sichtbarkeit hängt nur am Netz und wird einmal je Bauteil gerechnet;
      die Zuordnung danach bei jedem Achsenwechsel (Millisekunden). Kommt
-     währenddessen ein anderes Teil, bricht die laufende Rechnung ab und
-     beginnt für das neue von vorn. */
-  let rerun = false;
+     währenddessen ein anderes Teil, ist die laufende Rechnung überholt: der
+     Gastgeber beendet sie still, und die für das neue beginnt, sobald sie
+     aufgegeben hat (js/studio/job.js). Der jüngste Auftrag gewinnt. */
+  let latest = 0;
   async function runAnalysis() {
     const model = part.model;
     if (!model) return;
-    if (state.running) { rerun = true; host.jobs.cancel(); return; }
+    const my = ++latest;
     state.running = true; state.ready = false; state.cancelled = false;
     host.refreshActions();
     ui('analysis-state').textContent = 'rechnet … ' + fmt(model.faceCount, 0) + ' Dreiecke';
@@ -158,12 +154,13 @@ export function createEntformungTool(host) {
         samples: model.faceCount > 120000 ? 4 : 7, signal,
         onProgress: (p, label) => progress(p, 'Sichtbarkeit ' + label + ' … ' + Math.round(p * 100) + ' %')
       }),
-      onCancel: () => { state.cancelled = !rerun; }
+      onCancel: () => { state.cancelled = true; }
     }).catch(err => {
-      shell.toast('Die Analyse ist gescheitert: ' + err.message, { ms: 9000 });
+      if (my === latest) shell.toast('Die Analyse ist gescheitert: ' + err.message, { ms: 9000 });
       console.error(err);
       return null;
     });
+    if (my !== latest) return;                       // ein neueres Bauteil hat übernommen
     state.running = false;
     if (vis && part.model === model) {
       state.vis = vis;
@@ -171,11 +168,8 @@ export function createEntformungTool(host) {
       state.analysed = true;
       recompute();
     } else if (!state.analysed) ui('analysis-state').textContent = '';
-    const again = rerun || part.model !== model;
-    rerun = false;
-    state.ready = !again;
+    state.ready = true;
     host.refreshActions();
-    if (again) runAnalysis();
   }
 
   /* Anzeige ohne Analyse: graues Bauteil, leere Legenden und Listen. */
@@ -325,14 +319,14 @@ export function createEntformungTool(host) {
     const col = part.colors();
     if (!col || !model || !seg || mode === 'plain') return;      // grau: das Material des Gastgebers
     const arr = col.array;
-    const regions = [0, 1, 2, 3, 4, 5].map(l => C.linRgb(C.regionColor(l)));
-    const under = C.linRgb(mode === 'draft' ? C.undercutDark() : C.undercutColor());
+    const regions = [0, 1, 2, 3, 4, 5].map(l => linRgb(regionColor(l)));
+    const under = linRgb(mode === 'draft' ? undercutDark() : undercutColor());
     const grip = mode === 'grip' ? gripPainter() : null;
     for (let f = 0; f < model.faceCount; f++) {
       let rgb;
       if (grip) rgb = grip(f);
       else if (seg.label[f] === UNDERCUT) rgb = under;
-      else if (mode === 'draft') rgb = C.draftColor(draft[f], state.draftLimit);
+      else if (mode === 'draft') rgb = draftColor(draft[f], state.draftLimit);
       else rgb = regions[seg.label[f]];
       for (let e = 0; e < 3; e++) {
         arr[f * 9 + e * 3] = rgb[0];
@@ -344,12 +338,13 @@ export function createEntformungTool(host) {
   }
 
   /* Haftung: die Leiste `turbo` nach dem Haftmaß je Fläche, blau = schwach,
-     rot = stark (turboT); was nicht haftet (Außenwand, waagerecht, Schieber,
-     Hinterschnitt), trägt das Grau des Bauteils: dort gibt es keinen Wert. */
+     rot = stark (turboTrim, wie die Karten daneben); was nicht haftet
+     (Außenwand, waagerecht, Schieber, Hinterschnitt), trägt das Grau des
+     Bauteils: dort gibt es keinen Wert. */
   function gripPainter() {
-    const g = state.grip, none = C.linRgb(VIEW.noData), turbo = C.scaleFn('turbo');
+    const g = state.grip, none = linRgb(VIEW.noData), turbo = scaleFn('turbo');
     return f => (!g || !(g.intensity[f] > 0) || !(g.maxIntensity > 0) ? none
-      : turbo(turboT(g.intensity[f] / g.maxIntensity)));
+      : turbo(turboTrim(g.intensity[f] / g.maxIntensity)));
   }
 
   function updatePartingLine() {
@@ -382,8 +377,8 @@ export function createEntformungTool(host) {
     if (!seg || !model || shell.mode !== 'entformung' || state.mode !== 'regions') { shell.legend(''); return; }
     const A = model.totalArea || 1;
     const names = dirNames(seg.mainAxis, state.movSign);
-    const rows = names.map((d, i) => ({ name: d.name, color: C.regionColor(i), frac: seg.areaByLabel[i] / A }));
-    rows.push({ name: 'Hinterschnitt', color: C.undercutColor(), frac: seg.areaByLabel[6] / A });
+    const rows = names.map((d, i) => ({ name: d.name, color: regionColor(i), frac: seg.areaByLabel[i] / A }));
+    rows.push({ name: 'Hinterschnitt', color: undercutColor(), frac: seg.areaByLabel[6] / A });
     shell.legend('<div class="st-title">Flächenanteil</div>' + rows.filter(r => r.frac >= 0.0005).map(r =>
       '<div class="lg-row">' + chip(r.color) + '<span>' + r.name + '</span><span class="pct">' + pct(r.frac) + '</span></div>').join(''));
   }
@@ -393,7 +388,7 @@ export function createEntformungTool(host) {
     if (mode === 'grip') {
       return colorbar({
         title: 'Haftung',
-        stops: gradient(t => C.scale('turbo', turboT(t))),
+        stops: gradient(t => scale('turbo', turboTrim(t))),
         ticks: ['stark', '', '', '', 'schwach'],
         extra: chip(VIEW.noData) + 'haftet nicht'
       });
@@ -402,9 +397,9 @@ export function createEntformungTool(host) {
     const lim = state.draftLimit, top = 3 * lim;
     colorbar({
       title: 'Entformschräge',
-      stops: gradient(t => C.draftHex(top * t, lim)),
+      stops: gradient(t => draftHex(top * t, lim)),
       ticks: [top, 2 * lim, lim, 0].map(v => fmt(v) + '°'),
-      extra: chip(C.undercutDark()) + 'Hinterschnitt'
+      extra: chip(undercutDark()) + 'Hinterschnitt'
     });
   }
 
@@ -456,11 +451,11 @@ export function createEntformungTool(host) {
       const on = has && state.die.show[l] !== false;
       return '<label class="inline piece-row' + (has ? '' : ' off') + '">'
         + '<input type="checkbox" data-label="' + l + '"' + (on ? ' checked' : '') + (has ? '' : ' disabled') + '>'
-        + chip(C.regionColor(l)) + '<span class="name">' + names[l].name + '</span>'
+        + chip(regionColor(l)) + '<span class="name">' + names[l].name + '</span>'
         + '<span class="pct">' + (has ? pct(area / A) : 'nicht in der Form') + '</span></label>';
     }).join('');
     if (seg.areaByLabel[6] > 0) {
-      html += '<div class="legend-row">' + chip(C.undercutColor()) + '<span class="name">Hinterschnitt: bleibt am Ort</span>'
+      html += '<div class="legend-row">' + chip(undercutColor()) + '<span class="name">Hinterschnitt: bleibt am Ort</span>'
         + '<span class="pct">' + pct(seg.areaByLabel[6] / A) + '</span></div>';
     }
     el.innerHTML = html;
@@ -472,7 +467,7 @@ export function createEntformungTool(host) {
     if (!seg || !proj) return;
     const names = dirNames(seg.mainAxis, state.movSign);
     const cm2 = a => fmtFixed(a / 100, 1) + ' cm²';
-    const rows = proj.pieces.map(q => ({ label: chip(C.regionColor(q.label)) + ' ' + names[q.label].name, value: cm2(q.area) }));
+    const rows = proj.pieces.map(q => ({ label: chip(regionColor(q.label)) + ' ' + names[q.label].name, value: cm2(q.area) }));
     rows.push({ label: 'Bauteil auf die Trennebene', value: cm2(proj.total.area) });
     kpis(ui('proj-kpis'), rows);
   }
@@ -503,39 +498,38 @@ export function createEntformungTool(host) {
   for (const m of modes) {
     m.primary = gate;
     m.enter = () => applyMode();
-    m.leave = () => {};
   }
 
   /* ── Verdrahtung ─────────────────────────────────────────── */
-  /* slider() meldet seinen Anfangswert schon beim Einbau — das ist keine
-     Änderung. Gemeldet wird erst, wenn alles verdrahtet ist. */
-  let wired = false;
-  const changed = label => { if (wired) host.changed(label); };
+  /* Die Regler, die onPart und fromJSON nachstellen (slider: set ohne
+     Rückruf); ihr Einbau ist keine Änderung ({ fire: false }). */
+  const sliders = {};
+  const quiet = { fire: false };
 
   function mounted() {
     /* Bauteil */
-    edgesBox().addEventListener('change', e => { state.showEdges = e.target.checked; applyOpacity(); changed('Netzkanten'); });
+    edgesBox().addEventListener('change', e => { state.showEdges = e.target.checked; applyOpacity(); host.changed('Netzkanten'); });
 
     /* Entformung */
-    segButtons(ui('axis-seg'), v => { state.axis = v === 'auto' ? 'auto' : +v; recompute(); changed('Formöffnung'); });
-    segButtons(ui('mov-seg'), v => { state.movSign = +v === -1 ? -1 : 1; recompute(); changed('Bewegliche Seite'); });
-    segButtons(ui('mode-seg'), v => { setColouring(v); changed('Einfärbung'); });
-    slider(ui('draft-limit'), v => {
+    segButtons(ui('axis-seg'), v => { state.axis = v === 'auto' ? 'auto' : +v; recompute(); host.changed('Formöffnung'); });
+    segButtons(ui('mov-seg'), v => { state.movSign = +v === -1 ? -1 : 1; recompute(); host.changed('Bewegliche Seite'); });
+    segButtons(ui('mode-seg'), v => { setColouring(v); host.changed('Einfärbung'); });
+    sliders['draft-limit'] = slider(ui('draft-limit'), v => {
       state.draftLimit = v;
       if (state.seg) { updateSegKpis(); applyMode(); }
-      changed('Grenzwert');
-    }, v => fmt(v) + ' °');
-    ui('show-parting').addEventListener('change', e => { state.showParting = e.target.checked; applyOpacity(); changed('Trennlinie'); });
+      host.changed('Grenzwert');
+    }, v => fmt(v) + ' °', null, quiet);
+    ui('show-parting').addEventListener('change', e => { state.showParting = e.target.checked; applyOpacity(); host.changed('Trennlinie'); });
 
     /* Formteile */
-    slider(ui('die-dist'), v => {
+    sliders['die-dist'] = slider(ui('die-dist'), v => {
       state.die.dist = v;
       if (v !== +ui('die-dist').defaultValue) state.die.distTouched = true;
       dieView.setDistance(v);
-      changed('Abstand');
-    }, v => fmt(v, 0) + ' mm');
+      host.changed('Abstand');
+    }, v => fmt(v, 0) + ' mm', null, quiet);
     let skirtTimer = 0;
-    slider(ui('die-skirt'), v => {
+    sliders['die-skirt'] = slider(ui('die-skirt'), v => {
       state.die.skirt = v;
       clearTimeout(skirtTimer);
       /* Nachgebaut wird für die Zuordnung von JETZT. Kam inzwischen ein
@@ -549,9 +543,9 @@ export function createEntformungTool(host) {
         dieView.setPieces(state.pieces);
         applyMode();
       }, 120);
-      changed('Rand');
-    }, v => fmt(v, 0) + ' mm');
-    ui('die-part').addEventListener('change', e => { state.die.part = e.target.checked; applyOpacity(); changed('Bauteil dazwischen'); });
+      host.changed('Rand');
+    }, v => fmt(v, 0) + ' mm', null, quiet);
+    ui('die-part').addEventListener('change', e => { state.die.part = e.target.checked; applyOpacity(); host.changed('Bauteil dazwischen'); });
     ui('die-pieces').addEventListener('change', e => {
       const l = Number(e.target && e.target.dataset ? e.target.dataset.label : NaN);
       if (!Number.isInteger(l)) return;
@@ -560,20 +554,20 @@ export function createEntformungTool(host) {
     });
 
     /* Flächen */
-    slider(ui('proj-gap'), v => {
+    sliders['proj-gap'] = slider(ui('proj-gap'), v => {
       state.projView.gap = v;
       if (v !== +ui('proj-gap').defaultValue) state.projView.gapTouched = true;
       if (shell.mode === 'flaechen') dieView.setGap(v);
-      changed('Abstand');
-    }, v => fmt(v, 0) + ' mm');
-    slider(ui('proj-alpha'), v => {
+      host.changed('Abstand');
+    }, v => fmt(v, 0) + ' mm', null, quiet);
+    sliders['proj-alpha'] = slider(ui('proj-alpha'), v => {
       state.projView.alpha = v / 100;
       if (shell.mode === 'flaechen') dieView.setOverlayOpacity(state.projView.alpha);
-      changed('Deckkraft');
-    }, v => fmt(v, 0) + ' %');
+      host.changed('Deckkraft');
+    }, v => fmt(v, 0) + ' %', null, quiet);
 
     /* Haftung */
-    slider(ui('ej-mu'), v => {
+    sliders['ej-mu'] = slider(ui('ej-mu'), v => {
       state.ej.mu = v;
       if (state.seg) {
         state.grip = gripPerFace(part.model, state.vis, state.seg, { mu: v, movSign: state.movSign });
@@ -581,22 +575,21 @@ export function createEntformungTool(host) {
         updateGripKpis();
         applyMode();
       }
-      changed('Reibwert');
-    }, v => fmt(v, 2));
-    slider(ui('ej-gap'), v => {
+      host.changed('Reibwert');
+    }, v => fmt(v, 2), null, quiet);
+    sliders['ej-gap'] = slider(ui('ej-gap'), v => {
       state.ej.gap = v;
       if (v !== +ui('ej-gap').defaultValue) state.ej.gapTouched = true;
       if (shell.mode === 'haftung') dieView.setGap(v);
-      changed('Abstand');
-    }, v => fmt(v, 0) + ' mm');
-    slider(ui('ej-alpha'), v => {
+      host.changed('Abstand');
+    }, v => fmt(v, 0) + ' mm', null, quiet);
+    sliders['ej-alpha'] = slider(ui('ej-alpha'), v => {
       state.ej.alpha = v / 100;
       if (shell.mode === 'haftung') dieView.setOverlayOpacity(state.ej.alpha);
-      changed('Deckkraft');
-    }, v => fmt(v, 0) + ' %');
+      host.changed('Deckkraft');
+    }, v => fmt(v, 0) + ' %', null, quiet);
 
     wireHover();
-    wired = true;
   }
 
   function setColouring(v) {
@@ -606,28 +599,18 @@ export function createEntformungTool(host) {
     applyMode();
   }
 
-  /* Hover: Region, Entformschräge und Haftung des Dreiecks unter dem Zeiger.
-     Der Strahlentest läuft ohne Beschleunigungsstruktur über das ganze Netz —
-     gemessen 9,7 ms je Ereignis bei 197k Dreiecken, und pointermove feuert so
-     oft, wie der Zeiger Positionen meldet. Deshalb wird nur die zuletzt
-     gemeldete Position gemerkt und höchstens einmal je Bild ausgewertet. */
+  /* Hover: Region, Entformschräge und Haftung des Dreiecks unter dem Zeiger —
+     höchstens einmal je Bild (js/viewmath.js, hoverProbe: der Strahlentest
+     läuft ohne Beschleunigungsstruktur über das ganze Netz). */
   function wireHover() {
     const ray = new T.Raycaster();
     const canvas = view.renderer.domElement;
-    let hoverAt = null, hoverQueued = false, shown = false;
+    let shown = false;
     const clear = () => { if (shown) { shell.status(''); shown = false; } };
-    canvas.addEventListener('pointermove', ev => {
-      hoverAt = { x: ev.clientX, y: ev.clientY };
-      if (hoverQueued) return;
-      hoverQueued = true;
-      requestAnimationFrame(() => { hoverQueued = false; if (hoverAt) evalHover(hoverAt); });
-    });
-    canvas.addEventListener('pointerleave', () => { hoverAt = null; clear(); });
+    hoverProbe(canvas, evalHover, clear);
     function evalHover(at) {
       if (!state.seg || !part.mesh.visible) return clear();
-      const r = canvas.getBoundingClientRect();
-      const p = new T.Vector2(((at.x - r.left) / r.width) * 2 - 1, -((at.y - r.top) / r.height) * 2 + 1);
-      ray.setFromCamera(p, view.camera);
+      rayAt(ray, at, canvas, view.camera);
       const hit = ray.intersectObject(part.mesh, false)[0];
       if (!hit) return clear();
       const f = hit.faceIndex;
@@ -655,8 +638,7 @@ export function createEntformungTool(host) {
   });
 
   function fromJSON(obj) {
-    if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Datei der Entformungsanalyse.');
-    if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
+    checkFormat(obj, FORMAT, FORMAT_VERSION, 'Das ist keine Datei der Entformungsanalyse.');
     const num = (v, lo, hi, d) => (Number.isFinite(+v) && v !== null ? Math.max(lo, Math.min(hi, +v)) : d);
     state.axis = [0, 1, 2].includes(obj.axis) ? obj.axis : 'auto';
     state.movSign = obj.movSign === -1 ? -1 : 1;
@@ -668,23 +650,21 @@ export function createEntformungTool(host) {
     segButtonSet(ui('mode-seg'), obj.mode === 'draft' ? 'draft' : 'regions');
     ui('show-parting').checked = state.showParting;
     edgesBox().checked = state.showEdges;
-    ui('draft-limit').value = String(state.draftLimit);
-    ui('draft-limit-val').textContent = fmt(state.draftLimit) + ' °';
+    sliders['draft-limit'].set(state.draftLimit);
     const d = obj.die || {}, pv = obj.projView || {}, ej = obj.ej || {};
     state.die.skirt = num(d.skirt, 0, 500, state.die.skirt);
     state.die.part = d.part !== false;
     ui('die-part').checked = state.die.part;
-    setSlider('die-skirt', state.die.skirt, ' mm');
-    if (d.dist !== null && d.dist !== undefined) { state.die.dist = num(d.dist, 0, +ui('die-dist').max, state.die.dist); state.die.distTouched = true; setSlider('die-dist', state.die.dist, ' mm'); dieView.setDistance(state.die.dist); }
+    sliders['die-skirt'].set(state.die.skirt);
+    if (d.dist !== null && d.dist !== undefined) { state.die.dist = num(d.dist, 0, +ui('die-dist').max, state.die.dist); state.die.distTouched = true; sliders['die-dist'].set(state.die.dist); dieView.setDistance(state.die.dist); }
     state.projView.alpha = num(pv.alpha, 0.1, 1, state.projView.alpha);
-    setSlider('proj-alpha', Math.round(state.projView.alpha * 100), ' %');
-    if (pv.gap !== null && pv.gap !== undefined) { state.projView.gap = num(pv.gap, 0, +ui('proj-gap').max, state.projView.gap); state.projView.gapTouched = true; setSlider('proj-gap', state.projView.gap, ' mm'); }
+    sliders['proj-alpha'].set(Math.round(state.projView.alpha * 100));
+    if (pv.gap !== null && pv.gap !== undefined) { state.projView.gap = num(pv.gap, 0, +ui('proj-gap').max, state.projView.gap); state.projView.gapTouched = true; sliders['proj-gap'].set(state.projView.gap); }
     state.ej.mu = num(ej.mu, 0.1, 0.6, state.ej.mu);
-    ui('ej-mu').value = String(state.ej.mu);
-    ui('ej-mu-val').textContent = fmt(state.ej.mu, 2);
+    sliders['ej-mu'].set(state.ej.mu);
     state.ej.alpha = num(ej.alpha, 0.1, 1, state.ej.alpha);
-    setSlider('ej-alpha', Math.round(state.ej.alpha * 100), ' %');
-    if (ej.gap !== null && ej.gap !== undefined) { state.ej.gap = num(ej.gap, 0, +ui('ej-gap').max, state.ej.gap); state.ej.gapTouched = true; setSlider('ej-gap', state.ej.gap, ' mm'); }
+    sliders['ej-alpha'].set(Math.round(state.ej.alpha * 100));
+    if (ej.gap !== null && ej.gap !== undefined) { state.ej.gap = num(ej.gap, 0, +ui('ej-gap').max, state.ej.gap); state.ej.gapTouched = true; sliders['ej-gap'].set(state.ej.gap); }
     state.mode = obj.mode === 'draft' ? 'draft' : 'regions';
     ui('draft-block').hidden = state.mode !== 'draft';
     if (state.vis) recompute(); else applyMode();
@@ -699,17 +679,19 @@ export function createEntformungTool(host) {
     const m = part.model;
     if (m) {
       const longest = Math.max(...m.bounds.size);
-      setSlider('die-dist', Math.max(10, Math.round(longest * 0.25)), ' mm');
+      sliders['die-dist'].set(Math.max(10, Math.round(longest * 0.25)));
       state.die.dist = +ui('die-dist').value; dieView.setDistance(state.die.dist);
-      for (const [name, st] of [['proj-gap', state.projView], ['ej-gap', state.ej]]) { setSlider(name, Math.max(10, Math.round(longest * 0.08)), ' mm'); st.gap = +ui(name).value; }
+      for (const [name, st] of [['proj-gap', state.projView], ['ej-gap', state.ej]]) { sliders[name].set(Math.max(10, Math.round(longest * 0.08))); st.gap = +ui(name).value; }
       applyMode();
     }
   }
 
   const tool = {
     id: 'entformung', modes, startMode: 'entformung', settingsOnly: true,
-    mounted, onPart, onPartStart: () => { state.ready = false; }, toJSON, fromJSON, resetSettings, accepts: [FORMAT], exports: [],
-    state, group, dieView, recompute, runAnalysis
+    mounted, onPart, toJSON, fromJSON, resetSettings, accepts: [FORMAT], exports: [],
+    /* Eine laufende Rechnung gehört zum alten Bauteil: der Gastgeber hat sie
+       still beendet, ihr Lauf fasst nichts mehr an. */
+    onPartStart: () => { state.ready = false; state.running = false; latest++; }
   };
   tool.__viewer = {
     state, view, get partMesh() { return part.mesh; }, partingLines, edgeLines, dieView,

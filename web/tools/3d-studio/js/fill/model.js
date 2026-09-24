@@ -9,16 +9,21 @@
    Das Modul kennt kein Three.js; was daraus wird, rechnet
    js/fill/solve.js. */
 
-import { add, cross, norm, dot, rotate, rad, clamp } from '../runner/vec.js';
+import { add, normOr, clamp, wallFrame } from '../runner/vec.js';
 import { ELEMENT, onScheme } from '../part/colors.js';
+import { checkFormat, fileIds, filePoint, fileNumber } from '../studio/planio.js';
 
 export const FORMAT = 'dielogic-fuellung';
 export const FORMAT_VERSION = 1;
 
-/* Die Farbe des Anschnitts: der Anschnitt gehört zum Werkzeug (Sachfarbe
-   `die`, js/part/colors.js), wie in den Diagrammen der Auslegung. Sie
-   folgt dem Schema: der Wert wird bei einem Wechsel neu gelesen, bevor die
-   Werkzeuge neu malen (dieses Modul hört zuerst hin). */
+/** Die Farbe des Anschnitts: er gehört zum Werkzeug (Sachfarbe `die`,
+    js/part/colors.js), wie in den Diagrammen der Auslegung. Gelesen beim
+    Malen — so gilt immer das Schema von jetzt, gleich wer bei einem
+    Wechsel zuerst hinhört. */
+export const inletColor = () => ELEMENT.anschnitt;
+/** Nur noch für die Werkbank (js/werkbank/fill.js), bis sie auf die
+    Bausteine der Werkzeuge umzieht: dieselbe Farbe als Variable, die ein
+    Wechsel des Schemas nachzieht. */
 export let COLOR = ELEMENT.anschnitt;
 onScheme(() => { COLOR = ELEMENT.anschnitt; });
 export const DEFAULTS = { w: 30, h: 2 };
@@ -41,10 +46,7 @@ export function emptyPlan() {
 
 export const allItems = plan => Object.values(plan.items);
 
-const unit = v => {
-  const u = norm(v);
-  return (u[0] || u[1] || u[2]) ? u : [1, 0, 0];
-};
+const unit = v => normOr(v, [1, 0, 0]);
 
 /** Anschnitt anlegen: `normal` ist die nach AUSSEN gerichtete Normale. */
 export function addInlet(plan, pos, normal, params = {}) {
@@ -70,15 +72,11 @@ export function setRot(plan, id, deg) {
   if (it) it.rot = Math.max(-180, Math.min(180, Number(deg) || 0));
 }
 
-/** Dreibein: n nach außen, u quer (Breite), v längs (Höhe) — in der Wand. */
+/** Dreibein: n nach außen, u quer (Breite), v längs (Höhe) — in der Wand
+    (js/runner/vec.js, wallFrame: v ist dort d, u ist r). */
 export function frameOf(item) {
-  const n = unit(item.n);
-  const ref = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1];
-  let v = norm(cross(cross(n, ref), n));
-  const a = rad(item.rot || 0);
-  if (a) v = rotate(v, n, a);
-  const u = norm(cross(n, v));
-  return { o: item.pos, n, u, v };
+  const { n, d, r } = wallFrame(unit(item.n), item.rot);
+  return { o: item.pos, n, u: r, v: d };
 }
 
 export const areaOf = item => item.w * item.h;
@@ -101,7 +99,8 @@ export function shares(plan) {
   return out;
 }
 
-/** Die vier Ecken des Rechtecks in der Welt (für die Anzeige). */
+/** Die vier Ecken des Rechtecks in der Welt — die Tests messen daran das
+    Dreibein; den Körper im Bild baut js/fill/geom.js (inletBody). */
 export function corners(item) {
   const f = frameOf(item);
   const hw = item.w / 2, hh = item.h / 2;
@@ -122,59 +121,16 @@ export function toJSON(plan) {
   };
 }
 
-/* Kennungen aus einer Datei: vorn ein Buchstabe, dann Buchstaben, Ziffern,
-   _ oder -, höchstens 32 Zeichen. Sie stehen im Auswahlfeld und in der
-   Liste — eine Datei mit anderen stammt nicht von hier und wird abgelehnt.
-   Wer keine Kennung hat (oder eine, die schon vergeben ist), bekommt eine
-   neue, die keiner anderen gleicht: sonst überschrieben sich die Anschnitte. */
-const ID = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
-export function fileIds(list, prefix) {
-  const ids = [], taken = new Set();
-  let seq = 0;
-  list.forEach((raw, i) => {
-    if (!raw || typeof raw !== 'object') throw new Error('Anschnitt ' + (i + 1) + ' der Datei ist unlesbar.');
-    const id = raw.id !== undefined && raw.id !== null && raw.id !== '' ? String(raw.id) : null;
-    if (id !== null && !ID.test(id)) {
-      throw new Error('Anschnitt ' + (i + 1) + ' der Datei hat keine gültige Kennung: erlaubt sind Buchstaben, Ziffern, _ und -, vorn ein Buchstabe, höchstens 32 Zeichen.');
-    }
-    ids.push(id !== null && !taken.has(id) ? id : null);
-    if (id === null) return;
-    taken.add(id);
-    const num = +id.replace(/\D/g, '');
-    if (Number.isSafeInteger(num)) seq = Math.max(seq, num);
-  });
-  for (let i = 0; i < ids.length; i++) {
-    if (ids[i]) continue;
-    let id;
-    do id = prefix + (++seq); while (taken.has(id));
-    taken.add(id);
-    ids[i] = id;
-  }
-  return { ids, seq };
-}
-
-/** Ein Punkt aus der Datei: drei Zahlen — sonst ist die Datei beschädigt. */
-function filePoint(v, what) {
-  const p = Array.isArray(v) && v.length >= 3 ? v.slice(0, 3).map(Number) : null;
-  if (!p || !p.every(Number.isFinite)) throw new Error(what + ': Die Lage fehlt oder ist keine Zahl.');
-  return p;
-}
-
-/** Eine Zahl aus der Datei in den Grenzen ihres Feldes — oder die Vorgabe. */
-const fileNumber = (v, meta, fallback) => {
-  const x = v === null || v === '' || v === undefined ? NaN : Number(v);
-  return Number.isFinite(x) ? clamp(x, meta.min, meta.max) : fallback;
-};
-
+/* Kennungen, Punkte und Zahlen aus der Datei prüft js/studio/planio.js —
+   wie bei den anderen Plänen. */
 export function fromJSON(obj) {
-  if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Fülldatei (Kennung „' + FORMAT + '" fehlt).');
-  if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
+  checkFormat(obj, FORMAT, FORMAT_VERSION, 'Das ist keine Fülldatei (Kennung „' + FORMAT + '" fehlt).');
   const plan = emptyPlan();
   /* Werte in den Grenzen der Felder: der Regler von α reicht von 0 bis 1,
      ein Anteil von 1 bis 100 % — mehr soll auch aus einer Datei nicht kommen. */
   plan.alpha = fileNumber(obj.alpha, { min: ALPHA_RANGE[0], max: ALPHA_RANGE[1] }, plan.alpha);
   const list = Array.isArray(obj.items) ? obj.items : [];
-  const { ids, seq } = fileIds(list, 'a');
+  const { ids, seq } = fileIds(list, 'a', 'Anschnitt');
   list.forEach((raw, i) => {
     const id = ids[i];
     plan.items[id] = {
@@ -187,5 +143,3 @@ export function fromJSON(obj) {
   plan.seq = seq;
   return plan;
 }
-
-export { dot };

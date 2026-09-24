@@ -11,26 +11,28 @@
    SUCHGRENZE gehört zur Rechnung: weiter als bis dorthin wird nicht gesucht.
 
    Das Werkzeug hat ZWEI Bauteile und verzichtet deshalb auf das eine des
-   Gastgebers (createHost({ part: false })): die beiden Quellen stehen als
-   Chips „A" und „B" in der Kopfzeile, jeder mit derselben Klappe wie der
-   Bauteil-Chip der anderen Werkzeuge (shell.header.addPartChips); ein
-   abgelegtes Netz fragt, ob es A oder B sein soll.
+   Gastgebers (part: false): die beiden Quellen stehen als Chips „A" und
+   „B" in der Kopfzeile, jeder mit derselben Klappe wie der Bauteil-Chip der
+   anderen Werkzeuge (shell.header.addPartChips); ein abgelegtes Netz
+   fragt, ob es A oder B sein soll (dropPart).
    Die Modi: Abstand (Rechnung, Kennzahlen) · Skala (Grenzen, Einfärben).
 
-   Grobe Netze werden vor der Messung verfeinert. Eine ebene Wand aus zwei
-   Dreiecken hat vier Eckpunkte; zwischen ihnen würde linear interpoliert,
-   und der wahre Abstandsverlauf ginge verloren. */
+   Gemessen und gefärbt wird das Netz, wie es geladen wurde: an seinen
+   Eckpunkten, zwischen ihnen linear. Verfeinert wird hier nichts — wie fein
+   ein Bauteil vernetzt ist, entscheidet der Anwender beim Export (eine
+   ebene Wand aus zwei Dreiecken hat nur ihre vier Ecken). Bis zum 23.09.
+   teilte die Seite grobe Dreiecke vorher selbst. */
 
 import * as T from 'three';
 import { mountPartSource } from '../part/partsource.js';
-import { buildModel } from '../part/model.js';
-import { refine } from '../mesh.js';
 import { buildLocator, distanceToMesh, distanceStats, insideFraction } from '../part/distance.js';
 import { facts, segButtons, segButtonSet, slider, numberInput, clampNote, colorbar, gradient } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit, fmtFixed } from '../studio/format.js';
 import { kpis } from '../studio/rows.js';
-import * as C from '../part/colors.js';
-import { onScheme, VIEW } from '../part/colors.js';
+import { checkFormat } from '../studio/planio.js';
+import { surfaceMaterial } from '../ui/common.js';
+import { rayAt, hoverProbe } from '../viewmath.js';
+import { onScheme, VIEW, scale, scaleFn, linRgb, mixHex, turboTrim } from '../part/colors.js';
 import { MODES, DARSTELLUNG, CHIP_HINT } from './panel.js';
 
 export const FORMAT = 'dielogic-abstand';
@@ -39,12 +41,11 @@ export const FORMAT_VERSION = 1;
 const RUN = 'Abstand berechnen';
 const REACH = [0.01, 1e5];
 /* Der kleinste Abstand der beiden Skalengrenzen — so fein, wie auch
-   „Grenzen aus den Messwerten" rundet. */
+   „Grenzen aus den Messwerten" rundet. Gefärbt wird auf der Farbleiste
+   `turbo`, wie in der Wandstärkenanalyse und in jedem Farbschema dieselbe:
+   nah ist rot (kritisch), fern blau — das Stück von sattem Blau bis sattem
+   Rot (turboTrim). */
 const SCALE_GAP = 0.1;
-/* Die Farbleiste `turbo`, wie in der Wandstärkenanalyse und in jedem
-   Farbschema dieselbe: nah ist rot (kritisch), fern blau; benutzt wird das
-   Stück von sattem Blau bis sattem Rot. */
-const turboT = t => 0.08 + 0.84 * Math.max(0, Math.min(1, t));
 
 export function createAbstandTool(host) {
   const { shell, view } = host;
@@ -69,10 +70,9 @@ export function createAbstandTool(host) {
      ungefärbt auseinanderzuhalten sind. */
   const group = new T.Group();
   view.scene.add(group);
-  const plainOf = key => (key === 'a' ? VIEW.noData : C.mixHex(VIEW.noData, 'text', 0.25));
+  const plainOf = key => (key === 'a' ? VIEW.noData : mixHex(VIEW.noData, 'text', 0.25));
   function makeMesh() {
-    const mat = new T.MeshStandardMaterial({ vertexColors: true, color: 0xffffff, roughness: 0.6, metalness: 0.08, flatShading: true, side: T.DoubleSide });
-    const m = new T.Mesh(new T.BufferGeometry(), mat);
+    const m = new T.Mesh(new T.BufferGeometry(), surfaceMaterial(0xffffff, { vertexColors: true, roughness: 0.6, metalness: 0.08 }));
     group.add(m);
     return m;
   }
@@ -83,14 +83,15 @@ export function createAbstandTool(host) {
   /* ── Dateien laden ───────────────────────────────────────── */
   const sources = {};
   /* Die Rechnung gehört zu dem Paar, für das sie begann: eine neue Datei
-     beendet sie still (onStart), ihr Ergebnis zählt dann nicht mehr. */
-  let epoch = 0, silent = false;
+     überholt sie (sie endet still, js/studio/job.js), und ihr Lauf fasst
+     danach nichts mehr an — der jüngste Auftrag gewinnt. */
+  let latest = 0;
   /* Was der Chip zuletzt nannte — scheitert ein Laden, bleibt das vorige
      Netz, und Chip und Name kommen darauf zurück. */
   const shown = { a: null, b: null };
   function mountSource(key, startId) {
     sources[key] = mountPartSource({
-      busy: shell.busyEl, viewport: null, suffix: '-' + key, filter: () => true, start: startId,
+      fields: chips[key].fields, setBusy: shell.loading, filter: () => true, start: startId,
       /* Die Meldung steht auch in der Klappe — gesehen wird sie im Toast. */
       onError: text => {
         shell.toast(text, { ms: 8000 });
@@ -100,27 +101,19 @@ export function createAbstandTool(host) {
       },
       onStart: name => {
         state.ready = false; state[key].name = name; chips[key].set(name + ' …');
-        /* Eine laufende Rechnung misst das alte Paar: still beenden. Sie lief
-           sonst zu Ende und sperrte so lange den Knopf für das neue. */
-        epoch++;
-        if (state.running) { silent = true; host.jobs.cancel(); shell.setNote(''); }
+        /* Eine laufende Rechnung misst das alte Paar: sie ist überholt. Sie
+           lief sonst zu Ende und sperrte so lange den Knopf für das neue. */
+        latest++;
+        if (state.running) { host.jobs.supersede(); shell.setNote(''); }
         state.running = false;
       },
-      onLoad: model => {
-        /* Der Chip nennt das Teil wie die Auswahl (Beispielteil) oder beim
-           Dateinamen, und trägt ein ⚠, wenn partsource.js etwas am Netz fand. */
-        const sel = document.getElementById('demo-select-' + key);
-        const opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
-        const warn = document.getElementById('model-warn-' + key);
-        shown[key] = { name: state[key].name, label: opt ? opt.textContent : state[key].name, warn: warn ? warn.textContent : '' };
-        chips[key].set(shown[key].label, shown[key].warn);
-        /* Fein genug für eine punktweise Karte — nicht feiner als nötig: der
-           Abstand ändert sich über eine Fläche langsam, und jeder zusätzliche
-           Punkt kostet eine vollständige Suche. Rund achtzig Schritte über die
-           Diagonale reichen für ein Bild und bleiben in Sekunden rechenbar. */
-        const fine = refine(model.tris, model.bounds.diag / 80, 150000);
+      onLoad: (model, name, info) => {
+        /* Der Chip nennt das Teil (Beispielteil oder Dateiname) und trägt ein
+           ⚠, wenn das Laden etwas am Netz fand. */
+        shown[key] = { name, label: name, warn: info.warning };
+        chips[key].set(name, info.warning);
         const s = state[key];
-        s.model = fine.length !== model.tris.length ? buildModel(fine) : model;
+        s.model = model;
         /* Alles, was aus dem PAAR folgt, gilt nicht mehr — auch auf der
            anderen Seite: A war gegen das alte B gemessen. Vorher stand A nach
            einem neuen B voll eingefärbt da, mit Abständen zum alten, dazu
@@ -154,13 +147,14 @@ export function createAbstandTool(host) {
     if (!box.isEmpty()) shell.fit(box);
   }
 
-  /* Ein abgelegtes Netz: A oder B? */
+  /* Ein abgelegtes Netz: A oder B? Das Beispielteil der Klappe gilt erst
+     als abgewählt, wenn die Datei geladen ist (loadFile). */
   function dropPart(tris, name, note) {
     shell.banner({
       text: '„' + name + '" laden als …',
       actions: ['a', 'b'].map(key => ({
         label: 'Datei ' + key.toUpperCase(), primary: key === 'a',
-        onClick: () => { document.getElementById('demo-select-' + key).selectedIndex = -1; sources[key].load(tris, name, note); }
+        onClick: () => { sources[key].loadFile(tris, name, note); }
       }))
     });
   }
@@ -172,7 +166,7 @@ export function createAbstandTool(host) {
     host.refreshActions();
     const t0 = performance.now();
     /* Gerechnet wird mit dem Paar und der Suchgrenze von JETZT. */
-    const A = state.a.model, B = state.b.model, reach = state.reach, my = epoch;
+    const A = state.a.model, B = state.b.model, reach = state.reach, my = ++latest;
     const result = await host.jobs.run({
       label: RUN, note: 'Abstand rechnen …',
       run: async (signal, progress) => {
@@ -195,14 +189,13 @@ export function createAbstandTool(host) {
         }
         return out;
       },
-      onCancel: () => { if (!silent) state.cancelled = true; }
+      onCancel: () => { state.cancelled = true; }
     }).catch(err => {
-      if (my === epoch) shell.toast('Der Abstand konnte nicht gerechnet werden: ' + err.message, { ms: 9000 });
+      if (my === latest) shell.toast('Der Abstand konnte nicht gerechnet werden: ' + err.message, { ms: 9000 });
       console.error(err);
       return null;
     });
-    silent = false;
-    if (my !== epoch) return;                        // eine neue Datei: onStart hat aufgeräumt
+    if (my !== latest) return;                       // eine neue Datei: onStart hat aufgeräumt
     state.running = false;
     if (result && state.a.model === A && state.b.model === B) {
       for (const key of ['a', 'b']) Object.assign(state[key], result[key]);
@@ -270,16 +263,16 @@ export function createAbstandTool(host) {
       const arr = col.array;
       const wantColor = state.color === 'both' || state.color === key;
       if (!wantColor || !s.dist) {
-        const g = C.linRgb(plainOf(key));
+        const g = linRgb(plainOf(key));
         for (let i = 0; i < arr.length; i += 3) { arr[i] = g[0]; arr[i + 1] = g[1]; arr[i + 2] = g[2]; }
       } else {
         const { min, max } = state.scale;
         const { index, faceCount } = s.model;
-        const turbo = C.scaleFn('turbo');
+        const turbo = scaleFn('turbo');
         for (let f = 0; f < faceCount; f++) {
           for (let e = 0; e < 3; e++) {
             const v = s.dist[index[f * 3 + e]];
-            const rgb = turbo(turboT(1 - (max > min ? (v - min) / (max - min) : 0)));
+            const rgb = turbo(turboTrim(1 - (max > min ? (v - min) / (max - min) : 0)));
             arr[f * 9 + e * 3] = rgb[0]; arr[f * 9 + e * 3 + 1] = rgb[1]; arr[f * 9 + e * 3 + 2] = rgb[2];
           }
         }
@@ -297,7 +290,7 @@ export function createAbstandTool(host) {
     const { min, max } = state.scale;
     colorbar({
       title: 'Abstand A ↔ B',
-      stops: gradient(t => C.scale('turbo', turboT(1 - t))),
+      stops: gradient(t => scale('turbo', turboTrim(1 - t))),
       ticks: [max, min + 0.75 * (max - min), min + 0.5 * (max - min), min + 0.25 * (max - min), min]
         .map((v, i) => (i === 0 ? '≥ ' : i === 4 ? '≤ ' : '') + fmtFixed(v, 1)),
       extra: 'mm · nah rot, fern blau'
@@ -344,13 +337,11 @@ export function createAbstandTool(host) {
   }
 
   /* ── Modi ────────────────────────────────────────────────── */
-  const modes = MODES.map(m => ({ ...m }));
-  for (const m of modes) { m.primary = primary; m.enter = () => applyColors(); m.leave = () => {}; }
+  const modes = MODES.map(m => ({ ...m, primary, enter: () => applyColors() }));
 
   /* ── Verdrahtung ─────────────────────────────────────────── */
-  let wired = false;
-  const changed = label => { if (wired) host.changed(label); };
   const els = {};
+  let opacitySlider = null;
 
   let chips = null;
   function mounted() {
@@ -360,9 +351,8 @@ export function createAbstandTool(host) {
     ], CHIP_HINT);
     mountSource('a', 'oil_pan');
     mountSource('b', 'coolfix');
-    host.dropPart = dropPart;
 
-    numberInput(ui('reach'), v => { state.reach = v; markStale(); changed('Suchgrenze'); return v; }, { min: REACH[0], max: REACH[1], unit: 'mm' });
+    numberInput(ui('reach'), v => { state.reach = v; markStale(); host.changed('Suchgrenze'); return v; }, { min: REACH[0], max: REACH[1], unit: 'mm' });
     /* Skalengrenzen färben nur um — sie rechnen nichts neu. Sie bleiben in
        ihrer Reihenfolge: wer das Minimum über das Maximum setzt, schiebt das
        Maximum mit (und umgekehrt), und die Zeile des geschobenen Feldes sagt
@@ -393,16 +383,15 @@ export function createAbstandTool(host) {
       if (scaleFromStats()) applyColors();
       else shell.toast('Zuerst den Abstand berechnen, dann gibt es Messwerte.');
     });
-    segButtons(ui('color-seg'), v => { state.color = v; applyColors(); changed('Einfärben'); });
+    segButtons(ui('color-seg'), v => { state.color = v; applyColors(); host.changed('Einfärben'); });
 
     const pop = shell.darstellung(DARSTELLUNG);
     const q = name => pop.querySelector('[data-ui="' + name + '"]');
-    els.showA = q('show-a'); els.showB = q('show-b'); els.opacity = q('opacity');
-    els.showA.addEventListener('change', () => { state.showA = els.showA.checked; applyColors(); changed('Datei A zeigen'); });
-    els.showB.addEventListener('change', () => { state.showB = els.showB.checked; applyColors(); changed('Datei B zeigen'); });
-    slider(els.opacity, v => { setOpacity(v / 100); changed('Deckkraft'); }, v => v + ' %');
+    els.showA = q('show-a'); els.showB = q('show-b');
+    els.showA.addEventListener('change', () => { state.showA = els.showA.checked; applyColors(); host.changed('Datei A zeigen'); });
+    els.showB.addEventListener('change', () => { state.showB = els.showB.checked; applyColors(); host.changed('Datei B zeigen'); });
+    opacitySlider = slider(q('opacity'), v => { setOpacity(v / 100); host.changed('Deckkraft'); }, v => v + ' %', null, { fire: false });
     wireHover();
-    wired = true;
   }
 
   function setOpacity(o) {
@@ -416,26 +405,18 @@ export function createAbstandTool(host) {
     view.invalidate();
   }
 
-  /* Hover: gemessener Abstand am Dreieck unter dem Zeiger. Der Strahlentest
-     läuft ohne Beschleunigungsstruktur über ZWEI Netze — deshalb wird nur die
-     letzte Zeigerposition gemerkt und höchstens einmal je Bild ausgewertet. */
+  /* Hover: gemessener Abstand am Dreieck unter dem Zeiger — höchstens
+     einmal je Bild (js/viewmath.js, hoverProbe: der Strahlentest läuft ohne
+     Beschleunigungsstruktur über ZWEI Netze). */
   function wireHover() {
     const ray = new T.Raycaster();
     const canvas = view.renderer.domElement;
-    let hoverAt = null, hoverQueued = false, shown = false;
+    let shown = false;
     const clear = () => { if (shown) { shell.status(''); shown = false; } };
-    canvas.addEventListener('pointermove', ev => {
-      hoverAt = { x: ev.clientX, y: ev.clientY };
-      if (hoverQueued) return;
-      hoverQueued = true;
-      requestAnimationFrame(() => { hoverQueued = false; if (hoverAt) evalHover(hoverAt); });
-    });
-    canvas.addEventListener('pointerleave', () => { hoverAt = null; clear(); });
+    hoverProbe(canvas, evalHover, clear);
     function evalHover(at) {
       if (!state.analysed) return clear();
-      const r = canvas.getBoundingClientRect();
-      const p = new T.Vector2(((at.x - r.left) / r.width) * 2 - 1, -((at.y - r.top) / r.height) * 2 + 1);
-      ray.setFromCamera(p, view.camera);
+      rayAt(ray, at, canvas, view.camera);
       const hit = ray.intersectObjects([meshA, meshB].filter(m => m.visible), false)[0];
       if (!hit) return clear();
       const key = hit.object === meshA ? 'a' : 'b';
@@ -452,8 +433,7 @@ export function createAbstandTool(host) {
   /* ── Einstellungen: merken, laden, zurücksetzen ──────────── */
   const toJSON = () => ({ format: FORMAT, version: FORMAT_VERSION, reach: state.reach, color: state.color, opacity: state.opacity, showA: state.showA, showB: state.showB });
   function fromJSON(obj) {
-    if (!obj || obj.format !== FORMAT) throw new Error('Das ist keine Datei der Abstandsanalyse.');
-    if (!(obj.version <= FORMAT_VERSION)) throw new Error('Die Datei stammt aus einer neueren Fassung (Version ' + obj.version + ').');
+    checkFormat(obj, FORMAT, FORMAT_VERSION, 'Das ist keine Datei der Abstandsanalyse.');
     if (Number.isFinite(obj.reach)) {
       const r = Math.max(REACH[0], Math.min(REACH[1], obj.reach));
       if (Math.abs(r - state.reach) > 1e-9) { state.reach = r; markStale(); }
@@ -464,8 +444,7 @@ export function createAbstandTool(host) {
     state.showA = obj.showA !== false; state.showB = obj.showB !== false;
     els.showA.checked = state.showA; els.showB.checked = state.showB;
     const o = Number.isFinite(obj.opacity) ? Math.max(0.15, Math.min(1, obj.opacity)) : 1;
-    els.opacity.value = String(Math.round(o * 100));
-    els.opacity.parentNode.querySelector('.val').textContent = els.opacity.value + ' %';
+    opacitySlider.set(Math.round(o * 100));
     setOpacity(o);
     applyColors();
     host.refreshActions();
@@ -477,9 +456,8 @@ export function createAbstandTool(host) {
 
   const tool = {
     id: 'abstand', modes, startMode: 'abstand', settingsOnly: true,
-    mounted, start, toJSON, fromJSON, resetSettings, accepts: [FORMAT], exports: [],
-    docName: () => (state.a.name || 'a') + '-' + (state.b.name || 'b'),
-    state, group
+    mounted, start, toJSON, fromJSON, resetSettings, accepts: [FORMAT], exports: [], dropPart,
+    docName: () => (state.a.name || 'a') + '-' + (state.b.name || 'b')
   };
   tool.__viewer = { state, view, meshA, meshB, runDistance, applyColors, shell, host, tool };
   return tool;

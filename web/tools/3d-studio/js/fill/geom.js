@@ -5,7 +5,7 @@
 
 import { frameOf, allItems } from './model.js';
 
-export const INLET_DEPTH = 3;   // mm nach außen und nach innen
+const INLET_DEPTH = 3;          // mm nach außen und nach innen
 
 export function inletBody(item, depth = INLET_DEPTH) {
   const f = frameOf(item);

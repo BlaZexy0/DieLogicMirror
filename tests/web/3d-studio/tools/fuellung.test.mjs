@@ -9,22 +9,12 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mountPage, wait, kpiText } from './fixture.mjs';
+import { mountPage, wait, kpiText, interact, same, seg } from './fixture.mjs';
 
-/* Felder und Ergebnisse NIE mit assert.equal vergleichen: schlägt der
-   Vergleich fehl, baut Node einen Textvergleich beider Objekte — bei
-   Millionen Rasterwerten frisst das den Arbeitsspeicher. Deshalb same(). */
-const same = (a, b, msg) => assert.ok(a === b, msg);
-
-let P, T3, M, cam, canvas, b, c, a1, a2;
-const zeiger = (t, x, y, extra = {}) => canvas.dispatch(t, { button: 0, clientX: x, clientY: y, stopPropagation() {}, preventDefault() {}, ...extra });
-const klick = (x, y) => { zeiger('pointerdown', x, y); zeiger('pointerup', x, y); };
-const px = p => { const q = new T3.Vector3(...p).project(cam); return [(q.x + 1) / 2 * 800, (1 - q.y) / 2 * 600]; };
-const schauAuf = (from, to) => { cam.position.set(...from); cam.up.set(0, 1, 0); cam.lookAt(...to); cam.updateMatrixWorld(true); P.v.view.scene.updateMatrixWorld(true); };
-const chip = () => P.doc.querySelector('[data-chip="anschnitt"]');
-const taste = (key, extra = {}) => P.doc.dispatch('keydown', { key, target: canvas, preventDefault() {}, ...extra });
+/* Felder und Ergebnisse NIE mit assert.equal vergleichen (same, ./fixture.mjs). */
+let P, T3, M, b, c, a1, a2, zeiger, klick, px, schauAuf, chipOf, taste, gruppe;
+const chip = () => chipOf('anschnitt');
 const items = () => Object.values(P.v.state.plan.items);
-const gruppe = name => P.ui('sel-groups').querySelector('[data-group-tab="' + name + '"]').dispatch('click');
 /* Fertig heißt: es läuft nichts, und das Ergebnis passt zum Plan. */
 const settled = () => wait(() => { const s = P.v.state; return !s.running && s.ready && !!s.result && !s.stale; }, 1600);
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -33,8 +23,7 @@ before(async () => {
   P = await mountPage('fuellung.html', 'js/studio/pages/fuellung.js');
   T3 = await import('three');
   M = await import('../../../../web/tools/3d-studio/js/fill/model.js');
-  cam = P.v.view.camera;
-  canvas = P.v.view.renderer.domElement;
+  ({ zeiger, klick, px, schauAuf, chip: chipOf, taste, gruppe } = interact(P, { T3 }));
   b = P.host.part.model.bounds;
   c = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
 });
@@ -190,7 +179,7 @@ test('Ergebnis besitzt sein Bild: Füllkörper, Füllgrad, letzte Stellen — un
   assert.equal(s.q, 1);
   await pause(40);
   assert.notEqual(v.bodyMesh.geometry.getAttribute('position').array.length, count50, 'der Körper folgt dem Regler');
-  ui('show-seg').querySelectorAll('button').find(x => x.dataset.value === 'farbe').dispatch('click');
+  seg(ui('show-seg'), 'farbe').dispatch('click');
   assert.ok(!v.bodyMesh.visible);
   same(v.partMesh.material, host.part.colorMat, 'das Bauteil trägt seine Punktfarben');
   assert.ok(doc.getElementById('colorbar').classList.contains('on'), 'die Skala steht');
@@ -216,9 +205,9 @@ test('Ergebnis besitzt sein Bild: Füllkörper, Füllgrad, letzte Stellen — un
   assert.ok(v.inletMesh.visible && v.inletMesh.geometry.getAttribute('position').count > 0, 'die Anschnitte sind der Plan und bleiben');
   shell.setMode('ergebnis');
   same(v.partMesh.material, host.part.colorMat);
-  ui('show-seg').querySelectorAll('button').find(x => x.dataset.value === 'grau').dispatch('click');
+  seg(ui('show-seg'), 'grau').dispatch('click');
   assert.ok(!doc.getElementById('colorbar').classList.contains('on'), '„Bauteil": nur das Bauteil und die Anschnitte');
-  ui('show-seg').querySelectorAll('button').find(x => x.dataset.value === 'farbe').dispatch('click');
+  seg(ui('show-seg'), 'farbe').dispatch('click');
 });
 
 test('Nach dem ersten Lauf rechnet jede Änderung von selbst nach: zweiter Anschnitt, Anteil, α', async () => {

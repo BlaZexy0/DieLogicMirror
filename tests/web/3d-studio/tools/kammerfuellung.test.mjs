@@ -19,14 +19,11 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { mountPage, wait, kpiText, read, ROOT } from './fixture.mjs';
+import { mountPage, wait, kpiText, read, ROOT, same, seg, set } from './fixture.mjs';
 
 const require = createRequire(import.meta.url);
 
-/* Ergebnisse tragen große Felder — nie mit assert.equal vergleichen. */
-const same = (a, b, msg) => assert.ok(a === b, msg);
-const seg = (el, value) => el.querySelectorAll('button').find(b => b.dataset.value === value);
-const set = (el, val) => { el.value = val; el.dispatch('change'); };
+/* Ergebnisse tragen große Felder — nie mit assert.equal vergleichen, deshalb same(). */
 const cells = el => el.querySelectorAll('tbody tr').map(tr => tr.querySelectorAll('td').map(td => td.textContent));
 let P;
 

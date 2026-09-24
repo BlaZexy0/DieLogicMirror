@@ -21,12 +21,15 @@
 
 import * as G from './graph.js';
 import { scale } from '../part/colors.js';
+import { fmt as fmtDe } from '../studio/format.js';
 
 /* Geschwindigkeit: ruhig und weit (Blau) → schnell und eng (Rot), auf der
    Farbleiste `speed` (js/part/colors.js), in jedem Farbschema dieselbe. */
 export const speedColor = (v, vMax) => scale('speed', v / Math.max(vMax, 1e-6));
 
-const fmt = (v, n = 1) => v.toLocaleString('de-DE', { maximumFractionDigits: n });
+/* Zahlen wie überall im Studio (js/studio/format.js) — hier mit einer
+   Nachkommastelle, wenn keine andere verlangt ist. */
+const fmt = (v, n = 1) => fmtDe(v, n);
 
 /**
  * Schema zeichnen.

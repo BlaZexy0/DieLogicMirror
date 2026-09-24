@@ -8,25 +8,18 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mountPage, kpiText } from './fixture.mjs';
+import { mountPage, kpiText, interact } from './fixture.mjs';
 
-let P, T3, G, it, cam, canvas, b, c;
-const zeiger = (t, x, y, extra = {}) => canvas.dispatch(t, { button: 0, clientX: x, clientY: y, stopPropagation() {}, preventDefault() {}, ...extra });
-const klick = (x, y) => { zeiger('pointerdown', x, y); zeiger('pointerup', x, y); };
-const px = p => { const q = new T3.Vector3(...p).project(cam); return [(q.x + 1) / 2 * 800, (1 - q.y) / 2 * 600]; };
-const schauAuf = (from, to) => { cam.position.set(...from); cam.up.set(0, 1, 0); cam.lookAt(...to); cam.updateMatrixWorld(true); P.v.view.scene.updateMatrixWorld(true); };
-const chip = id => P.doc.querySelector('[data-chip="' + id + '"]');
+let P, T3, G, it, b, c, zeiger, klick, px, schauAuf, chip, taste;
 const param = k => P.ui('sel-params').querySelector('[data-param="' + k + '"]');
 const griff = id => P.v.handles.group.children.find(m => m.userData && m.userData.id === id);
-const taste = (key, extra = {}) => P.doc.dispatch('keydown', { key, target: canvas, preventDefault() {}, ...extra });
 const anzahl = () => Object.keys(P.v.state.plan.items).length;
 
 before(async () => {
   P = await mountPage('ueberlauf.html', 'js/studio/pages/ueberlauf.js');
   T3 = await import('three');
   G = await import('../../../../web/tools/3d-studio/js/vents/model.js');
-  cam = P.v.view.camera;
-  canvas = P.v.view.renderer.domElement;
+  ({ zeiger, klick, px, schauAuf, chip, taste } = interact(P, { T3 }));
   b = P.host.part.model.bounds;
   c = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
 });

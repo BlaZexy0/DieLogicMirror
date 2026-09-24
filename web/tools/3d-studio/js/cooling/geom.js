@@ -8,25 +8,17 @@
    Bohrung, ihr Mittelpunkt liegt r weiter außen, der Zylinder beginnt
    dort und endet bei `len` von der Spitze. */
 
-import { sub, norm, cross, addScaled } from '../runner/vec.js';
+import { sub, addScaled } from '../runner/vec.js';
 import { volume } from '../mesh.js';
+import { perpFrame, concat } from '../solids.js';
 import { axisOf, allItems } from './model.js';
 
 const SEG = 24;
 
-/* Zwei Einheitsvektoren senkrecht zur Achse. */
-function frame(axis) {
-  const a = norm(axis);
-  const h = Math.abs(a[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
-  const u = norm(cross(a, h));
-  const v = cross(a, u);
-  return { a, u, v };
-}
-
 /** Rotationskörper: Ringe [{ z, r }] entlang der Achse `a` ab `origin`,
     z in mm von origin; r = 0 an einem Ende heißt Spitze. */
 function revolve(origin, axisDir, rings, seg = SEG) {
-  const f = frame(axisDir);
+  const f = perpFrame(axisDir);
   const pt = (z, r, k) => {
     const ang = 2 * Math.PI * k / seg;
     const c = Math.cos(ang) * r, s = Math.sin(ang) * r;
@@ -96,14 +88,7 @@ export function buildByType(plan) {
 }
 
 /** Alles zusammen — für die STL. */
-export function buildAll(plan) {
-  const list = allItems(plan).map(buildItem);
-  const n = list.reduce((a, t) => a + t.length, 0);
-  const out = new Float64Array(n);
-  let k = 0;
-  for (const t of list) { out.set(t, k); k += t.length; }
-  return out;
-}
+export const buildAll = plan => concat(allItems(plan).map(buildItem));
 
 /** Volumen (mm³) — die Menge Wasser, die im Element steht. */
 export const volumeOf = item => volume(buildItem(item));

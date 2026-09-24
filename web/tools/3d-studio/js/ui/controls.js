@@ -1,13 +1,13 @@
 /* Bedienelemente, die auf mehreren Seiten gleich aussehen und sich gleich
    verhalten sollen: Regler mit Wertanzeige, segmentierte Schalter,
-   Zahleneingaben, Kennzahlenblöcke, der „Rechnen"-Knopf mit seiner
-   Hinweiszeile und die Farbskala im Viewport.
+   Zahleneingaben, Kennzahlenblöcke und die Farbskala im Viewport.
 
-   Jeder Helfer nimmt ein ELEMENT oder eine id — die alten Seiten reichen
-   ids, die Werkzeuge des gemeinsamen Rahmens (js/studio/) ihre über
-   data-ui gefundenen Elemente. Zahlen kommen aus js/studio/format.js
-   (deutsch lesen und schreiben); die Namen bleiben hier exportiert, weil
-   die Rechenmodule und Tests sie von hier holen. */
+   Jeder Helfer nimmt ein ELEMENT oder eine id — die Seiten ohne den
+   gemeinsamen Rahmen (der Formaufbau, die Werkbank) reichen ids, die
+   Werkzeuge des Rahmens (js/studio/) ihre über data-ui gefundenen
+   Elemente. Zahlen kommen aus js/studio/format.js (deutsch lesen und
+   schreiben); fmt, fmtPlain und parseNumber stehen nur noch für die
+   Werkbank und js/lbm/paint.js auch hier. */
 
 import { fmt, fmtPlain, parseNumber, clamp, rangeText } from '../studio/format.js';
 
@@ -58,30 +58,31 @@ export function segButtonSet(id, value) {
 }
 
 /** Regler; die Wertanzeige daneben heißt <id>-val — oder wird als
-    `out` mitgegeben. */
-export function slider(id, onChange, format, out) {
+    `out` mitgegeben. onChange(v) kommt bei jedem Zug — und einmal beim
+    Einbau mit dem Anfangswert, außer mit { fire: false }: dann ist der
+    Einbau keine Änderung, und niemand braucht ein „schon verdrahtet?".
+    Zurück kommt { el, set(v) }: set stellt Regler und Anzeige auf einen
+    Wert (nach dem Laden einer Datei, nach Rückgängig), ohne onChange. */
+export function slider(id, onChange, format, out, { fire = true } = {}) {
   const e = el(id);
   const o = out || (typeof id === 'string' ? $(id + '-val') : (e.parentNode && e.parentNode.querySelector('.val')));
-  const push = () => {
-    const v = +e.value;
-    if (o) o.textContent = format ? format(v) : String(v);
-    onChange(v);
-  };
-  e.addEventListener('input', push);
-  push();
-  return e;
+  const show = v => { if (o) o.textContent = format ? format(v) : String(v); };
+  e.addEventListener('input', () => { const v = +e.value; show(v); onChange(v); });
+  show(+e.value);
+  if (fire) onChange(+e.value);
+  return { el: e, set(v) { e.value = String(v); show(v); } };
 }
+
+/** Grenzen einer Lage im Auswahlfeld der Designer (mm): „12.500" liest sich
+    deutsch als 12 500 mm und läge ohne Hinweis zwölf Meter neben dem
+    Bauteil. */
+export const POS_LIMIT = { min: -5000, max: 5000, unit: 'mm' };
 
 /** Zahleneingabe: übernommen wird mit der Eingabetaste oder beim
     Verlassen. apply(wert) gibt den tatsächlich gesetzten Wert zurück
     (geklemmt o. ä.), unlesbare Eingaben werden als „schlecht" markiert und der
     letzte gültige Wert bleibt stehen. Mit `min`/`max` klemmt der Helfer
     selbst und sagt es kurz dazu („auf 30 mm begrenzt"). */
-/** Grenzen einer Lage im Auswahlfeld der Designer (mm): „12.500" liest sich
-    deutsch als 12 500 mm und läge ohne Hinweis zwölf Meter neben dem
-    Bauteil. */
-export const POS_LIMIT = { min: -5000, max: 5000, unit: 'mm' };
-
 export function numberInput(id, apply, opts = {}) {
   const e = el(id);
   const { min, max, unit = '' } = opts;

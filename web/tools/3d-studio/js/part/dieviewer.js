@@ -23,8 +23,9 @@
 
 import * as T from 'three';
 import { diePieces, maskOutline } from './dieview.js';
-import { regionColor, undercutColor, mixHex, hex2rgb, lut, VIEW, onScheme } from './colors.js';
+import { regionColor, undercutColor, mixHex, hex2rgb, lut, turboTrim, VIEW, onScheme } from './colors.js';
 import { UNDERCUT } from './segment.js';
+import { disposeTree, surfaceMaterial } from '../ui/common.js';
 
 export function createDieView(view) {
   const group = new T.Group();
@@ -49,22 +50,12 @@ export function createDieView(view) {
      Wechsel des Farbschemas (recolor). */
   const pieceColor = p => (p.label === UNDERCUT ? undercutColor() : regionColor(p.label));
   const skirtColor = color => mixHex(color, 'text', 0.3);
-  const surfMat = color => new T.MeshStandardMaterial({
-    color, roughness: 0.6, metalness: 0.08, side: T.DoubleSide, flatShading: true
-  });
-  const skirtMat = color => new T.MeshStandardMaterial({
-    color: skirtColor(color), roughness: 0.7, metalness: 0.05, side: T.DoubleSide, flatShading: true
-  });
+  const surfMat = color => surfaceMaterial(color, { roughness: 0.6, metalness: 0.08 });
+  const skirtMat = color => surfaceMaterial(skirtColor(color), { roughness: 0.7, metalness: 0.05 });
 
-  function disposeObject(o) {
-    o.traverse(c => {
-      if (c.geometry) c.geometry.dispose();
-      if (c.material && c.material !== lineMat) {
-        if (c.material.map) c.material.map.dispose();
-        c.material.dispose();
-      }
-    });
-  }
+  /* Die Linien teilen ein Material — das bleibt. */
+  const keepLines = new Set([lineMat]);
+  const disposeObject = o => disposeTree(o, { keep: keepLines });
 
   function clear() {
     for (const h of holders) { disposeObject(h); group.remove(h); }
@@ -249,14 +240,15 @@ export function createDieView(view) {
         eg.userData.piece = p;
         /* Die Karte auf der Farbleiste `turbo` (in jedem Farbschema
            dieselbe), blau = wenig, rot = viel, ohne die fast schwarzen Enden
-           (0,05 … 0,95); was kaum haftet, ist zudem durchscheinend. Die
-           Textur trägt die Werte der Leiste: sRGB. */
+           — dasselbe Stück wie das Bauteil daneben (turboTrim); was kaum
+           haftet, ist zudem durchscheinend. Die Textur trägt die Werte der
+           Leiste: sRGB. */
         const { nu, nv } = em.frame;
         const rgba = new Uint8Array(nu * nv * 4);
         const tab = lut('turbo');
         for (let i = 0; i < em.map.length; i++) {
           const v = em.map[i];
-          const k = 3 * Math.round(Math.max(0, Math.min(1, 0.05 + 0.9 * v)) * 255);
+          const k = 3 * Math.round(turboTrim(v) * 255);
           rgba[i * 4] = tab[k]; rgba[i * 4 + 1] = tab[k + 1]; rgba[i * 4 + 2] = tab[k + 2];
           rgba[i * 4 + 3] = v > 0.01 ? 150 + 105 * Math.min(1, v * 2) : 0;
         }

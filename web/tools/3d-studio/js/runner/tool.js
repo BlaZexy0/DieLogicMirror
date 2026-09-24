@@ -35,9 +35,8 @@ import * as T from 'three';
 import { onScheme, ROLE, VIEW } from '../part/colors.js';
 import { facts, slider, numberInput, segButtons, segButtonSet, POS_LIMIT } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit, parseNumber } from '../studio/format.js';
-import { kpis, esc } from '../studio/rows.js';
-import { baseName } from '../studio/files.js';
-import { writeSTL } from '../part/stlio.js';
+import { kpis, esc, selTitle, groupTabs, legendRow, selectedRow } from '../studio/rows.js';
+import { saveSTL } from '../studio/files.js';
 import { DEMO_PARTS } from '../part/demoparts.js';
 import * as G from './graph.js';
 import { sampleNetwork } from './curve.js';
@@ -47,11 +46,13 @@ import { checkRules } from './rules.js';
 import { autoTaper, DEFAULT_SIZING } from './sizing.js';
 import { DEMOS } from './presets.js';
 import { flowChart } from './chart.js';
-import { createEditor, SELECTED_RING, followerColor } from './editor.js';
+import { createEditor } from './editor.js';
+import { createPlacer } from '../handles.js';
+import { rayAt } from '../viewmath.js';
 import { rotate, norm, cross, dot, sub, add } from './vec.js';
 import { shotTimeline, flowOnCurve, curveValues as curveValuesFor } from './shottime.js';
 import { state as design } from '../../../auslegung/js/core/state.js';
-import { download, safeName, dirText, setTris } from '../ui/common.js';
+import { dirText, setTris, surfaceMaterial } from '../ui/common.js';
 import { MODES, INSPECTOR, DARSTELLUNG, CHART } from './panel.js';
 
 const HANDLE_HINT = '<b>Punkt</b> ziehen: in der Arbeitsebene · <b>Alt</b>: aus ihr heraus · <b>Pfeil</b> am Anschnitt: Mündung ans Bauteil · <b>Entf</b>: entfernen';
@@ -85,10 +86,9 @@ export function createAngussTool(host) {
        das lesen Auswahlfeld, Schema und Prüfregeln. */
     onCurve: true, timeline: null, flowShown: null, flowView: null,
     preset: DEMOS[0].id, ready: false,
-    chartOpen: false, openGroup: '',
+    chartOpen: false,
     /* Lage des Referenzbauteils: { key, quat, pos } — oder null ohne Bauteil. */
-    place: null,
-    refPending: null
+    place: null
   };
   let wired = false, hinted = false, dragged = false;
 
@@ -102,7 +102,7 @@ export function createAngussTool(host) {
      ableiten: bei einer Dreieckssuppe ohne geteilte Ecken lieferte
      computeVertexNormals ohnehin nur die Flächennormale — nur eben als
      2,2 MB großes Attribut, das bei jedem Mauszug neu gerechnet wurde. */
-  const runnerMat = new T.MeshStandardMaterial({ color: ROLE.runner, roughness: 0.52, metalness: 0.04, side: T.DoubleSide, flatShading: true });
+  const runnerMat = surfaceMaterial(ROLE.runner, { roughness: 0.52, metalness: 0.04 });
   const runnerMesh = new T.Mesh(new T.BufferGeometry(), runnerMat);
   group.add(runnerMesh);
 
@@ -111,8 +111,8 @@ export function createAngussTool(host) {
      Trennebene — zwei Flächen in derselben Tiefe kann der Tiefenpuffer nicht
      ordnen (Flimmern). polygonOffset zieht den Pressrest um einen
      Tiefenschritt vor: wo beide zusammenfallen, gewinnt er. */
-  const biscMat = new T.MeshStandardMaterial({
-    color: ROLE.biscuit, roughness: 0.6, metalness: 0.06, side: T.DoubleSide,
+  const biscMat = surfaceMaterial(ROLE.biscuit, {
+    roughness: 0.6, metalness: 0.06, flat: false,
     polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
   });
   const biscMesh = new T.Mesh(new T.BufferGeometry(), biscMat);
@@ -154,7 +154,7 @@ export function createAngussTool(host) {
       return e && e.sections.length ? e.sections[e.sections.length - 1].t : null;
     },
     onAim: id => startAim(id),
-    onSelect: () => { cancelAim(); syncSelection(); },
+    onSelect: () => { placer.cancel(); syncSelection(); },
     onChange: (what, id) => {
       if (what === 'drag') { dragged = true; rebuild('drag'); return; }
       /* Esc mitten im Zug (host.cancelDrag): zurück zum Stand davor, ohne
@@ -177,6 +177,7 @@ export function createAngussTool(host) {
       dragged = false;
     }
   });
+  const placer = createPlacer({ aim: shell.aim, handles: editor });
 
   /* ── Kette: Graph → Anzeige ──────────────────────────────── */
   /* Während eines Zuges zählt, was man sieht: Netz, Linien, Griffe. Regeln,
@@ -429,7 +430,7 @@ export function createAngussTool(host) {
     state.chartOpen = !!on;
     ui('chart-panel').classList.toggle('on', state.chartOpen);
     /* Über dem Schema hat der Hinweis zu den Griffen nichts zu suchen. */
-    if (state.chartOpen) { cancelAim(); updateChart(); if (hinted) { shell.status(''); hinted = false; } }
+    if (state.chartOpen) { placer.cancel(); updateChart(); if (hinted) { shell.status(''); hinted = false; } }
     else syncSelection();
     shell.renderChips();
     if (host.refreshActions) host.refreshActions();
@@ -441,12 +442,12 @@ export function createAngussTool(host) {
 
   /* Kopfzeile des Auswahlfeldes: Artfarbe, Bezeichnung, id. Die id kann aus
      einer Datei stammen; fromJSON lässt nur harmlose zu, maskiert wird sie
-     trotzdem. */
+     trotzdem (selTitle). */
   function selectionLabel(g, n) {
     const meta = G.TYPES[n.type] || G.TYPES.point;
-    return '<span class="dot" style="background:' + meta.color + '"></span>' + meta.label + ' <code>' + esc(n.id) + '</code>'
-      + (G.isFollower(g, n.id) ? ' <em>gespiegelt, die andere Seite bearbeiten</em>'
-        : n.aim ? ' <em class="pinned">ans Bauteil gebunden</em>' : '');
+    return selTitle({ color: meta.color, label: meta.label, id: n.id,
+      extra: G.isFollower(g, n.id) ? ' <em>gespiegelt, die andere Seite bearbeiten</em>'
+        : n.aim ? ' <em class="pinned">ans Bauteil gebunden</em>' : '' });
   }
 
   /* Welche Gruppen das Auswahlfeld zeigt, hängt an der Art des Punktes. Eine
@@ -470,17 +471,13 @@ export function createAngussTool(host) {
     return '';
   }
 
-  function showGroup() {
-    for (const b of ui('sel-groups').querySelectorAll('[data-group-tab]')) {
-      const on = b.getAttribute('data-group-tab') === state.openGroup;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-selected', on ? 'true' : 'false');
-    }
-    for (const el of ui('sel-params').querySelectorAll('[data-group]')) el.hidden = el.getAttribute('data-group') !== state.openGroup;
-    ui('sel-facts').hidden = state.openGroup !== DETAILS;
-  }
+  /* Die Gruppen des Auswahlfelds (js/studio/rows.js) und die Regler darin —
+     es gibt sie, sobald der Rahmen das Feld eingesetzt hat (mounted). */
+  let groups = null;
+  const sliders = {};
 
   function syncSelection() {
+    if (!groups) return;
     const g = state.graph;
     const n = sel();
     shell.renderChips();
@@ -493,10 +490,7 @@ export function createAngussTool(host) {
     shell.inspector.show({ title: selectionLabel(g, n) });
     shell.status(HANDLE_HINT);
 
-    const names = groupsFor(n);
-    if (!names.includes(state.openGroup)) state.openGroup = names[0];
-    ui('sel-groups').innerHTML = names.map(x => '<button type="button" role="tab" data-group-tab="' + x + '">' + x + '</button>').join('');
-    showGroup();
+    groups.set(groupsFor(n));
 
     /* Ein Zehntel: „−137,25" passt nicht in ein Drittel der Zeile, und auf
        den Hundertstelmillimeter setzt niemand einen Kanalpunkt. */
@@ -507,14 +501,12 @@ export function createAngussTool(host) {
        „System"): seine Ebene IST die Ausstoßrichtung, kippen lässt sie sich nicht. */
     ui('plane-block').hidden = isRoot;
     ui('root-note').hidden = !isRoot;
-    ui('sel-roll').value = String(n.tilt[0]);
-    ui('sel-roll-val').textContent = fmt(n.tilt[0], 0) + '°';
-    ui('sel-pitch').value = String(n.tilt[1]);
-    ui('sel-pitch-val').textContent = fmt(n.tilt[1], 0) + '°';
+    sliders['sel-roll'].set(n.tilt[0]);
+    sliders['sel-pitch'].set(n.tilt[1]);
     if (isBranch) {
       const r = n.ratio === undefined ? 0.5 : n.ratio;
-      ui('sel-ratio').value = String(Math.round(r * 100));
-      ui('sel-ratio-val').textContent = n.children.length > 2 ? 'gleich' : fmt(r * 100, 0) + ':' + fmt((1 - r) * 100, 0);
+      sliders['sel-ratio'].set(Math.round(r * 100));
+      if (n.children.length > 2) ui('sel-ratio-val').textContent = 'gleich';
       ui('sel-mirror').checked = !!n.mirror && n.children.length <= 2;
       ui('sel-ratio-note').textContent = follower ? '' : forkNote(n);
     }
@@ -525,7 +517,7 @@ export function createAngussTool(host) {
       ui('sel-gw').value = fmtPlain(n.gate.w, 2);
       ui('sel-gauto').checked = !!n.gate.auto;
       ui('sel-gtrans').value = n.gate.transition;
-    } else cancelAim();
+    } else placer.cancel();
 
     /* Die nachgezogene Seite einer Spiegelung zeigt ihre Werte, nimmt aber
        keine an — bearbeitet wird die andere. */
@@ -600,10 +592,7 @@ export function createAngussTool(host) {
 
   /* Ein Feld des Auswahlfelds ändert den gewählten Punkt. `key` fasst
      Reglerschritte zu EINEM Eintrag im Verlauf zusammen. */
-  function commit(label, key) {
-    if (key && host.history) { host.history.coalesce(key, label); host.changed('', { silent: true }); }
-    else host.changed(label);
-  }
+  const commit = (label, key) => host.changed(label, key ? { coalesce: key } : undefined);
   function editNode(fn, label, key) {
     const n = sel();
     if (!n || G.isFollower(state.graph, n.id)) return false;
@@ -675,8 +664,7 @@ export function createAngussTool(host) {
     G.removeNode(g, n.id);
     rebuild();
     editor.select(g.nodes[parent] ? parent : g.rootId);
-    host.changed(name + ' entfernt');
-    host.toastUndo(behind ? name + ' und ' + behind + (behind === 1 ? ' Punkt' : ' Punkte') + ' dahinter entfernt.' : name + ' entfernt.');
+    host.removed(name, behind ? name + ' und ' + behind + (behind === 1 ? ' Punkt' : ' Punkte') + ' dahinter entfernt.' : undefined);
     return true;
   }
 
@@ -687,17 +675,8 @@ export function createAngussTool(host) {
      Bauteil anklickt, legt beides auf einmal fest: den Ort der Mündung
      und die Richtung, in der die Schmelze das Bauteil betritt.
      Der scharfe Zustand muss unübersehbar sein: oben im Viewport steht,
-     was zu tun ist. */
-  const aim = shell.aim;
-  /* Solange gezielt wird, weicht das Auswahlfeld auf seine Kopfzeile zurück —
-     das tut der Rahmen (shell.aim.show). */
-  function cancelAim() {
-    const was = editor.cancelAim();
-    aim.hide();
-    return was;
-  }
-  host.cancelAim = cancelAim;
-  host.cancelDrag = () => { if (!editor.dragging) return false; editor.cancelDrag(); return true; };
+     was zu tun ist (js/handles.js, createPlacer); solange gezielt wird,
+     weicht das Auswahlfeld auf seine Kopfzeile zurück — das tut der Rahmen. */
 
   /* Der Klick auf den Pfeil eines Anschnitts (oder auf den Knopf im
      Auswahlfeld). Ohne Referenzbauteil gibt es nichts zu treffen — dann
@@ -705,13 +684,13 @@ export function createAngussTool(host) {
   function startAim(id) {
     const n = id && state.graph.nodes[id];
     if (!n || n.type !== 'gate' || G.isFollower(state.graph, id)) return;
-    if (!host.part.model || !host.part.mesh.visible) { aim.note(NEEDS_PART); return; }
+    if (!host.part.model || !host.part.mesh.visible) { shell.aim.note(NEEDS_PART); return; }
     if (state.chartOpen) openChart(false);
     /* Schon scharf für diesen Anschnitt: bleibt scharf. Abgebrochen wird
        mit Esc, mit „Abbrechen" im Hinweis oder durch eine andere Auswahl. */
-    aim.show(true, 'Mündung ans Bauteil: die Stelle auf dem Bauteil anklicken. Ziehen dreht die Ansicht, Esc bricht ab.');
-    aim.onCancel = cancelAim;
-    editor.armAim({
+    placer.aim({
+      text: 'Mündung ans Bauteil: die Stelle auf dem Bauteil anklicken. Ziehen dreht die Ansicht, Esc bricht ab.',
+      miss: 'Daneben: Die Stelle muss auf dem Bauteil liegen.',
       /* Die Arbeitsebene des Anschnitts, jedes Mal frisch: ein Treffer an
          einer aufrechten Wand wird in sie gelegt (js/handles.js). */
       plane: () => {
@@ -719,13 +698,11 @@ export function createAngussTool(host) {
         return gn ? { origin: gn.pos, normal: G.planeNormal(state.graph, gn) } : null;
       },
       onHit: hit => {
-        aim.hide();
         G.aimAt(state.graph, id, hit.point, hit.dir);
         rebuild();
         syncSelection();
         host.changed('Mündung ans Bauteil gebunden');
-      },
-      onMiss: () => aim.miss('Daneben: Die Stelle muss auf dem Bauteil liegen.', () => editor.aiming)
+      }
     });
   }
 
@@ -738,9 +715,7 @@ export function createAngussTool(host) {
   const bodyRay = new T.Raycaster();
   function pickBody(ev) {
     if (!state.net || state.chartOpen) return null;
-    const dom = view.renderer.domElement;
-    const r = dom.getBoundingClientRect();
-    bodyRay.setFromCamera(new T.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), view.camera);
+    rayAt(bodyRay, ev, view.renderer.domElement, view.camera);
     group.updateMatrixWorld(true);
     const hits = bodyRay.intersectObjects([runnerMesh, biscMesh].filter(m => m.visible), false);
     if (!hits.length) return null;
@@ -836,7 +811,7 @@ export function createAngussTool(host) {
       und stellt es vor seine Anschnitte. */
   function pickPreset(id) {
     const d = DEMOS.find(x => x.id === id) || DEMOS[0];
-    cancelAim();
+    placer.cancel();
     state.preset = d.id;
     state.graph = d.build();
     /* Bemessen ist ein Beispiel für den voreingestellten Prozess
@@ -855,16 +830,13 @@ export function createAngussTool(host) {
     adoptGraph();
     if (refId && !loaded) {
       state.ready = false;
-      /* Die Auswahl der Bauteil-Klappe mitführen: daran liest der Gastgeber,
-         welches Beispielteil es ist (Schlüssel des Entwurfs). */
-      const partSel = document.getElementById('demo-select');
-      if (partSel) partSel.value = refId;
-      state.refPending = Promise.resolve(host.part.pickDemo(refId)).then(() => {
+      /* Das Beispielteil lädt der Gastgeber; die Klappe zeigt es als gewählt,
+         und sein Schlüssel ist der des Entwurfs. */
+      return Promise.resolve(host.part.pickDemo(refId)).then(() => {
         /* Kam das Teil nicht (Datei fehlt), meldet es die Bauteil-Klappe —
            die Seite arbeitet ohne weiter. */
         if (!state.ready) { ui('graph-warn').textContent = '„' + d.ref.name + '" konnte nicht geladen werden; das Beispiel steht ohne sein Bauteil.'; state.ready = true; }
       });
-      return state.refPending;
     }
     return Promise.resolve();
   }
@@ -872,25 +844,20 @@ export function createAngussTool(host) {
   /** Nach dem Laden eines anderen Systems alle Anzeigen nachziehen. */
   function syncPanel() {
     const g = state.graph, p = state.proc;
-    ui('draft').value = String(g.draft);
-    ui('draft-val').textContent = fmt(g.draft) + '°';
+    sliders.draft.set(g.draft);
     ui('radius').value = fmtPlain(g.radius, 2);
     ui('branch-r').value = fmtPlain(g.branchR, 2);
-    ui('tension').value = String(Math.round(g.tension * 100));
-    ui('tension-val').textContent = fmt(g.tension, 2);
+    sliders.tension.set(Math.round(g.tension * 100));
     ui('step').value = fmtPlain(g.step, 2);
     ui('gate-h').value = fmtPlain(g.gateH, 2);
-    ui('taper').value = String(Math.round(state.sizing.taper * 100));
-    ui('taper-val').textContent = fmt(state.sizing.taper * 100, 0) + ' %';
-    ui('aspect').value = String(Math.round(state.sizing.aspect * 100));
-    ui('aspect-val').textContent = fmt(state.sizing.aspect, 2);
+    sliders.taper.set(Math.round(state.sizing.taper * 100));
+    sliders.aspect.set(Math.round(state.sizing.aspect * 100));
     ui('alloy').value = p.alloy;
     ui('vol').value = fmtPlain(p.volume, 1);
     ui('tfill').value = fmtPlain(p.fillTime, 1);
     ui('vgate').value = fmtPlain(p.vGate, 1);
     ui('chamber-len').value = fmtPlain(p.chamberLen, 0);
-    ui('cbranch').value = String(Math.round(p.cBranch * 100));
-    ui('cbranch-val').textContent = fmt(p.cBranch, 2);
+    sliders.cbranch.set(Math.round(p.cBranch * 100));
     ui('shot-time').checked = state.onCurve;
   }
   function adoptGraph() {
@@ -898,7 +865,7 @@ export function createAngussTool(host) {
     rebuild();
     /* Nichts gewählt: das erste Bild zeigt das ganze System, kein Feld davor. */
     editor.select(null);
-    if (host.history) host.history.reset();
+    host.resetHistory();
     fit();
     state.ready = true;
   }
@@ -964,15 +931,10 @@ export function createAngussTool(host) {
     shell.header.setPart('Bauteil laden …', 'Referenz');
     /* Die Bauteil-Klappe zeigt von sich aus das erste Beispielteil als
        gewählt — hier ist aber (noch) keines geladen. */
-    const partSel = document.getElementById('demo-select');
-    if (partSel) partSel.selectedIndex = -1;
-
-    ui('sel-groups').addEventListener('click', ev => {
-      const b = ev.target.closest('[data-group-tab]');
-      if (!b) return;
-      state.openGroup = b.getAttribute('data-group-tab');
-      showGroup();
-    });
+    host.part.deselect();
+    /* Welche Gruppen es gibt, hängt an der Art des Punktes; „Details" zeigt
+       die abgeleiteten Zahlen darunter. */
+    groups = groupTabs({ tabs: ui('sel-groups'), box: ui('sel-params'), onShow: open => { ui('sel-facts').hidden = open !== DETAILS; } });
 
     /* System */
     ui('preset').innerHTML = DEMOS.map(d => '<option value="' + d.id + '">' + d.label + '</option>').join('');
@@ -1003,13 +965,12 @@ export function createAngussTool(host) {
     });
 
     /* Kanalform */
-    const graphSlider = (name, set, text, label) => slider(ui(name), v => {
-      if (!wired) return;
+    const graphSlider = (name, set, text, label) => { sliders[name] = slider(ui(name), v => {
       set(v);
       rebuild();
       if (sel()) syncFacts(sel());
       commit(label, name);
-    }, text, ui(name + '-val'));
+    }, text, ui(name + '-val'), { fire: false }); };
     graphSlider('draft', v => { state.graph.draft = v; }, v => fmt(v) + '°', 'Entformschräge geändert');
     graphSlider('tension', v => { state.graph.tension = v / 100; }, v => fmt(v / 100, 2), 'Splinestraffheit geändert');
     const graphNumber = (name, set, key, label) => numberInput(ui(name), v => { set(v); rebuild(); syncSelection(); host.changed(label); return v; }, mm(key));
@@ -1018,8 +979,8 @@ export function createAngussTool(host) {
     graphNumber('step', v => { state.graph.step = v; }, 'step', 'Abtastschritt geändert');
     graphNumber('gate-h', v => { G.setGateHeight(state.graph, v); }, 'gateH', 'Anschnitthöhe geändert');
     /* Verjüngung und Seitenverhältnis wirken erst mit „Querschnitte abstufen". */
-    slider(ui('taper'), v => { if (!wired) return; state.sizing.taper = v / 100; commit('Verjüngung geändert', 'taper'); }, v => fmt(v, 0) + ' %', ui('taper-val'));
-    slider(ui('aspect'), v => { if (!wired) return; state.sizing.aspect = v / 100; commit('Seitenverhältnis geändert', 'aspect'); }, v => fmt(v / 100, 2), ui('aspect-val'));
+    sliders.taper = slider(ui('taper'), v => { state.sizing.taper = v / 100; commit('Verjüngung geändert', 'taper'); }, v => fmt(v, 0) + ' %', ui('taper-val'), { fire: false });
+    sliders.aspect = slider(ui('aspect'), v => { state.sizing.aspect = v / 100; commit('Seitenverhältnis geändert', 'aspect'); }, v => fmt(v / 100, 2), ui('aspect-val'), { fire: false });
 
     /* Prozess */
     ui('alloy').innerHTML = Object.entries(F.ALLOYS).map(([k, v]) => '<option value="' + k + '">' + v.label + '</option>').join('');
@@ -1035,13 +996,12 @@ export function createAngussTool(host) {
     procNumber('tfill', 'fillTime', 'ms', 'Füllzeit geändert');
     procNumber('vgate', 'vGate', 'm/s', 'Zielgeschwindigkeit geändert');
     procNumber('chamber-len', 'chamberLen', 'mm', 'Füllkammerlänge geändert');
-    slider(ui('cbranch'), v => {
-      if (!wired) return;
+    sliders.cbranch = slider(ui('cbranch'), v => {
       state.proc.cBranch = v / 100;
       rebuild();
       if (sel()) syncFacts(sel());
       commit('Verzweigungsverlust geändert', 'cbranch');
-    }, v => fmt(v / 100, 2), ui('cbranch-val'));
+    }, v => fmt(v / 100, 2), ui('cbranch-val'), { fire: false });
     ui('shot-time').addEventListener('change', e => {
       state.onCurve = e.target.checked;
       rebuild();
@@ -1075,10 +1035,10 @@ export function createAngussTool(host) {
       return w;
     }, mm('w'));
     numberInput(ui('sel-h'), v => { editNode(x => { x.h = v; }, 'Kanaltiefe geändert'); return v; }, mm('h'));
-    const nodeSlider = (name, set, text, label) => slider(ui(name), v => {
-      if (!wired || !sel()) return;
+    const nodeSlider = (name, set, text, label) => { sliders[name] = slider(ui(name), v => {
+      if (!sel()) return;
       editNode(n => set(n, v), label, name + ':' + sel().id);
-    }, text, ui(name + '-val'));
+    }, text, ui(name + '-val'), { fire: false }); };
     nodeSlider('sel-roll', (n, v) => { n.tilt = [v, n.tilt[1]]; }, v => fmt(v, 0) + '°', 'Ebene längs gekippt');
     nodeSlider('sel-pitch', (n, v) => { n.tilt = [n.tilt[0], v]; }, v => fmt(v, 0) + '°', 'Ebene quer gekippt');
     nodeSlider('sel-ratio', (n, v) => { n.ratio = v / 100; }, v => fmt(v, 0) + ':' + fmt(100 - v, 0), 'Aufteilung geändert');
@@ -1119,9 +1079,8 @@ export function createAngussTool(host) {
 
   function updateLegend() {
     shell.legend('<div class="st-title">Punktarten</div>'
-      + Object.values(G.TYPES).map(t => '<div class="lg-row"><span class="dot" style="background:' + t.color + '"></span>' + t.label + '</div>').join('')
-      + '<div class="lg-row"><span class="dot ring" style="border-color:' + SELECTED_RING + '"></span>gewählt</div>'
-      + '<div class="lg-row"><span class="dot" style="background:' + followerColor() + ';opacity:.6"></span>gespiegelt (folgt)</div>');
+      + Object.values(G.TYPES).map(t => legendRow(t.color, t.label)).join('')
+      + selectedRow() + legendRow(VIEW.follower, 'gespiegelt (folgt)', ';opacity:.6'));
   }
 
   /* ── Hauptknöpfe der Modi ────────────────────────────────── */
@@ -1169,7 +1128,6 @@ export function createAngussTool(host) {
   /* Dateinamen wie beim Plan (<bauteil>-anguss.json, js/studio/files.js):
      <bauteil>-anguss.stl und <bauteil>-pressrest.stl. Vorher hießen die
      STL nach dem Beispiel, der Plan nach dem Bauteil. */
-  const fileName = what => safeName((baseName(host.part.name) || 'bauteil') + '-' + what) + '.stl';
 
   /* Mit Referenzbauteil kommen Anguss und Pressrest in DESSEN Koordinaten
      heraus. Hier steht das Bauteil gedreht und verschoben (placePart), im
@@ -1191,7 +1149,7 @@ export function createAngussTool(host) {
 
   const tool = {
     id: 'anguss',
-    modes: MODES.map(m => ({ ...m, enter() {}, leave() {}, primary: PRIMARY[m.id] })),
+    modes: MODES.map(m => ({ ...m, primary: PRIMARY[m.id] })),
     accepts: [G.FORMAT],
     toJSON: toDoc,
     /* Eine Datei (oder ein Entwurf): ein anderes System — nichts gewählt, das
@@ -1202,7 +1160,7 @@ export function createAngussTool(host) {
        des geöffneten Plans, wie bei einem Beispiel ohne eigenes Bauteil,
        und die Zeile unter dem Beispiel sagt es. */
     fromJSON(obj) {
-      cancelAim();
+      placer.cancel();
       const placed = applyDoc(obj);
       const moved = !!host.part.model && !placed;
       if (moved) placePart(null);
@@ -1224,7 +1182,7 @@ export function createAngussTool(host) {
     restore(doc) {
       const keep = editor.selected;
       const before = new Set(Object.keys(state.graph.nodes));
-      cancelAim();
+      placer.cancel();
       applyDoc(doc);
       const g = state.graph;
       const back = Object.keys(g.nodes).filter(id => !before.has(id));
@@ -1246,16 +1204,15 @@ export function createAngussTool(host) {
         if (!runner.length) return;
         const inPart = !!(host.part.model && state.place);
         const frame = inPart ? toPartFrame : t => t;
-        const a = fileName('anguss'), b = fileName('pressrest');
-        download(new Blob([writeSTL(frame(runner), 'DieLogic Anguss')], { type: 'model/stl' }), a);
-        download(new Blob([writeSTL(frame(biscuitMesh(state.graph.biscuit)), 'DieLogic Pressrest')], { type: 'model/stl' }), b);
+        const a = saveSTL(frame(runner), 'DieLogic Anguss', host.part.name, 'anguss');
+        const b = saveSTL(frame(biscuitMesh(state.graph.biscuit)), 'DieLogic Pressrest', host.part.name, 'pressrest');
         shell.toast('Zwei Dateien: ' + a + ' und ' + b + '.' + (inPart ? ' Sie stehen in den Koordinaten des Bauteils und liegen im CAD genau an ihm.' : ''));
       }
     }],
     keys: {
       Delete: () => removeSelected(),
-      /* Einen laufenden Zug bricht der Rahmen vorher ab (host.cancelDrag,
-         js/studio/host.js); hier kommt Esc nur ohne Zug an. */
+      /* Einen laufenden Zug und das Zielen bricht der Rahmen vorher ab
+         (cancelDrag, cancelAim); hier kommt Esc nur ohne beides an. */
       Escape: () => {
         if (state.chartOpen) { openChart(false); return true; }
         if (!editor.selected) return false;
@@ -1263,6 +1220,8 @@ export function createAngussTool(host) {
         return true;
       }
     },
+    cancelDrag: () => { if (!editor.dragging) return false; editor.cancelDrag(); return true; },
+    cancelAim: () => placer.cancel(),
     onPartStart() { state.ready = false; },
     /* Ein Referenzbauteil ist da: hinstellen, sein Volumen übernehmen. Das
        Referenzteil liefert die Zahl, um die sich alles dreht — aus dem
@@ -1286,7 +1245,7 @@ export function createAngussTool(host) {
       rebuild();
       syncSelection();
       /* Ein Bauteil ist kein Schritt, den Rückgängig zurücknehmen könnte. */
-      if (host.history) host.history.reset();
+      host.resetHistory();
       fit();
       state.ready = true;
     },

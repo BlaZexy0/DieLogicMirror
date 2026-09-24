@@ -49,7 +49,6 @@ export function createStore({ tool, debounce = 1000 } = {}) {
   }
 
   const api = {
-    get available() { return !!storage(); },
     get dirty() { return dirty; },
     get partKey() { return partKey; },
     get lastSaved() { return lastSaved; },
@@ -89,14 +88,6 @@ export function createStore({ tool, debounce = 1000 } = {}) {
       clearTimeout(timer);
       timer = setTimeout(() => api.flushPending(), debounce);
     },
-    /** Sofort schreiben, was `getDoc` JETZT liefert (für dieses Bauteil). */
-    flush(getDoc) {
-      clearTimeout(timer);
-      pending = null;
-      let doc;
-      try { doc = getDoc(); } catch { return false; }
-      return write(partKey, doc);
-    },
     /** Gibt es einen Entwurf für dieses Werkzeug und Bauteil? */
     peek() {
       const s = storage();
@@ -107,18 +98,6 @@ export function createStore({ tool, debounce = 1000 } = {}) {
         const obj = JSON.parse(raw);
         return obj && obj.doc ? obj : null;
       } catch { return null; }
-    },
-    /** Entwürfe dieses Werkzeugs für ANDERE Bauteile (Hinweis, nie stille Übernahme). */
-    others() {
-      const s = storage();
-      if (!s) return [];
-      const out = [];
-      for (let i = 0; i < s.length; i++) {
-        const k = s.key(i);
-        if (!k || !k.startsWith(PREFIX + tool + ':') || k === key()) continue;
-        try { const o = JSON.parse(s.getItem(k)); if (o && o.doc) out.push({ part: o.part, when: o.when }); } catch { /* kaputt: ignorieren */ }
-      }
-      return out;
     },
     discard() {
       clearTimeout(timer);
