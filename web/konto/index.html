@@ -892,6 +892,7 @@
       );
     }
     me = r.ok ? r.me : null;
+    if (fresh) document.dispatchEvent(new CustomEvent('dielogic:auth-changed', { detail: me }));
     if (!r.ok && r.status !== 401) { show('nobackend', true); return; }
     if (me) { showAccount(); if (token) showInviteConflict(); }
     else if (token) showInvite();

@@ -521,6 +521,18 @@
     });
   }
 
+
+  /* Sitzungswechsel auf der Konto-Seite (Anmelden, Registrieren, Demo,
+     Abmelden): die Leiste hatte den Namen nur einmal beim Laden geholt und
+     zeigte nach dem Abmelden weiter das alte Konto. */
+  document.addEventListener('dielogic:auth-changed', (e) => {
+    const a = document.getElementById('dl-nav-account');
+    if (!a) return;
+    const me = e.detail;
+    a.textContent = me && me.user ? '👤 ' + (me.user.name || me.user.email) : 'Anmelden';
+    if (recompute) recompute();
+  });
+
   function init() {
     injectNav();
     if (wantFooter) injectFooter();
