@@ -108,6 +108,8 @@
         { label: 'Kammerfüllung', href: '/tools/3d-studio/kammerfuellung.html' },
       ] },
     ] },
+    /* Der OpenFOAM-Solver dieFillFoam: eine Seite, noch ein Entwurf (24.09.). */
+    { label: 'Simulation', href: '/simulation/' },
     { label: 'Theorie', children: [
       { label: 'Das PQ²-Diagramm', href: '/theorie/pq2.html' },
       { label: 'Kritische Kolbengeschwindigkeit', href: '/theorie/kritische-geschwindigkeit.html' },

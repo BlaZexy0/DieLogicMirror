@@ -319,7 +319,7 @@ test('nav: Auslegung und 3D-Studio sind Spaltenmenüs — Werkzeuge · Diagramme
   assert.ok(m, 'NAV_LINKS in nav.js nicht gefunden');
   const body = m[1];
   const top = [...body.matchAll(/^ {4}\{ label: '([^']+)'/gm)].map(x => x[1]);
-  assert.deepEqual(top, ['Auslegung', '3D-Studio', 'Theorie', 'Preise', 'Über uns', 'Kontakt'],
+  assert.deepEqual(top, ['Auslegung', '3D-Studio', 'Simulation', 'Theorie', 'Preise', 'Über uns', 'Kontakt'],
     'oben stehen nur noch Gruppen und die Seiten des Auftritts');
   const auslegung = body.slice(body.indexOf("label: 'Auslegung'"), body.indexOf("label: '3D-Studio'"));
   for (const l of ['Dashboard', 'Sprengflächenanalyse', 'Teilekosten', 'Zyklusanalyse']) {
@@ -412,6 +412,7 @@ const KOPF_SEITEN = [
   'recht/ueber-uns.html', 'recht/kontakt.html',
   'theorie/pq2.html', 'theorie/kritische-geschwindigkeit.html', 'theorie/kreissegmente.html',
   'theorie/nebenbedingungen.html', 'theorie/entlueftung-vakuum.html', 'theorie/zuhaltung-sprengflaeche.html',
+  'simulation/index.html',
   'tools/sprengflaeche/index.html', 'tools/teilekosten/index.html', 'tools/zyklus/index.html'
 ];
 
@@ -432,7 +433,7 @@ test('KaTeX-Seiten laden /shared/katex-init.js, kein onload= mehr am Script-Tag'
     assert.match(html, /<script defer src="\/shared\/katex-init\.js"><\/script>/, p + ': lädt katex-init.js nicht');
     geprüft++;
   }
-  assert.equal(geprüft, 7, 'sieben Seiten binden KaTeX ein');
+  assert.equal(geprüft, 8, 'acht Seiten binden KaTeX ein (seit 24.09. auch die Simulation)');
 });
 
 function loadAsset(name) {

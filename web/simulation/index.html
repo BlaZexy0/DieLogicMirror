@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dieFillFoam · Simulation · DieLogic</title>
+  <!-- Entwurf: noch nicht in Suchmaschinen, bis die fertige Fassung kommt. -->
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
+  <style>
+    /* Seitenspezifisch; Farben nur als Rollen. */
+    pre.code {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    pre.code .c { color: var(--muted); }
+    .th-table th code { text-transform: none; }
+
+    /* Videos der Beispielrechnungen (ParaView, pvbatch) */
+    .fig-wrap video {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: var(--dark);
+      border-radius: 6px 6px 0 0;
+    }
+    .fig-platzhalter {
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+      margin: 0.75rem;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .kennzahlen td:nth-child(n+2),
+    .kennzahlen th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="/">DieLogic</a>
+  <span>›</span>
+  <a href="/simulation/">Simulation</a>
+  <span>›</span>
+  dieFillFoam
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>dieFillFoam: Formfüllung ohne Luftrechnung</h1>
+    <p class="subtitle">Ein OpenFOAM-Solver für die Formfüllung im Druckguss, der nur die Schmelze
+      rechnet. Die Luft wird nicht auf dem Netz gelöst, sondern als Luftpakete mit eigenem Druck
+      geführt, die über die Entlüftungen entweichen oder eingeschlossen und verdichtet werden.
+      So arbeiten auch die kommerziellen Gießsimulationen, und so bleibt die Rechnung stabil.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">OpenFOAM v2606</span>
+      <span class="hero-tag">isoAdvector</span>
+      <span class="hero-tag">Void-Modell</span>
+      <span class="hero-tag">Lufteinschluss</span>
+      <span class="hero-tag">Temperatur</span>
+      <span class="hero-tag">Oxidfilme</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#s1">1. Wofür der Solver gebaut ist</a></li>
+        <li><a href="#s2">2. Das Modell</a></li>
+        <li><a href="#s3">3. Numerik</a></li>
+        <li><a href="#s4">4. Beispiel: Platte mit Kern</a></li>
+        <li><a href="#s5">5. Beispiel: Gießkammer</a></li>
+        <li><a href="#s6">6. Beispiel: Wassermodell</a></li>
+        <li><a href="#s7">7. Einen Fall rechnen</a></li>
+        <li><a href="#s8">8. Grenzen</a></li>
+        <li><a href="#quellen">9. Quellen</a></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <div class="draft-note">
+        📚 <b>Entwurf:</b> Die Seite entsteht im Entwicklungsordner. Die Beispielrechnungen laufen
+        noch; Abschnitte ohne Video werden ergänzt, sobald die Rechnung fertig ist.
+      </div>
+
+      <span class="section-anchor" id="s1"></span>
+      <h2 class="section-title">1. Wofür der Solver gebaut ist</h2>
+      <div class="prose">
+        <p>Beim Druckguss füllt die Schmelze die Form in wenigen Hundertstelsekunden. Ob dabei Luft
+          eingeschlossen wird, entscheidet über Porosität und Ausschuss. Ein naheliegender Ansatz
+          in OpenFOAM ist <code>compressibleInterIsoFoam</code>: Schmelze und Luft werden als zwei
+          Phasen gerechnet, die Luft kompressibel. Im Druckguss führt das aber zu drei Problemen:</p>
+        <ul>
+          <li>Das Dichteverhältnis von rund 2000 und das Viskositätsverhältnis koppeln eine fast
+            inkompressible Schmelze an ein kompressibles Gas. Die Druckgleichung schwingt, und die
+            Rechnung bricht leicht ab.</li>
+          <li>In den Entlüftungen strömt die Luft mit Schallgeschwindigkeit, mit Verdichtungsstößen.
+            Diese Luftströmung bestimmt den Zeitschritt, nicht die Schmelze.</li>
+          <li>Eine Entlüftung von 0,2 mm Spalthöhe müsste fein vernetzt werden, nur damit die Luft
+            richtig abfließt.</li>
+        </ul>
+        <p><code>dieFillFoam</code> geht den Weg der kommerziellen Programme (MAGMA, Flow-3D): Die
+          Luft verschwindet aus den Strömungsgleichungen. Gerechnet wird nur die Schmelze; jede
+          zusammenhängende Luftblase ist ein Luftpaket mit einem einzigen Druck, das über seine Masse
+          und sein Volumen verdichtet wird und über die Entlüftungen Masse verliert.</p>
+      </div>
+      <div class="insight-box">
+        <div class="label">Kurz gesagt</div>
+        <p>Nur die Schmelze wird gerechnet, die Luft als Pakete mit einem Druck je Blase. Der
+          Zeitschritt folgt der Schmelzegeschwindigkeit, die Druckgleichung sieht nur ein Fluid, und
+          eingeschlossene Luft wird trotzdem erkannt und ihr Druck berechnet.</p>
+      </div>
+
+      <span class="section-anchor" id="s2"></span>
+      <h2 class="section-title">2. Das Modell</h2>
+      <div class="prose">
+        <p><b>Schmelze.</b> Ein inkompressibles newtonsches Fluid mit konstanter Dichte $\rho$. Der
+          Füllgrad $\alpha$ einer Zelle (1 Schmelze, 0 Luft) wird geometrisch mit isoAdvector
+          transportiert. Impuls und Kontinuität gelten nur in Schmelzezellen, deren Mittelpunkt in
+          der Schmelze liegt ($\alpha \ge 1/2$):</p>
+      </div>
+      <div class="math-block">
+        $$\frac{\partial\alpha}{\partial t} + \nabla\cdot(\alpha\,\mathbf{u}) = 0$$
+        $$\nabla\cdot\mathbf{u} = 0,\qquad
+          \frac{\partial\mathbf{u}}{\partial t} + \nabla\cdot(\mathbf{u}\mathbf{u})
+          = -\frac{1}{\rho}\nabla p_{rgh} + \nabla\cdot\big(\nu\,(\nabla\mathbf{u} + \nabla\mathbf{u}^{T})\big)
+          \qquad (\alpha \ge \tfrac12)$$
+      </div>
+      <div class="prose">
+        <p><b>Leerzellen.</b> In allen anderen Zellen ist der Druck vorgegeben: der Druck $p_k$ des
+          Luftpakets, zu dem die Zelle gehört. Er wirkt an der tatsächlichen Lage der Oberfläche.
+          Zwischen einer Schmelzezelle S und einer Leerzelle L liegt die Oberfläche dort, wo
+          $\alpha$ linear auf 1/2 fällt, im Abstand</p>
+      </div>
+      <div class="math-block">
+        $$\theta = \frac{\alpha_S - \tfrac12}{\alpha_S - \alpha_L}$$
+      </div>
+      <div class="prose">
+        <p>Zellweiten vom Mittelpunkt der Schmelzezelle (Ghost-Fluid-Randbedingung). Die
+          Geschwindigkeit wird aus der Schmelze in die Leerzellen fortgesetzt; dünne Filme und
+          Strahlspitzen mit $\alpha &lt; 1/2$ bewegen sich damit weiter. Abgerissene Tropfen, die
+          kleiner als einige Zellen sind, fliegen ballistisch, bis sie wieder auf Schmelze treffen.</p>
+        <p><b>Luftpakete.</b> Jede zusammenhängende Menge von Zellen mit Luft ist ein Paket $k$ mit
+          dem Volumen $V_k = \sum (1-\alpha)\,V$ und der Masse $m_k$. Die Masse wird in jedem
+          Zeitschritt aus den Zellmassen des vorigen Schritts neu gebildet. Teilt sich eine Blase,
+          behalten beide Teile die Dichte; vereinigen sich zwei, addieren sich die Massen. Der Druck
+          folgt polytrop:</p>
+      </div>
+      <div class="math-block">
+        $$p_k = p_0\left(\frac{m_k/V_k}{\rho_0}\right)^{n},\qquad n = 1{,}4 \text{ (adiabat)}$$
+      </div>
+      <div class="prose">
+        <p><b>Entlüftung.</b> Berührt ein Paket eine Entlüftung, verliert es Masse nach dem Gesetz
+          der isentropen Düse. Eine Entlüftung ist nur ein Querschnitt $A$ mit Beiwert $C_d$ am
+          Rand, der Kanal selbst wird nicht vernetzt. Bei kritischem Druckverhältnis (verblockt):</p>
+      </div>
+      <div class="math-block">
+        $$\dot m = C_d\,A\,p_k\sqrt{\frac{\gamma}{R\,T}}
+          \left(\frac{2}{\gamma+1}\right)^{\frac{\gamma+1}{2(\gamma-1)}}$$
+      </div>
+      <div class="prose">
+        <p>Die neue Masse wird je Schritt implizit bestimmt, deshalb begrenzt auch eine sehr kleine
+          Entlüftung den Zeitschritt nicht. Eine offene Entlüftung hält das Paket auf
+          Umgebungsdruck. Deckt Schmelze die Entlüftung ab, ist das Paket eingeschlossen.</p>
+        <p><b>Temperatur.</b> Wahlweise wird die Schmelzetemperatur mit demselben Volumenstrom wie
+          $\alpha$ transportiert. Wärme geht über die benetzten Wandflächen an die Form, Latentwärme
+          geht über eine scheinbare Wärmekapazität zwischen Solidus und Liquidus ein:</p>
+      </div>
+      <div class="math-block">
+        $$c_{\text{eff}}\,\alpha\Big(\frac{\partial T}{\partial t} + \mathbf{u}\cdot\nabla T\Big)
+          = \nabla\cdot(\alpha\,a\,\nabla T) - \alpha\,\frac{h\,A_W}{\rho\,c_p\,V}\,(T - T_{\text{Form}}),
+          \qquad c_{\text{eff}} = 1 + \frac{L}{c_p\,(T_L - T_S)}$$
+      </div>
+      <div class="prose">
+        <p><b>Einschlussmodelle.</b> Zwei Kennwerte für Gussfehler werden als passive Skalare mit
+          der Schmelze transportiert, mit demselben Volumenstrom wie $\alpha$ und wie die
+          Temperatur. Beide werden an der freien Oberfläche erzeugt; dafür braucht es ihre
+          Flächendichte, die Normale, die Krümmung und die Dehnung der Oberfläche:</p>
+      </div>
+      <div class="math-block">
+        $$a_s = |\nabla\alpha|,\qquad \mathbf{n} = \frac{\nabla\alpha}{|\nabla\alpha|},\qquad
+          \kappa = -\nabla\cdot\mathbf{n},\qquad
+          \nabla_{\!s}\cdot\mathbf{u} = \nabla\cdot\mathbf{u} - \mathbf{n}\cdot(\nabla\mathbf{u})\cdot\mathbf{n}$$
+      </div>
+      <div class="prose">
+        <p><b>Oxidfilme.</b> Solange Schmelze an der Oberfläche liegt, oxidiert sie. Jede
+          Schmelzeportion trägt ihr Oberflächenalter $\tau$ mit sich, die Zeit, die sie an der
+          freien Oberfläche verbracht hat; die Oxidhaut wächst parabolisch. Wo sich die Oberfläche
+          zusammenzieht (eine Welle überschlägt sich, zwei Fronten treffen sich), wird ihre Haut in
+          die Schmelze gefaltet. Stark gekrümmte Falten zählen mehr, alte Oberflächen tragen dickere
+          Filme:</p>
+      </div>
+      <div class="math-block">
+        $$\frac{D\tau}{Dt} = \min(1,\,a_s\Delta),\qquad \delta = \sqrt{k_p\,\tau}$$
+        $$\frac{Dc_{ox}}{Dt} = a_s\,\delta\,\max\big(0,\,-\nabla_{\!s}\cdot\mathbf{u}\big)
+          \big(1 + C_\kappa\,\Delta\,|\kappa|\big)$$
+      </div>
+      <div class="prose">
+        <p>$c_{ox}$ ist der Volumenanteil eingefalteten Oxids in der Schmelze, $\Delta$ die
+          Zellweite, $k_p = 10^{-12}$ m²/s (30 nm nach 1 ms). <b>Lufteinmischung.</b> Nach Hirt
+          (2003): Störungen der Oberfläche durch Wirbel mischen Luft ein, wenn ihr Druck die
+          stabilisierende Wirkung von Schwerkraft und Oberflächenspannung übersteigt. Die Krümmung
+          der aufgelösten Oberfläche geht in den Kapillardruck ein, die Störung wird aus der
+          Scherrate geschätzt:</p>
+      </div>
+      <div class="math-block">
+        $$P_t = \rho\,(C_t\,\Delta\,|\mathbf{S}|)^2,\qquad
+          P_d = \rho\,|\mathbf{g}\cdot\mathbf{n}|\,\Delta + \sigma\,\max\big(\tfrac{1}{\Delta},\,|\kappa|\big)$$
+        $$\frac{Df_{air}}{Dt} = a_s\,C_{air}\sqrt{\frac{2\max(0,\,P_t - P_d)}{\rho}}\;(1 - f_{air})$$
+      </div>
+      <div class="prose">
+        <p>Beide Größen sind Kennwerte für den Vergleich von Varianten: wo sie hoch sind, ist mit
+          Oxidfilmen und Gasporosität zu rechnen. Die Beiwerte $C_\kappa = 1$,
+          $C_t = 0{,}05$ und $C_{air} = 0{,}5$ sind nicht an Gussteilen kalibriert.</p>
+      </div>
+      <div class="derivation-box">
+        <div class="step"><span class="step-num">①</span>
+          <span>Die Luft trägt keinen Impuls. Ihr Einfluss auf die Schmelze ist allein ihr Druck,
+            einheitlich in jeder Blase.</span></div>
+        <div class="step"><span class="step-num">②</span>
+          <span>Die Schmelze ist inkompressibel; nur die Luftpakete sind kompressibel.</span></div>
+        <div class="step"><span class="step-num">③</span>
+          <span>Oberflächenspannung fehlt (im Druckguss ist die Weber-Zahl sehr groß); die
+            Formtemperatur ist je Rand fest.</span></div>
+      </div>
+
+      <span class="section-anchor" id="s3"></span>
+      <h2 class="section-title">3. Numerik</h2>
+      <div class="prose">
+        <p>Die Stabilität kommt nicht von selbst. Jeder Punkt der Tabelle war zuerst eine
+          abgebrochene Rechnung:</p>
+      </div>
+      <div class="table-scroll">
+      <table class="th-table">
+        <thead><tr><th>Baustein</th><th>Umsetzung</th><th>Warum</th></tr></thead>
+        <tbody>
+          <tr><td>Fluss an der Oberfläche</td><td>vorhergesagter Fluss nur aus der Schmelzezelle,
+            wie an einem Auslass</td><td>sonst treibt die fortgesetzte Geschwindigkeit der Leerzelle
+            den Fluss: die Oberfläche läuft davon</td></tr>
+          <tr><td>Schmelzezelle</td><td>$\alpha \ge 1/2$ mit Ghost-Fluid-Abstand $\theta$</td>
+            <td>in Zellen mit wenig Schmelze ist die Lage der Oberfläche unbestimmt</td></tr>
+          <tr><td>Druckkraft</td><td>Gauß-Gradient mit dem Luftdruck auf den Oberflächenflächen</td>
+            <td>impulserhaltend: ein freier Tropfen erhält von seinem eigenen Druck keine Kraft</td></tr>
+          <tr><td>Tropfen und Fetzen</td><td>kleiner als 8 Zellen: ballistisch im Leerraum</td>
+            <td>Kontinuität auf zwei Zellen erzeugt Druckspitzen und Tropfen mit 300 m/s</td></tr>
+          <tr><td>Zeitschritt</td><td>Courant-Zahl nur über Zellen mit Schmelze,
+            $\mathrm{Co} \le 0{,}8$, an der Oberfläche $0{,}5$</td><td>leere Zellen neben schnellen
+            Tropfen sollen den Schritt nicht bestimmen</td></tr>
+          <tr><td>Masse</td><td>Überfüllung von Leerzellen wird an Nachbarn weitergegeben;
+            isoAdvector ohne <code>clip</code> und <code>snapTol</code></td><td>Abschneiden bei
+            $\alpha = 1$ kostete 2 % der Schmelze</td></tr>
+          <tr><td>Temperatur</td><td>Aufwind, nicht konservative Form mit dem Fluss von $\alpha$</td>
+            <td>beschränkt; neue Zellen übernehmen die Temperatur der einströmenden Schmelze</td></tr>
+          <tr><td>Einschlussmodelle</td><td>Quelle mit dem alten Schmelzeanteil gewichtet,
+            Zufluss mit Wert 0</td><td>sonst wachsen Werte in Zellen, die durch die Umverteilung
+            aufgefüllt werden, ohne Grenze</td></tr>
+          <tr><td>Netzbewegung</td><td>relative Flüsse für Transport, absolute in der
+            Druckgleichung</td><td>Kolben in der Gießkammer; Luftmassen mit den alten
+            Zellvolumen</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <span class="section-anchor" id="s4"></span>
+      <h2 class="section-title">4. Beispiel: Platte mit Kern</h2>
+      <div class="prose">
+        <p>Eine Platte von 200 × 120 mm und 4 mm Wanddicke mit einem Kern von 80 × 30 mm, gerechnet
+          zweidimensional mit 1 mm Zellen (21 600 Zellen). Der Anschnitt von 20 mm sitzt unten in
+          der Mitte, die Anschnittgeschwindigkeit steigt in 3 ms von 5 auf 25 m/s. Oben links liegt
+          eine Entlüftung mit 2 mm² Querschnitt, oben rechts eine offene. AlSi9Cu3 mit 680 °C, Form
+          200 °C, Wärmeübergang 20 kW/(m²K) über beide Formhälften.</p>
+      </div>
+      <div class="fig-wrap" id="video-platte">
+        <video autoplay muted loop playsinline controls preload="metadata" poster="img/platte.webp" aria-label="Füllung der Platte mit Kern: Temperatur, Geschwindigkeit und eingeschlossene Luft">
+          <source src="img/platte.mp4" type="video/mp4">
+        </video>
+        <div class="fig-cap"><b>Füllung der Platte.</b> Oben die Schmelzetemperatur und die
+          Geschwindigkeit; Luft mit Verbindung zu einer Entlüftung ist grau, eingeschlossene Luft
+          nach dem Druck ihres Pakets eingefärbt (1 bis 200 bar). Unten die beiden
+          Einschlussmodelle: eingefaltetes Oxid und eingemischte Luft, jeweils logarithmisch.</div>
+      </div>
+      <div class="prose">
+        <p>Der Strahl trifft den Kern, spritzt seitlich ab und läuft als Wandstrahl um den Rand. Nach
+          etwa 11 ms hat der Film an der oberen Wand beide Entlüftungen zugedeckt: Die restlichen
+          67 cm³ Luft sind eingeschlossen, zerfallen in bis zu 170 Pakete und werden am Ende auf bis
+          zu 200 bar verdichtet. Das ist das Bild einer Form ohne Überläufe. Die Schmelze kühlt dabei
+          im Mittel um 40 K ab; am kältesten ist die Schmelze, die früh in den oberen Ecken ankommt.</p>
+        <p>Die Einschlussmodelle trennen den frischen Strahl von der Schmelze, die als Film und
+          Spritzer durch die Form geflogen ist: Der Strahl bleibt fast frei von Oxid und Luft, die
+          übrige Schmelze trägt 20 bis 50 ppm eingefaltetes Oxid und einige Prozent eingemischte Luft.
+          Am Ende sind 1,5 cm³ Luft in 85 cm³ Schmelze eingemischt, zusätzlich zu den
+          eingeschlossenen Blasen. Das ist ein Kennwert für den Vergleich: Ein Anschnitt, der die
+          Form ruhiger füllt, senkt beide Werte.</p>
+      </div>
+      <div class="fig-wrap">
+        <img src="img/platte-fuellbild.webp" alt="Füllbild der Platte: Zeitpunkt, zu dem jede Zelle halb gefüllt war" loading="lazy">
+        <div class="fig-cap"><b>Füllbild.</b> Zeitpunkt, zu dem jede Zelle halb voll war. Die
+          schrägen Streifen sind Spritzer und Filme, die früh durch die Form fliegen; die spät
+          gefüllten Flächen oben und neben dem Kern sind die Stellen, an denen die Luft zuletzt
+          verdrängt wurde.</div>
+      </div>
+
+      <div class="prose">
+        <p><b>Vergleich mit gerechneter Luft.</b> Derselbe Fall mit <code>interIsoFoam</code>, das
+          die Luft als zweite inkompressible Phase rechnet (Dichte 1,16 kg/m³). Die Entlüftungen sind
+          dort offene Ränder von 20 × 4 mm.</p>
+      </div>
+      <div class="fig-wrap">
+        <video autoplay muted loop playsinline controls preload="metadata" poster="img/platte-vergleich.webp"
+          aria-label="Vergleich dieFillFoam und interIsoFoam in den ersten 12 ms">
+          <source src="img/platte-vergleich.mp4" type="video/mp4">
+        </video>
+        <div class="fig-cap"><b>Die ersten 12 ms.</b> Links <code>dieFillFoam</code>, rechts
+          <code>interIsoFoam</code> mit gerechneter Luft. Strahl, Aufprall am Kern (30 bar) und die
+          seitlichen Spritzfilme mit 80–100 m/s stimmen überein.</div>
+      </div>
+      <div class="prose">
+        <p>Ab etwa 8 ms trennen sich die Bilder, und genau dort liegt der Unterschied der Modelle.
+          Sobald sich die Wandfilme neben dem Strahl schließen, sind die beiden Bereiche darunter für
+          <code>dieFillFoam</code> eingeschlossene Pakete, deren Druck steigt. Für
+          <code>interIsoFoam</code> sind die Filme nur eine Zelle dick; die Luft strömt durch die
+          teilgefüllten Zellen hindurch und entweicht. Später läuft in <code>interIsoFoam</code>
+          außerdem Schmelze durch die offenen Entlüftungen aus der Form, was eine Entlüftung im
+          Druckguss nicht tut. Beim Rechenaufwand ist der Unterschied eindeutig:</p>
+      </div>
+      <div class="table-scroll">
+      <table class="th-table kennzahlen">
+        <thead><tr><th>Platte, 21 600 Zellen, 1 Kern</th><th>dieFillFoam</th><th>interIsoFoam</th></tr></thead>
+        <tbody>
+          <tr><td>Zeitschritte bis 44 ms</td><td>5 597</td><td>6 947</td></tr>
+          <tr><td>Rechenzeit</td><td>812 s</td><td>2 592 s</td></tr>
+          <tr><td>mittlerer Zeitschritt</td><td>7,9 µs</td><td>6,5 µs</td></tr>
+          <tr><td>Schmelzevolumen, Fehler</td><td>0,01 %</td><td>Verlust über die Entlüftungen</td></tr>
+          <tr><td>Temperatur mitgerechnet</td><td>ja</td><td>nein</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <span class="section-anchor" id="s5"></span>
+      <h2 class="section-title">5. Beispiel: Gießkammer mit bewegtem Kolben</h2>
+      <div class="prose">
+        <p>Die erste Phase des Schusses: Kammer mit 100 mm Durchmesser und 600 mm Länge, zu 40 %
+          gefüllt. Der Kolben fährt auf den ersten 100 mm auf 0,25 m/s an und beschleunigt bis
+          150 mm auf 1,0 m/s, deutlich über der kritischen Geschwindigkeit. Das Netz (52 600 Zellen,
+          O-Grid) wird mit dem Kolben gestaucht. Die Schmelze wird zu Beginn mit einer Ebene in die
+          Zellen geschnitten (<code>setAlphaField</code>), so dass die Oberfläche eben ist und die
+          angeschnittenen Zellen ihren Bruchteil erhalten; die Luft entweicht über ein Steigrohr hinter der
+          Stirnplatte, das als offene Entlüftung wirkt. Kammerwand und Kolben haben 200 °C.</p>
+      </div>
+      <div class="fig-wrap" id="video-kammer">
+        <video autoplay muted loop playsinline controls preload="metadata" poster="img/kammer.webp" aria-label="Welle in der Gießkammer mit bewegtem Kolben">
+          <source src="img/kammer.mp4" type="video/mp4">
+        </video>
+        <div class="fig-cap"><b>Welle in der Gießkammer.</b> Oben links der Längsschnitt mit der
+          Schmelzetemperatur und der Luft (grau: mit dem Steigrohr verbunden), oben rechts das
+          eingefaltete Oxid, unten die Oberfläche der Schmelze nach der Geschwindigkeit.</div>
+      </div>
+      <div class="prose">
+        <p>Vor dem Kolben baut sich eine Welle auf, läuft zur Stirnplatte und schlägt dort über. Die
+          Luft unter der überschlagenden Welle bleibt hier mit dem Steigrohr verbunden und entweicht.
+          Das Oxidmodell zeigt, was die Welle mitnimmt: Die Badoberfläche war vor dem Schuss bis zu
+          einer Sekunde der Luft ausgesetzt, ihre Oxidhaut ist entsprechend dick. Wo die Welle an der
+          Stirnplatte überschlägt, wird diese alte Haut eingefaltet; die Schmelze dort trägt 10 bis
+          100 ppm Oxid, während der Sumpf darunter sauber bleibt.</p>
+        <p>Deutlich sichtbar ist auch die Vorerstarrung: An der Kammerwand kühlt die Schmelze bis
+          zum Ende des Hubs auf 559 °C ab, unter die Liquidustemperatur, 1,8 % der Schmelze sind
+          bereits fest. Die Rechnung braucht 4 Minuten auf 6 Kernen.</p>
+      </div>
+
+      <span class="section-anchor" id="s6"></span>
+      <h2 class="section-title">6. Beispiel: Wassermodell nach Niida und Maeda</h2>
+      <div class="prose">
+        <p>Niida und Maeda (2020) haben die Formfüllung an einem Wassermodell aus Acrylglas gefilmt:
+          Platte 100 × 150 mm, 5 mm dick, mit Trichter, Anschnitt, Überlauf und Entlüftung, gespeist
+          aus einer Gießkammer von 50 mm Durchmesser. Verglichen werden zwei Umschaltpunkte des
+          Kolbens von 20 auf 150 mm/s: P1 vor dem Anschnitt, P2 danach. Der Fall ist dreidimensional
+          nachgebaut (1 mm Zellen, 162 000 Zellen, mit der Angussbuchse von 57 mm).</p>
+      </div>
+      <div class="prose">
+        <p>Nachgebaut sind die Maße aus Bild 1 und 4 der Arbeit: Platte 100 × 110 mm auf einem
+          Trichter von 40 mm, der sich auf einen Anschnitt von 16 mm verengt, darunter die
+          Angussbuchse (57 mm, Achse senkrecht zur Platte), oben ein Überlauf mit Entlüftung zur
+          Atmosphäre. Wasser strömt aus der Buchse, knickt um 90° nach oben ab und schießt durch den
+          Anschnitt in die Form. Beide Fälle beginnen mit gefüllter Buchse; bei P2 fährt der Kolben
+          noch 5 mm langsam, bevor er auf 150 mm/s umschaltet.</p>
+      </div>
+      <div class="fig-wrap" id="video-wasser-p1">
+        <!-- Entwurf: das Video folgt, sobald die Rechnung fertig ist
+             (img/wasser-P1.mp4 und img/wasser-P1.webp als Standbild). -->
+        <div class="fig-platzhalter">Video folgt</div>
+        <div class="fig-cap"><b>P1: schnell schon vor dem Anschnitt.</b> Links die Oberfläche des
+          Wassers in der Form, Mitte die Zellschicht an der Vorderwand, rechts die an der Kammerseite
+          (je 0,5 mm von der Wand). Grau: Luft mit Verbindung zur Entlüftung; blau: eingeschlossene
+          Luft.</div>
+      </div>
+      <div class="fig-wrap" id="video-wasser-p2">
+        <!-- Entwurf: das Video folgt, sobald die Rechnung fertig ist
+             (img/wasser-P2.mp4 und img/wasser-P2.webp als Standbild). -->
+        <div class="fig-platzhalter">Video folgt</div>
+        <div class="fig-cap"><b>P2: langsam bis hinter den Anschnitt.</b> Gleiche Darstellung.</div>
+      </div>
+      <div class="prose" id="wasser-ergebnis">
+        <p><b>Was die Rechnung zeigt.</b> Bei P1 schießt der Strahl nach dem Knick an der Vorderwand
+          entlang nach oben, an der Kammerseite bleibt Luft. Genau das beschreiben Niida und Maeda
+          für P1: das Wasser liegt an der Vorderwand, die Luft wird über die Dicke der Form
+          eingeschlossen. Die Ergebnisse für P2 und der Verlauf der eingeschlossenen Luft folgen,
+          sobald die Rechnungen fertig sind.</p>
+      </div>
+
+      <span class="section-anchor" id="s7"></span>
+      <h2 class="section-title">7. Einen Fall rechnen</h2>
+      <div class="prose">
+        <p>Jeder Beispielfall hat ein <code>Allrun</code>, das vernetzt, rechnet und die Bilder und
+          das Video erzeugt.</p>
+      </div>
+<pre class="code">dieFill/
+  src/dieFillFoam/     <span class="c"># der Solver</span>
+  tools/renderFill.py  <span class="c"># ParaView: Bilder und Video</span>
+  cases/plateCore2D/   <span class="c"># Platte mit Kern (2D)</span>
+  cases/shotSleeve/    <span class="c"># Gießkammer mit Kolben</span>
+  cases/waterModel3D/  <span class="c"># Wassermodell, P1 und P2</span></pre>
+<pre class="code">cd dieFill &amp;&amp; ./Allwmake
+cd cases/plateCore2D &amp;&amp; ./Allrun   <span class="c"># Netz, Rechnung, postProcessing/images, Video</span></pre>
+      <div class="prose">
+        <p>Die Luft wird in <code>constant/gasProperties</code> beschrieben, die Temperatur in
+          <code>constant/thermalProperties</code>, die Einschlussmodelle in
+          <code>constant/inclusionProperties</code>:</p>
+      </div>
+<pre class="code">vents                                  <span class="c"># gasProperties</span>
+{
+    ventLeft  { Cd 0.8; area 2e-6; }   <span class="c"># Entlüftung 2 mm², isentrope Düse</span>
+    ventRight { open true; }           <span class="c"># offen: Umgebungsdruck</span>
+}</pre>
+<pre class="code">dieHeatTransfer                        <span class="c"># thermalProperties</span>
+{
+    "(walls|vent.*)" { h 2e4; Tdie 473; }   <span class="c"># Wärmeübergang, Formtemperatur</span>
+    frontAndBack     { h 2e4; Tdie 473; }   <span class="c"># 2D: die beiden Formhälften</span>
+}</pre>
+<pre class="code">oxide          { active yes; kp 1e-12; Ckappa 1; }            <span class="c"># inclusionProperties</span>
+airEntrainment { active yes; Cair 0.5; Cturb 0.05; sigma 0.9; }</pre>
+      <div class="prose">
+        <p>Die Videos erzeugt <code>tools/renderFill.py</code> mit ParaView
+          (<code>pvbatch</code>): ein Bild je geschriebenem Zeitschritt nach
+          <code>postProcessing/images</code>, daraus mit ffmpeg ein Video. Mit
+          <code>WEBDIR=… ./Allrun</code> entstehen zusätzlich die Fassungen für diese Seite.</p>
+      </div>
+
+      <span class="section-anchor" id="s8"></span>
+      <h2 class="section-title">8. Grenzen</h2>
+      <div class="warning-box">
+        <b>Grenzen des Modells:</b> Die Luft hat keinen Impuls; Luftpolster, die die Schmelze
+        abbremsen, und Luft, die durch die Schmelze strömt, fehlen. Die Pakete sind explizit an die
+        Druckgleichung gekoppelt, sehr kleine Blasen werden bei <code>pMax</code> begrenzt. Keine
+        Oberflächenspannung, keine Wärmeleitung in der Form, keine temperaturabhängige Viskosität.
+        Turbulenzmodelle lassen sich einschalten, wirken aber auch im Leerraum.
+      </div>
+
+      <span class="section-anchor" id="quellen"></span>
+      <h2 class="section-title">9. Quellen</h2>
+      <div class="prose">
+        <ul>
+          <li>A. Niida, Y. Maeda: <i>Observation of Air Entrapment during Mold Filling of Die
+            Casting Using Water Model Experiment for Mold Filling Simulation.</i> Materials
+            Transactions 61 (2020), S. 1364–1368, doi:10.2320/matertrans.F-M2020821.</li>
+          <li>J. Roenby, H. Bredmose, H. Jasak: <i>A computational method for sharp interface
+            advection.</i> Royal Society Open Science 3 (2016), 160405.</li>
+          <li>C. W. Hirt, B. D. Nichols: <i>Volume of fluid (VOF) method for the dynamics of free
+            boundaries.</i> Journal of Computational Physics 39 (1981), S. 201–225.</li>
+          <li>F. Gibou, R. Fedkiw, L.-T. Cheng, M. Kang: <i>A second-order-accurate symmetric
+            discretization of the Poisson equation on irregular domains.</i> Journal of
+            Computational Physics 176 (2002), S. 205–227.</li>
+          <li>OpenFOAM v2606 (openfoam.com); eigene Rechnungen in <code>dieFill/cases/</code>.</li>
+        </ul>
+      </div>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>
