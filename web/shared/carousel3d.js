@@ -21,9 +21,16 @@ const THREE_URL = '/tools/3d-studio/vendor/three/three.module.js';
 const CARD_W = 1, CARD_H = 2 / 3;      // Seitenverhältnis 3:2 wie die Bilder
 const FOV = 15;
 
+/* Farben zur Laufzeit aus den CSS-Tokens des aktiven Farbschemas (shared.css,
+   von schemes.js umgeschaltet); ohne Token die Palette. Keine Hex-Werte im Code. */
 function palette() {
+  const css = getComputedStyle(document.documentElement);
   const P = window.__PALETTE__ || {};
-  return { dark: P.dark || '#002733', surface: P.surface || '#ffffff', bg: P.bg || '#f3f6f6', primaryLight: P.primaryLight || '#3fc2b6', primary: P.primary || '#008c82', muted: P.muted || '#4c6870' };
+  const token = (name, key) => (css.getPropertyValue(name) || '').trim() || P[key] || '';
+  return {
+    dark: token('--dark', 'dark'), surface: token('--surface', 'surface'), bg: token('--bg', 'bg'),
+    primaryLight: token('--primary-light', 'primaryLight'), primary: token('--primary', 'primary'), muted: token('--muted', 'muted')
+  };
 }
 
 /* Exponentielle Dämpfung wie maath/easing.damp: tau in Sekunden. */
