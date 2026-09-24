@@ -67,7 +67,7 @@ const STELLEN = [...Array.from({ length: 101 }, (_, i) => i / 100), 1 / 3 - 1e-9
 const things = () => ({
   'Überlaufbohne': VENTS.TYPES.bohne.color, 'Überlauf mit Entlüftung': VENTS.TYPES.entlueftet.color,
   'Waschbrett': VENTS.TYPES.waschbrett.color, 'Schlitz': VENTS.TYPES.schlitz.color, 'Kanalpunkt': C.ELEMENT.kanalpunkt,
-  'Kühlstich': COOL.TYPES.stich.color, 'Kanal': COOL.TYPES.kanal.color, 'Anschnitt (Füllung)': FILL.COLOR,
+  'Kühlstich': COOL.TYPES.stich.color, 'Kanal': COOL.TYPES.kanal.color, 'Anschnitt (Füllung)': FILL.inletColor(),
   ...Object.fromEntries(Object.entries(G.TYPES).map(([k, t]) => ['Knoten ' + k, t.color])),
   ...Object.fromEntries([0, 1, 2, 3, 4, 5].map(l => ['Richtung ' + l, C.regionColor(l)])),
   ...Object.fromEntries(C.axisColors().map((c, i) => ['Achse ' + 'XYZ'[i], c]))
@@ -89,7 +89,7 @@ test('Standard: jede Elementart trägt ihre Farbe', () => {
   assert.equal(C.ELEMENT.kanalpunkt, P.mix('air', 'surface', 0.7), 'die Kanalpunkte noch heller');
   assert.equal(COOL.TYPES.stich.color, c.cool);
   assert.equal(COOL.TYPES.kanal.color, P.mix('cool', 'surface', 0.45), 'der Kanal ist die hellere Temperierung');
-  assert.equal(FILL.COLOR, c.die, 'der Anschnitt gehört zum Werkzeug');
+  assert.equal(FILL.inletColor(), c.die, 'der Anschnitt gehört zum Werkzeug');
   assert.equal(G.TYPES.root.color, c.biscuit);
   assert.equal(G.TYPES.gate.color, c.die);
   assert.deepEqual(C.axisColors(), [c.axisX, c.axisY, c.axisZ]);
@@ -156,7 +156,7 @@ test('Umschalten färbt Designer, Anguss, Richtungen und Achsen um', () => {
   assert.equal(VENTS.TYPES.waschbrett.color, c.machine);
   assert.equal(VENTS.TYPES.entlueftet.color, c.air);
   assert.equal(COOL.TYPES.stich.color, c.cool);
-  assert.equal(FILL.COLOR, c.die, 'der Anschnitt der Füllung zieht mit dem Ereignis nach');
+  assert.equal(FILL.inletColor(), c.die, 'der Anschnitt der Füllung zieht mit dem Ereignis nach');
   assert.equal(G.TYPES.point.color, c.mark);
   assert.equal(G.TYPES.gate.color, c.die);
   assert.deepEqual(C.axisColors(), [c.axisX, c.axisY, c.axisZ]);
@@ -165,9 +165,9 @@ test('Umschalten färbt Designer, Anguss, Richtungen und Achsen um', () => {
   /* Ein entfallenes Schema landet beim nächsten der drei (S.alias). */
   assert.equal(S.set('kupfer'), 'graphit');
   assert.equal(C.ROLE.part, S.colors('graphit').part, 'das Bauteil hat das Grau des Schemas');
-  assert.equal(FILL.COLOR, S.colors('graphit').die);
+  assert.equal(FILL.inletColor(), S.colors('graphit').die);
   S.set('teal');
-  assert.equal(FILL.COLOR, P.die);
+  assert.equal(FILL.inletColor(), P.die);
 });
 
 test('Farbleisten: die von palette.js, turbo blau → grün → rot, Punktfarben linear', () => {

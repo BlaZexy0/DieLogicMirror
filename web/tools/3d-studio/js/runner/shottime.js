@@ -23,8 +23,8 @@
    hier für das Modell erzeugt — Maschine, Kammer, Legierung und Thermik
    aus dem Auslegungszustand, die Massen aus den Volumen des Modells —,
    unabhängig davon, welche Kurve das Dashboard gerade zeigt. Der
-   Angussdesigner (js/runner/tool.js) und der Anguss-Schritt der Werkbank
-   (js/werkbank/runner.js) benutzen es gleich.
+   Angussdesigner (js/runner/tool.js) benutzt es auf seiner Seite und im
+   Schritt Anguss der Werkbank gleich.
    Kein DOM: die Tests rechnen es unter Node nach. */
 
 import { generateCurve } from '../../../auslegung/js/core/curvegen.js';

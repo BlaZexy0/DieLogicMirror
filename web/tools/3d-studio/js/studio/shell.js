@@ -145,21 +145,74 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   aim.hide = () => aim.show(false);
   const helpApi = mountHelp({ drawer: ui('help'), body: ui('help-body'), closeBtn: ui('help-close'), html: help });
   ui('help-title').textContent = 'Hilfe · ' + title;
+  /* Auf einer Seite mit mehreren Werkzeugen (die Werkbank) hat jedes seinen
+     Abschnitt in der Hilfe (data-help-owner): ein ⓘ öffnet sie bei den
+     Ankern SEINES Werkzeugs — zwei Werkzeuge kennen beide eine „Zellkante".
+     „?" schlägt den Abschnitt des Werkzeugs auf, das gerade dran ist. */
+  const helpOwner = el => { const o = el.closest && el.closest('[data-owner]'); return o ? o.getAttribute('data-owner') : null; };
+  let helpFor = null;
 
   /* ── Modi ─────────────────────────────────────────────────── */
+  /* Eine Seite kann mehrere GRUPPEN von Modi tragen — die Werkbank je
+     Schritt eine (js/studio/stages.js). Die Reiterleiste zeigt die Modi der
+     Gruppe, die gerade dran ist; die Abschnitte aller Gruppen stehen
+     verborgen in der Seitenleiste, damit jedes Werkzeug seine Felder
+     behält. Eine Seite mit einem Werkzeug hat genau eine Gruppe (''). Die
+     Zahlen an den Reitern gehören ihrer Gruppe: ein Werkzeug, das gerade
+     nicht dran ist, schreibt sie trotzdem, und sie stehen da, sobald seine
+     Gruppe wieder gezeigt wird. */
   let modes = [];
   let current = null;
+  let group = '';
+  const groups = new Map();          // Name → { modes, current, badges }
   const modeListeners = [];
   const tabs = ui('tabs'), body = ui('body'), hint = ui('hint');
+  /* ids nur für aria-controls/-labelledby — je Gruppe eindeutig. */
+  const tid = (g, m) => 'st-tab-' + (g ? g + '-' : '') + m.id, pid = (g, m) => 'st-mode-' + (g ? g + '-' : '') + m.id;
+  const sectionHTML = (g, m) => '<section class="st-mode" id="' + pid(g, m) + '" aria-labelledby="' + tid(g, m) + '" data-mode="' + m.id + '"'
+    + (g ? ' data-group="' + g + '"' : '') + (m.owner ? ' data-owner="' + m.owner + '"' : '') + ' role="tabpanel" hidden>' + (m.html || '') + '</section>';
+
+  /* Die Reiter der gezeigten Gruppe. Ein Modus mit `breakBefore` beginnt eine
+     neue Zeile — die Werkbank stellt so die Modi zweier Werkzeuge eines
+     Schritts untereinander. Eine Gruppe mit nur einem Modus braucht keine
+     Reiter. */
+  function renderTabs() {
+    const g = groups.get(group);
+    tabs.innerHTML = modes.map(m => (m.breakBefore ? '<span class="st-tab-break" aria-hidden="true"></span>' : '')
+      + '<button type="button" role="tab" id="' + tid(group, m) + '" aria-controls="' + pid(group, m) + '" data-mode="' + m.id + '" aria-selected="false" tabindex="-1" title="' + esc(m.hint || '') + '">'
+      + '<span class="st-tab-label">' + m.label + '</span><span class="st-tab-badge" data-badge="' + m.id + '" hidden></span></button>').join('');
+    tabs.hidden = modes.length < 2;
+    if (g) for (const [id, b] of g.badges) paintBadge(id, b.text, b.kind);
+  }
 
   function setModes(list) {
+    groups.clear();
+    groups.set('', { modes: list, current: null, badges: new Map() });
+    group = '';
     modes = list;
-    /* ids nur für aria-controls/-labelledby — ein Rahmen je Seite. */
-    const tid = m => 'st-tab-' + m.id, pid = m => 'st-mode-' + m.id;
-    tabs.innerHTML = list.map(m => '<button type="button" role="tab" id="' + tid(m) + '" aria-controls="' + pid(m) + '" data-mode="' + m.id + '" aria-selected="false" tabindex="-1" title="' + esc(m.hint || '') + '">'
-      + '<span class="st-tab-label">' + m.label + '</span><span class="st-tab-badge" data-badge="' + m.id + '" hidden></span></button>').join('');
-    body.innerHTML = list.map(m => '<section class="st-mode" id="' + pid(m) + '" aria-labelledby="' + tid(m) + '" data-mode="' + m.id + '" role="tabpanel" hidden>' + (m.html || '') + '</section>').join('');
+    body.innerHTML = list.map(m => sectionHTML('', m)).join('');
+    renderTabs();
     current = null;
+  }
+
+  /** Eine weitere Gruppe von Modi: ihre Abschnitte kommen (verborgen) dazu,
+      die Reiter erst mit showGroup. */
+  function addModes(name, list) {
+    groups.set(name, { modes: list, current: null, badges: new Map() });
+    body.insertAdjacentHTML('beforeend', list.map(m => sectionHTML(name, m)).join(''));
+  }
+
+  /** Eine Gruppe zeigen: ihre Reiter, und den Modus, in dem man sie zuletzt
+      verlassen hat (sonst `want` oder den ersten). */
+  function showGroup(name, want) {
+    const g = groups.get(name);
+    if (!g) return;
+    const prev = current, prevGroup = group;
+    group = name;
+    modes = g.modes;
+    renderTabs();
+    const id = want && modes.some(m => m.id === want) ? want : g.current || modes[0].id;
+    applyMode(id, prev, prevGroup);
   }
   tabs.addEventListener('click', ev => {
     const b = ev.target.closest('[data-mode]');
@@ -181,27 +234,40 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   function setMode(id) {
     const m = modes.find(x => x.id === id);
     if (!m || id === current) return;
-    const prev = current;
+    applyMode(id, current, group);
+  }
+  /* Die Zuhörer erfahren, woher es kam: (Modus, voriger Modus,
+     { group, prevGroup }) — beim Wechsel der Gruppe gehört der vorige Modus
+     einer anderen. */
+  function applyMode(id, prev, prevGroup) {
+    const m = modes.find(x => x.id === id);
     current = id;
+    const g = groups.get(group);
+    if (g) g.current = id;
     for (const b of tabs.querySelectorAll('[data-mode]')) {
       const on = b.getAttribute('data-mode') === id;
       b.classList.toggle('active', on);
       b.setAttribute('aria-selected', on ? 'true' : 'false');
       b.setAttribute('tabindex', on ? '0' : '-1');
     }
-    for (const s of body.querySelectorAll('.st-mode')) s.hidden = s.getAttribute('data-mode') !== id;
+    for (const s of body.querySelectorAll('.st-mode')) s.hidden = !(s.getAttribute('data-mode') === id && (s.getAttribute('data-group') || '') === group);
     hint.textContent = m.hint || '';
     hint.hidden = !m.hint;
-    for (const fn of modeListeners) fn(id, prev);
+    for (const fn of modeListeners) fn(id, prev, { group, prevGroup });
     view.invalidate();
   }
-  const modeSection = id => body.querySelector('.st-mode[data-mode="' + id + '"]');
-  function setTabBadge(id, text, kind = '') {
+  const modeSection = (id, g = group) => body.querySelector('.st-mode[data-mode="' + id + '"]' + (g ? '[data-group="' + g + '"]' : ''));
+  function paintBadge(id, text, kind) {
     const b = tabs.querySelector('[data-badge="' + id + '"]');
     if (!b) return;
     b.textContent = text || '';
     b.hidden = !text;
     b.className = 'st-tab-badge' + (kind ? ' ' + kind : '');
+  }
+  function setTabBadge(id, text, kind = '', g = group) {
+    const store = groups.get(g);
+    if (store) store.badges.set(id, { text, kind });
+    if (g === group) paintBadge(id, text, kind);
   }
 
   /* ── Hauptknopf, Fortschritt, Zustandszeile ──────────────── */
@@ -356,6 +422,18 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   /* ── Auswahlfeld ─────────────────────────────────────────── */
   const inspectorEl = ui('inspector'), inspTitle = ui('inspector-title'), inspBody = ui('inspector-body');
   let onInspectorClose = null;
+  /* Mehrere Werkzeuge auf einer Seite (die Werkbank): jedes füllt seinen
+     eigenen Kasten im Auswahlfeld (boxFor), zu sehen ist der des Werkzeugs,
+     das dran ist (setOwner). Kopf, Einklappen und Schließen teilen sie. */
+  const ownBox = (parent, owner) => {
+    let box = [...parent.children].find(c => c.getAttribute && c.getAttribute('data-owner') === owner);
+    if (!box) {
+      box = document.createElement('div');
+      box.setAttribute('data-owner', owner);
+      parent.appendChild(box);
+    }
+    return box;
+  };
   const inspector = {
     el: inspectorEl, body: inspBody,
     show({ title: t, html }) {
@@ -367,7 +445,11 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     hide() { inspectorEl.hidden = true; },
     get visible() { return !inspectorEl.hidden; },
     collapse(on) { inspectorEl.classList.toggle('collapsed', on === undefined ? !inspectorEl.classList.contains('collapsed') : !!on); ui('inspector-toggle').textContent = inspectorEl.classList.contains('collapsed') ? '▸' : '▾'; },
-    onClose(fn) { onInspectorClose = fn; }
+    onClose(fn) { onInspectorClose = fn; },
+    boxFor: owner => ownBox(inspBody, owner),
+    setOwner(owner) {
+      for (const c of [...inspBody.children]) if (c.getAttribute && c.getAttribute('data-owner') !== null) c.hidden = c.getAttribute('data-owner') !== owner;
+    }
   };
   ui('inspector-toggle').addEventListener('click', () => inspector.collapse());
   /* ⓘ-Knöpfe öffnen die Hilfe an ihrem Anker — in der Seitenleiste, im
@@ -381,7 +463,7 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
          und ohne Abbruch setzte das Label danach noch den Fokus ins Feld
          (oder schaltete ein Häkchen um). */
       ev.preventDefault(); ev.stopPropagation();
-      helpApi.show(b.getAttribute('data-help'));
+      helpApi.show(b.getAttribute('data-help'), helpOwner(b));
     });
     /* Das ⓘ ist ein <span role="button"> (rows.js) — Eingabe und Leertaste
        lösen es aus wie einen Knopf. */
@@ -390,7 +472,7 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
       const b = ev.target.closest && ev.target.closest('[data-help]');
       if (!b || b !== ev.target) return;
       ev.preventDefault(); ev.stopPropagation();
-      helpApi.show(b.getAttribute('data-help'));
+      helpApi.show(b.getAttribute('data-help'), helpOwner(b));
     });
   }
   ui('inspector-close').addEventListener('click', () => { if (onInspectorClose) onInspectorClose(); else inspector.hide(); });
@@ -442,12 +524,38 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
   viewport.addEventListener('wheel', introSeen, { passive: true });
   /* „Darstellung ▾" gibt es nur, wenn das Werkzeug Anzeigeoptionen hat. */
   const darstellungBtn = viewbar.querySelector('[data-darstellung]'), darstellungSep = viewbar.querySelector('[data-darstellung-sep]');
-  const darstellung = html => {
-    if (viewbar.pop) viewbar.pop.innerHTML = html || '';
-    if (darstellungBtn) darstellungBtn.hidden = !html;
-    if (darstellungSep) darstellungSep.hidden = !html;
-    return viewbar.pop;
+  const showDarstellungBtn = on => {
+    if (darstellungBtn) darstellungBtn.hidden = !on;
+    if (darstellungSep) darstellungSep.hidden = !on;
   };
+  /* Mit `owner` (die Werkbank: mehrere Werkzeuge auf einer Seite) bekommt
+     jedes Werkzeug seinen Kasten im Aufklappfeld; zu sehen ist der des
+     Werkzeugs, das dran ist (darstellungOwner) — und der Knopf nur, wenn
+     dessen Kasten etwas enthält. */
+  let darstOwner = null;
+  const darstellung = (html, owner) => {
+    const pop = viewbar.pop;
+    if (owner === undefined) {
+      if (pop) pop.innerHTML = html || '';
+      showDarstellungBtn(!!html);
+      return pop;
+    }
+    const box = ownBox(pop, owner);
+    box.innerHTML = html || '';
+    darstellungOwner(darstOwner);
+    return box;
+  };
+  function darstellungOwner(owner) {
+    darstOwner = owner;
+    let has = false;
+    for (const c of [...viewbar.pop.children]) {
+      const o = c.getAttribute && c.getAttribute('data-owner');
+      if (o === null || o === undefined) continue;
+      c.hidden = o !== owner;
+      if (o === owner && c.innerHTML) has = true;
+    }
+    showDarstellungBtn(has);
+  }
   darstellung('');
 
   /* Wo die Ansichtsleiste endet, MISST der Rahmen: sie ist je nach Schrift
@@ -636,7 +744,7 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
     /** Je Eingang ein Chip mit Bauteil-Klappe: [{ key, label, title }] → { key: { set(name, warning), open, fields } } */
     addPartChips
   };
-  ui('help-btn').addEventListener('click', ev => { ev.stopPropagation(); helpApi.toggle(); });
+  ui('help-btn').addEventListener('click', ev => { ev.stopPropagation(); helpApi.toggle(null, helpFor); });
   /* ☰ nimmt die Seitenleiste weg und holt sie wieder — bei jeder Breite: wo
      sie neben dem Bild steht, bekommt das Bild den Platz; unter 720 px, wo sie
      als Lade darüber liegt, gleitet sie hinaus (css/studio.css). Sie ist DA,
@@ -677,11 +785,15 @@ export function createShell({ mount, title, help = '', sceneOpts = {} }) {
         den Hüllquader JETZT liefert — der Körper eines Designers wächst. */
     setFitTarget: fn => vp.setFitTarget(fn),
     setModes, setMode, get mode() { return current; }, onMode(fn) { modeListeners.push(fn); }, modeSection, setTabBadge,
+    /* Mehrere Gruppen von Modi (die Werkbank, js/studio/stages.js). */
+    addModes, showGroup, get group() { return group; },
     setPrimary, setNote, setBusy, progress: setProgress, get busy() { return busy; },
     setActionsExtra, actionsExtra,
     setChips, renderChips,
     inspector,
-    legend, status, colorbar: setColorbar, darstellung,
+    legend, status, colorbar: setColorbar, darstellung, darstellungOwner,
+    /** Wessen Abschnitt der Hilfe „?" aufschlägt (die Werkbank: das Werkzeug, das dran ist). */
+    setHelpOwner(owner) { helpFor = owner || null; },
     toast, hideToast, banner,
     header,
     onKey(fn) { keyListeners.push(fn); },

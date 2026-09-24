@@ -155,6 +155,7 @@ test('Rechnen: Raster und Front als eine Rechnung — danach steht das Ergebnis,
   assert.ok(s.spots.list[0].frac > 0.9, 'die erste liegt ganz am Ende');
   assert.ok(s.spots.list[0].x < c[0], 'am −X-Ende, nicht am Anschnitt: ' + s.spots.list[0].x);
   assert.match(kpiText(ui('result-kpis')), /letzte Stelle/);
+  assert.ok(ui('clock-details').hidden, 'ohne Schusskurve (nur auf der Werkbank) keine Zeiten ab Kolbenstart');
   assert.match(doc.getElementById('pt-legend').textContent, /zuletzt gefüllt/);
   shell.setMode('fuellung');
   assert.ok(ui('primary').hidden, 'ein aktuelles Ergebnis braucht keinen Knopf');

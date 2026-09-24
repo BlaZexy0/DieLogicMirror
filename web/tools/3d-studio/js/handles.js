@@ -48,13 +48,6 @@ const HANDLE_PX = 9;
    (dielogic:scheme): auch die Griffe, deren Farben die Werkzeuge bei jedem
    Abgleich neu nennen. */
 
-/** Nur noch für die Werkbank (js/werkbank/), bis sie auf die Bausteine der
-    Werkzeuge umzieht: die Farbe des Rings als Variable, die ein Wechsel des
-    Schemas nachzieht. Die Werkzeuge lesen VIEW.selected beim Malen — so
-    hängt nichts daran, wer bei einem Wechsel zuerst hinhört. */
-export let SELECTED_RING = VIEW.selected;
-onScheme(() => { SELECTED_RING = VIEW.selected; });
-
 /* Ein Pfeil in Griff-Einheiten (eine Einheit sind HANDLE_PX Bildpunkte,
    wie die Kugeln); er beginnt außerhalb der Kugel, damit beide getrennt
    zu treffen sind. */

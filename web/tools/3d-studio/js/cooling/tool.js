@@ -31,7 +31,12 @@
    Abstandsfläche gehört den Modi „Abstandsfläche" und „Setzen" (auf ihr
    wird gezielt — wer anderswo einen Chip oder den Pfeil wählt, landet in
    „Setzen"). Jede abgeschlossene Änderung geht an den Gastgeber
-   (host.changed): Rückgängig, Entwurf, „Ungespeichert". */
+   (host.changed): Rückgängig, Entwurf, „Ungespeichert".
+
+   Auf der Werkbank (host.field.shared) kommt die Fläche aus dem
+   gemeinsamen Feld mit der Zellkante des Schritts Bauteil — hat die
+   Füllung oder die Wandstärke es schon gerechnet, breit genug, wird nur
+   noch abgeleitet —, und gerechnet wird erst, wenn der Schritt dran ist. */
 
 import * as T from 'three';
 import { onScheme, ROLE, VIEW } from '../part/colors.js';
@@ -97,11 +102,20 @@ function suggestShellCell(model) {
 export function createTemperierTool(host) {
   const { shell, view, part, field: hostField } = host;
   const ui = host.ui;
+  /* EIN Feld für die ganze Seite (die Werkbank): seine Zellkante stellt der
+     Schritt Bauteil ein. */
+  const shared = !!hostField.shared;
+  /* Auf der Werkbank ist das Werkzeug nur dran, solange einer seiner Modi
+     zu sehen ist (setActive); auf seiner eigenen Seite immer. Was liegen
+     blieb, während es nicht dran war, rechnet es, sobald es dran ist. */
+  let active = true, pending = false;
 
   let placer = null;
   const state = {
     plan: M.emptyPlan(), field: null, fieldH: 0, shellDist: null, shellCount: 0, lifted: null,
-    h: 6, hAuto: true, dirMode: 'normal', both: false,
+    /* Die Zellkante: die eigene — auf der Werkbank die des gemeinsamen Feldes. */
+    ownH: 6, get h() { return shared ? hostField.h : state.ownH; }, set h(v) { state.ownH = v; },
+    hAuto: true, dirMode: 'normal', both: false,
     /* Die Vorgaben für neue Elemente stehen im Plan (js/cooling/model.js):
        mit „Auto" hängt der Mindest-Wandabstand an ihnen. */
     get defaults() { return state.plan.defaults; },
@@ -254,6 +268,7 @@ export function createTemperierTool(host) {
     if (mode === 'drag') { syncSelLive(); return; }
     updateChecks();
     if (wired && !state.running) host.refreshActions();
+    host.emit('cooling');
   }
 
   /* Modus „Prüfung": Kennzahlen mit Urteil, darunter die Liste derer, die
@@ -319,6 +334,8 @@ export function createTemperierTool(host) {
     state.queued = false;
     const model = part.model;
     if (!model) return;
+    /* Nicht dran (die Werkbank): später, wenn der Schritt dran ist. */
+    if (!active) { pending = true; state.queued = false; state.ready = true; return; }
     const my = ++latest;
     /* Eine laufende Rechnung gilt einem Stand von vorhin: sie ist überholt. */
     if (state.running) { host.jobs.supersede(); state.running = false; }
@@ -326,6 +343,11 @@ export function createTemperierTool(host) {
     state.cancelled = false;
     state.held = false;
     ui('shell-warn').textContent = '';
+    /* Das gemeinsame Feld der Werkbank reicht womöglich schon — dann nur ableiten. */
+    if (!fieldFits() && shared) {
+      const f = hostField.peek({ h, band: bandFor(dist), pad: bandFor(dist) + 3 * h });
+      if (f) { state.field = f; state.fieldH = h; state.lifted = Math.abs(f.h - h) > 1e-9 ? f.h : null; state.ms = 0; }
+    }
     if (fieldFits()) { if (state.shellDist !== dist) derive(dist); state.ready = true; finish(); return; }
     if (asked !== true && estimate() > HOLD_S) { state.held = true; state.ready = true; finish(); return; }
 
@@ -385,6 +407,7 @@ export function createTemperierTool(host) {
 
   function updateShellFacts() {
     if (!wired) return;
+    if (shared) ui('cell-shared').textContent = 'Zellkante ' + fmtUnit(state.h, 'mm', 2) + ', eingestellt im Schritt Bauteil (Modus Feld).';
     const f = state.field;
     kpis(ui('shell-kpis'), hasShell() ? [
       { label: 'Fläche im Abstand', value: fmtUnit(state.shellDist, 'mm', 0), verdict: state.stale ? 'warn' : 'ok',
@@ -710,6 +733,12 @@ export function createTemperierTool(host) {
     groups = groupTabs({ tabs: ui('sel-groups'), box: shell.inspector.body });
     groups.set(GROUPS);
 
+    if (shared) {
+      /* Die Fläche kommt aus dem gemeinsamen Feld: seine Zellkante steht im Schritt Bauteil. */
+      ui('cell').closest('.row').hidden = true;
+      ui('cell-shared').hidden = false;
+    }
+
     /* Abstandsfläche. */
     distSlider = slider(ui('dist'), v => {
       if (v === state.plan.dist) return;
@@ -868,7 +897,8 @@ export function createTemperierTool(host) {
     state.field = null; state.fieldH = 0; state.shellDist = null; state.shellCount = 0; state.lifted = null;
     state.cancelled = false; state.held = false; state.ready = false;
     setTris(shellMesh, []);
-    if (state.hAuto) { state.h = suggestShellCell(model); ui('cell').value = fmtPlain(state.h); }
+    if (state.hAuto && !shared) { state.h = suggestShellCell(model); ui('cell').value = fmtPlain(state.h); }
+    pending = false;
     loadPlan(fresh, true);
     host.resetHistory();
     updateShellFacts();
@@ -877,11 +907,43 @@ export function createTemperierTool(host) {
     host.refreshActions();
   }
 
+  /* Die Werkbank: nicht mehr dran — kein Zielen, Griffe und Abstandsfläche
+     weg (die Bohrungen bleiben als Plan im Bild); wieder dran — alles wie
+     vorhin, und die Fläche, wenn sie aussteht. */
+  function setActive(on) {
+    active = on;
+    if (!on) { placer.cancel(); clearTimeout(shellTimer); state.queued = false; }
+    handles.setEnabled(on);
+    handles.group.visible = on;
+    applyMode();
+    if (!on) return;
+    syncSelection();
+    if (part.model && (pending || state.stale)) { pending = false; computeShell(); }
+  }
+
+  /** Das Feld des Gastgebers hat sich geändert (die Werkbank): ist der
+      Schritt dran, die Fläche daraus — sonst, wenn er dran kommt. */
+  function fieldChanged() {
+    if (!part.model || state.running) return;
+    if (active) computeShell(); else pending = true;
+  }
+
   const tool = {
     id: 'temperier',
     modes,
     startMode: 'setzen',
     accepts: [M.FORMAT],
+    setActive,
+    /* Was als Plan auch in anderen Schritten der Werkbank im Bild steht. */
+    bodies: group,
+    /* Was die übrigen Schritte der Werkbank ihm sagen und von ihm wissen. */
+    link: {
+      fieldChanged,
+      /** Wie breit das Feld nach außen reichen muss (mm): für den Achsabstand von jetzt. */
+      band: () => bandFor(state.plan.dist),
+      doc: () => M.toJSON(state.plan),
+      load: obj => loadPlan(M.fromJSON(obj))
+    },
     toJSON: () => M.toJSON(state.plan),
     fromJSON: obj => loadPlan(M.fromJSON(obj)),
     serialize: () => M.toJSON(state.plan),

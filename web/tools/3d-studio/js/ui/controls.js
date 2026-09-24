@@ -2,16 +2,14 @@
    verhalten sollen: Regler mit Wertanzeige, segmentierte Schalter,
    Zahleneingaben, Kennzahlenblöcke und die Farbskala im Viewport.
 
-   Jeder Helfer nimmt ein ELEMENT oder eine id — die Seiten ohne den
-   gemeinsamen Rahmen (der Formaufbau, die Werkbank) reichen ids, die
-   Werkzeuge des Rahmens (js/studio/) ihre über data-ui gefundenen
-   Elemente. Zahlen kommen aus js/studio/format.js (deutsch lesen und
-   schreiben); fmt, fmtPlain und parseNumber stehen nur noch für die
-   Werkbank und js/lbm/paint.js auch hier. */
+   Jeder Helfer nimmt ein ELEMENT oder eine id; die Werkzeuge des Rahmens
+   (js/studio/) reichen ihre über data-ui gefundenen Elemente. Zahlen kommen
+   aus js/studio/format.js (deutsch lesen und schreiben); fmt steht nur noch
+   für js/lbm/paint.js auch hier. */
 
 import { fmt, fmtPlain, parseNumber, clamp, rangeText } from '../studio/format.js';
 
-export { fmt, fmtPlain, parseNumber };
+export { fmt };
 
 export const $ = id => document.getElementById(id);
 

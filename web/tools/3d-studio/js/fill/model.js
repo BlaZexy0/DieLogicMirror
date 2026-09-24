@@ -10,7 +10,7 @@
    js/fill/solve.js. */
 
 import { add, normOr, clamp, wallFrame } from '../runner/vec.js';
-import { ELEMENT, onScheme } from '../part/colors.js';
+import { ELEMENT } from '../part/colors.js';
 import { checkFormat, fileIds, filePoint, fileNumber } from '../studio/planio.js';
 
 export const FORMAT = 'dielogic-fuellung';
@@ -21,11 +21,6 @@ export const FORMAT_VERSION = 1;
     Malen — so gilt immer das Schema von jetzt, gleich wer bei einem
     Wechsel zuerst hinhört. */
 export const inletColor = () => ELEMENT.anschnitt;
-/** Nur noch für die Werkbank (js/werkbank/fill.js), bis sie auf die
-    Bausteine der Werkzeuge umzieht: dieselbe Farbe als Variable, die ein
-    Wechsel des Schemas nachzieht. */
-export let COLOR = ELEMENT.anschnitt;
-onScheme(() => { COLOR = ELEMENT.anschnitt; });
 export const DEFAULTS = { w: 30, h: 2 };
 
 export const PARAM_META = {

@@ -1,6 +1,6 @@
 # 3D-Studio
 
-Acht Werkzeuge rund um Bauteil und Form in 3D, unter einem
+Zehn Werkzeuge rund um Bauteil und Form in 3D, unter einem
 Navigationsreiter — und die Werkbank, die sie als sechs Schritte an
 einem Bauteil aneinanderreiht. Alles rechnet clientseitig — kein Backend, kein
 Projekt; die Bauteile kommen als STL oder GLB und verlassen den Browser
@@ -355,8 +355,8 @@ einem ausgeblendeten Schieber würde sonst eine ausgeblendete Hälfte. Die
 bewegliche Seite zu tauschen lässt sie stehen, es bleibt dasselbe Stück.
 Die Stücke baut `js/part/dieview.js` (Dreiecke je Region, Trennkanten,
 Rand, Seite; ohne Three.js), gezeichnet und verschoben werden sie in
-`js/part/dieviewer.js`; die Werkbank hat dieselbe Formansicht im Schritt
-Bauteil, dort mit dem Blick von der Trennebene in eine Hälfte.
+`js/part/dieviewer.js`; die Werkbank hat dasselbe Werkzeug im Schritt
+Bauteil.
 
 ### Projizierte Flächen
 
@@ -2149,8 +2149,7 @@ Alle Werkzeugseiten bekommen dasselbe Gerüst und denselben Ablauf.
 Die drei Analysen (Wandstärke, Entformung, Abstand), die vier Designer
 (Anguss, Überlauf, Temperierung, Füllabschätzung), die beiden Simulationen
 (Anguss- und Kammerfüllung) und der Formaufbau laufen darin; die Werkbank
-zieht nach (bis dahin trägt sie `css/viewer.css` und ihre eigene
-Seitenleiste).
+trägt sechs davon als Schritte (`js/studio/stages.js`).
 
 ```
 Kopfzeile     Werkzeug · Bauteil-Chip (Beispielteil, Datei öffnen) · ↶ ↷ ·
@@ -2286,7 +2285,8 @@ Die Regeln, die der Rahmen durchsetzt — und die Tests, die sie halten:
 Ein Werkzeug ist eine Fabrik `createXTool(host)` in seinem Ordner
 (`tool.js`, dazu `panel.js` mit den Feldern je Modus und `help.js`). Es
 findet seine Felder mit `ui('name')` = `[data-ui="name"]` statt über ids —
-auf der Werkbank werden mehrere Werkzeuge auf einer Seite leben. Der
+auf der Werkbank leben mehrere Werkzeuge auf einer Seite
+(`js/studio/stages.js`). Der
 Gastgeber (`host.js`) besitzt Bauteil, Abstandsfeld, Verlauf, Entwurf,
 Rechnungen und Dateien und verdrahtet Reiter, Hauptknopf, Speichern,
 Exportieren und Tasten; die Seite selbst ist nur noch
@@ -2315,7 +2315,9 @@ gleich benutzt:
 - **Rechnungen** (`job.js`): `run(spec)` überholt einen laufenden Auftrag
   und wartet, bis er an seinem Haltepunkt aufgegeben hat; der überholte
   endet ohne `onCancel` und trägt `spec.superseded`. Nur „Abbrechen" ist
-  eine Entscheidung des Anwenders.
+  eine Entscheidung des Anwenders. Trägt der Auftrag ein Werkzeug
+  (`spec.owner`, die Werkbank), überholt er nur Aufträge desselben
+  Werkzeugs; den eines anderen wartet er ab (`supersede(owner)`).
 - **Raster** (`js/part/field.js`): `planField(model, { h, band, pad })`
   sagt vorher, welche Zellkante wirklich gerastert wird — über
   `MAX_SAMPLES` Punkten hebt es die Kante in Schritten von zehn Prozent,
@@ -2334,6 +2336,19 @@ gleich benutzt:
   Gerätekoordinaten, Strahl unter dem Zeiger, Bildachsen und
   `hoverProbe` (was unter dem Zeiger liegt, höchstens einmal je Bild) —
   für Griffe, Trackball, Einpassen, Licht und die Analysen.
+- **Mehrere Werkzeuge auf einer Seite** (`stages.js`, die Werkbank):
+  `mountStages(host, { stages })` gibt jedem Werkzeug einen Gast-Gastgeber;
+  die Modi eines Schritts sind eine Gruppe (`shell.addModes`,
+  `shell.showGroup`), jeder Kasten trägt `data-owner`, und Hilfe,
+  Darstellung und Auswahlfeld gehören dem Werkzeug, das dran ist. Dazu
+  kommen drei freiwillige Teile des Vertrags: `setActive(on)` (dran oder
+  nicht), `bodies` (was in anderen Schritten stehen bleibt) und `link`
+  (was andere Schritte lesen); die Seite verdrahtet sie über
+  `host.on`/`host.emit` und hängt Verlauf, Entwurf und Speichern an ihr
+  eigenes Dokument (`host.wireDoc`). Ein gemeinsames Abstandsfeld
+  (`host.field.shared`) hat eine Zellkante für alle, ein Band, das mit
+  jedem `ensure({ band })` nur wächst (`host.field.bandWanted`), und
+  `peek(opts)` für den, der ein passendes Feld nur übernehmen will.
 
 **Zeichnen auf Abruf.** Jede Seite zeichnet NUR, wenn sich etwas geändert
 hat (`js/scene.js`); eine ruhende Seite zeichnet nicht. Zeiger, Rad,
@@ -2459,7 +2474,6 @@ ueberlauf.html        Viewer 6: Überlaufdesigner (Überläufe und Entlüftungen
 temperier.html        Viewer 7: Temperierkanal-Designer (Kühlstiche und Kanäle)
 fuellung.html         Viewer 8: Füllabschätzung (Frontausbreitung von Anschnitten)
 css/site.css          Übersichtsseite und Karten
-css/viewer.css        Seitenleiste und Viewport der Werkbank, die noch nicht im Rahmen läuft
 css/studio.css        der gemeinsame Rahmen: Kopfzeile, Modi, Viewport-Aufsätze, Hilfe, Stufen, Touch
 assets/die.glb        DAS Formmodell — binäres glTF, vom Viewer geladen
 assets/parts/*.glb    die Beispielteile — ebenfalls fertiges glTF
@@ -2670,66 +2684,83 @@ Quelle.
 
 Die Werkbank reiht die Werkzeuge als **Schritte** an einem Bauteil auf —
 links eine schmale Leiste (1 Bauteil · 2 Anguss · 3 Füllung · 4 Überläufe ·
-5 Temperierung · 6 Auslegung), daneben das Feld des aktiven Schritts, rechts
-ein Viewport für alles. Die Einzelseiten bleiben, wie sie sind; die
-Schritte sind Portierungen davon (`js/werkbank/`) über denselben
-Rechenmodulen. Rahmen ist das Bauteilsystem der Analyseseiten (Trennebene
-z = 0, die Form öffnet nach +z).
+5 Temperierung · 6 Auslegung), daneben die Seitenleiste des gemeinsamen
+Rahmens mit den Modi des Schritts, rechts ein Viewport für alles. Jeder
+Schritt IST das Werkzeug seiner Einzelseite, gebaut von derselben Fabrik
+(`createXTool` in `js/<werkzeug>/tool.js`): Bauteil = Entformung und
+Wandstärke (ihre Modi in zwei Reiterzeilen), Anguss = der Angussdesigner
+mit dem Vorschlag im Modus System, Füllung = die Füllabschätzung mit
+Anschnitten aus dem Anguss, Überläufe = der Überlaufdesigner,
+Temperierung = der Temperierkanal-Designer, Auslegung = das Dashboard
+(`js/werkbank/design.js`). Rahmen ist das Bauteilsystem der Analyseseiten
+(Trennebene z = 0, die Form öffnet nach +z); das Bauteil bleibt dort.
 
-Was zwischen den Schritten wandert:
+Mehrere Werkzeuge auf einer Seite richtet `js/studio/stages.js` ein: je
+Werkzeug ein **Gast-Gastgeber** mit demselben Vertrag wie auf der
+Einzelseite, der nur durchlässt, was dem Werkzeug gehört, solange einer
+seiner Modi zu sehen ist — Felder (`ui()` sucht in den eigenen Kästen,
+`data-owner`), Chips, Legende, Farbskala, Auswahlfeld, Darstellung,
+Einpassen, das Aussehen des Bauteils. `shell.mode` ist für ein Werkzeug,
+das nicht dran ist, `null`; `tool.setActive(on)` sagt ihm, wann es dran
+ist. Was es plant (`tool.bodies`: Anguss, Überläufe, Bohrungen), bleibt in
+den anderen Schritten als Körper im Bild, nur der Schritt Bauteil zeigt
+das Bauteil für sich. Rechnungen laufen weiter, wenn man den Schritt
+wechselt (ein Punkt an der Leiste); eine Rechnung eines anderen Werkzeugs
+wird nicht überholt, die neue wartet (`spec.owner` in `js/studio/job.js`).
+
+Was zwischen den Schritten wandert (`host.on`/`host.emit`, verdrahtet in
+`js/werkbank/app.js`; die Werkzeuge sagen es über `tool.link`):
 
 - **Bauteil → Anguss:** beim Laden liegt ein Vorschlag vor dem Bauteil
-  (`js/werkbank/propose.js`): Pressrest vor der Kante bei −Y, Kanäle in der
-  Trennebene als Nut in der beweglichen Hälfte (Achse −z), ein, zwei oder
-  vier Anschnitte an der Kante, mit einem Strahl an die Wand gebunden. Das
-  Gussvolumen des Angusses ist Bauteil plus Überläufe.
+  (`js/werkbank/propose.js`, `vorschlag.js`): Pressrest vor der Kante bei
+  −Y, Kanäle in der Trennebene als Nut in der beweglichen Hälfte (Achse
+  −z), ein, zwei oder vier Anschnitte an der Kante, mit einem Strahl an die
+  Wand gebunden. Er steht im Modus System, wo auf der Einzelseite die
+  Beispiele stehen (`opts.propose`: Zahl der Anschnitte, Hauptknopf „Anguss
+  ans Bauteil legen", jeder Vorschlag ein Schritt im Verlauf); ein eigener
+  Modus kostete eine zweite Reiterzeile. Das Gussvolumen des Angusses ist
+  Bauteil plus Überläufe (abschaltbar, `opts.castVolume`).
 - **Anguss → Füllung:** die Anschnitte der Füllabschätzung *sind* die
   Mündungen des Angussgraphen — Ort, Richtung, Breite, Höhe, Ist-Anteil aus
-  der Strömungsrechnung; niemand setzt sie von Hand.
-- **Füllung → Überläufe:** die zuletzt gefüllten Stellen bleiben als Marken
-  stehen, während man die Überläufe setzt.
-- **Ein Abstandsfeld für drei Schritte:** Wandstärke (Wärmezentren,
-  Feldschnitt), Füllung (Raster) und Temperierung (Abstandsfläche) rechnen
-  auf demselben Feld (`ctx.field` in `js/werkbank/app.js`; Zellkante = halbe
-  Wanddicke, Band nach außen für den Temperierabstand).
-- **Auslegung → Anguss:** die Ankunft der Schmelze an jedem Anschnitt (im
-  Flussschema, im Auswahlfeld und in der Prüfregel der Spanne) steht nach der
-  **DieLogic-Schusskurve** statt nach einem konstanten Strom
-  (`js/runner/shottime.js`, dasselbe Modul wie im Angussdesigner): die Kurve der Auslegung (López-Anfahrt bis
-  v_krit, Plateau bis „Kammer voll", Rampe mit a_max auf das v₂ der
-  NADCA-Füllzeit) wird für dieses Modell erzeugt — Maschine, Kammer,
-  Legierung und Thermik aus dem Auslegungszustand, die Massen aus den
-  Volumen des Modells. Die Ankunft bei konstantem Strom ist ein Volumen,
-  das den Pressrest passiert hat; auf der Kurve ist das ein Kolbenweg
-  hinter „Kammer voll", und das Profil kennt die Zeit dazu. Die Zeiten
-  zählen ab Kolbenstart; das Häkchen „Ankunft nach der
-  DieLogic-Schusskurve" schaltet auf den konstanten Strom zurück.
+  der Strömungsrechnung (`opts.derive`); niemand setzt sie von Hand. Die
+  Füllung rechnet, sobald ihr Schritt dran ist, und nach jeder Änderung am
+  Anguss wieder.
+- **Füllung → Überläufe:** die zuletzt gefüllten Stellen stehen als Marken
+  im Bild, während man die Überläufe setzt (`opts.spots`).
+- **Ein Abstandsfeld für drei Schritte:** Wandstärke, Füllung und
+  Temperierung rechnen auf demselben Feld (`host.field.shared`) mit EINER
+  Zellkante (Schritt Bauteil, Modus Feld) und einem Band nach außen, das von
+  Anfang an für die Abstandsfläche der Temperierung reicht
+  (`host.field.bandWanted`) — gerechnet wird es einmal.
+- **Auslegung → Anguss:** die Ankunft der Schmelze an jedem Anschnitt steht
+  nach der **DieLogic-Schusskurve** (`js/runner/shottime.js`) mit der Kammer
+  des Angusses (Pressrest als Kolben, Füllkammerlänge aus „Prozess"),
+  Maschine und Thermik aus dem Auslegungszustand. Gezeigt wird ab „Kammer
+  voll", ab Kolbenstart nur in den Details. „Prozess aus der Auslegung"
+  setzt Legierung (nach der Dichte), Füllzeit (der Kurve) und
+  Zielgeschwindigkeit (Mitte des Zielbands).
 - **Anguss + Auslegung → Füllung:** die Füllabschätzung bekommt dieselbe
   Uhr (`js/werkbank/filltime.js`): ab dem ersten Anschnitt strömt der
   Kolbenstrom in die Kavität, aber nur der Anteil der schon offenen
-  Anschnitte — die übrigen Äste füllen noch den Anguss. Daraus folgt zu
-  jedem Füllgrad eine Zeit ab Kolbenstart (Regler, Farbskala, letzte
-  Stellen) und zu jedem später öffnenden Anschnitt der **Vorsprung**, den
-  die früheren bis dahin haben. Die Frontausbreitung läuft dann zweimal
-  (`js/fill/solve.js` mit der Option `offsets`, dem Startversatz je
-  Anschnitt): einmal ohne Versatz, um Füllgrad und
-  Ankunftseinheit aufeinander abzubilden, dann mit dem Vorsprung an den
-  Startzellen der späteren Anschnitte. Die Kennzahlen nennen Öffnen der
-  Anschnitte, „Bauteil voll", die Füllzeit des Bauteils und daneben die
-  Füllzeit der Auslegung (Anguss → Überlauf gefüllt auf derselben Kurve).
+  Anschnitte. Daraus folgt zu jedem Füllgrad eine Zeit (Regler, Farbskala,
+  letzte Stelle, „Bauteil voll") und zu jedem später öffnenden Anschnitt der
+  **Vorsprung** der früheren; die Frontausbreitung läuft dann zweimal
+  (`js/fill/solve.js`, Option `offsets`).
 - **Modell → Auslegung:** Bauteil-, Anguss-, Überlauf- und Pressrestgewicht
   (Volumen × Dichte bei Solidus), Anschnittfläche und -dicke, Wandstärke
   (2V/A, dickste Stelle) und die Sprengfläche (Projektion aller Kavitäten
   auf die Trennebene, als Vereinigung gerastert — `js/werkbank/measure.js`)
-  stehen zur Übernahme in den Auslegungszustand; „automatisch nachführen"
-  hält sie aktuell. Der Schritt selbst ist das echte Dashboard (dieselben
-  Module wie `/tools/auslegung/`) über dem Viewport. Zurück geht die
-  Legierung (nach Dichte), die Füllzeit der Schusskurve und die
-  Zielgeschwindigkeit ins „Prozess"-Feld des Angusses.
+  stehen in der Seitenleiste zur Übernahme; „automatisch nachführen" hält
+  sie aktuell. Das Dashboard selbst (dieselben Module wie
+  `/tools/auslegung/`) liegt über dem Viewport, links seine Eingaben.
 
-Dateien: jeder Schritt lädt und speichert seine gewohnte JSON (Anguss,
-Überläufe, Temperierung); „Speichern" in der Leiste schreibt alles zusammen
-als `dielogic-werkbank` (das Bauteil als Verweis auf das Beispielteil, nicht
-als Netz). Ablegen auf dem Viewport nimmt Bauteile (STL/GLB), Plandateien
-und Werkbank-Dateien entgegen — was es ist, sagt der Inhalt.
+Datei, Entwurf, Verlauf: EIN Dokument für alle Schritte. „Speichern" schreibt
+`dielogic-werkbank` Fassung 1, wie seit jeher (das Bauteil als Verweis auf
+das Beispielteil, der Anguss als Graph, sein Prozess daneben, Füllung,
+Überläufe, Temperierung); gespeichert, geladen und wieder gespeichert ist
+es dieselbe Datei. Ein Entwurf je Bauteil im Browser, Rückgängig und
+Wiederholen über alle Schritte, Exportieren ▾ mit den Körpern aller
+Schritte. Der Bauteil-Chip und das Ablegen nehmen Bauteile (STL/GLB),
+Werkbank-Dateien und die Pläne der Einzelwerkzeuge (Anguss, Überläufe,
+Temperierung — sie gehen an ihren Schritt) entgegen.
 `?schritt=anguss` öffnet die Seite in einem bestimmten Schritt.

@@ -4,9 +4,7 @@
    Die Felder bekommt sie übergeben (`fields`: select, input, button, warn,
    note, facts; note und facts dürfen fehlen) — der Rahmen reicht die seiner
    Klappe (js/studio/shell.js, header.partFields; die Abstandsanalyse je
-   Chip eine). Ohne `fields` sucht sie die ids demo-select, stl-input,
-   stl-btn, model-warn, part-note und model-facts, mit `suffix` dahinter:
-   so trägt die Werkbank sie.
+   Chip eine).
 
    Was sie über ein geladenes Teil weiß, gibt sie MIT: onLoad(model, name,
    { name, demoId, warning, note }). Vorher las der Rahmen Auswahl und
@@ -35,32 +33,21 @@ import { parsePart } from '../studio/files.js';
 
 /* Auf ein vollständig gezeichnetes Bild warten — sonst steht der
    Fortschrittstext erst da, wenn die Rechnung schon vorbei ist. */
-export const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-/* Die Felder nach ihren ids — so, wie die Werkbank sie trägt. */
-const fieldsById = suffix => {
-  const $ = name => document.getElementById(name + suffix);
-  return { select: $('demo-select'), input: $('stl-input'), button: $('stl-btn'), warn: $('model-warn'), note: $('part-note'), facts: $('model-facts') };
-};
+const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
 /**
- * @param opts.fields   { select, input, button, warn, note?, facts? } — sonst die ids (mit suffix)
+ * @param opts.fields   { select, input, button, warn, note?, facts? }
  * @param opts.setBusy  text → der Schleier über dem Bild, null nimmt ihn weg
- *                      (die Werkbank reicht stattdessen ihr Element als `busy`)
  * @param opts.onFile   file → eine Datei aus dem Knopf der Klappe; ohne: als Netz lesen
  * @param opts.onStart  name → ein Laden beginnt
  * @param opts.onLoad   (model, name, { name, demoId, warning, note }) → es ist da
  * @param opts.onError  text → ein Laden ist gescheitert
  */
-export function mountPartSource({ fields = null, suffix = '', onStart, onLoad, onError = null, setBusy = null, busy = null,
+export function mountPartSource({ fields, onStart, onLoad, onError = null, setBusy = null,
                                   onFile = null, filter = p => !p.pairOnly, start: startId = null }) {
-  const f = fields || fieldsById(suffix);
+  const f = fields;
   const sel = f.select;
-  const veil = setBusy || (text => {
-    if (!busy) return;
-    if (text === null) busy.classList.remove('on');
-    else { busy.textContent = text; busy.classList.add('on'); }
-  });
+  const veil = setBusy || (() => {});
   const list = DEMO_PARTS.filter(filter);
   /* Die Nummer der jüngsten Wahl (Beispielteil, Datei). */
   let seq = 0;
@@ -169,7 +156,7 @@ export function mountPartSource({ fields = null, suffix = '', onStart, onLoad, o
 
   /* Beispielteil aus der Adresszeile (?part=…) oder das vorgegebene. */
   function start() {
-    const wanted = new URLSearchParams(location.search).get('part' + suffix);
+    const wanted = new URLSearchParams(location.search).get('part');
     const first = list.find(p => p.id === wanted) || list.find(p => p.id === startId) || list[0];
     return pickDemo(first.id);
   }

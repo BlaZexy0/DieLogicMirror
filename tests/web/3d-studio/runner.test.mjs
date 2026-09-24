@@ -3,7 +3,7 @@
 
    Alle Module unter js/runner/ außer app.js und editor.js kommen ohne
    DOM aus — das ist Absicht und der Grund, warum hier so viel prüfbar
-   ist. Die Verdrahtung der Seite prüft viewer.test.mjs.
+   ist. Die Verdrahtung der Seite prüft tools/anguss.test.mjs.
 
      node --import ./tests/web/3d-studio/stubs/register.mjs \
           --test tests/web/3d-studio/runner.test.mjs                    */

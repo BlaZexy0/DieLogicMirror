@@ -15,6 +15,9 @@ export const MODES = [
     hint: 'Die Abstandsfläche: überall derselbe Abstand zur Kavität; auf ihr sitzen die Spitzen der Kühlstiche und die Achsen der Kanäle.',
     html: sliderRow({ ui: 'dist', label: 'Achsabstand zur Kavität', min: DIST_RANGE[0], max: DIST_RANGE[1], step: 1, value: 20, help: 'achsabstand' })
       + numberRow({ ui: 'cell', label: 'Zellkante', unit: 'mm', value: '6', help: 'zellkante' })
+      /* Auf der Werkbank kommt die Fläche aus dem gemeinsamen Feld: statt der
+         Zellkante sagt diese Zeile, woher sie kommt. */
+      + '<div class="st-hintline" data-ui="cell-shared" hidden></div>'
       + numberRow({ ui: 'min-wall', label: 'Mindest-Wandabstand', unit: 'mm', value: '10', help: 'mindestabstand' })
       + checkRow({ ui: 'min-wall-auto', label: 'Auto: Achsabstand − Ø/2', checked: true })
       + kpiBlock('shell-kpis')

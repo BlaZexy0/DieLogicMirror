@@ -2,7 +2,7 @@
    Auswahlfeld im Viewport. Die Texte, die früher in der Seitenleiste
    standen, liegen in help.js. */
 
-import { sliderRow, selectRow, kpiBlock, factsBlock, hintLine } from '../studio/rows.js';
+import { sliderRow, selectRow, checkRow, kpiBlock, factsBlock, hintLine } from '../studio/rows.js';
 
 export const MODES = [
   {
@@ -10,6 +10,8 @@ export const MODES = [
     hint: 'Oben im Bild eine Art wählen, dann aufs Bauteil klicken. Hier steht, was gesetzt ist; ein Klick wählt es.',
     html: '<div class="st-list" data-ui="item-list" data-scroll></div>'
       + hintLine('<span data-ui="item-empty">Noch nichts gesetzt.</span>')
+      /* Nur auf der Werkbank (js/vents/tool.js, opts.spots): woher die Marken kommen. */
+      + '<div class="st-hintline" data-ui="spots-note" hidden></div>'
   },
   {
     id: 'volumen', label: 'Volumen',
@@ -36,4 +38,6 @@ export const INSPECTOR = selectRow({ ui: 'sel-type', label: 'Art', options: [] }
   + '<button type="button" class="btn btn-sm btn-outline" data-ui="vent-del">− Punkt</button></div></div>'
   + '<button type="button" class="btn btn-sm btn-outline block-btn st-danger" data-ui="del-item">Entfernen</button>';
 
-export const DARSTELLUNG = sliderRow({ ui: 'opacity', label: 'Deckkraft Bauteil', min: 5, max: 100, step: 1, value: 100 });
+export const DARSTELLUNG = sliderRow({ ui: 'opacity', label: 'Deckkraft Bauteil', min: 5, max: 100, step: 1, value: 100 })
+  /* Nur auf der Werkbank: die zuletzt gefüllten Stellen aus dem Schritt Füllung. */
+  + '<div data-ui="spots-row" hidden>' + checkRow({ ui: 'show-spots', label: 'Zuletzt gefüllte Stellen zeigen', checked: true }) + '</div>';

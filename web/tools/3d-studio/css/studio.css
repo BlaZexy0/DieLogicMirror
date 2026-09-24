@@ -8,7 +8,7 @@
 :root {
   --st-panel: 340px;
   --st-inspector: 300px;
-  --st-rail: 72px;
+  --st-rail: 80px;
   --st-bar: 44px;
   --st-row: 32px;
   --st-touch: 44px;
@@ -113,6 +113,34 @@ body.studio { display: flex; flex-direction: column; height: 100vh; height: 100d
 .st-layout.panel-closed { grid-template-columns: minmax(0, 1fr); }
 .st-layout.panel-closed > .st-panel { display: none; }
 
+/* ── Die Leiste der Schritte (die Werkbank, js/studio/stages.js) ──
+   Links vor der Seitenleiste; ☰ nimmt nur die Seitenleiste weg. Je Schritt
+   Nummer, Bild und Name; ein Punkt sagt, ob er schon ein Ergebnis hat
+   (die helle Marke) oder gerade rechnet (der zweite Akzent) — Bedienung,
+   kein Urteil. */
+.st-layout.has-rail { grid-template-columns: var(--st-rail) var(--st-panel) minmax(0, 1fr); }
+.st-layout.has-rail.panel-closed { grid-template-columns: var(--st-rail) minmax(0, 1fr); }
+.st-rail {
+  display: flex; flex-direction: column; gap: 2px; padding: 6px 0; min-height: 0; overflow-y: auto;
+  background: var(--dark); border-right: 1px solid var(--dark3);
+}
+.st-step {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 0 0 auto;
+  padding: 11px 2px 8px; border: 0; border-left: 3px solid transparent; border-radius: 0; background: none;
+  color: var(--ondark); cursor: pointer; text-align: center;
+  font-family: var(--sans); font-size: .6rem; font-weight: 600; line-height: 1.15; letter-spacing: .01em;
+  transition: background .15s, color .15s;
+}
+.st-step svg { width: 24px; height: 24px; flex-shrink: 0; }
+.st-step-label { max-width: 100%; overflow-wrap: anywhere; }
+.st-step:hover { color: #fff; background: rgba(255,255,255,.06); }
+.st-step.active { color: #fff; background: rgba(var(--primary-rgb), .22); border-left-color: var(--primary-light); }
+.st-step-num { position: absolute; top: 4px; left: 6px; font-family: var(--mono); font-size: .58rem; font-weight: 600; color: var(--ondark2); }
+.st-step.active .st-step-num { color: var(--primary-light); }
+.st-step-dot { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: transparent; transition: background .2s; }
+.st-step.done .st-step-dot { background: var(--primary-light); }
+.st-step.busy .st-step-dot { background: var(--accent); }
+
 /* ── Seitenleiste ──────────────────────────────────────────── */
 .st-panel {
   display: flex; flex-direction: column; min-height: 0; background: var(--surface);
@@ -130,8 +158,11 @@ body.studio { display: flex; flex-direction: column; height: 100vh; height: 100d
   border: none; border-bottom: 1px solid var(--border); border-radius: 0;
 }
 /* Ab fünf Reitern wird es eng: gleichmäßig über die Breite verteilt, der
-   Zwischenraum ist, was übrig bleibt. Wenige Reiter stehen links beieinander. */
-.seg.tabs:has(> button:nth-child(5)) { justify-content: space-between; gap: 0 2px; }
+   Zwischenraum ist, was übrig bleibt. Wenige Reiter stehen links beieinander.
+   Die Werkbank stellt die Modi zweier Werkzeuge eines Schritts in zwei
+   Zeilen (.st-tab-break, js/studio/shell.js) — jede Zeile für sich verteilt. */
+.seg.tabs:has(> button:nth-child(5)), .seg.tabs:has(> .st-tab-break) { justify-content: space-between; gap: 0 2px; }
+.st-tab-break { flex: 0 0 100%; height: 0; }
 .seg.tabs button, .seg.tabs button + button {
   flex: 0 0 auto; min-width: min-content; background: none; border: none; border-bottom: 2px solid transparent;
   margin-bottom: -1px; padding: 10px 2px 8px; cursor: pointer; white-space: nowrap;
@@ -221,25 +252,28 @@ select { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--bo
 .btn-pair { display: flex; gap: 6px; margin-top: 6px; }
 .btn-pair .btn { flex: 1; justify-content: center; }
 
-/* Kennzahlen: Details als zweispaltiges Raster, Urteile als krow. */
+/* Kennzahlen: Details als zweispaltiges Raster, Urteile als krow — in der
+   Seitenleiste und im Auswahlfeld. Nur dort: auf der Werkbank liegt das
+   Dashboard der Auslegung im Viewport, und seine Kennzahlen heißen auch
+   .krow (tools/auslegung/css/main.css), sehen aber anders aus. */
 .facts { margin-top: 6px; border-top: 1px solid var(--border-light); padding-top: 5px; }
 .facts:empty { display: none; }
 .fact { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; font-size: .78rem; padding: 1.5px 0; align-items: baseline; }
 .fact span:first-child { color: var(--muted); overflow-wrap: anywhere; }
 .fact span:last-child { font-family: var(--mono); color: var(--text); text-align: right; white-space: nowrap; }
-.krows { margin: 6px 0 2px; display: flex; flex-direction: column; gap: 3px; }
-.krow {
+:is(.st-panel, .st-inspector) .krows { margin: 6px 0 2px; display: flex; flex-direction: column; gap: 3px; }
+:is(.st-panel, .st-inspector) .krow {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline;
   padding: 5px 9px; border-radius: 7px; background: var(--surface2); border-left: 3px solid var(--border);
   font-size: .8rem;
 }
-.krow .klbl { color: var(--text-body); overflow-wrap: anywhere; }
-.krow .kval { font-family: var(--mono); color: var(--text); white-space: nowrap; font-weight: 600; }
-.krow .knote { grid-column: 1 / 3; font-size: .7rem; color: var(--muted); }
-.krow.ok { border-left-color: var(--ok); }
-.krow.warn { border-left-color: var(--caution); background: var(--caution-bg); }
-.krow.bad { border-left-color: var(--bad); background: var(--bad-bg); }
-.krow.bad .kval { color: var(--bad-text); }
+:is(.st-panel, .st-inspector) .krow .klbl { color: var(--text-body); overflow-wrap: anywhere; }
+:is(.st-panel, .st-inspector) .krow .kval { font-family: var(--mono); color: var(--text); white-space: nowrap; font-weight: 600; }
+:is(.st-panel, .st-inspector) .krow .knote { grid-column: 1 / 3; font-size: .7rem; color: var(--muted); }
+:is(.st-panel, .st-inspector) .krow.ok { border-left-color: var(--ok); }
+:is(.st-panel, .st-inspector) .krow.warn { border-left-color: var(--caution); background: var(--caution-bg); }
+:is(.st-panel, .st-inspector) .krow.bad { border-left-color: var(--bad); background: var(--bad-bg); }
+:is(.st-panel, .st-inspector) .krow.bad .kval { color: var(--bad-text); }
 .st-details { margin-top: 8px; border: 1px solid var(--border-light); border-radius: var(--radius); background: var(--surface2); }
 .st-details summary { cursor: pointer; padding: 6px 10px; font-size: .76rem; font-weight: 600; color: var(--muted); list-style: none; }
 .st-details summary::-webkit-details-marker { display: none; }
@@ -308,6 +342,9 @@ select { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--bo
 button.st-list-row { background: transparent; color: var(--text); font-family: inherit; text-align: left; width: 100%; }
 button.st-list-row:hover { background: var(--surface2); }
 button.st-list-row.active { background: var(--pale); }
+/* Eine Zeile, die nur Auskunft ist (listRow still): kein Knopf, kein Zeiger. */
+.st-list-row.still { cursor: default; }
+.st-list-row.still:hover { background: transparent; }
 
 /* ── Viewport ──────────────────────────────────────────────── */
 .st-viewport { position: relative; overflow: hidden; background: var(--bg); min-width: 0; container-type: inline-size; }
@@ -526,6 +563,11 @@ button.st-list-row.active { background: var(--pale); }
 .st-help-body code { font-family: var(--mono); font-size: .9em; background: var(--surface2); padding: 0 .25em; border-radius: 3px; }
 /* Ein Treffer der Suche ist Bedienung, kein Urteil: die Tönung der Marke. */
 .st-help-body .st-help-hit { background: var(--pale); border-radius: 6px; padding: 4px 8px; margin: 0 -8px; }
+/* Die Werkbank: je Werkzeug ein Abschnitt der Hilfe (js/werkbank/help.js). */
+.st-help-body .st-help-part {
+  font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+  margin: 26px 0 0; padding-top: 10px; border-top: 1px solid var(--border);
+}
 
 /* ── Touch ─────────────────────────────────────────────────── */
 /* Unter dem Finger ist alles, was man antippt, 44 px hoch — Zeilen,
@@ -549,8 +591,8 @@ button.st-list-row.active { background: var(--pale); }
   .row input[type="text"], select { padding: .45rem .5rem; }
   /* Kennzahlen sind Text, kein Ziel: enger gesetzt, damit die Zeilen der
      Bedienung ihre 44 px behalten können, ohne dass die Leiste überläuft. */
-  .krows { margin: 4px 0 0; gap: 2px; }
-  .krow { padding: 3px 9px; gap: 3px 10px; }
+  :is(.st-panel, .st-inspector) .krows { margin: 4px 0 0; gap: 2px; }
+  :is(.st-panel, .st-inspector) .krow { padding: 3px 9px; gap: 3px 10px; }
   .st-actions { padding: 6px 16px 8px; }
   .st-actions-extra { margin-top: 2px; padding-top: 0; }
   label.inline input[type="checkbox"] { width: 20px; height: 20px; }
@@ -584,6 +626,10 @@ button.st-list-row.active { background: var(--pale); }
     transition: transform .18s ease-out; box-shadow: 8px 0 28px rgba(var(--dark-rgb), .18);
   }
   .st-layout.panel-closed > .st-panel { transform: translateX(-100%); box-shadow: none; }
+  /* Mit der Leiste der Schritte: die Lade liegt rechts von ihr. */
+  .st-layout.has-rail, .st-layout.has-rail.panel-closed { grid-template-columns: var(--st-rail) minmax(0, 1fr); }
+  .st-layout.has-rail > .st-panel { left: var(--st-rail); width: min(340px, calc(92% - var(--st-rail))); }
+  .st-layout.has-rail.panel-closed > .st-panel { transform: translateX(calc(-100% - var(--st-rail))); }
   .st-inspector { position: fixed; left: 0; right: 0; bottom: 0; width: auto; max-height: 45vh; border-radius: 12px 12px 0 0; }
   .st-dock-tl { max-width: calc(100% - 24px); }
   .st-chip { max-width: 40vw; }
@@ -602,6 +648,11 @@ button.st-list-row.active { background: var(--pale); }
   .st-save-state { margin-right: auto; }
   .st-layout { display: flex; flex-direction: column; }
   .st-viewport { order: 1; flex: 0 0 50vh; height: 50vh; }
+  /* Die Schritte als Zeile über dem Bild. */
+  .st-rail { order: 0; flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 0; border-right: 0; border-bottom: 1px solid var(--dark3); }
+  .st-step { min-width: 70px; border-left: 0; border-bottom: 3px solid transparent; }
+  .st-step.active { border-bottom-color: var(--primary-light); }
+  .st-layout.has-rail > .st-panel { left: auto; width: auto; }
   .st-panel, .st-layout.panel-closed > .st-panel { order: 2; display: flex; position: static; width: auto; transform: none; box-shadow: none; border-right: 0; border-top: 1px solid var(--border); }
   .st-body { overflow: visible; }
   .view-bar { left: 8px; right: 8px; top: 8px; overflow-x: auto; scrollbar-width: none; }
@@ -781,16 +832,19 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
 }
 
 /* Angussdesigner, Modus „Prozess": aufgeklappt braucht der Kasten „Details"
-   mehr, als die Leiste hat (474 statt 455 px bei 1280 × 720). Wie die
-   Ergebnistabelle der Simulationen scrollt er deshalb in SICH — die
-   Seitenleiste scrollt nie. Zugeklappt ändert sich nichts. */
+   mehr, als die Leiste hat (auf der Werkbank mit der Zeile „aus Bauteil und
+   Überläufen" schon bei 1280 × 720). Wie die Ergebnistabelle der
+   Simulationen scrollt er deshalb in SICH — die Seitenleiste scrollt nie.
+   Scrollen muss der Kasten selbst: seinen Inhalt legt der Browser in einen
+   eigenen Kasten (::details-content), an den keine Flex-Regel herankommt;
+   die Kopfzeile bleibt dabei oben stehen. Zugeklappt ändert sich nichts. */
 .st-root[data-tool="anguss"] .st-mode[data-mode="prozess"] {
   display: flex; flex-direction: column; min-height: 0; max-height: 100%;
 }
-.st-root[data-tool="anguss"] .st-mode[data-mode="prozess"] .st-details {
-  display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0;
+.st-root[data-tool="anguss"] .st-mode[data-mode="prozess"] .st-details { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+.st-root[data-tool="anguss"] .st-mode[data-mode="prozess"] .st-details > summary {
+  position: sticky; top: 0; z-index: 1; background: var(--surface2);
 }
-.st-root[data-tool="anguss"] .st-mode[data-mode="prozess"] .st-details-body { overflow-y: auto; min-height: 0; }
 
 /* Der Modus „Kurve" füllt die Leiste; die Punktliste nimmt, was übrig bleibt,
    und scrollt in SICH — zehn Wegpunkte passen sonst in keine Seitenleiste. */

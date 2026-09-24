@@ -13,20 +13,26 @@ export const MODES = [
   {
     id: 'anschnitte', label: 'Anschnitte',
     hint: 'Oben im Bild „Anschnitt setzen", dann aufs Bauteil klicken. Hier steht, was gesetzt ist; ein Klick wählt es.',
-    html: heading('Vorgaben für neue Anschnitte')
+    /* Auf der Werkbank kommen die Anschnitte aus dem Anguss (js/fill/tool.js,
+       opts.derive): dann entfallen die Vorgaben, und die Liste heißt anders. */
+    html: '<div data-ui="defaults-block">' + heading('Vorgaben für neue Anschnitte')
       + numberRow({ ui: 'def-w', label: 'Breite', unit: 'mm', value: fmtPlain(DEFAULTS.w), help: 'vorgaben' })
-      + numberRow({ ui: 'def-h', label: 'Höhe', unit: 'mm', value: fmtPlain(DEFAULTS.h) })
+      + numberRow({ ui: 'def-h', label: 'Höhe', unit: 'mm', value: fmtPlain(DEFAULTS.h) }) + '</div>'
       /* Wie viele gesetzt sind, steht hier — nicht als Zahl am Reiter: vier
          Reiter mit Zahl passen in Firefox nicht mehr in eine 320 px breite
          Seitenleiste, und „Ergebnis" stünde allein in einer zweiten Zeile. */
-      + heading('Gesetzt <span class="fu-count" data-ui="item-count"></span>')
+      + heading('<span data-ui="list-title">Gesetzt</span> <span class="fu-count" data-ui="item-count"></span>')
       + '<div class="st-list" data-ui="item-list" data-scroll></div>'
       + hintLine('<span data-ui="item-empty">Noch kein Anschnitt gesetzt.</span>')
+      + warnLine('inlet-warn')
   },
   {
     id: 'fuellung', label: 'Füllung',
     hint: 'Das Bauteil wird gerastert, die Front läuft von den Anschnitten durch die Zellen: eine Abschätzung, keine Strömung.',
     html: numberRow({ ui: 'cell', label: 'Zellkante', unit: 'mm', value: '3', help: 'zellkante' })
+      /* Auf der Werkbank rastert das gemeinsame Feld: statt der Zellkante sagt
+         diese Zeile, woher sie kommt. */
+      + '<div class="st-hintline" data-ui="cell-shared" hidden></div>'
       + warnLine('cell-note')
       + sliderRow({ ui: 'alpha', label: 'Dünnwand-Bremse α', min: ALPHA_RANGE[0], max: ALPHA_RANGE[1], step: 0.1, value: 0.5, help: 'alpha' })
       + kpiBlock('fill-kpis')
@@ -41,7 +47,11 @@ export const MODES = [
       + sliderRow({ ui: 'q', label: 'Füllgrad', min: 0, max: 100, step: 1, value: 50, help: 'fuellgrad' })
       + sliderRow({ ui: 'spots-count', label: 'Letzte Stellen', min: 0, max: 20, step: 1, value: 5, help: 'letzte-stellen' })
       + kpiBlock('result-kpis')
-      + hintLine('Wo die Front zuletzt ankommt, sammelt sich die Luft: dort gehören die Überläufe hin; der <a href="ueberlauf.html">Überlaufdesigner</a> setzt sie.')
+      /* Nur auf der Werkbank (mit der Uhr der Schusskurve): die Zeiten ab
+         Kolbenstart, gezeigt wird ab „Kammer voll". */
+      + detailsBlock('clock-details', 'Ab Kolbenstart', factsBlock('clock-facts'))
+      + hintLine('<span data-ui="spots-hint">Wo die Front zuletzt ankommt, sammelt sich die Luft: dort gehören die Überläufe hin; der <a href="ueberlauf.html">Überlaufdesigner</a> setzt sie.</span>'
+        + '<span data-ui="spots-hint-bench" hidden>Wo die Front zuletzt ankommt, sammelt sich die Luft: dort gehören die Überläufe hin. Im Schritt Überläufe stehen diese Stellen als Marken.</span>')
   }
 ];
 

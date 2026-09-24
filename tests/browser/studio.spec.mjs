@@ -188,31 +188,50 @@ test('Werkbank: alle sechs Schritte kommen ohne Fehler hoch und hängen zusammen
   });
   await page.goto('/tools/3d-studio/werkbank.html');
   await page.waitForFunction(() => window.__werkbank?.ctx?.ready, null, { timeout: 60_000 });
-  /* Anguss: der Vorschlag hat zwei Anschnitte an der Wand. */
+  /* Bauteil: Entformung und Wandstärke, ihre Modi in zwei Zeilen. */
+  await expect(page.locator('[data-ui="tabs"] [data-mode]')).toHaveCount(8);
+  await page.waitForFunction(() => window.__werkbank.stages.entformung.state.analysed, null, { timeout: 90_000 });
+  /* Gröber rastern: das Feld ist hier Mittel, nicht Gegenstand. */
+  await page.click('[data-ui="tabs"] [data-mode="feld"]');
+  await page.fill('[data-owner="wandstaerke"] [data-ui="cell"]', '6');
+  await page.press('[data-owner="wandstaerke"] [data-ui="cell"]', 'Enter');
+  /* Anguss: der Vorschlag hat zwei Anschnitte an der Wand; die Chips des Angussdesigners stehen im Bild. */
   await page.click('[data-stage="anguss"]');
-  await expect(page.locator('#an-menu')).toBeVisible();
+  await expect(page.locator('[data-chip="add-point"]')).toBeVisible();
+  /* Der Vorschlag steht im Modus System: vier Reiter in EINER Zeile. */
+  await expect(page.locator('[data-ui="tabs"] [data-mode]')).toHaveCount(4);
+  const zeilen = await page.$$eval('[data-ui="tabs"] [data-mode]', els => new Set(els.map(e => Math.round(e.getBoundingClientRect().top))).size);
+  expect(zeilen).toBe(1);
+  await expect(page.locator('[data-ui="primary"]')).toHaveText('Anguss ans Bauteil legen');
   const gates = await page.evaluate(() => Object.values(window.__werkbank.stages.anguss.state.graph.nodes).filter(n => n.type === 'gate' && n.aim).length);
   expect(gates).toBe(2);
-  /* Füllung: rechnet auf dem gemeinsamen Feld mit genau diesen Anschnitten. */
+  /* Füllung: rechnet beim Betreten, auf dem gemeinsamen Feld, mit genau diesen Anschnitten. */
   await page.click('[data-stage="fuellung"]');
-  await page.waitForFunction(() => { const s = window.__werkbank.stages.fuellung.state; return s.result && !s.stale && !s.computing; }, null, { timeout: 90_000 });
+  await page.waitForFunction(() => { const s = window.__werkbank.stages.fuellung.state; return s.result && !s.stale && !s.running; }, null, { timeout: 90_000 });
   expect(await page.evaluate(() => Object.keys(window.__werkbank.stages.fuellung.state.plan.items).length)).toBe(2);
+  await page.click('[data-owner="fuellung"] [data-ui="show-seg"] button[data-value="farbe"]');
   await expect(page.locator('#colorbar')).toHaveClass(/on/);
-  /* Überläufe und Temperierung: Auswahlfelder da, Abstandsfläche aus demselben Feld. */
+  await expect(page.locator('#colorbar')).toContainText('ab Kammer voll');
+  /* Überläufe und Temperierung: ihre Chips, die Abstandsfläche aus demselben Feld. */
   await page.click('[data-stage="ueberlauf"]');
-  await expect(page.locator('#ue-menu')).toBeVisible();
+  await expect(page.locator('[data-chip="bohne"]')).toBeVisible();
   await page.click('[data-stage="temperier"]');
-  await page.waitForFunction(() => { const s = window.__werkbank.stages.temperier.state; return s.shellDist === 20 && !s.computing; }, null, { timeout: 90_000 });
-  await expect(page.locator('#te-add-stich')).toBeEnabled();
+  await page.waitForFunction(() => { const s = window.__werkbank.stages.temperier.state; return s.shellDist === 20 && !s.running; }, null, { timeout: 90_000 });
+  await expect(page.locator('[data-chip="stich"]')).not.toHaveClass(/off/);
+  expect(await page.evaluate(() => window.__werkbank.stages.temperier.state.field === window.__werkbank.field.data)).toBe(true);
   /* Auslegung: das Dashboard liegt über dem Viewport, die Übernahme hat Werte. */
   await page.click('[data-stage="auslegung"]');
-  await expect(page.locator('#au-dash')).toBeVisible();
+  await expect(page.locator('[data-ui="au-dash"]')).toBeVisible();
   await expect(page.locator('#charts .card')).not.toHaveCount(0);
   await expect(page.locator('#checkbar')).toContainText('Prüfungen');
   const vals = await page.evaluate(() => window.__werkbank.stages.auslegung.measure());
   expect(vals.part).toBeGreaterThan(3);
   expect(vals.gate).toBeGreaterThan(100);
   expect(vals.area).toBeGreaterThan(0.1);
+  /* Zurück zum Bauteil: das Dashboard geht, der Schritt steht, wie man ihn verließ. */
+  await page.click('[data-stage="bauteil"]');
+  await expect(page.locator('[data-ui="au-dash"]')).toBeHidden();
+  await expect(page.locator('[data-ui="tabs"] [data-mode="feld"]')).toHaveClass(/active/);
   await page.waitForTimeout(500);
   expect(errors, errors.join('\n')).toEqual([]);
 });

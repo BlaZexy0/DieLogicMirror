@@ -18,8 +18,8 @@
    hängen nicht an den Formteil-Meshes, damit sie auch ohne die Formteile
    stehen. Einzelne Formteile lassen sich ausblenden (setVisible).
 
-   Gemeinsam für die Entformungsanalyse (js/entformung/tool.js) und den Schritt
-   Bauteil der Werkbank (js/werkbank/part.js), die nur die Formteile nutzt. */
+   Für die Entformungsanalyse (js/entformung/tool.js) — auf ihrer Seite und
+   im Schritt Bauteil der Werkbank. */
 
 import * as T from 'three';
 import { diePieces, maskOutline } from './dieview.js';

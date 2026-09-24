@@ -19,8 +19,8 @@ export const MODES = [
     html: selectRow({ ui: 'preset', label: 'Beispiel', options: [] })
       + '<div class="st-hintline" data-ui="graph-note"></div>'
       + warnLine('graph-warn')
-      + heading('Referenzbauteil' + info('referenz'))
-      + kpiBlock('ref-kpis')
+      + '<div data-ui="ref-block">' + heading('Referenzbauteil' + info('referenz'))
+      + kpiBlock('ref-kpis') + '</div>'
       + heading('Pressrest')
       + numberRow({ ui: 'bisc-d', label: 'Durchmesser', unit: 'mm', value: '90', help: 'pressrest' })
       + numberRow({ ui: 'bisc-t', label: 'Dicke', unit: 'mm', value: '25', help: 'pressrest' })
@@ -47,6 +47,9 @@ export const MODES = [
     hint: 'Volumen und Füllzeit ergeben den Strom; daraus folgt jede Anschnittfläche.',
     html: selectRow({ ui: 'alloy', label: 'Legierung', options: [] })
       + numberRow({ ui: 'vol', label: 'Gussvolumen', unit: 'cm³', value: '420', help: 'gussvolumen' })
+      /* Nur auf der Werkbank (js/runner/tool.js, opts.castVolume): das Volumen
+         folgt Bauteil und Überläufen, bis man selbst eines tippt. */
+      + '<div data-ui="vol-auto-row" hidden>' + checkRow({ ui: 'vol-auto', label: 'aus Bauteil und Überläufen', checked: true }) + '</div>'
       + numberRow({ ui: 'tfill', label: 'Füllzeit', unit: 'ms', value: '45' })
       + numberRow({ ui: 'vgate', label: 'Anschnitt v<sub>Ziel</sub>', unit: 'm/s', value: '40', help: 'vziel' })
       + numberRow({ ui: 'chamber-len', label: 'Füllkammerlänge', unit: 'mm', value: '450', help: 'kammer' })

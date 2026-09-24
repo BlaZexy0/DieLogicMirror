@@ -62,7 +62,24 @@
    gehören, und nimmt abgelegte Netze mit dropPart entgegen. Der Gastgeber
    verdrahtet Reiter, Hauptknopf, Speichern, Exportieren, Öffnen,
    Rückgängig, Entwurf und Tasten — das Werkzeug kümmert sich nur um seine
-   Sache. */
+   Sache.
+
+   MEHRERE WERKZEUGE AUF EINER SEITE (die Werkbank, js/studio/stages.js):
+   dann gibt es statt des einen Werkzeugs ein DOKUMENT der Seite, das den
+   Vertrag oben für alle zusammen erfüllt (wireDoc), und jedes Werkzeug
+   bekommt einen eigenen Gastgeber, der nur durchlässt, was ihm gehört.
+   Dazu drei Dinge, die jede Seite hat, aber nur dort zählen:
+     host.on(ereignis, fn) / host.emit(ereignis, …) — was ein Werkzeug den
+       anderen sagt: 'runner', 'vents', 'fill', 'cooling', 'design' (die
+       Werkzeuge melden, die Seite verdrahtet), 'field' (der Gastgeber, bei
+       jedem neuen oder veralteten Feld);
+     host.field.shared — EIN Feld für alle Werkzeuge, mit EINER Zellkante
+       (die der Wandstärke): wer das Feld nur nutzt, blendet seine eigene
+       Zellkante aus;
+     host.field.bandWanted — so breit ist das Band nach außen mindestens,
+       und jede breitere Bestellung hebt es an: ein Feld, das ein Werkzeug
+       schon gerechnet hat, reicht dann auch dem mit dem breitesten Bedarf
+       (der Abstandsfläche der Temperierung). 0: jeder bestellt selbst. */
 
 import { createShell } from './shell.js';
 import { createPart } from './part.js';
@@ -82,6 +99,20 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
   };
   const jobs = createJobRunner(shell);
   host.jobs = jobs;
+
+  /* ── Ereignisse zwischen Werkzeugen einer Seite ──────────── */
+  /* Ein Zuhörer, der wirft, hält die anderen nicht auf. */
+  const listeners = new Map();
+  host.on = (ev, fn) => {
+    if (!listeners.has(ev)) listeners.set(ev, []);
+    listeners.get(ev).push(fn);
+    return () => { const l = listeners.get(ev); const i = l.indexOf(fn); if (i >= 0) l.splice(i, 1); };
+  };
+  host.emit = (ev, ...args) => {
+    for (const fn of [...(listeners.get(ev) || [])]) {
+      try { fn(...args); } catch (err) { console.error(ev, err); }
+    }
+  };
 
   /* ── Bauteil ─────────────────────────────────────────────── */
   if (!part) shell.header.hidePart();
@@ -107,17 +138,30 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
   /* ── Das Abstandsfeld: einmal je Bauteil und Zellkante ──── */
   const asked = f => (f.hAsked ?? f.h);
   /* Band nach außen und Rand um das Bauteil (mm): ohne Angabe drei und
-     zwei Zellen, so viel braucht die Wandstärke. */
-  const extent = (opts, h) => ({ h, band: opts.band ?? 3 * h, pad: opts.pad ?? 2 * h });
+     zwei Zellen, so viel braucht die Wandstärke. Mit bandWanted (die
+     Werkbank) mindestens so breit wie der breiteste Abnehmer, und der Rand
+     fasst das Band samt drei Zellen — die Abstandsfläche liegt AUSSEN. */
+  const extent = (opts, h) => {
+    const band = Math.max(opts.band ?? 3 * h, field.bandWanted || 0);
+    const pad = field.bandWanted > 0 ? Math.max(opts.pad ?? 2 * h, band + 3 * h) : (opts.pad ?? 2 * h);
+    return { h, band, pad };
+  };
+  /* Verglichen wird mit dem, was BESTELLT war: ein Feld, das über 16 Mio.
+     Punkten gröber gerastert wurde, passte sonst nie und galt nach jedem
+     Blick auf die Zellkante als veraltet. */
+  const fits = (f, { h, band, pad }) => !!f && Math.abs(asked(f) - h) < 1e-9 && f.band >= band - 1e-6 && (f.padAsked ?? f.padCells * f.h) >= pad - 1e-6;
   const field = {
     data: null, stats: null, h: 3, hAuto: true, stale: false,
+    shared: false, bandWanted: 0,
     setCell(v) {
       field.h = Math.max(CELL_RANGE[0], Math.min(CELL_RANGE[1], v));
       field.hAuto = false;
       /* Veraltet ist das Feld genau dann, wenn seine Kante von der gewählten
          abweicht — wer zur Kante des Feldes zurückkehrt, braucht kein neues. */
       const stale = !!(field.data && Math.abs(asked(field.data) - field.h) > 1e-9);
+      const changed = stale !== field.stale;
       field.stale = stale;
+      if (changed) host.emit('field', field.data);
       return field.h;
     },
     /** Was das Feld kosten würde und mit welcher Kante es entsteht
@@ -126,16 +170,23 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       const m = host.part && host.part.model;
       return m ? planField(m, extent(opts, opts.h || field.h)) : null;
     },
+    /** Das vorhandene Feld, wenn es für diese Bestellung reicht — ohne zu
+        rechnen (sonst null): wer das Feld nur mitbenutzt, sieht so, ob ein
+        anderes Werkzeug es schon gerechnet hat. */
+    peek(opts = {}) {
+      const m = host.part && host.part.model;
+      if (!m || field.stale) return null;
+      return fits(field.data, extent(opts, opts.h || field.h)) ? field.data : null;
+    },
     /** Das Feld holen — vorhanden oder jetzt rechnen (mit Fortschritt und Abbruch). */
     async ensure(opts = {}) {
       const m = host.part && host.part.model;
       if (!m) return null;
-      const { h, band, pad } = extent(opts, opts.h || field.h);
-      /* Verglichen wird mit dem, was BESTELLT war: ein Feld, das über 16 Mio.
-         Punkten gröber gerastert wurde, passte sonst nie und galt nach jedem
-         Blick auf die Zellkante als veraltet. */
-      const fits = f => f && Math.abs(asked(f) - h) < 1e-9 && f.band >= band - 1e-6 && (f.padAsked ?? f.padCells * f.h) >= pad - 1e-6;
-      if (!opts.force && !field.stale && fits(field.data)) return field.data;
+      const want = extent(opts, opts.h || field.h);
+      const { h, band, pad } = want;
+      if (!opts.force && !field.stale && fits(field.data, want)) return field.data;
+      /* Das breiteste Band, das je verlangt wurde, gilt ab jetzt für alle. */
+      if (field.bandWanted > 0) field.bandWanted = Math.max(field.bandWanted, band);
       const hh = planField(m, { h, band, pad }).est.h;
       const f = await buildField(m, { h: hh, band, pad, onProgress: opts.onProgress, signal: opts.signal });
       f.padCells = Math.round(pad / hh);
@@ -145,6 +196,7 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       field.data = f;
       field.stats = fieldExtrema(f);
       field.stale = false;
+      host.emit('field', f);
       return f;
     }
   };
@@ -266,7 +318,9 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
             if (tool.settingsOnly) store.save(() => tool.toJSON(), { quiet: true });
             store.markSaved();
             shell.toast('„' + name + '" geladen.');
-          } else if (tool && tool.openJSON) tool.openJSON(obj, name);
+          /* openJSON darf warten (die Werkbank lädt erst das Bauteil der
+             Datei): sein Fehler landet dann hier, nicht im Nichts. */
+          } else if (tool && tool.openJSON) return tool.openJSON(obj, name);
           else throw new Error('„' + name + '" gehört zu einem anderen Werkzeug (Kennung „' + obj.format + '").');
         },
         part: async (tris, name, note) => {
@@ -287,26 +341,15 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
      selbst liest (openFiles), alle auf einmal. */
   wireDrop(shell.viewport, files => (host.tool && host.tool.openFiles ? host.tool.openFiles(files) : openFile(files[0])), { multiple: true });
 
-  /* ── Das Werkzeug einbauen ───────────────────────────────── */
-  host.mountTool = factory => {
-    const tool = factory(host);
+  /* ── Das Dokument der Seite verdrahten ───────────────────── */
+  /* Verlauf, Speichern, Exportieren und Tasten hängen am DOKUMENT der
+     Seite: auf einer Werkzeugseite ist das das Werkzeug selbst (mountTool),
+     auf der Werkbank das, was alle Werkzeuge zusammen sind
+     (js/werkbank/app.js). Bis Modi verdrahtet sind, gibt es keinen
+     Hauptknopf. */
+  host.refreshActions = () => {};
+  host.wireDoc = tool => {
     host.tool = tool;
-    shell.setModes(tool.modes);
-    shell.onMode((id, prev) => {
-      const from = tool.modes.find(m => m.id === prev), to = tool.modes.find(m => m.id === id);
-      if (from && from.leave) from.leave();
-      /* Die Zeile unter dem Hauptknopf gehört dem Modus: ein Modus, der keine
-         eigene setzt, erbte sonst die des vorigen. Läuft eine Rechnung,
-         schreibt ihr Fortschritt sie gleich wieder. */
-      shell.setNote('');
-      if (to && to.enter) to.enter();
-      host.refreshActions();
-    });
-    host.refreshActions = () => {
-      const m = tool.modes.find(x => x.id === shell.mode);
-      const spec = m && m.primary ? m.primary() : null;
-      shell.setPrimary(spec);
-    };
     if (tool.serialize && tool.restore) {
       history = createHistory({ serialize: tool.serialize, restore: doc => { tool.restore(doc); host.refreshActions(); } });
       host.history = history;               // für die Tests; die Werkzeuge melden über changed()
@@ -363,6 +406,29 @@ export function createHost({ mount, id, title, help = '', start = null, sceneOpt
       if ((ev.key === 'f' || ev.key === 'F') && !ev.ctrlKey && !ev.metaKey) { shell.fit(); return true; }
       return false;
     });
+  };
+
+  /* ── Das Werkzeug einbauen ───────────────────────────────── */
+  host.mountTool = factory => {
+    const tool = factory(host);
+    host.tool = tool;
+    shell.setModes(tool.modes);
+    shell.onMode((id, prev) => {
+      const from = tool.modes.find(m => m.id === prev), to = tool.modes.find(m => m.id === id);
+      if (from && from.leave) from.leave();
+      /* Die Zeile unter dem Hauptknopf gehört dem Modus: ein Modus, der keine
+         eigene setzt, erbte sonst die des vorigen. Läuft eine Rechnung,
+         schreibt ihr Fortschritt sie gleich wieder. */
+      shell.setNote('');
+      if (to && to.enter) to.enter();
+      host.refreshActions();
+    });
+    host.refreshActions = () => {
+      const m = tool.modes.find(x => x.id === shell.mode);
+      const spec = m && m.primary ? m.primary() : null;
+      shell.setPrimary(spec);
+    };
+    host.wireDoc(tool);
     if (tool.mounted) tool.mounted();
     const first = tool.startMode || tool.modes[0].id;
     shell.setMode(first);

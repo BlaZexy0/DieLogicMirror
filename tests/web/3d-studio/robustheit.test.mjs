@@ -318,8 +318,10 @@ function shellSources() {
   }
   /* Die beiden Simulationen (js/simulation/) sind ganz Oberfläche — auch die
      Adapter schreiben Text (die Kostenzeile „grob 2 min"); ihre Felder heißen
-     anguss-panel.js, kammer-panel.js, panel-common.js. */
+     anguss-panel.js, kammer-panel.js, panel-common.js. Ebenso die Werkbank
+     (js/werkbank/): der Vorschlag, die Übernahme, die Hilfe. */
   take(join(js, 'simulation'));
+  take(join(js, 'werkbank'));
   return out;
 }
 

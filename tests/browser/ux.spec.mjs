@@ -309,7 +309,8 @@ const messen = page => page.evaluate(() => {
   const knapp = [];
   const name = el => (el.dataset.ui || el.dataset.mode || el.dataset.value || el.textContent.trim() || el.tagName).slice(0, 28);
   for (const el of document.querySelectorAll('.st-root button, .st-root .klbl, .st-root .kval, .st-root .row > span, .st-root .fact span, .st-root .st-hint, .st-root .st-note, .st-root .st-hintline, .st-root summary, .st-root .st-tool-name, #status')) {
-    if (!sichtbar(el) || el.closest('[hidden]') || el.closest('[data-ui^="part-chip"]')) continue;
+    /* Das Dashboard der Auslegung (Werkbank) hat seine eigene Seite und ihre Regeln. */
+    if (!sichtbar(el) || el.closest('[hidden]') || el.closest('[data-ui^="part-chip"]') || el.closest('.wb-dash')) continue;
     if (el.scrollWidth > el.clientWidth + 1) knapp.push('Text: ' + name(el) + ' (' + el.scrollWidth + ' > ' + el.clientWidth + ')');
   }
   for (const box of document.querySelectorAll('.st-root .seg, .st-root .view-bar, .st-root .st-bar')) {
@@ -510,6 +511,39 @@ for (const s of SEITEN) {
     await expect(lade).toBeHidden();
     const [datei] = await Promise.all([page.waitForEvent('download'), page.click('[data-ui="save"]')]);
     expect(datei.suggestedFilename()).toMatch(s.datei);
+    expect(errors).toEqual([]);
+  });
+}
+
+/* Die Werkbank: sechs Schritte, jeder mit den Modi seines Werkzeugs
+   (js/studio/stages.js). In jedem Schritt und jedem Modus gilt, was oben
+   für die Werkzeugseiten gilt — mit der Leiste der Schritte links daneben. */
+for (const [w, h] of GROESSEN) {
+  test(`werkbank.html @ ${w}×${h}: kein Schritt und kein Modus scrollt, überdeckt sich oder schneidet ab`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    const errors = watch(page);
+    await page.goto('/tools/3d-studio/werkbank.html');
+    await page.waitForFunction(() => window.__werkbank?.state?.ready, null, { timeout: 60_000 });
+    /* Grob rastern: hier zählt das Layout, nicht das Feld. */
+    await page.evaluate(() => window.__werkbank.shell.setMode('feld'));
+    await page.fill('[data-owner="wandstaerke"] [data-ui="cell"]', '8');
+    await page.press('[data-owner="wandstaerke"] [data-ui="cell"]', 'Enter');
+    for (const stage of ['bauteil', 'anguss', 'fuellung', 'ueberlauf', 'temperier', 'auslegung']) {
+      await page.click(`[data-stage="${stage}"]`);
+      if (stage === 'fuellung') await page.waitForFunction(() => { const s = window.__werkbank.stages.fuellung.state; return s.result && !s.running && !s.stale; }, null, { timeout: 120_000 });
+      if (stage === 'temperier') await page.waitForFunction(() => { const s = window.__werkbank.stages.temperier.state; return s.shellDist !== null && !s.running; }, null, { timeout: 120_000 });
+      const modi = await page.evaluate(() => [...document.querySelectorAll('[data-ui="tabs"] [role="tab"]')].map(b => b.dataset.mode));
+      for (const m of modi) {
+        await page.evaluate(id => window.__werkbank.shell.setMode(id), m);
+        await page.evaluate(() => { for (const d of document.querySelectorAll('.st-mode:not([hidden]) details')) d.open = true; });
+        const r = await messen(page);
+        expect(r.body, `${stage}/${m}: Inhalt der Seitenleiste läuft über`).toBeLessThanOrEqual(0);
+        expect(r.panel, `${stage}/${m}: Seitenleiste läuft über`).toBeLessThanOrEqual(0);
+        expect(r.seite, `${stage}/${m}: die Seite selbst scrollt`).toBeLessThanOrEqual(0);
+        expect(r.ueber, `${stage}/${m}: Aufsätze überdecken sich`).toEqual([]);
+        expect(r.knapp, `${stage}/${m}: abgeschnitten`).toEqual([]);
+      }
+    }
     expect(errors).toEqual([]);
   });
 }

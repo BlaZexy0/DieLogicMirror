@@ -25,7 +25,7 @@ import { draftAngles, draftStats, dirNames } from '../part/draft.js';
 import { diePieces, pieceProjections } from '../part/dieview.js';
 import { gripPerFace, ejectorMaps } from '../part/ejector.js';
 import { createDieView } from '../part/dieviewer.js';
-import { facts, segButtons, segButtonSet, slider, colorbar, gradient, chip } from '../ui/controls.js';
+import { facts, segButtons, segButtonSet, slider, gradient, chip } from '../ui/controls.js';
 import { fmt, fmtUnit, fmtFixed } from '../studio/format.js';
 import { kpis } from '../studio/rows.js';
 import { checkFormat } from '../studio/planio.js';
@@ -43,9 +43,17 @@ const pct = x => fmtFixed(100 * x, 1) + ' %';
 const DEFAULTS = { axis: 'auto', movSign: 1, mode: 'regions', draftLimit: 1.5, showParting: true, showEdges: false,
   die: { skirt: 8, part: true }, projView: { alpha: 0.6 }, ej: { mu: 0.3, alpha: 0.7 } };
 
-export function createEntformungTool(host) {
+/**
+ * @param opts.axisNote  seg → Satz, der an die Zeile der Formöffnung
+ *                       angehängt wird (die Werkbank rechnet mit Z und sagt,
+ *                       wenn die Analyse eine andere Achse findet)
+ */
+export function createEntformungTool(host, opts = {}) {
   const { shell, view, part } = host;
   const ui = host.ui;
+  /* Auf der Werkbank ist das Werkzeug nur dran, solange einer seiner Modi
+     zu sehen ist (setActive); auf seiner eigenen Seite immer. */
+  let active = true;
   /* Die Netzkanten stehen unter „Darstellung" — das Aufklappfeld gehört dem
      Rahmen und steht schon, bevor die Felder der Modi eingesetzt sind. */
   const darstellung = shell.darstellung(DARSTELLUNG);
@@ -386,16 +394,16 @@ export function createEntformungTool(host) {
   function updateColorbar() {
     const mode = state.seg ? colouring() : 'plain';
     if (mode === 'grip') {
-      return colorbar({
+      return shell.colorbar({
         title: 'Haftung',
         stops: gradient(t => scale('turbo', turboTrim(t))),
         ticks: ['stark', '', '', '', 'schwach'],
         extra: chip(VIEW.noData) + 'haftet nicht'
       });
     }
-    if (mode !== 'draft') return colorbar(null);
+    if (mode !== 'draft') return shell.colorbar(null);
     const lim = state.draftLimit, top = 3 * lim;
-    colorbar({
+    shell.colorbar({
       title: 'Entformschräge',
       stops: gradient(t => draftHex(top * t, lim)),
       ticks: [top, 2 * lim, lim, 0].map(v => fmt(v) + '°'),
@@ -413,8 +421,9 @@ export function createEntformungTool(host) {
     let halves = 0, sliders = 0;
     for (let d = 0; d < 6; d++) (DIRS[d].axis === seg.mainAxis ? halves += seg.areaByLabel[d] : sliders += seg.areaByLabel[d]);
     const axisName = 'XYZ'[seg.mainAxis];
+    const note = opts.axisNote ? opts.axisNote(seg) : '';
     ui('analysis-state').textContent = 'Formöffnung ' + axisName + (seg.auto ? ' (automatisch gewählt)' : ' (fest gewählt)')
-      + ' · bewegliche Seite ' + (state.movSign > 0 ? '+' : '−') + axisName;
+      + ' · bewegliche Seite ' + (state.movSign > 0 ? '+' : '−') + axisName + (note ? '. ' + note : '');
     const under = seg.areaByLabel[6] / A;
     const underRow = { label: 'Hinterschnitt', value: pct(under), verdict: under >= 0.0005 ? 'bad' : 'ok' };
     if (state.mode === 'draft') {
@@ -609,7 +618,7 @@ export function createEntformungTool(host) {
     const clear = () => { if (shown) { shell.status(''); shown = false; } };
     hoverProbe(canvas, evalHover, clear);
     function evalHover(at) {
-      if (!state.seg || !part.mesh.visible) return clear();
+      if (!active || !state.seg || !part.mesh.visible) return clear();
       rayAt(ray, at, canvas, view.camera);
       const hit = ray.intersectObject(part.mesh, false)[0];
       if (!hit) return clear();
@@ -686,9 +695,18 @@ export function createEntformungTool(host) {
     }
   }
 
+  /* Die Werkbank: nicht mehr dran — Formteile, Silhouetten, Karten,
+     Trennlinie und Netzkanten gehen aus dem Bild (ohne Modus zeigt
+     applyMode nichts davon); wieder dran — der Modus von vorhin. */
+  function setActive(on) {
+    active = on;
+    applyMode();
+    if (!on) edgeLines.visible = false;
+  }
+
   const tool = {
     id: 'entformung', modes, startMode: 'entformung', settingsOnly: true,
-    mounted, onPart, toJSON, fromJSON, resetSettings, accepts: [FORMAT], exports: [],
+    mounted, onPart, toJSON, fromJSON, resetSettings, setActive, accepts: [FORMAT], exports: [],
     /* Eine laufende Rechnung gehört zum alten Bauteil: der Gastgeber hat sie
        still beendet, ihr Lauf fasst nichts mehr an. */
     onPartStart: () => { state.ready = false; state.running = false; latest++; }

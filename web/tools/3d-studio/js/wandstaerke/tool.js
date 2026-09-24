@@ -5,13 +5,15 @@
    die ISOFLÄCHE (Untermaß, sofort), der FELDSCHNITT und die WÄRMEZENTREN.
    Jeder Modus besitzt, was er im Viewport zeigt; die Deckkraft des
    Bauteils steht in der Darstellung. Das Feld selbst gehört dem
-   Gastgeber (host.field) — auf der Werkbank teilen es sich drei Schritte. */
+   Gastgeber (host.field) — auf der Werkbank teilen es sich drei Schritte:
+   rechnet es dort die Füllung oder die Temperierung, übernimmt die
+   Wandstärke es (link.fieldChanged), wenn es zu ihrer Zellkante passt. */
 
 import * as T from 'three';
 import { thickMaxima, CELL_RANGE, MAX_SAMPLES } from '../part/field.js';
 import { surfaceNets } from '../part/surfacenets.js';
 import { volume, surface } from '../mesh.js';
-import { facts, segButtons, segButtonSet, slider, numberInput, colorbar, gradient, chip } from '../ui/controls.js';
+import { facts, segButtons, segButtonSet, slider, numberInput, gradient, chip } from '../ui/controls.js';
 import { fmt, fmtPlain, fmtUnit } from '../studio/format.js';
 import { kpis } from '../studio/rows.js';
 import { saveSTL } from '../studio/files.js';
@@ -112,26 +114,44 @@ export function createWandstaerkeTool(host) {
     });
     if (my !== latest) return;                       // anderes Bauteil: onPartStart hat aufgeräumt
     state.running = false; state.ready = true;
-    if (f) {
-      state.field = f;
-      state.fieldCell = asked;
-      state.stats = hostField.stats;
-      state.stale = Math.abs(asked - state.cell) > 1e-9;
-      state.ms = performance.now() - t0;
-      ui('under-slider').max = String(Math.ceil(state.stats.maxIn * 2) / 2);
-      if (!state.underTouched) state.under = Math.round(state.stats.maxIn) / 2;
-      if (state.under > state.stats.maxIn) state.under = Math.floor(state.stats.maxIn * 2) / 2;
-      ui('under').value = fmtPlain(state.under);
-      ui('under-slider').value = String(state.under);
-      extract();
-      updateFieldFacts();
-    }
+    if (f) adopt(f, asked, performance.now() - t0);
     /* Mit dem Feld werden die Felder der abgeleiteten Modi scharf — auch in
        dem Modus, aus dem gerechnet wurde (vorher erst nach einem Wechsel). */
     syncGates();
     applyMode();
     host.refreshActions();
     if (f && first && shell.mode === 'feld') shell.setMode('isoflaeche');
+  }
+
+  /* Ein Feld übernehmen — das eigene oder eines, das ein anderer Schritt der
+     Werkbank mit derselben Zellkante gerechnet hat. */
+  function adopt(f, asked, ms) {
+    state.field = f;
+    state.fieldCell = asked;
+    state.stats = hostField.stats;
+    state.stale = Math.abs(asked - state.cell) > 1e-9;
+    state.ms = ms;
+    ui('under-slider').max = String(Math.ceil(state.stats.maxIn * 2) / 2);
+    if (!state.underTouched) state.under = Math.round(state.stats.maxIn) / 2;
+    if (state.under > state.stats.maxIn) state.under = Math.floor(state.stats.maxIn * 2) / 2;
+    ui('under').value = fmtPlain(state.under);
+    ui('under-slider').value = String(state.under);
+    extract();
+    updateFieldFacts();
+  }
+
+  /** Das Feld des Gastgebers hat sich geändert (die Werkbank: ein anderer
+      Schritt hat es gerechnet). Passt es zur Zellkante von hier und ist es
+      ein anderes als das gezeigte, gilt ab jetzt dieses. Läuft die eigene
+      Rechnung, übernimmt die selbst. */
+  function fieldChanged() {
+    if (state.running || !part.model) return;
+    const f = hostField.peek(params());
+    if (!f || f === state.field) return;
+    adopt(f, state.cell, 0);
+    syncGates();
+    applyMode();
+    host.refreshActions();
   }
 
   function markStale() {
@@ -285,9 +305,9 @@ export function createWandstaerkeTool(host) {
 
   /* ── Farbskala ───────────────────────────────────────────── */
   function updateColorbar() {
-    if (!state.field || !state.stats || !(state.slice.on || state.hot.on)) return colorbar(null);
+    if (!state.field || !state.stats || !(state.slice.on || state.hot.on)) return shell.colorbar(null);
     const inn = scaleEnd();
-    colorbar({
+    shell.colorbar({
       title: 'Wandstärke',
       stops: gradient(t => scale('turbo', turboTrim(t))),
       ticks: [1, 0.75, 0.5, 0.25, 0].map(q => fmtUnit(2 * inn * q, 'mm')),
@@ -487,8 +507,16 @@ export function createWandstaerkeTool(host) {
     run: () => saveSTL(state.offsetTris, 'DieLogic Isofläche', part.name, 'isoflaeche')
   }];
 
+  /* Die Werkbank: nicht mehr dran — Isofläche, Schnitt und Marken gehen aus
+     dem Bild (für ein Werkzeug, das nicht dran ist, gibt es keinen Modus, und
+     ohne Modus zeigt applyMode nichts davon); wieder dran — der Modus von
+     vorhin. */
+  const setActive = () => applyMode();
+
   const tool = {
-    id: 'wandstaerke', modes, startMode: 'feld', settingsOnly: true, mounted, onPart, onPartStart, toJSON, fromJSON, resetSettings, accepts: [FORMAT], exports
+    id: 'wandstaerke', modes, startMode: 'feld', settingsOnly: true, mounted, onPart, onPartStart, toJSON, fromJSON, resetSettings, setActive, accepts: [FORMAT], exports,
+    /* Was die übrigen Werkzeuge der Seite ihm sagen (die Werkbank). */
+    link: { fieldChanged }
   };
   tool.__viewer = { state, view, get partMesh() { return part.mesh; }, offsetMesh, sliceMesh, hotGroup, runField, extract, shell, host, tool };
   return tool;

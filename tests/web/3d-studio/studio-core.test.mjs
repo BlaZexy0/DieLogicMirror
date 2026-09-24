@@ -347,6 +347,53 @@ test('Auftrag: ein neuer Lauf überholt den laufenden still — ohne dessen onCa
   assert.equal(jobs.running, false);
 });
 
+test('Auftrag: mehrere Werkzeuge auf einer Seite (owner) — die Rechnung eines anderen läuft zu Ende, die neue wartet', async () => {
+  const { createJobRunner } = await import('../../../web/tools/3d-studio/js/studio/job.js');
+  const jobs = createJobRunner({ setBusy() {}, progress() {} });
+  let release = null;
+  const a = { owner: 'entformung', run: signal => new Promise((res, rej) => { release = res; signal.addEventListener('abort', () => rej(Object.assign(new Error('ab'), { name: 'AbortError' }))); }) };
+  const pa = jobs.run(a);
+  assert.equal(jobs.owner, 'entformung');
+  /* Die Füllung rechnet: sie überholt die Entformung NICHT, sie wartet. */
+  const order = [];
+  const pb = jobs.run({ owner: 'fuellung', run: async () => { order.push('b'); return 'b'; } });
+  await new Promise(r => setTimeout(r, 10));
+  assert.equal(jobs.owner, 'entformung', 'die Entformung rechnet weiter');
+  assert.ok(!a.superseded);
+  release('a');
+  assert.equal(await pa, 'a', 'und kommt zu ihrem Ergebnis');
+  assert.equal(await pb, 'b', 'danach rechnet die Füllung');
+  assert.deepEqual(order, ['b']);
+
+  /* Dasselbe Werkzeug: die neue überholt die eigene, wie auf einer Einzelseite. */
+  const c = { owner: 'fuellung', run: signal => new Promise((res, rej) => signal.addEventListener('abort', () => rej(Object.assign(new Error('ab'), { name: 'AbortError' })))) };
+  const pc = jobs.run(c);
+  const pd = jobs.run({ owner: 'fuellung', run: async () => 'd' });
+  assert.equal(await pc, null);
+  assert.ok(c.superseded);
+  assert.equal(await pd, 'd');
+
+  /* supersede(owner) trifft nur dieses Werkzeug — die laufende eines anderen bleibt, eine wartende des genannten fällt weg. */
+  let rel2 = null;
+  const e = { owner: 'wandstaerke', run: () => new Promise(res => { rel2 = res; }) };
+  const pe = jobs.run(e);
+  const f = { owner: 'temperier', run: async () => 'f' };
+  const pf = jobs.run(f);
+  jobs.supersede('temperier');
+  rel2('e');
+  assert.equal(await pe, 'e');
+  assert.equal(await pf, null, 'die wartende Rechnung der Temperierung beginnt nicht mehr');
+  assert.ok(f.superseded);
+  /* Ohne owner (ein neues Bauteil): alles endet still. */
+  const g = { owner: 'anguss', run: signal => new Promise((res, rej) => signal.addEventListener('abort', () => rej(Object.assign(new Error('ab'), { name: 'AbortError' })))) };
+  const pg = jobs.run(g);
+  const ph = jobs.run({ owner: 'fuellung', run: async () => 'h' });
+  jobs.supersede();
+  assert.equal(await pg, null);
+  assert.equal(await ph, null);
+  assert.equal(jobs.running, false);
+});
+
 /* ── Raster ──────────────────────────────────────────────────── */
 test('Raster: planField hebt die Zellkante in Zehnprozentschritten, bis das Raster unter MAX_SAMPLES bleibt', async () => {
   const { planField, fieldSize, MAX_SAMPLES } = await import('../../../web/tools/3d-studio/js/part/field.js');

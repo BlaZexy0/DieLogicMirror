@@ -17,13 +17,8 @@
    Esc einen Zug abbricht (der Rahmen fragt das Werkzeug, tool.cancelDrag). */
 
 import * as G from './graph.js';
-import { createHandles, SELECTED_RING } from '../handles.js';
+import { createHandles } from '../handles.js';
 import { VIEW } from '../part/colors.js';
-
-/* Nur noch für die Werkbank (js/werkbank/runner.js), bis sie auf die
-   Bausteine der Werkzeuge umzieht; der Angussdesigner liest VIEW beim Malen. */
-export { SELECTED_RING };
-export const followerColor = () => VIEW.follower;
 
 export function createEditor(opts) {
   const { view, getGraph, onSelect, onChange, getRefMesh, getGateDir, onAim } = opts;

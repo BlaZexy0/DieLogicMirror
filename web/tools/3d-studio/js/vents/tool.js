@@ -23,7 +23,12 @@
    ihre Griffe sind der Plan selbst und stehen in jedem Modus im Bild; das
    Setzen sitzt als Chips über dem Viewport, das Bearbeiten im Auswahlfeld
    daneben. Ein neues Bauteil beginnt mit einem leeren Plan — der alte
-   bleibt als Entwurf bei seinem Bauteil. */
+   bleibt als Entwurf bei seinem Bauteil.
+
+   Auf der Werkbank (opts.spots) stehen dazu die zuletzt gefüllten Stellen
+   aus dem Schritt Füllung als Marken im Bild — dort gehören die Überläufe
+   hin —, und das Volumen der Überläufe geht als Gussvolumen in den Anguss
+   und als Überlaufgewicht in die Auslegung (tool.link). */
 
 import * as T from 'three';
 import { facts, slider, numberInput, POS_LIMIT } from '../ui/controls.js';
@@ -31,7 +36,7 @@ import { fmt, fmtPlain, fmtUnit, parseNumber } from '../studio/format.js';
 import { kpis, esc, selTitle, groupTabs, listRow, onListPick, legendRow, selectedRow } from '../studio/rows.js';
 import { saveSTL } from '../studio/files.js';
 import { createHandles, createPlacer } from '../handles.js';
-import { onScheme, ELEMENT } from '../part/colors.js';
+import { onScheme, ELEMENT, VIEW } from '../part/colors.js';
 import { setTris, dirText, outward, surfaceMaterial } from '../ui/common.js';
 import * as M from './model.js';
 import { buildByType, buildAll, volumeOf } from './geom.js';
@@ -62,10 +67,17 @@ const splitId = id => {
   return m ? { base: m[1], k: +m[2] } : { base: id, k: null };
 };
 
-export function createUeberlaufTool(host) {
+/**
+ * @param opts.spots  () → die zuletzt gefüllten Stellen [{ x, y, z }] (die Werkbank)
+ */
+export function createUeberlaufTool(host, opts = {}) {
   const { shell, view } = host;
   const ui = host.ui;
   let placer = null;
+  /* Auf der Werkbank ist das Werkzeug nur dran, solange einer seiner Modi
+     zu sehen ist (setActive); auf seiner eigenen Seite immer. */
+  let active = true;
+  let showSpots = !!opts.spots;
   const state = {
     plan: M.emptyPlan(), ready: false,
     /** Welche Art gerade gesetzt wird (ihr Chip ist aktiv) — oder null. */
@@ -80,11 +92,20 @@ export function createUeberlaufTool(host) {
     meshes[type] = new T.Mesh(new T.BufferGeometry(), surfaceMaterial(meta.color, { roughness: 0.55, metalness: 0.04 }));
     group.add(meshes[type]);
   }
+  /* Die zuletzt gefüllten Stellen (die Werkbank): Kugeln in Bildgröße, in
+     der Hervorhebung des Schemas, immer zu sehen. */
+  const spotGeo = new T.SphereGeometry(1, 20, 14);
+  const spotMat = new T.MeshBasicMaterial({ color: VIEW.lastFilled, depthTest: false, transparent: true, opacity: 0.9 });
+  const spotGroup = new T.Group();
+  spotGroup.renderOrder = 5;
+  spotGroup.visible = false;
+  group.add(spotGroup);
   /* Die Artfarben folgen dem Farbschema (js/part/colors.js): die Körper
      umfärben, Liste, Auswahlfeld und Legende neu. Die Griffe gleicht
      js/handles.js selbst ab, die Chips der Rahmen. */
   onScheme(() => {
     for (const [type, meta] of Object.entries(M.TYPES)) meshes[type].material.color.set(meta.color);
+    spotMat.color.set(VIEW.lastFilled);
     syncSelection();
     updateLegend();
     view.invalidate();
@@ -149,6 +170,30 @@ export function createUeberlaufTool(host) {
     if (mode === 'drag') return;
     updateKpis();
     updateList();
+    /* Das Volumen geht auf der Werkbank in den Anguss und die Auslegung. */
+    host.emit('vents');
+  }
+
+  /* ── Die zuletzt gefüllten Stellen (die Werkbank) ─────────── */
+  function updateSpots() {
+    if (!opts.spots) return;
+    spotGroup.clear();
+    const list = opts.spots() || [];
+    for (const m of list) {
+      const mesh = new T.Mesh(spotGeo, spotMat);
+      mesh.position.set(m.x, m.y, m.z);
+      mesh.onBeforeRender = (renderer, scene, camera) => {
+        const d = camera.isOrthographicCamera ? (camera.top - camera.bottom) / camera.zoom / 3 : camera.position.distanceTo(mesh.position);
+        mesh.scale.setScalar(d * 0.012);
+      };
+      spotGroup.add(mesh);
+    }
+    spotGroup.visible = active && showSpots && list.length > 0;
+    ui('spots-note').textContent = showSpots && !list.length
+      ? 'Noch keine Füllung gerechnet: danach stehen die zuletzt gefüllten Stellen hier als Marken.' : '';
+    ui('spots-note').hidden = !(showSpots && !list.length);
+    updateLegend();
+    view.invalidate();
   }
 
   const label = it => M.TYPES[it.type].label + ' ' + it.id;
@@ -393,6 +438,10 @@ export function createUeberlaufTool(host) {
     /* ── Darstellung, Legende ────────────────────────────────── */
     const pop = shell.darstellung(DARSTELLUNG);
     slider(pop.querySelector('[data-ui="opacity"]'), v => host.part.setOpacity(v / 100), v => v + ' %', pop.querySelector('[data-ui="opacity-val"]'));
+    if (opts.spots) {
+      pop.querySelector('[data-ui="spots-row"]').hidden = false;
+      pop.querySelector('[data-ui="show-spots"]').addEventListener('change', e => { showSpots = e.target.checked; updateSpots(); });
+    }
     updateLegend();
 
     rebuild();
@@ -401,7 +450,8 @@ export function createUeberlaufTool(host) {
 
   function updateLegend() {
     shell.legend(Object.values(M.TYPES).map(t => legendRow(t.color, t.label)).join('')
-      + legendRow(ELEMENT.kanalpunkt, 'Kanalpunkt') + selectedRow());
+      + legendRow(ELEMENT.kanalpunkt, 'Kanalpunkt')
+      + (spotGroup.visible ? legendRow(VIEW.lastFilled, 'zuletzt gefüllt') : '') + selectedRow());
   }
 
   /* ── Plan laden, Bauteil ─────────────────────────────────── */
@@ -413,11 +463,37 @@ export function createUeberlaufTool(host) {
     syncSelection();
   }
 
+  /* Die Werkbank: nicht mehr dran — kein Zielen, Griffe und Marken weg (die
+     Körper bleiben als Plan im Bild); wieder dran — alles wie vorhin. */
+  function setActive(on) {
+    active = on;
+    if (!on) placer.cancel();
+    handles.setEnabled(on);
+    handles.group.visible = on;
+    if (on) { updateSpots(); syncSelection(); } else spotGroup.visible = false;
+    view.invalidate();
+  }
+  const volume = () => M.allItems(state.plan).reduce((a, it) => a + volumeOf(it), 0);
+
   const tool = {
     id: 'ueberlauf',
     modes: MODES,
     startMode: 'elemente',
     accepts: [M.FORMAT],
+    setActive,
+    /* Was als Plan auch in anderen Schritten der Werkbank im Bild steht. */
+    bodies: group,
+    /* Was die übrigen Schritte der Werkbank von ihm wissen und ihm sagen. */
+    link: {
+      /** Das Volumen aller Elemente in mm³. */
+      volume,
+      /** Die Körper als Dreieckssuppe (Sprengfläche). */
+      tris: () => buildAll(state.plan),
+      /** Die Füllung ist neu gerechnet: die Marken neu. */
+      spotsChanged: () => updateSpots(),
+      doc: () => M.toJSON(state.plan),
+      load: obj => loadPlan(M.fromJSON(obj))
+    },
     toJSON: () => M.toJSON(state.plan),
     fromJSON: obj => loadPlan(M.fromJSON(obj)),
     serialize: () => M.toJSON(state.plan),

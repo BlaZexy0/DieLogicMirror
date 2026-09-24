@@ -146,12 +146,14 @@ export function groupTabs({ tabs, box, onShow = null }) {
 }
 
 /** Eine Zeile einer Liste in der Seitenleiste: ein Knopf, der sein Element
-    wählt (data-item). `name` und `sub` sind fertiges HTML. */
-export const listRow = ({ id, color, name, value = '', sub = '', cls = '', active = false }) =>
-  '<button type="button" class="st-list-row' + (cls ? ' ' + cls : '') + (active ? ' active' : '') + '" data-item="' + esc(id) + '">'
+    wählt (data-item). `name` und `sub` sind fertiges HTML. Mit `still` ist
+    sie nur Auskunft, kein Knopf (die Anschnitte der Werkbank kommen aus dem
+    Anguss und werden dort bearbeitet). */
+export const listRow = ({ id, color, name, value = '', sub = '', cls = '', active = false, still = false }) =>
+  (still ? '<div class="st-list-row still' : '<button type="button" class="st-list-row') + (cls ? ' ' + cls : '') + (active ? ' active' : '') + '" data-item="' + esc(id) + '">'
   + '<span class="dot" style="background:' + color + '"></span>'
   + '<span class="name">' + name + '</span><span class="val">' + value + '</span>'
-  + (sub ? '<span class="sub">' + sub + '</span>' : '') + '</button>';
+  + (sub ? '<span class="sub">' + sub + '</span>' : '') + (still ? '</div>' : '</button>');
 
 /** Ein Klick auf eine Zeile der Liste ruft pick(id). */
 export function onListPick(list, pick) {
