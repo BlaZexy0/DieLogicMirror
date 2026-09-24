@@ -5,7 +5,8 @@
    Die Reiter von links nach rechts sind die Arbeit: das Bauteil ansehen,
    Anschnitte setzen, rechnen, das Ergebnis lesen. */
 
-import { numberRow, sliderRow, segRow, kpiBlock, factsBlock, detailsBlock, warnLine, heading, hintLine } from '../studio/rows.js';
+import { numberRow, sliderRow, segRow, kpiBlock, factsBlock, detailsBlock, warnLine, heading, hintLine, info } from '../studio/rows.js';
+import { PLAY } from '../simulation/panel-common.js';
 import { fmtPlain } from '../studio/format.js';
 import { DEFAULTS, ALPHA_RANGE } from './model.js';
 
@@ -43,8 +44,7 @@ export const MODES = [
     id: 'ergebnis', label: 'Ergebnis',
     hint: 'Der Füllgrad einer Stelle ist der Anteil des Volumens, der voll ist, wenn die Front sie erreicht: eine Reihenfolge, keine Zeit.',
     html: segRow({ ui: 'show-seg', label: 'Anzeige', value: 'koerper', help: 'ansichten',
-      options: [['farbe', 'Füllgrad'], ['koerper', 'Füllkörper'], ['grau', 'Bauteil']] })
-      + sliderRow({ ui: 'q', label: 'Füllgrad', min: 0, max: 100, step: 1, value: 50, help: 'fuellgrad' })
+      options: [['farbe', 'Füllzeit'], ['koerper', 'Füllkörper'], ['grau', 'Bauteil']] })
       + sliderRow({ ui: 'spots-count', label: 'Letzte Stellen', min: 0, max: 20, step: 1, value: 5, help: 'letzte-stellen' })
       + kpiBlock('result-kpis')
       /* Nur auf der Werkbank (mit der Uhr der Schusskurve): die Zeiten ab
@@ -84,3 +84,13 @@ export const INSPECTOR = '<div class="st-grouptabs" role="tablist" data-ui="sel-
   + '<button type="button" class="btn btn-sm btn-outline block-btn st-danger" data-ui="del-item">Entfernen</button>';
 
 export const DARSTELLUNG = sliderRow({ ui: 'opacity', label: 'Deckkraft Bauteil', min: 5, max: 100, step: 1, value: 100 });
+
+/* Füllgrad und Abspielen: unten unter dem Hauptknopf (shell.setActionsExtra),
+   wie der Zeitregler der Simulationen, und in jedem Modus bedienbar
+   (Rückmeldung vom 24.09.). Der Regler stellt den Füllkörper auf einen
+   Füllgrad; Abspielen lässt ihn bis 100 % volllaufen. */
+export const PLAYBACK =
+  '<div data-ui="q-row" class="off"><div class="row sim-time"><span>Füllgrad' + info('fuellgrad') + '</span>'
+  + '<button type="button" class="sim-play" data-ui="q-play" aria-label="Abspielen" disabled>' + PLAY + '</button>'
+  + '<input type="range" data-ui="q" aria-label="Füllgrad" min="0" max="100" step="1" value="50" disabled>'
+  + '<span class="val" data-ui="q-val"></span></div></div>';

@@ -50,6 +50,9 @@ before(async () => {
   }
   W = (await import(pathToFileURL(join(ROOT, 'js', 'werkbank', 'app.js')).href)).__viewer;
   await wait(() => W.state.ready, 1200);
+  /* Die Entformung rechnet auf Knopfdruck (24.09.), auch in der Werkbank. */
+  assert.equal(W.stages.entformung.state.analysed, false, 'nicht von selbst gerechnet');
+  frame('primary').dispatch('click');
   await wait(() => W.stages.entformung.state.analysed && !W.stages.entformung.state.running, 2400);
 });
 
@@ -91,7 +94,7 @@ test('Rahmen: jedes Werkzeug findet nur seine Felder, und EIN Feld hat EINE Zell
   assert.equal(own('fuellung', 'defaults-block').hidden, true);
 });
 
-test('Bauteil: die Entformung läuft beim Laden und findet Z', () => {
+test('Bauteil: die Entformung läuft auf Knopfdruck und findet Z', () => {
   const s = W.stages.entformung.state;
   assert.equal(s.seg.mainAxis, 2);
   assert.ok(s.seg.auto);
@@ -272,7 +275,7 @@ test('Füllung: die Uhr läuft auf der Schusskurve, gezeigt ab Kammer voll; ein 
   const uhr = own('fuellung', 'clock-facts').textContent;
   assert.ok(/Kammer voll/.test(uhr) && /Anschnitte öffnen/.test(uhr) && /Füllzeit der Auslegung/.test(uhr), uhr);
   assert.doesNotMatch(own('fuellung', 'grid-facts').textContent, /Kammer voll/);
-  assert.match(own('fuellung', 'q-val').textContent, /%.*ms/, 'der Regler nennt zum Füllgrad die Zeit');
+  assert.match(frame('q-val').textContent, /%.*ms/, 'der Regler unten nennt zum Füllgrad die Zeit');
   /* Zwei symmetrische Anschnitte öffnen zugleich: kein Vorsprung. */
   assert.ok(Object.values(tm.offsets).every(o => o === 0), 'symmetrisch: ' + JSON.stringify(tm.offsets));
   /* Ungleich aufgeteilt (70 : 30): der Ast mit dem kleineren Anteil füllt sich

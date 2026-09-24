@@ -54,7 +54,8 @@ import { buildAll } from './geom.js';
 import { solveFill, fracToSurface, sampleFrac, fillBodyField, lastSpots } from './solve.js';
 import { fillClock, openingFractions, unitsForFraction } from '../werkbank/filltime.js';
 import { cross, dot, norm, addScaled } from '../runner/vec.js';
-import { MODES, INSPECTOR, GROUPS, DARSTELLUNG } from './panel.js';
+import { MODES, INSPECTOR, GROUPS, DARSTELLUNG, PLAYBACK } from './panel.js';
+import { PLAY, PAUSE } from '../simulation/panel-common.js';
 
 const RUN = 'Rechnen';
 const NEEDS_PART = 'Zuerst ein Bauteil laden; der Klick setzt den Anschnitt auf seine Wand.';
@@ -645,12 +646,12 @@ export function createFuellungTool(host, opts = {}) {
     return v + ' %' + (Number.isFinite(t) ? ' · ' + fmtUnit((t - tm.tFull) * 1000, 'ms', 0) : '');
   }
 
-  /* Jeder Modus besitzt, was er zeigt: nur „Ergebnis" färbt das Bauteil,
-     stellt den Füllkörper hinein, markiert die letzten Stellen und trägt die
-     Skala. Überall sonst steht das Bauteil grau da — dort wird auf die Wand
-     geklickt, und die soll aussehen wie eine Wand. */
+  /* Das Ergebnis steht in jedem Modus im Bild, sobald gerechnet ist
+     (Rückmeldung vom 24.09.): wer an Anschnitten oder Raster dreht, sieht die
+     Füllung dazu, wie bei den Simulationen. Auf der Werkbank zeigt ein
+     Schritt, der nicht dran ist, nichts (shell.mode ist dort null). */
   function applyMode() {
-    const on = shell.mode === 'ergebnis' && !!state.result;
+    const on = shell.mode !== null && !!state.result;
     if (on) {
       if (state.show === 'farbe') paintPart();
       if (state.show === 'koerper') updateBody();
@@ -669,16 +670,17 @@ export function createFuellungTool(host, opts = {}) {
        der Schmelze und steht in der Legende. */
     const tm = timingNow();
     shell.colorbar(on && state.show === 'farbe' ? {
-      title: 'Füllgrad',
+      title: 'Füllzeit',
       stops: gradient(t => scale('turbo', t)),
       ticks: [100, 75, 50, 25, 0].map(v => v + ' %'),
-      extra: tm && tm.tEnd !== null ? fmtUnit((tm.tFirst - tm.tFull) * 1000, 'ms', 0) + ' bis ' + fmtUnit((tm.tEnd - tm.tFull) * 1000, 'ms', 0) + ' ab Kammer voll' : ''
+      extra: tm && tm.tEnd !== null ? fmtUnit((tm.tFirst - tm.tFull) * 1000, 'ms', 0) + ' bis ' + fmtUnit((tm.tEnd - tm.tFull) * 1000, 'ms', 0) + ' ab Kammer voll'
+        : 'wann die Front ankommt, als Anteil der Füllung'
     } : null);
     shell.legend(legendRow(M.inletColor(), 'Anschnitt')
       + (body ? legendRow(ROLE.melt, 'Schmelze bis ' + fmt(100 * state.q, 0) + ' %') : '')
       + (spotGroup.visible ? legendRow(spotColor(), 'zuletzt gefüllt') : '')
       + selectedRow());
-    if (wired) { updateResultKpis(); ui('q-val').textContent = qLabel(Math.round(100 * state.q)); }
+    if (wired) { updateResultKpis(); syncPlayback(); }
     view.invalidate();
   }
 
@@ -687,6 +689,56 @@ export function createFuellungTool(host, opts = {}) {
     const sec = shell.modeSection('ergebnis');
     if (!sec) return;
     for (const child of sec.children) child.classList.toggle('disabled', !state.result);
+  }
+
+  /* ── Füllgrad und Abspielen, unten unter dem Hauptknopf ──── */
+  /* Wie der Zeitregler der Simulationen (Rückmeldung vom 24.09.): in jedem
+     Modus da, sobald es ein Ergebnis gibt. Auf der Werkbank steht die Zeile
+     nur, solange dieser Schritt dran ist (setActive). */
+  let playing = 0;
+  function showPlayback(on) {
+    stopPlay();
+    shell.setActionsExtra(on ? PLAYBACK : null);
+    if (!on) return;
+    slider(ui('q'), v => { stopPlay(); state.q = v / 100; applySoon(); }, qLabel, ui('q-val'), { fire: false });
+    ui('q-play').addEventListener('click', togglePlay);
+    syncPlayback();
+  }
+  function syncPlayback() {
+    const row = ui('q-row');
+    if (!row) return;
+    const on = !!state.result;
+    row.classList.toggle('off', !on);
+    ui('q').disabled = ui('q-play').disabled = !on;
+    ui('q').value = String(Math.round(100 * state.q));
+    ui('q-val').textContent = qLabel(Math.round(100 * state.q));
+    if (!on) stopPlay();
+  }
+  function setPlayButton(on) {
+    const b = ui('q-play');
+    if (!b) return;
+    b.innerHTML = on ? PAUSE : PLAY;
+    b.title = on ? 'Anhalten' : 'Abspielen';
+    b.setAttribute('aria-label', b.title);
+  }
+  function stopPlay() {
+    if (playing) { clearInterval(playing); playing = 0; }
+    setPlayButton(false);
+  }
+  /* Von der Stelle des Reglers bis 100 % in 4 s; stand er schon oben, von vorn. */
+  function togglePlay() {
+    if (playing) { stopPlay(); return; }
+    if (!state.result) return;
+    if (state.q >= 0.999) state.q = 0;
+    setPlayButton(true);
+    playing = setInterval(() => {
+      if (!state.result) { stopPlay(); return; }
+      state.q = Math.min(1, state.q + 0.01);
+      ui('q').value = String(Math.round(100 * state.q));
+      ui('q-val').textContent = qLabel(Math.round(100 * state.q));
+      applyMode();
+      if (state.q >= 1) stopPlay();
+    }, 40);
   }
 
   /* Der Füllgrad-Regler meldet sich je Mausschritt; gebaut wird höchstens
@@ -985,7 +1037,7 @@ export function createFuellungTool(host, opts = {}) {
 
     /* Ergebnis — Anzeige, kein Plan: nichts davon ist ein Schritt im Verlauf. */
     segButtons(ui('show-seg'), v => { state.show = v; applyMode(); });
-    slider(ui('q'), v => { state.q = v / 100; applySoon(); }, qLabel, null, { fire: false });
+    if (!derived) showPlayback(true);
     spotsSlider = slider(ui('spots-count'), v => {
       state.spots.count = v;
       /* Auf der Werkbank zeigt der Schritt Überläufe die Stellen: neu, auch
@@ -1026,6 +1078,7 @@ export function createFuellungTool(host, opts = {}) {
     active = on;
     clearTimeout(timer);
     if (!on) placer.cancel();
+    if (derived && wired) showPlayback(on);
     shown.paintFor = null;
     rebuild();
     applyMode();

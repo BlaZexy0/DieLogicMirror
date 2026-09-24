@@ -7,7 +7,7 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mountPage, wait, kpiText, same, seg } from './fixture.mjs';
+import { mountPage, wait, same, seg } from './fixture.mjs';
 
 /* Messwerte nie mit assert.equal vergleichen (same, ./fixture.mjs). */
 /* Ungefärbt steht ein Netz im Grau des Bauteils (Rolle part, als Punktfarbe
@@ -27,7 +27,9 @@ test('Zwei Dateien als Chips A und B in der Kopfzeile, nichts gerechnet', () => 
   assert.ok(s.a.name.includes('Ölwanne'), 'A ist die Ölwanne, das Gussteil der Form: ' + s.a.name);
   assert.ok(s.b.name.includes('Temperierung fest'), 'B ist die Temperierung der festen Hälfte: ' + s.b.name);
   assert.equal(s.analysed, false, 'ohne Bestätigung wird nicht gerechnet');
-  assert.deepEqual(doc.querySelectorAll('[role="tab"]').map(b => b.getAttribute('data-mode')), ['abstand', 'skala']);
+  assert.deepEqual(doc.querySelectorAll('[role="tab"]').map(b => b.getAttribute('data-mode')), ['abstand'], 'Abstand und Skala in einem Menü');
+  assert.equal(ui('dist-kpis'), null, 'keine Kennzahlen A–B in der Seitenleiste: das zeigt die Farbe im Viewport');
+  assert.equal(ui('dist-facts'), null, 'keine Rechnung mit Punkten, Dreiecken und Rechenzeit');
   assert.equal(shell.mode, 'abstand', 'die Seite beginnt bei der Rechnung');
   assert.equal(ui('part').hidden, true, 'zwei Dateien — der eine Bauteil-Chip der Kopfzeile entfällt …');
   /* … an seiner Stelle stehen zwei, A und B, jeder mit derselben Klappe:
@@ -49,7 +51,7 @@ test('Zwei Dateien als Chips A und B in der Kopfzeile, nichts gerechnet', () => 
   assert.ok(doc.getElementById('demo-select-a').innerHTML.includes('coolmov'), 'Gegenstücke sind hier wählbar');
   assert.equal(doc.querySelector('.st-mode #demo-select-a'), null, 'die Seitenleiste lädt keine Dateien mehr');
   assert.equal(ui('primary').textContent, 'Abstand berechnen');
-  assert.match(ui('note').textContent, /Noch nicht gerechnet: .* Punkte gegen .* Dreiecke/);
+  assert.match(ui('note').textContent, /^Noch nicht gerechnet\.$/);
   /* Anzeigeoptionen stehen unter „Darstellung". */
   const bar = doc.getElementById('viewport').querySelector('.view-bar');
   assert.equal(bar.querySelector('[data-darstellung]').hidden, false);
@@ -78,9 +80,8 @@ test('Abstand auf Knopfdruck: beide Richtungen, Kennzahlen, Skala aus den Messwe
   const lo = Math.min(s.a.stats.min, s.b.stats.min), hi = Math.max(s.a.stats.max, s.b.stats.max);
   assert.ok(Math.abs(s.scale.min - lo) <= 0.1 + 1e-9 && Math.abs(s.scale.max - hi) <= 0.1 + 1e-9, 'Grenzen aus den Messwerten');
   assert.equal(ui('scale-min').value, String(s.scale.min).replace('.', ','));
-  assert.match(kpiText(ui('dist-kpis')), /A → B.*mm.*Mittel A.*B → A.*Mittel B/);
   assert.equal(ui('dist-warn').textContent, '', 'keine Durchdringung');
-  assert.ok(ui('dist-facts').innerHTML.includes('Rechenzeit'));
+  assert.doesNotMatch(ui('note').textContent, /Punkte|Dreiecke|ms\b/, 'keine Rechenstatistik unter dem Knopf');
   assert.equal(ui('primary').hidden, true, 'aktuell — kein Knopf');
   assert.match(ui('note').textContent, /Abstand ist aktuell/);
 });
@@ -108,7 +109,7 @@ test('Skala, Einfärben, Darstellung, Farbskala — und die Suchgrenze verlangt 
   /* Über viele Dreiecke vergleichen — ein einzelnes kann in beiden Skalen am Anschlag liegen. */
   const fingerprint = mesh => { const c = mesh.geometry.getAttribute('color').array; let h = 0; for (let i = 0; i < c.length; i += 97) h = (h * 31 + Math.round(c[i] * 255)) | 0; return h; };
 
-  shell.setMode('skala');
+  shell.setMode('abstand');
   const before = fingerprint(v.meshA), distRef = s.a.dist;
   const mn = ui('scale-min'), mx = ui('scale-max');
   mn.value = '5'; mn.dispatch('change');
@@ -150,7 +151,7 @@ test('Skala, Einfärben, Darstellung, Farbskala — und die Suchgrenze verlangt 
   assert.ok(doc.getElementById('cb-ticks').innerHTML.includes('≥'), 'oberes Ende als „ab" beschriftet');
   assert.ok(doc.getElementById('cb-scale').style.background.includes('linear-gradient'));
   /* Die Karte steht in beiden Modi — sie gehört zur Rechnung, nicht zu einem Reiter. */
-  shell.setMode('skala');
+  shell.setMode('abstand');
   assert.ok(bar.classList.contains('on'));
   shell.setMode('abstand');
 
@@ -266,9 +267,7 @@ test('Eine neue Datei: nichts bleibt vom alten Paar stehen, auch nicht auf der a
   seg(ui('color-seg'), 'both').dispatch('click');
   const bar = doc.getElementById('colorbar');
   assert.ok(bar.classList.contains('on'), 'gerechnet: die Skala steht');
-  assert.match(kpiText(ui('dist-kpis')), /A → B/);
   assert.match(ui('dist-warn').textContent, /INNERHALB/, 'die Teile durchdringen sich');
-  assert.ok(ui('dist-facts').innerHTML.includes('Rechenzeit'));
 
   await loadAs('b', 'wuerfel-c.stl', S.translate(S.box(20, 20, 20), 0, 80, 0));
   assert.equal(s.analysed, false);
@@ -281,9 +280,7 @@ test('Eine neue Datei: nichts bleibt vom alten Paar stehen, auch nicht auf der a
   for (let i = 0; i < colA.length; i += 7) if (colA[i] !== plain[i % 3]) coloured++;
   assert.equal(coloured, 0, 'A ist wieder im Grau des Bauteils, nicht nach Abständen zum alten B gefärbt');
   assert.ok(!bar.classList.contains('on'), 'keine Skala ohne Messwerte');
-  assert.equal(kpiText(ui('dist-kpis')), '', 'keine Kennzahlen des alten Paares');
   assert.equal(ui('dist-warn').textContent, '', 'keine Warnung des alten Paares');
-  assert.ok(!ui('dist-facts').innerHTML.includes('Rechenzeit'), 'keine Rechenzeit des alten Paares');
   assert.match(ui('note').textContent, /Noch nicht gerechnet/);
 });
 
@@ -305,7 +302,7 @@ test('Suchgrenze während der Rechnung geändert: veraltet, und „≥" bleibt b
   assert.equal(ui('primary').textContent, 'Abstand neu berechnen');
   assert.match(ui('note').textContent, /Suchgrenze geändert/);
   assert.ok(s.a.stats.max >= 40 - 1e-6, 'A stößt an die Grenze: ' + s.a.stats.max);
-  assert.match(kpiText(ui('dist-kpis')), /A → B.*≥ 40,0 mm/, 'an der Grenze der Rechnung steht „≥" (nicht an der Eingabe 100)');
+  assert.equal(s.measuredReach, 40, '„≥" gilt an der Grenze der Rechnung (nicht an der Eingabe 100)');
   /* Zurück zur Grenze der Rechnung: wieder aktuell, ohne neu zu rechnen. */
   reach.value = '40'; reach.dispatch('change');
   assert.equal(s.stale, false);
@@ -315,7 +312,7 @@ test('Suchgrenze während der Rechnung geändert: veraltet, und „≥" bleibt b
 test('Skala: die Grenzen bleiben in ihrer Reihenfolge, das geschobene Feld sagt es', () => {
   const { doc, v, ui, shell } = P;
   const s = v.state;
-  shell.setMode('skala');
+  shell.setMode('abstand');
   const mn = ui('scale-min'), mx = ui('scale-max');
   const note = el => el.closest('.row').querySelector('.clamp-note').textContent;
   mn.value = '0'; mn.dispatch('change');

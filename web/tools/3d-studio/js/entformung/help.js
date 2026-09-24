@@ -11,7 +11,8 @@ der Weg frei ist (verdeckungsgenau, nicht nur über den Winkel). Dann gelten fes
 die Richtung, die am meisten davon sieht, auch parallel (0°); was niemand sieht, ist
 <b>Hinterschnitt</b>. Splitter ohne Schräge, die keine Hälfte sieht, gehen an die Hälften und werden
 als Fläche gemeldet. Weder Formhälften noch Schieber müssen dafür vorhanden sein.</p>
-<p>Gerechnet wird sofort beim Laden: Es gibt keine Regler, die eine Bestätigung bräuchten. Die
+<p>Gerechnet wird auf Knopfdruck, mit <b>Entformung rechnen</b>: Bei großen Teilen dauert die
+Sichtbarkeit spürbar. Die
 <b>Formöffnung</b> wird automatisch so gewählt, dass Schieber und Hinterschnitte zusammen die kleinste
 Fläche haben; X, Y, Z lassen sich zum Vergleich fest setzen, das rechnet nur die Zuordnung neu
 (Millisekunden). Die Sichtbarkeit selbst, der teure Teil, hängt nur am Netz und lässt sich

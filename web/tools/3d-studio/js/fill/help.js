@@ -77,8 +77,9 @@ sie abbricht; dann wartet sie wieder auf den Knopf.</p>
 <section data-help-anchor="ansichten">
 <h3>Drei Ansichten</h3>
 <ul>
-<li><b>Füllgrad</b>: Bauteil nach Füllgrad gefärbt (früh blau, spät rot, die Skala im Bild);
-was über dem Regler liegt, behält das Grau des Bauteils.</li>
+<li><b>Füllzeit</b>: Bauteil danach gefärbt, wann die Front ankommt (früh blau, spät rot, die Skala
+im Bild), als Anteil der Füllung; auf der Werkbank mit der Zeit der Schusskurve. Was über dem
+Füllgrad-Regler liegt, behält das Grau des Bauteils.</li>
 <li><b>Füllkörper</b>: die Schmelze beim gewählten Füllgrad als Körper in der Farbe der Schmelze,
 das Bauteil durchscheinend.</li>
 <li><b>Bauteil</b>: nur das Bauteil und die Anschnitte.</li>
@@ -86,8 +87,10 @@ das Bauteil durchscheinend.</li>
 </section>
 <section data-help-anchor="fuellgrad">
 <h3>Füllgrad</h3>
-<p>Bis zu welchem Füllgrad gezeigt wird; die Front wandert mit dem Regler. Voreingestellt ist der
-Füllkörper bei 50 %: die Front mitten im Teil sagt auf einen Blick, wo die Schmelze zuerst hinkommt.</p>
+<p>Bis zu welchem Füllgrad gezeigt wird; die Front wandert mit dem Regler. Er steht unten unter dem
+Hauptknopf, in jedem Reiter, sobald gerechnet ist; der Knopf daneben spielt die Füllung bis 100 %
+ab. Voreingestellt ist der Füllkörper bei 50 %: die Front mitten im Teil sagt auf einen Blick, wo die
+Schmelze zuerst hinkommt.</p>
 </section>
 <section data-help-anchor="letzte-stellen">
 <h3>Letzte Stellen</h3>

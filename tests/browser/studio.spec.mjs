@@ -190,6 +190,8 @@ test('Werkbank: alle sechs Schritte kommen ohne Fehler hoch und hängen zusammen
   await page.waitForFunction(() => window.__werkbank?.ctx?.ready, null, { timeout: 60_000 });
   /* Bauteil: Entformung und Wandstärke, ihre Modi in zwei Zeilen. */
   await expect(page.locator('[data-ui="tabs"] [data-mode]')).toHaveCount(8);
+  /* Die Entformung rechnet auf Knopfdruck. */
+  await page.click('[data-ui="primary"]');
   await page.waitForFunction(() => window.__werkbank.stages.entformung.state.analysed, null, { timeout: 90_000 });
   /* Gröber rastern: das Feld ist hier Mittel, nicht Gegenstand. */
   await page.click('[data-ui="tabs"] [data-mode="feld"]');

@@ -757,26 +757,26 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
    SICH — die Seitenleiste selbst scrollt nie. Eine feste Höhe (24vh) ging
    nicht mehr auf, seit der Zeitregler unten im Streifen steht: Was er dem
    Kasten nimmt, fehlte der letzten Zeile der Tabelle. Der Kopf bleibt stehen. */
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .st-mode[data-mode="ergebnis"] {
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .st-mode[data-mode="ergebnis"] {
   display: flex; flex-direction: column; min-height: 0; max-height: 100%;
 }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table { margin: 6px 0 6px; flex: 0 1 auto; min-height: 76px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: var(--radius); }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table:empty { display: none; }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table table { width: 100%; border-collapse: collapse; font-size: .78rem; }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table caption { text-align: left; caption-side: top; color: var(--muted); font-size: .72rem; line-height: 1.4; padding: 5px 8px 3px; }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table th {
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table { margin: 6px 0 6px; flex: 0 1 auto; min-height: 76px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: var(--radius); }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table:empty { display: none; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table caption { text-align: left; caption-side: top; color: var(--muted); font-size: .72rem; line-height: 1.4; padding: 5px 8px 3px; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table th {
   position: sticky; top: 0; background: var(--surface2); color: var(--muted); font-weight: 600; font-size: .72rem;
   text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--border);
 }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table td { font-family: var(--mono); text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--border-light); white-space: nowrap; color: var(--text); }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table tr:last-child td { border-bottom: 0; }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table th:first-child, .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table td:first-child { text-align: left; }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table td:first-child { font-family: var(--sans); color: var(--text-body); white-space: normal; overflow-wrap: break-word; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table td { font-family: var(--mono); text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--border-light); white-space: nowrap; color: var(--text); }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table tr:last-child td { border-bottom: 0; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table th:first-child, .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table td:first-child { text-align: left; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table td:first-child { font-family: var(--sans); color: var(--text-body); white-space: normal; overflow-wrap: break-word; }
 /* Kein Lauf mit diesem Verfahren. */
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table .off { color: var(--muted); font-weight: 400; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table .off { color: var(--muted); font-weight: 400; }
 /* Die Spalte, deren Bild gerade im Viewport steht. */
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table th.shown { color: var(--primary-deep); box-shadow: inset 0 -2px 0 var(--primary); }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table tr.sum td { border-top: 1px solid var(--border); background: var(--surface2); font-weight: 600; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table th.shown { color: var(--primary-deep); box-shadow: inset 0 -2px 0 var(--primary); }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table tr.sum td { border-top: 1px solid var(--border); background: var(--surface2); font-weight: 600; }
 
 /* Der Zeitregler steht unter dem Hauptknopf (shell.setActionsExtra) und gehört
    damit keinem Reiter: eine feine Linie trennt ihn von der Zustandszeile. Er
@@ -812,23 +812,23 @@ details.rule > span { display: block; padding: 0 9px 7px 24px; }
 /* Die Zeitzeile: Bezeichnung · Abspielen · Regler. Die Bezeichnung ist hier
    nur so breit wie ihr Text, sonst bliebe dem Regler nichts. Eine Zahl steht
    nicht dahinter: Zeit, Kolbenweg und Luft stehen unten links IM Bild. */
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .row.sim-time { flex-wrap: nowrap; }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .row.sim-time > span:first-child { width: auto; white-space: nowrap; }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-play {
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .row.sim-time { flex-wrap: nowrap; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .row.sim-time > span:first-child { width: auto; white-space: nowrap; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-play {
   flex: 0 0 auto; width: 30px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--surface); color: var(--primary-deep); line-height: 1; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
 }
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-play:hover { background: var(--pale); border-color: var(--pale-border); }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-play:hover { background: var(--pale); border-color: var(--pale-border); }
 
 /* Der Zusatz unter der Geschwindigkeitsskala bricht um, statt die Skala breit
    zu machen — sonst trifft sie im schmalen Bild die Hinweiszeile. */
-.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .cb-extra .sim-cb-note { display: block; max-width: 176px; line-height: 1.35; }
+.st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .cb-extra .sim-cb-note { display: block; max-width: 176px; line-height: 1.35; }
 
 @media (pointer: coarse) {
-  .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table th, .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-table td { padding-top: 7px; padding-bottom: 7px; }
-  .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-play { width: 44px; height: 44px; }
-  .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"]) .sim-play svg { width: 16px; height: 16px; }
+  .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table th, .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-table td { padding-top: 7px; padding-bottom: 7px; }
+  .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-play { width: 44px; height: 44px; }
+  .st-root:is([data-tool="angussfuellung"], [data-tool="kammerfuellung"], [data-tool="fuellung"]) .sim-play svg { width: 16px; height: 16px; }
 }
 
 /* Angussdesigner, Modus „Prozess": aufgeklappt braucht der Kasten „Details"

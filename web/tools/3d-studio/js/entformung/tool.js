@@ -39,6 +39,7 @@ export const FORMAT = 'dielogic-entformung';
 export const FORMAT_VERSION = 1;
 
 const RUN = 'Entformung rechnen';
+const RERUN = 'Neu rechnen';
 const pct = x => fmtFixed(100 * x, 1) + ' %';
 const DEFAULTS = { axis: 'auto', movSign: 1, mode: 'regions', draftLimit: 1.5, showParting: true, showEdges: false,
   die: { skirt: 8, part: true }, projView: { alpha: 0.6 }, ej: { mu: 0.3, alpha: 0.7 } };
@@ -105,7 +106,7 @@ export function createEntformungTool(host, opts = {}) {
     applyMode();
   });
 
-  /* ── Bauteil gewechselt: danach sofort rechnen ───────────── */
+  /* ── Bauteil gewechselt: bereit machen, gerechnet wird auf Knopfdruck ── */
   function onPart(model) {
     state.vis = null; state.seg = null; state.draft = null;
     state.pieces = null; state.proj = null; state.grip = null; state.ejMaps = null;
@@ -135,9 +136,11 @@ export function createEntformungTool(host, opts = {}) {
     for (const [name, st] of [['proj-gap', state.projView], ['ej-gap', state.ej]]) {
       st.gap = fit(name, Math.max(50, Math.round(longest)), Math.max(10, Math.round(longest * 0.08)), st.gapTouched);
     }
-    /* Erst nach dem Laden: das Laden nimmt seinen Schleier weg, sobald onLoad
-       zurückkehrt — die Rechnung setzt ihren danach. */
-    setTimeout(runAnalysis, 0);
+    /* Nicht von selbst rechnen: bei großen Teilen dauert die Sichtbarkeit
+       spürbar, und das soll der Anwender auslösen (Rückmeldung vom 24.09.).
+       Der Hauptknopf steht dafür bereit; die Seite ist fertig geladen. */
+    state.ready = true;
+    host.refreshActions();
   }
 
   /* Die Sichtbarkeit hängt nur am Netz und wird einmal je Bauteil gerechnet;
@@ -496,10 +499,11 @@ export function createEntformungTool(host, opts = {}) {
       : wrongSide ? 'Das Teil haftet stärker an der festen Seite: Beim Öffnen bliebe es dort, nicht bei den Auswerfern.' : '';
   }
 
-  /* ── Hauptknopf: nur, wenn die Analyse aussteht ──────────── */
+  /* ── Hauptknopf: bleibt stehen, auch nach der Analyse ─────── */
   function gate() {
     if (!part.model) return { label: RUN, disabled: true, reason: 'Zuerst ein Bauteil laden.' };
-    if (state.analysed || state.running) return null;
+    if (state.running) return null;
+    if (state.analysed) return { label: RERUN, onClick: runAnalysis };
     return { label: RUN, onClick: runAnalysis, noteKind: state.cancelled ? 'warn' : '',
       reason: state.cancelled ? 'Abgebrochen: Das Bauteil ist noch nicht untersucht.' : 'Die Analyse steht noch aus.' };
   }

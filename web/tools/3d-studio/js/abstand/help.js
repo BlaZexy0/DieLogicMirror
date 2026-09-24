@@ -24,8 +24,9 @@ groß gegenüber den Teilen, warnt die Zeile unter dem Knopf, bevor gerechnet wi
 sich jederzeit abbrechen. Die Suchgrenze gehört zur <em>Rechnung</em>: Wer sie ändert, rechnet neu.
 Eine neue Datei, A oder B, verwirft die Messwerte beider Seiten: Sie waren gegen das alte Gegenstück
 gemessen.</p>
-<p>Die Kennzahlen nennen je Richtung den kleinsten und größten gemessenen Abstand und das Mittel; das
-Mittel ist <b>flächengewichtet</b>: Ein fein vernetzter Bereich zählt nicht mehr als ein grober.</p>
+<p>Die Abstände zeigt die Farbe im Viewport mit ihrer Skala; über einem Punkt nennt die Statuszeile
+den Abstand dort zur Gegenseite. Kennzahlen daneben gibt es nicht: Erst die Grenzen der Skala machen
+aus der Karte eine Aussage.</p>
 </section>
 <section data-help-anchor="skala">
 <h3>Farbskala</h3>

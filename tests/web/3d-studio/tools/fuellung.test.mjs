@@ -136,7 +136,11 @@ test('Rechnen: Raster und Front als eine Rechnung — danach steht das Ergebnis,
   }
   assert.equal(shell.mode, 'ergebnis', 'nach dem ersten Lauf zeigt die Seite das Ergebnis');
   assert.ok(ui('primary').hidden, 'dort gibt es nichts mehr zu tun');
-  assert.ok(ui('actions').hidden, 'und die leere Leiste fällt weg');
+  /* Unten steht statt des Knopfs der Füllgrad mit Abspielen (24.09.). */
+  assert.equal(ui('actions').hidden, false, 'die Leiste trägt jetzt den Füllgrad');
+  assert.equal(ui('q-row').classList.contains('off'), false, 'mit Ergebnis bedienbar');
+  assert.equal(ui('q').disabled, false);
+  assert.equal(ui('q-play').disabled, false);
   const r = s.result;
   assert.equal(r.stats.inlets.length, 1);
   assert.ok(r.stats.maxPath > 150, 'der Fließweg geht durch das Teil: ' + r.stats.maxPath);
@@ -198,11 +202,11 @@ test('Ergebnis besitzt sein Bild: Füllkörper, Füllgrad, letzte Stellen — un
   assert.ok(!/zuletzt gefüllt/.test(doc.getElementById('pt-legend').textContent));
   sc.value = '5'; sc.dispatch('input');
   assert.ok(v.spotGroup.visible && v.spotGroup.children.length >= 1);
-  /* Der Modus nimmt sein Bild mit. */
+  /* Das Ergebnis steht in jedem Modus im Bild (24.09.), auch bei den Anschnitten. */
   shell.setMode('anschnitte');
-  same(v.partMesh.material, host.part.plainMat, 'bei den Anschnitten steht die Wand grau da');
-  assert.ok(!v.spotGroup.visible && !v.bodyMesh.visible);
-  assert.ok(!doc.getElementById('colorbar').classList.contains('on'), 'keine Skala ohne Bild');
+  same(v.partMesh.material, host.part.colorMat, 'bei den Anschnitten bleibt die Füllzeit im Bild');
+  assert.ok(v.spotGroup.visible, 'die letzten Stellen auch');
+  assert.ok(doc.getElementById('colorbar').classList.contains('on'), 'mit ihrer Skala');
   assert.ok(v.inletMesh.visible && v.inletMesh.geometry.getAttribute('position').count > 0, 'die Anschnitte sind der Plan und bleiben');
   shell.setMode('ergebnis');
   same(v.partMesh.material, host.part.colorMat);

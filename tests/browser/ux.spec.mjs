@@ -74,9 +74,17 @@ const SEITEN = [
   },
   {
     page: 'entformungsanalyse.html', query: '?part=gearbox_cover', hook: '__entformung', datei: /-entformung\.json$/,
-    ergebnis: (page, s) => page.waitForFunction(h => window[h].state.analysed && !window[h].state.running, s.hook, { timeout: 120_000 }),
-    /* Ein anderes Beispielteil wählen: es wird geladen und sofort gerechnet. */
-    lang: async page => { await page.click('[data-ui="part-chip"]'); await page.selectOption('#demo-select', 'oil_pan'); },
+    /* Gerechnet wird auf Knopfdruck (24.09.). */
+    ergebnis: async (page, s) => {
+      if (!(await page.evaluate(h => window[h].state.analysed, s.hook))) await page.click('[data-ui="primary"]');
+      await page.waitForFunction(h => window[h].state.analysed && !window[h].state.running, s.hook, { timeout: 120_000 });
+    },
+    /* Ein anderes Beispielteil wählen und rechnen lassen. */
+    lang: async page => {
+      await page.click('[data-ui="part-chip"]'); await page.selectOption('#demo-select', 'oil_pan');
+      await page.waitForFunction(() => window.__entformung.state.ready && /Ölwanne/.test(window.__entformung.state.name), null, { timeout: 60_000 });
+      await page.click('[data-ui="primary"]');
+    },
     nachAbbruch: { offen: v => v.state.analysed === false, knopf: 'Entformung rechnen' },
     merken: {
       setzen: page => page.click('[data-ui="axis-seg"] button[data-value="0"]'),
@@ -340,7 +348,9 @@ for (const s of SEITEN) {
       await page.goto(url(s));
       await ready(page, s.hook);
       const modi = await page.evaluate(() => [...document.querySelectorAll('[data-ui="tabs"] [role="tab"]')].map(b => b.dataset.mode));
-      expect(modi.length).toBeGreaterThan(1);
+      /* Mindestens ein Modus; die Abstandsanalyse hat seit dem 24.09. nur noch
+         ein Menü (Abstand und Skala zusammen), ihre Reiterleiste fällt weg. */
+      expect(modi.length).toBeGreaterThanOrEqual(1);
 
       const pruefen = async wann => {
         for (const m of modi) {

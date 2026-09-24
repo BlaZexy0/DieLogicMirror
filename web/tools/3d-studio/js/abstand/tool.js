@@ -26,9 +26,8 @@
 import * as T from 'three';
 import { mountPartSource } from '../part/partsource.js';
 import { buildLocator, distanceToMesh, distanceStats, insideFraction } from '../part/distance.js';
-import { facts, segButtons, segButtonSet, slider, numberInput, clampNote, colorbar, gradient } from '../ui/controls.js';
-import { fmt, fmtPlain, fmtUnit, fmtFixed } from '../studio/format.js';
-import { kpis } from '../studio/rows.js';
+import { segButtons, segButtonSet, slider, numberInput, clampNote, colorbar, gradient } from '../ui/controls.js';
+import { fmtPlain, fmtUnit, fmtFixed } from '../studio/format.js';
 import { checkFormat } from '../studio/planio.js';
 import { surfaceMaterial } from '../ui/common.js';
 import { rayAt, hoverProbe } from '../viewmath.js';
@@ -241,16 +240,14 @@ export function createAbstandTool(host) {
     if (!state.a.model || !state.b.model) return { label: RUN, disabled: true, reason: 'Es fehlt noch eine Datei.' };
     if (!state.analysed) {
       return { label: RUN, onClick: runDistance, noteKind: state.cancelled || reachWarning() ? 'warn' : '',
-        reason: (state.cancelled ? 'Abgebrochen: Noch nichts gerechnet. ' : 'Noch nicht gerechnet: ')
-          + fmt(state.a.model.vertexCount + state.b.model.vertexCount, 0) + ' Punkte gegen '
-          + fmt(state.a.model.faceCount + state.b.model.faceCount, 0) + ' Dreiecke.' + reachWarning() };
+        reason: (state.cancelled ? 'Abgebrochen: Noch nichts gerechnet.' : 'Noch nicht gerechnet.') + reachWarning() };
     }
     if (state.stale) {
       return { label: 'Abstand neu berechnen', onClick: runDistance, noteKind: 'warn',
         reason: (state.cancelled ? 'Abgebrochen' : 'Datei oder Suchgrenze geändert') + ': Das Bild zeigt noch die vorige Rechnung.' + reachWarning() };
     }
     /* Aktuell: nichts zu tun, also kein Knopf. */
-    return shell.mode === 'abstand' ? { hidden: true, noteKind: 'ok', reason: 'Der Abstand ist aktuell: Die Grenzen der Farben stehen unter „Skala".' } : null;
+    return { hidden: true, noteKind: 'ok', reason: 'Der Abstand ist aktuell.' };
   }
 
   /* ── Einfärben ───────────────────────────────────────────── */
@@ -297,26 +294,11 @@ export function createAbstandTool(host) {
     });
   }
 
-  /* Die Kennzahlen: je Richtung kleinster … größter Abstand und das Mittel.
-     Punkte INNERHALB des anderen Netzes sind eine Durchdringung: „schlecht". */
+  /* Keine Kennzahlen in der Seitenleiste (Rückmeldung vom 24.09.): die
+     Abstände zeigt die Farbe im Viewport mit ihrer Skala. Nur eine
+     Durchdringung wird gesagt: Punkte INNERHALB des anderen Netzes sind kein
+     Freiraum, auch wenn die Farbe dort einen Abstand zeigt. */
   function updateKpis() {
-    const rows = [];
-    for (const key of ['a', 'b']) {
-      const s = state[key];
-      if (!s.stats) continue;
-      const K = key.toUpperCase(), other = key === 'a' ? 'B' : 'A';
-      /* „≥": der Wert liegt an der Suchgrenze DER RECHNUNG, nicht der Eingabe. */
-      const cap = s.stats.max >= state.measuredReach - 1e-6;
-      rows.push({ label: K + ' → ' + other, value: fmtFixed(s.stats.min, 1) + ' … ' + (cap ? '≥ ' : '') + fmtFixed(s.stats.max, 1) + ' mm' });
-      rows.push({ label: 'Mittel ' + K, value: fmtFixed(s.stats.mean, 1) + ' mm' });
-      if (s.inside > 0.001) rows.push({ label: 'Punkte ' + K + ' in ' + other, value: fmtFixed(100 * s.inside, 1) + ' %', verdict: 'bad' });
-    }
-    kpis(ui('dist-kpis'), rows);
-    facts(ui('dist-facts'), rows.length ? [
-      ['Punkte', fmt(state.a.model.vertexCount + state.b.model.vertexCount, 0)],
-      ['Dreiecke', fmt(state.a.model.faceCount + state.b.model.faceCount, 0)],
-      ['Rechenzeit', fmtUnit(state.ms, 'ms')]
-    ] : []);
     const drin = ['a', 'b'].filter(k => state[k].inside > 0.001);
     ui('dist-warn').textContent = drin.length
       ? 'Achtung: ' + drin.map(k => fmtFixed(100 * state[k].inside, 1) + ' % der Punkte von ' + k.toUpperCase()).join(' und ')

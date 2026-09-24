@@ -3,25 +3,22 @@
    ein Chip mit Klappe (shell.header.addPartChips). Anzeigeoptionen (zeigen,
    Deckkraft) stehen unter „Darstellung" in der Ansichtsleiste. */
 
-import { numberRow, sliderRow, segRow, checkRow, kpiBlock, factsBlock, detailsBlock, warnLine, blockButton } from '../studio/rows.js';
+import { numberRow, sliderRow, segRow, checkRow, warnLine, blockButton } from '../studio/rows.js';
 
 /* Was in der Klappe der beiden Datei-Chips unter dem Knopf steht. */
 export const CHIP_HINT = 'STL oder GLB. Eine Datei, ins Bild gezogen, fragt, ob sie A oder B sein soll.';
 
+/* Ein Menü (Rückmeldung vom 24.09.): die Suchgrenze der Rechnung und die
+   Skala, die nur umfärbt, stehen untereinander; die Abstände selbst zeigt
+   die Farbe im Viewport mit ihrer Skala, keine Kennzahlen daneben. */
 export const MODES = [
   {
     id: 'abstand', label: 'Abstand',
-    hint: 'Für jeden Punkt der einen Oberfläche der kürzeste Weg zur anderen: exakt, in beide Richtungen.',
+    hint: 'Für jeden Punkt der einen Oberfläche der kürzeste Weg zur anderen, in beide Richtungen. Die Grenzen der Skala färben nur um.',
     html: numberRow({ ui: 'reach', label: 'Suchgrenze', unit: 'mm', value: '50', help: 'suchgrenze' })
-      + kpiBlock('dist-kpis')
       + warnLine('dist-warn')
-      + detailsBlock('dist-details', 'Rechnung', factsBlock('dist-facts'))
-  },
-  {
-    id: 'skala', label: 'Skala',
-    hint: 'Die Grenzen der Farbskala färben nur um, sie rechnen nichts neu: erst „zwischen 8 und 20 mm" macht aus der Karte eine Aussage.',
-    html: numberRow({ ui: 'scale-min', label: 'Minimum', unit: 'mm', value: '0', help: 'skala' })
-      + numberRow({ ui: 'scale-max', label: 'Maximum', unit: 'mm', value: '20', help: 'skala' })
+      + numberRow({ ui: 'scale-min', label: 'Skala Minimum', unit: 'mm', value: '0', help: 'skala' })
+      + numberRow({ ui: 'scale-max', label: 'Skala Maximum', unit: 'mm', value: '20', help: 'skala' })
       + blockButton({ ui: 'scale-auto', label: 'Grenzen aus den Messwerten' })
       + segRow({ ui: 'color-seg', label: 'Einfärben', value: 'a', options: [['a', 'nur A'], ['b', 'nur B'], ['both', 'beide']] })
   }
