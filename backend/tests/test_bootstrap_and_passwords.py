@@ -117,6 +117,24 @@ def test_bootstrap_invite_expires_and_is_renewed_while_unused(tmp_path, monkeypa
         assert aware(inv.expires_at) < now(), "mit vorhandenem Benutzer wird nichts mehr verlängert"
 
 
+def test_invite_without_expiry_counts_as_expired(tmp_path, monkeypatch):
+    """Alte Einladungen ohne Frist sind kein Dauerschlüssel."""
+    from fastapi import HTTPException
+    from backend.auth import _valid_invite
+    token = "c" * 40
+    monkeypatch.setenv("DIELOGIC_ADMIN_EMAIL", "owner@example.com")
+    monkeypatch.setenv("DIELOGIC_ADMIN_TOKEN", token)
+    with _fresh_session(tmp_path) as db:
+        bootstrap_from_env(db)
+        inv = db.scalar(select(Invite).where(Invite.token == token))
+        assert _valid_invite(db, token) is inv
+        inv.expires_at = None
+        db.commit()
+        with pytest.raises(HTTPException) as err:
+            _valid_invite(db, token)
+        assert err.value.status_code == 410
+
+
 # ── H-07 ──────────────────────────────────────────────────────────────
 
 def test_change_own_password_and_end_other_sessions(client, owner_client, member_client):

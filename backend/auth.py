@@ -160,10 +160,12 @@ def _valid_invite(db: Session, token: str) -> Invite:
     inv = db.scalar(select(Invite).where(Invite.token == token))
     if not inv or inv.used_at is not None:
         raise HTTPException(status_code=404, detail="Einladung unbekannt oder bereits eingelöst.")
+    # Jede Einladung bekommt beim Anlegen eine Frist. Eine ohne Frist stammt
+    # aus einer älteren Version und wäre ein Dauerschlüssel: sie gilt als
+    # abgelaufen, ein Admin lädt neu ein.
     expires = inv.expires_at
-    if expires is not None:
-        if aware(expires) < now():
-            raise HTTPException(status_code=410, detail="Einladung abgelaufen — bitte neu einladen lassen.")
+    if expires is None or aware(expires) < now():
+        raise HTTPException(status_code=410, detail="Einladung abgelaufen. Bitte neu einladen lassen.")
     return inv
 
 
