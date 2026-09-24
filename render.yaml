@@ -29,6 +29,14 @@ services:
         sync: false
       # Optional: Demo-Konto demo@dielogic.de mit diesem Passwort (nur zum
       # Ausprobieren; in Produktion weglassen).
+      # E-Mail-Versand: off | log | smtp | resend (siehe backend/README.md).
+      # Für resend zusätzlich DIELOGIC_RESEND_KEY und DIELOGIC_MAIL_FROM.
+      - key: DIELOGIC_MAIL
+        sync: false
+      - key: DIELOGIC_RESEND_KEY
+        sync: false
+      - key: DIELOGIC_MAIL_FROM
+        sync: false
       - key: DIELOGIC_DEMO_PASSWORD
         sync: false
 

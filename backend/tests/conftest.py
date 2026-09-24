@@ -86,3 +86,13 @@ def member_client(owner_client):
                 assert r.status_code == 200, r.text
             return c
         yield make
+
+
+@pytest.fixture(autouse=True)
+def _fresh_ratelimit():
+    """Die Rate-Limits zählen je Prozess; Tests, die viele Anmeldungen
+    durchspielen, dürfen sich nicht gegenseitig aussperren."""
+    from backend import ratelimit
+    ratelimit.clear()
+    yield
+    ratelimit.clear()

@@ -24,7 +24,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .db import AuthSession, Invite, Org, User, aware, get_db, iso, now
+from . import mail, ratelimit
+from .db import AuthSession, Invite, Org, PasswordReset, User, aware, get_db, iso, now
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -35,6 +36,15 @@ log = logging.getLogger("uvicorn.error")
 DEMO_EMAIL = "demo@dielogic.de"
 INVITE_DAYS = 14
 MIN_PASSWORD = 10
+RESET_MINUTES = 60
+
+# Rate-Limits: (Versuche, Fenster in Sekunden)
+LIMIT_LOGIN_IP = (20, 900)
+LIMIT_LOGIN_MAIL = (8, 900)
+LIMIT_FORGOT_IP = (10, 900)
+LIMIT_FORGOT_MAIL = (3, 3600)
+LIMIT_REGISTER_IP = (10, 3600)
+LIMIT_RESET_IP = (10, 900)
 
 
 # ── Passwörter ────────────────────────────────────────────────────────
@@ -268,6 +278,15 @@ class InviteIn(BaseModel):
     role: str = Field("member", pattern="^(admin|member)$")
 
 
+class ForgotIn(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+
+
+class ResetIn(BaseModel):
+    token: str = Field(min_length=8, max_length=128)
+    password: str = Field(min_length=MIN_PASSWORD, max_length=200)
+
+
 class PasswordIn(BaseModel):
     current_password: str = Field(min_length=1, max_length=200)
     new_password: str = Field(min_length=MIN_PASSWORD, max_length=200)
@@ -287,6 +306,13 @@ def me_out(user: User) -> dict:
 def get_invite(token: str, db: Session = Depends(get_db)):
     inv = _valid_invite(db, token)
     return {"email": inv.email, "role": inv.role, "org": {"slug": inv.org.slug, "name": inv.org.name}}
+
+
+@router.get("/auth/features")
+def features():
+    """Was die Site anbieten darf: Mailversand (Passwort vergessen, Einladung
+    per Mail) hängt an DIELOGIC_MAIL. Keine Geheimnisse."""
+    return {"mail": mail.enabled(), "min_password": MIN_PASSWORD}
 
 
 @router.get("/auth/demo")
@@ -316,6 +342,7 @@ def demo_login(request: Request, response: Response, db: Session = Depends(get_d
 
 @router.post("/auth/register")
 def register(body: RegisterIn, request: Request, response: Response, db: Session = Depends(get_db)):
+    ratelimit.check("register:" + ratelimit.client_ip(request), *LIMIT_REGISTER_IP)
     inv = _valid_invite(db, body.token)
     if db.scalar(select(User).where(User.email == inv.email)):
         raise HTTPException(status_code=409, detail="Für diese E-Mail-Adresse gibt es bereits ein Konto.")
@@ -331,7 +358,10 @@ def register(body: RegisterIn, request: Request, response: Response, db: Session
 
 @router.post("/auth/login")
 def login(body: LoginIn, request: Request, response: Response, db: Session = Depends(get_db)):
-    user = db.scalar(select(User).where(User.email == body.email.strip().lower()))
+    email = body.email.strip().lower()
+    ratelimit.check("login:" + ratelimit.client_ip(request), *LIMIT_LOGIN_IP)
+    ratelimit.check("login:" + email, *LIMIT_LOGIN_MAIL)
+    user = db.scalar(select(User).where(User.email == email))
     # Gleiche Fehlermeldung UND gleiche Laufzeit für unbekannte Adresse und
     # falsches Passwort. Ohne den Blindvergleich lief scrypt nur für
     # vorhandene Konten: gemessen 45,3 ms gegen 4,2 ms — ein Orakel für die
@@ -377,9 +407,30 @@ def new_invite(body: InviteIn, request: Request, user: User = Depends(admin_user
         inv = create_invite(db, user.org, body.email, body.role, created_by=user.id)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
-    base = str(request.base_url)
+    url = invite_url(str(request.base_url), inv.token)
+    mailed = _send_invite(inv, url, user)
     return {"id": inv.id, "email": inv.email, "role": inv.role, "token": inv.token,
-            "url": invite_url(base, inv.token), "expires_at": iso(inv.expires_at)}
+            "url": url, "expires_at": iso(inv.expires_at), "mailed": mailed}
+
+
+def _send_invite(inv: Invite, url: str, inviter: User) -> bool:
+    if not mail.enabled():
+        return False
+    subject, text, html = mail.invite_mail(inv.org.name, inviter.name or inviter.email, url, INVITE_DAYS)
+    return mail.send(inv.email, subject, text, html)
+
+
+@router.post("/org/invites/{invite_id}/resend")
+def resend_invite(invite_id: str, request: Request, user: User = Depends(admin_user),
+                  db: Session = Depends(get_db)):
+    """Die Einladung noch einmal per Mail schicken (gleicher Link, Frist neu)."""
+    inv = db.get(Invite, invite_id)
+    if not inv or inv.org_id != user.org_id or inv.used_at is not None:
+        raise HTTPException(status_code=404, detail="Einladung nicht gefunden.")
+    inv.expires_at = now() + timedelta(days=INVITE_DAYS)
+    db.commit()
+    url = invite_url(str(request.base_url), inv.token)
+    return {"mailed": _send_invite(inv, url, user), "url": url, "expires_at": iso(inv.expires_at)}
 
 
 @router.delete("/org/invites/{invite_id}", status_code=204)
@@ -407,7 +458,83 @@ def change_password(body: PasswordIn, request: Request, response: Response,
         if sess.token != keep:
             db.delete(sess)
     db.commit()
+    _notify_password_changed(user)
     return {"ok": True}
+
+
+def _notify_password_changed(user: User) -> None:
+    if mail.enabled():
+        subject, text, html = mail.password_changed_mail(user.email)
+        mail.send(user.email, subject, text, html)
+
+
+# ── Passwort vergessen ────────────────────────────────────────────────
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def reset_url(base_url: str, token: str) -> str:
+    return base_url.rstrip("/") + "/konto/?reset=" + token
+
+
+@router.post("/auth/password/forgot")
+def forgot_password(body: ForgotIn, request: Request, db: Session = Depends(get_db)):
+    """Link zum Zurücksetzen per Mail. Die Antwort ist immer dieselbe: ob es
+    zu der Adresse ein Konto gibt, verrät der Endpunkt nicht. Ohne
+    Mailversand (DIELOGIC_MAIL=off) sagt er das offen, statt ins Leere zu
+    versprechen."""
+    if not mail.enabled():
+        raise HTTPException(status_code=503, detail="Passwort zurücksetzen per E-Mail ist auf diesem Server nicht eingerichtet. Bitte an den Administrator der Organisation wenden.")
+    email = body.email.strip().lower()
+    ratelimit.check("forgot:" + ratelimit.client_ip(request), *LIMIT_FORGOT_IP)
+    ratelimit.check("forgot:" + email, *LIMIT_FORGOT_MAIL)
+    user = db.scalar(select(User).where(User.email == email))
+    if user and not user.disabled:
+        token = secrets.token_urlsafe(32)
+        db.add(PasswordReset(user_id=user.id, token_hash=_token_hash(token),
+                             expires_at=now() + timedelta(minutes=RESET_MINUTES)))
+        db.commit()
+        subject, text, html = mail.reset_mail(user.email, reset_url(str(request.base_url), token), RESET_MINUTES)
+        mail.send(user.email, subject, text, html)
+    return {"ok": True}
+
+
+def _valid_reset(db: Session, token: str) -> PasswordReset:
+    pr = db.scalar(select(PasswordReset).where(PasswordReset.token_hash == _token_hash(token)))
+    if not pr or pr.used_at is not None:
+        raise HTTPException(status_code=404, detail="Der Link ist unbekannt oder wurde schon benutzt.")
+    if aware(pr.expires_at) < now():
+        raise HTTPException(status_code=410, detail='Der Link ist abgelaufen. Bitte „Passwort vergessen“ erneut anfordern.')
+    return pr
+
+
+@router.get("/auth/password/reset/{token}")
+def check_reset(token: str, db: Session = Depends(get_db)):
+    pr = _valid_reset(db, token)
+    return {"email": pr.user.email}
+
+
+@router.post("/auth/password/reset")
+def reset_password(body: ResetIn, request: Request, response: Response, db: Session = Depends(get_db)):
+    """Neues Passwort über den Link setzen. Alle Sitzungen des Kontos enden,
+    der Link ist danach verbraucht; die Person ist direkt angemeldet."""
+    ratelimit.check("reset:" + ratelimit.client_ip(request), *LIMIT_RESET_IP)
+    pr = _valid_reset(db, body.token)
+    user = pr.user
+    if user.disabled:
+        raise HTTPException(status_code=403, detail="Dieses Konto ist deaktiviert.")
+    user.pw_hash = hash_password(body.password)
+    pr.used_at = now()
+    for sess in db.scalars(select(AuthSession).where(AuthSession.user_id == user.id)).all():
+        db.delete(sess)
+    for other in db.scalars(select(PasswordReset).where(PasswordReset.user_id == user.id,
+                                                        PasswordReset.used_at.is_(None))).all():
+        other.used_at = now()
+    db.commit()
+    _notify_password_changed(user)
+    start_session(db, user, request, response)
+    return me_out(user)
 
 
 @router.post("/org/members/{user_id}/password")

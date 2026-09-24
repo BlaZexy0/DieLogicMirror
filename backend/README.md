@@ -39,6 +39,19 @@ Tests: `pytest backend/tests -q` (conftest.py setzt eine temporäre SQLite).
   über TLS zusätzlich HSTS. Die CSP erlaubt `'unsafe-inline'` für Skripte
   und Styles, weil die Seiten ihre Logik in Inline-Blöcken tragen — alles
   Übrige ist auf `'self'` beschränkt und wird mitgeliefert.
+- **E-Mail-Versand** (`backend/mail.py`): `DIELOGIC_MAIL` wählt den Weg:
+  `off` (Standard, nichts wird verschickt; Einladungslinks zum Kopieren,
+  kein „Passwort vergessen"), `log` (nur ins Server-Log, zum lokalen
+  Durchspielen), `smtp` (`DIELOGIC_SMTP_HOST`, `_PORT`, `_USER`, `_PASSWORD`,
+  `_STARTTLS`), `resend` (`DIELOGIC_RESEND_KEY`). Absender
+  `DIELOGIC_MAIL_FROM`, z. B. `DieLogic <no-reply@dielogic.de>`. Mit Versand
+  gehen Einladungen per Mail, „Passwort vergessen" schickt einen Link
+  (`/konto/?reset=…`, 60 Minuten, einmal nutzbar, gespeichert nur als
+  SHA-256), und jede Passwortänderung bekommt eine Hinweismail.
+- **Rate-Limits** (`backend/ratelimit.py`, je Prozess): Anmeldung 20 je
+  Adresse des Aufrufers und 8 je E-Mail in 15 Minuten, „Passwort vergessen"
+  3 je E-Mail pro Stunde, Registrierung 10 je Aufrufer pro Stunde; darüber
+  antwortet der Server 429 mit `Retry-After`.
 - **Demo-Konto:** `DIELOGIC_DEMO_PASSWORD=<mind. 10 Zeichen>` setzen → beim
   Start entsteht die Organisation „Demo" mit Admin `demo@dielogic.de`; die
   Login-Seite zeigt dann „Als Demo anmelden" mit der Adresse (das Passwort

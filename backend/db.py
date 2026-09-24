@@ -137,6 +137,21 @@ class AuthSession(Base):
     user: Mapped[User] = relationship()
 
 
+class PasswordReset(Base):
+    """„Passwort vergessen": ein Link per Mail, kurz gültig, einmal nutzbar.
+    Gespeichert ist nur der SHA-256 des Tokens; wer die Datenbank liest,
+    kann damit kein Passwort setzen."""
+    __tablename__ = "password_resets"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship()
+
+
 class Project(Base):
     __tablename__ = "projects"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
