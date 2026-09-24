@@ -283,6 +283,7 @@
   </div>
 
   <!-- ── Angemeldet ──────────────────────────────────────── -->
+  <div id="invite-conflict" class="kt-note hidden"></div>
   <div id="account" class="hidden">
     <div class="kt-id">
       <div class="kt-avatar" id="a-avatar">·</div>
@@ -486,6 +487,32 @@
       /* Ein Fehler wie jeder andere auf der Seite: in der Schrift von
          „schlecht", als Token, damit er einen Wechsel des Schemas mitmacht. */
       $('invite-text').innerHTML = '<span style="color:var(--bad-text)">' + esc(err.message) + '</span>';
+    }
+  }
+
+
+  /* Einladungslink bei bestehender Sitzung: bisher zeigte die Seite still das
+     eigene Konto und ließ den Token fallen; wer seinen frisch erzeugten Link
+     selbst probierte, sah kein Formular und hielt die Einladung für kaputt. */
+  async function showInviteConflict() {
+    var box = $('invite-conflict');
+    show('invite-conflict', true);
+    try {
+      var inv = await api('GET', '/api/auth/invite/' + encodeURIComponent(token));
+      var myMail = me && me.user ? me.user.email : (me && me.email) || '';
+      if (inv.email === myMail) {
+        box.innerHTML = 'Dieser Einladungslink ist für <strong>' + esc(inv.email) + '</strong>, also für Ihr eigenes Konto. Sie sind bereits angemeldet, die Einladung wird nicht mehr gebraucht.';
+        return;
+      }
+      box.innerHTML = 'Dieser Link ist eine Einladung für <strong>' + esc(inv.email) + '</strong> in die Organisation <strong>' + esc(inv.org.name) + '</strong>. Sie sind als <strong>' + esc(myMail) + '</strong> angemeldet. '
+        + '<button type="button" class="btn btn-outline btn-sm" id="invite-switch" style="margin-left:.6rem">Abmelden und Einladung öffnen</button>';
+      $('invite-switch').addEventListener('click', async function () {
+        try { await api('POST', '/api/auth/logout'); } catch (e) { /* Sitzung war schon weg */ }
+        if (P && P.clearAll) P.clearAll();
+        start(true);
+      });
+    } catch (err) {
+      box.innerHTML = 'Der Einladungslink ist ungültig oder abgelaufen: ' + esc(err.message);
     }
   }
 
@@ -849,7 +876,7 @@
      Ergebnis von window.__DL_AUTH_ME__ ist sonst der Stand von VOR dieser
      Änderung, gemerkt für die ganze Seitenlebensdauer. */
   async function start(fresh) {
-    ['invite', 'login', 'account', 'nobackend'].forEach(function (id) { show(id, false); });
+    ['invite', 'invite-conflict', 'login', 'account', 'nobackend'].forEach(function (id) { show(id, false); });
     if (location.protocol === 'file:') { show('nobackend', true); return; }
     var r;
     if (!fresh && window.__DL_AUTH_ME__) {
@@ -866,7 +893,7 @@
     }
     me = r.ok ? r.me : null;
     if (!r.ok && r.status !== 401) { show('nobackend', true); return; }
-    if (me) showAccount();
+    if (me) { showAccount(); if (token) showInviteConflict(); }
     else if (token) showInvite();
     else { show('login', true); showDemo(); }
   }
