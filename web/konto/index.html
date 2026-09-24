@@ -89,7 +89,7 @@
     .kt-danger h2 { color: var(--bad-text); }
     .btn-danger { background: var(--bad); color: white; border-color: var(--bad); }
     .btn-danger:hover { filter: brightness(.92); }
-    /* Geräte, Protokoll */
+    /* Protokoll */
     .kt-list { list-style: none; margin: 0; padding: 0; font-size: .82rem; }
     .kt-list li { display: flex; gap: .8rem; align-items: center; padding: .45rem 0; border-bottom: 1px solid var(--border-light); flex-wrap: wrap; }
     .kt-list li:last-child { border-bottom: 0; }
@@ -382,13 +382,8 @@
     <!-- Projekte -->
     <section class="kt-section" id="sicherheit">
       <div class="kt-section-head"><div><span class="eyebrow">Konto</span><h2>Sicherheit</h2>
-        <p>Angemeldete Geräte dieses Kontos; „Passwort ändern" oben beendet alle anderen automatisch.</p></div></div>
+        <p>„Passwort ändern" oben beendet alle anderen Anmeldungen dieses Kontos automatisch.</p></div></div>
       <div class="kt-two">
-        <div class="kt-card">
-          <h2>Angemeldete Geräte</h2>
-          <ul class="kt-list" id="sess-body"><li class="mem-empty">Lade …</li></ul>
-          <div class="kt-actions"><button class="btn btn-outline btn-sm" id="sess-revoke">Alle anderen Geräte abmelden</button><span class="kt-ok" id="sess-ok"></span></div>
-        </div>
         <div class="kt-card kt-danger">
           <h2>Konto löschen</h2>
           <p>Entfernt Ihr Konto endgültig. Sind Sie das einzige Mitglied, wird die ganze Organisation mit allen Projekten gelöscht; sonst bleiben die Projekte der Organisation erhalten.</p>
@@ -726,7 +721,7 @@
   async function showAccount() {
     show('account', true);
     if (!features.loaded) { await loadFeatures(); features.loaded = true; }
-    loadSessions(); loadOrg();
+    loadOrg();
     window.__KONTO_ME__ = me;
     window.dispatchEvent(new CustomEvent('konto:account', { detail: me }));
     /* Lokale Projekte ohne Serverbezug in die Datenbank übernehmen — aber erst,
@@ -981,19 +976,7 @@
     });
   });
 
-  /* ── Sicherheit: Geräte, Konto löschen ── */
-  async function loadSessions() {
-    try {
-      var rows = await api('GET', '/api/auth/sessions');
-      $('sess-body').innerHTML = rows.map(function (s) {
-        return '<li><span class="a">' + (s.current ? 'Dieses Gerät' : 'Anderes Gerät') + '</span><span class="t">angemeldet ' + fmt(s.created_at) + '</span><span class="d">gültig bis ' + fmt(s.expires_at) + '</span></li>';
-      }).join('') || '<li class="mem-empty">Keine Sitzungen.</li>';
-    } catch (err) { $('sess-body').innerHTML = '<li class="mem-empty">' + esc(err.message) + '</li>'; }
-  }
-  $('sess-revoke').addEventListener('click', async function () {
-    try { var r = await api('POST', '/api/auth/sessions/revoke-others'); $('sess-ok').textContent = r.revoked + ' Gerät(e) abgemeldet.'; loadSessions(); }
-    catch (err) { alert(err.message); }
-  });
+  /* ── Sicherheit: Konto löschen ── */
   $('del-me').addEventListener('click', async function () {
     $('del-err').textContent = '';
     if (!$('del-pw').value) { $('del-err').textContent = 'Bitte das Passwort eingeben.'; return; }
