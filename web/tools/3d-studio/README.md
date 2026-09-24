@@ -125,7 +125,7 @@ besitzt, was er im Bild zeigt:
   deutsch gelesen: „1.500" sind 1500 mm; einen fehlenden Namen oder Weg
   meldet das Formular selbst) und heißt dann **Anlegen**; Abbrechen, Esc
   und ein anderer Reiter schließen es. Unter dem Knopf steht, was die Form
-  hat („18 Teile in 6 Gruppen · 2 ausgeblendet").
+  hat („19 Teile in 6 Gruppen · 2 ausgeblendet").
 - **Schnitt** — solange der Reiter gewählt ist, ist die Form
   aufgeschnitten (kein eigener Schalter mehr): Achse, Lage in mm entlang
   der Achse, Seite umkehren. Der Schnitt zeigt die Körper *geschlossen*.

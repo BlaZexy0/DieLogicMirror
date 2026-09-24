@@ -15,7 +15,8 @@ import { roleColor } from './registry.js';
 export const MATERIAL_CLASSES = [
   { key: 'steel',        label: 'Stahl' },
   { key: 'castPart',     label: 'Gussteil' },
-  { key: 'castRunner',   label: 'Anguss + Pressrest' },
+  { key: 'castRunner',   label: 'Anguss' },
+  { key: 'castBiscuit',  label: 'Pressrest' },
   { key: 'castOverflow', label: 'Überläufe + Entlüftung' },
   { key: 'coolFix',      label: 'Temperierung fest' },
   { key: 'coolMov',      label: 'Temperierung beweglich' },
@@ -29,7 +30,7 @@ export const MATERIAL_CLASSES = [
    Sachfarben der Schmelze, die Temperierung fest dunkel und beweglich hell,
    der Kolben Kolben, die Stifte die Kante des Stahls. */
 export const CLASS_ROLE = {
-  steel: 'steel:0.56', castPart: 'melt', castRunner: 'runner', castOverflow: 'overflow',
+  steel: 'steel:0.56', castPart: 'melt', castRunner: 'runner', castBiscuit: 'biscuit', castOverflow: 'overflow',
   coolFix: 'cool', coolMov: 'cool:0.45', plunger: 'piston', pins: 'steelDark'
 };
 /** Kolben und Stifte haben die Farbe ihrer Klasse, gleich was das Teil trägt. */

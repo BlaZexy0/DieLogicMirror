@@ -2,26 +2,13 @@
       node scripts/3d-studio/build-gusstraube.mjs <openscad_parts> [ziel.glb]
    (Ziel: web/examples/gusstraube.glb)
 
-   Dieselbe Gusstraube wie in assets/die.glb, aus dem Schwesterprojekt
-   openscad_parts: Bauteil und Überläufe sind build/die/oil_pan_die/
-   castPart.stl und castOverflow.stl (./render_die.sh). Anguss und Pressrest
-   stecken dort in EINEM Stück (castRunner); die Sprengflächenanalyse führt
-   den Pressrest aber getrennt, seine Masse geht eigens ins Dashboard. Beide
-   kommen deshalb aus build/gusstraube/{anguss,pressrest}.stl, gerendert mit
-   openscad-nightly --backend=manifold --export-format binstl -D 'teil="…"'
-   aus build/gusstraube/teilen.scad, das castRunner an der Wand des
-   Pressrests teilt:
-
-      use <../../dies/oil_pan_die.scad>
-      teil = "pressrest";
-      module schnitt() { translate([0, -280, -20]) cylinder(r = 65, h = 21, $fn = 64); }
-      if (teil == "pressrest") intersection() { castRunner(); schnitt(); }
-      else difference() { castRunner(); schnitt(); }
-
-   Der Schnittzylinder ist das 64-Eck des Pressrests (r = sl_d/2, Achse
-   y = sl_y), reicht aber bis z = +1: der Anguss steht 0,01 mm über der
-   Trennebene, und eine Haut davon über dem Pressrest zählte sonst in der
-   Projektion als Anguss-Fläche. Zusammen sind die zwei genau castRunner.
+   Dieselbe Gusstraube wie in assets/die.glb, aus denselben Stücken im
+   Schwesterprojekt openscad_parts (./render_die.sh --studio rendert sie
+   nach build/die/oil_pan_die/): castPart, castRunner, castOverflow und
+   castBiscuit. Anguss und Pressrest sind dort getrennt (castRunner und
+   castBiscuit, geteilt an der Wand des Pressrests), weil die
+   Sprengflächenanalyse den Pressrest eigens führt: seine Masse geht
+   getrennt ins Dashboard.
 
    Die GLB trägt nur Lagen und Indizes: die Analyse projiziert, sie
    schattiert nicht. Je Teil ein Knoten mit deutschem Namen; die Seite
@@ -40,9 +27,9 @@ const { parseSTL } = await import('../../web/tools/sprengflaeche/stl-math.js');
 const QUELLE = resolve(process.argv[2]);
 const TEILE = [
   ['Bauteil', 'build/die/oil_pan_die/castPart.stl'],
-  ['Anguss', 'build/gusstraube/anguss.stl'],
+  ['Anguss', 'build/die/oil_pan_die/castRunner.stl'],
   ['Überläufe', 'build/die/oil_pan_die/castOverflow.stl'],
-  ['Pressrest', 'build/gusstraube/pressrest.stl'],
+  ['Pressrest', 'build/die/oil_pan_die/castBiscuit.stl'],
 ];
 
 /** Dreieckssuppe → indizierte Geometrie nur mit Lagen (gleiche Punkte

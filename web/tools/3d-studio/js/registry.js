@@ -12,7 +12,7 @@
    role: die Farbe als ROLLE des Farbschemas (js/part/colors.js), kein
    Wert. `color` nennt den Wert des Schemas von jetzt. So hat die
    Beispielform die Sachfarben jedes Werkzeugs: das Gussteil ist Schmelze,
-   Anguss und Pressrest der Anguss, die Überläufe Überlauf, die Kreise
+   der Anguss Anguss, der Pressrest Pressrest, die Überläufe Überlauf, die Kreise
    Temperierung (die feste Hälfte dunkel, die bewegliche hell), die
    Stahlteile Stahl, jedes in einer eigenen Stufe, damit Nachbarn sich
    trennen. Eine Rolle schreibt sich
@@ -57,7 +57,8 @@ export const COMPONENTS = [
   comp('coolMovR',     'Kreis rechts',  'mov', 'cool:0.6', 'Temperierung'),
 
   comp('castPart',     'Bauteil',                   'cast', 'melt'),
-  comp('castRunner',   'Anguss + Pressrest',        'cast', 'runner'),
+  comp('castRunner',   'Anguss',                    'cast', 'runner'),
+  comp('castBiscuit',  'Pressrest',                 'cast', 'biscuit'),
   comp('castOverflow', 'Überläufe + Entlüftungskanal', 'cast', 'overflow')
 ];
 

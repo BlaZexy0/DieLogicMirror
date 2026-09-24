@@ -474,9 +474,9 @@ const massKg = (volMm3) => volMm3 * DENSITY * 1e-9;
 /* Das Beispiel der Seite: die Gusstraube der Beispielform (3D-Studio), vier
    Netze, deren Knotennamen die Rolle sagen (stl-app.js ROLLE_AUS_NAME). Der
    Pressrest ist der Zylinder aus der OpenSCAD-Quelle: 64-Eck r = 65 mm,
-   20 mm dick (dazu die 0,01-mm-Haut des Angusses über ihm); Anguss +
-   Pressrest sind zusammen das eine Stück der Form, und der Anguss reicht
-   nicht in den Kreis des Pressrests. */
+   20 mm dick (dazu die 0,01-mm-Haut des Angusses über ihm), dieselben
+   Stücke wie castRunner und castBiscuit in assets/die.glb; der Anguss
+   reicht nicht in den Kreis des Pressrests. */
 test('gusstraube.glb: vier Teile mit Rolle im Namen, Pressrest wie in der Quelle', async () => {
   const { readGLBMeshes, isGLB } = await import(pathToFileURL(path.join(site, 'tools/3d-studio/js/part/glbio.js')));
   const buf = readFileSync(path.join(site, 'examples', 'gusstraube.glb'));
@@ -487,7 +487,7 @@ test('gusstraube.glb: vier Teile mit Rolle im Namen, Pressrest wie in der Quelle
   const cm3 = n => meshVolume(netze[n]) / 1000;
   closeTo(cm3('Bauteil'), 1333.60, 1e-3);
   closeTo(cm3('Überläufe'), 71.93, 1e-3);
-  closeTo(cm3('Anguss') + cm3('Pressrest'), 326.53, 1e-3);          // castRunner der Form
+  closeTo(cm3('Anguss') + cm3('Pressrest'), 326.53, 1e-3);          // das frühere eine Stück der Form
   const vieleck = 32 * 65 * 65 * Math.sin(2 * Math.PI / 64);        // mm², Fläche des 64-Ecks
   closeTo(meshVolume(netze.Pressrest), vieleck * 20, 2e-4);
   const t = netze.Anguss;

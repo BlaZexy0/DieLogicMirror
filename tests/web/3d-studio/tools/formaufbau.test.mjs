@@ -129,7 +129,7 @@ test('Rahmen: Reiter Teile · Schnitt · Öffnen, die Klappe „Form", Gruppen m
   assert.equal(ui('save-state').textContent, '', 'nichts Ungespeichertes');
   assert.ok(doc.querySelector('[data-chip="stl"]'), 'der Chip „STL laden" über dem Bild');
   assert.equal(ui('primary').textContent, 'Gruppe anlegen');
-  assert.match(ui('note').textContent, /^18 Teile in 6 Gruppen$/, 'unter dem Knopf, was die Form hat');
+  assert.match(ui('note').textContent, /^19 Teile in 6 Gruppen$/, 'unter dem Knopf, was die Form hat');
 
   const rows = list.querySelectorAll('[data-comp]');
   assert.equal(rows.length, COMPONENTS.length, 'eine Zeile je Teil');
@@ -490,7 +490,7 @@ test('Speichern schreibt die GLB: gespeichert heißt, die Datei ist da', async (
   } finally { P.doc.createElement = make; }
   assert.deepEqual(names, ['formaufbau.glb'], 'die Beispielform heißt formaufbau.glb');
   assert.ok(v.lastExport && v.lastExport.byteLength > 1000, 'eine GLB entsteht');
-  assert.match(ui('toast').textContent, /Gespeichert: formaufbau\.glb · .* kB · 18 Teile in 6 Gruppen/);
+  assert.match(ui('toast').textContent, /Gespeichert: formaufbau\.glb · .* kB · 19 Teile in 6 Gruppen/);
   assert.match(ui('save-state').textContent, /^Gespeichert /);
   assert.ok(!host.store.dirty, 'die Seite fragt beim Verlassen nicht mehr');
 });
@@ -1066,7 +1066,7 @@ test('der Schnitt zeichnet je Teil in dessen Farbe, nur wo die Ebene schneidet, 
   shell.setMode('oeffnen');
   slide(ui('open'), 100);
   await choose(P, [await stl('klein.stl', [4, 4, 4])]);
-  assert.equal(asm.items.length, 19, 'das Teil ist dazugekommen');
+  assert.equal(asm.items.length, 20, 'das Teil ist dazugekommen');
   shell.setMode('schnitt');
   assert.equal(v.clip.activePlane().constant, c0, 'die Ebene springt nicht, wenn sich bei offener Form etwas ändert');
   assert.ok(caps().some(c => c.userData.capOf === asm.items[18].id), 'und das neue Teil hat seine Schnittfläche');

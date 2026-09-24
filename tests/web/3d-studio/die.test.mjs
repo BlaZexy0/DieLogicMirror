@@ -37,7 +37,7 @@ test('assets/die.glb enthält alle Namen, über die der Viewer sucht', { skip: !
 
   /* Materialnamen steuern die Deckkraft und die Schnittflächen. */
   const mats = new Set(g.materials.map(m => m.name));
-  for (const n of ['steel', 'plunger', 'pins', 'castPart', 'castRunner', 'castOverflow', 'coolFix', 'coolMov']) {
+  for (const n of ['steel', 'plunger', 'pins', 'castPart', 'castRunner', 'castBiscuit', 'castOverflow', 'coolFix', 'coolMov']) {
     assert.ok(mats.has(n), 'Material fehlt: ' + n);
   }
 

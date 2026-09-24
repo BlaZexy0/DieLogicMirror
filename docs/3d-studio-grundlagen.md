@@ -47,7 +47,7 @@ nie selbst: feine Tessellierung ist Sache des Exports.
 Eine Kaltkammer-Form um die Ölwanne, erzeugt von
 `openscad_parts/dies/oil_pan_die.scad` und zusammengesetzt von
 `scripts/3d-studio/build-die-stl.mjs` aus dem Manifest
-`dies/oil_pan_die.json`. Zwanzig Teile:
+`dies/oil_pan_die.json`. Einundzwanzig Teile:
 
 | Gruppe | Teile (Registry-id · Material) |
 |---|---|
@@ -55,13 +55,19 @@ Eine Kaltkammer-Form um die Ölwanne, erzeugt von
 | Temperierung fest | coolFixL, coolFixR · coolFix |
 | bewegliche Seite | movHalf, movInsert, ejBox, ejector, guideBushings, ventBlockMov · steel; ejector_pins · pins |
 | Temperierung beweglich | coolMovL, coolMovR · coolMov |
-| Guss | castPart · castPart; castRunner · castRunner; castOverflow · castOverflow |
+| Guss | castPart · castPart; castRunner · castRunner; castBiscuit · castBiscuit; castOverflow · castOverflow |
+
+Anguss (`castRunner`) und Pressrest (`castBiscuit`) sind zwei Stücke, in der
+Quelle an der Wand des Pressrests geteilt. Aus denselben Stücken baut
+`scripts/3d-studio/build-gusstraube.mjs` das Beispiel der
+Sprengflächenanalyse (`web/examples/gusstraube.glb`), die den Pressrest
+eigens führt.
 
 **GLB-Vertrag** (was `js/assembly.js` liest und schreibt): ein Wurzelknoten
 `die` mit den Kindern `fixedRoot` und `movingRoot`; ein Gruppenknoten je
 Registry-id; Netze heißen `<id>_<material>` und tragen `extras.compId`;
 Materialnamen `steel`, `plunger`, `pins`, `coolFix`, `coolMov`, `castPart`,
-`castRunner`, `castOverflow` (`js/materials.js`); die Metadaten des Aufbaus
+`castRunner`, `castBiscuit`, `castOverflow` (`js/materials.js`); die Metadaten des Aufbaus
 stehen in den extras der Wurzel als `userData.formaufbau` (Format
 `dielogic-formaufbau`: Gruppen mit Seite, Materialklasse, wahlweise
 Schieberrichtung und -weg; Öffnungsweg). Jede GLB, die diesem Vertrag folgt,
