@@ -46,8 +46,7 @@ for (const [k, v] of Object.entries(P.colors)) DEF[P.cssName(k).slice(2)] = v;
 const KEY = Object.fromEntries(Object.entries(P.colors));   // Schlüssel → Standardwert
 
 const QUELLEN = tracked(['web/*.js', 'web/**/*.js', 'web/*.css', 'web/**/*.css', 'web/*.html', 'web/**/*.html'])
-  .filter(f => !/\/vendor\//.test(f) && !/shared\/(palette|schemes)\.js$/.test(f))
-  .filter(f => !/^web\/index2\.html$/.test(f));   // Entwurf des Nutzers, nicht Teil der Seite
+  .filter(f => !/\/vendor\//.test(f) && !/shared\/(palette|schemes)\.js$/.test(f));
 
 /* Kommentare fallen weg: dort darf von Farben die Rede sein. */
 function ohneKommentare(src, f) {

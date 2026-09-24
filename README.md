@@ -103,6 +103,8 @@ dielogic/
 │   │                    team-mockup.svg, palette.svg (generiert), theorie/*.svg (generiert)
 │   │                    icons/*.svg: Piktogramme der Startseite (Schritte, Werkzeuge) —
 │   │                    per <use href="…svg#icon"> eingebunden, Farben var(--…, Fallback)
+│   │                    studio/*.webp: Schemabilder des 3D-Studios für die Startseite
+│   │                    (scripts/3d-studio/build-studio-figures.mjs, braucht npm run serve)
 │   └── examples/        gusstraube.glb: Beispiel der Sprengflächenanalyse, die Gusstraube
 │                        der Beispielform (scripts/3d-studio/build-gusstraube.mjs)
 ├── backend/         FastAPI: /api/auth (Einladung, Sitzung), /api/org (Mitglieder,

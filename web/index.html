@@ -363,6 +363,59 @@
       .hero-stat { min-width: 0; padding: 0.7rem 0.5rem; font-size: 0.7rem; line-height: 1.25; }
       .hero-stat strong { font-size: 1.35rem; }
     }
+
+    /* 3D-Studio: Werkzeug für Werkzeug (Schemabilder aus
+       scripts/3d-studio/build-studio-figures.mjs, Legenden mit den Farbrollen) */
+    .studio-section { padding: 6rem 2rem; background: var(--bg); border-top: 1px solid var(--border-light); }
+    .studio-inner { max-width: 1140px; margin: 0 auto; }
+    .studio-section .section-title { color: var(--text); }
+    .studio-section .section-sub { color: var(--muted); }
+    .studio-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+    .studio-card {
+      display: flex; flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      text-decoration: none;
+      transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), border-color 0.18s var(--ease);
+    }
+    .studio-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--pale-border); }
+    .studio-fig { margin: 0; padding: 0.55rem 0.55rem 0; background: var(--surface); }
+    .studio-fig img { display: block; width: 100%; height: auto; border-radius: 9px; background: #fff; }
+    .studio-text { padding: 0.9rem 1.15rem 1.15rem; }
+    .studio-text h4 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 0.3rem; letter-spacing: -0.01em; }
+    .studio-text p { font-size: 0.82rem; color: var(--muted); line-height: 1.55; }
+    .studio-text .arrow { color: var(--primary); font-weight: 600; font-size: 0.8rem; margin-top: 0.55rem; }
+    .studio-card.wide { grid-column: span 3; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); align-items: stretch; }
+    .studio-card.wide .studio-fig { order: 2; display: flex; align-items: center; padding: 0.8rem 0.8rem 0.8rem 0; }
+    .studio-card.wide .studio-text { padding: 1.6rem 1.7rem; align-self: center; }
+    .studio-card.wide .studio-text h4 { font-size: 1.05rem; }
+    .studio-card.wide .studio-text p { font-size: 0.88rem; }
+    .fig-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 0.28rem 0.75rem; margin: 0.75rem 0 0; padding: 0; }
+    .fig-legend li { display: flex; align-items: center; gap: 0.35rem; font-size: 0.73rem; color: var(--muted); line-height: 1.3; }
+    .fig-legend .key { width: 11px; height: 11px; border-radius: 3px; flex: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dark) 18%, transparent); }
+    .fig-legend .key.bar { width: 52px; }
+    .wb-chain { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.35rem; margin: 0 0 1rem; padding: 0; }
+    .wb-chain li { display: flex; align-items: center; gap: 0.35rem; list-style: none; }
+    .wb-chain .pill {
+      background: var(--surface); border: 1px solid var(--pale-border); color: var(--text);
+      font-size: 0.8rem; font-weight: 600; padding: 0.32rem 0.8rem; border-radius: var(--radius-pill);
+      box-shadow: var(--shadow);
+    }
+    .wb-chain .sep { color: var(--primary); font-weight: 700; }
+    .wb-chain-note { text-align: center; font-size: 0.8rem; color: var(--muted); margin: 0 0 2.6rem; }
+    @media (max-width: 900px) {
+      .studio-grid { grid-template-columns: repeat(2, 1fr); }
+      .studio-card.wide { grid-column: span 2; }
+    }
+    @media (max-width: 768px) {
+      .studio-section { padding: 4rem 1.2rem; }
+      .studio-grid { grid-template-columns: 1fr; }
+      .studio-card.wide { grid-column: span 1; grid-template-columns: 1fr; }
+      .studio-card.wide .studio-fig { order: 0; padding: 0.55rem 0.55rem 0; }
+    }
   </style>
 </head>
 <body>
@@ -690,6 +743,133 @@
 
     </div>
   </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     3D-STUDIO: WERKZEUG FÜR WERKZEUG
+═══════════════════════════════════════════════════════════════ -->
+<section class="studio-section" id="studio">
+  <div class="studio-inner">
+    <div class="section-head"><span class="eyebrow">Am Bauteil</span></div>
+    <h2 class="section-title">Das 3D-Studio, Werkzeug für Werkzeug</h2>
+    <p class="section-sub">Acht Werkzeuge rund um Bauteil und Form, dazu zwei Füllsimulationen. Jedes Bild
+      unten zeigt, was das Werkzeug aus einem Bauteil macht: gerechnet im Browser, die Dateien
+      bleiben auf dem Rechner.</p>
+    <ul class="wb-chain"><li><span class="pill">Bauteil</span><span class="sep">›</span></li><li><span class="pill">Anguss</span><span class="sep">›</span></li><li><span class="pill">Füllung</span><span class="sep">›</span></li><li><span class="pill">Überläufe</span><span class="sep">›</span></li><li><span class="pill">Temperierung</span><span class="sep">›</span></li><li><span class="pill">Auslegung</span></li></ul>
+    <p class="wb-chain-note">Die Werkbank hängt sie aneinander: ein Bauteil, sechs Schritte, am Ende die Auslegung.</p>
+    <div class="studio-grid">
+      <a class="studio-card wide" href="/tools/3d-studio/werkbank.html">
+        <figure class="studio-fig"><img src="/assets/studio/werkbank.webp" width="1100" height="825" alt="Getriebedeckel mit dem vorgeschlagenen Angusssystem: Pressrest, Laufkanäle, Anschnitte an der Bauteilkante" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Werkbank</h4>
+          <p>Sechs Schritte an einem Bauteil, jeder baut auf dem vorigen auf: Formteilung und Wandstärke, Angusssystem, Füllung, Überläufe, Temperierung und am Ende die Auslegung, die Massen, Anschnittfläche und Sprengfläche aus dem Modell übernimmt. Das Bild zeigt den Stand nach Schritt zwei: das Bauteil mit dem Anguss, den die Werkbank aus seiner Kante vorschlägt.</p>
+          <ul class="fig-legend"><li><span class="key" style="background:var(--part)"></span>Bauteil</li><li><span class="key" style="background:var(--runner)"></span>Anguss aus dem Vorschlag</li><li><span class="key" style="background:var(--biscuit)"></span>Pressrest</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/form.html">
+        <figure class="studio-fig"><img src="/assets/studio/form.webp" width="780" height="585" alt="Schnitt durch eine Kaltkammer-Druckgießform: beide Hälften, Füllkammer, Gießkolben, Kavität, Temperierkreise" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Formaufbau</h4>
+          <p>Die Druckgießform als Baugruppe, hier im Schnitt: feste und bewegliche Seite, die Füllkammer mit dem Gießkolben, die Kavität dazwischen und die Temperierkreise darin.</p>
+          <ul class="fig-legend"><li><span class="key" style="background:color-mix(in srgb, var(--steel), var(--steel-dark))"></span>Stahl</li><li><span class="key" style="background:var(--melt)"></span>Gussteil</li><li><span class="key" style="background:var(--piston)"></span>Gießkolben</li><li><span class="key" style="background:var(--cool)"></span>Temperierung</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/entformungsanalyse.html">
+        <figure class="studio-fig"><img src="/assets/studio/entformung.webp" width="780" height="585" alt="Bauteil, eingefärbt nach Formhälften und Schiebern" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Entformungsanalyse</h4>
+          <p>Jede Fläche bekommt die Seite, die sie bilden kann. Was in keine Richtung frei kommt, ist ein Hinterschnitt und braucht einen Schieber.</p>
+          <ul class="fig-legend"><li><span class="key" style="background:var(--axis-z)"></span>bewegliche Seite</li><li><span class="key" style="background:color-mix(in srgb, var(--axis-z) 45%, var(--text))"></span>feste Seite</li><li><span class="key" style="background:var(--axis-x)"></span>Schieber</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/wandstaerke.html">
+        <figure class="studio-fig"><img src="/assets/studio/wandstaerke.webp" width="780" height="585" alt="Durchscheinendes Bauteil mit Kugeln an den dicksten Stellen" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Wandstärkenanalyse</h4>
+          <p>Ein Abstandsfeld im Bauteil sagt an jeder Stelle, wie dick die Wand ist. Die dicksten Stellen erstarren zuletzt: dort sitzen die Wärmezentren, und dorthin muss die Temperierung.</p>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo"></span>Wärmezentrum: je dicker die Wand, desto größer und röter die Kugel</li><li><span class="key" style="background:var(--part)"></span>Bauteil durchscheinend</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/abstand.html">
+        <figure class="studio-fig"><img src="/assets/studio/abstand.webp" width="780" height="585" alt="Bauteil, eingefärbt nach dem Abstand zu den Temperierkanälen" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Abstandsanalyse</h4>
+          <p>Der kürzeste Weg von jeder Stelle der einen Datei zur anderen, etwa von der Kavität zum Temperierkanal. Rot heißt nah, blau fern; die Skala setzt man selbst.</p>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo" data-richtung="270deg"></span>nah → fern</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/fuellung.html">
+        <figure class="studio-fig"><img src="/assets/studio/fuellung.webp" width="780" height="585" alt="Bauteil mit Anschnitten, eingefärbt nach der Reihenfolge der Füllung" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Füllabschätzung</h4>
+          <p>Die Schmelzefront läuft von den Anschnitten durch das gerasterte Bauteil. Die Farbe sagt, wann eine Stelle voll ist; die letzten Stellen sind die, an denen die Luft steht.</p>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo"></span>zuerst → zuletzt gefüllt</li><li><span class="key" style="background:var(--die)"></span>Anschnitt</li><li><span class="key" style="background:var(--mark)"></span>zuletzt gefüllt</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/anguss.html">
+        <figure class="studio-fig"><img src="/assets/studio/anguss.webp" width="780" height="585" alt="Angusssystem mit Pressrest, Verzweigung und vier Anschnitten an der Ölwanne" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Angussdesigner</h4>
+          <p>Pressrest, Laufkanäle und Anschnitte wachsen als ein geschlossener Körper aus einem Graphen: Querschnitt je Punkt, Zwickelradius je Verzweigung, gerader Steg am Anschnitt.</p>
+          <ul class="fig-legend"><li><span class="key" style="background:var(--biscuit)"></span>Pressrest</li><li><span class="key" style="background:var(--mark)"></span>Punkt</li><li><span class="key" style="background:var(--mark-warm)"></span>Verzweigung</li><li><span class="key" style="background:var(--die)"></span>Anschnitt</li><li><span class="key" style="background:var(--part)"></span>Bauteil als Referenz</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/ueberlauf.html">
+        <figure class="studio-fig"><img src="/assets/studio/ueberlauf.webp" width="780" height="585" alt="Bauteil von oben mit Überlaufbohnen, einem Überlauf mit Entlüftung und einem Waschbrett" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Überlaufdesigner</h4>
+          <p>Überläufe fangen die kalte Schmelzefront, Entlüftungen lassen die Luft heraus. Beides wird aufs Bauteil gesetzt; das Volumen geht ins Schussgewicht.</p>
+          <ul class="fig-legend"><li><span class="key" style="background:var(--mark)"></span>Bohne</li><li><span class="key" style="background:var(--air)"></span>mit Entlüftung</li><li><span class="key" style="background:var(--mark-warm)"></span>Waschbrett</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/temperier.html">
+        <figure class="studio-fig"><img src="/assets/studio/temperier.webp" width="780" height="585" alt="Bauteil in der Abstandsfläche mit automatisch gesetzten Kühlstichen und Kanälen" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Temperierkanal-Designer</h4>
+          <p>Kühlstiche und Kanäle liegen auf der Fläche im gewählten Abstand zur Kavität. Die Automatik verteilt sie dorthin, wo das Bauteil dick ist; wer zu nah an der Kavität steht, wird gelb markiert.</p>
+          <ul class="fig-legend"><li><span class="key" style="background:var(--cool)"></span>Kühlstich</li><li><span class="key" style="background:color-mix(in srgb, var(--cool) 55%, var(--surface))"></span>Kanal</li><li><span class="key" style="background:var(--primary-light)"></span>Abstandsfläche</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card" href="/tools/3d-studio/angussfuellung.html">
+        <figure class="studio-fig"><img src="/assets/studio/angussfuellung.webp" width="780" height="585" alt="Schmelze auf halbem Weg durch das Angusssystem, eingefärbt nach Geschwindigkeit" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Angussfüllung</h4>
+          <p>Die Schmelze vom Pressrest bis zu den Anschnitten, gerechnet mit dem Gitter (Lattice-Boltzmann mit freier Oberfläche) oder mit Partikeln (SPH), auf der Grafikkarte, sonst in JavaScript. Ergebnis: wann die Schmelze an welchem Anschnitt ankommt.</p>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo"></span>langsam → schnell</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+      <a class="studio-card wide" href="/tools/3d-studio/kammerfuellung.html">
+        <figure class="studio-fig"><img src="/assets/studio/kammerfuellung.webp" width="1100" height="440" alt="Welle in der Füllkammer vor dem Gießkolben, eingefärbt nach Geschwindigkeit" loading="lazy" decoding="async"></figure>
+        <div class="studio-text">
+          <h4>Kammerfüllung</h4>
+          <p>Die Welle in der Füllkammer: Wie schnell darf der Kolben anfahren, ohne dass die Welle bricht und Luft einschließt? Gitter, Partikel oder ein auf OpenFOAM-Rechnungen trainiertes Metamodell, gegen die Schusskurve, mit „Kammer voll“ und eingeschlossener Luft.</p>
+          <ul class="fig-legend"><li><span class="key bar" data-leiste="turbo"></span>langsam → schnell</li></ul>
+          <div class="arrow">Öffnen →</div>
+        </div>
+      </a>
+    </div>
+  </div>
+  <script>
+    /* Die Farbleisten der Legenden kommen aus der Palette (fest, in jedem
+       Schema gleich), nicht als Farbwerte ins HTML. */
+    (function () {
+      var P = window.__PALETTE__;
+      if (!P || !P.gradient) return;
+      document.querySelectorAll('.fig-legend [data-leiste]').forEach(function (el) {
+        el.style.background = P.gradient(el.dataset.leiste, el.dataset.richtung);
+      });
+    })();
+  </script>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════
