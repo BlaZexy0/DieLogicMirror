@@ -77,6 +77,11 @@
     .pw-meter.ok > i { background: var(--ok); }
     .pw-meter.mid > i { background: var(--caution); }
     .pw-hint { font-size: .74rem; color: var(--muted); min-height: 1.1em; }
+    /* Passwort anzeigen: Schalter im Feld rechts */
+    .pw-wrap { position: relative; display: block; }
+    .pw-wrap > input { padding-right: 5.2rem !important; }
+    .pw-eye { position: absolute; right: .35rem; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: var(--primary); font: inherit; font-size: .74rem; font-weight: 600; padding: .25rem .45rem; border-radius: var(--radius-pill); cursor: pointer; }
+    .pw-eye:hover, .pw-eye:focus-visible { background: var(--pale); outline: none; }
     /* Gefährliche Aktionen */
     .kt-danger { border-color: var(--bad-border); }
     .kt-danger h2 { color: var(--bad-text); }
@@ -944,6 +949,23 @@
     if (id === "s-pw") return [String(($("reset-text").textContent.match(/[\w.+-]+@[\w.-]+/) || [""])[0]), ""];
     return [me && me.user ? me.user.email : "", me && me.user ? me.user.name : ""];
   }
+  /* Jedes Passwortfeld bekommt einen Schalter „anzeigen / verbergen"; die
+     Felder bleiben type=password, bis man ihn drückt. */
+  document.querySelectorAll('input[type="password"]').forEach(function (inp) {
+    var wrap = document.createElement("span"), btn = document.createElement("button");
+    wrap.className = "pw-wrap";
+    if (inp.style.marginBottom) { wrap.style.marginBottom = inp.style.marginBottom; inp.style.marginBottom = ""; }
+    btn.type = "button"; btn.className = "pw-eye"; btn.textContent = "anzeigen";
+    btn.setAttribute("aria-label", "Passwort anzeigen"); btn.tabIndex = -1;
+    btn.addEventListener("click", function () {
+      var show = inp.type === "password";
+      inp.type = show ? "text" : "password";
+      btn.textContent = show ? "verbergen" : "anzeigen";
+      btn.setAttribute("aria-label", show ? "Passwort verbergen" : "Passwort anzeigen");
+      inp.focus();
+    });
+    inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp); wrap.appendChild(btn);
+  });
   document.querySelectorAll("[data-pwmeter]").forEach(function (inp) {
     inp.addEventListener("input", function () {
       var ctx = pwContext(inp.id), c = pwCheck(inp.value, ctx[0], ctx[1]);
