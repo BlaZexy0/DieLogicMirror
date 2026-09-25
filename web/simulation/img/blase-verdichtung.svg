@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 470" font-family="Arial, Helvetica, sans-serif" role="img">
+<rect x="0" y="0" width="880" height="470" fill="#ffffff" class="f-surface"/>
+<text x="440.0" y="26" font-size="15" font-weight="700" fill="#002733" class="f-text" text-anchor="middle">Verdichtung einer eingeschlossenen Blase</text>
+<text x="440.0" y="46" font-size="11" fill="#4c6870" class="f-muted" text-anchor="middle">geschlossene Kammer 40 × 60 mm, Schmelze steigt mit 0,2 m/s</text>
+<path d="M86 400.0H626" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="78" y="404.0" font-size="11" fill="#002733" class="f-text" text-anchor="end">0</text>
+<path d="M86.0 70V400" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="86.0" y="418" font-size="11" fill="#002733" class="f-text" text-anchor="middle">0</text>
+<path d="M86 334.0H626" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="78" y="338.0" font-size="11" fill="#002733" class="f-text" text-anchor="end">6</text>
+<path d="M194.0 70V400" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="194.0" y="418" font-size="11" fill="#002733" class="f-text" text-anchor="middle">0,06</text>
+<path d="M86 268.0H626" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="78" y="272.0" font-size="11" fill="#002733" class="f-text" text-anchor="end">12</text>
+<path d="M302.0 70V400" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="302.0" y="418" font-size="11" fill="#002733" class="f-text" text-anchor="middle">0,12</text>
+<path d="M86 202.0H626" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="78" y="206.0" font-size="11" fill="#002733" class="f-text" text-anchor="end">18</text>
+<path d="M410.0 70V400" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="410.0" y="418" font-size="11" fill="#002733" class="f-text" text-anchor="middle">0,18</text>
+<path d="M86 136.0H626" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="78" y="140.0" font-size="11" fill="#002733" class="f-text" text-anchor="end">24</text>
+<path d="M518.0 70V400" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="518.0" y="418" font-size="11" fill="#002733" class="f-text" text-anchor="middle">0,24</text>
+<path d="M86 70.0H626" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="78" y="74.0" font-size="11" fill="#002733" class="f-text" text-anchor="end">30</text>
+<path d="M626.0 70V400" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="626.0" y="418" font-size="11" fill="#002733" class="f-text" text-anchor="middle">0,3</text>
+<path d="M86 70V400H626" fill="none" stroke="#ccd4d6" stroke-width="1" class="s-border"/>
+<text x="356.0" y="442" font-size="12" fill="#002733" class="f-text" text-anchor="middle">Zeit [s]</text>
+<text x="24" y="235.0" font-size="12" fill="#002733" class="f-text" text-anchor="middle" transform="rotate(-90 24 235.0)">Druck der Blase [bar]</text>
+<polyline points="86.0,389.0 86.0,389.0 86.1,389.0 86.3,389.0 87.0,389.0 88.8,388.9 91.0,388.9 93.2,388.8 95.4,388.7 97.5,388.7 99.7,388.6 101.8,388.5 104.0,388.5 106.2,388.4 108.3,388.3 110.5,388.3 112.6,388.2 114.8,388.1 117.0,388.1 119.1,388.0 121.3,387.9 123.4,387.8 125.6,387.8 127.8,387.7 129.9,387.6 132.1,387.5 134.2,387.5 136.4,387.4 138.6,387.3 140.7,387.2 142.9,387.1 145.0,387.1 147.2,387.0 149.4,386.9 151.5,386.8 153.7,386.7 155.8,386.6 158.0,386.6 160.2,386.5 162.3,386.4 164.5,386.3 166.6,386.2 168.8,386.1 171.0,386.0 173.1,385.9 175.3,385.8 177.4,385.7 179.6,385.6 181.8,385.5 183.9,385.4 186.1,385.3 188.2,385.2 190.4,385.1 192.6,385.0 194.7,384.9 196.9,384.8 199.0,384.7 201.2,384.6 203.4,384.5 205.5,384.4 207.7,384.3 209.8,384.2 212.0,384.0 214.2,383.9 216.3,383.8 218.5,383.7 220.6,383.6 222.8,383.4 225.0,383.3 227.1,383.2 229.3,383.1 231.4,382.9 233.6,382.8 235.8,382.7 237.9,382.5 240.1,382.4 242.2,382.3 244.4,382.1 246.6,382.0 248.7,381.8 250.9,381.7 253.0,381.5 255.2,381.4 257.4,381.2 259.5,381.1 261.7,380.9 263.8,380.8 266.0,380.6" fill="none" stroke="#008c82" stroke-width="5" stroke-linejoin="round" class="s-primary"/>
+<path d="M642 80h26" stroke="#008c82" stroke-width="5" class="s-primary"/>
+<text x="674" y="84" font-size="11.5" fill="#002733" class="f-text">dieFillFoam (n = 1,4)</text>
+<polyline points="86.0,389.0 90.1,388.9 94.2,388.8 98.3,388.6 102.3,388.5 106.4,388.4 110.5,388.3 114.6,388.1 118.7,388.0 122.8,387.9 126.8,387.7 130.9,387.6 135.0,387.4 139.1,387.3 143.2,387.1 147.3,387.0 151.3,386.8 155.4,386.7 159.5,386.5 163.6,386.3 167.7,386.2 171.8,386.0 175.8,385.8 179.9,385.6 184.0,385.4 188.1,385.2 192.2,385.1 196.3,384.9 200.4,384.7 204.4,384.4 208.5,384.2 212.6,384.0 216.7,383.8 220.8,383.6 224.9,383.3 228.9,383.1 233.0,382.8 237.1,382.6 241.2,382.3 245.3,382.1 249.4,381.8 253.4,381.5 257.5,381.2 261.6,380.9 265.7,380.6 269.8,380.3 273.9,380.0 277.9,379.7 282.0,379.3 286.1,379.0 290.2,378.6 294.3,378.2 298.4,377.9 302.5,377.5 306.5,377.1 310.6,376.6 314.7,376.2 318.8,375.8 322.9,375.3 327.0,374.8 331.0,374.4 335.1,373.8 339.2,373.3 343.3,372.8 347.4,372.2 351.5,371.6 355.5,371.0 359.6,370.4 363.7,369.8 367.8,369.1 371.9,368.4 376.0,367.7 380.1,366.9 384.1,366.1 388.2,365.3 392.3,364.5 396.4,363.6 400.5,362.7 404.6,361.7 408.6,360.7 412.7,359.6 416.8,358.5 420.9,357.3 425.0,356.1 429.1,354.8 433.1,353.5 437.2,352.1 441.3,350.6 445.4,349.0 449.5,347.4 453.6,345.6 457.6,343.8 461.7,341.8 465.8,339.7 469.9,337.5 474.0,335.1 478.1,332.6 482.2,329.9 486.2,327.0 490.3,323.9 494.4,320.6 498.5,317.0 502.6,313.2 506.7,309.0 510.7,304.4 514.8,299.5 518.9,294.1 523.0,288.1 527.1,281.6 531.2,274.4 535.2,266.4 539.3,257.5 543.4,247.6 547.5,236.4 551.6,223.6 555.7,209.1 559.7,192.5 563.8,173.1 567.9,150.5 572.0,123.7" fill="none" stroke="#002733" stroke-width="1.6" stroke-linejoin="round" stroke-dasharray="6 4" class="s-text"/>
+<path d="M642 102h26" stroke="#002733" stroke-width="1.6" stroke-dasharray="6 4" class="s-text"/>
+<text x="674" y="106" font-size="11.5" fill="#002733" class="f-text">exakt, adiabat</text>
+<polyline points="86.0,389.0 90.1,388.9 94.2,388.8 98.3,388.7 102.3,388.7 106.4,388.6 110.5,388.5 114.6,388.4 118.7,388.3 122.8,388.2 126.8,388.1 130.9,388.0 135.0,387.9 139.1,387.8 143.2,387.7 147.3,387.6 151.3,387.5 155.4,387.4 159.5,387.3 163.6,387.2 167.7,387.0 171.8,386.9 175.8,386.8 179.9,386.7 184.0,386.6 188.1,386.4 192.2,386.3 196.3,386.2 200.4,386.0 204.4,385.9 208.5,385.8 212.6,385.6 216.7,385.5 220.8,385.3 224.9,385.2 228.9,385.0 233.0,384.9 237.1,384.7 241.2,384.6 245.3,384.4 249.4,384.2 253.4,384.1 257.5,383.9 261.6,383.7 265.7,383.5 269.8,383.3 273.9,383.1 277.9,382.9 282.0,382.7 286.1,382.5 290.2,382.3 294.3,382.1 298.4,381.9 302.5,381.6 306.5,381.4 310.6,381.2 314.7,380.9 318.8,380.7 322.9,380.4 327.0,380.1 331.0,379.9 335.1,379.6 339.2,379.3 343.3,379.0 347.4,378.7 351.5,378.4 355.5,378.0 359.6,377.7 363.7,377.4 367.8,377.0 371.9,376.6 376.0,376.2 380.1,375.8 384.1,375.4 388.2,375.0 392.3,374.6 396.4,374.1 400.5,373.7 404.6,373.2 408.6,372.7 412.7,372.1 416.8,371.6 420.9,371.0 425.0,370.5 429.1,369.8 433.1,369.2 437.2,368.5 441.3,367.8 445.4,367.1 449.5,366.3 453.6,365.6 457.6,364.7 461.7,363.8 465.8,362.9 469.9,361.9 474.0,360.9 478.1,359.8 482.2,358.7 486.2,357.5 490.3,356.2 494.4,354.9 498.5,353.4 502.6,351.9 506.7,350.2 510.7,348.5 514.8,346.6 518.9,344.5 523.0,342.3 527.1,340.0 531.2,337.4 535.2,334.5 539.3,331.5 543.4,328.1 547.5,324.3 551.6,320.2 555.7,315.5 559.7,310.3 563.8,304.5 567.9,297.7 572.0,290.0" fill="none" stroke="#4c6870" stroke-width="1.6" stroke-linejoin="round" stroke-dasharray="6 4" class="s-muted"/>
+<path d="M642 124h26" stroke="#4c6870" stroke-width="1.6" stroke-dasharray="6 4" class="s-muted"/>
+<text x="674" y="128" font-size="11.5" fill="#002733" class="f-text">exakt, isotherm</text>
+<circle cx="91.0" cy="388.9" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="106.2" cy="388.4" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="121.3" cy="387.9" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="136.4" cy="387.4" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="151.5" cy="386.9" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="166.6" cy="386.3" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="181.8" cy="385.6" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="196.9" cy="384.9" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="212.0" cy="384.2" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="227.1" cy="383.3" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="242.2" cy="382.4" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="257.4" cy="381.5" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="272.5" cy="380.4" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="287.6" cy="379.2" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="302.7" cy="377.9" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="317.8" cy="376.4" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="333.0" cy="374.8" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="348.1" cy="372.9" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="363.2" cy="370.8" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="378.3" cy="368.5" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="393.4" cy="365.7" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="408.6" cy="362.6" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="423.7" cy="358.9" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="438.8" cy="354.5" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="453.9" cy="349.3" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="469.0" cy="343.0" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="484.2" cy="335.2" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="499.3" cy="325.2" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="514.4" cy="312.6" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="529.5" cy="295.6" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="544.6" cy="271.6" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="559.8" cy="237.9" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="574.9" cy="184.4" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="590.0" cy="87.2" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<circle cx="655" cy="146" r="4" fill="none" stroke="#f66e5c" stroke-width="1.8" class="s-mark-warm"/>
+<text x="674" y="150" font-size="11.5" fill="#002733" class="f-text">compressibleInterIsoFoam</text>
+</svg>
