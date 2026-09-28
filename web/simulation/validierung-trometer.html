@@ -71,6 +71,7 @@
     .karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 1rem 0; }
     .karte { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.9rem 1rem; background: var(--surface2); }
     .karte h4 { margin: 0 0 0.35rem; font-size: 1rem; }
+    h4.bild-reihe { margin: 1.8rem 0 0.5rem; font-size: 1rem; color: var(--text); }
     .karte p { margin: 0 0 0.6rem; color: var(--muted); font-size: 0.9rem; }
     .status-ok { color: var(--ok-text); }
     .status-offen { color: var(--caution-text, var(--muted)); }
@@ -153,9 +154,34 @@
       <span class="section-anchor" id="t3"></span>
       <h2 class="section-title">3. Ergebnisse</h2>
       <div class="table-scroll"><table class="th-table kennzahlen"><thead><tr><th>Rechnung</th><th>Einstellung</th><th>Anfang: IoU Wasser</th><th>Anfang: IoU Luft</th><th>Mitte: IoU Wasser</th><th>Mitte: IoU Luft</th><th>Ende: IoU Wasser</th><th>Ende: IoU Luft</th></tr></thead><tbody><tr><td><code>vac100mbar</code></td><td>Kammer voll bei t = 0</td><td>0,06</td><td>0,94</td><td>0,61</td><td>0,26</td><td>0,77</td><td>0,01</td></tr><tr><td><code>vac1bar</code></td><td>Kammer voll bei t = 0</td><td>0,07</td><td>0,93</td><td>0,59</td><td>0,44</td><td>0,74</td><td>0,13</td></tr><tr><td><code>vac200mbar</code></td><td>Kammer voll bei t = 0</td><td>0,29</td><td>0,83</td><td>0,62</td><td>0,10</td><td>0,85</td><td>0,00</td></tr><tr><td><code>vac265mbar</code></td><td>Kammer voll bei t = 0</td><td>0,31</td><td>0,84</td><td>0,61</td><td>0,07</td><td>0,85</td><td>0,06</td></tr><tr><td><code>sleeve_phi050</code></td><td>ganze Kammer Ø25,4 × 280 mm, 50 % gefüllt, Kolben aus der Ruhe auf 1,75 m/s (bewegtes Netz)</td><td>0,27</td><td>0,82</td><td>0,64</td><td>0,10</td><td>0,85</td><td>0,01</td></tr><tr><td><code>sleeve_phi060</code></td><td>ganze Kammer Ø25,4 × 280 mm, 60 % gefüllt, Kolben aus der Ruhe auf 1,75 m/s (bewegtes Netz)</td><td>0,24</td><td>0,80</td><td>0,62</td><td>0,08</td><td>0,85</td><td>0,02</td></tr><tr><td><code>sst</code></td><td>RANS k-omega SST, Wandfunktionen</td><td>0,28</td><td>0,83</td><td>0,64</td><td>0,07</td><td>0,85</td><td>0,02</td></tr></tbody></table></div><p class="prose"><small>Fotos und Rechnung sind über den Füllstand des Hohlraums zugeordnet. IoU Luft vergleicht die trockenen Flächen im Hohlraum, also die Lage der Luftnester.</small></p>
-      <div class="fig-wrap"><img src="img/val/trometer-vac1bar-vergleich.webp" alt="&lt;code&gt;vac1bar&lt;/code&gt;: Fotos mit gemessener Front (magenta) neben der Rechnung in ParaView" loading="lazy"><div class="fig-cap"><code>vac1bar</code>: Fotos mit gemessener Front (magenta) neben der Rechnung in ParaView</div></div>
-<div class="fig-wrap"><img src="img/val/trometer-vac200mbar-vergleich.webp" alt="&lt;code&gt;vac200mbar&lt;/code&gt;: Fotos mit gemessener Front (magenta) neben der Rechnung in ParaView" loading="lazy"><div class="fig-cap"><code>vac200mbar</code>: Fotos mit gemessener Front (magenta) neben der Rechnung in ParaView</div></div>
-<div class="fig-wrap"><img src="img/val/trometer-vac100mbar-vergleich.webp" alt="&lt;code&gt;vac100mbar&lt;/code&gt;: Fotos mit gemessener Front (magenta) neben der Rechnung in ParaView" loading="lazy"><div class="fig-cap"><code>vac100mbar</code>: Fotos mit gemessener Front (magenta) neben der Rechnung in ParaView</div></div>
+      <h3 class="sub-title">3.1 Foto, Auswertung und Rechnung</h3>
+      <div class="prose">
+        <p>Jedes Bild zeigt nebeneinander das Foto der Quelle, seine Auswertung und die Rechnung, alle drei auf
+          der Ebene des Modells und damit in genau derselben Ansicht. Das Foto ist über die Lage in der Form
+          entzerrt; die Auswertung ist der Anteil der Plattendicke, den das Wasser füllt (Abschnitt
+          <a href="validierung.html#v2">Vom Foto zum Feld</a>); die Rechnung ist derselbe Anteil aus dem gerechneten
+          Feld, beim selben Füllstand des Hohlraums (die Quelle gibt keine Zeiten an). Auswertung und Rechnung tragen dieselben Markierungen: die Füllfront (Anteil 0,5, Linie), die
+          nasse Front (0,1, gestrichelt) und die eingeschlossene Luft (orange: trockene Stellen, die keine
+          Verbindung zur Oberkante des Hohlraums haben). In der Rechnung steht punktiert zusätzlich die Füllfront
+          des Fotos. Was das Foto nicht zeigen kann, ist grau und wird nicht bewertet; die Rechnung zeigt dort ihr
+          Feld hell und gestrichelt umrandet. Die Rechnungen der Autoren werden nicht gezeigt.</p>
+        <p>Verdeckt ist der Anschluss der Vakuumleitung vor der Mitte des Überlaufs.</p>
+      </div>
+      <h4 class="bild-reihe"><code>vac1bar</code>: 1 bar (Abb. 8)</h4>
+<div class="fig-wrap"><img src="img/val/trometer-vac1bar-p2_8a_1bar_exp_beginning.webp" alt="&lt;code&gt;vac1bar&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>vac1bar</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/trometer-vac1bar-p2_8d_1bar_exp_middle.webp" alt="&lt;code&gt;vac1bar&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>vac1bar</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/trometer-vac1bar-p2_8g_1bar_exp_end.webp" alt="&lt;code&gt;vac1bar&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>vac1bar</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<h4 class="bild-reihe"><code>vac200mbar</code>: 200 mbar (Abb. 6, Lauf 1, und Abb. 8)</h4>
+<div class="fig-wrap"><img src="img/val/trometer-vac200mbar-p2_6a_run1_200mbar_exp_beginning.webp" alt="&lt;code&gt;vac200mbar&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>vac200mbar</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/trometer-vac200mbar-p2_6d_run1_200mbar_exp_middle.webp" alt="&lt;code&gt;vac200mbar&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>vac200mbar</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/trometer-vac200mbar-p2_6g_run1_200mbar_exp_end.webp" alt="&lt;code&gt;vac200mbar&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>vac200mbar</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/trometer-vac200mbar-p2_8b_200mbar_exp_beginning.webp" alt="&lt;code&gt;vac200mbar&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>vac200mbar</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/trometer-vac200mbar-p2_8e_200mbar_exp_middle.webp" alt="&lt;code&gt;vac200mbar&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>vac200mbar</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/trometer-vac200mbar-p2_8h_200mbar_exp_end.webp" alt="&lt;code&gt;vac200mbar&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>vac200mbar</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<h4 class="bild-reihe"><code>vac100mbar</code>: 100 mbar (Abb. 8)</h4>
+<div class="fig-wrap"><img src="img/val/trometer-vac100mbar-p2_8c_100mbar_exp_beginning.webp" alt="&lt;code&gt;vac100mbar&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>vac100mbar</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/trometer-vac100mbar-p2_8f_100mbar_exp_middle.webp" alt="&lt;code&gt;vac100mbar&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>vac100mbar</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/trometer-vac100mbar-p2_8i_100mbar_exp_end.webp" alt="&lt;code&gt;vac100mbar&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>vac100mbar</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
 
       <span class="section-anchor" id="t4"></span>
       <h2 class="section-title">4. Abstimmung</h2>

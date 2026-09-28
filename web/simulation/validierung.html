@@ -71,6 +71,7 @@
     .karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 1rem 0; }
     .karte { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.9rem 1rem; background: var(--surface2); }
     .karte h4 { margin: 0 0 0.35rem; font-size: 1rem; }
+    h4.bild-reihe { margin: 1.8rem 0 0.5rem; font-size: 1rem; color: var(--text); }
     .karte p { margin: 0 0 0.6rem; color: var(--muted); font-size: 0.9rem; }
     .status-ok { color: var(--ok-text); }
     .status-offen { color: var(--caution-text, var(--muted)); }
@@ -155,8 +156,10 @@
           <li><strong>Wasseranteil:</strong> Wasser mit Farbstoff schluckt Licht nach Lambert und Beer. Der Anteil der
             Plattendicke, den das Wasser füllt, ist daher die Extinktion $A = -\ln(I/I_0)$ im Verhältnis zur Extinktion
             der vollen Dicke, nicht der lineare Farbwert.</li>
-          <li><strong>Verdeckt:</strong> Stellen, die im Foto nicht zu sehen sind (Anschnitt vor der dunklen Scheibe,
-            Anschluss der Vakuumleitung), werden ausgeblendet und nicht bewertet.</li>
+          <li><strong>Verdeckt:</strong> Stellen, die im Foto nicht zu sehen sind, werden ausgeblendet und nicht bewertet:
+            bei Niida der Anschnitt vor der dunklen Scheibe der Gießbüchse und der Anschluss der Entlüftung im Überlauf,
+            bei Trometer der Kuchen und die Engstelle hinter der Gießkammer mit dem Kolben (bis 22 mm über der Achse) und
+            der Anschluss der Vakuumleitung.</li>
         </ul>
       </div>
       <div class="insight-box"><span class="label">Prüfung an der Massenbilanz</span>
