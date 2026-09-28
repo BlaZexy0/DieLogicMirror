@@ -701,7 +701,7 @@ svg.svg-bild { display: block; width: 100%; height: auto; }
   color: var(--ondark);
   padding: 3.5rem 2rem 2rem;
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
   gap: 2rem;
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;

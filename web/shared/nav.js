@@ -227,6 +227,11 @@
     const [dashboard, ...auslegungTools] = NAV_LINKS[0].columns[0].items;
     const footerCharts = ['shotcurve', 'pq2', 'phild'].map(id => CHARTS.find(c => c[0] === id));
     const theorie = NAV_LINKS.find(g => g.label === 'Theorie').children;
+    /* Die Simulation aus derselben Liste wie oben: die Solver-Spalte wie sie ist,
+       die Validierung mit Vorsilbe (wie „Theorie: …"), die Methode als „Validierung". */
+    const [simSolver, simVal] = NAV_LINKS.find(g => g.label === 'Simulation').columns;
+    const simulation = [...simSolver.items,
+      ...simVal.items.map((t, i) => ({ href: t.href, label: i === 0 ? 'Validierung' : 'Validierung: ' + t.label }))];
     return `<footer class="dl-footer">
   <div class="dl-footer-col">
     <div class="dl-footer-logo">
@@ -251,6 +256,13 @@
       <li><a href="/tools/3d-studio/">3D-Studio: alle Werkzeuge</a></li>
       <li><a href="/index.html#diagramme">Alle ${CHARTS.length} Diagramme</a></li>
       ${theorie.map(t => `<li><a href="${t.href}">Theorie: ${t.label}</a></li>`).join('\n      ')}
+    </ul>
+  </div>
+
+  <div class="dl-footer-col">
+    <h4>Simulation</h4>
+    <ul>
+      ${simulation.map(t => `<li><a href="${t.href}">${t.label}</a></li>`).join('\n      ')}
     </ul>
   </div>
 

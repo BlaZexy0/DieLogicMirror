@@ -449,7 +449,11 @@ test('nav: Simulation ist ein Spaltenmenü (Solver · Validierung), jede Seite e
   assert.match(sim, /columns: \[/, 'Spaltenmenü wie Auslegung und Studio');
   assert.match(sim, /title: 'Solver'/, 'Spalte Solver');
   assert.match(sim, /title: 'Validierung'/, 'Spalte Validierung');
-  const hrefs = [...sim.matchAll(/href: '\/simulation\/([a-z-]*(?:\.html)?)'/g)].map(m => m[1] || 'index.html');
+  /* Die Fußzeile hat eine eigene Spalte Simulation, gebaut aus derselben Liste. */
+  const footer = src.slice(src.indexOf('function buildFooter'), src.indexOf('<h4>Rechtliches</h4>'));
+  assert.match(footer, /NAV_LINKS\.find\(g => g\.label === 'Simulation'\)\.columns/, 'Fußzeile nimmt die Simulation aus NAV_LINKS');
+  assert.match(footer, /<h4>Simulation<\/h4>/, 'Fußzeile: Spalte Simulation');
+  const hrefs =[...sim.matchAll(/href: '\/simulation\/([a-z-]*(?:\.html)?)'/g)].map(m => m[1] || 'index.html');
   const pages = readdirSync(path.join(site, 'simulation')).filter(f => f.endsWith('.html')).sort();
   assert.deepEqual([...hrefs].sort(), pages, 'Menü und Seiten in web/simulation/ stimmen überein');
   for (const p of pages) {
