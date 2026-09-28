@@ -155,9 +155,20 @@
             liegt nach der Zuordnung auf den Kanten im Foto.</li>
           <li><strong>Wasseranteil:</strong> Wasser mit Farbstoff schluckt Licht nach Lambert und Beer. Der Anteil der
             Plattendicke, den das Wasser füllt, ist daher die Extinktion $A = -\ln(I/I_0)$ im Verhältnis zur Extinktion
-            der vollen Dicke, nicht der lineare Farbwert.</li>
+            der vollen Dicke, nicht der lineare Farbwert. $I_0$ ist dabei die Helligkeit des trockenen Acryls an
+            derselben Stelle: die Fotos sind ungleichmäßig ausgeleuchtet (heller oben, dunkler an den Rändern), und
+            ein einziger Leerwert je Foto las die dunkleren Teile als dünnen Wasserfilm. Die Helligkeit des trockenen
+            Acryls wird deshalb je Foto als glatte Fläche durch das Acryl rund um die Platte gelegt, das immer
+            trocken ist. Anteile unter 0,04 sind Rauschen der JPEG-Kompression und zählen als trocken.</li>
+          <li><strong>Rückstände:</strong> Bei Trometer liegen auf der Form Reste früherer Schüsse, am deutlichsten als
+            Band auf der Oberkante der Insel. Zu Beginn der Füllung zählt deshalb nur Wasser, das mit dem Zulauf am
+            Boden des Hohlraums zusammenhängt; was dort nicht hinkommen kann, gilt als trocken.</li>
+          <li><strong>Überlauf:</strong> Wasser kommt nur durch den Hals aus dem Hohlraum in den Überlauf. Nasse Stellen im
+            Überlauf, die nicht über den Hals mit dem Wasser im Hohlraum zusammenhängen, sind Rückstände, Flecken oder
+            Licht am Rand des Fotos und gelten als trocken (bei Niida zuvor 150 bis 690 mm² je Foto, auch wenn das
+            Wasser die Oberkante des Hohlraums noch nicht erreicht hatte).</li>
           <li><strong>Verdeckt:</strong> Stellen, die im Foto nicht zu sehen sind, werden ausgeblendet und nicht bewertet:
-            bei Niida der Anschnitt vor der dunklen Scheibe der Gießbüchse und der Anschluss der Entlüftung im Überlauf,
+            bei Niida der Anschnitt vor der dunklen Scheibe der Gießbüchse und der Anschluss der Entlüftung im Überlauf mit seinem Schatten,
             bei Trometer der Kuchen und die Engstelle hinter der Gießkammer mit dem Kolben (bis 22 mm über der Achse) und
             der Anschluss der Vakuumleitung.</li>
         </ul>
@@ -165,10 +176,12 @@
       <div class="insight-box"><span class="label">Prüfung an der Massenbilanz</span>
         <p>Wasser ist inkompressibel: das Wasservolumen im Hohlraum muss zwischen zwei Fotos genau um die vom Kolben
           verdrängte Menge wachsen, $\Delta V = A_K\,v_K\,\Delta t$, und der Bildabstand ist bekannt (60 Bilder je
-          Sekunde). Mit der Extinktion ergeben alle vier Fotoreihen von Niida 88 bis 95 % der Verdrängung, bei
-          dünnem wie bei vollem Wasser. Der lineare Farbwert ergibt 69 bis 132 %: er überschätzt dünnes Wasser.</p></div>
+          Sekunde). Mit der Extinktion gegen die örtliche Helligkeit ergeben die Fotoreihen von Niida 88, 98 und
+          103 % der Verdrängung; die vierte (<code>case2</code>, fünf Bilder in 0,07 s mit auf 0,01 s gerundeten Zeiten)
+          76 %, ihre Steigung ist auf etwa 15 % unsicher. Der lineare Farbwert ergab 69 bis 132 %: er überschätzt
+          dünnes Wasser.</p></div>
 
-      <div class="fig-wrap"><img src="img/val/massenbilanz.webp" alt="Wasservolumen aus den Fotos (Punkte, Extinktion nach Lambert und Beer) und die vom Kolben verdrängte Menge (Linien) über der Zeit seit dem Anschnitt" loading="lazy"><div class="fig-cap">Wasservolumen aus den Fotos (Punkte, Extinktion nach Lambert und Beer) und die vom Kolben verdrängte Menge (Linien) über der Zeit seit dem Anschnitt</div></div><div class="table-scroll"><table class="th-table kennzahlen"><thead><tr><th>Fotoreihe</th><th>Anschnitt auf der Videouhr [s]</th><th>Anstieg / Verdrängung</th></tr></thead><tbody><tr><td><code>case1</code></td><td>8,307</td><td>112 %</td></tr><tr><td><code>case4</code></td><td>8,380</td><td>93 %</td></tr><tr><td><code>case2</code></td><td>8,664</td><td>102 %</td></tr><tr><td><code>case5</code></td><td>8,735</td><td>93 %</td></tr></tbody></table></div>
+      <div class="fig-wrap"><img src="img/val/massenbilanz.webp" alt="Wasservolumen aus den Fotos (Punkte, Extinktion nach Lambert und Beer) und die vom Kolben verdrängte Menge (Linien) über der Zeit seit dem Anschnitt" loading="lazy"><div class="fig-cap">Wasservolumen aus den Fotos (Punkte, Extinktion nach Lambert und Beer) und die vom Kolben verdrängte Menge (Linien) über der Zeit seit dem Anschnitt</div></div><div class="table-scroll"><table class="th-table kennzahlen"><thead><tr><th>Fotoreihe</th><th>Anschnitt auf der Videouhr [s]</th><th>Anstieg / Verdrängung</th></tr></thead><tbody><tr><td><code>case1</code></td><td>8,333</td><td>103 %</td></tr><tr><td><code>case4</code></td><td>8,390</td><td>88 %</td></tr><tr><td><code>case2</code></td><td>8,675</td><td>76 %</td></tr><tr><td><code>case5</code></td><td>8,750</td><td>98 %</td></tr></tbody></table></div>
 
       <span class="section-anchor" id="v3"></span>
       <h2 class="section-title">3. Die Zeitachse</h2>
