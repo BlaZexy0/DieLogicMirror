@@ -15,7 +15,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -328,7 +328,7 @@ test('nav: Auslegung und 3D-Studio sind Spaltenmenüs — Werkzeuge · Diagramme
   assert.ok(/title: 'Diagramme'[\s\S]*CHARTS\.map/.test(auslegung), 'die Diagramme stehen als Spalte in der Auslegung');
   /* Das Studio hat dieselbe Darstellung: links die Werkbank, rechts die
      Einzeltools als Spalte — nicht mehr eine flache Liste von zehn. */
-  const studio = body.slice(body.indexOf("label: '3D-Studio'"), body.indexOf("label: 'Theorie'"));
+  const studio = body.slice(body.indexOf("label: '3D-Studio'"), body.indexOf("label: 'Simulation'"));
   assert.match(studio, /columns: \[/, 'das Studio ist ein Spaltenmenü wie die Auslegung');
   assert.match(studio, /title: 'Werkbank'/, 'Spalte Werkbank');
   assert.match(studio, /title: 'Einzeltools', wide: true/, 'Spalte Einzeltools, zweispaltig wie die Diagramme');
@@ -412,7 +412,9 @@ const KOPF_SEITEN = [
   'recht/ueber-uns.html', 'recht/kontakt.html',
   'theorie/pq2.html', 'theorie/kritische-geschwindigkeit.html', 'theorie/kreissegmente.html',
   'theorie/nebenbedingungen.html', 'theorie/entlueftung-vakuum.html', 'theorie/zuhaltung-sprengflaeche.html',
-  'simulation/index.html',
+  'simulation/index.html', 'simulation/dielogicfoam.html', 'simulation/shotsleevefoam.html',
+  'simulation/netzbewegung.html', 'simulation/validierung.html', 'simulation/validierung-niida.html',
+  'simulation/validierung-trometer.html', 'simulation/validierung-zamora.html',
   'tools/sprengflaeche/index.html', 'tools/teilekosten/index.html', 'tools/zyklus/index.html'
 ];
 
@@ -433,7 +435,29 @@ test('KaTeX-Seiten laden /shared/katex-init.js, kein onload= mehr am Script-Tag'
     assert.match(html, /<script defer src="\/shared\/katex-init\.js"><\/script>/, p + ': lädt katex-init.js nicht');
     geprüft++;
   }
-  assert.equal(geprüft, 8, 'acht Seiten binden KaTeX ein (seit 24.09. auch die Simulation)');
+  assert.equal(geprüft, 15, 'fünfzehn Seiten binden KaTeX ein: sechs Theorie-Seiten, die Startseite und seit 28.09. acht Seiten der Simulation');
+});
+
+/* Die Simulation ist seit 28.09. eine Seitenfamilie (Solver und Validierung),
+   gebaut und kopiert von handover/website/solver/publish.py in DieLogic_OF.
+   Das Menü und die Seiten müssen zusammenpassen: jeder Eintrag zeigt auf
+   eine vorhandene Seite, jede Seite steht im Menü, und jedes Bild, das eine
+   Seite zeigt, liegt im Repo. */
+test('nav: Simulation ist ein Spaltenmenü (Solver · Validierung), jede Seite existiert und zeigt nur vorhandene Bilder', () => {
+  const src = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
+  const sim = src.slice(src.indexOf("label: 'Simulation'"), src.indexOf("label: 'Theorie'"));
+  assert.match(sim, /columns: \[/, 'Spaltenmenü wie Auslegung und Studio');
+  assert.match(sim, /title: 'Solver'/, 'Spalte Solver');
+  assert.match(sim, /title: 'Validierung'/, 'Spalte Validierung');
+  const hrefs = [...sim.matchAll(/href: '\/simulation\/([a-z-]*(?:\.html)?)'/g)].map(m => m[1] || 'index.html');
+  const pages = readdirSync(path.join(site, 'simulation')).filter(f => f.endsWith('.html')).sort();
+  assert.deepEqual([...hrefs].sort(), pages, 'Menü und Seiten in web/simulation/ stimmen überein');
+  for (const p of pages) {
+    const html = readFileSync(path.join(site, 'simulation', p), 'utf8');
+    for (const [, img] of html.matchAll(/(?:src|poster)="(img\/[^"]+)"/g)) {
+      assert.ok(existsSync(path.join(site, 'simulation', img)), 'simulation/' + p + ': ' + img + ' fehlt');
+    }
+  }
 });
 
 function loadAsset(name) {

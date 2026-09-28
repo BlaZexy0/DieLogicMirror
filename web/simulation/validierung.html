@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validierung an Messungen · Simulation · DieLogic</title>
+  <!-- Entwurf: noch nicht in Suchmaschinen, bis die Validierung abgeschlossen ist. -->
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
+  <style>
+    /* Seitenspezifisch; Farben nur als Rollen. */
+    pre.code {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    pre.code .c { color: var(--muted); }
+    .th-table th code { text-transform: none; }
+    .toc-sidebar ul + h3 { margin-top: 1.6rem; }
+
+    /* Videos der Beispielrechnungen (ParaView, pvbatch) */
+    .fig-wrap video {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: var(--dark);
+      border-radius: 6px 6px 0 0;
+    }
+    .fig-platzhalter {
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+      margin: 0.75rem;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .kennzahlen td:nth-child(n+2),
+    .kennzahlen th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+    .fig-schmal img { max-width: 520px; margin: 0 auto; display: block; }
+    .toc-knopf { margin-top: 1rem; }
+    h3.sub-title {
+      font-size: 1.05rem;
+      margin: 1.6rem 0 0.4rem;
+      color: var(--text);
+    }
+    .seiten-nav li.nav-sub { padding-left: 0.9rem; font-size: 0.92em; }
+    .seiten-nav strong { color: var(--text); }
+    .karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .karte { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.9rem 1rem; background: var(--surface2); }
+    .karte h4 { margin: 0 0 0.35rem; font-size: 1rem; }
+    .karte p { margin: 0 0 0.6rem; color: var(--muted); font-size: 0.9rem; }
+    .status-ok { color: var(--ok-text); }
+    .status-offen { color: var(--caution-text, var(--muted)); }
+  </style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="/">DieLogic</a>
+  <span>›</span>
+  <a href="index.html">Simulation</a>
+  <span>›</span>
+  Validierung
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Validierung an Messungen</h1>
+    <p class="subtitle">Die Solver werden an den Messungen aus drei Veröffentlichungen gemessen, nicht an den Simulationen der Autoren: Fotos von Wassermodellen und daraus gemessene Luftvolumina. Diese Seite erklärt, wie aus den Bildern Zahlen werden.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">Wassermodell</span>
+      <span class="hero-tag">Bildauswertung</span>
+      <span class="hero-tag">Messung</span>
+      <span class="hero-tag">Kalibrierung</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#v1">1. Grundsatz</a></li>
+        <li><a href="#v2">2. Vom Foto zum Feld</a></li>
+        <li><a href="#v3">3. Die Zeitachse</a></li>
+        <li><a href="#v4">4. Kennzahlen</a></li>
+        <li><a href="#v5">5. Die Fälle</a></li>
+      </ul>
+      <h3>Seiten</h3>
+      <ul class="seiten-nav">
+        <li><a href="index.html">Übersicht</a></li>
+        <li><a href="dielogicfoam.html">dieLogicFoam</a></li>
+        <li><a href="shotsleevefoam.html">shotSleeveFoam</a></li>
+        <li><a href="netzbewegung.html">Netzbewegung</a></li>
+        <li><strong>Validierung</strong></li>
+        <li class="nav-sub"><a href="validierung-niida.html">Niida und Maeda 2020</a></li>
+        <li class="nav-sub"><a href="validierung-trometer.html">Trometer et al. 2023</a></li>
+        <li class="nav-sub"><a href="validierung-zamora.html">Zamora und López</a></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <div class="draft-note">
+        📚 <b>Entwurf:</b> Die Validierung läuft noch; Zahlen und Befunde werden mit jeder
+        Rechnung nachgetragen (Stand 28.09.2026). Der Text ist noch nicht redigiert.
+      </div>
+
+      <span class="section-anchor" id="v1"></span>
+      <h2 class="section-title">1. Grundsatz</h2>
+      <div class="prose">
+        <p>Alle drei Quellen haben neben ihren Versuchen auch eigene Simulationen veröffentlicht (TopCAST, MAGMASOFT,
+          FLOW-3D). Die Solver werden <strong>nur an den Versuchen</strong> gemessen: an den Fotos und an den Größen,
+          die die Autoren aus ihren Videos gemessen haben. Die fremden Simulationen dienen höchstens als Hinweis,
+          wo ein Modell an Grenzen kommt.</p>
+        <p>Aus jeder Veröffentlichung wird entnommen: die Geometrie (als OpenSCAD-Modell, aus den bemaßten
+          Zeichnungen und Maßen in den Bildern), die Versuchseinstellungen (Füllgrad, Schusskurve, Vakuum,
+          Stoffwerte), die Fotos der Füllung und die gemessenen Kurven. Jede Zahl ist gekennzeichnet: in der Quelle
+          angegeben, aus einer Abbildung gemessen oder angenommen.</p>
+      </div>
+
+      <span class="section-anchor" id="v2"></span>
+      <h2 class="section-title">2. Vom Foto zum Feld</h2>
+      <div class="prose">
+        <p>Jedes Foto wird auf die Modellebene der Geometrie gelegt und in einen Wasseranteil je Bildpunkt umgerechnet,
+          auf einem Raster von 0,25 mm.</p>
+        <ul>
+          <li><strong>Lage:</strong> Merkmale, die in jedem Bild zu sehen sind: die dunkle Scheibe der Gießbüchse
+            (Niida), die Insel (Trometer), der Umriss des Modells (Simulationsbilder). Die Umrisslinie des Modells
+            liegt nach der Zuordnung auf den Kanten im Foto.</li>
+          <li><strong>Wasseranteil:</strong> Wasser mit Farbstoff schluckt Licht nach Lambert und Beer. Der Anteil der
+            Plattendicke, den das Wasser füllt, ist daher die Extinktion $A = -\ln(I/I_0)$ im Verhältnis zur Extinktion
+            der vollen Dicke, nicht der lineare Farbwert.</li>
+          <li><strong>Verdeckt:</strong> Stellen, die im Foto nicht zu sehen sind (Anschnitt vor der dunklen Scheibe,
+            Anschluss der Vakuumleitung), werden ausgeblendet und nicht bewertet.</li>
+        </ul>
+      </div>
+      <div class="insight-box"><span class="label">Prüfung an der Massenbilanz</span>
+        <p>Wasser ist inkompressibel: das Wasservolumen im Hohlraum muss zwischen zwei Fotos genau um die vom Kolben
+          verdrängte Menge wachsen, $\Delta V = A_K\,v_K\,\Delta t$, und der Bildabstand ist bekannt (60 Bilder je
+          Sekunde). Mit der Extinktion ergeben alle vier Fotoreihen von Niida 88 bis 95 % der Verdrängung, bei
+          dünnem wie bei vollem Wasser. Der lineare Farbwert ergibt 69 bis 132 %: er überschätzt dünnes Wasser.</p></div>
+
+      <div class="fig-wrap"><img src="img/val/massenbilanz.webp" alt="Wasservolumen aus den Fotos (Punkte, Extinktion nach Lambert und Beer) und die vom Kolben verdrängte Menge (Linien) über der Zeit seit dem Anschnitt" loading="lazy"><div class="fig-cap">Wasservolumen aus den Fotos (Punkte, Extinktion nach Lambert und Beer) und die vom Kolben verdrängte Menge (Linien) über der Zeit seit dem Anschnitt</div></div><div class="table-scroll"><table class="th-table kennzahlen"><thead><tr><th>Fotoreihe</th><th>Anschnitt auf der Videouhr [s]</th><th>Anstieg / Verdrängung</th></tr></thead><tbody><tr><td><code>case1</code></td><td>8,307</td><td>112 %</td></tr><tr><td><code>case4</code></td><td>8,380</td><td>93 %</td></tr><tr><td><code>case2</code></td><td>8,664</td><td>102 %</td></tr><tr><td><code>case5</code></td><td>8,735</td><td>93 %</td></tr></tbody></table></div>
+
+      <span class="section-anchor" id="v3"></span>
+      <h2 class="section-title">3. Die Zeitachse</h2>
+      <div class="prose">
+        <p>Die Zeiten unter den Fotos sind Zeiten der Videouhr mit beliebigem Nullpunkt. Die Rechnung beginnt, wenn
+          das Wasser den Anschnitt erreicht. Die Massenbilanz liefert für jede Fotoreihe diesen Zeitpunkt auf der
+          Videouhr: eine Gerade durch das Wasservolumen der Fotos, mit der bekannten Kolbengeschwindigkeit und dem
+          bekannten Umschaltpunkt. Damit hat jedes Foto eine Zeit seit dem Anschnitt. Beim Vergleich wird nur noch
+          eine kleine Korrektur von höchstens ±0,03 s zugelassen, die Unsicherheit der Farbkalibrierung; sie wird so
+          gewählt, dass das Wasservolumen in Foto und Rechnung übereinstimmt, nicht die Form. So gehen die
+          Formkennzahlen nicht in die Zuordnung ein.</p>
+      </div>
+
+      <span class="section-anchor" id="v4"></span>
+      <h2 class="section-title">4. Kennzahlen</h2>
+      <div class="table-scroll"><table class="th-table">
+        <thead><tr><th>Kennzahl</th><th>Messung</th><th>Rechnung</th></tr></thead>
+        <tbody>
+          <tr><td>Fläche (IoU)</td><td>Bildpunkte mit Wasseranteil über 0,5</td><td>über die Plattendicke gemittelter Anteil über 0,5, gleiches Raster</td></tr>
+          <tr><td>Front</td><td>höchster Punkt mit Wasser im Hohlraum</td><td>ebenso</td></tr>
+          <tr><td>Eingeschlossene Luft (Niida)</td><td>Abb. 6 der Quelle, aus den Videos gemessen</td>
+            <td>das Bildverfahren der Quelle auf das gerechnete Feld: Volumen zwischen Wänden und freier Oberfläche minus Wasservolumen</td></tr>
+          <tr><td>Luftnester (Trometer)</td><td>trockene Fläche im Hohlraum bei gleichem Füllstand</td><td>ebenso</td></tr>
+        </tbody>
+      </table></div>
+      <div class="prose">
+        <p>IoU ist die Schnittmenge der beiden Wasserflächen geteilt durch ihre Vereinigung: 1 heißt deckungsgleich,
+          0 heißt keine Überlappung.</p>
+      </div>
+
+      <span class="section-anchor" id="v5"></span>
+      <h2 class="section-title">5. Die Fälle</h2>
+      <div class="karten">
+        <div class="karte"><h4>Niida und Maeda 2020</h4><p>Sechs Schussprofile, Fotos und gemessenes Luftvolumen.</p>
+          <a class="btn btn-outline" href="validierung-niida.html">Zum Fall</a></div>
+        <div class="karte"><h4>Trometer et al. 2023</h4><p>Rechteckform mit Insel bei 1 bar, 200 und 100 mbar.</p>
+          <a class="btn btn-outline" href="validierung-trometer.html">Zum Fall</a></div>
+        <div class="karte"><h4>Zamora und López</h4><p>Welle in der Gießkammer; eingeschlossene Luft in 13 gemessenen Einstellungen, RMSE 0,012.</p>
+          <a class="btn btn-outline" href="validierung-zamora.html">Zum Fall</a></div>
+      </div>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>

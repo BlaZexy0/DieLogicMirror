@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gießkammer nach Zamora und López · Simulation · DieLogic</title>
+  <!-- Entwurf: noch nicht in Suchmaschinen, bis die Validierung abgeschlossen ist. -->
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
+  <style>
+    /* Seitenspezifisch; Farben nur als Rollen. */
+    pre.code {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    pre.code .c { color: var(--muted); }
+    .th-table th code { text-transform: none; }
+    .toc-sidebar ul + h3 { margin-top: 1.6rem; }
+
+    /* Videos der Beispielrechnungen (ParaView, pvbatch) */
+    .fig-wrap video {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: var(--dark);
+      border-radius: 6px 6px 0 0;
+    }
+    .fig-platzhalter {
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+      margin: 0.75rem;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .kennzahlen td:nth-child(n+2),
+    .kennzahlen th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+    .fig-schmal img { max-width: 520px; margin: 0 auto; display: block; }
+    .toc-knopf { margin-top: 1rem; }
+    h3.sub-title {
+      font-size: 1.05rem;
+      margin: 1.6rem 0 0.4rem;
+      color: var(--text);
+    }
+    .seiten-nav li.nav-sub { padding-left: 0.9rem; font-size: 0.92em; }
+    .seiten-nav strong { color: var(--text); }
+    .karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .karte { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.9rem 1rem; background: var(--surface2); }
+    .karte h4 { margin: 0 0 0.35rem; font-size: 1rem; }
+    .karte p { margin: 0 0 0.6rem; color: var(--muted); font-size: 0.9rem; }
+    .status-ok { color: var(--ok-text); }
+    .status-offen { color: var(--caution-text, var(--muted)); }
+  </style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="/">DieLogic</a>
+  <span>›</span>
+  <a href="index.html">Simulation</a>
+  <span>›</span>
+  <a href="validierung.html">Validierung</a>
+  <span>›</span>
+  Zamora und López
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Gießkammer nach Zamora und López</h1>
+    <p class="subtitle">Langsamer Schuss in einer Gießkammer aus Plexiglas: die Welle vor dem Kolben, fotografiert bei verschiedenen Füllgraden und Kolbengeschwindigkeiten.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">shotSleeveFoam</span>
+      <span class="hero-tag">Welle</span>
+      <span class="hero-tag">Füllgrad</span>
+      <span class="hero-tag">Fotos</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#z1">1. Versuch</a></li>
+        <li><a href="#z2">2. Modell</a></li>
+        <li><a href="#z3">3. Messgröße: Luft in der Kammer</a></li>
+        <li><a href="#z4">4. Wellenform auf den Fotos</a></li>
+      </ul>
+      <h3>Seiten</h3>
+      <ul class="seiten-nav">
+        <li><a href="index.html">Übersicht</a></li>
+        <li><a href="dielogicfoam.html">dieLogicFoam</a></li>
+        <li><a href="shotsleevefoam.html">shotSleeveFoam</a></li>
+        <li><a href="netzbewegung.html">Netzbewegung</a></li>
+        <li><a href="validierung.html">Validierung</a></li>
+        <li class="nav-sub"><a href="validierung-niida.html">Niida und Maeda 2020</a></li>
+        <li class="nav-sub"><a href="validierung-trometer.html">Trometer et al. 2023</a></li>
+        <li class="nav-sub"><strong>Zamora und López</strong></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <div class="draft-note">
+        📚 <b>Entwurf:</b> Die Validierung läuft noch; Zahlen und Befunde werden mit jeder
+        Rechnung nachgetragen (Stand 28.09.2026). Der Text ist noch nicht redigiert.
+      </div>
+
+      <span class="section-anchor" id="z1"></span>
+      <h2 class="section-title">1. Versuch</h2>
+      <div class="prose">
+        <p>Zamora et al., J. Manuf. Sci. Eng. 130 (2008) 051009, und Int. J. Adv. Manuf. Technol. 33 (2007) 266, nach
+          den Arbeiten von López und Faura. Eine Gießkammer aus Plexiglas mit Wasser, Füllgrad 25,2 bis 50 %; der Kolben
+          beschleunigt nach dem Gesetz von López. Fotografiert wurde die Welle vor dem Kolben bei verschiedenen
+          Geschwindigkeiten, darunter die optimale Schusskurve und Fälle mit Wandstrahl.</p>
+      </div>
+
+      <span class="section-anchor" id="z2"></span>
+      <h2 class="section-title">2. Modell</h2>
+      <div class="prose">
+        <p>Zwölf Einstellungen aus der Vorlage <code>cases/shotSleeve</code>, erzeugt von
+          <code>scripts/setup_runs.py</code>: Geometrie, Füllgrad, Kolbengesetz, Wasser und Luft, Ausgabe genau zu den
+          Zeiten der Fotos. Die Fotos der Quelle sind in <code>paper/frames.json</code> kalibriert.</p>
+      </div>
+
+      <span class="section-anchor" id="z3"></span>
+      <h2 class="section-title">3. Messgröße: Luft in der Kammer</h2>
+      <div class="prose">
+        <p>Gemessen haben Zamora et al. mit einer Kamera (1000 Bilder je Sekunde) den Zeitpunkt $t_p$, zu dem das
+          Wasser in den Anschnitt oben an der Stirnwand zu fließen beginnt. Aus dem Kolbenweg zu diesem Zeitpunkt folgt
+          die Luft, die dann noch in der Kammer ist (Gl. 2 der Quelle):</p>
+        <div class="math-block">$$\frac{V}{AL} = \frac{L - X(t_p)}{L} - f$$</div>
+        <p>Die Werte (Abb. 9, Quadrate) sind digitalisiert in <code>paper/measurements/</code>; die Kreuze derselben
+          Abbildung sind Rechnungen der Autoren und werden nicht verwendet. In der Rechnung ist $t_p$ der erste
+          Zeitschritt, in dem Wasser hinter der Stirnwand ist. Das Fenster der Stirnwand reicht im Modell bis 0,53 R über
+          die Achse, tiefer als der Anschnitt im Versuch; der gerechnete Wert ist daher eine obere Schranke.</p>
+      </div>
+      <div class="fig-wrap"><img src="img/val/zamora-luft.webp" alt="Luft in der Kammer, wenn das Wasser den Anschnitt erreicht: Messung der Quelle (Abb. 9, Quadrate) und Rechnung" loading="lazy"><div class="fig-cap">Luft in der Kammer, wenn das Wasser den Anschnitt erreicht: Messung der Quelle (Abb. 9, Quadrate) und Rechnung</div></div><div class="table-scroll"><table class="th-table kennzahlen"><thead><tr><th>Rechnung</th><th>f</th><th>U*</th><th>Messung V/(AL)</th><th>Rechnung V/(AL)</th></tr></thead><tbody><tr><td><code>air_f0252_U042</code></td><td>0,252</td><td>0,42</td><td>0,161</td><td>0,182</td></tr><tr><td><code>vis_f0252_U042</code></td><td>0,252</td><td>0,42</td><td>0,161</td><td>0,182</td></tr><tr><td><code>air_f0252_U054</code></td><td>0,252</td><td>0,54</td><td>0,106</td><td>0,116</td></tr><tr><td><code>air_f0252_U064</code></td><td>0,252</td><td>0,64</td><td>0,069</td><td>0,071</td></tr><tr><td><code>air_f0252_U078</code></td><td>0,252</td><td>0,78</td><td>0,025</td><td>0,027</td></tr><tr><td><code>air_f0252_U085</code></td><td>0,252</td><td>0,85</td><td>0,012</td><td>0,010</td></tr><tr><td><code>air_f0252_U088</code></td><td>0,252</td><td>0,88</td><td>0,001</td><td>0,005</td></tr><tr><td><code>vis_f0252_U088</code></td><td>0,252</td><td>0,88</td><td>0,001</td><td>0,005</td></tr><tr><td><code>air_f0252_U091</code></td><td>0,252</td><td>0,91</td><td>0,011</td><td>0,005</td></tr><tr><td><code>air_f0252_U099</code></td><td>0,252</td><td>0,99</td><td>0,090</td><td>0,072</td></tr><tr><td><code>vis_f0252_U100</code></td><td>0,252</td><td>1,00</td><td>0,090</td><td>n. b.</td></tr><tr><td><code>air_f0374_U043</code></td><td>0,374</td><td>0,43</td><td>0,109</td><td>0,114</td></tr><tr><td><code>vis_f0374_U043</code></td><td>0,374</td><td>0,43</td><td>0,109</td><td>0,114</td></tr><tr><td><code>air_f0374_U056</code></td><td>0,374</td><td>0,56</td><td>0,044</td><td>0,049</td></tr><tr><td><code>air_f0374_U065</code></td><td>0,374</td><td>0,65</td><td>0,001</td><td>0,015</td></tr><tr><td><code>air_f0374_U068</code></td><td>0,374</td><td>0,68</td><td>0,002</td><td>0,005</td></tr><tr><td><code>air_f0374_U074</code></td><td>0,374</td><td>0,74</td><td>0,013</td><td>0,037</td></tr><tr><td><code>vis_f0374_U074</code></td><td>0,374</td><td>0,74</td><td>0,013</td><td>n. b.</td></tr></tbody></table></div>
+      <div class="insight-box"><span class="label">Befund</span>
+        <p>Über alle 13 gemessenen Einstellungen liegt shotSleeveFoam im Mittel 0,005 über der Messung (RMSE 0,012,
+          größte Abweichung 0,024). Die Rechnung trifft den Abfall der Luft mit der Geschwindigkeit, das Optimum
+          (Füllgrad 0,252 bei $U^* \approx 0{,}88$, Füllgrad 0,374 bei $U^* \approx 0{,}65$ bis $0{,}68$) und den
+          Wiederanstieg darüber, wenn die Welle überschlägt. Bei 0,374 liegt das gerechnete Optimum etwas höher
+          (0,015 statt 0,001 bei $U^* = 0{,}65$). Die positive Abweichung passt zum Kriterium: das Fenster der Stirnwand
+          im Modell liegt tiefer als der Anschnitt, der Wert ist eine obere Schranke. Einstellungen am Solver waren
+          dafür nicht nötig; es gelten die Grundeinstellungen der Vorlage <code>cases/shotSleeve</code>.</p></div>
+
+      <span class="section-anchor" id="z4"></span>
+      <h2 class="section-title">4. Wellenform auf den Fotos</h2>
+      <div class="prose">
+        <p>In jedem Foto der Quelle ist das Feld durch die Rechnung zur selben Zeit ersetzt. Die weißen Punkte in den
+          Fotos sind die Rechnung der Autoren, nicht die Messung.</p>
+      </div>
+      <div class="fig-wrap"><img src="img/val/zamora-fig06.webp" alt="Fig06: Fotos der Quelle, darin die Rechnung" loading="lazy"><div class="fig-cap">Fig06: Fotos der Quelle, darin die Rechnung</div></div>
+<div class="fig-wrap"><img src="img/val/zamora-fig07.webp" alt="Fig07: Fotos der Quelle, darin die Rechnung" loading="lazy"><div class="fig-cap">Fig07: Fotos der Quelle, darin die Rechnung</div></div>
+<div class="fig-wrap"><img src="img/val/zamora-fig08.webp" alt="Fig08: Fotos der Quelle, darin die Rechnung" loading="lazy"><div class="fig-cap">Fig08: Fotos der Quelle, darin die Rechnung</div></div>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>

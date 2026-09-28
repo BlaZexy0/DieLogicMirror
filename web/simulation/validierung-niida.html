@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wassermodell nach Niida und Maeda · Simulation · DieLogic</title>
+  <!-- Entwurf: noch nicht in Suchmaschinen, bis die Validierung abgeschlossen ist. -->
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
+  <style>
+    /* Seitenspezifisch; Farben nur als Rollen. */
+    pre.code {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    pre.code .c { color: var(--muted); }
+    .th-table th code { text-transform: none; }
+    .toc-sidebar ul + h3 { margin-top: 1.6rem; }
+
+    /* Videos der Beispielrechnungen (ParaView, pvbatch) */
+    .fig-wrap video {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: var(--dark);
+      border-radius: 6px 6px 0 0;
+    }
+    .fig-platzhalter {
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+      margin: 0.75rem;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .kennzahlen td:nth-child(n+2),
+    .kennzahlen th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+    .fig-schmal img { max-width: 520px; margin: 0 auto; display: block; }
+    .toc-knopf { margin-top: 1rem; }
+    h3.sub-title {
+      font-size: 1.05rem;
+      margin: 1.6rem 0 0.4rem;
+      color: var(--text);
+    }
+    .seiten-nav li.nav-sub { padding-left: 0.9rem; font-size: 0.92em; }
+    .seiten-nav strong { color: var(--text); }
+    .karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .karte { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.9rem 1rem; background: var(--surface2); }
+    .karte h4 { margin: 0 0 0.35rem; font-size: 1rem; }
+    .karte p { margin: 0 0 0.6rem; color: var(--muted); font-size: 0.9rem; }
+    .status-ok { color: var(--ok-text); }
+    .status-offen { color: var(--caution-text, var(--muted)); }
+  </style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="/">DieLogic</a>
+  <span>›</span>
+  <a href="index.html">Simulation</a>
+  <span>›</span>
+  <a href="validierung.html">Validierung</a>
+  <span>›</span>
+  Niida und Maeda 2020
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Wassermodell nach Niida und Maeda</h1>
+    <p class="subtitle">Dünne Platte 100 × 150 × 5 mm mit Trichter und Überlauf, Wasser aus einer Gießkammer mit 42,8 % Füllgrad. Sechs Schussprofile, Fotos mit 60 Bildern je Sekunde und das gemessene eingeschlossene Luftvolumen.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">dieLogicFoam</span>
+      <span class="hero-tag">P1 / P2</span>
+      <span class="hero-tag">Luftvolumen</span>
+      <span class="hero-tag">Fotos</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#n1">1. Versuch</a></li>
+        <li><a href="#n2">2. Messgrößen</a></li>
+        <li><a href="#n3">3. Modell</a></li>
+        <li><a href="#n4">4. Ergebnisse</a></li>
+        <li><a href="#n5">5. Abstimmung</a></li>
+      </ul>
+      <h3>Seiten</h3>
+      <ul class="seiten-nav">
+        <li><a href="index.html">Übersicht</a></li>
+        <li><a href="dielogicfoam.html">dieLogicFoam</a></li>
+        <li><a href="shotsleevefoam.html">shotSleeveFoam</a></li>
+        <li><a href="netzbewegung.html">Netzbewegung</a></li>
+        <li><a href="validierung.html">Validierung</a></li>
+        <li class="nav-sub"><strong>Niida und Maeda 2020</strong></li>
+        <li class="nav-sub"><a href="validierung-trometer.html">Trometer et al. 2023</a></li>
+        <li class="nav-sub"><a href="validierung-zamora.html">Zamora und López</a></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <div class="draft-note">
+        📚 <b>Entwurf:</b> Die Validierung läuft noch; Zahlen und Befunde werden mit jeder
+        Rechnung nachgetragen (Stand 28.09.2026). Der Text ist noch nicht redigiert.
+      </div>
+
+      <span class="section-anchor" id="n1"></span>
+      <h2 class="section-title">1. Versuch</h2>
+      <div class="prose">
+        <p>A. Niida, Y. Maeda, Materials Transactions 61 (2020) 1364. Eine Gießkammer aus Acryl (Ø 50 mm, 262 mm lang,
+          Gießbüchse konisch 50 auf 57 mm über 40 mm) füllt eine senkrechte Platte, 100 × 150 × 5 mm mit einem Trichter
+          zum Anschnitt (nach der Zeichnung 22 mm breit, im Modell der Autoren rund 30 mm) und einem Überlauf mit Schlauch zum Eimer. 259 g Wasser, das sind 42,8 % Füllgrad.
+          Der Kolben fährt mit 20 mm/s und schaltet auf 100, 150 oder 200 mm/s um: vor dem Anschnitt (P1) oder 5 mm
+          danach (P2). Gefilmt von vorn mit 60 Bildern je Sekunde.</p>
+      </div>
+      <div class="table-scroll"><table class="th-table kennzahlen">
+        <thead><tr><th>Einstellung</th><th>Umschaltung</th><th>v hoch [mm/s]</th><th>Umschaltweg [mm]</th><th>Fotos</th></tr></thead>
+        <tbody>
+          <tr><td><code>case1</code></td><td>P1</td><td>100</td><td>174,8</td><td>Abb. 5</td></tr>
+          <tr><td><code>case2</code></td><td>P1</td><td>150</td><td>174,1</td><td>Abb. 7</td></tr>
+          <tr><td><code>case3</code></td><td>P1</td><td>200</td><td>174,4</td><td>nur Luftvolumen</td></tr>
+          <tr><td><code>case4</code></td><td>P2</td><td>100</td><td>180,7</td><td>Abb. 5</td></tr>
+          <tr><td><code>case5</code></td><td>P2</td><td>150</td><td>180,0</td><td>Abb. 9</td></tr>
+          <tr><td><code>case6</code></td><td>P2</td><td>200</td><td>179,2</td><td>nur Luftvolumen</td></tr>
+        </tbody>
+      </table></div>
+
+      <span class="section-anchor" id="n2"></span>
+      <h2 class="section-title">2. Messgrößen</h2>
+      <div class="prose">
+        <p>Neben den Fotos haben die Autoren aus den Videos das eingeschlossene Luftvolumen gemessen (Abb. 6), für alle
+          sechs Einstellungen über der Zeit seit dem Anschnitt. Die Kurven sind automatisch digitalisiert
+          (Symbole nach Form, Füllung und Grauwert erkannt) und liegen in <code>paper/measurements/</code>.
+          Die Aussage der Messung ist deutlich: bei P1 bedeckt das Wasser 0,13 s nach dem Anschnitt schon fast die
+          ganze Vorderwand, obwohl erst rund 20 cm³ Wasser im Hohlraum sind. Es läuft als dünner Film an der Wand.
+          Bei P2 füllt es die Platte von unten über die ganze Dicke.</p>
+      </div>
+
+      <span class="section-anchor" id="n3"></span>
+      <h2 class="section-title">3. Modell</h2>
+      <div class="prose">
+        <p>Gerechnet wird ab dem Zeitpunkt, an dem Gießkammer und Gießbüchse voll sind (nach 175,72 mm Kolbenweg).
+          Das Netz enthält die Platte mit Überlauf und Entlüftung, die Gießbüchse und 10 mm der Kammer bis zur
+          Endlage des Kolbens; am Eintritt strömt das Wasser mit der Kolbengeschwindigkeit ein. Kartesisches Netz
+          mit 1 mm, die Platte ist genau der Umriss des Modells.</p>
+        <p>Trichterboden und Anschnitt sind 30 mm breit. Aus der Zeichnung ergaben sich 22 mm; das Modell der Autoren
+          (sein Umriss ist in Abb. 7 und 9 zu sehen) und das Foto des vollen Hohlraums zeigen 30 bis 34 mm. Mit 30 mm
+          liegen alle Fotos und die Luftmessung näher am Versuch (Abschnitt 5), daher ist das seit dem 26.09.2026 die
+          Grundeinstellung. Die früheren Rechnungen mit 22 mm stehen als <code>gate22_*</code> in den Tabellen.</p>
+        <p>Turbulenz: RANS k-omega SST mit Wandfunktionen, seit dem 27.09.2026. Auf dem 30 mm breiten Anschnitt kam SST
+          der gemessenen Luft bei P1 und P2 am nächsten und bei P2 auch den Fotos. Laminar mit 20-facher Zähigkeit trifft
+          die Fotos bei P1 besser, schließt dort aber nur die Hälfte der gemessenen Luft ein (Abschnitt 5).</p>
+      </div>
+
+      <span class="section-anchor" id="n4"></span>
+      <h2 class="section-title">4. Ergebnisse</h2>
+      <div class="table-scroll"><table class="th-table kennzahlen"><thead><tr><th>Einstellung</th><th>Umschaltung, v hoch [mm/s]</th><th>Luft RMSE [cm³]</th><th>Luft am Ende gemessen / gerechnet [cm³]</th><th>Fotos: mittlere Abweichung</th><th>Fotos: IoU dick</th><th>Fotos: IoU nass</th><th>Massenbilanz der Fotos</th></tr></thead><tbody><tr><td><code>case1</code></td><td>P1, 100</td><td>9,8</td><td>67,4 / 50,7</td><td>0,311</td><td>0,24</td><td>0,75</td><td>1,12</td></tr><tr><td><code>case2</code></td><td>P1, 150</td><td>8,3</td><td>76,7 / 62,3</td><td>0,159</td><td>0,14</td><td>0,54</td><td>1,02</td></tr><tr><td><code>case3</code></td><td>P1, 200</td><td>8,4</td><td>78,8 / 62,4</td><td>keine Fotos</td><td>keine Fotos</td><td>keine Fotos</td><td>keine Fotos</td></tr><tr><td><code>case4</code></td><td>P2, 100</td><td>1,4</td><td>7,3 / 2,9</td><td>0,127</td><td>0,80</td><td>0,77</td><td>0,93</td></tr><tr><td><code>case5</code></td><td>P2, 150</td><td>8,0</td><td>12,1 / 6,9</td><td>0,240</td><td>0,62</td><td>0,71</td><td>0,93</td></tr><tr><td><code>case6</code></td><td>P2, 200</td><td>23,0</td><td>22,3 / 22,7</td><td>keine Fotos</td><td>keine Fotos</td><td>keine Fotos</td><td>keine Fotos</td></tr></tbody></table></div><p class="prose"><small>Grundeinstellung: Anschnitt 30 mm, k-omega SST, 1 mm. Luft: Abb. 6 der Quelle über die ganze Messung. Massenbilanz: Zuwachs des Wassers in den Fotos je verdrängtem Volumen des Kolbens (1 = stimmig).</small></p>
+      <div class="insight-box"><span class="label">Befund</span>
+        <p>Mit dem 30 mm breiten Anschnitt und SST liegt die eingeschlossene Luft in fünf der sechs Einstellungen
+          innerhalb von 10 cm³ (RMSE) an der Messung, mit dem 22 mm breiten Anschnitt waren es 11,5 bis 29 cm³ (drei Einstellungen gerechnet). Am besten
+          passt <code>case4</code> (P2, 100 mm/s): Fotos IoU 0,80, Luft RMSE 1,4 cm³. Bei P1 schließt die Rechnung
+          am Ende 20 bis 25 % zu wenig Luft ein, die dicke Front steigt zu schnell. Bei P2 mit 200 mm/s
+          (<code>case6</code>) schießt der Strahl nach dem Umschalten durch das Becken und schließt sofort 33 bis
+          41 cm³ ein, gemessen sind bis 0,35 s nur 1 bis 6 cm³; erst am Ende stimmt die Luft wieder überein.
+          Der zu schnelle Strahl bei hoher Geschwindigkeit bleibt die offene Stelle (Abschnitt 5).</p></div>
+      <h3 class="sub-title">4.1 Eingeschlossene Luft</h3>
+      <div class="fig-wrap"><img src="img/val/niida-case1-luft.webp" alt="&lt;code&gt;case1&lt;/code&gt;: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)" loading="lazy"><div class="fig-cap"><code>case1</code>: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case2-luft.webp" alt="&lt;code&gt;case2&lt;/code&gt;: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)" loading="lazy"><div class="fig-cap"><code>case2</code>: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case3-luft.webp" alt="&lt;code&gt;case3&lt;/code&gt;: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)" loading="lazy"><div class="fig-cap"><code>case3</code>: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case4-luft.webp" alt="&lt;code&gt;case4&lt;/code&gt;: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)" loading="lazy"><div class="fig-cap"><code>case4</code>: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case5-luft.webp" alt="&lt;code&gt;case5&lt;/code&gt;: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)" loading="lazy"><div class="fig-cap"><code>case5</code>: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case6-luft.webp" alt="&lt;code&gt;case6&lt;/code&gt;: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)" loading="lazy"><div class="fig-cap"><code>case6</code>: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)</div></div>
+      <h3 class="sub-title">4.2 Fotos</h3>
+      <div class="fig-wrap"><img src="img/val/niida-case1-vergleich.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto mit gemessener Front (magenta) neben der Rechnung in ParaView" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto mit gemessener Front (magenta) neben der Rechnung in ParaView</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case2-vergleich.webp" alt="&lt;code&gt;case2&lt;/code&gt;: Foto mit gemessener Front (magenta) neben der Rechnung in ParaView" loading="lazy"><div class="fig-cap"><code>case2</code>: Foto mit gemessener Front (magenta) neben der Rechnung in ParaView</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case4-vergleich.webp" alt="&lt;code&gt;case4&lt;/code&gt;: Foto mit gemessener Front (magenta) neben der Rechnung in ParaView" loading="lazy"><div class="fig-cap"><code>case4</code>: Foto mit gemessener Front (magenta) neben der Rechnung in ParaView</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case5-vergleich.webp" alt="&lt;code&gt;case5&lt;/code&gt;: Foto mit gemessener Front (magenta) neben der Rechnung in ParaView" loading="lazy"><div class="fig-cap"><code>case5</code>: Foto mit gemessener Front (magenta) neben der Rechnung in ParaView</div></div>
+
+      <span class="section-anchor" id="n5"></span>
+      <h2 class="section-title">5. Abstimmung</h2>
+      <div class="prose">
+        <p>Die Grundeinstellung trifft das Wasservolumen im Hohlraum zu jedem Foto, verteilt es aber falsch. Bei P1 schießt
+          der Strahl aus dem Anschnitt in 0,03 s bis zur Oberkante, im Versuch liegt die dicke Front nach 0,09 s erst bei
+          130 mm; das Wasser breitet sich dort über die Breite aus und läuft als dünner Film an der Vorderwand hoch. Bei P2
+          füllt der Versuch nach dem Umschalten ruhig von unten, die Rechnung spritzt durch das Becken bis nach oben.</p>
+        <p><strong>Befund:</strong> Die Rechnung führt genau den Volumenstrom des Kolbens durch den Anschnitt
+          (301 gegen 294 cm³/s), aber als eingeschnürten Strahl: rund 13 mm breit mit 5 m/s statt über die 22 mm des
+          Anschnitts mit 2,7 m/s. Die Rechnung der Autoren (TopCAST, laminar) zeigt denselben schnellen Strahl. Die
+          Varianten prüfen, was den Strahl im Versuch aufweitet und bremst; alle an <code>case2</code> bis 0,12 s, wo Fotos
+          und Luftmessung liegen:</p>
+        <ul>
+          <li><code>hz05</code>: 10 statt 5 Zellen über die Dicke. Keine Änderung: der dünne Film ist nicht die Ursache.</li>
+          <li><code>film</code>: Wandreibung für Filme dünner als eine halbe Zelle (neue Option <code>wallFilmFriction</code>
+            in dieLogicFoam, Scherspannung eines laminaren Films $\tau = 3\mu\bar u/\delta$). Luftvolumen etwas näher,
+            Strahl unverändert.</li>
+          <li><code>les</code>, <code>sst</code>: Turbulenzmodelle; der Strahl hat eine Reynolds-Zahl um $10^4$.</li>
+          <li><code>nu20</code>: laminar mit 20-facher Zähigkeit ($2\cdot10^{-5}$ m²/s), eine grobe Wirbelviskosität.
+            Die Fotos liegen so nah wie bei keiner anderen Variante: mittlere Abweichung 0,140, nasse Fläche IoU 0,65.
+            Der Strahl weitet sich auf und läuft als Film über die Breite, wie im Versuch. SST liefert im Wasser nur
+            eine Wirbelviskosität von im Mittel $3{,}5\cdot10^{-6}$ m²/s: der Einlauf ist dort laminar und der Strahl
+            nur wenige Zellen breit, das Modell baut die Turbulenz zu langsam auf. Eine Wirbelviskosität von
+            $10^{-5}$ bis $10^{-4}$ m²/s ist für einen Strahl mit 3 m/s im Spalt von 5 mm plausibel.</li>
+          <li><code>vf1</code>: Leerzellen nicht schneller als die schnellste Schmelze (<code>maxVoidVelocityFactor 1</code>).</li>
+          <li><code>gate30</code>: Trichterboden und Anschnitt 30 statt 22 mm breit. Die Zeichnung der Quelle ergab 22 mm,
+            das Modell der Autoren (Umriss in Abb. 7 und 9) und das Foto des leeren Hohlraums zeigen rund 30 mm bei
+            z = 30 mm. Der Anschnitt hat damit 150 statt 110 mm² Querschnitt, der Strahl ist langsamer. Bisher die
+            größte Verbesserung: Luftvolumen RMSE 10 200 statt 18 500 mm³, nasse Fläche IoU 0,49 statt 0,40. Die dicke
+            Front erreicht aber weiterhin nach 0,04 s die Oberkante.</li>
+          <li><code>p2_gate30</code>: derselbe Anschnitt bei P2. Die Fotos liegen deutlich näher: mittlere Abweichung
+            0,30 statt 0,52, dicke Fläche IoU 0,51 statt 0,17, nasse 0,69 statt 0,45; Luft bis 0,42 s RMSE 19 statt
+            32 cm³. Damit wird der 30 mm breite Anschnitt die Grundeinstellung aller sechs Einstellungen.</li>
+          <li><code>gate30_sst</code>, <code>p2_gate30_sst</code>: auf dem neuen Anschnitt zusätzlich SST, die beste
+            der Turbulenzvarianten. Bei P1 die beste Luftkurve bisher (RMSE 8,2 cm³), die Fotos nur wenig näher
+            (0,168 statt 0,171): der Strahl bleibt schmal und schnell. Bei P2 dagegen deutlich näher: mittlere
+            Abweichung 0,239 statt 0,303, dicke Fläche IoU 0,61 statt 0,51, Luft RMSE 9,0 statt 19,0 cm³.</li>
+          <li><code>gate30_nu20</code>, <code>_nu50</code>, <code>_nu100</code>: Abgleich einer konstanten wirksamen
+            Zähigkeit auf dem neuen Anschnitt. Die Fotos werden mit 20-facher Zähigkeit deutlich besser (mittlere
+            Abweichung 0,141 statt 0,171, nasse Fläche 0,63 statt 0,49), mit mehr nicht weiter (0,142, 0,145). Die
+            eingeschlossene Luft sinkt dagegen mit jeder Stufe: nach 0,12 s gemessen 77 cm³, gerechnet 65 (laminar),
+            35, 31 und 23 cm³. Die Zähigkeit verteilt das Wasser in der Ebene richtig, füllt aber die ganze Dicke;
+            im Versuch läuft es als Film an der Vorderwand und lässt Luft in der Dicke zurück.</li>
+          <li>Bei allen Varianten erreicht die dicke Front die Oberkante nach etwa 0,06 s, im Versuch steht sie dann bei
+            95 mm. Die Ablösung beim Umlenken aus der Gießbüchse gibt die Rechnung dabei wieder: 75 bis 93 % des Wassers
+            liegen in der vorderen Hälfte der Dicke, bei 5 wie bei 10 Zellen. Das Wasser läuft also auch in der Rechnung
+            als Film an der Vorderwand, aber zu schnell nach oben. Über dem Anschnitt steigt das Wasser in der Rechnung
+            mit im Mittel 3,7 m/s (bei allen Varianten 3,5 bis 3,8 m/s), es füllt nur etwa die halbe Dicke. Der volle
+            Querschnitt von 30 × 5 mm² ergäbe 2,0 m/s, und so schnell steigt im Versuch die nasse Front (115 mm nach
+            0,036 s, 215 mm nach 0,086 s). Im Versuch füllt das Wasser den Anschnitt also offenbar ganz, in der Rechnung
+            schnürt es sich hinter der Kante auf der Seite der Kammer ein. Nächster Schritt: die Form dieser Kante
+            (in den Quellen nicht bemaßt) und ein feineres Netz nur im Anschnitt.</li>
+          <li><code>p2_gate30_nu20</code>: dieselbe Zähigkeit bei P2; 50- und 100-fach entfallen dort. Fast gleich wie SST:
+            mittlere Abweichung 0,226 gegen 0,239, nasse Fläche 0,76 gegen 0,72, Luft RMSE 10,9 gegen 9,0 cm³.</li>
+        </ul>
+        <p><strong>Die langsame Phase bei P1.</strong> Die Grundeinstellung beginnt, wenn Gießkammer und Gießbüchse ganz
+          voll sind (175,7 mm Kolbenweg), mit leerer Platte und sofort mit $V_H$. Mit ebener Oberfläche erreicht das
+          Wasser aber den tiefsten Punkt des Anschnitts (21,5 mm über der Achse) schon bei 170,5 mm, die Oberkante der
+          Kammer (25 mm) bei 175,2 mm. Beim Umschalten in <code>case2</code> (174,1 mm) steht es bei 23,8 mm: der
+          Anschnitt ist unten schon voll Wasser, oben an der Kammer liegt noch eine dünne Luftschicht von 3 cm³. In der
+          Rechnung ist genau dieser untere Teil des Anschnitts leer, hinter der Kante, an der sich der Strahl einschnürt.
+          <code>p1_slow</code> rechnet deshalb die ganze Kammer mit bewegtem Kolben ab 165 mm aus der Ruhe, mit 20 mm/s bis
+          zum Umschalten. Ergebnis: der Anschnitt füllt sich unten wie erwartet vor dem Umschalten, der Strahl danach ist
+          aber derselbe (3,7 m/s über die halbe Dicke, 85 % an der Vorderwand; Fotos 0,177 gegen 0,168, Luft RMSE 14 gegen
+          8 cm³). Die langsame Phase ist nicht die Ursache; die Einschnürung ist eine Folge der Form des Übergangs.</p>
+        <p><strong>Tiefe des Anschnitts.</strong> Der Anschnitt reicht unter die Oberkante der Bohrung der Gießbüchse
+          (Φ57). Zuerst gemessen waren 7 mm; mit an den Kreis angepasstem Umriss (seine Oberkante liegt hinter den Bögen
+          des Anschnitts verdeckt) ergibt Abb. 4 etwa 10 mm, Abb. 1 8,4 bis 10,5 mm. Das Fenster, durch das das Wasser
+          aus der Büchse in die Platte tritt, ist damit 10 statt 7 mm hoch, gut 40 % mehr Fläche.
+          <code>gate_deep</code> und <code>p2_gate_deep</code> prüfen das (tiefster Punkt 18,5 statt 21,5 mm über der Achse).</p>
+        <p>Ergebnis bei P1 (<code>case2</code> bis 0,12 s), verglichen mit der Grundeinstellung:</p>
+        <ul>
+          <li><code>gate_deep</code>: der Strahl füllt 97 statt 81 mm² des Anschnitts und steigt mit 3,0 statt 3,7 m/s; die
+            dicke Front liegt nach 0,036 s bei 132 statt 169 mm (Versuch 66 mm). Fotos so nah wie bei keiner Variante
+            zuvor: mittlere Abweichung 0,132, dicke Fläche IoU 0,25, nasse 0,63. Die Luft sinkt dagegen (am Ende 54 statt
+            gemessen 77 cm³, RMSE 12,7 cm³).</li>
+          <li><code>gate_ref05</code>: 0,5 mm im Bereich von Büchse und Anschnitt. Der Strahl ist fast gleich (3,5 m/s),
+            die Luft am nächsten an der Messung (RMSE 6,0 cm³), die dicke Fläche besser (IoU 0,23).</li>
+          <li><code>gate_deep12</code>: 12 mm, der Außenrand des Umrisses in Abb. 4. Keine weitere Verbesserung (Front
+            134 mm, Fotos 0,137, Luft RMSE 16,9 cm³): 10 mm, der gemessene Wert, bleibt.</li>
+          <li><code>p2_gate_deep</code>: bei P2 gleiche Fotos wie die Grundeinstellung (0,241 gegen 0,239, dicke Fläche
+            0,60 gegen 0,61), die Luft näher (RMSE 6,5 gegen 9,0 cm³), die Front nach dem Umschalten langsamer (191 statt
+            215 mm nach 0,335 s, Versuch 135 mm).</li>
+          <li>Die Form des Übergangs ist also der Hebel, das Netz wirkt zusätzlich auf die Luft. Zuletzt:
+            <code>gate_deep_ref05</code> und <code>p2_gate_deep_ref05</code>, 10 mm tiefer Anschnitt mit feinem Netz im
+            Bereich des Anschnitts. Hält die Verbindung bei P1 und P2, wird sie die neue Grundeinstellung.</li>
+        </ul>
+        <p>Aus den Zeiten der Fotos lassen sich Füllgrad und Länge der Kammer nicht sicher bestimmen. Liefe die Uhr der
+          Videos ab dem Anlauf des Kolbens, wäre die Kammer in beiden Reihen mit 150 mm/s schon bei 167 bis 170 mm voll,
+          6 mm früher als aus 259 g, 262 mm und 40 mm folgt (entsprechend 44 statt 42,8 % Füllgrad oder einer um 6 mm
+          kürzeren Kammer). Dieselbe Verschiebung ergibt aber schon ein Versatz der Uhr um 0,04 s, gut zwei Bilder bei
+          60 Bildern je Sekunde. Die Uhr in Abb. 5 läuft sicher nicht ab dem Anlauf: die Fotos bei P2 liegen dort schon
+          alle in der schnellen Phase. Und bei 169 mm lägen alle P1-Umschaltpunkte der Tabelle 1 hinter dem Eintreffen
+          des Wassers, gegen die Definition von P1 in der Quelle. Die Angaben der Quelle sind in sich stimmig und
+          bleiben die Grundlage.</p>
+        <p><strong>Entscheidung:</strong> Anschnitt 30 mm und k-omega SST werden die Grundeinstellung aller sechs
+          Einstellungen. Die eingeschlossene Luft ist die einzige Messgröße für alle sechs, und SST ist ein physikalisches
+          Modell statt einer angepassten Konstanten. Die Zeile „Grundeinstellung“ in den Tabellen unten ist ab jetzt diese Einstellung über die ganze Rechnung.</p>
+      </div>
+      <h3 class="sub-title">P1, <code>case2</code></h3><div class="table-scroll"><table class="th-table kennzahlen"><thead><tr><th>Variante</th><th>Änderung</th><th>Fotos: mittlere Abweichung</th><th>Fotos: IoU nass</th><th>Fotos: IoU dick</th><th>Luft bis 0,12 s: RMSE [cm³]</th></tr></thead><tbody><tr><td><code>Grundeinstellung</code></td><td>Anschnitt 30 mm, k-omega SST, ganze Rechnung</td><td>0,159</td><td>0,54</td><td>0,14</td><td>8,3</td></tr><tr><td><code>film</code></td><td>Wandreibung dünner Filme (wallFilmFriction) (Anschnitt 22 mm)</td><td>0,186</td><td>0,39</td><td>0,13</td><td>15,3</td></tr><tr><td><code>gate22_case2</code></td><td>Anschnitt 22 mm nach der Zeichnung, die frühere Grundeinstellung</td><td>0,180</td><td>0,40</td><td>0,13</td><td>18,5</td></tr><tr><td><code>gate30</code></td><td>Anschnitt 30 mm, jetzt die Grundeinstellung (Rechnung bis 0,12 s)</td><td>0,171</td><td>0,49</td><td>0,11</td><td>10,2</td></tr><tr><td><code>gate30_nu100</code></td><td>Anschnitt 30 mm, laminar, 100-fache Zähigkeit</td><td>0,145</td><td>0,55</td><td>0,24</td><td>32,5</td></tr><tr><td><code>gate30_nu20</code></td><td>Anschnitt 30 mm, laminar, 20-fache Zähigkeit</td><td>0,141</td><td>0,63</td><td>0,19</td><td>22,3</td></tr><tr><td><code>gate30_nu50</code></td><td>Anschnitt 30 mm, laminar, 50-fache Zähigkeit</td><td>0,142</td><td>0,61</td><td>0,17</td><td>26,1</td></tr><tr><td><code>gate30_sst</code></td><td>Anschnitt 30 mm und RANS k-omega SST</td><td>0,168</td><td>0,52</td><td>0,13</td><td>8,2</td></tr><tr><td><code>gate_deep</code></td><td>Anschnitt 10 mm tief in der Büchse statt 7 mm, 30 mm breit, SST</td><td>0,132</td><td>0,63</td><td>0,25</td><td>12,7</td></tr><tr><td><code>gate_deep12</code></td><td>Anschnitt 12 mm tief in der Büchse, 30 mm breit, SST</td><td>0,137</td><td>0,61</td><td>0,24</td><td>16,8</td></tr><tr><td><code>gate_deep_ref05</code></td><td>Anschnitt 10 mm tief, Bereich des Anschnitts mit 0,5 mm, SST</td><td>0,136</td><td>0,56</td><td>0,26</td><td>10,3</td></tr><tr><td><code>gate_ref05</code></td><td>Anschnitt 30 mm, SST, Büchse oben, Anschnitt und unterer Trichter mit 0,5 mm</td><td>0,158</td><td>0,48</td><td>0,23</td><td>6,0</td></tr><tr><td><code>hz05</code></td><td>10 statt 5 Zellen über die Dicke (Anschnitt 22 mm)</td><td>0,179</td><td>0,36</td><td>0,15</td><td>17,9</td></tr><tr><td><code>les</code></td><td>LES, WALE (Anschnitt 22 mm)</td><td>0,184</td><td>0,38</td><td>0,12</td><td>14,0</td></tr><tr><td><code>nu20</code></td><td>laminar, 20-fache Zähigkeit (Anschnitt 22 mm)</td><td>0,140</td><td>0,65</td><td>0,17</td><td>18,7</td></tr><tr><td><code>p1_slow</code></td><td>P1 mit der langsamen Phase: ganze Gießkammer, bewegter Kolben ab s = 165 mm, Umschalten bei 174,1 mm</td><td>0,177</td><td>0,48</td><td>0,14</td><td>14,0</td></tr><tr><td><code>sst</code></td><td>RANS k-omega SST, Wandfunktionen (Anschnitt 22 mm)</td><td>0,174</td><td>0,44</td><td>0,14</td><td>14,6</td></tr></tbody></table></div><p class="prose"><small>Mittlere Abweichung: Betrag der Differenz des Wasseranteils über die Plattendicke, gemittelt über den sichtbaren Hohlraum (0 ist deckungsgleich). IoU nass: Wasseranteil über 0,1, dick: über 0,5.</small></p>
+<h3 class="sub-title">P2, <code>case5</code></h3><div class="table-scroll"><table class="th-table kennzahlen"><thead><tr><th>Variante</th><th>Änderung</th><th>Fotos: mittlere Abweichung</th><th>Fotos: IoU nass</th><th>Fotos: IoU dick</th><th>Luft bis 0,42 s: RMSE [cm³]</th></tr></thead><tbody><tr><td><code>Grundeinstellung</code></td><td>Anschnitt 30 mm, k-omega SST, ganze Rechnung</td><td>0,240</td><td>0,71</td><td>0,62</td><td>8,9</td></tr><tr><td><code>gate22_case5</code></td><td>Anschnitt 22 mm nach der Zeichnung, die frühere Grundeinstellung</td><td>0,515</td><td>0,45</td><td>0,17</td><td>32,0</td></tr><tr><td><code>p2_gate30</code></td><td>Anschnitt 30 mm, jetzt die Grundeinstellung (Rechnung bis 0,42 s)</td><td>0,303</td><td>0,69</td><td>0,51</td><td>19,0</td></tr><tr><td><code>p2_gate30_nu20</code></td><td>Anschnitt 30 mm, laminar, 20-fache Zähigkeit</td><td>0,226</td><td>0,76</td><td>0,61</td><td>10,9</td></tr><tr><td><code>p2_gate30_sst</code></td><td>Anschnitt 30 mm und RANS k-omega SST</td><td>0,239</td><td>0,72</td><td>0,61</td><td>9,0</td></tr><tr><td><code>p2_gate_deep</code></td><td>Anschnitt 10 mm tief in der Büchse statt 7 mm, 30 mm breit, SST</td><td>0,241</td><td>0,70</td><td>0,60</td><td>6,5</td></tr></tbody></table></div><p class="prose"><small>Mittlere Abweichung: Betrag der Differenz des Wasseranteils über die Plattendicke, gemittelt über den sichtbaren Hohlraum (0 ist deckungsgleich). IoU nass: Wasseranteil über 0,1, dick: über 0,5.</small></p>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>

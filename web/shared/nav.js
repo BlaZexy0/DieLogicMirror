@@ -108,8 +108,23 @@
         { label: 'Kammerfüllung', href: '/tools/3d-studio/kammerfuellung.html' },
       ] },
     ] },
-    /* Der OpenFOAM-Solver dieFillFoam: eine Seite, noch ein Entwurf (24.09.). */
-    { label: 'Simulation', href: '/simulation/' },
+    /* Die OpenFOAM-Solver und ihre Validierung an Messungen, noch ein Entwurf:
+       links die Solver, rechts die Validierung mit den drei Fällen
+       (Seiten aus handover/website/solver/publish.py in DieLogic_OF). */
+    { label: 'Simulation', columns: [
+      { title: 'Solver', items: [
+        { label: 'Übersicht', href: '/simulation/' },
+        { label: 'dieLogicFoam', href: '/simulation/dielogicfoam.html' },
+        { label: 'shotSleeveFoam', href: '/simulation/shotsleevefoam.html' },
+        { label: 'Netzbewegung', href: '/simulation/netzbewegung.html' },
+      ] },
+      { title: 'Validierung', items: [
+        { label: 'Methode', href: '/simulation/validierung.html' },
+        { label: 'Niida und Maeda 2020', href: '/simulation/validierung-niida.html' },
+        { label: 'Trometer et al. 2023', href: '/simulation/validierung-trometer.html' },
+        { label: 'Zamora und López', href: '/simulation/validierung-zamora.html' },
+      ] },
+    ] },
     { label: 'Theorie', children: [
       { label: 'Das PQ²-Diagramm', href: '/theorie/pq2.html' },
       { label: 'Kritische Kolbengeschwindigkeit', href: '/theorie/kritische-geschwindigkeit.html' },

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>shotSleeveFoam: die Gießkammer · Simulation · DieLogic</title>
+  <!-- Entwurf: noch nicht in Suchmaschinen, bis die Validierung abgeschlossen ist. -->
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
+  <style>
+    /* Seitenspezifisch; Farben nur als Rollen. */
+    pre.code {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    pre.code .c { color: var(--muted); }
+    .th-table th code { text-transform: none; }
+    .toc-sidebar ul + h3 { margin-top: 1.6rem; }
+
+    /* Videos der Beispielrechnungen (ParaView, pvbatch) */
+    .fig-wrap video {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: var(--dark);
+      border-radius: 6px 6px 0 0;
+    }
+    .fig-platzhalter {
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+      margin: 0.75rem;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .kennzahlen td:nth-child(n+2),
+    .kennzahlen th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+    .fig-schmal img { max-width: 520px; margin: 0 auto; display: block; }
+    .toc-knopf { margin-top: 1rem; }
+    h3.sub-title {
+      font-size: 1.05rem;
+      margin: 1.6rem 0 0.4rem;
+      color: var(--text);
+    }
+    .seiten-nav li.nav-sub { padding-left: 0.9rem; font-size: 0.92em; }
+    .seiten-nav strong { color: var(--text); }
+    .karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .karte { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.9rem 1rem; background: var(--surface2); }
+    .karte h4 { margin: 0 0 0.35rem; font-size: 1rem; }
+    .karte p { margin: 0 0 0.6rem; color: var(--muted); font-size: 0.9rem; }
+    .status-ok { color: var(--ok-text); }
+    .status-offen { color: var(--caution-text, var(--muted)); }
+  </style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="/">DieLogic</a>
+  <span>›</span>
+  <a href="index.html">Simulation</a>
+  <span>›</span>
+  shotSleeveFoam
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>shotSleeveFoam: die Gießkammer</h1>
+    <p class="subtitle">Die erste Phase des Schusses: der Kolben schiebt die Schmelze durch die Gießkammer, Luft entweicht über das Fenster zum Anschnitt. Zweiphasig mit gerechneter Luft, bewegtes Netz, alle Eingaben in einer Datei.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">OpenFOAM v2606</span>
+      <span class="hero-tag">interIsoFoam</span>
+      <span class="hero-tag">bewegtes Netz</span>
+      <span class="hero-tag">Schusskurve</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#k1">1. Aufgabe</a></li>
+        <li><a href="#k2">2. Grundlage</a></li>
+        <li><a href="#k3">3. Netz und Geometrie</a></li>
+        <li><a href="#k4">4. Einsatz</a></li>
+        <li><a href="#k5">5. Grenzen</a></li>
+      </ul>
+      <h3>Seiten</h3>
+      <ul class="seiten-nav">
+        <li><a href="index.html">Übersicht</a></li>
+        <li><a href="dielogicfoam.html">dieLogicFoam</a></li>
+        <li><strong>shotSleeveFoam</strong></li>
+        <li><a href="netzbewegung.html">Netzbewegung</a></li>
+        <li><a href="validierung.html">Validierung</a></li>
+        <li class="nav-sub"><a href="validierung-niida.html">Niida und Maeda 2020</a></li>
+        <li class="nav-sub"><a href="validierung-trometer.html">Trometer et al. 2023</a></li>
+        <li class="nav-sub"><a href="validierung-zamora.html">Zamora und López</a></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <div class="draft-note">
+        📚 <b>Entwurf:</b> Die Validierung läuft noch; Zahlen und Befunde werden mit jeder
+        Rechnung nachgetragen (Stand 28.09.2026). Der Text ist noch nicht redigiert.
+      </div>
+
+      <span class="section-anchor" id="k1"></span>
+      <h2 class="section-title">1. Aufgabe</h2>
+      <div class="prose">
+        <p>In der ersten Phase des Schusses fährt der Kolben langsam an und schiebt die Schmelze vor sich her.
+          Vor dem Kolben baut sich eine Welle auf. Ist der Kolben zu langsam, läuft die Welle an der Stirnwand hoch,
+          wird reflektiert und schließt Luft ein. Ist er zu schnell, bricht die Welle über. Die richtige
+          Schusskurve füllt die Kammer genau bis zum Anschnitt, ohne Luft einzuschließen.</p>
+        <p><code>shotSleeveFoam</code> rechnet diese Phase mit Schmelze <em>und</em> Luft. Anders als in der Form
+          ist die Luft hier langsam und großräumig; die volle Zweiphasenrechnung ist billig genug und liefert
+          die Wellenform genau.</p>
+      </div>
+
+      <span class="section-anchor" id="k2"></span>
+      <h2 class="section-title">2. Grundlage</h2>
+      <div class="prose">
+        <p>Der Solver ist <code>interIsoFoam</code> aus OpenFOAM: zwei inkompressible, nicht mischbare Fluide,
+          die Grenzfläche geometrisch mit isoAdvector verfolgt, auf einem bewegten Netz. Dazu kommt die Logik der
+          Gießkammer, alles aus einer Datei <code>system/shotSleeveDict</code>:</p>
+        <ul>
+          <li>Die Kolbenbewegung kommt aus der Schusskurve; das Netz bewegt die Bibliothek
+            <code>libshotSleeve</code> (siehe <a href="netzbewegung.html">Netzbewegung</a>).</li>
+          <li>Der Lauf endet, wenn der Kolben die Endlage erreicht (ohne Angabe: theoretisch 100 % Füllung).</li>
+          <li>Ergebnisse werden bei gleich weit auseinander liegenden Kolbenwegen geschrieben; der Zeitschritt
+            wird genau auf diese Zeiten gelegt. Wahlweise feste Zeiten (<code>writeTimes</code>).</li>
+          <li>Die Grenze der Courant-Zahl an der Grenzfläche und die Grenze des Zeitschritts aus der Kapillarwelle
+            werden aus denselben Angaben abgeleitet.</li>
+          <li>Der Anfangsspiegel der Schmelze folgt aus dem Füllgrad; die Zellen, die der Spiegel schneidet,
+            bekommen ihren genauen Anteil.</li>
+        </ul>
+      </div>
+
+      <span class="section-anchor" id="k3"></span>
+      <h2 class="section-title">3. Netz und Geometrie</h2>
+      <div class="prose">
+        <p>Das Werkzeug <code>shotSleeveMesh</code> erzeugt die Kammer als O-Netz aus fünf Blöcken, geteilt an einer
+          Gitterlinie des Kerns: die Stirnflächen oberhalb dieser Sehne bilden das Fenster zum Anschnitt.
+          Hinter dem Fenster sitzt ein fester Stutzen, darauf ein Steigrohr, dessen obere Fläche der Auslass ist.
+          Der Kolben ist die Fläche <code>inlet</code>. Die ganze Kammer wird mit dem Kolben gleichmäßig gestaucht,
+          Stutzen und Steigrohr bewegen sich nicht.</p>
+      </div>
+      <div class="table-scroll"><table class="th-table">
+        <thead><tr><th>Gruppe</th><th>Einträge in <code>shotSleeveDict</code></th></tr></thead>
+        <tbody>
+          <tr><td>Geometrie</td><td><code>diameter</code>, <code>length</code>, <code>fillFraction</code></td></tr>
+          <tr><td>Netz</td><td><code>nCellsD</code> (15, 30, 60), <code>axialStretch</code>, <code>windowChord</code>, Stutzen, Steigrohr</td></tr>
+          <tr><td>Schusskurve</td><td><code>shotCurve</code>: Weg und Geschwindigkeit, Zeit und Geschwindigkeit oder Froude-Zahl über dem Weg</td></tr>
+          <tr><td>Ende</td><td><code>endPosition</code>: <code>auto</code> = Kammerlänge × (1 − Füllgrad) oder ein Weg</td></tr>
+          <tr><td>Ausgabe</td><td><code>nResults</code>, <code>writeTimes</code>, Rohdaten für das Metamodell</td></tr>
+          <tr><td>Lauf</td><td><code>nCores</code>, <code>maxAlphaCo</code>, <code>capillaryFactor</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <span class="section-anchor" id="k4"></span>
+      <h2 class="section-title">4. Einsatz</h2>
+      <div class="prose">
+        <p>Der Solver ist die Vorlage <code>cases/shotSleeve</code>. Aus ihr entstehen die Läufe des
+          Metamodells (über 500 Rechnungen mit verschiedenen Kammern, Füllgraden und Schusskurven, daraus ein
+          Ersatzmodell im Browser) und die Validierung nach <a href="validierung-zamora.html">Zamora und López</a>.</p>
+      </div>
+<pre class="code">solvers/Allwmake                        <span class="c"># libshotSleeve, shotSleeveMesh, shotSleeveFoam</span>
+tools/runCase cases/shotSleeve          <span class="c"># Netz, Zerlegung, Rechnung in runs/shotSleeve</span></pre>
+
+      <span class="section-anchor" id="k5"></span>
+      <h2 class="section-title">5. Grenzen</h2>
+      <div class="warning-box"><p>Die Luft ist inkompressibel gerechnet; das passt für die langsame erste Phase, nicht für
+        den Formfüllschuss. Das Fenster zum Anschnitt ist eine Vereinfachung: die Luft strömt mit etwa dem 5-Fachen der
+        Kolbengeschwindigkeit durch das Fenster. Die Kammer wird als Ganzes gestaucht, daher sind die Zellen am Ende des
+        Schusses kürzer als am Anfang.</p></div>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>

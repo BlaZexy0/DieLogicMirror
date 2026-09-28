@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rechteckform mit Insel nach Trometer et al. · Simulation · DieLogic</title>
+  <!-- Entwurf: noch nicht in Suchmaschinen, bis die Validierung abgeschlossen ist. -->
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
+  <style>
+    /* Seitenspezifisch; Farben nur als Rollen. */
+    pre.code {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    pre.code .c { color: var(--muted); }
+    .th-table th code { text-transform: none; }
+    .toc-sidebar ul + h3 { margin-top: 1.6rem; }
+
+    /* Videos der Beispielrechnungen (ParaView, pvbatch) */
+    .fig-wrap video {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: var(--dark);
+      border-radius: 6px 6px 0 0;
+    }
+    .fig-platzhalter {
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+      margin: 0.75rem;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .kennzahlen td:nth-child(n+2),
+    .kennzahlen th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+    .fig-schmal img { max-width: 520px; margin: 0 auto; display: block; }
+    .toc-knopf { margin-top: 1rem; }
+    h3.sub-title {
+      font-size: 1.05rem;
+      margin: 1.6rem 0 0.4rem;
+      color: var(--text);
+    }
+    .seiten-nav li.nav-sub { padding-left: 0.9rem; font-size: 0.92em; }
+    .seiten-nav strong { color: var(--text); }
+    .karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .karte { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.9rem 1rem; background: var(--surface2); }
+    .karte h4 { margin: 0 0 0.35rem; font-size: 1rem; }
+    .karte p { margin: 0 0 0.6rem; color: var(--muted); font-size: 0.9rem; }
+    .status-ok { color: var(--ok-text); }
+    .status-offen { color: var(--caution-text, var(--muted)); }
+  </style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="/">DieLogic</a>
+  <span>›</span>
+  <a href="index.html">Simulation</a>
+  <span>›</span>
+  <a href="validierung.html">Validierung</a>
+  <span>›</span>
+  Trometer et al. 2023
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Rechteckform mit Insel nach Trometer et al.</h1>
+    <p class="subtitle">Form 100 × 100 × 5 mm mit einer Insel 40 × 60 mm, Wasser mit 1,75 m/s, Vakuum 1 bar bis 100 mbar. Fotos mit 1000 Bildern je Sekunde.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">dieLogicFoam</span>
+      <span class="hero-tag">Vakuum</span>
+      <span class="hero-tag">Luftnester</span>
+      <span class="hero-tag">Fotos</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#t1">1. Versuch</a></li>
+        <li><a href="#t2">2. Modell</a></li>
+        <li><a href="#t3">3. Ergebnisse</a></li>
+        <li><a href="#t4">4. Abstimmung</a></li>
+      </ul>
+      <h3>Seiten</h3>
+      <ul class="seiten-nav">
+        <li><a href="index.html">Übersicht</a></li>
+        <li><a href="dielogicfoam.html">dieLogicFoam</a></li>
+        <li><a href="shotsleevefoam.html">shotSleeveFoam</a></li>
+        <li><a href="netzbewegung.html">Netzbewegung</a></li>
+        <li><a href="validierung.html">Validierung</a></li>
+        <li class="nav-sub"><a href="validierung-niida.html">Niida und Maeda 2020</a></li>
+        <li class="nav-sub"><strong>Trometer et al. 2023</strong></li>
+        <li class="nav-sub"><a href="validierung-zamora.html">Zamora und López</a></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <div class="draft-note">
+        📚 <b>Entwurf:</b> Die Validierung läuft noch; Zahlen und Befunde werden mit jeder
+        Rechnung nachgetragen (Stand 28.09.2026). Der Text ist noch nicht redigiert.
+      </div>
+
+      <span class="section-anchor" id="t1"></span>
+      <h2 class="section-title">1. Versuch</h2>
+      <div class="prose">
+        <p>N. Trometer et al., International Journal of Metalcasting 18 (2024) 69. Eine gedruckte Form mit Deckel aus
+          Polycarbonat: Hohlraum 100 × 100 × 5 mm mit Ecken R10 und einer Insel 40 × 60 mm, Anschnitt 30 mm, Überlauf
+          100 × 30 mm. Der Kolben (Ø 25,4 mm) schießt mit 1,75 m/s in einem Zug; die Form steht unter 1 bar, 200 oder
+          100 mbar. Gefilmt mit 1000 Bildern je Sekunde.</p>
+        <p>Der Füllgrad der Kammer ist nicht angegeben, ebenso wenig die Zeiten der Fotos. Die Fotos sind daher über
+          den Füllstand des Hohlraums der Rechnung zugeordnet.</p>
+      </div>
+
+      <span class="section-anchor" id="t2"></span>
+      <h2 class="section-title">2. Modell</h2>
+      <div class="prose">
+        <p>Die Platte mit Kuchen, Anschnitt, Hohlraum und Überlauf, dahinter 20 mm der Kammer; zur Zeit null ist die
+          Kammer voll, das Wasser tritt mit der Kolbengeschwindigkeit ein. Das Vakuum ist der Druck der Luft in der
+          Form und im Tank am Anschluss der Vakuumleitung.</p>
+      </div>
+
+      <span class="section-anchor" id="t3"></span>
+      <h2 class="section-title">3. Ergebnisse</h2>
+      <div class="table-scroll"><table class="th-table kennzahlen"><thead><tr><th>Rechnung</th><th>Einstellung</th><th>Anfang: IoU Wasser</th><th>Anfang: IoU Luft</th><th>Mitte: IoU Wasser</th><th>Mitte: IoU Luft</th><th>Ende: IoU Wasser</th><th>Ende: IoU Luft</th></tr></thead><tbody><tr><td><code>vac100mbar</code></td><td>Kammer voll bei t = 0</td><td>0,06</td><td>0,94</td><td>0,61</td><td>0,26</td><td>0,77</td><td>0,01</td></tr><tr><td><code>vac1bar</code></td><td>Kammer voll bei t = 0</td><td>0,07</td><td>0,93</td><td>0,59</td><td>0,44</td><td>0,74</td><td>0,13</td></tr><tr><td><code>vac200mbar</code></td><td>Kammer voll bei t = 0</td><td>0,29</td><td>0,83</td><td>0,62</td><td>0,10</td><td>0,85</td><td>0,00</td></tr><tr><td><code>vac265mbar</code></td><td>Kammer voll bei t = 0</td><td>0,31</td><td>0,84</td><td>0,61</td><td>0,07</td><td>0,85</td><td>0,06</td></tr><tr><td><code>sleeve_phi050</code></td><td>ganze Kammer Ø25,4 × 280 mm, 50 % gefüllt, Kolben aus der Ruhe auf 1,75 m/s (bewegtes Netz)</td><td>0,27</td><td>0,82</td><td>0,64</td><td>0,10</td><td>0,85</td><td>0,01</td></tr><tr><td><code>sleeve_phi060</code></td><td>ganze Kammer Ø25,4 × 280 mm, 60 % gefüllt, Kolben aus der Ruhe auf 1,75 m/s (bewegtes Netz)</td><td>0,24</td><td>0,80</td><td>0,62</td><td>0,08</td><td>0,85</td><td>0,02</td></tr><tr><td><code>sst</code></td><td>RANS k-omega SST, Wandfunktionen</td><td>0,28</td><td>0,83</td><td>0,64</td><td>0,07</td><td>0,85</td><td>0,02</td></tr></tbody></table></div><p class="prose"><small>Fotos und Rechnung sind über den Füllstand des Hohlraums zugeordnet. IoU Luft vergleicht die trockenen Flächen im Hohlraum, also die Lage der Luftnester.</small></p>
+      <div class="fig-wrap"><img src="img/val/trometer-vac1bar-vergleich.webp" alt="&lt;code&gt;vac1bar&lt;/code&gt;: Fotos mit gemessener Front (magenta) neben der Rechnung in ParaView" loading="lazy"><div class="fig-cap"><code>vac1bar</code>: Fotos mit gemessener Front (magenta) neben der Rechnung in ParaView</div></div>
+<div class="fig-wrap"><img src="img/val/trometer-vac200mbar-vergleich.webp" alt="&lt;code&gt;vac200mbar&lt;/code&gt;: Fotos mit gemessener Front (magenta) neben der Rechnung in ParaView" loading="lazy"><div class="fig-cap"><code>vac200mbar</code>: Fotos mit gemessener Front (magenta) neben der Rechnung in ParaView</div></div>
+<div class="fig-wrap"><img src="img/val/trometer-vac100mbar-vergleich.webp" alt="&lt;code&gt;vac100mbar&lt;/code&gt;: Fotos mit gemessener Front (magenta) neben der Rechnung in ParaView" loading="lazy"><div class="fig-cap"><code>vac100mbar</code>: Fotos mit gemessener Front (magenta) neben der Rechnung in ParaView</div></div>
+
+      <span class="section-anchor" id="t4"></span>
+      <h2 class="section-title">4. Abstimmung</h2>
+      <div class="prose">
+        <p>Die Rechnung trifft den Füllstand und die Menge der Luft: bei halb vollem Hohlraum sind im Foto 519 mm² trocken,
+          in der Rechnung 462 mm². Sie liegen aber an anderer Stelle. Im Versuch bleiben die Luftnester an den oberen
+          Ecken der Insel, seitlich neben ihr; in der Rechnung verteilen sie sich unterhalb der Insel. Die trockene
+          Fläche deckt sich daher kaum (IoU der Luft 0,05 in der Mitte, 0,02 am Ende), die nasse gut (0,62 und 0,85).</p>
+        <ul>
+          <li><code>sleeve_phi060</code>: die ganze Gießkammer (280 mm, Ø 25,4 mm) mit bewegtem Kolben
+            (<code>shotSleeve</code>-Netzbewegung, 10 ms Anlauf auf 1,75 m/s), 60 % Füllgrad. Das Wasser kommt als Welle
+            aus der Kammer statt als voller Strahl. Ergebnis gleich der Grundeinstellung (Anfang 0,24, Mitte 0,62,
+            Ende 0,85): der Einlauf ist nicht die Ursache. Mit 50 % Füllgrad ebenso (0,27, 0,64, 0,85); der Füllgrad der
+            Kammer spielt für den Hohlraum keine Rolle, die Variante mit 70 % wurde daher abgebrochen.</li>
+          <li><code>sst</code>: die Grundeinstellung mit RANS k-omega SST, das bei Niida auf dem breiteren Anschnitt Fotos
+            und Luft deutlich näher brachte. Hier ohne Wirkung (0,28, 0,64, 0,85).</li>
+        </ul>
+        <p><strong>Befund:</strong> Die Füllung der Trometer-Form ist unempfindlich gegen Einlauf, Füllgrad der Kammer
+          und Turbulenzmodell. Die Rechnung trifft Füllstand und Luftmenge, die Lage der Luftnester an den oberen Ecken
+          der Insel trifft keine Variante. Die Form des Anschnitts aus der Zeichnung (Abb. 2b) gibt keinen Anlass zu
+          einer Änderung wie bei Niida.</p>
+      </div>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>
