@@ -130,7 +130,7 @@
 
       <div class="draft-note">
         📚 <b>Entwurf:</b> Die Validierung läuft noch; Zahlen und Befunde werden mit jeder
-        Rechnung nachgetragen (Stand 29.09.2026). Der Text ist noch nicht redigiert.
+        Rechnung nachgetragen (Stand 30.09.2026). Der Text ist noch nicht redigiert.
       </div>
 
       <span class="section-anchor" id="n1"></span>
@@ -183,20 +183,25 @@
 
       <span class="section-anchor" id="n4"></span>
       <h2 class="section-title">4. Ergebnisse</h2>
-      <div class="table-scroll"><table class="th-table kennzahlen"><thead><tr><th>Einstellung</th><th>Umschaltung, v hoch [mm/s]</th><th>Luft RMSE [cm³]</th><th>Luft am Ende gemessen / gerechnet [cm³]</th><th>Fotos: mittlere Abweichung</th><th>Fotos: IoU dick</th><th>Fotos: IoU nass</th><th>Massenbilanz der Fotos</th></tr></thead><tbody><tr><td><code>case1</code></td><td>P1, 100</td><td>läuft</td><td>läuft</td><td>läuft</td><td>läuft</td><td>läuft</td><td>läuft</td></tr><tr><td><code>case2</code></td><td>P1, 150</td><td>10,6</td><td>76,7 / 57,6</td><td>0,073</td><td>0,23</td><td>0,54</td><td>0,76</td></tr><tr><td><code>case3</code></td><td>P1, 200</td><td>13,5</td><td>78,8 / 55,1</td><td>keine Fotos</td><td>keine Fotos</td><td>keine Fotos</td><td>keine Fotos</td></tr><tr><td><code>case4</code></td><td>P2, 100</td><td>2,6</td><td>7,3 / 0,8</td><td>0,085</td><td>0,87</td><td>0,88</td><td>0,88</td></tr><tr><td><code>case5</code></td><td>P2, 150</td><td>4,2</td><td>12,1 / 4,8</td><td>0,186</td><td>0,67</td><td>0,74</td><td>0,98</td></tr><tr><td><code>case6</code></td><td>P2, 200</td><td>läuft</td><td>läuft</td><td>läuft</td><td>läuft</td><td>läuft</td><td>läuft</td></tr></tbody></table></div><p class="prose"><small>Grundeinstellung: Anschnitt 30 mm, k-omega SST, 1 mm. Luft: Abb. 6 der Quelle über die ganze Messung. Massenbilanz: Zuwachs des Wassers in den Fotos je verdrängtem Volumen des Kolbens (1 = stimmig).</small></p>
+      <div class="table-scroll"><table class="th-table kennzahlen"><thead><tr><th>Einstellung</th><th>Umschaltung, v hoch [mm/s]</th><th>Luft RMSE [cm³]</th><th>Luft am Ende gemessen / gerechnet [cm³]</th><th>Fotos: mittlere Abweichung</th><th>Fotos: IoU dick</th><th>Fotos: IoU nass</th><th>Massenbilanz der Fotos</th></tr></thead><tbody><tr><td><code>case1</code></td><td>P1, 100</td><td>16,5</td><td>67,4 / 43,9</td><td>0,268</td><td>0,29</td><td>0,68</td><td>1,03</td></tr><tr><td><code>case2</code></td><td>P1, 150</td><td>10,6</td><td>76,7 / 57,6</td><td>0,073</td><td>0,23</td><td>0,54</td><td>0,76</td></tr><tr><td><code>case3</code></td><td>P1, 200</td><td>13,5</td><td>78,8 / 55,1</td><td>keine Fotos</td><td>keine Fotos</td><td>keine Fotos</td><td>keine Fotos</td></tr><tr><td><code>case4</code></td><td>P2, 100</td><td>2,6</td><td>7,3 / 0,8</td><td>0,085</td><td>0,87</td><td>0,88</td><td>0,88</td></tr><tr><td><code>case5</code></td><td>P2, 150</td><td>4,2</td><td>12,1 / 4,8</td><td>0,186</td><td>0,67</td><td>0,74</td><td>0,98</td></tr><tr><td><code>case6</code></td><td>P2, 200</td><td>17,0</td><td>22,3 / 13,5</td><td>keine Fotos</td><td>keine Fotos</td><td>keine Fotos</td><td>keine Fotos</td></tr></tbody></table></div><p class="prose"><small>Grundeinstellung: Anschnitt 30 mm, k-omega SST, 1 mm. Luft: Abb. 6 der Quelle über die ganze Messung. Massenbilanz: Zuwachs des Wassers in den Fotos je verdrängtem Volumen des Kolbens (1 = stimmig).</small></p>
       <div class="insight-box"><span class="label">Befund</span>
-        <p>Mit der Grundeinstellung vom 28.09. (Anschnitt 30 mm breit und 10 mm tief in der Büchse, 0,5 mm am Übergang,
-          SST) liegen die Fotos in allen gerechneten Einstellungen näher als zuvor: bei P2 <code>case4</code> mittlere
-          Abweichung 0,085 und dicke Fläche IoU 0,87 (zuvor 0,123 und 0,81), <code>case5</code> 0,186 und 0,67; bei P1
-          <code>case2</code> 0,073 und 0,23 (zuvor 0,090 und 0,13). Die eingeschlossene Luft trifft <code>case5</code>
-          besser (RMSE 4,2 statt 8,0 cm³), <code>case4</code> etwas schlechter (2,6 statt 1,4 cm³). Bei P1 schließt die
-          Rechnung am Ende 25 bis 30 % weniger Luft ein als gemessen (<code>case2</code> 58 gegen 77 cm³,
-          <code>case3</code> 55 gegen 79 cm³; RMSE 10,6 und 13,5 statt 8,3 und 8,4 cm³).</p>
-        <p>Die gemessene Luft ist selbst unsicher. Dieselbe Bildmethode auf unserer Auswertung derselben Fotos ergibt bei
-          P1 bis zu 18 cm³ weniger als Abb. 6 (<code>case2</code> nach 0,075 s: 55 gegen 72 cm³, die Rechnung 56 cm³),
-          bei P2 bis auf 2 bis 3 cm³ dasselbe; die offenen Quadrate in den Diagrammen unten. Der Unterschied bei P1 liegt
-          damit in derselben Größe wie die Unsicherheit der Messung. <code>case1</code> und <code>case6</code> werden
-          noch gerechnet.</p></div>
+        <p>Alle sechs Einstellungen mit der Grundeinstellung vom 28.09. (Anschnitt 30 mm breit und 10 mm tief in der
+          Büchse, 0,5 mm am Übergang, SST), verglichen mit der vom 27.09. (7 mm tief, 1 mm):</p>
+        <ul>
+          <li><strong>Fotos:</strong> näher in <code>case2</code> (mittlere Abweichung 0,073 statt 0,090, dicke Fläche IoU
+            0,23 statt 0,13), <code>case4</code> (0,085 statt 0,123, IoU 0,87 statt 0,81) und <code>case5</code> (0,186
+            statt 0,210); gleich in <code>case1</code> (0,268 gegen 0,262).</li>
+          <li><strong>Luft bei P2:</strong> näher mit 150 und 200 mm/s (<code>case5</code> RMSE 4,2 statt 8,0 cm³,
+            <code>case6</code> 17,0 statt 23,0 cm³), etwas weiter mit 100 mm/s (<code>case4</code> 2,6 statt 1,4 cm³).
+            Bei 200 mm/s schießt der Strahl nach dem Umschalten weiter durch das Becken und schließt zu früh Luft ein.</li>
+          <li><strong>Luft bei P1:</strong> die Rechnung schließt am Ende 25 bis 35 % weniger Luft ein als Abb. 6
+            (<code>case1</code> 44 gegen 67, <code>case2</code> 58 gegen 77, <code>case3</code> 55 gegen 79 cm³; RMSE
+            16,5, 10,6 und 13,5 statt 9,8, 8,3 und 8,4 cm³).</li>
+        </ul>
+        <p>Die gemessene Luft ist selbst unsicher. Dieselbe Bildmethode auf unserer Auswertung derselben Fotos liest bei
+          P1 20 bis 35 % weniger Luft als Abb. 6, und die Rechnung liegt nahe an dieser Lesart (<code>case1</code> nach
+          0,087 s: Foto 42, Rechnung 41, Abb. 6 56 cm³; <code>case2</code> nach 0,075 s: 55, 56 und 72 cm³); bei P2
+          stimmen beide Lesarten bis auf 2 bis 3 cm³ überein. Die offenen Quadrate in den Diagrammen unten zeigen sie.</p></div>
       <h3 class="sub-title">4.1 Eingeschlossene Luft</h3>
       <div class="fig-wrap"><img src="img/val/niida-case1-luft.webp" alt="&lt;code&gt;case1&lt;/code&gt;: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)" loading="lazy"><div class="fig-cap"><code>case1</code>: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)</div></div>
 <div class="fig-wrap"><img src="img/val/niida-case2-luft.webp" alt="&lt;code&gt;case2&lt;/code&gt;: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)" loading="lazy"><div class="fig-cap"><code>case2</code>: eingeschlossene Luft über der Zeit, Messung der Quelle und Rechnungen (Bildverfahren der Quelle)</div></div>
@@ -221,12 +226,12 @@
           Entlüftung oben rechts im Überlauf.</p>
       </div>
       <h4 class="bild-reihe"><code>case1</code>: P1, 100 mm/s (Abb. 5)</h4>
-<div class="fig-wrap"><img src="img/val/niida-case1-p1_5_case1_exp_front_t8.37s.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht, Rechnung noch mit der Grundeinstellung bis 28.09. (die neue läuft)" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht, Rechnung noch mit der Grundeinstellung bis 28.09. (die neue läuft)</div></div>
-<div class="fig-wrap"><img src="img/val/niida-case1-p1_5_case1_exp_front_t8.42s.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht, Rechnung noch mit der Grundeinstellung bis 28.09. (die neue läuft)" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht, Rechnung noch mit der Grundeinstellung bis 28.09. (die neue läuft)</div></div>
-<div class="fig-wrap"><img src="img/val/niida-case1-p1_5_case1_exp_front_t8.46s.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht, Rechnung noch mit der Grundeinstellung bis 28.09. (die neue läuft)" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht, Rechnung noch mit der Grundeinstellung bis 28.09. (die neue läuft)</div></div>
-<div class="fig-wrap"><img src="img/val/niida-case1-p1_5_case1_exp_front_t8.51s.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht, Rechnung noch mit der Grundeinstellung bis 28.09. (die neue läuft)" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht, Rechnung noch mit der Grundeinstellung bis 28.09. (die neue läuft)</div></div>
-<div class="fig-wrap"><img src="img/val/niida-case1-p1_5_case1_exp_front_t8.56s.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht, Rechnung noch mit der Grundeinstellung bis 28.09. (die neue läuft)" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht, Rechnung noch mit der Grundeinstellung bis 28.09. (die neue läuft)</div></div>
-<div class="fig-wrap"><img src="img/val/niida-case1-p1_5_case1_exp_front_t8.61s.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht, Rechnung noch mit der Grundeinstellung bis 28.09. (die neue läuft)" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht, Rechnung noch mit der Grundeinstellung bis 28.09. (die neue läuft)</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case1-p1_5_case1_exp_front_t8.37s.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case1-p1_5_case1_exp_front_t8.42s.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case1-p1_5_case1_exp_front_t8.46s.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case1-p1_5_case1_exp_front_t8.51s.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case1-p1_5_case1_exp_front_t8.56s.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
+<div class="fig-wrap"><img src="img/val/niida-case1-p1_5_case1_exp_front_t8.61s.webp" alt="&lt;code&gt;case1&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>case1</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
 <h4 class="bild-reihe"><code>case2</code>: P1, 150 mm/s (Abb. 7)</h4>
 <div class="fig-wrap"><img src="img/val/niida-case2-p1_7_case2_exp_front_t8.68s.webp" alt="&lt;code&gt;case2&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>case2</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
 <div class="fig-wrap"><img src="img/val/niida-case2-p1_7_case2_exp_front_t8.70s.webp" alt="&lt;code&gt;case2&lt;/code&gt;: Foto, seine Auswertung und die Rechnung in derselben Ansicht" loading="lazy"><div class="fig-cap"><code>case2</code>: Foto, seine Auswertung und die Rechnung in derselben Ansicht</div></div>
