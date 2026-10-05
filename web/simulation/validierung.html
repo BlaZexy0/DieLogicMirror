@@ -115,6 +115,7 @@
         <li><a href="#v3">3. Die Zeitachse</a></li>
         <li><a href="#v4">4. Kennzahlen</a></li>
         <li><a href="#v5">5. Die Fälle</a></li>
+        <li><a href="#v6">6. Ergebnis</a></li>
       </ul>
       <h3>Seiten</h3>
       <ul class="seiten-nav">
@@ -230,6 +231,54 @@
           <a class="btn btn-outline" href="validierung-trometer.html">Zum Fall</a></div>
         <div class="karte"><h4>Zamora und López</h4><p>Welle in der Gießkammer; eingeschlossene Luft in 13 gemessenen Einstellungen, RMSE 0,012.</p>
           <a class="btn btn-outline" href="validierung-zamora.html">Zum Fall</a></div>
+      </div>
+
+      <span class="section-anchor" id="v6"></span>
+      <h2 class="section-title">6. Ergebnis</h2>
+      <div class="prose">
+        <p>Abschluss der Validierung am 05.10.2026. Verglichen ist jeweils mit den Messungen der Autoren, nicht mit ihren
+          Rechnungen. Die Grundeinstellungen unten sind die, mit denen die Fälle jetzt im Projekt liegen.</p>
+      </div>
+      <div class="table-scroll"><table class="th-table kennzahlen"><thead><tr><th>Fall</th><th>Grundeinstellung</th>
+        <th>trifft die Messung</th><th>offen</th></tr></thead><tbody>
+        <tr><td><a href="validierung-niida.html">Niida und Maeda 2020</a><br><small>dieLogicFoam</small></td>
+          <td>Anschnitt 30 mm breit, 10 mm tief in der Bohrung der Büchse, dort 0,5 mm; Anschnitt zu Beginn gefüllt;
+            Reibung dünner Wandfilme; realisierbares k-ε</td>
+          <td>eingeschlossene Luft bei P1 auf 85 bis 91 % der Messung am Ende (RMSE 5,9 bis 12,1 cm³), bei P2 RMSE 3,0
+            bis 7,4 cm³; Fotos der langsamen Füllung und bei 100 mm/s (dicke Fläche IoU 0,91)</td>
+          <td>Strahl aus dem Anschnitt behält zu viel Impuls: bei P1 Front zu hoch, Ecken des Trichters leer; nach dem
+            Umschalten bei P2 See zu unruhig. Gemessene Luft selbst um 20 bis 35 % unsicher</td></tr>
+        <tr><td><a href="validierung-trometer.html">Trometer et al. 2023</a><br><small>dieLogicFoam</small></td>
+          <td>laminar, 1 mm, 5 Zellen über die Dicke; zu Beginn in Ruhe (Pressrest bis zum Wasserspiegel der Kammer);
+            Entlüftung auf der Seite der Kammer</td>
+          <td>Füllstand bei allen Drücken (Wasser IoU am Ende 0,86 bis 0,96); Luftnester der mittleren Füllung in
+            denselben Seitenkanälen (mit 5 mm Toleranz 52 % bei 200 mbar)</td>
+          <td>Fächer des ersten Einlaufs (Tiefe des Anschnitts in der Quelle nicht angegeben); Nester an den oberen
+            Ecken der Insel am Ende; Füllgrad der Gießkammer nicht angegeben</td></tr>
+        <tr><td><a href="validierung-zamora.html">Zamora und López 2007/2008</a><br><small>shotSleeveFoam</small></td>
+          <td>unverändert</td>
+          <td>eingeschlossene Luft über 13 Einstellungen, RMSE 0,012 von V/(AL), im Mittel 0,005 darüber; Optimum und
+            Wiederanstieg beim Überschlagen der Welle</td>
+          <td>gerechnetes Optimum bei Füllgrad 0,374 etwas höher (0,015 statt 0,001)</td></tr>
+      </tbody></table></div>
+      <h3 class="sub-title">Was die Validierung am Modell geändert hat</h3>
+      <div class="prose">
+        <ul>
+          <li><strong>26.09.</strong> Niida: Anschnitt 30 statt 22 mm breit, nach dem Modell der Autoren und dem Foto des
+            vollen Hohlraums.</li>
+          <li><strong>27.09.</strong> Niida: k-omega SST statt laminar.</li>
+          <li><strong>28.09.</strong> Niida: Anschnitt 10 mm tief in der Bohrung der Büchse, 0,5 mm im Übergang.</li>
+          <li><strong>01.10.</strong> Niida: Anschnitt unterhalb der Oberkante der Büchse zu Beginn gefüllt; Reibung
+            dünner Wandfilme (neue Option <code>wallFilmFriction</code> in dieLogicFoam).</li>
+          <li><strong>02.10.</strong> Trometer: Wasser zu Beginn in Ruhe, die Entlüftung auf der Seite der Kammer. Vorher
+            stand das Wasser als Wand an der Form neben dem leeren Pressrest, ein Fehler des Modells.</li>
+          <li><strong>04.10.</strong> Niida: realisierbares k-ε statt SST.</li>
+          <li>Werkzeuge: Auswertung der Fotos mit lokalem Hintergrund und bereinigten Masken, Vergleich bei gleicher
+            Füllung (<code>fillmatch.py</code>), Videos mit Schnitt durch die Gießkammer (<code>fieldvideo.py
+            --kammer</code>), flache Bereiche im Vernetzer (<code>paperDieMesh.py</code>, <code>shallow</code>).</li>
+        </ul>
+        <p>Jede Änderung ist auf der Seite des Falls mit den Rechnungen davor und danach belegt; die früheren
+          Grundeinstellungen stehen als eigene Zeilen in den Tabellen.</p>
       </div>
 
     </article>
