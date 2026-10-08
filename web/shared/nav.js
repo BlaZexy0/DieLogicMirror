@@ -124,6 +124,7 @@
         { label: 'Niida und Maeda 2020', href: '/simulation/validierung-niida.html' },
         { label: 'Trometer et al. 2023', href: '/simulation/validierung-trometer.html' },
         { label: 'Zamora und López', href: '/simulation/validierung-zamora.html' },
+        { label: 'Guo und Xiong 2008', href: '/simulation/validierung-guo.html' },
       ] },
     ] },
     { label: 'Theorie', children: [

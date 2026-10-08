@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stufenprobe nach Guo, Xiong et al. · Simulation · DieLogic</title>
+  <!-- Entwurf: noch nicht in Suchmaschinen, bis die Validierung abgeschlossen ist. -->
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
+  <style>
+    /* Seitenspezifisch; Farben nur als Rollen. */
+    pre.code {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    pre.code .c { color: var(--muted); }
+    .th-table th code { text-transform: none; }
+    .toc-sidebar ul + h3 { margin-top: 1.6rem; }
+
+    /* Videos der Beispielrechnungen (ParaView, pvbatch) */
+    .fig-wrap video {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: var(--dark);
+      border-radius: 6px 6px 0 0;
+    }
+    .fig-platzhalter {
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+      margin: 0.75rem;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .kennzahlen td:nth-child(n+2),
+    .kennzahlen th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+    .fig-schmal img { max-width: 520px; margin: 0 auto; display: block; }
+    .toc-knopf { margin-top: 1rem; }
+    h3.sub-title {
+      font-size: 1.05rem;
+      margin: 1.6rem 0 0.4rem;
+      color: var(--text);
+    }
+    .seiten-nav li.nav-sub { padding-left: 0.9rem; font-size: 0.92em; }
+    .seiten-nav strong { color: var(--text); }
+    .karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .karte { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.9rem 1rem; background: var(--surface2); }
+    .karte h4 { margin: 0 0 0.35rem; font-size: 1rem; }
+    h4.bild-reihe { margin: 1.8rem 0 0.5rem; font-size: 1rem; color: var(--text); }
+    .video-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.9rem; margin: 0.6rem 0 1.4rem; }
+    .video-raster.breit { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+    .video-raster.voll { grid-template-columns: 1fr; }
+    .video-raster .fig-wrap { margin: 0; }
+    .video-raster .fig-cap { font-size: 0.78rem; }
+    .karte p { margin: 0 0 0.6rem; color: var(--muted); font-size: 0.9rem; }
+    .status-ok { color: var(--ok-text); }
+    .status-offen { color: var(--caution-text, var(--muted)); }
+  </style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="/">DieLogic</a>
+  <span>›</span>
+  <a href="index.html">Simulation</a>
+  <span>›</span>
+  <a href="validierung.html">Validierung</a>
+  <span>›</span>
+  Guo und Xiong 2008
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>Stufenprobe nach Guo, Xiong et al.</h1>
+    <p class="subtitle">Stufenprobe aus AM50 im Druckguss mit Thermoelementen in der Form: die Wärme, die das Gussteil an die Form abgibt, und die Temperaturen 3 und 7 mm hinter der Kavität.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">dieLogicSolFoam</span>
+      <span class="hero-tag">Erstarrung</span>
+      <span class="hero-tag">Formtemperatur</span>
+      <span class="hero-tag">Wärmeübergang</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#g1">1. Der Versuch</a></li>
+        <li><a href="#g2">2. Das 2D-Modell</a></li>
+        <li><a href="#g3">3. Was angenommen und was angepasst ist</a></li>
+        <li><a href="#g4">4. Ergebnis</a></li>
+        <li><a href="#g5">5. Warum der Anstieg in der Form nicht passen kann</a></li>
+        <li><a href="#g6">6. Fall und Daten</a></li>
+      </ul>
+      <h3>Seiten</h3>
+      <ul class="seiten-nav">
+        <li><a href="index.html">Übersicht</a></li>
+        <li><a href="dielogicfoam.html">dieLogicFoam</a></li>
+        <li><a href="dielogicsolfoam.html">dieLogicSolFoam</a></li>
+        <li><a href="shotsleevefoam.html">shotSleeveFoam</a></li>
+        <li><a href="netzbewegung.html">Netzbewegung</a></li>
+        <li><a href="validierung.html">Validierung</a></li>
+        <li class="nav-sub"><a href="validierung-niida.html">Niida und Maeda 2020</a></li>
+        <li class="nav-sub"><a href="validierung-trometer.html">Trometer et al. 2023</a></li>
+        <li class="nav-sub"><a href="validierung-zamora.html">Zamora und López</a></li>
+        <li class="nav-sub"><strong>Guo und Xiong 2008</strong></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <div class="draft-note">
+        📚 <b>Entwurf:</b> Die Validierung läuft noch; Zahlen und Befunde werden mit jeder
+        Rechnung nachgetragen (Stand 08.10.2026). Der Text ist noch nicht redigiert.
+      </div>
+
+      <div class="insight-box">
+        <div class="label">Kurz gesagt</div>
+        <p>Die erste Prüfung von <code>dieLogicSolFoam</code> an einer Messung im Druckguss:
+          eine Stufenprobe aus AM50 mit Thermoelementen in der Form. Die Wärme, die das Gussteil in den ersten
+          Sekunden an die Form abgibt, trifft die Auswertung der Quelle auf 7 %. Die Temperaturen 3 und 7 mm tief in
+          der Form steigen in der Rechnung dagegen 1,5- bis 1,8-mal so stark wie gemessen. Das liegt nach einer
+          einfachen Abschätzung nicht am Modell: mit der gemessenen Wärme muss Warmarbeitsstahl in 7 mm Tiefe um bis
+          zu 56 K wärmer werden, gemessen sind 32 K.</p>
+      </div>
+
+      <span class="section-anchor" id="g1"></span>
+      <h2 class="section-title">1. Der Versuch</h2>
+      <div class="prose">
+        <p>Guo, Xiong, Cho und Choi (Tsinghua-Universität, 2008) haben auf einer 650-t-Kaltkammermaschine eine Stufenprobe
+          gegossen: 125 mm breit, fünf Stufen von 2, 5, 8, 11 und 14 mm Dicke, 55 bis 80 mm hoch, aus der
+          Magnesiumlegierung AM50 in einem Einsatz aus H13. Die Kavität ist in die feste Formhälfte eingearbeitet,
+          die bewegliche ist eben. Hinter den Stufen 1, 2 und 4 sitzen Thermoelemente in der festen Hälfte: mit der
+          Spitze an der Kavitätenfläche, 3 mm und 7 mm dahinter, abgetastet mit 50 Hz. Gegossen wurde bei
+          680 °C, 67 MPa Gießdruck und 2 m/s im schnellen Schuss, rund 370 Schüsse.</p>
+        <p>Aus den Temperaturen hat die Quelle mit einem inversen Verfahren den Wärmestrom und den
+          Wärmeübergangskoeffizienten zwischen Gussteil und Form bestimmt: nach dem Schuss ein Spitzenwert von
+          24 bis 49 kW/(m² K), der beim Erstarren auf 1 bis 2 kW/(m² K) fällt.</p>
+      </div>
+      <div class="table-scroll"><table class="th-table">
+        <thead><tr><th>Größe</th><th>Wert</th><th>Herkunft</th></tr></thead>
+        <tbody>
+          <tr><td>Geometrie, Messstellen</td><td>5 Stufen, Thermoelemente bei 0, 3 und 7 mm</td><td>Fig. 1 und 2 der Quelle</td></tr>
+          <tr><td>Legierung, Form</td><td>AM50, 680 °C; H13</td><td>angegeben</td></tr>
+          <tr><td>Zyklus</td><td>72,5 s, Sprühen 39,5 s nach dem Schuss</td><td>aus Fig. 4a gemessen</td></tr>
+          <tr><td>Temperaturverläufe Stufe 2</td><td>Oberfläche, 3 mm, 7 mm über Schuss 64</td><td>aus Fig. 4a digitalisiert</td></tr>
+          <tr><td>Oberfläche Stufen 1, 2, 4</td><td>vor dem Schuss und 10 s danach</td><td>aus Fig. 4b digitalisiert</td></tr>
+          <tr><td>Wärmestrom</td><td>Spitze 6,45 / 7,62 / 6,27 MW/m²; Verlauf Stufe 2</td><td>angegeben; Fig. 6a abgelesen</td></tr>
+          <tr><td>Kühlung der Form, Öffnungszeit</td><td>nicht angegeben</td><td>angenommen, siehe Abschnitt 3</td></tr>
+        </tbody>
+      </table></div>
+
+      <span class="section-anchor" id="g2"></span>
+      <h2 class="section-title">2. Das 2D-Modell</h2>
+      <div class="prose">
+        <p>Die Stufen sind 125 mm breit; in ihrer Mitte fließt die Wärme quer durch die Dicke. Gerechnet wird deshalb ein
+          Schnitt durch beide Formhälften und alle fünf Stufen, mit dem Lauf darunter (Fig. 1 und 2 der Quelle). Über
+          das Gussteil und die ersten 30 mm der Form sind die Zellen 0,5 mm breit, die 2-mm-Stufe hat also vier Zellen
+          über der Dicke; zur Rückseite hin werden sie gröber, 21 840 Zellen insgesamt. Die Messstellen der Quelle sind
+          Sonden im Modell an derselben Stelle.</p>
+        <p>Gerechnet werden 14 Schüsse hintereinander mit Öffnen, Sprühen und Schließen, bis die Form im Zyklusbetrieb ist.
+          Verglichen wird der 14. Schuss der Rechnung mit Schuss 64 der Messung. Eine Rechnung dauert etwa vier Minuten.</p>
+      </div>
+      <div class="fig-wrap fig-schmal">
+        <img src="img/val/guo-modell.webp" alt="Schnitt durch die Stufenprobe: bewegliche und feste Formhälfte, fünf Stufen, Messstellen hinter den Stufen 1, 2 und 4" loading="lazy">
+        <div class="fig-cap"><b>Modell.</b> Hell das Gussteil, links die bewegliche, rechts die feste Formhälfte mit der
+          Kavität. Orange die Messstellen an der Oberfläche, in 3 mm und in 7 mm Tiefe.</div>
+      </div>
+
+      <span class="section-anchor" id="g3"></span>
+      <h2 class="section-title">3. Was angenommen und was angepasst ist</h2>
+      <div class="prose">
+        <p>Der Kontakt zwischen Gussteil und Form beginnt mit 35 kW/(m² K), der Größenordnung der inversen Auswertung der
+          Quelle. Wie die Form gekühlt wird, gibt die Quelle nicht an. Im Modell geben die Rückseiten beider Hälften Wärme
+          an ein Kühlmittel ab. Zwei Werte sind an der Messung angepasst: die Temperatur dieses Kühlmittels und der
+          Kontakt, wenn das Gussteil fest ist und sich ein Luftspalt öffnet. In sechs Rechnungen mit 60 oder 90 °C und
+          200, 400 oder 700 W/(m² K) passt 60 °C mit 200 W/(m² K) am besten; diese Werte sind die Einstellung des Falls.</p>
+        <p>Auch damit ist die Form vor dem Schuss zu warm. Kälteres Kühlmittel hilft kaum, denn 100 mm Stahl zwischen
+          Rückseite und Kavität begrenzen die Kühlung. Die echte Form muss Kühlkanäle nahe an der Kavität haben; die
+          Quelle nennt sie nicht.</p>
+      </div>
+
+      <span class="section-anchor" id="g4"></span>
+      <h2 class="section-title">4. Ergebnis</h2>
+      <div class="fig-wrap">
+        <img src="img/val/guo-stufe2.webp" alt="Formtemperatur hinter Stufe 2 an der Oberfläche, in 3 mm und 7 mm Tiefe über einen Schuss: Rechnung und Messung" loading="lazy">
+        <div class="fig-cap"><b>Stufe 2 über einen Schuss.</b> Linien: Rechnung, Punkte: Messung. Die Rechnung liegt vor dem
+          Schuss 17 bis 25 K zu hoch und steigt in 3 und 7 mm Tiefe stärker an. Die Spitze an der Oberfläche
+          (Rechnung 390 °C, Messung 445 °C) und den Einbruch beim Sprühen gibt sie wieder.</div>
+      </div>
+      <div class="fig-wrap">
+        <img src="img/val/guo-waermestrom.webp" alt="Wärmestrom in die Form hinter den Stufen 1, 2 und 4 und aufsummierte Wärme hinter Stufe 2: Rechnung und Quelle" loading="lazy">
+        <div class="fig-cap"><b>Wärme in die Form.</b> Links der Wärmestrom der drei Stufen, gestrichelt die Spitzenwerte der
+          Quelle. Rechts die Wärme, die hinter Stufe 2 in die Form geht, aufsummiert: Rechnung 2,94 MJ/m² nach 3,3 s,
+          Auswertung der Quelle 3,15 MJ/m².</div>
+      </div>
+      <div class="table-scroll"><table class="th-table">
+        <thead><tr><th>Größe</th><th>Rechnung</th><th>Messung</th><th>Bewertung</th></tr></thead>
+        <tbody>
+          <tr><td>Wärme in die Form, Stufe 2, erste 3,3 s</td><td>2,94 MJ/m²</td><td>3,15 MJ/m²</td><td class="status-ok">trifft (7 %)</td></tr>
+          <tr><td>Reihenfolge der Stufen an der Oberfläche</td><td>1 &lt; 2 &lt; 4</td><td>1 &lt; 2 &lt; 4</td><td class="status-ok">trifft</td></tr>
+          <tr><td>Oberfläche vor dem Schuss, Stufe 1</td><td>160 °C</td><td>150 °C</td><td class="status-ok">trifft</td></tr>
+          <tr><td>Oberfläche vor dem Schuss, Stufen 2 und 4</td><td>201 / 281 °C</td><td>184 / 230 °C</td><td class="status-offen">zu warm</td></tr>
+          <tr><td>Oberfläche 10 s nach dem Schuss, Stufen 1, 2, 4</td><td>192 / 260 / 402 °C</td><td>176 / 235 / 331 °C</td><td class="status-offen">zu warm</td></tr>
+          <tr><td>Anstieg in 3 mm / 7 mm, Stufe 2</td><td>90 / 48 K</td><td>49 / 32 K</td><td class="status-offen">zu stark</td></tr>
+          <tr><td>Spitzenwärmestrom, Mittel über 20 ms, Stufen 1, 2, 4</td><td>10,3 / 9,5 / 8,0 MW/m²</td><td>6,45 / 7,62 / 6,27 MW/m²</td><td class="status-offen">zu hoch</td></tr>
+        </tbody>
+      </table></div>
+
+      <span class="section-anchor" id="g5"></span>
+      <h2 class="section-title">5. Warum der Anstieg in der Form nicht passen kann</h2>
+      <div class="prose">
+        <p>Geht eine Wärmemenge $Q$ je Fläche in kurzer Zeit in eine dicke Stahlwand, steigt die Temperatur in der Tiefe
+          $x$ höchstens um</p>
+      </div>
+      <div class="math-block">$$\Delta T_\text{max} = \frac{Q}{\rho c\, x}\sqrt{\frac{2}{\pi e}}$$</div>
+      <div class="prose">
+        <p>Mit der Wärme aus der Auswertung der Quelle, $Q = 3{,}15$ MJ/m², und H13 ($\rho c \approx 3{,}9$ MJ/(m³ K)) sind das
+          in 7 mm Tiefe 56 K. Die Rechnung kommt auf 48 K, weil die Wärme über etwa eine Sekunde verteilt ankommt. Gemessen
+          sind 32 K. Die gemessene Wärme und der gemessene Anstieg passen also untereinander nicht zusammen. Die Quelle
+          musste diesen Anstieg nicht nachbilden, denn sie hat das Thermoelement in 7 mm Tiefe selbst als Randbedingung
+          ihrer Auswertung verwendet.</p>
+        <p>Am wahrscheinlichsten zeigen die eingebauten Thermoelemente gedämpft und verzögert an: Sie sitzen in Bohrungen,
+          mit Übergangswiderstand im Loch und Wärmeableitung über den Mantel. Dafür spricht auch der Zeitpunkt: in 3 mm Tiefe
+          erreicht die Messung ihr Maximum 5 s nach dem Schuss, die Rechnung nach 2 s. Der Spitzenwärmestrom liegt
+          auch als Mittel über 20 ms (die Abtastung der Messung) über den Werten der Quelle: das Modell setzt den vollen
+          Kontakt vom ersten Augenblick an, das inverse Verfahren verteilt die Spitze über mehrere Messpunkte.</p>
+      </div>
+      <div class="warning-box"><p>Dieser Fall bestätigt die Wärme, die das erstarrende Gussteil an die Form abgibt:
+        Überhitzung, latente Wärme und Kontakt zusammen. Die Temperaturen in der Form lassen sich mit diesen Messstellen
+        nicht prüfen, und das Temperaturniveau hängt an einer Kühlung, die die Quelle nicht beschreibt. Die Aluminiumvariante
+        derselben Stufenprobe (ADC12, Front. Mech. Eng. China 2007) oder eine Quelle mit beschriebener Formkühlung würde
+        die offenen Punkte klären.</p></div>
+
+      <span class="section-anchor" id="g6"></span>
+      <h2 class="section-title">6. Fall und Daten</h2>
+<pre class="code">tools/runCase cases/validation/stepDie     <span class="c"># Netz, 14 Schüsse (etwa 4 min), Vergleich check.py</span>
+python3 tools/render/stepDieFigures.py runs/validation/stepDie img/   <span class="c"># Bilder dieser Seite</span></pre>
+      <div class="prose">
+        <p>Im Projekt <code>dieLogicSol</code> unter <code>cases/validation/stepDie</code>: das Netz aus
+          <code>makeMesh.py</code>, die digitalisierten Messkurven mit ihren Skripten in <code>paper/</code> und
+          <code>check.py</code>. Die Prüfung bewertet nur, was die Messung tragen kann (Wärme in die Form, Reihenfolge
+          der Stufen, Oberfläche von Stufe 1); die übrigen Abweichungen gibt sie als Befund aus.</p>
+        <p>Quelle: Z. Guo, S. Xiong, S.-H. Cho, J.-K. Choi: Heat Transfer between Casting and Die during High Pressure Die
+          Casting Process of AM50 Alloy: Modeling and Experimental Results. J. Mater. Sci. Technol. 24 (2008) 131–135.</p>
+      </div>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>
