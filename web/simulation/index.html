@@ -93,10 +93,11 @@
 <section class="page-hero">
   <div class="inner">
     <h1>Simulation mit OpenFOAM</h1>
-    <p class="subtitle">Zwei eigene Solver für den Druckguss, eine Netzbewegung für die Gießkammer und die Validierung an Messungen aus der Literatur. Diese Seiten beschreiben, was die Solver rechnen, wie sie aufgebaut sind und wie nahe sie an die Messungen herankommen.</p>
+    <p class="subtitle">Drei eigene Solver für den Druckguss, eine Netzbewegung für die Gießkammer und die Validierung an Messungen aus der Literatur. Diese Seiten beschreiben, was die Solver rechnen, wie sie aufgebaut sind und wie nahe sie an die Messungen herankommen.</p>
     <div class="hero-tags">
       <span class="hero-tag">OpenFOAM v2606</span>
       <span class="hero-tag">dieLogicFoam</span>
+      <span class="hero-tag">dieLogicSolFoam</span>
       <span class="hero-tag">shotSleeveFoam</span>
       <span class="hero-tag">Validierung</span>
     </div>
@@ -116,6 +117,7 @@
       <ul class="seiten-nav">
         <li><strong>Übersicht</strong></li>
         <li><a href="dielogicfoam.html">dieLogicFoam</a></li>
+        <li><a href="dielogicsolfoam.html">dieLogicSolFoam</a></li>
         <li><a href="shotsleevefoam.html">shotSleeveFoam</a></li>
         <li><a href="netzbewegung.html">Netzbewegung</a></li>
         <li><a href="validierung.html">Validierung</a></li>
@@ -129,7 +131,7 @@
 
       <div class="draft-note">
         📚 <b>Entwurf:</b> Die Validierung läuft noch; Zahlen und Befunde werden mit jeder
-        Rechnung nachgetragen (Stand 05.10.2026). Der Text ist noch nicht redigiert.
+        Rechnung nachgetragen (Stand 08.10.2026). Der Text ist noch nicht redigiert.
       </div>
 
       <span class="section-anchor" id="u1"></span>
@@ -141,13 +143,17 @@
           die Schmelze mit bis zu 50 m/s durch den Anschnitt; entscheidend ist, wo Luft eingeschlossen wird
           und wie sie über die Entlüftung entweicht.</p>
         <p>Für beide Abschnitte gibt es einen eigenen Solver auf der Basis von OpenFOAM v2606. Beide sind
-          an Wassermodellen aus der Literatur gemessen. Verglichen wird mit den <strong>Messungen</strong>
+          an Wassermodellen aus der Literatur gemessen. Ein dritter Solver rechnet, was nach der Füllung
+          kommt: die <strong>Erstarrung</strong> des Schusses zusammen mit der Form, mit Porosität, Kleben und
+          Erstarrungszeiten. Verglichen wird mit den <strong>Messungen</strong>
           der Autoren, also mit ihren Fotos und den daraus gemessenen Größen, nicht mit ihren Simulationen.</p>
       </div>
 
       <div class="karten">
         <div class="karte"><h4>dieLogicFoam</h4><p>Formfüllung ohne Luftrechnung: nur die Schmelze auf dem Netz,
           die Luft als Pakete mit eigenem Druck und Entlüftung.</p><a class="btn btn-outline" href="dielogicfoam.html">Zum Solver</a></div>
+        <div class="karte"><h4>dieLogicSolFoam</h4><p>Erstarrung des Schusses mit dem Stahl der Form: Erstarrungszeiten,
+          Porosität, Kleben, Form über mehrere Schüsse.</p><a class="btn btn-outline" href="dielogicsolfoam.html">Zum Solver</a></div>
         <div class="karte"><h4>shotSleeveFoam</h4><p>Gießkammer mit bewegtem Kolben: Schmelze und Luft zweiphasig,
           alle Eingaben in einer Datei.</p><a class="btn btn-outline" href="shotsleevefoam.html">Zum Solver</a></div>
         <div class="karte"><h4>Netzbewegung</h4><p>Die Bibliothek <code>libshotSleeve</code>: O-Netz der Kammer,

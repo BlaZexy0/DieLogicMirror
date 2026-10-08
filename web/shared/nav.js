@@ -115,6 +115,7 @@
       { title: 'Solver', items: [
         { label: 'Übersicht', href: '/simulation/' },
         { label: 'dieLogicFoam', href: '/simulation/dielogicfoam.html' },
+        { label: 'dieLogicSolFoam', href: '/simulation/dielogicsolfoam.html' },
         { label: 'shotSleeveFoam', href: '/simulation/shotsleevefoam.html' },
         { label: 'Netzbewegung', href: '/simulation/netzbewegung.html' },
       ] },

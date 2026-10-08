@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dieLogicSolFoam: Erstarrung mit der Form · Simulation · DieLogic</title>
+  <!-- Entwurf: noch nicht in Suchmaschinen, bis die Validierung abgeschlossen ist. -->
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
+  <style>
+    /* Seitenspezifisch; Farben nur als Rollen. */
+    pre.code {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    pre.code .c { color: var(--muted); }
+    .th-table th code { text-transform: none; }
+    .toc-sidebar ul + h3 { margin-top: 1.6rem; }
+
+    /* Videos der Beispielrechnungen (ParaView, pvbatch) */
+    .fig-wrap video {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: var(--dark);
+      border-radius: 6px 6px 0 0;
+    }
+    .fig-platzhalter {
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+      margin: 0.75rem;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .kennzahlen td:nth-child(n+2),
+    .kennzahlen th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+    .fig-schmal img { max-width: 520px; margin: 0 auto; display: block; }
+    .toc-knopf { margin-top: 1rem; }
+    h3.sub-title {
+      font-size: 1.05rem;
+      margin: 1.6rem 0 0.4rem;
+      color: var(--text);
+    }
+    .seiten-nav li.nav-sub { padding-left: 0.9rem; font-size: 0.92em; }
+    .seiten-nav strong { color: var(--text); }
+    .karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .karte { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.9rem 1rem; background: var(--surface2); }
+    .karte h4 { margin: 0 0 0.35rem; font-size: 1rem; }
+    h4.bild-reihe { margin: 1.8rem 0 0.5rem; font-size: 1rem; color: var(--text); }
+    .video-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.9rem; margin: 0.6rem 0 1.4rem; }
+    .video-raster.breit { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+    .video-raster.voll { grid-template-columns: 1fr; }
+    .video-raster .fig-wrap { margin: 0; }
+    .video-raster .fig-cap { font-size: 0.78rem; }
+    .karte p { margin: 0 0 0.6rem; color: var(--muted); font-size: 0.9rem; }
+    .status-ok { color: var(--ok-text); }
+    .status-offen { color: var(--caution-text, var(--muted)); }
+  </style>
+</head>
+<body>
+
+<div class="breadcrumb">
+  <a href="/">DieLogic</a>
+  <span>›</span>
+  <a href="index.html">Simulation</a>
+  <span>›</span>
+  dieLogicSolFoam
+</div>
+
+<section class="page-hero">
+  <div class="inner">
+    <h1>dieLogicSolFoam: Erstarrung mit der Form</h1>
+    <p class="subtitle">Nach der Füllung: die Erstarrung des ganzen Schusses zusammen mit dem Stahl der Form. Lokale und globale Erstarrungszeit, Porosität aus Schwindung, Gas und Mikroporen, Kleben an der Form und die Form über mehrere Schüsse.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">OpenFOAM v2606</span>
+      <span class="hero-tag">Aluminium</span>
+      <span class="hero-tag">Porosität</span>
+      <span class="hero-tag">Kleben</span>
+      <span class="hero-tag">Zyklen</span>
+    </div>
+  </div>
+</section>
+
+<div class="content-wrap">
+  <div class="content-cols">
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#s1">1. Aufgabe</a></li>
+        <li><a href="#s2">2. Ein Netz für Gussteil und Form</a></li>
+        <li><a href="#s3">3. Erstarrung und latente Wärme</a></li>
+        <li><a href="#s4">4. Nachdruck, Öffnen, Sprühen</a></li>
+        <li><a href="#s5">5. Erstarrungszeiten</a></li>
+        <li><a href="#s6">6. Porosität</a></li>
+        <li><a href="#s7">7. Kleben an der Form</a></li>
+        <li><a href="#s8">8. Übergabe von der Füllung</a></li>
+        <li><a href="#s9">9. Verifikation</a></li>
+        <li><a href="#s10">10. Beispiele</a></li>
+        <li><a href="#s11">11. Einsatz</a></li>
+        <li><a href="#s12">12. Grenzen</a></li>
+      </ul>
+      <h3>Seiten</h3>
+      <ul class="seiten-nav">
+        <li><a href="index.html">Übersicht</a></li>
+        <li><a href="dielogicfoam.html">dieLogicFoam</a></li>
+        <li><strong>dieLogicSolFoam</strong></li>
+        <li><a href="shotsleevefoam.html">shotSleeveFoam</a></li>
+        <li><a href="netzbewegung.html">Netzbewegung</a></li>
+        <li><a href="validierung.html">Validierung</a></li>
+        <li class="nav-sub"><a href="validierung-niida.html">Niida und Maeda 2020</a></li>
+        <li class="nav-sub"><a href="validierung-trometer.html">Trometer et al. 2023</a></li>
+        <li class="nav-sub"><a href="validierung-zamora.html">Zamora und López</a></li>
+      </ul>
+    </aside>
+
+    <article class="theory-article">
+
+      <div class="draft-note">
+        📚 <b>Entwurf:</b> Die Validierung läuft noch; Zahlen und Befunde werden mit jeder
+        Rechnung nachgetragen (Stand 08.10.2026). Der Text ist noch nicht redigiert.
+      </div>
+
+      <div class="insight-box">
+        <div class="label">Kurz gesagt</div>
+        <p>Nach der Füllung rechnet <code>dieLogicSolFoam</code> die Erstarrung des ganzen Schusses
+          zusammen mit dem Stahl der Form: Gussteil, Anschnitt, Überläufe und Pressrest, die beiden
+          Formhälften, Einsätze, Kernstifte und den Kolben. Das Ergebnis sind die lokale und die globale
+          Erstarrungszeit, die Porosität aus Schwindung, Gas und Mikroporen und die Gefahr des Klebens
+          (Anlöten) an der Form. Über mehrere Schüsse mit Öffnen und Sprühen findet die Form ihren
+          Zyklusbetrieb. Der Startzustand kommt direkt aus der Füllung mit
+          <code>dieLogicFoam</code>.</p>
+      </div>
+
+      <span class="section-anchor" id="s1"></span>
+      <h2 class="section-title">1. Aufgabe</h2>
+      <div class="prose">
+        <p>Wenn die Form voll ist, beginnt der Teil des Schusses, der über die Güte des Gussteils entscheidet.
+          Die Schmelze gibt ihre Wärme an die Form ab und erstarrt von der Wand nach innen. Wo ein dicker
+          Bereich von dünnen umgeben ist, bleibt ein heißer Kern übrig: Er schwindet, wenn er fest wird, und
+          wenn der Anschnitt schon zu ist, kann der Kolben keine Schmelze mehr nachdrücken. Dort entsteht
+          Schwindungsporosität. Die Luft, die bei der Füllung eingeschlossen wurde, bleibt als Gasporen
+          zurück, verdichtet vom Nachdruck. Und wo die Form an einer Stelle lange heiß ist und Schmelze
+          berührt, wächst eine Eisen-Aluminium-Schicht: Das Gussteil klebt.</p>
+        <p>Alle drei Fragen hängen an der Temperatur der Form. Deshalb rechnet der Solver nicht nur das
+          Gussteil mit einem festen Wärmeübergang, sondern die Form als Ganzes mit, mit Kühlkanälen, Kolben
+          und, über mehrere Schüsse, dem Öffnen, Sprühen und Schließen.</p>
+      </div>
+      <div class="table-scroll"><table class="th-table">
+        <thead><tr><th>Ergebnis</th><th>Felder</th></tr></thead>
+        <tbody>
+          <tr><td>Erstarrungszeit lokal</td><td><code>tLiquidus</code>, <code>tSolidus</code>, <code>localSolidificationTime</code> (Erstarrungsdauer der Zelle), <code>coolingRate</code>, <code>SDAS</code> (sekundärer Dendritenarmabstand), <code>niyama</code></td></tr>
+          <tr><td>Erstarrungszeit global</td><td>Zeit, zu der das ganze Gussteil und jede Zone (Anschnitt, Platte, Dom, Pressrest, Überlauf) fest ist; <code>solidificationTime</code> ab Beginn der Füllung</td></tr>
+          <tr><td>Porosität</td><td><code>shrinkagePorosity</code>, <code>gasPorosity</code>, <code>microPorosity</code>, <code>porosity</code>, dazu <code>feedingState</code> (gespeist oder abgeschnitten) und <code>pMelt</code></td></tr>
+          <tr><td>Kleben an der Form</td><td><code>dieSurfaceTmax</code>, <code>solderingTime</code>, <code>solderingIndex</code></td></tr>
+          <tr><td>Form im Zyklus</td><td><code>T</code> der Form über die Schüsse, Wärmeströme in <code>postProcessing/dieLogicSol/</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <span class="section-anchor" id="s2"></span>
+      <h2 class="section-title">2. Ein Netz für Gussteil und Form</h2>
+      <div class="prose">
+        <p>Gussteil und Form sind ein einziges Netz. Jeder Werkstoff ist eine Zellzone: die Legierung für
+          Gussteil, Anschnitt, Überläufe und Pressrest, Warmarbeitsstahl für die Formhälften, eine Kupferlegierung
+          für die Kolbenspitze, eigene Zonen für Kernstifte oder Einsätze. Kühlkanäle sind Löcher im Netz mit einem
+          Wärmeübergang an das Wasser. Die Energiegleichung wird für alle Zellen in einer Matrix gelöst; es gibt keine
+          Kopplung zwischen getrennten Gebieten und keine Iteration zwischen Gussteil und Form.</p>
+        <p>Zwischen zwei Zellen fließt Wärme über den Widerstand der beiden halben Zellen und, an der Grenze
+          Gussteil zu Form, über den Kontaktwiderstand:</p>
+      </div>
+      <div class="math-block">$$\dot q = \frac{T_N - T_P}{R}, \qquad R = \frac{d_P}{\lambda_P} + \frac{1}{h} + \frac{d_N}{\lambda_N}$$</div>
+      <div class="prose">
+        <p>Innerhalb eines Werkstoffs ist $1/h = 0$, das ist das harmonische Mittel der Leitfähigkeiten. An der Form
+          ist $h$ der Wärmeübergangskoeffizient der Kontaktfläche. Er ist hoch, solange die Schmelze unter Druck an der
+          Form anliegt, und fällt, wenn die Randschale erstarrt, schwindet und sich ein Luftspalt öffnet:</p>
+      </div>
+      <div class="math-block">$$h = h_\text{flüssig} + \left(h_\text{fest} - h_\text{flüssig}\right)\,\frac{f_s - f_{s,1}}{f_{s,2} - f_{s,1}}, \qquad f_{s,1} \le f_s \le f_{s,2}$$</div>
+      <div class="prose">
+        <p>Der Festanteil $f_s$ ist der der Gusszelle an dieser Fläche. Jede Formzone hat ihre eigenen Werte. Auf einen
+          Kernstift schwindet das Gussteil auf, dort bleibt der Kontakt auch fest gut; von einer ebenen Formwand hebt
+          es ab. An den Rändern des Netzes (Kühlkanäle, Außenflächen, Kolben) gilt
+          $\dot q = (T - T_\infty)/(1/h + d/\lambda)$ mit dem Widerstand der halben Randzelle, damit eine grobe Zelle
+          am Kühlkanal nicht zu kalt wird.</p>
+      </div>
+
+      <span class="section-anchor" id="s3"></span>
+      <h2 class="section-title">3. Erstarrung und latente Wärme</h2>
+      <div class="prose">
+        <p>Der Festanteil der Legierung ist eine Kurve $f_s(T)$: eine Tabelle (zum Beispiel aus CALPHAD), linear
+          zwischen Liquidus und Solidus, oder nach Scheil mit einem eutektischen Intervall. Die Energiegleichung ist</p>
+      </div>
+      <div class="math-block">$$\rho c_p \frac{T - T^0}{\Delta t} - \rho L \frac{f_s - f_s^0}{\Delta t} = \nabla\cdot\left(\lambda \nabla T\right)$$</div>
+      <div class="prose">
+        <p>Die latente Wärme ist stark nichtlinear: in einem engen Temperaturbereich wird fast die ganze Wärme frei.
+          In jeder äußeren Iteration wird $f_s$ um den letzten Stand linearisiert (nach Voller und Swaminathan), die
+          Gleichung implizit gelöst und danach die Energieänderung jeder Gusszelle wieder genau auf die Kurve
+          aufgeteilt:</p>
+      </div>
+      <div class="math-block">$$\rho c_p T' - \rho L f_s(T') = \rho c_p T - \rho L f_{s,\text{lin}}$$</div>
+      <div class="prose">
+        <p>Diese Aufteilung ist auf der stückweise linearen Kurve exakt und kann nicht zwischen flüssig und fest
+          hin- und herspringen, auch wenn eine Zelle den ganzen Erstarrungsbereich in einem Zeitschritt durchläuft.
+          Ohne sie pendelte eine Zelle an der kalten Wand in den ersten Tests zwischen $f_s = 0$ und $f_s = 1$.
+          Für $c_p(T)$ steht die Sekante $\int c_p\,\mathrm{d}T/(T - T^0)$ in der Gleichung; die Energiebilanz
+          schließt deshalb in allen Fällen auf $10^{-8}$ oder besser.</p>
+      </div>
+      <div class="table-scroll"><table class="th-table">
+        <thead><tr><th>Werkstoff</th><th>Einsatz</th><th>Liquidus / Solidus</th><th>Schwindung</th></tr></thead>
+        <tbody>
+          <tr><td>AlSi9Cu3(Fe), EN AC-46000</td><td>Standardlegierung im Druckguss</td><td>595 / 490 °C</td><td>4,6 %</td></tr>
+          <tr><td>AlSi10MnMg, EN AC-43500</td><td>Strukturguss</td><td>596 / 553 °C</td><td>4,7 %</td></tr>
+          <tr><td>AlSi12(Fe), EN AC-44300</td><td>dünne Wände, nah am Eutektikum</td><td>582 / 572 °C</td><td>3,5 %</td></tr>
+          <tr><td>1.2343 (H11/H13)</td><td>Formhälften, Einsätze, Stifte</td><td colspan="2">λ 24,5 bis 28,5 W/(m K)</td></tr>
+          <tr><td>CuCoBe</td><td>Kolbenspitze</td><td colspan="2">λ 230 bis 250 W/(m K)</td></tr>
+          <tr><td>Densimet (W-Ni-Fe)</td><td>Kernstifte</td><td colspan="2">λ 75 bis 85 W/(m K)</td></tr>
+        </tbody>
+      </table></div>
+      <div class="prose">
+        <p>Die Daten liegen in <code>materials/</code> und werden in die Fälle kopiert. Es sind Literaturwerte;
+          die Kurven $f_s(T)$ sind Näherungen und sollten für eine echte Schmelze aus CALPHAD kommen.</p>
+      </div>
+
+      <span class="section-anchor" id="s4"></span>
+      <h2 class="section-title">4. Nachdruck, Öffnen, Sprühen</h2>
+      <div class="prose">
+        <p>Zeit null ist das Ende der Füllung. Der Nachdruck (Multiplikation) ist eine Zeitfunktion, zum Beispiel
+          von 50 auf 800 bar in 30 ms. Für eine Rechnung über mehrere Schüsse kommen dazu:</p>
+        <ul>
+          <li><strong>Öffnen:</strong> zur eingestellten Zeit wird das Gussteil entnommen; seine Zellen sind von der
+            Form getrennt, die Kavitätenfläche der Form gibt Wärme an die Luft ab.</li>
+          <li><strong>Sprühen:</strong> im Sprühfenster kühlt das Trennmittel die Kavität mit einem hohen
+            Wärmeübergang.</li>
+          <li><strong>Nächster Schuss:</strong> zur Zykluszeit schließt die Form, das Gussteil beginnt wieder mit dem
+            Zustand am Ende der Füllung, die Form so warm, wie sie ist.</li>
+        </ul>
+        <p>Der Zeitschritt trifft alle Ereignisse und Schreibzeiten genau und beginnt bei jedem Schuss wieder klein.
+          Bei jedem Öffnen werden die Ergebnisse des Schusses geschrieben.</p>
+      </div>
+
+      <span class="section-anchor" id="s5"></span>
+      <h2 class="section-title">5. Erstarrungszeiten</h2>
+      <div class="prose">
+        <p>Für jede Gusszelle wird festgehalten, wann sie unter die Liquidustemperatur fällt und wann sie ganz fest
+          ist, innerhalb des Zeitschritts interpoliert. Die Differenz ist die <strong>lokale Erstarrungszeit</strong>
+          $t_f$; aus ihr folgen die mittlere Abkühlrate $(T_L - T_S)/t_f$ und der Dendritenarmabstand
+          $\lambda_2 = A\,t_f^{\,n}$. Die <strong>globale Erstarrungszeit</strong> ist die Zeit, zu der die letzte
+          Zelle fest wird, für das ganze Gussteil und für jede Zone. Das Niyama-Kriterium
+          $G/\sqrt{\dot T}$ wird bei $T_S + 0{,}1\,(T_L - T_S)$ bestimmt, mit dem Temperaturgradienten nur über
+          Gusszellen.</p>
+      </div>
+
+      <span class="section-anchor" id="s6"></span>
+      <h2 class="section-title">6. Porosität</h2>
+      <h3 class="sub-title">Speisung und Schwindung</h3>
+      <div class="prose">
+        <p>Schmelze mit einem Festanteil unter $f_{s,\text{Speisung}}$ (0,5 bis 0,7) kann noch fließen. In jedem
+          Zeitschritt wird diese bewegliche Schmelze in zusammenhängende Bereiche zerlegt, auch über die Grenzen der
+          Prozessoren hinweg. Ein Bereich, der den Pressrest erreicht, wird vom Kolben unter Nachdruck gespeist: seine
+          Schwindung wird ersetzt. Ein Bereich, den ein erstarrter Anschnitt oder Querschnitt abgeschnitten hat, kann
+          nicht gespeist werden. Seine Schwindung</p>
+      </div>
+      <div class="math-block">$$\Delta V = \beta\,\Delta f_s\,V, \qquad \beta = 1 - \rho_\text{flüssig}/\rho_\text{fest}$$</div>
+      <div class="prose">
+        <p>wird zu Porenvolumen in der restlichen Schmelze dieses Bereichs, gewichtet mit $(f_{s,\text{Speisung}} - f_s)\,V$.
+          So sammelt sich die Pore dort, wo der Bereich zuletzt erstarrt: im heißen Kern.</p>
+      </div>
+      <h3 class="sub-title">Gas aus der Füllung</h3>
+      <div class="prose">
+        <p>Die Luft der eingeschlossenen Pakete am Ende der Füllung (aus dieLogicFoam, mit ihrem Paketdruck) wird vom
+          Druck der Schmelze isotherm verdichtet und friert ein, wenn die Zelle erstarrt oder abgeschnitten wird:</p>
+      </div>
+      <div class="math-block">$$\varphi_\text{Gas} = \varphi_{\text{Gas},0}\,\frac{p_{\text{Gas},0}}{p_\text{Schmelze}}$$</div>
+      <h3 class="sub-title">Mikroporosität</h3>
+      <div class="prose">
+        <p>Jenseits der Speisungsgrenze strömt nur noch wenig Schmelze durch das Dendritennetz. Ihr Druckabfall wächst mit
+          $1/Ny^2$; Poren bilden sich, wenn er den Druck der Schmelze übersteigt. Der kritische Niyama-Wert fällt deshalb
+          mit dem Druck:</p>
+      </div>
+      <div class="math-block">$$\varphi_\text{Mikro} = \beta\,(1 - f_{s,\text{Speisung}})\,\max\!\left(0,\;1 - \frac{Ny}{Ny_\text{krit}\sqrt{p_\text{ref}/p}}\right)$$</div>
+      <div class="prose">
+        <p>Mit $p$ dem Nachdruck, wenn die Schmelze bis zum Erstarren gespeist war, und dem Bezugsdruck, wenn sie in einem
+          abgeschnittenen Bereich lag. Der Nachdruck verhindert Mikroporen dort, wo er die Schmelze erreicht.</p>
+      </div>
+
+      <span class="section-anchor" id="s7"></span>
+      <h2 class="section-title">7. Kleben an der Form</h2>
+      <div class="prose">
+        <p>An jeder Kontaktfläche ergibt sich die Temperatur der Formoberfläche aus dem Kontaktwiderstand. Solange die
+          Gusszelle an der Fläche über dem Solidus liegt und die Oberfläche über einer kritischen Temperatur, wächst eine
+          Eisen-Aluminium-Schicht diffusionsgesteuert:</p>
+      </div>
+      <div class="math-block">$$\frac{\mathrm{d}\left(\delta^2\right)}{\mathrm{d}t} = k_0\,\exp\!\left(-\frac{Q}{R\,T_\text{Oberfläche}}\right), \qquad \text{Index} = \delta/\delta_\text{krit}$$</div>
+      <div class="prose">
+        <p>Der Index wird über die Schüsse aufsummiert, ebenso die Kontaktzeit über der kritischen Temperatur und die höchste
+          Oberflächentemperatur. Ein Index über 1 heißt: hier ist Kleben wahrscheinlich. Typisch sind Kernstifte und die
+          Formfläche vor dem Anschnitt.</p>
+      </div>
+
+      <span class="section-anchor" id="s8"></span>
+      <h2 class="section-title">8. Übergabe von der Füllung</h2>
+      <div class="prose">
+        <p>Das Werkzeug <code>dieLogicSolMapFill</code> überträgt den Zustand am Ende der Füllung auf die Gusszellen:
+          die Schmelzetemperatur (teilgefüllte Zellen gemischt mit der mittleren Schmelzetemperatur), die Luft der
+          eingeschlossenen Pakete mit ihrem Druck, die Füllzeit und das Oxid. Zellen außerhalb der Füllrechnung,
+          etwa der Pressrest, bekommen die nächstgelegene Schmelze. Das Ende der Füllung wird als Zeitversatz
+          übergeben, damit <code>solidificationTime</code> ab Beginn der Füllung zählt. Am einfachsten wird die Füllung
+          auf genau den Gusszellen des Erstarrungsnetzes gerechnet, ausgeschnitten mit <code>subsetMesh</code>; dann
+          ist die Übertragung Zelle für Zelle.</p>
+      </div>
+
+      <span class="section-anchor" id="s9"></span>
+      <h2 class="section-title">9. Verifikation</h2>
+      <div class="prose">
+        <p>Zwei eindimensionale Fälle prüfen den Kern des Solvers gegen Lösungen, die unabhängig von ihm sind.</p>
+      </div>
+      <div class="fig-wrap">
+        <img src="img/sol/sol-stefan.webp" alt="Temperaturprofile und Erstarrungszeit über dem Wandabstand: dieLogicSolFoam und Neumann-Lösung" loading="lazy">
+        <div class="fig-cap"><b>Stefan-Problem.</b> Erstarrung von einer kalten Wand (Erstarrungsbereich 1 K), gegen die
+          Neumann-Lösung: Front auf 0,1 bis 0,3 %, Temperatur im Festen auf 0,1 % der Spanne, <code>tSolidus</code>
+          auf unter 5 %, Energie auf $10^{-12}$.</div>
+      </div>
+      <div class="fig-wrap">
+        <img src="img/sol/sol-platte1d.webp" alt="Temperaturprofile durch Form, Gussteil und Form: dieLogicSolFoam gegen explizite Referenz" loading="lazy">
+        <div class="fig-cap"><b>Platte zwischen zwei Formplatten.</b> 10 mm AlSi9Cu3 zwischen 30 mm H13, Kontakt
+          mit Luftspalt, temperaturabhängige Stoffwerte, außen adiabat. Gegen eine unabhängige explizite
+          Enthalpierechnung: höchstens 1,2 K Abweichung über 10 s, Erstarrungszeit der Mitte auf 0,6 %, die
+          Ausgleichstemperatur nach 1000 s auf 0,01 K.</div>
+      </div>
+      <div class="table-scroll"><table class="th-table">
+        <thead><tr><th>Testfall</th><th>Prüft</th><th>Ergebnis</th></tr></thead>
+        <tbody>
+          <tr><td><code>stefan1D</code></td><td>Front, Profil, <code>tSolidus</code></td><td class="status-ok">bestanden</td></tr>
+          <tr><td><code>conjugateSlab1D</code></td><td>Kontakt, Stoffwerte, Ausgleich</td><td class="status-ok">bestanden</td></tr>
+          <tr><td><code>hotSpot2D</code></td><td>Reihenfolge der Erstarrung, Pore im Dom, Kleben am Stift</td><td class="status-ok">bestanden</td></tr>
+          <tr><td><code>hotSpot2D_thickGate</code></td><td>dicker Anschnitt speist länger</td><td class="status-ok">bestanden</td></tr>
+          <tr><td><code>hotSpot2D_parallel</code></td><td>4 Prozessoren gleich seriell</td><td class="status-ok">bestanden</td></tr>
+          <tr><td><code>dieCycles2D</code></td><td>Aufheizen der Form über 5 Schüsse</td><td class="status-ok">bestanden</td></tr>
+          <tr><td><code>plateShot3D</code></td><td>Füllung, Übergabe, Erstarrung in 3D</td><td class="status-ok">bestanden</td></tr>
+        </tbody>
+      </table></div>
+
+      <span class="section-anchor" id="s10"></span>
+      <h2 class="section-title">10. Beispiele</h2>
+      <h3 class="sub-title">Heißer Kern im Schnitt</h3>
+      <div class="prose">
+        <p>Ein Schnitt durch beide Formhälften (2D): Pressrest auf einer gekühlten Kupferspitze, Lauf, 2 mm Anschnitt,
+          4 mm Platte mit einem Dom, in den ein Kernstift ragt, ein Überlauf und fünf Kühlkanäle. Der Anschnitt ist nach
+          1,75 s fest und schneidet Platte und Dom vom Kolben ab. Der Dom erstarrt als letzter Teil des Gussteils
+          (10,5 s); in seiner Mitte sammelt sich die Schwindung zu einer Pore mit 16 %. Der Pressrest wird bis 19,7 s
+          gespeist und ist nach 23,2 s fest. Die heißeste Formoberfläche und der höchste Klebeindex (2,2) liegen an der
+          Spitze des Kernstifts.</p>
+      </div>
+      <div class="fig-wrap">
+        <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/hotspot.webp"
+          aria-label="Erstarrung im Schnitt durch die Form: Temperatur, Speisung, Festanteil und Porosität">
+          <source src="img/sol/hotspot.mp4" type="video/mp4">
+        </video>
+        <div class="fig-cap"><b>hotSpot2D.</b> Oben links die Temperatur in Gussteil und Form, oben rechts die Speisung
+          (grün gespeist, orange abgeschnitten), unten der Festanteil und die wachsende Porosität.</div>
+      </div>
+      <div class="prose">
+        <p>Mit einem 6 mm dicken Anschnitt (<code>hotSpot2D_thickGate</code>) ist der Anschnitt erst nach 2,8 s zu, die
+          Platte wird länger gespeist und die Schwindungsporen sinken von 23,9 auf 14,3 mm³ je mm Tiefe.</p>
+      </div>
+
+      <h3 class="sub-title">Fünf Schüsse</h3>
+      <div class="prose">
+        <p>Dieselbe Form über fünf Schüsse mit 55 s Zyklus: Öffnen nach 40 s, Sprühen von 43 bis 46 s. Die Form startet
+          bei 200 °C. Die höchste Formtemperatur am Ende der Zyklen steigt von 281 auf 399 °C, der Zuwachs je Schuss fällt
+          von 39 auf 22 K; eine Form braucht noch einige Schüsse mehr bis zum Zyklusbetrieb. Mit der wärmeren Form
+          erstarrt jeder Schuss länger: 23,2 s im ersten, 30,0 s im fünften.</p>
+      </div>
+      <div class="fig-wrap">
+        <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/zyklen.webp"
+          aria-label="Temperatur der Form über fünf Schüsse mit Öffnen und Sprühen">
+          <source src="img/sol/zyklen.mp4" type="video/mp4">
+        </video>
+        <div class="fig-cap"><b>dieCycles2D.</b> Oben die Temperatur im Schnitt; bei offener Form ist das Gussteil entnommen.
+          Unten die höchste Formtemperatur und die Restschmelze über der Zeit, hell die offene Form, grün das Sprühen.</div>
+      </div>
+
+      <h3 class="sub-title">Der ganze Schuss in 3D</h3>
+      <div class="prose">
+        <p>Eine Platte 120 × 60 × 4 mm mit Dom (16 mm dick) und zwei Überläufen in einem Formblock 160 × 150 × 84 mm,
+          Pressrest auf der Kolbenspitze, vier Kühlkanäle, 125 000 Zellen. Zuerst füllt dieLogicFoam die Plattenebene,
+          ausgeschnitten aus demselben Netz: nach 28 ms ist die Form zu 99 % voll, 0,14 cm³ Luft sind eingeschlossen.</p>
+      </div>
+      <div class="fig-wrap">
+        <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/schuss3d-fuellung.webp"
+          aria-label="Füllung der Plattenebene mit dieLogicFoam">
+          <source src="img/sol/schuss3d-fuellung.mp4" type="video/mp4">
+        </video>
+        <div class="fig-cap"><b>plateShot3D, Füllung.</b> dieLogicFoam auf der Trennebene, Darstellung wie in den
+          Beispielen von <a href="dielogicfoam.html">dieLogicFoam</a>.</div>
+      </div>
+      <div class="prose">
+        <p>Dann übernimmt dieLogicSolFoam den Zustand auf 4 Prozessoren. Die Überläufe sind nach 1,6 s fest, die Platte nach
+          4,7 s, der Dom nach 4,9 s, der Pressrest nach 9,0 s. Im Dom bleibt eine Schwindungspore mit 12,7 %; die
+          eingeschlossene Luft der Füllung wird vom Nachdruck auf 0,9 % ihres Volumens verdichtet. Gerechnet in 29 s.</p>
+      </div>
+      <div class="fig-wrap">
+        <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/schuss3d.webp"
+          aria-label="Erstarrung des Schusses in 3D: Trennebene und Schnitt durch Pressrest und Dom">
+          <source src="img/sol/schuss3d.mp4" type="video/mp4">
+        </video>
+        <div class="fig-cap"><b>plateShot3D, Erstarrung.</b> Links die Trennebene, rechts ein Schnitt durch Pressrest,
+          Lauf und Dom (feste Formhälfte unten). Unten die Speisung und die Porosität im Schnitt.</div>
+      </div>
+
+      <span class="section-anchor" id="s11"></span>
+      <h2 class="section-title">11. Einsatz</h2>
+      <div class="prose">
+        <p>Der Solver liegt im Projekt <code>dieLogicSol</code>, mit derselben Ablage wie <code>DieLogic_OF</code>:
+          Fälle unter <code>cases/</code>, gerechnet als Kopie unter <code>runs/</code>, jeder Fall mit einer Prüfung
+          <code>check.py</code>.</p>
+      </div>
+<pre class="code">solvers/Allwmake                                 <span class="c"># dieLogicSolFoam, dieLogicSolMapFill</span>
+tools/runCase cases/hotSpot2D                    <span class="c"># Netz, Rechnung, Prüfung in runs/hotSpot2D</span>
+tools/runTests                                   <span class="c"># alle Testfälle mit Prüfungen</span>
+
+dieLogicSolMapFill -source fill                  <span class="c"># Ende der Füllung auf das Gussteil</span>
+mpirun -np 4 dieLogicSolFoam -parallel</pre>
+      <div class="table-scroll"><table class="th-table">
+        <thead><tr><th>Datei</th><th>Inhalt</th></tr></thead>
+        <tbody>
+          <tr><td><code>constant/materialProperties</code></td><td>Legierung und Formzonen mit Zellzonen, $c_p(T)$, $\lambda(T)$, $f_s(T)$, $L$, Dichten</td></tr>
+          <tr><td><code>constant/heatTransferProperties</code></td><td>Kontakt Gussteil zu Form je Formzone, Kontakt zwischen Formteilen, Ränder (Kühlkanäle, außen, Kolben)</td></tr>
+          <tr><td><code>constant/processProperties</code></td><td>Nachdruck, Zyklen mit Öffnen und Sprühen</td></tr>
+          <tr><td><code>constant/defectProperties</code></td><td>Speisung (Pressrest, Grenze), Mikroporosität, Kleben</td></tr>
+        </tbody>
+      </table></div>
+
+      <span class="section-anchor" id="s12"></span>
+      <h2 class="section-title">12. Grenzen</h2>
+      <div class="warning-box"><p>Die Modellkonstanten (Kontaktkoeffizienten, Speisungsgrenze, kritischer Niyama-Wert,
+        Kinetik des Klebens) sind Werte in der Größenordnung der Literatur, nicht an Gussteilen kalibriert; sie eignen sich
+        zum Vergleich von Formen und Prozessvarianten. Nach der Füllung wird nur Wärmeleitung gerechnet, ohne Strömung im
+        Pressrest. Der Nachdruck ist in einem gespeisten Bereich überall gleich, ohne Druckabfall auf dem Speiseweg; Poren
+        wandern nicht. Der Kontakt hängt nur vom Festanteil ab, ohne Spaltmodell aus der Verformung. Jeder Schuss einer
+        Zyklusrechnung beginnt mit demselben Zustand am Ende der Füllung. Getestet sind strukturierte Hexaedernetze.</p></div>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>
