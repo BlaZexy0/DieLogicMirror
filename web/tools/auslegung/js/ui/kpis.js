@@ -22,7 +22,7 @@ import { fmt, subHTML } from '../core/format.js';
 import {
   total, pistonArea, travel, doseMass, doseVolume, fillRatio, injForceEff, hydArea, specPressure,
   leverFactor, clampPMax, clampForceNeeded, nadcaFillMs, fillTimeAt, ventAreaFor, atomJ,
-  cavityTravel, biscuitSolid, intensStroke, rhoSolidus, shotSpeed
+  cavityTravel, biscuitSolid, intensStroke, rhoSolidus, shotSpeed, sleeveLoss, fillEndSpike
 } from '../core/physics.js';
 import { pqCore } from '../charts/pq2.js';
 import { ratio as bubbleRatio, vacPressure } from '../charts/bubble.js';
@@ -361,6 +361,15 @@ export function renderKpis(el, v, shot, chamberEl) {
   const rBub = (v.psel > 0 && v.Tliq > v.Tdie && v.Tdie > -273.15)
     ? bubbleRatio(v, v.psel, pVacB !== null ? pVacB : undefined) : NaN;
 
+  /* Füllende aus der Schusskurve: Zeit für den Wärmeverlust in der Kammer
+     (Verweilzeit + Schuss bis „Überlauf gefüllt"), Kolbengeschwindigkeit
+     für die Druckspitze. */
+  const evEnd = !shot.error && shot.events && shot.events[3] && shot.events[3].inP ? shot.events[3] : null;
+  const heat = evEnd ? sleeveLoss(v, v.dwell + evEnd.t) : null;
+  const spike = evEnd ? fillEndSpike(v, evEnd.v) : null;
+  const fSpike = spike && v.area > 0 ? globalThis.__CLAMP_MODEL__.forceKN(spike.peak, v.area, 1, kClamp) : NaN;
+  const uSpike = v.force > 0 ? fSpike / v.force : NaN;
+
   const chamberKvs =
     kv('Dosiergewicht', fmt(mdos) + ' kg', 'Bauteil + Anguss + Überlauf + Pressrest ' + fmt(v.biscuit) + ' kg')
     + kv('Dosiervolumen', fmt(Vdos * 1e6) + ' cm³', 'inkl. Pressrest · Flüssigdichte ' + fmt(v.density) + ' kg/m³')
@@ -466,6 +475,12 @@ export function renderKpis(el, v, shot, chamberEl) {
           'Nachdruck ' + fmt(v.psel) + ' von max. ' + fmt(pMaxClamp) + ' bar (Zuhaltung · e = (' + fmt(v.eccX) + ', ' + fmt(v.eccY) + ') mm · k = ' + fmt(kClamp) + ')',
           uHold, pctTag(uHold))
         : row('Nachdruck-Auslastung', '—', 'Zuhaltungsmodell unvollständig', 'nodata'))
+      + (isFinite(uSpike)
+        ? limitRow('Zuhaltung bei Druckspitze', fmt(spike.peak) + ' bar',
+          'Füllende bei v_p ' + fmt(spike.vp) + ' m/s: Wasserschlag ρ·a·v_p ' + fmt(spike.hammer) + ' bar + Anschnitt ' + fmt(spike.gateP)
+          + ' bar · ' + fmt(fSpike) + ' von ' + fmt(v.force) + ' kN ohne Sicherheitsfaktor (k = ' + fmt(kClamp) + ') · eine Bremsung vor dem Füllende senkt die Spitze',
+          uSpike, pctTag(uSpike))
+        : row('Zuhaltung bei Druckspitze', '—', 'braucht eine Schusskurve bis zum Füllende, Sprengfläche, Maschinenkraft und Schallgeschwindigkeit', 'nodata'))
       + (v.pAcc > 0 && v.injForce > 0
         ? row('Gießkraft', fmt(Feff) + ' kN',
           'Akkumulatordruck ' + fmt(Math.min(v.pAccOp, v.pAcc)) + ' von max. ' + fmt(v.pAcc) + ' bar · A_h = ' + fmt(hydArea(v)) + ' cm² · max. ' + fmt(v.injForce) + ' kN',
@@ -489,7 +504,14 @@ export function renderKpis(el, v, shot, chamberEl) {
         : ''), () =>
       minRow('Anschnitt-Erstarrung', fmt(tErst) + ' ms',
         'k·s² bei s = ' + fmt(v.gateTh) + ' mm · Nachdruckaufbau ' + fmt(v.intTime) + ' ms',
-        tErst, v.intTime, Math.max(1.5 * v.intTime, 1.15 * tErst), 'ms', 'min ' + fmt(v.intTime) + ' (Nachdruckaufbau)'))
+        tErst, v.intTime, Math.max(1.5 * v.intTime, 1.15 * tErst), 'ms', 'min ' + fmt(v.intTime) + ' (Nachdruckaufbau)')
+      + (heat
+        ? limitRow('Wärmeverlust Füllkammer', fmt(heat.dT) + ' K',
+          'Schmelze am Füllende ' + fmt(heat.Tmelt) + ' °C · Überhitzung ' + fmt(v.Tcast - v.Tliq) + ' K ' + (isFinite(heat.used) ? 'zu ' + fmt(Math.round(100 * heat.used)) + ' % verbraucht' : 'nicht vorhanden')
+          + (heat.solidMean > 0 ? ' · ' + fmt(100 * heat.solidMean) + ' % im Mittel erstarrt' : '')
+          + ' · Randschale höchstens ' + fmt(100 * heat.shellMax) + ' % · ' + fmt(heat.tS) + ' s Kontakt auf ' + fmt(heat.area) + ' m² bei Kammer ' + fmt(v.sleeveT) + ' °C',
+          heat.used, isFinite(heat.used) ? fmt(Math.round(100 * heat.used)) + ' %' : 'ohne Überhitzung')
+        : row('Wärmeverlust Füllkammer', '—', 'braucht eine Schusskurve bis zum Füllende, Gießtemperatur über Liquidus und Kammertemperatur', 'nodata')))
     + '</div>';
 
   /* Kammerkarte (ui/chamber.js): Lineal unter dem Schema — an der aktiven

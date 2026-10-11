@@ -1,5 +1,14 @@
 /* Schusskurven-Generatoren: erzeugen Wegpunkte [s mm, v m/s] für die
-   beiden generierten Modi (state.curveGen.mode):
+   generierten Modi (state.curveGen.mode):
+
+   'focus' — die DieLogic-Kurve: fokussierendes Kolbengesetz für die runde
+     Kammer (physics.focusLaw): jede Charakteristik der Kolbenwelle trifft
+     die Stirnwand im selben Augenblick, das Gesetz erreicht die Decken-
+     geschwindigkeit U_H genau bei „Kammer voll". Gekappt bei
+     min(κ·U_H, v_krit) — κ nach der Studie des Papiers (DieLogic_OF,
+     claude_paper: zulässig bis etwa 1,0·U_H, sicher 0,95·U_H), v_krit, damit
+     die Prüfung der 1. Phase dieselbe Grenze sieht —, Plateau bis „Kammer
+     voll", dann dieselbe 2. Phase wie 'lopez'.
 
    'lopez' — López-Faura-Hernández-Anfahrt (Theorie „Nebenbedingungen",
      Profil P5): v(t) = 2c₀[(1 − c₀t/ℓ)^(−1/3) − 1] mit c₀ = waveSpeed
@@ -18,7 +27,7 @@
 
 import { state, addPreparer } from './state.js';
 import { fmt } from './format.js';
-import { total, fillRatio, vCrit, waveSpeed, cavityTravel, nadcaFillMs, pistonSpeedFor } from './physics.js';
+import { total, fillRatio, vCrit, waveSpeed, focusLaw, cavityTravel, nadcaFillMs, pistonSpeedFor } from './physics.js';
 
 /* Punkte aufräumen: runden, streng steigende s erzwingen. */
 function clean(pts) {
@@ -81,11 +90,92 @@ export function fillTimeMs(v0, v2, a, s0, sGate, sOver) {
   return (tAt(sOver) - tAt(sGate)) * 1000;
 }
 
+/* Plateau bis „Kammer voll" und 2. Phase, gemeinsam für 'focus' und
+   'lopez': pts endet mit der Anfahrt, deren letzter Punkt vReached erreicht. */
+function plateauAndFill(v, pts, vReached, sFill, sEnd) {
+  /* Plateau abrunden, damit die Rundung v nicht über v_krit hebt */
+  const vTop = Math.floor(vReached * 1000) / 1000;
+  pts[pts.length - 1][1] = vTop;
+  /* Plateau-Ende AUF 0,1 mm aufrunden: die Rampe der 2. Phase darf nie
+     vor „Kammer voll" beginnen — sonst liegt v bei s_voll schon über
+     v_krit (Prüfung der 1. Phase nimmt das Maximum bis genau s_voll). */
+  const sR = Math.ceil(sFill * 10) / 10;
+  if (pts[pts.length - 1][0] < sR) pts.push([sR, vTop]);
+  else pts[pts.length - 1][0] = sR;
+
+  /* 2. Phase: v₂ so, dass die Füllzeit ab Anschnitt die empfohlene
+     NADCA-Füllzeit trifft — mit der Rampe, die ab „Kammer voll" noch in
+     die Formfüllung hineinläuft (bei a_max = 0: sofort auf v₂). */
+  const tNadca = nadcaFillMs(v);
+  if (!(tNadca > 0)) return { error: 'NADCA-Füllzeit nicht berechenbar: Temperaturen und k prüfen.' };
+  /* Die NADCA-Empfehlung, höchstens aber die zulässige Füllzeit t_max —
+     sonst verletzte die erzeugte Kurve ihre eigene Füllzeit-Prüfung. */
+  const tN = v.tmax > 0 ? Math.min(tNadca, v.tmax) : tNadca;
+  const tLabel = tN < tNadca ? 'Füllzeit max. ' + fmt(tN) + ' ms' : 'NADCA-Füllzeit ' + fmt(tN) + ' ms';
+  const sGate = sR + cavityTravel(v.runner, v);             // Anguss gefüllt [mm]
+  const sOver = sR + cavityTravel(total(v), v);             // Überlauf gefüllt [mm]
+  const vFlat = pistonSpeedFor(v, tN);                      // ohne Rampe nötig
+  const want = v2 => fillTimeMs(vTop, v2, v.amax, sR, sGate, sOver);
+  let v2, warn = null;
+  const vCap = v.vmax > 0 ? v.vmax : Infinity;
+  if (!(v.amax > 0)) {
+    /* ramp() setzt auch ohne a_max eine kurze Rampe, die fillTimeMs nicht
+       kennt: dieselbe Marge wie unten, damit die Füllzeit nicht über tN rutscht. */
+    v2 = Math.min(Math.ceil(vFlat * 1000 + 10) / 1000, vCap);
+    if (vFlat > vCap) warn = 'v_max ' + fmt(vCap) + ' m/s reicht für die ' + tLabel + ' nicht; erreichbar sind ' + fmt(want(vCap)) + ' ms.';
+  } else {
+    /* Schnellstmögliche 2. Phase: volle Rampe bis zum Schussende, höchstens v_max */
+    const vEndMax = Math.floor(Math.sqrt(vTop * vTop + 2 * v.amax * (sEnd - sR) / 1000) * 1000) / 1000;
+    const vFast = Math.min(vCap, vEndMax);
+    if (want(vFast) > tN) {
+      v2 = vFast;
+      warn = (vEndMax < vCap ? 'a_max ' + fmt(v.amax) + ' m/s²' : 'v_max ' + fmt(vCap) + ' m/s')
+        + ' reicht für die ' + tLabel + ' nicht; die Kurve fährt die schnellste mögliche 2. Phase, Füllzeit ≈ ' + fmt(want(vFast)) + ' ms.';
+    } else {
+      let lo = vTop, hi = vFast;
+      for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (want(m) > tN) lo = m; else hi = m; }
+      /* aufrunden + 0,01 m/s Marge: die 0,1-mm-Rundung der Wegpunkte darf die
+         Füllzeit nicht über die NADCA-Empfehlung heben */
+      v2 = Math.ceil(hi * 1000 + 10) / 1000;
+    }
+  }
+  const w = ramp(pts, vTop, v2, sR, sEnd, v.amax);
+  if (w !== null && !warn) warn = 'a_max reicht nicht: 2. Phase erreicht ' + fmt(w) + ' statt ' + fmt(v2) + ' m/s.';
+  return { points: clean(pts), warn, v2, tN };
+}
+
 export function generateCurve(v, g) {
   const phi = fillRatio(v);
   if (!(phi > 0 && phi < 1)) return { error: 'Füllgrad außerhalb (0, 1), Kurve nicht generierbar.' };
   const sFill = (1 - phi) * v.length;                       // „Kammer voll" [mm]
   const sEnd = sFill + cavityTravel(total(v), v);            // Füllende: Kavität (fest, ρ_sol) voll [mm]
+
+  if (g.mode === 'focus') {
+    const D = v.diam / 1000;
+    const law = focusLaw(phi);
+    const vc = vCrit(D, phi);
+    if (!law || !(vc > 0)) return { error: 'Fokusgesetz nicht berechenbar (Füllgrad prüfen).' };
+    const kappa = g.kappa > 0 ? Math.min(g.kappa, 1) : 0.95;
+    const sc = Math.sqrt(9.81 * D);                          // √(gD) [m/s]
+    const UH = law.UH * sc;
+    const cap = Math.min(kappa * UH, vc);
+    /* Stützstellen gleichmäßig in der Zeit bis zum Erreichen der Kappe;
+       zwischen ihnen beschleunigt das Profil konstant (v² linear in s). */
+    const at = (x, xs, ys) => {
+      let i = 1;
+      while (i < xs.length - 1 && xs[i] < x) i++;
+      const t = (x - xs[i - 1]) / (xs[i] - xs[i - 1]);
+      return ys[i - 1] + Math.max(0, Math.min(1, t)) * (ys[i] - ys[i - 1]);
+    };
+    const tauC = cap >= UH ? 1 : at(cap / sc, law.U, law.tau);
+    const pts = [];
+    const N = 10;
+    for (let i = 1; i <= N; i++) {
+      const tau = tauC * i / N;
+      pts.push([at(tau, law.tau, law.xi) * v.length, at(tau, law.tau, law.U) * sc]);
+    }
+    return plateauAndFill(v, pts, Math.min(pts[N - 1][1], cap), sFill, sEnd);
+  }
 
   if (g.mode === 'lopez') {
     const D = v.diam / 1000, l = v.length / 1000;
@@ -112,49 +202,7 @@ export function generateCurve(v, g) {
       const t = tEnd * i / 6;
       pts.push([xOf(t), vOf(t)]);
     }
-    /* Plateau abrunden, damit die Rundung v nicht über v_krit hebt */
-    const vTop = Math.floor(vOf(tEnd) * 1000) / 1000;
-    pts[pts.length - 1][1] = vTop;
-    /* Plateau-Ende AUF 0,1 mm aufrunden: die Rampe der 2. Phase darf nie
-       vor „Kammer voll" beginnen — sonst liegt v bei s_voll schon über
-       v_krit (Prüfung der 1. Phase nimmt das Maximum bis genau s_voll). */
-    const sR = Math.ceil(sFill * 10) / 10;
-    if (pts[pts.length - 1][0] < sR) pts.push([sR, vTop]);
-    else pts[pts.length - 1][0] = sR;
-
-    /* 2. Phase: v₂ so, dass die Füllzeit ab Anschnitt die empfohlene
-       NADCA-Füllzeit trifft — mit der Rampe, die ab „Kammer voll" noch in
-       die Formfüllung hineinläuft (bei a_max = 0: sofort auf v₂). */
-    const tN = nadcaFillMs(v);
-    if (!(tN > 0)) return { error: 'NADCA-Füllzeit nicht berechenbar: Temperaturen und k prüfen.' };
-    const sGate = sR + cavityTravel(v.runner, v);             // Anguss gefüllt [mm]
-    const sOver = sR + cavityTravel(total(v), v);             // Überlauf gefüllt [mm]
-    const vFlat = pistonSpeedFor(v, tN);                      // ohne Rampe nötig
-    const want = v2 => fillTimeMs(vTop, v2, v.amax, sR, sGate, sOver);
-    let v2, warn = null;
-    const vCap = v.vmax > 0 ? v.vmax : Infinity;
-    if (!(v.amax > 0)) {
-      v2 = Math.min(vFlat, vCap);
-      if (vFlat > vCap) warn = 'v_max ' + fmt(vCap) + ' m/s reicht für die NADCA-Füllzeit ' + fmt(tN) + ' ms nicht; erreichbar sind ' + fmt(want(vCap)) + ' ms.';
-    } else {
-      /* Schnellstmögliche 2. Phase: volle Rampe bis zum Schussende, höchstens v_max */
-      const vEndMax = Math.floor(Math.sqrt(vTop * vTop + 2 * v.amax * (sEnd - sR) / 1000) * 1000) / 1000;
-      const vFast = Math.min(vCap, vEndMax);
-      if (want(vFast) > tN) {
-        v2 = vFast;
-        warn = (vEndMax < vCap ? 'a_max ' + fmt(v.amax) + ' m/s²' : 'v_max ' + fmt(vCap) + ' m/s')
-          + ' reicht für die NADCA-Füllzeit ' + fmt(tN) + ' ms nicht; die Kurve fährt die schnellste mögliche 2. Phase, Füllzeit ≈ ' + fmt(want(vFast)) + ' ms.';
-      } else {
-        let lo = vTop, hi = vFast;
-        for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (want(m) > tN) lo = m; else hi = m; }
-        /* aufrunden + 0,01 m/s Marge: die 0,1-mm-Rundung der Wegpunkte darf die
-           Füllzeit nicht über die NADCA-Empfehlung heben */
-        v2 = Math.ceil(hi * 1000 + 10) / 1000;
-      }
-    }
-    const w = ramp(pts, vTop, v2, sR, sEnd, v.amax);
-    if (w !== null && !warn) warn = 'a_max reicht nicht: 2. Phase erreicht ' + fmt(w) + ' statt ' + fmt(v2) + ' m/s.';
-    return { points: clean(pts), warn, v2, tN };
+    return plateauAndFill(v, pts, vOf(tEnd), sFill, sEnd);
   }
 
   if (g.mode === 'v1v2') {
@@ -163,8 +211,11 @@ export function generateCurve(v, g) {
     const s1 = g.v1 * g.v1 / (2 * g.a1) * 1000;
     if (s1 >= sFill - 0.5)
       return { error: 'Rampe auf V₁ (' + Math.round(s1) + ' mm) reicht über „Kammer voll" (' + Math.round(sFill) + ' mm): a₁ erhöhen oder V₁ senken.' };
-    const pts = [[s1, g.v1], [sFill, g.v1]];
-    const w = ramp(pts, g.v1, g.v2, sFill, sEnd, g.a2);
+    /* Plateau-Ende auf 0,1 mm AUFrunden wie bei 'lopez': clean() rundet
+       sonst ab, und die Rampe begänne vor „Kammer voll" (v₁ > V₁). */
+    const sR = Math.ceil(sFill * 10) / 10;
+    const pts = [[s1, g.v1], [sR, g.v1]];
+    const w = ramp(pts, g.v1, g.v2, sR, sEnd, g.a2);
     return {
       points: clean(pts),
       warn: w === null ? null

@@ -95,7 +95,10 @@ export const groups = [
       { key: 'hf',      label: 'Erstarrungswärme',     unit: 'kJ/kg',    def: 403,  adv: true , gt: 0, max: 2000, bound: 'plaus' },
       { key: 'cp20',    label: 'c_p bei 20 °C',        unit: 'J/(kg·K)', def: 846,  adv: true , gt: 0, max: 5000, bound: 'plaus' },
       { key: 'cpS',     label: 'c_p bei Solidus',      unit: 'J/(kg·K)', def: 1034, adv: true , gt: 0, max: 5000, bound: 'plaus' },
-      { key: 'cpL',     label: 'c_p bei Liquidus',     unit: 'J/(kg·K)', def: 1056, adv: true , gt: 0, max: 5000, bound: 'plaus' }
+      { key: 'cpL',     label: 'c_p bei Liquidus',     unit: 'J/(kg·K)', def: 1056, adv: true , gt: 0, max: 5000, bound: 'plaus' },
+      /* Schallgeschwindigkeit der Schmelze: Druckspitze am Füllende
+         (Wasserschlag ρ·a·v_p, physics.fillEndSpike). */
+      { key: 'soundSpeed', label: 'Schallgeschwindigkeit flüssig', unit: 'm/s', def: 4600, adv: true, gt: 0, max: 10000, bound: 'plaus' }
     ]
   },
   {
@@ -105,7 +108,13 @@ export const groups = [
       /* def passt zur Default-Maschine (HCC-1600, lmax 900) und hält den
          Füllgrad mit der Default-Massenbilanz im Zielband. */
       { key: 'length', label: 'Gewählte Kammerlänge',  unit: 'mm', def: 900 , gt: 0, max: 3000, bound: 'plaus' },
-      { key: 'sealStroke', label: 'Einfüllöffnung verschlossen', unit: 'mm', def: 150 , gt: 0, max: 3000, bound: 'plaus' }
+      { key: 'sealStroke', label: 'Einfüllöffnung verschlossen', unit: 'mm', def: 150 , gt: 0, max: 3000, bound: 'plaus' },
+      /* Wärmeverlust in der Kammer (physics.sleeveLoss): Wandtemperatur vor
+         dem Dosieren, Zeit vom Dosieren bis Schussbeginn, Wärmeübergang
+         Schmelze → Kammerwand (Trennmittel, Spalt). */
+      { key: 'sleeveT', label: 'Kammertemperatur', unit: '°C', def: 250, min: 0, max: 1000, bound: 'plaus' },
+      { key: 'dwell', label: 'Verweilzeit Dosieren → Schuss', unit: 's', def: 3, min: 0, max: 60, bound: 'plaus' },
+      { key: 'hSleeve', label: 'Wärmeübergang Schmelze → Kammer', unit: 'W/(m²·K)', def: 3000, adv: true, gt: 0, max: 100000, bound: 'plaus' }
     ]
   },
   {

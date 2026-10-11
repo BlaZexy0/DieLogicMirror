@@ -79,6 +79,7 @@ diese Datei nicht neu erzeugt, bekommt einen roten CI-Lauf.
 | c_p bei 20 °C `cp20` | J/(kg·K) | 846 | `> 0 … 5000` | plausibel |
 | c_p bei Solidus `cpS` | J/(kg·K) | 1034 | `> 0 … 5000` | plausibel |
 | c_p bei Liquidus `cpL` | J/(kg·K) | 1056 | `> 0 … 5000` | plausibel |
+| Schallgeschwindigkeit flüssig `soundSpeed` | m/s | 4600 | `> 0 … 10000` | plausibel |
 
 ### Füllkammer und Kolben
 
@@ -87,6 +88,9 @@ diese Datei nicht neu erzeugt, bekommt einen roten CI-Lauf.
 | Gewählter Kolben-Ø `diam` | mm | 150 | `> 0 … 500` | plausibel |
 | Gewählte Kammerlänge `length` | mm | 900 | `> 0 … 3000` | plausibel |
 | Einfüllöffnung verschlossen `sealStroke` | mm | 150 | `> 0 … 3000` | plausibel |
+| Kammertemperatur `sleeveT` | °C | 250 | `0 … 1000` | plausibel |
+| Verweilzeit Dosieren → Schuss `dwell` | s | 3 | `0 … 60` | plausibel |
+| Wärmeübergang Schmelze → Kammer `hSleeve` | W/(m²·K) | 3000 | `> 0 … 100000` | plausibel |
 
 ### Anschnitt
 
@@ -250,4 +254,4 @@ Zahlen „nicht belastbar" seien.
 
 ---
 
-_87 Felder, davon 12 mit harter Grenze · 16 Regeln zwischen Feldern · erzeugt aus `config/fields.js` und `shared/felddomaene.js`._
+_91 Felder, davon 12 mit harter Grenze · 16 Regeln zwischen Feldern · erzeugt aus `config/fields.js` und `shared/felddomaene.js`._

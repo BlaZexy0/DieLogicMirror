@@ -15,7 +15,8 @@ function download(blob, name) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(a.href);
+  /* erst nach dem Download freigeben — sofort abgebrochen manche Browser ihn */
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 /* Ein fertiges PNG in die Zwischenablage (ohne Clipboard-API oder bei
@@ -52,9 +53,12 @@ export function exportShotCSV(shot) {
   if (!shot || shot.error) { alert('Schusskurve ungültig, kein Export möglich.'); return; }
   const sm = shot.samples, gate = !!shot.gateR;
   let csv = 'zeit_s,weg_mm,geschwindigkeit_m_s,beschleunigung_m_s2' + (gate ? ',anschnittgeschwindigkeit_m_s' : '') + '\n';
+  /* Durch den Anschnitt fließt erst ab „Anguss gefüllt" Schmelze (wie
+     computeShot: davor gv = null) — davor bleibt die Spalte leer. */
+  const sGate = shot.events[1] ? shot.events[1].s : Infinity;
   for (let i = 0; i < sm.t.length; i++) {
     csv += sm.t[i].toFixed(6) + ',' + sm.s[i].toFixed(3) + ',' + sm.v[i].toFixed(4) + ',' + sm.a[i].toFixed(3)
-      + (gate ? ',' + (sm.v[i] * shot.gateR).toFixed(3) : '') + '\n';
+      + (gate ? ',' + (sm.s[i] >= sGate - 1e-9 ? (sm.v[i] * shot.gateR).toFixed(3) : '') : '') + '\n';
   }
   csv += '\nereignis,hub_mm,zeit_s,kolben_v_m_s,anschnitt_v_m_s\n';
   shot.events.forEach(e => {

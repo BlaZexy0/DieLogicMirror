@@ -52,7 +52,7 @@ der gewünschten Zeit voll ist, und schafft das die Maschine?</em> Weil die Schm
 dafür die Kontinuität: was vorne in der Kavität ankommt, muss der Kolben hinten verdrängen. Das Volumen ab
 Anschnitt V<sub>a</sub> (Kavität von Bauteil + Überlauf, ohne Anguss und Pressrest) geteilt durch die Füllzeit
 t<sub>f</sub> ist der nötige Volumenstrom, und der ist Kolbenfläche mal Kolbengeschwindigkeit:</p>
-${eq('V_{a} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Überlauf}}}{\\rho } \\qquad Q = \\frac{V_{a}}{t_{f}} = A_{K} \\cdot v_{p}')}
+${eq('V_{a} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Überlauf}}}{\\rho_{\\text{sol}} } \\qquad Q = \\frac{V_{a}}{t_{f}} = A_{K} \\cdot v_{p}')}
 ${eq('\\Rightarrow \\quad v_{p}(t_{f}, D) = \\frac{V_{a}}{t_{f} \\cdot A_{K}} = \\frac{4 \\cdot V_{a}}{t_{f} \\cdot \\pi \\cdot D^{2}}')}
 <p class="math-note">Die Heatmap zeigt v<sub>p</sub> über (t<sub>f</sub>, D), je dunkler, desto schneller; die Konturen sind Linien
 konstanter Kolbengeschwindigkeit. Die Farbskala endet bei v<sub>max</sub> der Maschine: schraffierte Bereiche

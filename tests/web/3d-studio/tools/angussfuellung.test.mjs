@@ -36,7 +36,7 @@ test('Vier Modi, der Anguss-Chip statt des Bauteils, Kurve und Aufwand stehen', 
   assert.match(doc.getElementById('stl-btn').textContent, /Angussdatei/);
   assert.match(kpiText(ui('graph-kpis')), /Anschnitte\s*2.*Pressrest\s*Ø/);
   /* Prozess: die Kurve, „Kammer voll" genau einmal mit Zahl. */
-  assert.match(kpiText(ui('curve-kpis')), /Füllkammer.*Kammer voll\s*bei \d+ ms.*2\. Phase/);
+  assert.match(kpiText(ui('curve-kpis')), /Füllkammer.*Kammer voll\s*bei [\d.]+ ms.*2\. Phase/);
   assert.equal(ui('curve-warn').textContent, '');
   /* Simulation: Gitter ist vorgewählt, die Zeile sagt, was es kostet und womit. */
   assert.equal(v.gpu, false, 'unter Node gibt es kein WebGPU');

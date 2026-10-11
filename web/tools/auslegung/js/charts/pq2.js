@@ -272,7 +272,7 @@ Carleton University, 1997, Kap. 2–3; dort nach CSIRO (P–Q², 1977) und Karni
 Envelope). Gleichungsnummern unten beziehen sich auf diese Arbeit.</p>
 
 <h4>1 · Grundgrößen</h4>
-${eq('A_{K} = \\frac{\\pi \\cdot D^{2}}{4} \\qquad p_{0} = \\frac{F_{G}}{A_{K}} = P_{\\text{acc}} \\cdot \\frac{A_{h}}{A_{K}} \\qquad Q_{\\text{dry}} = A_{K} \\cdot v_{\\text{dry}} \\qquad V_{a} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Überlauf}}}{\\rho }')}
+${eq('A_{K} = \\frac{\\pi \\cdot D^{2}}{4} \\qquad p_{0} = \\frac{F_{G}}{A_{K}} = P_{\\text{acc}} \\cdot \\frac{A_{h}}{A_{K}} \\qquad Q_{\\text{dry}} = A_{K} \\cdot v_{\\text{dry}} \\qquad V_{a} = \\frac{m_{\\text{Bauteil}} + m_{\\text{Überlauf}}}{\\rho_{\\text{sol}} }')}
 <p class="math-note">Die Gießkraft F<sub>G</sub> = P<sub>acc</sub>·A<sub>h</sub> stammt aus Akkumulatordruck × Antriebskolbenfläche;
 die Maschinenkonstante ist der Antriebskolben A<sub>h</sub> = F<sub>max</sub>/P<sub>max</sub> (Preset: Gießkraft bei
 max. Akkumulatordruck). Der <em>eingestellte</em> Akkumulatordruck (höchstens das Maximum) bestimmt die Gießkraft:
@@ -377,7 +377,7 @@ ${eq('J = v_{a}^{1.71} \\cdot e_{p} \\cdot \\rho \\quad \\Rightarrow \\quad v_{a
 Erosionsgrenze. Im Fenster wirkt je Seite die schärfere Grenze. Aktuell: J = <b data-m="Jat"></b> ·
 e<sub>p</sub> = <b data-m="ep"></b> · v<sub>a</sub>(J<sub>min</sub>) = <b data-m="vaAtom"></b> ·
 v<sub>a</sub>(J<sub>max</sub>) = <b data-m="vaAtomMax"></b></p>
-<p class="math-note"><b>Volumen-Konvention:</b> V<sub>luft</sub> = Dosiervolumen ohne Pressrest (Bauteil + Anguss +
+<p class="math-note"><b>Volumen-Konvention:</b> V<sub>luft</sub> = Kavitätsvolumen (fest, ρ<sub>sol</sub>) ohne Pressrest (Bauteil + Anguss +
 Überlauf), also die verdrängte Luft aus Kavität und Lauf; die Füllzeit-Achse rechnet dagegen ab Anschnitt mit
 V<sub>a</sub> (Bauteil + Überlauf). Das UPCT-TFG nutzt für beides V<sub>m</sub> inkl. Anguss (Gl. 2.27);
 hier gilt die App-Konvention (siehe Seitenleiste).
@@ -389,7 +389,10 @@ t<sub>max,Zerstäubung</sub> = <b data-m="tmaxZ"></b> · Arbeitspunkt t<sub>f</s
 <p class="math-note">Werkzeuglinien durch die Ecken des Operational Window liefern die zulässige Spanne der
 Anschnittfläche (Fig. 3.3): steilste Linie durch (t<sub>f,max</sub>, v<sub>a,max</sub>), flachste durch
 (t<sub>f,min</sub>, v<sub>a,min</sub>):</p>
-${eq('A_{a,\\min} = \\frac{V_{a}}{t_{f,\\max} \\cdot v_{a,\\max}} \\qquad A_{a,\\max} = \\frac{V_{a}}{t_{f,\\min} \\cdot v_{a,\\min}} \\quad\\ \\text{mit}\\ \\; t_{f,\\min} = \\max(t_{\\text{vent}}, t_{\\min,J})')}
+${eq('A_{a,\\min} = \\frac{V_{a}}{t_{f,\\max} \\cdot \\min(v_{a,\\max}, v_{a,\\text{hydr}})} \\qquad A_{a,\\max} = \\frac{V_{a}}{t_{\\text{vent}} \\cdot v_{a,\\min}}')}
+<p class="math-note">Die hydraulische Grenze v<sub>a,hydr</sub> deckelt die Anschnittgeschwindigkeit, nicht die
+Füllzeit: als Füllzeitgrenze t<sub>min,J</sub> = V<sub>a</sub>/(A<sub>a</sub>·v<sub>a,hydr</sub>) hinge sie an der gewählten
+Fläche, und die obere Grenze A<sub>a,max</sub> wüchse mit jeder gewählten Fläche mit.</p>
 <p class="math-note">Die Länge der Werkzeuglinie innerhalb von Fenster und Hüllkurve ist nach Karni ein Maß für die
 <b>Flexibilität</b> der Auslegung. Aktuell: zulässige Spanne <b data-m="AgRange"></b> · gewählt
 A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
@@ -451,10 +454,11 @@ A<sub>a</sub> = <b data-m="AgSel"></b></p>`;
     set('tmaxZ', v.gateMin > 0 ? fmt(c.Vag / (c.Ag * v.gateMin) * 1000) + ' ms' : '—');
     set('tVent', isFinite(c.tVent) ? fmt(c.tVent * 1000) + ' ms' : '—');
     /* Extremwerte der Anschnittfläche */
-    const tfMinS = Math.max(isFinite(c.tVent) ? c.tVent : 0, tminJ / 1000);
+    const tfMinS = isFinite(c.tVent) ? c.tVent : 0;
     const tfMaxS = v.tmax > 0 ? v.tmax / 1000 : NaN;
     if (tfMaxS > 0 && tfMinS > 0 && v.gateMin > 0 && v.gateMax > 0) {
-      const AgMin = c.Vag / (tfMaxS * v.gateMax) * 1e6;
+      const vaTop = isFinite(c.vaHydr) && c.vaHydr > 0 ? Math.min(v.gateMax, c.vaHydr) : v.gateMax;
+      const AgMin = c.Vag / (tfMaxS * vaTop) * 1e6;
       const AgMax = c.Vag / (tfMinS * v.gateMin) * 1e6;
       const ok = v.gate >= AgMin && v.gate <= AgMax;
       set('AgRange', fmt(AgMin) + '–' + fmt(AgMax) + ' mm²');

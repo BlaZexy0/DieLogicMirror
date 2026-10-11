@@ -18,8 +18,9 @@
    Kolbenfläche), und das Bewegungsprofil kennt die Zeit zu jedem Weg.
 
    Die Kurve ist die DieLogic-Kurve der Auslegung (js/core/curvegen.js,
-   Modus 'lopez'): López-Anfahrt bis v_krit, Plateau bis „Kammer voll",
-   Rampe mit a_max auf das v₂, das die NADCA-Füllzeit trifft. Sie wird
+   Modus 'focus'): fokussierendes Kolbengesetz bis min(0,95·U_H, v_krit),
+   Plateau bis „Kammer voll", Rampe mit a_max auf das v₂, das die
+   NADCA-Füllzeit trifft. Sie wird
    hier für das Modell erzeugt — Maschine, Kammer, Legierung und Thermik
    aus dem Auslegungszustand, die Massen aus den Volumen des Modells —,
    unabhängig davon, welche Kurve das Dashboard gerade zeigt. Der
@@ -78,7 +79,7 @@ export function shotTimeline(values, volumesMm3 = {}, chamber = null) {
        zwei Kilogramm der Auslegungsvorgabe. */
     if (Number.isFinite(mm3) && mm3 >= 0) v[k] = mm3 * 1e-9 * rho;
   }
-  const gen = generateCurve(v, { mode: 'lopez' });
+  const gen = generateCurve(v, { mode: 'focus' });
   if (gen.error) return { error: gen.error };
   let shot;
   try { shot = computeShot(v, gen.points); } catch (e) { return { error: String(e && e.message || e) }; }

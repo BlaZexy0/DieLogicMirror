@@ -27,8 +27,8 @@ nicht im Bild.</p>
 </section>
 <section data-help-anchor="kurve">
 <h3>Schusskurve</h3>
-<p><b>DieLogic</b>: die DieLogic-Kurve des Projekts: López-Anfahrt bis v<sub>krit</sub>, Plateau bis
-Kammer voll, Rampe auf v₂. Sie nimmt Maschine und Thermik aus dem aktuellen Projekt, Kammer und Füllgrad
+<p><b>DieLogic</b>: die DieLogic-Kurve des Projekts: fokussierendes Kolbengesetz bis 0,95·U<sub>H</sub>
+bzw. v<sub>krit</sub>, Plateau bis Kammer voll, Rampe auf v₂. Sie nimmt Maschine und Thermik aus dem aktuellen Projekt, Kammer und Füllgrad
 von hier; die Massen werden so gesetzt, dass die Kurve den gewählten Füllgrad rechnet.</p>
 <p><b>v₁ / v₂</b>: zweistufig: Rampe auf v₁, Plateau bis Kammer voll, Rampe auf v₂. Die Beschleunigung
 gilt für beide Rampen.</p>

@@ -83,8 +83,11 @@ export function leverFactor(v) {
   return (v.tieX > 0 && v.tieY > 0) ? globalThis.__CLAMP_MODEL__.leverK(v.eccX, v.eccY, v.tieX, v.tieY) : 1;
 }
 export function clampPMax(v) { return globalThis.__CLAMP_MODEL__.pMax(v.force, v.area, v.safety, leverFactor(v)); }
-/* Nötige Schließkraft [kN] beim Nachdruck psel, zentrisch: 100 · S · p · A. */
-export function clampForceNeeded(v) { return globalThis.__CLAMP_MODEL__.forceKN(v.psel, v.area, v.safety, 1); }
+/* Nötige Schließkraft [kN] beim Nachdruck psel: 100 · S · p · A · k. Mit
+   dem Hebelfaktor wie clampPMax — vorher rechnete diese Größe zentrisch
+   (k = 1), und bei außermittiger Sprengfläche zeigte die Schließkraft-
+   Auslastung ✓, während die Nachdruck-Auslastung derselben Zuhaltung ✕ meldete. */
+export function clampForceNeeded(v) { return globalThis.__CLAMP_MODEL__.forceKN(v.psel, v.area, v.safety, leverFactor(v)); }
 
 /* Empfohlene Füllzeit nach NADCA [ms] bei der Wandstärke s (ohne Angabe die
    des Bauteils): t_f = k · s · (T_guss − T_fließ + S_zul · Z) / (T_fließ −
@@ -230,6 +233,131 @@ export function waveSpeed(Dm, phi) {
   const y = segHeight(phi);
   const chord = 2 * Math.sqrt(Math.max(1e-12, y * (1 - y))) * Dm;
   return Math.sqrt(9.81 * (phi * PI * Dm * Dm / 4) / chord);
+}
+
+/* ── Fokussierendes Kolbengesetz (DieLogic, Kreisquerschnitt) ──
+   Flachwasser-Einfachwelle in der runden Kammer: das Gesetz, bei dem jede
+   C⁺-Charakteristik, die den Kolben verlässt, durch denselben Punkt läuft
+   — die Stirnwand in dem Augenblick, in dem der Wellenfuß sie erreicht,
+   (t*, ℓ) mit t* = ℓ/c₀ und ℓ = L. Alle Tiefen kommen dort gleichzeitig an,
+   die Front wird genau an der Wand senkrecht. Geschlossene Form
+   (DieLogic_OF, claude_paper/scripts/focusing_law.py, Gl. focus1–3):
+     A(h_p)·c(h_p) = A₀c₀ / (1 − t/t*)
+     U(t) = ω(h_p) = ∫ √(g·T/A) dh   von h₀ bis h_p
+     X(t) = ℓ·(1 − A₀/A(h_p)) − U·(t* − t)
+   Bei Deckenberührung (h_p = D) ist t = t*, U = U_H und X = ℓ·(1 − φ):
+   das Gesetz erreicht die Deckengeschwindigkeit genau bei „Kammer voll",
+   mit verschwindender Beschleunigung. U/√(gD) über X/ℓ hängt nur von φ ab,
+   nicht von D oder L.
+   Dimensionslos: Längen / D, Geschwindigkeiten / √(gD), y = h/D. Rückgabe
+   je Stützstelle U (in √(gD)), xi = X/ℓ und tau = t/t*, dazu C0 = c₀/√(gD)
+   und UH = U_H/√(gD). Simpson je Intervall auf einem zur Decke verdichteten
+   y-Gitter; gegen die Tabelle des Papiers auf drei Stellen geprüft
+   (tests/web/fokusgesetz.test.mjs). */
+function segA(y) { return (Math.acos(1 - 2 * y) - 2 * (1 - 2 * y) * Math.sqrt(Math.max(y * (1 - y), 0))) / 4; }
+function segT(y) { return 2 * Math.sqrt(Math.max(y * (1 - y), 0)); }
+function omegaRate(y) { const t = segT(y); return t > 0 ? Math.sqrt(t / segA(y)) : 0; }
+export function focusLaw(phi, n = 400) {
+  if (!(phi > 0 && phi < 1)) return null;
+  const y0 = segHeight(phi), A0 = segA(y0), C0 = Math.sqrt(A0 / segT(y0));
+  const y = [], U = [0], tau = [], xi = [];
+  for (let i = 0; i < n; i++) y.push(y0 + (1 - y0) * (1 - Math.pow(1 - i / (n - 1), 3)));
+  y[n - 1] = 1;
+  for (let i = 1; i < n; i++) {
+    const a = y[i - 1], b = y[i];
+    U.push(U[i - 1] + (b - a) / 6 * (omegaRate(a) + 4 * omegaRate((a + b) / 2) + omegaRate(b)));
+  }
+  for (let i = 0; i < n; i++) {
+    const Ai = segA(y[i]), Ti = segT(y[i]);
+    const r = Ti > 0 ? A0 * C0 / (Ai * Math.sqrt(Ai / Ti)) : 0;   // A₀c₀/(A·c)
+    tau.push(1 - r);
+    xi.push(1 - A0 / Ai - U[i] * r / C0);                         // (t* − t)/ℓ = r/C₀
+  }
+  return { phi, C0, UH: U[n - 1], U, xi, tau };
+}
+
+/* ── Wärmeverlust in der Füllkammer ──
+   Die Schmelze liegt vom Dosieren bis zum Füllende in der Kammer und gibt
+   Wärme an die kältere Kammerwand ab. Modell: die Wand ist ein halbunendlicher
+   Stahlkörper (Warmarbeitsstahl, Stoffwerte unten) mit dem Wärmeübergang h
+   an der Grenzfläche (Trennmittel, Spalt); die Schmelze hält dabei ihre
+   Gießtemperatur (konservativ: der Verlust ist so eher zu hoch). Die je m²
+   bis zur Zeit t abgegebene Wärme ist die klassische Lösung
+     q = ΔT · k²/(h·a) · [e^{β²}·erfc β − 1 + 2β/√π],   β = h·√(a·t)/k
+   (für h → ∞ die reine Wärmeleitung 2·ΔT·b·√(t/π), für kleine β Newton
+   ΔT·h·t). Benetzt ist die Kammerwand unter dem ruhenden Bad (Bogen
+   D·θ₀ über die Länge L, θ₀ = acos(1 − 2h₀/D)) und je ein Kreissegment an
+   Kolben und Stirnseite — beim Hochstauen der Welle bleibt die benetzte
+   Fläche etwa gleich, und die Strahlung der freien Oberfläche ist
+   vernachlässigt.
+   Ergebnis: die mittlere Schmelzetemperatur am Füllende (die Wärme kommt
+   zuerst aus der Überhitzung), der Anteil der verbrauchten Überhitzung und
+   als obere Schranke der Anteil, der als Randschale an der Wand erstarrt,
+   wenn jede abgeführte Wärme nur Wandschmelze erstarren lässt. */
+export const SLEEVE_STEEL = { k: 28, rho: 7700, c: 500 };   // W/(m·K), kg/m³, J/(kg·K), 1.2343 bei ~300 °C
+
+/* e^{x²}·erfc(x) für x ≥ 0 ohne Überlauf: unter 2 über die Taylorreihe von
+   erf, darüber der Kettenbruch (beide auf 1e-9 genau). */
+export function erfcx(x) {
+  if (!(x >= 0)) return NaN;
+  if (x < 2) {
+    let term = x, sum = x;
+    for (let n = 1; n < 60; n++) {
+      term *= -x * x / n;
+      sum += term / (2 * n + 1);
+    }
+    return Math.exp(x * x) * (1 - 2 / Math.sqrt(PI) * sum);
+  }
+  let f = x;
+  for (let k = 120; k >= 1; k--) f = x + (k / 2) / f;
+  return 1 / (Math.sqrt(PI) * f);
+}
+export function sleeveHeatPerArea(dT, h, tS, steel = SLEEVE_STEEL) {
+  if (!(dT > 0) || !(h > 0) || !(tS > 0)) return 0;
+  const a = steel.k / (steel.rho * steel.c);
+  const beta = h * Math.sqrt(a * tS) / steel.k;
+  /* Für kleine β löscht sich die Klammer aus (≈ β²): dort Newton direkt. */
+  if (beta < 1e-3) return dT * h * tS;
+  return dT * steel.k * steel.k / (h * a) * (erfcx(beta) - 1 + 2 * beta / Math.sqrt(PI));
+}
+/* tS = Kontaktzeit [s] (Verweilzeit vor dem Schuss + Schuss bis zum Füllende). */
+export function sleeveLoss(v, tS) {
+  const phi = fillRatio(v);
+  const m = doseMass(v), cpL = v.cpL, hf = v.hf * 1000;
+  const sup = v.Tcast - v.Tliq;
+  if (!(phi > 0 && phi < 1) || !(m > 0) || !(cpL > 0) || !(hf > 0) || !(sup >= 0)
+    || !(v.Tcast > v.sleeveT) || !(v.hSleeve > 0) || !(tS > 0)) return null;
+  const D = v.diam / 1000, L = v.length / 1000;
+  const theta = Math.acos(1 - 2 * segHeight(phi));
+  const area = D * theta * L + 2 * phi * 0.25 * PI * D * D;          // m² benetzt
+  const Q = area * sleeveHeatPerArea(v.Tcast - v.sleeveT, v.hSleeve, tS);   // J
+  const Qsup = m * cpL * sup;
+  const used = Qsup > 0 ? Q / Qsup : Infinity;
+  const Tmelt = Q <= Qsup ? v.Tcast - Q / (m * cpL) : v.Tliq;
+  const solidMean = Q <= Qsup ? 0 : Math.min(1, (Q - Qsup) / (m * hf));
+  const shellMax = Math.min(1, Q / (m * (cpL * sup + hf)));
+  return { area, tS, Q, Qsup, used, Tmelt, dT: v.Tcast - Tmelt, solidMean, shellMax };
+}
+
+/* ── Druckspitze am Füllende ──
+   Ist die Kavität voll, kommt die Schmelze schlagartig zum Stehen. Wie beim
+   Wasserschlag läuft eine Druckwelle durch die Schmelzesäule in der Kammer,
+   die mit der Kolbengeschwindigkeit v_p strömt: Δp = ρ·a·v_p (Joukowsky,
+   a = Schallgeschwindigkeit der Schmelze). Dazu kommt der Druck, mit dem
+   die Schmelze in diesem Augenblick durch den Anschnitt gedrückt wird,
+   p_A = ρ·(v_A/C_d)²/2 (dieselbe Werkzeuglinie wie im PQ²). Beide wirken
+   auf die ganze Sprengfläche, die Spitze ist also eine Zuhaltungsgröße —
+   ohne Sicherheitsfaktor, denn sie ist die Dynamik, die S sonst abdecken
+   soll. Eine Bremsung in der Schusskurve senkt v_p am Füllende und damit
+   die Spitze. Nicht enthalten: die Masse von Kolben, Stange und
+   Antriebskolben, die nach der Spitze weiterdrückt, Luftpolster und die
+   Nachgiebigkeit von Form und Maschine. vp in m/s; Drücke in bar. */
+export function fillEndSpike(v, vp) {
+  if (!(vp >= 0) || !(v.density > 0) || !(v.soundSpeed > 0)) return null;
+  const hammer = v.density * v.soundSpeed * vp / 1e5;
+  const va = v.gate > 0 ? vp * pistonArea(v) / v.gate : NaN;
+  const gateP = isFinite(va) && v.Cd > 0 ? v.density * (va / v.Cd) * (va / v.Cd) / 2 / 1e5 : 0;
+  return { vp, va, hammer, gateP, peak: hammer + gateP };
 }
 
 /* Bewegungsprofil: stückweise konstante Beschleunigung.

@@ -34,5 +34,17 @@ export const charts = [
   yieldChart
 ];
 
+/* Wer die Schusskurve liest (usesCurve), liest über computeShot auch die
+   Eingaben, die „Kammer voll" und die Füllereignisse festlegen — Kammer,
+   Massen, Dichten, Anschnitt. Sie gehören deshalb in jede solche inputs-
+   Liste (🎯-Hervorhebung, Einzelseite chart.html); vorher fehlten sie, und
+   z. B. die Kammerlänge verschob den Punkt im Füllzeit-Diagramm, ohne auf
+   dessen Einzelseite zu stehen. Die Eingaben der Kurvengeneratoren
+   (Thermik, NADCA) bleiben außen vor: sie zählen nur in den erzeugten Modi. */
+export const SHOT_INPUTS = ['diam', 'length', 'part', 'runner', 'overflow', 'biscuit', 'density', 'densitySolid', 'shrink', 'gate'];
+for (const c of charts) {
+  if (c.usesCurve) c.inputs = c.inputs.concat(SHOT_INPUTS.filter(k => !c.inputs.includes(k)));
+}
+
 export const chartsById = {};
 charts.forEach(c => { chartsById[c.id] = c; });

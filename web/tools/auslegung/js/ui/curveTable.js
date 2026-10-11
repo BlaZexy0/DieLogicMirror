@@ -8,17 +8,20 @@ import { subHTML } from '../core/format.js';
 /* Die Modi selbst stehen in core/state.js (CURVE_MODES); hier ihre
    Beschriftung und je ein Hinweis, der den leeren Absatz .curve-note der
    Seite füllt. */
-const LABELS = { points: 'Punkte', lopez: 'DieLogic', v1v2: 'V₁ / V₂' };
+const LABELS = { points: 'Punkte', focus: 'DieLogic', lopez: 'López', v1v2: 'V₁ / V₂' };
 
 const NOTES = {
   points: 'Wegpunkte als Weg s [mm] / Kolbengeschwindigkeit v [m/s]. Zwischen den Punkten wird konstant beschleunigt; der Ursprung (0 mm, 0 m/s) wird automatisch ergänzt.',
-  lopez: 'DieLogic-Kurve: Anfahrt nach López-Faura-Hernández (Profil P5 der Theorie „Nebenbedingungen") bis v_krit, Plateau bis „Kammer voll", dann Rampe mit a_max auf v₂, so gewählt, dass die Füllzeit ab Anschnitt samt Rampe die empfohlene NADCA-Füllzeit trifft (höchstens v_max; reicht a_max nicht, fährt die Kurve die schnellste mögliche 2. Phase und sagt es). Die Punkte werden aus den Eingaben erzeugt.',
+  focus: 'DieLogic-Kurve: fokussierendes Kolbengesetz für die runde Kammer. Jede Teilwelle, die der Kolben anstößt, erreicht die Stirnwand im selben Augenblick; das Gesetz käme genau bei „Kammer voll" auf die Deckengeschwindigkeit U_H. Gekappt bei κ·U_H bzw. v_krit, was kleiner ist, Plateau bis „Kammer voll", dann Rampe mit a_max auf v₂ für die empfohlene NADCA-Füllzeit, höchstens Füllzeit max. (wie bei López). Die Punkte werden aus den Eingaben erzeugt.',
+  lopez: 'López-Kurve: Anfahrt nach López-Faura-Hernández (Profil P5 der Theorie „Nebenbedingungen") bis v_krit, Plateau bis „Kammer voll", dann Rampe mit a_max auf v₂, so gewählt, dass die Füllzeit ab Anschnitt samt Rampe die empfohlene NADCA-Füllzeit trifft, höchstens Füllzeit max. (höchstens v_max; reicht a_max nicht, fährt die Kurve die schnellste mögliche 2. Phase und sagt es). Die Punkte werden aus den Eingaben erzeugt.',
   v1v2: 'Rampe mit a₁ auf V₁, Plateau bis „Kammer voll", Rampe mit a₂ auf V₂ bis zum Schussende. Die Punkte werden aus den Eingaben erzeugt.'
 };
 
+/* Parameterfelder je Modus: [Schlüssel, Beschriftung, Einheit, Modus] */
 const PARAMS = [
-  ['v1', 'V₁', 'm/s'], ['a1', 'a₁', 'm/s²'],
-  ['v2', 'V₂', 'm/s'], ['a2', 'a₂', 'm/s²']
+  ['v1', 'V₁', 'm/s', 'v1v2'], ['a1', 'a₁', 'm/s²', 'v1v2'],
+  ['v2', 'V₂', 'm/s', 'v1v2'], ['a2', 'a₂', 'm/s²', 'v1v2'],
+  ['kappa', 'κ = Kappe / U_H', '-', 'focus']
 ];
 
 /* Modus-Tabs + Parameterfelder einmalig in die Kurven-Gruppe einbauen. */
@@ -44,12 +47,14 @@ function ensureModeUI() {
   const params = document.createElement('div');
   params.className = 'cgen-fields';
   params.id = 'curveGenParams';
-  PARAMS.forEach(([k, label, unit]) => {
+  PARAMS.forEach(([k, label, unit, m]) => {
     const f = document.createElement('div');
     f.className = 'field';
+    f.dataset.mode = m;
     f.innerHTML = '<label>' + label + ' <span class="unit">' + unit + '</span></label>';
     const inp = document.createElement('input');
     inp.type = 'number'; inp.step = 'any'; inp.min = '0';
+    if (k === 'kappa') { inp.max = '1'; inp.step = '0.01'; }
     inp.dataset.gen = k;
     inp.oninput = () => {
       state.curveGen[k] = parseFloat(inp.value);
@@ -79,7 +84,9 @@ export function renderCurveTable(genError = null) {
 
   const params = document.getElementById('curveGenParams');
   if (params) {
-    params.style.display = mode === 'v1v2' ? '' : 'none';
+    const own = params.querySelectorAll('.field[data-mode="' + mode + '"]');
+    params.style.display = own.length ? '' : 'none';
+    params.querySelectorAll('.field').forEach(f => { f.style.display = f.dataset.mode === mode ? '' : 'none'; });
     params.querySelectorAll('input[data-gen]').forEach(inp => {
       if (document.activeElement !== inp) inp.value = state.curveGen[inp.dataset.gen];
     });

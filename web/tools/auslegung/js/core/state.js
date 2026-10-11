@@ -15,10 +15,11 @@ if (!window.__PROJECT__) throw new Error('shared/project.js nicht geladen (windo
 const PROJECT = window.__PROJECT__;
 
 /* Schusskurven-Definition: 'points' = editierbare Wegpunkte,
+   'focus' = DieLogic-Kurve, fokussierendes Kolbengesetz bis κ·U_H + NADCA-Füllzeit,
    'lopez' = López-Faura-Hernández-Anfahrt + NADCA-Füllzeit,
    'v1v2' = Rampen auf V₁ und V₂ (core/curvegen.js erzeugt die Punkte). */
-export const CURVE_MODES = ['points', 'lopez', 'v1v2'];
-export const DEFAULT_CURVEGEN = { mode: 'points', v1: 0.4, a1: 5, v2: 4, a2: 30 };
+export const CURVE_MODES = ['points', 'focus', 'lopez', 'v1v2'];
+export const DEFAULT_CURVEGEN = { mode: 'points', v1: 0.4, a1: 5, v2: 4, a2: 30, kappa: 0.95 };
 
 export const state = {
   values: {},
@@ -136,6 +137,9 @@ export function applyData(data) {
       const x = Number(data.curveGen[k]);
       if (isFinite(x) && x > 0) state.curveGen[k] = x;
     }
+    /* κ: Anteil der Deckengeschwindigkeit, bei dem die DieLogic-Kurve kappt */
+    const kap = Number(data.curveGen.kappa);
+    if (isFinite(kap) && kap > 0 && kap <= 1) state.curveGen.kappa = kap;
   }
   for (const d of PRESET_DOMAINS) {
     if (typeof data[d.stateKey] === 'string') state[d.stateKey] = data[d.stateKey];

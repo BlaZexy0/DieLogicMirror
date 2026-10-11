@@ -100,8 +100,8 @@ folgt daraus der Füllgrad, den die Schusskurve braucht.</p>
 </section>
 <section data-help-anchor="schusskurve">
 <h3>Ankunft nach der DieLogic-Schusskurve</h3>
-<p>Die Ankunft der Schmelze an jedem Anschnitt nach der DieLogic-Schusskurve der Auslegung (López-Anfahrt bis
-v<sub>krit</sub>, Plateau bis Kammer voll, Rampe auf das v₂ der NADCA-Füllzeit), erzeugt mit der Füllkammer von hier
+<p>Die Ankunft der Schmelze an jedem Anschnitt nach der DieLogic-Schusskurve der Auslegung (fokussierendes
+Kolbengesetz bis 0,95·U<sub>H</sub> bzw. v<sub>krit</sub>, Plateau bis Kammer voll, Rampe auf das v₂ der NADCA-Füllzeit), erzeugt mit der Füllkammer von hier
 (Pressrest-Ø als Kolben-Ø, Kammerlänge von oben), der Legierung und den Volumen von hier; Maschine und Thermik aus
 dem aktuellen Projekt. Ist die Legierung des Projekts dasselbe Metall wie die von hier, gelten ihre Werte, sonst die
 der Vorlage (AlSi9Cu3, AZ91D, Zamak 5). Ohne Häkchen: ein konstanter Strom aus Gussvolumen und Füllzeit.</p>

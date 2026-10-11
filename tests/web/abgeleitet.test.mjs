@@ -114,7 +114,7 @@ test('Zuhaltung: Hebelfaktor, Nachdruckgrenze und Kraftbedarf wie vorher inline'
     const k = (v.tieX > 0 && v.tieY > 0) ? CLAMP.leverK(v.eccX, v.eccY, v.tieX, v.tieY) : 1;
     assert.equal(Ph.leverFactor(v), k);
     assert.equal(Ph.clampPMax(v), CLAMP.pMax(v.force, v.area, v.safety, k));
-    assert.equal(Ph.clampForceNeeded(v), CLAMP.forceKN(v.psel, v.area, v.safety, 1));
+    assert.equal(Ph.clampForceNeeded(v), CLAMP.forceKN(v.psel, v.area, v.safety, Ph.leverFactor(v)));
   }
   assert.equal(Ph.leverFactor(Object.assign(defaults(), { tieX: 0 })), 1, 'ohne Säulenfeld zentrisch');
 });

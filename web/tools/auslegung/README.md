@@ -131,7 +131,7 @@ js/
                        und jede abgeleitete Größe genau einmal (Füllgrad,
                        NADCA-Füllzeit, spez. Gießdruck, Zuhaltung, Entlüftungsbedarf …)
     vkritTable.js      CFD-Tabelle der kritischen Geschwindigkeit (GENERIERT)
-    curvegen.js        Schusskurven-Generatoren (Wegpunkte aus v₁/a₁/v₂/a₂)
+    curvegen.js        Schusskurven-Generatoren: DieLogic (Fokusgesetz), López, V₁/V₂
     autofit.js         Auto-Schalter: ideale Anschnitt- und Entlüftungsfläche
     domain.js          die Eingabedomäne, angewandt (welche Werte überhaupt rechnen dürfen)
     limits.js          Grenzen (Ungleichungs-Restriktionen) als Daten
