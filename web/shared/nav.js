@@ -126,6 +126,9 @@
         { label: 'Zamora und López', href: '/simulation/validierung-zamora.html' },
         { label: 'Guo und Xiong 2008', href: '/simulation/validierung-guo.html' },
       ] },
+      { title: 'Werkzeug', items: [
+        { label: 'Simulation einrichten', href: '/tools/simulation/' },
+      ] },
     ] },
     { label: 'Theorie', children: [
       { label: 'Das PQ²-Diagramm', href: '/theorie/pq2.html' },
@@ -231,8 +234,8 @@
     const theorie = NAV_LINKS.find(g => g.label === 'Theorie').children;
     /* Die Simulation aus derselben Liste wie oben: die Solver-Spalte wie sie ist,
        die Validierung mit Vorsilbe (wie „Theorie: …"), die Methode als „Validierung". */
-    const [simSolver, simVal] = NAV_LINKS.find(g => g.label === 'Simulation').columns;
-    const simulation = [...simSolver.items,
+    const [simSolver, simVal, simTool] = NAV_LINKS.find(g => g.label === 'Simulation').columns;
+    const simulation = [...simTool.items, ...simSolver.items,
       ...simVal.items.map((t, i) => ({ href: t.href, label: i === 0 ? 'Validierung' : 'Validierung: ' + t.label }))];
     return `<footer class="dl-footer">
   <div class="dl-footer-col">

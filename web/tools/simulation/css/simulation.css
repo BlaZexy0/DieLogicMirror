@@ -1,0 +1,94 @@
+/* Simulation einrichten: die Leiste als Ablaufplan, Listen der Körper und
+   Auslässe. Farben nur aus den Tokens von /shared/shared.css und dem
+   Studio (css/studio.css). */
+
+/* Ablaufplan: Verbinder zwischen den Schritten, gesperrte Schritte blass */
+.st-rail.sim-flow { gap: 10px; }
+.sim-flow .st-step { overflow: visible; }
+.sim-flow .st-step + .st-step::before {
+  content: ''; position: absolute; top: -10px; left: 50%; width: 2px; height: 10px;
+  background: var(--dark3); transform: translateX(-50%);
+}
+.sim-flow .st-step.done + .st-step::before { background: var(--primary-light); }
+.sim-flow .st-step.locked { opacity: .38; cursor: not-allowed; }
+.sim-flow .st-step.locked:hover { background: none; color: var(--ondark); }
+.sim-flow .st-step.done .st-step-dot { background: var(--primary-light); }
+@media (max-width: 760px) {
+  .st-rail.sim-flow { gap: 0; }
+  .sim-flow .st-step + .st-step::before { display: none; }
+}
+
+.sim-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.sim-actions .btn { min-height: 36px; }
+.sim-file { cursor: pointer; }
+
+.sim-bodies { gap: 4px; }
+.sim-body {
+  display: grid; grid-template-columns: 12px 22px minmax(0, 1fr) auto auto; align-items: center; gap: 6px;
+  padding: 5px 6px; border: 1px solid var(--border-light); border-radius: 6px; background: var(--surface);
+}
+.sim-body.off { opacity: .55; }
+.sim-body input[type="checkbox"] { width: 18px; height: 18px; margin: 0; }
+.sim-swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(var(--dark-rgb), .25); }
+.sim-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: .82rem; }
+.sim-name small { display: block; font-weight: 400; color: var(--muted); font-size: .7rem; overflow: hidden; text-overflow: ellipsis; }
+.sim-body select, .sim-outlet select { max-width: 120px; font-size: .78rem; }
+.sim-x { min-width: 32px; min-height: 32px; padding: 0 8px; }
+
+.sim-outlet {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 6px;
+  padding: 5px 6px; border: 1px solid var(--border-light); border-left: 3px solid var(--air); border-radius: 6px;
+}
+.sim-outlet b { font-family: var(--mono); font-size: .78rem; }
+.sim-outlet span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .78rem; color: var(--muted); }
+
+.sim-crit { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin: 4px 0 8px; }
+.sim-views { display: block; margin: 4px 0 8px; }
+.sim-crit small { color: var(--muted); }
+.sim-label { grid-column: 1 / -1; font-size: .72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.sim-cmd {
+  margin: 8px 0 0; padding: 8px 10px; border-radius: 6px; background: var(--dark); color: var(--ondark);
+  font-family: var(--mono); font-size: .72rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.sim-flow .st-step.locked .st-step-dot { background: transparent; }
+.sim-flow .st-step.locked + .st-step::before { background: var(--dark3); }
+.sim-meshrow {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px;
+  padding: 5px 6px; border: 1px solid var(--border-light); border-radius: 6px;
+}
+.sim-meshrow.warn { border-left: 3px solid var(--caution); }
+.sim-meshrow select { font-size: .78rem; }
+/* Übersprungene Schritte (Anguss/Überläufe aus Dateien) stehen nicht in der Leiste */
+.sim-flow .st-step[hidden] { display: none; }
+
+/* Schusskurve im Schritt Prozess */
+.sim-curvebox { margin: 6px 0 4px; }
+.sim-curve { width: 100%; height: auto; display: block; overflow: hidden; background: var(--surface); border: 1px solid var(--border-light); border-radius: 6px; }
+.sim-curve .v { fill: none; stroke: var(--primary); stroke-width: 2; }
+.sim-curve .sim { fill: rgba(var(--primary-rgb), .08); }
+.sim-curve .axl { stroke: var(--border); stroke-width: 1; }
+.sim-curve .ev { stroke: var(--muted); stroke-width: .8; stroke-dasharray: 3 3; }
+.sim-curve .evl, .sim-curve .ax { fill: var(--muted); font-size: 8px; font-family: var(--sans); }
+
+/* Ansichten im Schritt Auswertung */
+.sim-viewrow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px; padding: 2px 0; }
+.sim-viewrow small { color: var(--muted); }
+
+/* Der Bildausschnitt im Viewport: Rahmen, außen abgedunkelt, darin eine
+   Farbleiste oben links und der Text oben rechts wie in render.py */
+.sim-frame { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+.sim-frame[hidden] { display: none; }
+.sim-frame-box { position: absolute; outline: 2px solid #fff; box-shadow: 0 0 0 1px rgba(var(--dark-rgb), .35), 0 0 0 9999px rgba(var(--dark-rgb), .32); }
+.sim-frame-bar { position: absolute; display: flex; align-items: stretch; gap: 4px; color: var(--text); font-family: var(--sans); }
+.sim-frame-bar i { display: block; border: 1px solid rgba(var(--dark-rgb), .35); }
+.sim-frame-bar b { position: absolute; left: calc(100% + 2px); font-weight: 400; white-space: nowrap; }
+.sim-frame-bar b.hi { top: -.6em; }
+.sim-frame-bar b.lo { bottom: -.6em; }
+.sim-frame-bar .tt { position: absolute; left: 0; bottom: calc(100% + .9em); white-space: nowrap; font-size: 1.15em; }
+.sim-frame-text { position: absolute; text-align: right; color: var(--text); font-family: var(--sans); line-height: 1.25; text-shadow: 0 0 3px #fff; }
+.sim-frame-size { position: absolute; right: 6px; bottom: 4px; font: 600 .7rem var(--mono); color: #fff; text-shadow: 0 0 3px rgba(var(--dark-rgb), .7); }
+
+/* Längere Einheiten als im Studio (W/(m²·K), J/(kg·K)): die Einheit nimmt
+   ihre Breite, das Feld gibt nach — nichts ragt aus der Seitenleiste. */
+body.simulation .row .unit { width: auto; min-width: 30px; white-space: nowrap; }
+body.simulation .row input[type="text"] { flex: 1 1 64px; min-width: 0; }

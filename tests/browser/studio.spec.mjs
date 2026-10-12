@@ -237,3 +237,97 @@ test('Werkbank: alle sechs Schritte kommen ohne Fehler hoch und hängen zusammen
   await page.waitForTimeout(500);
   expect(errors, errors.join('\n')).toEqual([]);
 });
+
+/* Simulation einrichten (/tools/simulation/): das Beispiel mit allen Körpern,
+   der Ablaufplan sperrt, der Einlass kommt als Vorschlag, ein Klick ins Bild
+   auf den Pressrest trifft eine Fläche, und der Fall entsteht im Worker. */
+test('Simulation einrichten: Beispiel, Ablaufplan, Fall im Worker', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+  page.on('console', m => {
+    if (m.type() !== 'error' || /\/api\//.test(m.location().url || '')) return;
+    errors.push('console: ' + m.text() + ' @ ' + (m.location().url || ''));
+  });
+  await page.goto('/tools/simulation/');
+  await page.waitForFunction(() => window.__simulation?.state.ready && window.__simulation.plan.bodies.length === 4, null, { timeout: 60_000 });
+  await expect(page.locator('[data-stage="fall"]')).toHaveClass(/locked/);
+  await page.click('[data-stage="einlass"]');
+  await page.click('[data-ui="inlet-suggest"]');
+  await expect(page.locator('[data-ui="primary"]')).toHaveText('Weiter: Auslässe');
+  await page.click('[data-ui="primary"]');
+  /* Ein echter Tipp ins Bild trifft eine Fläche: die Oberseite des Pressrests
+     (z = 0, von oben sichtbar) wird Auslass, ein zweiter Tipp nimmt sie heraus. */
+  const at = await page.evaluate(() => {
+    const v = window.__simulation, cam = v.host.view.camera, el = v.host.view.renderer.domElement;
+    v.host.view.controls.target.set(0, -280, 0);
+    cam.position.set(0, -280, 600); cam.up.set(0, 1, 0); cam.lookAt(0, -280, 0); cam.updateMatrixWorld();
+    v.host.view.controls.update && v.host.view.controls.update();
+    const p = cam.position.clone().set(10, -275, 0).project(cam), r = el.getBoundingClientRect();
+    return { x: r.left + (p.x + 1) / 2 * r.width, y: r.top + (1 - p.y) / 2 * r.height };
+  });
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => page.evaluate(() => window.__simulation.plan.outlets.length)).toBe(1);
+  expect(await page.evaluate(() => Math.abs(window.__simulation.plan.outlets[0].centroid[2]))).toBeLessThan(0.01);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => page.evaluate(() => window.__simulation.plan.outlets.length)).toBe(0);
+  await page.evaluate(() => {
+    const v = window.__simulation, b = v.plan.bodies.find(x => x.role === 'overflow'), t = b.tris;
+    for (let f = 0; f < t.length / 9; f++) { const o = f * 9; if ((t[o + 1] + t[o + 4] + t[o + 7]) / 3 > 330 && Math.abs((t[o + 2] + t[o + 5] + t[o + 8]) / 3 + 3) < 0.01) return v.tools.auslass.pickFace(b.id, f); }
+    return false;
+  });
+  await expect(page.locator('[data-stage="fall"]')).not.toHaveClass(/locked/);
+  /* Prozess: die DieLogic-Kurve als Bild, mit Kammer rechnet der Fall ab Kolbenstart */
+  await page.click('[data-stage="prozess"]');
+  await expect(page.locator('[data-ui="p-curve"] svg.sim-curve path.v')).toBeVisible();
+  await expect(page.locator('[data-ui="p-mode"]')).toHaveValue('focus');
+  await page.click('[data-ui="p-chamber"] [data-value="1"]');
+  await expect(page.locator('[data-ui="p-shot"]')).toContainText('ab Kolbenstart');
+  await page.click('[data-ui="p-length-fit"]');
+  await expect(page.locator('[data-ui="p-shot"]')).toContainText('Füllgrad');
+  /* die Länge für die Mitte des Zielbands (40–60 %): 50 % Füllgrad */
+  await expect(page.locator('[data-ui="p-length-fit"]')).toBeHidden();
+  await expect(page.locator('[data-ui="p-shot"]')).toContainText(/Füllgrad\s*(49|50|51),\d %/);
+  /* Auswertung: der Bildrahmen im Viewport, im gewählten Seitenverhältnis */
+  await page.click('[data-stage="auswertung"]');
+  await expect(page.locator('.sim-frame')).toBeVisible();
+  await page.click('[data-ui="post-aspect"] [data-value="1:1"]');
+  const r = await page.locator('.sim-frame-box').boundingBox();
+  expect(Math.abs(r.width / r.height - 1)).toBeLessThan(0.02);
+  await page.click('[data-ui="post-addview"]');
+  expect(await page.evaluate(() => window.__simulation.plan.post.views.some(v => v.id === 'cam1' && v.fov > 0))).toBe(true);
+  await page.click('[data-stage="fall"]');
+  await expect(page.locator('.sim-frame')).toBeHidden();
+  const download = page.waitForEvent('download', { timeout: 120_000 });
+  await page.click('[data-ui="primary"]');
+  expect((await download).suggestedFilename()).toBe('Gusstraube_openfoam.zip');
+  expect(errors, errors.join('\n')).toEqual([]);
+});
+
+/* Nur ein Bauteil, kein Anguss als Datei: dann gibt es die Designer-Schritte.
+   Der Anguss kommt aus dem Designer, sein „Weiter" steht unter dessen
+   Hauptknopf; Überläufe sind wahlweise. Mit Anguss und Pressrest als Datei
+   (das Beispiel oben) stehen beide Schritte nicht in der Leiste. */
+test('Simulation einrichten: Anguss im Designer, Überläufe wahlweise', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+  page.on('console', m => {
+    if (m.type() !== 'error' || /\/api\//.test(m.location().url || '')) return;
+    errors.push('console: ' + m.text() + ' @ ' + (m.location().url || ''));
+  });
+  await page.goto('/tools/simulation/?part=gearbox_cover');
+  await page.waitForFunction(() => window.__simulation?.state.ready && window.__simulation.plan.bodies.length === 1, null, { timeout: 60_000 });
+  await expect(page.locator('[data-stage="anguss"]')).toBeVisible();
+  await expect(page.locator('[data-stage="ueberlauf"]')).toHaveClass(/locked/);
+  await page.click('[data-stage="anguss"]');
+  await expect(page.locator('[data-ui="sim-next"]')).toBeDisabled();
+  await page.click('[data-ui="primary"]');
+  await expect(page.locator('[data-ui="sim-next"]')).toBeEnabled({ timeout: 30_000 });
+  await expect(page.locator('[data-ui="sim-next"]')).toHaveText('Weiter: Überläufe');
+  await page.click('[data-ui="sim-next"]');
+  await expect(page.locator('[data-ui="sim-next"]')).toHaveText('Ohne Überläufe weiter: Einlass');
+  await page.click('[data-ui="sim-next"]');
+  expect(await page.evaluate(() => window.__simulation.state.stage)).toBe('einlass');
+  await page.click('[data-ui="inlet-suggest"]');
+  expect(await page.evaluate(() => window.__simulation.plan.body(window.__simulation.plan.inlet.bodyId).src)).toBe('biscuit');
+  expect(errors, errors.join('\n')).toEqual([]);
+});
