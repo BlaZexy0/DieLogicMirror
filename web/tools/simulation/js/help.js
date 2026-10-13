@@ -89,8 +89,9 @@ source /usr/lib/openfoam/openfoam2606/etc/bashrc
 der Leckage nach <code>simulation/postProcessing/constant/leakPath.vtp</code>) und ob jede Randfläche im Netz
 angekommen ist — ein Körper, der dünner als zwei Zellen ist, kann fehlen. Danach Anfangswerte, Zerlegung,
 dieLogicFoam bis zur vollen Form und die Auswertung: <code>auswertung/bericht.html</code> mit den Kennzahlen, den
-Bildern (mit Zeitregler), den Verläufen, dazu <code>bilder</code>, <code>graphiken</code> (SVG) und
-<code>daten</code> (CSV). Eine abgebrochene Rechnung läuft mit demselben Aufruf weiter.</p>
+Bildern (mit Zeitregler), der eingeschlossenen Luft (je Nest Volumen, Druck und Lage am Ende), den Verläufen, dazu
+<code>bilder</code>, <code>graphiken</code> (SVG) und <code>daten</code> (CSV). Das Menü links springt zu den
+Abschnitten; „Als PDF speichern" druckt den Bericht mit je vier Bildern je Kennwert. Eine abgebrochene Rechnung läuft mit demselben Aufruf weiter.</p>
 </section>
 `;
 

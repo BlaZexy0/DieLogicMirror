@@ -175,7 +175,7 @@ KW = {
   'temperature': dict(label='Temperatur', unit='°C', expr='T-273.15', need=['T'], map='heat', log=False, range=[Ts - 40, Tc]),
   'air':         dict(label='Lufteinschluss', unit='%', expr='airEntrained*100', need=['airEntrained'], map='bgo', log=False, range=[0, 100]),
   'oxide':       dict(label='Oxide', unit='ppm', expr='max(oxide*1e6,1e-3)', need=['oxide'], map='heat', log=True, range=[0.1, 1000]),
-  'trapped':     dict(label='Eingeschlossene Luft', unit='bar', expr=None, need=['gasTrapped', 'pGas'], map='heat', log=True, range=[1, 50]),
+  'trapped':     dict(label='Eingeschlossene Luft', unit='bar', expr=None, need=['pGas'], map='heat', log=True, range=[1, 50]),
   'fillTime':    dict(label='Füllzeit', unit='ms', expr='max(fillTime*1000-%.6g,0)' % t0ms, need=['fillTime'], map='heat', log=False, range=None),
   'solid':       dict(label='Erstarrt', unit='–', expr='solidFraction', need=['solidFraction'], map='heat', log=False, range=[0, 1]),
 }
@@ -288,7 +288,7 @@ def nester():
     je Nest rechnet das Skript selbst (numpy) und gibt das Ergebnis über
     einen TrivialProducer weiter: ein ProgrammableFilter importiert seine
     Hilfen (max, min …) in den Namensraum dieses Skripts."""
-    teile = [darueber(punkte(WAND), 'gasTrapped', 0.5)]
+    teile = [darueber(punkte(WAND), LUFTFELD, 0.5)]
     if LUFT is not None:
         teile.append(punkte(LUFT))
     flaeche = Clean(Input=ExtractSurface(Input=AppendDatasets(Input=teile)))
@@ -374,7 +374,8 @@ def unterzeile(t):
 ARRAYS = set(WAND.CellArrays.Available) if hasattr(WAND.CellArrays, 'Available') else set(WAND.CellArrays)
 ENDE_ARRAYS = set(ENDE_W.CellArrays.Available) if ENDE_W is not None and hasattr(ENDE_W.CellArrays, 'Available') else set()
 print('Felder der Wand:', ', '.join(sorted(ARRAYS)))
-schmelzeHell = None
+# eingeschlossene Luft: luftEin (Anteil eingeschlossener Luft je Zelle); ältere Fälle hatten nur gasTrapped
+LUFTFELD = 'luftEin' if 'luftEin' in ARRAYS else 'gasTrapped'
 liste = {'views': [], 'criteria': [], 'frames': [], 'images': {}}
 for k, i in enumerate(BILDER):
     t = TIMES[i]
@@ -388,7 +389,7 @@ for v in CONF['views']:
         if not kw:
             continue
         ende = cid == 'fillTime'
-        if any(f not in (ENDE_ARRAYS if ende else ARRAYS) for f in kw['need']):
+        if any(f not in (ENDE_ARRAYS if ende else ARRAYS) for f in kw['need']) or (cid == 'trapped' and LUFTFELD not in ARRAYS):
             print('übersprungen (Feld fehlt):', cid)
             continue
         vorher = None                    # je Bild vorher zu tun (Gasnester)
@@ -425,10 +426,6 @@ for v in CONF['views']:
         bar.LabelFontSize = fs - 2
         bar.RangeLabelFormat = '%-.4g'
         bar.Visibility = 1
-        if cid == 'trapped':
-            schmelzeHell = Show(MELT, view)
-            einfarbig(schmelzeHell, COL.get('melt', [0.95, 0.55, 0.2]))
-            schmelzeHell.Opacity = 0.25
         ordner = os.path.join(OUT, v['id'], cid)
         os.makedirs(ordner, exist_ok=True)
         dateien = []
@@ -445,10 +442,66 @@ for v in CONF['views']:
         if not any(c['id'] == cid for c in liste['criteria']):
             liste['criteria'].append({'id': cid, 'label': kw['label'], 'unit': kw['unit'], 'end': ende})
         Hide(quelle, view)
-        if schmelzeHell is not None:
-            Hide(MELT, view)
-            schmelzeHell = None
         bar.Visibility = 0
+
+# ── Die Gasnester am Ende: je Nest Volumen, Druck, Lage ─────────────────
+def nestDaten(t):
+    """Die Nester zur Zeit t: Wand mit gasTrapped ≥ 0,5 und Isofläche,
+    verschweißt, in Dreiecken, je zusammenhängendes Stück einheitlich nach
+    außen gerichtet. Volumen aus der Hülle (Gaußscher Satz; wo die Hülle
+    nicht ganz schließt, eine Näherung), Druck der höchste darin, Lage der
+    Flächenschwerpunkt."""
+    from vtkmodules.vtkFiltersCore import vtkPolyDataNormals
+    teile = [darueber(punkte(WAND), LUFTFELD, 0.5)]
+    if LUFT is not None:
+        teile.append(punkte(LUFT))
+    fl = Triangulate(Input=Clean(Input=ExtractSurface(Input=AppendDatasets(Input=teile))))
+    con = Connectivity(Input=fl)
+    con.ColorRegions = 1
+    con.UpdatePipeline(t)
+    d = con.GetClientSideObject().GetOutputDataObject(0)
+    if d is None or d.GetNumberOfCells() == 0:
+        return []
+    nf = vtkPolyDataNormals()
+    nf.SetInputData(d)
+    nf.ConsistencyOn()
+    nf.AutoOrientNormalsOn()
+    nf.SplittingOff()
+    nf.ComputePointNormalsOff()
+    nf.ComputeCellNormalsOn()
+    nf.Update()
+    w = dsa.WrapDataObject(nf.GetOutput())
+    P = np.asarray(w.Points)
+    pg = np.asarray(w.PointData['pGas']) / 1e5
+    rid_p = np.asarray(w.PointData['RegionId'])
+    polys = w.GetPolys()
+    conn = np.asarray(dsa.vtkDataArrayToVTKArray(polys.GetConnectivityArray()))
+    tri = conn.reshape(-1, 3)
+    a, b, c = P[tri[:, 0]], P[tri[:, 1]], P[tri[:, 2]]
+    vol6 = np.einsum('ij,ij->i', a, np.cross(b, c))
+    area = 0.5 * np.linalg.norm(np.cross(b - a, c - a), axis=1)
+    cen = (a + b + c) / 3
+    rid = rid_p[tri[:, 0]]
+    nester = []
+    for r in np.unique(rid):
+        m = rid == r
+        A = area[m].sum()
+        if A <= 0:
+            continue
+        V = abs(vol6[m].sum()) / 6
+        lage = (cen[m] * area[m][:, None]).sum(0) / A
+        nester.append({'v': float(V * 1e6), 'p': float(max(1.0, pg[rid_p == r].max())), 'x': float(lage[0] * 1e3), 'y': float(lage[1] * 1e3), 'z': float(lage[2] * 1e3), 'a': float(A * 1e4)})
+    nester.sort(key=lambda n: -n['v'])
+    return nester
+
+
+if LUFTFELD in ARRAYS and 'pGas' in ARRAYS:
+    try:
+        tE = TIMES[-1]
+        liste['nester'] = {'t': tE, 'tc': tE + CONF.get('tOffset', 0), 'fill': FILL[-1], 'liste': nestDaten(tE)}
+        print('Gasnester am Ende:', len(liste['nester']['liste']), ' zusammen %.2f cm³' % sum(n['v'] for n in liste['nester']['liste']))
+    except Exception as e:
+        print('Gasnester nicht ausgewertet:', e)
 
 with open(os.path.join(OUT, 'bilder.json'), 'w', encoding='utf-8') as fh:
     json.dump(liste, fh, ensure_ascii=False, indent=1)

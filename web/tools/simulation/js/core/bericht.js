@@ -184,8 +184,11 @@ if os.path.isfile(CM):
 BILD = {}
 BJ = os.path.join(AUS, 'bilder', 'bilder.json')
 if os.path.isfile(BJ):
-    with open(BJ, encoding='utf-8') as fh:
-        BILD = json.load(fh)
+    try:
+        with open(BJ, encoding='utf-8') as fh:
+            BILD = json.load(fh)
+    except ValueError as e:
+        print('bilder.json nicht lesbar, Bericht ohne Bilder:', e)
 
 # ── Graphiken ────────────────────────────────────────────────────────────
 def stufen(lo, hi, n=5):
@@ -393,37 +396,54 @@ if FALL.get('outlets'):
     eingaben.append(('Auslässe', ', '.join(FALL['outlets'])))
 
 css = '''
-:root{--ink:%(ink)s;--muted:%(muted)s;--line:%(line)s;--soft:%(soft)s;--bg:%(bg)s;--card:%(card)s;--primary:%(primary)s;--primary-soft:%(primarySoft)s;--ok:%(ok)s;--ok-soft:%(okSoft)s;--caution:%(caution)s;--caution-soft:%(cautionSoft)s;}
+:root{--ink:%(ink)s;--muted:%(muted)s;--line:%(line)s;--soft:%(soft)s;--bg:%(bg)s;--card:%(card)s;--primary:%(primary)s;--primary-soft:%(primarySoft)s;--primary-side:%(primarySide)s;--ok:%(ok)s;--ok-soft:%(okSoft)s;--caution:%(caution)s;--caution-soft:%(cautionSoft)s;--side-ink:%(sideInk)s;--side-muted:%(sideMuted)s;}
 *{box-sizing:border-box}
+html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-main{max-width:1180px;margin:0 auto;padding:28px 16px 60px}
-header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:22px}
-h1{font-size:28px;line-height:1.15;margin:0 0 4px}
-.sub{color:var(--muted);margin:0}
-.pill{display:inline-block;padding:5px 12px;border-radius:999px;font-weight:600;font-size:13px}
+.app{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--ink);color:var(--side-ink);padding:22px 18px;display:flex;flex-direction:column;gap:18px}
+.side .kicker{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--primary-side)}
+.side .name{font-size:20px;font-weight:700;line-height:1.2;margin:4px 0 2px;word-break:break-word}
+.side .sub{font-size:12.5px;color:var(--side-muted)}
+.side nav{display:flex;flex-direction:column;gap:2px}
+.side nav a{color:var(--side-ink);text-decoration:none;padding:7px 10px;border-radius:6px;font-size:14px;border-left:3px solid transparent}
+.side nav a:hover,.side nav a.on{background:rgba(255,255,255,.08);border-left-color:var(--primary-side)}
+.side .lab{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--side-muted);margin-bottom:6px}
+.side button{width:100%%;font:inherit;font-weight:600;font-size:14px;padding:10px 12px;border:0;border-radius:7px;background:var(--primary);color:var(--card);cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center}
+.side button:hover{filter:brightness(1.08)}
+.side p{font-size:12px;color:var(--side-muted);margin:6px 0 0}
+.side .files a{display:inline-block;margin:0 10px 4px 0;color:var(--primary-side);font-size:13.5px}
+main{padding:26px 30px 60px;min-width:0}
+.pill{display:inline-block;padding:4px 11px;border-radius:999px;font-weight:600;font-size:12.5px}
 .pill.ok{background:var(--ok-soft);color:var(--ok)}
+.side .pill.ok{background:rgba(255,255,255,.1);color:var(--primary-side)}
 .pill.caution{background:var(--caution-soft);color:var(--ink);border:1px solid var(--caution)}
-section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 18px 20px;margin:0 0 18px}
-h2{font-size:18px;margin:0 0 12px}
-.kz{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.side .pill.caution{color:var(--side-ink)}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px 22px;margin:0 0 20px;scroll-margin-top:12px}
+h2{font-size:19px;margin:0 0 12px}
+h3{font-size:15px;margin:18px 0 6px}
+.intro{color:var(--muted);margin:-4px 0 14px;max-width:900px}
+.kz{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
 .kz div{border:1px solid var(--soft);border-left:4px solid var(--primary);border-radius:6px;padding:9px 12px}
 .kz div.caution{border-left-color:var(--caution)}
 .kz b{display:block;font-size:20px;line-height:1.25}
 .kz span{font-size:12.5px;color:var(--muted)}
-.kz small{display:block;font-size:12.5px;color:var(--muted);text-transform:none}
+.kz small{display:block;font-size:12.5px;color:var(--muted)}
 .bar{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
 .bar button{font:inherit;font-size:13.5px;padding:5px 11px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;cursor:pointer}
 .bar button.on{background:var(--primary);border-color:var(--primary);color:var(--card)}
 .bar .lab{font-size:12px;color:var(--muted);align-self:center;margin-right:4px;min-width:62px}
-.frame{background:var(--card);border:1px solid var(--soft);border-radius:8px;overflow:hidden}
-.frame img{display:block;width:100%%;height:auto}
+.frame{display:flex;justify-content:center;background:var(--card);border:1px solid var(--soft);border-radius:8px;overflow:hidden}
+.frame img{display:block;max-width:100%%;max-height:calc(100vh - 230px);width:auto;height:auto}
 .ctl{display:flex;align-items:center;gap:10px;margin-top:10px}
 .ctl input[type=range]{flex:1;accent-color:var(--primary)}
 .ctl button{font:inherit;width:38px;height:34px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--primary);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .cap{font-size:13.5px;color:var(--muted);margin-top:6px;min-height:20px}
-.charts{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:16px}
-figure{margin:0;position:relative}
-figcaption{font-size:13px;color:var(--muted);margin:2px 0 0}
+.charts{display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:18px}
+.zwei{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%%,460px),1fr));gap:20px;align-items:start}
+.zwei img{width:100%%;height:auto;border:1px solid var(--soft);border-radius:8px;display:block}
+figure{margin:0;position:relative;break-inside:avoid}
+figcaption{font-size:13px;color:var(--muted);margin:3px 0 0}
 figure h3{font-size:15px;margin:0 0 4px}
 .chart{width:100%%;height:auto;display:block;touch-action:none}
 .chart .tk{font-size:11px;fill:var(--muted)}
@@ -433,24 +453,131 @@ figure h3{font-size:15px;margin:0 0 4px}
 .tip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12.5px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.12);display:none}
 table{border-collapse:collapse;width:100%%}
 th,td{text-align:left;vertical-align:top;padding:6px 10px;border-bottom:1px solid var(--soft);font-size:14px}
-th{width:170px;color:var(--muted);font-weight:500}
+.fall th{width:170px;color:var(--muted);font-weight:500}
+.tabelle{overflow-x:auto}
+.zwei>div{min-width:0}
+.nester th{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+.nester td.r{white-space:nowrap}
+.nester td{font-variant-numeric:tabular-nums}
+.nester td.r,.nester th.r{text-align:right}
+.hinweis{font-size:12.5px;color:var(--muted);margin:8px 0 0}
 .files a{color:var(--primary)}
 footer{color:var(--muted);font-size:12.5px;text-align:center}
 .leer{color:var(--muted)}
-@media (max-width:560px){.charts{grid-template-columns:1fr}h1{font-size:22px}th{width:110px}.bar .lab{min-width:0;width:100%%}}
+.nur-druck{display:none}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .side{position:static;height:auto;padding:16px}
+  .side nav{flex-direction:row;flex-wrap:wrap}
+  .side .side-hilfe{display:none}
+  main{padding:16px 16px 40px}
+  .zwei{grid-template-columns:1fr}
+}
+@media (max-width:560px){.charts{grid-template-columns:1fr}.fall th{width:110px}.bar .lab{min-width:0;width:100%%}}
+@media print{
+  @page{size:A4;margin:12mm}
+  body{background:white;font-size:11pt}
+  .app{display:block}
+  .side,.ctl,.bar,#bilder .frame,#bilder .cap,.tip,.nur-schirm{display:none!important}
+  .nur-druck{display:block!important}
+  main{padding:0}
+  section{border:0;padding:0;margin:0 0 9mm;border-radius:0}
+  .charts{grid-template-columns:1fr 1fr;gap:5mm}
+  .zwei{grid-template-columns:1fr 1fr}
+  .druckraster{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin-bottom:5mm}
+  .druckraster img{width:100%%;height:auto;border:1px solid var(--soft)}
+  .druckkopf h1{font-size:20pt;margin:0}
+  .druckkopf p{margin:2pt 0 8mm;color:var(--muted)}
+  h2,h3{break-after:avoid}
+  .druckblock{break-inside:avoid}
+  table,tr,figure,.kz div{break-inside:avoid}
+}
 ''' % {'ink': farbe('text'), 'muted': farbe('muted'), 'line': farbe('border'), 'soft': farbe('borderLight'), 'bg': farbe('viewport'),
        'card': farbe('surface'), 'primary': farbe('primary'), 'primarySoft': farbe('primary', 0.12), 'ok': farbe('ok'), 'okSoft': farbe('ok', 0.14),
-       'caution': farbe('caution'), 'cautionSoft': farbe('caution', 0.16)}
+       'caution': farbe('caution'), 'cautionSoft': farbe('caution', 0.16), 'primarySide': farbe('primary', None) if not COL.get('primaryLight') else farbe('primaryLight'),
+       'sideInk': farbe('surface'), 'sideMuted': farbe('border')}
 
 kz_html = ''.join('<div class="%s"><span>%s</span><b>%s</b><small>%s</small></div>' % (v or '', html.escape(a), html.escape(b), html.escape(c)) for a, b, c, v in KZ)
+
+# ── Bilder: am Schirm der Betrachter, im Druck je Kennwert vier Bilder ───
+druck_html = ''
 if BILD.get('images'):
     bilder_html = ('<div class="bar" id="ansichten"></div><div class="bar" id="kennwerte"></div>'
                    '<div class="frame"><img id="bild" alt="Bild der Formfüllung"></div>'
                    '<div class="ctl" id="ctl"><button type="button" id="play" aria-label="Abspielen"></button>'
                    '<input type="range" id="regler" min="0" value="0" aria-label="Zeitpunkt"></div><div class="cap" id="cap"></div>')
+    frames = BILD.get('frames') or []
+
+    def bei(fill):
+        if not frames:
+            return None
+        return min(range(len(frames)), key=lambda i: abs(frames[i]['fill'] - fill))
+
+    teile = []
+    for v in BILD.get('views', []):
+        for c in BILD.get('criteria', []):
+            liste = BILD['images'].get(v['id'] + '/' + c['id']) or []
+            if not liste:
+                continue
+            if c.get('end'):
+                wahl = [(len(liste) - 1, 'am Ende der Rechnung')]
+            else:
+                ks = []
+                for q in (0.25, 0.5, 0.75, 1.0):
+                    k = bei(q)
+                    if k is not None and k < len(liste) and k not in ks:
+                        ks.append(k)
+                wahl = [(k, 't = %s ms · Füllgrad %s %%' % (de(1000 * frames[k]['tc'], 1), de(100 * frames[k]['fill'], 0))) for k in ks]
+            teile.append('<div class="druckblock"><h3>%s [%s]%s</h3><div class="druckraster">%s</div></div>' % (
+                html.escape(c['label']), html.escape(c['unit']), (' · ' + html.escape(v['label'])) if len(BILD['views']) > 1 else '',
+                ''.join('<figure><img src="bilder/%s" alt=""><figcaption>%s</figcaption></figure>' % (html.escape(liste[k]), html.escape(t)) for k, t in wahl)))
+    druck_html = '<div class="nur-druck">%s</div>' % ''.join(teile)
 else:
     bilder_html = '<p class="leer">Keine Bilder: <code>pvbatch bilder.py</code> im Hauptordner schreibt sie (braucht ParaView).</p>'
-graph_html = ''.join('<figure><h3>%s</h3>%s<figcaption>%s · <a href="graphiken/%s.svg">SVG</a></figcaption><div class="tip"></div></figure>' % (html.escape(t), svg, html.escape(tx), i) for i, t, tx, svg, _ in GRAPH) or '<p class="leer">Keine Zeitreihen gefunden.</p>'
+
+# ── Eingeschlossene Luft: Kennzahlen, Bild am Ende, die Nester, Verläufe ─
+LUFT_GRAPHEN = ('eingeschlossen', 'gasdruck', 'luft', 'entlueftung')
+NEST = BILD.get('nester') or {}
+nester = NEST.get('liste') or []
+vEnde, vMax = letzter(LUFTEIN_V), hoechster(LUFTEIN_V)
+tMax = next((t for t, v in LUFTEIN_V if vMax is not None and v >= vMax), None)
+summe = sum(n['v'] for n in nester)
+luft_kz = [
+    ('Am Ende eingeschlossen', de(vEnde, 2) + ' cm³', ('in %d Nestern' % len(nester)) if nester else 'Zeitreihe luft', None),
+    ('Höchstens', de(vMax, 2) + ' cm³', ('bei t = ' + de(tMax, 1) + ' ms') if tMax is not None else '', None),
+]
+if nester:
+    luft_kz.append(('Größtes Nest am Ende', de(nester[0]['v'], 2) + ' cm³', 'Druck ' + de(nester[0]['p'], 1) + ' bar', None))
+luft_kz.append(('Höchster Gasdruck', de(pGasMax, 1) + ' bar', 'an der Obergrenze des Gasmodells (pMax)' if pGasMax is not None and pGasMax >= 199.9 else 'in einer Tasche, über die ganze Rechnung',
+                'caution' if pGasMax is not None and pGasMax >= 199.9 else None))
+luft_kz_html = ''.join('<div class="%s"><span>%s</span><b>%s</b><small>%s</small></div>' % (v or '', html.escape(a), html.escape(b), html.escape(c)) for a, b, c, v in luft_kz)
+endbild = ''
+for v in BILD.get('views', [])[:1]:
+    l = (BILD.get('images') or {}).get(v['id'] + '/trapped') or []
+    if l:
+        endbild = '<figure><img src="bilder/%s" alt="Eingeschlossene Luft am Ende"><figcaption>Die Gasnester am Ende der Rechnung, je Nest sein Druck; die Form blass.</figcaption></figure>' % html.escape(l[-1])
+if nester:
+    zeilen = ''.join('<tr><td>%d</td><td class="r">%s</td><td class="r">%s %%</td><td class="r">%s</td><td class="r">%s; %s; %s</td></tr>' % (
+        i + 1, de(n['v'], 2), de(100 * n['v'] / summe, 0) if summe > 0 else '–', de(n['p'], 1), de(n['x'], 0), de(n['y'], 0), de(n['z'], 0)) for i, n in enumerate(nester[:15]))
+    tabelle = ('<div class="tabelle"><table class="nester"><thead><tr><th>Nest</th><th class="r">Volumen [cm³]</th><th class="r">Anteil</th><th class="r">Druck [bar]</th>'
+               '<th class="r">Lage x; y; z [mm]</th></tr></thead><tbody>%s</tbody></table></div>'
+               '<p class="hinweis">Am Ende der Rechnung (t = %s ms, Füllgrad %s %%), nach Volumen geordnet%s. Volumen aus der Hülle der Nester '
+               '(Wand und Isofläche, eine Näherung): zusammen %s cm³, die Zeitreihe zählt %s cm³. Lage: Schwerpunkt der Hülle.</p>') % (
+        zeilen, de(1000 * NEST.get('tc', 0), 1), de(100 * (NEST.get('fill') or 0), 0), (', die größten 15 von %d' % len(nester)) if len(nester) > 15 else '',
+        de(summe, 2), de(vEnde, 2))
+elif vEnde:
+    tabelle = '<p class="leer">Die einzelnen Nester stehen hier, wenn bilder.py gelaufen ist (ParaView).</p>'
+else:
+    tabelle = '<p class="leer">Am Ende ist keine Luft eingeschlossen.</p>'
+luft_graph_html = ''.join('<figure><h3>%s</h3>%s<figcaption>%s · <a href="graphiken/%s.svg">SVG</a></figcaption><div class="tip"></div></figure>' % (html.escape(t), svg, html.escape(tx), i)
+                          for i, t, tx, svg, _ in GRAPH if i in LUFT_GRAPHEN)
+luft_html = ('<p class="intro">Luft, die keinen Auslass mehr erreicht, bleibt als Nest in der Form und wird zur Pore. Das Gasmodell rechnet je Nest '
+             'einen Druck; die Bilder zeigen nur die Nester, gefärbt nach ihrem Druck.</p><div class="kz">%s</div>'
+             '<div class="zwei" style="margin-top:16px">%s<div>%s</div></div><div class="charts" style="margin-top:18px">%s</div>') % (
+    luft_kz_html, endbild or '<div></div>', tabelle, luft_graph_html)
+
+graph_html = ''.join('<figure><h3>%s</h3>%s<figcaption>%s · <a href="graphiken/%s.svg">SVG</a></figcaption><div class="tip"></div></figure>' % (html.escape(t), svg, html.escape(tx), i)
+                     for i, t, tx, svg, _ in GRAPH if i not in LUFT_GRAPHEN) or '<p class="leer">Keine Zeitreihen gefunden.</p>'
 dateien = sorted(os.path.relpath(p, AUS) for p in glob.glob(os.path.join(AUS, 'daten', '*.csv')))
 files_html = ' · '.join('<a href="%s">%s</a>' % (html.escape(p), html.escape(os.path.basename(p))) for p in dateien)
 
@@ -529,6 +656,20 @@ function de(x, d) { return isFinite(x) ? x.toLocaleString('de-DE', { minimumFrac
     svg.addEventListener('pointermove', an); svg.addEventListener('pointerleave', aus);
   });
 })();
+(function () {
+  var pdf = document.getElementById('pdf');
+  if (pdf) pdf.onclick = function () { window.print(); };
+  /* der Abschnitt, in dem man liest, ist im Menü markiert */
+  var links = Array.prototype.slice.call(document.querySelectorAll('#inhalt a'));
+  if (!('IntersectionObserver' in window) || !links.length) return;
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      links.forEach(function (a) { a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id); });
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  document.querySelectorAll('main section[id]').forEach(function (s) { io.observe(s); });
+})();
 '''.replace('__BILD__', json.dumps(BILD, ensure_ascii=False)).replace('__GRAPH__', json.dumps({i: j for i, _, _, _, j in GRAPH}))
 
 jetzt = datetime.datetime.now().strftime('%d.%m.%Y, %H:%M')
@@ -541,24 +682,40 @@ seite = '''<!doctype html>
 <style>__CSS__</style>
 </head>
 <body>
-<main>
-<header>
-  <div><h1>__TITEL__</h1><p class="sub">Formfüllung mit dieLogicFoam · Bericht vom __JETZT__</p></div>
+<div class="app">
+<aside class="side">
+  <div><div class="kicker">Bericht</div><div class="name">__TITEL__</div><div class="sub">Formfüllung mit dieLogicFoam · __JETZT__</div></div>
   <span class="pill __STATUSK__">__STATUS__</span>
-</header>
-<section><h2>Kennzahlen</h2><div class="kz">__KZ__</div></section>
-<section><h2>Bilder</h2>__BILDER__</section>
-<section><h2>Verläufe</h2><div class="charts">__GRAPH__</div></section>
-<section><h2>Der Fall</h2><table>__EINGABEN__</table><p class="files">Daten (CSV, Trennzeichen Semikolon): __FILES__</p></section>
+  <nav id="inhalt">
+    <a href="#kennzahlen">Kennzahlen</a>
+    <a href="#bilder">Bilder</a>
+    <a href="#luft">Eingeschlossene Luft</a>
+    <a href="#verlaeufe">Verläufe</a>
+    <a href="#fall">Der Fall</a>
+  </nav>
+  <div>
+    <button type="button" id="pdf"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M4 1.5h5.5L13 5v9.5H4z M9.5 1.5V5H13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6 9.5h5M6 12h5" stroke="currentColor" stroke-width="1.4"/></svg>Als PDF speichern</button>
+    <p class="side-hilfe">Öffnet den Druck: im Dialog „Als PDF speichern" wählen. Gedruckt werden Kennzahlen, je Kennwert vier Bilder, die Gasnester und alle Verläufe.</p>
+  </div>
+  <div class="files"><div class="lab">Ordner</div><a href="bilder/">bilder</a><a href="graphiken/">graphiken</a><a href="daten/">daten</a></div>
+</aside>
+<main>
+<header class="nur-druck druckkopf"><h1>__TITEL__</h1><p>Formfüllung mit dieLogicFoam · Bericht vom __JETZT__ · __STATUS__</p></header>
+<section id="kennzahlen"><h2>Kennzahlen</h2><div class="kz">__KZ__</div></section>
+<section id="bilder"><h2>Bilder</h2>__BILDER____DRUCK__</section>
+<section id="luft"><h2>Eingeschlossene Luft</h2>__LUFT__</section>
+<section id="verlaeufe"><h2>Verläufe</h2><div class="charts">__GRAPH__</div></section>
+<section id="fall"><h2>Der Fall</h2><table class="fall">__EINGABEN__</table><p class="files">Daten (CSV, Trennzeichen Semikolon): __FILES__</p></section>
 <footer>DieLogic · Simulation einrichten · Ordner: simulation (OpenFOAM), auswertung (dieser Bericht, bilder, graphiken, daten)</footer>
 </main>
+</div>
 <script>__JS__</script>
 </body>
 </html>
 '''
 for a, b in (('__CSS__', css), ('__TITEL__', html.escape(CONF.get('title', 'Simulation'))), ('__JETZT__', jetzt),
-             ('__STATUSK__', status[0]), ('__STATUS__', html.escape(status[1])), ('__KZ__', kz_html), ('__BILDER__', bilder_html),
-             ('__GRAPH__', graph_html), ('__EINGABEN__', zeilen_html(eingaben + RECHNUNG)), ('__FILES__', files_html or '–'), ('__JS__', js)):
+             ('__STATUSK__', status[0]), ('__STATUS__', html.escape(status[1])), ('__KZ__', kz_html), ('__BILDER__', bilder_html), ('__DRUCK__', druck_html),
+             ('__LUFT__', luft_html), ('__GRAPH__', graph_html), ('__EINGABEN__', zeilen_html(eingaben + RECHNUNG)), ('__FILES__', files_html or '–'), ('__JS__', js)):
     seite = seite.replace(a, b)
 with open(os.path.join(AUS, 'bericht.html'), 'w', encoding='utf-8') as fh:
     fh.write(seite)

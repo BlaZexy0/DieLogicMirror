@@ -28,7 +28,7 @@ export const CRITERIA = [
   { id: 'temperature', label: 'Temperatur', unit: '°C', map: 'heat', hint: 'Schmelzetemperatur, Wärmeabgabe an die Form', range: ['T_sol − 40', 'T_Guss'], fields: ['T'] },
   { id: 'air', label: 'Lufteinschluss', unit: '%', map: 'bgo', hint: 'mitgerissene Luft (airEntrained) als Anteil der Schmelze, lineare Skala', range: ['0', '100'], fields: ['airEntrained'] },
   { id: 'oxide', label: 'Oxide', unit: 'ppm', map: 'heat', hint: 'Oxidhaut aus Oberflächenalter und Faltung, log. Skala', range: ['0,1', '1000'], fields: ['oxide'] },
-  { id: 'trapped', label: 'Eingeschlossene Luft', unit: 'bar', map: 'heat', hint: 'Gasnester ohne Entlüftung, je Nest sein Druck (log. Skala)', range: ['1', '50'], fields: ['gasTrapped', 'pGas'] },
+  { id: 'trapped', label: 'Eingeschlossene Luft', unit: 'bar', map: 'heat', hint: 'Gasnester ohne Entlüftung, je Nest sein Druck (log. Skala)', range: ['1', '50'], fields: ['luftEin', 'pGas'] },
   { id: 'fillTime', label: 'Füllzeit', unit: 'ms', map: 'heat', hint: 'wann jede Zelle voll war, ab „Kammer voll"; ein Bild am Ende', range: ['0', '…'], fields: [] },
   { id: 'solid', label: 'Erstarrt', unit: '–', map: 'heat', hint: 'Festanteil der Schmelze', range: ['0', '1'], fields: ['solidFraction'] }
 ];

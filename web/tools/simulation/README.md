@@ -118,7 +118,14 @@ Kolben fährt die ganze Kurve (`libshotSleeve`, `system/shotSleeveDict`,
 Endplatte = Einlassfläche), die Schmelze liegt mit dem Füllgrad unter einer
 waagerechten Ebene (`setAlphaField`) und nur in der Kammer (`topoSet` +
 `setFields`); die langsame Phase schreibt selten, ab kurz vor „Kammer voll"
-schaltet `timeActivatedFileUpdate` auf `controlDict.shot`.
+schaltet `timeActivatedFileUpdate` auf `controlDict.shot`. Bewegt wird nur die
+`cellZone kammer` (`dynamicMultiMotionSolverFvMesh`, Zone aus `topoSet`):
+libshotSleeve verdichtet jeden Punkt zwischen Endplatte und Kolben, gleich wie
+weit von der Achse — ein Bauteil neben der Kammer, das hinter die Einlassfläche
+reicht (die Gusstraube 107 mm), wurde mitgestaucht (Kammer6: 127 → 61 mm Tiefe
+bei „Kammer voll"). Die Verfeinerungskörper (`body*.stl`) liegen auf dem Raster
+von `edgeCheck` (0,1 µm, `snapTris`): zwei Ecken 0,07 µm nebeneinander in den
+Überläufen der Gusstraube ließen snappyHexMesh „not closed" melden.
 
 Anschnitte des Angussdesigners liegen genau an der Bauteilwand, die Nut über
 der Trennebene — im Netz hinge das Bauteil nur an 0,05 mm. Die Seite legt je
@@ -176,9 +183,16 @@ Schmelze. Zeitpunkte nach Füllgrad, Zeit oder Kolbenweg (n Stück), Kameras
 genau wie im Viewport, Farbleiste oben links. Geschwindigkeit: Regenbogen
 0–50 m/s, darüber Pink; Lufteinschluss: „Blue - Green - Orange" linear
 0–100 %; sonst `heat`. Eingeschlossene Gasnester je zusammenhängendes Nest
-mit seinem Druck. `bericht.py` (nur Python 3) schreibt die Graphiken (SVG),
-die Daten (CSV) und `bericht.html`: Kennzahlen, Bilder mit Zeitregler,
-Verläufe mit Messwert unter dem Zeiger, die Eingaben.
+mit seinem Druck (ohne die Schmelze), dazu am Ende je Nest Volumen, Druck und
+Lage (`nester` in `bilder.json`). Die Nester sind die Isofläche von `luftEin`
+(gasTrapped·(1 − alpha)): auf `gasTrapped` selbst blieb die Isofläche „topo"
+leer, wenn die Rechnung ohne eingeschlossene Luft begann. `bericht.py` (nur
+Python 3) schreibt die Graphiken (SVG), die Daten (CSV) und `bericht.html`:
+über die ganze Breite, links ein Menü (Abschnitte, „Als PDF speichern" =
+Drucken mit eigenem Drucklayout: je Kennwert vier Bilder statt des
+Betrachters, A4), Kennzahlen, Bilder mit Zeitregler, „Eingeschlossene Luft"
+(Bild am Ende, Tabelle der Nester, Verläufe von Luft, Gasdruck und
+Entlüftung), die übrigen Verläufe mit Messwert unter dem Zeiger, die Eingaben.
 
 ## Tests
 

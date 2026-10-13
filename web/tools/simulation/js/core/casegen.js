@@ -135,6 +135,12 @@ export function buildCase(plan) {
       let tris = b.tris;
       if (p) { tris = new Float64Array(p.length * 9); p.forEach((f, j) => tris.set(b.tris.subarray(f * 9, f * 9 + 9), j * 9)); }
       const name = 'body' + (i + 1) + (parts.length > 1 ? '_' + (k + 1) : '');
+      /* auf das Raster von edgeCheck (0,1 µm): was die Prüfung als eine Ecke
+         zählt, ist dann auch in der STL eine — snappyHexMesh vergleicht
+         genau. Die Überläufe der Gusstraube hatten zwei Ecken 0,07 µm
+         nebeneinander: „geschlossen" hier, „nicht geschlossen" dort, und
+         snappyHexMesh brach die Verfeinerung „inside" ab. */
+      tris = snapTris(tris);
       const closed = edgeCheck(tris).closed;
       files[C + 'constant/triSurface/' + name + '.stl'] = new Uint8Array(writeSTL(toM(tris), 'DieLogic ' + b.name));
       regions.push({ name, body: b, i, closed, reach: b.reach > 0 ? b.reach : 2 * hSurf });
@@ -346,12 +352,20 @@ export function buildCase(plan) {
       + 'constructFrom   mesh;\nsourceCase      "$FOAM_CASE";\nsourcePatches   (inlet);\nexposedPatchName inlet;\nflipNormals     false;\n'
       + 'extrudeModel    linearDirection;\nnLayers         ' + nLayers + ';   // ' + f6(stroke / nLayers) + ' mm beim Kolbenstart\nexpansionRatio  1.0;\n'
       + 'linearDirectionCoeffs\n{\n    direction   ' + vec(inl.normal) + ';\n    thickness   ' + f6(stroke * 1e-3) + ';\n}\nmergeFaces      false;\n';
+    /* libshotSleeve verdichtet JEDEN Punkt zwischen Endplatte und Kolben,
+       gleich wie weit von der Achse — ein Bauteil, das neben der Kammer
+       hinter die Einlassfläche reicht (die Gusstraube 107 mm), wurde mit
+       zusammengedrückt (bei „Kammer voll" auf die halbe Tiefe). Darum wirkt
+       die Bewegung nur auf die Zellen der Kammer (cellZone kammer aus
+       topoSetDict, dynamicMultiMotionSolverFvMesh); alles andere steht. */
     files[C + 'constant/dynamicMeshDict'] = dict('dynamicMeshDict', 'constant')
       + '// Der Kolben (Patch inlet) fährt die Schusskurve; die Kammer zwischen Kolben und Endplatte\n'
       + '// (die Einlassfläche, Kolben in der Endlage) wird gleichmäßig verdichtet (libshotSleeve, DieLogic_OF).\n'
-      + 'dynamicFvMesh       dynamicMotionSolverFvMesh;\nmotionSolverLibs    (shotSleeve);\nmotionSolver        shotSleeve;\n'
-      + 'shotSleeveCoeffs\n{\n    pistonPatch     inlet;\n    axis            ' + vec(nIn) + ';   // Richtung der Kolbenbewegung\n'
-      + '    #include "$FOAM_CASE/system/shotSleeveDict"\n}\n';
+      + '// Nur die Zellen der Kammer (cellZone kammer) bewegen sich: das Bauteil daneben bleibt, wo es ist.\n'
+      + 'dynamicFvMesh       dynamicMultiMotionSolverFvMesh;\n\ndynamicMultiMotionSolverFvMeshCoeffs\n{\n    kammer\n    {\n'
+      + '        cellZone            kammer;\n        motionSolverLibs    (shotSleeve);\n        motionSolver        shotSleeve;\n'
+      + '        shotSleeveCoeffs\n        {\n            pistonPatch     inlet;\n            axis            ' + vec(nIn) + ';   // Richtung der Kolbenbewegung\n'
+      + '            #include "$FOAM_CASE/system/shotSleeveDict"\n        }\n    }\n}\n';
     const travel = Math.min(stroke * 0.999, Math.max(...SH.points.map(p => p[0])));
     files[C + 'system/shotSleeveDict'] = dict('shotSleeveDict', 'system')
       + 'diameter        ' + f6(2 * R) + ';\nlength          ' + f6(stroke) + ';   // Kolbenstart → Endplatte (Einlassfläche)\n'
@@ -372,7 +386,10 @@ export function buildCase(plan) {
       + '    { name notChamber; type cellSet; action new; source cylinderToCell; p1 ' + vec(c1) + '; p2 ' + vec(c2) + '; radius ' + f6((R + pad1) * 1e-3) + '; }\n'
       + '    { name notChamber; type cellSet; action invert; }\n'
       + '    // ... das ist die Form: über sie zählt die Füllung (fuellung, schmelze)\n'
-      + '    { name form; type cellZoneSet; action new; source setToCellZone; set notChamber; }\n);\n';
+      + '    { name form; type cellZoneSet; action new; source setToCellZone; set notChamber; }\n'
+      + '    // die Kammer vom Kolbenstart bis genau an die Einlassfläche: nur sie bewegt sich (dynamicMeshDict)\n'
+      + '    { name kammer; type cellSet; action new; source cylinderToCell; p1 ' + vec(c1) + '; p2 ' + vec(inl.centroid.map(x => x * 1e-3)) + '; radius ' + f6((R + pad1) * 1e-3) + '; }\n'
+      + '    { name kammer; type cellZoneSet; action new; source setToCellZone; set kammer; }\n);\n';
     files[C + 'system/setFieldsDict'] = dict('setFieldsDict', 'system')
       + 'defaultFieldValues ( );\n\nregions\n(\n    cellToCell { set notChamber; fieldValues ( volScalarFieldValue alpha.melt 0 ); }\n);\n';
   }
@@ -476,6 +493,22 @@ export function segmentHeight(phi) {
   return (lo + hi) / 2;
 }
 
+/** Ecken auf 1e-4 mm runden (wie edgeCheck und neighbours sie vergleichen)
+    und Dreiecke, die dabei zu einer Linie oder einem Punkt werden, weglassen. */
+export function snapTris(t) {
+  const out = new Float64Array(t.length);
+  let n = 0;
+  for (let o = 0; o < t.length; o += 9) {
+    const v = [];
+    for (let k = 0; k < 9; k++) v.push(Math.round(t[o + k] * 1e4) / 1e4);
+    const same = (a, b) => v[a] === v[b] && v[a + 1] === v[b + 1] && v[a + 2] === v[b + 2];
+    if (same(0, 3) || same(3, 6) || same(0, 6)) continue;
+    out.set(v, n);
+    n += 9;
+  }
+  return out.subarray(0, n);
+}
+
 function perpTo(n) {
   const a = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
   const p = [n[1] * a[2] - n[2] * a[1], n[2] * a[0] - n[0] * a[2], n[0] * a[1] - n[1] * a[0]];
@@ -489,7 +522,7 @@ const ROLE_DE = { part: 'Bauteil', runner: 'Anguss', biscuit: 'Pressrest', overf
  * system/auswertung: die Funktionsobjekte der Auswertung. Während der
  * Rechnung entstehen nur Oberflächen und Zeitreihen (postProcessing/…):
  *   oberflaechen  Schmelze (Isofläche alpha.melt = 0,5), Wand mit den Werten
- *                 der Zellen dahinter, eingeschlossene Luft (gasTrapped = 0,5);
+ *                 der Zellen dahinter, eingeschlossene Luft (luftEin = 0,5);
  *                 EnSight, die Wand nur einmal als Geometrie
  *   ende          die Wand mit der Füllzeit, bei jedem vollen Zeitstand
  *   fuellung, schmelze, luft, gasdruck, einschluss, kolbendruck  Zeitreihen
@@ -531,7 +564,10 @@ export function functionObjects({ post, imgInterval, seriesInterval, tStart = 0 
       + '        regionType      patch;\n        name            inlet;\n        operation       areaAverage;\n        fields          (p);\n        writeFields     false;\n' + timed)
     + surf('oberflaechen', 'Schmelze und Wand für die Bilder', '        writeControl    runTime;\n        writeInterval   ' + f6(imgInterval) + ';\n'
       + (tStart > 0 ? '        timeStart       ' + f6(tStart) + ';   // kurz vor „Kammer voll"\n' : ''),
-    fields, [iso('schmelze', 'alpha.melt'), wall].concat(crit.includes('trapped') ? [iso('luft', 'gasTrapped')] : []))
+    /* die Gasnester als Isofläche von luftEin (gasTrapped·(1 − alpha)): auf
+       gasTrapped selbst (nur 0 und 1) blieb die Isofläche „topo" leer, wenn
+       die Rechnung ohne eingeschlossene Luft begann — auch später noch */
+    fields, [iso('schmelze', 'alpha.melt'), wall].concat(crit.includes('trapped') ? [iso('luft', 'luftEin')] : []))
     + (crit.includes('fillTime') ? surf('ende', 'Füllzeit an der Wand, bei jedem vollen Zeitstand (der letzte ist das Ende)', '        writeControl    writeTime;\n',
       ['alpha.melt', 'fillTime'], [iso('schmelze', 'alpha.melt'), wall]) : '');
 }

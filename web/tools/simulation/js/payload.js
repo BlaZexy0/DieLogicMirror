@@ -12,7 +12,7 @@ import { ROLE, hex2rgb, scaleRgb } from '../../3d-studio/js/part/colors.js';
    mit ihren Stützstellen und der Farbe darüber (Geschwindigkeit, Luft;
    die Bilder nehmen dafür die gleichnamigen Vorgaben von ParaView) und die
    Rollen für Schmelze, Form, Schrift, Linien und Flächen des Berichts. */
-const ROLLEN = ['text', 'muted', 'border', 'borderLight', 'surface', 'viewport', 'primary', 'ok', 'caution', 'bad',
+const ROLLEN = ['text', 'muted', 'border', 'borderLight', 'surface', 'viewport', 'primary', 'primaryLight', 'ok', 'caution', 'bad',
   'melt', 'air', 'mark', 'die', 'runner', 'steelDark'];
 export function imageColors() {
   const r3 = c => c.map(x => Number(x.toFixed(4)));

@@ -171,8 +171,8 @@ test('Fall: Dateien, Randflächen, Schmelzezylinder, Allrun, Bilder', () => {
   assert.match(fo, /oberflaechen[\s\S]*type +surfaces;[\s\S]*surfaceFormat +ensight;/);
   assert.match(fo, /schmelze \{ type isoSurface; isoField alpha\.melt; isoValue 0\.5;/);
   assert.match(fo, /wand \{ type patchInternalField; patches \(walls inlet "vent\.\*"\);/);
-  assert.match(fo, /luft \{ type isoSurface; isoField gasTrapped;/);
-  assert.match(fo, /fields +\(alpha\.melt magU T airEntrained oxide gasTrapped pGas solidFraction\);/);
+  assert.match(fo, /luft \{ type isoSurface; isoField luftEin;/);
+  assert.match(fo, /fields +\(alpha\.melt magU T airEntrained oxide luftEin pGas solidFraction\);/);
   assert.match(fo, /fuellung[\s\S]*regionType +cellZone;\s*name +form;\s*operation +volAverage;/);
   for (const k of ['magU', 'luftMasse', 'luftEin', 'luftEinMasse', 'schmelze', 'luft', 'gasdruck', 'einschluss', 'kolbendruck', 'ende']) assert.match(fo, new RegExp('^    ' + k + ' ', 'm'), k);
   assert.match(files['simulation/system/topoSetDict'], /cylinderToCell[\s\S]*action invert[\s\S]*source setToCellZone; set form;/);
@@ -267,6 +267,16 @@ test('Auswertung: bericht.py schreibt Graphiken, Daten und bericht.html (Python 
   }
 });
 
+/* Verfeinerungskörper: Ecken, die edgeCheck als eine zählt (0,1 µm), sind
+   in der STL eine — sonst fand snappyHexMesh den Körper „nicht geschlossen" */
+test('Fall: Verfeinerungskörper auf das Raster von edgeCheck', () => {
+  const t = Float64Array.from([0, 0, 0, 10, 0, 0, 0, 10, 0, 10.00000003, 0, 0, 10, 10, 0, 0, 10.00000002, 0, 1, 1, 1, 1.00000001, 1, 1, 2, 2, 2]);
+  const s = C.snapTris(t);
+  assert.equal(s.length, 18, 'das entartete Dreieck fällt weg');
+  assert.equal(s[9], 10, 'die Ecke liegt genau auf der des Nachbarn');
+  assert.equal(s[17 - 1], 10);
+});
+
 test('Fall: ohne Einlass oder Auslass gibt es keinen', () => {
   assert.throws(() => C.buildCase({ bodies: [{ tris: box(0, 0, 0, 1, 1, 1) }], union: {}, mesh: { cell: 1 } }), /Einlass/);
   assert.deepEqual(C.missing({ bodies: [], outlets: [], mesh: {} }).length, 4);
@@ -321,6 +331,13 @@ test('Fall mit Kammer: Hub als extrudeMesh, Kolben als libshotSleeve, Schmelze i
   assert.match(ex, /thickness +0\.2;/);
   assert.match(ex, /nLayers +50;/);                             // 200 mm / 4 mm
   assert.match(files['simulation/constant/dynamicMeshDict'], /axis +\(0 0 1\);/);
+  /* nur die Kammer bewegt sich: ein Bauteil neben ihr (hinter der Einlassfläche) bleibt stehen */
+  assert.match(files['simulation/constant/dynamicMeshDict'], /dynamicFvMesh +dynamicMultiMotionSolverFvMesh;[\s\S]*cellZone +kammer;[\s\S]*motionSolver +shotSleeve;/);
+  const kz = /name kammer; type cellSet; action new; source cylinderToCell; p1 \(([^)]+)\); p2 \(([^)]+)\);/.exec(files['simulation/system/topoSetDict']);
+  assert.ok(kz, 'cellZone kammer');
+  assert.deepEqual(kz[2].split(' ').map(Number), [0, -0.03, -0.012], 'die Kammer endet genau an der Einlassfläche');
+  assert.ok(Number(kz[1].split(' ')[2]) < -0.2, 'und reicht über den Kolbenstart hinaus');
+  assert.match(files['simulation/system/topoSetDict'], /name kammer; type cellZoneSet; action new; source setToCellZone; set kammer;/);
   const ssd = files['simulation/system/shotSleeveDict'];
   assert.match(ssd, /length +200;/);
   assert.match(ssd, /\(190 3\)/);
@@ -365,7 +382,7 @@ test('Bilder: Zeitpunkte nach Füllgrad, Zeit oder Kolbenweg; Format aus Seitenv
   assert.equal(R.imageList(p)[0].file, 'iso/velocity/001.png');
   /* die Oberflächen schreiben nur, was die gewählten Kennwerte brauchen */
   assert.deepEqual(R.surfaceFields({ ...p, criteria: ['velocity'] }), ['alpha.melt', 'magU']);
-  assert.deepEqual(R.surfaceFields({ ...p, criteria: ['trapped', 'air'] }), ['alpha.melt', 'airEntrained', 'gasTrapped', 'pGas']);
+  assert.deepEqual(R.surfaceFields({ ...p, criteria: ['trapped', 'air'] }), ['alpha.melt', 'airEntrained', 'luftEin', 'pGas']);
 });
 
 test('Seite: Beispiel laden, Schritte der Reihe nach, Fall als ZIP', async () => {
