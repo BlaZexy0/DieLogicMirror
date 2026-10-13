@@ -55,8 +55,9 @@ test('palette: die Rechenhilfen mischen im OK-Lab-Raum und folgen den Rollen', (
    Flussschema) und die Entformschräge mit ihrer Stufe am Grenzwert. Seit
    24.09. nur diese zwei: vorher las das 3D-Studio Turbo als Polynom
    (`turbo`) und das Flussschema eine eigene Leiste (`speed`). */
-test('palette: zwei Farbleisten, heat und die Entformschräge', () => {
-  assert.deepEqual(Object.keys(P.leisten).sort(), ['draft', 'heat']);
+test('palette: die Farbleisten, heat und die Entformschräge', () => {
+  /* seit 13.10. dazu rainbow und bgo, nur für die Bilder der Simulation */
+  assert.deepEqual(Object.keys(P.leisten).sort(), ['bgo', 'draft', 'heat', 'rainbow']);
   assert.equal(P.scale('heat', 0), '#30123b');
   assert.equal(P.scale('heat', 0.5), '#67eb73');
   assert.equal(P.scale('heat', 1), '#7a0403');
@@ -72,6 +73,24 @@ test('palette: zwei Farbleisten, heat und die Entformschräge', () => {
   assert.match(P.gradient('heat'), /^linear-gradient\(90deg, #/);
   /* Keine Rolle: kein Token, kein Schlüssel in colors. */
   for (const n of Object.keys(P.leisten)) assert.ok(!(n in P.colors), n);
+});
+
+/* Die Leisten der Simulationsbilder sind die Vorgaben von ParaView (render
+   färbt mit deren Namen): Regenbogen in HSV von Blau nach Rot, darüber
+   Pink; Blue - Green - Orange mit ihren 50 Stützstellen. */
+test('palette: Leisten der Simulationsbilder wie in ParaView', () => {
+  assert.equal(P.scale('rainbow', 0), '#0000ff');
+  assert.equal(P.scale('rainbow', 0.5), '#00ff00');
+  assert.equal(P.scale('rainbow', 1), '#ff0000');
+  assert.equal(P.scale('rainbow', 0.125), '#0080ff', 'zwischen Blau und Cyan wie in HSV');
+  assert.equal(P.ueber.rainbow, '#ff69b4');
+  assert.equal(P.leisten.bgo.length, 50);
+  assert.equal(P.scale('bgo', 0), '#d4e8fa');
+  assert.equal(P.scale('bgo', 1), '#730200');
+  for (const n of ['rainbow', 'bgo']) {
+    const l = P.leisten[n];
+    for (let i = 1; i < l.length; i++) assert.ok(l[i][0] > l[i - 1][0], n + ': steigend');
+  }
 });
 
 test('shared.css :root spiegelt die Palette vollständig', () => {

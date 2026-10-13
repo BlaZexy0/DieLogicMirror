@@ -6,8 +6,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, existsSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
+import { resolve, join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
 import { buildDocument, installGlobals } from '../stubs/dom.mjs';
@@ -126,25 +128,29 @@ test('Fall: Dateien, Randflächen, Schmelzezylinder, Allrun, Bilder', () => {
     outlets: [{ centroid: [50, 10, -5], area: 600, mode: 'orifice', Cd: 0.8 }],
     mesh: { cell: 2, level: 1, nProc: 2 }, process: {}
   });
-  for (const f of ['Allrun', 'Allclean', 'render.py', 'system/snappyHexMeshDict', 'system/blockMeshDict', 'system/setFieldsDict', 'system/controlDict',
-    'constant/triSurface/walls.stl', 'constant/triSurface/inlet.stl', 'constant/triSurface/vent1.stl', 'constant/triSurface/internal.stl',
-    'constant/gasProperties', 'constant/thermalProperties', 'constant/plungerTable', '0.orig/U', '0.orig/alpha.melt', '0.orig/p_rgh', '0.orig/T'])
+  /* Hauptordner mit den Skripten, darunter der OpenFOAM-Fall */
+  for (const f of ['Allrun', 'Allclean', 'README.md', 'bilder.py', 'bericht.py', 'auswertung.json'])
     assert.ok(f in files, f + ' fehlt');
+  for (const f of ['system/snappyHexMeshDict', 'system/blockMeshDict', 'system/setFieldsDict', 'system/topoSetDict', 'system/controlDict', 'system/auswertung',
+    'constant/triSurface/walls.stl', 'constant/triSurface/inlet.stl', 'constant/triSurface/vent1.stl', 'constant/triSurface/internal.stl',
+    'constant/gasProperties', 'constant/thermalProperties', 'constant/plungerTable', '0.orig/U', '0.orig/alpha.melt', '0.orig/p_rgh', '0.orig/T', 'case.foam'])
+    assert.ok('simulation/' + f in files, 'simulation/' + f + ' fehlt');
+  assert.ok(!('render.py' in files) && !Object.keys(files).some(f => /^(system|constant|0\.orig)\//.test(f)), 'nichts vom OpenFOAM-Fall im Hauptordner');
   assert.deepEqual(info.names, ['walls', 'inlet', 'vent1']);
-  const shm = files['system/snappyHexMeshDict'];
+  const shm = files['simulation/system/snappyHexMeshDict'];
   /* Überlappungen nur verfeinert, keine Fläche (Zellscheiben zwischen nahen inneren Flächen) */
   assert.match(shm, /internal \{ mode distance; levels \(\(0\.002 1\)\); \}/);
   assert.doesNotMatch(shm, /faceZone/);
   assert.match(shm, /locationsOutsideMesh/);
   assert.match(shm, /vent1 \{ level \(1 1\); patchInfo \{ type patch; \} \}/);
-  assert.match(files['system/setFieldsDict'], /cylinderToCell/);
+  assert.match(files['simulation/system/setFieldsDict'], /cylinderToCell/);
   /* wie die Validierungsfälle: Wandfilme mit Reibung */
-  assert.match(files['system/fvSolution'], /wallFilmFriction true;/);
-  assert.match(files['constant/gasProperties'], /vent1\s+\{ Cd 0\.8; \}/);
+  assert.match(files['simulation/system/fvSolution'], /wallFilmFriction true;/);
+  assert.match(files['simulation/constant/gasProperties'], /vent1\s+\{ Cd 0\.8; \}/);
   /* Drossel: die Luft geht über das Gasmodell, für die Schmelze ist sie Wand */
-  assert.match(files['0.orig/U'], /vent1 +\{ type noSlip; \}/);
-  assert.match(files['0.orig/p_rgh'], /vent1 +\{ type fixedFluxPressure;/);
-  assert.match(files['0.orig/alpha.melt'], /vent1 +\{ type zeroGradient; \}/);
+  assert.match(files['simulation/0.orig/U'], /vent1 +\{ type noSlip; \}/);
+  assert.match(files['simulation/0.orig/p_rgh'], /vent1 +\{ type fixedFluxPressure;/);
+  assert.match(files['simulation/0.orig/alpha.melt'], /vent1 +\{ type zeroGradient; \}/);
   /* offen: Luft und Schmelze treten aus */
   const opened = C.buildCase({
     title: 'Test', union, bodies,
@@ -152,18 +158,31 @@ test('Fall: Dateien, Randflächen, Schmelzezylinder, Allrun, Bilder', () => {
     outlets: [{ centroid: [50, 10, -5], area: 600, mode: 'open' }],
     mesh: { cell: 2, level: 1, nProc: 2 }, process: {}
   }).files;
-  assert.match(opened['constant/gasProperties'], /vent1\s+\{ open true; \}/);
-  assert.match(opened['0.orig/U'], /vent1 +\{ type pressureInletOutletVelocity;/);
-  assert.match(opened['0.orig/p_rgh'], /vent1 +\{ type fixedValue;/);
-  assert.match(opened['0.orig/alpha.melt'], /vent1 +\{ type inletOutlet;/);
-  assert.match(files['constant/controlDict'] || files['system/controlDict'], /application\s+dieLogicFoam/);
+  assert.match(opened['simulation/constant/gasProperties'], /vent1\s+\{ open true; \}/);
+  assert.match(opened['simulation/0.orig/U'], /vent1 +\{ type pressureInletOutletVelocity;/);
+  assert.match(opened['simulation/0.orig/p_rgh'], /vent1 +\{ type fixedValue;/);
+  assert.match(opened['simulation/0.orig/alpha.melt'], /vent1 +\{ type inletOutlet;/);
+  const cd = files['simulation/system/controlDict'];
+  assert.match(cd, /application\s+dieLogicFoam/);
+  /* volle Zeitstände nur zum Weiterrechnen, die Auswertung über Funktionsobjekte */
+  assert.match(cd, /purgeWrite +2;/);
+  assert.match(cd, /functions\s*\{\s*#include "auswertung"/);
+  const fo = files['simulation/system/auswertung'];
+  assert.match(fo, /oberflaechen[\s\S]*type +surfaces;[\s\S]*surfaceFormat +ensight;/);
+  assert.match(fo, /schmelze \{ type isoSurface; isoField alpha\.melt; isoValue 0\.5;/);
+  assert.match(fo, /wand \{ type patchInternalField; patches \(walls inlet "vent\.\*"\);/);
+  assert.match(fo, /luft \{ type isoSurface; isoField gasTrapped;/);
+  assert.match(fo, /fields +\(alpha\.melt magU T airEntrained oxide gasTrapped pGas solidFraction\);/);
+  assert.match(fo, /fuellung[\s\S]*regionType +cellZone;\s*name +form;\s*operation +volAverage;/);
+  for (const k of ['magU', 'luftMasse', 'luftEin', 'luftEinMasse', 'schmelze', 'luft', 'gasdruck', 'einschluss', 'kolbendruck', 'ende']) assert.match(fo, new RegExp('^    ' + k + ' ', 'm'), k);
+  assert.match(files['simulation/system/topoSetDict'], /cylinderToCell[\s\S]*action invert[\s\S]*source setToCellZone; set form;/);
   /* Kolben in Richtung der Einlassnormale nach innen (+z) */
-  assert.match(files['constant/plungerTable'], /\(0 \(0 0 0\.5\)\)/);
+  assert.match(files['simulation/constant/plungerTable'], /\(0 \(0 0 0\.5\)\)/);
   /* locationInMesh im Pressrest, nicht auf einer Zellfläche */
   const loc = /locationInMesh \(([^)]+)\)/.exec(shm)[1].split(' ').map(Number).map(x => x * 1000);
   assert.ok(loc[2] > -12 && loc[2] < 0 && Math.abs(loc[1] + 30) < 15, 'locationInMesh ' + loc);
   /* der Hintergrund liegt krumm: keine Zellfläche auf z = 0 */
-  const bm = files['system/blockMeshDict'];
+  const bm = files['simulation/system/blockMeshDict'];
   const lo = /\(([-\d.e]+) ([-\d.e]+) ([-\d.e]+)\)/.exec(bm).slice(1).map(Number);
   const h = 2 * 2;
   assert.ok(Math.abs(((lo[2] % (h / 2)) + h / 2) % (h / 2)) > 0.05, 'Zellflächen auf runden Ebenen');
@@ -175,13 +194,77 @@ test('Fall: Dateien, Randflächen, Schmelzezylinder, Allrun, Bilder', () => {
   const exact = (100 * 60 * 10 + 30 * 30 * 12 - 30 * 5 * 10) * 1e-9;   // ganze Dreiecke am Saum: auf 1 % genau
   assert.ok(Math.abs(vm / exact - 1) < 0.01, 'Modellvolumen ' + vm);
   assert.match(files.Allrun, /Total volume/);
-  assert.match(files['render.py'], /bar\.Position = \[F\['barX'\], 1\.0 - F\['barTop'\] - F\['barLen'\]\]/, 'Farbleiste oben links, aus FRAME');
-  for (const k of ['velocity', 'temperature', 'air', 'oxide', 'trapped', 'fillTime', 'solid']) assert.match(files['render.py'], new RegExp('"' + k + '"'));
+  /* erst die Form (topoSet), dann die Schmelze; beim Weiterrechnen nicht noch einmal */
+  assert.match(files.Allrun, /if \[ ! -f log\.setFields \][\s\S]*restore0Dir[\s\S]*runApplication topoSet[\s\S]*runApplication setFields/);
+  assert.match(files.Allrun, /pvbatch bilder\.py[\s\S]*python3 bericht\.py/);
+  assert.match(files.Allrun, /-auswertung/);
+  assert.match(files['bilder.py'], /bar\.Position = \[F\['barX'\], 1\.0 - F\['barTop'\] - F\['barLen'\]\]/, 'Farbleiste oben links, aus FRAME');
+  assert.match(files['bilder.py'], /darueber\(wp, 'alphamelt', 0\.5\)/, 'die Wand punktweise bei alpha = 0,5 abgeschnitten');
+  const conf = JSON.parse(files['auswertung.json']);
+  assert.deepEqual(conf.criteria, ['velocity', 'temperature', 'air', 'oxide', 'trapped', 'fillTime', 'solid']);
+  assert.equal(conf.maps.rainbow.preset, 'Blue to Red Rainbow');
+  assert.equal(conf.maps.bgo.preset, 'Blue - Green - Orange');
   /* Binäre STL in Metern: 84 + 50·n Bytes, Koordinaten unter 1 */
-  const stl = files['constant/triSurface/walls.stl'];
+  const stl = files['simulation/constant/triSurface/walls.stl'];
   const n = new DataView(stl.buffer, stl.byteOffset).getUint32(80, true);
   assert.equal(stl.length, 84 + 50 * n);
   assert.ok(Math.abs(new DataView(stl.buffer, stl.byteOffset).getFloat32(84 + 12, true)) < 1);
+});
+
+/* Die Skripte der Auswertung sind Python im JS-Text: bilder.py muss sich
+   übersetzen lassen, bericht.py läuft hier wirklich — auf kleinen Zeitreihen,
+   wie die Funktionsobjekte sie schreiben (ohne ParaView, ohne Bilder). */
+test('Auswertung: bericht.py schreibt Graphiken, Daten und bericht.html (Python 3)', t => {
+  if (spawnSync('python3', ['--version']).status !== 0) { t.skip('ohne python3'); return; }
+  const part = box(-50, -20, -10, 50, 40, 0), bis = box(-15, -45, -12, 15, -15, 0);
+  const bodies = [{ name: 'Bauteil', tris: part, labels: new Int32Array(part.length / 9) }, { name: 'Pressrest', tris: bis, labels: new Int32Array(bis.length / 9) }];
+  for (let i = 0; i < bis.length / 9; i++) if (bis[i * 9 + 2] === -12 && bis[i * 9 + 5] === -12 && bis[i * 9 + 8] === -12) bodies[1].labels[i] = 1;
+  for (let i = 0; i < part.length / 9; i++) if (part[i * 9] === 50 && part[i * 9 + 3] === 50 && part[i * 9 + 6] === 50) bodies[0].labels[i] = 2;
+  const { files } = C.buildCase({
+    title: 'Bericht', union: G.unionSurfaces(bodies, { maxEdge: 1 }), bodies,
+    inlet: { centroid: [0, -30, -12], normal: [0, 0, -1], area: 900, radius: Math.sqrt(900 / Math.PI), depth: 12 },
+    outlets: [{ centroid: [50, 10, -5], area: 600, mode: 'orifice', Cd: 0.8 }], mesh: { cell: 2, level: 1, nProc: 2 }, process: {},
+    shot: { chamber: false, mode: 'focus', points: [[0, 0.2], [100, 0.3], [150, 3]], inletTable: [[0, 0.3], [0.01, 3]], piston: [[0, 0], [0.3, 100], [0.35, 150]],
+      tFull: 0.3, tEnd: 0.35, sFull: 100, sEnd: 150, phi: 0.5, diam: 33.85, length: 200, depth: 12, stroke: 188, Vdose: 1e5 }
+  });
+  const dir = mkdtempSync(join(tmpdir(), 'dielogic-bericht-'));
+  try {
+    for (const f of ['auswertung.json', 'bericht.py', 'bilder.py']) writeFileSync(join(dir, f), files[f]);
+    const c = spawnSync('python3', ['-m', 'py_compile', join(dir, 'bilder.py')], { encoding: 'utf8' });
+    assert.equal(c.status, 0, c.stderr);
+    const pp = join(dir, 'simulation', 'postProcessing');
+    const dat = (fo, head, rows, start = '0') => {
+      const f = join(pp, fo, start, fo === 'kolbendruck' ? 'surfaceFieldValue.dat' : 'volFieldValue.dat');
+      mkdirSync(dirname(f), { recursive: true });
+      writeFileSync(f, '# Region : x\n# Time\t' + head.join('\t') + '\n' + rows.map(r => r.join('\t')).join('\n') + '\n');
+    };
+    const ts = Array.from({ length: 51 }, (_, i) => i * 0.001);
+    dat('fuellung', ['volAverage(alpha.melt)'], ts.map(t => [t, Math.min(1, t / 0.045)]));
+    /* nach einem Neustart bei 0,03 s: der neue Ordner ersetzt, was er abdeckt */
+    dat('fuellung', ['volAverage(alpha.melt)'], ts.filter(t => t >= 0.03).map(t => [t, Math.min(1, t / 0.045)]), '0.03');
+    dat('kolbendruck', ['areaAverage(p)'], ts.map(t => [t, 1e5 + 5e6 * t]));
+    /* vor der Schmelze ist die Form leer: das gewichtete Mittel ist 0 (K) — es zählt erst ab der Ankunft */
+    dat('schmelze', ['weightedVolAverage(T)', 'weightedVolAverage(solidFraction)', 'weightedVolAverage(magU)'], ts.map(t => (t < 0.001 ? [t, 0, 0, 0] : [t, 930 - 1000 * t, t, 10])));
+    dat('luft', ['volIntegrate(luftMasse)', 'volIntegrate(luftEin)', 'volIntegrate(luftEinMasse)'], ts.map(t => [t, 3e-5 * (1 - t / 0.05), 1e-6 * t / 0.05, 1e-6 * t]));
+    dat('gasdruck', ['max(pGas)'], ts.map(t => [t, 1e5 + 1e6 * t]));
+    dat('einschluss', ['weightedVolIntegrate(airEntrained)', 'weightedVolIntegrate(oxide)'], ts.map(t => [t, 1e-9 * t, 1e-10 * t]));
+    writeFileSync(join(dir, 'simulation', 'log.dieLogicFoam'), 'Time = 0.01\n\nTime = 0.02\n\nCavity filled (fill fraction 0.995, void cells 0): writing and stopping\nExecutionTime = 812.5 s  ClockTime = 830 s\n\nEnd\n');
+    const r = spawnSync('python3', [join(dir, 'bericht.py')], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    const html = readFileSync(join(dir, 'auswertung', 'bericht.html'), 'utf8');
+    for (const x of ['Füllung der Form', 'Druck am Kolben', 'Eingeschlossene Luft', 'Form gefüllt', '13 min 50 s', '607 °C']) assert.ok(html.includes(x), x);
+    assert.ok(!html.includes('-273'), 'kein Mittel über eine leere Form');
+    assert.ok(!/NaN|undefined/.test(html.replace(/isFinite|NaN\)|f\.piston/g, '')), 'keine Lücken');
+    for (const f of ['graphiken/fuellung.svg', 'graphiken/druck.svg', 'graphiken/schusskurve.svg', 'daten/fuellung.csv']) assert.ok(existsSync(join(dir, 'auswertung', f)), f);
+    const csv = readFileSync(join(dir, 'auswertung', 'daten', 'fuellung.csv'), 'utf8').trim().split('\n');
+    assert.equal(csv.length, 1 + 51, 'eine Zeile je Zeit, der Neustart ohne Doppel');
+    /* Kurvenzeit = Rechenzeit + „Kammer voll" (ohne Kammer) */
+    assert.equal(Number(csv[1].split(';')[0]), 300);
+    /* jede Linie beginnt mit M (sonst zeichnet der Browser sie nicht) */
+    assert.ok(!/d="L/.test(readFileSync(join(dir, 'auswertung', 'graphiken', 'fuellung.svg'), 'utf8')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('Fall: ohne Einlass oder Auslass gibt es keinen', () => {
@@ -231,27 +314,30 @@ test('Fall mit Kammer: Hub als extrudeMesh, Kolben als libshotSleeve, Schmelze i
   };
   const { files, info } = C.buildCase(plan);
   for (const f of ['system/extrudeMeshDict', 'constant/dynamicMeshDict', 'system/shotSleeveDict', 'system/setAlphaFieldDict', 'system/topoSetDict', 'system/controlDict.slow', 'system/controlDict.shot'])
-    assert.ok(f in files, f + ' fehlt');
-  assert.ok(!('constant/plungerTable' in files), 'mit Kammer fährt der Kolben, keine Einlassgeschwindigkeit');
-  const ex = files['system/extrudeMeshDict'];
+    assert.ok('simulation/' + f in files, f + ' fehlt');
+  assert.ok(!('simulation/constant/plungerTable' in files), 'mit Kammer fährt der Kolben, keine Einlassgeschwindigkeit');
+  const ex = files['simulation/system/extrudeMeshDict'];
   assert.match(ex, /direction +\(0 0 -1\);/);                       // nach außen, zum Kolbenstart
   assert.match(ex, /thickness +0\.2;/);
   assert.match(ex, /nLayers +50;/);                             // 200 mm / 4 mm
-  assert.match(files['constant/dynamicMeshDict'], /axis +\(0 0 1\);/);
-  const ssd = files['system/shotSleeveDict'];
+  assert.match(files['simulation/constant/dynamicMeshDict'], /axis +\(0 0 1\);/);
+  const ssd = files['simulation/system/shotSleeveDict'];
   assert.match(ssd, /length +200;/);
   assert.match(ssd, /\(190 3\)/);
-  assert.match(files['0.orig/U'], /inlet +\{ type movingWallVelocity;/);
+  assert.match(files['simulation/0.orig/U'], /inlet +\{ type movingWallVelocity;/);
   /* Füllgrad 0,5 in der liegenden Kammer: der Spiegel auf der Achse, unterhalb gefüllt */
-  const al = files['system/setAlphaFieldDict'];
+  const al = files['simulation/system/setAlphaFieldDict'];
   assert.match(al, /normal +\(0 -1 0\);/);
   const y = Number(/origin +\(([-\d.e]+) ([-\d.e]+) /.exec(al)[2]);
   assert.ok(Math.abs(y * 1000 + 30) < 1e-6, 'Spiegel bei y = ' + y * 1000);
-  assert.match(files['system/topoSetDict'], /action invert/);
-  assert.match(files['system/setFieldsDict'], /cellToCell \{ set notChamber;/);
+  assert.match(files['simulation/system/topoSetDict'], /action invert[\s\S]*source setToCellZone; set notChamber;/);
+  assert.match(files['simulation/system/setFieldsDict'], /cellToCell \{ set notChamber;/);
+  /* die Oberflächen erst ab kurz vor „Kammer voll" — davor rührt sich in der Form nichts */
+  assert.match(files['simulation/system/auswertung'], /timeStart +0\.\d+;/);
+  assert.match(files['simulation/system/controlDict.shot'], /shotPhase[\s\S]*#include "auswertung"/);
   assert.match(files.Allrun, /runApplication extrudeMesh/);
   assert.match(files.Allrun, /runApplication setAlphaField[\s\S]*runApplication topoSet[\s\S]*runApplication setFields/);
-  assert.match(files['system/controlDict.slow'], /timeActivatedFileUpdate[\s\S]*\(0\.\d+ "<system>\/controlDict\.shot"\)/);
+  assert.match(files['simulation/system/controlDict.slow'], /timeActivatedFileUpdate[\s\S]*\(0\.\d+ "<system>\/controlDict\.shot"\)/);
   assert.ok(info.sleeveCells > 0 && info.chamber);
   /* Kolbenachse parallel zur Schwerkraft: abgewiesen */
   assert.throws(() => C.buildCase(Object.assign({}, plan, { process: { gravity: '-z' } })), /waagerecht/);
@@ -273,9 +359,13 @@ test('Bilder: Zeitpunkte nach Füllgrad, Zeit oder Kolbenweg; Format aus Seitenv
   /* alte Pläne mit fills/size */
   const old = R.normalizePost({ criteria: ['velocity'], fills: [10, 20, 30], size: [1280, 720], views: p.views });
   assert.deepEqual([old.when.by, old.when.count, old.width], ['fill', 3, 1280]);
-  const py = R.renderScript({ ...p, title: 'T', chamber: { c: [0, 0, 0], a: [0, 0, 1], r: 0.05, top: 0.02 }, piston: [[0, 0], [1, 500]], views: [{ id: 'cam1', label: 'A', pos: [0, -500, 300], target: [0, 0, 0], up: [0, 0, 1], fov: 30 }] });
-  assert.match(py, /"pos": \[\n?\s*0,\n?\s*-0\.5/);
-  assert.match(py, /view\.CameraViewAngle = v\['fov'\]/);
+  const conf = R.auswertungConfig({ ...p, title: 'T', piston: [[0, 0], [1, 500]], views: [{ id: 'cam1', label: 'A', pos: [0, -500, 300], target: [0, 0, 0], up: [0, 0, 1], fov: 30 }] });
+  assert.deepEqual(conf.views[0].pos, [0, -0.5, 0.3], 'Kamera in m');
+  assert.match(R.BILDER_PY, /view\.CameraViewAngle = v\['fov'\]/);
+  assert.equal(R.imageList(p)[0].file, 'iso/velocity/001.png');
+  /* die Oberflächen schreiben nur, was die gewählten Kennwerte brauchen */
+  assert.deepEqual(R.surfaceFields({ ...p, criteria: ['velocity'] }), ['alpha.melt', 'magU']);
+  assert.deepEqual(R.surfaceFields({ ...p, criteria: ['trapped', 'air'] }), ['alpha.melt', 'airEntrained', 'gasTrapped', 'pGas']);
 });
 
 test('Seite: Beispiel laden, Schritte der Reihe nach, Fall als ZIP', async () => {
@@ -305,7 +395,7 @@ test('Seite: Beispiel laden, Schritte der Reihe nach, Fall als ZIP', async () =>
   /* Anguss, Pressrest und Überläufe kommen als Dateien: die Designer-Schritte
      entfallen, die Leiste zählt nur, was dasteht. */
   const step = id => rail.querySelector('[data-stage="' + id + '"]');
-  assert.deepEqual(v.state.shown, ['koerper', 'einlass', 'auslass', 'netz', 'prozess', 'auswertung', 'fall']);
+  assert.deepEqual(v.state.shown, ['koerper', 'einlass', 'auslass', 'netz', 'schuss', 'prozess', 'auswertung', 'fall']);
   assert.ok(step('anguss').hidden && step('ueberlauf').hidden);
   assert.equal(step('einlass').querySelector('.st-step-num').textContent, '2');
   assert.equal(v.activate('anguss'), false, 'ein entfallener Schritt lässt sich nicht öffnen');
@@ -327,20 +417,28 @@ test('Seite: Beispiel laden, Schritte der Reihe nach, Fall als ZIP', async () =>
   toggle('runner', true); toggle('biscuit', true);
   assert.equal(v.state.stage, 'einlass', 'der Schritt entfällt wieder — weiter zum ersten offenen');
   assert.ok(step('anguss').hidden);
+  /* beim ersten Besuch des Einlasses gilt der Vorschlag: offen sind jetzt die Auslässe */
+  assert.ok(v.plan.inlet, 'der Vorschlag gilt ohne Klick');
+  assert.equal(v.state.open, 'auslass');
   /* ohne Überlauf-Datei: der Überlauf-Schritt ist wahlweise */
   toggle('overflow', false);
   assert.ok(!step('ueberlauf').hidden);
-  assert.equal(v.state.open, 'einlass');
+  assert.equal(v.state.open, 'auslass');
   v.activate('ueberlauf');
   assert.equal(next().textContent, 'Ohne Überläufe weiter: Einlass');
   next().dispatch('click');
   assert.equal(v.state.stage, 'einlass');
   toggle('overflow', true);
   assert.equal(doc.querySelector('[data-ui="sim-next"]'), null, 'der Zusatzstreifen gehört nur den Designer-Schritten');
-  /* Einlass vorschlagen: die Kreisfläche des Pressrests */
+  /* Einlass nach Vorschlag: die Kreisfläche des Pressrests */
   v.activate('einlass');
-  v.tools.einlass.suggest();
   assert.ok(Math.abs(v.plan.inlet.radius - 65) < 0.2 && Math.abs(v.plan.inlet.depth - 20) < 0.1);
+  const sugg = doc.querySelector('[data-ui="inlet-sugg"]');
+  assert.ok(sugg.classList.contains('on') && !sugg.querySelector('[data-act="apply"]'), 'der Vorschlag gilt: Haken, kein „Übernehmen"');
+  v.plan.inlet.depth = 12; v.plan.changed('inlet');
+  assert.ok(doc.querySelector('[data-ui="depth-sugg"] [data-act="apply"]'), 'eigene Tiefe: der Vorschlag bietet sich an');
+  v.tools.einlass.suggest();
+  assert.ok(Math.abs(v.plan.inlet.depth - 20) < 0.1);
   /* Auslass: die Ventilfläche des Überlaufs */
   const ov = v.plan.bodies.find(b => b.role === 'overflow');
   let face = -1;
@@ -352,7 +450,12 @@ test('Seite: Beispiel laden, Schritte der Reihe nach, Fall als ZIP', async () =>
   /* jetzt ist alles bis „Fall" offen */
   assert.equal(v.state.open, 'fall');
   v.activate('netz');
+  /* die Zellgröße folgt dem Vorschlag, bis man selbst eine setzt */
+  const cs = v.plan.mesh.cell;
+  assert.ok(cs > 0.2 && cs <= 3 && doc.querySelector('[data-ui="mesh-sugg"]').classList.contains('on'), 'Zellgröße nach Vorschlag ' + cs);
+  v.plan.mesh.cell = 2; v.plan.mesh.cellSet = true;
   v.tools.netz.measure();
+  assert.equal(v.plan.mesh.cell, 2, 'eine eigene Zellgröße bleibt');
   assert.equal(ov.extra, 2, 'Überläufe 1,5 mm dick: zwei Stufen feiner');
   /* Fall bauen (ohne Worker direkt) */
   v.plan.mesh.cell = 3;
@@ -382,7 +485,7 @@ test('Seite: Beispiel laden, Schritte der Reihe nach, Fall als ZIP', async () =>
   const r = await v.app.build(payload, () => {});
   assert.ok(r.zip.length > 1e5);
   assert.equal(r.root, 'Gusstraube_openfoam');
-  assert.ok(r.files.includes('constant/triSurface/vent1.stl'));
+  assert.ok(r.files.includes('simulation/constant/triSurface/vent1.stl'));
   /* Überläufe 1,5 mm: zwei Stufen; der Anguss nach seinem Anschnitt (dünnste 2 %, 2,5 mm): eine */
   assert.deepEqual(r.info.extra, [0, 2, 1, 0], 'Stufen je Körper (Reihenfolge: ' + v.plan.included().map(b => b.name) + ')');
 });

@@ -68,6 +68,45 @@
 .sim-outlet .sim-seg button { min-height: 30px; font-size: .78rem; }
 .sim-inlet { border-left-color: var(--melt, var(--border)); }
 
+/* Der Einlass als ein Block: Fläche oben (mit ✕), darunter Richtung und
+   Tiefe — die Kante in der Farbe der Schmelze wie im Bild */
+.sim-card {
+  margin: 4px 0 6px; border: 1px solid var(--border-light); border-left: 4px solid var(--melt, var(--border)); border-radius: 6px;
+  background: var(--surface); box-shadow: 0 1px 2px rgba(var(--dark-rgb), .05);
+}
+.sim-card.empty { border-left-color: var(--border); }
+.sim-card-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 7px 8px 7px 10px; }
+.sim-card-head .sim-name { font-family: var(--mono); }
+.sim-card-head .sim-name small { font-family: var(--sans); white-space: normal; }
+.sim-card-head .st-hintline { margin: 0; }
+.sim-card-body { padding: 2px 10px 8px; border-top: 1px solid var(--border-light); }
+.sim-card-body[hidden] { display: none; }
+.sim-card-body .row { margin: 6px 0 0; }
+.sim-dir { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 8px 0 2px; font-size: .84rem; color: var(--text); }
+.sim-dirval { font-family: var(--mono); font-size: .8rem; color: var(--text); text-align: right; }
+.sim-dirval small { display: block; margin-top: 1px; font-family: var(--sans); font-size: .68rem; color: var(--muted); }
+.sim-meshrow .sim-name small { white-space: normal; }
+.sim-ok { color: var(--primary); font-weight: 600; }
+.sim-card .st-hintline { margin: 6px 0 0; }
+
+/* Ein Vorschlag der Seite, überall gleich: Etikett, Wert und warum,
+   „Übernehmen" — gilt er, ist die Zeile getönt und hat einen Haken */
+.sim-sugg {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 8px;
+  margin: 4px 0 6px; padding: 6px 6px 6px 10px; border: 1px dashed var(--primary-light); border-radius: 6px; background: var(--surface);
+}
+.sim-sugg[hidden] { display: none; }
+.sim-sugg.on { border-style: solid; border-color: rgba(var(--primary-rgb), .35); background: rgba(var(--primary-rgb), .07); }
+.sim-sugg-tag { grid-column: 1; font-size: .64rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--primary); }
+.sim-sugg-text { grid-column: 1; font-size: .76rem; line-height: 1.35; color: var(--muted); }
+.sim-sugg-text b { color: var(--text); font-weight: 700; }
+.sim-sugg .btn { grid-column: 2; grid-row: 1 / span 2; min-height: 32px; }
+
+/* Fall: was im ZIP liegt */
+.sim-tree { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.sim-tree li { display: grid; grid-template-columns: minmax(0, 1fr); font-size: .74rem; color: var(--muted); }
+.sim-tree code { font-family: var(--mono); font-size: .72rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* Abschnitte im Panel: eine feine Linie darüber, die Überschrift klein */
 .sim-label {
   margin: 14px 0 6px; padding-top: 10px; border-top: 1px solid var(--border-light);
@@ -160,6 +199,9 @@
 .sim-frame-box { position: absolute; outline: 2px solid #fff; box-shadow: 0 0 0 1px rgba(var(--dark-rgb), .35), 0 0 0 9999px rgba(var(--dark-rgb), .32); }
 .sim-frame-bar { position: absolute; display: flex; align-items: stretch; gap: 4px; color: var(--text); font-family: var(--sans); }
 .sim-frame-bar i { display: block; border: 1px solid rgba(var(--dark-rgb), .35); }
+/* über dem Bereich (Geschwindigkeit über 50 m/s): ein Feld in Pink über der Leiste */
+.sim-frame-bar .ov { position: absolute; left: 0; bottom: calc(100% + 2px); height: .8em; border: 1px solid rgba(var(--dark-rgb), .35); }
+.sim-frame-bar .ov[hidden] { display: none; }
 .sim-frame-bar b { position: absolute; left: calc(100% + 2px); font-weight: 400; white-space: nowrap; }
 .sim-frame-bar b.hi { top: -.6em; }
 .sim-frame-bar b.lo { bottom: -.6em; }

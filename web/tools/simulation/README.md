@@ -3,7 +3,7 @@
 Eine Formfüllung mit dem DieLogic-Solver **dieLogicFoam** (DieLogic_OF,
 OpenFOAM v2606 von openfoam.com) im Browser einrichten und als fertigen
 OpenFOAM-Fall herunterladen. Die Seite ist ein 3D-Studio-Rahmen
-(`/tools/3d-studio/js/studio/`) mit neun Schritten, die wie ein Ablaufplan
+(`/tools/3d-studio/js/studio/`) mit zehn Schritten, die wie ein Ablaufplan
 nacheinander frei werden (ein Schritt öffnet sich erst, wenn alle davor
 erledigt sind):
 
@@ -12,19 +12,23 @@ erledigt sind):
 | 1 | Körper | `steps.js` createKoerperTool — STL/GLB laden, Rollen, ✕ auch für das Bauteil (`app.removePart`) | ein Bauteil da ist |
 | 2 | Anguss | Angussdesigner des Studios (`3d-studio/js/runner/tool.js`) — entfällt, wenn Anguss und Pressrest unter „Körper" aus Dateien kommen | Anguss oder Pressrest da ist |
 | 3 | Überläufe | Überlaufdesigner (`3d-studio/js/vents/tool.js`) — entfällt bei Überläufen aus Dateien; wahlweise | immer (wahlweise) |
-| 4 | Einlass | createFlaechenTool('inlet') — Kreisfläche des Pressrests; nur einer (ein neuer Tipp ersetzt ihn, ✕ entfernt ihn) | gewählt |
-| 5 | Auslässe | createFlaechenTool('outlet') — ebene Flächen, je Zeile Drossel/offen und ✕ | mindestens einer |
-| 6 | Netz | createNetzTool — Zellgröße, Hintergrund, Stufen je Körper, Zelllänge der Kammer | gültig |
-| 7 | Prozess | createProzessTool — 1. Phase (DieLogic/López/V₁ von Hand), 2. Phase (V₂ automatisch oder von Hand mit a₂), Kurvenbild, mit/ohne Gießkammer, Kammerlänge, Temperaturen | Kurve rechenbar, Temperaturen stimmig |
-| 8 | Auswertung | createAuswertungTool — Kennwerte, Zeitpunkte (Füllgrad/Zeit/Kolbenweg × n), Format, Ansichten, Rahmen im Viewport | etwas gewählt |
-| 9 | Fall | createExportTool — ZIP im Worker | heruntergeladen |
+| 4 | Einlass | createFlaechenTool('inlet') — Vorschlag größte Kreisfläche (gilt beim ersten Besuch), „Andere Fläche wählen"; ein Block mit Fläche, Richtung, Tiefe; darunter Gießkammer ohne/mit und Kammerlänge | gewählt |
+| 5 | Auslässe | createFlaechenTool('outlet') — je Fläche einmal „Auslass auswählen"; je Zeile Drossel/offen und ✕ | mindestens einer |
+| 6 | Netz | createNetzTool — Zellgröße (Vorschlag: zwei Zellen über die dünnste Bauteilwand, höchstens rund 2 Mio. Zellen), Hintergrund, Stufen je Körper, Zelllänge der Kammer | gültig |
+| 7 | Schusskurve | createSchussTool — 1. Phase (DieLogic/López/V₁ von Hand), 2. Phase (V₂ automatisch oder von Hand mit a₂, Vorschlag a₂), Kurvenbild | Kurve rechenbar |
+| 8 | Prozess | createProzessTool — Schwerkraft, Temperaturen, Werte der Legierung | Temperaturen stimmig, mit Kammer Schwerkraft quer |
+| 9 | Auswertung | createAuswertungTool — Kennwerte, Zeitpunkte (Füllgrad/Zeit/Kolbenweg × n), Format, Ansichten, Rahmen im Viewport | etwas gewählt |
+| 10 | Fall | createExportTool — ZIP im Worker | heruntergeladen |
 
 Über jedem Schritt steht seine Überschrift mit Erklärung (`lead` in `STEPS`,
 auch über den Designern); die Leiste zeigt erledigte Schritte getönt statt mit
 Punkten — getönt erst, wenn man dort war (Prozess und Auswertung sind mit ihren
 Vorgaben sonst schon vorher „fertig"). Einlass und Auslässe werden im Zielmodus
-gewählt (Knopf „… auswählen", Hinweis im Bild, Esc beendet); der Einlass endet
-mit dem ersten Treffer. Das Bauteil des Studios lässt sich entfernen: der Rahmen
+gewählt (Knopf „… auswählen", Hinweis im Bild, Esc beendet); jeder Treffer beendet
+ihn. Vorschläge (Einlassfläche, Tiefe, Kammerlänge, Zellgröße, a₂) stehen überall
+gleich als Zeile „Vorschlag" unter dem Feld: getönt mit Haken, wenn er gilt, sonst
+mit „Übernehmen"; beim ersten Besuch gilt er (außer der Kammerlänge aus der
+Auslegung), was man selbst setzt, bleibt (`plan.mesh.cellSet`). Das Bauteil des Studios lässt sich entfernen: der Rahmen
 behält sein Netz, die Seite nimmt es aus dem Plan und verbirgt es, bis ein neues
 geladen ist.
 
@@ -63,8 +67,11 @@ js/payload.js       Plan → Nutzlast für den Worker (Flächenmarken, Kurve, Fa
 js/build.js         Nutzlast → Vereinigung → Fall → ZIP (Worker und Tests)
 js/worker.js        Rechnungen im Hintergrund (Fall, Anschnittfläche)
 js/core/geometry.js Vereinigung der Körper, ebene Flächen, Einlassvorschlag, Wandstärke, Anschnittfläche
-js/core/casegen.js  alle Dateien des OpenFOAM-Falls (Allrun, Dictionaries, 0.orig, STL in m)
-js/core/render.js   render.py für pvbatch (Bilder der Auswertung)
+js/core/casegen.js  alle Dateien des Falls: Hauptordner (Allrun …) und simulation/ (Dictionaries,
+                    0.orig, STL in m, Funktionsobjekte der Auswertung in system/auswertung)
+js/core/render.js   Kennwerte, Leisten, Bildformat, auswertung.json
+js/core/bilder.js   bilder.py für pvbatch (Bilder aus den Oberflächen der Rechnung)
+js/core/bericht.js  bericht.py für Python 3 (Graphiken, Daten, bericht.html)
 js/core/zip.js      ZIP ohne Bibliothek (deflate-raw über CompressionStream, Allrun 755)
 ```
 
@@ -137,14 +144,41 @@ mitgerissene Luft (`constant/inclusionProperties`).
 ```sh
 unzip Name_openfoam.zip && cd Name_openfoam
 source /usr/lib/openfoam/openfoam2606/etc/bashrc
-./Allrun          # NP=8 ./Allrun · ./Allrun -mesh · ./Allrun -prepare
+./Allrun          # NP=8 ./Allrun · ./Allrun -mesh · ./Allrun -prepare · ./Allrun -auswertung
 ```
 
-`render.py` (pvbatch) schreibt je Kennwert, Zeitpunkt und Ansicht ein Bild nach
-`images/`: Zeitpunkte nach Füllgrad der Form, Zeit oder Kolbenweg (n Stück),
-Seitenverhältnis und Breite von der Seite, Kameras genau wie im Viewport
-übernommen, Farbleiste oben links (alle Kennwerte mit der Leiste `heat` der
-Palette). Der Füllgrad zählt nur die Form, nicht den Kammerzylinder.
+Der Fall ist ein Hauptordner mit den Skripten (`Allrun`, `Allclean`,
+`bilder.py`, `bericht.py`, `auswertung.json`), dem OpenFOAM-Fall in
+`simulation/` und am Ende `auswertung/` (`bericht.html`, `bilder/`,
+`graphiken/`, `daten/`).
+
+Während der Rechnung schreiben Funktionsobjekte (`simulation/system/auswertung`)
+nur, was die Auswertung braucht — volle Zeitstände gibt es nur zum
+Weiterrechnen (`purgeWrite 2`) und am Ende. Gemessen an der Gusstraube
+(255 000 Zellen): ein voller Zeitstand 49 MB, die Oberflächen je Bild etwa ein
+Fünftel davon, die Wand nur einmal als Geometrie (EnSight, `collateTimes`).
+
+- `oberflaechen`: Isofläche alpha.melt = 0,5 (`schmelze`), alle Randflächen
+  mit den Werten der Zellen dahinter (`wand`, patchInternalField), mit dem
+  Kennwert „Eingeschlossene Luft" die Isofläche gasTrapped = 0,5 (`luft`) —
+  in gleichen Zeitabständen, doppelt so oft wie Bilder je Kennwert.
+- `ende`: die Wand mit der Füllzeit bei jedem vollen Zeitstand.
+- Zeitreihen (400 über die Füllung): `fuellung` (Form = cellZone `form`
+  aus `topoSet`, ohne Kammer und Pressrest), `schmelze` (mittlere
+  Temperatur, Festanteil, Geschwindigkeit), `luft` (Luftmasse, eingeschlossenes
+  Volumen und Masse über `exprField`), `gasdruck`, `einschluss` (mitgerissene
+  Luft, Oxide), `kolbendruck`.
+
+`bilder.py` (pvbatch) macht aus den Oberflächen je Kennwert, Zeitpunkt und
+Ansicht ein Bild: die Wand bekommt Punktwerte und wird bei alpha = 0,5
+punktweise abgeschnitten, mit der Isofläche zusammen die glatte Hülle der
+Schmelze. Zeitpunkte nach Füllgrad, Zeit oder Kolbenweg (n Stück), Kameras
+genau wie im Viewport, Farbleiste oben links. Geschwindigkeit: Regenbogen
+0–50 m/s, darüber Pink; Lufteinschluss: „Blue - Green - Orange" linear
+0–100 %; sonst `heat`. Eingeschlossene Gasnester je zusammenhängendes Nest
+mit seinem Druck. `bericht.py` (nur Python 3) schreibt die Graphiken (SVG),
+die Daten (CSV) und `bericht.html`: Kennzahlen, Bilder mit Zeitregler,
+Verläufe mit Messwert unter dem Zeiger, die Eingaben.
 
 ## Tests
 
@@ -155,9 +189,10 @@ Palette). Der Füllgrad zählt nur die Form, nicht den Kammerzylinder.
 - Ob der Fall in OpenFOAM läuft, zeigt ein lokaler Lauf mit einem über die
   Seite gebauten Fall. Kurz und vollständig (Netz, Rechnung bis „Cavity
   filled", Bilder): eine Platte 100 × 60 × 4 mm mit Steg, Pressrest Ø 40 und
-  Überlauf als STL-Dateien unter „Körper", Zellgröße „passend" (2 mm, 6300
+  Überlauf als STL-Dateien unter „Körper", Zellgröße 2 mm (6300
   Zellen, mit Kammer 11 000) — ohne Kammer rund 17 min, mit Gießkammer
-  25 min auf einem Kern.
+  25 min auf einem Kern; Abbruch und Weiterrechnen geprüft (Oberflächen
+  und Zeitreihen setzen nahtlos fort).
   Größere Teile brauchen Stunden: dieLogicFoam kostet um 2 s je Schritt
   (240 000 Zellen, 4 Kerne), und den Zeitschritt begrenzen die Spitzen der
   Geschwindigkeit an der freien Oberfläche (1–5 µs).

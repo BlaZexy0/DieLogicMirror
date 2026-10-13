@@ -15,15 +15,29 @@
    Vereinigung liegt (Überlappungen, Anschnitte), steht in internal.stl:
    nur ein Verfeinerungsbereich (Abstand), keine Fläche im Netz.
 
+   Der Fall ist ein Ordner mit drei Teilen (Wunsch vom 13.10.):
+
+     Allrun, Allclean, bilder.py, bericht.py, auswertung.json, README.md
+                    der Hauptordner: die Skripte, die alles ausführen
+     simulation/    der OpenFOAM-Fall (0.orig, constant, system)
+     auswertung/    entsteht am Ende: bericht.html, bilder, graphiken, daten
+
+   Während der Rechnung schreiben Funktionsobjekte (system/auswertung) nur
+   Oberflächen und Zeitreihen; volle Zeitstände gibt es nur noch zum
+   Weiterrechnen (die letzten zwei, purgeWrite) und am Ende.
+
    Reine Rechnung, kein DOM: der Browser lädt den Fall als ZIP herunter,
    die Tests schreiben ihn auf die Platte und lassen ihn laufen. */
 
 import { writeSTL } from '../../../3d-studio/js/part/stlio.js';
 import { bounds, volume, shells, edgeCheck } from './geometry.js';
-import { renderScript, targets } from './render.js';
+import { auswertungConfig, surfaceFields, targets, normalizePost, BILDER_PY, BERICHT_PY } from './render.js';
 
 export const SOLVER = 'dieLogicFoam';
 const K = 273.15;
+/** Der OpenFOAM-Fall liegt im Ordner simulation/ des Hauptordners. */
+export const SIM = 'simulation/';
+const C = SIM;
 
 /* Vorgaben, gegen die die Seite ihre Eingaben prüft */
 export const DEFAULTS = {
@@ -106,10 +120,10 @@ export function buildCase(plan) {
   for (let i = 0; i < names.length; i++) {
     const t = patchTris(i);
     if (!t.length) throw new Error('Die Fläche „' + names[i] + '" ist leer — liegt sie im Innern eines anderen Körpers?');
-    files['constant/triSurface/' + names[i] + '.stl'] = new Uint8Array(writeSTL(toM(t), 'DieLogic ' + names[i]));
+    files[C + 'constant/triSurface/' + names[i] + '.stl'] = new Uint8Array(writeSTL(toM(t), 'DieLogic ' + names[i]));
   }
   const hasInternal = plan.union.internal && plan.union.internal.length > 0;
-  if (hasInternal) files['constant/triSurface/internal.stl'] = new Uint8Array(writeSTL(toM(plan.union.internal), 'DieLogic internal'));
+  if (hasInternal) files[C + 'constant/triSurface/internal.stl'] = new Uint8Array(writeSTL(toM(plan.union.internal), 'DieLogic internal'));
   /* Verfeinerungsbereiche je SCHALE: ein Körper aus mehreren geschlossenen,
      sich durchdringenden Schalen (der Anguss des Designers) ist für
      snappyHexMesh „nicht geschlossen" — seine Schalen sind es. Geschlossene
@@ -122,7 +136,7 @@ export function buildCase(plan) {
       if (p) { tris = new Float64Array(p.length * 9); p.forEach((f, j) => tris.set(b.tris.subarray(f * 9, f * 9 + 9), j * 9)); }
       const name = 'body' + (i + 1) + (parts.length > 1 ? '_' + (k + 1) : '');
       const closed = edgeCheck(tris).closed;
-      files['constant/triSurface/' + name + '.stl'] = new Uint8Array(writeSTL(toM(tris), 'DieLogic ' + b.name));
+      files[C + 'constant/triSurface/' + name + '.stl'] = new Uint8Array(writeSTL(toM(tris), 'DieLogic ' + b.name));
       regions.push({ name, body: b, i, closed, reach: b.reach > 0 ? b.reach : 2 * hSurf });
     });
   });
@@ -139,7 +153,7 @@ export function buildCase(plan) {
   const perp = perpTo(nIn);
   const loc = inl.centroid.map((c, k) => c + nIn[k] * into + perp[k] * 0.137 * hSurf * 1.31 + 0.0731 * hSurf);
 
-  files['system/blockMeshDict'] = dict('blockMeshDict', 'system')
+  files[C + 'system/blockMeshDict'] = dict('blockMeshDict', 'system')
     + 'scale 0.001;    // Koordinaten in mm\n\n'
     + 'vertices\n(\n'
     + [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
@@ -149,7 +163,7 @@ export function buildCase(plan) {
 
   const lv = '(' + level + ' ' + level + ')';
   const patchType = name => (name.startsWith('vent') ? 'patch' : 'wall');
-  files['system/snappyHexMeshDict'] = dict('snappyHexMeshDict', 'system')
+  files[C + 'system/snappyHexMeshDict'] = dict('snappyHexMeshDict', 'system')
     + 'castellatedMesh true;\nsnap            true;\naddLayers       false;\n\n'
     + 'geometry\n{\n'
     + names.map(nm => '    ' + nm + ' { type triSurfaceMesh; file "' + nm + '.stl"; }\n').join('')
@@ -191,19 +205,20 @@ export function buildCase(plan) {
     + '    minMedialAxisAngle 90;\n    nBufferCellsNoExtrude 0;\n    nLayerIter 50;\n}\n\n'
     + 'meshQualityControls { #include "meshQualityDict" }\n\nmergeTolerance 1e-6;\n';
 
-  files['system/surfaceFeatureExtractDict'] = dict('surfaceFeatureExtractDict', 'system')
+  files[C + 'system/surfaceFeatureExtractDict'] = dict('surfaceFeatureExtractDict', 'system')
     + names.map(nm => nm + '.stl\n{\n    extractionMethod    extractFromSurface;\n    includedAngle       150;\n'
       + '    subsetFeatures { nonManifoldEdges no; openEdges yes; }\n    writeObj            no;\n}\n').join('\n');
-  files['system/meshQualityDict'] = dict('meshQualityDict', 'system') + '#includeEtc "caseDicts/mesh/generation/meshQualityDict.cfg"\n';
+  files[C + 'system/meshQualityDict'] = dict('meshQualityDict', 'system') + '#includeEtc "caseDicts/mesh/generation/meshQualityDict.cfg"\n';
 
   /* ── Prozess: Schusskurve, Zeiten ── */
   const g = GRAV[P.gravity] || GRAV['-y'];
   const nu = P.mu / P.rho;
   const SH = plan.shot && plan.shot.points ? plan.shot : null;
   const chamber = !!(SH && SH.chamber);
-  /* Zeitstände über die Füllung: doppelt so viele wie Bilder je Kennwert —
-     alle Kennwerte und Ansichten lesen dieselben, und render.py nimmt je Ziel
-     den nächsten (doppelt getroffene fallen weg) */
+  /* Oberflächen über die Füllung: doppelt so viele wie Bilder je Kennwert —
+     alle Kennwerte und Ansichten lesen dieselben, und bilder.py nimmt je Ziel
+     die nächste (doppelt getroffene fallen weg). Volle Zeitstände nur zum
+     Weiterrechnen: zehn über die Füllung, die letzten zwei bleiben. */
   const nWrite = Math.max(60, 2 * targets(plan.post).length);
   let tFill, endTime, writeInterval, tSwitch = 0, slowInterval = 0;
   if (SH) {
@@ -227,43 +242,52 @@ export function buildCase(plan) {
     endTime = 2 * tFill + P.tRamp;
   }
   endTime = Number(endTime.toPrecision(3));
-  writeInterval = Number((tFill / nWrite).toPrecision(2));
+  writeInterval = Number((tFill / 10).toPrecision(2));                // Neustartpunkte
+  const imgInterval = Number((tFill / nWrite).toPrecision(2));        // Oberflächen
+  const seriesInterval = Number((tFill / 400).toPrecision(2));        // Zeitreihen
 
   if (!chamber) {
     const table = SH ? SH.inletTable.concat([[Math.max(10, 10 * endTime), SH.inletTable[SH.inletTable.length - 1][1]]])
       : [[0, P.vStart], [P.tRamp, P.v2], [Math.max(10, 10 * endTime), P.v2]];
-    files['constant/plungerTable'] = '// t [s]   U [m/s]: Kolbengeschwindigkeit ab „Kammer voll", in Richtung Einlassnormale nach innen\n'
+    files[C + 'constant/plungerTable'] = '// t [s]   U [m/s]: Kolbengeschwindigkeit ab „Kammer voll", in Richtung Einlassnormale nach innen\n'
       + (SH ? '// Schusskurve ' + (SH.mode || '') + ' ab „Kammer voll" (Kurvenzeit ' + f6(SH.tFull * 1000) + ' ms, Kolbenweg ' + f6(SH.sFull) + ' mm); zwischen den Zeilen linear\n'
         : '// Rampe von ' + f6(P.vStart) + ' auf ' + f6(P.v2) + ' m/s in ' + f6(P.tRamp * 1000) + ' ms, dann konstant\n')
       + table.map(([t, v]) => '(' + f6(t) + ' ' + vec(nIn.map(x => x * v)) + ')').join('\n') + '\n';
   }
 
-  const control = (interval, maxDt, extra = '') => dict('controlDict', 'system')
+  /* Volle Zeitstände nur zum Weiterrechnen: purgeWrite 2 behält die letzten
+     zwei (und den am Ende); was die Auswertung braucht, schreiben die
+     Funktionsobjekte in system/auswertung. */
+  const control = (interval, maxDt, phase = '') => dict('controlDict', 'system')
     + 'application     ' + SOLVER + ';\nstartFrom       latestTime;\nstartTime       0;\nstopAt          endTime;\n'
     + 'endTime         ' + f6(endTime) + ';    // Füllende nach der Kurve ' + f6((chamber ? SH.tEnd : tFill) * 1000) + ' ms; stopAtFill beendet früher\n'
-    + 'deltaT          1e-6;\nwriteControl    adjustable;\nwriteInterval   ' + f6(interval) + ';\npurgeWrite      0;\n'
+    + 'deltaT          1e-6;\nwriteControl    adjustable;\nwriteInterval   ' + f6(interval) + ';   // nur Neustartpunkte\npurgeWrite      2;\n'
     + 'writeFormat     binary;\nwritePrecision  8;\ntimeFormat      general;\ntimePrecision   6;\nrunTimeModifiable yes;\n'
     + 'adjustTimeStep  yes;\nmaxCo           0.8;\nmaxAlphaCo      0.5;\nmaxDeltaT       ' + f6(maxDt) + ';\n'
-    + 'stopAtFill      0.995;   // Schmelzeanteil des ganzen (bei Kammer: des verdichteten) Gebiets\n' + extra;
+    + 'stopAtFill      0.995;   // Schmelzeanteil des ganzen (bei Kammer: des verdichteten) Gebiets\n\n'
+    + 'functions\n{\n' + phase + '    #include "auswertung"   // Oberflächen und Zeitreihen für bilder.py und bericht.py\n}\n';
   if (chamber) {
-    /* Langsame Phase: nur Neustartpunkte; ab kurz vor „Kammer voll" so oft
-       wie für die Bilder nötig (timeActivatedFileUpdate wie bei Niida). */
-    const phase = 'functions\n{\n    shotPhase\n    {\n        type            timeActivatedFileUpdate;\n        libs            (utilityFunctionObjects);\n'
+    /* Langsame Phase: nur Neustartpunkte; ab kurz vor „Kammer voll" die
+       Einstellungen des Schusses (timeActivatedFileUpdate wie bei Niida). */
+    const phase = '    shotPhase\n    {\n        type            timeActivatedFileUpdate;\n        libs            (utilityFunctionObjects);\n'
       + '        fileToUpdate    "<system>/controlDict";\n        timeVsFile\n        (\n            (-1 "<system>/controlDict.slow")\n'
-      + '            (' + f6(tSwitch) + ' "<system>/controlDict.shot")\n        );\n    }\n}\n';
-    files['system/controlDict.slow'] = control(slowInterval, Math.max(slowInterval / 4, 1e-4), phase);
-    files['system/controlDict.shot'] = control(writeInterval, 1e-4, phase);
-    files['system/controlDict'] = files['system/controlDict.slow'];
+      + '            (' + f6(tSwitch) + ' "<system>/controlDict.shot")\n        );\n    }\n';
+    files[C + 'system/controlDict.slow'] = control(slowInterval, Math.max(slowInterval / 4, 1e-4), phase);
+    files[C + 'system/controlDict.shot'] = control(writeInterval, 1e-4, phase);
+    files[C + 'system/controlDict'] = files[C + 'system/controlDict.slow'];
   } else {
-    files['system/controlDict'] = control(writeInterval, 1e-4);
+    files[C + 'system/controlDict'] = control(writeInterval, 1e-4);
   }
-  files['system/fvSchemes'] = dict('fvSchemes', 'system')
+  files[C + 'system/auswertung'] = functionObjects({
+    post: normalizePost(plan.post), imgInterval, seriesInterval, tStart: chamber ? tSwitch : 0
+  });
+  files[C + 'system/fvSchemes'] = dict('fvSchemes', 'system')
     + 'ddtSchemes      { default Euler; }\ngradSchemes     { default Gauss linear; }\n'
     + 'divSchemes\n{\n    default         none;\n    div(phi,U)      Gauss linearUpwind grad(U);\n'
     + '    div((nuEff*dev2(T(grad(U))))) Gauss linear;\n    div(alphaPhi,T) Gauss upwind;\n    div(alphaPhi,inclusion) Gauss upwind;\n}\n'
     + 'laplacianSchemes { default Gauss linear corrected; }\ninterpolationSchemes { default linear; }\nsnGradSchemes   { default corrected; }\n';
 
-  files['system/fvSolution'] = dict('fvSolution', 'system')
+  files[C + 'system/fvSolution'] = dict('fvSolution', 'system')
     + 'solvers\n{\n    "alpha.melt.*"\n    {\n        reconstructionScheme plicRDF;\n        nAlphaSubCycles 1;\n        cAlpha          1;\n'
     + '        isoFaceTol      1e-8;\n        surfCellTol     1e-8;\n        nAlphaBounds    3;\n        snapTol         0;\n'
     + '        clip            false;\n        nOverfillPasses 20;\n        nVoidLayers     2;\n'
@@ -278,7 +302,7 @@ export function buildCase(plan) {
     + 'PIMPLE\n{\n    momentumPredictor yes;\n    nOuterCorrectors  1;\n    nCorrectors       3;\n    nNonOrthogonalCorrectors 0;\n}\n\n'
     + 'cache { grad(U); }\n';
 
-  files['system/decomposeParDict'] = dict('decomposeParDict', 'system')
+  files[C + 'system/decomposeParDict'] = dict('decomposeParDict', 'system')
     + 'numberOfSubdomains ' + M.nProc + ';    // Allrun setzt NP\nmethod          scotch;\n';
 
   /* Die Schmelze zu Beginn. Ohne Kammer: der Pressrest voll — ein Zylinder
@@ -290,12 +314,18 @@ export function buildCase(plan) {
   if (!chamber) {
     const p1 = inl.centroid.map((c, k) => (c + inl.normal[k] * pad1) * 1e-3);
     const p2 = inl.centroid.map((c, k) => (c + nIn[k] * (depth + pad1)) * 1e-3);
-    files['system/setFieldsDict'] = dict('setFieldsDict', 'system')
+    files[C + 'system/setFieldsDict'] = dict('setFieldsDict', 'system')
       + 'defaultFieldValues ( volScalarFieldValue alpha.melt 0 );\n\n'
       + 'regions\n(\n    // Pressrest bei „Kammer voll": Zylinder Ø ' + f6(2 * (R + pad1)) + ' mm (Pressrest Ø ' + f6(2 * R) + ' mm), ' + f6(depth + 2 * pad1) + ' mm lang\n'
       + '    cylinderToCell\n    {\n        p1     ' + vec(p1) + ';\n        p2     ' + vec(p2) + ';\n'
       + '        radius ' + f6((R + pad1) * 1e-3) + ';\n'
       + '        fieldValues ( volScalarFieldValue alpha.melt 1 );\n    }\n);\n';
+    /* Die Form ohne den Pressrest: über sie zählt die Füllung (fuellung, schmelze) */
+    files[C + 'system/topoSetDict'] = dict('topoSetDict', 'system')
+      + 'actions\n(\n    // die Form: alles außer dem Zylinder des Pressrests (wie setFieldsDict)\n'
+      + '    { name form; type cellSet; action new; source cylinderToCell; p1 ' + vec(p1) + '; p2 ' + vec(p2) + '; radius ' + f6((R + pad1) * 1e-3) + '; }\n'
+      + '    { name form; type cellSet; action invert; }\n'
+      + '    { name form; type cellZoneSet; action new; source setToCellZone; set form; }\n);\n';
   } else {
     const gl = Math.hypot(...g);
     if (!(gl > 0)) throw new Error('Mit Kammer braucht die Rechnung Schwerkraft: die Schmelze liegt in der Kammer.');
@@ -310,20 +340,20 @@ export function buildCase(plan) {
     const stroke = SH.stroke;
     const hLayer = M.sleeveCell > 0 ? M.sleeveCell : 2 * hSurf;
     const nLayers = Math.max(10, Math.min(3000, Math.round(stroke / hLayer)));
-    files['system/extrudeMeshDict'] = dict('extrudeMeshDict', 'system')
+    files[C + 'system/extrudeMeshDict'] = dict('extrudeMeshDict', 'system')
       + '// Die Gießkammer: der Einlass (Kolben in der Endlage) um den Hub zurück zum Kolbenstart.\n'
       + '// Kammer Ø ' + f6(2 * R) + ' × ' + f6(SH.length) + ' mm = Hub ' + f6(stroke) + ' mm + Pressrest ' + f6(depth) + ' mm.\n'
       + 'constructFrom   mesh;\nsourceCase      "$FOAM_CASE";\nsourcePatches   (inlet);\nexposedPatchName inlet;\nflipNormals     false;\n'
       + 'extrudeModel    linearDirection;\nnLayers         ' + nLayers + ';   // ' + f6(stroke / nLayers) + ' mm beim Kolbenstart\nexpansionRatio  1.0;\n'
       + 'linearDirectionCoeffs\n{\n    direction   ' + vec(inl.normal) + ';\n    thickness   ' + f6(stroke * 1e-3) + ';\n}\nmergeFaces      false;\n';
-    files['constant/dynamicMeshDict'] = dict('dynamicMeshDict', 'constant')
+    files[C + 'constant/dynamicMeshDict'] = dict('dynamicMeshDict', 'constant')
       + '// Der Kolben (Patch inlet) fährt die Schusskurve; die Kammer zwischen Kolben und Endplatte\n'
       + '// (die Einlassfläche, Kolben in der Endlage) wird gleichmäßig verdichtet (libshotSleeve, DieLogic_OF).\n'
       + 'dynamicFvMesh       dynamicMotionSolverFvMesh;\nmotionSolverLibs    (shotSleeve);\nmotionSolver        shotSleeve;\n'
       + 'shotSleeveCoeffs\n{\n    pistonPatch     inlet;\n    axis            ' + vec(nIn) + ';   // Richtung der Kolbenbewegung\n'
       + '    #include "$FOAM_CASE/system/shotSleeveDict"\n}\n';
     const travel = Math.min(stroke * 0.999, Math.max(...SH.points.map(p => p[0])));
-    files['system/shotSleeveDict'] = dict('shotSleeveDict', 'system')
+    files[C + 'system/shotSleeveDict'] = dict('shotSleeveDict', 'system')
       + 'diameter        ' + f6(2 * R) + ';\nlength          ' + f6(stroke) + ';   // Kolbenstart → Endplatte (Einlassfläche)\n'
       + 'fillFraction    ' + f6(phi) + ';   // Füllgrad der Kammer (Auslegung), nur zur Information\n'
       + 'endPosition     ' + f6(travel) + ';\nnCellsD         30;\ninitialFill     no;\n\n'
@@ -332,34 +362,36 @@ export function buildCase(plan) {
       + '// „Kammer voll" bei x = ' + f6(SH.sFull) + ' mm, t = ' + f6(SH.tFull * 1000) + ' ms; Füllende bei x = ' + f6(SH.sEnd) + ' mm, t = ' + f6(SH.tEnd * 1000) + ' ms\n'
       + 'shotCurve\n{\n    type        positionVelocity;\n    lengthUnit  mm;\n    values\n    (\n'
       + SH.points.map(([x, v]) => '        (' + f6(x) + ' ' + f6(v) + ')').join('\n') + '\n    );\n}\n';
-    files['system/setAlphaFieldDict'] = dict('setAlphaFieldDict', 'system')
+    files[C + 'system/setAlphaFieldDict'] = dict('setAlphaFieldDict', 'system')
       + '// Die Schmelze in Ruhe: Füllgrad ' + f6(phi) + ', Füllhöhe ' + f6(h) + ' mm über dem tiefsten Punkt der Kammer.\n'
       + 'field       "alpha.melt";\ntype        plane;\norigin      ' + vec(level) + ';\nnormal      ' + vec(gh) + ';   // gefüllt wird unterhalb\n';
     const c1 = inl.centroid.map((c, k) => (c + inl.normal[k] * (stroke + 2 * hLayer)) * 1e-3);
     const c2 = inl.centroid.map((c, k) => (c + nIn[k] * (depth + pad1)) * 1e-3);
-    files['system/topoSetDict'] = dict('topoSetDict', 'system')
+    files[C + 'system/topoSetDict'] = dict('topoSetDict', 'system')
       + 'actions\n(\n    // alles außerhalb der Kammer (Hub + Pressrest): dort ist zu Beginn keine Schmelze\n'
       + '    { name notChamber; type cellSet; action new; source cylinderToCell; p1 ' + vec(c1) + '; p2 ' + vec(c2) + '; radius ' + f6((R + pad1) * 1e-3) + '; }\n'
-      + '    { name notChamber; type cellSet; action invert; }\n);\n';
-    files['system/setFieldsDict'] = dict('setFieldsDict', 'system')
+      + '    { name notChamber; type cellSet; action invert; }\n'
+      + '    // ... das ist die Form: über sie zählt die Füllung (fuellung, schmelze)\n'
+      + '    { name form; type cellZoneSet; action new; source setToCellZone; set notChamber; }\n);\n';
+    files[C + 'system/setFieldsDict'] = dict('setFieldsDict', 'system')
       + 'defaultFieldValues ( );\n\nregions\n(\n    cellToCell { set notChamber; fieldValues ( volScalarFieldValue alpha.melt 0 ); }\n);\n';
   }
 
-  files['constant/g'] = head('uniformDimensionedVectorField', 'g', 'constant') + 'dimensions      [0 1 -2 0 0 0 0];\nvalue           ' + vec(g) + ';\n';
-  files['constant/turbulenceProperties'] = dict('turbulenceProperties', 'constant') + 'simulationType  laminar;\n';
-  files['constant/transportProperties'] = dict('transportProperties', 'constant')
+  files[C + 'constant/g'] = head('uniformDimensionedVectorField', 'g', 'constant') + 'dimensions      [0 1 -2 0 0 0 0];\nvalue           ' + vec(g) + ';\n';
+  files[C + 'constant/turbulenceProperties'] = dict('turbulenceProperties', 'constant') + 'simulationType  laminar;\n';
+  files[C + 'constant/transportProperties'] = dict('transportProperties', 'constant')
     + '// Schmelze: Dichte flüssig, Zähigkeit ' + f6(P.mu) + ' Pa s\ntransportModel  Newtonian;\nrho             ' + f6(P.rho) + ';\nnu              ' + f6(nu) + ';\n';
-  files['constant/gasProperties'] = dict('gasProperties', 'constant')
+  files[C + 'constant/gasProperties'] = dict('gasProperties', 'constant')
     + 'gamma           1.4;\nn               1.4;\npMax            2e7;\npAmb            ' + f6(P.pAmb) + ';\nTGas            300;\n\n'
     + 'vents\n{\n'
     + outlets.map((o, i) => '    ' + ventName(i) + (o.mode === 'open' ? '  { open true; }      // offen (z. B. Vakuumventil offen)\n'
       : '  { Cd ' + f6(o.Cd > 0 ? o.Cd : 0.8) + '; }          // Drossel, Fläche = Patchfläche (' + f6(o.area) + ' mm²)\n')).join('')
     + '}\n';
-  files['constant/inclusionProperties'] = dict('inclusionProperties', 'constant')
+  files[C + 'constant/inclusionProperties'] = dict('inclusionProperties', 'constant')
     + '// Fehlerkennwerte, von der Schmelze mitgetragen (meltInclusions.H)\n'
     + 'oxide\n{\n    active      yes;\n    kp          1e-12;\n    Ckappa      1;\n}\n\n'
     + 'airEntrainment\n{\n    active      yes;\n    Cair        0.5;\n    Cturb       0.05;\n    sigma       ' + f6(P.sigma) + ';\n}\n';
-  files['constant/thermalProperties'] = dict('thermalProperties', 'constant')
+  files[C + 'constant/thermalProperties'] = dict('thermalProperties', 'constant')
     + 'solveEnergy     yes;\n\ncp              ' + f6(P.cp) + ';\nkappa           ' + f6(P.kappa) + ';\nL               ' + f6(P.hf * 1000) + ';\n'
     + 'Tliquidus       ' + f6(P.Tliq + K) + ';   // ' + f6(P.Tliq) + ' °C\nTsolidus        ' + f6(P.Tsol + K) + ';   // ' + f6(P.Tsol) + ' °C\nCmush           0;\n\n'
     + 'dieHeatTransfer\n{\n    "(walls|vent.*)" { h ' + f6(P.hDie) + '; Tdie ' + f6(P.Tdie + K) + '; }   // Form ' + f6(P.Tdie) + ' °C\n}\n';
@@ -376,12 +408,12 @@ export function buildCase(plan) {
      (stopAtFill, keine Gaszelle mehr) und setzt den Druckbezug erst dann. */
   const ventBC = (fn) => outlets.map((o, i) => ventName(i).padEnd(16) + fn(o, i));
   const open = o => o.mode === 'open';
-  files['0.orig/alpha.melt'] = vf('volScalarField', 'alpha.melt', '[0 0 0 0 0 0 0]', 'uniform 0', [
+  files[C + '0.orig/alpha.melt'] = vf('volScalarField', 'alpha.melt', '[0 0 0 0 0 0 0]', 'uniform 0', [
     chamber ? 'inlet           { type zeroGradient; }   // Kolben' : 'inlet           { type fixedValue; value uniform 1; }',
     ...ventBC(o => open(o) ? '{ type inletOutlet; inletValue uniform 0; value uniform 0; }   // offen' : '{ type zeroGradient; }   // Drossel: für die Schmelze Wand'),
     'walls           { type zeroGradient; }'
   ]);
-  files['0.orig/U'] = vf('volVectorField', 'U', '[0 1 -1 0 0 0 0]', 'uniform (0 0 0)', [
+  files[C + '0.orig/U'] = vf('volVectorField', 'U', '[0 1 -1 0 0 0 0]', 'uniform (0 0 0)', [
     chamber ? 'inlet           { type movingWallVelocity; value uniform (0 0 0); }   // Kolben (libshotSleeve)'
       : 'inlet\n    {\n        type            uniformFixedValue;\n        uniformValue    table\n        (\n            #include "$FOAM_CASE/constant/plungerTable"\n        );\n        value           uniform (0 0 0);\n    }',
     ...ventBC(o => open(o) ? '{ type pressureInletOutletVelocity; value uniform (0 0 0); }' : '{ type noSlip; }'),
@@ -389,35 +421,45 @@ export function buildCase(plan) {
   ]);
   /* p_rgh = p − ρ g·x: an einem offenen Auslass der Umgebungsdruck */
   const prgh = c => P.pAmb - P.rho * (g[0] * c[0] + g[1] * c[1] + g[2] * c[2]) * 1e-3;
-  files['0.orig/p_rgh'] = vf('volScalarField', 'p_rgh', '[1 -1 -2 0 0 0 0]', 'uniform ' + f6(P.pAmb), [
+  files[C + '0.orig/p_rgh'] = vf('volScalarField', 'p_rgh', '[1 -1 -2 0 0 0 0]', 'uniform ' + f6(P.pAmb), [
     ...ventBC(o => open(o) ? '{ type fixedValue; value uniform ' + f6(prgh(o.centroid || [0, 0, 0])) + '; }' : '{ type fixedFluxPressure; value uniform ' + f6(P.pAmb) + '; }'),
     '"(walls|inlet)" { type fixedFluxPressure; value uniform ' + f6(P.pAmb) + '; }'
   ]);
-  files['0.orig/T'] = vf('volScalarField', 'T', '[0 0 0 1 0 0 0]', 'uniform ' + f6(P.Tcast + K), [
+  files[C + '0.orig/T'] = vf('volScalarField', 'T', '[0 0 0 1 0 0 0]', 'uniform ' + f6(P.Tcast + K), [
     chamber ? 'inlet           { type zeroGradient; }   // Kolben'
       : 'inlet           { type fixedValue; value uniform ' + f6(P.Tcast + K) + '; }   // Gießtemperatur ' + f6(P.Tcast) + ' °C',
     '".*"            { type zeroGradient; }   // Wärme an die Form: constant/thermalProperties'
   ]);
 
-  /* ── Skripte ── */
-  files['render.py'] = renderScript(Object.assign({ fields: P }, plan.post || {}, {
+  /* ── Skripte im Hauptordner ── */
+  const sleeveCells = chamber ? Math.round(inl.area / (hSurf * hSurf)) * Math.max(10, Math.round(SH.stroke / (M.sleeveCell > 0 ? M.sleeveCell : 2 * hSurf))) : 0;
+  const MODE = { focus: 'DieLogic', lopez: 'López', v1v2: 'V₁ von Hand' };
+  const conf = auswertungConfig(Object.assign({ fields: P }, plan.post || {}, {
     title: plan.title || 'DieLogic',
-    /* Kammer (bzw. ohne Kammer: der Pressrest) — was nicht zur Form zählt */
-    chamber: { c: inl.centroid.map(x => x * 1e-3), a: nIn, r: (R + pad1) * 1e-3, top: (depth + pad1) * 1e-3 },
     piston: SH ? SH.piston : null, tOffset: SH && !chamber ? SH.tFull : 0, moving: chamber,
-    fillFrom: SH && chamber ? SH.tFull : 0
+    fillFrom: SH && chamber ? SH.tFull : 0,
+    shot: SH ? { mode: SH.mode, label: MODE[SH.mode] || SH.mode || '', points: SH.points, tFull: SH.tFull, tEnd: SH.tEnd, sFull: SH.sFull, sEnd: SH.sEnd, phi: SH.phi, diam: SH.diam, length: SH.length, stroke: SH.stroke } : null,
+    fall: {
+      bodies: plan.bodies.map(b => ({ name: b.name, role: ROLE_DE[b.role] || b.role })),
+      mesh: { cell: M.cell, level: M.level, nProc: M.nProc, cells: cells + sleeveCells },
+      process: { Tcast: P.Tcast, Tdie: P.Tdie, Tliq: P.Tliq, Tsol: P.Tsol, rho: P.rho, mu: P.mu, cp: P.cp },
+      outlets: outlets.map((o, i) => ventName(i) + ' ' + (o.mode === 'open' ? 'offen' : 'Drossel') + ' ' + f6(Math.round(o.area * 10) / 10) + ' mm²')
+    }
   }));
+  files['auswertung.json'] = JSON.stringify(conf, null, 1) + '\n';
+  files['bilder.py'] = BILDER_PY;
+  files['bericht.py'] = BERICHT_PY;
   /* Volumen der Form nach der Vereinigung (Randflächen, Divergenzsatz), mit
      Kammer dazu der Zylinder des Hubs — Allrun vergleicht es mit dem Netz */
   const vModel = Math.abs([...plan.union.patches.values()].reduce((sum, t) => sum + volume(t), 0)) + (chamber ? inl.area * SH.stroke : 0);
-  files['Allrun'] = allrun(M.nProc, names.slice(1), chamber, vModel * 1e-9);
-  files['Allclean'] = '#!/bin/sh\ncd "${0%/*}" || exit\n. ${WM_PROJECT_DIR:?}/bin/tools/CleanFunctions\ncleanCase0\n'
-    + 'rm -rf constant/extendedFeatureEdgeMesh constant/triSurface/*.eMesh images\n'
+  files['Allrun'] = allrun(M.nProc, names.slice(1), chamber, vModel * 1e-9, surfaceFields(plan.post));
+  files['Allclean'] = '#!/bin/sh\n# Alles Gerechnete löschen: Netz, Zeitstände, Protokolle, Auswertung.\ncd "${0%/*}" || exit\nrm -rf auswertung\ncd simulation || exit\n'
+    + '. ${WM_PROJECT_DIR:?}/bin/tools/CleanFunctions\ncleanCase0\n'
+    + 'rm -rf constant/extendedFeatureEdgeMesh constant/triSurface/*.eMesh\n'
     + (chamber ? '[ -f system/controlDict.slow ] && cp system/controlDict.slow system/controlDict\n' : '');
   files['README.md'] = readme(plan, { cells, tFill, endTime, names, M, P, SH, chamber });
-  files['case.foam'] = '';
-  const sleeveCells = chamber ? Math.round(inl.area / (hSurf * hSurf)) * Math.max(10, Math.round(SH.stroke / (M.sleeveCell > 0 ? M.sleeveCell : 2 * hSurf))) : 0;
-  return { files, info: { cells: cells + sleeveCells, sleeveCells, fillTime: tFill, endTime, names, bgCells: n[0] * n[1] * n[2], extra, chamber } };
+  files[C + 'case.foam'] = '';
+  return { files, info: { cells: cells + sleeveCells, sleeveCells, fillTime: tFill, endTime, names, bgCells: n[0] * n[1] * n[2], extra, chamber, images: conf.targets.length } };
 }
 
 /** Höhe h/D eines Kreissegments mit dem Flächenanteil phi (Bisektion) —
@@ -441,17 +483,90 @@ function perpTo(n) {
   return p.map(x => x / l);
 }
 
-function allrun(nProc, patches, chamber = false, vModel = 0) {
+const ROLE_DE = { part: 'Bauteil', runner: 'Anguss', biscuit: 'Pressrest', overflow: 'Überlauf', other: 'Sonstiges' };
+
+/**
+ * system/auswertung: die Funktionsobjekte der Auswertung. Während der
+ * Rechnung entstehen nur Oberflächen und Zeitreihen (postProcessing/…):
+ *   oberflaechen  Schmelze (Isofläche alpha.melt = 0,5), Wand mit den Werten
+ *                 der Zellen dahinter, eingeschlossene Luft (gasTrapped = 0,5);
+ *                 EnSight, die Wand nur einmal als Geometrie
+ *   ende          die Wand mit der Füllzeit, bei jedem vollen Zeitstand
+ *   fuellung, schmelze, luft, gasdruck, einschluss, kolbendruck  Zeitreihen
+ * Die Hilfsfelder (magU, Luft je Zelle) rechnen magU und exprField jeden
+ * Schritt vorher aus — sie kosten neben dem Solver nichts.
+ */
+export function functionObjects({ post, imgInterval, seriesInterval, tStart = 0 }) {
+  const crit = post.criteria;
+  const fields = surfaceFields(post);
+  const lib = '        libs            (fieldFunctionObjects);\n';
+  const fo = (name, note, body) => '    ' + name + '   // ' + note + '\n    {\n' + body + '    }\n';
+  const timed = '        writeControl    runTime;\n        writeInterval   ' + f6(seriesInterval) + ';\n        log             false;\n';
+  const expr = (name, e, note) => fo(name, note, '        type            exprField;\n' + lib
+    + '        field           ' + name + ';\n        expression      "' + e + '";\n        executeControl  timeStep;\n        writeControl    none;\n');
+  const vol = (name, note, region, op, flds, weight) => fo(name, note, '        type            volFieldValue;\n' + lib
+    + (region ? '        regionType      cellZone;\n        name            ' + region + ';\n' : '        regionType      all;\n')
+    + '        operation       ' + op + ';\n' + (weight ? '        weightField     ' + weight + ';\n' : '')
+    + '        fields          (' + flds.join(' ') + ');\n        writeFields     false;\n' + timed);
+  const surf = (name, note, control, flds, list) => fo(name, note, '        type            surfaces;\n        libs            (sampling);\n'
+    + control
+    + '        surfaceFormat   ensight;\n        formatOptions   { ensight { format binary; collateTimes true; } }\n'
+    + '        fields          (' + flds.join(' ') + ');\n        surfaces\n        {\n' + list.join('') + '        }\n');
+  const iso = (name, field) => '            ' + name + ' { type isoSurface; isoField ' + field + '; isoValue 0.5; isoMethod topo; interpolate false; }\n';
+  const wall = '            wand { type patchInternalField; patches (walls inlet "vent.*"); offsetMode normal; distance 0; interpolate false; }\n';
+  return dict('auswertung', 'system')
+    + '// Funktionsobjekte der Auswertung (aus controlDict eingebunden). Statt voller Zeitstände\n'
+    + '// schreibt die Rechnung nur Oberflächen und Zeitreihen; bilder.py und bericht.py im\n'
+    + '// Hauptordner machen daraus die Bilder und den Bericht (auswertung/bericht.html).\n\n'
+    + fo('magU', 'Betrag der Geschwindigkeit', '        type            mag;\n' + lib + '        field           U;\n        result          magU;\n        executeControl  timeStep;\n        writeControl    none;\n')
+    + expr('luftMasse', 'rhoGas*(1 - alpha.melt)', 'Luft je Zelle [kg/m³]')
+    + expr('luftEin', 'gasTrapped*(1 - alpha.melt)', 'eingeschlossene Luft, Volumenanteil')
+    + expr('luftEinMasse', 'rhoGas*gasTrapped*(1 - alpha.melt)', 'eingeschlossene Luft [kg/m³]')
+    + vol('fuellung', 'Füllgrad der Form (ohne Kammer und Pressrest)', 'form', 'volAverage', ['alpha.melt'])
+    + vol('schmelze', 'Mittel über die Schmelze in der Form', 'form', 'weightedVolAverage', ['T', 'solidFraction', 'magU'], 'alpha.melt')
+    + vol('luft', 'Luft in der Form [kg], eingeschlossen [m³, kg]', null, 'volIntegrate', ['luftMasse', 'luftEin', 'luftEinMasse'])
+    + vol('gasdruck', 'höchster Gasdruck [Pa]', null, 'max', ['pGas'])
+    + vol('einschluss', 'mitgerissene Luft und Oxide in der Schmelze [m³]', null, 'weightedVolIntegrate', ['airEntrained', 'oxide'], 'alpha.melt')
+    + fo('kolbendruck', 'Druck auf der Kolbenfläche [Pa]', '        type            surfaceFieldValue;\n' + lib
+      + '        regionType      patch;\n        name            inlet;\n        operation       areaAverage;\n        fields          (p);\n        writeFields     false;\n' + timed)
+    + surf('oberflaechen', 'Schmelze und Wand für die Bilder', '        writeControl    runTime;\n        writeInterval   ' + f6(imgInterval) + ';\n'
+      + (tStart > 0 ? '        timeStart       ' + f6(tStart) + ';   // kurz vor „Kammer voll"\n' : ''),
+    fields, [iso('schmelze', 'alpha.melt'), wall].concat(crit.includes('trapped') ? [iso('luft', 'gasTrapped')] : []))
+    + (crit.includes('fillTime') ? surf('ende', 'Füllzeit an der Wand, bei jedem vollen Zeitstand (der letzte ist das Ende)', '        writeControl    writeTime;\n',
+      ['alpha.melt', 'fillTime'], [iso('schmelze', 'alpha.melt'), wall]) : '');
+}
+
+function allrun(nProc, patches, chamber = false, vModel = 0, fields = []) {
   return `#!/bin/sh
-# Simulation der Formfüllung mit ${SOLVER} (DieLogic), erzeugt von DieLogic · Simulation einrichten.
-#   ./Allrun              Netz, Anfangswerte, Rechnung (NP Prozesse), Bilder
+# Formfüllung mit ${SOLVER} (DieLogic), erzeugt von DieLogic · Simulation einrichten.
+#   ./Allrun              Netz, Rechnung (NP Prozesse), Auswertung
 #   NP=8 ./Allrun         mit 8 Prozessen
-#   ./Allrun -mesh        nur das Netz (danach checkMesh ansehen)
+#   ./Allrun -mesh        nur das Netz (danach simulation/log.checkMesh ansehen)
 #   ./Allrun -prepare     Netz und zerlegter Fall, ohne Rechnung
-# Braucht OpenFOAM v2606 (openfoam.com), den Solver ${SOLVER} aus DieLogic_OF/solvers
-# (Allwmake) und für die Bilder ParaView (pvbatch). Eine abgebrochene Rechnung läuft
+#   ./Allrun -auswertung  nur die Auswertung: Bilder (pvbatch bilder.py) und Bericht (python3 bericht.py)
+# simulation/ ist der OpenFOAM-Fall, auswertung/ entsteht am Ende (bericht.html, bilder, graphiken, daten).
+# Braucht OpenFOAM v2606 (openfoam.com), den Solver ${SOLVER} aus DieLogic_OF/solvers (Allwmake),
+# für die Bilder ParaView (pvbatch), für den Bericht Python 3. Eine abgebrochene Rechnung läuft
 # mit demselben Aufruf ab ihrer letzten Zeit weiter; ./Allclean fängt neu an.
 cd "\${0%/*}" || exit
+HAUPT=$PWD
+
+auswertung() {
+    cd "$HAUPT" || exit
+    mkdir -p auswertung
+    if command -v pvbatch >/dev/null 2>&1
+    then
+        echo "Bilder: pvbatch bilder.py"
+        pvbatch bilder.py > auswertung/log.bilder 2>&1 || echo "bilder.py ist gescheitert: auswertung/log.bilder" >&2
+    else
+        echo "pvbatch nicht gefunden: ohne Bilder (nachholen mit 'pvbatch bilder.py')."
+    fi
+    python3 bericht.py > auswertung/log.bericht 2>&1 || { echo "bericht.py ist gescheitert: auswertung/log.bericht" >&2; return 1; }
+    echo "Bericht: $HAUPT/auswertung/bericht.html"
+}
+[ "$1" = "-auswertung" ] && { auswertung; exit $?; }
+
+cd simulation || exit
 . \${WM_PROJECT_DIR:?}/bin/tools/RunFunctions
 PATCHES="${patches.join(' ')}"
 
@@ -468,8 +583,8 @@ then
     runApplication snappyHexMesh -overwrite
     if grep -q "FOAM FATAL" log.snappyHexMesh || grep -qw "background" constant/polyMesh/boundary
     then
-        echo "snappyHexMesh ist gescheitert, siehe log.snappyHexMesh." >&2
-        [ -f postProcessing/constant/leakPath.vtp ] && echo "Das Netz läuft aus der Form hinaus: die Wand hat ein Loch. Den Weg zeigt postProcessing/constant/leakPath.vtp (ParaView)." >&2
+        echo "snappyHexMesh ist gescheitert, siehe simulation/log.snappyHexMesh." >&2
+        [ -f postProcessing/constant/leakPath.vtp ] && echo "Das Netz läuft aus der Form hinaus: die Wand hat ein Loch. Den Weg zeigt simulation/postProcessing/constant/leakPath.vtp (ParaView)." >&2
         rm -rf constant/polyMesh
         exit 1
     fi
@@ -484,7 +599,7 @@ then
     done
 ${chamber ? `    # die Gießkammer: der Einlass um den Hub zurück (system/extrudeMeshDict)
     runApplication extrudeMesh
-    grep -q "FOAM FATAL" log.extrudeMesh && { echo "extrudeMesh ist gescheitert: log.extrudeMesh" >&2; rm -rf constant/polyMesh; exit 1; }
+    grep -q "FOAM FATAL" log.extrudeMesh && { echo "extrudeMesh ist gescheitert: simulation/log.extrudeMesh" >&2; rm -rf constant/polyMesh; exit 1; }
 ` : ''}    runApplication checkMesh
 ${vModel > 0 ? `    # Volumen des Netzes gegen das Modell: zu grobe Zellen verlieren dünne Wände
     # und Rundungen still (2 mm statt 1,2 mm am U-Profil: 6,7 % weniger)
@@ -497,17 +612,22 @@ ${vModel > 0 ? `    # Volumen des Netzes gegen das Modell: zu grobe Zellen verli
 [ "$1" = "-mesh" ] && { echo "Netz fertig."; exit 0; }
 
 # ── Anfangswerte, Zerlegung ─────────────────────────────────────────
+# nur beim ersten Mal: beim Weiterrechnen (auch ohne processor*) bleibt 0/ wie es ist
+if [ ! -f log.setFields ]
+then
+    restore0Dir
+${chamber ? `    cp system/controlDict.slow system/controlDict
+    runApplication setAlphaField        # Schmelze in Ruhe unter der Füllhöhe
+    runApplication topoSet              # Zellen außerhalb der Kammer = die Form (cellZone form)
+    runApplication setFields            # ... dort keine Schmelze` : `    runApplication topoSet              # die Form ohne den Pressrest (cellZone form)
+    runApplication setFields            # der Pressrest voll Schmelze`}
+fi
 if [ -d processor0 ]
 then
     NP=$(ls -d processor[0-9]* | wc -l)
     echo "weiter auf $NP Prozessen"
 else
     NP=\${NP:-${nProc}}
-    restore0Dir
-${chamber ? `    cp system/controlDict.slow system/controlDict
-    runApplication setAlphaField        # Schmelze in Ruhe unter der Füllhöhe
-    runApplication topoSet              # Zellen außerhalb der Kammer
-    runApplication setFields            # ... dort keine Schmelze` : '    runApplication setFields'}
 fi
 sed -i "s/^numberOfSubdomains .*/numberOfSubdomains $NP;/" system/decomposeParDict
 if [ "$NP" -gt 1 ] && [ ! -d processor0 ]
@@ -517,8 +637,18 @@ fi
 [ "$1" = "-prepare" ] && { echo "vorbereitet ($NP Prozesse)"; exit 0; }
 
 # ── Rechnung ────────────────────────────────────────────────────────
+# Oberflächen und Zeitreihen schreiben die Funktionsobjekte (system/auswertung);
+# volle Zeitstände nur zum Weiterrechnen (die letzten zwei) und am Ende.
 if ! tail -n 5 log.${SOLVER} 2>/dev/null | grep -qx "End"
 then
+    # die Protokolle des Gasmodells beginnen beim Weiterrechnen neu: aufheben
+    if [ -f log.${SOLVER} ]
+    then
+        for f in postProcessing/gasPockets.dat postProcessing/inclusions.dat
+        do
+            [ -f "$f" ] && mv "$f" "\${f%.dat}.$(date +%s).dat"
+        done
+    fi
     if [ "$NP" -gt 1 ]
     then
         mpirun --bind-to none -n "$NP" ${SOLVER} -parallel >> log.${SOLVER} 2>&1
@@ -526,24 +656,28 @@ then
         ${SOLVER} >> log.${SOLVER} 2>&1
     fi
 fi
-tail -n 5 log.${SOLVER} | grep -qx "End" || { echo "${SOLVER} ist nicht bis zum Ende gelaufen: log.${SOLVER}" >&2; exit 1; }
-[ "$NP" -gt 1 ] && runApplication -o reconstructPar -newTimes
+tail -n 5 log.${SOLVER} | grep -qx "End" || { echo "${SOLVER} ist nicht bis zum Ende gelaufen: simulation/log.${SOLVER}" >&2; exit 1; }
+# der letzte Zeitstand zum Ansehen in ParaView (simulation/case.foam)
+[ "$NP" -gt 1 ] && runApplication -o reconstructPar -latestTime
 
-# ── Bilder ──────────────────────────────────────────────────────────
-if command -v pvbatch >/dev/null 2>&1
-then
-    runApplication -o pvbatch render.py .
-    echo "Bilder in images/"
-else
-    echo "pvbatch nicht gefunden: die Bilder mit 'pvbatch render.py .' nachholen."
-fi
+# ── Auswertung ──────────────────────────────────────────────────────
+# Felder der Oberflächen: ${fields.join(' ')}
+auswertung
 `;
 }
 
 function readme(plan, { cells, tFill, endTime, names, M, P, SH, chamber }) {
   return '# ' + (plan.title || 'DieLogic-Simulation') + '\n\n'
     + 'Formfüllung mit `' + SOLVER + '` (DieLogic_OF), erzeugt von **DieLogic · Simulation einrichten**.\n\n'
-    + '```sh\nsource /usr/lib/openfoam/openfoam2606/etc/bashrc\n./Allrun            # Netz, Rechnung, Bilder (NP=' + M.nProc + ')\n```\n\n'
+    + '```sh\nsource /usr/lib/openfoam/openfoam2606/etc/bashrc\n./Allrun            # Netz, Rechnung (NP=' + M.nProc + '), Auswertung\n'
+    + './Allrun -auswertung   # nur Bilder und Bericht neu\n```\n\n'
+    + '| Ordner, Datei | |\n|---|---|\n'
+    + '| `Allrun`, `Allclean` | alles ausführen, alles Gerechnete löschen |\n'
+    + '| `bilder.py` | die Bilder (ParaView: `pvbatch bilder.py`) |\n'
+    + '| `bericht.py` | Graphiken, Daten und `auswertung/bericht.html` (Python 3) |\n'
+    + '| `auswertung.json` | Einstellungen der Auswertung: Kennwerte, Zeitpunkte, Format, Ansichten, Farben |\n'
+    + '| `simulation/` | der OpenFOAM-Fall (`0.orig`, `constant`, `system`, Protokolle `log.*`) |\n'
+    + '| `auswertung/` | entsteht am Ende: `bericht.html`, `bilder/`, `graphiken/`, `daten/` |\n\n'
     + '| | |\n|---|---|\n'
     + '| Körper | ' + plan.bodies.map(b => b.name).join(', ') + ' |\n'
     + '| Randflächen | ' + names.join(', ') + ' |\n'
@@ -555,13 +689,15 @@ function readme(plan, { cells, tFill, endTime, names, M, P, SH, chamber }) {
     + '| Füllzeit (grob) | ' + (tFill * 1000).toFixed(1) + ' ms, endTime ' + (endTime * 1000).toFixed(0) + ' ms |\n'
     + '| Gießtemperatur / Form | ' + P.Tcast + ' °C / ' + P.Tdie + ' °C |\n\n'
     + (chamber ? 'Die Rechnung beginnt beim Kolbenstart: die Schmelze liegt mit dem Füllgrad in der Kammer '
-      + '(`system/setAlphaFieldDict`, außerhalb der Kammer `topoSet` + `setFields`), der Kolben (Patch `inlet`) fährt die '
-      + 'Schusskurve (`system/shotSleeveDict`, libshotSleeve). Die Auslässe `vent*` sind die '
-      : 'Die Rechnung beginnt bei „Kammer voll": der Pressrest ist voll Schmelze (`system/setFieldsDict`), '
-      + 'der Kolben drückt über die Fläche `inlet` nach (`constant/plungerTable`). Die Auslässe `vent*` sind die ')
+      + '(`simulation/system/setAlphaFieldDict`, außerhalb der Kammer `topoSet` + `setFields`), der Kolben (Patch `inlet`) fährt die '
+      + 'Schusskurve (`simulation/system/shotSleeveDict`, libshotSleeve). Die Auslässe `vent*` sind die '
+      : 'Die Rechnung beginnt bei „Kammer voll": der Pressrest ist voll Schmelze (`simulation/system/setFieldsDict`), '
+      + 'der Kolben drückt über die Fläche `inlet` nach (`simulation/constant/plungerTable`). Die Auslässe `vent*` sind die ')
     + 'Entlüftungen des Gasmodells (`constant/gasProperties`): eine Drossel lässt nur die Luft hinaus und ist für die '
     + 'Schmelze Wand (Entlüftungsblock), ein offener Auslass lässt auch die Schmelze hinaus. Die Rechnung endet bei voller Form '
     + '(`stopAtFill`). Überlappungen der Körper stehen in '
     + '`constant/triSurface/internal.stl`; dort wird nur verfeinert, das Netz läuft durch.\n\n'
-    + 'Bilder: `render.py` (pvbatch) schreibt nach `images/`; die Einstellungen stehen oben im Skript.\n';
+    + 'Auswertung: während der Rechnung schreiben die Funktionsobjekte in `simulation/system/auswertung` nur die Oberfläche '
+    + 'der Schmelze, die Wand mit den Werten dahinter und Zeitreihen (`simulation/postProcessing`); volle Zeitstände gibt es '
+    + 'nur zum Weiterrechnen und am Ende. `bilder.py` und `bericht.py` machen daraus `auswertung/`.\n';
 }

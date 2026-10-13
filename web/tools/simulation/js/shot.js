@@ -113,7 +113,7 @@ export function shotPlan(plan) {
   };
 }
 
-/** Kolbenweg über der Zeit (ab Kolbenstart) für render.py: [t s, s mm]. */
+/** Kolbenweg über der Zeit (ab Kolbenstart) für bilder.py und bericht.py: [t s, s mm]. */
 export function pistonTable(sp, n = 120) {
   const prof = sp.shot.profile, out = [];
   for (let i = 0; i <= n; i++) {

@@ -11,7 +11,7 @@ const INTRO = `
 <h3>Simulation einrichten</h3>
 <p>Aus den Körpern der Form entsteht ein OpenFOAM-Fall für den DieLogic-Solver <b>dieLogicFoam</b>: Netz mit
 snappyHexMesh, Anfangs- und Randwerte, Solver-Einstellungen, ein <code>Allrun</code>, das alles nacheinander
-ausführt, und <code>render.py</code> für die Bilder der Auswertung. Die Schritte links sind ein Ablaufplan: ein
+ausführt, und die Skripte der Auswertung (Bilder, Graphiken, Bericht). Die Schritte links sind ein Ablaufplan: ein
 Schritt öffnet sich erst, wenn alle davor erledigt sind.</p>
 <p>Gerechnet wird im <b>Bauteilsystem</b> in mm: Trennebene z = 0, die Form öffnet nach +z. Alle Körper müssen
 geschlossene Netze sein. Sie dürfen sich überlappen oder berühren (der Anguss steckt im Bauteil, der Anschnitt
@@ -26,21 +26,30 @@ erledigter Schritt getönt, der aktuelle kräftiger, gesperrte sind blass.</p>
 Knoten ergibt mehrere Körper. Jeder Körper hat eine Rolle; das erste Bauteil wird das Bauteil des Studios, an
 dem die Designer bauen. ✕ entfernt einen Körper, auch das Bauteil — ohne Bauteil geht es nicht weiter. <b>Anguss</b> und <b>Überläufe</b>: im Designer bauen. Liegen Anguss und
 Pressrest (bzw. Überläufe) schon als Dateien unter „Körper", entfällt der Schritt und verschwindet aus der
-Leiste. Überläufe sind wahlweise: „Ohne Überläufe weiter" unter dem Knopf des Designers. <b>Einlass</b>: „Einlass auswählen", dann auf die große Kreisfläche des Pressrests tippen (oder den Vorschlag nehmen). Der
-Pressrest dahinter ist zu Beginn voll Schmelze (im Bild ein durchscheinender Zylinder bis zur gewählten Tiefe),
-der Kolben drückt über die Fläche nach; der Pfeil zeigt, wie die Schmelze einströmt. Es gibt nur einen Einlass:
-ein Tipp auf eine andere Fläche ersetzt ihn, ✕ entfernt ihn. <b>Auslässe</b>: „Auslass auswählen", dann auf ebene Flächen tippen, durch die die Luft geht (Esc beendet das Wählen): als Drossel (die Schmelze bleibt davor stehen wie am Entlüftungsblock) oder offen (auch die Schmelze tritt aus).
-<b>Netz</b>: Zellgröße, Hintergrund, Stufen je Körper (dünne Körper feiner; mit Kammer die Zelllänge der Kammer).
-<b>Fall</b>: der ZIP-Download.</p>
+Leiste. Überläufe sind wahlweise: „Ohne Überläufe weiter" unter dem Knopf des Designers. <b>Einlass</b>: vorgeschlagen ist die
+größte Kreisfläche des Pressrests; „Andere Fläche wählen", dann auf die Fläche tippen, nimmt eine andere. Im Block
+des Einlasses stehen Fläche, Richtung und die Tiefe, bis zu der der Pressrest zu Beginn voll Schmelze ist (im Bild
+ein durchscheinender Zylinder), der Pfeil zeigt, wie die Schmelze einströmt. Es gibt nur einen Einlass, ✕ entfernt
+ihn. Darunter die <b>Gießkammer</b>: ohne oder mit, und die Kammerlänge (sie gibt den Füllgrad und damit die
+Schusskurve). <b>Auslässe</b>: je Fläche einmal „Auslass auswählen" und auf eine ebene Fläche tippen, durch die die
+Luft geht (Esc bricht ab): als Drossel (die Schmelze bleibt davor stehen wie am Entlüftungsblock) oder offen (auch
+die Schmelze tritt aus). <b>Netz</b>: Zellgröße, Hintergrund, Stufen je Körper (dünne Körper feiner; mit Kammer die
+Zelllänge der Kammer). <b>Schusskurve</b> und <b>Prozess</b>: unten. <b>Fall</b>: der ZIP-Download.</p>
+<p><b>Vorschläge</b> sehen überall gleich aus: eine Zeile mit dem Etikett „Vorschlag" direkt unter dem Feld, mit dem
+Wert und warum. Gilt er, ist sie getönt und hat einen Haken; sonst steht „Übernehmen" daneben. Beim ersten Besuch
+eines Schritts gilt der Vorschlag (die größte Kreisfläche als Einlass, ihre Tiefe, zwei Zellen über die dünnste
+Bauteilwand); was man selbst einträgt oder wählt, bleibt. Die Kammerlänge kommt aus der Auslegung, ihr Vorschlag
+(Mitte des Füllgrad-Bands) gilt erst mit „Übernehmen".</p>
 </section>
 <section data-help-anchor="prozess">
-<h3>Prozess: Schusskurve und Gießkammer</h3>
+<h3>Schusskurve, Gießkammer und Prozess</h3>
 <p>Die Schusskurve ist die der Auslegung, gerechnet auf dieses Modell: Kolben-Ø = Einlass, Massen aus den
-Körpern, Kammerlänge aus der Auslegung oder von Hand. Liegt der Füllgrad außerhalb des Zielbands, bietet der
-Schritt die passende Kammerlänge an. Die <b>1. Phase</b> bis „Kammer voll": <b>DieLogic</b> (das fokussierende
+Körpern, Kammerlänge aus der Auslegung oder von Hand (unter „Einlass", mit dem Vorschlag für die Mitte des
+Füllgrad-Bands). Die <b>1. Phase</b> bis „Kammer voll": <b>DieLogic</b> (das fokussierende
 Kolbengesetz, Vorgabe), López oder V₁ von Hand. Die <b>2. Phase</b>: V₂ automatisch (die Auslegung wählt es für
-die NADCA-Füllzeit, Rampe mit ihrem a_max) oder V₂ von Hand mit a₂. Reicht a₂ bis zum Füllende nicht, sagt
-der Schritt, welches a₂ V₂ erreicht, und bietet es an. Das Bild zeigt den ganzen Schuss oder nur die
+die NADCA-Füllzeit, Rampe mit ihrem a_max) oder V₂ von Hand mit a₂. Reicht a₂ bis zum Füllende nicht, schlägt
+der Schritt das a₂ vor, mit dem V₂ erreicht wird. Der Schritt <b>Prozess</b> danach: Schwerkraft,
+Temperaturen und die Werte der Legierung. Das Bild zeigt den ganzen Schuss oder nur die
 Formfüllung, die Ereignisse nummeriert wie in der Legende, den gerechneten Teil als Balken auf der Achse; unter
 der Maus stehen Weg, Geschwindigkeit und Zeit.</p>
 <p><b>Ohne Kammer</b> beginnt die Rechnung bei „Kammer voll": der Pressrest ist voll Schmelze (ein Zylinder etwas
@@ -54,21 +63,34 @@ Anschnitte genau an die Bauteilwand; für das Netz verlängert die Seite sie um 
 </section>
 <section data-help-anchor="auswertung">
 <h3>Auswertung</h3>
-<p>Die Kennwerte stehen als Liste: der Haken nimmt einen in die Bilder, das Auge zeigt ihn im Rahmen. Wann ein
+<p>Während der Rechnung schreibt der Fall keine vollen Zeitstände mehr (die gibt es nur zum Weiterrechnen und am
+Ende), sondern mit Funktionsobjekten nur, was die Auswertung braucht: die Oberfläche der Schmelze (Isofläche
+alpha = 0,5) und die Wand mit den Werten der Zellen dahinter, dazu Zeitreihen von Füllung, Druck am Kolben, Luft in
+der Form, eingeschlossener Luft, Gasdruck, mitgerissener Luft und Oxiden, Temperatur und Festanteil. Die Bilder
+schneiden die Wand punktweise bei alpha = 0,5 ab — die Schmelze ist glatt, nicht aus Zellblöcken.</p>
+<p>Die Kennwerte stehen als Liste: der Haken nimmt einen in die Bilder, das Auge zeigt ihn im Rahmen. Die
+<b>Geschwindigkeit</b> ist im Regenbogen von 0 bis 50 m/s gefärbt, darüber Pink; der <b>Lufteinschluss</b>
+linear mit „Blue - Green - Orange" von 0 bis 100 %; die übrigen mit der Leiste der Auslegung. Wann ein
 Bild entsteht: nach <b>Füllgrad</b> der Form, nach <b>Zeit</b> oder nach <b>Kolbenweg</b>, je n Bilder
-gleichmäßig verteilt (Vorgabe 100 je Kennwert; der Fall schreibt dafür doppelt so viele Zeitstände). Format: Seitenverhältnis und Breite. Solange der Schritt dran ist, zeigt ein Rahmen im Bild
-den Ausschnitt, mit Farbleiste und Text an den Stellen der Bilder; „Aktuelle Ansicht übernehmen" nimmt genau
-diesen Rahmen (Lage, Ziel und Öffnungswinkel der Kamera). Jeder Kennwert ist mit derselben Leiste gefärbt.</p>
+gleichmäßig verteilt (Vorgabe 100 je Kennwert; der Fall schreibt dafür doppelt so viele Oberflächen). Format:
+Seitenverhältnis und Breite. Solange der Schritt dran ist, zeigt ein Rahmen im Bild den Ausschnitt, mit Farbleiste
+und Text an den Stellen der Bilder; „Aktuelle Ansicht übernehmen" nimmt genau diesen Rahmen (Lage, Ziel und
+Öffnungswinkel der Kamera).</p>
 </section>
 <section data-help-anchor="lauf">
 <h3>Den Fall rechnen</h3>
 <pre>unzip Name_openfoam.zip &amp;&amp; cd Name_openfoam
 source /usr/lib/openfoam/openfoam2606/etc/bashrc
-./Allrun            # NP=8 ./Allrun: 8 Prozesse; ./Allrun -mesh: nur das Netz</pre>
-<p>Allrun prüft, ob das Netz dicht ist (sonst schreibt snappyHexMesh den Weg der Leckage nach
-<code>postProcessing/constant/leakPath.vtp</code>) und ob jede Randfläche im Netz angekommen ist — ein Körper,
-der dünner als zwei Zellen ist, kann fehlen. Danach Anfangswerte, Zerlegung, dieLogicFoam bis zur vollen Form,
-Rekonstruktion und die Bilder in <code>images/</code>. Eine abgebrochene Rechnung läuft mit demselben Aufruf weiter.</p>
+./Allrun            # NP=8 ./Allrun: 8 Prozesse; ./Allrun -mesh: nur das Netz
+./Allrun -auswertung   # nur Bilder und Bericht neu</pre>
+<p>Im Hauptordner liegen die Skripte: <code>Allrun</code>, <code>Allclean</code>, <code>bilder.py</code>
+(ParaView), <code>bericht.py</code> (Python 3) und ihre Einstellungen <code>auswertung.json</code>; im Ordner
+<code>simulation</code> der OpenFOAM-Fall. Allrun prüft, ob das Netz dicht ist (sonst schreibt snappyHexMesh den Weg
+der Leckage nach <code>simulation/postProcessing/constant/leakPath.vtp</code>) und ob jede Randfläche im Netz
+angekommen ist — ein Körper, der dünner als zwei Zellen ist, kann fehlen. Danach Anfangswerte, Zerlegung,
+dieLogicFoam bis zur vollen Form und die Auswertung: <code>auswertung/bericht.html</code> mit den Kennzahlen, den
+Bildern (mit Zeitregler), den Verläufen, dazu <code>bilder</code>, <code>graphiken</code> (SVG) und
+<code>daten</code> (CSV). Eine abgebrochene Rechnung läuft mit demselben Aufruf weiter.</p>
 </section>
 `;
 

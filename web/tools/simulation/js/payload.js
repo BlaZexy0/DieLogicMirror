@@ -7,14 +7,26 @@ import { shotPlan, pistonTable } from './shot.js';
 import { edgeCheck, thickness } from './core/geometry.js';
 import { ROLE, hex2rgb, scaleRgb } from '../../3d-studio/js/part/colors.js';
 
-/* Die Farben der Bilder: die Leiste heat der Palette (für jeden Kennwert)
-   und die Rollen für Schmelze, Form und Schrift — als Zahlen, render.py
-   kennt keine Palette. */
+/* Die Farben der Auswertung als Zahlen — bilder.py und bericht.py kennen
+   keine Palette: die Leiste heat (die meisten Kennwerte), rainbow und bgo
+   mit ihren Stützstellen und der Farbe darüber (Geschwindigkeit, Luft;
+   die Bilder nehmen dafür die gleichnamigen Vorgaben von ParaView) und die
+   Rollen für Schmelze, Form, Schrift, Linien und Flächen des Berichts. */
+const ROLLEN = ['text', 'muted', 'border', 'borderLight', 'surface', 'viewport', 'primary', 'ok', 'caution', 'bad',
+  'melt', 'air', 'mark', 'die', 'runner', 'steelDark'];
 export function imageColors() {
   const r3 = c => c.map(x => Number(x.toFixed(4)));
+  const P = globalThis.__PALETTE__;
+  const stops = name => (P && P.leisten && P.leisten[name] ? P.leisten[name].map(([t, h]) => [Number(t.toFixed(4)), ...r3(hex2rgb(h))]) : null);
+  const colors = { shell: r3(hex2rgb(ROLE.part)) };
+  for (const k of ROLLEN) colors[k] = r3(hex2rgb(ROLE[k]));
   return {
     heat: Array.from({ length: 7 }, (_, k) => [Number((k / 6).toFixed(4)), ...r3(scaleRgb('heat', k / 6))]),
-    colors: { melt: r3(hex2rgb(ROLE.melt)), shell: r3(hex2rgb(ROLE.part)), text: r3(hex2rgb(ROLE.text)) }
+    maps: {
+      rainbow: { stops: stops('rainbow'), over: P && P.ueber && P.ueber.rainbow ? r3(hex2rgb(P.ueber.rainbow)) : null },
+      bgo: { stops: stops('bgo') }
+    },
+    colors
   };
 }
 

@@ -112,7 +112,9 @@ export function createPlan() {
       };
       plan.inlet = map(s.inlet);
       plan.outlets = (s.outlets || []).map(map).filter(Boolean);
-      if (s.mesh) Object.assign(plan.mesh, s.mesh);
+      /* ein gespeicherter Plan von vor dem Vorschlag (13.10.) hat seine
+         Zellgröße selbst gewählt: sie bleibt */
+      if (s.mesh) Object.assign(plan.mesh, s.mesh, s.mesh.cell > 0 && s.mesh.cellSet === undefined ? { cellSet: true } : {});
       if (s.process) Object.assign(plan.process, s.process);
       if (s.shot) Object.assign(plan.shot, s.shot);
       if (s.post) plan.post = normalizePost(JSON.parse(JSON.stringify(s.post)));

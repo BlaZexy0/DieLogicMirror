@@ -1,18 +1,19 @@
 /* Simulation einrichten (/tools/simulation/) — Einstieg und Verdrahtung.
 
-   Ein 3D-Studio-Rahmen mit neun Schritten in einer Leiste links, die wie
+   Ein 3D-Studio-Rahmen mit zehn Schritten in einer Leiste links, die wie
    ein Ablaufplan nacheinander frei werden: ein Schritt öffnet sich erst,
    wenn alle davor erledigt sind.
 
      1 Körper       Bauteil, Anguss, Pressrest, Überläufe aus STL/GLB
      2 Anguss       der Angussdesigner des Studios — oder aus Datei
      3 Überläufe    der Überlaufdesigner des Studios — oder aus Datei / ohne
-     4 Einlass      die Kreisfläche des Pressrests; der Pressrest voll Schmelze
+     4 Einlass      die Kreisfläche des Pressrests, Tiefe, Gießkammer
      5 Auslässe     ebene Flächen für die Luft (Entlüftung, Vakuumventil)
      6 Netz         Zellgröße und Verfeinerung für snappyHexMesh
-     7 Prozess      Kolben, Temperaturen, Legierung (Vorgabe: die Auslegung)
-     8 Auswertung   welche Bilder render.py schreibt
-     9 Fall         der OpenFOAM-Fall für dieLogicFoam als ZIP
+     7 Schusskurve  1. und 2. Phase (Vorgabe: die Auslegung)
+     8 Prozess      Schwerkraft, Temperaturen, Legierung
+     9 Auswertung   Bilder, Graphiken und Bericht nach der Rechnung
+    10 Fall         der OpenFOAM-Fall für dieLogicFoam als ZIP
 
    Die Designer kommen unverändert aus dem 3D-Studio (gleiche Fabrik wie in
    der Werkbank, js/studio/stages.js); ihre Körper laufen über host.on in
@@ -25,7 +26,7 @@ import { createUeberlaufTool } from '../../3d-studio/js/vents/tool.js';
 import { createVorschlag } from '../../3d-studio/js/werkbank/vorschlag.js';
 import { readGLBMeshes } from '../../3d-studio/js/part/glbio.js';
 import { createPlan, processFromProject, guessRole } from './plan.js';
-import { createLayer, createKoerperTool, createFlaechenTool, createNetzTool, createProzessTool, createAuswertungTool, createExportTool, readBodies } from './steps.js';
+import { createLayer, createKoerperTool, createFlaechenTool, createNetzTool, createSchussTool, createProzessTool, createAuswertungTool, createExportTool, readBodies } from './steps.js';
 import { build as buildDirect } from './build.js';
 import { gateArea as gateAreaDirect } from './core/geometry.js';
 import { HELP } from './help.js';
@@ -56,7 +57,8 @@ const ICON = {
   einlass: svg('<ellipse cx="13" cy="7" rx="8" ry="3"/><path d="M5 7 V19 a8 3 0 0 0 16 0 V7"/><path d="M13 25 V15 M10 18 L13 15 L16 18"/>'),
   auslass: svg('<path d="M4 20 H22"/><path d="M8 20 V12 H18 V20"/><path d="M13 12 V3 M10 6 L13 3 L16 6"/>'),
   netz: svg('<path d="M3 3 H23 V23 H3 Z"/><path d="M3 10 H23 M3 16 H23 M10 3 V23 M16 3 V23"/>'),
-  prozess: svg('<path d="M3 22 H23"/><path d="M3 22 V4"/><path d="M5 19 C9 18 10 9 14 9 H22"/>'),
+  schuss: svg('<path d="M3 22 H23"/><path d="M3 22 V4"/><path d="M5 19 C9 18 10 9 14 9 H22"/>'),
+  prozess: svg('<path d="M11 4 a2.5 2.5 0 0 1 5 0 V15.5 a5 5 0 1 1 -5 0 Z"/><path d="M13.5 9 V18.5"/><circle cx="13.5" cy="19.5" r="1.6"/><path d="M19 7 H22 M19 11 H22"/>'),
   auswertung: svg('<rect x="3" y="5" width="20" height="15" rx="1.5"/><path d="M6 8 V17" stroke-width="2.4"/><path d="M10 16 L14 11 L17 14 L21 9"/>'),
   fall: svg('<path d="M6 3 H16 L21 8 V23 H6 Z"/><path d="M16 3 V8 H21"/><path d="M13.5 11 V19 M10 16 L13.5 19.5 L17 16"/>')
 };
@@ -92,28 +94,33 @@ const STEPS = [
     done: () => plan.has('overflow'),
     tools: [{ id: 'ueberlauf', create: g => createUeberlaufTool(g, {}) }] },
   { id: 'einlass', label: 'Einlass', title: 'Die Einlassfläche am Pressrest', icon: ICON.einlass,
-    lead: 'Die Fläche, über die die Schmelze einströmt: die große Kreisfläche des Pressrests (Seite zur Kammer). Dort drückt der Kolben nach, der Pressrest dahinter ist zu Beginn voll Schmelze. Es gibt nur einen Einlass.',
+    lead: 'Die Fläche, über die die Schmelze einströmt: die große Kreisfläche des Pressrests (Seite zur Kammer). Vorgeschlagen ist die größte Kreisfläche; „Andere Fläche wählen" nimmt eine andere. Dahinter die Gießkammer: ohne Kammer beginnt die Rechnung bei „Kammer voll", mit Kammer beim Kolbenstart.',
     done: () => !!plan.inlet, why: 'Der Einlass ist noch nicht gewählt.',
     tools: [{ id: 'einlass', create: g => createFlaechenTool(g, { plan, layer, app, kind: 'inlet' }) }] },
   { id: 'auslass', label: 'Auslässe', title: 'Flächen, durch die die Luft entweicht', icon: ICON.auslass,
-    lead: 'Ebene Flächen, durch die die Luft entweicht: Entlüftung, Vakuumventil, Ende eines Überlaufs. Mindestens einer; jeder wird im Fall eine eigene Randfläche (vent1, vent2 …).',
+    lead: 'Ebene Flächen, durch die die Luft entweicht: Entlüftung, Vakuumventil, Ende eines Überlaufs. Mindestens einer; je Fläche einmal „Auslass auswählen". Jeder wird im Fall eine eigene Randfläche (vent1, vent2 …).',
     done: () => plan.outlets.length > 0, why: 'Es ist noch kein Auslass gewählt.',
     tools: [{ id: 'auslass', create: g => createFlaechenTool(g, { plan, layer, app, kind: 'outlet' }) }] },
   { id: 'netz', label: 'Netz', title: 'Zellgröße und Verfeinerung für snappyHexMesh', icon: ICON.netz,
-    lead: 'Das Rechennetz für snappyHexMesh: ein grober Hintergrund, an den Wänden und in den Körpern verfeinert bis zur Zellgröße. Dünne Körper bekommen eigene Stufen, damit zwei Zellen über die Wand passen.',
+    lead: 'Das Rechennetz für snappyHexMesh: ein grober Hintergrund, an den Wänden und in den Körpern verfeinert bis zur Zellgröße. Vorgeschlagen sind zwei Zellen über die dünnste Bauteilwand; dünne Körper bekommen eigene Stufen.',
     done: () => plan.mesh.cell > 0 && plan.mesh.nProc >= 1, why: 'Die Zellgröße fehlt.',
     tools: [{ id: 'netz', create: g => createNetzTool(g, { plan, app }) }] },
-  { id: 'prozess', label: 'Prozess', title: 'Schusskurve, Gießkammer, Temperaturen und Legierung', icon: ICON.prozess,
-    lead: 'Die Schusskurve der Auslegung auf dieses Modell (Kolben-Ø vom Einlass, Massen aus den Körpern), dazu Gießkammer, Schmelze und Form. Ohne Kammer beginnt die Rechnung bei „Kammer voll", mit Kammer beim Kolbenstart.',
+  { id: 'schuss', label: 'Schusskurve', title: 'Die Schusskurve: 1. und 2. Phase', icon: ICON.schuss,
+    lead: 'Die Schusskurve der Auslegung auf dieses Modell: Kolben-Ø vom Einlass, Massen aus den Körpern, Kammerlänge vom Einlass. Die 1. Phase füllt die Kammer bis „Kammer voll", die 2. Phase die Form.',
+    done: () => tools.schuss && tools.schuss.valid(),
+    get why() { return tools.schuss ? tools.schuss.why() : ''; },
+    tools: [{ id: 'schuss', create: g => createSchussTool(g, { plan, app }) }] },
+  { id: 'prozess', label: 'Prozess', title: 'Schwerkraft, Temperaturen und Legierung', icon: ICON.prozess,
+    lead: 'Schwerkraft, Temperaturen von Schmelze und Form und die Werte der Legierung — vorgegeben aus der Auslegung.',
     done: () => tools.prozess && tools.prozess.valid(),
     get why() { return tools.prozess ? tools.prozess.why() : ''; },
     tools: [{ id: 'prozess', create: g => createProzessTool(g, { plan, app }) }] },
-  { id: 'auswertung', label: 'Auswertung', title: 'Bilder der Auswertung (ParaView)', icon: ICON.auswertung,
-    lead: 'Was render.py nach der Rechnung als Bild schreibt: je Kennwert, Zeitpunkt und Ansicht eines. Der Rahmen im Bild ist der Ausschnitt; „Aktuelle Ansicht übernehmen" nimmt ihn genau so.',
+  { id: 'auswertung', label: 'Auswertung', title: 'Bilder, Graphiken und Bericht', icon: ICON.auswertung,
+    lead: 'Was nach der Rechnung entsteht: Bilder je Kennwert, Zeitpunkt und Ansicht, Graphiken von Füllung, Druck und Luft und ein Bericht (auswertung/bericht.html). Der Rahmen im Bild ist der Ausschnitt; „Aktuelle Ansicht übernehmen" nimmt ihn genau so.',
     done: () => plan.post.criteria.length > 0 && plan.post.views.length > 0, why: 'Mindestens ein Kennwert und eine Ansicht.',
     tools: [{ id: 'auswertung', create: g => createAuswertungTool(g, { plan, app, host }) }] },
   { id: 'fall', label: 'Fall', title: 'Den OpenFOAM-Fall herunterladen', icon: ICON.fall,
-    lead: 'Der OpenFOAM-Fall als ZIP: Netz, Anfangs- und Randwerte, dieLogicFoam, Allrun und render.py. Entpacken, OpenFOAM v2606 laden, ./Allrun — am Ende liegen die Bilder in images/.',
+    lead: 'Der Fall als ZIP: im Hauptordner Allrun und die Skripte der Auswertung, in simulation/ der OpenFOAM-Fall. Entpacken, OpenFOAM v2606 laden, ./Allrun — am Ende liegt der Bericht in auswertung/bericht.html.',
     done: () => plan.exported, why: '',
     tools: [{ id: 'export', create: g => createExportTool(g, { plan, app }) }] }
 ];

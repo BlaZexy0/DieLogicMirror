@@ -318,6 +318,38 @@ export function createKoerperTool(g, { plan, layer, app }) {
   return tool;
 }
 
+/* ── Vorschläge: überall gleich ──────────────────────────────────────
+   Wo die Seite einen Wert vorschlägt (Einlassfläche, Tiefe, Kammerlänge,
+   Zellgröße, a₂), steht er direkt unter dem Feld in einer Zeile mit dem
+   Etikett „Vorschlag": der Wert, warum, und „Übernehmen", solange etwas
+   anderes gilt. Gilt er, ist die Zeile getönt und hat einen Haken. Beim
+   ersten Besuch eines Schritts gilt der Vorschlag; was man selbst setzt,
+   bleibt (Wunsch vom 13.10.: sonst war unklar, was Vorschlag und was
+   Vorgabe ist). */
+const suggBox = ui => '<div class="sim-sugg" data-ui="' + ui + '" hidden></div>';
+/** s = { value, why, on, apply } oder null (kein Vorschlag) */
+function paintSugg(el, s) {
+  if (!el) return;
+  el.hidden = !s;
+  if (!s) return;
+  el.classList.toggle('on', !!s.on);
+  el.innerHTML = '<span class="sim-sugg-tag">' + (s.on ? '✓ Vorschlag' : 'Vorschlag') + '</span>'
+    + '<span class="sim-sugg-text"><b>' + esc(s.value) + '</b>' + (s.why ? ' · ' + esc(s.why) : '') + '</span>'
+    + (s.on ? '' : '<button type="button" class="btn btn-sm btn-outline" data-act="apply">' + esc(s.apply || 'Übernehmen') + '</button>');
+}
+const onSugg = (el, fn) => el && el.addEventListener('click', ev => { if (ev.target.closest('[data-act="apply"]')) fn(); });
+
+/* Zielbänder aus der Auslegung, sonst übliche Werte */
+const design = () => { try { return window.__PROJECT__.getSection('design').values || {}; } catch { return {}; } };
+const gateBand = () => { const v = design(); return v.gateMin > 0 && v.gateMax > v.gateMin ? [v.gateMin, v.gateMax] : [30, 50]; };
+const fillBand = () => { const v = design(); return v.fillMin > 0 && v.fillMax > v.fillMin ? [v.fillMin, v.fillMax] : [40, 60]; };
+/** Die Kammerlänge für die Mitte des Füllgrad-Bands (NaN ohne Schusskurve). */
+function lengthForBand(sp) {
+  if (!sp || sp.error) return NaN;
+  const [flo, fhi] = fillBand();
+  return Math.round(sp.Vdose / (Math.PI * sp.diam * sp.diam / 4) / ((flo + fhi) / 200) / 5) * 5;
+}
+
 /* ── Einlass, Auslässe: Flächen im Bild wählen ─────────────────────── */
 export function createFlaechenTool(g, { plan, layer, app, kind }) {
   const inlet = kind === 'inlet';
@@ -325,37 +357,49 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
   const modes = [{
     id, label: inlet ? 'Einlass' : 'Auslässe',
     html: inlet
-      ? '<div class="sim-actions"><button type="button" class="btn btn-sm btn-outline sim-pick" data-ui="pick" aria-pressed="false">Einlass auswählen</button>'
-        + '<button type="button" class="btn btn-sm btn-outline" data-ui="inlet-suggest">Vorschlag: größte Kreisfläche</button></div>'
-        + '<div class="st-list sim-outlets" data-ui="inlet-row"></div>'
-        + '<div class="krows" data-ui="inlet-kpis"></div>'
+      ? '<div class="sim-label">Einlassfläche</div>'
+        + suggBox('inlet-sugg')
+        + '<div class="sim-actions"><button type="button" class="btn btn-sm btn-outline sim-pick" data-ui="pick" aria-pressed="false">Einlass auswählen</button></div>'
+        + '<div class="sim-card sim-inlet" data-ui="inlet-card">'
+        + '<div class="sim-card-head" data-ui="inlet-row"></div>'
+        + '<div class="sim-card-body" data-ui="inlet-body">'
+        + '<div class="sim-dir"><span>Richtung</span><span class="sim-dirval" data-ui="inlet-dir"></span></div>'
         + numberRow({ ui: 'inlet-depth', label: 'Schmelze bis Tiefe', unit: 'mm' })
-        + '<div class="st-hintline" data-ui="inlet-note"></div>'
+        + suggBox('depth-sugg')
+        + '<div class="st-hintline" data-ui="inlet-note"></div></div></div>'
+        + '<div class="sim-label">Gießkammer</div>'
+        + segFull('p-chamber', 'Gießkammer', [['0', 'ohne Kammer'], ['1', 'mit Kammer']], plan.shot.chamber ? '1' : '0')
+        + '<div class="st-hintline" data-ui="chamber-note"></div>'
+        + numberRow({ ui: 'p-length', label: 'Kammerlänge', unit: 'mm' })
+        + suggBox('length-sugg')
+        + '<div class="krows" data-ui="chamber-kpis"></div>'
       : '<div class="sim-actions"><button type="button" class="btn btn-sm btn-outline sim-pick" data-ui="pick" aria-pressed="false">Auslass auswählen</button></div>'
         + '<div class="st-list sim-outlets" data-ui="outlet-list" data-scroll></div>'
         + '<div class="st-hintline" data-ui="outlet-note"></div>',
-    primary: () => app.nextPrimary(id)
+    primary: () => app.nextPrimary(id),
+    /* der Vorschlag gilt, solange noch kein Einlass gewählt ist */
+    enter: () => { if (inlet && !plan.inlet) suggest(true); }
   }];
   let active = false;
 
   /* Gewählt wird im Zielmodus: der Knopf schaltet ihn ein, der Hinweis im
-     Bild sagt, worauf man tippt, Esc oder „Abbrechen" beendet ihn. Den
-     Einlass gibt es nur einmal — der erste Treffer beendet das Zielen;
-     Auslässe bleiben im Zielmodus, bis man ihn beendet. */
+     Bild sagt, worauf man tippt, Esc oder „Abbrechen" beendet ihn. Ein
+     Treffer beendet ihn auch — beim Einlass wie bei den Auslässen; für den
+     nächsten Auslass drückt man den Knopf wieder. */
   let aiming = false;
   const AIM_TEXT = inlet ? 'Auf die Kreisfläche des Pressrests tippen'
-    : 'Auf ebene Flächen tippen, durch die die Luft geht — ein zweiter Tipp nimmt eine heraus';
-  const PICK_LABEL = inlet ? ['Einlass auswählen', 'Auswahl abbrechen'] : ['Auslass auswählen', 'Auswahl beenden'];
+    : 'Auf eine ebene Fläche tippen, durch die die Luft geht — ein Tipp auf einen Auslass nimmt ihn heraus';
+  const pickLabel = on => (on ? 'Auswahl abbrechen' : inlet ? (plan.inlet ? 'Andere Fläche wählen' : 'Einlass auswählen') : 'Auslass auswählen');
   function setAim(on) {
     aiming = on;
     g.aim.onCancel = on ? () => setAim(false) : null;
     g.aim.show(on, AIM_TEXT);
     g.viewport.classList.toggle('sim-aiming', on);
     const b = g.ui('pick');
-    if (b) { b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); b.textContent = PICK_LABEL[on ? 1 : 0]; }
+    if (b) { b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); b.textContent = pickLabel(on); }
   }
 
-  function choose(body, faces, info) {
+  function choose(body, faces, info, how = 'gewählt') {
     const sel = { bodyId: body.id, stamp: body.stamp, faces, centroid: info.centroid, normal: info.normal, area: info.area, radius: info.radius };
     if (inlet) {
       const d = depthAlong(body.tris, info.centroid, info.normal);
@@ -363,7 +407,7 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
       sel.depth = sel.depthAuto;
       plan.inlet = sel;
       plan.changed('inlet');
-      g.changed('Einlass gewählt');
+      g.changed('Einlass ' + how);
     } else {
       const k = plan.outlets.findIndex(o => o.bodyId === body.id && o.faces.includes(faces[0]));
       if (k >= 0) { plan.outlets.splice(k, 1); plan.changed('outlets'); g.changed('Auslass entfernt'); }
@@ -378,36 +422,66 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
     const r = planarRegion(hit.body.tris, layer.neighbours(hit.body), hit.face);
     if (inlet && r.circularity < 0.6) g.shell.toast('Die Fläche ist nicht kreisrund (' + fmt(100 * r.circularity) + ' %) — als Einlass trotzdem übernommen.', { ms: 6000 });
     if (!inlet && r.area > 0.5 * totalArea(hit.body)) { g.shell.toast('Diese Fläche ist fast der ganze Körper — das ist keine ebene Auslassfläche.'); return; }
+    setAim(false);
     choose(hit.body, r.faces, r);
-    if (inlet) setAim(false);
   }
   const totalArea = b => { let A = 0; for (let i = 0; i < b.tris.length; i += 9) { const ux = b.tris[i + 3] - b.tris[i], uy = b.tris[i + 4] - b.tris[i + 1], uz = b.tris[i + 5] - b.tris[i + 2], vx = b.tris[i + 6] - b.tris[i], vy = b.tris[i + 7] - b.tris[i + 1], vz = b.tris[i + 8] - b.tris[i + 2]; A += Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx) / 2; } return A; };
 
-  function suggest() {
+  /* Der Vorschlag: die größte kreisrunde ebene Fläche des Pressrests (ohne
+     Pressrest: aller Körper) — je Netzstand einmal gesucht. */
+  let suggCache = { key: null, val: null };
+  function suggestion() {
     const cands = plan.included().filter(b => b.role === 'biscuit');
     const pool = cands.length ? cands : plan.included();
+    const key = pool.map(b => b.id + ':' + b.stamp).join('|');
+    if (suggCache.key === key) return suggCache.val;
     let best = null, bb = null;
     for (const b of pool) { const r = suggestInlet(b.tris, layer.neighbours(b)); if (r && (!best || r.area > best.area)) { best = r; bb = b; } }
-    if (!best) { g.shell.toast('Keine kreisrunde ebene Fläche gefunden — bitte „Einlass auswählen" und im Bild tippen.'); return; }
+    suggCache = { key, val: best ? { body: bb, r: best } : null };
+    return suggCache.val;
+  }
+  const isSuggested = s => !!(s && plan.inlet && plan.inlet.bodyId === s.body.id && plan.inlet.faces.length === s.r.faces.length && plan.inlet.faces[0] === s.r.faces[0]);
+  function suggest(quiet = false) {
+    const s = suggestion();
+    if (!s) { if (!quiet) g.shell.toast('Keine kreisrunde ebene Fläche gefunden — bitte „Einlass auswählen" und im Bild tippen.'); return; }
     if (aiming) setAim(false);
-    choose(bb, best.faces, best);
+    choose(s.body, s.r.faces, s.r, 'nach Vorschlag');
   }
   function render() {
     if (inlet) {
       const i = plan.inlet, b = i && plan.body(i.bodyId);
+      const s = suggestion();
+      paintSugg(g.ui('inlet-sugg'), s ? { value: 'größte Kreisfläche', why: s.body.name + ', Ø ' + fmt(2 * s.r.radius, 1) + ' mm', on: isSuggested(s) } : null);
+      const pick = g.ui('pick');
+      if (pick && !aiming) pick.textContent = pickLabel(false);
+      g.ui('inlet-card').classList.toggle('empty', !i);
       g.ui('inlet-row').innerHTML = i
-        ? '<div class="sim-outlet sim-inlet"><div class="sim-name">inlet<small>' + esc(b ? b.name : '–') + ' · ' + fmt(i.area) + ' mm² · Ø ' + fmt(2 * i.radius, 1) + ' mm</small></div>'
-          + '<button type="button" class="btn btn-sm btn-outline sim-x" data-act="remove" title="Einlass entfernen" aria-label="Einlass entfernen">✕</button></div>'
-        : '<div class="st-hintline">Noch kein Einlass: „Einlass auswählen" und auf die Fläche tippen, oder den Vorschlag nehmen.</div>';
-      kpis(g.ui('inlet-kpis'), i ? [
-        { label: 'Richtung', value: '(' + i.normal.map(x => fmt(Math.abs(x) < 5e-3 ? 0 : -x, 2)).join('; ') + ')', note: 'Kolben schiebt so (der Pfeil im Bild)' }
-      ] : []);
-      const d = g.ui('inlet-depth');
-      if (d && document.activeElement !== d) d.value = i ? fmt(i.depth, 1) : '';
-      g.ui('inlet-note').textContent = !i ? ''
-        : (plan.shot.chamber ? 'Der Pfeil zeigt, wie die Schmelze aus der Kammer einströmt'
-          : 'Der durchscheinende Zylinder im Bild ist die Schmelze bei „Kammer voll", der Pfeil zeigt, wie sie einströmt')
-          + '; Tiefe vorgeschlagen aus dem Körper (' + fmt(i.depthAuto, 1) + ' mm).';
+        ? '<div class="sim-name">inlet<small>' + esc(b ? b.name : '–') + ' · ' + fmt(i.area) + ' mm² · Ø ' + fmt(2 * i.radius, 1) + ' mm</small></div>'
+          + '<button type="button" class="btn btn-sm btn-outline sim-x" data-act="remove" title="Einlass entfernen" aria-label="Einlass entfernen">✕</button>'
+        : '<div class="st-hintline">Noch kein Einlass: den Vorschlag übernehmen oder „Einlass auswählen" und auf die Fläche tippen.</div>';
+      g.ui('inlet-body').hidden = !i;
+      if (i) {
+        g.ui('inlet-dir').innerHTML = '(' + i.normal.map(x => fmt(Math.abs(x) < 5e-3 ? 0 : -x, 2)).join('; ') + ') <small>so schiebt der Kolben, der Pfeil im Bild</small>';
+        const d = g.ui('inlet-depth');
+        if (d && document.activeElement !== d) d.value = fmt(i.depth, 1);
+        paintSugg(g.ui('depth-sugg'), isFinite(i.depthAuto) ? { value: fmt(i.depthAuto, 1) + ' mm', why: b && b.role === 'biscuit' ? 'Tiefe des Pressrests' : 'aus dem Körper, höchstens Ø', on: Math.abs(i.depth - i.depthAuto) < 1e-6 } : null);
+        g.ui('inlet-note').textContent = plan.shot.chamber ? 'Der Pfeil zeigt, wie die Schmelze aus der Kammer einströmt.'
+          : 'Der durchscheinende Zylinder im Bild ist die Schmelze bei „Kammer voll", der Pfeil zeigt, wie sie einströmt.';
+      }
+      /* Gießkammer: mit oder ohne, Kammerlänge, Füllgrad */
+      const seg = g.ui('p-chamber');
+      if (seg) for (const x of seg.querySelectorAll('button')) x.classList.toggle('active', x.getAttribute('data-value') === (plan.shot.chamber ? '1' : '0'));
+      g.ui('chamber-note').textContent = plan.shot.chamber
+        ? 'Die Rechnung beginnt beim Kolbenstart: die Kammer hängt um den Hub hinter dem Einlass, die Schmelze liegt mit dem Füllgrad darin.'
+        : 'Die Rechnung beginnt bei „Kammer voll": der Pressrest ist voll Schmelze, der Kolben drückt über den Einlass nach. Die Kammerlänge zählt trotzdem — sie gibt die Schusskurve.';
+      const sp = i ? shotPlan(plan) : null;
+      const L = g.ui('p-length');
+      if (L && document.activeElement !== L) L.value = fmt(chamberLength(plan.shot), 0);
+      const want = lengthForBand(sp), [flo, fhi] = fillBand();
+      paintSugg(g.ui('length-sugg'), want > 0 && want > (i ? i.depth : 0) + 10 ? { value: fmt(want) + ' mm', why: fmt((flo + fhi) / 2) + ' % Füllgrad, Mitte des Zielbands ' + fmt(flo) + '–' + fmt(fhi) + ' %', on: Math.abs(chamberLength(plan.shot) - want) < 0.5 } : null);
+      kpis(g.ui('chamber-kpis'), sp && !sp.error ? [
+        { label: 'Füllgrad', value: fmt(100 * sp.phi, 1) + ' %', verdict: 100 * sp.phi < flo || 100 * sp.phi > fhi ? 'warn' : 'ok', note: 'Ziel ' + fmt(flo) + '–' + fmt(fhi) + ' % · Kolben-Ø ' + fmt(sp.diam, 1) + ' mm, Hub ' + fmt(sp.stroke) + ' mm' }
+      ] : sp && sp.error ? [{ label: 'Kammer', value: '–', verdict: 'bad', note: sp.error }] : []);
     } else {
       const list = g.ui('outlet-list');
       if (!list) return;
@@ -417,7 +491,7 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
         return '<div class="sim-outlet" data-k="' + k + '"><div class="sim-name">' + name + '<small>' + esc(b ? b.name : '') + ' · ' + fmt(o.area, 1) + ' mm²</small></div>'
           + '<button type="button" class="btn btn-sm btn-outline sim-x" data-act="remove" title="' + name + ' entfernen" aria-label="' + name + ' entfernen">✕</button>'
           + segFull('', 'Art von ' + name, [['orifice', 'Drossel (Cd 0,8)'], ['open', 'offen']], o.mode === 'open' ? 'open' : 'orifice') + '</div>';
-      }).join('') || '<div class="st-hintline">Noch kein Auslass: „Auslass auswählen" und auf die Flächen tippen.</div>';
+      }).join('') || '<div class="st-hintline">Noch kein Auslass: „Auslass auswählen" und auf eine Fläche tippen.</div>';
       g.ui('outlet-note').textContent = 'Drossel: die Luft strömt durch die Fläche wie durch eine Blende (Fläche × Cd), die Schmelze bleibt davor stehen wie am Entlüftungsblock. Offen: Umgebungsdruck an der Fläche, Luft und Schmelze treten aus (offener Vakuumschlauch, Wassermodell).';
     }
   }
@@ -428,7 +502,7 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
       onTap(g, pickAt);
       g.ui('pick').addEventListener('click', () => setAim(!aiming));
       if (inlet) {
-        g.ui('inlet-suggest').addEventListener('click', suggest);
+        onSugg(g.ui('inlet-sugg'), () => suggest());
         g.ui('inlet-row').addEventListener('click', ev => {
           if (!ev.target.closest('[data-act="remove"]') || !plan.inlet) return;
           plan.inlet = null;
@@ -439,7 +513,27 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
         g.ui('inlet-depth').addEventListener('change', ev => {
           const x = num(ev.target.value);
           if (plan.inlet && x > 0) { plan.inlet.depth = x; plan.changed('inlet'); g.changed('Schmelzetiefe ' + fmt(x, 1) + ' mm'); }
-          render();
+          render(); app.refresh();
+        });
+        onSugg(g.ui('depth-sugg'), () => {
+          if (!plan.inlet) return;
+          plan.inlet.depth = plan.inlet.depthAuto; plan.changed('inlet'); g.changed('Schmelzetiefe nach Vorschlag'); app.refresh();
+        });
+        g.ui('p-chamber').addEventListener('click', ev => {
+          const b = ev.target.closest('[data-value]');
+          if (!b) return;
+          plan.shot.chamber = b.getAttribute('data-value') === '1';
+          plan.changed('shot'); g.changed(plan.shot.chamber ? 'Mit Gießkammer' : 'Ohne Gießkammer');
+          render(); app.refresh();
+        });
+        g.ui('p-length').addEventListener('change', ev => {
+          const x = num(ev.target.value);
+          if (isFinite(x) && x > 10 && x < 5000) { plan.shot.length = x; plan.changed('shot'); g.changed('Kammerlänge ' + fmt(x) + ' mm'); }
+          render(); app.refresh();
+        });
+        onSugg(g.ui('length-sugg'), () => {
+          const want = lengthForBand(plan.inlet ? shotPlan(plan) : null);
+          if (want > 0) { plan.shot.length = want; plan.changed('shot'); g.changed('Kammerlänge ' + fmt(want) + ' mm nach Vorschlag'); app.refresh(); }
         });
       } else {
         const list = g.ui('outlet-list');
@@ -474,7 +568,8 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
     },
     /** den Zielmodus ein- oder ausschalten (Knopf, Tests) */
     aim: on => setAim(on !== false),
-    /** für die Seite: den Einlass ohne Klick vorschlagen (Beispiel) */
+    get aiming() { return aiming; },
+    /** den Vorschlag übernehmen (Knopf, Beispiel, Tests) */
     suggest,
     /** wie ein Tipp auf das Dreieck `face` des Körpers (Tests, Skripte) */
     pickFace(bodyId, face) {
@@ -492,10 +587,10 @@ export function createNetzTool(g, { plan, app }) {
   const modes = [{
     id: 'netz', label: 'Netz',
     html: numberRow({ ui: 'mesh-cell', label: 'Zellgröße', unit: 'mm' })
+      + suggBox('mesh-sugg')
       + segRow({ ui: 'mesh-level', label: 'Hintergrund', options: [['0', '1×'], ['1', '2×'], ['2', '4×'], ['3', '8×']], value: String(plan.mesh.level), help: '' })
       + numberRow({ ui: 'mesh-np', label: 'Prozesse', unit: '' })
       + '<div data-ui="mesh-sleeve-row">' + numberRow({ ui: 'mesh-sleeve', label: 'Kammer: Zelllänge', unit: 'mm' }) + '</div>'
-      + '<div class="sim-actions"><button type="button" class="btn btn-sm btn-outline" data-ui="mesh-fit" hidden></button></div>'
       + '<div class="sim-label">Körper</div><div class="st-list" data-ui="mesh-bodies"></div>'
       + '<div class="krows" data-ui="mesh-kpis"></div>'
       + '<div class="st-hintline" data-ui="mesh-note"></div>',
@@ -513,12 +608,33 @@ export function createNetzTool(g, { plan, app }) {
      Höhe ist der Anschnitt), und an den Spitzen seiner Verzweigungen fände
      p02 Keile von Zehntelmillimetern (U-Profil: drei Stufen, 3 Mio. Zellen). */
   const wallOf = b => { const th = thick.get(b.stamp); return th ? (b.role === 'runner' && b.src === 'file' ? th.p02 : th.p10) : NaN; };
+  /** Der Vorschlag für die Zellgröße: zwei Zellen über die dünnste
+      Bauteilwand, aber nicht mehr als rund zwei Millionen Zellen in den
+      Körpern; auf 0,05 mm, zwischen 0,25 und 3 mm. */
+  const CELL_BUDGET = 2e6;
+  function cellSuggestion() {
+    const parts = plan.included().filter(b => b.role === 'part' && isFinite(wallOf(b)));
+    if (!parts.length) return null;
+    const wall = Math.min(...parts.map(wallOf));
+    const vol = plan.included().reduce((s, b) => s + Math.abs(volume(b.tris)), 0);
+    const byWall = Math.floor(wall / 2 * 20) / 20, byBudget = Math.ceil(Math.cbrt(vol / CELL_BUDGET) * 20) / 20;
+    const cell = Math.min(3, Math.max(0.25, byWall, byBudget));
+    return { cell, wall, why: byBudget > byWall ? 'sonst über zwei Millionen Zellen (zwei über die Bauteilwand ' + fmt(wall, 1) + ' mm wären ' + fmt(byWall, 2) + ' mm)' : 'zwei Zellen über die dünnste Bauteilwand (' + fmt(wall, 1) + ' mm)' };
+  }
   /** Wandstärken messen (einmal je Netz) und Vorschläge setzen, wo der
-      Anwender nichts gewählt hat: Überläufe und Anguss automatisch. */
+      Anwender nichts gewählt hat: die Zellgröße, Stufen für Überläufe und
+      Anguss. */
   function measure() {
     let changed = false;
+    for (const b of plan.included()) if (!thick.has(b.stamp)) thick.set(b.stamp, thickness(b.tris));
+    const cs = cellSuggestion();
+    if (cs && !plan.mesh.cellSet && Math.abs(plan.mesh.cell - cs.cell) > 1e-9) {
+      plan.mesh.cell = cs.cell;
+      plan.mesh.cellSet = false;                // gespeichert: folgt dem Vorschlag (alte Pläne ohne den Schlüssel: plan.apply)
+      for (const b of plan.bodies) if (b.extraSet === undefined) delete b.extra;
+      changed = true;
+    }
     for (const b of plan.included()) {
-      if (!thick.has(b.stamp)) thick.set(b.stamp, thickness(b.tris));
       const sug = extraLevels(wallOf(b), plan.mesh.cell);
       if (b.extraSet === undefined && (b.role === 'overflow' || b.role === 'runner') && (b.extra || 0) !== sug) { b.extra = sug; changed = true; }
     }
@@ -537,8 +653,11 @@ export function createNetzTool(g, { plan, app }) {
       const th = thick.get(b.stamp), wall = wallOf(b);
       const k = b.extra || 0, h = M.cell / Math.pow(2, k);
       const thin = th && wall < 2 * h;
+      /* der Vorschlag je Körper: zwei Zellen über seine Wand — in der Zeile darunter, wie überall */
+      const sug = th ? extraLevels(wall, M.cell) : NaN;
+      const sugTxt = !th ? '' : sug === k ? ' · <span class="sim-ok">✓ Vorschlag</span>' : ' · Vorschlag ' + fmt(M.cell / Math.pow(2, sug), 2) + ' mm';
       return '<div class="sim-meshrow' + (thin ? ' warn' : '') + '" data-id="' + b.id + '"><span class="sim-name">' + esc(b.name)
-        + '<small title="' + (b.role === 'runner' && b.src === 'file' ? 'Anschnitt: die dünnsten 2 % der Wand' : 'die dünnsten 10 % der Wand') + '">' + (th ? 'Wand ' + fmt(wall, 1) + ' mm' + (b.role === 'runner' && b.src === 'file' ? ' am Anschnitt' : '') : 'Wand wird gemessen …') + (thin ? ' · unter zwei Zellen' : '') + '</small></span>'
+        + '<small title="' + (b.role === 'runner' && b.src === 'file' ? 'Anschnitt: die dünnsten 2 % der Wand' : 'die dünnsten 10 % der Wand') + '">' + (th ? 'Wand ' + fmt(wall, 1) + ' mm' + (b.role === 'runner' && b.src === 'file' ? ' am Anschnitt' : '') : 'Wand wird gemessen …') + (thin ? ' · unter zwei Zellen' : '') + sugTxt + '</small></span>'
         + '<select data-act="extra" aria-label="Verfeinerung ' + esc(b.name) + '">' + [0, 1, 2, 3].map(x => '<option value="' + x + '"' + (x === k ? ' selected' : '') + '>' + fmt(M.cell / Math.pow(2, x), 2) + ' mm</option>').join('') + '</select></div>';
     }).join('');
     let cells = bodies.reduce((s, b) => s + Math.abs(volume(b.tris)) * Math.pow(8, b.extra || 0), 0) / Math.pow(M.cell, 3);
@@ -558,16 +677,9 @@ export function createNetzTool(g, { plan, app }) {
     ]);
     g.ui('mesh-note').textContent = thinNow.length ? thinNow.map(b => b.name).join(', ') + ': dünner als zwei Zellen — kann im Netz fehlen; dann bricht Allrun mit einer Meldung ab.' : '';
     /* Das Bauteil bekommt keine Stufen von selbst (sie kosten das Achtfache):
-       der Knopf setzt die Zellgröße so, dass seine dünnste Wand zwei Zellen hat. */
-    const fit = g.ui('mesh-fit');
-    if (fit) {
-      const parts = bodies.filter(b => b.role === 'part' && isFinite(wallOf(b)));
-      const want = parts.length ? Math.floor(Math.min(...parts.map(wallOf)) / 2 * 20) / 20 : NaN;
-      const show = want > 0.1 && want < M.cell - 1e-9;
-      fit.hidden = !show;
-      fit.textContent = show ? 'Zellgröße ' + fmt(want, 2) + ' mm: zwei Zellen über die dünnste Bauteilwand' : '';
-      fit.dataset.cell = show ? String(want) : '';
-    }
+       die Zellgröße folgt ihm — der Vorschlag darunter. */
+    const cs = cellSuggestion();
+    paintSugg(g.ui('mesh-sugg'), cs ? { value: fmt(cs.cell, 2) + ' mm', why: cs.why, on: Math.abs(M.cell - cs.cell) < 1e-9 } : null);
   }
   plan.on(w => { if (['bodies', 'include', 'mesh', 'apply', 'role', 'shot', 'inlet'].includes(w)) render(); });
   return {
@@ -575,15 +687,16 @@ export function createNetzTool(g, { plan, app }) {
     mounted() {
       g.ui('mesh-cell').addEventListener('change', ev => {
         const x = num(ev.target.value);
-        if (x >= 0.1 && x <= 50) { plan.mesh.cell = x; for (const b of plan.bodies) if (b.extraSet === undefined) delete b.extra; plan.changed('mesh'); g.changed('Zellgröße ' + fmt(x, 2) + ' mm'); measure(); }
+        if (x >= 0.1 && x <= 50) { plan.mesh.cell = x; plan.mesh.cellSet = true; for (const b of plan.bodies) if (b.extraSet === undefined) delete b.extra; plan.changed('mesh'); g.changed('Zellgröße ' + fmt(x, 2) + ' mm'); measure(); }
         render(); app.refresh();
       });
-      g.ui('mesh-fit').addEventListener('click', ev => {
-        const x = Number(ev.currentTarget.dataset.cell);
-        if (!(x > 0)) return;
-        plan.mesh.cell = x;
+      /* Übernehmen: die Zellgröße folgt wieder dem Vorschlag */
+      onSugg(g.ui('mesh-sugg'), () => {
+        const cs = cellSuggestion();
+        if (!cs) return;
+        plan.mesh.cell = cs.cell; plan.mesh.cellSet = false;
         for (const b of plan.bodies) if (b.extraSet === undefined) delete b.extra;
-        plan.changed('mesh'); g.changed('Zellgröße ' + fmt(x, 2) + ' mm'); measure(); app.refresh();
+        plan.changed('mesh'); g.changed('Zellgröße ' + fmt(cs.cell, 2) + ' mm nach Vorschlag'); measure(); app.refresh();
       });
       g.ui('mesh-sleeve').addEventListener('change', ev => { const x = num(ev.target.value); if (x >= 0.2 && x <= 50) { plan.mesh.sleeveCell = x; plan.changed('mesh'); g.changed('Kammer: Zelllänge ' + fmt(x, 2) + ' mm'); } render(); });
       g.ui('mesh-np').addEventListener('change', ev => { const x = Math.round(num(ev.target.value)); if (x >= 1 && x <= 512) { plan.mesh.nProc = x; plan.changed('mesh'); g.changed(x + ' Prozesse'); } render(); });
@@ -601,47 +714,31 @@ export function createNetzTool(g, { plan, app }) {
   };
 }
 
-/* ── 7 Prozess ────────────────────────────────────────────────────── */
-const PROC = [
-  ['Tcast', 'Gießtemperatur', '°C', 0, 100, 1500],
-  ['Tdie', 'Formtemperatur', '°C', 0, 0, 800],
-  ['hDie', 'Wärmeübergang Form', 'W/(m²·K)', 0, 0, 1e6],
-  ['rho', 'Dichte flüssig', 'kg/m³', 0, 500, 20000],
-  ['mu', 'Zähigkeit', 'Pa·s', 4, 1e-5, 1],
-  ['cp', 'c_p flüssig', 'J/(kg·K)', 0, 100, 5000],
-  ['hf', 'Erstarrungswärme', 'kJ/kg', 0, 1, 2000],
-  ['Tliq', 'Liquidus', '°C', 0, 50, 1500],
-  ['Tsol', 'Solidus', '°C', 0, 50, 1500]
-];
+/* ── 7 Schusskurve ────────────────────────────────────────────────── */
 /* [Schlüssel, Bezeichnung, Einheit, Stellen, min, max, wann sichtbar] — wann: Modus der 1. Phase oder 'v2' (2. Phase von Hand) */
 const SHOT_PARAMS = [['kappa', 'κ = Kappe / U_H', '–', 2, 0.3, 1, 'focus'], ['v1', 'V₁', 'm/s', 2, 0.01, 5, 'v1v2'], ['a1', 'a₁', 'm/s²', 1, 0.1, 500, 'v1v2'], ['v2', 'V₂', 'm/s', 2, 0.1, 20, 'v2'], ['a2', 'a₂', 'm/s²', 1, 0.1, 5000, 'v2']];
 const shotRows = when => '<div data-shotmode="' + when + '">' + SHOT_PARAMS.filter(r => r[6] === when).map(([k, l, u]) => numberRow({ ui: 'p-' + k, label: l, unit: u })).join('') + '</div>';
-export function createProzessTool(g, { plan, app }) {
+/** a₂, mit dem V₂ bis zum Füllende erreicht wird (aufgerundet auf 5 m/s², 5 % Luft), NaN wenn es reicht. */
+const a2Fit = sp => (!sp.error && sp.v2Manual && isFinite(sp.a2Need) ? Math.ceil(sp.a2Need * 1.05 / 5) * 5 : NaN);
+export function createSchussTool(g, { plan, app }) {
   let view = 'all', sp = null;
   const modes = [{
-    id: 'prozess', label: 'Prozess',
-    html: segRow({ ui: 'p-chamber', label: 'Gießkammer', options: [['0', 'ohne'], ['1', 'mit Kammer']], value: plan.shot.chamber ? '1' : '0' })
-      + numberRow({ ui: 'p-length', label: 'Kammerlänge', unit: 'mm' })
-      + '<div class="sim-actions"><button type="button" class="btn btn-sm btn-outline" data-ui="p-length-fit" hidden></button></div>'
-      + '<div class="sim-label">1. Phase — bis „Kammer voll"</div>'
+    id: 'schuss', label: 'Schusskurve',
+    html: '<div class="sim-label">1. Phase — bis „Kammer voll"</div>'
       + segFull('p-mode', 'Gesetz der 1. Phase', CURVE_MODES, plan.shot.mode)
       + shotRows('focus') + shotRows('v1v2')
       + '<div class="st-hintline" data-ui="p-phase1"></div>'
       + '<div class="sim-label">2. Phase — Formfüllung</div>'
       + segFull('p-v2mode', 'Zweite Phase', V2_MODES, plan.shot.v2Mode || 'auto')
       + shotRows('v2')
+      + suggBox('a2-sugg')
       + '<div class="st-hintline" data-ui="p-phase2"></div>'
-      + '<div class="sim-actions"><button type="button" class="btn btn-sm btn-outline" data-ui="p-a2-fit" hidden></button></div>'
-      + '<div class="sim-label">Schusskurve</div>'
+      + '<div class="sim-label">Kurve</div>'
       + segFull('p-view', 'Ausschnitt', [['all', 'Ganzer Schuss'], ['fill', 'Formfüllung']], 'all')
       + '<div class="sim-curvebox" data-ui="p-curve"></div>'
       + '<div data-ui="p-legend"></div>'
-      + '<div class="krows" data-ui="p-shot"></div>'
-      + selectRow({ ui: 'p-gravity', label: 'Schwerkraft', options: [['-y', '−y'], ['+y', '+y'], ['-x', '−x'], ['+x', '+x'], ['-z', '−z'], ['+z', '+z'], ['aus', 'aus']], value: plan.process.gravity })
-      + '<details class="st-details sim-details" data-ui="p-melt"><summary>Schmelze und Form <span data-ui="p-melt-sum"></span></summary><div class="st-details-body">'
-      + PROC.map(([k, l, u]) => numberRow({ ui: 'p-' + k, label: l, unit: u })).join('')
-      + '<div class="krows" data-ui="p-kpis"></div></div></details>',
-    primary: () => app.nextPrimary('prozess'),
+      + '<div class="krows" data-ui="p-shot"></div>',
+    primary: () => app.nextPrimary('schuss'),
     enter: () => measureGate()
   }];
   let gateA = NaN, gateBusy = false;
@@ -650,20 +747,11 @@ export function createProzessTool(g, { plan, app }) {
     try { gateA = await app.gate(); } catch (err) { console.error(err); gateA = NaN; }
     gateBusy = false; render();
   }
-  /* Zielbänder aus der Auslegung, sonst übliche Werte */
-  const design = () => { try { return window.__PROJECT__.getSection('design').values || {}; } catch { return {}; } };
-  const band = () => { const v = design(); return v.gateMin > 0 && v.gateMax > v.gateMin ? [v.gateMin, v.gateMax] : [30, 50]; };
-  const fillBand = () => { const v = design(); return v.fillMin > 0 && v.fillMax > v.fillMin ? [v.fillMin, v.fillMax] : [40, 60]; };
   function render() {
     const set = (ui, v) => { const el = g.ui(ui); if (el && document.activeElement !== el) el.value = v; };
-    for (const [k, , , d] of PROC) set('p-' + k, fmt(plan.process[k], d));
     for (const [k, , , d] of SHOT_PARAMS) set('p-' + k, fmt(plan.shot[k], d));
-    set('p-length', fmt(chamberLength(plan.shot), 0));
-    const gr = g.ui('p-gravity');
-    if (gr) gr.value = plan.process.gravity;
     const S = plan.shot, manual = v2Manual(S);
     const segSet = (ui, val) => { const el = g.ui(ui); if (el) for (const b of el.querySelectorAll('button')) b.classList.toggle('active', b.getAttribute('data-value') === val); };
-    segSet('p-chamber', S.chamber ? '1' : '0');
     segSet('p-mode', S.mode);
     segSet('p-v2mode', manual ? 'manual' : 'auto');
     segSet('p-view', view);
@@ -679,20 +767,16 @@ export function createProzessTool(g, { plan, app }) {
     if (box) box.innerHTML = sp.error ? '<div class="st-hintline">' + esc(sp.error) + '</div>' : curveSVG(sp, { chamber: S.chamber, view });
     const leg = g.ui('p-legend');
     if (leg) leg.innerHTML = sp.error ? '' : curveLegend(sp, { chamber: S.chamber });
-    const ph1 = g.ui('p-phase1'), ph2 = g.ui('p-phase2'), a2fit = g.ui('p-a2-fit');
+    const ph1 = g.ui('p-phase1'), ph2 = g.ui('p-phase2');
     if (ph1) ph1.textContent = sp.error ? '' : ({ focus: 'Fokussierendes Kolbengesetz bis zur Kappe κ·U_H (höchstens v_krit), Plateau bis „Kammer voll".', lopez: 'Anfahrt nach López bis v_krit, Plateau bis „Kammer voll".', v1v2: 'Rampe mit a₁ auf V₁, Plateau bis „Kammer voll".' })[S.mode] || '';
     if (ph2) ph2.textContent = sp.error ? '' : manual
       ? (isFinite(sp.v2Reached) ? sp.warn : 'Ab „Kammer voll" mit a₂ auf V₂, dann gleichbleibend bis zum Füllende.')
       : 'V₂ = ' + fmt(sp.v2, 2) + ' m/s trifft die ' + (isFinite(sp.tNadca) ? 'Füllzeit ' + fmt(sp.tNadca, 1) + ' ms' : 'Füllzeit') + ' (NADCA, höchstens t_max der Auslegung); Rampe mit a_max ' + fmt(sp.a2) + ' m/s² der Auslegung.';
     if (ph2) ph2.classList.toggle('warn', !sp.error && manual && isFinite(sp.v2Reached));
-    if (a2fit) {
-      const need = !sp.error && manual && isFinite(sp.a2Need) ? Math.ceil(sp.a2Need * 1.05 / 5) * 5 : NaN;
-      a2fit.hidden = !(need > 0 && need <= 5000);
-      a2fit.textContent = need > 0 ? 'a₂ = ' + fmt(need) + ' m/s²: V₂ wird erreicht' : '';
-      a2fit.dataset.a2 = need > 0 ? String(need) : '';
-    }
-    const P = plan.process;
-    const [lo, hi] = band(), [flo, fhi] = fillBand();
+    /* a₂: der Vorschlag nur, wenn V₂ von Hand nicht erreicht wird */
+    const need = a2Fit(sp);
+    paintSugg(g.ui('a2-sugg'), need > 0 && need <= 5000 ? { value: 'a₂ = ' + fmt(need) + ' m/s²', why: 'damit V₂ bis zum Füllende erreicht wird', on: false } : null);
+    const [lo, hi] = gateBand(), [flo, fhi] = fillBand();
     const rows = [];
     if (!sp.error) {
       const vc = sp.shot.vcrit, v1 = sp.shot.v1;
@@ -705,7 +789,7 @@ export function createProzessTool(g, { plan, app }) {
       const loose = isFinite(sec) && isFinite(gateA) && gateA < 0.5 * sec;
       rows.push(
         { label: 'Kolben-Ø', value: fmt(sp.diam, 1) + ' mm', note: 'vom Einlass · Kammer ' + fmt(sp.length) + ' mm, Hub ' + fmt(sp.stroke) + ' mm' },
-        { label: 'Füllgrad', value: fmt(100 * sp.phi, 1) + ' %', verdict: 100 * sp.phi < flo || 100 * sp.phi > fhi ? 'warn' : 'ok', note: 'Ziel ' + fmt(flo) + '–' + fmt(fhi) + ' % · „Kammer voll" bei ' + fmt(sp.sFull) + ' mm, ' + fmt(sp.tFull * 1000) + ' ms' },
+        { label: 'Füllgrad', value: fmt(100 * sp.phi, 1) + ' %', verdict: 100 * sp.phi < flo || 100 * sp.phi > fhi ? 'warn' : 'ok', note: 'Ziel ' + fmt(flo) + '–' + fmt(fhi) + ' % (Kammerlänge unter „Einlass") · „Kammer voll" bei ' + fmt(sp.sFull) + ' mm, ' + fmt(sp.tFull * 1000) + ' ms' },
         { label: '1. Phase', value: fmt(v1, 2) + ' m/s', verdict: v1 <= vc + 1e-9 ? 'ok' : 'bad', note: 'höchstens v_krit ' + fmt(vc, 2) + ' m/s' },
         { label: 'Füllzeit', value: isFinite(sp.fillMs) ? fmt(sp.fillMs, 1) + ' ms' : '–', note: 'ab Anschnitt · v bei „Bauteil gefüllt" ' + fmt(sp.vAtPart, 2) + ' m/s' },
         gateBusy ? { label: 'Anschnitt', value: 'wird gemessen …' }
@@ -717,27 +801,83 @@ export function createProzessTool(g, { plan, app }) {
       if (sp.warn && !(manual && isFinite(sp.v2Reached))) rows.push({ label: 'Hinweis', value: '', verdict: 'warn', note: sp.warn });
     } else rows.push({ label: 'Schusskurve', value: '–', verdict: 'bad', note: sp.error });
     kpis(g.ui('p-shot'), rows);
-    /* Füllgrad außerhalb des Zielbands: die Kammerlänge für die Mitte anbieten */
-    const fit = g.ui('p-length-fit');
-    if (fit) {
-      const want = sp.error ? NaN : Math.round(sp.Vdose / (Math.PI * sp.diam * sp.diam / 4) / ((flo + fhi) / 200) / 5) * 5;
-      const off = !sp.error && (100 * sp.phi < flo || 100 * sp.phi > fhi) && want > sp.depth + 10;
-      fit.hidden = !off;
-      fit.textContent = off ? 'Kammerlänge ' + fmt(want) + ' mm für ' + fmt((flo + fhi) / 2) + ' % Füllgrad' : '';
-      fit.dataset.length = off ? String(want) : '';
+  }
+  plan.on(w => { if (['process', 'shot', 'apply', 'inlet', 'bodies', 'include', 'role', 'mesh'].includes(w)) render(); });
+  return {
+    id: 'schuss', modes, startMode: 'schuss',
+    mounted() {
+      for (const [k, l, , d, lo, hi] of SHOT_PARAMS) {
+        g.ui('p-' + k).addEventListener('change', ev => {
+          const x = num(ev.target.value);
+          if (isFinite(x) && x >= lo && x <= hi) { plan.shot[k] = x; plan.changed('shot'); g.changed(l + ' ' + fmt(x, d)); }
+          render(); app.refresh();
+        });
+      }
+      const segClick = (ui, fn) => g.ui(ui).addEventListener('click', ev => { const b = ev.target.closest('[data-value]'); if (b && !b.disabled) fn(b.getAttribute('data-value'), b.textContent); });
+      segClick('p-mode', (v, l) => { plan.shot.mode = v; plan.changed('shot'); g.changed('1. Phase: ' + l); render(); app.refresh(); });
+      segClick('p-v2mode', (v, l) => { plan.shot.v2Mode = v; plan.changed('shot'); g.changed('2. Phase: ' + l); render(); app.refresh(); });
+      segClick('p-view', v => { view = v; render(); });
+      onSugg(g.ui('a2-sugg'), () => {
+        const x = a2Fit(shotPlan(plan));
+        if (x > 0) { plan.shot.a2 = x; plan.changed('shot'); g.changed('a₂ ' + fmt(x) + ' m/s² nach Vorschlag'); render(); app.refresh(); }
+      });
+      const box = g.ui('p-curve');
+      box.addEventListener('pointermove', ev => { if (sp && !sp.error) curveCursor(box.querySelector('svg'), sp, ev.clientX); });
+      box.addEventListener('pointerleave', () => curveCursor(box.querySelector('svg'), sp, null));
+      render();
+    },
+    valid: () => !shotPlan(plan).error,
+    why: () => 'Schusskurve: ' + (shotPlan(plan).error || '')
+  };
+}
+
+/* ── 8 Prozess ────────────────────────────────────────────────────── */
+const PROC_T = [
+  ['Tcast', 'Gießtemperatur', '°C', 0, 100, 1500],
+  ['Tdie', 'Formtemperatur', '°C', 0, 0, 800],
+  ['hDie', 'Wärmeübergang Form', 'W/(m²·K)', 0, 0, 1e6],
+  ['Tliq', 'Liquidus', '°C', 0, 50, 1500],
+  ['Tsol', 'Solidus', '°C', 0, 50, 1500]
+];
+const PROC_M = [
+  ['rho', 'Dichte flüssig', 'kg/m³', 0, 500, 20000],
+  ['mu', 'Zähigkeit', 'Pa·s', 4, 1e-5, 1],
+  ['cp', 'c_p flüssig', 'J/(kg·K)', 0, 100, 5000],
+  ['hf', 'Erstarrungswärme', 'kJ/kg', 0, 1, 2000]
+];
+const PROC = PROC_T.concat(PROC_M);
+export function createProzessTool(g, { plan, app }) {
+  const modes = [{
+    id: 'prozess', label: 'Prozess',
+    html: '<div class="sim-label">Schwerkraft</div>'
+      + selectRow({ ui: 'p-gravity', label: 'Richtung', options: [['-y', '−y'], ['+y', '+y'], ['-x', '−x'], ['+x', '+x'], ['-z', '−z'], ['+z', '+z'], ['aus', 'aus']], value: plan.process.gravity })
+      + '<div class="st-hintline" data-ui="p-gnote"></div>'
+      + '<div class="sim-label">Temperaturen</div>'
+      + PROC_T.map(([k, l, u]) => numberRow({ ui: 'p-' + k, label: l, unit: u })).join('')
+      + '<div class="sim-label">Schmelze</div>'
+      + PROC_M.map(([k, l, u]) => numberRow({ ui: 'p-' + k, label: l, unit: u })).join('')
+      + '<div class="krows" data-ui="p-kpis"></div>',
+    primary: () => app.nextPrimary('prozess')
+  }];
+  function render() {
+    const set = (ui, v) => { const el = g.ui(ui); if (el && document.activeElement !== el) el.value = v; };
+    for (const [k, , , d] of PROC) set('p-' + k, fmt(plan.process[k], d));
+    const gr = g.ui('p-gravity');
+    if (gr) gr.value = plan.process.gravity;
+    const P = plan.process;
+    const gok = !plan.shot.chamber || chamberOk(plan);
+    const gn = g.ui('p-gnote');
+    if (gn) {
+      gn.textContent = plan.shot.chamber ? (gok ? 'Mit Kammer: die Schwerkraft steht quer zur Kolbenachse, die Schmelze liegt in der Kammer.' : 'Mit Kammer muss die Schwerkraft quer zur Kolbenachse stehen — die Schmelze liegt in der Kammer.') : 'Richtung im Bauteilsystem; die Form öffnet nach +z.';
+      gn.classList.toggle('warn', !gok);
     }
     const ok = P.Tcast > P.Tliq && P.Tliq > P.Tsol && P.Tdie < P.Tsol;
-    /* zugeklappt steht die Kurzfassung in der Zeile; passt etwas nicht, geht sie auf */
-    const sum = g.ui('p-melt-sum');
-    if (sum) sum.textContent = '· ' + fmt(P.Tcast) + ' °C in ' + fmt(P.Tdie) + ' °C' + (ok ? '' : ' · prüfen');
-    const det = g.ui('p-melt');
-    if (det && !ok) det.open = true;
     kpis(g.ui('p-kpis'), [
       { label: 'Überhitzung', value: fmt(P.Tcast - P.Tliq) + ' K', verdict: P.Tcast > P.Tliq ? 'ok' : 'bad' },
       { label: 'Temperaturen', value: ok ? 'stimmig' : 'prüfen', verdict: ok ? 'ok' : 'bad', note: 'Guss > Liquidus > Solidus > Form' }
     ]);
   }
-  plan.on(w => { if (['process', 'shot', 'apply', 'inlet', 'bodies', 'include', 'role', 'mesh'].includes(w)) render(); });
+  plan.on(w => { if (['process', 'shot', 'apply', 'inlet'].includes(w)) render(); });
   return {
     id: 'prozess', modes, startMode: 'prozess',
     mounted() {
@@ -748,55 +888,16 @@ export function createProzessTool(g, { plan, app }) {
           render(); app.refresh();
         });
       }
-      for (const [k, l, , d, lo, hi] of SHOT_PARAMS) {
-        g.ui('p-' + k).addEventListener('change', ev => {
-          const x = num(ev.target.value);
-          if (isFinite(x) && x >= lo && x <= hi) { plan.shot[k] = x; plan.changed('shot'); g.changed(l + ' ' + fmt(x, d)); }
-          render(); app.refresh();
-        });
-      }
-      g.ui('p-length').addEventListener('change', ev => {
-        const x = num(ev.target.value);
-        if (isFinite(x) && x > 10 && x < 5000) { plan.shot.length = x; plan.changed('shot'); g.changed('Kammerlänge ' + fmt(x) + ' mm'); }
-        render(); app.refresh();
-      });
-      g.ui('p-length-fit').addEventListener('click', ev => {
-        const x = Number(ev.currentTarget.dataset.length);
-        if (x > 0) { plan.shot.length = x; plan.changed('shot'); g.changed('Kammerlänge ' + fmt(x) + ' mm'); render(); app.refresh(); }
-      });
-      const segClick = (ui, fn) => g.ui(ui).addEventListener('click', ev => { const b = ev.target.closest('[data-value]'); if (b && !b.disabled) fn(b.getAttribute('data-value'), b.textContent); });
-      segClick('p-mode', (v, l) => { plan.shot.mode = v; plan.changed('shot'); g.changed('1. Phase: ' + l); render(); app.refresh(); });
-      segClick('p-v2mode', (v, l) => { plan.shot.v2Mode = v; plan.changed('shot'); g.changed('2. Phase: ' + l); render(); app.refresh(); });
-      segClick('p-view', v => { view = v; render(); });
-      g.ui('p-a2-fit').addEventListener('click', ev => {
-        const x = Number(ev.currentTarget.dataset.a2);
-        if (x > 0) { plan.shot.a2 = x; plan.changed('shot'); g.changed('a₂ ' + fmt(x) + ' m/s²'); render(); app.refresh(); }
-      });
-      const box = g.ui('p-curve');
-      box.addEventListener('pointermove', ev => { if (sp && !sp.error) curveCursor(box.querySelector('svg'), sp, ev.clientX); });
-      box.addEventListener('pointerleave', () => curveCursor(box.querySelector('svg'), sp, null));
-      g.ui('p-chamber').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-value]');
-        if (!b) return;
-        plan.shot.chamber = b.getAttribute('data-value') === '1';
-        plan.changed('shot'); g.changed(plan.shot.chamber ? 'Mit Gießkammer' : 'Ohne Gießkammer');
-        render(); app.refresh();
-      });
       g.ui('p-gravity').addEventListener('change', ev => { plan.process.gravity = ev.target.value; plan.changed('process'); g.changed('Schwerkraft ' + ev.target.value); render(); app.refresh(); });
       render();
     },
     valid() {
       const P = plan.process;
       if (!(P.Tcast > P.Tliq && P.Tliq > P.Tsol && P.Tdie < P.Tsol)) return false;
-      const sp = shotPlan(plan);
-      if (sp.error) return false;
       /* mit Kammer: Schwerkraft quer zur Kolbenachse (die Schmelze liegt in der Kammer) */
-      if (plan.shot.chamber) return chamberOk(plan);
-      return true;
+      return !plan.shot.chamber || chamberOk(plan);
     },
     why() {
-      const sp = shotPlan(plan);
-      if (sp.error) return 'Schusskurve: ' + sp.error;
       if (plan.shot.chamber && !chamberOk(plan)) return 'Mit Kammer muss die Schwerkraft quer zur Kolbenachse stehen.';
       return 'Die Temperaturen passen nicht zusammen (Guss > Liquidus > Solidus > Form).';
     }
@@ -809,12 +910,12 @@ function chamberOk(plan) {
   return Math.abs(gv[0] * plan.inlet.normal[0] + gv[1] * plan.inlet.normal[1] + gv[2] * plan.inlet.normal[2]) <= 0.2;
 }
 
-/* ── 8 Auswertung ─────────────────────────────────────────────────── */
+/* ── 9 Auswertung ─────────────────────────────────────────────────── */
 /* Die Bilder: welche Kennwerte, wann (nach Füllgrad, Zeit oder Kolbenweg, n
    Stück), welches Format, aus welchen Ansichten. Solange der Schritt dran
    ist, zeigt ein Rahmen im Viewport den Bildausschnitt im gewählten
    Seitenverhältnis — mit einer Farbleiste oben links und dem Text oben
-   rechts, an denselben Stellen wie in render.py (FRAME). */
+   rechts, an denselben Stellen wie in bilder.py (FRAME). */
 export function createAuswertungTool(g, { plan, app, host }) {
   const P = () => (plan.post = normalizePost(plan.post));
   const modes = [{
@@ -841,7 +942,7 @@ export function createAuswertungTool(g, { plan, app, host }) {
   frame.className = 'sim-frame';
   frame.setAttribute('aria-hidden', 'true');
   frame.hidden = true;
-  frame.innerHTML = '<div class="sim-frame-box"><div class="sim-frame-bar"><i></i><b class="hi"></b><b class="lo"></b><span class="tt"></span></div>'
+  frame.innerHTML = '<div class="sim-frame-box"><div class="sim-frame-bar"><i></i><em class="ov"></em><b class="hi"></b><b class="lo"></b><span class="tt"></span></div>'
     + '<div class="sim-frame-text"></div><div class="sim-frame-size"></div></div>';
   vp.appendChild(frame);
   const box = frame.querySelector('.sim-frame-box');
@@ -860,14 +961,20 @@ export function createAuswertungTool(g, { plan, app, host }) {
     Object.assign(box.style, { left: R.x + 'px', top: R.y + 'px', width: R.w + 'px', height: R.h + 'px' });
     const crit = CRITERIA.find(c => c.id === post.preview) || CRITERIA[0];
     const [iw, ih] = imageSize(post);
-    const fs = Math.max(9, 22 * R.h / 1000);                              // wie render.py: 22 px je 1000 px Bildhöhe
+    const fs = Math.max(9, 22 * R.h / 1000);                              // wie bilder.py: 22 px je 1000 px Bildhöhe
     const bar = frame.querySelector('.sim-frame-bar');
     Object.assign(bar.style, { left: FRAME.barX * R.w + 'px', top: FRAME.barTop * R.h + 'px', height: FRAME.barLen * R.h + 'px', fontSize: fs * 0.85 + 'px' });
     const ramp = bar.querySelector('i');
     ramp.style.width = Math.max(5, FRAME.barW * R.w) + 'px';
-    /* dieselbe Leiste wie in den Bildern: heat der Palette */
-    ramp.style.background = 'linear-gradient(to top, ' + Array.from({ length: 7 }, (_, k) => scale('heat', k / 6)).join(', ') + ')';
-    bar.querySelector('.hi').textContent = crit.range[1];
+    /* dieselbe Leiste wie in den Bildern: die des Kennwerts (Palette) —
+       Regenbogen mit Pink darüber, Blue - Green - Orange oder heat */
+    const PAL = globalThis.__PALETTE__;
+    ramp.style.background = PAL && PAL.leisten && PAL.leisten[crit.map] ? PAL.gradient(crit.map, 'to top')
+      : 'linear-gradient(to top, ' + Array.from({ length: 7 }, (_, k) => scale('heat', k / 6)).join(', ') + ')';
+    const ov = bar.querySelector('.ov'), over = PAL && PAL.ueber && PAL.ueber[crit.map];
+    ov.hidden = !over;
+    if (over) Object.assign(ov.style, { background: over, width: ramp.style.width });
+    bar.querySelector('.hi').textContent = crit.range[1] + (over ? ', darüber Pink' : '');
     bar.querySelector('.lo').textContent = crit.range[0];
     bar.querySelector('.tt').textContent = crit.label + ' [' + crit.unit + ']';
     const sp = plan.inlet ? shotPlan(plan) : null;
@@ -1003,7 +1110,7 @@ export function createAuswertungTool(g, { plan, app, host }) {
   };
 }
 
-/* ── 9 Export ─────────────────────────────────────────────────────── */
+/* ── 10 Export ─────────────────────────────────────────────────────── */
 export function createExportTool(g, { plan, app }) {
   let busy = false, last = null;
   const modes = [{
@@ -1013,7 +1120,8 @@ export function createExportTool(g, { plan, app }) {
       + '<div class="st-hintline" data-ui="exp-note"></div>'
       + '<div class="sim-cmdbox"><div class="sim-cmdhead"><span>Im Terminal</span><button type="button" class="sim-copy" data-ui="exp-copy">Kopieren</button></div>'
       + '<pre class="sim-cmd" data-ui="exp-cmd"></pre></div>'
-      + '<div class="st-hintline">Mit mehreren Prozessen: <code>NP=8 ./Allrun</code>. Eine abgebrochene Rechnung läuft mit demselben Aufruf weiter.</div>',
+      + '<div class="st-hintline">Mit mehreren Prozessen: <code>NP=8 ./Allrun</code>. Eine abgebrochene Rechnung läuft mit demselben Aufruf weiter. Am Ende liegt der Bericht in <code>auswertung/bericht.html</code>; <code>./Allrun -auswertung</code> macht Bilder und Bericht neu.</div>'
+      + '<div class="sim-label">Im ZIP</div><ul class="sim-tree" data-ui="exp-tree"></ul>',
     primary: () => {
       const miss = missing({ bodies: plan.included(), inlet: plan.inlet, outlets: plan.outlets, mesh: plan.mesh });
       return { label: busy ? 'Fall wird gebaut …' : 'Fall herunterladen (ZIP)', onClick: run, disabled: busy || miss.length > 0, reason: miss.join(' ') };
@@ -1025,6 +1133,11 @@ export function createExportTool(g, { plan, app }) {
     const root = safe(plan.title) + '_openfoam';
     const cmd = g.ui('exp-cmd');
     if (cmd) cmd.textContent = 'unzip ' + root + '.zip\ncd ' + root + '\nsource \\\n  /usr/lib/openfoam/openfoam2606/etc/bashrc\n./Allrun';
+    const tree = g.ui('exp-tree');
+    if (tree) tree.innerHTML = [
+      ['Allrun', 'Netz, Rechnung, Auswertung'], ['bilder.py · bericht.py', 'Bilder (ParaView), Bericht (Python 3)'],
+      ['auswertung.json', 'Einstellungen der Auswertung'], ['simulation/', 'der OpenFOAM-Fall'], ['auswertung/', 'entsteht am Ende: bericht.html, bilder, graphiken, daten']
+    ].map(([f, t]) => '<li><code>' + esc(root + '/' + f) + '</code><span>' + esc(t) + '</span></li>').join('');
     const bodies = plan.included();
     kpis(g.ui('exp-kpis'), [
       { label: 'Körper', value: String(bodies.length), note: bodies.map(b => b.name).join(' · ') },

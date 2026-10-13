@@ -225,13 +225,34 @@
      Bis 24.09. hatte das 3D-Studio eine eigene Leiste (`turbo`, das
      Polynom nach Popov) und das Flussschema noch eine (`speed`: Blau, Teal,
      Gold, Rot). Seitdem liest jeder Messwert die Leiste der Auslegung.
+     Seit 13.10. (Wunsch) dazu zwei für die Bilder der Simulation, je mit
+     der Vorgabe von ParaView, mit der render die Bilder färbt:
+       rainbow Geschwindigkeit der Schmelze, 0 … 50 m/s: Blau über Cyan,
+               Grün und Gelb nach Rot („Blue to Red Rainbow", in HSV
+               gemischt — zwischen den reinen Farbtönen ist das dasselbe
+               wie linear in sRGB). Darüber die Farbe UEBER.rainbow.
+       bgo     Mitgerissene Luft, linear: „Blue - Green - Orange" mit
+               allen 50 Stützstellen von ParaView 5.13.
      Stützstellen [t, Farbe]; zwei an derselben Stelle sind eine Stufe.
      Gemischt wird linear in sRGB, wie die Leisten es immer taten. */
   var LEISTEN = {
     heat: [[0, '#30123b'], [1 / 6, '#3775c5'], [2 / 6, '#1dacd5'], [3 / 6, '#67eb73'],
       [4 / 6, '#f5c225'], [5 / 6, '#fa7e1d'], [1, '#7a0403']],
-    draft: [[0, '#b42318'], [1 / 3, '#d4a908'], [1 / 3, '#7cc4a0'], [1, '#0d7a3c']]
+    draft: [[0, '#b42318'], [1 / 3, '#d4a908'], [1 / 3, '#7cc4a0'], [1, '#0d7a3c']],
+    rainbow: [[0, '#0000ff'], [0.25, '#00ffff'], [0.5, '#00ff00'], [0.75, '#ffff00'], [1, '#ff0000']],
+    bgo: [[0, '#d4e8fa'], [0.0125, '#bfdcf5'], [0.025, '#b1d3f0'], [0.05, '#91c2eb'], [0.075, '#73b4e6'], [0.1, '#58a4db'],
+      [0.125, '#3f92d1'], [0.15, '#2e85c7'], [0.16, '#267dbf'], [0.18, '#2172b5'], [0.2, '#1a6db0'], [0.21, '#1867a8'],
+      [0.22, '#1764a3'], [0.23, '#155e9e'], [0.24, '#125a99'], [0.25, '#115491'], [0.26, '#13508a'], [0.27, '#164e82'],
+      [0.28, '#18497a'], [0.29, '#1a4773'], [0.3, '#1c4469'], [0.31, '#1d4261'], [0.32, '#1d4059'], [0.33, '#1c4452'],
+      [0.34, '#1b4d43'], [0.35, '#184f3e'], [0.36, '#15523a'], [0.37, '#135738'], [0.38, '#125c36'], [0.39, '#116137'],
+      [0.4, '#10662d'], [0.425, '#136b25'], [0.45, '#16701e'], [0.475, '#1f781e'], [0.5, '#2f8026'], [0.525, '#418a30'],
+      [0.55, '#53943b'], [0.575, '#679e47'], [0.6, '#80ab55'], [0.63, '#97ba66'], [0.65, '#bdc97d'], [0.67, '#dbdb9a'],
+      [0.7, '#ebd594'], [0.75, '#e6ba7e'], [0.8, '#db9563'], [0.85, '#cc7052'], [0.9, '#ad4c34'], [0.95, '#8c2b1c'],
+      [0.975, '#7a150c'], [1, '#730200']]
   };
+  /* Was über dem Bereich einer Leiste liegt, wenn es eine eigene Farbe hat:
+     die Geschwindigkeit über 50 m/s in Pink (Wunsch vom 13.10.). */
+  var UEBER = { rainbow: '#ff69b4' };
 
   /** Farbe auf einer Farbleiste als [r, g, b] mit 0 … 1, t = 0 … 1; NaN gibt null. */
   function scaleRgb(name, t) {
@@ -280,6 +301,7 @@
   api.deltaE = deltaE;
   api.rgba = rgba;
   api.leisten = LEISTEN;
+  api.ueber = UEBER;
   api.scale = scale;
   api.scaleRgb = scaleRgb;
   api.lut = lut;
