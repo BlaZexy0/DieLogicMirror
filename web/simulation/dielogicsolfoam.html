@@ -187,8 +187,9 @@
       <div class="prose">
         <p>Gussteil und Form sind ein einziges Netz. Jeder Werkstoff ist eine Zellzone: die Legierung für
           Gussteil, Anschnitt, Überläufe und Pressrest, Warmarbeitsstahl für die Formhälften, eine Kupferlegierung
-          für die Kolbenspitze, eigene Zonen für Kernstifte oder Einsätze. Kühlkanäle sind Löcher im Netz mit einem
-          Wärmeübergang an das Wasser. Die Energiegleichung wird für alle Zellen in einer Matrix gelöst; es gibt keine
+          für die Kolbenspitze, eigene Zonen für Kernstifte oder Einsätze. Kühlkanäle sind runde Löcher im Netz mit einem
+          Wärmeübergang an das Wasser: snappyHexMesh schneidet sie aus und legt die Zellen an den Kreis an (eine Treppe
+          aus Zellkanten hätte um 4/π, also 27 %, mehr Fläche zum Wasser). Die Energiegleichung wird für alle Zellen in einer Matrix gelöst; es gibt keine
           Kopplung zwischen getrennten Gebieten und keine Iteration zwischen Gussteil und Form.</p>
         <p>Zwischen zwei Zellen fließt Wärme über den Widerstand der beiden halben Zellen und, an der Grenze
           Gussteil zu Form, über den Kontaktwiderstand:</p>
@@ -373,11 +374,12 @@
       <h2 class="section-title">10. Beispiele</h2>
       <h3 class="sub-title">Heißer Kern im Schnitt</h3>
       <div class="prose">
-        <p>Ein Schnitt durch beide Formhälften (2D): Pressrest auf einer gekühlten Kupferspitze, Lauf, 2 mm Anschnitt,
-          4 mm Platte mit einem Dom, in den ein Kernstift ragt, ein Überlauf und fünf Kühlkanäle. Der Anschnitt ist nach
-          1,75 s fest und schneidet Platte und Dom vom Kolben ab. Der Dom erstarrt als letzter Teil des Gussteils
-          (10,5 s); in seiner Mitte sammelt sich die Schwindung zu einer Pore mit 16 %. Der Pressrest wird bis 19,7 s
-          gespeist und ist nach 23,2 s fest. Die heißeste Formoberfläche und der höchste Klebeindex (2,2) liegen an der
+        <p>Ein Schnitt durch beide Formhälften (2D, 0,5 mm Zellen, 91 000 Zellen): der ganze Pressrest (60 mm) auf einer
+          gekühlten Kupferspitze, ringsum im Stahl der Form, Lauf, 2 mm Anschnitt, 4 mm Platte mit einem Dom, in den ein
+          Kernstift ragt, ein Überlauf und sechs runde Kühlkanäle (8 mm, zwei davon neben dem Kolben). Der Anschnitt ist
+          nach 1,87 s fest und schneidet Platte und Dom vom Kolben ab. Der Dom erstarrt als letzter Teil des Gussteils
+          (10,3 s); in seiner Mitte sammelt sich die Schwindung zu einer Pore mit 17 %. Der Pressrest wird bis 19,8 s
+          gespeist und ist nach 23,0 s fest. Die heißeste Formoberfläche und der höchste Klebeindex (2,2) liegen an der
           Spitze des Kernstifts.</p>
       </div>
       <div class="fig-wrap">
@@ -389,16 +391,16 @@
           (grün gespeist, orange abgeschnitten), unten der Festanteil und die wachsende Porosität.</div>
       </div>
       <div class="prose">
-        <p>Mit einem 6 mm dicken Anschnitt (<code>hotSpot2D_thickGate</code>) ist der Anschnitt erst nach 2,8 s zu, die
-          Platte wird länger gespeist und die Schwindungsporen sinken von 23,9 auf 14,3 mm³ je mm Tiefe.</p>
+        <p>Mit einem 6 mm dicken Anschnitt (<code>hotSpot2D_thickGate</code>) ist der Anschnitt erst nach 2,9 s zu, die
+          Platte wird länger gespeist und die Schwindungsporen sinken von 22,6 auf 13,9 mm³ je mm Tiefe.</p>
       </div>
 
       <h3 class="sub-title">Fünf Schüsse</h3>
       <div class="prose">
         <p>Dieselbe Form über fünf Schüsse mit 55 s Zyklus: Öffnen nach 40 s, Sprühen von 43 bis 46 s. Die Form startet
-          bei 200 °C. Die höchste Formtemperatur am Ende der Zyklen steigt von 281 auf 399 °C, der Zuwachs je Schuss fällt
-          von 39 auf 22 K; eine Form braucht noch einige Schüsse mehr bis zum Zyklusbetrieb. Mit der wärmeren Form
-          erstarrt jeder Schuss länger: 23,2 s im ersten, 30,0 s im fünften.</p>
+          bei 200 °C. Die höchste Formtemperatur am Ende der Zyklen steigt von 277 auf 358 °C, der Zuwachs je Schuss fällt
+          von 29 auf 14 K; eine Form braucht noch einige Schüsse mehr bis zum Zyklusbetrieb. Mit der wärmeren Form
+          erstarrt jeder Schuss länger: 23,0 s im ersten, 25,3 s im fünften.</p>
       </div>
       <div class="fig-wrap">
         <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/zyklen.webp"
@@ -411,9 +413,11 @@
 
       <h3 class="sub-title">Der ganze Schuss in 3D</h3>
       <div class="prose">
-        <p>Eine Platte 120 × 60 × 4 mm mit Dom (16 mm dick) und zwei Überläufen in einem Formblock 160 × 150 × 84 mm,
-          Pressrest auf der Kolbenspitze, vier Kühlkanäle, 125 000 Zellen. Zuerst füllt dieLogicFoam die Plattenebene,
-          ausgeschnitten aus demselben Netz: nach 28 ms ist die Form zu 99 % voll, 0,14 cm³ Luft sind eingeschlossen.</p>
+        <p>Eine Platte 120 × 60 × 4 mm mit Dom (16 mm dick) und zwei Überläufen in einem Formblock 160 × 170 × 84 mm,
+          Pressrest auf der Kolbenspitze mit 30 mm Stahl darunter, vier runde Kühlkanäle (8 mm), 1,6 Millionen Zellen
+          (1 mm im Bereich des Gussteils, die Platte vier Zellen dick). Zuerst füllt dieLogicFoam die Plattenebene,
+          ausgeschnitten aus demselben Netz (32 500 Zellen): nach 28 ms ist die Form zu 99 % voll, 0,09 cm³ Luft sind
+          eingeschlossen.</p>
       </div>
       <div class="fig-wrap">
         <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/schuss3d-fuellung.webp"
@@ -424,9 +428,9 @@
           Beispielen von <a href="dielogicfoam.html">dieLogicFoam</a>.</div>
       </div>
       <div class="prose">
-        <p>Dann übernimmt dieLogicSolFoam den Zustand auf 4 Prozessoren. Die Überläufe sind nach 1,6 s fest, die Platte nach
-          4,7 s, der Dom nach 4,9 s, der Pressrest nach 9,0 s. Im Dom bleibt eine Schwindungspore mit 12,7 %; die
-          eingeschlossene Luft der Füllung wird vom Nachdruck auf 0,9 % ihres Volumens verdichtet. Gerechnet in 29 s.</p>
+        <p>Dann übernimmt dieLogicSolFoam den Zustand auf 6 Prozessoren. Die Überläufe sind nach 1,5 s fest, die Platte nach
+          4,7 s, der Dom nach 4,8 s, der Pressrest nach 9,3 s. Im Dom bleibt eine Schwindungspore mit 18,8 %; die
+          eingeschlossene Luft der Füllung wird vom Nachdruck auf 0,6 % ihres Volumens verdichtet. Gerechnet in 15 min.</p>
       </div>
       <div class="fig-wrap">
         <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/schuss3d.webp"
@@ -449,7 +453,7 @@ tools/runCase cases/hotSpot2D                    <span class="c"># Netz, Rechnun
 tools/runTests                                   <span class="c"># alle Testfälle mit Prüfungen</span>
 
 dieLogicSolMapFill -source fill                  <span class="c"># Ende der Füllung auf das Gussteil</span>
-mpirun -np 4 dieLogicSolFoam -parallel</pre>
+mpirun -np 6 dieLogicSolFoam -parallel</pre>
       <div class="table-scroll"><table class="th-table">
         <thead><tr><th>Datei</th><th>Inhalt</th></tr></thead>
         <tbody>
@@ -467,7 +471,8 @@ mpirun -np 4 dieLogicSolFoam -parallel</pre>
         zum Vergleich von Formen und Prozessvarianten. Nach der Füllung wird nur Wärmeleitung gerechnet, ohne Strömung im
         Pressrest. Der Nachdruck ist in einem gespeisten Bereich überall gleich, ohne Druckabfall auf dem Speiseweg; Poren
         wandern nicht. Der Kontakt hängt nur vom Festanteil ab, ohne Spaltmodell aus der Verformung. Jeder Schuss einer
-        Zyklusrechnung beginnt mit demselben Zustand am Ende der Füllung. Getestet sind strukturierte Hexaedernetze.</p></div>
+        Zyklusrechnung beginnt mit demselben Zustand am Ende der Füllung. Getestet sind Hexaedernetze aus blockMesh, an den
+        runden Kühlkanälen mit snappyHexMesh angepasst (in 3D ein extrudierter Querschnitt).</p></div>
 
     </article>
   </div>
