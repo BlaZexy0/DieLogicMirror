@@ -38,8 +38,8 @@ Zelllänge der Kammer). <b>Schusskurve</b> und <b>Prozess</b>: unten. <b>Fall</b
 <p><b>Vorschläge</b> sehen überall gleich aus: eine Zeile mit dem Etikett „Vorschlag" direkt unter dem Feld, mit dem
 Wert und warum. Gilt er, ist sie getönt und hat einen Haken; sonst steht „Übernehmen" daneben. Beim ersten Besuch
 eines Schritts gilt der Vorschlag (die größte Kreisfläche als Einlass, ihre Tiefe, zwei Zellen über die dünnste
-Bauteilwand, der Name des Falls mit dem Datum von heute); was man selbst einträgt oder wählt, bleibt. Die Kammerlänge kommt aus der Auslegung, ihr Vorschlag
-(Mitte des Füllgrad-Bands) gilt erst mit „Übernehmen".</p>
+Bauteilwand, der Name des Falls mit dem Datum von heute); was man selbst einträgt oder wählt, bleibt. Die Kammerlänge kommt aus der Auslegung; mit Kammer gilt
+ihr Vorschlag (Mitte des Füllgrad-Bands), solange man sie nicht selbst einträgt, ohne Kammer erst mit „Übernehmen".</p>
 </section>
 <section data-help-anchor="prozess">
 <h3>Schusskurve, Gießkammer und Prozess</h3>
@@ -47,7 +47,7 @@ Bauteilwand, der Name des Falls mit dem Datum von heute); was man selbst einträ
 Körpern, Kammerlänge aus der Auslegung oder von Hand (unter „Einlass", mit dem Vorschlag für die Mitte des
 Füllgrad-Bands). Die <b>1. Phase</b> bis „Kammer voll": <b>DieLogic</b> (das fokussierende
 Kolbengesetz, Vorgabe), López oder V₁ von Hand. Die <b>2. Phase</b>: V₂ automatisch (die Auslegung wählt es für
-die NADCA-Füllzeit, Rampe mit ihrem a_max) oder V₂ von Hand mit a₂. Reicht a₂ bis zum Füllende nicht, schlägt
+die NADCA-Füllzeit, Rampe mit ihrem a<sub>max</sub>) oder V₂ von Hand mit a₂. Reicht a₂ bis zum Füllende nicht, schlägt
 der Schritt das a₂ vor, mit dem V₂ erreicht wird. Der Schritt <b>Prozess</b> danach: Schwerkraft,
 Temperaturen und die Werte der Legierung. Das Bild zeigt den ganzen Schuss oder nur die
 Formfüllung, die Ereignisse nummeriert wie in der Legende, den gerechneten Teil als Balken auf der Achse; unter

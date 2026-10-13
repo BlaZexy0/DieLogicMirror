@@ -523,17 +523,25 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
           const b = ev.target.closest('[data-value]');
           if (!b) return;
           plan.shot.chamber = b.getAttribute('data-value') === '1';
+          /* Mit Kammer wird die Kammer gerechnet: ihre Länge soll zum Schuss
+             passen — der Vorschlag (Mitte des Füllgrad-Bands) gilt, solange
+             man die Länge nicht selbst eingetragen hat (die der Auslegung
+             gab beim Beispiel 900 mm und 16 % Füllgrad) */
+          if (plan.shot.chamber && !plan.shot.lengthSet) {
+            const want = lengthForBand(plan.inlet ? shotPlan(plan) : null);
+            if (want > 0) plan.shot.length = want;
+          }
           plan.changed('shot'); g.changed(plan.shot.chamber ? 'Mit Gießkammer' : 'Ohne Gießkammer');
           render(); app.refresh();
         });
         g.ui('p-length').addEventListener('change', ev => {
           const x = num(ev.target.value);
-          if (isFinite(x) && x > 10 && x < 5000) { plan.shot.length = x; plan.changed('shot'); g.changed('Kammerlänge ' + fmt(x) + ' mm'); }
+          if (isFinite(x) && x > 10 && x < 5000) { plan.shot.length = x; plan.shot.lengthSet = true; plan.changed('shot'); g.changed('Kammerlänge ' + fmt(x) + ' mm'); }
           render(); app.refresh();
         });
         onSugg(g.ui('length-sugg'), () => {
           const want = lengthForBand(plan.inlet ? shotPlan(plan) : null);
-          if (want > 0) { plan.shot.length = want; plan.changed('shot'); g.changed('Kammerlänge ' + fmt(want) + ' mm nach Vorschlag'); app.refresh(); }
+          if (want > 0) { plan.shot.length = want; plan.shot.lengthSet = false; plan.changed('shot'); g.changed('Kammerlänge ' + fmt(want) + ' mm nach Vorschlag'); app.refresh(); }
         });
       } else {
         const list = g.ui('outlet-list');
@@ -716,7 +724,7 @@ export function createNetzTool(g, { plan, app }) {
 
 /* ── 7 Schusskurve ────────────────────────────────────────────────── */
 /* [Schlüssel, Bezeichnung, Einheit, Stellen, min, max, wann sichtbar] — wann: Modus der 1. Phase oder 'v2' (2. Phase von Hand) */
-const SHOT_PARAMS = [['kappa', 'κ = Kappe / U_H', '–', 2, 0.3, 1, 'focus'], ['v1', 'V₁', 'm/s', 2, 0.01, 5, 'v1v2'], ['a1', 'a₁', 'm/s²', 1, 0.1, 500, 'v1v2'], ['v2', 'V₂', 'm/s', 2, 0.1, 20, 'v2'], ['a2', 'a₂', 'm/s²', 1, 0.1, 5000, 'v2']];
+const SHOT_PARAMS = [['kappa', 'κ = Kappe / v<sub>krit</sub>', '–', 2, 0.3, 1, 'focus'], ['v1', 'V₁', 'm/s', 2, 0.01, 5, 'v1v2'], ['a1', 'a₁', 'm/s²', 1, 0.1, 500, 'v1v2'], ['v2', 'V₂', 'm/s', 2, 0.1, 20, 'v2'], ['a2', 'a₂', 'm/s²', 1, 0.1, 5000, 'v2']];
 const shotRows = when => '<div data-shotmode="' + when + '">' + SHOT_PARAMS.filter(r => r[6] === when).map(([k, l, u]) => numberRow({ ui: 'p-' + k, label: l, unit: u })).join('') + '</div>';
 /** a₂, mit dem V₂ bis zum Füllende erreicht wird (aufgerundet auf 5 m/s², 5 % Luft), NaN wenn es reicht. */
 const a2Fit = sp => (!sp.error && sp.v2Manual && isFinite(sp.a2Need) ? Math.ceil(sp.a2Need * 1.05 / 5) * 5 : NaN);
@@ -734,7 +742,11 @@ export function createSchussTool(g, { plan, app }) {
       + suggBox('a2-sugg')
       + '<div class="st-hintline" data-ui="p-phase2"></div>'
       + '<div class="sim-label">Kurve</div>'
-      + segFull('p-view', 'Ausschnitt', [['all', 'Ganzer Schuss'], ['fill', 'Formfüllung']], 'all')
+      /* Der Ausschnitt ist nur eine Ansicht des Bilds, keine Einstellung der
+         Rechnung: eine kleine Leiste am Bild (wie Zoom), nicht die großen
+         Umschalter der Einstellungen darüber */
+      + '<div class="sim-viewbar" data-ui="p-view" role="group" aria-label="Ansicht des Bilds (ändert nichts an der Rechnung)">'
+      + '<span>Ansicht</span><button type="button" data-value="all" class="active">Ganzer Schuss</button><button type="button" data-value="fill">Formfüllung</button></div>'
       + '<div class="sim-curvebox" data-ui="p-curve"></div>'
       + '<div data-ui="p-legend"></div>'
       + '<div class="krows" data-ui="p-shot"></div>',
@@ -768,10 +780,11 @@ export function createSchussTool(g, { plan, app }) {
     const leg = g.ui('p-legend');
     if (leg) leg.innerHTML = sp.error ? '' : curveLegend(sp, { chamber: S.chamber });
     const ph1 = g.ui('p-phase1'), ph2 = g.ui('p-phase2');
-    if (ph1) ph1.textContent = sp.error ? '' : ({ focus: 'Fokussierendes Kolbengesetz bis zur Kappe κ·U_H (höchstens v_krit), Plateau bis „Kammer voll".', lopez: 'Anfahrt nach López bis v_krit, Plateau bis „Kammer voll".', v1v2: 'Rampe mit a₁ auf V₁, Plateau bis „Kammer voll".' })[S.mode] || '';
-    if (ph2) ph2.textContent = sp.error ? '' : manual
-      ? (isFinite(sp.v2Reached) ? sp.warn : 'Ab „Kammer voll" mit a₂ auf V₂, dann gleichbleibend bis zum Füllende.')
-      : 'V₂ = ' + fmt(sp.v2, 2) + ' m/s trifft die ' + (isFinite(sp.tNadca) ? 'Füllzeit ' + fmt(sp.tNadca, 1) + ' ms' : 'Füllzeit') + ' (NADCA, höchstens t_max der Auslegung); Rampe mit a_max ' + fmt(sp.a2) + ' m/s² der Auslegung.';
+    /* Kappe κ relativ zu v_krit (U_H der Auslegung ist v_krit selbst) — die Indizes gesetzt, nicht mit Unterstrich */
+    if (ph1) ph1.innerHTML = sp.error ? '' : ({ focus: 'Fokussierendes Kolbengesetz bis zur Kappe κ·v<sub>krit</sub>, Plateau bis „Kammer voll".', lopez: 'Anfahrt nach López bis v<sub>krit</sub>, Plateau bis „Kammer voll".', v1v2: 'Rampe mit a₁ auf V₁, Plateau bis „Kammer voll".' })[S.mode] || '';
+    if (ph2) ph2.innerHTML = sp.error ? '' : manual
+      ? (isFinite(sp.v2Reached) ? esc(sp.warn) : 'Ab „Kammer voll" mit a₂ auf V₂, dann gleichbleibend bis zum Füllende.')
+      : 'V₂ = ' + fmt(sp.v2, 2) + ' m/s trifft die ' + (isFinite(sp.tNadca) ? 'Füllzeit ' + fmt(sp.tNadca, 1) + ' ms' : 'Füllzeit') + ' (NADCA, höchstens t<sub>max</sub> der Auslegung); Rampe mit a<sub>max</sub> ' + fmt(sp.a2) + ' m/s² der Auslegung.';
     if (ph2) ph2.classList.toggle('warn', !sp.error && manual && isFinite(sp.v2Reached));
     /* a₂: der Vorschlag nur, wenn V₂ von Hand nicht erreicht wird */
     const need = a2Fit(sp);
@@ -790,7 +803,7 @@ export function createSchussTool(g, { plan, app }) {
       rows.push(
         { label: 'Kolben-Ø', value: fmt(sp.diam, 1) + ' mm', note: 'vom Einlass · Kammer ' + fmt(sp.length) + ' mm, Hub ' + fmt(sp.stroke) + ' mm' },
         { label: 'Füllgrad', value: fmt(100 * sp.phi, 1) + ' %', verdict: 100 * sp.phi < flo || 100 * sp.phi > fhi ? 'warn' : 'ok', note: 'Ziel ' + fmt(flo) + '–' + fmt(fhi) + ' % (Kammerlänge unter „Einlass") · „Kammer voll" bei ' + fmt(sp.sFull) + ' mm, ' + fmt(sp.tFull * 1000) + ' ms' },
-        { label: '1. Phase', value: fmt(v1, 2) + ' m/s', verdict: v1 <= vc + 1e-9 ? 'ok' : 'bad', note: 'höchstens v_krit ' + fmt(vc, 2) + ' m/s' },
+        { label: '1. Phase', value: fmt(v1, 2) + ' m/s', verdict: v1 <= vc + 1e-9 ? 'ok' : 'bad', note: 'höchstens v<sub>krit</sub> ' + fmt(vc, 2) + ' m/s' },
         { label: 'Füllzeit', value: isFinite(sp.fillMs) ? fmt(sp.fillMs, 1) + ' ms' : '–', note: 'ab Anschnitt · v bei „Bauteil gefüllt" ' + fmt(sp.vAtPart, 2) + ' m/s' },
         gateBusy ? { label: 'Anschnitt', value: 'wird gemessen …' }
           : loose ? { label: 'Anschnitt', value: fmt(gateA) + ' mm²', verdict: 'bad', note: 'Anguss und Bauteil berühren sich kaum (Querschnitt ' + fmt(sec) + ' mm²): unter „Körper" die Anschnittzungen mitrechnen' }
@@ -809,7 +822,7 @@ export function createSchussTool(g, { plan, app }) {
       for (const [k, l, , d, lo, hi] of SHOT_PARAMS) {
         g.ui('p-' + k).addEventListener('change', ev => {
           const x = num(ev.target.value);
-          if (isFinite(x) && x >= lo && x <= hi) { plan.shot[k] = x; plan.changed('shot'); g.changed(l + ' ' + fmt(x, d)); }
+          if (isFinite(x) && x >= lo && x <= hi) { plan.shot[k] = x; plan.changed('shot'); g.changed(l.replace(/<[^>]*>/g, '') + ' ' + fmt(x, d)); }
           render(); app.refresh();
         });
       }

@@ -258,8 +258,8 @@ test('Simulation einrichten: Beispiel, Ablaufplan, Fall im Worker', async ({ pag
   await expect(page.locator('[data-ui="inlet-card"]')).toContainText('Richtung');
   await expect(page.locator('[data-ui="pick"]:visible')).toHaveText('Andere Fläche wählen');
   await expect(page.locator('[data-ui="primary"]')).toHaveText('Weiter: Auslässe');
+  /* mit Kammer gilt der Vorschlag für die Kammerlänge sofort (die der Auslegung passte nicht) */
   await page.click('[data-ui="p-chamber"] [data-value="1"]');
-  await page.click('[data-ui="length-sugg"] [data-act="apply"]');
   await expect(page.locator('[data-ui="length-sugg"]')).toHaveClass(/\bon\b/);
   /* die Länge für die Mitte des Zielbands (40–60 %): 50 % Füllgrad */
   await expect(page.locator('[data-ui="chamber-kpis"]')).toContainText(/Füllgrad\s*(49|50|51),\d %/);

@@ -27,8 +27,10 @@ Vorgaben sonst schon vorher „fertig"). Einlass und Auslässe werden im Zielmod
 gewählt (Knopf „… auswählen", Hinweis im Bild, Esc beendet); jeder Treffer beendet
 ihn. Vorschläge (Einlassfläche, Tiefe, Kammerlänge, Zellgröße, a₂) stehen überall
 gleich als Zeile „Vorschlag" unter dem Feld: getönt mit Haken, wenn er gilt, sonst
-mit „Übernehmen"; beim ersten Besuch gilt er (außer der Kammerlänge aus der
-Auslegung), was man selbst setzt, bleibt (`plan.mesh.cellSet`). Das Bauteil des Studios lässt sich entfernen: der Rahmen
+mit „Übernehmen"; beim ersten Besuch gilt er, was man selbst setzt, bleibt
+(`plan.mesh.cellSet`, `plan.shot.lengthSet`). Die Kammerlänge kommt aus der
+Auslegung; beim Umschalten auf „mit Kammer" gilt ihr Vorschlag (Mitte des
+Füllgrad-Bands), solange man sie nicht selbst eingetragen hat. Das Bauteil des Studios lässt sich entfernen: der Rahmen
 behält sein Netz, die Seite nimmt es aus dem Plan und verbirgt es, bis ein neues
 geladen ist.
 
@@ -109,7 +111,7 @@ Zwei Fallen, die der Fall abfängt:
 `js/shot.js` rechnet die Kurve mit den Generatoren der Auslegung auf das Modell
 (Kolben-Ø = Einlass, Massen = Volumen × ρ_sol je Rolle, Kammerlänge aus der
 Auslegung oder von Hand). Die 2. Phase setzt die Auslegung bei DieLogic und
-López selbst (V₂ für die NADCA-Füllzeit, a_max); von Hand ersetzt die Seite
+López selbst (V₂ für die NADCA-Füllzeit, a<sub>max</sub>); von Hand ersetzt die Seite
 alles ab „Kammer voll" durch eine Rampe mit a₂ auf V₂ (`rampTo`, wie `ramp` der
 Auslegung) und nennt das a₂, das V₂ bis zum Füllende erreicht. **Ohne Kammer** geht der Teil ab „Kammer voll" als
 Geschwindigkeitstabelle an den Einlass (`constant/plungerTable`). **Mit

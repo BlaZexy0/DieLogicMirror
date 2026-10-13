@@ -184,7 +184,7 @@ export function curveSVG(sp, { chamber = false, view = 'all' } = {}) {
   const vc = sp.shot.vcrit;
   if (vc > 0 && vc < vmax && xF > L + 4) {
     out.push('<line x1="' + L + '" x2="' + f1(xF) + '" y1="' + f1(Y(vc)) + '" y2="' + f1(Y(vc)) + '" class="crit"/>');
-    if (xF - L > 80) out.push('<text x="' + (L + 3) + '" y="' + f1(Y(vc) - 4) + '" class="critl">v_krit ' + fmtN(vc, 2) + '</text>');
+    if (xF - L > 80) out.push('<text x="' + (L + 3) + '" y="' + f1(Y(vc) - 4) + '" class="critl">v<tspan baseline-shift="sub" font-size="75%">krit</tspan> ' + fmtN(vc, 2) + '</text>');
   }
   out.push('<path d="' + area + '" class="area"/>', '<path d="' + line + '" class="v"/>');
   /* V₂ über dem Plateau am Ende (wird es nicht erreicht: am Ende, „erreicht") */
