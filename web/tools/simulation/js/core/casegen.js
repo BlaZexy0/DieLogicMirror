@@ -20,7 +20,7 @@
 
 import { writeSTL } from '../../../3d-studio/js/part/stlio.js';
 import { bounds, volume, shells, edgeCheck } from './geometry.js';
-import { renderScript, imageCount } from './render.js';
+import { renderScript, targets } from './render.js';
 
 export const SOLVER = 'dieLogicFoam';
 const K = 273.15;
@@ -201,7 +201,10 @@ export function buildCase(plan) {
   const nu = P.mu / P.rho;
   const SH = plan.shot && plan.shot.points ? plan.shot : null;
   const chamber = !!(SH && SH.chamber);
-  const nWrite = Math.max(60, 4 * imageCount(plan.post));
+  /* Zeitstände über die Füllung: doppelt so viele wie Bilder je Kennwert —
+     alle Kennwerte und Ansichten lesen dieselben, und render.py nimmt je Ziel
+     den nächsten (doppelt getroffene fallen weg) */
+  const nWrite = Math.max(60, 2 * targets(plan.post).length);
   let tFill, endTime, writeInterval, tSwitch = 0, slowInterval = 0;
   if (SH) {
     tFill = Math.max(SH.tEnd - SH.tFull, 1e-3);                     // „Kammer voll" → Füllende [s]

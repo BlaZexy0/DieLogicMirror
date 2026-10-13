@@ -260,14 +260,16 @@ test('Fall mit Kammer: Hub als extrudeMesh, Kolben als libshotSleeve, Schmelze i
 test('Bilder: Zeitpunkte nach Füllgrad, Zeit oder Kolbenweg; Format aus Seitenverhältnis und Breite', async () => {
   const R = await imp('js/core/render.js');
   const p = R.defaultPost();
-  assert.deepEqual(R.targets(p), [25, 50, 75, 100]);
+  assert.equal(R.targets(p).length, 100);
+  assert.deepEqual(R.targets(p).slice(0, 3).concat(R.targets(p).slice(-1)), [1, 2, 3, 100]);
+  assert.deepEqual(R.targets({ ...p, when: { by: 'fill', count: 4 } }), [25, 50, 75, 100]);
   assert.deepEqual(R.targets({ ...p, when: { by: 'fill', count: 3 } }), [33.3, 66.7, 100]);
   assert.deepEqual(R.targets({ ...p, when: { by: 'time', count: 2 } }), [0.5, 1]);
   assert.deepEqual(R.imageSize(p), [1600, 900]);
   assert.deepEqual(R.imageSize({ ...p, aspect: '1:1', width: 1280 }), [1280, 1280]);
   assert.deepEqual(R.imageSize({ ...p, aspect: '4:3', width: 1920 }), [1920, 1440]);
-  /* 6 Kennwerte × 4 + Füllzeit einmal */
-  assert.equal(R.imageCount(p), 6 * 4 + 1);
+  /* 6 Kennwerte × 100 + Füllzeit einmal */
+  assert.equal(R.imageCount(p), 6 * 100 + 1);
   /* alte Pläne mit fills/size */
   const old = R.normalizePost({ criteria: ['velocity'], fills: [10, 20, 30], size: [1280, 720], views: p.views });
   assert.deepEqual([old.when.by, old.when.count, old.width], ['fill', 3, 1280]);
@@ -360,6 +362,23 @@ test('Seite: Beispiel laden, Schritte der Reihe nach, Fall als ZIP', async () =>
   assert.ok(Math.abs(payload.shot.diam - 129.9) < 0.2, 'Kolben-Ø ' + payload.shot.diam);
   assert.ok(payload.shot.phi > 0.1 && payload.shot.phi < 0.9);
   assert.equal(payload.shot.inletTable[0][0], 0);
+  /* 2. Phase: automatisch wählt die Auslegung V₂ (NADCA); von Hand fährt die
+     Kurve ab „Kammer voll" mit a₂ auf V₂ — reicht a₂ nicht, sagt sie, welches */
+  const { shotPlan, curveSVG } = await import(pathToFileURL(resolve(SIM, 'js/shot.js')).href);
+  const auto = shotPlan(v.plan);
+  assert.ok(!auto.v2Manual && auto.v2 > 0 && auto.tNadca > 0);
+  Object.assign(v.plan.shot, { v2Mode: 'manual', v2: 3, a2: 1000 });
+  const hand = shotPlan(v.plan);
+  assert.ok(hand.v2Manual && !isFinite(hand.v2Reached));
+  assert.equal(hand.points[hand.points.length - 1][1], 3);
+  assert.deepEqual(hand.points.filter(p => p[0] < auto.sFull - 1), auto.points.filter(p => p[0] < auto.sFull - 1), 'die 1. Phase bleibt');
+  v.plan.shot.a2 = 5;
+  const slow = shotPlan(v.plan);
+  assert.ok(slow.v2Reached < 3 && slow.a2Need > 5 && /a₂ ≥/.test(slow.warn));
+  v.plan.shot.a2 = Math.ceil(slow.a2Need * 1.05);
+  assert.ok(!isFinite(shotPlan(v.plan).v2Reached), 'mit dem vorgeschlagenen a₂ wird V₂ erreicht');
+  assert.match(curveSVG(hand, { view: 'fill' }), /class="simbar"/);
+  Object.assign(v.plan.shot, { v2Mode: 'auto', v2: 4, a2: 30 });
   const r = await v.app.build(payload, () => {});
   assert.ok(r.zip.length > 1e5);
   assert.equal(r.root, 'Gusstraube_openfoam');

@@ -255,8 +255,9 @@ test('Simulation einrichten: Beispiel, Ablaufplan, Fall im Worker', async ({ pag
   await page.click('[data-ui="inlet-suggest"]');
   await expect(page.locator('[data-ui="primary"]')).toHaveText('Weiter: Auslässe');
   await page.click('[data-ui="primary"]');
-  /* Ein echter Tipp ins Bild trifft eine Fläche: die Oberseite des Pressrests
-     (z = 0, von oben sichtbar) wird Auslass, ein zweiter Tipp nimmt sie heraus. */
+  /* Ohne Zielmodus wählt ein Tipp nichts; nach „Auslass auswählen" trifft ein
+     echter Tipp ins Bild eine Fläche: die Oberseite des Pressrests (z = 0, von
+     oben sichtbar) wird Auslass, ein zweiter Tipp nimmt sie heraus. */
   const at = await page.evaluate(() => {
     const v = window.__simulation, cam = v.host.view.camera, el = v.host.view.renderer.domElement;
     v.host.view.controls.target.set(0, -280, 0);
@@ -266,10 +267,17 @@ test('Simulation einrichten: Beispiel, Ablaufplan, Fall im Worker', async ({ pag
     return { x: r.left + (p.x + 1) / 2 * r.width, y: r.top + (1 - p.y) / 2 * r.height };
   });
   await page.mouse.click(at.x, at.y);
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(() => window.__simulation.plan.outlets.length)).toBe(0);
+  await page.locator('[data-ui="pick"]:visible').click();
+  await expect(page.locator('#aim-banner')).not.toHaveClass(/hidden/);
+  await page.mouse.click(at.x, at.y);
   await expect.poll(() => page.evaluate(() => window.__simulation.plan.outlets.length)).toBe(1);
   expect(await page.evaluate(() => Math.abs(window.__simulation.plan.outlets[0].centroid[2]))).toBeLessThan(0.01);
   await page.mouse.click(at.x, at.y);
   await expect.poll(() => page.evaluate(() => window.__simulation.plan.outlets.length)).toBe(0);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#aim-banner')).toHaveClass(/hidden/);
   await page.evaluate(() => {
     const v = window.__simulation, b = v.plan.bodies.find(x => x.role === 'overflow'), t = b.tris;
     for (let f = 0; f < t.length / 9; f++) { const o = f * 9; if ((t[o + 1] + t[o + 4] + t[o + 7]) / 3 > 330 && Math.abs((t[o + 2] + t[o + 5] + t[o + 8]) / 3 + 3) < 0.01) return v.tools.auslass.pickFace(b.id, f); }
@@ -279,7 +287,15 @@ test('Simulation einrichten: Beispiel, Ablaufplan, Fall im Worker', async ({ pag
   /* Prozess: die DieLogic-Kurve als Bild, mit Kammer rechnet der Fall ab Kolbenstart */
   await page.click('[data-stage="prozess"]');
   await expect(page.locator('[data-ui="p-curve"] svg.sim-curve path.v')).toBeVisible();
-  await expect(page.locator('[data-ui="p-mode"]')).toHaveValue('focus');
+  await expect(page.locator('[data-ui="p-mode"] [data-value="focus"]')).toHaveClass(/active/);
+  /* 2. Phase von Hand: V₂ und a₂ erscheinen, die Kurve endet bei V₂ */
+  await page.click('[data-ui="p-v2mode"] [data-value="manual"]');
+  await page.fill('[data-ui="p-v2"]', '3');
+  await page.fill('[data-ui="p-a2"]', '1000');
+  await page.locator('[data-ui="p-a2"]').press('Tab');
+  await expect(page.locator('[data-ui="p-curve"] .v2l')).toHaveText('V₂ 3,00');
+  await page.click('[data-ui="p-v2mode"] [data-value="auto"]');
+  await expect(page.locator('[data-ui="p-v2"]')).toBeHidden();
   await page.click('[data-ui="p-chamber"] [data-value="1"]');
   await expect(page.locator('[data-ui="p-shot"]')).toContainText('ab Kolbenstart');
   await page.click('[data-ui="p-length-fit"]');

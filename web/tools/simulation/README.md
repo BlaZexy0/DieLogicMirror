@@ -9,15 +9,24 @@ erledigt sind):
 
 | # | Schritt | Werkzeug | erledigt, wenn |
 |---|---|---|---|
-| 1 | Körper | `steps.js` createKoerperTool — STL/GLB laden, Rollen | ein Bauteil da ist |
+| 1 | Körper | `steps.js` createKoerperTool — STL/GLB laden, Rollen, ✕ auch für das Bauteil (`app.removePart`) | ein Bauteil da ist |
 | 2 | Anguss | Angussdesigner des Studios (`3d-studio/js/runner/tool.js`) — entfällt, wenn Anguss und Pressrest unter „Körper" aus Dateien kommen | Anguss oder Pressrest da ist |
 | 3 | Überläufe | Überlaufdesigner (`3d-studio/js/vents/tool.js`) — entfällt bei Überläufen aus Dateien; wahlweise | immer (wahlweise) |
-| 4 | Einlass | createFlaechenTool('inlet') — Kreisfläche des Pressrests | gewählt |
-| 5 | Auslässe | createFlaechenTool('outlet') — ebene Flächen | mindestens einer |
+| 4 | Einlass | createFlaechenTool('inlet') — Kreisfläche des Pressrests; nur einer (ein neuer Tipp ersetzt ihn, ✕ entfernt ihn) | gewählt |
+| 5 | Auslässe | createFlaechenTool('outlet') — ebene Flächen, je Zeile Drossel/offen und ✕ | mindestens einer |
 | 6 | Netz | createNetzTool — Zellgröße, Hintergrund, Stufen je Körper, Zelllänge der Kammer | gültig |
-| 7 | Prozess | createProzessTool — Schusskurve (DieLogic/López/V₁V₂), mit/ohne Gießkammer, Kammerlänge, Temperaturen | Kurve rechenbar, Temperaturen stimmig |
+| 7 | Prozess | createProzessTool — 1. Phase (DieLogic/López/V₁ von Hand), 2. Phase (V₂ automatisch oder von Hand mit a₂), Kurvenbild, mit/ohne Gießkammer, Kammerlänge, Temperaturen | Kurve rechenbar, Temperaturen stimmig |
 | 8 | Auswertung | createAuswertungTool — Kennwerte, Zeitpunkte (Füllgrad/Zeit/Kolbenweg × n), Format, Ansichten, Rahmen im Viewport | etwas gewählt |
 | 9 | Fall | createExportTool — ZIP im Worker | heruntergeladen |
+
+Über jedem Schritt steht seine Überschrift mit Erklärung (`lead` in `STEPS`,
+auch über den Designern); die Leiste zeigt erledigte Schritte getönt statt mit
+Punkten — getönt erst, wenn man dort war (Prozess und Auswertung sind mit ihren
+Vorgaben sonst schon vorher „fertig"). Einlass und Auslässe werden im Zielmodus
+gewählt (Knopf „… auswählen", Hinweis im Bild, Esc beendet); der Einlass endet
+mit dem ersten Treffer. Das Bauteil des Studios lässt sich entfernen: der Rahmen
+behält sein Netz, die Seite nimmt es aus dem Plan und verbirgt es, bis ein neues
+geladen ist.
 
 Geladen wird nur unter „Körper". Ein entfallener Schritt verschwindet aus der
 Leiste (`skip`), die Nummern zählen die sichtbaren Schritte; die Designer-Schritte
@@ -27,14 +36,28 @@ Die Designer werden **nicht verändert**: sie kommen mit derselben Fabrik wie in
 der Werkbank (`mountStages`), ihre Körper laufen über `host.on('runner'|'vents')`
 in den Plan (`js/plan.js`).
 
+Im Bild sind die Körper deckend, auch beim Wählen der Flächen, in der Farbe
+ihrer Rolle. Durchscheinend ist nur die Schmelze bei „Kammer voll": im
+Pressrest ein Zylinder etwas größer als er (5 % des Radius, mindestens eine
+halbe Zelle wie im Fall), so dass man den Pressrest darin sieht. Ein Pfeil in
+der Hervorhebung zeigt den Zustrom am Einlass (−n, wie der Kolben schiebt).
+Mit Kammer ist die Kammer nur von innen gezeichnet (`BackSide`): die Wand zum
+Betrachter fällt weg, man sieht aus jeder Richtung auf die Schmelze darin,
+hinten der Kolben.
+
+Unter „Auswertung" stehen die Kennwerte als Liste (Haken = Bilder davon, Auge
+= im Rahmen gezeigt); vorgegeben sind 100 Bilder je Kennwert und Ansicht. Der
+Fall schreibt doppelt so viele Zeitstände über die Füllung (mindestens 60),
+unabhängig von der Zahl der Kennwerte und Ansichten — sie lesen alle dieselben.
+
 ## Dateien
 
 ```
 index.html          Seite (Import-Map auf /tools/3d-studio/vendor/three)
-css/simulation.css  Leiste als Ablaufplan, Listen
+css/simulation.css  Leiste als Ablaufplan, Listen, Abschnitte, Bildrahmen
 js/app.js           Gastgeber, Schritte, Sperre der Leiste, Dokument (Datei, Verlauf, Entwurf)
 js/plan.js          der Plan: Körper, Einlass, Auslässe, Netz, Prozess, Auswertung
-js/steps.js         die eigenen Schritte und die Bildschicht (Pickkörper, Marken, Schmelzezylinder)
+js/steps.js         die eigenen Schritte und die Bildschicht (Pickkörper, Marken, Schmelze, Kammer)
 js/shot.js          Schusskurve der Auslegung auf das Modell (curvegen, computeShot), Kurvenbild
 js/payload.js       Plan → Nutzlast für den Worker (Flächenmarken, Kurve, Farben der Palette)
 js/build.js         Nutzlast → Vereinigung → Fall → ZIP (Worker und Tests)
@@ -78,7 +101,10 @@ Zwei Fallen, die der Fall abfängt:
 
 `js/shot.js` rechnet die Kurve mit den Generatoren der Auslegung auf das Modell
 (Kolben-Ø = Einlass, Massen = Volumen × ρ_sol je Rolle, Kammerlänge aus der
-Auslegung oder von Hand). **Ohne Kammer** geht der Teil ab „Kammer voll" als
+Auslegung oder von Hand). Die 2. Phase setzt die Auslegung bei DieLogic und
+López selbst (V₂ für die NADCA-Füllzeit, a_max); von Hand ersetzt die Seite
+alles ab „Kammer voll" durch eine Rampe mit a₂ auf V₂ (`rampTo`, wie `ramp` der
+Auslegung) und nennt das a₂, das V₂ bis zum Füllende erreicht. **Ohne Kammer** geht der Teil ab „Kammer voll" als
 Geschwindigkeitstabelle an den Einlass (`constant/plungerTable`). **Mit
 Kammer** wird der Einlass um den Hub zurück extrudiert (`extrudeMesh`), der
 Kolben fährt die ganze Kurve (`libshotSleeve`, `system/shotSleeveDict`,

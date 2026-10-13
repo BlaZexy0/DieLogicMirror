@@ -44,7 +44,7 @@ export const FRAME = { barX: 0.05, barTop: 0.09, barLen: 0.4, barW: 0.012, textR
 export function defaultPost() {
   return {
     criteria: CRITERIA.map(c => c.id),
-    when: { by: 'fill', count: 4 },
+    when: { by: 'fill', count: 100 },
     aspect: '16:9', width: 1600,
     preview: 'velocity',
     views: [{ id: 'iso', label: 'Schräg', dir: VIEW_PRESETS[0].dir, up: VIEW_PRESETS[0].up }]

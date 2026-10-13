@@ -64,18 +64,20 @@ const ICON = {
 const vorschlag = createVorschlag({ part: host.part });
 let tools = {};
 const app = {
-  refresh, loadExample, addFiles, build, gate, nextPrimary, designerGateSection,
+  refresh, loadExample, addFiles, removePart, build, gate, nextPrimary, designerGateSection,
   get tools() { return tools; }
 };
 
 const STEPS = [
   { id: 'koerper', label: 'Körper', title: 'Die Körper der Form laden und ihre Rollen setzen', icon: ICON.koerper,
+    lead: 'Die Körper der Form als STL oder GLB laden, in mm im Bauteilsystem (Trennebene z = 0) — mehrere auf einmal, auch per Ablegen ins Bild. Jeder bekommt eine Rolle; ohne Bauteil geht es nicht weiter. Kommen Anguss und Pressrest (oder Überläufe) als Dateien, entfallen die Schritte der Designer.',
     done: () => plan.has('part'), why: 'Es fehlt ein Körper mit der Rolle Bauteil.',
     tools: [{ id: 'koerper', create: g => createKoerperTool(g, { plan, layer, app }) }] },
   /* Anguss und Überläufe: nur der Designer — geladen wird unter „Körper".
      Kommen Anguss und Pressrest (bzw. Überläufe) dort aus Dateien, braucht
      es den Schritt nicht: er verschwindet aus der Leiste (skip). */
   { id: 'anguss', label: 'Anguss', title: 'Anguss und Pressrest im Angussdesigner', icon: ICON.anguss,
+    lead: 'Anguss und Pressrest im Angussdesigner des Studios bauen. Für das Netz verlängert die Seite die Anschnitte um zwei Zellen ins Bauteil.',
     skip: () => fromFiles('runner', 'biscuit'),
     done: () => plan.has('runner') || plan.has('biscuit'),
     why: 'Im Angussdesigner einen Anguss bauen — oder Anguss und Pressrest unter „Körper" laden.',
@@ -84,27 +86,34 @@ const STEPS = [
       castVolume: () => (host.part.model ? Math.abs(host.part.model.volume) + tools.ueberlauf.link.volume() : NaN)
     }) }] },
   { id: 'ueberlauf', label: 'Überläufe', title: 'Überläufe im Überlaufdesigner (wahlweise)', icon: ICON.ueberlauf,
+    lead: 'Überläufe im Überlaufdesigner setzen. Der Schritt ist wahlweise: ohne Überläufe geht es mit dem Knopf unter dem des Designers weiter.',
     skip: () => fromFiles('overflow'),
     optional: true,
     done: () => plan.has('overflow'),
     tools: [{ id: 'ueberlauf', create: g => createUeberlaufTool(g, {}) }] },
   { id: 'einlass', label: 'Einlass', title: 'Die Einlassfläche am Pressrest', icon: ICON.einlass,
+    lead: 'Die Fläche, über die die Schmelze einströmt: die große Kreisfläche des Pressrests (Seite zur Kammer). Dort drückt der Kolben nach, der Pressrest dahinter ist zu Beginn voll Schmelze. Es gibt nur einen Einlass.',
     done: () => !!plan.inlet, why: 'Der Einlass ist noch nicht gewählt.',
     tools: [{ id: 'einlass', create: g => createFlaechenTool(g, { plan, layer, app, kind: 'inlet' }) }] },
   { id: 'auslass', label: 'Auslässe', title: 'Flächen, durch die die Luft entweicht', icon: ICON.auslass,
+    lead: 'Ebene Flächen, durch die die Luft entweicht: Entlüftung, Vakuumventil, Ende eines Überlaufs. Mindestens einer; jeder wird im Fall eine eigene Randfläche (vent1, vent2 …).',
     done: () => plan.outlets.length > 0, why: 'Es ist noch kein Auslass gewählt.',
     tools: [{ id: 'auslass', create: g => createFlaechenTool(g, { plan, layer, app, kind: 'outlet' }) }] },
   { id: 'netz', label: 'Netz', title: 'Zellgröße und Verfeinerung für snappyHexMesh', icon: ICON.netz,
+    lead: 'Das Rechennetz für snappyHexMesh: ein grober Hintergrund, an den Wänden und in den Körpern verfeinert bis zur Zellgröße. Dünne Körper bekommen eigene Stufen, damit zwei Zellen über die Wand passen.',
     done: () => plan.mesh.cell > 0 && plan.mesh.nProc >= 1, why: 'Die Zellgröße fehlt.',
     tools: [{ id: 'netz', create: g => createNetzTool(g, { plan, app }) }] },
   { id: 'prozess', label: 'Prozess', title: 'Schusskurve, Gießkammer, Temperaturen und Legierung', icon: ICON.prozess,
+    lead: 'Die Schusskurve der Auslegung auf dieses Modell (Kolben-Ø vom Einlass, Massen aus den Körpern), dazu Gießkammer, Schmelze und Form. Ohne Kammer beginnt die Rechnung bei „Kammer voll", mit Kammer beim Kolbenstart.',
     done: () => tools.prozess && tools.prozess.valid(),
     get why() { return tools.prozess ? tools.prozess.why() : ''; },
     tools: [{ id: 'prozess', create: g => createProzessTool(g, { plan, app }) }] },
   { id: 'auswertung', label: 'Auswertung', title: 'Bilder der Auswertung (ParaView)', icon: ICON.auswertung,
+    lead: 'Was render.py nach der Rechnung als Bild schreibt: je Kennwert, Zeitpunkt und Ansicht eines. Der Rahmen im Bild ist der Ausschnitt; „Aktuelle Ansicht übernehmen" nimmt ihn genau so.',
     done: () => plan.post.criteria.length > 0 && plan.post.views.length > 0, why: 'Mindestens ein Kennwert und eine Ansicht.',
     tools: [{ id: 'auswertung', create: g => createAuswertungTool(g, { plan, app, host }) }] },
   { id: 'fall', label: 'Fall', title: 'Den OpenFOAM-Fall herunterladen', icon: ICON.fall,
+    lead: 'Der OpenFOAM-Fall als ZIP: Netz, Anfangs- und Randwerte, dieLogicFoam, Allrun und render.py. Entpacken, OpenFOAM v2606 laden, ./Allrun — am Ende liegen die Bilder in images/.',
     done: () => plan.exported, why: '',
     tools: [{ id: 'export', create: g => createExportTool(g, { plan, app }) }] }
 ];
@@ -128,8 +137,12 @@ const unlocked = id => { const s = STEPS[stepIndex(id)]; return !!s && !isSkippe
 const nextOf = i => STEPS.slice(i + 1).find(s => !isSkipped(s)) || null;
 const rail = shell.ui('rail');
 rail.classList.add('sim-flow');
+/* Wo man schon war: erst dann zeigt die Leiste einen Schritt als erledigt —
+   Prozess und Auswertung sind mit ihren Vorgaben schon „fertig", bevor man
+   sie gesehen hat. */
+const seen = new Set();
 function lockRail() {
-  const open = firstOpen();
+  const open = firstOpen(), here = stepIndex(shell.group);
   let n = 0;
   for (const b of rail.querySelectorAll('[data-stage]')) {
     const i = stepIndex(b.getAttribute('data-stage')), s = STEPS[i];
@@ -141,6 +154,11 @@ function lockRail() {
     if (num) num.textContent = String(++n);
     const locked = i > open;
     b.classList.toggle('locked', locked);
+    /* Erledigt zeigt die Fläche des Schritts (keine Punkte): fertig — ein
+       wahlweiser Schritt ohne Inhalt erst, wenn man an ihm vorbei ist */
+    let done;
+    try { done = !!s.done(); } catch { done = false; }
+    b.classList.toggle('sim-done', (done && (seen.has(s.id) || i < here)) || (!!s.optional && here > i));
     b.setAttribute('aria-disabled', locked ? 'true' : 'false');
     b.title = locked ? s.title + ' — erst ' + STEPS.slice(0, i).filter(x => !isDone(x)).map(x => x.label).join(', ')
       : s.title + (s.optional ? ' — wahlweise' : '');
@@ -207,15 +225,34 @@ function designerNext(st = shell.group) {
 }
 shell.onMode((id, prev, info) => { if (info.group !== info.prevGroup) { shell.setActionsExtra(null); designerNext(info.group); } });
 
+/* Über jedem Schritt seine Überschrift und was er tut — auch über den
+   Designern, deren Panel sonst gleich mit ihren Reitern beginnt. */
+const head = document.createElement('div');
+head.className = 'sim-head';
+head.innerHTML = '<div class="sim-head-step"></div><h2></h2><p></p>';
+shell.ui('panel').prepend(head);
+function paintHead() {
+  const s = STEPS[stepIndex(shell.group)];
+  head.hidden = !s;
+  if (!s) return;
+  const shown = STEPS.filter(x => !isSkipped(x));
+  head.querySelector('.sim-head-step').textContent = 'Schritt ' + (shown.indexOf(s) + 1) + ' von ' + shown.length + (s.optional ? ' · wahlweise' : '');
+  head.querySelector('h2').textContent = s.label;
+  head.querySelector('p').textContent = s.lead || '';
+}
+shell.onMode((id, prev, info) => { if (info.group !== info.prevGroup) { seen.add(info.group); lockRail(); paintHead(); } });
+
 function refresh() {
   /* Steht man auf einem Schritt, den es nicht mehr gibt (Anguss eben als
      Datei geladen), geht es zum ersten offenen. */
   const cur = STEPS[stepIndex(shell.group)];
+  if (cur) seen.add(cur.id);
   if (cur && isSkipped(cur)) stages.activate(STEPS[firstOpen()].id);
   stages.refreshRail();
   lockRail();
   host.refreshActions();
   designerNext();
+  paintHead();
 }
 plan.on(() => refresh());
 
@@ -238,6 +275,27 @@ async function addFiles(files, forceRole = null) {
   if (list.length) host.changed(list.length === 1 ? '„' + list[0].name + '" geladen' : list.length + ' Körper geladen');
   refresh();
   return list;
+}
+/** Das Bauteil des Studios entfernen. Der Rahmen kennt kein „ohne
+    Bauteil": sein Netz bleibt geladen, bis ein neues kommt — die Seite
+    nimmt es aus dem Plan, „Körper" verbirgt es im Bild, der Kopf zeigt
+    keins. Liegt ein weiteres Bauteil als Datei da, wird das das Bauteil
+    des Studios. Ohne Bauteil ist „Körper" nicht erledigt: Weiter und die
+    Schritte danach bleiben gesperrt. */
+async function removePart() {
+  const b = plan.bodies.find(x => x.src === 'part');
+  if (!b) return;
+  plan.remove(b.id);
+  const next = plan.included().find(x => x.src === 'file' && x.role === 'part');
+  if (next) {
+    plan.remove(next.id);
+    hostPartKey = 'part:' + next.name;
+    await host.part.load(next.tris, next.name);
+  } else {
+    host.part.deselect();
+    shell.header.setPart('', null);
+  }
+  refresh();
 }
 async function loadExample() {
   shell.loading('Beispiel laden …');

@@ -12,7 +12,7 @@ import * as T from 'three';
 import { esc, numberRow, segRow, selectRow, kpis } from '../../3d-studio/js/studio/rows.js';
 import { surfaceMaterial, download } from '../../3d-studio/js/ui/common.js';
 import { rayAt } from '../../3d-studio/js/viewmath.js';
-import { ROLE, scale } from '../../3d-studio/js/part/colors.js';
+import { ROLE, scale, onScheme } from '../../3d-studio/js/part/colors.js';
 import { parsePart } from '../../3d-studio/js/studio/files.js';
 import { readGLBMeshes, isGLB } from '../../3d-studio/js/part/glbio.js';
 import { neighbours, planarRegion, suggestInlet, depthAlong, volume, thickness, extraLevels, edgeCheck } from './core/geometry.js';
@@ -21,7 +21,7 @@ import { missing, segmentHeight } from './core/casegen.js';
 import { ROLES, roleLabel } from './plan.js';
 import { safe } from './build.js';
 import { payloadOf } from './payload.js';
-import { shotPlan, chamberLength, curveSVG, CURVE_MODES } from './shot.js';
+import { shotPlan, chamberLength, curveSVG, curveCursor, curveLegend, CURVE_MODES, V2_MODES, v2Manual } from './shot.js';
 
 const fmt = (x, d = 0) => (isFinite(x) ? Number(x).toLocaleString('de-DE', { maximumFractionDigits: d, minimumFractionDigits: d }) : '–');
 const num = s => Number(String(s).replace(',', '.'));
@@ -37,7 +37,13 @@ export function createLayer(host, plan) {
   const hidden = new T.MeshBasicMaterial({ visible: false, side: T.DoubleSide });
   const nbrCache = new Map();
   const geo = tris => { const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(new Float32Array(tris), 3)); g.computeVertexNormals(); return g; };
-  const clear = grp => { for (const c of [...grp.children]) { grp.remove(c); c.geometry && c.geometry.dispose(); } };
+  /* Die Körper aus Dateien haben je ein eigenes Material, die Zeichen teilen sich markMat */
+  const clear = grp => {
+    for (const c of [...grp.children]) {
+      grp.remove(c);
+      c.traverse(o => { if (o.geometry) o.geometry.dispose(); if (grp === shown && o.material) o.material.dispose(); });
+    }
+  };
 
   function rebuild() {
     clear(shown); clear(pick);
@@ -46,7 +52,7 @@ export function createLayer(host, plan) {
       /* Was das Studio schon zeigt (das Bauteil, die Körper der Designer),
          zeigt die Schicht nicht doppelt — gepickt wird trotzdem alles. */
       if (b.src === 'file' && !b.isHostPart) {
-        const m = new T.Mesh(geo(b.tris), surfaceMaterial(roleColor(b.role), { transparent: true, opacity: 0.92 }));
+        const m = new T.Mesh(geo(b.tris), surfaceMaterial(roleColor(b.role), { roughness: 0.7 }));
         m.userData.bodyId = b.id;
         shown.add(m);
       }
@@ -58,12 +64,27 @@ export function createLayer(host, plan) {
     host.view.invalidate();
   }
 
+  /* Die Körper sind deckend, die Kammer ist aufgeschnitten. Durch scheinen
+     nur die Schmelze bei „Kammer voll" und die gewählte Einlassfläche: man
+     sieht den Pressrest darin. Die Zeichen auf den Flächen liegen mit
+     polygonOffset obenauf, der Pfeil zeigt den Zustrom am Einlass. */
   const markMat = {
-    inlet: new T.MeshBasicMaterial({ color: ROLE.melt, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }),
+    inlet: new T.MeshBasicMaterial({ color: ROLE.melt, side: T.DoubleSide, transparent: true, opacity: 0.5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }),
     outlet: new T.MeshBasicMaterial({ color: ROLE.air, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }),
-    melt: new T.MeshStandardMaterial({ color: ROLE.melt, transparent: true, opacity: 0.45, depthWrite: false, side: T.DoubleSide }),
-    sleeve: new T.MeshStandardMaterial({ color: ROLE.steelDark, transparent: true, opacity: 0.18, depthWrite: false, side: T.DoubleSide })
+    melt: surfaceMaterial(ROLE.melt, { flat: false, side: T.FrontSide, roughness: 0.45, transparent: true, opacity: 0.4, depthWrite: false }),
+    arrow: surfaceMaterial(ROLE.mark, { flat: false, roughness: 0.45 }),
+    /* Die Kammer nur von innen: die Wand zum Betrachter fällt weg, man sieht
+       hinein auf die Schmelze — aus jeder Richtung, ohne Durchscheinen. */
+    sleeve: surfaceMaterial(ROLE.steel, { flat: false, side: T.BackSide, roughness: 0.55, metalness: 0.15 }),
+    piston: surfaceMaterial(ROLE.steelDark, { flat: false, roughness: 0.5, metalness: 0.2 }),
+    rim: new T.LineBasicMaterial({ color: ROLE.steelDark })
   };
+  onScheme(() => {
+    markMat.inlet.color.set(ROLE.melt); markMat.outlet.color.set(ROLE.air); markMat.melt.color.set(ROLE.melt);
+    markMat.sleeve.color.set(ROLE.steel); markMat.piston.color.set(ROLE.steelDark); markMat.rim.color.set(ROLE.steelDark);
+    markMat.arrow.color.set(ROLE.mark);
+    rebuild();
+  });
   /* Die Schmelze in der liegenden Kammer: ein Kreissegment (Füllhöhe aus φ)
      über die ganze Kammerlänge, von der Kolbenstartlage (Ursprung) in
      Richtung -n (zur Form). Schwerkraft quer zur Achse; sonst nichts. */
@@ -92,6 +113,27 @@ export function createLayer(host, plan) {
     m.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(w, up, a));
     return m;
   }
+  /** Ein Kreis (Linie) mit Radius r um c in der Ebene mit Normale n. */
+  function ring(c, n, r) {
+    const q = new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 0, 1), n);
+    const pts = Array.from({ length: 96 }, (_, k) => new T.Vector3(r * Math.cos(2 * Math.PI * k / 96), r * Math.sin(2 * Math.PI * k / 96), 0).applyQuaternion(q).add(c));
+    return new T.LineLoop(new T.BufferGeometry().setFromPoints(pts), markMat.rim);
+  }
+  /** Der Zustrom: ein Pfeil auf der Achse in Richtung -n (so schiebt der
+      Kolben), die Spitze um `gap` vor der Einlassfläche. */
+  function inflowArrow(c, n, r, gap) {
+    const L = 1.4 * r, tipLen = 0.4 * r;
+    const shaft = new T.Mesh(new T.CylinderGeometry(0.07 * r, 0.07 * r, L - tipLen, 24), markMat.arrow);
+    shaft.position.y = tipLen + (L - tipLen) / 2;
+    const tip = new T.Mesh(new T.ConeGeometry(0.18 * r, tipLen, 32), markMat.arrow);
+    tip.rotation.x = Math.PI;
+    tip.position.y = tipLen / 2;
+    const a = new T.Group();
+    a.add(shaft, tip);
+    a.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), n);
+    a.position.copy(c).addScaledVector(n, gap);
+    return a;
+  }
   function faceTris(b, faces) {
     const out = new Float32Array(faces.length * 9);
     faces.forEach((f, i) => out.set(b.tris.subarray(f * 9, f * 9 + 9), i * 9));
@@ -106,51 +148,48 @@ export function createLayer(host, plan) {
     };
     if (plan.inlet) {
       add(plan.inlet, markMat.inlet);
-      const i = plan.inlet, n = new T.Vector3(...i.normal);
-      /* wie im Fall: eine halbe Zelle größer als der Pressrest, rundum */
-      const pad = 0.5 * plan.mesh.cell, r = i.radius + pad;
+      const i = plan.inlet, n = new T.Vector3(...i.normal), c = new T.Vector3(...i.centroid);
       const sp = plan.shot.chamber ? shotPlan(plan) : null;
       if (sp && !sp.error) {
+        const r = i.radius + 0.5 * plan.mesh.cell;
         /* mit Kammer: der Hub hinter der Einlassfläche, die Schmelze darin
-           in Ruhe mit dem Füllgrad (waagerechte Oberfläche) */
-        const total = sp.stroke + i.depth;
-        const sleeve = new T.Mesh(new T.CylinderGeometry(r, r, sp.stroke, 64, 1, true), markMat.sleeve);
+           in Ruhe mit dem Füllgrad (waagerechte Oberfläche), hinten der
+           Kolben. Im Pressrest liegt sie auch — der verdeckt sie. */
+        const sleeve = new T.Mesh(new T.CylinderGeometry(r, r, sp.stroke, 96, 1, true), markMat.sleeve);
         sleeve.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), n);
-        sleeve.position.set(...i.centroid).addScaledVector(n, sp.stroke / 2);
+        sleeve.position.copy(c).addScaledVector(n, sp.stroke / 2);
         marks.add(sleeve);
-        const seg = meltSegment(r, total, sp.phi, plan.process.gravity, n);
+        const back = c.clone().addScaledVector(n, sp.stroke);
+        marks.add(ring(c, n, r), ring(back, n, r));
+        const piston = new T.Mesh(new T.CylinderGeometry(r * 0.995, r * 0.995, Math.max(r * 0.25, 2), 96), markMat.piston);
+        piston.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), n);
+        piston.position.copy(back).addScaledVector(n, Math.max(r * 0.25, 2) / 2);
+        marks.add(piston);
+        const seg = meltSegment(r * 0.995, sp.stroke, sp.phi, plan.process.gravity, n);
         if (seg) {
-          seg.position.set(...i.centroid).addScaledVector(n, sp.stroke);
+          seg.position.copy(back);
           marks.add(seg);
         }
+        marks.add(inflowArrow(c, n, i.radius, 0));
       } else {
+        /* Der Fall füllt eine halbe Zelle über den Pressrest hinaus; im Bild
+           etwas mehr, damit man den Rand des Pressrests in der Schmelze sieht. */
+        const pad = Math.max(0.5 * plan.mesh.cell, 0.05 * i.radius), r = i.radius + pad;
         const h = Math.max(i.depth, 0.5) + 2 * pad;
-        const cyl = new T.Mesh(new T.CylinderGeometry(r, r, h, 64, 1), markMat.melt);
+        const cyl = new T.Mesh(new T.CylinderGeometry(r, r, h, 96, 1), markMat.melt);
         cyl.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), n);
-        cyl.position.set(...i.centroid).addScaledVector(n, -(h / 2 - pad));
-        marks.add(cyl);
+        cyl.position.copy(c).addScaledVector(n, -(h / 2 - pad));
+        marks.add(cyl, inflowArrow(c, n, i.radius, pad));
       }
     }
     for (const o of plan.outlets) add(o, markMat.outlet);
     host.view.invalidate();
   }
-  plan.on(what => { if (what === 'bodies' || what === 'apply' || what === 'include') { rebuild(); applyGhost(); } else marksRebuild(); });
+  plan.on(what => { if (what === 'bodies' || what === 'apply' || what === 'include') rebuild(); else marksRebuild(); });
 
-  /* Beim Wählen von Flächen die Körper durchscheinend: Einlass und
-     Schmelzezylinder liegen sonst unter dem Pressrest. */
-  let ghost = false;
-  function applyGhost() {
-    for (const m of shown.children) {
-      m.material.opacity = ghost ? 0.4 : 0.92;
-      m.material.depthWrite = !ghost;
-      m.material.needsUpdate = true;
-    }
-    host.view.invalidate();
-  }
   const ray = new T.Raycaster();
   return {
-    group, rebuild: () => { rebuild(); applyGhost(); }, marksRebuild,
-    set ghost(v) { ghost = !!v; applyGhost(); },
+    group, rebuild, marksRebuild,
     /** Was unter dem Zeiger liegt → { body, face } oder null. */
     pickAt(ev) {
       rayAt(ray, ev, host.view.renderer.domElement, host.view.camera);
@@ -198,6 +237,10 @@ export async function readBodies(files) {
   return out;
 }
 
+/* Ein Umschalter über die ganze Breite — der Abschnitt darüber nennt ihn schon. */
+const segFull = (ui, label, options, value) => '<div class="seg sim-seg"' + (ui ? ' data-ui="' + ui + '"' : '') + ' role="group" aria-label="' + esc(label) + '">'
+  + options.map(([v, l]) => '<button type="button" data-value="' + esc(v) + '"' + (v === value ? ' class="active"' : '') + '>' + l + '</button>').join('') + '</div>';
+const EYE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
 const fileInput = (ui, label, accept = '.stl,.glb', multiple = true) =>
   '<label class="btn btn-sm btn-outline sim-file"><input type="file" data-ui="' + ui + '" accept="' + accept + '"' + (multiple ? ' multiple' : '') + ' hidden>' + label + '</label>';
 
@@ -205,7 +248,6 @@ const fileInput = (ui, label, accept = '.stl,.glb', multiple = true) =>
 export function createKoerperTool(g, { plan, layer, app }) {
   const modes = [{
     id: 'koerper', label: 'Körper',
-    hint: 'Die Körper der Form als STL oder GLB, in mm, im Bauteilsystem (Trennebene z = 0); mehrere auf einmal, auch per Ablegen ins Bild. Sind Anguss und Pressrest (oder Überläufe) dabei, entfallen die Schritte der Designer.',
     html: '<div class="sim-actions">' + fileInput('body-files', 'Dateien laden …')
       + '<button type="button" class="btn btn-sm btn-outline" data-ui="body-example">Beispiel: Gusstraube</button></div>'
       + '<div class="st-list sim-bodies" data-ui="body-list" data-scroll></div>'
@@ -216,13 +258,13 @@ export function createKoerperTool(g, { plan, layer, app }) {
   function render() {
     const list = g.ui('body-list');
     if (!list) return;
-    list.innerHTML = plan.bodies.length ? plan.bodies.map(b => '<div class="sim-body' + (b.include ? '' : ' off') + '" data-id="' + b.id + '">'
-      + '<i class="sim-swatch" style="background:' + roleColor(b.role) + '"></i>'
+    list.innerHTML = plan.bodies.length ? plan.bodies.map(b => '<div class="sim-body' + (b.include ? '' : ' off') + '" data-id="' + b.id + '" style="--role:' + roleColor(b.role) + '">'
       + '<input type="checkbox" data-act="include"' + (b.include ? ' checked' : '') + ' aria-label="' + esc(b.name) + ' mitrechnen">'
-      + '<span class="sim-name" title="' + esc(b.name) + '">' + esc(b.name) + '<small>' + srcLabel(b) + ' · ' + fmt(b.tris.length / 9) + ' Dreiecke · ' + fmt(Math.abs(volume(b.tris)) / 1000, 1) + ' cm³'
-      + (closedOf(b) ? '' : ' · nicht geschlossen') + '</small></span>'
+      + '<span class="sim-name" title="' + esc(b.name + ' · ' + srcLabel(b) + ' · ' + fmt(b.tris.length / 9) + ' Dreiecke') + '">' + esc(b.name)
+      + '<small>' + fmt(Math.abs(volume(b.tris)) / 1000, 1) + ' cm³ · ' + srcLabel(b) + '</small>'
+      + (closedOf(b) ? '' : '<small class="warn">nicht geschlossen</small>') + '</span>'
       + '<select data-act="role" aria-label="Rolle">' + ROLES.map(([v, l]) => '<option value="' + v + '"' + (v === b.role ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>'
-      + (b.src === 'file' ? '<button type="button" class="btn btn-sm btn-outline sim-x" data-act="remove" aria-label="' + esc(b.name) + ' entfernen">✕</button>' : '<span></span>')
+      + (b.src === 'file' || b.src === 'part' ? '<button type="button" class="btn btn-sm btn-outline sim-x" data-act="remove" title="' + esc(b.name) + ' entfernen" aria-label="' + esc(b.name) + ' entfernen">✕</button>' : '<span></span>')
       + '</div>').join('') : '<div class="st-hintline">Noch kein Körper. Dateien laden, ablegen oder das Beispiel nehmen.</div>';
     const parts = plan.included().filter(b => b.role === 'part');
     g.ui('body-note').textContent = !parts.length ? 'Es fehlt ein Körper mit der Rolle Bauteil.'
@@ -238,7 +280,12 @@ export function createKoerperTool(g, { plan, layer, app }) {
   const closedOf = b => { if (!closedCache.has(b.stamp)) closedCache.set(b.stamp, edgeCheck(b.tris).closed); return closedCache.get(b.stamp); };
   const srcLabel = b => (b.key === 'designer:tongues' ? 'Anschnitte bis aufs Bauteil verlängert'
     : ({ file: 'Datei', part: 'Bauteil des Studios', runner: 'Angussdesigner', biscuit: 'Angussdesigner', vents: 'Überlaufdesigner' })[b.src] || b.src);
-  plan.on(() => render());
+  plan.on(w => {
+    /* Ohne Bauteil im Plan zeigt das Bild auch keins: der Rahmen behält sein
+       Netz, bis ein neues geladen ist (app.removePart) */
+    if (w === 'bodies') g.part.setLook({ visible: plan.bodies.some(b => b.src === 'part') });
+    render();
+  });
   const tool = {
     id: 'koerper', modes, startMode: 'koerper',
     mounted() {
@@ -254,12 +301,13 @@ export function createKoerperTool(g, { plan, layer, app }) {
         if (act === 'role') { b.role = ev.target.value; plan.changed('role'); g.changed('Rolle von „' + b.name + '": ' + roleLabel(b.role)); }
         app.refresh();
       });
-      g.ui('body-list').addEventListener('click', ev => {
+      g.ui('body-list').addEventListener('click', async ev => {
         const btn = ev.target.closest('[data-act="remove"]');
         const row = btn && btn.closest('[data-id]');
         const b = row && plan.body(row.getAttribute('data-id'));
         if (!b) return;
-        plan.remove(b.id);
+        if (b.src === 'part') await app.removePart();
+        else plan.remove(b.id);
         g.changed('„' + b.name + '" entfernt');
         app.refresh();
       });
@@ -276,19 +324,36 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
   const id = inlet ? 'einlass' : 'auslass';
   const modes = [{
     id, label: inlet ? 'Einlass' : 'Auslässe',
-    hint: inlet
-      ? 'Auf die große Kreisfläche des Pressrests tippen (Seite zur Kammer). Dort drückt der Kolben nach; der Pressrest dahinter ist zu Beginn voll Schmelze.'
-      : 'Auf ebene Flächen tippen, durch die die Luft geht: Entlüftung, Vakuumventil, Ende eines Überlaufs. Ein zweiter Tipp nimmt die Fläche wieder heraus.',
     html: inlet
-      ? '<div class="sim-actions"><button type="button" class="btn btn-sm btn-outline" data-ui="inlet-suggest">Vorschlag: größte Kreisfläche</button></div>'
+      ? '<div class="sim-actions"><button type="button" class="btn btn-sm btn-outline sim-pick" data-ui="pick" aria-pressed="false">Einlass auswählen</button>'
+        + '<button type="button" class="btn btn-sm btn-outline" data-ui="inlet-suggest">Vorschlag: größte Kreisfläche</button></div>'
+        + '<div class="st-list sim-outlets" data-ui="inlet-row"></div>'
         + '<div class="krows" data-ui="inlet-kpis"></div>'
         + numberRow({ ui: 'inlet-depth', label: 'Schmelze bis Tiefe', unit: 'mm' })
         + '<div class="st-hintline" data-ui="inlet-note"></div>'
-      : '<div class="st-list" data-ui="outlet-list" data-scroll></div>'
+      : '<div class="sim-actions"><button type="button" class="btn btn-sm btn-outline sim-pick" data-ui="pick" aria-pressed="false">Auslass auswählen</button></div>'
+        + '<div class="st-list sim-outlets" data-ui="outlet-list" data-scroll></div>'
         + '<div class="st-hintline" data-ui="outlet-note"></div>',
     primary: () => app.nextPrimary(id)
   }];
   let active = false;
+
+  /* Gewählt wird im Zielmodus: der Knopf schaltet ihn ein, der Hinweis im
+     Bild sagt, worauf man tippt, Esc oder „Abbrechen" beendet ihn. Den
+     Einlass gibt es nur einmal — der erste Treffer beendet das Zielen;
+     Auslässe bleiben im Zielmodus, bis man ihn beendet. */
+  let aiming = false;
+  const AIM_TEXT = inlet ? 'Auf die Kreisfläche des Pressrests tippen'
+    : 'Auf ebene Flächen tippen, durch die die Luft geht — ein zweiter Tipp nimmt eine heraus';
+  const PICK_LABEL = inlet ? ['Einlass auswählen', 'Auswahl abbrechen'] : ['Auslass auswählen', 'Auswahl beenden'];
+  function setAim(on) {
+    aiming = on;
+    g.aim.onCancel = on ? () => setAim(false) : null;
+    g.aim.show(on, AIM_TEXT);
+    g.viewport.classList.toggle('sim-aiming', on);
+    const b = g.ui('pick');
+    if (b) { b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); b.textContent = PICK_LABEL[on ? 1 : 0]; }
+  }
 
   function choose(body, faces, info) {
     const sel = { bodyId: body.id, stamp: body.stamp, faces, centroid: info.centroid, normal: info.normal, area: info.area, radius: info.radius };
@@ -307,13 +372,14 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
     app.refresh();
   }
   function pickAt(ev) {
-    if (!active || g.shell.mode !== id) return;
+    if (!active || !aiming || g.shell.mode !== id) return;
     const hit = layer.pickAt(ev);
-    if (!hit) return;
+    if (!hit) { g.aim.miss('Daneben: dort liegt kein Körper.', () => aiming); return; }
     const r = planarRegion(hit.body.tris, layer.neighbours(hit.body), hit.face);
     if (inlet && r.circularity < 0.6) g.shell.toast('Die Fläche ist nicht kreisrund (' + fmt(100 * r.circularity) + ' %) — als Einlass trotzdem übernommen.', { ms: 6000 });
     if (!inlet && r.area > 0.5 * totalArea(hit.body)) { g.shell.toast('Diese Fläche ist fast der ganze Körper — das ist keine ebene Auslassfläche.'); return; }
     choose(hit.body, r.faces, r);
+    if (inlet) setAim(false);
   }
   const totalArea = b => { let A = 0; for (let i = 0; i < b.tris.length; i += 9) { const ux = b.tris[i + 3] - b.tris[i], uy = b.tris[i + 4] - b.tris[i + 1], uz = b.tris[i + 5] - b.tris[i + 2], vx = b.tris[i + 6] - b.tris[i], vy = b.tris[i + 7] - b.tris[i + 1], vz = b.tris[i + 8] - b.tris[i + 2]; A += Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx) / 2; } return A; };
 
@@ -322,29 +388,36 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
     const pool = cands.length ? cands : plan.included();
     let best = null, bb = null;
     for (const b of pool) { const r = suggestInlet(b.tris, layer.neighbours(b)); if (r && (!best || r.area > best.area)) { best = r; bb = b; } }
-    if (!best) { g.shell.toast('Keine kreisrunde ebene Fläche gefunden — bitte im Bild wählen.'); return; }
+    if (!best) { g.shell.toast('Keine kreisrunde ebene Fläche gefunden — bitte „Einlass auswählen" und im Bild tippen.'); return; }
+    if (aiming) setAim(false);
     choose(bb, best.faces, best);
   }
   function render() {
     if (inlet) {
       const i = plan.inlet, b = i && plan.body(i.bodyId);
+      g.ui('inlet-row').innerHTML = i
+        ? '<div class="sim-outlet sim-inlet"><div class="sim-name">inlet<small>' + esc(b ? b.name : '–') + ' · ' + fmt(i.area) + ' mm² · Ø ' + fmt(2 * i.radius, 1) + ' mm</small></div>'
+          + '<button type="button" class="btn btn-sm btn-outline sim-x" data-act="remove" title="Einlass entfernen" aria-label="Einlass entfernen">✕</button></div>'
+        : '<div class="st-hintline">Noch kein Einlass: „Einlass auswählen" und auf die Fläche tippen, oder den Vorschlag nehmen.</div>';
       kpis(g.ui('inlet-kpis'), i ? [
-        { label: 'Körper', value: b ? b.name : '–' },
-        { label: 'Fläche', value: fmt(i.area) + ' mm²', note: 'Ø ' + fmt(2 * i.radius, 1) + ' mm (gleiche Fläche)' },
-        { label: 'Richtung', value: '(' + i.normal.map(x => fmt(Math.abs(x) < 5e-3 ? 0 : -x, 2)).join('; ') + ')', note: 'Kolben schiebt so' }
-      ] : [{ label: 'Einlass', value: 'noch nicht gewählt', verdict: 'warn' }]);
+        { label: 'Richtung', value: '(' + i.normal.map(x => fmt(Math.abs(x) < 5e-3 ? 0 : -x, 2)).join('; ') + ')', note: 'Kolben schiebt so (der Pfeil im Bild)' }
+      ] : []);
       const d = g.ui('inlet-depth');
       if (d && document.activeElement !== d) d.value = i ? fmt(i.depth, 1) : '';
-      g.ui('inlet-note').textContent = i ? 'Der Zylinder im Bild ist die Schmelze bei „Kammer voll"; Tiefe vorgeschlagen aus dem Körper (' + fmt(i.depthAuto, 1) + ' mm).' : '';
+      g.ui('inlet-note').textContent = !i ? ''
+        : (plan.shot.chamber ? 'Der Pfeil zeigt, wie die Schmelze aus der Kammer einströmt'
+          : 'Der durchscheinende Zylinder im Bild ist die Schmelze bei „Kammer voll", der Pfeil zeigt, wie sie einströmt')
+          + '; Tiefe vorgeschlagen aus dem Körper (' + fmt(i.depthAuto, 1) + ' mm).';
     } else {
       const list = g.ui('outlet-list');
       if (!list) return;
+      /* je Auslass zwei Zeilen: Name, Körper und Fläche; darunter die Art */
       list.innerHTML = plan.outlets.map((o, k) => {
-        const b = plan.body(o.bodyId);
-        return '<div class="sim-outlet" data-k="' + k + '"><b>vent' + (k + 1) + '</b><span>' + esc(b ? b.name : '') + ' · ' + fmt(o.area, 1) + ' mm²</span>'
-          + '<select data-act="mode" aria-label="Art"><option value="orifice"' + (o.mode !== 'open' ? ' selected' : '') + '>Drossel (Cd 0,8)</option><option value="open"' + (o.mode === 'open' ? ' selected' : '') + '>offen</option></select>'
-          + '<button type="button" class="btn btn-sm btn-outline sim-x" data-act="remove" aria-label="vent' + (k + 1) + ' entfernen">✕</button></div>';
-      }).join('') || '<div class="st-hintline">Noch kein Auslass.</div>';
+        const b = plan.body(o.bodyId), name = 'vent' + (k + 1);
+        return '<div class="sim-outlet" data-k="' + k + '"><div class="sim-name">' + name + '<small>' + esc(b ? b.name : '') + ' · ' + fmt(o.area, 1) + ' mm²</small></div>'
+          + '<button type="button" class="btn btn-sm btn-outline sim-x" data-act="remove" title="' + name + ' entfernen" aria-label="' + name + ' entfernen">✕</button>'
+          + segFull('', 'Art von ' + name, [['orifice', 'Drossel (Cd 0,8)'], ['open', 'offen']], o.mode === 'open' ? 'open' : 'orifice') + '</div>';
+      }).join('') || '<div class="st-hintline">Noch kein Auslass: „Auslass auswählen" und auf die Flächen tippen.</div>';
       g.ui('outlet-note').textContent = 'Drossel: die Luft strömt durch die Fläche wie durch eine Blende (Fläche × Cd), die Schmelze bleibt davor stehen wie am Entlüftungsblock. Offen: Umgebungsdruck an der Fläche, Luft und Schmelze treten aus (offener Vakuumschlauch, Wassermodell).';
     }
   }
@@ -353,8 +426,16 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
     id, modes, startMode: id,
     mounted() {
       onTap(g, pickAt);
+      g.ui('pick').addEventListener('click', () => setAim(!aiming));
       if (inlet) {
         g.ui('inlet-suggest').addEventListener('click', suggest);
+        g.ui('inlet-row').addEventListener('click', ev => {
+          if (!ev.target.closest('[data-act="remove"]') || !plan.inlet) return;
+          plan.inlet = null;
+          plan.changed('inlet');
+          g.changed('Einlass entfernt');
+          app.refresh();
+        });
         g.ui('inlet-depth').addEventListener('change', ev => {
           const x = num(ev.target.value);
           if (plan.inlet && x > 0) { plan.inlet.depth = x; plan.changed('inlet'); g.changed('Schmelzetiefe ' + fmt(x, 1) + ' mm'); }
@@ -362,28 +443,37 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
         });
       } else {
         const list = g.ui('outlet-list');
-        list.addEventListener('change', ev => {
-          const k = Number(ev.target.closest('[data-k]').getAttribute('data-k'));
-          plan.outlets[k].mode = ev.target.value;
-          plan.changed('outlets');
-          g.changed('vent' + (k + 1) + ': ' + (ev.target.value === 'open' ? 'offen' : 'Drossel'));
-        });
         list.addEventListener('click', ev => {
-          const btn = ev.target.closest('[data-act="remove"]');
-          if (!btn) return;
-          plan.outlets.splice(Number(btn.closest('[data-k]').getAttribute('data-k')), 1);
-          plan.changed('outlets');
-          g.changed('Auslass entfernt');
-          app.refresh();
+          const row = ev.target.closest('[data-k]');
+          if (!row) return;
+          const k = Number(row.getAttribute('data-k'));
+          const mode = ev.target.closest('[data-value]');
+          if (mode) {
+            plan.outlets[k].mode = mode.getAttribute('data-value');
+            plan.changed('outlets');
+            g.changed('vent' + (k + 1) + ': ' + (plan.outlets[k].mode === 'open' ? 'offen' : 'Drossel'));
+          } else if (ev.target.closest('[data-act="remove"]')) {
+            plan.outlets.splice(k, 1);
+            plan.changed('outlets');
+            g.changed('Auslass entfernt');
+            app.refresh();
+          }
         });
       }
       render();
     },
     setActive(on) {
       active = on;
-      layer.ghost = on;
-      g.part.setLook({ opacity: on ? 0.45 : undefined });
+      if (!on && aiming) setAim(false);
     },
+    /** Esc im Zielmodus (der Rahmen fragt erst hier) */
+    cancelAim() {
+      if (!aiming) return false;
+      setAim(false);
+      return true;
+    },
+    /** den Zielmodus ein- oder ausschalten (Knopf, Tests) */
+    aim: on => setAim(on !== false),
     /** für die Seite: den Einlass ohne Klick vorschlagen (Beispiel) */
     suggest,
     /** wie ein Tipp auf das Dreieck `face` des Körpers (Tests, Skripte) */
@@ -401,7 +491,6 @@ export function createFlaechenTool(g, { plan, layer, app, kind }) {
 export function createNetzTool(g, { plan, app }) {
   const modes = [{
     id: 'netz', label: 'Netz',
-    hint: 'snappyHexMesh aus den Körpern: ein grober Hintergrund, an den Wänden und in den Körpern verfeinert bis zur Zellgröße. Dünne Körper bekommen eigene Stufen, damit zwei Zellen über die Wand passen.',
     html: numberRow({ ui: 'mesh-cell', label: 'Zellgröße', unit: 'mm' })
       + segRow({ ui: 'mesh-level', label: 'Hintergrund', options: [['0', '1×'], ['1', '2×'], ['2', '4×'], ['3', '8×']], value: String(plan.mesh.level), help: '' })
       + numberRow({ ui: 'mesh-np', label: 'Prozesse', unit: '' })
@@ -449,7 +538,7 @@ export function createNetzTool(g, { plan, app }) {
       const k = b.extra || 0, h = M.cell / Math.pow(2, k);
       const thin = th && wall < 2 * h;
       return '<div class="sim-meshrow' + (thin ? ' warn' : '') + '" data-id="' + b.id + '"><span class="sim-name">' + esc(b.name)
-        + '<small>' + (th ? 'Wand ≈ ' + fmt(wall, 1) + ' mm (' + (b.role === 'runner' && b.src === 'file' ? 'Anschnitt, dünnste 2 %' : 'dünnste 10 %') + ')' : 'Wand: wird gemessen …') + (thin ? ' · unter zwei Zellen' : '') + '</small></span>'
+        + '<small title="' + (b.role === 'runner' && b.src === 'file' ? 'Anschnitt: die dünnsten 2 % der Wand' : 'die dünnsten 10 % der Wand') + '">' + (th ? 'Wand ' + fmt(wall, 1) + ' mm' + (b.role === 'runner' && b.src === 'file' ? ' am Anschnitt' : '') : 'Wand wird gemessen …') + (thin ? ' · unter zwei Zellen' : '') + '</small></span>'
         + '<select data-act="extra" aria-label="Verfeinerung ' + esc(b.name) + '">' + [0, 1, 2, 3].map(x => '<option value="' + x + '"' + (x === k ? ' selected' : '') + '>' + fmt(M.cell / Math.pow(2, x), 2) + ' mm</option>').join('') + '</select></div>';
     }).join('');
     let cells = bodies.reduce((s, b) => s + Math.abs(volume(b.tris)) * Math.pow(8, b.extra || 0), 0) / Math.pow(M.cell, 3);
@@ -524,22 +613,34 @@ const PROC = [
   ['Tliq', 'Liquidus', '°C', 0, 50, 1500],
   ['Tsol', 'Solidus', '°C', 0, 50, 1500]
 ];
-const SHOT_PARAMS = [['kappa', 'κ = Kappe / U_H', '–', 2, 0.3, 1, 'focus'], ['v1', 'V₁', 'm/s', 2, 0.01, 5, 'v1v2'], ['a1', 'a₁', 'm/s²', 1, 0.1, 500, 'v1v2'], ['v2', 'V₂', 'm/s', 2, 0.1, 20, 'v1v2'], ['a2', 'a₂', 'm/s²', 1, 0.1, 5000, 'v1v2']];
+/* [Schlüssel, Bezeichnung, Einheit, Stellen, min, max, wann sichtbar] — wann: Modus der 1. Phase oder 'v2' (2. Phase von Hand) */
+const SHOT_PARAMS = [['kappa', 'κ = Kappe / U_H', '–', 2, 0.3, 1, 'focus'], ['v1', 'V₁', 'm/s', 2, 0.01, 5, 'v1v2'], ['a1', 'a₁', 'm/s²', 1, 0.1, 500, 'v1v2'], ['v2', 'V₂', 'm/s', 2, 0.1, 20, 'v2'], ['a2', 'a₂', 'm/s²', 1, 0.1, 5000, 'v2']];
+const shotRows = when => '<div data-shotmode="' + when + '">' + SHOT_PARAMS.filter(r => r[6] === when).map(([k, l, u]) => numberRow({ ui: 'p-' + k, label: l, unit: u })).join('') + '</div>';
 export function createProzessTool(g, { plan, app }) {
+  let view = 'all', sp = null;
   const modes = [{
     id: 'prozess', label: 'Prozess',
-    hint: 'Die Schusskurve der Auslegung auf dieses Modell: Kolben-Ø vom Einlass, Massen aus den Körpern. Ohne Kammer beginnt die Rechnung bei „Kammer voll", mit Kammer beim Kolbenstart — die Schmelze liegt dann in der Kammer.',
     html: segRow({ ui: 'p-chamber', label: 'Gießkammer', options: [['0', 'ohne'], ['1', 'mit Kammer']], value: plan.shot.chamber ? '1' : '0' })
       + numberRow({ ui: 'p-length', label: 'Kammerlänge', unit: 'mm' })
-      + selectRow({ ui: 'p-mode', label: 'Schusskurve', options: CURVE_MODES, value: plan.shot.mode })
-      + SHOT_PARAMS.map(([k, l, u, , , , m]) => '<div data-shotmode="' + m + '">' + numberRow({ ui: 'p-' + k, label: l, unit: u }) + '</div>').join('')
-      + '<div class="sim-curvebox" data-ui="p-curve"></div>'
-      + '<div class="krows" data-ui="p-shot"></div>'
       + '<div class="sim-actions"><button type="button" class="btn btn-sm btn-outline" data-ui="p-length-fit" hidden></button></div>'
-      + '<div class="sim-label">Schmelze und Form</div>'
-      + PROC.map(([k, l, u]) => numberRow({ ui: 'p-' + k, label: l, unit: u })).join('')
+      + '<div class="sim-label">1. Phase — bis „Kammer voll"</div>'
+      + segFull('p-mode', 'Gesetz der 1. Phase', CURVE_MODES, plan.shot.mode)
+      + shotRows('focus') + shotRows('v1v2')
+      + '<div class="st-hintline" data-ui="p-phase1"></div>'
+      + '<div class="sim-label">2. Phase — Formfüllung</div>'
+      + segFull('p-v2mode', 'Zweite Phase', V2_MODES, plan.shot.v2Mode || 'auto')
+      + shotRows('v2')
+      + '<div class="st-hintline" data-ui="p-phase2"></div>'
+      + '<div class="sim-actions"><button type="button" class="btn btn-sm btn-outline" data-ui="p-a2-fit" hidden></button></div>'
+      + '<div class="sim-label">Schusskurve</div>'
+      + segFull('p-view', 'Ausschnitt', [['all', 'Ganzer Schuss'], ['fill', 'Formfüllung']], 'all')
+      + '<div class="sim-curvebox" data-ui="p-curve"></div>'
+      + '<div data-ui="p-legend"></div>'
+      + '<div class="krows" data-ui="p-shot"></div>'
       + selectRow({ ui: 'p-gravity', label: 'Schwerkraft', options: [['-y', '−y'], ['+y', '+y'], ['-x', '−x'], ['+x', '+x'], ['-z', '−z'], ['+z', '+z'], ['aus', 'aus']], value: plan.process.gravity })
-      + '<div class="krows" data-ui="p-kpis"></div>',
+      + '<details class="st-details sim-details" data-ui="p-melt"><summary>Schmelze und Form <span data-ui="p-melt-sum"></span></summary><div class="st-details-body">'
+      + PROC.map(([k, l, u]) => numberRow({ ui: 'p-' + k, label: l, unit: u })).join('')
+      + '<div class="krows" data-ui="p-kpis"></div></div></details>',
     primary: () => app.nextPrimary('prozess'),
     enter: () => measureGate()
   }];
@@ -560,14 +661,36 @@ export function createProzessTool(g, { plan, app }) {
     set('p-length', fmt(chamberLength(plan.shot), 0));
     const gr = g.ui('p-gravity');
     if (gr) gr.value = plan.process.gravity;
-    const md = g.ui('p-mode');
-    if (md) md.value = plan.shot.mode;
-    const seg = g.ui('p-chamber');
-    if (seg) for (const b of seg.querySelectorAll('button')) b.classList.toggle('active', b.getAttribute('data-value') === (plan.shot.chamber ? '1' : '0'));
+    const S = plan.shot, manual = v2Manual(S);
+    const segSet = (ui, val) => { const el = g.ui(ui); if (el) for (const b of el.querySelectorAll('button')) b.classList.toggle('active', b.getAttribute('data-value') === val); };
+    segSet('p-chamber', S.chamber ? '1' : '0');
+    segSet('p-mode', S.mode);
+    segSet('p-v2mode', manual ? 'manual' : 'auto');
+    segSet('p-view', view);
+    /* mit V₁ von Hand gibt es kein „automatisch" (das rechnet die Auslegung nur zu ihren Gesetzen) */
+    const auto = g.ui('p-v2mode') && g.ui('p-v2mode').querySelector('[data-value="auto"]');
+    if (auto) { auto.disabled = S.mode === 'v1v2'; auto.title = S.mode === 'v1v2' ? 'Mit V₁ von Hand wird auch V₂ von Hand gesetzt' : 'V₂ so, dass die NADCA-Füllzeit getroffen wird'; }
     const box = g.ui('p-curve');
-    if (box) for (const el of box.parentNode.querySelectorAll('[data-shotmode]')) el.hidden = el.getAttribute('data-shotmode') !== plan.shot.mode;
-    const sp = shotPlan(plan);
-    if (box) box.innerHTML = sp.error ? '<div class="st-hintline">' + esc(sp.error) + '</div>' : curveSVG(sp, { chamber: plan.shot.chamber });
+    if (box) for (const el of box.closest('.st-mode').querySelectorAll('[data-shotmode]')) {
+      const w = el.getAttribute('data-shotmode');
+      el.hidden = w === 'v2' ? !manual : w !== S.mode;
+    }
+    sp = shotPlan(plan);
+    if (box) box.innerHTML = sp.error ? '<div class="st-hintline">' + esc(sp.error) + '</div>' : curveSVG(sp, { chamber: S.chamber, view });
+    const leg = g.ui('p-legend');
+    if (leg) leg.innerHTML = sp.error ? '' : curveLegend(sp, { chamber: S.chamber });
+    const ph1 = g.ui('p-phase1'), ph2 = g.ui('p-phase2'), a2fit = g.ui('p-a2-fit');
+    if (ph1) ph1.textContent = sp.error ? '' : ({ focus: 'Fokussierendes Kolbengesetz bis zur Kappe κ·U_H (höchstens v_krit), Plateau bis „Kammer voll".', lopez: 'Anfahrt nach López bis v_krit, Plateau bis „Kammer voll".', v1v2: 'Rampe mit a₁ auf V₁, Plateau bis „Kammer voll".' })[S.mode] || '';
+    if (ph2) ph2.textContent = sp.error ? '' : manual
+      ? (isFinite(sp.v2Reached) ? sp.warn : 'Ab „Kammer voll" mit a₂ auf V₂, dann gleichbleibend bis zum Füllende.')
+      : 'V₂ = ' + fmt(sp.v2, 2) + ' m/s trifft die ' + (isFinite(sp.tNadca) ? 'Füllzeit ' + fmt(sp.tNadca, 1) + ' ms' : 'Füllzeit') + ' (NADCA, höchstens t_max der Auslegung); Rampe mit a_max ' + fmt(sp.a2) + ' m/s² der Auslegung.';
+    if (ph2) ph2.classList.toggle('warn', !sp.error && manual && isFinite(sp.v2Reached));
+    if (a2fit) {
+      const need = !sp.error && manual && isFinite(sp.a2Need) ? Math.ceil(sp.a2Need * 1.05 / 5) * 5 : NaN;
+      a2fit.hidden = !(need > 0 && need <= 5000);
+      a2fit.textContent = need > 0 ? 'a₂ = ' + fmt(need) + ' m/s²: V₂ wird erreicht' : '';
+      a2fit.dataset.a2 = need > 0 ? String(need) : '';
+    }
     const P = plan.process;
     const [lo, hi] = band(), [flo, fhi] = fillBand();
     const rows = [];
@@ -591,7 +714,7 @@ export function createProzessTool(g, { plan, app }) {
             : { label: 'Anschnitt', value: '–', note: 'braucht Bauteil und Anguss' },
         { label: 'Rechnung', value: plan.shot.chamber ? 'ab Kolbenstart' : 'ab „Kammer voll"', note: plan.shot.chamber ? 'Kammer als bewegtes Netz (libshotSleeve)' : 'Kolben als Geschwindigkeit am Einlass' }
       );
-      if (sp.warn) rows.push({ label: 'Hinweis', value: '', verdict: 'warn', note: sp.warn });
+      if (sp.warn && !(manual && isFinite(sp.v2Reached))) rows.push({ label: 'Hinweis', value: '', verdict: 'warn', note: sp.warn });
     } else rows.push({ label: 'Schusskurve', value: '–', verdict: 'bad', note: sp.error });
     kpis(g.ui('p-shot'), rows);
     /* Füllgrad außerhalb des Zielbands: die Kammerlänge für die Mitte anbieten */
@@ -604,6 +727,11 @@ export function createProzessTool(g, { plan, app }) {
       fit.dataset.length = off ? String(want) : '';
     }
     const ok = P.Tcast > P.Tliq && P.Tliq > P.Tsol && P.Tdie < P.Tsol;
+    /* zugeklappt steht die Kurzfassung in der Zeile; passt etwas nicht, geht sie auf */
+    const sum = g.ui('p-melt-sum');
+    if (sum) sum.textContent = '· ' + fmt(P.Tcast) + ' °C in ' + fmt(P.Tdie) + ' °C' + (ok ? '' : ' · prüfen');
+    const det = g.ui('p-melt');
+    if (det && !ok) det.open = true;
     kpis(g.ui('p-kpis'), [
       { label: 'Überhitzung', value: fmt(P.Tcast - P.Tliq) + ' K', verdict: P.Tcast > P.Tliq ? 'ok' : 'bad' },
       { label: 'Temperaturen', value: ok ? 'stimmig' : 'prüfen', verdict: ok ? 'ok' : 'bad', note: 'Guss > Liquidus > Solidus > Form' }
@@ -636,7 +764,17 @@ export function createProzessTool(g, { plan, app }) {
         const x = Number(ev.currentTarget.dataset.length);
         if (x > 0) { plan.shot.length = x; plan.changed('shot'); g.changed('Kammerlänge ' + fmt(x) + ' mm'); render(); app.refresh(); }
       });
-      g.ui('p-mode').addEventListener('change', ev => { plan.shot.mode = ev.target.value; plan.changed('shot'); g.changed('Schusskurve ' + ev.target.selectedOptions[0].textContent); render(); app.refresh(); });
+      const segClick = (ui, fn) => g.ui(ui).addEventListener('click', ev => { const b = ev.target.closest('[data-value]'); if (b && !b.disabled) fn(b.getAttribute('data-value'), b.textContent); });
+      segClick('p-mode', (v, l) => { plan.shot.mode = v; plan.changed('shot'); g.changed('1. Phase: ' + l); render(); app.refresh(); });
+      segClick('p-v2mode', (v, l) => { plan.shot.v2Mode = v; plan.changed('shot'); g.changed('2. Phase: ' + l); render(); app.refresh(); });
+      segClick('p-view', v => { view = v; render(); });
+      g.ui('p-a2-fit').addEventListener('click', ev => {
+        const x = Number(ev.currentTarget.dataset.a2);
+        if (x > 0) { plan.shot.a2 = x; plan.changed('shot'); g.changed('a₂ ' + fmt(x) + ' m/s²'); render(); app.refresh(); }
+      });
+      const box = g.ui('p-curve');
+      box.addEventListener('pointermove', ev => { if (sp && !sp.error) curveCursor(box.querySelector('svg'), sp, ev.clientX); });
+      box.addEventListener('pointerleave', () => curveCursor(box.querySelector('svg'), sp, null));
       g.ui('p-chamber').addEventListener('click', ev => {
         const b = ev.target.closest('[data-value]');
         if (!b) return;
@@ -681,15 +819,13 @@ export function createAuswertungTool(g, { plan, app, host }) {
   const P = () => (plan.post = normalizePost(plan.post));
   const modes = [{
     id: 'auswertung', label: 'Bilder',
-    hint: 'Was render.py nach der Rechnung als Bild schreibt: je Kennwert, Zeitpunkt und Ansicht eines. Der Rahmen im Bild ist der Ausschnitt; „Aktuelle Ansicht übernehmen" nimmt ihn genau so.',
-    html: '<div class="sim-label">Kennwerte</div><div class="sim-crit" data-ui="post-crit"></div>'
-      + selectRow({ ui: 'post-preview', label: 'Vorschau', options: CRITERIA.map(c => [c.id, c.label]), value: 'velocity' })
+    html: '<div class="sim-label">Kennwerte</div><div class="st-list sim-views" data-ui="post-crit"></div>'
       + '<div class="sim-label">Zeitpunkte</div>'
-      + segRow({ ui: 'post-by', label: 'nach', options: WHEN, value: 'fill' })
+      + segFull('post-by', 'Bilder nach', WHEN, 'fill')
       + numberRow({ ui: 'post-count', label: 'Bilder je Kennwert', unit: '' })
       + '<div class="st-hintline" data-ui="post-when"></div>'
       + '<div class="sim-label">Format</div>'
-      + segRow({ ui: 'post-aspect', label: 'Seiten', options: ASPECTS.map(([a]) => [a, a]), value: '16:9' })
+      + segFull('post-aspect', 'Seitenverhältnis', ASPECTS.map(([a]) => [a, a]), '16:9')
       + selectRow({ ui: 'post-width', label: 'Breite', options: WIDTHS.map(w => [String(w), w + ' px']), value: '1600' })
       + '<div class="sim-label">Ansichten</div><div class="st-list sim-views" data-ui="post-views"></div>'
       + '<div class="sim-actions"><button type="button" class="btn btn-sm btn-outline" data-ui="post-addview">Aktuelle Ansicht übernehmen</button></div>'
@@ -785,14 +921,22 @@ export function createAuswertungTool(g, { plan, app, host }) {
 
   function render() {
     const post = P();
-    g.ui('post-crit').innerHTML = CRITERIA.map(c => '<label class="inline" title="' + esc(c.hint) + '"><input type="checkbox" data-crit="' + c.id + '"' + (post.criteria.includes(c.id) ? ' checked' : '') + '> <span>' + c.label + ' <small>[' + c.unit + ']</small></span></label>').join('');
-    const pv = g.ui('post-preview'); if (pv) pv.value = post.preview;
+    /* je Kennwert eine Zeile: Haken = Bilder davon, Auge = im Rahmen zeigen */
+    g.ui('post-crit').innerHTML = CRITERIA.map(c => {
+      const on = post.criteria.includes(c.id), pv = post.preview === c.id;
+      return '<div class="sim-viewrow sim-critrow" data-crit="' + c.id + '" title="' + esc(c.hint) + '">'
+        + '<label class="inline"><input type="checkbox" data-act="on"' + (on ? ' checked' : '') + '> <span>' + esc(c.label) + ' <small>' + esc(c.unit) + '</small></span></label>'
+        + '<button type="button" class="btn btn-sm btn-outline sim-x" data-act="preview" aria-pressed="' + pv + '" title="Im Rahmen zeigen" aria-label="' + esc(c.label) + ' im Rahmen zeigen">' + EYE + '</button></div>';
+    }).join('');
     const seg = (ui, val) => { const el = g.ui(ui); if (el) for (const b of el.querySelectorAll('button')) b.classList.toggle('active', b.getAttribute('data-value') === val); };
     seg('post-by', post.when.by); seg('post-aspect', post.aspect);
     const cnt = g.ui('post-count'); if (cnt && document.activeElement !== cnt) cnt.value = String(post.when.count);
     const wd = g.ui('post-width'); if (wd) wd.value = String(post.width);
     const tg = targets(post);
-    g.ui('post-when').textContent = post.when.by === 'fill' ? 'Füllgrad der Form: ' + tg.map(x => fmt(x, x % 1 ? 1 : 0)).join(' · ') + ' %'
+    const step = 100 / tg.length;
+    g.ui('post-when').textContent = post.when.by === 'fill'
+      ? (tg.length <= 10 ? 'Füllgrad der Form: ' + tg.map(x => fmt(x, x % 1 ? 1 : 0)).join(' · ') + ' %'
+        : tg.length + ' Bilder je Kennwert, Füllgrad der Form alle ' + fmt(step, step % 1 ? 1 : 0) + ' % bis 100 %')
       : post.when.by === 'time' ? tg.length + ' Bilder in gleichen Zeitabständen, von der Ankunft der Schmelze in der Form bis zum Ende'
         : tg.length + ' Bilder in gleichen Abständen des Kolbenwegs, von der Ankunft der Schmelze in der Form bis zum Ende';
     const views = post.views;
@@ -800,7 +944,7 @@ export function createAuswertungTool(g, { plan, app, host }) {
       .concat(views.filter(v => v.id.startsWith('cam')).map(v => ({ v, on: true, preset: false })));
     g.ui('post-views').innerHTML = rows.map(({ v, on, preset }) => '<div class="sim-viewrow" data-view="' + v.id + '">'
       + '<label class="inline"><input type="checkbox" data-act="on"' + (on ? ' checked' : '') + (preset ? '' : ' disabled') + '> <span>' + esc(v.label) + (preset ? ' <small>eingepasst</small>' : ' <small>genau</small>') + '</span></label>'
-      + '<button type="button" class="btn btn-sm btn-outline" data-act="show">zeigen</button>'
+      + '<button type="button" class="btn btn-sm btn-outline sim-x" data-act="show" title="Im Bild zeigen" aria-label="' + esc(v.label) + ' zeigen">' + EYE + '</button>'
       + (preset ? '<span></span>' : '<button type="button" class="btn btn-sm btn-outline sim-x" data-act="remove" aria-label="' + esc(v.label) + ' entfernen">✕</button>') + '</div>').join('');
     const [iw, ih] = imageSize(post);
     const n = imageList(post).length;
@@ -813,13 +957,20 @@ export function createAuswertungTool(g, { plan, app, host }) {
   return {
     id: 'auswertung', modes, startMode: 'auswertung',
     mounted() {
-      g.ui('post-crit').addEventListener('change', ev => {
-        const c = ev.target.getAttribute('data-crit'), post = P();
-        post.criteria = ev.target.checked ? CRITERIA.map(x => x.id).filter(x => x === c || post.criteria.includes(x)) : post.criteria.filter(x => x !== c);
-        if (ev.target.checked) post.preview = c;
+      const crit = g.ui('post-crit');
+      crit.addEventListener('change', ev => {
+        const c = ev.target.closest('[data-crit]').getAttribute('data-crit'), post = P(), on = ev.target.checked;
+        post.criteria = on ? CRITERIA.map(x => x.id).filter(x => x === c || post.criteria.includes(x)) : post.criteria.filter(x => x !== c);
+        if (on) post.preview = c;
+        else if (post.preview === c && post.criteria.length) post.preview = post.criteria[0];
         plan.changed('post'); g.changed('Bilder: ' + c); app.refresh();
       });
-      g.ui('post-preview').addEventListener('change', ev => { P().preview = ev.target.value; plan.changed('post'); });
+      crit.addEventListener('click', ev => {
+        const btn = ev.target.closest('[data-act="preview"]');
+        if (!btn) return;
+        P().preview = btn.closest('[data-crit]').getAttribute('data-crit');
+        plan.changed('post');
+      });
       g.ui('post-by').addEventListener('click', ev => { const b = ev.target.closest('[data-value]'); if (!b) return; P().when.by = b.getAttribute('data-value'); plan.changed('post'); g.changed('Bilder nach ' + b.textContent); });
       g.ui('post-count').addEventListener('change', ev => {
         const x = Math.round(num(ev.target.value));
@@ -857,11 +1008,12 @@ export function createExportTool(g, { plan, app }) {
   let busy = false, last = null;
   const modes = [{
     id: 'export', label: 'Fall',
-    hint: 'Der OpenFOAM-Fall als ZIP: Netz-Dictionaries, Anfangs- und Randwerte, Solver-Einstellungen für dieLogicFoam, Allrun und render.py. Entpacken, OpenFOAM v2606 laden, ./Allrun.',
-    html: numberRow({ ui: 'exp-title', label: 'Name', unit: '' })
+    html: '<label class="row sim-textrow"><span>Name</span><input type="text" data-ui="exp-title" spellcheck="false" autocomplete="off"></label>'
       + '<div class="krows" data-ui="exp-kpis"></div>'
       + '<div class="st-hintline" data-ui="exp-note"></div>'
-      + '<pre class="sim-cmd">unzip &lt;Name&gt;_openfoam.zip\ncd &lt;Name&gt;_openfoam\nsource /usr/lib/openfoam/openfoam2606/etc/bashrc\n./Allrun          # NP=8 ./Allrun für 8 Prozesse</pre>',
+      + '<div class="sim-cmdbox"><div class="sim-cmdhead"><span>Im Terminal</span><button type="button" class="sim-copy" data-ui="exp-copy">Kopieren</button></div>'
+      + '<pre class="sim-cmd" data-ui="exp-cmd"></pre></div>'
+      + '<div class="st-hintline">Mit mehreren Prozessen: <code>NP=8 ./Allrun</code>. Eine abgebrochene Rechnung läuft mit demselben Aufruf weiter.</div>',
     primary: () => {
       const miss = missing({ bodies: plan.included(), inlet: plan.inlet, outlets: plan.outlets, mesh: plan.mesh });
       return { label: busy ? 'Fall wird gebaut …' : 'Fall herunterladen (ZIP)', onClick: run, disabled: busy || miss.length > 0, reason: miss.join(' ') };
@@ -870,6 +1022,9 @@ export function createExportTool(g, { plan, app }) {
   function render() {
     const t = g.ui('exp-title');
     if (t && document.activeElement !== t) t.value = plan.title;
+    const root = safe(plan.title) + '_openfoam';
+    const cmd = g.ui('exp-cmd');
+    if (cmd) cmd.textContent = 'unzip ' + root + '.zip\ncd ' + root + '\nsource \\\n  /usr/lib/openfoam/openfoam2606/etc/bashrc\n./Allrun';
     const bodies = plan.included();
     kpis(g.ui('exp-kpis'), [
       { label: 'Körper', value: String(bodies.length), note: bodies.map(b => b.name).join(' · ') },
@@ -901,6 +1056,10 @@ export function createExportTool(g, { plan, app }) {
   return {
     id: 'export', modes, startMode: 'export',
     mounted() {
+      g.ui('exp-copy').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(g.ui('exp-cmd').textContent); g.shell.toast('Befehle kopiert.'); }
+        catch { g.shell.toast('Kopieren ging nicht — die Befehle bitte markieren.'); }
+      });
       g.ui('exp-title').addEventListener('change', ev => { const s = String(ev.target.value).trim(); if (s) { plan.title = s; plan.changed('title'); g.changed('Name „' + s + '"'); } render(); });
       render();
     },
