@@ -340,7 +340,9 @@ test('Simulation einrichten: Beispiel, Ablaufplan, Fall im Worker', async ({ pag
   await expect(page.locator('.sim-frame')).toBeHidden();
   const download = page.waitForEvent('download', { timeout: 120_000 });
   await page.click('[data-ui="primary"]');
-  expect((await download).suggestedFilename()).toBe('Gusstraube_openfoam.zip');
+  /* Ordner und ZIP nach Vorschlag: Datum von heute und Name */
+  await expect(page.locator('[data-ui="case-sugg"]')).toHaveClass(/\bon\b/);
+  expect((await download).suggestedFilename()).toMatch(/^\d{4}-\d{2}-\d{2}_Gusstraube\.zip$/);
   expect(errors, errors.join('\n')).toEqual([]);
 });
 

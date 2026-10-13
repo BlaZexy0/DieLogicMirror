@@ -41,6 +41,7 @@ export function createPlan() {
   const listeners = [];
   const plan = {
     title: 'Simulation',
+    caseName: null,             // Ordner und ZIP von Hand; null: der Vorschlag JJJJ-MM-TT_Name
     bodies: [],                 // { id, name, role, src, tris, include, stamp }
     inlet: null,                // { bodyId, stamp, faces, centroid, normal, area, radius, depth, depthAuto }
     outlets: [],                // { bodyId, stamp, faces, centroid, normal, area, mode, Cd }
@@ -90,7 +91,7 @@ export function createPlan() {
     settings() {
       const sel = s => s && { bodyId: s.bodyId, stamp: s.stamp, faces: s.faces.slice(), centroid: s.centroid, normal: s.normal, area: s.area, radius: s.radius, depth: s.depth, depthAuto: s.depthAuto, mode: s.mode, Cd: s.Cd };
       return {
-        title: plan.title,
+        title: plan.title, caseName: plan.caseName,
         bodies: plan.bodies.map(b => ({ id: b.id, name: b.name, role: b.role, src: b.src, include: b.include, stamp: b.stamp, extra: b.extra, extraSet: b.extraSet })),
         inlet: sel(plan.inlet), outlets: plan.outlets.map(sel),
         mesh: Object.assign({}, plan.mesh), process: Object.assign({}, plan.process),
@@ -101,6 +102,7 @@ export function createPlan() {
     apply(s) {
       if (!s) return;
       if (s.title) plan.title = s.title;
+      plan.caseName = s.caseName || null;
       for (const m of s.bodies || []) {
         const b = plan.body(m.id) || plan.bodies.find(x => x.stamp === m.stamp && x.name === m.name);
         if (b) { b.role = m.role; b.include = m.include !== false; if (m.extraSet) { b.extra = m.extra; b.extraSet = true; } }

@@ -484,7 +484,15 @@ test('Seite: Beispiel laden, Schritte der Reihe nach, Fall als ZIP', async () =>
   Object.assign(v.plan.shot, { v2Mode: 'auto', v2: 4, a2: 30 });
   const r = await v.app.build(payload, () => {});
   assert.ok(r.zip.length > 1e5);
-  assert.equal(r.root, 'Gusstraube_openfoam');
+  /* Ordner und ZIP: Datum von heute und Name */
+  const B = await imp('js/build.js');
+  assert.equal(r.root, B.caseName('Gusstraube'));
+  assert.match(r.root, /^\d{4}-\d{2}-\d{2}_Gusstraube$/);
+  assert.equal(B.caseName('Platte 1', new Date(2026, 9, 3)), '2026-10-03_Platte_1', 'Ortszeit, nicht UTC');
+  assert.equal(B.caseName('2026-09-30_Platte', new Date(2026, 9, 3)), '2026-10-03_Platte', 'kein doppeltes Datum');
+  v.plan.caseName = 'Versuch_7';
+  assert.equal((await v.app.build((await import(pathToFileURL(resolve(SIM, 'js/payload.js')).href)).payloadOf(v.plan), () => {})).root, 'Versuch_7', 'von Hand bleibt');
+  v.plan.caseName = null;
   assert.ok(r.files.includes('simulation/constant/triSurface/vent1.stl'));
   /* Überläufe 1,5 mm: zwei Stufen; der Anguss nach seinem Anschnitt (dünnste 2 %, 2,5 mm): eine */
   assert.deepEqual(r.info.extra, [0, 2, 1, 0], 'Stufen je Körper (Reihenfolge: ' + v.plan.included().map(b => b.name) + ')');

@@ -120,7 +120,7 @@ const STEPS = [
     done: () => plan.post.criteria.length > 0 && plan.post.views.length > 0, why: 'Mindestens ein Kennwert und eine Ansicht.',
     tools: [{ id: 'auswertung', create: g => createAuswertungTool(g, { plan, app, host }) }] },
   { id: 'fall', label: 'Fall', title: 'Den OpenFOAM-Fall herunterladen', icon: ICON.fall,
-    lead: 'Der Fall als ZIP: im Hauptordner Allrun und die Skripte der Auswertung, in simulation/ der OpenFOAM-Fall. Entpacken, OpenFOAM v2606 laden, ./Allrun — am Ende liegt der Bericht in auswertung/bericht.html.',
+    lead: 'Der Fall als ZIP, nach Vorschlag benannt mit dem Datum von heute (JJJJ-MM-TT_Name): im Hauptordner Allrun und die Skripte der Auswertung, in simulation/ der OpenFOAM-Fall. Entpacken, OpenFOAM v2606 laden, ./Allrun — am Ende liegt der Bericht in auswertung/bericht.html.',
     done: () => plan.exported, why: '',
     tools: [{ id: 'export', create: g => createExportTool(g, { plan, app }) }] }
 ];

@@ -24,11 +24,16 @@ export async function build(p, progress = () => {}) {
     mesh: p.mesh, process: p.process, post: p.post, shot: p.shot
   });
   progress('Packen …');
-  const root = safe(p.title) + '_openfoam';
+  const root = safe(p.caseName || caseName(p.title));
   const bytes = await zip(files, { root });
   return { zip: bytes, root, info, stats: union.stats, files: Object.keys(files) };
 }
 
 export const safe = s => String(s || 'simulation').normalize('NFKD').replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '') || 'simulation';
+/** Das Datum als JJJJ-MM-TT (Ortszeit, nicht UTC). */
+export const today = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+/** Der vorgeschlagene Name des Falls (Ordner und ZIP): Datum von heute und
+    der Name — ein Datum, das der Name schon trägt, kommt nicht doppelt. */
+export const caseName = (title, d) => today(d) + '_' + safe(String(title || '').replace(/^\d{4}-\d{2}-\d{2}[_ ]+/, ''));
 
 export { makeSolid, depthAlong };

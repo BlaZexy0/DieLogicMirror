@@ -34,11 +34,11 @@ ihn. Darunter die <b>Gießkammer</b>: ohne oder mit, und die Kammerlänge (sie g
 Schusskurve). <b>Auslässe</b>: je Fläche einmal „Auslass auswählen" und auf eine ebene Fläche tippen, durch die die
 Luft geht (Esc bricht ab): als Drossel (die Schmelze bleibt davor stehen wie am Entlüftungsblock) oder offen (auch
 die Schmelze tritt aus). <b>Netz</b>: Zellgröße, Hintergrund, Stufen je Körper (dünne Körper feiner; mit Kammer die
-Zelllänge der Kammer). <b>Schusskurve</b> und <b>Prozess</b>: unten. <b>Fall</b>: der ZIP-Download.</p>
+Zelllänge der Kammer). <b>Schusskurve</b> und <b>Prozess</b>: unten. <b>Fall</b>: der ZIP-Download; Ordner und ZIP heißen nach Vorschlag <code>JJJJ-MM-TT_Name</code> (Datum von heute).</p>
 <p><b>Vorschläge</b> sehen überall gleich aus: eine Zeile mit dem Etikett „Vorschlag" direkt unter dem Feld, mit dem
 Wert und warum. Gilt er, ist sie getönt und hat einen Haken; sonst steht „Übernehmen" daneben. Beim ersten Besuch
 eines Schritts gilt der Vorschlag (die größte Kreisfläche als Einlass, ihre Tiefe, zwei Zellen über die dünnste
-Bauteilwand); was man selbst einträgt oder wählt, bleibt. Die Kammerlänge kommt aus der Auslegung, ihr Vorschlag
+Bauteilwand, der Name des Falls mit dem Datum von heute); was man selbst einträgt oder wählt, bleibt. Die Kammerlänge kommt aus der Auslegung, ihr Vorschlag
 (Mitte des Füllgrad-Bands) gilt erst mit „Übernehmen".</p>
 </section>
 <section data-help-anchor="prozess">
@@ -79,7 +79,7 @@ und Text an den Stellen der Bilder; „Aktuelle Ansicht übernehmen" nimmt genau
 </section>
 <section data-help-anchor="lauf">
 <h3>Den Fall rechnen</h3>
-<pre>unzip Name_openfoam.zip &amp;&amp; cd Name_openfoam
+<pre>unzip JJJJ-MM-TT_Name.zip &amp;&amp; cd JJJJ-MM-TT_Name
 source /usr/lib/openfoam/openfoam2606/etc/bashrc
 ./Allrun            # NP=8 ./Allrun: 8 Prozesse; ./Allrun -mesh: nur das Netz
 ./Allrun -auswertung   # nur Bilder und Bericht neu</pre>

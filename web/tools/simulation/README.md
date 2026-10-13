@@ -18,7 +18,7 @@ erledigt sind):
 | 7 | Schusskurve | createSchussTool — 1. Phase (DieLogic/López/V₁ von Hand), 2. Phase (V₂ automatisch oder von Hand mit a₂, Vorschlag a₂), Kurvenbild | Kurve rechenbar |
 | 8 | Prozess | createProzessTool — Schwerkraft, Temperaturen, Werte der Legierung | Temperaturen stimmig, mit Kammer Schwerkraft quer |
 | 9 | Auswertung | createAuswertungTool — Kennwerte, Zeitpunkte (Füllgrad/Zeit/Kolbenweg × n), Format, Ansichten, Rahmen im Viewport | etwas gewählt |
-| 10 | Fall | createExportTool — ZIP im Worker | heruntergeladen |
+| 10 | Fall | createExportTool — Name, Fall (Ordner und ZIP, Vorschlag `JJJJ-MM-TT_Name` mit dem Datum von heute, `build.js` caseName), ZIP im Worker | heruntergeladen |
 
 Über jedem Schritt steht seine Überschrift mit Erklärung (`lead` in `STEPS`,
 auch über den Designern); die Leiste zeigt erledigte Schritte getönt statt mit
@@ -142,7 +142,7 @@ mit der Wärmeabgabe an die Form (`constant/thermalProperties`), Oxide und
 mitgerissene Luft (`constant/inclusionProperties`).
 
 ```sh
-unzip Name_openfoam.zip && cd Name_openfoam
+unzip JJJJ-MM-TT_Name.zip && cd JJJJ-MM-TT_Name
 source /usr/lib/openfoam/openfoam2606/etc/bashrc
 ./Allrun          # NP=8 ./Allrun · ./Allrun -mesh · ./Allrun -prepare · ./Allrun -auswertung
 ```

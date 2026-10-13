@@ -39,7 +39,7 @@ export function payloadOf(plan) {
   const sp = plan.inlet ? shotPlan(plan) : { error: 'kein Einlass' };
   if (sp.error) throw new Error('Schusskurve: ' + sp.error);
   return {
-    title: plan.title,
+    title: plan.title, caseName: plan.caseName || null,
     bodies: bodies.map((b, i) => {
       /* Nicht geschlossen (offen oder nicht-mannigfaltig): snappyHexMesh kann
          dort nicht „innen" verfeinern — dann im Abstand der halben Wand */

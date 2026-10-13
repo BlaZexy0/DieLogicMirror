@@ -19,7 +19,7 @@ import { neighbours, planarRegion, suggestInlet, depthAlong, volume, thickness, 
 import { CRITERIA, VIEW_PRESETS, WHEN, ASPECTS, WIDTHS, FRAME, imageList, imageSize, targets, normalizePost } from './core/render.js';
 import { missing, segmentHeight } from './core/casegen.js';
 import { ROLES, roleLabel } from './plan.js';
-import { safe } from './build.js';
+import { safe, caseName } from './build.js';
 import { payloadOf } from './payload.js';
 import { shotPlan, chamberLength, curveSVG, curveCursor, curveLegend, CURVE_MODES, V2_MODES, v2Manual } from './shot.js';
 
@@ -1116,6 +1116,9 @@ export function createExportTool(g, { plan, app }) {
   const modes = [{
     id: 'export', label: 'Fall',
     html: '<label class="row sim-textrow"><span>Name</span><input type="text" data-ui="exp-title" spellcheck="false" autocomplete="off"></label>'
+      + '<div class="st-hintline">Steht in den Bildern und im Bericht.</div>'
+      + '<label class="row sim-textrow sim-stack"><span>Fall (Ordner und ZIP)</span><input type="text" data-ui="exp-case" spellcheck="false" autocomplete="off"></label>'
+      + suggBox('case-sugg')
       + '<div class="krows" data-ui="exp-kpis"></div>'
       + '<div class="st-hintline" data-ui="exp-note"></div>'
       + '<div class="sim-cmdbox"><div class="sim-cmdhead"><span>Im Terminal</span><button type="button" class="sim-copy" data-ui="exp-copy">Kopieren</button></div>'
@@ -1130,7 +1133,11 @@ export function createExportTool(g, { plan, app }) {
   function render() {
     const t = g.ui('exp-title');
     if (t && document.activeElement !== t) t.value = plan.title;
-    const root = safe(plan.title) + '_openfoam';
+    /* Ordner und ZIP: von Hand, sonst der Vorschlag mit dem Datum von heute */
+    const sug = caseName(plan.title), root = plan.caseName ? safe(plan.caseName) : sug;
+    const c = g.ui('exp-case');
+    if (c && document.activeElement !== c) c.value = root;
+    paintSugg(g.ui('case-sugg'), { value: sug, why: 'Datum von heute und Name — Ordner und ZIP', on: root === sug });
     const cmd = g.ui('exp-cmd');
     if (cmd) cmd.textContent = 'unzip ' + root + '.zip\ncd ' + root + '\nsource \\\n  /usr/lib/openfoam/openfoam2606/etc/bashrc\n./Allrun';
     const tree = g.ui('exp-tree');
@@ -1174,9 +1181,17 @@ export function createExportTool(g, { plan, app }) {
         catch { g.shell.toast('Kopieren ging nicht — die Befehle bitte markieren.'); }
       });
       g.ui('exp-title').addEventListener('change', ev => { const s = String(ev.target.value).trim(); if (s) { plan.title = s; plan.changed('title'); g.changed('Name „' + s + '"'); } render(); });
+      g.ui('exp-case').addEventListener('change', ev => {
+        const s = safe(String(ev.target.value).trim());
+        /* derselbe wie der Vorschlag: der Vorschlag gilt weiter (morgen mit neuem Datum) */
+        plan.caseName = s && s !== caseName(plan.title) ? s : null;
+        plan.changed('title'); g.changed('Fall „' + (plan.caseName || caseName(plan.title)) + '"');
+        render();
+      });
+      onSugg(g.ui('case-sugg'), () => { plan.caseName = null; plan.changed('title'); g.changed('Fall nach Vorschlag'); render(); });
       render();
     },
     exports: [{ label: 'OpenFOAM-Fall (ZIP)', enabled: () => !missing({ bodies: plan.included(), inlet: plan.inlet, outlets: plan.outlets, mesh: plan.mesh }).length, run }],
-    run, get last() { return last; }, safeName: () => safe(plan.title)
+    run, get last() { return last; }, safeName: () => (plan.caseName ? safe(plan.caseName) : caseName(plan.title))
   };
 }
