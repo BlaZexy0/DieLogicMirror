@@ -108,10 +108,15 @@
         { label: 'Kammerfüllung', href: '/tools/3d-studio/kammerfuellung.html' },
       ] },
     ] },
-    /* Die OpenFOAM-Solver und ihre Validierung an Messungen, noch ein Entwurf:
-       links die Solver, rechts die Validierung mit den drei Fällen
+    /* Die Simulation: links das Werkzeug (wie Dashboard und Werkbank in den
+       Menüs daneben), hervorgehoben — alles rechts davon sind Artikel: die
+       OpenFOAM-Solver und ihre Validierung an Messungen, noch ein Entwurf
        (Seiten aus handover/website/solver/publish.py in DieLogic_OF). */
     { label: 'Simulation', columns: [
+      { title: 'Werkzeug', items: [
+        { label: 'Simulation einrichten', href: '/tools/simulation/', feature: true,
+          desc: 'Fall für dieLogicFoam im Browser bauen: Körper, Einlass, Netz, Schusskurve — als ZIP mit Allrun und Bericht' },
+      ] },
       { title: 'Solver', items: [
         { label: 'Übersicht', href: '/simulation/' },
         { label: 'dieLogicFoam', href: '/simulation/dielogicfoam.html' },
@@ -125,9 +130,6 @@
         { label: 'Trometer et al. 2023', href: '/simulation/validierung-trometer.html' },
         { label: 'Zamora und López', href: '/simulation/validierung-zamora.html' },
         { label: 'Guo und Xiong 2008', href: '/simulation/validierung-guo.html' },
-      ] },
-      { title: 'Werkzeug', items: [
-        { label: 'Simulation einrichten', href: '/tools/simulation/' },
       ] },
     ] },
     { label: 'Theorie', children: [
@@ -186,6 +188,8 @@
   /* ── Nav-Links bauen ──────────────────────────────────────── */
   const linkHtml = child => {
     const active = isActive(child.href) ? ' active' : '';
+    /* ein hervorgehobener Eintrag (das Werkzeug unter „Simulation"): Name und eine Zeile, was es tut */
+    if (child.feature) return `<a href="${child.href}" class="dl-nav-feature${active}"><span class="dl-nav-feature-title">${child.label}</span><span class="dl-nav-feature-desc">${child.desc || ''}</span></a>`;
     return `<a href="${child.href}" class="${active}">${child.label}</a>`;
   };
 
@@ -232,9 +236,10 @@
     const [dashboard, ...auslegungTools] = NAV_LINKS[0].columns[0].items;
     const footerCharts = ['shotcurve', 'pq2', 'phild'].map(id => CHARTS.find(c => c[0] === id));
     const theorie = NAV_LINKS.find(g => g.label === 'Theorie').children;
-    /* Die Simulation aus derselben Liste wie oben: die Solver-Spalte wie sie ist,
-       die Validierung mit Vorsilbe (wie „Theorie: …"), die Methode als „Validierung". */
-    const [simSolver, simVal, simTool] = NAV_LINKS.find(g => g.label === 'Simulation').columns;
+    /* Die Simulation aus derselben Liste wie oben: das Werkzeug zuerst, die
+       Solver-Spalte wie sie ist, die Validierung mit Vorsilbe (wie „Theorie: …"),
+       die Methode als „Validierung". */
+    const [simTool, simSolver, simVal] = NAV_LINKS.find(g => g.label === 'Simulation').columns;
     const simulation = [...simTool.items, ...simSolver.items,
       ...simVal.items.map((t, i) => ({ href: t.href, label: i === 0 ? 'Validierung' : 'Validierung: ' + t.label }))];
     return `<footer class="dl-footer">
@@ -536,6 +541,24 @@
     document.body.insertAdjacentHTML('beforeend', buildFooter());
   }
 
+  /* Auf den Seiten unter /simulation/ (Artikel: Solver, Validierung) steht
+     das Werkzeug „Simulation einrichten" links ganz oben, über dem Inhalt
+     der Seite. Die Seiten baut publish.py in DieLogic_OF und kopiert sie
+     hierher — darum setzt nav.js den Kasten ein, nicht das HTML: so bleibt
+     er, wenn die Artikel neu kommen. Name und Ziel aus NAV_LINKS. */
+  function injectToolCta() {
+    if (!/^\/simulation\//.test(window.location.pathname)) return;
+    const side = document.querySelector('.toc-sidebar');
+    if (!side || side.querySelector('.dl-tool-cta')) return;
+    const tool = NAV_LINKS.find(g => g.label === 'Simulation').columns[0].items[0];
+    side.insertAdjacentHTML('afterbegin', `<a class="dl-tool-cta" href="${tool.href}">
+      <span class="dl-tool-cta-kicker">Werkzeug</span>
+      <span class="dl-tool-cta-title">${tool.label}</span>
+      <span class="dl-tool-cta-desc">${tool.desc}</span>
+      <span class="dl-tool-cta-go">Öffnen →</span>
+    </a>`);
+  }
+
   /* Angemeldet? Dann zeigt der Knopf den Namen statt „Anmelden" — nur
      hinter dem Backend (http/https); bei file:// oder statischem Hosting
      bleibt der Link zur Konto-Seite. Meldet das Ergebnis zusätzlich als
@@ -558,6 +581,7 @@
   function init() {
     injectNav();
     if (wantFooter) injectFooter();
+    injectToolCta();
     showAccount();
   }
 

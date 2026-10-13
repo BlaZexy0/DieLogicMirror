@@ -444,10 +444,14 @@ test('KaTeX-Seiten laden /shared/katex-init.js, kein onload= mehr am Script-Tag'
    Das Menü und die Seiten müssen zusammenpassen: jeder Eintrag zeigt auf
    eine vorhandene Seite, jede Seite steht im Menü, und jedes Bild, das eine
    Seite zeigt, liegt im Repo. */
-test('nav: Simulation ist ein Spaltenmenü (Solver · Validierung), jede Seite existiert und zeigt nur vorhandene Bilder', () => {
+test('nav: Simulation ist ein Spaltenmenü (Werkzeug · Solver · Validierung), jede Seite existiert und zeigt nur vorhandene Bilder', () => {
   const src = readFileSync(path.join(site, 'shared/nav.js'), 'utf8');
   const sim = src.slice(src.indexOf("label: 'Simulation'"), src.indexOf("label: 'Theorie'"));
   assert.match(sim, /columns: \[/, 'Spaltenmenü wie Auslegung und Studio');
+  /* das Werkzeug links und hervorgehoben — der Rest sind Artikel (13.10.) */
+  assert.match(sim, /columns: \[\s*\{ title: 'Werkzeug', items: \[\s*\{ label: 'Simulation einrichten', href: '\/tools\/simulation\/', feature: true/, 'Werkzeug als erste Spalte');
+  assert.ok(sim.indexOf("title: 'Werkzeug'") < sim.indexOf("title: 'Solver'"));
+  assert.match(src, /function injectToolCta[\s\S]*\.toc-sidebar/, 'auf den Seiten der Simulation links über dem Inhalt');
   assert.match(sim, /title: 'Solver'/, 'Spalte Solver');
   assert.match(sim, /title: 'Validierung'/, 'Spalte Validierung');
   /* Die Fußzeile hat eine eigene Spalte Simulation, gebaut aus derselben Liste. */

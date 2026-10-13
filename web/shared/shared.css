@@ -695,6 +695,37 @@ svg.svg-bild { display: block; width: 100%; height: auto; }
   color: white;
   background: color-mix(in srgb, var(--primary) 18%, transparent);
 }
+/* Ein hervorgehobener Eintrag: das Werkzeug unter „Simulation" — getönt,
+   mit Kante, Name und einer Zeile darunter, was es tut */
+.dl-nav-dropdown a.dl-nav-feature {
+  max-width: 250px;
+  padding: 0.7rem 0.85rem;
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-light) 45%, transparent);
+}
+.dl-nav-dropdown a.dl-nav-feature:hover { background: color-mix(in srgb, var(--primary) 28%, transparent); }
+.dl-nav-feature-title { display: block; font-weight: 700; color: white; font-size: 0.9rem; }
+.dl-nav-feature-desc { display: block; margin-top: 0.25rem; font-size: 0.76rem; line-height: 1.45; color: var(--ondark2); white-space: normal; }
+.dl-nav--compact .dl-nav-dropdown a.dl-nav-feature { display: block; max-width: none; min-height: 0; margin: 0.2rem 1.25rem 0.3rem 2.25rem; padding: 0.7rem 0.85rem; text-align: left; border-radius: 8px; }
+
+/* Das Werkzeug links über dem Inhalt der Seiten unter /simulation/ (nav.js) */
+.dl-tool-cta {
+  display: block;
+  margin: 0 0 1.6rem;
+  padding: 1rem 1.05rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--dark);
+  color: var(--ondark);
+  text-decoration: none;
+  border-left: 4px solid var(--primary);
+  box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--dark) 60%, transparent);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.dl-tool-cta:hover { transform: translateY(-1px); box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--dark) 70%, transparent); }
+.dl-tool-cta-kicker { display: block; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--primary-light); }
+.dl-tool-cta-title { display: block; margin: 0.2rem 0 0.35rem; font-size: 1.05rem; font-weight: 700; color: white; }
+.dl-tool-cta-desc { display: block; font-size: 0.78rem; line-height: 1.5; color: var(--ondark2); }
+.dl-tool-cta-go { display: inline-block; margin-top: 0.7rem; padding: 0.35rem 0.8rem; border-radius: 6px; background: var(--primary); color: white; font-size: 0.8rem; font-weight: 600; }
 
 .dl-footer {
   background: var(--dark);
