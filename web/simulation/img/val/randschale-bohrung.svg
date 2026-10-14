@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 400" font-family="Arial, Helvetica, sans-serif" role="img"><defs><clipPath id="feld"><rect x="64" y="16" width="458" height="328"/></clipPath></defs>
+<rect x="0" y="0" width="660" height="400" fill="#ffffff" class="f-surface"/>
+<rect x="66" y="18" width="454" height="324" fill="none" stroke="#e5e9eb" stroke-width="1" class="s-border-light"/>
+<text x="66" y="363" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4c6870" class="f-muted" text-anchor="middle">0</text>
+<path d="M179.5 18V342" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" class="s-border-light"/>
+<text x="179.5" y="363" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4c6870" class="f-muted" text-anchor="middle">5</text>
+<path d="M293 18V342" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" class="s-border-light"/>
+<text x="293" y="363" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4c6870" class="f-muted" text-anchor="middle">10</text>
+<path d="M406.5 18V342" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" class="s-border-light"/>
+<text x="406.5" y="363" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4c6870" class="f-muted" text-anchor="middle">15</text>
+<text x="520" y="363" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4c6870" class="f-muted" text-anchor="middle">20</text>
+<text x="57" y="347" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4c6870" class="f-muted" text-anchor="end">200</text>
+<path d="M66 277.2H520" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" class="s-border-light"/>
+<text x="57" y="282.2" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4c6870" class="f-muted" text-anchor="end">250</text>
+<path d="M66 212.4H520" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" class="s-border-light"/>
+<text x="57" y="217.4" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4c6870" class="f-muted" text-anchor="end">300</text>
+<path d="M66 147.6H520" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" class="s-border-light"/>
+<text x="57" y="152.6" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4c6870" class="f-muted" text-anchor="end">350</text>
+<path d="M66 82.8H520" fill="none" stroke="#e5e9eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" class="s-border-light"/>
+<text x="57" y="87.8" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4c6870" class="f-muted" text-anchor="end">400</text>
+<text x="57" y="23" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#4c6870" class="f-muted" text-anchor="end">450</text>
+<path d="M66 342H520" fill="none" stroke="#ccd4d6" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" class="s-border"/>
+<text x="293" y="388" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#4c6870" class="f-muted" text-anchor="middle">Zeit nach dem Dosieren [s]</text>
+<text x="0" y="0" transform="translate(18 180) rotate(-90)" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#4c6870" class="f-muted" text-anchor="middle">Temperatur der Bohrung [°C]</text>
+<path d="M66 316.08 L77.35 176.35 L88.7 143.74 L100.05 123.29 L111.4 108.48 L122.75 96.79 L134.1 91.95 L145.45 90.81 L156.8 89.41 L168.15 87.18 L179.5 85.11 L190.85 83.28 L202.2 81.68 L213.55 80.32 L224.9 79.13 L236.25 78.09 L247.6 76.91 L258.95 75.39 L270.3 73.82 L281.65 72.28 L293 70.77 L304.35 69.32 L315.7 67.93 L327.05 66.59 L338.4 65.33 L349.75 64.11 L361.1 62.96 L372.45 61.86 L383.8 60.81 L395.15 59.81 L406.5 58.86 L417.85 57.96 L429.2 57.1 L440.55 56.27 L451.9 55.49 L463.25 54.74 L474.6 54.02 L485.95 53.34 L497.3 52.67 L508.65 52.06 L520 51.45" fill="none" stroke="#002733" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round" class="s-text" clip-path="url(#feld)"/>
+<path d="M66 316.08 L77.35 315.64 L88.7 315.45 L100.05 315.32 L111.4 315.2 L122.75 315.1 L134.1 315.01 L145.45 314.93 L156.8 314.85 L168.15 314.78 L179.5 314.71 L190.85 314.65 L202.2 314.59 L213.55 314.54 L224.9 314.48 L236.25 314.43 L247.6 314.38 L258.95 314.33 L270.3 314.29 L281.65 314.24 L293 314.2 L304.35 314.16 L315.7 314.13 L327.05 314.09 L338.4 314.06 L349.75 314.02 L361.1 313.99 L372.45 313.96 L383.8 313.93 L395.15 313.9 L406.5 313.87 L417.85 313.85 L429.2 313.82 L440.55 313.8 L451.9 313.78 L463.25 313.75 L474.6 313.73 L485.95 313.71 L497.3 313.69 L508.65 313.68 L520 313.66" fill="none" stroke="#002733" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" class="s-text" stroke-dasharray="8 5" clip-path="url(#feld)"/>
+<text x="304.35" y="88.91" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#4c6870" class="f-muted" text-anchor="start">unter der Schmelze</text>
+<text x="304.35" y="301.24" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#4c6870" class="f-muted" text-anchor="start">trockene Oberseite</text>
+<text x="528" y="56.45" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#002733" class="f-text" text-anchor="start">unten 424 °C</text>
+<text x="528" y="318.66" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#002733" class="f-text" text-anchor="start">oben 222 °C</text>
+</svg>

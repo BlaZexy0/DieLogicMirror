@@ -416,6 +416,7 @@ const KOPF_SEITEN = [
   'simulation/shotsleevefoam.html',
   'simulation/netzbewegung.html', 'simulation/validierung.html', 'simulation/validierung-niida.html',
   'simulation/validierung-trometer.html', 'simulation/validierung-zamora.html', 'simulation/validierung-guo.html',
+  'simulation/validierung-randschale.html',
   'tools/sprengflaeche/index.html', 'tools/teilekosten/index.html', 'tools/zyklus/index.html'
 ];
 
@@ -436,7 +437,7 @@ test('KaTeX-Seiten laden /shared/katex-init.js, kein onload= mehr am Script-Tag'
     assert.match(html, /<script defer src="\/shared\/katex-init\.js"><\/script>/, p + ': lädt katex-init.js nicht');
     geprüft++;
   }
-  assert.equal(geprüft, 17, 'siebzehn Seiten binden KaTeX ein: sechs Theorie-Seiten, die Startseite und zehn Seiten der Simulation (seit 08.10. mit dieLogicSolFoam und der Stufenprobe)');
+  assert.equal(geprüft, 18, 'achtzehn Seiten binden KaTeX ein: sechs Theorie-Seiten, die Startseite und elf Seiten der Simulation (seit 08.10. mit dieLogicSolFoam und der Stufenprobe, seit 14.10. mit der Randschale)');
 });
 
 /* Die Simulation ist seit 28.09. eine Seitenfamilie (Solver und Validierung),

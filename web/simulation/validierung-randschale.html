@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Randschale in der Gießkammer · Simulation · DieLogic</title>
+  <!-- Entwurf: noch nicht in Suchmaschinen, bis die Validierung abgeschlossen ist. -->
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#002733">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icon-180.png">
+  <link rel="manifest" href="/assets/site.webmanifest">
+  <link rel="stylesheet" href="/shared/shared.css">
+  <link rel="stylesheet" href="/shared/vendor/katex/katex.min.css">
+  <script defer src="/shared/vendor/katex/katex.min.js"></script>
+  <script defer src="/shared/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/shared/katex-init.js"></script>
+  <script src="/shared/version.js"></script>
+  <script src="/shared/palette.js"></script>
+  <script src="/shared/schemes.js"></script>
+  <script src="/shared/nav.js"></script>
+  <script src="/shared/svgfarben.js"></script>
+  <style>
+    /* Seitenspezifisch; Farben nur als Rollen. */
+    pre.code {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    pre.code .c { color: var(--muted); }
+    .th-table th code { text-transform: none; }
+    .toc-sidebar ul + h3 { margin-top: 1.6rem; }
+
+    /* Videos der Beispielrechnungen (ParaView, pvbatch) */
+    .fig-wrap video {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: var(--dark);
+      border-radius: 6px 6px 0 0;
+    }
+    .fig-platzhalter {
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+      margin: 0.75rem;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .kennzahlen td:nth-child(n+2),
+    .kennzahlen th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+    .fig-schmal img { max-width: 520px; margin: 0 auto; display: block; }
+    .fig-wrap img.diagramm { display: block; width: 100%; height: auto; background: var(--surface); }
+    .fig-quadrat video { max-width: 560px; margin: 0 auto; }
+    .toc-knopf { margin-top: 1rem; }
+    h3.sub-title {
+      font-size: 1.05rem;
+      margin: 1.6rem 0 0.4rem;
+      color: var(--text);
+    }
+    .seiten-nav li.nav-sub { padding-left: 0.9rem; font-size: 0.92em; }
+    .seiten-nav strong { color: var(--text); }
+    .karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .karte { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.9rem 1rem; background: var(--surface2); }
+    .karte h4 { margin: 0 0 0.35rem; font-size: 1rem; }
+    h4.bild-reihe { margin: 1.8rem 0 0.5rem; font-size: 1rem; color: var(--text); }
+    .video-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.9rem; margin: 0.6rem 0 1.4rem; }
+    .video-raster.breit { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+    .video-raster.voll { grid-template-columns: 1fr; }
+    .video-raster .fig-wrap { margin: 0; }
+    .video-raster .fig-cap { font-size: 0.78rem; }
+    .karte p { margin: 0 0 0.6rem; color: var(--muted); font-size: 0.9rem; }
+    .status-ok { color: var(--ok-text); }
+    .status-offen { color: var(--caution-text, var(--muted)); }
+  </style>
+</head>
+<body>
+<div class="breadcrumb">
+  <a href="/">DieLogic</a>
+  <span>›</span>
+  <a href="index.html">Simulation</a>
+  <span>›</span>
+  <a href="validierung.html">Validierung</a>
+  <span>›</span>
+  Randschale in der Gießkammer
+</div>
+<section class="page-hero">
+  <div class="inner">
+    <h1>Randschale in der Gießkammer</h1>
+    <p class="subtitle">Wie schnell an der kalten Kammerwand eine Schale erstarrt, solange die Schmelze vor dem Schuss in der Gießkammer liegt: gerechnet mit dieLogicSolFoam, geprüft gegen ein halbanalytisches Modell und an Grenzfällen, die sich ohne Messung prüfen lassen.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">dieLogicSolFoam</span>
+      <span class="hero-tag">Vorerstarrung</span>
+      <span class="hero-tag">Gießkammer</span>
+      <span class="hero-tag">Analytik</span>
+    </div>
+  </div>
+</section>
+<div class="content-wrap">
+  <div class="content-cols">
+    <aside class="toc-sidebar">
+      <h3>Inhalt</h3>
+      <ul>
+        <li><a href="#r1">1. Worum es geht</a></li>
+        <li><a href="#r2">2. Das Modell</a></li>
+        <li><a href="#r3">3. Das Netz</a></li>
+        <li><a href="#r4">4. Gegen die Analytik</a></li>
+        <li><a href="#r5">5. Was die Schale wachsen lässt</a></li>
+        <li><a href="#r6">6. Welche Kammer?</a></li>
+        <li><a href="#r7">7. Grenzen und Messung</a></li>
+        <li><a href="#r8">8. Fall und Daten</a></li>
+      </ul>
+      <h3>Seiten</h3>
+      <ul class="seiten-nav">
+        <li><a href="index.html">Übersicht</a></li>
+        <li><a href="dielogicfoam.html">dieLogicFoam</a></li>
+        <li><a href="dielogicsolfoam.html">dieLogicSolFoam</a></li>
+        <li><a href="shotsleevefoam.html">shotSleeveFoam</a></li>
+        <li><a href="netzbewegung.html">Netzbewegung</a></li>
+        <li><a href="validierung.html">Validierung</a></li>
+        <li class="nav-sub"><a href="validierung-niida.html">Niida und Maeda 2020</a></li>
+        <li class="nav-sub"><a href="validierung-trometer.html">Trometer et al. 2023</a></li>
+        <li class="nav-sub"><a href="validierung-zamora.html">Zamora und López</a></li>
+        <li class="nav-sub"><a href="validierung-guo.html">Guo und Xiong 2008</a></li>
+        <li class="nav-sub"><strong>Randschale in der Kammer</strong></li>
+      </ul>
+    </aside>
+    <article class="theory-article">
+      <div class="draft-note">
+        📚 <b>Entwurf:</b> Für die Randschale in der Gießkammer gibt es noch keine veröffentlichte Messung, die
+        sich nachrechnen ließe. Diese Seite prüft deshalb, was sich ohne Messung prüfen lässt, und beschreibt die
+        Effekte (Stand 14.10.2026).
+      </div>
+
+      <div class="insight-box">
+        <div class="label">Kurz gesagt</div>
+        <p>Nach dem Dosieren liegt die Schmelze einige Sekunden in der Gießkammer. An der kalten Wand erstarrt eine
+          Schale; im Basisfall (Ø 80 mm, 40 % gefüllt, AlSi9Cu3) ist sie nach 10 s im Mittel 2,8 mm dick, und 15 %
+          der Schmelze sind fest. Ein halbanalytisches Modell ohne angepasste Konstanten trifft 21 Rechnungen bis
+          10 s auf 0,34 mm; Netz, Energiebilanz, Fläche und Symmetrie stimmen. Offen ist der Kontakt zwischen
+          Schmelze und Kammer: er bestimmt das Ergebnis am stärksten und ist nicht gemessen.</p>
+      </div>
+
+      <span class="section-anchor" id="r1"></span>
+      <h2 class="section-title">1. Worum es geht</h2>
+      <div class="prose">
+        <p>Zwischen Dosieren und Schuss liegen 1 bis 10 s. In dieser Zeit gibt die Schmelze Wärme an die Kammer ab, und
+          an der Wand erstarrt eine Randschale. Der Kolben reißt sie beim Schuss auf und trägt ihre Kristalle in die Form:
+          grobe, schon in der Kammer erstarrte Körner im feinen Gefüge, in der Literatur <i>externally solidified
+          crystals</i> (ESC). Sie mindern die Dehnung des Gussteils. Die Kammer ist meist nur zu 30 bis 50 % gefüllt; die
+          Schmelze berührt nur den unteren Teil der Bohrung, darüber steht Luft.</p>
+        <p>Gefragt ist, wie dick die Schale wird, wie viel der Schmelze bis zum Schuss fest ist, und was man an Kammer und
+          Betrieb daran ändern kann. Eine veröffentlichte Messung der Schale in einer Druckgießkammer, die sich
+          nachrechnen ließe, haben wir nicht gefunden. Diese Seite prüft deshalb die Rechnung an dem, was ohne Messung
+          feststeht: an exakten Größen der Geometrie, an Bilanzen, an Grenzfällen und an einem halbanalytischen Modell,
+          das dieselbe Physik ohne Netz beschreibt.</p>
+      </div>
+      <div class="fig-wrap fig-schmal">
+        <img src="img/val/randschale-schema.svg" alt="Schnitt quer zur Gießkammer: Kammerwand aus Stahl, unten die Schmelze mit der Randschale, darüber Luft und die freie Oberfläche" loading="lazy">
+        <div class="fig-cap"><b>Der Schnitt.</b> Bohrung Ø 80 mm, Wand 30 mm, Füllgrad 40 %. Die graue Schale hat die
+          gerechnete Form nach 10 s.</div>
+      </div>
+
+      <span class="section-anchor" id="r2"></span>
+      <h2 class="section-title">2. Das Modell</h2>
+      <div class="prose">
+        <p>Gerechnet wird ein Schnitt quer zur Kammer mit <a href="dielogicsolfoam.html">dieLogicSolFoam</a>, dem
+          Erstarrungssolver, der sonst Gussteil und Form zusammen rechnet: Wärmeleitung mit Erstarrung in Schmelze und
+          Stahl, eine Gleichung für beide, der Festphasenanteil $f_s(T)$ aus einer Scheil-Kurve der Legierung.</p>
+      </div>
+      <div class="math-block">$$\rho c\,\frac{\partial T}{\partial t} = \nabla\!\cdot\!\left(k\,\nabla T\right) + \rho L\,\frac{\partial f_s}{\partial t}$$</div>
+      <div class="prose">
+        <p>Die Schmelze liegt unter einer ebenen freien Oberfläche bis zum Füllgrad, ringsum ein Stahlring.
+          Zwischen Schmelze und Kammer gilt ein Wärmeübergang von 5000 W/(m² K), solange die Schmelze an der Wand flüssig
+          ist; er fällt auf 2000 W/(m² K), während der Festanteil an der Wand von 0,6 auf 1 steigt, weil die Schale
+          schrumpft und sich von der Wand löst. Freie Oberfläche und trockene Bohrung tauschen Wärme durch Strahlung,
+          linearisiert mit 20 und 10 W/(m² K); zusammen sind das etwa 1 % des Wärmestroms. Außen gibt die Kammer
+          15 W/(m² K) an 20 °C ab. Die Schmelze ruht, es gibt nur Wärmeleitung; Zeit null ist der Augenblick, in dem
+          die Schmelze an der Wand liegt.</p>
+      </div>
+      <div class="table-scroll"><table class="th-table">
+        <thead><tr><th>Basisfall</th><th>Wert</th></tr></thead>
+        <tbody>
+          <tr><td>Schmelze</td><td>AlSi9Cu3, 680 °C, Erstarrung 595 bis 490 °C</td></tr>
+          <tr><td>Kammer</td><td>Warmarbeitsstahl H13, 220 °C, Wand 30 mm</td></tr>
+          <tr><td>Bohrung, Füllgrad</td><td>Ø 80 mm, 40 % (benetzt 162°)</td></tr>
+          <tr><td>Kontakt Schmelze/Kammer</td><td>5000 → 2000 W/(m² K) zwischen $f_s$ = 0,6 und 1</td></tr>
+          <tr><td>Rechnung</td><td>20 s, 10 926 Zellen, etwa 15 s Rechenzeit</td></tr>
+        </tbody>
+      </table></div>
+
+      <span class="section-anchor" id="r3"></span>
+      <h2 class="section-title">3. Das Netz</h2>
+      <div class="prose">
+        <p>Die Schale wächst an der Wand, dort liegt deshalb eine polare Schicht: 0,1 mm dicke Zellen senkrecht zur
+          Bohrung, nach innen um 8 % je Zelle größer, im Stahl spiegelbildlich. Den Rest der Schmelze füllt ein halbes
+          O-Netz. Das Netz entsteht für jeden Füllgrad von 10 bis 90 % und für die volle Kammer aus denselben Regeln;
+          an der Ecke zur freien Oberfläche bestimmt der Winkel β der benetzten Bohrung die Form der Zellen (71° bei
+          30 %, 132° bei 90 %).</p>
+      </div>
+      <div class="fig-wrap fig-schmal">
+        <img src="img/val/randschale-netz-ecke.svg" alt="Netz an der Ecke zwischen freier Oberfläche und Kammerwand: feine polare Zellen an der Bohrung in Schmelze und Stahl" loading="lazy">
+        <div class="fig-cap"><b>Ecke an der freien Oberfläche</b>, 16 × 16 mm, Füllgrad 40 %. Links die Schmelze,
+          rechts der Stahl, oben die Luft.</div>
+      </div>
+
+      <span class="section-anchor" id="r4"></span>
+      <h2 class="section-title">4. Gegen die Analytik</h2>
+      <div class="prose">
+        <p>Der Solver selbst ist an exakten Lösungen geprüft, auf der Seite <a href="dielogicsolfoam.html#s9">dieLogicSolFoam</a>:
+          die Erstarrungsfront nach Neumann (<code>stefan1D</code>) und zwei Platten mit Kontaktwiderstand
+          (<code>conjugateSlab1D</code>). Für die Kammer kommen vier Prüfungen dazu, die keine Messung brauchen, und ein
+          halbanalytisches Modell der ganzen Aufgabe.</p>
+      </div>
+      <div class="table-scroll"><table class="th-table kennzahlen">
+        <thead><tr><th>Prüfung</th><th>Sollwert</th><th>Rechnung</th><th>Bewertung</th></tr></thead>
+        <tbody>
+          <tr><td>Fläche der Schmelze gegen das Kreissegment</td><td>$\tfrac{R^2}{2}(2\beta - \sin 2\beta)$</td><td>auf 0,03 %</td><td class="status-ok">trifft</td></tr>
+          <tr><td>Energiebilanz: abgegebene gegen abgeflossene Wärme</td><td>0</td><td>6 · 10⁻⁶</td><td class="status-ok">trifft</td></tr>
+          <tr><td>Netz: 3 819 / 10 926 / 29 490 Zellen, Schale nach 20 s</td><td>unabhängig vom Netz</td><td>6,24 / 6,23 / 6,22 mm</td><td class="status-ok">0,3 %</td></tr>
+          <tr><td>Netz: vorerstarrter Anteil nach 20 s</td><td>unabhängig vom Netz</td><td>32,3 % in allen drei</td><td class="status-ok">trifft</td></tr>
+          <tr><td>Halb gefüllt gegen volle Kammer, Schale nach 10 / 20 s</td><td>gleich je benetzter Länge</td><td>2,63 / 5,84 gegen 2,55 / 5,60 mm</td><td class="status-ok">3 bis 4 %, erklärt</td></tr>
+          <tr><td>Halbanalytisches Modell, 21 Varianten, bis 10 s</td><td>gleiche Physik</td><td>höchstens 0,34 mm, 1,8 Pkt.</td><td class="status-ok">trifft</td></tr>
+        </tbody>
+      </table></div>
+      <div class="prose">
+        <p><b>Symmetrie.</b> Eine halb gefüllte Kammer ist die volle Kammer, in der Mitte durchgeschnitten: dieselbe Schmelze
+          je benetzter Länge, die freie Oberfläche liegt auf der Symmetrielinie. Je benetzter Länge müssten beide
+          dieselbe Schale bilden, wenn die freie Oberfläche keine Wärme abgäbe und die trockene obere Hälfte der Kammer
+          nicht wäre. Die halb gefüllte Kammer liegt 3 bis 4 % darüber. Das passt zu dem, was die Rechnung an der Ecke zur
+          freien Oberfläche zeigt: Die trockene Kammer über der Schmelze bleibt kalt und zieht seitlich Wärme aus dem
+          heißen Stahl unter der Schmelze; die volle Kammer hat keinen trockenen Teil. Die Strahlung der freien Oberfläche
+          trägt etwa 1 % bei. Ab 50 % Füllgrad bleibt die Schale je benetzter Länge innerhalb dieser 4 % bei der vollen
+          Kammer.</p>
+        <p><b>Das halbanalytische Modell</b> beschreibt dieselbe Physik mit drei Bausteinen, ohne Netz und ohne angepasste
+          Konstanten. Die Kammer ist ein Halbraum aus Stahl. Ihre Temperatur unter der Schmelze folgt aus der Geschichte
+          des Wärmestroms (Duhamel), mit der exakten Antwort eines Halbraums, der nur auf einem Streifen von der Breite
+          der benetzten Bohrung $2\beta R$ beheizt wird, neben der trockenen Bohrung:</p>
+      </div>
+      <div class="math-block">$$T_B(t) = T_0 + \frac{1}{e_s\sqrt{\pi}}\int_0^t \frac{q(\tau)\,m(t-\tau)}{\sqrt{t-\tau}}\,d\tau, \qquad m(\tau) = \operatorname{erf} z - \frac{1 - e^{-z^2}}{z\sqrt{\pi}}, \quad z = \frac{\beta R}{\sqrt{a_s \tau}}$$</div>
+      <div class="prose">
+        <p>$e_s = \sqrt{k\rho c}$ ist die Wärmeeindringzahl des Stahls, $a_s$ seine Temperaturleitfähigkeit; für die volle
+          Kammer ist $m = 1$, die gewöhnliche Antwort des Halbraums. Die Schmelze ist ein Ersatzzylinder mit derselben
+          Schmelzemenge je benetzter Länge, $R_{eq} = 2A/P$; für die volle und die halb gefüllte Kammer ist das exakt, für
+          die Segmente trifft er die langsamste Abkühlform des echten Segments (bei 30 % Füllgrad 30,4 gegen 30,3 mm, aus
+          einer Eigenwertrechnung mit Differenzen). Die Überhitzung fließt nach der exakten Antwort des Zylinders ab (Bessel-Reihe). Die
+          Schale wächst nach dem Anlauf, sobald die Schmelze an der Wand die Liquidus-Temperatur erreicht hat, als
+          Wärmebilanz bis zur Liquidus-Isotherme, mit der echten Kurve $f_s(T)$ und demselben Kontakt wie im Solver:</p>
+      </div>
+      <div class="math-block">$$q = h\,(T_\text{Wand} - T_B) = \frac{\int_{T_\text{Wand}}^{T_\text{liq}} k\,dT}{R\,\ln\frac{R}{R-d}}$$</div>
+      <div class="fig-wrap">
+        <img class="diagramm" src="img/val/randschale-modell.svg" alt="Dicke der Randschale über 20 s: Simulation und halbanalytisches Modell für sechs Varianten" loading="lazy">
+        <div class="fig-cap"><b>Modell gegen Simulation.</b> Durchgezogen dieLogicSolFoam, gestrichelt das Modell (1 s
+          Rechenzeit) für sechs der 21 Varianten. Bis 10 s weicht das Modell über alle Varianten um höchstens 0,34 mm in
+          der Schale und 1,8 Prozentpunkte im vorerstarrten Anteil ab; bis 20 s um 0,2 bis 0,7 mm, in der engen Kammer
+          (Ø 60 mm), wo die Schale ein Viertel des Radius erreicht, um 0,9 mm.</div>
+      </div>
+      <div class="prose">
+        <p>Das Modell gibt den Mittelwert der Schale wieder, nicht ihre Verteilung entlang der Bohrung. Die dickere Schale
+          an der freien Oberfläche geht nur über den seitlichen Wärmefluss in die trockene Kammer ein; deshalb unterschätzt
+          es die Schale bei kleinem Füllgrad nach 10 s etwas. Die Temperatur der Bohrung unter der Schmelze geben Modell und
+          Rechnung beide aus: das ist die Größe, an der sich beide messen lassen (Abschnitt 7).</p>
+      </div>
+
+      <span class="section-anchor" id="r5"></span>
+      <h2 class="section-title">5. Was die Schale wachsen lässt</h2>
+      <div class="fig-wrap fig-quadrat">
+        <video autoplay muted loop playsinline controls preload="metadata" poster="img/val/video/randschale-schnitt40.webp"
+          aria-label="Schnitt durch die zu 40 Prozent gefüllte Gießkammer über 20 Sekunden: Temperatur der Kammer und Festanteil der Schmelze">
+          <source src="img/val/video/randschale-schnitt40.mp4" type="video/mp4">
+        </video>
+        <div class="fig-cap"><b>Basisfall über 20 s.</b> Die Kammer nach ihrer Temperatur (220 bis 450 °C), die Schmelze
+          nach dem Festanteil: orange flüssig, grau erstarrt. Unter der Schmelze heizt sich die Kammer schnell auf, die
+          trockene Oberseite bleibt kalt.</div>
+      </div>
+      <div class="fig-wrap">
+        <img src="img/val/randschale-zeitreihe.webp" alt="Der Basisfall nach 2, 5, 10 und 20 Sekunden: Schale 0,4, 1,3, 2,8 und 6,2 mm" loading="lazy">
+        <div class="fig-cap"><b>Basisfall nach 2, 5, 10 und 20 s.</b> Schale im Mittel 0,4 / 1,3 / 2,8 / 6,2 mm, fest
+          2 / 7 / 15 / 32 % der Schmelze.</div>
+      </div>
+      <div class="prose">
+        <p><b>Anlauf, dann fast linear.</b> In den ersten 0,1 bis 2 s verliert die Schmelze an der Wand ihre Überhitzung;
+          danach wächst die mittlere Schale fast linear, im Basisfall um 0,3 mm je Sekunde
+          ($d \approx 0{,}226\,(t - 0{,}34)^{1{,}11}$ mm, $t$ in s). Das ist nicht das Wurzelgesetz der Erstarrung an einer
+          kalten Wand: In den Liegezeiten einer Gießkammer begrenzen der Kontakt und die Erwärmung der Bohrung das Wachstum,
+          nicht die Wärmeleitung durch die Schale.</p>
+      </div>
+      <div class="fig-wrap">
+        <img class="diagramm" src="img/val/randschale-wachstum.svg" alt="Dicke der Randschale über der Zeit: Mittel, Boden und an der freien Oberfläche" loading="lazy">
+        <div class="fig-cap"><b>Wachstum.</b> Mittel und Boden fast gleich, an der freien Oberfläche deutlich dicker.</div>
+      </div>
+      <div class="prose">
+        <p><b>Freie Oberfläche.</b> An der Ecke zur freien Oberfläche ist die Schale bis doppelt so dick wie am Boden
+          (30 % Füllgrad nach 10 s: 5,9 gegen 2,8 mm). Dort ist die Schmelze ein dünner Keil, und der heiße Stahl darunter
+          gibt Wärme seitlich an die kalte, trockene Kammer ab; der Keil selbst erstarrt ganz durch. Über 50 % Füllgrad ist
+          der Winkel an der Ecke stumpf, der Effekt verschwindet.</p>
+      </div>
+      <div class="fig-wrap">
+        <img class="diagramm" src="img/val/randschale-profil.svg" alt="Dicke der Randschale entlang der Bohrung nach 2, 5, 10 und 20 Sekunden" loading="lazy">
+        <div class="fig-cap"><b>Entlang der Bohrung.</b> Lage als Bogen vom Boden; an beiden Ecken zur freien Oberfläche
+          die dickere Schale.</div>
+      </div>
+      <div class="prose">
+        <p><b>Die Kammer wird ungleich warm.</b> Nach 10 s hat die Bohrung unter der Schmelze 409 °C, die trockene Oberseite
+          221 °C. Ein Unterschied von 190 K über den Umfang ist eine bekannte Ursache dafür, dass sich Gießkammern
+          verziehen.</p>
+      </div>
+      <div class="fig-wrap">
+        <img class="diagramm" src="img/val/randschale-bohrung.svg" alt="Temperatur der Bohrung unter der Schmelze und an der trockenen Oberseite über 20 Sekunden" loading="lazy">
+        <div class="fig-cap"><b>Temperatur der Bohrung</b> unter der Schmelze und an der trockenen Oberseite.</div>
+      </div>
+      <div class="prose">
+        <p><b>Füllgrad.</b> Weniger Füllung heißt weniger Schmelze je benetzter Wand: die Überhitzung ist früher weg, die
+          Schale wächst schneller, und ein viel größerer Teil der Schmelze ist fest (nach 10 s 19 % bei 30 %, 15 % bei
+          40 %, 13 % bei 50 % Füllgrad).</p>
+      </div>
+      <div class="fig-wrap">
+        <video autoplay muted loop playsinline controls preload="metadata" poster="img/val/video/randschale-fuellgrad.webp"
+          aria-label="Gießkammer mit 30, 40 und 50 Prozent Füllgrad nebeneinander über 20 Sekunden">
+          <source src="img/val/video/randschale-fuellgrad.mp4" type="video/mp4">
+        </video>
+        <div class="fig-cap"><b>30, 40 und 50 % Füllgrad.</b> Gleiche Kammer, gleiche Temperaturen; darunter Schale und
+          fester Anteil.</div>
+      </div>
+      <div class="fig-wrap">
+        <img class="diagramm" src="img/val/randschale-fuellgrad-anteil.svg" alt="Vorerstarrter Anteil der Schmelze über der Zeit für 20 bis 50 Prozent Füllgrad und die volle Kammer" loading="lazy">
+        <div class="fig-cap"><b>Vorerstarrter Anteil</b> für 20 bis 50 % Füllgrad, gestrichelt die volle Kammer: ab
+          50 % liegt der Anteil bei ihr.</div>
+      </div>
+      <div class="prose">
+        <p><b>Legierung.</b> AlSi9Cu3 erstarrt über einen weiten Bereich (595 bis 490 °C): eine breite, teigige Schale, die
+          in 20 s nicht ganz fest wird. AlSi12 erstarrt fast bei einer Temperatur (582 bis 572 °C): eine dünne, scharf
+          begrenzte Schale und ein Drittel weniger vorerstarrt. AlSi10MnMg liegt dazwischen.</p>
+      </div>
+      <div class="fig-wrap">
+        <img src="img/val/randschale-legierungen.webp" alt="Drei Legierungen nach 10 Sekunden in derselben Kammer: AlSi9Cu3, AlSi10MnMg, AlSi12" loading="lazy">
+        <div class="fig-cap"><b>Drei Legierungen nach 10 s</b>, gleiche Kammer und Temperaturen.</div>
+      </div>
+      <div class="prose">
+        <p><b>Stellschrauben.</b> Je ein Parameter gegen den Basisfall verändert: Am stärksten wirkt der Kontakt zur Kammer
+          (halber Wärmeübergang gibt 0,56-mal, doppelter 1,5-mal die Schale nach 10 s), dann die Temperaturen von Kammer
+          (±70 K: ±28 %) und Schmelze (±30 K: etwa ±25 %). Die Wanddicke spielt ab 20 mm keine Rolle: in 20 s dringt die
+          Wärme nur etwa 10 mm in den Stahl ein.</p>
+      </div>
+      <div class="fig-wrap">
+        <img class="diagramm" src="img/val/randschale-einfluss.svg" alt="Einfluss der Parameter auf die Dicke der Randschale nach 10 Sekunden" loading="lazy">
+        <div class="fig-cap"><b>Was das Wachstum treibt.</b> Schale nach 10 s, Basisfall 2,79 mm.</div>
+      </div>
+      <div class="table-scroll"><table class="th-table kennzahlen">
+        <thead><tr><th>Liegezeit</th><th>Füllgrad 30 %</th><th>40 %</th><th>50 %</th></tr></thead>
+        <tbody>
+          <tr><td>2 s</td><td>0,4 mm · 3 %</td><td>0,4 mm · 2 %</td><td>0,4 mm · 2 %</td></tr>
+          <tr><td>5 s</td><td>1,4 mm · 9 %</td><td>1,3 mm · 7 %</td><td>1,2 mm · 6 %</td></tr>
+          <tr><td>10 s</td><td>3,1 mm · 19 %</td><td>2,8 mm · 15 %</td><td>2,6 mm · 13 %</td></tr>
+        </tbody>
+      </table></div>
+      <div class="prose">
+        <p class="fig-cap">Randschale im Mittel und vorerstarrter Anteil der Schmelze; AlSi9Cu3 680 °C, Kammer 220 °C,
+          Ø 80 mm. Im Betrieb kostet jede Sekunde Liegezeit rund 0,3 mm Schale; 300 statt 220 °C in der Kammer geben
+          29 % weniger, 710 statt 680 °C in der Schmelze 24 % weniger, der halbe Wärmeübergang (Trennmittel,
+          Beschichtung) 44 % weniger.</p>
+      </div>
+
+      <span class="section-anchor" id="r6"></span>
+      <h2 class="section-title">6. Welche Kammer?</h2>
+      <div class="prose">
+        <p>Wie viel der Schmelze vorerstarrt, hängt daran, wie viel Wand auf wie viel Schmelze kommt. Eine Studie über
+          Bohrungen von 50 bis 300 mm und Füllgrade von 10 bis 90 % (je Zelle ein Schnitt wie der Basisfall, gerechnet bis
+          10 s) gibt den Anteil nach 5 s:</p>
+      </div>
+      <div class="table-scroll"><table class="th-table kennzahlen">
+        <thead><tr><th>vorerstarrt nach 5 s</th><th>Ø 50</th><th>70</th><th>100</th><th>150</th><th>200</th><th>300 mm</th></tr></thead>
+        <tbody>
+          <tr><td>Füllgrad 10 %</td><td>48,9 %</td><td>31,1 %</td><td>17,6 %</td><td>9,5 %</td><td>6,4 %</td><td>3,9 %</td></tr>
+          <tr><td>30 %</td><td>19,0 %</td><td>11,0 %</td><td>6,6 %</td><td>4,0 %</td><td>2,8 %</td><td>1,8 %</td></tr>
+          <tr><td>50 %</td><td>11,9 %</td><td>7,3 %</td><td>4,6 %</td><td>2,8 %</td><td>2,0 %</td><td>1,3 %</td></tr>
+          <tr><td>70 %</td><td>9,6 %</td><td>6,0 %</td><td>3,8 %</td><td>2,4 %</td><td>1,7 %</td><td>1,1 %</td></tr>
+          <tr><td>90 %</td><td>9,6 %</td><td>6,0 %</td><td>3,8 %</td><td>2,3 %</td><td>1,7 %</td><td>1,1 %</td></tr>
+        </tbody>
+      </table></div>
+      <div class="prose">
+        <p>Bei gleichem Füllgrad hat Ø 50 mm das Neun- bis Dreizehnfache von Ø 300 mm, mehr Wand je Schmelze. 10 % Füllgrad
+          gibt das Vier- bis Fünffache von 90 %; zwischen den üblichen 30 und 70 % das 1,6- bis 2-Fache, über 70 % ändert
+          sich kaum noch etwas. Die Schale selbst wächst überall ähnlich, 0,2 bis 0,5 mm je Sekunde.</p>
+        <p>Die Länge der Kammer kommt im Schnitt nicht vor, wohl aber über die Dosiermenge: Die Schmelzefläche im Schnitt ist
+          $V/L$. Entlang einer Linie gleicher Fläche ändert sich der Anteil kaum, weil die benetzte Breite eines Segments
+          gegebener Fläche nur schwach vom Durchmesser abhängt. Bei gleicher Dosiermenge entscheidet deshalb die Länge:
+          10 kg sind nach 5 s in einer 500 mm langen Kammer zu rund 3 % fest, in einer 1200 mm langen zu rund 5 %, fast
+          unabhängig vom Durchmesser. Die Kammer gehört damit in die Auslegung, nicht erst in den Versuch.</p>
+      </div>
+
+      <span class="section-anchor" id="r7"></span>
+      <h2 class="section-title">7. Grenzen und Messung</h2>
+      <div class="prose">
+        <p><b>Die Schmelze ruht.</b> Das ist die größte Vereinfachung. Beim Dosieren und danach bewegt sich die Schmelze,
+          sie schwappt noch, wenn der Kolben anfährt: Die Strömung bringt heiße Schmelze an die
+          Wand und verteilt die Überhitzung. An der Wand wächst die Schale dann langsamer und beginnt später, die Schmelze
+          als Ganzes kühlt schneller ab. Was die ruhende Rechnung zeigt, ist deshalb die Wirkung von Kammer, Füllgrad und
+          Legierung im Vergleich, nicht die Schale eines bestimmten Schusses. Während des Schusses wächst die Schale
+          weiter; auch das fehlt hier.</p>
+        <p><b>Der Kontakt ist nicht kalibriert.</b> 5000 und 2000 W/(m² K) sind Werte in der Größenordnung der Literatur,
+          und der Kontakt wirkt von allen Größen am stärksten. Gemessen werden kann er mit einem Thermoelement in der
+          Kammerwand unter der Schmelze: Rechnung und Modell geben genau diese Temperatur aus (Abschnitt 5), und an ihr
+          lässt sich der Kontakt anpassen. Das ist der nächste Schritt dieser Validierung.</p>
+        <p><b>Weiter:</b> Werkstoffdaten sind Näherungen ($f_s(T)$ nach Scheil; für eine bestimmte Legierung aus CALPHAD),
+          die freie Oberfläche ist eben und ohne Oxidhaut, und der Schnitt ist 2D: kein Wärmefluss entlang der Kammer,
+          kein Kolben, keine Stirnseiten.</p>
+      </div>
+      <div class="warning-box"><p>Diese Seite ist keine Validierung an einer Messung. Sie zeigt, dass die Rechnung die
+        Geometrie, die Bilanzen und ein halbanalytisches Modell der gleichen Physik trifft, und welche Effekte daraus folgen.
+        Ob die Schale so dick wird, entscheidet der Kontakt zwischen Schmelze und Kammer; er ist zu messen.</p></div>
+
+      <span class="section-anchor" id="r8"></span>
+      <h2 class="section-title">8. Fall und Daten</h2>
+<pre class="code">python3 tools/makeCase.py runs/meinFall --fill 0.35 --alloy AlSi12 --D 70   <span class="c"># Netz und Fall für jeden Füllgrad</span>
+runs/meinFall/Allrun                       <span class="c"># Netz, Rechnung (etwa 15 s), Auswertung shellGrowth.png</span>
+python3 tools/runStudy.py                  <span class="c"># die Studie, 21 Varianten</span>
+python3 tools/shellModel.py --all          <span class="c"># halbanalytisches Modell gegen alle Rechnungen</span></pre>
+      <div class="prose">
+        <p>Die Studie liegt unter <code>studies/shotSleeveShell2D</code>: <code>makeCase.py</code> baut Netz und Fall aus den
+          Parametern (Füllgrad, Legierung, Stahl, Bohrung, Wand, Temperaturen, Kontakt), <code>shellGrowth.py</code> wertet
+          aus (Schale als Mittel, am Boden und an der freien Oberfläche, Profil entlang der Bohrung, vorerstarrter Anteil,
+          Temperatur der Bohrung), <code>shellModel.py</code> ist das halbanalytische Modell. Die Schale ist als Mittel die
+          „feste gleichwertige“ Dicke: die frei gewordene latente Wärme $\int f_s\,dA$ als Band auf der benetzten Bohrung.
+          Alle Fälle der Simulationsseiten sind zusätzlich unter <code>webseite-faelle/</code> gesammelt.</p>
+      </div>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>

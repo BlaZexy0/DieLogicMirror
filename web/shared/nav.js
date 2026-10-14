@@ -132,6 +132,7 @@
         { label: 'Trometer et al. 2023', href: '/simulation/validierung-trometer.html' },
         { label: 'Zamora und López', href: '/simulation/validierung-zamora.html' },
         { label: 'Guo und Xiong 2008', href: '/simulation/validierung-guo.html' },
+        { label: 'Randschale in der Kammer', href: '/simulation/validierung-randschale.html' },
       ] },
     ] },
     { label: 'Theorie', children: [
@@ -556,7 +557,7 @@
     const side = document.querySelector('.toc-sidebar');
     if (!side || side.querySelector('.dl-tool-cta')) return;
     const [fill, sol] = NAV_LINKS.find(g => g.label === 'Simulation').columns[0].items;
-    const solPage = /dielogicsolfoam|validierung-guo/.test(path);
+    const solPage = /dielogicsolfoam|validierung-guo|validierung-randschale/.test(path);
     const overview = /^\/simulation\/(index\.html)?$/.test(path);
     const tools = overview ? [fill, sol] : [solPage ? sol : fill];
     side.insertAdjacentHTML('afterbegin', tools.map(tool => `<a class="dl-tool-cta" href="${tool.href}">
