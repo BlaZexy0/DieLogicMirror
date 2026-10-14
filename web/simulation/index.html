@@ -75,6 +75,8 @@
     .video-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.9rem; margin: 0.6rem 0 1.4rem; }
     .video-raster.breit { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
     .video-raster.voll { grid-template-columns: 1fr; }
+    .video-raster.zwei { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+    @media (max-width: 700px) { .video-raster.zwei { grid-template-columns: 1fr; } }
     .video-raster .fig-wrap { margin: 0; }
     .video-raster .fig-cap { font-size: 0.78rem; }
     .karte p { margin: 0 0 0.6rem; color: var(--muted); font-size: 0.9rem; }
@@ -174,58 +176,64 @@
       <span class="section-anchor" id="u2"></span>
       <h2 class="section-title">2. Ein Schuss in Bildern</h2>
       <div class="prose">
-        <p>Vom Eingießen bis zur Form im Zyklusbetrieb: was die Solver rechnen, in der Reihenfolge eines Schusses. Die
-          ersten sechs Videos sind Beispielrechnungen der Solverseiten, die letzten beiden kommen aus Fällen, die die
-          beiden Werkzeuge im Browser eingerichtet haben — so, wie ihr Bericht sie zeigt.</p>
+        <p>Vom Eingießen bis zur Form im Zyklusbetrieb, in der Reihenfolge eines Schusses: Rechnungen der drei Solver,
+          gezeigt wie im Vortrag „Druckguss genau simuliert“. Die Fälle sind auf den Solver- und Validierungsseiten
+          beschrieben.</p>
       </div>
-      <div class="video-raster breit">
+
+      <h4 class="bild-reihe">Gießkammer</h4>
+      <div class="video-raster zwei">
         <div class="fig-wrap">
-          <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/dosieren.webp" aria-label="Eingießen in die Gießkammer">
-            <source src="img/sol/dosieren.mp4" type="video/mp4">
+          <video autoplay muted loop playsinline controls preload="metadata" poster="img/uebersicht/kammer-langsam-schnell.webp" aria-label="Welle in der Gießkammer bei zu langsamem und zu schnellem Kolben">
+            <source src="img/uebersicht/kammer-langsam-schnell.mp4" type="video/mp4">
           </video>
-          <div class="fig-cap"><b>Eingießen.</b> Der Strahl aus der Gießpfanne fällt durch die Eingießöffnung, schlägt am Kolben hoch und läuft als Welle durch die Kammer; nach 2 s ist die Schmelze schon 66 K kälter. <a href="dielogicsolfoam.html#s10">dieLogicFoam</a></div>
+          <div class="fig-cap"><b>Zu langsam, zu schnell.</b> Wassermodell nach Zamora (Ø 74 mm, Füllgrad 25 %), beide Kolben bei gleichem Weg: oben läuft die Welle davon und wird an der Stirnwand zurückgeworfen, unten erreicht das Wasser schon am Kolben die Decke und schießt unter ihr vor. Es bleiben 18 und 11 % Luft. <a href="validierung-zamora.html">shotSleeveFoam</a></div>
         </div>
         <div class="fig-wrap">
-          <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/kammer-warten.webp" aria-label="Die Schmelze wartet in der Gießkammer">
-            <source src="img/sol/kammer-warten.mp4" type="video/mp4">
+          <video autoplay muted loop playsinline controls preload="metadata" poster="img/uebersicht/kammer-fokussierend.webp" aria-label="Welle in der Gießkammer mit der fokussierenden Schusskurve">
+            <source src="img/uebersicht/kammer-fokussierend.mp4" type="video/mp4">
           </video>
-          <div class="fig-cap"><b>Warten auf den Schuss.</b> Dieselbe Schmelze mit dem Stahl der Kammer: beim üblichen Schussbeginn nach 3 s sind 3 % fest, nach 10 s 24 % mit einer Haut am Boden. <a href="dielogicsolfoam.html#s10">dieLogicSolFoam</a></div>
+          <div class="fig-cap"><b>Fokussierende Schusskurve.</b> Dieselbe Kammer, der Kolben erst kräftig, dann sanft bis an die kritische Geschwindigkeit: die Welle trifft die Stirnwand, wenn die Kammer fast voll ist. Es bleiben 2,7 % Luft. <a href="shotsleevefoam.html">shotSleeveFoam</a></div>
+        </div>
+      </div>
+
+      <h4 class="bild-reihe">Formfüllung</h4>
+      <div class="video-raster zwei">
+        <div class="fig-wrap">
+          <video autoplay muted loop playsinline controls preload="metadata" poster="img/uebersicht/form-niida.webp" aria-label="Füllung der Platte von Niida und Maeda in 3D">
+            <source src="img/uebersicht/form-niida.mp4" type="video/mp4">
+          </video>
+          <div class="fig-cap"><b>Der Strahl in der Form.</b> Wassermodell nach Niida und Maeda, Platte 100 × 150 × 5 mm, Kolben 150 mm/s: der Strahl schießt bis in den Überlauf, zu beiden Seiten bleibt Luft ohne Weg zur Entlüftung. <a href="validierung-niida.html">dieLogicFoam</a></div>
         </div>
         <div class="fig-wrap">
-          <video autoplay muted loop playsinline controls preload="metadata" poster="img/kammer.webp" aria-label="Welle in der Gießkammer mit bewegtem Kolben">
-            <source src="img/kammer.mp4" type="video/mp4">
+          <video autoplay muted loop playsinline controls preload="metadata" poster="img/uebersicht/form-p1-p2.webp" aria-label="Umschaltpunkt P1 gegen P2 im Wassermodell">
+            <source src="img/uebersicht/form-p1-p2.mp4" type="video/mp4">
           </video>
-          <div class="fig-cap"><b>Die Welle vor dem Kolben.</b> Der Kolben fährt an, die Welle läuft zur Stirnplatte: schließt sie Luft ein, bevor die Kammer voll ist? Bewegtes Netz mit <a href="netzbewegung.html">libshotSleeve</a>. <a href="dielogicfoam.html">dieLogicFoam</a></div>
+          <div class="fig-cap"><b>Der Umschaltpunkt.</b> Gleiche Kolbengeschwindigkeit, anders ist nur, wann der Kolben schnell wird: P1 sofort, P2 erst nach 0,22 s langsamer Fahrt. Bei P2 steigt die Front geschlossen; am Ende 30,1 gegen 2,0 cm³ eingeschlossene Luft. <a href="validierung-niida.html">dieLogicFoam</a></div>
+        </div>
+      </div>
+
+      <h4 class="bild-reihe">Erstarrung</h4>
+      <div class="video-raster voll">
+        <div class="fig-wrap">
+          <video autoplay muted loop playsinline controls preload="metadata" poster="img/uebersicht/sol-platte.webp" aria-label="Füllen und Erstarren einer Platte in 3D mit der Form">
+            <source src="img/uebersicht/sol-platte.mp4" type="video/mp4">
+          </video>
+          <div class="fig-cap"><b>Füllen und Erstarren in einer Rechnung.</b> dieLogicFoam füllt die Platte in 28 ms, dieLogicSolFoam übernimmt Temperatur, Gas und Oxid und rechnet die Erstarrung mit Form, Kolben und runden Kühlkanälen; links die Trennebene, rechts ein Schnitt durch Pressrest und Dom. Nach 9,3 s ist alles fest, im Dom bleibt eine Pore. <a href="dielogicsolfoam.html#s10">dieLogicFoam und dieLogicSolFoam</a></div>
+        </div>
+      </div>
+      <div class="video-raster zwei">
+        <div class="fig-wrap">
+          <video autoplay muted loop playsinline controls preload="metadata" poster="img/uebersicht/sol-erstarrung.webp" aria-label="Erstarrung im Schnitt: Speisung und Pore">
+            <source src="img/uebersicht/sol-erstarrung.mp4" type="video/mp4">
+          </video>
+          <div class="fig-cap"><b>Speisung und Pore.</b> Ein Schnitt durch Form und Gussteil, Pressrest und Kolben im Stahl: der 2 mm dünne Anschnitt ist nach 1,9 s fest, der Dom erstarrt zuletzt und schwindet ungespeist, die Pore erreicht 17 %. Schraffiert ist Schmelze, die der Kolben nicht mehr erreicht. <a href="dielogicsolfoam.html#s10">dieLogicSolFoam</a></div>
         </div>
         <div class="fig-wrap">
-          <video autoplay muted loop playsinline controls preload="metadata" poster="img/platte.webp" aria-label="Füllung einer Platte mit Kern">
-            <source src="img/platte.mp4" type="video/mp4">
+          <video autoplay muted loop playsinline controls preload="metadata" poster="img/uebersicht/sol-zyklen.webp" aria-label="Die Form über fünf Schüsse">
+            <source src="img/uebersicht/sol-zyklen.mp4" type="video/mp4">
           </video>
-          <div class="fig-cap"><b>Die Form füllt sich.</b> Eine Platte mit Kern: Temperatur, Geschwindigkeit, eingefaltete Oxidfilme und eingemischte Luft; Luft, die keinen Auslass erreicht, bleibt als Nest mit eigenem Druck. <a href="dielogicfoam.html">dieLogicFoam</a></div>
-        </div>
-        <div class="fig-wrap">
-          <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/schuss3d.webp" aria-label="Erstarrung des Schusses mit der Form">
-            <source src="img/sol/schuss3d.mp4" type="video/mp4">
-          </video>
-          <div class="fig-cap"><b>Erstarrung mit der Form.</b> Der ganze Schuss in 3D, Gussteil, Formhälften, Kolben und runde Kühlkanäle in einem Netz: die Speisung reißt ab, im Dom bleibt eine Pore. <a href="dielogicsolfoam.html#s10">dieLogicSolFoam</a></div>
-        </div>
-        <div class="fig-wrap">
-          <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/zyklen.webp" aria-label="Die Form über fünf Schüsse">
-            <source src="img/sol/zyklen.mp4" type="video/mp4">
-          </video>
-          <div class="fig-cap"><b>Fünf Schüsse.</b> Gießen, Öffnen, Sprühen, Schließen: die Form heizt sich auf, jeder Schuss erstarrt etwas länger. <a href="dielogicsolfoam.html#s10">dieLogicSolFoam</a></div>
-        </div>
-        <div class="fig-wrap">
-          <video autoplay muted loop playsinline controls preload="metadata" poster="img/assistent/fuellung-platte.webp" aria-label="Füllung einer Platte, eingerichtet mit Simulation einrichten">
-            <source src="img/assistent/fuellung-platte.mp4" type="video/mp4">
-          </video>
-          <div class="fig-cap"><b>Aus „Simulation einrichten“.</b> Bauteil, Anguss und Pressrest im Browser zusammengesetzt, Fall heruntergeladen, <code>./Allrun</code>: ein Bild des Berichts nach dem anderen, die Geschwindigkeit der Schmelze. <a href="/tools/simulation/">Zum Werkzeug</a></div>
-        </div>
-        <div class="fig-wrap">
-          <video autoplay muted loop playsinline controls preload="metadata" poster="img/assistent/erstarrung-gusstraube.webp" aria-label="Erstarrungsfolge der Gusstraube, eingerichtet mit Erstarrung einrichten">
-            <source src="img/assistent/erstarrung-gusstraube.mp4" type="video/mp4">
-          </video>
-          <div class="fig-cap"><b>Aus „Erstarrung einrichten“.</b> Die Gusstraube in einem Formblock mit Kolben und Kühlkanälen: die Restschmelze über der Zeit, gespeist vom Pressrest oder abgeschnitten. <a href="/tools/erstarrung/">Zum Werkzeug</a></div>
+          <div class="fig-cap"><b>Fünf Schüsse.</b> Dieselbe Form im Takt von 55 s mit Öffnen und Sprühen: sie wärmt sich von Schuss zu Schuss auf, am Ende des Takts von 277 auf 358 °C, und das Gussteil braucht 25,3 statt 23,0 s, bis es fest ist. <a href="dielogicsolfoam.html#s10">dieLogicSolFoam</a></div>
         </div>
       </div>
 

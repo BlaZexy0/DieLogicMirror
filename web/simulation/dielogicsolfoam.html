@@ -362,7 +362,6 @@
           <tr><td><code>hotSpot2D_parallel</code></td><td>4 Prozessoren gleich seriell</td><td class="status-ok">bestanden</td></tr>
           <tr><td><code>dieCycles2D</code></td><td>Aufheizen der Form über 5 Schüsse</td><td class="status-ok">bestanden</td></tr>
           <tr><td><code>plateShot3D</code></td><td>Füllung, Übergabe, Erstarrung in 3D</td><td class="status-ok">bestanden</td></tr>
-          <tr><td><code>sleeveDosing3D</code></td><td>Eingießen in die Gießkammer, Übergabe der Schmelze, Haut am Stahl</td><td class="status-ok">bestanden</td></tr>
         </tbody>
       </table></div>
 
@@ -440,44 +439,6 @@
         </video>
         <div class="fig-cap"><b>plateShot3D, Erstarrung.</b> Links die Trennebene, rechts ein Schnitt durch Pressrest,
           Lauf und Dom (feste Formhälfte unten). Unten die Speisung und die Porosität im Schnitt.</div>
-      </div>
-
-      <h3 class="sub-title">Dosieren: Eingießen und Warten in der Gießkammer</h3>
-      <div class="prose">
-        <p>Bevor der Kolben anfährt, liegt die Schmelze in der Gießkammer und gibt Wärme an den Stahl ab. Gerechnet ist eine
-          Kammer mit 60 mm Bohrung und 350 mm Länge aus 1.2343 bei 250 °C (die Vorgabe der Auslegung), davor die
-          wassergekühlte Kolbenspitze, hinten die Stirnplatte, oben die Eingießöffnung mit 40 mm. Aus der Gießpfanne fällt
-          ein Strahl mit 20 mm und 1,4 m/s (100 mm Fallhöhe) und 680 °C, 0,94 s lang: 428 cm³, 43 % der Kammer.
-          <b>dieLogicFoam</b> rechnet das Eingießen und die Welle bis 2 s auf der Bohrung (90 000 Zellen, die Luft
-          entweicht durch die Öffnung, Wärmeübergang an die Wand 3000 W/m²K wie in der Auslegung). Der Strahl trifft auf
-          den Boden, schlägt am Kolben hoch und läuft als Welle zur Stirnplatte und zurück. Nach 2 s liegt die Schmelze
-          ruhig, 4,8 cm³ Luft sind darin eingeschlossen, und sie ist im Mittel schon auf 614 °C abgekühlt.</p>
-      </div>
-      <div class="fig-wrap">
-        <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/dosieren.webp"
-          aria-label="Eingießen in die Gießkammer: Längsschnitt mit Temperatur und Oberfläche der Schmelze">
-          <source src="img/sol/dosieren.mp4" type="video/mp4">
-        </video>
-        <div class="fig-cap"><b>sleeveDosing3D, Eingießen.</b> Oben der Längsschnitt durch die Eingießöffnung, die
-          Schmelze nach ihrer Temperatur; unten ihre Oberfläche in der aufgeschnittenen Kammer nach der Geschwindigkeit.</div>
-      </div>
-      <div class="prose">
-        <p>Dann übernimmt <b>dieLogicSolFoam</b> die Schmelze mit dem Stahl der Kammer und dem Kolben (300 000 Zellen; die
-          Luft über der Schmelze fällt aus dem Netz, ihr Rand ist adiabat). Beginnt der Schuss wie üblich 3 s nach
-          Gießbeginn, hat die Schmelze im Mittel 604 °C und ist zu 2,9 % fest; nach 5 s sind es 595 °C und 9 %, nach 10 s
-          584 °C und 24 %, mit einer 1,5 mm dicken Haut am Boden. Die Kammer wird unter der Schmelze bis 336 °C (3 s) und
-          413 °C (10 s) heiß. Die Wärme, die die Schmelze bis zum Schuss abgibt, liegt nahe an der Abschätzung der
-          Auslegung (halbunendliche Stahlwand mit Wärmeübergang, benetzte Fläche vom Anfang an): 109 gegen 92 kJ nach
-          3 s, 152 gegen 142 kJ nach 5 s. Gerechnet in 18 min (Eingießen, 6 Prozessoren) und 1 min (Warten).</p>
-      </div>
-      <div class="fig-wrap">
-        <video autoplay muted loop playsinline controls preload="metadata" poster="img/sol/kammer-warten.webp"
-          aria-label="Die Schmelze wartet in der Gießkammer: Temperatur, Festanteil und Verlauf">
-          <source src="img/sol/kammer-warten.mp4" type="video/mp4">
-        </video>
-        <div class="fig-cap"><b>sleeveDosing3D, Warten.</b> Querschnitt in der Mitte und Längsschnitt mit der Temperatur in
-          Schmelze und Stahl, links unten der Festanteil im Querschnitt, rechts unten die mittlere Temperatur der Schmelze
-          und ihr fester Anteil über der Zeit.</div>
       </div>
 
       <span class="section-anchor" id="s11"></span>
