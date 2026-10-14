@@ -179,10 +179,20 @@
       <div class="prose">
         <p>Vom Eingießen bis zur Form im Zyklusbetrieb, in der Reihenfolge eines Schusses: Rechnungen der drei Solver,
           gezeigt wie im Vortrag „Druckguss genau simuliert“. Die Fälle sind auf den Solver- und Validierungsseiten
-          beschrieben.</p>
+          beschrieben. Jede Größe hat in allen Bildern der Simulation dieselbe Farbskala: die Temperatur wie eine
+          Wärmebildkamera (Inferno), die Geschwindigkeit von Blau nach Rot (darüber Pink), der Festanteil von Orange
+          (flüssig) nach Grau (fest), abgeschnittene Schmelze und Poren Magenta, Kühlwasser Blau.</p>
       </div>
 
       <h4 class="bild-reihe">Gießkammer</h4>
+      <div class="video-raster voll">
+        <div class="fig-wrap">
+          <video autoplay muted loop playsinline controls preload="metadata" poster="img/uebersicht/dosieren-schuss.webp" aria-label="Eingießen in die Gießkammer und langsame Phase mit dem Kolben">
+            <source src="img/uebersicht/dosieren-schuss.mp4" type="video/mp4">
+          </video>
+          <div class="fig-cap"><b>Eingießen und langsame Phase.</b> Ein Strahl von Ø&nbsp;30 mm fließt mit 0,4 m/s aus der Pfanne in die Kammer (Ø&nbsp;60 × 350 mm): 396 cm³, 40 % Füllgrad, in 1,45 s. Nach 1 s Nachschwappen fährt der Kolben die fokussierende Schusskurve bis 0,54 m/s, auf Schmelze, die sich noch bewegt. Die Welle erreicht das Fenster in der Stirnwand bei 95 % des Wegs; am Füllende bleiben oben in der Hälfte am Kolben 6,6 % Luft. dieLogicFoam rechnet das Eingießen, shotSleeveFoam den Schuss, beide auf einem Netz von snappyHexMesh. <a href="shotsleevefoam.html">dieLogicFoam und shotSleeveFoam</a></div>
+        </div>
+      </div>
       <div class="video-raster zwei">
         <div class="fig-wrap">
           <video autoplay muted loop playsinline controls preload="metadata" poster="img/uebersicht/kammer-langsam-schnell.webp" aria-label="Welle in der Gießkammer bei zu langsamem und zu schnellem Kolben">
