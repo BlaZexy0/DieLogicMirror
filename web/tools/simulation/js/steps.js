@@ -208,7 +208,7 @@ export function createLayer(host, plan) {
 }
 
 /* Ein Tipp ins Bild (kaum bewegt, kurz) — wie im Formaufbau. */
-function onTap(host, fn) {
+export function onTap(host, fn) {
   const el = host.view.renderer.domElement;
   let press = null;
   el.addEventListener('pointerdown', ev => { press = ev.button === 0 || ev.button === undefined ? { x: ev.clientX, y: ev.clientY, t: performance.now() } : null; });
@@ -238,10 +238,10 @@ export async function readBodies(files) {
 }
 
 /* Ein Umschalter über die ganze Breite — der Abschnitt darüber nennt ihn schon. */
-const segFull = (ui, label, options, value) => '<div class="seg sim-seg"' + (ui ? ' data-ui="' + ui + '"' : '') + ' role="group" aria-label="' + esc(label) + '">'
+export const segFull = (ui, label, options, value) => '<div class="seg sim-seg"' + (ui ? ' data-ui="' + ui + '"' : '') + ' role="group" aria-label="' + esc(label) + '">'
   + options.map(([v, l]) => '<button type="button" data-value="' + esc(v) + '"' + (v === value ? ' class="active"' : '') + '>' + l + '</button>').join('') + '</div>';
 const EYE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
-const fileInput = (ui, label, accept = '.stl,.glb', multiple = true) =>
+export const fileInput = (ui, label, accept = '.stl,.glb', multiple = true) =>
   '<label class="btn btn-sm btn-outline sim-file"><input type="file" data-ui="' + ui + '" accept="' + accept + '"' + (multiple ? ' multiple' : '') + ' hidden>' + label + '</label>';
 
 /* ── 1 Körper ─────────────────────────────────────────────────────── */
@@ -326,9 +326,9 @@ export function createKoerperTool(g, { plan, layer, app }) {
    ersten Besuch eines Schritts gilt der Vorschlag; was man selbst setzt,
    bleibt (Wunsch vom 13.10.: sonst war unklar, was Vorschlag und was
    Vorgabe ist). */
-const suggBox = ui => '<div class="sim-sugg" data-ui="' + ui + '" hidden></div>';
+export const suggBox = ui => '<div class="sim-sugg" data-ui="' + ui + '" hidden></div>';
 /** s = { value, why, on, apply } oder null (kein Vorschlag) */
-function paintSugg(el, s) {
+export function paintSugg(el, s) {
   if (!el) return;
   el.hidden = !s;
   if (!s) return;
@@ -337,7 +337,7 @@ function paintSugg(el, s) {
     + '<span class="sim-sugg-text"><b>' + esc(s.value) + '</b>' + (s.why ? ' · ' + esc(s.why) : '') + '</span>'
     + (s.on ? '' : '<button type="button" class="btn btn-sm btn-outline" data-act="apply">' + esc(s.apply || 'Übernehmen') + '</button>');
 }
-const onSugg = (el, fn) => el && el.addEventListener('click', ev => { if (ev.target.closest('[data-act="apply"]')) fn(); });
+export const onSugg = (el, fn) => el && el.addEventListener('click', ev => { if (ev.target.closest('[data-act="apply"]')) fn(); });
 
 /* Zielbänder aus der Auslegung, sonst übliche Werte */
 const design = () => { try { return window.__PROJECT__.getSection('design').values || {}; } catch { return {}; } };

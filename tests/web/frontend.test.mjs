@@ -450,6 +450,9 @@ test('nav: Simulation ist ein Spaltenmenü (Werkzeug · Solver · Validierung), 
   assert.match(sim, /columns: \[/, 'Spaltenmenü wie Auslegung und Studio');
   /* das Werkzeug links und hervorgehoben — der Rest sind Artikel (13.10.) */
   assert.match(sim, /columns: \[\s*\{ title: 'Werkzeug', items: \[\s*\{ label: 'Simulation einrichten', href: '\/tools\/simulation\/', feature: true/, 'Werkzeug als erste Spalte');
+  /* daneben der zweite Assistent, für die Erstarrung (14.10.) */
+  assert.match(sim, /\{ label: 'Erstarrung einrichten', href: '\/tools\/erstarrung\/', feature: true/, 'zweites Werkzeug: Erstarrung');
+  assert.ok(existsSync(path.join(site, 'tools', 'erstarrung', 'index.html')), 'die Seite des zweiten Werkzeugs');
   assert.ok(sim.indexOf("title: 'Werkzeug'") < sim.indexOf("title: 'Solver'"));
   assert.match(src, /function injectToolCta[\s\S]*\.toc-sidebar/, 'auf den Seiten der Simulation links über dem Inhalt');
   assert.match(sim, /title: 'Solver'/, 'Spalte Solver');

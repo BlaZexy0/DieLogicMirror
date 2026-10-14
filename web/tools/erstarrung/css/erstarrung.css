@@ -1,0 +1,21 @@
+/* Erstarrung einrichten: was zu „Simulation einrichten" (simulation.css)
+   dazukommt — die Liste der Kühlkanäle und die Häkchenlisten der
+   Auswertung. Farben nur aus den Tokens von /shared/shared.css. */
+
+.sim-channels { gap: 8px; }
+.sim-channel {
+  display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--border-light);
+  border-left: 4px solid var(--die, var(--primary)); border-radius: 6px; background: var(--surface);
+}
+.sim-channel.warn { border-left-color: var(--caution, var(--border)); }
+.sim-chhead { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+.sim-chrow { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 6px; font-size: .76rem; color: var(--muted); }
+.sim-xyz { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.sim-channel input[type="text"] { width: 100%; min-width: 0; min-height: 30px; font-size: .78rem; padding: 2px 6px; text-align: right; }
+.sim-chvals { grid-template-columns: auto 1fr auto auto 1fr auto; }
+.sim-chvals label { white-space: nowrap; }
+.sim-chvals input[type="text"] { max-width: 70px; }
+
+.sim-check { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; padding: 6px 2px; font-size: .84rem; font-weight: 600; color: var(--text); cursor: pointer; }
+.sim-check input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--primary); }
+.sim-check small { display: block; font-weight: 400; color: var(--muted); font-size: .72rem; line-height: 1.35; }

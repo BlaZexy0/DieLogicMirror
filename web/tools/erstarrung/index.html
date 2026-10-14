@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Die Werkzeuge des 3D-Studios laden ihre Beispielteile und Daten relativ
+     zu ihrer Seite (assets/parts/…): hier gilt deshalb dieselbe Basis. Was
+     dieser Seite gehört, steht absolut. -->
+<base href="/tools/3d-studio/">
+<title>Erstarrung einrichten · DieLogic</title>
+<meta name="description" content="Die Erstarrung eines Druckgussteils mit dem DieLogic-Solver dieLogicSolFoam einrichten: Gusskörper laden oder Anguss und Überläufe im Designer bauen, Kolbenfläche, Formblock und Kühlkanäle, Netz, Legierung und Prozess — und den OpenFOAM-Fall mit Allrun und Bericht herunterladen.">
+<meta name="theme-color" content="#002733">
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="stylesheet" href="/shared/shared.css">
+<link rel="stylesheet" href="/tools/3d-studio/css/studio.css">
+<link rel="stylesheet" href="/tools/simulation/css/simulation.css">
+<link rel="stylesheet" href="/tools/erstarrung/css/erstarrung.css">
+<script src="/shared/version.js"></script>
+<script src="/shared/palette.js"></script>
+<script src="/shared/schemes.js"></script>
+<script src="/shared/nav.js" data-footer="none"></script>
+<script src="/shared/theme.js"></script>
+<!-- Der Angussdesigner rechnet seine Kurve aus der Auslegung des Projekts;
+     die Vorgaben des Prozesses kommen von dort. -->
+<script src="/shared/examples/machines.js"></script>
+<script src="/shared/examples/alloys.js"></script>
+<script src="/shared/examples/parts.js"></script>
+<script src="/shared/orgpresets.js"></script>
+<script src="/shared/project.js"></script>
+<script src="/shared/clampmodel.js"></script>
+<script type="importmap">
+  { "imports": { "three": "/tools/3d-studio/vendor/three/three.module.js" } }
+</script>
+</head>
+<body class="studio simulation erstarrung">
+<div id="studio" class="st-root"></div>
+<script type="module" src="/tools/erstarrung/js/app.js"></script>
+</body>
+</html>

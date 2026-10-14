@@ -346,6 +346,47 @@ test('Simulation einrichten: Beispiel, Ablaufplan, Fall im Worker', async ({ pag
   expect(errors, errors.join('\n')).toEqual([]);
 });
 
+/* Erstarrung einrichten (/tools/erstarrung/): das Beispiel mit allen
+   Körpern, die Kolbenfläche als Vorschlag, Formblock, Kühlkanäle nach
+   Vorschlag, Zyklen im Prozess, und der Fall für dieLogicSolFoam im Worker. */
+test('Erstarrung einrichten: Beispiel, Kolben, Kanäle, Fall im Worker', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+  page.on('console', m => {
+    if (m.type() !== 'error' || /\/api\//.test(m.location().url || '')) return;
+    errors.push('console: ' + m.text() + ' @ ' + (m.location().url || ''));
+  });
+  await page.goto('/tools/erstarrung/');
+  await page.waitForFunction(() => window.__erstarrung?.state.ready && window.__erstarrung.plan.bodies.length === 4, null, { timeout: 60_000 });
+  await expect(page.locator('[data-stage="fall"]')).toHaveClass(/locked/);
+  await page.click('[data-stage="kolben"]');
+  await expect(page.locator('[data-ui="kol-sugg"]')).toHaveClass(/\bon\b/);
+  await expect(page.locator('[data-ui="kol-kpis"]')).toContainText('Ø 129,9 mm');
+  await expect(page.locator('[data-stage="fall"]')).not.toHaveClass(/locked/);
+  await page.click('[data-stage="form"]');
+  await expect(page.locator('[data-ui="margin-sugg"]')).toHaveClass(/\bon\b/);
+  await expect(page.locator('[data-ui="die-kpis"]')).toContainText('Formblock');
+  /* Kühlung: ohne Kanäle heißt der Knopf „Ohne Kühlung weiter", der Vorschlag legt welche */
+  await page.click('[data-stage="kuehlung"]');
+  await expect(page.locator('[data-ui="primary"]')).toHaveText('Ohne Kühlung weiter: Netz');
+  await page.click('[data-ui="ch-sugg"]');
+  await expect(page.locator('.sim-channel')).toHaveCount(4);
+  await expect(page.locator('[data-ui="primary"]')).toHaveText('Weiter: Netz');
+  await page.click('[data-stage="netz"]');
+  await expect(page.locator('[data-ui="m-sugg"]')).toHaveClass(/\bon\b/);
+  /* Prozess: Zyklen zeigen ihre Zeiten */
+  await page.click('[data-stage="prozess"]');
+  await expect(page.locator('[data-ui="p-cycles"]')).toBeHidden();
+  await page.click('[data-ui="p-mode"] [data-value="cycles"]');
+  await expect(page.locator('[data-ui="p-cycles"]')).toBeVisible();
+  await expect(page.locator('[data-ui="p-kpis"]')).toContainText('stimmig');
+  await page.click('[data-stage="fall"]');
+  const download = page.waitForEvent('download', { timeout: 180_000 });
+  await page.click('[data-ui="primary"]');
+  expect((await download).suggestedFilename()).toMatch(/^\d{4}-\d{2}-\d{2}_Gusstraube_Erstarrung\.zip$/);
+  expect(errors, errors.join('\n')).toEqual([]);
+});
+
 /* Nur ein Bauteil, kein Anguss als Datei: dann gibt es die Designer-Schritte.
    Der Anguss kommt aus dem Designer, sein „Weiter" steht unter dessen
    Hauptknopf; Überläufe sind wahlweise. Mit Anguss und Pressrest als Datei

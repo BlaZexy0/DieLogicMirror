@@ -116,6 +116,8 @@
       { title: 'Werkzeug', items: [
         { label: 'Simulation einrichten', href: '/tools/simulation/', feature: true,
           desc: 'Fall für dieLogicFoam im Browser bauen: Körper, Einlass, Netz, Schusskurve — als ZIP mit Allrun und Bericht' },
+        { label: 'Erstarrung einrichten', href: '/tools/erstarrung/', feature: true,
+          desc: 'Fall für dieLogicSolFoam: Form, Kolben, Kühlkanäle, Legierung, Zyklen — Erstarrung, Porosität und Formtemperatur als ZIP mit Bericht' },
       ] },
       { title: 'Solver', items: [
         { label: 'Übersicht', href: '/simulation/' },
@@ -542,21 +544,27 @@
   }
 
   /* Auf den Seiten unter /simulation/ (Artikel: Solver, Validierung) steht
-     das Werkzeug „Simulation einrichten" links ganz oben, über dem Inhalt
-     der Seite. Die Seiten baut publish.py in DieLogic_OF und kopiert sie
-     hierher — darum setzt nav.js den Kasten ein, nicht das HTML: so bleibt
-     er, wenn die Artikel neu kommen. Name und Ziel aus NAV_LINKS. */
+     das passende Werkzeug links ganz oben, über dem Inhalt der Seite: bei der
+     Erstarrung (dieLogicSolFoam, ihre Validierung) „Erstarrung einrichten",
+     sonst „Simulation einrichten", auf der Übersicht beide. Die Seiten baut
+     publish.py in DieLogic_OF und kopiert sie hierher — darum setzt nav.js
+     den Kasten ein, nicht das HTML: so bleibt er, wenn die Artikel neu
+     kommen. Name und Ziel aus NAV_LINKS. */
   function injectToolCta() {
-    if (!/^\/simulation\//.test(window.location.pathname)) return;
+    const path = window.location.pathname;
+    if (!/^\/simulation\//.test(path)) return;
     const side = document.querySelector('.toc-sidebar');
     if (!side || side.querySelector('.dl-tool-cta')) return;
-    const tool = NAV_LINKS.find(g => g.label === 'Simulation').columns[0].items[0];
-    side.insertAdjacentHTML('afterbegin', `<a class="dl-tool-cta" href="${tool.href}">
+    const [fill, sol] = NAV_LINKS.find(g => g.label === 'Simulation').columns[0].items;
+    const solPage = /dielogicsolfoam|validierung-guo/.test(path);
+    const overview = /^\/simulation\/(index\.html)?$/.test(path);
+    const tools = overview ? [fill, sol] : [solPage ? sol : fill];
+    side.insertAdjacentHTML('afterbegin', tools.map(tool => `<a class="dl-tool-cta" href="${tool.href}">
       <span class="dl-tool-cta-kicker">Werkzeug</span>
       <span class="dl-tool-cta-title">${tool.label}</span>
       <span class="dl-tool-cta-desc">${tool.desc}</span>
       <span class="dl-tool-cta-go">Öffnen →</span>
-    </a>`);
+    </a>`).join(''));
   }
 
   /* Angemeldet? Dann zeigt der Knopf den Namen statt „Anmelden" — nur
