@@ -1,4 +1,4 @@
-# Simulation einrichten (`/tools/simulation/`)
+# Füllsimulation (`/tools/simulation/`)
 
 Eine Formfüllung mit dem DieLogic-Solver **dieLogicFoam** (DieLogic_OF,
 OpenFOAM v2606 von openfoam.com) im Browser einrichten und als fertigen
@@ -204,7 +204,7 @@ Entlüftung), die übrigen Verläufe mit Messwert unter dem Zeiger, die Eingaben
 
 - `tests/web/3d-studio/tools/simulation.test.mjs` — Vereinigung, Einlass,
   Wandstärke, Fall, ZIP, die Seite mit dem Beispiel bis zum ZIP.
-- `tests/browser/studio.spec.mjs` „Simulation einrichten" — echter Browser,
+- `tests/browser/studio.spec.mjs` „Füllsimulation" — echter Browser,
   echter Klick ins Bild, Fall im Worker, Download.
 - Ob der Fall in OpenFOAM läuft, zeigt ein lokaler Lauf mit einem über die
   Seite gebauten Fall. Kurz und vollständig (Netz, Rechnung bis „Cavity

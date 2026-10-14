@@ -1,4 +1,4 @@
-/* Die Hilfe von „Simulation einrichten": vorn der Ablauf, dann je Designer
+/* Die Hilfe von „Füllsimulation": vorn der Ablauf, dann je Designer
    seine eigene Hilfe aus dem Studio (wie in der Werkbank). */
 
 import { HELP as ANGUSS } from '../../3d-studio/js/runner/help.js';
@@ -8,7 +8,7 @@ const part = (owner, title, body) => '<div data-help-owner="' + owner + '"><h2 c
 
 const INTRO = `
 <section data-help-anchor="simulation">
-<h3>Simulation einrichten</h3>
+<h3>Füllsimulation</h3>
 <p>Aus den Körpern der Form entsteht ein OpenFOAM-Fall für den DieLogic-Solver <b>dieLogicFoam</b>: Netz mit
 snappyHexMesh, Anfangs- und Randwerte, Solver-Einstellungen, ein <code>Allrun</code>, das alles nacheinander
 ausführt, und die Skripte der Auswertung (Bilder, Graphiken, Bericht). Die Schritte links sind ein Ablaufplan: ein

@@ -1,4 +1,4 @@
-/* Die Hilfe von „Erstarrung einrichten": vorn der Ablauf, dann je Designer
+/* Die Hilfe von „Erstarrungssimulation": vorn der Ablauf, dann je Designer
    seine eigene Hilfe aus dem Studio (wie in der Werkbank). */
 
 import { HELP as ANGUSS } from '../../3d-studio/js/runner/help.js';
@@ -8,12 +8,12 @@ const part = (owner, title, body) => '<div data-help-owner="' + owner + '"><h2 c
 
 const INTRO = `
 <section data-help-anchor="erstarrung">
-<h3>Erstarrung einrichten</h3>
+<h3>Erstarrungssimulation</h3>
 <p>Aus den Gusskörpern entsteht ein OpenFOAM-Fall für den DieLogic-Solver <b>dieLogicSolFoam</b>: die Erstarrung
 des Schusses zusammen mit der Form — Gussteil, Formhälften, Kolbenspitze und Kühlkanäle sind ein Netz, jeder
 Werkstoff eine Zellzone. Heraus kommen Erstarrungszeiten, die Erstarrungsfolge mit gespeisten und abgeschnittenen
 Bereichen, Porosität, die Temperatur der Formoberfläche und das Kleben, über einen Schuss oder über mehrere Zyklen.
-Die Schritte links sind ein Ablaufplan wie bei „Simulation einrichten".</p>
+Die Schritte links sind ein Ablaufplan wie bei „Füllsimulation".</p>
 <p>Gerechnet wird im <b>Bauteilsystem</b> in mm: Trennebene z = 0, die Form öffnet nach +z. Die Körper dürfen sich
 überlappen oder berühren; das Gussteil ist ihre Vereinigung.</p>
 </section>
@@ -29,7 +29,7 @@ Stahl bis zur Kavität bleibt. Der Schritt ist wahlweise. <b>Netz</b>: die Zellg
 Zellen über die dünnste Wand) und wie viel größer die Zellen weit draußen im Stahl sind. <b>Prozess</b>: Legierung
 (die Bibliothek von dieLogicSol mit Kurven des Festanteils, oder eine der Auslegung mit linearer Kurve),
 Temperaturen, Füllzeit, Nachdruck, ein Schuss oder Zyklen mit Öffnen und Sprühen, und ob der Zustand am Füllende
-gleichmäßig ist oder aus einer Füllrechnung von „Simulation einrichten" kommt. <b>Auswertung</b>: welche Bilder.
+gleichmäßig ist oder aus einer Füllrechnung von „Füllsimulation" kommt. <b>Auswertung</b>: welche Bilder.
 <b>Fall</b>: der ZIP-Download.</p>
 </section>
 <section data-help-anchor="modell">

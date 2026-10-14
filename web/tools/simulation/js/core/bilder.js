@@ -18,7 +18,7 @@
 export const BILDER_PY = String.raw`#!/usr/bin/env pvbatch
 # Bilder der Formfüllung — im Hauptordner des Falls:  pvbatch bilder.py
 #   → auswertung/bilder/<Ansicht>/<Kennwert>/001.png …, auswertung/bilder/bilder.json
-# Erzeugt von DieLogic · Simulation einrichten. Die Einstellungen stehen in
+# Erzeugt von DieLogic · Füllsimulation. Die Einstellungen stehen in
 # auswertung.json (Kennwerte, Zeitpunkte, Format, Ansichten, Farben).
 # Gelesen werden die Oberflächen aus simulation/postProcessing/oberflaechen
 # (während der Rechnung geschrieben), die Füllung aus .../fuellung.

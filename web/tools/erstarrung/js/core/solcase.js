@@ -25,7 +25,7 @@
                   der Trennebene; die feste Seite ist der Rest (die Seite
                   des Kolbens)
 
-   Der Fall ist ein Ordner mit drei Teilen wie bei „Simulation einrichten":
+   Der Fall ist ein Ordner mit drei Teilen wie bei „Füllsimulation":
 
      Allrun, Allclean, bilder.py, bericht.py, auswertung.json, README.md
      simulation/    der OpenFOAM-Fall (0.orig, constant, system)
@@ -67,7 +67,7 @@ const f6 = x => (Math.abs(x) < 1e-12 ? '0' : Number(Number(x).toPrecision(8)).to
 const vec = v => '(' + v.map(f6).join(' ') + ')';
 const head = (cls, obj, loc) => 'FoamFile\n{\n    version     2.0;\n    format      ascii;\n    class       ' + cls + ';\n'
   + (loc ? '    location    "' + loc + '";\n' : '') + '    object      ' + obj + ';\n}\n'
-  + '// Erzeugt von DieLogic · Erstarrung einrichten (/tools/erstarrung/)\n\n';
+  + '// Erzeugt von DieLogic · Erstarrungssimulation (/tools/erstarrung/)\n\n';
 const dict = (obj, loc) => head('dictionary', obj, loc);
 const toM = (t, s = 1e-3) => { const o = new Float32Array(t.length); for (let i = 0; i < t.length; i++) o[i] = t[i] * s; return o; };
 const table = rows => 'table (' + rows.map(([a, b]) => '(' + f6(a) + ' ' + f6(b) + ')').join(' ') + ')';
@@ -437,7 +437,7 @@ function castArea(t) {
 
 function allrun(nProc, nChannels, fillCase, vCast) {
   return `#!/bin/sh
-# Erstarrung mit ${SOLVER} (DieLogic), erzeugt von DieLogic · Erstarrung einrichten.
+# Erstarrung mit ${SOLVER} (DieLogic), erzeugt von DieLogic · Erstarrungssimulation.
 #   ./Allrun              Netz, Rechnung (NP Prozesse), Auswertung
 #   NP=8 ./Allrun         mit 8 Prozessen
 #   ./Allrun -mesh        nur das Netz (danach simulation/log.checkMesh ansehen)
@@ -562,7 +562,7 @@ function readme(p, { cells, tEst, endTime, P, M, A, blk, channels, cycles }) {
   const fmt = (x, d = 0) => Number(x).toLocaleString('de-DE', { maximumFractionDigits: d, minimumFractionDigits: d });
   return `# ${p.title || 'Erstarrung'} — Erstarrung mit ${SOLVER}
 
-Erzeugt von DieLogic · Erstarrung einrichten (/tools/erstarrung/).
+Erzeugt von DieLogic · Erstarrungssimulation (/tools/erstarrung/).
 
     ./Allrun                      Netz, Rechnung, Auswertung
     NP=8 ./Allrun                 mit 8 Prozessen

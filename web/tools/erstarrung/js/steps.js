@@ -1,6 +1,6 @@
-/* Die eigenen Schritte der Seite „Erstarrung einrichten" — je Schritt ein
+/* Die eigenen Schritte der Seite „Erstarrungssimulation" — je Schritt ein
    Werkzeug nach dem Vertrag des 3D-Studios (js/studio/host.js), aus
-   denselben Zeilen (js/studio/rows.js) wie „Simulation einrichten". Von
+   denselben Zeilen (js/studio/rows.js) wie „Füllsimulation". Von
    dort kommen der Schritt Körper und die kleinen Hilfen (Vorschlag,
    Umschalter, Tipp ins Bild); der Plan ist derselbe, die Kolbenfläche
    steht in plan.inlet, alles Übrige der Erstarrung in plan.sol.

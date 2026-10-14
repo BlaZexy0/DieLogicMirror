@@ -15,7 +15,7 @@
 export const SOL_BERICHT_PY = String.raw`#!/usr/bin/env python3
 # Endbericht der Erstarrung — im Hauptordner des Falls:  python3 bericht.py
 #   → auswertung/bericht.html, auswertung/graphiken/*.svg, auswertung/daten/*.csv
-# Erzeugt von DieLogic · Erstarrung einrichten. Braucht nur Python 3; die Bilder
+# Erzeugt von DieLogic · Erstarrungssimulation. Braucht nur Python 3; die Bilder
 # kommen von bilder.py (pvbatch) und werden eingebunden, wenn es sie gibt.
 import datetime, glob, html, json, math, os, re
 
@@ -569,7 +569,7 @@ seite = """<!doctype html>
 <section id="bilder"><h2>Bilder</h2>__BILDER____DRUCK__</section>
 <section id="verlaeufe"><h2>Verläufe</h2><div class="charts">__GRAPH__</div></section>
 <section id="fall"><h2>Der Fall</h2><table class="fall">__EINGABEN__</table><p class="files">Daten (CSV, Trennzeichen Semikolon): __FILES__</p></section>
-<footer>DieLogic · Erstarrung einrichten · Ordner: simulation (OpenFOAM), auswertung (dieser Bericht, bilder, graphiken, daten)</footer>
+<footer>DieLogic · Erstarrungssimulation · Ordner: simulation (OpenFOAM), auswertung (dieser Bericht, bilder, graphiken, daten)</footer>
 </main>
 </div>
 <script>__JSX__</script>

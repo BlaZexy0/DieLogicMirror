@@ -1,4 +1,4 @@
-/* Simulation einrichten (/tools/simulation/) — Einstieg und Verdrahtung.
+/* Füllsimulation (/tools/simulation/) — Einstieg und Verdrahtung.
 
    Ein 3D-Studio-Rahmen mit zehn Schritten in einer Leiste links, die wie
    ein Ablaufplan nacheinander frei werden: ein Schritt öffnet sich erst,
@@ -38,7 +38,7 @@ const EXAMPLE = '/examples/gusstraube.glb';
 const mount = document.getElementById('studio');
 mount.setAttribute('data-page', 'simulation');
 const host = createHost({
-  mount, id: 'simulation', title: 'Simulation einrichten', help: HELP, start: 'gearbox_cover',
+  mount, id: 'simulation', title: 'Füllsimulation', help: HELP, start: 'gearbox_cover',
   sceneOpts: { cameraStart: [420, -760, 520], target: [0, 0, -40], minDistance: 3, maxDistance: 30000 }
 });
 const { shell } = host;

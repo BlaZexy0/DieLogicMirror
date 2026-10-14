@@ -1,4 +1,4 @@
-/* Erstarrung einrichten (web/tools/erstarrung/): der Fall für
+/* Erstarrungssimulation (web/tools/erstarrung/): der Fall für
    dieLogicSolFoam ohne DOM — Formblock, Kolben, Kanäle, Dateien des Falls,
    der Bericht — und die Seite unter dem DOM-Platzhalter mit dem Beispiel
    Gusstraube vom Laden bis zum ZIP. Ob der Fall in OpenFOAM läuft, prüft ein

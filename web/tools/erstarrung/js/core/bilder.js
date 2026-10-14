@@ -11,13 +11,13 @@
      den letzten Zeitstand (case.foam)       für die Poren im Innern
 
    und schreibt auswertung/bilder/<Ansicht>/<Kennwert>/NNN.png und
-   bilder.json — im selben Aufbau wie bei „Simulation einrichten", damit der
+   bilder.json — im selben Aufbau wie bei „Füllsimulation", damit der
    Bericht denselben Betrachter hat. Fester Text: String.raw. */
 
 export const SOL_BILDER_PY = String.raw`#!/usr/bin/env pvbatch
 # Bilder der Erstarrung — im Hauptordner des Falls:  pvbatch bilder.py
 #   → auswertung/bilder/<Ansicht>/<Kennwert>/001.png …, auswertung/bilder/bilder.json
-# Erzeugt von DieLogic · Erstarrung einrichten. Einstellungen: auswertung.json.
+# Erzeugt von DieLogic · Erstarrungssimulation. Einstellungen: auswertung.json.
 import bisect, glob, json, math, os, sys
 from paraview.simple import *
 from vtk.numpy_interface import dataset_adapter as dsa

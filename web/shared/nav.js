@@ -114,9 +114,9 @@
        (Seiten aus handover/website/solver/publish.py in DieLogic_OF). */
     { label: 'Simulation', columns: [
       { title: 'Werkzeug', items: [
-        { label: 'Simulation einrichten', href: '/tools/simulation/', feature: true,
-          desc: 'Fall für dieLogicFoam im Browser bauen: Körper, Einlass, Netz, Schusskurve — als ZIP mit Allrun und Bericht' },
-        { label: 'Erstarrung einrichten', href: '/tools/erstarrung/', feature: true,
+        { label: 'Füllsimulation', href: '/tools/simulation/', feature: true,
+          desc: 'Fall für dieLogicFoam: Körper, Einlass, Auslässe, Netz, Schusskurve — Füllung, eingeschlossene Luft und Oxide als ZIP mit Bericht' },
+        { label: 'Erstarrungssimulation', href: '/tools/erstarrung/', feature: true,
           desc: 'Fall für dieLogicSolFoam: Form, Kolben, Kühlkanäle, Legierung, Zyklen — Erstarrung, Porosität und Formtemperatur als ZIP mit Bericht' },
       ] },
       { title: 'Solver', items: [
@@ -546,8 +546,8 @@
 
   /* Auf den Seiten unter /simulation/ (Artikel: Solver, Validierung) steht
      das passende Werkzeug links ganz oben, über dem Inhalt der Seite: bei der
-     Erstarrung (dieLogicSolFoam, ihre Validierung) „Erstarrung einrichten",
-     sonst „Simulation einrichten", auf der Übersicht beide. Die Seiten baut
+     Erstarrung (dieLogicSolFoam, ihre Validierung) „Erstarrungssimulation",
+     sonst „Füllsimulation", auf der Übersicht beide. Die Seiten baut
      publish.py in DieLogic_OF und kopiert sie hierher — darum setzt nav.js
      den Kasten ein, nicht das HTML: so bleibt er, wenn die Artikel neu
      kommen. Name und Ziel aus NAV_LINKS. */

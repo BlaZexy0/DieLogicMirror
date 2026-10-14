@@ -55,7 +55,7 @@ const f6 = x => (Math.abs(x) < 1e-12 ? '0' : Number(x.toPrecision(8)).toString()
 const vec = v => '(' + v.map(f6).join(' ') + ')';
 const head = (cls, obj, loc) => 'FoamFile\n{\n    version     2.0;\n    format      ascii;\n    class       ' + cls + ';\n'
   + (loc ? '    location    "' + loc + '";\n' : '') + '    object      ' + obj + ';\n}\n'
-  + '// Erzeugt von DieLogic · Simulation einrichten (/tools/simulation/)\n\n';
+  + '// Erzeugt von DieLogic · Füllsimulation (/tools/simulation/)\n\n';
 const dict = (obj, loc) => head('dictionary', obj, loc);
 const toM = (t, s = 1e-3) => { const o = new Float32Array(t.length); for (let i = 0; i < t.length; i++) o[i] = t[i] * s; return o; };
 const GRAV = { '-x': [-9.81, 0, 0], '+x': [9.81, 0, 0], '-y': [0, -9.81, 0], '+y': [0, 9.81, 0], '-z': [0, 0, -9.81], '+z': [0, 0, 9.81], aus: [0, 0, 0] };
@@ -574,7 +574,7 @@ export function functionObjects({ post, imgInterval, seriesInterval, tStart = 0 
 
 function allrun(nProc, patches, chamber = false, vModel = 0, fields = []) {
   return `#!/bin/sh
-# Formfüllung mit ${SOLVER} (DieLogic), erzeugt von DieLogic · Simulation einrichten.
+# Formfüllung mit ${SOLVER} (DieLogic), erzeugt von DieLogic · Füllsimulation.
 #   ./Allrun              Netz, Rechnung (NP Prozesse), Auswertung
 #   NP=8 ./Allrun         mit 8 Prozessen
 #   ./Allrun -mesh        nur das Netz (danach simulation/log.checkMesh ansehen)
@@ -704,7 +704,7 @@ auswertung
 
 function readme(plan, { cells, tFill, endTime, names, M, P, SH, chamber }) {
   return '# ' + (plan.title || 'DieLogic-Simulation') + '\n\n'
-    + 'Formfüllung mit `' + SOLVER + '` (DieLogic_OF), erzeugt von **DieLogic · Simulation einrichten**.\n\n'
+    + 'Formfüllung mit `' + SOLVER + '` (DieLogic_OF), erzeugt von **DieLogic · Füllsimulation**.\n\n'
     + '```sh\nsource /usr/lib/openfoam/openfoam2606/etc/bashrc\n./Allrun            # Netz, Rechnung (NP=' + M.nProc + '), Auswertung\n'
     + './Allrun -auswertung   # nur Bilder und Bericht neu\n```\n\n'
     + '| Ordner, Datei | |\n|---|---|\n'

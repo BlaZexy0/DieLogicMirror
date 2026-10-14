@@ -1,4 +1,4 @@
-/* Simulation einrichten (web/tools/simulation/): die Rechnung ohne DOM —
+/* Füllsimulation (web/tools/simulation/): die Rechnung ohne DOM —
    Vereinigung der Körper, Einlass, Fall, ZIP — und die Seite unter dem
    DOM-Platzhalter mit dem Beispiel Gusstraube vom Laden bis zum ZIP.
    Ob der Fall in OpenFOAM läuft, prüft das ein lokaler Lauf (Allrun);

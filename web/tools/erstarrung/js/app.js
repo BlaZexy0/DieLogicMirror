@@ -1,6 +1,6 @@
-/* Erstarrung einrichten (/tools/erstarrung/) — Einstieg und Verdrahtung.
+/* Erstarrungssimulation (/tools/erstarrung/) — Einstieg und Verdrahtung.
 
-   Der zweite Assistent unter „Simulation", neben „Simulation einrichten":
+   Der zweite Assistent unter „Simulation", neben „Füllsimulation":
    derselbe Rahmen des 3D-Studios mit einer Leiste von Schritten, die wie ein
    Ablaufplan nacheinander frei werden.
 
@@ -15,7 +15,7 @@
      9 Auswertung   Bilder, Graphiken und Bericht nach der Rechnung
     10 Fall         der OpenFOAM-Fall für dieLogicSolFoam als ZIP
 
-   Körper, Designer und Rahmen wie bei „Simulation einrichten" (dessen
+   Körper, Designer und Rahmen wie bei „Füllsimulation" (dessen
    js/steps.js liefert den Schritt Körper); der Plan ist derselbe mit
    plan.sol dazu. Der Fall entsteht in einem Worker (js/worker.js →
    js/build.js → js/core/solcase.js). */
@@ -40,7 +40,7 @@ const EXAMPLE = '/examples/gusstraube.glb';
 const mount = document.getElementById('studio');
 mount.setAttribute('data-page', 'erstarrung');
 const host = createHost({
-  mount, id: 'erstarrung', title: 'Erstarrung einrichten', help: HELP, start: 'gearbox_cover',
+  mount, id: 'erstarrung', title: 'Erstarrungssimulation', help: HELP, start: 'gearbox_cover',
   sceneOpts: { cameraStart: [420, -760, 520], target: [0, 0, -40], minDistance: 3, maxDistance: 30000 }
 });
 const { shell } = host;

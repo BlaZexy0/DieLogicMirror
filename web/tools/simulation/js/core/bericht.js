@@ -14,7 +14,7 @@
 export const BERICHT_PY = String.raw`#!/usr/bin/env python3
 # Endbericht der Formfüllung — im Hauptordner des Falls:  python3 bericht.py
 #   → auswertung/bericht.html, auswertung/graphiken/*.svg, auswertung/daten/*.csv
-# Erzeugt von DieLogic · Simulation einrichten. Braucht nur Python 3; die Bilder
+# Erzeugt von DieLogic · Füllsimulation. Braucht nur Python 3; die Bilder
 # kommen von bilder.py (pvbatch) und werden eingebunden, wenn es sie gibt.
 import datetime, glob, html, json, math, os, re
 
@@ -706,7 +706,7 @@ seite = '''<!doctype html>
 <section id="luft"><h2>Eingeschlossene Luft</h2>__LUFT__</section>
 <section id="verlaeufe"><h2>Verläufe</h2><div class="charts">__GRAPH__</div></section>
 <section id="fall"><h2>Der Fall</h2><table class="fall">__EINGABEN__</table><p class="files">Daten (CSV, Trennzeichen Semikolon): __FILES__</p></section>
-<footer>DieLogic · Simulation einrichten · Ordner: simulation (OpenFOAM), auswertung (dieser Bericht, bilder, graphiken, daten)</footer>
+<footer>DieLogic · Füllsimulation · Ordner: simulation (OpenFOAM), auswertung (dieser Bericht, bilder, graphiken, daten)</footer>
 </main>
 </div>
 <script>__JS__</script>

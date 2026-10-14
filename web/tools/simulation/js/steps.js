@@ -1,4 +1,4 @@
-/* Die eigenen Schritte der Seite „Simulation einrichten" — je Schritt ein
+/* Die eigenen Schritte der Seite „Füllsimulation" — je Schritt ein
    Werkzeug nach dem Vertrag des 3D-Studios (js/studio/host.js), gebaut
    aus denselben Zeilen (js/studio/rows.js). Der Angussdesigner und der
    Überlaufdesigner kommen unverändert aus dem Studio (js/app.js).

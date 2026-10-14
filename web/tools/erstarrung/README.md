@@ -1,9 +1,9 @@
-# Erstarrung einrichten (`/tools/erstarrung/`)
+# Erstarrungssimulation (`/tools/erstarrung/`)
 
 Die Erstarrung eines Schusses mit dem DieLogic-Solver **dieLogicSolFoam**
 (dieLogicSol, OpenFOAM v2606) im Browser einrichten und als fertigen
 OpenFOAM-Fall herunterladen — der zweite Assistent unter „Simulation", neben
-„Simulation einrichten" (Füllung, dieLogicFoam). Derselbe Rahmen des
+„Füllsimulation" (Füllung, dieLogicFoam). Derselbe Rahmen des
 3D-Studios, dieselbe Leiste als Ablaufplan:
 
 | # | Schritt | Werkzeug | erledigt, wenn |
@@ -19,7 +19,7 @@ OpenFOAM-Fall herunterladen — der zweite Assistent unter „Simulation", neben
 | 9 | Auswertung | `createAuswertungTool` — Kennwerte, Bilder der Erstarrungsfolge, Ansichten, Format | etwas gewählt |
 | 10 | Fall | `createExportTool` — Name, Fall `JJJJ-MM-TT_Name_Erstarrung`, ZIP im Worker | heruntergeladen |
 
-Der Plan ist der von „Simulation einrichten" (`../simulation/js/plan.js`):
+Der Plan ist der von „Füllsimulation" (`../simulation/js/plan.js`):
 Körper und die Kolbenfläche in `plan.inlet`; alles Übrige der Erstarrung in
 `plan.sol` (`js/plan.js`). Im Bild (`createSolLayer`): die Körper, die
 Kolbenfläche (Markierung) mit dem Kolben dahinter, ab dem Schritt Kolben der

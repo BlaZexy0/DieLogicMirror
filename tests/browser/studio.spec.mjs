@@ -238,10 +238,10 @@ test('Werkbank: alle sechs Schritte kommen ohne Fehler hoch und hängen zusammen
   expect(errors, errors.join('\n')).toEqual([]);
 });
 
-/* Simulation einrichten (/tools/simulation/): das Beispiel mit allen Körpern,
+/* Füllsimulation (/tools/simulation/): das Beispiel mit allen Körpern,
    der Ablaufplan sperrt, der Einlass kommt als Vorschlag, ein Klick ins Bild
    auf den Pressrest trifft eine Fläche, und der Fall entsteht im Worker. */
-test('Simulation einrichten: Beispiel, Ablaufplan, Fall im Worker', async ({ page }) => {
+test('Füllsimulation: Beispiel, Ablaufplan, Fall im Worker', async ({ page }) => {
   const errors = [];
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
   page.on('console', m => {
@@ -346,10 +346,10 @@ test('Simulation einrichten: Beispiel, Ablaufplan, Fall im Worker', async ({ pag
   expect(errors, errors.join('\n')).toEqual([]);
 });
 
-/* Erstarrung einrichten (/tools/erstarrung/): das Beispiel mit allen
+/* Erstarrungssimulation (/tools/erstarrung/): das Beispiel mit allen
    Körpern, die Kolbenfläche als Vorschlag, Formblock, Kühlkanäle nach
    Vorschlag, Zyklen im Prozess, und der Fall für dieLogicSolFoam im Worker. */
-test('Erstarrung einrichten: Beispiel, Kolben, Kanäle, Fall im Worker', async ({ page }) => {
+test('Erstarrungssimulation: Beispiel, Kolben, Kanäle, Fall im Worker', async ({ page }) => {
   const errors = [];
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
   page.on('console', m => {
@@ -391,7 +391,7 @@ test('Erstarrung einrichten: Beispiel, Kolben, Kanäle, Fall im Worker', async (
    Der Anguss kommt aus dem Designer, sein „Weiter" steht unter dessen
    Hauptknopf; Überläufe sind wahlweise. Mit Anguss und Pressrest als Datei
    (das Beispiel oben) stehen beide Schritte nicht in der Leiste. */
-test('Simulation einrichten: Anguss im Designer, Überläufe wahlweise', async ({ page }) => {
+test('Füllsimulation: Anguss im Designer, Überläufe wahlweise', async ({ page }) => {
   const errors = [];
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
   page.on('console', m => {

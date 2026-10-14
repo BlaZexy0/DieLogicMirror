@@ -1,4 +1,4 @@
-/* Der Plan der Erstarrung: der Plan von „Simulation einrichten" (Körper,
+/* Der Plan der Erstarrung: der Plan von „Füllsimulation" (Körper,
    Einlass — hier die Kolbenfläche am Pressrest) und dazu plan.sol mit
    Formblock, Kühlkanälen, Netz, Prozess und Auswertung der Erstarrung. */
 
