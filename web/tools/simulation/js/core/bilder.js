@@ -172,12 +172,12 @@ Tc, Ts = CONF['Tcast'], CONF['Tsol']
 t0ms = 1000.0 * CONF.get('fillFrom', 0)       # Füllzeit ab „Kammer voll"
 KW = {
   'velocity':    dict(label='Geschwindigkeit', unit='m/s', expr='magU', need=['magU'], map='rainbow', log=False, range=[0, 50]),
-  'temperature': dict(label='Temperatur', unit='°C', expr='T-273.15', need=['T'], map='heat', log=False, range=[Ts - 40, Tc]),
+  'temperature': dict(label='Temperatur', unit='°C', expr='T-273.15', need=['T'], map='inferno', log=False, range=[Ts - 40, Tc]),
   'air':         dict(label='Lufteinschluss', unit='%', expr='airEntrained*100', need=['airEntrained'], map='bgo', log=False, range=[0, 100]),
-  'oxide':       dict(label='Oxide', unit='ppm', expr='max(oxide*1e6,1e-3)', need=['oxide'], map='heat', log=True, range=[0.1, 1000]),
-  'trapped':     dict(label='Eingeschlossene Luft', unit='bar', expr=None, need=['pGas'], map='heat', log=True, range=[1, 50]),
-  'fillTime':    dict(label='Füllzeit', unit='ms', expr='max(fillTime*1000-%.6g,0)' % t0ms, need=['fillTime'], map='heat', log=False, range=None),
-  'solid':       dict(label='Erstarrt', unit='–', expr='solidFraction', need=['solidFraction'], map='heat', log=False, range=[0, 1]),
+  'oxide':       dict(label='Oxide', unit='ppm', expr='max(oxide*1e6,1e-3)', need=['oxide'], map='plasma', log=True, range=[0.1, 1000]),
+  'trapped':     dict(label='Eingeschlossene Luft', unit='bar', expr=None, need=['pGas'], map='blues', log=True, range=[1, 50]),
+  'fillTime':    dict(label='Füllzeit', unit='ms', expr='max(fillTime*1000-%.6g,0)' % t0ms, need=['fillTime'], map='viridis', log=False, range=None),
+  'solid':       dict(label='Erstarrt', unit='–', expr='solidFraction', need=['solidFraction'], map='festanteil', log=False, range=[0, 1]),
 }
 MAPS = CONF.get('maps') or {}
 COL = CONF.get('colors') or {}

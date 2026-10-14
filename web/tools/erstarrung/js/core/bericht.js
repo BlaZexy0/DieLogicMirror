@@ -38,7 +38,7 @@ for d in ('graphiken', 'daten'):
 ROLLEN = {'text': [0, 0.153, 0.2], 'muted': [0.298, 0.408, 0.439], 'border': [0.8, 0.831, 0.839], 'borderLight': [0.898, 0.914, 0.922],
           'surface': [1, 1, 1], 'viewport': [0.91, 0.933, 0.941], 'primary': [0, 0.549, 0.51], 'primaryLight': [0.247, 0.761, 0.714],
           'ok': [0.082, 0.604, 0.298], 'caution': [0.878, 0.643, 0], 'melt': [0.91, 0.373, 0.031], 'air': [0.408, 0.655, 0.8],
-          'die': [0.18, 0.396, 0.627], 'runner': [0.624, 0.392, 0.012], 'steelDark': [0.482, 0.565, 0.588]}
+          'die': [0.18, 0.396, 0.627], 'runner': [0.624, 0.392, 0.012], 'steelDark': [0.482, 0.565, 0.588], 'mark': [0.698, 0.216, 0.592]}
 COL = dict(ROLLEN, **(CONF.get('colors') or {}))
 K = 273.15
 
@@ -263,7 +263,7 @@ graph('temperaturen', 'Temperaturen', 'Höchste und tiefste Temperatur im Gusste
       [('Gussteil höchstens', 'melt', [(r[0], r[8] - K) for r in SOL], False), ('Gussteil tiefstens', 'runner', [(r[0], r[7] - K) for r in SOL], True),
        ('Form höchstens', 'die', [(r[0], r[10] - K) for r in SOL], False)])
 graph('speisung', 'Speisung', 'Schmelze, die noch mit dem Pressrest verbunden ist (gespeist), und abgeschnittene Bereiche.', ZEIT, 'Schmelze [cm³]',
-      [('gespeist', 'primary', [(r[0], r[3]) for r in POR], False), ('abgeschnitten', 'melt', [(r[0], r[5]) for r in POR], False)], y0=0)
+      [('gespeist', 'melt', [(r[0], r[3]) for r in POR], False), ('abgeschnitten', 'mark', [(r[0], r[5]) for r in POR], False)], y0=0)
 graph('poren', 'Poren', 'Volumen der Poren im Gussteil über der Zeit.', ZEIT, 'Poren [cm³]',
       [('Schwindung', 'melt', [(r[0], r[6]) for r in POR], False), ('Gas', 'air', [(r[0], r[7]) for r in POR], False), ('Mikro', 'steelDark', [(r[0], r[8]) for r in POR], True)], y0=0)
 graph('waerme', 'Wärmeströme', 'Vom Gussteil in die Form und über die Ränder (Kühlkanäle, Kolben, außen) hinaus.', ZEIT, 'Wärmestrom [kW]',

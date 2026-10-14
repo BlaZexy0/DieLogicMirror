@@ -182,9 +182,13 @@ Fünftel davon, die Wand nur einmal als Geometrie (EnSight, `collateTimes`).
 Ansicht ein Bild: die Wand bekommt Punktwerte und wird bei alpha = 0,5
 punktweise abgeschnitten, mit der Isofläche zusammen die glatte Hülle der
 Schmelze. Zeitpunkte nach Füllgrad, Zeit oder Kolbenweg (n Stück), Kameras
-genau wie im Viewport, Farbleiste oben links. Geschwindigkeit: Regenbogen
-0–50 m/s, darüber Pink; Lufteinschluss: „Blue - Green - Orange" linear
-0–100 %; sonst `heat`. Eingeschlossene Gasnester je zusammenhängendes Nest
+genau wie im Viewport, Farbleiste oben links. Je Kriterium eine Leiste, in
+allen Bildern der Simulation dieselbe (`MAP_PRESETS` in `js/core/render.js`,
+Stützstellen in `shared/palette.js`): Geschwindigkeit „Blue to Red Rainbow“
+0–50 m/s, darüber Pink; Temperatur „Inferno (matplotlib)“ (wie eine
+Wärmebildkamera); Lufteinschluss „Blue - Green - Orange“ linear 0–100 %; Oxide
+„Plasma (matplotlib)“; Gasdruck „Blues“; Füllzeit „Viridis (matplotlib)“;
+Erstarrt `festanteil` (flüssig orange, fest grau). Eingeschlossene Gasnester je zusammenhängendes Nest
 mit seinem Druck (ohne die Schmelze), dazu am Ende je Nest Volumen, Druck und
 Lage (`nester` in `bilder.json`). Die Nester sind die Isofläche von `luftEin`
 (gasTrapped·(1 − alpha)): auf `gasTrapped` selbst blieb die Isofläche „topo"

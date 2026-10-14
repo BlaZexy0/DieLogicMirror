@@ -229,8 +229,9 @@ test('Teal gehört dem Standard, die Schmelze ist überall Orange', () => {
 test('die Farbleisten sind in jedem Schema dieselben', () => {
   const T01 = [0, 0.1, 0.25, 1 / 3, 0.5, 0.66, 0.8, 1];
   const probe = () => Object.keys(P.leisten).map(n => T01.map(t => P.scale(n, t)).join()).join('|');
-  /* seit 13.10. dazu rainbow und bgo für die Simulationsbilder — auch sie fest */
-  assert.deepEqual(Object.keys(P.leisten).sort(), ['bgo', 'draft', 'heat', 'rainbow']);
+  /* seit 13.10. dazu rainbow und bgo, seit 14.10. je Kriterium eine Leiste
+     für die Simulationsbilder — auch sie fest */
+  assert.deepEqual(Object.keys(P.leisten).sort(), ['bgo', 'blues', 'coolwarm', 'draft', 'festanteil', 'heat', 'inferno', 'plasma', 'porositaet', 'rainbow', 'viridis']);
   for (const s of S.list) {
     for (const k of Object.keys(s.colors)) assert.doesNotMatch(k, /^seq|heat|turbo|leiste/i, s.id + ': ' + k);
   }

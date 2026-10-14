@@ -57,6 +57,10 @@ Vorbild ist plateShot3D von dieLogicSol: ein Netz für Gussteil und Form.
   `bericht.py` (Python 3, `core/bericht.js`; Aufbau, Graphiken und
   Betrachter wie der Bericht der Füllung) machen daraus Bilder und
   `auswertung/bericht.html`.
+- **Farben**: je Kriterium die Leiste aller Simulationsbilder (`MAP_PRESETS`
+  in `../simulation/js/core/render.js`): Erstarrungszeit „Viridis“,
+  Porosität `porositaet` (Grau → Magenta), Formtemperatur „Inferno“ (wie eine
+  Wärmebildkamera), Klebeindex „Cool to Warm“ mit der Mitte bei 1.
 
 ## Dateien
 

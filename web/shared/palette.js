@@ -233,6 +233,20 @@
                wie linear in sRGB). Darüber die Farbe UEBER.rainbow.
        bgo     Mitgerissene Luft, linear: „Blue - Green - Orange" mit
                allen 50 Stützstellen von ParaView 5.13.
+     Seit 14.10. (Wunsch: „simulationsübergreifend einheitliche Farbskalen
+     je Kriterium", Temperatur wie eine Wärmebildkamera) je Kriterium eine
+     Leiste für alle Bilder der Simulation, aus ParaView 5.13 abgetastet:
+       inferno     Temperatur (Schmelze, Form, Kammer, Formtemperatur):
+                   „Inferno (matplotlib)", 33 Stützstellen
+       viridis     Zeitpunkte: Füllzeit, Erstarrungszeit, „Viridis (matplotlib)"
+       plasma      Oxide, „Plasma (matplotlib)"
+       blues       Druck eingeschlossener Luft, „Blues"
+       coolwarm    Klebeindex, „Cool to Warm" (Mitte bei 1)
+       festanteil  Festphasenanteil: bis 0,2 flüssig in der Farbe der
+                   Schmelze, dann von dunklem zu hellem Grau (fest)
+       porositaet  Porosität: vom Grau des festen Gussteils zu mark
+     Dieselben Skalen stehen für die Werkzeuge außerhalb der Seite in
+     ~/DieLogic/webseite-faelle/_werkzeuge/farbskalen.json.
      Stützstellen [t, Farbe]; zwei an derselben Stelle sind eine Stufe.
      Gemischt wird linear in sRGB, wie die Leisten es immer taten. */
   var LEISTEN = {
@@ -248,7 +262,45 @@
       [0.4, '#10662d'], [0.425, '#136b25'], [0.45, '#16701e'], [0.475, '#1f781e'], [0.5, '#2f8026'], [0.525, '#418a30'],
       [0.55, '#53943b'], [0.575, '#679e47'], [0.6, '#80ab55'], [0.63, '#97ba66'], [0.65, '#bdc97d'], [0.67, '#dbdb9a'],
       [0.7, '#ebd594'], [0.75, '#e6ba7e'], [0.8, '#db9563'], [0.85, '#cc7052'], [0.9, '#ad4c34'], [0.95, '#8c2b1c'],
-      [0.975, '#7a150c'], [1, '#730200']]
+      [0.975, '#7a150c'], [1, '#730200']],
+    inferno: [
+      [0, '#000004'], [0.03125, '#040312'], [0.0625, '#0b0724'], [0.09375, '#150b37'], [0.125, '#210c4a'],
+      [0.15625, '#2f0a5b'], [0.1875, '#3d0965'], [0.21875, '#4a0c6b'], [0.25, '#57106e'], [0.28125, '#64156e'],
+      [0.3125, '#71196e'], [0.34375, '#7d1e6d'], [0.375, '#8a226a'], [0.40625, '#972766'], [0.4375, '#a32c61'],
+      [0.46875, '#b0315b'], [0.5, '#bc3754'], [0.53125, '#c73e4c'], [0.5625, '#d24644'], [0.59375, '#db503b'],
+      [0.625, '#e45a31'], [0.65625, '#eb6628'], [0.6875, '#f1731d'], [0.71875, '#f68013'], [0.75, '#f98e09'],
+      [0.78125, '#fb9d07'], [0.8125, '#fcac11'], [0.84375, '#fbbc21'], [0.875, '#f9cb35'], [0.90625, '#f5db4c'],
+      [0.9375, '#f2ea69'], [0.96875, '#f3f68a'], [1, '#fcffa4']],
+    viridis: [
+      [0, '#440154'], [0.03125, '#470d60'], [0.0625, '#48186a'], [0.09375, '#482374'], [0.125, '#472d7b'],
+      [0.15625, '#453781'], [0.1875, '#424086'], [0.21875, '#3e4989'], [0.25, '#3b528b'], [0.28125, '#375b8d'],
+      [0.3125, '#33638d'], [0.34375, '#2f6b8e'], [0.375, '#2c728e'], [0.40625, '#297a8e'], [0.4375, '#26828e'],
+      [0.46875, '#23898e'], [0.5, '#21918c'], [0.53125, '#1f988b'], [0.5625, '#1fa088'], [0.59375, '#22a785'],
+      [0.625, '#28ae80'], [0.65625, '#32b67a'], [0.6875, '#3fbc73'], [0.71875, '#4ec36b'], [0.75, '#5ec962'],
+      [0.78125, '#70cf57'], [0.8125, '#84d44b'], [0.84375, '#98d83e'], [0.875, '#addc30'], [0.90625, '#c2df23'],
+      [0.9375, '#d8e219'], [0.96875, '#ece51b'], [1, '#fde725']],
+    plasma: [
+      [0, '#0d0887'], [0.03125, '#220690'], [0.0625, '#310597'], [0.09375, '#3f049c'], [0.125, '#4c02a1'],
+      [0.15625, '#5901a5'], [0.1875, '#6600a7'], [0.21875, '#7201a8'], [0.25, '#7e03a8'], [0.28125, '#8a09a5'],
+      [0.3125, '#9511a1'], [0.34375, '#a01a9c'], [0.375, '#aa2395'], [0.40625, '#b32c8e'], [0.4375, '#bc3587'],
+      [0.46875, '#c43e7f'], [0.5, '#cc4778'], [0.53125, '#d35171'], [0.5625, '#da5a6a'], [0.59375, '#e06363'],
+      [0.625, '#e66c5c'], [0.65625, '#eb7655'], [0.6875, '#f0804e'], [0.71875, '#f58b47'], [0.75, '#f89540'],
+      [0.78125, '#fba139'], [0.8125, '#fdac33'], [0.84375, '#feb82c'], [0.875, '#fdc527'], [0.90625, '#fcd225'],
+      [0.9375, '#f8df25'], [0.96875, '#f4ed27'], [1, '#f0f922']],
+    blues: [
+      [0, '#08306b'], [0.0625, '#084184'], [0.125, '#08519c'], [0.1875, '#1561a9'], [0.25, '#2171b5'],
+      [0.3125, '#3282be'], [0.375, '#4292c6'], [0.4375, '#57a0ce'], [0.5, '#6caed6'], [0.5625, '#85bcdc'],
+      [0.625, '#9fcae1'], [0.6875, '#b3d3e8'], [0.75, '#c7dbef'], [0.8125, '#d3e3f3'], [0.875, '#dfebf7'],
+      [0.9375, '#ebf3fb'], [1, '#f7fbff']],
+    coolwarm: [
+      [0, '#3b4cc0'], [0.0625, '#4e68d7'], [0.125, '#6282ea'], [0.1875, '#779af7'], [0.25, '#8db0fe'],
+      [0.3125, '#a3c2fe'], [0.375, '#b9d0f9'], [0.4375, '#ccd9ed'], [0.5, '#dddcdc'], [0.5625, '#ecd2c5'],
+      [0.625, '#f5c4ac'], [0.6875, '#f7b093'], [0.75, '#f4997a'], [0.8125, '#eb7d62'], [0.875, '#dd5f4b'],
+      [0.9375, '#ca3b37'], [1, '#b40426']],
+    festanteil: [
+      [0, '#e85f08'], [0.2, '#e85f08'], [0.2001, '#546d77'], [1, '#e3e8e9']],
+    porositaet: [
+      [0, '#e3e8e9'], [1, '#b23797']]
   };
   /* Was über dem Bereich einer Leiste liegt, wenn es eine eigene Farbe hat:
      die Geschwindigkeit über 50 m/s in Pink (Wunsch vom 13.10.). */

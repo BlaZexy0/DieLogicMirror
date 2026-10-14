@@ -409,6 +409,7 @@ export function buildSolCase(p) {
     volume: p.bodies.reduce((s, b) => s + Math.abs(volume(b.tris)), 0) / 1000,
     views: (post.views || ['iso']).map(id => VIEW_PRESETS.find(v => v.id === id)).filter(Boolean).map(v => ({ id: v.id, label: v.label, dir: v.dir, up: v.up })),
     heat: p.colors ? p.colors.heat : null,       // [[t, r, g, b]] 0…1, die Leiste heat der Palette
+    maps: p.colors ? p.colors.maps : null,       // je Kriterium: Vorgabe von ParaView und Stützstellen
     colors: p.colors ? p.colors.colors : null    // Rollen der Palette als [r, g, b]
   };
   const vCast = conf.volume;

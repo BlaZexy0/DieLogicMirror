@@ -34,6 +34,7 @@ POST = CONF['post']
 COL = CONF.get('colors') or {}
 INK = COL.get('text', [0.1, 0.12, 0.14])
 HEAT = CONF.get('heat') or [[0, 0.05, 0.03, 0.2], [0.5, 0.8, 0.2, 0.3], [1, 1, 0.95, 0.6]]
+MAPS = CONF.get('maps') or {}
 
 
 def zahl(s):
@@ -124,9 +125,23 @@ def einfarbig(rep, farbe):
     rep.AmbientColor = farbe
 
 
-def faerben(lut, lo, hi):
-    lut.RGBPoints = [v for s in HEAT for v in (lo + (hi - lo) * s[0], s[1], s[2], s[3])]
-    lut.ColorSpace = 'RGB'
+def faerben(lut, name, lo, hi):
+    """Die Leiste des Kriteriums (eine je Kriterium in allen Bildern der
+    Simulation): die Vorgabe von ParaView, wenn sie eine hat, sonst ihre
+    Stützstellen; ohne Angaben heat."""
+    m = MAPS.get(name) or {}
+    done = False
+    if m.get('preset'):
+        try:
+            done = bool(lut.ApplyPreset(m['preset'], True))
+        except Exception:
+            done = False
+    if done:
+        lut.RescaleTransferFunction(lo, hi)
+    else:
+        stops = m.get('stops') or HEAT
+        lut.RGBPoints = [v for s in stops for v in (lo + (hi - lo) * s[0], s[1], s[2], s[3])]
+        lut.ColorSpace = 'RGB'
     lut.AutomaticRescaleRangeMode = 'Never'
     lut.UseLogScale = 0
 
@@ -166,8 +181,8 @@ titelDisp.FontSize = fs
 titelDisp.Color = INK
 # die Legende der Erstarrungsfolge: zwei Einträge in ihren Farben
 LEGENDE = []
-for k, (txt, rolle, ersatz) in enumerate((('gespeist vom Pressrest', 'primary', [0, 0.55, 0.51]),
-                                         ('abgeschnitten — wird zur Pore', 'melt', [0.91, 0.37, 0.03]))):
+for k, (txt, rolle, ersatz) in enumerate((('gespeist vom Pressrest', 'melt', [0.91, 0.37, 0.03]),
+                                         ('abgeschnitten — wird zur Pore', 'mark', [0.7, 0.22, 0.59]))):
     t_ = Text(Text=txt)
     d_ = Show(t_, view)
     d_.WindowLocation = 'Any Location'
@@ -268,10 +283,10 @@ except Exception as e:
     print('Letzter Zeitstand nicht lesbar (Poren ohne Inneres):', e)
 
 KW = {
-    'solidTime': dict(label='Erstarrungszeit', unit='s', feld='solidificationTime', expr='solidificationTime'),
-    'porosity': dict(label='Porosität', unit='%', feld='porosity', expr='porosity*100'),
-    'dieTemp': dict(label='Formtemperatur höchstens', unit='°C', feld='dieSurfaceTmax', expr='dieSurfaceTmax-273.15'),
-    'soldering': dict(label='Klebeindex', unit='–', feld='solderingIndex', expr='solderingIndex'),
+    'solidTime': dict(label='Erstarrungszeit', unit='s', feld='solidificationTime', expr='solidificationTime', map='viridis'),
+    'porosity': dict(label='Porosität', unit='%', feld='porosity', expr='porosity*100', map='porositaet'),
+    'dieTemp': dict(label='Formtemperatur höchstens', unit='°C', feld='dieSurfaceTmax', expr='dieSurfaceTmax-273.15', map='inferno'),
+    'soldering': dict(label='Klebeindex', unit='–', feld='solderingIndex', expr='solderingIndex', map='coolwarm'),
 }
 ARR = set(OBER.CellArrays.Available) if hasattr(OBER.CellArrays, 'Available') else set(OBER.CellArrays)
 print('Felder der Oberfläche:', ', '.join(sorted(ARR)))
@@ -310,9 +325,10 @@ for v in CONF['views']:
             inseln, zu = inselzustand()
             zu(FOLGE[0])                 # der Producer braucht Daten, bevor er gezeigt wird
             gesp = Show(glatt(schwelle(inseln, 'zustand', 0.5, 1.5)), view)
-            einfarbig(gesp, COL.get('primary', [0, 0.55, 0.51]))
+            einfarbig(gesp, COL.get('melt', [0.91, 0.37, 0.03]))     # Speisung in allen Bildern: flüssig und
+                                                                     # gespeist Schmelze, abgeschnitten mark (wird zur Pore)
             abg = Show(glatt(schwelle(inseln, 'zustand', 1.5, 2.5)), view)
-            einfarbig(abg, COL.get('melt', [0.91, 0.37, 0.03]))
+            einfarbig(abg, COL.get('mark', [0.7, 0.22, 0.59]))
             for d_ in LEGENDE:
                 d_.Visibility = 1
             dateien = []
@@ -369,13 +385,13 @@ for v in CONF['views']:
             if cid == 'solidTime':
                 lo = 0.0
             if cid == 'soldering':
-                lo, hi = 0.0, max(1.5, hi)
+                lo, hi = 0.0, 2.0       # Cool to Warm: die Mitte (weiß) bei 1, darüber Kleben wahrscheinlich
             if hi <= lo:
                 hi = lo + 1
         disp = Show(q, view)
         ColorBy(disp, ('POINTS', 'wert'))
         lut = GetColorTransferFunction('wert')
-        faerben(lut, lo, hi)
+        faerben(lut, kw['map'], lo, hi)
         bar = leiste(lut, kw['label'], kw['unit'])
         zeigt.append(disp)
         titel.Text = '%s · %s\n%s' % (CONF['title'], kw['label'], 'am Ende der Rechnung' if cid != 'solidTime' else 'ab Füllbeginn')

@@ -5,12 +5,13 @@
 
 import { shotPlan, pistonTable } from './shot.js';
 import { edgeCheck, thickness } from './core/geometry.js';
+import { MAP_PRESETS } from './core/render.js';
 import { ROLE, hex2rgb, scaleRgb } from '../../3d-studio/js/part/colors.js';
 
 /* Die Farben der Auswertung als Zahlen — bilder.py und bericht.py kennen
-   keine Palette: die Leiste heat (die meisten Kennwerte), rainbow und bgo
-   mit ihren Stützstellen und der Farbe darüber (Geschwindigkeit, Luft;
-   die Bilder nehmen dafür die gleichnamigen Vorgaben von ParaView) und die
+   keine Palette: die Leiste heat, die Leisten der Kennwerte (MAP_PRESETS:
+   eine je Kriterium) mit ihren Stützstellen und der Farbe darüber (die
+   Bilder nehmen dafür die gleichnamigen Vorgaben von ParaView) und die
    Rollen für Schmelze, Form, Schrift, Linien und Flächen des Berichts. */
 const ROLLEN = ['text', 'muted', 'border', 'borderLight', 'surface', 'viewport', 'primary', 'primaryLight', 'ok', 'caution', 'bad',
   'melt', 'air', 'mark', 'die', 'runner', 'steelDark'];
@@ -22,10 +23,8 @@ export function imageColors() {
   for (const k of ROLLEN) colors[k] = r3(hex2rgb(ROLE[k]));
   return {
     heat: Array.from({ length: 7 }, (_, k) => [Number((k / 6).toFixed(4)), ...r3(scaleRgb('heat', k / 6))]),
-    maps: {
-      rainbow: { stops: stops('rainbow'), over: P && P.ueber && P.ueber.rainbow ? r3(hex2rgb(P.ueber.rainbow)) : null },
-      bgo: { stops: stops('bgo') }
-    },
+    maps: Object.fromEntries(Object.keys(MAP_PRESETS).map(k => [k, Object.assign({ stops: stops(k) },
+      P && P.ueber && P.ueber[k] ? { over: r3(hex2rgb(P.ueber[k])) } : {})])),
     colors
   };
 }

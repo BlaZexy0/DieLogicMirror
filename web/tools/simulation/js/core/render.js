@@ -19,22 +19,30 @@ import { BERICHT_PY } from './bericht.js';
 export { BILDER_PY, BERICHT_PY };
 
 /** Die Kennwerte, die die Seite anbietet — alle standardmäßig an. Je
-    Kennwert eine Farbleiste der Palette (shared/palette.js): `rainbow` für
-    die Geschwindigkeit (0 … 50 m/s, darüber Pink), `bgo` für die
-    mitgerissene Luft (linear), sonst `heat`. `fields`: was die Oberflächen
-    dafür mitschreiben müssen. */
+    Kennwert die Farbleiste seines Kriteriums (shared/palette.js), dieselbe
+    in allen Bildern der Simulation: `rainbow` Geschwindigkeit (0 … 50 m/s,
+    darüber Pink), `inferno` Temperatur, `bgo` mitgerissene Luft (linear),
+    `plasma` Oxide, `blues` Druck eingeschlossener Luft, `viridis` Füllzeit,
+    `festanteil` Festanteil. `fields`: was die Oberflächen dafür mitschreiben
+    müssen. */
 export const CRITERIA = [
   { id: 'velocity', label: 'Geschwindigkeit', unit: 'm/s', map: 'rainbow', hint: 'Betrag der Schmelzegeschwindigkeit, Regenbogen von 0 bis 50 m/s, darüber Pink', range: ['0', '50'], fields: ['magU'] },
-  { id: 'temperature', label: 'Temperatur', unit: '°C', map: 'heat', hint: 'Schmelzetemperatur, Wärmeabgabe an die Form', range: ['T_sol − 40', 'T_Guss'], fields: ['T'] },
+  { id: 'temperature', label: 'Temperatur', unit: '°C', map: 'inferno', hint: 'Schmelzetemperatur, Wärmeabgabe an die Form', range: ['T_sol − 40', 'T_Guss'], fields: ['T'] },
   { id: 'air', label: 'Lufteinschluss', unit: '%', map: 'bgo', hint: 'mitgerissene Luft (airEntrained) als Anteil der Schmelze, lineare Skala', range: ['0', '100'], fields: ['airEntrained'] },
-  { id: 'oxide', label: 'Oxide', unit: 'ppm', map: 'heat', hint: 'Oxidhaut aus Oberflächenalter und Faltung, log. Skala', range: ['0,1', '1000'], fields: ['oxide'] },
-  { id: 'trapped', label: 'Eingeschlossene Luft', unit: 'bar', map: 'heat', hint: 'Gasnester ohne Entlüftung, je Nest sein Druck (log. Skala)', range: ['1', '50'], fields: ['luftEin', 'pGas'] },
-  { id: 'fillTime', label: 'Füllzeit', unit: 'ms', map: 'heat', hint: 'wann jede Zelle voll war, ab „Kammer voll"; ein Bild am Ende', range: ['0', '…'], fields: [] },
-  { id: 'solid', label: 'Erstarrt', unit: '–', map: 'heat', hint: 'Festanteil der Schmelze', range: ['0', '1'], fields: ['solidFraction'] }
+  { id: 'oxide', label: 'Oxide', unit: 'ppm', map: 'plasma', hint: 'Oxidhaut aus Oberflächenalter und Faltung, log. Skala', range: ['0,1', '1000'], fields: ['oxide'] },
+  { id: 'trapped', label: 'Eingeschlossene Luft', unit: 'bar', map: 'blues', hint: 'Gasnester ohne Entlüftung, je Nest sein Druck (log. Skala)', range: ['1', '50'], fields: ['luftEin', 'pGas'] },
+  { id: 'fillTime', label: 'Füllzeit', unit: 'ms', map: 'viridis', hint: 'wann jede Zelle voll war, ab „Kammer voll"; ein Bild am Ende', range: ['0', '…'], fields: [] },
+  { id: 'solid', label: 'Erstarrt', unit: '–', map: 'festanteil', hint: 'Festanteil der Schmelze', range: ['0', '1'], fields: ['solidFraction'] }
 ];
-/** Die Leisten der Bilder: die Vorgabe von ParaView (exakt), die Palette
-    hat dieselben Stützstellen für Vorschau und Bericht. */
-export const MAP_PRESETS = { rainbow: 'Blue to Red Rainbow', bgo: 'Blue - Green - Orange' };
+/** Die Leisten der Bilder, eine je Kriterium (auch die von „Erstarrung
+    einrichten“): die Vorgabe von ParaView (exakt), die Palette hat dieselben
+    Stützstellen für Vorschau und Bericht; `festanteil` und `porositaet` sind
+    keine Vorgaben von ParaView (null), die Bilder nehmen die Stützstellen. */
+export const MAP_PRESETS = {
+  rainbow: 'Blue to Red Rainbow', bgo: 'Blue - Green - Orange', inferno: 'Inferno (matplotlib)',
+  viridis: 'Viridis (matplotlib)', plasma: 'Plasma (matplotlib)', blues: 'Blues', coolwarm: 'Cool to Warm',
+  festanteil: null, porositaet: null
+};
 export const WHEN = [['fill', 'Füllgrad'], ['time', 'Zeit'], ['piston', 'Kolbenweg']];
 export const ASPECTS = [['16:9', 16 / 9], ['3:2', 3 / 2], ['4:3', 4 / 3], ['1:1', 1], ['9:16', 9 / 16]];
 export const WIDTHS = [1280, 1600, 1920, 2560];
@@ -125,7 +133,7 @@ export function auswertungConfig(cfg) {
     fillFrom: cfg.fillFrom || 0,      // Rechenzeit von „Kammer voll" [s]: die Füllzeit zählt ab dort
     shot: cfg.shot || null,
     heat: cfg.heat || null,          // [[t, r, g, b]] 0…1, die Leiste heat der Palette
-    maps,                            // rainbow, bgo: Vorgabe von ParaView, Stützstellen, Farbe darüber
+    maps,                            // je Leiste: Vorgabe von ParaView, Stützstellen, Farbe darüber
     colors: cfg.colors || null,      // Rollen der Palette als [r, g, b]
     Tcast: cfg.fields ? cfg.fields.Tcast : 660,
     Tsol: cfg.fields ? cfg.fields.Tsol : 520,

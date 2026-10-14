@@ -204,6 +204,9 @@ test('Fall: Dateien, Randflächen, Schmelzezylinder, Allrun, Bilder', () => {
   assert.deepEqual(conf.criteria, ['velocity', 'temperature', 'air', 'oxide', 'trapped', 'fillTime', 'solid']);
   assert.equal(conf.maps.rainbow.preset, 'Blue to Red Rainbow');
   assert.equal(conf.maps.bgo.preset, 'Blue - Green - Orange');
+  assert.equal(conf.maps.inferno.preset, 'Inferno (matplotlib)', 'Temperatur wie eine Wärmebildkamera');
+  assert.ok(conf.maps.festanteil && conf.maps.festanteil.preset === null, 'Festanteil: Stützstellen statt Vorgabe');
+  assert.match(files['bilder.py'], /'temperature': dict\([^)]*map='inferno'/, 'Temperatur: inferno');
   /* Binäre STL in Metern: 84 + 50·n Bytes, Koordinaten unter 1 */
   const stl = files['simulation/constant/triSurface/walls.stl'];
   const n = new DataView(stl.buffer, stl.byteOffset).getUint32(80, true);

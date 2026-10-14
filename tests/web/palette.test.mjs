@@ -56,8 +56,9 @@ test('palette: die Rechenhilfen mischen im OK-Lab-Raum und folgen den Rollen', (
    24.09. nur diese zwei: vorher las das 3D-Studio Turbo als Polynom
    (`turbo`) und das Flussschema eine eigene Leiste (`speed`). */
 test('palette: die Farbleisten, heat und die Entformschräge', () => {
-  /* seit 13.10. dazu rainbow und bgo, nur für die Bilder der Simulation */
-  assert.deepEqual(Object.keys(P.leisten).sort(), ['bgo', 'draft', 'heat', 'rainbow']);
+  /* seit 13.10. dazu rainbow und bgo, seit 14.10. je Kriterium eine Leiste,
+     nur für die Bilder der Simulation */
+  assert.deepEqual(Object.keys(P.leisten).sort(), ['bgo', 'blues', 'coolwarm', 'draft', 'festanteil', 'heat', 'inferno', 'plasma', 'porositaet', 'rainbow', 'viridis']);
   assert.equal(P.scale('heat', 0), '#30123b');
   assert.equal(P.scale('heat', 0.5), '#67eb73');
   assert.equal(P.scale('heat', 1), '#7a0403');
@@ -87,10 +88,26 @@ test('palette: Leisten der Simulationsbilder wie in ParaView', () => {
   assert.equal(P.leisten.bgo.length, 50);
   assert.equal(P.scale('bgo', 0), '#d4e8fa');
   assert.equal(P.scale('bgo', 1), '#730200');
-  for (const n of ['rainbow', 'bgo']) {
+  for (const n of ['rainbow', 'bgo', 'inferno', 'viridis', 'plasma', 'blues', 'coolwarm', 'porositaet']) {
     const l = P.leisten[n];
     for (let i = 1; i < l.length; i++) assert.ok(l[i][0] > l[i - 1][0], n + ': steigend');
   }
+});
+
+/* Seit 14.10. je Kriterium eine Leiste für alle Bilder der Simulation
+   (Wunsch: „simulationsübergreifend einheitliche Farbskalen je Kriterium“,
+   die Temperatur wie eine Wärmebildkamera): abgetastet aus ParaView 5.13. */
+test('palette: eine Leiste je Kriterium, wie in ParaView', () => {
+  assert.equal(P.scale('inferno', 0), '#000004', 'Inferno beginnt schwarz');
+  assert.equal(P.scale('inferno', 1), '#fcffa4', 'und endet hellgelb');
+  assert.equal(P.scale('viridis', 0), '#440154');
+  assert.equal(P.scale('viridis', 1), '#fde725');
+  assert.equal(P.scale('plasma', 0), '#0d0887');
+  assert.equal(P.scale('coolwarm', 0.5), '#dddcdc', 'Cool to Warm: hell in der Mitte');
+  assert.equal(P.scale('festanteil', 0.1), P.colors.melt, 'flüssig in der Farbe der Schmelze');
+  assert.notEqual(P.scale('festanteil', 0.3), P.colors.melt, 'dann grau');
+  assert.equal(P.scale('porositaet', 1), P.colors.mark);
+  for (const n of ['inferno', 'viridis', 'plasma']) assert.equal(P.leisten[n].length, 33, n);
 });
 
 test('shared.css :root spiegelt die Palette vollständig', () => {
