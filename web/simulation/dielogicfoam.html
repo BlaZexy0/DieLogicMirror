@@ -560,7 +560,7 @@
         <p>Die Druckgleichung sieht in den Leerzellen den Druck des Pakets. Setzt man dort einfach
           den Druck vom Anfang des Schritts ein, kann der Schmelzefluss der neuen Lösung ein kleines
           Paket in einem einzigen Advektionsschritt zusammendrücken, ohne dass sein Druck
-          dagegenhält. Im Wassermodell auf Tetraedern erreicht ein Paket aus vier Zellen so die
+          dagegenhält. Im vereinfachten Wassermodell auf Tetraedern (14.1) erreicht ein Paket aus vier Zellen so die
           Grenze von 200 bar, und der Druckstoß schleudert 1,5 cm³ Wasser mit bis zu 46 m/s weg;
           diese Tropfen bestimmen danach den Zeitschritt. Ein aufgelöst kompressibler Solver hat
           dieses Problem nicht, weil die Kompressibilität der Luft in seiner Druckgleichung
@@ -1197,149 +1197,65 @@
       <!-- ============================================================ 13 -->
       <span class="section-anchor" id="s13"></span>
       <h2 class="section-title">13. Beispiel: Wassermodell nach Niida und Maeda</h2>
-      <div class="warning-box"><p><strong>Früheres, vereinfachtes Modell.</strong> Dieser Abschnitt zeigt den ersten Nachbau
-        (Platte 100 × 110 mm, Anschnitt 16 mm) und vergleicht nur qualitativ. Die Validierung auf der vollständigen Geometrie
-        der Veröffentlichung (100 × 150 mm mit Trichter, Anschnitt 30 mm breit und 10 mm tief in der Gießbüchse, Überlauf
-        wie im Versuch) und gegen die gemessenen Größen, Fotos und eingeschlossene Luft, steht auf der Seite
-        <a href="validierung-niida.html">Wassermodell nach Niida und Maeda</a>. Die Fälle dieses Abschnitts liegen im Archiv.</p></div>
-
       <div class="prose">
-        <p>Niida und Maeda (2020) haben die Formfüllung an einem Wassermodell aus Acrylglas gefilmt:
-          Platte 100 × 150 mm, 5 mm dick, mit Trichter, Anschnitt, Überlauf und Entlüftung, gespeist
-          aus einer Gießkammer von 50 mm Durchmesser. Verglichen werden zwei Umschaltpunkte des
-          Kolbens von 20 auf 150 mm/s: P1 vor dem Anschnitt, P2 danach. Nachgebaut sind die Maße aus
-          Bild 1 und 4 der Arbeit: Platte 100 × 110 mm auf einem Trichter von 40 mm, der sich auf
-          einen Anschnitt von 16 mm verengt, darunter die Angussbuchse (57 mm, Achse senkrecht zur
-          Platte), oben ein Überlauf, dessen Entlüftung über einen Schlauch ins Freie führt. Wasser
-          strömt aus der Buchse, knickt um 90° nach oben ab und schießt durch den Anschnitt in die
-          Form. Beide Fälle beginnen mit gefüllter Buchse; bei P2 fährt der Kolben noch 5 mm langsam,
-          bevor er auf 150 mm/s umschaltet. Gerechnet auf einem kartesischen Netz mit 1 mm Zellen
-          (162 000 Zellen), wie es die Gießsimulationen verwenden.</p>
+        <p>Niida und Maeda (2020) haben die Formfüllung an einem Wassermodell aus Acrylglas gefilmt.
+          Eine Gießkammer von 50 mm Durchmesser füllt über eine konische Gießbüchse (50 auf 57 mm,
+          40 mm lang) eine senkrechte Platte von 100 × 150 × 5 mm mit Trichter, Anschnitt, S-förmigem
+          Überlauf und Entlüftung; der Schlauch der Entlüftung führt in einen Eimer. Der Kolben schaltet
+          von 20 auf 150 mm/s um, bevor das Wasser den Anschnitt erreicht (P1) oder 5 mm danach (P2).
+          Nachgerechnet ist das Modell so, wie es die Veröffentlichung beschreibt; den Vergleich mit den
+          Fotos und der gemessenen Luft für alle sechs Einstellungen zeigt die Seite
+          <a href="validierung-niida.html">Wassermodell nach Niida und Maeda</a>. Hier geht es darum,
+          was <code>dieLogicFoam</code> in diesem Fall rechnet.</p>
+        <p><b>Modell.</b> Die Rechnung beginnt, wenn Kammer und Büchse voll sind, nach 175,7 mm
+          Kolbenweg. Am Eintritt, dem Ende der Kammer in der Endlage des Kolbens, strömt das Wasser mit
+          der Geschwindigkeit des Kolbens ein. Das Netz enthält die Platte mit Überlauf und
+          Entlüftungskanal, die Büchse und 10 mm der Kammer: Würfel von 1 mm, aus einem kartesischen
+          Block geschnitten, die Platte genau nach dem Umriss des Modells, der Übergang aus der Büchse
+          in den Anschnitt auf 0,5 mm verfeinert, zusammen 336 463 Zellen. Die Entlüftung ist offen
+          (1 bar), Wasser und Luft dürfen austreten; die Turbulenz rechnet das realisierbare k-ε mit
+          Wandfunktionen. Auf drei Prozessoren brauchte P1 15,4 h (15 900 Zeitschritte bis 0,53 s),
+          P2 9,6 h (13 318 Zeitschritte bis 0,72 s).</p>
       </div>
-      <div class="fig-wrap" id="video-wasser-p1">
-        <video autoplay muted loop playsinline controls preload="metadata" poster="img/wasser-P1.webp"
-          aria-label="Wassermodell, Umschaltpunkt P1">
-          <source src="img/wasser-P1.mp4" type="video/mp4">
+      <div class="fig-wrap" id="video-niida">
+        <video autoplay muted loop playsinline controls preload="metadata" poster="img/niida-p1-p2.webp"
+          aria-label="Wassermodell nach Niida und Maeda: P1 und P2 in 3D mit Gießbüchse">
+          <source src="img/niida-p1-p2.mp4" type="video/mp4">
         </video>
-        <div class="fig-cap"><b>P1: schnell schon vor dem Anschnitt.</b> Links die Oberfläche des
-          Wassers in der Form, dann die Zellschicht an der Vorderwand und an der Kammerseite (je
-          0,5 mm von der Wand) und die eingemischte Luft in der Mitte der Platte. Grau: Luft mit
-          Verbindung zur Entlüftung; blau: eingeschlossene Luft.</div>
+        <div class="fig-cap"><b>P1 und P2, zeitgleich.</b> Das Wasser als Körper (alle Zellen, die mehr
+          als halb voll sind), gefärbt nach seiner Geschwindigkeit, über 4 m/s pink; weiß ist Luft. Die
+          Platte ist Glas ohne Vorderwand, Gießbüchse und Kammer sind hinten aufgeschnitten. Unter
+          jedem Bild der Füllgrad der Platte und die eingeschlossene Luft (ohne Weg zur Entlüftung),
+          rechts die Geschwindigkeit des Kolbens.</div>
       </div>
-      <div class="fig-wrap" id="video-wasser-p2">
-        <video autoplay muted loop playsinline controls preload="metadata" poster="img/wasser-P2.webp"
-          aria-label="Wassermodell, Umschaltpunkt P2">
-          <source src="img/wasser-P2.mp4" type="video/mp4">
-        </video>
-        <div class="fig-cap"><b>P2: langsam bis hinter den Anschnitt.</b> Gleiche Darstellung.</div>
+      <div class="prose" id="niida-ergebnis">
+        <p><b>P1.</b> Der Kolben fährt von Beginn an 150 mm/s, im Anschnitt sind das im Mittel 2 m/s.
+          Das Wasser biegt aus der Büchse um 90° nach oben und schießt als Strahl durch den Trichter,
+          über dem Anschnitt im Mittel mit 3 m/s, im Kern mit 4 m/s und mehr. Der Strahl fächert sich
+          auf, läuft an den Seiten und an der Vorderwand hoch und erreicht nach 0,1 s den Überlauf; nach
+          0,05 s liegen drei Viertel des Wassers über dem Trichter in der vorderen Hälfte der Dicke
+          (9,5 von 12,4 cm³), wie es Niida und Maeda bei P1 beobachten. Bis
+          dahin hat er 63 cm³ Luft eingeschlossen, die keinen Weg zur Entlüftung mehr hat. Danach
+          zerfällt sie in immer mehr kleine Pakete (146 bei 0,1 s, rund 1 500 am Ende) und nimmt ab:
+          50 cm³ bei 0,2 s, 35 cm³ bei 0,4 s, am Ende 30 cm³; der höchste Paketdruck ist dann 1,5 bar.
+          Die Platte ist nach 0,20 s halb voll.</p>
+        <p><b>P2.</b> Bis 0,22 s fährt der Kolben weiter mit 20 mm/s. Das Wasser steigt langsam durch
+          den Anschnitt in den Trichter, meist mit weniger als 0,5 m/s, und schwappt dort; nach 0,2 s ist
+          die Platte zu 7,7 % gefüllt. Nach dem Umschalten strömt es durch den vollen Querschnitt des
+          Anschnitts, im Mittel mit den 1,9 m/s, die der Kolben vorgibt, im Kern mit 3 m/s, und mündet
+          in das stehende Wasser. Die Platte füllt sich von unten über die ganze Dicke (nach 0,35 s
+          23 cm³ in der hinteren, 18 cm³ in der vorderen Hälfte), an den Seiten schneller als in der
+          Mitte, und ist nach 0,39 s halb voll. Eingeschlossen werden höchstens
+          14 cm³ (bei 0,44 s), am Ende 2,0 cm³.</p>
+        <p><b>Was das zeigt.</b> Beide Schüsse unterscheiden sich nur im Zeitpunkt des Umschaltens, und
+          der entscheidet über die Luft: bei P1 durchschießt der Strahl den leeren Hohlraum und schließt
+          die Luft ein, statt sie vor sich herzuschieben; bei P2 trifft der schnelle Zulauf auf Wasser,
+          das schon über dem Anschnitt steht. Am Ende bleiben 30 gegen 2 cm³. Im Versuch wurde die Luft
+          mit einem Bildverfahren gemessen, das jede im Bild von Wasser umschlossene Luft zählt; diese
+          Auswertung der Rechnung und den Vergleich über der Zeit zeigt die Validierungsseite. Ein
+          vereinfachter Nachbau desselben Wassermodells dient in 14.1 dem Vergleich der Netze und dem
+          mit gerechneter Luft.</p>
       </div>
-      <div class="prose" id="wasser-ergebnis">
-        <p><b>Was die Rechnung zeigt.</b> Bei P1 schießt der Strahl nach dem Knick aus der Buchse an
-          der Vorderwand entlang nach oben; die Schicht an der Kammerseite bleibt in den ersten
-          50 ms fast leer. Genau das beschreiben Niida und Maeda für P1: das Wasser liegt an der
-          Vorderwand, die Luft wird über die Dicke der Form eingeschlossen. Der Strahl trifft die
-          Decke, läuft in den Überlauf und verschließt die Entlüftung zeitweise; das Wasser, das den
-          Überlauf füllt, fließt durch die Entlüftung ab, und die Luft folgt (um 60 ms ist fast die ganze
-          Luft für kurze Zeit eingeschlossen, 51 cm³). Ab etwa 0,12 s schließt das von oben
-          zurückfallende Wasser die restliche Luft endgültig ein: 36 cm³ bei 0,12 s und 32 cm³ bei
-          0,15 s, verteilt auf beide Hälften der Platte und über ihre Dicke, am Ende noch 16 cm³ in
-          fast 700 kleinen Paketen.</p>
-        <p>Bei P2 steigt das Wasser in den ersten 0,25 s langsam durch den Anschnitt und füllt die
-          Platte von unten, gleichmäßig über ihre Dicke: bei 17 % Füllung haben alle
-          Zellschichten zwischen Vorder- und Rückwand denselben Füllgrad (0,16 bis 0,17). Bei P1
-          hat die Schicht an der Vorderwand nach 40 ms bereits fast den vierfachen Füllgrad der
-          Schicht an der Kammerseite (0,26 gegen 0,07). Auch das entspricht der Beobachtung: bei P2 geht
-          das Wasser „von unten nach oben und füllt dabei den Querschnitt“. Eingeschlossen wird bei
-          P2 bis 0,30 s praktisch keine Luft (weniger als 1 cm³ in kleinen Blasen); Niida und Maeda
-          messen bis 0,3 s fast null. Nach dem Umschalten schließt der schnelle Strahl an den Seiten
-          der Platte Luft ein (34 cm³ bei 0,35 s), die danach wie bei P1 zu kleinen Paketen
-          zusammengedrückt und teilweise ausgetragen wird: 17 cm³ bei 0,5 s.</p>
-      </div>
-      <div class="fig-wrap">
-        <img src="img/wasser-luft.svg" class="svg-bild" alt="Eingeschlossene Luft über der Zeit für P1 und P2" loading="lazy">
-        <div class="fig-cap"><b>Eingeschlossene Luft.</b> Bei P2 beginnt der Einschluss erst nach
-          dem Umschalten, rund 0,2 s später als bei P1; Höchstwert und Verlauf danach sind ähnlich.
-          Die senkrechten Sprünge sind Augenblicke, in denen ein großes Paket über einen dünnen
-          Luftkanal Verbindung zur Entlüftung bekommt oder verliert; die ersten Spitzen ab 60 ms bei P1
-          ist die kurze Zeit, in der der Überlauf die Entlüftung verschließt. Gestrichelt P1 auf dem
-          groben Tetraedernetz (13.1): es schließt mehr Luft ein, vermutlich weil das grobe Netz dünne Luftkanäle zur
-          Entlüftung nicht auflöst.</div>
-      </div>
-
-      <h3 class="sub-title">13.1 Auf einem Tetraedernetz</h3>
-      <div class="prose">
-        <p>Gussteile werden meist mit Tetraedern vernetzt. Das Wassermodell wurde deshalb auch mit
-          gmsh als Tetraedernetz erzeugt (2,2 mm in der Platte, 3,5 mm in der Buchse, 42 393
-          Tetraeder, Nichtorthogonalität bis 65°) und mit beiden Solvern gerechnet, P1.
-          <code>dieLogicFoam</code> läuft darauf mit einer nichtorthogonalen Korrektur, begrenzter
-          Laplace-Korrektur und begrenztem Gradienten für die Konvektion. Ein feineres Netz mit 1,6 mm und 103 400
-          Tetraedern läuft ebenfalls stabil, der Zeitschritt fällt dort aber auf 2,5 µs: in der nur
-          5 mm dicken Platte liegen an den Wänden flache Tetraeder, deren Courant-Zahl den Schritt
-          begrenzt. Für den Vergleich dient deshalb das gröbere Netz.</p>
-      </div>
-      <div class="fig-wrap" id="video-wasser-tet">
-        <video autoplay muted loop playsinline controls preload="metadata" poster="img/wasser-tet.webp"
-          aria-label="Wassermodell auf einem Tetraedernetz, dieLogicFoam">
-          <source src="img/wasser-tet.mp4" type="video/mp4">
-        </video>
-        <div class="fig-cap"><b>Tetraedernetz, <code>dieLogicFoam</code>.</b> Gleiche Darstellung wie
-          oben; eingeschlossene Luft ist nach ihrem Druck blau eingefärbt, je heller, desto höher.</div>
-      </div>
-      <div class="fig-wrap" id="video-wasser-tet-k">
-        <video autoplay muted loop playsinline controls preload="metadata" poster="img/wasser-tet-cif.webp"
-          aria-label="Wassermodell auf einem Tetraedernetz, compressibleInterFoam">
-          <source src="img/wasser-tet-cif.mp4" type="video/mp4">
-        </video>
-        <div class="fig-cap"><b>Tetraedernetz, <code>compressibleInterFoam</code>.</b> Die Luft
-          ist gerechnet und strömt durch die Entlüftung ab.</div>
-      </div>
-      <div class="prose" id="tet-ergebnis">
-        <p><b>Strömung.</b> Beide Rechnungen zeigen denselben Ablauf: der Strahl steigt aus dem
-          Anschnitt senkrecht bis unter den Deckel, teilt sich dort, läuft an den Seiten zurück und
-          umschließt eine große Luftinsel, während er sich selbst zum Überlauf biegt. Auf diesem Netz
-          liegen nur zwei bis drei Zellen über der Dicke der Platte; die Neigung zur Vorderwand, die
-          das Hexaedernetz bei P1 zeigt, kann es nicht auflösen. Der deutlichste Unterschied ist die
-          Geschwindigkeit des Strahls: seine Spitze steigt in <code>dieLogicFoam</code> mit 4,7 m/s,
-          in <code>compressibleInterFoam</code> mit 3,3 m/s (<code>compressibleInterIsoFoam</code>
-          ebenso). Aus dem Anschnitt kommen im Mittel 3,7 m/s; 4,7 m/s bedeutet einen Strahl, der
-          sich hinter dem verjüngten Anschnitt auf etwa 0,7 seiner Breite einschnürt. Auf dem
-          Hexaedernetz mit 1 mm Zellen ist <code>dieLogicFoam</code> praktisch gleich (4,9 m/s),
-          <code>compressibleInterFoam</code> wird schneller (3,9 m/s): die verschmierte Grenzfläche
-          der Referenz koppelt das Wasser an die Luft und bremst den dünnen Strahl, mit feinerem Netz
-          weniger. Bis 50 ms weicht das Füllbild im Mittel nur um 4,0 % (Hexaeder) und 3,9 % (Tetraeder)
-          ab; über die ganze Rechnung sind es auf Tetraedern 15 % (mit polytropen Paketen 18 %; die
-          beiden Referenzen untereinander 8 %).</p>
-        <p><b>Wassermenge und Luft.</b> Der Kolben schiebt in beiden Rechnungen dasselbe Volumen
-          nach. Bis 50 ms stimmt das Wasser in der Form auf 0,1 cm³ überein; danach fließt bei
-          <code>compressibleInterFoam</code> zunächst mehr Wasser über die Entlüftung ab, gegen Ende
-          weniger (100,7 gegen 102,3 cm³ bei 0,28 s). Der Unterschied ist die Luft:
-          <code>dieLogicFoam</code> schließt am Ende 23 cm³ in 295 Paketen ein, bei im Mittel 337 K
-          (Wasser 293 K); in der Referenz sind noch 22 cm³ Luft in der Form, nahezu isotherm. Ohne
-          das Energiemodell waren es 27 cm³ bei adiabater Verdichtung.</p>
-      </div>
-      <div class="fig-wrap">
-        <img src="img/wasser-tet-volumen.svg" class="svg-bild" alt="Wasservolumen in der Form über der Zeit, Tetraedernetz" loading="lazy">
-        <div class="fig-cap"><b>Wasser in der Form.</b> Bis zum Erreichen der Entlüftung decken sich
-          die Kurven.</div>
-      </div>
-      <div class="prose">
-        <p><b>Zeitschritt.</b> Tetraedernetze stellen zwei Anforderungen, die auf Hexaedern nicht
-          auffallen. Mit unbegrenztem Gradienten in <code>linearUpwind</code> beschleunigt der
-          Strahl, der auf diesem Netz nur eine Zelle dick an der Wand anliegt, auf 16,7 m/s, und der
-          Zeitschritt fällt auf 9 µs; mit <code>cellLimited</code> bleibt er bei 15 bis 27 µs. Und
-          ein kleines Paket, das in einem Schritt zerquetscht wird, setzt Tropfen mit bis zu 46 m/s
-          frei, die den Schritt auf 5 µs drücken; die halbimplizite Kopplung (6.4) verhindert
-          das. Sobald Wasser durch die 5 × 5 mm große Entlüftung schießt,
-          bestimmt es in beiden Rechnungen den Zeitschritt. <code>dieLogicFoam</code> braucht bis
-          0,28 s 19 044 Zeitschritte, <code>compressibleInterFoam</code> 27 161, bis 50 ms 2 513
-          gegen 3 462.</p>
-      </div>
-      <div class="fig-wrap">
-        <img src="img/wasser-tet-zeitschritt.svg" class="svg-bild" alt="Zeitschritt über der Zeit, Tetraedernetz" loading="lazy">
-        <div class="fig-cap"><b>Zeitschritt.</b> Zu Beginn ist der Schritt von <code>dieLogicFoam</code>
-          größer; danach bestimmt in beiden Rechnungen die Entlüftung den Schritt.</div>
-      </div>
-      <!-- TETCOST -->
 
       <!-- ============================================================ 14 (Vergleich) -->
       <span class="section-anchor" id="s14"></span>
@@ -1365,7 +1281,7 @@
             beide Solver mit 0,5 mm</td></tr>
           <tr><td>Gießkammer (12)</td><td><code>interFoam</code></td><td>beide kompressiblen Solver
             verlieren auf dem gestauchten Netz 26 bis 46 % der Schmelze</td></tr>
-          <tr><td>Wassermodell (13)</td><td><code>compressibleInterFoam</code></td><td>Tetraeder; dazu
+          <tr><td>Wassermodell, vereinfacht (14.1)</td><td><code>compressibleInterFoam</code></td><td>Tetraeder; dazu
             das Hexaedernetz bis 50 ms</td></tr>
         </tbody>
       </table>
@@ -1452,6 +1368,93 @@
           Referenz.</p>
       </div>
 
+      <h3 class="sub-title">14.1 Vereinfachtes Wassermodell auf Hexaedern und Tetraedern</h3>
+      <div class="prose">
+        <p>Für den Vergleich der Netze dient ein früher, vereinfachter Nachbau des Wassermodells aus
+          Abschnitt 13: Platte 100 × 110 mm auf einem Trichter von 40 mm, der sich auf einen Anschnitt
+          von 16 mm verengt, darunter die Angussbuchse (57 mm, Achse senkrecht zur Platte), oben ein
+          Überlauf, dessen Entlüftung über einen Schlauch ins Freie führt. Der Hohlraum ist rund 24 %
+          kleiner als in der Veröffentlichung; für einen Vergleich mit dem Versuch taugt dieses Modell
+          nicht, für den Vergleich der Netze und Solver auf demselben Fall schon. Gerechnet ist P1, auf
+          einem kartesischen Netz mit 1 mm Zellen (162 000 Zellen) und auf Tetraedern.</p>
+        <p>Gussteile werden meist mit Tetraedern vernetzt. Das Wassermodell wurde deshalb auch mit
+          gmsh als Tetraedernetz erzeugt (2,2 mm in der Platte, 3,5 mm in der Buchse, 42 393
+          Tetraeder, Nichtorthogonalität bis 65°) und mit beiden Solvern gerechnet, P1.
+          <code>dieLogicFoam</code> läuft darauf mit einer nichtorthogonalen Korrektur, begrenzter
+          Laplace-Korrektur und begrenztem Gradienten für die Konvektion. Ein feineres Netz mit 1,6 mm und 103 400
+          Tetraedern läuft ebenfalls stabil, der Zeitschritt fällt dort aber auf 2,5 µs: in der nur
+          5 mm dicken Platte liegen an den Wänden flache Tetraeder, deren Courant-Zahl den Schritt
+          begrenzt. Für den Vergleich dient deshalb das gröbere Netz.</p>
+      </div>
+      <div class="fig-wrap" id="video-wasser-tet">
+        <video autoplay muted loop playsinline controls preload="metadata" poster="img/wasser-tet.webp"
+          aria-label="Wassermodell auf einem Tetraedernetz, dieLogicFoam">
+          <source src="img/wasser-tet.mp4" type="video/mp4">
+        </video>
+        <div class="fig-cap"><b>Tetraedernetz, <code>dieLogicFoam</code>.</b> Links die Oberfläche des
+          Wassers in der Form, dann die Zellschicht an der Vorderwand und an der Kammerseite (je 0,5 mm
+          von der Wand) und die eingemischte Luft in der Mitte der Platte. Grau: Luft mit Verbindung zur
+          Entlüftung; eingeschlossene Luft ist nach ihrem Druck blau eingefärbt, je heller, desto
+          höher.</div>
+      </div>
+      <div class="fig-wrap" id="video-wasser-tet-k">
+        <video autoplay muted loop playsinline controls preload="metadata" poster="img/wasser-tet-cif.webp"
+          aria-label="Wassermodell auf einem Tetraedernetz, compressibleInterFoam">
+          <source src="img/wasser-tet-cif.mp4" type="video/mp4">
+        </video>
+        <div class="fig-cap"><b>Tetraedernetz, <code>compressibleInterFoam</code>.</b> Dieselben
+          Ansichten ohne die eingemischte Luft; die Luft ist gerechnet und strömt durch die Entlüftung
+          ab.</div>
+      </div>
+      <div class="prose" id="tet-ergebnis">
+        <p><b>Strömung.</b> Beide Rechnungen zeigen denselben Ablauf: der Strahl steigt aus dem
+          Anschnitt senkrecht bis unter den Deckel, teilt sich dort, läuft an den Seiten zurück und
+          umschließt eine große Luftinsel, während er sich selbst zum Überlauf biegt. Auf diesem Netz
+          liegen nur zwei bis drei Zellen über der Dicke der Platte; die Neigung zur Vorderwand, die
+          das Hexaedernetz bei P1 zeigt (der Strahl liegt dort an der Vorderwand), kann es nicht
+          auflösen. Der deutlichste Unterschied ist die
+          Geschwindigkeit des Strahls: seine Spitze steigt in <code>dieLogicFoam</code> mit 4,7 m/s,
+          in <code>compressibleInterFoam</code> mit 3,3 m/s (<code>compressibleInterIsoFoam</code>
+          ebenso). Aus dem Anschnitt kommen im Mittel 3,7 m/s; 4,7 m/s bedeutet einen Strahl, der
+          sich hinter dem verjüngten Anschnitt auf etwa 0,7 seiner Breite einschnürt. Auf dem
+          Hexaedernetz mit 1 mm Zellen ist <code>dieLogicFoam</code> praktisch gleich (4,9 m/s),
+          <code>compressibleInterFoam</code> wird schneller (3,9 m/s): die verschmierte Grenzfläche
+          der Referenz koppelt das Wasser an die Luft und bremst den dünnen Strahl, mit feinerem Netz
+          weniger. Bis 50 ms weicht das Füllbild im Mittel nur um 4,0 % (Hexaeder) und 3,9 % (Tetraeder)
+          ab; über die ganze Rechnung sind es auf Tetraedern 15 % (mit polytropen Paketen 18 %; die
+          beiden Referenzen untereinander 8 %).</p>
+        <p><b>Wassermenge und Luft.</b> Der Kolben schiebt in beiden Rechnungen dasselbe Volumen
+          nach. Bis 50 ms stimmt das Wasser in der Form auf 0,1 cm³ überein; danach fließt bei
+          <code>compressibleInterFoam</code> zunächst mehr Wasser über die Entlüftung ab, gegen Ende
+          weniger (100,7 gegen 102,3 cm³ bei 0,28 s). Der Unterschied ist die Luft:
+          <code>dieLogicFoam</code> schließt am Ende 23 cm³ in 295 Paketen ein, bei im Mittel 337 K
+          (Wasser 293 K); in der Referenz sind noch 22 cm³ Luft in der Form, nahezu isotherm. Ohne
+          das Energiemodell waren es 27 cm³ bei adiabater Verdichtung.</p>
+      </div>
+      <div class="fig-wrap">
+        <img src="img/wasser-tet-volumen.svg" class="svg-bild" alt="Wasservolumen in der Form über der Zeit, Tetraedernetz" loading="lazy">
+        <div class="fig-cap"><b>Wasser in der Form.</b> Bis zum Erreichen der Entlüftung decken sich
+          die Kurven.</div>
+      </div>
+      <div class="prose">
+        <p><b>Zeitschritt.</b> Tetraedernetze stellen zwei Anforderungen, die auf Hexaedern nicht
+          auffallen. Mit unbegrenztem Gradienten in <code>linearUpwind</code> beschleunigt der
+          Strahl, der auf diesem Netz nur eine Zelle dick an der Wand anliegt, auf 16,7 m/s, und der
+          Zeitschritt fällt auf 9 µs; mit <code>cellLimited</code> bleibt er bei 15 bis 27 µs. Und
+          ein kleines Paket, das in einem Schritt zerquetscht wird, setzt Tropfen mit bis zu 46 m/s
+          frei, die den Schritt auf 5 µs drücken; die halbimplizite Kopplung (6.4) verhindert
+          das. Sobald Wasser durch die 5 × 5 mm große Entlüftung schießt,
+          bestimmt es in beiden Rechnungen den Zeitschritt. <code>dieLogicFoam</code> braucht bis
+          0,28 s 19 044 Zeitschritte, <code>compressibleInterFoam</code> 27 161, bis 50 ms 2 513
+          gegen 3 462.</p>
+      </div>
+      <div class="fig-wrap">
+        <img src="img/wasser-tet-zeitschritt.svg" class="svg-bild" alt="Zeitschritt über der Zeit, Tetraedernetz" loading="lazy">
+        <div class="fig-cap"><b>Zeitschritt.</b> Zu Beginn ist der Schritt von <code>dieLogicFoam</code>
+          größer; danach bestimmt in beiden Rechnungen die Entlüftung den Schritt.</div>
+      </div>
+      <!-- TETCOST -->
+
       <!-- ============================================================ 14 -->
       <span class="section-anchor" id="s15"></span>
       <h2 class="section-title">15. Einen Fall rechnen</h2>
@@ -1469,7 +1472,7 @@
   cases/plateCore2D*/     <span class="c"># Platte, offen, geschlossen, interIsoFoam, compressibleInterIsoFoam</span>
   cases/plateSlow*/       <span class="c"># Platte mit 5 m/s, compressibleInterFoam, je 0,5 mm</span>
   cases/shotSleeve*/      <span class="c"># Gießkammer mit Kolben, Referenz interFoam (_if)</span>
-  cases/waterModel3D*/    <span class="c"># Wassermodell, Hexaeder (P1, P2) und Tetraeder, Referenzen _cif</span></pre>
+  cases/waterModel3D*/    <span class="c"># vereinfachtes Wassermodell: Hexaeder, Tetraeder, Referenzen _cif (14.1)</span></pre>
 <pre class="code">cd dieFill &amp;&amp; ./Allwmake
 cd cases/plateCore2D &amp;&amp; ./Allrun   <span class="c"># Netz, Rechnung, postProcessing/images, Video</span></pre>
       <div class="prose">
